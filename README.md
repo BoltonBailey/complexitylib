@@ -8,14 +8,19 @@ Complexity theory studies the resources required to solve computational problems
 
 ## Approach
 
-The library begins with formal models of computation and builds upward toward complexity classes and reductions. The Turing machine model uses a monadic transition function constrained by a `Possible` typeclass, so that the same definitions cover deterministic, nondeterministic, and probabilistic computation.
+The definitions follow Arora and Barak's *Computational Complexity: A Modern Approach*:
+
+- A concrete 4-symbol alphabet `{0, 1, □, ▷}`
+- Deterministic TMs with a single transition function (AB Definition 1.1)
+- Nondeterministic/probabilistic TMs with two transition functions `δ₀, δ₁` (AB Definition 2.1 / Section 7.1) — same machine structure, different acceptance semantics
+
+Tapes are custom one-sided infinite (cell 0 is leftmost, head cannot move left of it), matching AB exactly. Configurations use named tapes (read-only input, read-write work tapes, read-write output), making the read-only/read-write distinction structural.
 
 ## Contents
 
 | Module | Description |
 |--------|-------------|
-| `Complexitylib.Possible` | `Possible` typeclass with `Id` (deterministic), `SetM` (nondeterministic), and `PMF` (probabilistic) instances |
-| `Complexitylib.Models.TuringMachine` | Multi-tape Turing machine with step relation, reachability, and output predicates |
+| `Complexitylib.Models.TuringMachine` | Alphabet, directions, TM, NTM, configurations, step/trace, acceptance, deciding, PTM counting, language type |
 
 ## Building
 
@@ -29,10 +34,14 @@ The first build will download and compile Mathlib, which takes a while. Subseque
 
 ## Roadmap
 
-- [x] Multi-tape Turing machine model (deterministic and nondeterministic)
-- [ ] Time and space complexity measures
-- [ ] Complexity classes (P, NP, PSPACE, ...)
+- [x] Deterministic multi-tape Turing machine (AB Definition 1.1)
+- [x] Nondeterministic TM with two transition functions (AB Definition 2.1)
+- [x] Acceptance and deciding predicates (`Accepts`, `DecidesInTime`)
+- [x] PTM counting primitives (`acceptCount`, `acceptProb`)
+- [x] DTM-to-NTM embedding (`TM.toNTM`)
+- [ ] Complexity classes (P, NP, BPP, PSPACE, ...)
 - [ ] Reductions and completeness
+- [ ] Simulation theorems
 - [ ] Hierarchy theorems
 
 ## Contributing
