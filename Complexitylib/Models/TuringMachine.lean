@@ -124,6 +124,12 @@ def hasOutput (t : Tape) (y : List Bool) : Prop :=
     t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
   t.cells (y.length + 1) = Γ.blank
 
+instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput y) :=
+  if h : (∀ i : Fin y.length, t.cells (i.val + 1) = Γ.ofBool (y[i.val]'i.isLt)) ∧
+         t.cells (y.length + 1) = Γ.blank
+  then isTrue ⟨fun i hi => h.1 ⟨i, hi⟩, h.2⟩
+  else isFalse (fun ⟨h1, h2⟩ => h ⟨fun i => h1 i.val i.isLt, h2⟩)
+
 end Tape
 
 /-- Initialize a tape: `▷` at cell 0, `contents` at cells 1, 2, ..., `□` elsewhere.
@@ -334,6 +340,26 @@ noncomputable def acceptCount (tm : NTM n) (x : List Bool) (T : ℕ) : ℕ :=
     Meaningful when the machine halts on all paths within `T` steps. -/
 noncomputable def acceptProb (tm : NTM n) (x : List Bool) (T : ℕ) : ℚ :=
   (tm.acceptCount x T : ℚ) / (2 ^ T : ℚ)
+
+/-- Count of choice sequences of length `T` on which the machine halts with
+    output `y` (using `Tape.hasOutput`).
+
+    Meaningful when the machine halts on all paths within `T` steps. -/
+noncomputable def outputCount (tm : NTM n) (x : List Bool) (T : ℕ)
+    (y : List Bool) : ℕ :=
+  (Finset.univ.filter fun (choices : Fin T → Bool) =>
+    let c' := tm.trace T choices (tm.initCfg x)
+    c'.state = tm.qhalt ∧ c'.output.hasOutput y).card
+
+/-- Probability that the machine outputs `y` on input `x` =
+    |output-matching paths| / 2^T.
+
+    Meaningful when the machine halts on all paths within `T` steps.
+    This generalizes `acceptProb` from accept/reject to arbitrary output
+    strings, as needed for cryptographic definitions (Katz-Lindell). -/
+noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
+    (y : List Bool) : ℚ :=
+  (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
 
 end NTM
 
