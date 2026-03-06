@@ -1,4 +1,5 @@
 import Mathlib.Data.Set.Functor
+import Mathlib.Probability.ProbabilityMassFunction.Monad
 
 /-!
 # The Possible Typeclass
@@ -9,7 +10,7 @@ which values a monadic computation can produce. The laws ensure `possible` respe
 
 This lets us write monadic transition functions for Turing machines and then extract a
 step *relation* uniformly — `Id` yields deterministic machines, `SetM` yields nondeterministic
-machines.
+machines, and `PMF` yields probabilistic machines.
 -/
 
 universe u v
@@ -35,3 +36,13 @@ instance : Possible SetM where
     exact eq_comm
   possible_bind ma f b := by
     simp [SetM.run, Set.bind_def]
+
+/-- In the probability monad, the possible values are the values with positive probability. -/
+noncomputable instance : Possible PMF where
+  possible f a := f a > 0
+  possible_pure a b := by
+    show PMF.pure a b > 0 ↔ a = b
+    simp only [gt_iff_lt, PMF.apply_pos_iff, PMF.mem_support_pure_iff, eq_comm]
+  possible_bind ma f b := by
+    show (ma.bind f) b > 0 ↔ ∃ a, ma a > 0 ∧ (f a) b > 0
+    simp only [gt_iff_lt, PMF.apply_pos_iff, PMF.mem_support_bind_iff]

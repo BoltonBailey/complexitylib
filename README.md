@@ -8,13 +8,13 @@ Complexity theory studies the resources required to solve computational problems
 
 ## Approach
 
-The library begins with formal models of computation and builds upward toward complexity classes and reductions. The Turing machine model uses a monadic transition function constrained by a `Possible` typeclass, so that the same definitions cover both deterministic and nondeterministic computation.
+The library begins with formal models of computation and builds upward toward complexity classes and reductions. The Turing machine model uses a monadic transition function constrained by a `Possible` typeclass, so that the same definitions cover deterministic, nondeterministic, and probabilistic computation.
 
 ## Contents
 
 | Module | Description |
 |--------|-------------|
-| `Complexitylib.Possible` | `Possible` typeclass with `Id` (deterministic) and `SetM` (nondeterministic) instances |
+| `Complexitylib.Possible` | `Possible` typeclass with `Id` (deterministic), `SetM` (nondeterministic), and `PMF` (probabilistic) instances |
 | `Complexitylib.Models.TuringMachine` | Multi-tape Turing machine with step relation, reachability, and output predicates |
 
 ## Building

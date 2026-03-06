@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Lean 4 library formalizing computational complexity theory, built on Mathlib. The central abstraction is a multi-tape monadic Turing machine parameterized over a monad with a `Possible` typeclass, allowing the same definitions to express both deterministic and nondeterministic computation.
+A Lean 4 library formalizing computational complexity theory, built on Mathlib. The central abstraction is a multi-tape monadic Turing machine parameterized over a monad with a `Possible` typeclass, allowing the same definitions to express deterministic, nondeterministic, and probabilistic computation.
 
 ## Build
 
@@ -20,14 +20,14 @@ Always verify the build passes with **no errors and no warnings** before conside
 Complexitylib.lean               — root import (re-exports everything)
 Complexitylib/Models.lean        — aggregation import for computation models
 Complexitylib/Models/TuringMachine.lean — MultiTapeTM, Cfg, step relation, reachability
-Complexitylib/Possible.lean      — Possible typeclass, Id and SetM instances
+Complexitylib/Possible.lean      — Possible typeclass, Id, SetM, and PMF instances
 ```
 
 Aggregation files (`Complexitylib.lean`, `Models.lean`) contain only `import` statements — no definitions.
 
 ### Key Design Decisions
 
-- **Monad-parameterized TMs**: `MultiTapeTM` takes `(M : Type u → Type v) [Possible M]`. Use `Id` for deterministic, `SetM` for nondeterministic machines.
+- **Monad-parameterized TMs**: `MultiTapeTM` takes `(M : Type u → Type v) [Possible M]`. Use `Id` for deterministic, `SetM` for nondeterministic, `PMF` for probabilistic machines.
 - **`Possible` typeclass**: Extracts a step *relation* from monadic computations via `possible : M α → α → Prop`. Laws ensure it respects `pure` and `>>=`.
 - **Read-only input, write-only output**: The input tape only supports directional movement (no write). The output tape gets a `TapeAction` (write + move). This is enforced structurally in `stepRel`.
 - **Universe polymorphism**: `Possible` uses `universe u v`. `MultiTapeTM`, `Cfg`, and `TapeAction` use `universe u v` matching `Possible`. `State` lives in `Type u` alongside `Symbol`.
