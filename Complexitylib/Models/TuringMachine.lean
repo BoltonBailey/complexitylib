@@ -210,10 +210,10 @@ def AcceptsInTime (tm : TM n) (x : List Bool) (T : ℕ) : Prop :=
     c'.output.cells 1 = Γ.one
 
 /-- DTM decides `L` within time bound `T(n)`: halts on all inputs within `T(|x|)` steps,
-    accepting exactly the strings in `L`. -/
+    outputting `1` for `x ∈ L` and `0` for `x ∉ L` (Arora-Barak Definition 1.2). -/
 def DecidesInTime (tm : TM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
-    (c'.output.cells 1 = Γ.one ↔ x ∈ L)
+    (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
 end TM
 
@@ -264,12 +264,14 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
 
 /-- NTM decides `L` within time bound `T(n)` (Arora-Barak Definition 2.1):
-    all computation paths halt within `T(|x|)` steps, and `x ∈ L` iff there exists
-    an accepting path. -/
+    all computation paths halt within `T(|x|)` steps, accepting paths exist iff `x ∈ L`,
+    and all paths output `0` when `x ∉ L`. -/
 def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   (∀ x (choices : Fin (T x.length) → Bool),
     tm.halted (tm.trace (T x.length) choices (tm.initCfg x))) ∧
-  (∀ x, x ∈ L ↔ tm.AcceptsInTime x (T x.length))
+  (∀ x, x ∈ L → tm.AcceptsInTime x (T x.length)) ∧
+  (∀ x, x ∉ L → ∀ (choices : Fin (T x.length) → Bool),
+    (tm.trace (T x.length) choices (tm.initCfg x)).output.cells 1 = Γ.zero)
 
 /-- Count of accepting choice sequences of length `T`.
 

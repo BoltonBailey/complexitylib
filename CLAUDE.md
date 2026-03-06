@@ -30,7 +30,7 @@ Aggregation files (`Complexitylib.lean`, `Models.lean`) contain only `import` st
 - **Named tapes**: `Cfg` has separate `input : Tape`, `work : Fin n → Tape`, `output : Tape` fields. This avoids degenerate `Fin k` indexing and makes the read-only/read-write distinction structural.
 - **DTM (`TM`)**: Single deterministic transition function `δ`. Execution via `step` (computable) and relational `stepRel`/`reaches`/`reachesIn`.
 - **NTM (`NTM`)**: Two transition functions `δ₀, δ₁` selected by a `Bool`. Execution via `trace` (canonical, takes a fixed choice sequence). No parallel relational hierarchy — `trace` is the single source of truth.
-- **Acceptance vs deciding**: `Accepts`/`AcceptsInTime` are existential. `DecidesInTime` requires halting on all inputs (DTM) or all paths (NTM) and correct output.
+- **Acceptance vs deciding**: `Accepts`/`AcceptsInTime` are existential. `DecidesInTime` requires halting on all inputs (DTM) or all paths (NTM), outputting `1` for `x ∈ L` and `0` for `x ∉ L` (matching AB Definitions 1.2 / 2.1 exactly).
 - **PTM counting**: `acceptCount` and `acceptProb` count/measure accepting paths over `Fin T → Bool`. Meaningful only when all paths halt within `T` steps.
 - **Custom one-sided tapes**: `Tape` has `head : ℕ` and `cells : ℕ → Γ`. Cell 0 is leftmost and permanently `▷` (write is a no-op at cell 0). Moving left at position 0 is a no-op (Nat subtraction). Output is read from `cells 1` (first cell after `▷`). No dependency on `Mathlib.Computability.Tape`.
 - **Read vs write alphabet**: `δ` reads `Γ = {0, 1, □, ▷}` but writes `Γw = {0, 1, □}`, structurally preventing writing `▷`. Combined with immutable cell 0, `▷` uniquely marks position 0 on every tape.
