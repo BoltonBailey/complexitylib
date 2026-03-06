@@ -19,6 +19,9 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 - `NTM` — a nondeterministic TM with two transition functions (AB Definition 2.1)
 - `TM.stepRel`, `TM.reaches`, `TM.reachesIn` — deterministic step relation and reachability
 - `NTM.trace` — execute an NTM for a fixed choice sequence (canonical NTM execution)
+- `Tape.hasOutput` — predicate: tape contains a given binary string as output
+- `TM.ComputesInTime` — computing a function in bounded time (AB Definition 1.4)
+- `TM.Computes` — computing a function (existential over time bound)
 - `TM.Accepts`, `TM.AcceptsInTime` — deterministic acceptance
 - `NTM.Accepts`, `NTM.AcceptsInTime` — nondeterministic acceptance (existential)
 - `TM.DecidesInTime`, `NTM.DecidesInTime` — deciding a language within a time bound
@@ -47,6 +50,10 @@ inductive Γ where
   | zero | one | blank | start
   deriving DecidableEq
 
+instance : Fintype Γ where
+  elems := {.zero, .one, .blank, .start}
+  complete := fun x => by cases x <;> simp
+
 instance : Inhabited Γ := ⟨Γ.blank⟩
 
 /-- The writable alphabet Γw = {0, 1, □}. The start symbol `▷` cannot be written by a
@@ -54,6 +61,10 @@ instance : Inhabited Γ := ⟨Γ.blank⟩
 inductive Γw where
   | zero | one | blank
   deriving DecidableEq
+
+instance : Fintype Γw where
+  elems := {.zero, .one, .blank}
+  complete := fun x => by cases x <;> simp
 
 /-- Embed a writable symbol into the full alphabet. -/
 @[simp] def Γw.toΓ : Γw → Γ
@@ -72,6 +83,10 @@ def Γ.ofBool : Bool → Γ
 inductive Dir3 where
   | left | right | stay
   deriving DecidableEq
+
+instance : Fintype Dir3 where
+  elems := {.left, .right, .stay}
+  complete := fun x => by cases x <;> simp
 
 /-- A one-sided infinite tape following Arora-Barak.
     Cell 0 is the leftmost cell and permanently contains `▷`. The head cannot move
@@ -99,6 +114,15 @@ def move (t : Tape) (d : Dir3) : Tape :=
   | .left => { t with head := t.head - 1 }
   | .right => { t with head := t.head + 1 }
   | .stay => t
+
+/-- The tape contains output `y : List Bool` starting at cell 1:
+    cells 1 through |y| match `y`, and cell |y| + 1 is blank.
+    This matches Arora-Barak's convention that output is the binary
+    string written on the output tape after `▷`. -/
+def hasOutput (t : Tape) (y : List Bool) : Prop :=
+  (∀ (i : ℕ) (h : i < y.length),
+    t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
+  t.cells (y.length + 1) = Γ.blank
 
 end Tape
 
@@ -214,6 +238,29 @@ def AcceptsInTime (tm : TM n) (x : List Bool) (T : ℕ) : Prop :=
 def DecidesInTime (tm : TM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- DTM computes function `f` in time `T(n)` (Arora-Barak Definition 1.4):
+    for every input `x`, the machine halts within `T(|x|)` steps with `f(x)`
+    written on the output tape. -/
+def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) : Prop :=
+  ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
+    c'.output.hasOutput (f x)
+
+/-- DTM computes function `f` (existential version of `ComputesInTime`). -/
+def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
+  ∃ T, tm.ComputesInTime f T
+
+/-- Transitivity: if `c₁` reaches `c₂` in `t₁` steps and `c₂` reaches `c₃`
+    in `t₂` steps, then `c₁` reaches `c₃` in `t₁ + t₂` steps. -/
+theorem reachesIn_trans (tm : TM n) {t₁ t₂ : ℕ} {c₁ c₂ c₃ : Cfg n tm.Q}
+    (h₁ : tm.reachesIn t₁ c₁ c₂) (h₂ : tm.reachesIn t₂ c₂ c₃) :
+    tm.reachesIn (t₁ + t₂) c₁ c₃ := by
+  induction h₁ with
+  | zero => simp; exact h₂
+  | step hstep _ ih =>
+    show tm.reachesIn (_ + 1 + t₂) _ _
+    rw [Nat.add_right_comm]
+    exact reachesIn.step hstep (ih h₂)
 
 end TM
 
