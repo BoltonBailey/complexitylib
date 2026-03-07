@@ -25,6 +25,7 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 - `TM.Accepts`, `TM.AcceptsInTime` — deterministic acceptance
 - `NTM.Accepts`, `NTM.AcceptsInTime` — nondeterministic acceptance (existential)
 - `TM.DecidesInTime`, `NTM.DecidesInTime` — deciding a language within a time bound
+- `TM.DecidesInTimeSpace` — deciding with simultaneous time and space bounds
 - `NTM.acceptCount`, `NTM.acceptProb` — counting/probabilistic acceptance
 - `TM.toNTM` — embed a DTM into an NTM
 
@@ -268,6 +269,14 @@ def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
 def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
   ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧
+    (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- DTM decides `L` within time `T(|x|)` and space `S(|x|)` simultaneously:
+    a single machine halts in bounded time with correct output, and every
+    reachable configuration has bounded work tape heads. -/
+def DecidesInTimeSpace (tm : TM n) (L : Language) (T S : ℕ → ℕ) : Prop :=
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
 /-- DTM computes function `f` using at most `S(|x|)` space on work tapes, with

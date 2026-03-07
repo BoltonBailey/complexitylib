@@ -36,6 +36,9 @@ def NSPACE (S : ℕ → ℕ) : Set Language :=
 def L : Set Language :=
   {L | ∃ S, IsLogBounded S ∧ L ∈ DSPACE S}
 
+/-- Alias: `LOGSPACE` is another name for `L`. -/
+abbrev LOGSPACE := L
+
 /-- **NL** is the class of languages decidable by a nondeterministic TM using
     logarithmic space on work tapes. -/
 def NL : Set Language :=
@@ -52,9 +55,11 @@ def CoNL : Set Language :=
 def FL : Set (List Bool → List Bool) :=
   {f | ∃ S, IsLogBounded S ∧ ∃ (k : ℕ) (tm : TM k), tm.ComputesInSpace f S}
 
-/-- **FNL** is the class of search problems defined by NL relations: binary
-    relations that are polynomially balanced (witnesses have poly-bounded
-    length) and decidable in L. -/
+/-- **FNL** is the class of search problems with log-space verifiable relations:
+    binary relations that are polynomially balanced (witnesses have poly-bounded
+    length) and whose pair language is decidable in L (deterministic log space).
+
+    This parallels FNP, which uses P (deterministic poly time) for verification. -/
 def FNL : Set (List Bool → List Bool → Prop) :=
   {R | PolyBalanced R ∧ pairLang R ∈ L}
 

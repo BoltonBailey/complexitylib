@@ -39,14 +39,15 @@ def RejectsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (s : ℚ) : Pr
 
 end NTM
 
-/-- `BPTIME(T)` is the class of languages decidable by a PTM in time `T(n)`
-    with two-sided bounded error (accept probability ≥ 2/3 on yes-instances,
-    ≤ 1/3 on no-instances). -/
+/-- `BPTIME(T)` is the class of languages decidable by a PTM in time `c · T(n)`
+    for some constant `c`, with two-sided bounded error (accept probability ≥ 2/3
+    on yes-instances, ≤ 1/3 on no-instances). -/
 def BPTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k),
-    tm.AllPathsHaltIn T ∧
-    tm.AcceptsWithProb L T (2 / 3) ∧
-    tm.RejectsWithProb L T (1 / 3)}
+  {L | ∃ (c k : ℕ) (tm : NTM k),
+    let T' := fun n => c * T n
+    tm.AllPathsHaltIn T' ∧
+    tm.AcceptsWithProb L T' (2 / 3) ∧
+    tm.RejectsWithProb L T' (1 / 3)}
 
 /-- **BPP** is the class of languages decidable by a PTM in polynomial time
     with two-sided bounded error: yes-instances accepted with probability ≥ 2/3,
@@ -54,14 +55,15 @@ def BPTIME (T : ℕ → ℕ) : Set Language :=
 def BPP : Set Language :=
   {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ L ∈ BPTIME T}
 
-/-- `RTIME(T)` is the class of languages decidable by a PTM in time `T(n)`
-    with one-sided error: yes-instances accepted with probability ≥ 1/2,
-    no-instances never accepted (accept probability 0). -/
+/-- `RTIME(T)` is the class of languages decidable by a PTM in time `c · T(n)`
+    for some constant `c`, with one-sided error: yes-instances accepted with
+    probability ≥ 1/2, no-instances never accepted (accept probability 0). -/
 def RTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k),
-    tm.AllPathsHaltIn T ∧
-    tm.AcceptsWithProb L T (1 / 2) ∧
-    tm.RejectsWithProb L T 0}
+  {L | ∃ (c k : ℕ) (tm : NTM k),
+    let T' := fun n => c * T n
+    tm.AllPathsHaltIn T' ∧
+    tm.AcceptsWithProb L T' (1 / 2) ∧
+    tm.RejectsWithProb L T' 0}
 
 /-- **RP** is the class of languages decidable by a PTM in polynomial time
     with one-sided error: yes-instances accepted with probability ≥ 1/2,

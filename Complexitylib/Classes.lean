@@ -7,3 +7,4 @@ import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.FNP
 import Complexitylib.Classes.PPT
 import Complexitylib.Classes.L
+import Complexitylib.Classes.DTISP
