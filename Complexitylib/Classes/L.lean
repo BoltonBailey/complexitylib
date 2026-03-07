@@ -34,7 +34,7 @@ def NSPACE (S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k), tm.DecidesInSpace L S}
 
 /-- **L** (LOGSPACE) is the class of languages decidable by a deterministic TM
-    using logarithmic space on work tapes (Arora-Barak Definition 4.5). -/
+    using logarithmic space on work tapes (Arora-Barak Definition 4.1). -/
 def L : Set Language :=
   {L | ∃ S, IsLogBounded S ∧ L ∈ DSPACE S}
 

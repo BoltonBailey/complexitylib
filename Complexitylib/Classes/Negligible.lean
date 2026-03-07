@@ -9,6 +9,6 @@ polynomial. This is used in cryptographic definitions throughout Arora-Barak
 -/
 
 /-- A function `f : ℕ → ℝ` is negligible if for every `c`, `|f(n)| · n^c < 1`
-    for all sufficiently large `n` (Arora-Barak Section 9.1). -/
+    for all sufficiently large `n` (Katz-Lindell Definition 3.5). -/
 def Negligible (f : ℕ → ℝ) : Prop :=
   ∀ c : ℕ, ∃ N : ℕ, ∀ n ≥ N, |f n| * (n : ℝ) ^ c < 1

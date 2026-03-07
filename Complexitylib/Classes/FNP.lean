@@ -74,9 +74,9 @@ def FNP : Set (List Bool → List Bool → Prop) :=
        {z | ∃ x y, z = pair x y ∧ R x y} ∈ P}
 
 /-- **coFNP** is the class of FNP search problems whose associated decision
-    language `{x | ∃ y, R x y}` is in coNP. Since any FNP relation already
-    has its decision language in NP (by polynomial balance and P-verifiability),
-    this is equivalent to requiring the decision language to be in NP ∩ coNP. -/
+    language `{x | ∃ y, R x y}` is in coNP. Since any FNP relation has its
+    decision language in NP (by constructing an NTM that guesses and verifies a
+    witness), membership in coFNP places the decision language in NP ∩ coNP. -/
 def CoFNP : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNP | {x | ∃ y, R x y} ∈ CoNP}
 
