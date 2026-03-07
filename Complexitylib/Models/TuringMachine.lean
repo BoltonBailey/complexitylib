@@ -338,12 +338,18 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
     let c' := tm.trace T choices (tm.initCfg x)
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
 
+/-- All computation paths of the NTM halt within `T(|x|)` steps, for every
+    input `x` and every choice sequence. This is the core time-boundedness
+    condition shared by `DecidesInTime`, `BPP`, and `NTM.IsPPT`. -/
+def AllPathsHaltIn (tm : NTM n) (T : ℕ → ℕ) : Prop :=
+  ∀ x (choices : Fin (T x.length) → Bool),
+    tm.halted (tm.trace (T x.length) choices (tm.initCfg x))
+
 /-- NTM decides `L` within time bound `T(n)`:
     all computation paths halt within `T(|x|)` steps, accepting paths exist iff `x ∈ L`,
     and all paths output `0` when `x ∉ L`. -/
 def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
-  (∀ x (choices : Fin (T x.length) → Bool),
-    tm.halted (tm.trace (T x.length) choices (tm.initCfg x))) ∧
+  tm.AllPathsHaltIn T ∧
   (∀ x, x ∈ L → tm.AcceptsInTime x (T x.length)) ∧
   (∀ x, x ∉ L → ∀ (choices : Fin (T x.length) → Bool),
     (tm.trace (T x.length) choices (tm.initCfg x)).output.cells 1 = Γ.zero)

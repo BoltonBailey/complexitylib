@@ -17,6 +17,4 @@ definitions — nearly every definition quantifies "for all PPT adversaries A."
     A PPT machine always halts in polynomial time regardless of its random
     choices. -/
 def NTM.IsPPT (tm : NTM n) : Prop :=
-  ∃ T, IsPolyBounded T ∧
-    ∀ x (choices : Fin (T x.length) → Bool),
-      tm.halted (tm.trace (T x.length) choices (tm.initCfg x))
+  ∃ T, IsPolyBounded T ∧ tm.AllPathsHaltIn T

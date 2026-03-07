@@ -56,13 +56,12 @@ def FL : Set (List Bool → List Bool) :=
     relations that are polynomially balanced (witnesses have poly-bounded
     length) and decidable in L. -/
 def FNL : Set (List Bool → List Bool → Prop) :=
-  {R | (∃ p, IsPolyBounded p ∧ ∀ x y, R x y → y.length ≤ p x.length) ∧
-       {z | ∃ x y, z = pair x y ∧ R x y} ∈ L}
+  {R | PolyBalanced R ∧ pairLang R ∈ L}
 
 /-- **coFNL** is the class of FNL search problems whose associated decision
     language `{x | ∃ y, R x y}` is in coNL. -/
 def CoFNL : Set (List Bool → List Bool → Prop) :=
-  {R ∈ FNL | {x | ∃ y, R x y} ∈ CoNL}
+  {R ∈ FNL | searchLang R ∈ CoNL}
 
 /-- **TFNL** is the class of total FNL search problems: every instance has at
     least one witness. -/

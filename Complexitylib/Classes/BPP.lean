@@ -17,7 +17,6 @@ random. Acceptance probability is defined via `NTM.acceptProb`.
     accepted with probability ≤ 1/3. -/
 def BPP : Set Language :=
   {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ ∃ (k : ℕ) (tm : NTM k),
-    (∀ x (choices : Fin (T x.length) → Bool),
-      tm.halted (tm.trace (T x.length) choices (tm.initCfg x))) ∧
+    tm.AllPathsHaltIn T ∧
     (∀ x, x ∈ L → tm.acceptProb x (T x.length) ≥ 2 / 3) ∧
     (∀ x, x ∉ L → tm.acceptProb x (T x.length) ≤ 1 / 3)}
