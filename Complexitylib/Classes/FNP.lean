@@ -1,24 +1,34 @@
-import Complexitylib.Classes.Pairing
-import Complexitylib.Classes.P
+import Complexitylib.Classes.FNP.Defs
+import Complexitylib.Classes.FNP.Internal
 
 /-!
 # FNP and TFNP
 
-This file defines the function/search complexity classes **FNP** and **TFNP**.
-
-An FNP search problem is specified by a binary relation `R` that is polynomially
-balanced and decidable in polynomial time. The search task is: given `x`, find `y`
-with `R x y`, or report that none exists.
+This file defines the function/search complexity classes **FNP** and **TFNP**
+(see `FNP/Defs.lean`) and proves the fundamental connection between TFNP and
+NP ∩ coNP: if a language has both NP and coNP witness relations, the combined
+certificate-finding problem is in TFNP (Megiddo–Papadimitriou 1991).
 -/
 
-/-- **FNP** is the class of search problems defined by NP relations: binary
-    relations that are polynomially balanced and decidable in polynomial time.
-    A relation `R` is in FNP if witnesses have poly-bounded length and the
-    pair language `{pair(x, y) | R x y}` is in P. -/
-def FNP : Set (List Bool → List Bool → Prop) :=
-  {R | PolyBalanced R ∧ pairLang R ∈ P}
+/-- **NP ∩ coNP yields TFNP** (Megiddo–Papadimitriou 1991): given FNP relations
+    `R₁` (witnesses for `x ∈ L`) and `R₂` (witnesses for `x ∉ L`), the tagged
+    relation is in TFNP. The tag bit records which type of certificate was found,
+    so any solution to the search problem decides `L`.
 
-/-- **TFNP** is the class of total FNP search problems: every instance has at
-    least one witness. -/
-def TFNP : Set (List Bool → List Bool → Prop) :=
-  {R ∈ FNP | ∀ x, ∃ y, R x y}
+    Combined with the NP witness theorem
+    (`NP = {L | ∃ R ∈ FNP, ∀ x, x ∈ L ↔ ∃ y, R x y}`),
+    this establishes that every language in NP ∩ coNP gives rise to a TFNP
+    search problem. -/
+theorem tfnp_of_np_conp_witnesses
+    {R₁ R₂ : List Bool → List Bool → Prop} {L : Language}
+    (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP)
+    (h_mem : ∀ x, x ∈ L ↔ ∃ y, R₁ x y)
+    (h_nmem : ∀ x, x ∉ L ↔ ∃ y, R₂ x y) :
+    tagRelation R₁ R₂ ∈ TFNP := by
+  refine ⟨tagRelation_in_FNP hR₁ hR₂, ?_⟩
+  intro x
+  by_cases hx : x ∈ L
+  · obtain ⟨w, hw⟩ := (h_mem x).mp hx
+    exact ⟨true :: w, hw⟩
+  · obtain ⟨w, hw⟩ := (h_nmem x).mp hx
+    exact ⟨false :: w, hw⟩

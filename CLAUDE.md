@@ -25,11 +25,39 @@ Complexitylib/Models/TuringMachine/Internal.lean — proof internals (e.g. toNTM
 
 Aggregation files (`Complexitylib.lean`, `Models.lean`) contain only `import` statements — no definitions.
 
-### Internal Modules
+### Three-Layer Architecture
 
-When a theorem requires substantial helper lemmas or proof machinery, place these in a companion `Internal` module (e.g., `Foo/Internal.lean`) rather than cluttering the main module. The main module (`Foo.lean`) keeps definitions and public API; the Internal module imports it and contains proof internals. Aggregation files import both.
+The codebase uses three layers to separate concerns:
 
-This lets readers understand a module's API without wading through proof details. For trivial proofs, `private` lemmas in the same file are fine — use Internal modules when the proof machinery would obscure the module's purpose.
+1. **Definitions layer** (`Foo/Defs.lean`) — Core types, structures, and
+   definitions. Imported by both Internal and surface layers. Minimal
+   imports. Human-auditable: a reader should be able to verify that these
+   definitions faithfully capture the textbook concepts.
+2. **Internal layer** (`Foo/Internal.lean` or `Foo/Internal/`) — Proof
+   internals, helper lemmas, and auxiliary constructions. Imports `Foo/Defs`
+   (not `Foo.lean`). Not meant for human review — correctness is
+   established by the type checker.
+3. **Surface layer** (`Foo.lean`) — Public theorem statements with proofs
+   supplied by importing from Internal. Also human-auditable: a reader
+   should be able to verify that the theorem types match the textbook
+   without understanding proof internals.
+
+Import graph (no cycles):
+
+```
+Foo/Defs.lean ← Foo/Internal.lean
+Foo/Defs.lean ← Foo.lean ← Foo/Internal.lean
+```
+
+The Defs layer exists to break the import cycle that would occur if Internal
+needed to reference definitions from the surface layer. By extracting
+definitions into `Defs.lean`, Internal modules can use proper named
+definitions in their theorem signatures rather than raw expressions.
+
+For simple modules where Internal proofs don't need to reference surface
+definitions, the two-layer pattern (surface + Internal) is fine — introduce
+`Defs.lean` when the need arises. For trivial proofs, `private` lemmas in the
+same file are acceptable.
 
 ### Key Design Decisions
 
