@@ -1,13 +1,11 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Classes.Polynomial
 import Complexitylib.Classes.P
-import Complexitylib.Classes.NP
 
 /-!
-# FNP, coFNP, and TFNP
+# FNP and TFNP
 
-This file defines the function/search complexity classes **FNP**, **coFNP**, and
-**TFNP**.
+This file defines the function/search complexity classes **FNP** and **TFNP**.
 
 An FNP search problem is specified by a binary relation `R` that is polynomially
 balanced and decidable in polynomial time. The search task is: given `x`, find `y`
@@ -76,24 +74,12 @@ def PolyBalanced (R : List Bool → List Bool → Prop) : Prop :=
 def pairLang (R : List Bool → List Bool → Prop) : Language :=
   {z | ∃ x y, z = pair x y ∧ R x y}
 
-/-- The **search language** (decision language) of a binary relation `R`:
-    the set of inputs `x` that have at least one witness `y` with `R x y`. -/
-def searchLang (R : List Bool → List Bool → Prop) : Language :=
-  {x | ∃ y, R x y}
-
 /-- **FNP** is the class of search problems defined by NP relations: binary
     relations that are polynomially balanced and decidable in polynomial time.
     A relation `R` is in FNP if witnesses have poly-bounded length and the
     pair language `{pair(x, y) | R x y}` is in P. -/
 def FNP : Set (List Bool → List Bool → Prop) :=
   {R | PolyBalanced R ∧ pairLang R ∈ P}
-
-/-- **coFNP** is the class of FNP search problems whose associated decision
-    language `{x | ∃ y, R x y}` is in coNP. Since any FNP relation has its
-    decision language in NP (by constructing an NTM that guesses and verifies a
-    witness), membership in coFNP places the decision language in NP ∩ coNP. -/
-def CoFNP : Set (List Bool → List Bool → Prop) :=
-  {R ∈ FNP | searchLang R ∈ CoNP}
 
 /-- **TFNP** is the class of total FNP search problems: every instance has at
     least one witness. -/

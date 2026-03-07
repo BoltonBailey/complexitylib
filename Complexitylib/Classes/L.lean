@@ -6,7 +6,7 @@ import Mathlib.Data.Nat.Log
 # Logarithmic space complexity classes
 
 This file defines the space complexity classes `DSPACE`, `NSPACE`, **L**, **NL**,
-**coNL**, **FL**, and the search problem classes **FNL**, **coFNL**, **TFNL**
+**coNL**, **FL**, and the search problem classes **FNL**, **TFNL**.
 ## Space measurement
 
 Space is measured on work tapes only. The input tape is read-only (structurally
@@ -57,11 +57,6 @@ def FL : Set (List Bool → List Bool) :=
     length) and decidable in L. -/
 def FNL : Set (List Bool → List Bool → Prop) :=
   {R | PolyBalanced R ∧ pairLang R ∈ L}
-
-/-- **coFNL** is the class of FNL search problems whose associated decision
-    language `{x | ∃ y, R x y}` is in coNL. -/
-def CoFNL : Set (List Bool → List Bool → Prop) :=
-  {R ∈ FNL | searchLang R ∈ CoNL}
 
 /-- **TFNL** is the class of total FNL search problems: every instance has at
     least one witness. -/

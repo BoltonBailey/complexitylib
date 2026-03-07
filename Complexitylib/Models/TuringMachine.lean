@@ -346,13 +346,11 @@ def AllPathsHaltIn (tm : NTM n) (T : ℕ → ℕ) : Prop :=
     tm.halted (tm.trace (T x.length) choices (tm.initCfg x))
 
 /-- NTM decides `L` within time bound `T(n)`:
-    all computation paths halt within `T(|x|)` steps, accepting paths exist iff `x ∈ L`,
-    and all paths output `0` when `x ∉ L`. -/
+    all computation paths halt within `T(|x|)` steps, and accepting paths exist
+    iff `x ∈ L` (AB Definition 2.1). -/
 def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   tm.AllPathsHaltIn T ∧
-  (∀ x, x ∈ L → tm.AcceptsInTime x (T x.length)) ∧
-  (∀ x, x ∉ L → ∀ (choices : Fin (T x.length) → Bool),
-    (tm.trace (T x.length) choices (tm.initCfg x)).output.cells 1 = Γ.zero)
+  (∀ x, x ∈ L ↔ tm.AcceptsInTime x (T x.length))
 
 /-- Count of accepting choice sequences of length `T`.
 
