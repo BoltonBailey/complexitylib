@@ -7,8 +7,6 @@ import Mathlib.Data.Nat.Log
 
 This file defines the space complexity classes `DSPACE`, `NSPACE`, **L**, **NL**,
 **coNL**, **FL**, and the search problem classes **FNL**, **coFNL**, **TFNL**
-(Arora-Barak Chapter 4).
-
 ## Space measurement
 
 Space is measured on work tapes only. The input tape is read-only (structurally
@@ -24,42 +22,41 @@ def IsLogBounded (f : ℕ → ℕ) : Prop :=
   ∃ c : ℕ, ∀ n, f n ≤ c * Nat.log 2 (n + 1) + c
 
 /-- `DSPACE(S)` is the class of languages decidable by a deterministic TM using
-    at most `S(n)` space on work tapes (Arora-Barak Definition 4.1). -/
+    at most `S(n)` space on work tapes. -/
 def DSPACE (S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : TM k), tm.DecidesInSpace L S}
 
 /-- `NSPACE(S)` is the class of languages decidable by a nondeterministic TM
-    using at most `S(n)` space on work tapes (Arora-Barak Definition 4.5). -/
+    using at most `S(n)` space on work tapes. -/
 def NSPACE (S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k), tm.DecidesInSpace L S}
 
 /-- **L** (LOGSPACE) is the class of languages decidable by a deterministic TM
-    using logarithmic space on work tapes (Arora-Barak Definition 4.1). -/
+    using logarithmic space on work tapes. -/
 def L : Set Language :=
   {L | ∃ S, IsLogBounded S ∧ L ∈ DSPACE S}
 
 /-- **NL** is the class of languages decidable by a nondeterministic TM using
-    logarithmic space on work tapes (Arora-Barak Definition 4.5). -/
+    logarithmic space on work tapes. -/
 def NL : Set Language :=
   {L | ∃ S, IsLogBounded S ∧ L ∈ NSPACE S}
 
 /-- **coNL** is the class of languages whose complements are in NL.
-    By the Immerman-Szelepcsényi theorem, coNL = NL, but this is a
-    nontrivial result (Arora-Barak Theorem 4.20). -/
+    By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
 def CoNL : Set Language :=
   {L | Lᶜ ∈ NL}
 
 /-- **FL** is the class of functions computable by a deterministic log-space
     transducer: a DTM with logarithmically bounded work tape space and a
-    right-only output tape (Arora-Barak Section 4.3). -/
+    right-only output tape. -/
 def FL : Set (List Bool → List Bool) :=
   {f | ∃ S, IsLogBounded S ∧ ∃ (k : ℕ) (tm : TM k), tm.ComputesInSpace f S}
 
 /-- **FNL** is the class of search problems defined by NL relations: binary
-    relations that are logarithmically balanced (witnesses have log-bounded
-    length) and decidable in L (Arora-Barak Section 4.3). -/
+    relations that are polynomially balanced (witnesses have poly-bounded
+    length) and decidable in L. -/
 def FNL : Set (List Bool → List Bool → Prop) :=
-  {R | (∃ S, IsLogBounded S ∧ ∀ x y, R x y → y.length ≤ S x.length) ∧
+  {R | (∃ p, IsPolyBounded p ∧ ∀ x y, R x y → y.length ≤ p x.length) ∧
        {z | ∃ x y, z = pair x y ∧ R x y} ∈ L}
 
 /-- **coFNL** is the class of FNL search problems whose associated decision

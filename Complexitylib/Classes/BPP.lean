@@ -5,7 +5,7 @@ import Complexitylib.Classes.Polynomial
 # BPP
 
 This file defines **BPP**, the class of languages decidable by a probabilistic
-Turing machine in polynomial time with bounded error (Arora-Barak Definition 7.1).
+Turing machine in polynomial time with bounded error.
 
 A PTM is an NTM where the two transition functions are selected uniformly at
 random. Acceptance probability is defined via `NTM.acceptProb`.
@@ -14,7 +14,7 @@ random. Acceptance probability is defined via `NTM.acceptProb`.
 /-- **BPP** is the class of languages decidable by a probabilistic TM in
     polynomial time with two-sided bounded error: all computation paths halt,
     yes-instances are accepted with probability ≥ 2/3, and no-instances are
-    accepted with probability ≤ 1/3 (Arora-Barak Definition 7.1). -/
+    accepted with probability ≤ 1/3. -/
 def BPP : Set Language :=
   {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ ∃ (k : ℕ) (tm : NTM k),
     (∀ x (choices : Fin (T x.length) → Bool),

@@ -10,7 +10,7 @@ A Lean 4 library formalizing computational complexity theory, built on Mathlib. 
 lake build
 ```
 
-Always verify the build passes with **no errors and no warnings** before considering a change complete. (The sole exception is the `sorry` warning from `TM.toNTM_accepts_iff`, which is an explicitly stated stub.)
+Always verify the build passes with **no errors and no warnings** before considering a change complete.
 
 ## Architecture
 
@@ -19,10 +19,17 @@ Always verify the build passes with **no errors and no warnings** before conside
 ```
 Complexitylib.lean               — root import (re-exports everything)
 Complexitylib/Models.lean        — aggregation import for computation models
-Complexitylib/Models/TuringMachine.lean — Γ, Dir3, TM, NTM, Cfg, step/trace, acceptance, Language
+Complexitylib/Models/TuringMachine.lean          — Γ, Dir3, TM, NTM, Cfg, step/trace, acceptance, Language
+Complexitylib/Models/TuringMachine/Internal.lean — proof internals (e.g. toNTM_accepts_iff)
 ```
 
 Aggregation files (`Complexitylib.lean`, `Models.lean`) contain only `import` statements — no definitions.
+
+### Internal Modules
+
+When a theorem requires substantial helper lemmas or proof machinery, place these in a companion `Internal` module (e.g., `Foo/Internal.lean`) rather than cluttering the main module. The main module (`Foo.lean`) keeps definitions and public API; the Internal module imports it and contains proof internals. Aggregation files import both.
+
+This lets readers understand a module's API without wading through proof details. For trivial proofs, `private` lemmas in the same file are fine — use Internal modules when the proof machinery would obscure the module's purpose.
 
 ### Key Design Decisions
 

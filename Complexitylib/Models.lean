@@ -1,1 +1,2 @@
 import Complexitylib.Models.TuringMachine
+import Complexitylib.Models.TuringMachine.Internal

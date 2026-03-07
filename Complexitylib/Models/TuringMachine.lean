@@ -45,7 +45,7 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 - **NTM execution**: Defined via `trace` (a fixed choice sequence), not a relational step.
 -/
 
-/-- The tape alphabet Γ = {0, 1, □, ▷} following Arora-Barak. -/
+/-- The tape alphabet Γ = {0, 1, □, ▷}. -/
 inductive Γ where
   | zero | one | blank | start
   deriving DecidableEq
@@ -88,10 +88,10 @@ instance : Fintype Dir3 where
   elems := {.left, .right, .stay}
   complete := fun x => by cases x <;> simp
 
-/-- A one-sided infinite tape following Arora-Barak.
-    Cell 0 is the leftmost cell and permanently contains `▷`. The head cannot move
-    left of cell 0 (moving left at position 0 is a no-op via `Nat` subtraction).
-    Writing at cell 0 is a no-op, preserving `▷`. -/
+/-- A one-sided infinite tape. Cell 0 is the leftmost cell and permanently
+    contains `▷`. The head cannot move left of cell 0 (moving left at position 0
+    is a no-op via `Nat` subtraction). Writing at cell 0 is a no-op,
+    preserving `▷`. -/
 structure Tape where
   head : ℕ
   cells : ℕ → Γ
@@ -117,8 +117,7 @@ def move (t : Tape) (d : Dir3) : Tape :=
 
 /-- The tape contains output `y : List Bool` starting at cell 1:
     cells 1 through |y| match `y`, and cell |y| + 1 is blank.
-    This matches Arora-Barak's convention that output is the binary
-    string written on the output tape after `▷`. -/
+    Output is the binary string written on the output tape after `▷`. -/
 def hasOutput (t : Tape) (y : List Bool) : Prop :=
   (∀ (i : ℕ) (h : i < y.length),
     t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
@@ -156,7 +155,7 @@ structure Cfg (n : ℕ) (Q : Type) where
   work : Fin n → Tape
   output : Tape
 
-/-- A deterministic Turing machine with `n` work tapes (Arora-Barak Definition 1.1).
+/-- A deterministic Turing machine with `n` work tapes.
 
     The machine has a read-only input tape, `n` read-write work tapes, and a read-write
     output tape. The transition function reads `Γ` from all tape heads but writes only
@@ -177,9 +176,9 @@ structure TM (n : ℕ) where
 
 attribute [instance] TM.decEq TM.finQ
 
-/-- A nondeterministic Turing machine with two transition functions (Arora-Barak Definition 2.1).
+/-- A nondeterministic Turing machine with two transition functions.
 
-    The same structure is used for probabilistic TMs (AB Section 7.1) — only the acceptance
+    The same structure is used for probabilistic TMs — only the acceptance
     criterion differs (existential for NTM, counting for PTM). `Q` is finite. -/
 structure NTM (n : ℕ) where
   Q : Type
@@ -245,12 +244,12 @@ def AcceptsInTime (tm : TM n) (x : List Bool) (T : ℕ) : Prop :=
     c'.output.cells 1 = Γ.one
 
 /-- DTM decides `L` within time bound `T(n)`: halts on all inputs within `T(|x|)` steps,
-    outputting `1` for `x ∈ L` and `0` for `x ∉ L` (Arora-Barak Definition 1.2). -/
+    outputting `1` for `x ∈ L` and `0` for `x ∉ L`. -/
 def DecidesInTime (tm : TM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
-/-- DTM computes function `f` in time `T(n)` (Arora-Barak Definition 1.4):
+/-- DTM computes function `f` in time `T(n)`:
     for every input `x`, the machine halts within `T(|x|)` steps with `f(x)`
     written on the output tape. -/
 def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) : Prop :=
@@ -263,7 +262,7 @@ def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
 
 /-- DTM decides `L` using at most `S(|x|)` space on work tapes: every reachable
     configuration has all work tape heads at position ≤ `S(|x|)`, and the machine
-    halts on all inputs with correct output (Arora-Barak Definition 4.1). -/
+    halts on all inputs with correct output. -/
 def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
   ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧
@@ -271,7 +270,7 @@ def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
 
 /-- DTM computes function `f` using at most `S(|x|)` space on work tapes, with
     the output tape head restricted to rightward movement only (log-space
-    transducer model, Arora-Barak Section 4.3). -/
+    transducer model). -/
 def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
   (∀ q iHead wHeads oHead,
     let (_, _, _, _, _, outDir) := tm.δ q iHead wHeads oHead
@@ -339,7 +338,7 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
     let c' := tm.trace T choices (tm.initCfg x)
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
 
-/-- NTM decides `L` within time bound `T(n)` (Arora-Barak Definition 2.1):
+/-- NTM decides `L` within time bound `T(n)`:
     all computation paths halt within `T(|x|)` steps, accepting paths exist iff `x ∈ L`,
     and all paths output `0` when `x ∉ L`. -/
 def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
@@ -379,15 +378,14 @@ noncomputable def outputCount (tm : NTM n) (x : List Bool) (T : ℕ)
 
     Meaningful when the machine halts on all paths within `T` steps.
     This generalizes `acceptProb` from accept/reject to arbitrary output
-    strings, as needed for cryptographic definitions (Katz-Lindell). -/
+    strings, as needed for cryptographic definitions. -/
 noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
     (y : List Bool) : ℚ :=
   (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
 
 /-- NTM decides `L` using at most `S(|x|)` space on work tapes: there exists a
     time bound within which all paths halt and decide correctly, and every
-    intermediate configuration on every path has work tape heads ≤ `S(|x|)`
-    (Arora-Barak Definition 4.5). -/
+    intermediate configuration on every path has work tape heads ≤ `S(|x|)`. -/
 def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   ∃ T, tm.DecidesInTime L T ∧
     ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),
@@ -403,8 +401,3 @@ def TM.toNTM (tm : TM n) : NTM n where
   qhalt := tm.qhalt
   δ := fun _ => tm.δ
   δ_right_of_start := fun _ => tm.δ_right_of_start
-
-/-- The DTM and its NTM embedding agree on acceptance. -/
-theorem TM.toNTM_accepts_iff (tm : TM n) (x : List Bool) :
-    tm.Accepts x ↔ (tm.toNTM).Accepts x := by
-  sorry
