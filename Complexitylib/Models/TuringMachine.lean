@@ -124,6 +124,11 @@ def hasOutput (t : Tape) (y : List Bool) : Prop :=
     t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
   t.cells (y.length + 1) = Γ.blank
 
+/-- `hasOutput` depends only on the tape cells, not the head position. -/
+theorem hasOutput_congr {t₁ t₂ : Tape} (h : t₁.cells = t₂.cells) (y : List Bool) :
+    t₁.hasOutput y ↔ t₂.hasOutput y := by
+  simp only [hasOutput, h]
+
 instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput y) :=
   if h : (∀ i : Fin y.length, t.cells (i.val + 1) = Γ.ofBool (y[i.val]'i.isLt)) ∧
          t.cells (y.length + 1) = Γ.blank
