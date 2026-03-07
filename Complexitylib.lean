@@ -1,2 +1,3 @@
 import Complexitylib.Models
+import Complexitylib.Asymptotics
 import Complexitylib.Classes

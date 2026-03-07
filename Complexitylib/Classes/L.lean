@@ -1,12 +1,14 @@
 import Complexitylib.Models.TuringMachine
+import Complexitylib.Asymptotics
 import Complexitylib.Classes.Pairing
 import Mathlib.Data.Nat.Log
 
 /-!
-# Logarithmic space complexity classes
+# Space complexity classes
 
 This file defines the space complexity classes `DSPACE`, `NSPACE`, **L**, **NL**,
 **coNL**, **FL**, and the search problem classes **FNL**, **TFNL**.
+
 ## Space measurement
 
 Space is measured on work tapes only. The input tape is read-only (structurally
@@ -15,34 +17,32 @@ additionally constrained to rightward-only head movement, preventing its use as
 extra workspace.
 -/
 
-/-- A function `f : ℕ → ℕ` is logarithmically bounded if there exists a constant
-    `c` such that `f(n) ≤ c * ⌊log₂(n + 1)⌋ + c` for all `n`. The `n + 1`
-    avoids `log₂(0)`; the additive `c` handles small inputs. -/
-def IsLogBounded (f : ℕ → ℕ) : Prop :=
-  ∃ c : ℕ, ∀ n, f n ≤ c * Nat.log 2 (n + 1) + c
+open Complexity
 
 /-- `DSPACE(S)` is the class of languages decidable by a deterministic TM using
-    at most `S(n)` space on work tapes. -/
+    `O(S(n))` space on work tapes. -/
 def DSPACE (S : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : TM k), tm.DecidesInSpace L S}
+  {L | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
+    tm.DecidesInSpace L f ∧ f =O S}
 
 /-- `NSPACE(S)` is the class of languages decidable by a nondeterministic TM
-    using at most `S(n)` space on work tapes. -/
+    using `O(S(n))` space on work tapes. -/
 def NSPACE (S : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k), tm.DecidesInSpace L S}
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    tm.DecidesInSpace L f ∧ f =O S}
 
 /-- **L** (LOGSPACE) is the class of languages decidable by a deterministic TM
-    using logarithmic space on work tapes. -/
+    using logarithmic space on work tapes: `L = DSPACE(log n)`. -/
 def L : Set Language :=
-  {L | ∃ S, IsLogBounded S ∧ L ∈ DSPACE S}
+  DSPACE (fun n => Nat.log 2 n)
 
 /-- Alias: `LOGSPACE` is another name for `L`. -/
 abbrev LOGSPACE := L
 
 /-- **NL** is the class of languages decidable by a nondeterministic TM using
-    logarithmic space on work tapes. -/
+    logarithmic space on work tapes: `NL = NSPACE(log n)`. -/
 def NL : Set Language :=
-  {L | ∃ S, IsLogBounded S ∧ L ∈ NSPACE S}
+  NSPACE (fun n => Nat.log 2 n)
 
 /-- **coNL** is the class of languages whose complements are in NL.
     By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
@@ -50,10 +50,11 @@ def CoNL : Set Language :=
   {L | Lᶜ ∈ NL}
 
 /-- **FL** is the class of functions computable by a deterministic log-space
-    transducer: a DTM with logarithmically bounded work tape space and a
-    right-only output tape. -/
+    transducer: a DTM with `O(log n)` work tape space and a right-only output
+    tape. -/
 def FL : Set (List Bool → List Bool) :=
-  {f | ∃ S, IsLogBounded S ∧ ∃ (k : ℕ) (tm : TM k), tm.ComputesInSpace f S}
+  {f | ∃ (k : ℕ) (tm : TM k) (S : ℕ → ℕ),
+    tm.ComputesInSpace f S ∧ S =O (fun n => Nat.log 2 n)}
 
 /-- **FNL** is the class of search problems with log-space verifiable relations:
     binary relations that are polynomially balanced (witnesses have poly-bounded

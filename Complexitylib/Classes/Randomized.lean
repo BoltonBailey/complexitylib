@@ -1,11 +1,12 @@
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Classes.Polynomial
+import Complexitylib.Asymptotics
 
 /-!
 # Randomized time complexity classes
 
 This file defines the randomized complexity classes **BPP**, **RP**, **coRP**,
-**ZPP**, and **PP**, along with the time-parameterized class `BPTIME`.
+**ZPP**, and **PP**, along with the time-parameterized classes `BPTIME`,
+`RTIME`, and `PPTIME`.
 
 A PTM (probabilistic Turing machine) is an NTM where the two transition
 functions are selected uniformly at random. Acceptance probability is defined
@@ -17,6 +18,8 @@ The acceptance-probability conditions shared across classes are factored into
 `NTM.AcceptsWithProb` (lower-bounding acceptance on yes-instances) and
 `NTM.RejectsWithProb` (upper-bounding acceptance on no-instances).
 -/
+
+open Complexity
 
 namespace NTM
 
@@ -39,37 +42,35 @@ def RejectsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (s : ℚ) : Pr
 
 end NTM
 
-/-- `BPTIME(T)` is the class of languages decidable by a PTM in time `c · T(n)`
-    for some constant `c`, with two-sided bounded error (accept probability ≥ 2/3
-    on yes-instances, ≤ 1/3 on no-instances). -/
+/-- `BPTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`
+    with two-sided bounded error (accept probability ≥ 2/3 on yes-instances,
+    ≤ 1/3 on no-instances). -/
 def BPTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (c k : ℕ) (tm : NTM k),
-    let T' := fun n => c * T n
-    tm.AllPathsHaltIn T' ∧
-    tm.AcceptsWithProb L T' (2 / 3) ∧
-    tm.RejectsWithProb L T' (1 / 3)}
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    f =O T ∧
+    tm.AllPathsHaltIn f ∧
+    tm.AcceptsWithProb L f (2 / 3) ∧
+    tm.RejectsWithProb L f (1 / 3)}
 
 /-- **BPP** is the class of languages decidable by a PTM in polynomial time
-    with two-sided bounded error: yes-instances accepted with probability ≥ 2/3,
-    no-instances accepted with probability ≤ 1/3. -/
+    with two-sided bounded error: `BPP = ⋃_k BPTIME(n^k)`. -/
 def BPP : Set Language :=
-  {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ L ∈ BPTIME T}
+  ⋃ k : ℕ, BPTIME (· ^ k)
 
-/-- `RTIME(T)` is the class of languages decidable by a PTM in time `c · T(n)`
-    for some constant `c`, with one-sided error: yes-instances accepted with
-    probability ≥ 1/2, no-instances never accepted (accept probability 0). -/
+/-- `RTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`
+    with one-sided error: yes-instances accepted with probability ≥ 1/2,
+    no-instances never accepted (accept probability 0). -/
 def RTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (c k : ℕ) (tm : NTM k),
-    let T' := fun n => c * T n
-    tm.AllPathsHaltIn T' ∧
-    tm.AcceptsWithProb L T' (1 / 2) ∧
-    tm.RejectsWithProb L T' 0}
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    f =O T ∧
+    tm.AllPathsHaltIn f ∧
+    tm.AcceptsWithProb L f (1 / 2) ∧
+    tm.RejectsWithProb L f 0}
 
 /-- **RP** is the class of languages decidable by a PTM in polynomial time
-    with one-sided error: yes-instances accepted with probability ≥ 1/2,
-    no-instances never accepted. -/
+    with one-sided error: `RP = ⋃_k RTIME(n^k)`. -/
 def RP : Set Language :=
-  {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ L ∈ RTIME T}
+  ⋃ k : ℕ, RTIME (· ^ k)
 
 /-- **coRP** is the class of languages whose complements are in RP.
     Equivalently: yes-instances always accepted (probability 1), no-instances
@@ -82,11 +83,17 @@ def CoRP : Set Language :=
     time. -/
 def ZPP : Set Language := RP ∩ CoRP
 
+/-- `PPTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`
+    with unbounded error: `x ∈ L` iff the PTM accepts with probability
+    strictly greater than 1/2. -/
+def PPTIME (T : ℕ → ℕ) : Set Language :=
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    f =O T ∧
+    tm.AllPathsHaltIn f ∧
+    tm.AcceptsWithStrictProb L f (1 / 2) ∧
+    tm.RejectsWithProb L f (1 / 2)}
+
 /-- **PP** (probabilistic polynomial time) is the class of languages decidable
-    by a PTM in polynomial time with unbounded error: `x ∈ L` iff the PTM
-    accepts with probability strictly greater than 1/2. -/
+    by a PTM in polynomial time with unbounded error: `PP = ⋃_k PPTIME(n^k)`. -/
 def PP : Set Language :=
-  {L | ∃ (T : ℕ → ℕ), IsPolyBounded T ∧ ∃ (k : ℕ) (tm : NTM k),
-    tm.AllPathsHaltIn T ∧
-    tm.AcceptsWithStrictProb L T (1 / 2) ∧
-    tm.RejectsWithProb L T (1 / 2)}
+  ⋃ k : ℕ, PPTIME (· ^ k)
