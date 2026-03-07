@@ -261,6 +261,24 @@ def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) :
 def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
   ∃ T, tm.ComputesInTime f T
 
+/-- DTM decides `L` using at most `S(|x|)` space on work tapes: every reachable
+    configuration has all work tape heads at position ≤ `S(|x|)`, and the machine
+    halts on all inputs with correct output (Arora-Barak Definition 4.1). -/
+def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧
+    (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- DTM computes function `f` using at most `S(|x|)` space on work tapes, with
+    the output tape head restricted to rightward movement only (log-space
+    transducer model, Arora-Barak Section 4.3). -/
+def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
+  (∀ q iHead wHeads oHead,
+    let (_, _, _, _, _, outDir) := tm.δ q iHead wHeads oHead
+    outDir ≠ Dir3.left) ∧
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.hasOutput (f x)
+
 /-- Transitivity: if `c₁` reaches `c₂` in `t₁` steps and `c₂` reaches `c₃`
     in `t₂` steps, then `c₁` reaches `c₃` in `t₁ + t₂` steps. -/
 theorem reachesIn_trans (tm : TM n) {t₁ t₂ : ℕ} {c₁ c₂ c₃ : Cfg n tm.Q}
@@ -365,6 +383,16 @@ noncomputable def outputCount (tm : NTM n) (x : List Bool) (T : ℕ)
 noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
     (y : List Bool) : ℚ :=
   (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
+
+/-- NTM decides `L` using at most `S(|x|)` space on work tapes: there exists a
+    time bound within which all paths halt and decide correctly, and every
+    intermediate configuration on every path has work tape heads ≤ `S(|x|)`
+    (Arora-Barak Definition 4.5). -/
+def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
+  ∃ T, tm.DecidesInTime L T ∧
+    ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),
+      ∀ i, ((tm.trace t' (fun j => choices ⟨j.val, by omega⟩) (tm.initCfg x)).work i).head
+        ≤ S x.length
 
 end NTM
 

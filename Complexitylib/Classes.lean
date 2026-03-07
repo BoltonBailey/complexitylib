@@ -6,3 +6,4 @@ import Complexitylib.Classes.BPP
 import Complexitylib.Classes.FP
 import Complexitylib.Classes.FNP
 import Complexitylib.Classes.PPT
+import Complexitylib.Classes.L
