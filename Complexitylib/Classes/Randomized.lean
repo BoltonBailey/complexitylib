@@ -30,11 +30,6 @@ variable {n : ℕ}
 def AcceptsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (c : ℚ) : Prop :=
   ∀ x, x ∈ L → tm.acceptProb x (T x.length) ≥ c
 
-/-- The PTM accepts every `x ∈ L` with probability strictly greater than `c`
-    within `T(|x|)` steps. Used for PP (unbounded error). -/
-def AcceptsWithStrictProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (c : ℚ) : Prop :=
-  ∀ x, x ∈ L → tm.acceptProb x (T x.length) > c
-
 /-- The PTM accepts every `x ∉ L` with probability at most `s` within
     `T(|x|)` steps. -/
 def RejectsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (s : ℚ) : Prop :=
@@ -90,8 +85,7 @@ def PPTIME (T : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
     f =O T ∧
     tm.AllPathsHaltIn f ∧
-    tm.AcceptsWithStrictProb L f (1 / 2) ∧
-    tm.RejectsWithProb L f (1 / 2)}
+    ∀ x, x ∈ L ↔ tm.acceptProb x (f x.length) > 1 / 2}
 
 /-- **PP** (probabilistic polynomial time) is the class of languages decidable
     by a PTM in polynomial time with unbounded error: `PP = ⋃_k PPTIME(n^k)`. -/

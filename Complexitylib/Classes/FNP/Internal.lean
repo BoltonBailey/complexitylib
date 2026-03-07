@@ -11,21 +11,20 @@ Helper lemmas for `tagRelation` used by the surface-layer theorem
 theorem tagRelation_polyBalanced {R₁ R₂ : List Bool → List Bool → Prop}
     (h₁ : PolyBalanced R₁) (h₂ : PolyBalanced R₂) :
     PolyBalanced (tagRelation R₁ R₂) := by
-  obtain ⟨p₁, hp₁, hb₁⟩ := h₁
-  obtain ⟨p₂, hp₂, hb₂⟩ := h₂
-  refine ⟨fun n => p₁ n + p₂ n + 1, ?_, ?_⟩
-  · obtain ⟨q₁, hq₁⟩ := hp₁
-    obtain ⟨q₂, hq₂⟩ := hp₂
-    exact ⟨q₁ + q₂ + Polynomial.C 1, fun n => by
-      simp [Polynomial.eval_add]
-      exact Nat.add_le_add (hq₁ n) (hq₂ n)⟩
-  · intro x y hR
-    cases y with
-    | nil => simp [tagRelation] at hR
-    | cons b w =>
-      cases b with
-      | true => have := hb₁ x w hR; simp [List.length_cons]; omega
-      | false => have := hb₂ x w hR; simp [List.length_cons]; omega
+  obtain ⟨p₁, hb₁⟩ := h₁
+  obtain ⟨p₂, hb₂⟩ := h₂
+  refine ⟨p₁ + p₂ + Polynomial.C 1, ?_⟩
+  intro x y hR
+  cases y with
+  | nil => simp [tagRelation] at hR
+  | cons b w =>
+    cases b with
+    | true =>
+      have := hb₁ x w hR
+      simp [Polynomial.eval_add, List.length_cons]; omega
+    | false =>
+      have := hb₂ x w hR
+      simp [Polynomial.eval_add, List.length_cons]; omega
 
 /-- If both pair languages are in P, so is the pair language of the tagged
     relation. Requires constructing a TM that reads the tag bit and dispatches

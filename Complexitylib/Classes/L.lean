@@ -7,7 +7,7 @@ import Mathlib.Data.Nat.Log
 # Space complexity classes
 
 This file defines the space complexity classes `DSPACE`, `NSPACE`, **L**, **NL**,
-**coNL**, **FL**, and the search problem classes **FNL**, **TFNL**.
+**coNL**, **PSPACE**, **FL**, and the search problem classes **FNL**, **TFNL**.
 
 ## Space measurement
 
@@ -68,3 +68,8 @@ def FNL : Set (List Bool → List Bool → Prop) :=
     least one witness. -/
 def TFNL : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNL | ∀ x, ∃ y, R x y}
+
+/-- **PSPACE** is the class of languages decidable by a deterministic TM using
+    polynomial space on work tapes: `PSPACE = ⋃_k DSPACE(n^k)`. -/
+def PSPACE : Set Language :=
+  ⋃ k : ℕ, DSPACE (· ^ k)

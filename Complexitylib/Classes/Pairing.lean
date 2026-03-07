@@ -1,5 +1,5 @@
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Classes.Polynomial
+import Mathlib.Algebra.Polynomial.Eval.Defs
 
 /-!
 # Pairing and relation predicates
@@ -60,7 +60,7 @@ theorem pair_injective {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
     by a polynomial in the input length. This is the standard "short witness"
     condition used in the definitions of NP, FNP, FNL, etc. -/
 def PolyBalanced (R : List Bool → List Bool → Prop) : Prop :=
-  ∃ p, IsPolyBounded p ∧ ∀ x y, R x y → y.length ≤ p x.length
+  ∃ p : Polynomial ℕ, ∀ x y, R x y → y.length ≤ p.eval x.length
 
 /-- The **pair language** (verification language) of a binary relation `R`:
     the set of encoded pairs `pair(x, y)` such that `R x y` holds. -/
