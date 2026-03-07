@@ -10,9 +10,10 @@ and **coNP** as the complement class.
 -/
 
 /-- `NTIME(T)` is the class of languages decidable by a nondeterministic TM in
-    time `T(n)`. The machine may have any number of work tapes. -/
+    time `c · T(n)` for some constant `c` (AB Definition 2.1). The machine may
+    have any number of work tapes. -/
 def NTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k), tm.DecidesInTime L T}
+  {L | ∃ (c k : ℕ) (tm : NTM k), tm.DecidesInTime L (fun n => c * T n)}
 
 /-- **NP** is the class of languages decidable by a nondeterministic TM in
     polynomial time: `NP = ∪_T NTIME(T)` over polynomially bounded `T`. -/

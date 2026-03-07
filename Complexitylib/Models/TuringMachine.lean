@@ -260,8 +260,10 @@ def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) :
 def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
   ∃ T, tm.ComputesInTime f T
 
-/-- DTM decides `L` using at most `S(|x|)` space on work tapes: every reachable
-    configuration has all work tape heads at position ≤ `S(|x|)`, and the machine
+/-- DTM decides `L` using at most `S(|x|)` space on work tapes. Space is
+    measured as the maximum work tape head position reached during computation:
+    every reachable configuration has all work tape heads at position ≤ `S(|x|)`.
+    The input tape (read-only) and output tape are not counted. The machine
     halts on all inputs with correct output. -/
 def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
@@ -387,9 +389,12 @@ noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
     (y : List Bool) : ℚ :=
   (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
 
-/-- NTM decides `L` using at most `S(|x|)` space on work tapes: there exists a
-    time bound within which all paths halt and decide correctly, and every
-    intermediate configuration on every path has work tape heads ≤ `S(|x|)`. -/
+/-- NTM decides `L` using at most `S(|x|)` space on work tapes. Space is
+    measured as the maximum work tape head position reached during computation:
+    every intermediate configuration on every computation path has all work tape
+    heads at position ≤ `S(|x|)`. The input tape (read-only) and output tape are
+    not counted. There exists a time bound within which all paths halt and decide
+    correctly. -/
 def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   ∃ T, tm.DecidesInTime L T ∧
     ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),

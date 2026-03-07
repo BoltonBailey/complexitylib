@@ -1,5 +1,5 @@
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Classes.FNP
+import Complexitylib.Classes.Pairing
 import Mathlib.Data.Nat.Log
 
 /-!
