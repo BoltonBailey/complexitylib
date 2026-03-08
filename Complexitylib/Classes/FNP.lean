@@ -11,9 +11,9 @@ certificate-finding problem is in TFNP (Megiddo–Papadimitriou 1991).
 -/
 
 /-- **NP ∩ coNP yields TFNP** (Megiddo–Papadimitriou 1991): given FNP relations
-    `R₁` (witnesses for `x ∈ L`) and `R₂` (witnesses for `x ∉ L`), the tagged
-    relation is in TFNP. The tag bit records which type of certificate was found,
-    so any solution to the search problem decides `L`.
+    `R₁` (witnesses for `x ∈ L`) and `R₂` (witnesses for `x ∉ L`), the combined
+    relation is in TFNP. Any witness valid for either component serves as a
+    solution to the combined search problem.
 
     Combined with the NP witness theorem
     (`NP = {L | ∃ R ∈ FNP, ∀ x, x ∈ L ↔ ∃ y, R x y}`),
@@ -29,6 +29,6 @@ theorem tfnp_of_np_conp_witnesses
   intro x
   by_cases hx : x ∈ L
   · obtain ⟨w, hw⟩ := (h_mem x).mp hx
-    exact ⟨true :: w, hw⟩
+    exact ⟨w, Or.inl hw⟩
   · obtain ⟨w, hw⟩ := (h_nmem x).mp hx
-    exact ⟨false :: w, hw⟩
+    exact ⟨w, Or.inr hw⟩

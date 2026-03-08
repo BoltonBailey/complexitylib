@@ -21,12 +21,9 @@ def FNP : Set (List Bool → List Bool → Prop) :=
 def TFNP : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNP | ∀ x, ∃ y, R x y}
 
-/-- Combine two witness relations with a tag bit. `true :: w` dispatches to
-    `R₁`, `false :: w` dispatches to `R₂`. Used to construct TFNP problems
-    from NP ∩ coNP witness pairs. -/
+/-- Combine two witness relations by disjunction. Used to construct TFNP
+    problems from NP ∩ coNP witness pairs: the combined relation accepts any
+    witness valid for either component. -/
 def tagRelation (R₁ R₂ : List Bool → List Bool → Prop) :
     List Bool → List Bool → Prop :=
-  fun x y => match y with
-    | true :: w => R₁ x w
-    | false :: w => R₂ x w
-    | [] => False
+  fun x y => R₁ x y ∨ R₂ x y
