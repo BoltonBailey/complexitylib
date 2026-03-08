@@ -180,8 +180,8 @@ private theorem phase1_init_step (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List B
     {c_mid : Cfg n₁ tm₁.Q} (hstep : tm₁.step (tm₁.initCfg x) = some c_mid) :
     (unionTM tm₁ tm₂).step ((unionTM tm₁ tm₂).initCfg x) = some (phase1Cfg tm₁ tm₂ c_mid) := by
   have hne : tm₁.qstart ≠ tm₁.qhalt := by
-    intro heq; simp [step, initCfg, heq] at hstep
-  simp only [step, initCfg] at hstep ⊢
+    intro heq; simp [step, heq] at hstep
+  simp only [step] at hstep ⊢
   rw [if_neg hne] at hstep
   simp only [Option.some.injEq] at hstep
   subst hstep
@@ -207,10 +207,10 @@ private theorem phase1_init_step (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List B
   · -- work tapes
     ext i; dsimp only [phase1Cfg]; split
     · -- i < n₁: all tapes start at initTape [], write at head 0 is no-op
-      simp [initTape, Tape.write, Tape.read]
+      simp [initTape, Tape.read]
     · split
       · -- i = n₁
-        simp [initTape, Tape.write, Tape.read]
+        simp [initTape, Tape.read]
       · -- i > n₁: becomes idleTape
         simp [initTape, Tape.write, Tape.read, idleTape, idleDir, Tape.move]
   · -- output: becomes idleTape (phase1Cfg always has idleTape as output)
@@ -1005,14 +1005,14 @@ private theorem phase2_work_step_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
       congr 1; simp only [hine, ↓reduceIte]
     · -- q ≠ qhalt: write/dir have dif/if structure
       congr 1
-      · congr 1; congr 1; show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else Γw.blank) = Γw.blank
+      · congr 1; show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else Γw.blank) = Γw.blank
         rw [dif_neg (show ¬((i : ℕ) < n₁) from by omega), if_neg hine]
       · show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else idleDir (c.work i).read) = _
         rw [dif_neg (show ¬((i : ℕ) < n₁) from by omega), if_neg hine]
   · rw [hq]; dsimp only [unionTM]; split
     · congr 1; simp only [hine, ↓reduceIte]
     · congr 1
-      · congr 1; congr 1; simp only [hine, ↓reduceIte]
+      · congr 1; simp only [hine, ↓reduceIte]
       · simp only [hine, ↓reduceIte]
   · rw [hq]; dsimp only [unionTM]; split <;> rfl
   · rw [hq]; dsimp only [unionTM]; split <;> rfl
@@ -1527,7 +1527,7 @@ theorem phase2_simulation (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
       c_end.state = Sum.inr (Sum.inr c₂.state) ∧
       c_end.output = c₂.output := by
   have hcompat : Phase2Compat tm₁ tm₂ c_start (tm₂.initCfg x) :=
-    ⟨by rw [hss]; rfl, hsi, hsw, hso⟩
+    ⟨by rw [hss], hsi, hsw, hso⟩
   obtain ⟨c_end, hreach_u, hcompat_end⟩ := phase2_steps tm₁ tm₂ hreach hcompat
   exact ⟨c_end, hreach_u, hcompat_end.state_eq, hcompat_end.output_eq⟩
 
@@ -1575,7 +1575,7 @@ theorem head_bound_of_reachesIn (tm : TM n₁)
       c.output.head ≤ c₀.output.head + t ∧
       ∀ i, (c.work i).head ≤ (c₀.work i).head + t by
     have h := gen t (tm.initCfg x) c hreach
-    simp [TM.initCfg, initTape] at h
+    simp [initTape] at h
     exact h
   intro t c₀ c hreach
   induction hreach with

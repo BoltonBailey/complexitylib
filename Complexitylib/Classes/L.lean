@@ -36,9 +36,6 @@ def NSPACE (S : ℕ → ℕ) : Set Language :=
 def L : Set Language :=
   DSPACE (fun n => Nat.log 2 n)
 
-/-- Alias: `LOGSPACE` is another name for `L`. -/
-abbrev LOGSPACE := L
-
 /-- **NL** is the class of languages decidable by a nondeterministic TM using
     logarithmic space on work tapes: `NL = NSPACE(log n)`. -/
 def NL : Set Language :=

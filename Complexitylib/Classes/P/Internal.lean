@@ -32,17 +32,17 @@ private theorem qstart_ne_qhalt_of_decidesInTime {tm : TM n₁}
   obtain ⟨c', t, _, hreach, hhalt, hmem, hnmem⟩ := h []
   -- Since qstart = qhalt, initCfg is halted, so reachesIn can only give t=0, c'=initCfg
   have hhalted_init : (tm.initCfg []).state = tm.qhalt := by
-    simp [initCfg, heq]
+    simp [heq]
   -- step returns none for halted configs, so reachesIn must be zero
   have : c' = tm.initCfg [] ∧ t = 0 := by
     cases hreach with
     | zero => exact ⟨rfl, rfl⟩
     | step hstep _ =>
-      simp [step, hhalted_init] at hstep
+      simp [step, heq] at hstep
   obtain ⟨rfl, _⟩ := this
   -- output cell 1 of initCfg is blank
   have hblank : (tm.initCfg []).output.cells 1 = Γ.blank := by
-    simp [initCfg, initTape]
+    simp [initTape]
   -- But DecidesInTime requires it to be either one or zero
   by_cases hx : ([] : List Bool) ∈ L
   · have := hmem hx; rw [hblank] at this; exact absurd this (by decide)
@@ -68,11 +68,11 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   -- t₁ ≥ 1 since qstart ≠ qhalt (halting at step 0 means qstart = qhalt)
   have ht₁_pos : t₁ ≥ 1 := by
     rcases t₁ with _ | t₁
-    · cases hreach₁; simp [halted, initCfg] at hhalt₁; exact absurd hhalt₁ hne₁
+    · cases hreach₁; exact absurd hhalt₁ hne₁
     · omega
   have ht₂_pos : t₂ ≥ 1 := by
     rcases t₂ with _ | t₂
-    · cases hreach₂; simp [halted, initCfg] at hhalt₂; exact absurd hhalt₂ hne₂
+    · cases hreach₂; exact absurd hhalt₂ hne₂
     · omega
   -- Head bounds: tape heads are ≤ t₁ after Phase 1
   have hbounds := head_bound_of_reachesIn tm₁ hreach₁
@@ -134,47 +134,8 @@ end TM
 /-- If `f₁ =O T₁` and `f₂ =O T₂`, then `10·f₁ + f₂ =O (T₁ + T₂)`. -/
 private theorem bigO_union_bound {f₁ f₂ T₁ T₂ : ℕ → ℕ}
     (ho₁ : f₁ =O T₁) (ho₂ : f₂ =O T₂) :
-    (fun n => 10 * f₁ n + f₂ n) =O (fun n => T₁ n + T₂ n) := by
-  -- Unfold our BigO to Mathlib's IsBigO
-  show (fun n => ((10 * f₁ n + f₂ n : ℕ) : ℝ)) =O[atTop]
-       (fun n => ((T₁ n + T₂ n : ℕ) : ℝ))
-  -- Cast to ℝ and decompose
-  have h1 : (fun n => ((f₁ n : ℕ) : ℝ)) =O[atTop] (fun n => ((T₁ n : ℕ) : ℝ)) := ho₁
-  have h2 : (fun n => ((f₂ n : ℕ) : ℝ)) =O[atTop] (fun n => ((T₂ n : ℕ) : ℝ)) := ho₂
-  -- T₁ =O (T₁ + T₂) since T₁ ≤ T₁ + T₂
-  have hT₁_le : (fun n => ((T₁ n : ℕ) : ℝ)) =O[atTop]
-      (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) := by
-    apply IsBigO.of_bound 1
-    filter_upwards with n
-    simp only [Nat.cast_add, one_mul, Real.norm_natCast]
-    exact le_of_le_of_eq (le_add_of_nonneg_right (Nat.cast_nonneg (α := ℝ) (T₂ n)))
-      (abs_of_nonneg (add_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))).symm
-  -- T₂ =O (T₁ + T₂) since T₂ ≤ T₁ + T₂
-  have hT₂_le : (fun n => ((T₂ n : ℕ) : ℝ)) =O[atTop]
-      (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) := by
-    apply IsBigO.of_bound 1
-    filter_upwards with n
-    simp only [Nat.cast_add, one_mul, Real.norm_natCast]
-    exact le_of_le_of_eq (le_add_of_nonneg_left (Nat.cast_nonneg (α := ℝ) (T₁ n)))
-      (abs_of_nonneg (add_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _))).symm
-  -- f₁ =O (T₁ + T₂) by transitivity
-  have hf₁ : (fun n => ((f₁ n : ℕ) : ℝ)) =O[atTop]
-      (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) := h1.trans hT₁_le
-  -- 10 * f₁ =O (T₁ + T₂) by constant factor
-  have h7f₁ : (fun n => ((10 * f₁ n : ℕ) : ℝ)) =O[atTop]
-      (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) := by
-    have : (fun n => (10 : ℝ) * ((f₁ n : ℕ) : ℝ)) =O[atTop]
-        (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) :=
-      hf₁.const_mul_left 10
-    convert this using 1
-    ext n; push_cast; ring
-  -- f₂ =O (T₁ + T₂) by transitivity
-  have hf₂ : (fun n => ((f₂ n : ℕ) : ℝ)) =O[atTop]
-      (fun n => ((T₁ n + T₂ n : ℕ) : ℝ)) := h2.trans hT₂_le
-  -- 10 * f₁ + f₂ =O (T₁ + T₂) by sum
-  have := h7f₁.add hf₂
-  convert this using 1
-  ext n; push_cast; ring
+    (fun n => 10 * f₁ n + f₂ n) =O (fun n => T₁ n + T₂ n) :=
+  BigO.const_mul_add 10 ho₁ ho₂
 
 -- ════════════════════════════════════════════════════════════════════════
 -- DTIME_union
