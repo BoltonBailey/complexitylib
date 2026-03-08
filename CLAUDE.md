@@ -83,7 +83,7 @@ Follow Mathlib style:
 - **No `module` keyword** in aggregation files — they import files with definitions, and `module` files can only import other `module` files.
 - **`List.get?` removed**: Use `l[i]?` (GetElem? syntax) instead of `l.get? i` in Lean 4 v4.28.0+.
 - **Lambda expressions in conjunction chains** need explicit parens: `c'.work = (fun i => ...) ∧ ...`
-- **`open` scoping**: `open Turing` is wrapped in a `section`/`end` block, not at module level.
+- **`open` scoping**: Prefer `open Foo in` or `section`/`end` blocks over module-level `open` to avoid namespace pollution.
 - **`DecidableEq Q` and `Fintype Q`**: The `TM` and `NTM` structures carry these as instance fields, exposed via `attribute [instance]`. `DecidableEq` is needed for `if c.state = tm.qhalt` in `step`/`trace`; `Fintype` matches AB's finite state requirement.
 - **Existential binders**: Use `∃ (T : ℕ) (choices : Fin T → Bool), ...` with explicit type annotations — omitting them causes parse errors.
 

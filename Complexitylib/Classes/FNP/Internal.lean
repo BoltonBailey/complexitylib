@@ -1,5 +1,5 @@
 import Complexitylib.Classes.FNP.Defs
-import Complexitylib.Classes.P.Internal
+import Complexitylib.Classes.P
 import Mathlib.Analysis.Asymptotics.Defs
 
 /-!

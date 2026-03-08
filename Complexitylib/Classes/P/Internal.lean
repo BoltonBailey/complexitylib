@@ -6,7 +6,7 @@ import Mathlib.Analysis.Asymptotics.Defs
 /-!
 # P closure properties — proof internals
 
-This file contains the proofs behind `DTIME_union` (DTIME closed under union).
+This file contains the proof helpers used by `DTIME_union` (stated in `P.lean`).
 The key simulation theorem `unionTM_decidesInTime` establishes that the
 composite machine from `TM.unionTM` correctly decides `L₁ ∪ L₂`.
 -/
@@ -128,26 +128,11 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
 end TM
 
 -- ════════════════════════════════════════════════════════════════════════
--- BigO arithmetic: 8·f₁ + f₂ =O (T₁ + T₂)
+-- BigO arithmetic: 10·f₁ + f₂ =O (T₁ + T₂)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- If `f₁ =O T₁` and `f₂ =O T₂`, then `10·f₁ + f₂ =O (T₁ + T₂)`. -/
-private theorem bigO_union_bound {f₁ f₂ T₁ T₂ : ℕ → ℕ}
+theorem bigO_union_bound {f₁ f₂ T₁ T₂ : ℕ → ℕ}
     (ho₁ : f₁ =O T₁) (ho₂ : f₂ =O T₂) :
     (fun n => 10 * f₁ n + f₂ n) =O (fun n => T₁ n + T₂ n) :=
   BigO.const_mul_add 10 ho₁ ho₂
-
--- ════════════════════════════════════════════════════════════════════════
--- DTIME_union
--- ════════════════════════════════════════════════════════════════════════
-
-/-- **DTIME is closed under union** (AB Claim 1.5): if `L₁ ∈ DTIME(T₁)` and
-    `L₂ ∈ DTIME(T₂)`, then `L₁ ∪ L₂ ∈ DTIME(T₁ + T₂)`. -/
-theorem DTIME_union {T₁ T₂ : ℕ → ℕ} {L₁ L₂ : Language}
-    (h₁ : L₁ ∈ DTIME T₁) (h₂ : L₂ ∈ DTIME T₂) :
-    L₁ ∪ L₂ ∈ DTIME (fun n => T₁ n + T₂ n) := by
-  obtain ⟨k₁, tm₁, f₁, hd₁, ho₁⟩ := h₁
-  obtain ⟨k₂, tm₂, f₂, hd₂, ho₂⟩ := h₂
-  exact ⟨k₁ + 1 + k₂, TM.unionTM tm₁ tm₂, fun n => 10 * f₁ n + f₂ n,
-    TM.unionTM_decidesInTime hd₁ hd₂,
-    bigO_union_bound ho₁ ho₂⟩
