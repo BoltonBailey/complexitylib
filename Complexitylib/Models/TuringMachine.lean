@@ -135,6 +135,10 @@ instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput 
   then isTrue ⟨fun i hi => h.1 ⟨i, hi⟩, h.2⟩
   else isFalse (fun ⟨h1, h2⟩ => h ⟨fun i => h1 i.val i.isLt, h2⟩)
 
+/-- Write a symbol and move in one step. -/
+abbrev writeAndMove (t : Tape) (s : Γ) (d : Dir3) : Tape :=
+  (t.write s).move d
+
 end Tape
 
 /-- Initialize a tape: `▷` at cell 0, `contents` at cells 1, 2, ..., `□` elsewhere.
@@ -155,6 +159,21 @@ structure Cfg (n : ℕ) (Q : Type) where
   input : Tape
   work : Fin n → Tape
   output : Tape
+
+namespace Cfg
+
+/-- Initial configuration for any TM: input on the input tape, all tapes start with `▷`. -/
+abbrev init (qstart : Q) (x : List Bool) : Cfg n Q :=
+  { state := qstart
+    input := initTape (x.map Γ.ofBool)
+    work := fun _ => initTape []
+    output := initTape [] }
+
+/-- A configuration is halted when its state equals the halt state. -/
+abbrev isHalted [DecidableEq Q] (qhalt : Q) (c : Cfg n Q) : Prop :=
+  c.state = qhalt
+
+end Cfg
 
 /-- A deterministic Turing machine with `n` work tapes.
 
@@ -210,18 +229,16 @@ def step (tm : TM n) (c : Cfg n tm.Q) : Option (Cfg n tm.Q) :=
     some
       { state := q'
         input := c.input.move inDir
-        work := fun i => ((c.work i).write (workWrites i)).move (workDirs i)
-        output := (c.output.write outWrite).move outDir }
+        work := fun i => (c.work i).writeAndMove (workWrites i) (workDirs i)
+        output := c.output.writeAndMove outWrite outDir }
 
 /-- Initial configuration: input on the input tape, all tapes start with `▷`. -/
-def initCfg (tm : TM n) (x : List Bool) : Cfg n tm.Q :=
-  { state := tm.qstart
-    input := initTape (x.map Γ.ofBool)
-    work := fun _ => initTape []
-    output := initTape [] }
+abbrev initCfg (tm : TM n) (x : List Bool) : Cfg n tm.Q :=
+  Cfg.init tm.qstart x
 
 /-- A configuration is halted when its state is `qhalt`. -/
-def halted (tm : TM n) (c : Cfg n tm.Q) : Prop := c.state = tm.qhalt
+abbrev halted (tm : TM n) (c : Cfg n tm.Q) : Prop :=
+  Cfg.isHalted tm.qhalt c
 
 /-- One-step relation for a deterministic TM. -/
 def stepRel (tm : TM n) (c c' : Cfg n tm.Q) : Prop := tm.step c = some c'
@@ -321,19 +338,17 @@ def trace (tm : NTM n) :
       let c' : Cfg n tm.Q :=
         { state := q'
           input := c.input.move inDir
-          work := fun i => ((c.work i).write (workWrites i)).move (workDirs i)
-          output := (c.output.write outWrite).move outDir }
+          work := fun i => (c.work i).writeAndMove (workWrites i) (workDirs i)
+          output := c.output.writeAndMove outWrite outDir }
       tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c'
 
 /-- Initial configuration: input on the input tape, all tapes start with `▷`. -/
-def initCfg (tm : NTM n) (x : List Bool) : Cfg n tm.Q :=
-  { state := tm.qstart
-    input := initTape (x.map Γ.ofBool)
-    work := fun _ => initTape []
-    output := initTape [] }
+abbrev initCfg (tm : NTM n) (x : List Bool) : Cfg n tm.Q :=
+  Cfg.init tm.qstart x
 
 /-- A configuration is halted when its state is `qhalt`. -/
-def halted (tm : NTM n) (c : Cfg n tm.Q) : Prop := c.state = tm.qhalt
+abbrev halted (tm : NTM n) (c : Cfg n tm.Q) : Prop :=
+  Cfg.isHalted tm.qhalt c
 
 /-- NTM accepts `x`: there exists a time bound and choice sequence leading to
     `qhalt` with output cell 1 = `1`. -/

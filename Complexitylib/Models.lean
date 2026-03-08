@@ -1,2 +1,4 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal

@@ -42,10 +42,10 @@ end NTM
     ≤ 1/3 on no-instances). -/
 def BPTIME (T : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
-    f =O T ∧
     tm.AllPathsHaltIn f ∧
     tm.AcceptsWithProb L f (2 / 3) ∧
-    tm.RejectsWithProb L f (1 / 3)}
+    tm.RejectsWithProb L f (1 / 3) ∧
+    f =O T}
 
 /-- **BPP** is the class of languages decidable by a PTM in polynomial time
     with two-sided bounded error: `BPP = ⋃_k BPTIME(n^k)`. -/
@@ -57,10 +57,10 @@ def BPP : Set Language :=
     no-instances never accepted (accept probability 0). -/
 def RTIME (T : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
-    f =O T ∧
     tm.AllPathsHaltIn f ∧
     tm.AcceptsWithProb L f (1 / 2) ∧
-    tm.RejectsWithProb L f 0}
+    tm.RejectsWithProb L f 0 ∧
+    f =O T}
 
 /-- **RP** is the class of languages decidable by a PTM in polynomial time
     with one-sided error: `RP = ⋃_k RTIME(n^k)`. -/
@@ -83,9 +83,9 @@ def ZPP : Set Language := RP ∩ CoRP
     strictly greater than 1/2. -/
 def PPTIME (T : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
-    f =O T ∧
     tm.AllPathsHaltIn f ∧
-    ∀ x, x ∈ L ↔ tm.acceptProb x (f x.length) > 1 / 2}
+    (∀ x, x ∈ L ↔ tm.acceptProb x (f x.length) > 1 / 2) ∧
+    f =O T}
 
 /-- **PP** (probabilistic polynomial time) is the class of languages decidable
     by a PTM in polynomial time with unbounded error: `PP = ⋃_k PPTIME(n^k)`. -/
