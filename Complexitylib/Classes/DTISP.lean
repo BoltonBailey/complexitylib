@@ -6,7 +6,7 @@ import Mathlib.Data.Nat.Log
 # Simultaneous time-space complexity classes
 
 This file defines the simultaneous time-space class `DTISP(T, S)` and **SC**
-(Steve's Class), following Arora-Barak Chapter 4.
+(Steve's Class).
 
 The key distinction from intersecting separate time and space classes is that
 `DTISP` requires a *single* machine satisfying both bounds simultaneously.
