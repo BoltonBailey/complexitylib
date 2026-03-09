@@ -30,6 +30,9 @@ This file collects the standard containment results between complexity classes.
 - `BPTIME_sub_PPTIME` — `BPTIME(T) ⊆ PPTIME(T)` (bounded error → unbounded error)
 - `BPP_sub_PP` — `BPP ⊆ PP`
 - `P_compl` — `L ∈ P → Lᶜ ∈ P` (P closed under complement)
+- `DSPACE_sub_NSPACE` — `DSPACE(S) ⊆ NSPACE(S)`
+- `NSPACE_mono` — `S₁ =O S₂ → NSPACE(S₁) ⊆ NSPACE(S₂)`
+- `L_sub_NL` — `L ⊆ NL`
 -/
 
 open Complexity
@@ -228,4 +231,20 @@ theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
     filter_upwards [Ioi_mem_atTop 0] with n hn
     simp only [Real.norm_natCast]
     exact_mod_cast le_mul_of_one_le_right (by omega) (Nat.one_le_pow _ _ hn))
+
+/-- **DSPACE ⊆ NSPACE**: every language decidable by a DTM in space `O(S)` is also
+    decidable by an NTM in space `O(S)`, via the `TM.toNTM` embedding. -/
+theorem DSPACE_sub_NSPACE (S : ℕ → ℕ) : DSPACE S ⊆ NSPACE S := by
+  intro L ⟨k, tm, f, hdec, hbig⟩
+  exact ⟨k, tm.toNTM, f, tm.toNTM_decidesInSpace hdec, hbig⟩
+
+/-- NSPACE is monotone: if `S₁ =O S₂`, then `NSPACE S₁ ⊆ NSPACE S₂`. -/
+theorem NSPACE_mono {S₁ S₂ : ℕ → ℕ} (h : S₁ =O S₂) : NSPACE S₁ ⊆ NSPACE S₂ := by
+  intro L ⟨k, tm, f, hdec, hbig⟩
+  exact ⟨k, tm, f, hdec, hbig.trans h⟩
+
+/-- **L ⊆ NL**: every deterministic log-space transducer language is also in NL. -/
+theorem L_sub_NL : L ⊆ NL := by
+  intro L ⟨k, tm, f, htrans, hdec, hbig⟩
+  exact ⟨k, tm.toNTM, f, tm.toNTM_isTransducer htrans, tm.toNTM_decidesInSpace hdec, hbig⟩
 

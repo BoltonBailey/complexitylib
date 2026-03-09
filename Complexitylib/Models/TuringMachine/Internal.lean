@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine
+import Mathlib.Data.Finset.Lattice.Fold
 
 /-!
 # TM–NTM embedding: proof internals
@@ -31,7 +32,7 @@ private lemma TM.reaches_toNTM_trace (tm : TM n) {a c' : Cfg n tm.Q}
       simp [TM.stepRel] at hstep; simp [hstep]
     rw [this]; exact hT _
 
-private lemma TM.toNTM_trace_reaches (tm : TM n) (c : Cfg n tm.Q)
+lemma TM.toNTM_trace_reaches (tm : TM n) (c : Cfg n tm.Q)
     (T : ℕ) (choices : Fin T → Bool) :
     tm.reaches c (tm.toNTM.trace T choices c) := by
   induction T generalizing c with
@@ -227,3 +228,61 @@ theorem TM.reachesIn_le_halt (tm : TM n) {c c' c_halt : Cfg n tm.Q}
 lemma TM.initCfg_work_head_zero (tm : TM n) (x : List Bool) (i : Fin n) :
     ((tm.initCfg x).work i).head = 0 := by
   simp [initTape]
+
+/-- If a DTM is a transducer, so is its NTM embedding. -/
+theorem TM.toNTM_isTransducer (tm : TM n) (h : tm.IsTransducer) : tm.toNTM.IsTransducer := by
+  intro b q iHead wHeads oHead
+  simp only [TM.toNTM]
+  exact h q iHead wHeads oHead
+
+/-- If a DTM decides `L` in space `f`, then its NTM embedding also decides `L`
+    in space `f`. The uniform time bound is constructed as the maximum halting
+    time over all inputs of each length. -/
+theorem TM.toNTM_decidesInSpace (tm : TM n) {L : Language} {f : ℕ → ℕ}
+    (h : tm.DecidesInSpace L f) : tm.toNTM.DecidesInSpace L f := by
+  -- Extract per-input halting times
+  have hdata : ∀ x, ∃ t c', tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
+      (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero) := by
+    intro x
+    obtain ⟨c', hreach, hhalt, hyes, hno⟩ := h.2 x
+    obtain ⟨t, hreachIn⟩ := tm.reaches_to_reachesIn hreach
+    exact ⟨t, c', hreachIn, hhalt, hyes, hno⟩
+  choose t_fn c_fn hreachIn hhalt hyes hno using hdata
+  -- Uniform time bound: max halting time over all inputs of each length
+  let T : ℕ → ℕ := fun m =>
+    Finset.sup (Finset.univ : Finset (Fin m → Bool)) (fun v => t_fn (List.ofFn v))
+  have hle_T : ∀ x, t_fn x ≤ T x.length := by
+    intro x
+    show t_fn x ≤ Finset.sup Finset.univ (fun v => t_fn (List.ofFn v))
+    conv_lhs => rw [show x = List.ofFn (fun i : Fin x.length => x[↑i]) from
+      (List.ofFn_getElem (l := x)).symm]
+    exact Finset.le_sup (f := fun v => t_fn (List.ofFn v))
+      (Finset.mem_univ (fun i : Fin x.length => x[↑i]))
+  refine ⟨T, ⟨?_, ?_⟩, ?_⟩
+  · -- AllPathsHaltIn
+    intro x choices
+    have htrace := tm.toNTM_trace_of_reachesIn (hreachIn x) (hhalt x) (hle_T x) choices
+    change (tm.toNTM.trace _ choices (tm.initCfg x)).state = tm.qhalt
+    rw [htrace]; exact hhalt x
+  · -- x ∈ L ↔ AcceptsInTime
+    intro x; constructor
+    · intro hx
+      refine ⟨fun _ => false, ?_, ?_⟩
+      · change (tm.toNTM.trace _ _ (tm.initCfg x)).state = tm.qhalt
+        rw [tm.toNTM_trace_of_reachesIn (hreachIn x) (hhalt x) (hle_T x)]
+        exact hhalt x
+      · change (tm.toNTM.trace _ _ (tm.initCfg x)).output.cells 1 = Γ.one
+        rw [tm.toNTM_trace_of_reachesIn (hreachIn x) (hhalt x) (hle_T x)]
+        exact hyes x hx
+    · intro ⟨choices, hhalt_ch, hout_ch⟩
+      by_contra hxL
+      have htrace := tm.toNTM_trace_of_reachesIn (hreachIn x) (hhalt x) (hle_T x) choices
+      change (tm.toNTM.trace _ choices (tm.initCfg x)).output.cells 1 = _ at hout_ch
+      rw [htrace] at hout_ch
+      have := hno x hxL
+      simp_all
+  · -- Space bound
+    intro x choices t' ht' i
+    have hreach := tm.toNTM_trace_reaches (tm.initCfg x) t'
+      (fun j : Fin t' => choices ⟨j.val, by omega⟩)
+    exact h.1 x _ hreach i
