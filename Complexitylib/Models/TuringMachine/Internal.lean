@@ -46,6 +46,70 @@ private lemma TM.toNTM_trace_reaches (tm : TM n) (c : Cfg n tm.Q)
         (show tm.stepRel c _ by simp [TM.stepRel, TM.step, hne, TM.toNTM])
         (ih _ _)
 
+/-- Once halted, NTM trace stays at the same configuration. -/
+private lemma NTM.trace_halted (tm : NTM n) {c : Cfg n tm.Q}
+    (T : ℕ) (choices : Fin T → Bool) (h : tm.halted c) :
+    tm.trace T choices c = c := by
+  induction T with
+  | zero => rfl
+  | succ T _ => simp [NTM.trace, h]
+
+/-- For `toNTM`, the trace is independent of the choice sequence since both
+    transition functions are identical. -/
+lemma TM.toNTM_trace_choice_irrel (tm : TM n) (T : ℕ) (c : Cfg n tm.Q)
+    (ch₁ ch₂ : Fin T → Bool) :
+    tm.toNTM.trace T ch₁ c = tm.toNTM.trace T ch₂ c := by
+  induction T generalizing c with
+  | zero => rfl
+  | succ T ih =>
+    simp only [NTM.trace]
+    split
+    · rfl
+    · simp only [TM.toNTM]; exact ih _ _ _
+
+/-- If a DTM reaches `c'` in exactly `t` steps, then `toNTM.trace t` agrees. -/
+private lemma TM.toNTM_reachesIn_trace (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
+    (h : tm.reachesIn t c c') (ch : Fin t → Bool) :
+    tm.toNTM.trace t ch c = c' := by
+  induction h with
+  | zero => rfl
+  | @step c₀ c_mid _ _ hstep _ ih =>
+    have hne : c₀.state ≠ tm.qhalt := by
+      intro heq; simp [TM.step, heq] at hstep
+    rw [tm.toNTM_trace_step _ ch hne]
+    have : (tm.step c₀).get (by simp [TM.step, hne]) = c_mid := by
+      simp [TM.step, hne] at hstep ⊢; exact hstep
+    rw [this]; exact ih _
+
+/-- If a DTM halts within `t ≤ T` steps, then `toNTM.trace T` reaches the same
+    halted configuration regardless of choices. -/
+lemma TM.toNTM_trace_of_reachesIn (tm : TM n) {c c' : Cfg n tm.Q}
+    {t T : ℕ} (h : tm.reachesIn t c c') (hhalt : tm.halted c')
+    (hle : t ≤ T) (ch : Fin T → Bool) :
+    tm.toNTM.trace T ch c = c' := by
+  induction T generalizing c t with
+  | zero =>
+    have : t = 0 := by omega
+    subst this; cases h; rfl
+  | succ T ih =>
+    by_cases hh : c.state = tm.qhalt
+    · -- c is halted → t = 0 → c = c'
+      have : t = 0 := by
+        by_contra hp; obtain ⟨t', rfl⟩ := Nat.exists_eq_succ_of_ne_zero hp
+        cases h with | step hs _ => simp [TM.step, hh] at hs
+      subst this; cases h; simp [NTM.trace, TM.toNTM, hh]
+    · -- c not halted → t > 0 → peel one step
+      have ht_pos : t ≠ 0 := by
+        intro h0; subst h0; cases h; exact hh hhalt
+      obtain ⟨t', rfl⟩ := Nat.exists_eq_succ_of_ne_zero ht_pos
+      obtain ⟨c_mid, hstep, hrest⟩ : ∃ c_mid, tm.step c = some c_mid ∧ tm.reachesIn t' c_mid c' := by
+        cases h with | step hs hr => exact ⟨_, hs, hr⟩
+      rw [tm.toNTM_trace_step T ch hh]
+      have : (tm.step c).get (by simp [TM.step, hh]) = c_mid := by
+        simp [hstep]
+      rw [this]
+      exact ih hrest (by omega) _
+
 /-- The DTM and its NTM embedding agree on acceptance. -/
 theorem TM.toNTM_accepts_iff (tm : TM n) (x : List Bool) :
     tm.Accepts x ↔ (tm.toNTM).Accepts x := by
@@ -57,3 +121,109 @@ theorem TM.toNTM_accepts_iff (tm : TM n) (x : List Bool) :
       by change (tm.toNTM.trace T _ (tm.initCfg x)).output.cells 1 = _; rw [hT]; exact hout⟩
   · rintro ⟨T, choices, hhalt, hout⟩
     exact ⟨_, tm.toNTM_trace_reaches _ T choices, hhalt, hout⟩
+
+/-- If a DTM decides `L` in time `f`, then its NTM embedding also decides `L`
+    in time `f`. This is the key internal lemma for `DTIME ⊆ NTIME`. -/
+theorem TM.toNTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
+    (h : tm.DecidesInTime L f) : tm.toNTM.DecidesInTime L f := by
+  refine ⟨?_, ?_⟩
+  · -- AllPathsHaltIn
+    intro x choices
+    obtain ⟨c', t, hle, hreach, hhalt, _, _⟩ := h x
+    have htrace := tm.toNTM_trace_of_reachesIn hreach hhalt hle choices
+    change (tm.toNTM.trace _ choices (tm.initCfg x)).state = tm.qhalt
+    rw [htrace]; exact hhalt
+  · -- x ∈ L ↔ AcceptsInTime
+    intro x; constructor
+    · -- x ∈ L → AcceptsInTime
+      intro hx
+      obtain ⟨c', t, hle, hreach, hhalt, hyes, _⟩ := h x
+      refine ⟨fun _ => false, ?_, ?_⟩
+      · change (tm.toNTM.trace _ _ (tm.initCfg x)).state = _
+        rw [tm.toNTM_trace_of_reachesIn hreach hhalt hle]; exact hhalt
+      · change (tm.toNTM.trace _ _ (tm.initCfg x)).output.cells 1 = _
+        rw [tm.toNTM_trace_of_reachesIn hreach hhalt hle]; exact hyes hx
+    · -- AcceptsInTime → x ∈ L
+      intro ⟨choices, hhalt_ch, hout_ch⟩
+      obtain ⟨c', t, hle, hreach, hhalt, _, hno⟩ := h x
+      by_contra hxL
+      have htrace := tm.toNTM_trace_of_reachesIn hreach hhalt hle choices
+      change (tm.toNTM.trace _ choices (tm.initCfg x)).output.cells 1 = _ at hout_ch
+      rw [htrace] at hout_ch
+      have := hno hxL
+      simp_all
+
+/-- `write` does not change the head position. -/
+private lemma Tape.head_write (t : Tape) (s : Γ) : (t.write s).head = t.head := by
+  simp [Tape.write]; split <;> rfl
+
+/-- Tape head changes by at most 1 per `move` operation. -/
+private lemma Tape.head_move_le (t : Tape) (d : Dir3) :
+    (t.move d).head ≤ t.head + 1 := by
+  cases d <;> simp [Tape.move] <;> omega
+
+/-- `writeAndMove` changes head by at most 1. -/
+private lemma Tape.head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
+    (t.writeAndMove s d).head ≤ t.head + 1 := by
+  unfold Tape.writeAndMove
+  have h1 := Tape.head_move_le (t.write s) d
+  rw [Tape.head_write] at h1; exact h1
+
+/-- Work tape heads grow by at most 1 per step. -/
+private lemma TM.work_head_step_bound (tm : TM n) {c c' : Cfg n tm.Q}
+    (h : tm.step c = some c') (i : Fin n) :
+    (c'.work i).head ≤ (c.work i).head + 1 := by
+  simp only [TM.step] at h
+  split at h
+  · simp at h
+  · simp only [Option.some.injEq] at h
+    rw [← h]
+    exact Tape.head_writeAndMove_le _ _ _
+
+/-- After `t` steps, each work tape head is at most `t` plus its initial value. -/
+theorem TM.work_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
+    (h : tm.reachesIn t c c') (i : Fin n) :
+    (c'.work i).head ≤ (c.work i).head + t := by
+  induction h with
+  | zero => omega
+  | @step c₀ c_mid _ _ hstep _ ih =>
+    have := tm.work_head_step_bound hstep i
+    omega
+
+/-- Convert `reaches` to `reachesIn`. -/
+theorem TM.reaches_to_reachesIn (tm : TM n) {c c' : Cfg n tm.Q}
+    (h : tm.reaches c c') : ∃ t, tm.reachesIn t c c' := by
+  induction h using Relation.ReflTransGen.head_induction_on with
+  | refl => exact ⟨0, .zero⟩
+  | head hstep _ ih =>
+    obtain ⟨t, ht⟩ := ih
+    exact ⟨t + 1, .step hstep ht⟩
+
+/-- A DTM step is deterministic: `step` is a function. -/
+private lemma TM.step_det (tm : TM n) {c c₁ c₂ : Cfg n tm.Q}
+    (h₁ : tm.step c = some c₁) (h₂ : tm.step c = some c₂) : c₁ = c₂ := by
+  rw [h₁] at h₂; exact Option.some.inj h₂
+
+/-- If a DTM halts at step `t_halt`, then any `reachesIn t` has `t ≤ t_halt`. -/
+theorem TM.reachesIn_le_halt (tm : TM n) {c c' c_halt : Cfg n tm.Q}
+    {t t_halt : ℕ} (hr : tm.reachesIn t c c')
+    (hh : tm.reachesIn t_halt c c_halt) (hhalt : tm.halted c_halt) :
+    t ≤ t_halt := by
+  induction t generalizing c t_halt with
+  | zero => omega
+  | succ t ih =>
+    cases hr with | @step c₀ c_mid _ _ hs hr' =>
+    cases t_halt with
+    | zero =>
+      cases hh
+      simp [TM.step, hhalt] at hs
+    | succ t_halt' =>
+      cases hh with | step hs' hh' =>
+      have := tm.step_det hs hs'
+      subst this
+      exact Nat.succ_le_succ (ih hr' hh')
+
+/-- Initial work tape heads are all at position 0. -/
+lemma TM.initCfg_work_head_zero (tm : TM n) (x : List Bool) (i : Fin n) :
+    ((tm.initCfg x).work i).head = 0 := by
+  simp [initTape]
