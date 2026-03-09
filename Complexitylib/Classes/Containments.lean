@@ -4,6 +4,7 @@ import Complexitylib.Classes.Randomized
 import Complexitylib.Classes.L
 import Complexitylib.Classes.Exponential
 import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
 /-!
 # Containment relations between complexity classes
@@ -28,6 +29,7 @@ This file collects the standard containment results between complexity classes.
 - `EXP_sub_NEXP` — `EXP ⊆ NEXP`
 - `BPTIME_sub_PPTIME` — `BPTIME(T) ⊆ PPTIME(T)` (bounded error → unbounded error)
 - `BPP_sub_PP` — `BPP ⊆ PP`
+- `P_compl` — `L ∈ P → Lᶜ ∈ P` (P closed under complement)
 -/
 
 open Complexity
@@ -207,4 +209,23 @@ theorem BPTIME_sub_PPTIME (T : ℕ → ℕ) : BPTIME T ⊆ PPTIME T := by
 /-- **BPP ⊆ PP**. -/
 theorem BPP_sub_PP : BPP ⊆ PP :=
   Set.iUnion_mono fun _ => BPTIME_sub_PPTIME _
+
+/-- **P is closed under complement**: if `L ∈ P` then `Lᶜ ∈ P`. -/
+theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
+  obtain ⟨k, n_tapes, tm, f, hdec, hbig⟩ := Set.mem_iUnion.mp h
+  refine Set.mem_iUnion.mpr ⟨k + 1, n_tapes, tm.complementTM, fun n => 2 * f n + 4,
+    tm.complementTM_decidesInTime hdec, ?_⟩
+  -- (fun n => 2 * f n + 4) =O (· ^ (k + 1))
+  open Asymptotics Filter in
+  have hpow : (· ^ k) =O (· ^ (k + 1)) := by
+    apply IsBigO.of_bound 1
+    filter_upwards [Ioi_mem_atTop 0] with n hn
+    simp only [one_mul, Real.norm_natCast]
+    exact_mod_cast Nat.pow_le_pow_right hn (Nat.le_succ k)
+  open Asymptotics Filter in
+  exact BigO.add (BigO.const_mul_left 2 (hbig.trans hpow)) (by
+    apply IsBigO.of_bound 4
+    filter_upwards [Ioi_mem_atTop 0] with n hn
+    simp only [Real.norm_natCast]
+    exact_mod_cast le_mul_of_one_le_right (by omega) (Nat.one_le_pow _ _ hn))
 

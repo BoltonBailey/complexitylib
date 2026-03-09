@@ -301,4 +301,119 @@ def unionTM (tm₁ : TM n₁) (tm₂ : TM n₂) : TM (n₁ + 1 + n₂) :=
               rwa [show wHeads ⟨n₁ + 1 + (↑i - (n₁ + 1)), by omega⟩ = wHeads i from by
                 congr 1; ext; simp; omega]) }
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Complement TM
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Intermediate states for the complement machine's output-flipping phase. -/
+inductive ComplementPhase where
+  | rewind  -- rewind output head left to cell 0, then right to cell 1
+  | flip    -- at cell 1: flip the output bit and halt
+  | done    -- halt state
+  deriving DecidableEq
+
+instance : Fintype ComplementPhase where
+  elems := {.rewind, .flip, .done}
+  complete := fun x => by cases x <;> simp
+
+/-- The state type for the complement TM. -/
+abbrev ComplementQ (Q : Type) := Q ⊕ ComplementPhase
+
+/-- Flip a readable symbol: `1 ↔ 0`, blanks stay blank. -/
+def flipBit (g : Γ) : Γw :=
+  match g with
+  | .one => .zero
+  | .zero => .one
+  | .blank => .blank
+  | .start => .blank
+
+/-- Construct a TM deciding `Lᶜ` from a TM deciding `L`.
+
+    The complement machine has the same number of work tapes as the original.
+    It runs in three stages:
+
+    1. **Simulate**: Run the original TM. When it halts, transition to `rewind`.
+    2. **Rewind**: Move the output head left to `▷` (cell 0), then right to cell 1.
+    3. **Flip**: Read output cell 1, write the flipped bit, and halt. -/
+def complementTM (tm : TM n) : TM n :=
+  haveI : Fintype tm.Q := tm.finQ
+  haveI : DecidableEq tm.Q := tm.decEq
+  { Q := ComplementQ tm.Q,
+    qstart := Sum.inl tm.qstart,
+    qhalt := Sum.inr .done,
+    δ := fun state iHead wHeads oHead =>
+    match state with
+    -- ══════════════════════════════════════════════════════════════════
+    -- Simulation phase: run original TM
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inl q =>
+      if q = tm.qhalt then
+        -- Original TM halted → begin rewinding output
+        -- Write back the current output symbol to preserve cell contents
+        ( Sum.inr .rewind,
+          fun _ => .blank,
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        -- Not halted → run original δ, wrapping state in Sum.inl
+        let (q', wW, oW, iD, wD, oD) := tm.δ q iHead wHeads oHead
+        ( Sum.inl q', wW, oW, iD, wD, oD )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Rewind phase: move output head left to ▷, then right to cell 1
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr .rewind =>
+      if oHead = Γ.start then
+        -- At cell 0 (▷) → move right to cell 1, enter flip state
+        ( Sum.inr .flip,
+          fun _ => .blank,
+          .blank,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          Dir3.right )
+      else
+        -- Not at cell 0 → keep moving left, preserve output cell contents
+        ( Sum.inr .rewind,
+          fun _ => .blank,
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          Dir3.left )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Flip phase: at cell 1, flip the output bit and halt
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr .flip =>
+      ( Sum.inr .done,
+        fun _ => .blank,
+        flipBit oHead,
+        idleDir iHead,
+        fun i => idleDir (wHeads i),
+        idleDir oHead )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Done (= qhalt): unreachable by step, but δ is total
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr .done =>
+      allIdle (Sum.inr .done) iHead wHeads oHead,
+    δ_right_of_start := by
+      intro state iHead wHeads oHead
+      match state with
+      | Sum.inl q =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tm.δ_right_of_start q iHead wHeads oHead
+      | Sum.inr .rewind =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, fun _ => rfl⟩
+        · refine ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, ?_⟩
+          intro h; next hn => exact absurd h hn
+      | Sum.inr .flip =>
+        exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+               idleDir_right_of_start⟩
+      | Sum.inr .done =>
+        exact rightOfStart_allIdle iHead wHeads oHead }
+
 end TM
