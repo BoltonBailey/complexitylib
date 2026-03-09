@@ -1,5 +1,5 @@
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Classes.P.Defs
+import Complexitylib.Classes.Space
 import Complexitylib.Classes.Pairing
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
@@ -14,8 +14,8 @@ These classes require the machine to be a *transducer* (`IsTransducer`): the
 output tape head never moves left, preventing it from being used as extra
 workspace beyond the `O(log n)` space bound on work tapes.
 
-The base parametric classes `DSPACE`, `NSPACE`, and `PSPACE` (which do not
-require the transducer property) are defined in `P/Defs.lean`.
+The base parametric classes `DSPACE` and `NSPACE` (which do not require the
+transducer property) are defined in `Space.lean`.
 -/
 
 open Complexity

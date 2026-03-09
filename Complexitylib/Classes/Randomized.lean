@@ -2,11 +2,11 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 
 /-!
-# Randomized time complexity classes
+# Randomized complexity classes
 
 This file defines the randomized complexity classes **BPP**, **RP**, **coRP**,
 **ZPP**, and **PP**, along with the time-parameterized classes `BPTIME`,
-`RTIME`, and `PPTIME`.
+`RTIME`, and `PPTIME`, and the predicate `NTM.IsPPT`.
 
 A PTM (probabilistic Turing machine) is an NTM where the two transition
 functions are selected uniformly at random. Acceptance probability is defined
@@ -34,6 +34,13 @@ def AcceptsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (c : ℚ) : Pr
     `T(|x|)` steps. -/
 def RejectsWithProb (tm : NTM n) (L : Language) (T : ℕ → ℕ) (s : ℚ) : Prop :=
   ∀ x, x ∉ L → tm.acceptProb x (T x.length) ≤ s
+
+/-- An NTM is **probabilistic polynomial-time (PPT)** if there exist a time
+    bound `f` and degree `d` such that every computation path halts within
+    `f(|x|)` steps and `f(n) = O(n^d)`. This is the central notion in
+    cryptographic security definitions. -/
+def IsPPT (tm : NTM n) : Prop :=
+  ∃ (f : ℕ → ℕ) (d : ℕ), tm.AllPathsHaltIn f ∧ f =O (· ^ d)
 
 end NTM
 

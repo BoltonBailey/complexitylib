@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine
+import Complexitylib.Classes.Space
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
 

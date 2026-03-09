@@ -1,5 +1,4 @@
-import Complexitylib.Classes.P
-import Complexitylib.Classes.NP
+import Complexitylib.Classes.Time
 
 /-!
 # Exponential time complexity classes
