@@ -1,45 +1,39 @@
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Asymptotics
+import Complexitylib.Classes.P.Defs
 import Complexitylib.Classes.Pairing
+import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
 
 /-!
-# Space complexity classes
+# Log-space transducer classes
 
-This file defines the space complexity classes `DSPACE`, `NSPACE`, **L**, **NL**,
-**coNL**, **PSPACE**, **FL**, and the search problem classes **FNL**, **TFNL**.
+This file defines the log-space complexity classes **L**, **NL**, **coNL**,
+**FL**, and the search problem classes **FNL**, **TFNL**.
 
-## Space measurement
+These classes require the machine to be a *transducer* (`IsTransducer`): the
+output tape head never moves left, preventing it from being used as extra
+workspace beyond the `O(log n)` space bound on work tapes.
 
-Space is measured on work tapes only. The input tape is read-only (structurally
-in our model) and does not count. For function classes (FL), the output tape is
-additionally constrained to rightward-only head movement, preventing its use as
-extra workspace.
+The base parametric classes `DSPACE`, `NSPACE`, and `PSPACE` (which do not
+require the transducer property) are defined in `P/Defs.lean`.
 -/
 
 open Complexity
 
-/-- `DSPACE(S)` is the class of languages decidable by a deterministic TM using
-    `O(S(n))` space on work tapes. -/
-def DSPACE (S : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
-    tm.DecidesInSpace L f ∧ f =O S}
-
-/-- `NSPACE(S)` is the class of languages decidable by a nondeterministic TM
-    using `O(S(n))` space on work tapes. -/
-def NSPACE (S : ℕ → ℕ) : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
-    tm.DecidesInSpace L f ∧ f =O S}
-
-/-- **L** (LOGSPACE) is the class of languages decidable by a deterministic TM
-    using logarithmic space on work tapes: `L = DSPACE(log n)`. -/
+/-- **L** (LOGSPACE) is the class of languages decidable by a deterministic
+    log-space transducer: a DTM with `O(log n)` work tape space whose output
+    tape head never moves left. The transducer constraint prevents the output
+    tape from being used as extra workspace beyond the space bound. -/
 def L : Set Language :=
-  DSPACE (fun n => Nat.log 2 n)
+  {L | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
+    tm.IsTransducer ∧ tm.DecidesInSpace L f ∧ f =O (fun n => Nat.log 2 n)}
 
-/-- **NL** is the class of languages decidable by a nondeterministic TM using
-    logarithmic space on work tapes: `NL = NSPACE(log n)`. -/
+/-- **NL** is the class of languages decidable by a nondeterministic log-space
+    transducer: an NTM with `O(log n)` work tape space whose output tape head
+    never moves left. -/
 def NL : Set Language :=
-  NSPACE (fun n => Nat.log 2 n)
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    tm.IsTransducer ∧ tm.DecidesInSpace L f ∧ f =O (fun n => Nat.log 2 n)}
 
 /-- **coNL** is the class of languages whose complements are in NL.
     By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
@@ -47,11 +41,11 @@ def CoNL : Set Language :=
   {L | Lᶜ ∈ NL}
 
 /-- **FL** is the class of functions computable by a deterministic log-space
-    transducer: a DTM with `O(log n)` work tape space and a right-only output
-    tape. -/
+    transducer: a DTM with `O(log n)` work tape space whose output tape head
+    never moves left. -/
 def FL : Set (List Bool → List Bool) :=
   {f | ∃ (k : ℕ) (tm : TM k) (S : ℕ → ℕ),
-    tm.ComputesInSpace f S ∧ S =O (fun n => Nat.log 2 n)}
+    tm.IsTransducer ∧ tm.ComputesInSpace f S ∧ S =O (fun n => Nat.log 2 n)}
 
 /-- **FNL** is the class of search problems with log-space verifiable relations:
     binary relations that are polynomially balanced (witnesses have poly-bounded
@@ -65,8 +59,3 @@ def FNL : Set (List Bool → List Bool → Prop) :=
     least one witness. -/
 def TFNL : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNL | ∀ x, ∃ y, R x y}
-
-/-- **PSPACE** is the class of languages decidable by a deterministic TM using
-    polynomial space on work tapes: `PSPACE = ⋃_k DSPACE(n^k)`. -/
-def PSPACE : Set Language :=
-  ⋃ k : ℕ, DSPACE (· ^ k)

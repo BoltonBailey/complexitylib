@@ -296,13 +296,17 @@ def DecidesInTimeSpace (tm : TM n) (L : Language) (T S : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
-/-- DTM computes function `f` using at most `S(|x|)` space on work tapes, with
-    the output tape head restricted to rightward movement only (log-space
-    transducer model). -/
-def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
-  (∀ q iHead wHeads oHead,
+/-- The output tape head never moves left — the machine is a *transducer*.
+    This prevents the output tape from being used as extra workspace. Required
+    for log-space classes (L, NL, FL) where unbounded output space would
+    otherwise violate the space bound. -/
+def IsTransducer (tm : TM n) : Prop :=
+  ∀ q iHead wHeads oHead,
     let (_, _, _, _, _, outDir) := tm.δ q iHead wHeads oHead
-    outDir ≠ Dir3.left) ∧
+    outDir ≠ Dir3.left
+
+/-- DTM computes function `f` using at most `S(|x|)` space on work tapes. -/
+def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
   (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
   ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.hasOutput (f x)
 
@@ -424,6 +428,15 @@ def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
     ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),
       ∀ i, ((tm.trace t' (fun j => choices ⟨j.val, by omega⟩) (tm.initCfg x)).work i).head
         ≤ S x.length
+
+/-- The output tape head never moves left — the machine is a *transducer*.
+    This prevents the output tape from being used as extra workspace. Required
+    for log-space classes (NL) where unbounded output space would otherwise
+    violate the space bound. -/
+def IsTransducer (tm : NTM n) : Prop :=
+  ∀ b q iHead wHeads oHead,
+    let (_, _, _, _, _, outDir) := tm.δ b q iHead wHeads oHead
+    outDir ≠ Dir3.left
 
 end NTM
 

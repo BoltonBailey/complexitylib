@@ -2,13 +2,13 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 
 /-!
-# DTIME, P, and FP
+# Base complexity classes
 
-This file defines the deterministic time complexity class `DTIME(T)`, the
-class **P** of languages decidable in polynomial time, and the function class
-**FP** of functions computable in polynomial time.
+This file defines the parametric complexity classes `DTIME(T)`, `DSPACE(S)`,
+`NSPACE(S)`, the derived classes **P**, **PSPACE**, and the function class
+**FP**.
 
-Time-parameterized classes use `=O` (Mathlib's `IsBigO` lifted to `ℕ → ℕ`)
+All parameterized classes use `=O` (Mathlib's `IsBigO` lifted to `ℕ → ℕ`)
 to express asymptotic bounds, following standard complexity-theoretic
 conventions (see https://complexityzoo.net/Complexity_Zoo).
 -/
@@ -32,3 +32,20 @@ def P : Set Language :=
 def FP : Set (List Bool → List Bool) :=
   {f | ∃ (d k : ℕ) (tm : TM k) (T : ℕ → ℕ),
     tm.ComputesInTime f T ∧ T =O (· ^ d)}
+
+/-- `DSPACE(S)` is the class of languages decidable by a deterministic TM using
+    `O(S(n))` space on work tapes. -/
+def DSPACE (S : ℕ → ℕ) : Set Language :=
+  {L | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
+    tm.DecidesInSpace L f ∧ f =O S}
+
+/-- `NSPACE(S)` is the class of languages decidable by a nondeterministic TM
+    using `O(S(n))` space on work tapes. -/
+def NSPACE (S : ℕ → ℕ) : Set Language :=
+  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    tm.DecidesInSpace L f ∧ f =O S}
+
+/-- **PSPACE** is the class of languages decidable by a deterministic TM using
+    polynomial space on work tapes: `PSPACE = ⋃_k DSPACE(n^k)`. -/
+def PSPACE : Set Language :=
+  ⋃ k : ℕ, DSPACE (· ^ k)
