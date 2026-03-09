@@ -161,7 +161,7 @@ private lemma Tape.head_write (t : Tape) (s : Γ) : (t.write s).head = t.head :=
 /-- Tape head changes by at most 1 per `move` operation. -/
 private lemma Tape.head_move_le (t : Tape) (d : Dir3) :
     (t.move d).head ≤ t.head + 1 := by
-  cases d <;> simp [Tape.move] <;> omega
+  cases d <;> simp [Tape.move]; try omega
 
 /-- `writeAndMove` changes head by at most 1. -/
 private lemma Tape.head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
