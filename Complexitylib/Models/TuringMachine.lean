@@ -19,9 +19,13 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 - `NTM` — a nondeterministic TM with two transition functions (AB Definition 2.1)
 - `TM.stepRel`, `TM.reaches`, `TM.reachesIn` — deterministic step relation and reachability
 - `NTM.trace` — execute an NTM for a fixed choice sequence (canonical NTM execution)
+- `Tape.hasOutput` — predicate: tape contains a given binary string as output
+- `TM.ComputesInTime` — computing a function in bounded time (AB Definition 1.4)
+- `TM.Computes` — computing a function (existential over time bound)
 - `TM.Accepts`, `TM.AcceptsInTime` — deterministic acceptance
 - `NTM.Accepts`, `NTM.AcceptsInTime` — nondeterministic acceptance (existential)
 - `TM.DecidesInTime`, `NTM.DecidesInTime` — deciding a language within a time bound
+- `TM.DecidesInTimeSpace` — deciding with simultaneous time and space bounds
 - `NTM.acceptCount`, `NTM.acceptProb` — counting/probabilistic acceptance
 - `TM.toNTM` — embed a DTM into an NTM
 
@@ -42,10 +46,14 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 - **NTM execution**: Defined via `trace` (a fixed choice sequence), not a relational step.
 -/
 
-/-- The tape alphabet Γ = {0, 1, □, ▷} following Arora-Barak. -/
+/-- The tape alphabet Γ = {0, 1, □, ▷}. -/
 inductive Γ where
   | zero | one | blank | start
   deriving DecidableEq
+
+instance : Fintype Γ where
+  elems := {.zero, .one, .blank, .start}
+  complete := fun x => by cases x <;> simp
 
 instance : Inhabited Γ := ⟨Γ.blank⟩
 
@@ -54,6 +62,10 @@ instance : Inhabited Γ := ⟨Γ.blank⟩
 inductive Γw where
   | zero | one | blank
   deriving DecidableEq
+
+instance : Fintype Γw where
+  elems := {.zero, .one, .blank}
+  complete := fun x => by cases x <;> simp
 
 /-- Embed a writable symbol into the full alphabet. -/
 @[simp] def Γw.toΓ : Γw → Γ
@@ -73,10 +85,14 @@ inductive Dir3 where
   | left | right | stay
   deriving DecidableEq
 
-/-- A one-sided infinite tape following Arora-Barak.
-    Cell 0 is the leftmost cell and permanently contains `▷`. The head cannot move
-    left of cell 0 (moving left at position 0 is a no-op via `Nat` subtraction).
-    Writing at cell 0 is a no-op, preserving `▷`. -/
+instance : Fintype Dir3 where
+  elems := {.left, .right, .stay}
+  complete := fun x => by cases x <;> simp
+
+/-- A one-sided infinite tape. Cell 0 is the leftmost cell and permanently
+    contains `▷`. The head cannot move left of cell 0 (moving left at position 0
+    is a no-op via `Nat` subtraction). Writing at cell 0 is a no-op,
+    preserving `▷`. -/
 structure Tape where
   head : ℕ
   cells : ℕ → Γ
@@ -100,6 +116,29 @@ def move (t : Tape) (d : Dir3) : Tape :=
   | .right => { t with head := t.head + 1 }
   | .stay => t
 
+/-- The tape contains output `y : List Bool` starting at cell 1:
+    cells 1 through |y| match `y`, and cell |y| + 1 is blank.
+    Output is the binary string written on the output tape after `▷`. -/
+def hasOutput (t : Tape) (y : List Bool) : Prop :=
+  (∀ (i : ℕ) (h : i < y.length),
+    t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
+  t.cells (y.length + 1) = Γ.blank
+
+/-- `hasOutput` depends only on the tape cells, not the head position. -/
+theorem hasOutput_congr {t₁ t₂ : Tape} (h : t₁.cells = t₂.cells) (y : List Bool) :
+    t₁.hasOutput y ↔ t₂.hasOutput y := by
+  simp only [hasOutput, h]
+
+instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput y) :=
+  if h : (∀ i : Fin y.length, t.cells (i.val + 1) = Γ.ofBool (y[i.val]'i.isLt)) ∧
+         t.cells (y.length + 1) = Γ.blank
+  then isTrue ⟨fun i hi => h.1 ⟨i, hi⟩, h.2⟩
+  else isFalse (fun ⟨h1, h2⟩ => h ⟨fun i => h1 i.val i.isLt, h2⟩)
+
+/-- Write a symbol and move in one step. -/
+abbrev writeAndMove (t : Tape) (s : Γ) (d : Dir3) : Tape :=
+  (t.write s).move d
+
 end Tape
 
 /-- Initialize a tape: `▷` at cell 0, `contents` at cells 1, 2, ..., `□` elsewhere.
@@ -121,7 +160,22 @@ structure Cfg (n : ℕ) (Q : Type) where
   work : Fin n → Tape
   output : Tape
 
-/-- A deterministic Turing machine with `n` work tapes (Arora-Barak Definition 1.1).
+namespace Cfg
+
+/-- Initial configuration for any TM: input on the input tape, all tapes start with `▷`. -/
+abbrev init (qstart : Q) (x : List Bool) : Cfg n Q :=
+  { state := qstart
+    input := initTape (x.map Γ.ofBool)
+    work := fun _ => initTape []
+    output := initTape [] }
+
+/-- A configuration is halted when its state equals the halt state. -/
+abbrev isHalted [DecidableEq Q] (qhalt : Q) (c : Cfg n Q) : Prop :=
+  c.state = qhalt
+
+end Cfg
+
+/-- A deterministic Turing machine with `n` work tapes.
 
     The machine has a read-only input tape, `n` read-write work tapes, and a read-write
     output tape. The transition function reads `Γ` from all tape heads but writes only
@@ -142,9 +196,9 @@ structure TM (n : ℕ) where
 
 attribute [instance] TM.decEq TM.finQ
 
-/-- A nondeterministic Turing machine with two transition functions (Arora-Barak Definition 2.1).
+/-- A nondeterministic Turing machine with two transition functions.
 
-    The same structure is used for probabilistic TMs (AB Section 7.1) — only the acceptance
+    The same structure is used for probabilistic TMs — only the acceptance
     criterion differs (existential for NTM, counting for PTM). `Q` is finite. -/
 structure NTM (n : ℕ) where
   Q : Type
@@ -175,18 +229,16 @@ def step (tm : TM n) (c : Cfg n tm.Q) : Option (Cfg n tm.Q) :=
     some
       { state := q'
         input := c.input.move inDir
-        work := fun i => ((c.work i).write (workWrites i)).move (workDirs i)
-        output := (c.output.write outWrite).move outDir }
+        work := fun i => (c.work i).writeAndMove (workWrites i) (workDirs i)
+        output := c.output.writeAndMove outWrite outDir }
 
 /-- Initial configuration: input on the input tape, all tapes start with `▷`. -/
-def initCfg (tm : TM n) (x : List Bool) : Cfg n tm.Q :=
-  { state := tm.qstart
-    input := initTape (x.map Γ.ofBool)
-    work := fun _ => initTape []
-    output := initTape [] }
+abbrev initCfg (tm : TM n) (x : List Bool) : Cfg n tm.Q :=
+  Cfg.init tm.qstart x
 
 /-- A configuration is halted when its state is `qhalt`. -/
-def halted (tm : TM n) (c : Cfg n tm.Q) : Prop := c.state = tm.qhalt
+abbrev halted (tm : TM n) (c : Cfg n tm.Q) : Prop :=
+  Cfg.isHalted tm.qhalt c
 
 /-- One-step relation for a deterministic TM. -/
 def stepRel (tm : TM n) (c c' : Cfg n tm.Q) : Prop := tm.step c = some c'
@@ -210,10 +262,65 @@ def AcceptsInTime (tm : TM n) (x : List Bool) (T : ℕ) : Prop :=
     c'.output.cells 1 = Γ.one
 
 /-- DTM decides `L` within time bound `T(n)`: halts on all inputs within `T(|x|)` steps,
-    outputting `1` for `x ∈ L` and `0` for `x ∉ L` (Arora-Barak Definition 1.2). -/
+    outputting `1` for `x ∈ L` and `0` for `x ∉ L`. -/
 def DecidesInTime (tm : TM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- DTM computes function `f` in time `T(n)`:
+    for every input `x`, the machine halts within `T(|x|)` steps with `f(x)`
+    written on the output tape. -/
+def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) : Prop :=
+  ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
+    c'.output.hasOutput (f x)
+
+/-- DTM computes function `f` (existential version of `ComputesInTime`). -/
+def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
+  ∃ T, tm.ComputesInTime f T
+
+/-- DTM decides `L` using at most `S(|x|)` space on work tapes. Space is
+    measured as the maximum work tape head position reached during computation:
+    every reachable configuration has all work tape heads at position ≤ `S(|x|)`.
+    The input tape (read-only) and output tape are not counted. The machine
+    halts on all inputs with correct output. -/
+def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧
+    (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- DTM decides `L` within time `T(|x|)` and space `S(|x|)` simultaneously:
+    a single machine halts in bounded time with correct output, and every
+    reachable configuration has bounded work tape heads. -/
+def DecidesInTimeSpace (tm : TM n) (L : Language) (T S : ℕ → ℕ) : Prop :=
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
+    (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
+
+/-- The output tape head never moves left — the machine is a *transducer*.
+    This prevents the output tape from being used as extra workspace. Required
+    for log-space classes (L, NL, FL) where unbounded output space would
+    otherwise violate the space bound. -/
+def IsTransducer (tm : TM n) : Prop :=
+  ∀ q iHead wHeads oHead,
+    let (_, _, _, _, _, outDir) := tm.δ q iHead wHeads oHead
+    outDir ≠ Dir3.left
+
+/-- DTM computes function `f` using at most `S(|x|)` space on work tapes. -/
+def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
+  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.hasOutput (f x)
+
+/-- Transitivity: if `c₁` reaches `c₂` in `t₁` steps and `c₂` reaches `c₃`
+    in `t₂` steps, then `c₁` reaches `c₃` in `t₁ + t₂` steps. -/
+theorem reachesIn_trans (tm : TM n) {t₁ t₂ : ℕ} {c₁ c₂ c₃ : Cfg n tm.Q}
+    (h₁ : tm.reachesIn t₁ c₁ c₂) (h₂ : tm.reachesIn t₂ c₂ c₃) :
+    tm.reachesIn (t₁ + t₂) c₁ c₃ := by
+  induction h₁ with
+  | zero => simp; exact h₂
+  | step hstep _ ih =>
+    show tm.reachesIn (_ + 1 + t₂) _ _
+    rw [Nat.add_right_comm]
+    exact reachesIn.step hstep (ih h₂)
 
 end TM
 
@@ -235,19 +342,17 @@ def trace (tm : NTM n) :
       let c' : Cfg n tm.Q :=
         { state := q'
           input := c.input.move inDir
-          work := fun i => ((c.work i).write (workWrites i)).move (workDirs i)
-          output := (c.output.write outWrite).move outDir }
+          work := fun i => (c.work i).writeAndMove (workWrites i) (workDirs i)
+          output := c.output.writeAndMove outWrite outDir }
       tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c'
 
 /-- Initial configuration: input on the input tape, all tapes start with `▷`. -/
-def initCfg (tm : NTM n) (x : List Bool) : Cfg n tm.Q :=
-  { state := tm.qstart
-    input := initTape (x.map Γ.ofBool)
-    work := fun _ => initTape []
-    output := initTape [] }
+abbrev initCfg (tm : NTM n) (x : List Bool) : Cfg n tm.Q :=
+  Cfg.init tm.qstart x
 
 /-- A configuration is halted when its state is `qhalt`. -/
-def halted (tm : NTM n) (c : Cfg n tm.Q) : Prop := c.state = tm.qhalt
+abbrev halted (tm : NTM n) (c : Cfg n tm.Q) : Prop :=
+  Cfg.isHalted tm.qhalt c
 
 /-- NTM accepts `x`: there exists a time bound and choice sequence leading to
     `qhalt` with output cell 1 = `1`. -/
@@ -263,15 +368,19 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
     let c' := tm.trace T choices (tm.initCfg x)
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
 
-/-- NTM decides `L` within time bound `T(n)` (Arora-Barak Definition 2.1):
-    all computation paths halt within `T(|x|)` steps, accepting paths exist iff `x ∈ L`,
-    and all paths output `0` when `x ∉ L`. -/
+/-- All computation paths of the NTM halt within `T(|x|)` steps, for every
+    input `x` and every choice sequence. This is the core time-boundedness
+    condition shared by `DecidesInTime`, `BPTIME`, and `NTM.IsPPT`. -/
+def AllPathsHaltIn (tm : NTM n) (T : ℕ → ℕ) : Prop :=
+  ∀ x (choices : Fin (T x.length) → Bool),
+    tm.halted (tm.trace (T x.length) choices (tm.initCfg x))
+
+/-- NTM decides `L` within time bound `T(n)`:
+    all computation paths halt within `T(|x|)` steps, and accepting paths exist
+    iff `x ∈ L` (AB Definition 2.1). -/
 def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
-  (∀ x (choices : Fin (T x.length) → Bool),
-    tm.halted (tm.trace (T x.length) choices (tm.initCfg x))) ∧
-  (∀ x, x ∈ L → tm.AcceptsInTime x (T x.length)) ∧
-  (∀ x, x ∉ L → ∀ (choices : Fin (T x.length) → Bool),
-    (tm.trace (T x.length) choices (tm.initCfg x)).output.cells 1 = Γ.zero)
+  tm.AllPathsHaltIn T ∧
+  (∀ x, x ∈ L ↔ tm.AcceptsInTime x (T x.length))
 
 /-- Count of accepting choice sequences of length `T`.
 
@@ -288,6 +397,47 @@ noncomputable def acceptCount (tm : NTM n) (x : List Bool) (T : ℕ) : ℕ :=
 noncomputable def acceptProb (tm : NTM n) (x : List Bool) (T : ℕ) : ℚ :=
   (tm.acceptCount x T : ℚ) / (2 ^ T : ℚ)
 
+/-- Count of choice sequences of length `T` on which the machine halts with
+    output `y` (using `Tape.hasOutput`).
+
+    Meaningful when the machine halts on all paths within `T` steps. -/
+noncomputable def outputCount (tm : NTM n) (x : List Bool) (T : ℕ)
+    (y : List Bool) : ℕ :=
+  (Finset.univ.filter fun (choices : Fin T → Bool) =>
+    let c' := tm.trace T choices (tm.initCfg x)
+    c'.state = tm.qhalt ∧ c'.output.hasOutput y).card
+
+/-- Probability that the machine outputs `y` on input `x` =
+    |output-matching paths| / 2^T.
+
+    Meaningful when the machine halts on all paths within `T` steps.
+    This generalizes `acceptProb` from accept/reject to arbitrary output
+    strings, as needed for cryptographic definitions. -/
+noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
+    (y : List Bool) : ℚ :=
+  (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
+
+/-- NTM decides `L` using at most `S(|x|)` space on work tapes. Space is
+    measured as the maximum work tape head position reached during computation:
+    every intermediate configuration on every computation path has all work tape
+    heads at position ≤ `S(|x|)`. The input tape (read-only) and output tape are
+    not counted. There exists a time bound within which all paths halt and decide
+    correctly. -/
+def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
+  ∃ T, tm.DecidesInTime L T ∧
+    ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),
+      ∀ i, ((tm.trace t' (fun j => choices ⟨j.val, by omega⟩) (tm.initCfg x)).work i).head
+        ≤ S x.length
+
+/-- The output tape head never moves left — the machine is a *transducer*.
+    This prevents the output tape from being used as extra workspace. Required
+    for log-space classes (NL) where unbounded output space would otherwise
+    violate the space bound. -/
+def IsTransducer (tm : NTM n) : Prop :=
+  ∀ b q iHead wHeads oHead,
+    let (_, _, _, _, _, outDir) := tm.δ b q iHead wHeads oHead
+    outDir ≠ Dir3.left
+
 end NTM
 
 /-- Embed a DTM into an NTM by using the same transition for both choices. -/
@@ -297,8 +447,3 @@ def TM.toNTM (tm : TM n) : NTM n where
   qhalt := tm.qhalt
   δ := fun _ => tm.δ
   δ_right_of_start := fun _ => tm.δ_right_of_start
-
-/-- The DTM and its NTM embedding agree on acceptance. -/
-theorem TM.toNTM_accepts_iff (tm : TM n) (x : List Bool) :
-    tm.Accepts x ↔ (tm.toNTM).Accepts x := by
-  sorry
