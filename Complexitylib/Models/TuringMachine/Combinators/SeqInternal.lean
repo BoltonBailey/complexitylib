@@ -1,0 +1,195 @@
+import Complexitylib.Models.TuringMachine.Combinators
+
+/-!
+# seqTM simulation — proof internals
+
+This file contains the simulation lemmas for `seqTM tm₁ tm₂`.
+
+## Key definitions
+
+- `phase1Wrap` — embed a `tm₁` config into the `seqTM` config space
+- `phase2Wrap` — embed a `tm₂` config into the `seqTM` config space
+- `seqTransitionTape` / `seqTransitionInput` — tape transformations at transition
+-/
+
+variable {n : ℕ}
+
+namespace TM
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Config wrapping
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Embed a `tm₁` configuration into the `seqTM` config space. -/
+def phase1Wrap (tm₁ : TM n) (tm₂ : TM n) (c₁ : Cfg n tm₁.Q) :
+    Cfg n (SeqQ tm₁.Q tm₂.Q) where
+  state := Sum.inl c₁.state
+  input := c₁.input
+  work := c₁.work
+  output := c₁.output
+
+/-- Embed a `tm₂` configuration into the `seqTM` config space. -/
+def phase2Wrap (tm₁ : TM n) (tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
+    Cfg n (SeqQ tm₁.Q tm₂.Q) where
+  state := Sum.inr c₂.state
+  input := c₂.input
+  work := c₂.work
+  output := c₂.output
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Tape transition helpers
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The tape transformation applied by the transition step to work/output tapes. -/
+def seqTransitionTape (t : Tape) : Tape :=
+  t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read)
+
+/-- The tape transformation applied to the input tape (read-only: only head moves). -/
+def seqTransitionInput (t : Tape) : Tape :=
+  t.move (idleDir t.read)
+
+private theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
+    (readBackWrite g).toΓ = g := by
+  cases g <;> simp_all [readBackWrite]
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 1: seqTM simulates tm₁
+-- ════════════════════════════════════════════════════════════════════════
+
+private theorem sum_inl_ne_inr {α β : Type} {a : α} {b : β} :
+    (Sum.inl a : α ⊕ β) ≠ Sum.inr b := nofun
+
+/-- One step of `tm₁` corresponds to one step of `seqTM` during Phase 1. -/
+theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
+    (hstep : tm₁.step c₁ = some c₁') :
+    (seqTM tm₁ tm₂).step (phase1Wrap tm₁ tm₂ c₁) = some (phase1Wrap tm₁ tm₂ c₁') := by
+  have hne : c₁.state ≠ tm₁.qhalt := by intro heq; simp [step, heq] at hstep
+  -- Unfold step for tm₁
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
+  subst hstep
+  -- Unfold step for seqTM
+  show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
+        else some _) = some _
+  simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, if_neg hne]
+
+/-- Multi-step Phase 1 simulation. -/
+theorem seqTM_phase1_simulation (tm₁ tm₂ : TM n) {t : ℕ}
+    {c₁_start c₁_end : Cfg n tm₁.Q}
+    (hreach : tm₁.reachesIn t c₁_start c₁_end) :
+    (seqTM tm₁ tm₂).reachesIn t
+      (phase1Wrap tm₁ tm₂ c₁_start) (phase1Wrap tm₁ tm₂ c₁_end) := by
+  induction hreach with
+  | zero => exact .zero
+  | step hstep _ ih => exact .step (seqTM_phase1_step tm₁ tm₂ hstep) ih
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Transition step
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- When `tm₁` halts, one step of `seqTM` transitions to Phase 2. -/
+theorem seqTM_transition_step (tm₁ tm₂ : TM n) {c₁ : Cfg n tm₁.Q}
+    (hhalt : c₁.state = tm₁.qhalt) :
+    (seqTM tm₁ tm₂).step (phase1Wrap tm₁ tm₂ c₁) =
+      some (phase2Wrap tm₁ tm₂
+        { state := tm₂.qstart,
+          input := seqTransitionInput c₁.input,
+          work := fun i => seqTransitionTape (c₁.work i),
+          output := seqTransitionTape c₁.output }) := by
+  show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
+        else some _) = some _
+  simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, hhalt, ↓reduceIte]
+  congr 1
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 2: seqTM simulates tm₂
+-- ════════════════════════════════════════════════════════════════════════
+
+private theorem sum_inr_ne_of_ne {α β : Type} {a b : β} (h : a ≠ b) :
+    (Sum.inr a : α ⊕ β) ≠ Sum.inr b := fun heq => h (Sum.inr.inj heq)
+
+/-- One step of `tm₂` corresponds to one step of `seqTM` during Phase 2. -/
+theorem seqTM_phase2_step (tm₁ tm₂ : TM n) {c₂ c₂' : Cfg n tm₂.Q}
+    (hstep : tm₂.step c₂ = some c₂') :
+    (seqTM tm₁ tm₂).step (phase2Wrap tm₁ tm₂ c₂) = some (phase2Wrap tm₁ tm₂ c₂') := by
+  have hne : c₂.state ≠ tm₂.qhalt := by intro heq; simp [step, heq] at hstep
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
+  subst hstep
+  show (if (phase2Wrap tm₁ tm₂ c₂).state = (seqTM tm₁ tm₂).qhalt then none
+        else some _) = some _
+  simp only [phase2Wrap, seqTM, if_neg (sum_inr_ne_of_ne hne), if_neg hne]
+
+/-- Multi-step Phase 2 simulation. -/
+theorem seqTM_phase2_simulation (tm₁ tm₂ : TM n) {t : ℕ}
+    {c₂_start c₂_end : Cfg n tm₂.Q}
+    (hreach : tm₂.reachesIn t c₂_start c₂_end) :
+    (seqTM tm₁ tm₂).reachesIn t
+      (phase2Wrap tm₁ tm₂ c₂_start) (phase2Wrap tm₁ tm₂ c₂_end) := by
+  induction hreach with
+  | zero => exact .zero
+  | step hstep _ ih => exact .step (seqTM_phase2_step tm₁ tm₂ hstep) ih
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Full simulation
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Full `seqTM` simulation combining all three phases. -/
+theorem seqTM_full_simulation (tm₁ tm₂ : TM n)
+    {t₁ : ℕ} {c₁_start c₁_end : Cfg n tm₁.Q}
+    (hreach₁ : tm₁.reachesIn t₁ c₁_start c₁_end)
+    (hhalt₁ : c₁_end.state = tm₁.qhalt)
+    {t₂ : ℕ} {c₂_end : Cfg n tm₂.Q}
+    (hreach₂ : tm₂.reachesIn t₂
+      { state := tm₂.qstart,
+        input := seqTransitionInput c₁_end.input,
+        work := fun i => seqTransitionTape (c₁_end.work i),
+        output := seqTransitionTape c₁_end.output }
+      c₂_end) :
+    (seqTM tm₁ tm₂).reachesIn (t₁ + 1 + t₂)
+      (phase1Wrap tm₁ tm₂ c₁_start)
+      (phase2Wrap tm₁ tm₂ c₂_end) := by
+  have hp1 := seqTM_phase1_simulation tm₁ tm₂ hreach₁
+  have htrans := seqTM_transition_step tm₁ tm₂ hhalt₁
+  have hp2 := seqTM_phase2_simulation tm₁ tm₂ hreach₂
+  have h_tr : (seqTM tm₁ tm₂).reachesIn 1
+      (phase1Wrap tm₁ tm₂ c₁_end) (phase2Wrap tm₁ tm₂ _) :=
+    .step htrans .zero
+  exact reachesIn_trans _ (reachesIn_trans _ hp1 h_tr) hp2
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Halting and output in Phase 2
+-- ════════════════════════════════════════════════════════════════════════
+
+theorem phase2Wrap_halted (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
+    (seqTM tm₁ tm₂).halted (phase2Wrap tm₁ tm₂ c₂) ↔ tm₂.halted c₂ := by
+  simp [phase2Wrap, seqTM, halted, Cfg.isHalted]
+
+theorem phase2Wrap_output (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
+    (phase2Wrap tm₁ tm₂ c₂).output = c₂.output := rfl
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Transition step tape properties
+-- ════════════════════════════════════════════════════════════════════════
+
+theorem seqTransitionInput_cells (t : Tape) :
+    (seqTransitionInput t).cells = t.cells := by
+  simp [seqTransitionInput, Tape.move]; split <;> rfl
+
+private theorem Tape.move_cells' (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
+  cases d <;> rfl
+
+theorem seqTransitionTape_cells (t : Tape)
+    (hne : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
+    (seqTransitionTape t).cells = t.cells := by
+  simp only [seqTransitionTape, Tape.writeAndMove, Tape.move_cells']
+  -- Goal: (t.write (readBackWrite t.read).toΓ).cells = t.cells
+  simp only [Tape.write]
+  by_cases hh : t.head = 0
+  · simp only [hh, ↓reduceIte]
+  · simp only [hh, ↓reduceIte]
+    have hge : t.head ≥ 1 := Nat.one_le_iff_ne_zero.mpr hh
+    have hread : t.read ≠ Γ.start := by
+      simp only [Tape.read]; exact hne t.head hge
+    rw [readBackWrite_toΓ_eq hread, show t.read = t.cells t.head from rfl,
+        Function.update_eq_self]
+
+end TM

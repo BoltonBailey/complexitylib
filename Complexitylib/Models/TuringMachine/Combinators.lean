@@ -416,4 +416,396 @@ def complementTM (tm : TM n) : TM n :=
       | Sum.inr .done =>
         exact rightOfStart_allIdle iHead wHeads oHead }
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Conditional Branching
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Intermediate states for the conditional branching machine. -/
+inductive IfPhase where
+  | rewindOut  -- rewind output head left to ▷ (cell 0)
+  | check      -- at cell 0, move right to cell 1, read result, branch
+  | done       -- halt state (reached when either branch halts)
+  deriving DecidableEq
+
+instance : Fintype IfPhase where
+  elems := {.rewindOut, .check, .done}
+  complete := fun x => by cases x <;> simp
+
+/-- The state type for the conditional branching TM. -/
+abbrev IfQ (QT QThen QElse : Type) := QT ⊕ IfPhase ⊕ QThen ⊕ QElse
+
+/-- Conditional branching: run `tmTest` to completion, read its output at
+    cell 1, then run `tmThen` (if output = `Γ.one`) or `tmElse` (otherwise).
+
+    All three machines share the same `n` work tapes, input tape, and output
+    tape. Work tape contents are preserved across all transitions via
+    `readBackWrite`, maintaining shared state for the branch machines.
+
+    ## Phases
+
+    1. **Test**: Simulate `tmTest`. When it halts, enter rewind.
+    2. **Rewind output**: Move output head left to `▷` (cell 0).
+    3. **Check**: Move output head right to cell 1, read the test result.
+       If `Γ.one`, enter `tmThen.qstart`. Otherwise, enter `tmElse.qstart`.
+    4. **Branch**: Simulate `tmThen` or `tmElse`. When the branch machine
+       halts, transition to the `done` halt state.
+
+    ## Time
+
+    `t_test + (output_head_pos + 2) + 1 + t_branch + 1` where
+    `output_head_pos ≤ t_test`. Total: at most `2·t_test + t_branch + 4`. -/
+def ifTM (tmTest : TM n) (tmThen : TM n) (tmElse : TM n) : TM n :=
+  haveI : Fintype tmTest.Q := tmTest.finQ
+  haveI : DecidableEq tmTest.Q := tmTest.decEq
+  haveI : Fintype tmThen.Q := tmThen.finQ
+  haveI : DecidableEq tmThen.Q := tmThen.decEq
+  haveI : Fintype tmElse.Q := tmElse.finQ
+  haveI : DecidableEq tmElse.Q := tmElse.decEq
+  { Q := IfQ tmTest.Q tmThen.Q tmElse.Q,
+    qstart := Sum.inl tmTest.qstart,
+    qhalt := Sum.inr (Sum.inl .done),
+    δ := fun state iHead wHeads oHead =>
+    match state with
+    -- ══════════════════════════════════════════════════════════════════
+    -- Test phase: simulate tmTest
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inl q =>
+      if q = tmTest.qhalt then
+        -- tmTest halted → begin rewinding output, preserve all tapes
+        ( Sum.inr (Sum.inl .rewindOut),
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        let (q', wW, oW, iD, wD, oD) := tmTest.δ q iHead wHeads oHead
+        ( Sum.inl q', wW, oW, iD, wD, oD )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Transition: rewind output and check result
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr (Sum.inl phase) =>
+      match phase with
+      | .rewindOut =>
+        if oHead = Γ.start then
+          -- At ▷ (cell 0) → move right to cell 1, enter check
+          ( Sum.inr (Sum.inl .check),
+            fun i => readBackWrite (wHeads i),
+            .blank,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            Dir3.right )
+        else
+          -- Not at cell 0 → keep moving left, preserve output
+          ( Sum.inr (Sum.inl .rewindOut),
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            Dir3.left )
+      | .check =>
+        -- At cell 1: read output and branch
+        if oHead = Γ.one then
+          ( Sum.inr (Sum.inr (Sum.inl tmThen.qstart)),
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            idleDir oHead )
+        else
+          ( Sum.inr (Sum.inr (Sum.inr tmElse.qstart)),
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            idleDir oHead )
+      | .done =>
+        allIdle (Sum.inr (Sum.inl .done)) iHead wHeads oHead
+    -- ══════════════════════════════════════════════════════════════════
+    -- Then branch: simulate tmThen
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr (Sum.inr (Sum.inl q)) =>
+      if q = tmThen.qhalt then
+        -- tmThen halted → transition to done, preserve tapes
+        ( Sum.inr (Sum.inl .done),
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        let (q', wW, oW, iD, wD, oD) := tmThen.δ q iHead wHeads oHead
+        ( Sum.inr (Sum.inr (Sum.inl q')), wW, oW, iD, wD, oD )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Else branch: simulate tmElse
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr (Sum.inr (Sum.inr q)) =>
+      if q = tmElse.qhalt then
+        -- tmElse halted → transition to done, preserve tapes
+        ( Sum.inr (Sum.inl .done),
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        let (q', wW, oW, iD, wD, oD) := tmElse.δ q iHead wHeads oHead
+        ( Sum.inr (Sum.inr (Sum.inr q')), wW, oW, iD, wD, oD ),
+    δ_right_of_start := by
+      intro state iHead wHeads oHead
+      match state with
+      | Sum.inl q =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tmTest.δ_right_of_start q iHead wHeads oHead
+      | Sum.inr (Sum.inl phase) =>
+        match phase with
+        | .rewindOut =>
+          dsimp only []
+          split
+          · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                   fun _ => rfl⟩
+          · refine ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, ?_⟩
+            intro h; next hn => exact absurd h hn
+        | .check =>
+          dsimp only []
+          split <;> exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                           idleDir_right_of_start⟩
+        | .done =>
+          exact rightOfStart_allIdle iHead wHeads oHead
+      | Sum.inr (Sum.inr (Sum.inl q)) =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tmThen.δ_right_of_start q iHead wHeads oHead
+      | Sum.inr (Sum.inr (Sum.inr q)) =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tmElse.δ_right_of_start q iHead wHeads oHead }
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Sequential Composition
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The state type for the sequential composition TM. -/
+abbrev SeqQ (Q₁ Q₂ : Type) := Q₁ ⊕ Q₂
+
+/-- Sequential composition: run tm₁ to completion, then tm₂ on the same tapes.
+
+    Both machines share the same `n` work tapes, input tape, and output tape.
+    When tm₁ halts, there is one transition step that:
+    - Changes state from `Q₁` to `Q₂` (entering `tm₂.qstart`)
+    - Preserves all tape cell contents (via `readBackWrite`)
+    - Moves any tape head at position 0 to position 1 (forced by `δ_right_of_start`)
+    - Leaves all other tape head positions unchanged
+
+    After the transition, tm₂ runs from the resulting tape state.
+    Total time: `t₁ + 1 + t₂` where `t₁` and `t₂` are the run times of
+    `tm₁` and `tm₂` respectively. -/
+def seqTM (tm₁ tm₂ : TM n) : TM n :=
+  haveI : Fintype tm₁.Q := tm₁.finQ
+  haveI : DecidableEq tm₁.Q := tm₁.decEq
+  haveI : Fintype tm₂.Q := tm₂.finQ
+  haveI : DecidableEq tm₂.Q := tm₂.decEq
+  { Q := SeqQ tm₁.Q tm₂.Q,
+    qstart := Sum.inl tm₁.qstart,
+    qhalt := Sum.inr tm₂.qhalt,
+    δ := fun state iHead wHeads oHead =>
+    match state with
+    -- ══════════════════════════════════════════════════════════════════
+    -- Phase 1: simulate tm₁
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inl q =>
+      if q = tm₁.qhalt then
+        -- tm₁ halted → transition to tm₂.qstart, preserve tape contents
+        ( Sum.inr tm₂.qstart,
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        -- Not halted → run tm₁.δ, wrapping state in Sum.inl
+        let (q', wW, oW, iD, wD, oD) := tm₁.δ q iHead wHeads oHead
+        ( Sum.inl q', wW, oW, iD, wD, oD )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Phase 2: simulate tm₂
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr q =>
+      if q = tm₂.qhalt then
+        -- Unreachable by step, but δ is total
+        allIdle (Sum.inr tm₂.qhalt) iHead wHeads oHead
+      else
+        -- Not halted → run tm₂.δ, wrapping state in Sum.inr
+        let (q', wW, oW, iD, wD, oD) := tm₂.δ q iHead wHeads oHead
+        ( Sum.inr q', wW, oW, iD, wD, oD ),
+    δ_right_of_start := by
+      intro state iHead wHeads oHead
+      match state with
+      | Sum.inl q =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tm₁.δ_right_of_start q iHead wHeads oHead
+      | Sum.inr q =>
+        dsimp only []
+        split
+        · exact rightOfStart_allIdle iHead wHeads oHead
+        · exact tm₂.δ_right_of_start q iHead wHeads oHead }
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Loop Combinator
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Intermediate states for the loop machine's output-checking phase. -/
+inductive LoopPhase where
+  | rewindOut  -- rewind output head left to ▷ (cell 0)
+  | check      -- at cell 1: read output, decide continue/halt
+  | done       -- halt state
+  deriving DecidableEq
+
+instance : Fintype LoopPhase where
+  elems := {.rewindOut, .check, .done}
+  complete := fun x => by cases x <;> simp
+
+/-- The state type for the loop TM. -/
+abbrev LoopQ (QBody QTest : Type) := QBody ⊕ LoopPhase ⊕ QTest
+
+/-- Loop combinator: repeatedly run `tmBody` then `tmTest`, halting when
+    the test's output at cell 1 is `Γ.one`.
+
+    Both machines share the same `n` work tapes, input tape, and output tape.
+    Work tape contents are preserved across transitions (via `readBackWrite`),
+    allowing the body to accumulate state across iterations.
+
+    ## Phases
+
+    1. **Body**: Simulate `tmBody`. When it halts, transition to test.
+    2. **Test**: Simulate `tmTest`. When it halts, enter rewind.
+    3. **Rewind output**: Move output head left to `▷` (cell 0).
+    4. **Check**: Move right to cell 1, read the test result.
+       If `Γ.one`, enter `done` (halt). Otherwise, transition back to body.
+
+    ## Use case
+
+    The UTM's main loop: `loopTM simStepTM checkHaltTM` runs one simulation
+    step, then checks if the simulated machine has halted. -/
+def loopTM (tmBody : TM n) (tmTest : TM n) : TM n :=
+  haveI : Fintype tmBody.Q := tmBody.finQ
+  haveI : DecidableEq tmBody.Q := tmBody.decEq
+  haveI : Fintype tmTest.Q := tmTest.finQ
+  haveI : DecidableEq tmTest.Q := tmTest.decEq
+  { Q := LoopQ tmBody.Q tmTest.Q,
+    qstart := Sum.inl tmBody.qstart,
+    qhalt := Sum.inr (Sum.inl .done),
+    δ := fun state iHead wHeads oHead =>
+    match state with
+    -- ══════════════════════════════════════════════════════════════════
+    -- Body phase: simulate tmBody
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inl q =>
+      if q = tmBody.qhalt then
+        -- Body halted → transition to test, preserve tape contents
+        ( Sum.inr (Sum.inr tmTest.qstart),
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        let (q', wW, oW, iD, wD, oD) := tmBody.δ q iHead wHeads oHead
+        ( Sum.inl q', wW, oW, iD, wD, oD )
+    -- ══════════════════════════════════════════════════════════════════
+    -- Transition phases: rewind and check output
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr (Sum.inl phase) =>
+      match phase with
+      | .rewindOut =>
+        if oHead = Γ.start then
+          -- At ▷ (cell 0) → move right to cell 1, enter check
+          ( Sum.inr (Sum.inl .check),
+            fun i => readBackWrite (wHeads i),
+            .blank,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            Dir3.right )
+        else
+          -- Not at cell 0 → keep moving left, preserve output
+          ( Sum.inr (Sum.inl .rewindOut),
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            Dir3.left )
+      | .check =>
+        if oHead = Γ.one then
+          -- Test output = 1: halt the loop
+          ( Sum.inr (Sum.inl .done),
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            idleDir oHead )
+        else
+          -- Test output ≠ 1: loop back to body
+          ( Sum.inl tmBody.qstart,
+            fun i => readBackWrite (wHeads i),
+            readBackWrite oHead,
+            idleDir iHead,
+            fun i => idleDir (wHeads i),
+            idleDir oHead )
+      | .done =>
+        allIdle (Sum.inr (Sum.inl .done)) iHead wHeads oHead
+    -- ══════════════════════════════════════════════════════════════════
+    -- Test phase: simulate tmTest
+    -- ══════════════════════════════════════════════════════════════════
+    | Sum.inr (Sum.inr q) =>
+      if q = tmTest.qhalt then
+        -- Test halted → begin rewinding output, preserve tapes
+        ( Sum.inr (Sum.inl .rewindOut),
+          fun i => readBackWrite (wHeads i),
+          readBackWrite oHead,
+          idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
+      else
+        let (q', wW, oW, iD, wD, oD) := tmTest.δ q iHead wHeads oHead
+        ( Sum.inr (Sum.inr q'), wW, oW, iD, wD, oD ),
+    δ_right_of_start := by
+      intro state iHead wHeads oHead
+      match state with
+      | Sum.inl q =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tmBody.δ_right_of_start q iHead wHeads oHead
+      | Sum.inr (Sum.inl phase) =>
+        match phase with
+        | .rewindOut =>
+          dsimp only []
+          split
+          · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                   fun _ => rfl⟩
+          · refine ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, ?_⟩
+            intro h; next hn => exact absurd h hn
+        | .check =>
+          dsimp only []
+          split <;> exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                           idleDir_right_of_start⟩
+        | .done =>
+          exact rightOfStart_allIdle iHead wHeads oHead
+      | Sum.inr (Sum.inr q) =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+                 idleDir_right_of_start⟩
+        · exact tmTest.δ_right_of_start q iHead wHeads oHead }
+
 end TM
