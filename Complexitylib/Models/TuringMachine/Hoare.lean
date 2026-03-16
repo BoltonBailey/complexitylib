@@ -84,32 +84,170 @@ theorem complementTM_hoareTime (tm : TM n)
 -- If-then-else rule
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- **If-then-else Hoare triple**. The test runs first (via its Hoare triple),
-    then the rest of the execution (transition → rewind → check → branch → halt)
-    is handled by `h_branch`, which receives the halted test config.
+/-- **If-then-else Hoare triple**. Composes test, then-branch, and else-branch
+    Hoare triples. The test postcondition must include `AllTapesWF` (for rewind)
+    and a head bound. Branch routing maps the test postcondition to the branch
+    precondition on transitioned tapes (output gets head = 1, cells preserved).
 
-    The user proves `h_branch` using the per-phase simulation lemmas:
-    `ifTM_test_to_rewind`, `ifTM_rewind_loop`, `ifTM_check_step_then`/`_else`,
-    `ifTM_then_simulation`/`_else_simulation`, `ifTM_then_halt_step`/`_else_halt_step`. -/
+    Time: `b_test + p_bound + max b_then b_else + 5`
+    (test + transition + rewind + check + branch + halt). -/
 theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
-    {pre mid_test post : TapePred n} {b_test b_branch : ℕ}
+    {pre mid_test mid_then mid_else post_then post_else post : TapePred n}
+    {b_test b_then b_else p_bound : ℕ}
     (h_test : tmTest.HoareTime pre mid_test b_test)
-    (h_branch : ∀ (c_test : Cfg n tmTest.Q),
-      tmTest.halted c_test →
-      mid_test c_test.input c_test.work c_test.output →
-      ∃ c_done t, t ≤ b_branch ∧
-        (ifTM tmTest tmThen tmElse).reachesIn t
-          (ifTestWrap tmTest tmThen tmElse c_test) c_done ∧
-        (ifTM tmTest tmThen tmElse).halted c_done ∧
-        post c_done.input c_done.work c_done.output) :
-    (ifTM tmTest tmThen tmElse).HoareTime pre post (b_test + b_branch) := by
+    (h_wf : ∀ inp work out, mid_test inp work out → AllTapesWF inp work out)
+    (h_head : ∀ inp work out, mid_test inp work out → out.head ≤ p_bound)
+    (h_to_then : ∀ inp work out, mid_test inp work out → out.cells 1 = Γ.one →
+      mid_then (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+               ⟨1, out.cells⟩)
+    (h_to_else : ∀ inp work out, mid_test inp work out → out.cells 1 ≠ Γ.one →
+      mid_else (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+               ⟨1, out.cells⟩)
+    (h_then : tmThen.HoareTime mid_then post_then b_then)
+    (h_else : tmElse.HoareTime mid_else post_else b_else)
+    (h_post_then : ∀ inp work out, post_then inp work out →
+      post (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+           (ifTransitionTape out))
+    (h_post_else : ∀ inp work out, post_else inp work out →
+      post (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+           (ifTransitionTape out)) :
+    (ifTM tmTest tmThen tmElse).HoareTime pre post
+      (b_test + p_bound + max b_then b_else + 5) := by
   intro inp work out hpre
   obtain ⟨c_test, t₁, ht₁, hreach₁, hhalt₁, hmid⟩ := h_test inp work out hpre
+  have hwf := h_wf _ _ _ hmid
+  obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := hwf
+  have hhead_bound := h_head _ _ _ hmid
+  -- Phase 1: test simulation
   have hsim := ifTM_test_simulation tmTest tmThen tmElse hreach₁
-  obtain ⟨c_done, t₂, ht₂, hreach₂, hhalt₂, hpost⟩ :=
-    h_branch c_test hhalt₁ hmid
-  exact ⟨c_done, t₁ + t₂, by omega,
-    reachesIn_trans _ hsim hreach₂, hhalt₂, hpost⟩
+  -- Phase 2: test → rewind transition (1 step)
+  have h_tr := ifTM_test_to_rewind tmTest tmThen tmElse hhalt₁
+  -- Phase 3: rewind loop (tracks all tapes)
+  have h_inp_ge := ifTransitionInput_head_ge c_test.input hic0
+  have h_inp_ns : ∀ j, j ≥ 1 → (ifTransitionInput c_test.input).cells j ≠ Γ.start := by
+    rw [ifTransitionInput_cells]; exact hins
+  have h_work_ge : ∀ i, (ifTransitionTape (c_test.work i)).head ≥ 1 :=
+    fun i => ifTransitionTape_head_ge _ (hwc0 i)
+  have h_work_ns : ∀ i j, j ≥ 1 → (ifTransitionTape (c_test.work i)).cells j ≠ Γ.start := by
+    intro i j hj; rw [ifTransitionTape_cells _ (hwns i)]; exact hwns i j hj
+  have h_out_cells := ifTransitionTape_cells c_test.output hons
+  have h_out_ge := ifTransitionTape_head_ge c_test.output hoc0
+  have h_out_head_bound : (ifTransitionTape c_test.output).head ≤ p_bound + 1 := by
+    unfold ifTransitionTape Tape.writeAndMove
+    by_cases hh : c_test.output.head = 0
+    · simp only [Tape.write, hh, ↓reduceIte, Tape.read, hoc0, idleDir, Tape.move]; omega
+    · cases hdir : idleDir c_test.output.read with
+      | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+      | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+      | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+  obtain ⟨c_check, hreach_rw, hst_check, hh_check, hcells_check, hinp_check, hwork_check⟩ :=
+    ifTM_rewind_loop_full tmTest tmThen tmElse (ifTransitionTape c_test.output).head
+      { state := Sum.inr (Sum.inl IfPhase.rewindOut),
+        input := ifTransitionInput c_test.input,
+        work := fun i => ifTransitionTape (c_test.work i),
+        output := ifTransitionTape c_test.output }
+      rfl (by rw [h_out_cells]; exact hoc0)
+      (by intro j hj; rw [h_out_cells]; exact hons j hj) rfl
+      h_inp_ge h_inp_ns h_work_ge h_work_ns
+  -- Phase 4: check + branch (cases on output cell 1)
+  have hcells_at_check : c_check.output.cells 1 = c_test.output.cells 1 := by
+    rw [hcells_check, h_out_cells]
+  have hns_at_check : ∀ j, j ≥ 1 → c_check.output.cells j ≠ Γ.start := by
+    intro j hj; rw [hcells_check, h_out_cells]; exact hons j hj
+  have hinp_stable : c_check.input.head ≥ 1 := by rw [hinp_check]; exact h_inp_ge
+  have hins_stable : ∀ j, j ≥ 1 → c_check.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hinp_check]; exact h_inp_ns j hj
+  have hwh_stable : ∀ i, (c_check.work i).head ≥ 1 := by
+    intro i; rw [hwork_check]; exact h_work_ge i
+  have hwns_stable : ∀ i j, j ≥ 1 → (c_check.work i).cells j ≠ Γ.start := by
+    intro i j hj; rw [hwork_check]; exact h_work_ns i j hj
+  -- Time for transition + rewind
+  have hreach_tr_rw : (ifTM tmTest tmThen tmElse).reachesIn
+      (1 + ((ifTransitionTape c_test.output).head + 1))
+      (ifTestWrap tmTest tmThen tmElse c_test) c_check :=
+    reachesIn_trans _ (.step h_tr .zero) hreach_rw
+  -- Branch on output cell 1
+  by_cases hcell1 : c_test.output.cells 1 = Γ.one
+  · -- Then branch
+    obtain ⟨c_branch, hstep_check, hst_branch, hcells_branch, hhead_branch,
+            hinp_branch, hwork_branch⟩ :=
+      ifTM_check_step_then_full tmTest tmThen tmElse c_check hst_check hh_check
+        (by rw [hcells_at_check]; exact hcell1) hinp_stable hins_stable hwh_stable hwns_stable
+    have hmid_then := h_to_then c_test.input c_test.work c_test.output hmid hcell1
+    obtain ⟨c_then, t₃, ht₃, hreach₃, hhalt₃, hpost_then⟩ :=
+      h_then _ _ _ hmid_then
+    have hsim₃ := ifTM_then_simulation tmTest tmThen tmElse hreach₃
+    have h_halt_step := ifTM_then_halt_step tmTest tmThen tmElse hhalt₃
+    have hpost := h_post_then c_then.input c_then.work c_then.output hpost_then
+    -- Compose: test sim + transition + rewind + check + branch sim + halt
+    let c_done : Cfg n (ifTM tmTest tmThen tmElse).Q :=
+      ⟨(ifTM tmTest tmThen tmElse).qhalt,
+       ifTransitionInput c_then.input,
+       fun i => ifTransitionTape (c_then.work i),
+       ifTransitionTape c_then.output⟩
+    refine ⟨c_done, t₁ + (1 + ((ifTransitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
+      ?_, ?_, ?_, ?_⟩
+    · have : (ifTransitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
+      calc t₁ + _ + 1 + t₃ + 1
+          ≤ b_test + (1 + (p_bound + 2)) + 1 + b_then + 1 := by omega
+        _ ≤ b_test + p_bound + max b_then b_else + 5 := by omega
+    · have hstep_branch : (ifTM tmTest tmThen tmElse).step c_check =
+          some (ifThenWrap tmTest tmThen tmElse
+            ⟨tmThen.qstart, ifTransitionInput c_test.input,
+             fun i => ifTransitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
+        rw [hstep_check]; congr 1; simp only [ifThenWrap]
+        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have htape_eta : c_branch.output =
+            ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
+        rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,
+            htape_eta, hhead_branch]
+        congr 1; simp only [hcells_branch, hcells_check, h_out_cells]
+      have r1 := reachesIn_trans _ hsim hreach_tr_rw
+      have r2 := reachesIn_trans _ r1 (.step hstep_branch .zero)
+      have r3 := reachesIn_trans _ r2 hsim₃
+      exact reachesIn_trans _ r3 (.step h_halt_step .zero)
+    · exact ifTM_halted_done tmTest tmThen tmElse _ rfl
+    · exact hpost
+  · -- Else branch (symmetric)
+    obtain ⟨c_branch, hstep_check, hst_branch, hcells_branch, hhead_branch,
+            hinp_branch, hwork_branch⟩ :=
+      ifTM_check_step_else_full tmTest tmThen tmElse c_check hst_check hh_check
+        (by rw [hcells_at_check]; exact hcell1) hns_at_check
+        hinp_stable hins_stable hwh_stable hwns_stable
+    have hmid_else := h_to_else c_test.input c_test.work c_test.output hmid hcell1
+    obtain ⟨c_else, t₃, ht₃, hreach₃, hhalt₃, hpost_else⟩ :=
+      h_else _ _ _ hmid_else
+    have hsim₃ := ifTM_else_simulation tmTest tmThen tmElse hreach₃
+    have h_halt_step := ifTM_else_halt_step tmTest tmThen tmElse hhalt₃
+    have hpost := h_post_else c_else.input c_else.work c_else.output hpost_else
+    let c_done_else : Cfg n (ifTM tmTest tmThen tmElse).Q :=
+      ⟨(ifTM tmTest tmThen tmElse).qhalt,
+       ifTransitionInput c_else.input,
+       fun i => ifTransitionTape (c_else.work i),
+       ifTransitionTape c_else.output⟩
+    refine ⟨c_done_else, t₁ + (1 + ((ifTransitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
+      ?_, ?_, ?_, ?_⟩
+    · have : (ifTransitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
+      calc t₁ + _ + 1 + t₃ + 1
+          ≤ b_test + (1 + (p_bound + 2)) + 1 + b_else + 1 := by omega
+        _ ≤ b_test + p_bound + max b_then b_else + 5 := by omega
+    · have hstep_branch : (ifTM tmTest tmThen tmElse).step c_check =
+          some (ifElseWrap tmTest tmThen tmElse
+            ⟨tmElse.qstart, ifTransitionInput c_test.input,
+             fun i => ifTransitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
+        rw [hstep_check]; congr 1; simp only [ifElseWrap]
+        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have htape_eta : c_branch.output =
+            ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
+        rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,
+            htape_eta, hhead_branch]
+        congr 1; simp only [hcells_branch, hcells_check, h_out_cells]
+      have r1 := reachesIn_trans _ hsim hreach_tr_rw
+      have r2 := reachesIn_trans _ r1 (.step hstep_branch .zero)
+      have r3 := reachesIn_trans _ r2 hsim₃
+      exact reachesIn_trans _ r3 (.step h_halt_step .zero)
+    · exact ifTM_halted_done tmTest tmThen tmElse _ rfl
+    · exact hpost
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Loop invariant rule
