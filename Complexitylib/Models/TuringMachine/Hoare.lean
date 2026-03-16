@@ -2,6 +2,7 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
 import Complexitylib.Models.TuringMachine.Combinators.IfInternal
 import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
+import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
 /-!
 # Hoare-style composition rules for TM combinators
@@ -9,8 +10,9 @@ import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
 ## Main results
 
 - `seqTM_hoareTime` — sequential composition of Hoare triples
-- `ifTM_rewind_full` — rewind loop for ifTM transition
-- `ifTM_check_to_then` / `ifTM_check_to_else` — check step lemmas
+- `complementTM_hoareTime` — complement flips output cell 1
+- `ifTM_hoareTime` — if-then-else branching
+- `loopTM_hoareTime` — loop invariant rule
 -/
 
 set_option linter.unusedSimpArgs false
@@ -44,6 +46,70 @@ def AllTapesWF (inp : Tape) (work : Fin n → Tape) (out : Tape) : Prop :=
   inp.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → inp.cells j ≠ Γ.start) ∧
   (∀ i, (work i).cells 0 = Γ.start) ∧ (∀ i j, j ≥ 1 → (work i).cells j ≠ Γ.start) ∧
   out.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out.cells j ≠ Γ.start)
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Complement rule
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Complement Hoare triple**. If `tm` satisfies a Hoare triple whose
+    postcondition provides output WF (for rewind), a head bound, and a
+    property of output cell 1, then `complementTM tm` satisfies a triple
+    where output cell 1 is flipped. Time: `b + p_bound + 4`. -/
+theorem complementTM_hoareTime (tm : TM n)
+    {pre : TapePred n} {b p_bound : ℕ}
+    {cell1_pred : Γ → Prop}
+    (h_tm : tm.HoareTime pre
+      (fun _ _ out =>
+        out.cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → out.cells j ≠ Γ.start) ∧
+        out.head ≤ p_bound ∧
+        cell1_pred (out.cells 1))
+      b) :
+    tm.complementTM.HoareTime pre
+      (fun _ _ out => ∃ g, cell1_pred g ∧ out.cells 1 = (flipBit g).toΓ)
+      (b + p_bound + 4) := by
+  intro inp work out hpre
+  obtain ⟨c', t, ht, hreach, hhalt, hcell0, hnostart, hhead, hcell1⟩ :=
+    h_tm inp work out hpre
+  have hsim := complementTM_simulation tm hreach
+  rw [compCfg_qstart] at hsim
+  obtain ⟨c_done, t_rw, hreach_rw, hhalt_done, hflip, hle_rw⟩ :=
+    complementTM_rewind_and_flip tm c' hhalt hcell0 hnostart
+  exact ⟨c_done, t + t_rw,
+    by have : t_rw ≤ p_bound + 4 := le_trans hle_rw (by omega); omega,
+    reachesIn_trans _ hsim hreach_rw, hhalt_done,
+    c'.output.cells 1, hcell1, hflip⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- If-then-else rule
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **If-then-else Hoare triple**. The test runs first (via its Hoare triple),
+    then the rest of the execution (transition → rewind → check → branch → halt)
+    is handled by `h_branch`, which receives the halted test config.
+
+    The user proves `h_branch` using the per-phase simulation lemmas:
+    `ifTM_test_to_rewind`, `ifTM_rewind_loop`, `ifTM_check_step_then`/`_else`,
+    `ifTM_then_simulation`/`_else_simulation`, `ifTM_then_halt_step`/`_else_halt_step`. -/
+theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
+    {pre mid_test post : TapePred n} {b_test b_branch : ℕ}
+    (h_test : tmTest.HoareTime pre mid_test b_test)
+    (h_branch : ∀ (c_test : Cfg n tmTest.Q),
+      tmTest.halted c_test →
+      mid_test c_test.input c_test.work c_test.output →
+      ∃ c_done t, t ≤ b_branch ∧
+        (ifTM tmTest tmThen tmElse).reachesIn t
+          (ifTestWrap tmTest tmThen tmElse c_test) c_done ∧
+        (ifTM tmTest tmThen tmElse).halted c_done ∧
+        post c_done.input c_done.work c_done.output) :
+    (ifTM tmTest tmThen tmElse).HoareTime pre post (b_test + b_branch) := by
+  intro inp work out hpre
+  obtain ⟨c_test, t₁, ht₁, hreach₁, hhalt₁, hmid⟩ := h_test inp work out hpre
+  have hsim := ifTM_test_simulation tmTest tmThen tmElse hreach₁
+  obtain ⟨c_done, t₂, ht₂, hreach₂, hhalt₂, hpost⟩ :=
+    h_branch c_test hhalt₁ hmid
+  exact ⟨c_done, t₁ + t₂, by omega,
+    reachesIn_trans _ hsim hreach₂, hhalt₂, hpost⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Loop invariant rule

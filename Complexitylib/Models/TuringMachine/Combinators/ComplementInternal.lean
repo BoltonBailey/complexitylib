@@ -33,11 +33,15 @@ private theorem tape_head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
 -- Configuration embedding
 -- ════════════════════════════════════════════════════════════════════════
 
-private def compCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg n (tm.complementTM.Q) :=
+def compCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg n (tm.complementTM.Q) :=
   { state := Sum.inl c.state, input := c.input, work := c.work, output := c.output }
 
-private theorem compCfg_initCfg (tm : TM n) (x : List Bool) :
+theorem compCfg_initCfg (tm : TM n) (x : List Bool) :
     compCfg tm (tm.initCfg x) = tm.complementTM.initCfg x := rfl
+
+theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : Tape) :
+    compCfg tm ⟨tm.qstart, inp, work, out⟩ =
+      ⟨tm.complementTM.qstart, inp, work, out⟩ := rfl
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 1: Simulation
@@ -52,7 +56,7 @@ private theorem complementTM_step_sim (tm : TM n) {c c' : Cfg n tm.Q}
   simp only [hne, hne2, ↓reduceIte, Option.some.injEq] at hstep ⊢
   rw [← hstep]
 
-private theorem complementTM_simulation (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
+theorem complementTM_simulation (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
     (hreach : tm.reachesIn t c c') :
     tm.complementTM.reachesIn t (compCfg tm c) (compCfg tm c') := by
   induction hreach with
@@ -130,7 +134,7 @@ private theorem rewind_loop (tm : TM n) :
 
 /-- From halted compCfg, reach done state with flipped output.
     Takes ≤ `output.head + 4` steps. -/
-private theorem complementTM_rewind_and_flip (tm : TM n)
+theorem complementTM_rewind_and_flip (tm : TM n)
     (c_halt : Cfg n tm.Q)
     (hhalt : tm.halted c_halt)
     (hcell0 : c_halt.output.cells 0 = Γ.start)
