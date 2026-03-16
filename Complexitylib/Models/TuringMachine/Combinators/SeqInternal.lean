@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # seqTM simulation — proof internals
@@ -48,12 +49,8 @@ def seqTransitionTape (t : Tape) : Tape :=
 def seqTransitionInput (t : Tape) : Tape :=
   t.move (idleDir t.read)
 
-private theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
-    (readBackWrite g).toΓ = g := by
-  cases g <;> simp_all [readBackWrite]
-
 -- ════════════════════════════════════════════════════════════════════════
--- Phase 1: seqTM simulates tm₁
+-- Phase 1: seqTM simulates tm₁ (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 private theorem sum_inl_ne_inr {α β : Type} {a : α} {b : β} :
@@ -64,10 +61,8 @@ theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
     (hstep : tm₁.step c₁ = some c₁') :
     (seqTM tm₁ tm₂).step (phase1Wrap tm₁ tm₂ c₁) = some (phase1Wrap tm₁ tm₂ c₁') := by
   have hne : c₁.state ≠ tm₁.qhalt := by intro heq; simp [step, heq] at hstep
-  -- Unfold step for tm₁
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
-  -- Unfold step for seqTM
   show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
         else some _) = some _
   simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, if_neg hne]
@@ -77,10 +72,9 @@ theorem seqTM_phase1_simulation (tm₁ tm₂ : TM n) {t : ℕ}
     {c₁_start c₁_end : Cfg n tm₁.Q}
     (hreach : tm₁.reachesIn t c₁_start c₁_end) :
     (seqTM tm₁ tm₂).reachesIn t
-      (phase1Wrap tm₁ tm₂ c₁_start) (phase1Wrap tm₁ tm₂ c₁_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (seqTM_phase1_step tm₁ tm₂ hstep) ih
+      (phase1Wrap tm₁ tm₂ c₁_start) (phase1Wrap tm₁ tm₂ c₁_end) :=
+  simulation_reachesIn (tm' := seqTM tm₁ tm₂) (phase1Wrap tm₁ tm₂)
+    (fun _ _ => seqTM_phase1_step tm₁ tm₂) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Transition step
@@ -101,7 +95,7 @@ theorem seqTM_transition_step (tm₁ tm₂ : TM n) {c₁ : Cfg n tm₁.Q}
   congr 1
 
 -- ════════════════════════════════════════════════════════════════════════
--- Phase 2: seqTM simulates tm₂
+-- Phase 2: seqTM simulates tm₂ (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 private theorem sum_inr_ne_of_ne {α β : Type} {a b : β} (h : a ≠ b) :
@@ -123,10 +117,9 @@ theorem seqTM_phase2_simulation (tm₁ tm₂ : TM n) {t : ℕ}
     {c₂_start c₂_end : Cfg n tm₂.Q}
     (hreach : tm₂.reachesIn t c₂_start c₂_end) :
     (seqTM tm₁ tm₂).reachesIn t
-      (phase2Wrap tm₁ tm₂ c₂_start) (phase2Wrap tm₁ tm₂ c₂_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (seqTM_phase2_step tm₁ tm₂ hstep) ih
+      (phase2Wrap tm₁ tm₂ c₂_start) (phase2Wrap tm₁ tm₂ c₂_end) :=
+  simulation_reachesIn (tm' := seqTM tm₁ tm₂) (phase2Wrap tm₁ tm₂)
+    (fun _ _ => seqTM_phase2_step tm₁ tm₂) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Full simulation
@@ -174,14 +167,10 @@ theorem seqTransitionInput_cells (t : Tape) :
     (seqTransitionInput t).cells = t.cells := by
   simp [seqTransitionInput, Tape.move]; split <;> rfl
 
-private theorem Tape.move_cells' (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
-  cases d <;> rfl
-
 theorem seqTransitionTape_cells (t : Tape)
     (hne : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
     (seqTransitionTape t).cells = t.cells := by
-  simp only [seqTransitionTape, Tape.writeAndMove, Tape.move_cells']
-  -- Goal: (t.write (readBackWrite t.read).toΓ).cells = t.cells
+  simp only [seqTransitionTape, Tape.writeAndMove, tape_move_cells]
   simp only [Tape.write]
   by_cases hh : t.head = 0
   · simp only [hh, ↓reduceIte]

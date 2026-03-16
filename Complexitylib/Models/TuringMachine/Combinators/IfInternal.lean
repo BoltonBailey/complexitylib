@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # ifTM simulation — proof internals
@@ -63,7 +64,7 @@ private theorem ifQ_phase_ne_halt {QT QThen QElse : Type}
   fun h => hp (Sum.inl.inj (Sum.inr.inj h))
 
 -- ════════════════════════════════════════════════════════════════════════
--- Test phase: ifTM simulates tmTest
+-- Test phase: ifTM simulates tmTest (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- One step of `tmTest` corresponds to one step of `ifTM` during the test phase. -/
@@ -84,13 +85,12 @@ theorem ifTM_test_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
     (hreach : tmTest.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifTestWrap tmTest tmThen tmElse c_start)
-      (ifTestWrap tmTest tmThen tmElse c_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (ifTM_test_step tmTest tmThen tmElse hstep) ih
+      (ifTestWrap tmTest tmThen tmElse c_end) :=
+  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifTestWrap tmTest tmThen tmElse)
+    (fun _ _ => ifTM_test_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
--- Then branch: ifTM simulates tmThen
+-- Then branch: ifTM simulates tmThen (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- One step of `tmThen` corresponds to one step of `ifTM` during the then branch. -/
@@ -111,13 +111,12 @@ theorem ifTM_then_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
     (hreach : tmThen.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifThenWrap tmTest tmThen tmElse c_start)
-      (ifThenWrap tmTest tmThen tmElse c_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (ifTM_then_step tmTest tmThen tmElse hstep) ih
+      (ifThenWrap tmTest tmThen tmElse c_end) :=
+  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifThenWrap tmTest tmThen tmElse)
+    (fun _ _ => ifTM_then_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
--- Else branch: ifTM simulates tmElse
+-- Else branch: ifTM simulates tmElse (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- One step of `tmElse` corresponds to one step of `ifTM` during the else branch. -/
@@ -138,10 +137,9 @@ theorem ifTM_else_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
     (hreach : tmElse.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifElseWrap tmTest tmThen tmElse c_start)
-      (ifElseWrap tmTest tmThen tmElse c_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (ifTM_else_step tmTest tmThen tmElse hstep) ih
+      (ifElseWrap tmTest tmThen tmElse c_end) :=
+  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifElseWrap tmTest tmThen tmElse)
+    (fun _ _ => ifTM_else_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Halt transitions: branch halt → done
@@ -213,40 +211,6 @@ theorem ifTM_halted_done (tmTest tmThen tmElse : TM n)
     (ifTM tmTest tmThen tmElse).halted c := h
 
 -- ════════════════════════════════════════════════════════════════════════
--- Tape helpers
--- ════════════════════════════════════════════════════════════════════════
-
-private theorem tape_move_cells (t : Tape) (d : Dir3) :
-    (t.move d).cells = t.cells := by cases d <;> rfl
-
-private theorem readBackWrite_toΓ_eq' {g : Γ} (h : g ≠ Γ.start) :
-    (readBackWrite g).toΓ = g := by cases g <;> simp_all [readBackWrite, Γw.toΓ]
-
--- ════════════════════════════════════════════════════════════════════════
--- Tape stability under readBackWrite/idleDir
--- ════════════════════════════════════════════════════════════════════════
-
-/-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under
-    `writeAndMove(readBackWrite(read).toΓ, idleDir(read))`. -/
-private theorem tape_writeAndMove_stable (t : Tape)
-    (hhead : t.head ≥ 1) (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
-    t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
-  have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns t.head hhead
-  rw [readBackWrite_toΓ_eq' hne]
-  show (t.write t.read).move (idleDir t.read) = t
-  simp only [idleDir, hne, ↓reduceIte]
-  show (t.write (t.cells t.head)).move .stay = t
-  simp only [Tape.write, show ¬(t.head = 0) by omega, ↓reduceIte,
-             Function.update_eq_self, Tape.move]
-
-/-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under `move(idleDir(read))`. -/
-private theorem tape_move_idleDir_stable (t : Tape)
-    (hhead : t.head ≥ 1) (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
-    t.move (idleDir t.read) = t := by
-  have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns t.head hhead
-  simp only [idleDir, hne, ↓reduceIte, Tape.move]
-
--- ════════════════════════════════════════════════════════════════════════
 -- Transition tape properties
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -258,7 +222,7 @@ theorem ifTransitionTape_cells (t : Tape)
   by_cases hh : t.head = 0
   · simp only [Tape.write, hh, ↓reduceIte]
   · have hge : t.head ≥ 1 := by omega
-    rw [readBackWrite_toΓ_eq' (by simp only [Tape.read]; exact hns t.head hge)]
+    rw [readBackWrite_toΓ_eq (by simp only [Tape.read]; exact hns t.head hge)]
     simp only [Tape.write, hh, ↓reduceIte, Tape.read, Function.update_eq_self]
 
 /-- `ifTransitionInput` preserves cells. -/
@@ -292,8 +256,50 @@ theorem ifTransitionInput_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
       exfalso; revert hdir; simp only [idleDir]; split <;> simp
 
 -- ════════════════════════════════════════════════════════════════════════
--- Rewind loop
+-- Rewind loop (via generic rewind)
 -- ════════════════════════════════════════════════════════════════════════
+
+private theorem if_rewind_step_left (tmTest tmThen tmElse : TM n)
+    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
+    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
+    (hread_ne : c.output.read ≠ Γ.start)
+    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl IfPhase.rewindOut) ∧
+      c'.output.head = c.output.head - 1 ∧
+      c'.output.cells = c.output.cells := by
+  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
+  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp only [Tape.writeAndMove, Tape.move]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · omega
+    · simp
+  · simp only [Tape.writeAndMove, tape_move_cells]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · rfl
+    · exact Function.update_eq_self _ _
+
+private theorem if_rewind_step_base (tmTest tmThen tmElse : TM n)
+    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
+    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
+    (hread : c.output.read = Γ.start)
+    (_ : c.output.cells 0 = Γ.start)
+    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl IfPhase.check) ∧
+      c'.output.head = 1 ∧
+      c'.output.cells = c.output.cells := by
+  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
+  have hhead : c.output.head = 0 := by
+    by_contra hne
+    exact hnostart c.output.head (by omega) (by simp only [Tape.read] at hread; exact hread)
+  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
 
 /-- The full rewind loop: from rewindOut with output head at position `p`,
     reach check state at cell 1 in `p + 1` steps. Output cells are preserved. -/
@@ -307,58 +313,66 @@ theorem ifTM_rewind_loop (tmTest tmThen tmElse : TM n) :
       (ifTM tmTest tmThen tmElse).reachesIn (p + 1) c c_check ∧
       c_check.state = Sum.inr (Sum.inl IfPhase.check) ∧
       c_check.output.head = 1 ∧
-      c_check.output.cells = c.output.cells := by
-  intro p
-  induction p with
-  | zero =>
-    intro c hstate hcell0 _ hhead
-    have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-    have hread : c.output.read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    -- At cell 0: delta gives (.check, .blank, Dir3.right) for output
-    have hstep : ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl IfPhase.check) ∧
-        c'.output.head = 1 ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    exact ⟨c', .step hstep' .zero, hst', hh', hc'⟩
-  | succ p ih =>
-    intro c hstate hcell0 hnostart hhead
-    have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-    have hread_ne : c.output.read ≠ Γ.start := by
-      simp only [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
-    -- Not at cell 0: delta gives (.rewindOut, readBackWrite oHead, Dir3.left) for output
-    have hstep : ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl IfPhase.rewindOut) ∧
-        c'.output.head = p ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · -- head: writeAndMove (readBackWrite ...) left → head - 1
-        simp only [Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq' hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · omega  -- head = 0 contradicts hread_ne
-        · simp [hhead]
-      · -- cells: readBackWrite writes back the same symbol
-        simp only [Tape.writeAndMove, tape_move_cells]
-        rw [readBackWrite_toΓ_eq' hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · rfl  -- head = 0: write is no-op
-        · exact Function.update_eq_self _ _
-    obtain ⟨c', hstep', hst', hh', hcells'⟩ := hstep
-    obtain ⟨c_check, hreach, hst_check, hh_check, hcells_check⟩ := ih c' hst'
-      (by rw [hcells']; exact hcell0)
-      (by intro j hj; rw [hcells']; exact hnostart j hj) hh'
-    exact ⟨c_check, .step hstep' hreach, hst_check, hh_check,
-      by rw [hcells_check, hcells']⟩
+      c_check.output.cells = c.output.cells :=
+  generic_rewind_loop (ifTM tmTest tmThen tmElse)
+    (fun c hst hread hc0 hns => if_rewind_step_left tmTest tmThen tmElse c hst hread hc0 hns)
+    (fun c hst hread hc0 hns => if_rewind_step_base tmTest tmThen tmElse c hst hread hc0 hns)
 
 -- ════════════════════════════════════════════════════════════════════════
--- Rewind loop (full tape tracking)
+-- Rewind loop (full tape tracking, via generic rewind)
 -- ════════════════════════════════════════════════════════════════════════
+
+private theorem if_rewind_step_left_full (tmTest tmThen tmElse : TM n)
+    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
+    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
+    (hread_ne : c.output.read ≠ Γ.start)
+    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
+    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (h_wh : ∀ i, (c.work i).head ≥ 1) (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
+    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl IfPhase.rewindOut) ∧
+      c'.output.head = c.output.head - 1 ∧
+      c'.output.cells = c.output.cells ∧
+      c'.input = c.input ∧ c'.work = c.work := by
+  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
+  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · simp only [Tape.writeAndMove, Tape.move]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · omega
+    · simp
+  · simp only [Tape.writeAndMove, tape_move_cells]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · rfl
+    · exact Function.update_eq_self _ _
+  · exact tape_move_idleDir_stable _ h_ih h_ins
+  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
+
+private theorem if_rewind_step_base_full (tmTest tmThen tmElse : TM n)
+    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
+    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
+    (hread : c.output.read = Γ.start)
+    (_ : c.output.cells 0 = Γ.start)
+    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
+    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (h_wh : ∀ i, (c.work i).head ≥ 1) (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
+    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl IfPhase.check) ∧
+      c'.output.head = 1 ∧
+      c'.output.cells = c.output.cells ∧
+      c'.input = c.input ∧ c'.work = c.work := by
+  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
+  have hhead : c.output.head = 0 := by
+    by_contra hne
+    exact hnostart c.output.head (by omega) (by simp only [Tape.read] at hread; exact hread)
+  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · exact tape_move_idleDir_stable _ h_ih h_ins
+  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 /-- Extended rewind loop: also tracks that input and work tapes are preserved
     when they satisfy the stability condition (head ≥ 1, cells ≥ 1 ≠ start). -/
@@ -377,79 +391,16 @@ theorem ifTM_rewind_loop_full (tmTest tmThen tmElse : TM n) :
       c_check.output.head = 1 ∧
       c_check.output.cells = c.output.cells ∧
       c_check.input = c.input ∧
-      c_check.work = c.work := by
-  intro p
-  induction p with
-  | zero =>
-    intro c hstate hcell0 _ hhead h_ih h_ins h_wh h_wns
-    have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-    have hread : c.output.read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    have hstep : ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl IfPhase.check) ∧
-        c'.output.head = 1 ∧
-        c'.output.cells = c.output.cells ∧
-        c'.input = c.input ∧ c'.work = c.work := by
-      simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
-      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-      · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-      · exact tape_move_idleDir_stable _ h_ih h_ins
-      · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
-    obtain ⟨c', hstep', hst', hh', hc', hinp, hwork⟩ := hstep
-    exact ⟨c', .step hstep' .zero, hst', hh', hc', hinp, hwork⟩
-  | succ p ih =>
-    intro c hstate hcell0 hnostart hhead h_ih h_ins h_wh h_wns
-    have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-    have hread_ne : c.output.read ≠ Γ.start := by
-      simp only [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
-    have hstep : ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl IfPhase.rewindOut) ∧
-        c'.output.head = p ∧
-        c'.output.cells = c.output.cells ∧
-        c'.input = c.input ∧ c'.work = c.work := by
-      simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
-      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-      · simp only [Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq' hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · omega
-        · simp [hhead]
-      · simp only [Tape.writeAndMove, tape_move_cells]
-        rw [readBackWrite_toΓ_eq' hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · rfl
-        · exact Function.update_eq_self _ _
-      · exact tape_move_idleDir_stable _ h_ih h_ins
-      · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
-    obtain ⟨c', hstep', hst', hh', hcells', hinp', hwork'⟩ := hstep
-    obtain ⟨c_check, hreach, hst_check, hh_check, hcells_check, hinp_check, hwork_check⟩ :=
-      ih c' hst'
-        (by rw [hcells']; exact hcell0)
-        (by intro j hj; rw [hcells']; exact hnostart j hj) hh'
-        (by rw [hinp']; exact h_ih) (by rw [hinp']; exact h_ins)
-        (by intro i; rw [hwork']; exact h_wh i)
-        (by intro i j hj; rw [hwork']; exact h_wns i j hj)
-    exact ⟨c_check, .step hstep' hreach, hst_check, hh_check,
-      by rw [hcells_check, hcells'],
-      by rw [hinp_check, hinp'],
-      by rw [hwork_check, hwork']⟩
+      c_check.work = c.work :=
+  generic_rewind_loop_full (ifTM tmTest tmThen tmElse)
+    (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
+      if_rewind_step_left_full tmTest tmThen tmElse c hst hread hc0 hns h_ih h_ins h_wh h_wns)
+    (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
+      if_rewind_step_base_full tmTest tmThen tmElse c hst hread hc0 hns h_ih h_ins h_wh h_wns)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Check step: read output at cell 1, branch to then or else
 -- ════════════════════════════════════════════════════════════════════════
-
-/-- Helper: readBackWrite preserves tape cells when head ≥ 1 and cells[≥1] ≠ start,
-    or when head = 0. -/
-private theorem tape_readBackWrite_preserves (t : Tape) (d : Dir3)
-    (h : t.head = 0 ∨ t.read ≠ Γ.start) :
-    (t.writeAndMove (readBackWrite t.read).toΓ d).cells = t.cells := by
-  simp only [Tape.writeAndMove, tape_move_cells]
-  rcases h with hh0 | hne
-  · simp only [Tape.write, hh0, ↓reduceIte]
-  · rw [readBackWrite_toΓ_eq' hne]
-    simp only [Tape.write, Tape.read]; split
-    · rfl
-    · exact Function.update_eq_self _ _
 
 /-- Check step when output cell 1 = Γ.one: branch to tmThen.
     Requires the nostart invariant on output for cell preservation. -/
@@ -465,12 +416,10 @@ theorem ifTM_check_step_then (tmTest tmThen tmElse : TM n)
   have hread : c.output.read = Γ.one := by simp [Tape.read, hhead, hcell1]
   simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
   refine ⟨_, rfl, rfl, ?_⟩
-  -- The goal has `readBackWrite Γ.one` (simp already substituted hread).
-  -- We compute directly: readBackWrite Γ.one = .one, .one.toΓ = Γ.one, idleDir Γ.one = .stay
   show (c.output.writeAndMove (readBackWrite Γ.one).toΓ (idleDir Γ.one)).cells = c.output.cells
   simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, tape_move_cells]
   simp only [Tape.write]; split
-  · omega  -- 1 = 0 is absurd
+  · omega
   · dsimp only []; rw [hhead, ← hcell1]; exact Function.update_eq_self _ _
 
 /-- Check step when output cell 1 ≠ Γ.one: branch to tmElse.

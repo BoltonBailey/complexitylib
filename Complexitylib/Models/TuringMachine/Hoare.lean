@@ -48,6 +48,40 @@ def AllTapesWF (inp : Tape) (work : Fin n → Tape) (out : Tape) : Prop :=
   out.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out.cells j ≠ Γ.start)
 
 -- ════════════════════════════════════════════════════════════════════════
+-- AllTapesWF propagation through ifTransition
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- AllTapesWF is preserved through ifTransition (readBackWrite + idleDir). -/
+theorem AllTapesWF.ifTransition {inp : Tape} {work : Fin n → Tape} {out : Tape}
+    (h : AllTapesWF inp work out) :
+    (ifTransitionInput inp).head ≥ 1 ∧
+    (∀ j, j ≥ 1 → (ifTransitionInput inp).cells j ≠ Γ.start) ∧
+    (∀ i, (ifTransitionTape (work i)).head ≥ 1) ∧
+    (∀ i j, j ≥ 1 → (ifTransitionTape (work i)).cells j ≠ Γ.start) ∧
+    (ifTransitionTape out).cells = out.cells ∧
+    (ifTransitionTape out).head ≥ 1 := by
+  obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := h
+  exact ⟨ifTransitionInput_head_ge inp hic0,
+    by rw [ifTransitionInput_cells]; exact hins,
+    fun i => ifTransitionTape_head_ge _ (hwc0 i),
+    fun i j hj => by rw [ifTransitionTape_cells _ (hwns i)]; exact hwns i j hj,
+    ifTransitionTape_cells out hons,
+    ifTransitionTape_head_ge out hoc0⟩
+
+/-- Bound on ifTransitionTape output head: ≤ original head + 1. -/
+theorem ifTransitionTape_head_bound {out : Tape} {p_bound : ℕ}
+    (hoc0 : out.cells 0 = Γ.start)
+    (hhead : out.head ≤ p_bound) :
+    (ifTransitionTape out).head ≤ p_bound + 1 := by
+  unfold ifTransitionTape Tape.writeAndMove
+  by_cases hh : out.head = 0
+  · simp only [Tape.write, hh, ↓reduceIte, Tape.read, hoc0, idleDir, Tape.move]; omega
+  · cases hdir : idleDir out.read with
+    | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Complement rule
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -116,30 +150,16 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
   intro inp work out hpre
   obtain ⟨c_test, t₁, ht₁, hreach₁, hhalt₁, hmid⟩ := h_test inp work out hpre
   have hwf := h_wf _ _ _ hmid
-  obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := hwf
   have hhead_bound := h_head _ _ _ hmid
+  obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := hwf
   -- Phase 1: test simulation
   have hsim := ifTM_test_simulation tmTest tmThen tmElse hreach₁
   -- Phase 2: test → rewind transition (1 step)
   have h_tr := ifTM_test_to_rewind tmTest tmThen tmElse hhalt₁
-  -- Phase 3: rewind loop (tracks all tapes)
-  have h_inp_ge := ifTransitionInput_head_ge c_test.input hic0
-  have h_inp_ns : ∀ j, j ≥ 1 → (ifTransitionInput c_test.input).cells j ≠ Γ.start := by
-    rw [ifTransitionInput_cells]; exact hins
-  have h_work_ge : ∀ i, (ifTransitionTape (c_test.work i)).head ≥ 1 :=
-    fun i => ifTransitionTape_head_ge _ (hwc0 i)
-  have h_work_ns : ∀ i j, j ≥ 1 → (ifTransitionTape (c_test.work i)).cells j ≠ Γ.start := by
-    intro i j hj; rw [ifTransitionTape_cells _ (hwns i)]; exact hwns i j hj
-  have h_out_cells := ifTransitionTape_cells c_test.output hons
-  have h_out_ge := ifTransitionTape_head_ge c_test.output hoc0
-  have h_out_head_bound : (ifTransitionTape c_test.output).head ≤ p_bound + 1 := by
-    unfold ifTransitionTape Tape.writeAndMove
-    by_cases hh : c_test.output.head = 0
-    · simp only [Tape.write, hh, ↓reduceIte, Tape.read, hoc0, idleDir, Tape.move]; omega
-    · cases hdir : idleDir c_test.output.read with
-      | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-      | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-      | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+  -- Phase 3: rewind loop (tracks all tapes, using AllTapesWF propagation)
+  obtain ⟨h_inp_ge, h_inp_ns, h_work_ge, h_work_ns, h_out_cells, _⟩ :=
+    AllTapesWF.ifTransition (h_wf _ _ _ hmid)
+  have h_out_head_bound := ifTransitionTape_head_bound hoc0 hhead_bound
   obtain ⟨c_check, hreach_rw, hst_check, hh_check, hcells_check, hinp_check, hwork_check⟩ :=
     ifTM_rewind_loop_full tmTest tmThen tmElse (ifTransitionTape c_test.output).head
       { state := Sum.inr (Sum.inl IfPhase.rewindOut),
@@ -150,6 +170,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
       (by intro j hj; rw [h_out_cells]; exact hons j hj) rfl
       h_inp_ge h_inp_ns h_work_ge h_work_ns
   -- Phase 4: check + branch (cases on output cell 1)
+  -- Derive invariants on the check config from rewind results
   have hcells_at_check : c_check.output.cells 1 = c_test.output.cells 1 := by
     rw [hcells_check, h_out_cells]
   have hns_at_check : ∀ j, j ≥ 1 → c_check.output.cells j ≠ Γ.start := by

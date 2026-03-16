@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # loopTM simulation — proof internals
@@ -56,7 +57,7 @@ private theorem loopQ_test_ne_halt {QBody QTest : Type} {q : QTest} :
       Sum.inr (Sum.inl LoopPhase.done) := nofun
 
 -- ════════════════════════════════════════════════════════════════════════
--- Body phase: loopTM simulates tmBody
+-- Body phase: loopTM simulates tmBody (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 theorem loopTM_body_step (tmBody tmTest : TM n) {c c' : Cfg n tmBody.Q}
@@ -74,10 +75,9 @@ theorem loopTM_body_simulation (tmBody tmTest : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmBody.Q}
     (hreach : tmBody.reachesIn t c_start c_end) :
     (loopTM tmBody tmTest).reachesIn t
-      (loopBodyWrap tmBody tmTest c_start) (loopBodyWrap tmBody tmTest c_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (loopTM_body_step tmBody tmTest hstep) ih
+      (loopBodyWrap tmBody tmTest c_start) (loopBodyWrap tmBody tmTest c_end) :=
+  simulation_reachesIn (tm' := loopTM tmBody tmTest) (loopBodyWrap tmBody tmTest)
+    (fun _ _ => loopTM_body_step tmBody tmTest) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Body → test transition
@@ -97,7 +97,7 @@ theorem loopTM_body_to_test (tmBody tmTest : TM n) {c : Cfg n tmBody.Q}
   congr 1
 
 -- ════════════════════════════════════════════════════════════════════════
--- Test phase: loopTM simulates tmTest
+-- Test phase: loopTM simulates tmTest (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
 private theorem sum_inr_inr_ne_of_ne {α β γ : Type} {a b : γ} (h : a ≠ b) :
@@ -119,10 +119,9 @@ theorem loopTM_test_simulation (tmBody tmTest : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmTest.Q}
     (hreach : tmTest.reachesIn t c_start c_end) :
     (loopTM tmBody tmTest).reachesIn t
-      (loopTestWrap tmBody tmTest c_start) (loopTestWrap tmBody tmTest c_end) := by
-  induction hreach with
-  | zero => exact .zero
-  | step hstep _ ih => exact .step (loopTM_test_step tmBody tmTest hstep) ih
+      (loopTestWrap tmBody tmTest c_start) (loopTestWrap tmBody tmTest c_end) :=
+  simulation_reachesIn (tm' := loopTM tmBody tmTest) (loopTestWrap tmBody tmTest)
+    (fun _ _ => loopTM_test_step tmBody tmTest) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Test → rewind transition
@@ -141,14 +140,53 @@ theorem loopTM_test_to_rewind (tmBody tmTest : TM n) {c : Cfg n tmTest.Q}
   congr 1
 
 -- ════════════════════════════════════════════════════════════════════════
--- Rewind loop (following ifTM pattern)
+-- Rewind loop (via generic rewind)
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem tape_move_cells (t : Tape) (d : Dir3) :
-    (t.move d).cells = t.cells := by cases d <;> rfl
+private theorem loop_rewind_step_left (tmBody tmTest : TM n)
+    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
+    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.rewindOut))
+    (hread_ne : c.output.read ≠ Γ.start)
+    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl LoopPhase.rewindOut) ∧
+      c'.output.head = c.output.head - 1 ∧
+      c'.output.cells = c.output.cells := by
+  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
+    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp only [Tape.writeAndMove, Tape.move]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · omega
+    · simp
+  · simp only [Tape.writeAndMove, tape_move_cells]
+    rw [readBackWrite_toΓ_eq hread_ne]
+    simp only [Tape.write, Tape.read]; split
+    · rfl
+    · exact Function.update_eq_self _ _
 
-private theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
-    (readBackWrite g).toΓ = g := by cases g <;> simp_all [readBackWrite, Γw.toΓ]
+private theorem loop_rewind_step_base (tmBody tmTest : TM n)
+    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
+    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.rewindOut))
+    (hread : c.output.read = Γ.start)
+    (_ : c.output.cells 0 = Γ.start)
+    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
+      c'.state = Sum.inr (Sum.inl LoopPhase.check) ∧
+      c'.output.head = 1 ∧
+      c'.output.cells = c.output.cells := by
+  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
+    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+  have hhead : c.output.head = 0 := by
+    by_contra hne
+    have hge : c.output.head ≥ 1 := by omega
+    exact hnostart c.output.head hge (by simp only [Tape.read] at hread; exact hread)
+  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
 
 theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
     ∀ (p : ℕ) (c : Cfg n (LoopQ tmBody.Q tmTest.Q)),
@@ -160,60 +198,13 @@ theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
       (loopTM tmBody tmTest).reachesIn (p + 1) c c_check ∧
       c_check.state = Sum.inr (Sum.inl LoopPhase.check) ∧
       c_check.output.head = 1 ∧
-      c_check.output.cells = c.output.cells := by
-  intro p
-  induction p with
-  | zero =>
-    intro c hstate hcell0 _ hhead
-    have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-      rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-    have hread : c.output.read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    -- At cell 0: move right to cell 1
-    have hstep : ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl LoopPhase.check) ∧
-        c'.output.head = 1 ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    exact ⟨c', .step hstep' .zero, hst', hh', hc'⟩
-  | succ p ih =>
-    intro c hstate hcell0 hnostart hhead
-    have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-      rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-    have hread_ne : c.output.read ≠ Γ.start := by
-      simp only [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
-    -- Not at cell 0: keep moving left
-    have hstep : ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-        c'.state = Sum.inr (Sum.inl LoopPhase.rewindOut) ∧
-        c'.output.head = p ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · -- head moves from p+1 to p
-        simp only [Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · omega
-        · simp [hhead]
-      · -- cells preserved
-        simp only [Tape.writeAndMove, tape_move_cells]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write, Tape.read]; split
-        · rfl
-        · exact Function.update_eq_self _ _
-    obtain ⟨c', hstep', hst', hh', hcells'⟩ := hstep
-    obtain ⟨c_check, hreach, hst_check, hh_check, hcells_check⟩ := ih c' hst'
-      (by rw [hcells']; exact hcell0)
-      (by intro j hj; rw [hcells']; exact hnostart j hj) hh'
-    exact ⟨c_check, .step hstep' hreach, hst_check, hh_check,
-      by rw [hcells_check, hcells']⟩
+      c_check.output.cells = c.output.cells :=
+  generic_rewind_loop (loopTM tmBody tmTest)
+    (fun c hst hread hc0 hns => loop_rewind_step_left tmBody tmTest c hst hread hc0 hns)
+    (fun c hst hread hc0 hns => loop_rewind_step_base tmBody tmTest c hst hread hc0 hns)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Check step: halt (output = 1) or continue (output ≠ 1)
--- Following the ifTM_check_step_then/else pattern
 -- ════════════════════════════════════════════════════════════════════════
 
 theorem loopTM_check_halt (tmBody tmTest : TM n)
@@ -229,7 +220,6 @@ theorem loopTM_check_halt (tmBody tmTest : TM n)
   have hread : c.output.read = Γ.one := by simp [Tape.read, hhead, hcell1]
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
   refine ⟨_, rfl, rfl, ?_⟩
-  -- readBackWrite Γ.one = .one, .one.toΓ = Γ.one, idleDir Γ.one = .stay
   show (c.output.writeAndMove (readBackWrite Γ.one).toΓ (idleDir Γ.one)).cells = c.output.cells
   simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, tape_move_cells]
   simp only [Tape.write]; split
@@ -253,7 +243,6 @@ theorem loopTM_check_continue (tmBody tmTest : TM n)
     simp only [Tape.read, hhead]; exact hnostart 1 (by omega)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_⟩
-  -- readBackWrite preserves cells when read ≠ start
   simp only [Tape.writeAndMove, tape_move_cells]
   rw [readBackWrite_toΓ_eq hread_ne_start]
   simp only [Tape.write, Tape.read]; split
