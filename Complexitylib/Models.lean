@@ -10,4 +10,13 @@ import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.UTM.Defs
 import Complexitylib.Models.TuringMachine.UTM.Helpers
 import Complexitylib.Models.TuringMachine.UTM.HelpersInternal
-import Complexitylib.Models.TuringMachine.UTM.SimStep
+import Complexitylib.Models.TuringMachine.UTM.SimConfig.Defs
+import Complexitylib.Models.TuringMachine.UTM.Init
+import Complexitylib.Models.TuringMachine.UTM.ReadCurrent
+import Complexitylib.Models.TuringMachine.UTM.ReadCurrentInternal
+import Complexitylib.Models.TuringMachine.UTM.Lookup
+import Complexitylib.Models.TuringMachine.UTM.ApplyTransition
+import Complexitylib.Models.TuringMachine.UTM.CheckHalt
+import Complexitylib.Models.TuringMachine.UTM.CheckHaltInternal
+import Complexitylib.Models.TuringMachine.UTM.ExtractOutput
+import Complexitylib.Models.TuringMachine.UTM.UTM

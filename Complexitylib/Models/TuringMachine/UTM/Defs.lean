@@ -186,11 +186,49 @@ def allΓFuncs : (n : ℕ) → List (Fin n → Γ)
 
 namespace TMEncoding
 
-/-- Encode a single transition entry (the output of δ).
-    Format: q' (one-hot, k bits) ++ wWrites (2n bits) ++ oWrite (2 bits)
-            ++ iDir (2 bits) ++ wDirs (2n bits) ++ oDir (2 bits).
-    Total width: k + 4n + 6 bits. -/
-def encodeEntry (k n : ℕ) (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
+/-- Encode a single self-describing transition entry: includes both the input
+    pattern (for matching) and the output (for applying the transition).
+
+    Format:
+    - Input pattern: q (one-hot, k bits) ++ iHead (2b) ++ wHeads (2n bits) ++ oHead (2b)
+    - Separator: [false] (1 bit)
+    - Output: q' (one-hot, k bits) ++ wWrites (2n bits) ++ oWrite (2b)
+              ++ iDir (2b) ++ wDirs (2n bits) ++ oDir (2b)
+
+    Total width per entry: 2k + 4n + 4 + 1 + k + 4n + 6 = 3k + 8n + 11 bits.
+
+    The input pattern enables linear-scan lookup: the UTM can compare the
+    current (state, symbols) against each entry's prefix without needing
+    index arithmetic. -/
+def encodeEntry (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ)
+    (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
+    (iD : Dir3) (wD : Fin n → Dir3) (oD : Dir3) : List Bool :=
+  -- Input pattern
+  (List.finRange k).map (fun i => i == q) ++
+  iH.encode ++
+  (List.finRange n).flatMap (fun i => (wH i).encode) ++
+  oH.encode ++
+  -- Separator
+  [false] ++
+  -- Output
+  (List.finRange k).map (fun i => i == q') ++
+  (List.finRange n).flatMap (fun i => (wW i).encode) ++
+  oW.encode ++ iD.encode ++
+  (List.finRange n).flatMap (fun i => (wD i).encode) ++
+  oD.encode
+
+/-- Encode just the input pattern portion of a self-describing entry:
+    q (one-hot, k bits) ++ iHead (2b) ++ wHeads (2n bits) ++ oHead (2b). -/
+def encodeInputPattern (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ) : List Bool :=
+  (List.finRange k).map (fun i => i == q) ++
+  iH.encode ++
+  (List.finRange n).flatMap (fun i => (wH i).encode) ++
+  oH.encode
+
+/-- Encode just the transition output portion of a self-describing entry:
+    q' (one-hot, k bits) ++ wWrites (2n bits) ++ oWrite (2b)
+    ++ iDir (2b) ++ wDirs (2n bits) ++ oDir (2b). -/
+def encodeTransOutput (k n : ℕ) (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
     (iD : Dir3) (wD : Fin n → Dir3) (oD : Dir3) : List Bool :=
   (List.finRange k).map (fun i => i == q') ++
   (List.finRange n).flatMap (fun i => (wW i).encode) ++
@@ -198,9 +236,17 @@ def encodeEntry (k n : ℕ) (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
   (List.finRange n).flatMap (fun i => (wD i).encode) ++
   oD.encode
 
-/-- Encode the full transition table for a normalized TM.
-    Enumerates all input tuples `(q, iHead, wHeads, oHead)` in canonical order
-    and encodes the δ output for each. -/
+/-- Width of the input pattern portion of a self-describing entry. -/
+def inputPatternWidth (k n : ℕ) : ℕ := k + 2 + 2 * n + 2
+
+/-- Width of the output portion of a self-describing entry. -/
+def outputWidth (k n : ℕ) : ℕ := k + 2 * n + 2 + 2 + 2 * n + 2
+
+/-- Total width of one self-describing entry (input + separator + output). -/
+def entryWidth (k n : ℕ) : ℕ := inputPatternWidth k n + 1 + outputWidth k n
+
+/-- Encode the full transition table using self-describing entries.
+    Each entry includes its input pattern for linear-scan lookup. -/
 noncomputable def encodeTransTable {n : ℕ} (tm : TM n)
     (e : tm.Q ≃ Fin (Fintype.card tm.Q)) : List Bool :=
   let k := Fintype.card tm.Q
@@ -209,15 +255,110 @@ noncomputable def encodeTransTable {n : ℕ} (tm : TM n)
       (allΓFuncs n).flatMap fun wH =>
         allΓ.flatMap fun oH =>
           let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iH wH oH
-          encodeEntry k n (e q') wW oW iD wD oD
+          encodeEntry k n q iH wH oH (e q') wW oW iD wD oD
 
-/-- Full TM encoding: header + transition table.
-    Header: k in unary (k ones) ++ [false] ++ n in unary (n ones) ++ [false]
-    Body: transition table entries in canonical order. -/
+/-- Encode a state as a one-hot pattern (k bits).
+    Bit i is true iff i = e(q). -/
+noncomputable def encodeStateOneHot {n : ℕ} (tm : TM n)
+    (e : tm.Q ≃ Fin (Fintype.card tm.Q)) (q : tm.Q) : List Bool :=
+  let k := Fintype.card tm.Q
+  (List.finRange k).map (fun i => i == e q)
+
+/-- Full TM encoding with self-describing entries.
+    Header:
+    - k ones + [false]                  (number of states in unary)
+    - n ones + [false]                  (number of work tapes in unary)
+    - qhalt one-hot (k bits) + [false]  (halt state position)
+    - qstart one-hot (k bits) + [false] (start state position)
+    Body: self-describing transition table entries in canonical order. -/
 noncomputable def encodeTM {n : ℕ} (tm : TM n) : List Bool :=
   let k := @Fintype.card tm.Q tm.finQ
+  let e := tm.stateEquiv
   List.replicate k true ++ [false] ++
   List.replicate n true ++ [false] ++
-  encodeTransTable tm tm.stateEquiv
+  encodeStateOneHot tm e tm.qhalt ++ [false] ++
+  encodeStateOneHot tm e tm.qstart ++ [false] ++
+  encodeTransTable tm e
+
+/-- Offset in the description where the qhalt one-hot starts (0-indexed into bits). -/
+def qhaltOffset (k n : ℕ) : ℕ := k + 1 + n + 1
+
+/-- Offset where the qstart one-hot starts. -/
+def qstartOffset (k n : ℕ) : ℕ := qhaltOffset k n + k + 1
+
+/-- Offset where the transition table starts. -/
+def tableOffset (k n : ℕ) : ℕ := qstartOffset k n + k + 1
+
+/-- Length of the description for a normalized TM with k states and n work tapes. -/
+noncomputable def descLen {n : ℕ} (tm : TM n) : ℕ :=
+  (encodeTM tm).length
 
 end TMEncoding
+
+-- ════════════════════════════════════════════════════════════════════════
+-- UTM input encoding
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Encode the UTM's input as a `List Γ`: TM description bits (mapped through
+    `Γ.ofBool`), then a `Γ.blank` separator, then the input x (also mapped
+    through `Γ.ofBool`).
+
+    The description and x both use only `Γ.zero` and `Γ.one`, so the `Γ.blank`
+    separator is unambiguous. The `copyInputToWorkTM` machine (which copies
+    input until reading `Γ.blank`) naturally stops at the separator, giving us
+    a clean split between desc and x on the work tapes.
+
+    Input tape layout (via `initTape`):
+    ```
+    cell 0: ▷
+    cells 1..descLen: desc[0] .. desc[L-1]  (Γ.ofBool)
+    cell descLen+1: Γ.blank                 (separator)
+    cells descLen+2..descLen+1+|x|: x[0] .. x[|x|-1]  (Γ.ofBool)
+    cells descLen+2+|x|..: Γ.blank          (initTape default)
+    ``` -/
+noncomputable def encodeUTMInput {n : ℕ} (tm : TM n) (x : List Bool) : List Γ :=
+  (TMEncoding.encodeTM tm).map Γ.ofBool ++ [Γ.blank] ++ x.map Γ.ofBool
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Super-cell encoding definitions (for simulation tape)
+-- ════════════════════════════════════════════════════════════════════════
+
+namespace SuperCell
+
+/-- Width of a super-cell: 3 cells per simulated tape (1 head marker + 2 symbol bits).
+    The simulated machine has n work tapes + 1 input tape + 1 output tape = n + 2 tapes. -/
+def width (numTapes : ℕ) : ℕ := 3 * numTapes
+
+/-- Total number of simulated tapes: n work tapes + input + output. -/
+def totalTapes (n : ℕ) : ℕ := n + 2
+
+/-- Encode a Γ symbol as two cells (high bit, low bit) on the simulation tape.
+
+    Design: `Γ.blank` maps to `(Γ.blank, Γ.blank)` so that uninitialized UTM
+    sim tape cells (which default to `Γ.blank`) automatically represent
+    "blank content". This enables `superCellsCorrect` to quantify over all
+    positions without requiring the init machine to write infinitely many cells. -/
+def symToCellPair (g : Γ) : Γ × Γ :=
+  match g with
+  | .zero  => (.zero, .zero)
+  | .one   => (.zero, .one)
+  | .blank => (.blank, .blank)
+  | .start => (.one, .one)
+
+/-- Decode two cells back to a Γ symbol. -/
+def cellPairToSym : Γ → Γ → Option Γ
+  | .zero, .zero   => some .zero
+  | .zero, .one    => some .one
+  | .blank, .blank => some .blank
+  | .one, .one     => some .start
+  | _, _           => none
+
+/-- The base position on the simulation tape for position `pos` of simulated tape `tapeIdx`,
+    given `numTapes` total simulated tapes.
+    Each simulated position maps to a super-cell of width `3 * numTapes`.
+    Within a super-cell, tape `tapeIdx` occupies offsets `3 * tapeIdx`, `3 * tapeIdx + 1`,
+    `3 * tapeIdx + 2` (head marker, sym_hi, sym_lo). -/
+def simTapeOffset (numTapes : ℕ) (pos : ℕ) (tapeIdx : ℕ) : ℕ :=
+  1 + pos * width numTapes + 3 * tapeIdx
+
+end SuperCell
