@@ -12,6 +12,11 @@ import Complexitylib.Models.TuringMachine.UTM.Helpers
 import Complexitylib.Models.TuringMachine.UTM.HelpersInternal
 import Complexitylib.Models.TuringMachine.UTM.SimConfig.Defs
 import Complexitylib.Models.TuringMachine.UTM.Init
+import Complexitylib.Models.TuringMachine.UTM.InitInternal
+import Complexitylib.Models.TuringMachine.UTM.InitInternal.Copy
+import Complexitylib.Models.TuringMachine.UTM.InitInternal.Rewind
+import Complexitylib.Models.TuringMachine.UTM.InitInternal.SetupState
+import Complexitylib.Models.TuringMachine.UTM.InitInternal.SetupSim
 import Complexitylib.Models.TuringMachine.UTM.ReadCurrent
 import Complexitylib.Models.TuringMachine.UTM.ReadCurrentInternal
 import Complexitylib.Models.TuringMachine.UTM.Lookup

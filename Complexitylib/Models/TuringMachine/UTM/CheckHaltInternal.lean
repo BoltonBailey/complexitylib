@@ -359,7 +359,7 @@ theorem skipToQhaltTM_hoareTime (hk hn : ℕ)
 
 /-- Output head is preserved when writing blank with idleDir (stay). -/
 private theorem output_head_idle (out : Tape) (hns : out.read ≠ Γ.start)
-    (hh : out.head ≥ 1) :
+    (_hh : out.head ≥ 1) :
     (out.writeAndMove Γw.blank.toΓ (idleDir out.read)).head = out.head := by
   simp only [Tape.writeAndMove, Γw.toΓ, idleDir, hns, ↓reduceIte, Tape.move, Tape.write]
   split <;> rfl
@@ -376,7 +376,7 @@ private theorem output_cells0_idle (out : Tape) (hns : out.read ≠ Γ.start)
 
 /-- Output cells ≥ 1 remain ≠ ▷ after writing blank with idleDir. -/
 private theorem output_cellsNS_idle (out : Tape) (hns : out.read ≠ Γ.start)
-    (hh : out.head ≥ 1) (hons : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start) :
+    (_hh : out.head ≥ 1) (hons : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start) :
     ∀ j, j ≥ 1 → (out.writeAndMove Γw.blank.toΓ (idleDir out.read)).cells j ≠ Γ.start := by
   intro j hj
   simp only [Tape.writeAndMove, Γw.toΓ, idleDir, hns, ↓reduceIte, Tape.move, Tape.write]
@@ -389,7 +389,7 @@ private theorem output_cellsNS_idle (out : Tape) (hns : out.read ≠ Γ.start)
 
 /-- Output read ≠ ▷ after writing blank with idleDir. -/
 private theorem output_readNS_idle (out : Tape) (hns : out.read ≠ Γ.start)
-    (hh : out.head ≥ 1) (hons : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start) :
+    (_hh : out.head ≥ 1) (_hons : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start) :
     (out.writeAndMove Γw.blank.toΓ (idleDir out.read)).read ≠ Γ.start := by
   have hns' : out.cells out.head ≠ Γ.start := by rw [← Tape.read]; exact hns
   have hdir : idleDir (out.cells out.head) = Dir3.stay := by simp [idleDir, hns']
@@ -1023,14 +1023,14 @@ private theorem compareWriteTM_simulation (k : ℕ) (q_desc q_state : Fin k)
       simp only [m, Nat.min_def]
       split
       · -- q_desc.val ≤ q_state.val, so min = q_desc.val
-        simp only [show q_desc.val = q_desc.val from rfl, ↓reduceIte]
+        simp only [↓reduceIte]
         have : q_desc.val ≠ q_state.val := fun h => heq (Fin.ext h)
         simp [this]
       · -- q_state.val < q_desc.val, so min = q_state.val
         rename_i hgt
         have : q_state.val ≠ q_desc.val := by omega
         have : q_desc.val ≠ q_state.val := fun h => heq (Fin.ext h)
-        simp [*, show q_state.val = q_state.val from rfl]
+        simp [*]
     obtain ⟨c_mid, hreach1, hst_mid, hc0_mid, hc1_mid, hinp_mid, hoh_mid,
             hoc0_mid, hons_mid, hh0_mid_eq, hh1_mid_eq, hw_mid⟩ :=
       compare_mismatch_scan m c hstate hmatch_prefix hnotblank_prefix hmismatch_at_m
@@ -1403,15 +1403,13 @@ private theorem rewindWorkTM_rich_hoareTime (idx : Fin 4) (B_tape : ℕ)
       simp only [TM.step, ↓reduceIte, hstate, rewindWorkTM, hread_ne]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
       · dsimp only []
-        simp only [show (i : Fin 4) → (i = idx) → True from fun _ _ => trivial, ↓reduceIte,
-          Tape.writeAndMove, Tape.move]
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
         rw [readBackWrite_toΓ_eq' hread_ne]
         simp only [Tape.write]; split
         · omega
         · simp [hhead]
       · dsimp only []
-        simp only [show (i : Fin 4) → (i = idx) → True from fun _ _ => trivial, ↓reduceIte,
-          Tape.writeAndMove, tape_move_cells']
+        simp only [↓reduceIte, Tape.writeAndMove, tape_move_cells']
         rw [readBackWrite_toΓ_eq' hread_ne]
         simp only [Tape.write]; split
         · rfl

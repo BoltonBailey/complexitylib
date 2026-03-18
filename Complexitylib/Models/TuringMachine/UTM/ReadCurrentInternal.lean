@@ -70,7 +70,7 @@ private theorem copyState_simulation
     (hdesc_head : (c.work utmDescTape).head ≥ 1)
     (hstate_cells : stateOnTapeAt k q (c.work utmStateTape))
     (hwf : WorkTapesWF c.work)
-    (hinp : c.input.read ≠ Γ.start) (hinp_h : c.input.head ≥ 1)
+    (hinp : c.input.read ≠ Γ.start) (_hinp_h : c.input.head ≥ 1)
     (hout : c.output.read ≠ Γ.start) (hout_h : c.output.head ≥ 1) :
     ∃ c',
       (readCurrentTM (n := n)).reachesIn (k + 1) c c' ∧
@@ -226,7 +226,7 @@ private theorem copyState_simulation
         simp only [Tape.writeAndMove, rc_tape_move_cells, Tape.write, hsc_h']
         split
         · omega
-        · dsimp only []; simp [Function.update_apply]
+        · dsimp only []; simp
       -- Scratch tape cells preserved at other positions
       · intro j hne
         dsimp only []
@@ -517,7 +517,7 @@ private theorem per_tape_simulation
       have hread_one : (c'.work utmSimTape).read = Γ.one := by
         simp only [Tape.read, hsim_head', hcells']
         have := hsim_marker h_target
-        simp only [if_pos rfl] at this; exact this
+        simp only [] at this; exact this
       have hread_ne_start : (c'.work utmSimTape).read ≠ Γ.start :=
         rc_tape_read_ne_start_of_wf _ (hheads' utmSimTape) (hwf'.2 utmSimTape)
       -- Prove the if-condition for pos
@@ -535,7 +535,7 @@ private theorem per_tape_simulation
           (∀ i, i ≠ utmSimTape → c₁.work i = c.work i) ∧
           c₁.input = c.input ∧ c₁.output = c.output := by
         simp only [TM.step, hstate', readCurrentTM]
-        simp only [hne_done, ↓reduceIte, hpos_val, hread_one]
+        simp only [↓reduceIte, hpos_val, hread_one]
         refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
         · dsimp only []
           rw [if_pos (rfl : utmSimTape = (2 : Fin 4))]
@@ -612,7 +612,7 @@ private theorem per_tape_simulation
             (⟨((c'.work utmSimTape).head - 1) % W, Nat.mod_lt _ (by omega)⟩ :
               Fin (3 * (n + 2))).val = 3 * target.val →
             (c'.work utmSimTape).read ≠ Γ.one := by
-          intro hpeq; intro hre; exact hread_ne_one ⟨hpeq, hre⟩
+          intro hpeq hre; exact hread_ne_one ⟨hpeq, hre⟩
         -- We can handle both cases uniformly by considering them together
         by_cases hpeq : ((c'.work utmSimTape).head - 1) % W = 3 * target.val
         · -- pos = 3*target, but read ≠ one
