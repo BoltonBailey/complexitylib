@@ -328,7 +328,145 @@ private theorem phase1_loop :
         else c.work i
       output := c.output }
     -- 3-step reachesIn (sorry for now, will be filled by agent)
-    have hreach3 : setupSimTM.reachesIn 3 c c₃ := by sorry
+    have hreach3 : setupSimTM.reachesIn 3 c c₃ := by
+      -- ── Idle-preservation helpers ──
+      have hinp_idle : c.input.move (idleDir c.input.read) = c.input :=
+        idle_input_preserved hinp_h hinp_ns
+      have hout_idle : c.output.writeAndMove (readBackWrite c.output.read).toΓ
+          (idleDir c.output.read) = c.output := by
+        rw [show (readBackWrite c.output.read).toΓ = readBackWrite c.output.read from rfl]
+        exact idle_tape_preserved hout_h hout_ns
+      -- Helper to show non-sim work tapes are preserved by simWriteRight-style steps
+      have hwk_idle_step : ∀ (wk : Fin 4 → Tape),
+          (∀ i : Fin 4, i ≠ utmSimTape → wk i = c.work i) →
+          ∀ i : Fin 4, i ≠ utmSimTape →
+          (wk i).writeAndMove
+            (if i.val = 2 then Γw.one else readBackWrite ((wk i).read)).toΓ
+            (if i.val = 2 then Dir3.right else idleDir ((wk i).read)) = c.work i := by
+        intro wk hwk i hi
+        have hival : ¬(i.val = 2) := fun heq => hi (Fin.ext heq)
+        simp only [hival, ↓reduceIte,
+          show (readBackWrite (wk i).read).toΓ = readBackWrite (wk i).read from rfl]
+        rw [hwk i hi]; exact hwk_id i
+      -- ── Sim tape after step 1 ──
+      set sim₁ := (c.work utmSimTape).writeAndMove Γw.one.toΓ Dir3.right with sim₁_def
+      have hsim1_head : sim₁.head = 1 + 3 * done + 1 := by
+        rw [sim₁_def, writeAndMove_right_head, hsim_h]
+      -- ── Step 2: pos0Write2 → pos0Write3 via simWriteRight ──
+      -- Step 2 operates on the raw config from hstep1; we prove the step and
+      -- simultaneously simplify to get our nice intermediate form
+      set sim₂ := sim₁.writeAndMove Γw.one.toΓ Dir3.right with sim₂_def
+      have hsim2_head : sim₂.head = 1 + 3 * done + 2 := by
+        rw [sim₂_def, writeAndMove_right_head, hsim1_head]
+      -- Step 2: unfold on the raw config from hstep1
+      have hstep2_raw : setupSimTM.step
+          { state := SetupSimPhase.pos0Write2
+            input := c.input.move (idleDir c.input.read)
+            work := fun i => (c.work i).writeAndMove
+              (if i.val = 2 then Γw.one else readBackWrite ((c.work i).read)).toΓ
+              (if i.val = 2 then Dir3.right else idleDir ((c.work i).read))
+            output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+              (idleDir c.output.read) } = some
+          { state := SetupSimPhase.pos0Write3
+            input := c.input
+            work := fun i => if i = utmSimTape then sim₂ else c.work i
+            output := c.output } := by
+        unfold TM.step
+        simp only [show SetupSimPhase.pos0Write2 ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+          setupSimTM, simWriteRight]
+        congr 1
+        refine Cfg.mk.injEq .. |>.mpr ⟨rfl, ?_, ?_, ?_⟩
+        · -- input: double-idle = idle
+          rw [hinp_idle]; exact hinp_idle
+        · -- work tapes
+          funext i
+          by_cases hi : i = utmSimTape
+          · subst hi
+            simp only [utmSimTape, show (2 : Fin 4).val = 2 from rfl, ↓reduceIte, sim₂_def, sim₁_def]
+          · have hival : ¬(i.val = 2) := fun heq => hi (Fin.ext heq)
+            simp only [hi, ↓reduceIte, hival,
+              show (readBackWrite ((c.work i).writeAndMove
+                (readBackWrite (c.work i).read).toΓ
+                (idleDir (c.work i).read)).read).toΓ =
+                readBackWrite ((c.work i).writeAndMove
+                  (readBackWrite (c.work i).read).toΓ
+                  (idleDir (c.work i).read)).read from rfl]
+            rw [hwk_id i]; exact hwk_id i
+        · -- output: double-idle
+          rw [hout_idle]; exact hout_idle
+      -- ── Step 3: pos0Write3 → pos0Write1 (custom transition) ──
+      -- We prove step 3 from the simplified c₂-like config
+      have hstep3_raw : setupSimTM.step
+          { state := .pos0Write3, input := c.input,
+            work := fun i => if i = utmSimTape then sim₂ else c.work i,
+            output := c.output } = some c₃ := by
+        unfold TM.step
+        simp only [show SetupSimPhase.pos0Write3 ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+          setupSimTM]
+        congr 1
+        refine Cfg.mk.injEq .. |>.mpr ⟨rfl, hinp_idle, ?_, hout_idle⟩
+        funext i
+        -- Step 3 transition: sim(write one, right), scratch(readBackWrite, right), rest(idle)
+        by_cases hi2 : i = utmSimTape
+        · -- Sim tape: write one, move right → produces sim₃
+          subst hi2
+          simp only [utmSimTape, show (2 : Fin 4).val = 2 from rfl, ↓reduceIte,
+            show ¬((2 : Fin 4) = utmScratchTape) from by decide]
+          show sim₂.writeAndMove Γw.one.toΓ Dir3.right = sim₃
+          have hhead : (sim₂.writeAndMove Γw.one.toΓ Dir3.right).head = sim₃.head := by
+            rw [writeAndMove_right_head, hsim2_head]
+          have hcells : (sim₂.writeAndMove Γw.one.toΓ Dir3.right).cells = sim₃.cells := by
+            funext j; simp only [sim₃]
+            by_cases hj0 : j = 1 + 3 * done
+            · subst hj0; simp only [↓reduceIte]
+              rw [writeAndMove_cells_ne (by rw [hsim2_head]; omega),
+                writeAndMove_cells_ne (by rw [hsim1_head]; omega)]
+              conv_lhs => rw [← hsim_h]
+              exact writeAndMove_cells_at_head (by omega)
+            · simp only [hj0, ↓reduceIte]
+              by_cases hj1 : j = 1 + 3 * done + 1
+              · subst hj1; simp only [↓reduceIte]
+                rw [writeAndMove_cells_ne (by rw [hsim2_head]; omega)]
+                conv_lhs => rw [← hsim1_head]
+                exact writeAndMove_cells_at_head (by omega)
+              · simp only [hj1, ↓reduceIte]
+                by_cases hj2 : j = 1 + 3 * done + 2
+                · subst hj2; simp only [↓reduceIte]
+                  conv_lhs => rw [← hsim2_head]
+                  exact writeAndMove_cells_at_head (by omega)
+                · simp only [hj2, ↓reduceIte]
+                  rw [writeAndMove_cells_ne (by rw [hsim2_head]; omega),
+                    writeAndMove_cells_ne (by rw [hsim1_head]; omega),
+                    writeAndMove_cells_ne (by rw [hsim_h]; omega)]
+          exact match sim₂.writeAndMove Γw.one.toΓ Dir3.right, sim₃, hhead, hcells with
+            | ⟨_, _⟩, ⟨_, _⟩, rfl, rfl => rfl
+        · by_cases hi3 : i = utmScratchTape
+          · -- Scratch tape: readBackWrite + right → produces sc₃
+            subst hi3
+            show (c.work utmScratchTape).writeAndMove
+              (readBackWrite (c.work utmScratchTape).read).toΓ Dir3.right = sc₃
+            have hhead : ((c.work utmScratchTape).writeAndMove
+              (readBackWrite (c.work utmScratchTape).read).toΓ Dir3.right).head = sc₃.head := by
+              rw [writeAndMove_right_head]
+            have hcells : ((c.work utmScratchTape).writeAndMove
+              (readBackWrite (c.work utmScratchTape).read).toΓ Dir3.right).cells = sc₃.cells := by
+              simp only [sc₃]
+              exact readBackWrite_cells (by rw [hsc_h]; omega)
+                (fun j hj => hwf.2 utmScratchTape j hj)
+            exact match (c.work utmScratchTape).writeAndMove _ Dir3.right, sc₃, hhead, hcells with
+              | ⟨_, _⟩, ⟨_, _⟩, rfl, rfl => rfl
+          · -- Other tapes: idle (readBackWrite + idleDir)
+            have hi2v : ¬(i.val = 2) := fun heq => hi2 (Fin.ext heq)
+            have hi3v : ¬(i.val = 3) := fun heq => hi3 (Fin.ext heq)
+            simp only [hi2, hi3, ↓reduceIte, hi2v, hi3v,
+              show (readBackWrite (c.work i).read).toΓ = readBackWrite (c.work i).read from rfl,
+              show ¬(i = utmScratchTape) from hi3]
+            exact hwk_id i
+      -- ── Combine: reachesIn 3 c c₃ ──
+      -- hstep1 : step c = some raw₁
+      -- hstep2_raw : step raw₁ = some {.pos0Write3, ..sim₂..}
+      -- hstep3_raw : step {.pos0Write3, ..sim₂..} = some c₃
+      exact .step hstep1 (.step hstep2_raw (.step hstep3_raw .zero))
     -- Apply IH
     have hih := ih (done + 1) (by omega) c₃ (by omega)
       (by show c₃.state = .pos0Write1; rfl)
