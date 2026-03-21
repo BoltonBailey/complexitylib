@@ -30,6 +30,53 @@ private theorem init_tape_read_ne_start (t : Tape) (hh : t.head ≥ 1)
     (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) : t.read ≠ Γ.start := by
   simp only [Tape.read]; exact hns _ hh
 
+private theorem idle_tape_preserved {t : Tape} (hh : t.head ≥ 1)
+    (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
+    t.writeAndMove (readBackWrite t.read) (idleDir t.read) = t := by
+  have hread : t.read ≠ Γ.start := init_tape_read_ne_start _ hh hns
+  simp only [Tape.writeAndMove, idleDir, hread, ↓reduceIte, Tape.move,
+    Tape.write, show t.head ≠ 0 from by omega]
+  congr 1
+  rw [init_readBackWrite_toΓ_eq hread]; exact Function.update_eq_self _ _
+
+private theorem idle_input_preserved {t : Tape} (hh : t.head ≥ 1)
+    (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
+    t.move (idleDir t.read) = t := by
+  have hread : t.read ≠ Γ.start := init_tape_read_ne_start _ hh hns
+  simp [idleDir, hread, Tape.move]
+
+private theorem writeAndMove_right_head {t : Tape} {w : Γw} :
+    (t.writeAndMove w Dir3.right).head = t.head + 1 := by
+  simp [Tape.writeAndMove, Tape.write]; split <;> simp [Tape.move]
+
+private theorem writeAndMove_cells_at_head {t : Tape} {w : Γw} {d : Dir3}
+    (hh : t.head ≠ 0) :
+    (t.writeAndMove w d).cells t.head = w.toΓ := by
+  simp only [Tape.writeAndMove, init_tape_move_cells, Tape.write, hh, ↓reduceIte,
+    Function.update_self]
+
+private theorem writeAndMove_cells_ne {t : Tape} {w : Γw} {d : Dir3} {j : ℕ}
+    (hj : j ≠ t.head) :
+    (t.writeAndMove w d).cells j = t.cells j := by
+  simp only [Tape.writeAndMove, init_tape_move_cells, Tape.write]
+  split
+  · rfl
+  · simp only [Function.update]; split
+    · next h => exact absurd h hj
+    · rfl
+
+private theorem readBackWrite_cells {t : Tape} {d : Dir3}
+    (hh : t.head ≥ 1) (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
+    (t.writeAndMove (readBackWrite t.read) d).cells = t.cells := by
+  have hread : t.read ≠ Γ.start := init_tape_read_ne_start _ hh hns
+  ext j
+  simp only [Tape.writeAndMove, init_tape_move_cells, Tape.write,
+    show t.head ≠ 0 from by omega, ↓reduceIte]
+  simp only [Function.update]
+  split
+  · next h => subst h; exact init_readBackWrite_toΓ_eq hread
+  · rfl
+
 -- ════════════════════════════════════════════════════════════════════════
 -- simTapeCellCorrect lemmas
 -- ════════════════════════════════════════════════════════════════════════
@@ -158,8 +205,8 @@ private theorem phase1_loop :
     (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
     c.output.head ≥ 1 →
     (∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) →
-    c.work utmDescTape = c.work utmDescTape →
-    c.work utmStateTape = c.work utmStateTape →
+    (c.work utmDescTape).head ≥ 1 →
+    (c.work utmStateTape).head ≥ 1 →
     ∃ c',
       setupSimTM.reachesIn (3 * (n - done) + 1) c c' ∧
       c'.state = .pos0Extra1 ∧
@@ -172,7 +219,187 @@ private theorem phase1_loop :
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work ∧
       (c'.work utmScratchTape).head = n + 1 := by
-  sorry
+  intro done
+  induction h : n - done generalizing done with
+  | zero =>
+    intro c hdn hstate hsim_h hsim_ones hsim_blank hsim0
+      hsc_h hsc_ones hsc_sentinel hsc0 hsc_ns hwf hinp_h hinp_ns hout_h hout_ns hdesc_h hst_h
+    have hdn : done = n := by omega
+    have hsc_read : (fun i => (c.work i).read) (3 : Fin 4) ≠ Γ.one := by
+      show (c.work utmScratchTape).read ≠ Γ.one
+      simp only [Tape.read, hsc_h, hdn, show 1 + n = n + 1 from by omega, hsc_sentinel]; decide
+    have htape_id : ∀ (t : Tape), t.head ≥ 1 →
+        (∀ j, j ≥ 1 → t.cells j ≠ Γ.start) →
+        t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
+      intro t hh hns
+      have hns_read : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns _ hh
+      simp only [Tape.writeAndMove, idleDir, hns_read, ↓reduceIte, Tape.move,
+        init_readBackWrite_toΓ_eq hns_read, Tape.write]
+      split
+      · omega
+      · simp only [Tape.read, Function.update_eq_self]
+    have hwk_heads : ∀ i : Fin 4, (c.work i).head ≥ 1 := fun
+      | ⟨0, _⟩ => hdesc_h | ⟨1, _⟩ => hst_h
+      | ⟨2, _⟩ => by show (c.work utmSimTape).head ≥ 1; omega
+      | ⟨3, _⟩ => by show (c.work utmScratchTape).head ≥ 1; omega
+    have hwk_id : ∀ i : Fin 4,
+        (c.work i).writeAndMove (readBackWrite (c.work i).read).toΓ (idleDir (c.work i).read) = c.work i :=
+      fun i => htape_id _ (hwk_heads i) (fun j hj => hwf.2 i j hj)
+    have hinp_ns_read : c.input.read ≠ Γ.start := by
+      simp only [Tape.read]; exact hinp_ns _ hinp_h
+    have hinp_id : c.input.move (idleDir c.input.read) = c.input := by
+      simp only [idleDir, hinp_ns_read, ↓reduceIte, Tape.move]
+    have hout_id : c.output.writeAndMove (readBackWrite c.output.read).toΓ (idleDir c.output.read) = c.output :=
+      htape_id _ hout_h (fun j hj => hout_ns j hj)
+    have hstep : setupSimTM.step c = some
+        { state := SetupSimPhase.pos0Extra1
+          input := c.input.move (idleDir c.input.read)
+          work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read).toΓ (idleDir (c.work i).read)
+          output := c.output.writeAndMove (readBackWrite c.output.read).toΓ (idleDir c.output.read) } := by
+      unfold TM.step
+      simp only [hstate, show SetupSimPhase.pos0Write1 ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+        setupSimTM, hsc_read, setupIdle]
+    refine ⟨_, .step hstep .zero, rfl, ?_, ?_, ?_, ?_, ?_, ?_, hinp_id, hout_id, ?_, ?_⟩
+    · dsimp only []; rw [hwk_id utmSimTape, hsim_h, hdn]
+    · intro j hj1 hjn; dsimp only []; rw [hwk_id utmSimTape]; exact hsim_ones j hj1 (by omega)
+    · intro j hj; dsimp only []; rw [hwk_id utmSimTape]; exact hsim_blank j (by omega)
+    · dsimp only []; rw [hwk_id utmSimTape]; exact hsim0
+    · exact hwk_id utmDescTape
+    · exact hwk_id utmStateTape
+    · exact ⟨fun i => by dsimp only []; rw [hwk_id i]; exact hwf.1 i,
+             fun i j hj => by dsimp only []; rw [hwk_id i]; exact hwf.2 i j hj⟩
+    · dsimp only []; rw [hwk_id utmScratchTape, hsc_h, hdn]; omega
+  | succ m ih =>
+    intro c hdn hstate hsim_h hsim_ones hsim_blank hsim0
+      hsc_h hsc_ones hsc_sentinel hsc0 hsc_ns hwf hinp_h hinp_ns hout_h hout_ns hdesc_h hst_h
+    have hlt : done < n := by omega
+    have hsc_read_one : (c.work utmScratchTape).read = Γ.one := by
+      simp only [Tape.read, hsc_h]; exact hsc_ones (1 + done) (by omega) (by omega)
+    have hsc_is_one : (fun i => (c.work i).read) (3 : Fin 4) = Γ.one := hsc_read_one
+    have hwk_heads : ∀ i : Fin 4, (c.work i).head ≥ 1 := fun
+      | ⟨0, _⟩ => hdesc_h | ⟨1, _⟩ => hst_h
+      | ⟨2, _⟩ => by show (c.work utmSimTape).head ≥ 1; omega
+      | ⟨3, _⟩ => by show (c.work utmScratchTape).head ≥ 1; omega
+    have htape_id : ∀ (t : Tape), t.head ≥ 1 →
+        (∀ j, j ≥ 1 → t.cells j ≠ Γ.start) →
+        t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
+      intro t hh hns
+      have hns_read : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns _ hh
+      simp only [Tape.writeAndMove, idleDir, hns_read, ↓reduceIte, Tape.move,
+        init_readBackWrite_toΓ_eq hns_read, Tape.write]
+      split
+      · omega
+      · simp only [Tape.read, Function.update_eq_self]
+    have hwk_id : ∀ i : Fin 4,
+        (c.work i).writeAndMove (readBackWrite (c.work i).read).toΓ (idleDir (c.work i).read) = c.work i :=
+      fun i => htape_id _ (hwk_heads i) (fun j hj => hwf.2 i j hj)
+    have hinp_ns_read : c.input.read ≠ Γ.start := by
+      simp only [Tape.read]; exact hinp_ns _ hinp_h
+    have hout_ns_read : c.output.read ≠ Γ.start := by
+      simp only [Tape.read]; exact hout_ns _ hout_h
+    -- Step 1: pos0Write1(scratch=one) → pos0Write2 via simWriteRight
+    have hstep1 : setupSimTM.step c = some
+        { state := SetupSimPhase.pos0Write2
+          input := c.input.move (idleDir c.input.read)
+          work := fun i => (c.work i).writeAndMove
+            (if i.val = 2 then Γw.one else readBackWrite ((c.work i).read)).toΓ
+            (if i.val = 2 then Dir3.right else idleDir ((c.work i).read))
+          output := c.output.writeAndMove (readBackWrite c.output.read).toΓ (idleDir c.output.read) } := by
+      unfold TM.step
+      simp only [hstate, show SetupSimPhase.pos0Write1 ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+        setupSimTM, hsc_is_one, simWriteRight]
+    -- Define c₃: config after 3 steps
+    let sim₃ : Tape := {
+      head := 1 + 3 * done + 3
+      cells := fun j =>
+        if j = 1 + 3 * done then Γ.one
+        else if j = 1 + 3 * done + 1 then Γ.one
+        else if j = 1 + 3 * done + 2 then Γ.one
+        else (c.work utmSimTape).cells j }
+    let sc₃ : Tape := {
+      head := (c.work utmScratchTape).head + 1
+      cells := (c.work utmScratchTape).cells }
+    let c₃ : Cfg 4 setupSimTM.Q := {
+      state := .pos0Write1
+      input := c.input
+      work := fun i =>
+        if i = utmSimTape then sim₃
+        else if i = utmScratchTape then sc₃
+        else c.work i
+      output := c.output }
+    -- 3-step reachesIn (sorry for now, will be filled by agent)
+    have hreach3 : setupSimTM.reachesIn 3 c c₃ := by sorry
+    -- Apply IH
+    have hih := ih (done + 1) (by omega) c₃ (by omega)
+      (by show c₃.state = .pos0Write1; rfl)
+      (by show sim₃.head = 1 + 3 * (done + 1); simp [sim₃]; omega)
+      (by intro j hj1 hjn; show sim₃.cells j = Γ.one; simp only [sim₃]
+          by_cases h1 : j = 1 + 3 * done
+          · simp [h1]
+          · by_cases h2 : j = 1 + 3 * done + 1
+            · simp [h1, h2]
+            · by_cases h3 : j = 1 + 3 * done + 2
+              · simp [h1, h2, h3]
+              · simp [h1, h2, h3]; exact hsim_ones j hj1 (by omega))
+      (by intro j hj; show sim₃.cells j = Γ.blank; simp only [sim₃]
+          have : j ≠ 1 + 3 * done := by omega
+          have : j ≠ 1 + 3 * done + 1 := by omega
+          have : j ≠ 1 + 3 * done + 2 := by omega
+          simp [*]; exact hsim_blank j (by omega))
+      (by show sim₃.cells 0 = Γ.start; simp only [sim₃]
+          simp (config := { decide := true }) [show 0 ≠ 1 + 3 * done from by omega,
+            show 0 ≠ 1 + 3 * done + 1 from by omega, show 0 ≠ 1 + 3 * done + 2 from by omega]
+          exact hsim0)
+      (by show sc₃.head = 1 + (done + 1); simp [sc₃, hsc_h]; omega)
+      (by intro j hj hjn; show sc₃.cells j = Γ.one; simp only [sc₃]
+          exact hsc_ones j (by omega) hjn)
+      hsc_sentinel
+      (by show sc₃.cells 0 = Γ.start; simp [sc₃]; exact hsc0)
+      hsc_ns
+      (by constructor
+          · intro i; show (c₃.work i).cells 0 = Γ.start; simp only [c₃]
+            by_cases h2 : i = utmSimTape
+            · simp [h2, sim₃, show 0 ≠ 1 + 3 * done from by omega,
+                show 0 ≠ 1 + 3 * done + 1 from by omega, show 0 ≠ 1 + 3 * done + 2 from by omega]
+              exact hsim0
+            · by_cases h3 : i = utmScratchTape
+              · simp [h2, h3, sc₃]; exact hsc0
+              · simp [h2, h3]; exact hwf.1 i
+          · intro i j hj; show (c₃.work i).cells j ≠ Γ.start; simp only [c₃]
+            by_cases h2 : i = utmSimTape
+            · simp only [h2, ↓reduceIte, sim₃]
+              by_cases h4 : j = 1 + 3 * done
+              · simp [h4]
+              · by_cases h5 : j = 1 + 3 * done + 1
+                · simp [h4, h5]
+                · by_cases h6 : j = 1 + 3 * done + 2
+                  · simp [h4, h5, h6]
+                  · simp [h4, h5, h6]; exact hwf.2 utmSimTape j hj
+            · by_cases h3 : i = utmScratchTape
+              · simp [h2, h3, sc₃]; exact hwf.2 utmScratchTape j hj
+              · simp [h2, h3]; exact hwf.2 i j hj)
+      hinp_h hinp_ns hout_h hout_ns
+      (by show (c₃.work utmDescTape).head ≥ 1
+          simp only [c₃, show utmDescTape ≠ utmSimTape from by decide,
+            show utmDescTape ≠ utmScratchTape from by decide, ↓reduceIte]
+          exact hdesc_h)
+      (by show (c₃.work utmStateTape).head ≥ 1
+          simp only [c₃, show utmStateTape ≠ utmSimTape from by decide,
+            show utmStateTape ≠ utmScratchTape from by decide, ↓reduceIte]
+          exact hst_h)
+    obtain ⟨c', hreach_ih, hst', hsim_h', hsim_ones', hsim_blank', hsim0',
+            hdesc', hstate', hinp', hout', hwf', hsc_h'⟩ := hih
+    refine ⟨c', ?_, hst', hsim_h', hsim_ones', hsim_blank', hsim0', ?_, ?_, ?_, ?_, hwf', hsc_h'⟩
+    · have : 3 * (m + 1) + 1 = 3 + (3 * m + 1) := by omega
+      rw [this]; exact reachesIn_trans setupSimTM hreach3 hreach_ih
+    · rw [hdesc']; show c₃.work utmDescTape = c.work utmDescTape
+      simp only [c₃, show utmDescTape ≠ utmSimTape from by decide,
+        show utmDescTape ≠ utmScratchTape from by decide, ↓reduceIte]
+    · rw [hstate']; show c₃.work utmStateTape = c.work utmStateTape
+      simp only [c₃, show utmStateTape ≠ utmSimTape from by decide,
+        show utmStateTape ≠ utmScratchTape from by decide, ↓reduceIte]
+    · rw [hinp']
+    · rw [hout']
 
 /-- Phase 1+2: write 3*(n+2) ones for position 0 and advance input.
 
@@ -189,7 +416,9 @@ private theorem setupSim_phase12
     (hsc_head : (work utmScratchTape).head = 1)
     (hinp_h : inp.head ≥ 1) (hinp_ns : ∀ j, j ≥ 1 → inp.cells j ≠ Γ.start)
     (hout_h : out.head ≥ 1) (hout_ns : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start)
-    (hwf : WorkTapesWF work) :
+    (hwf : WorkTapesWF work)
+    (hdesc_h : (work utmDescTape).head ≥ 1)
+    (hst_h : (work utmStateTape).head ≥ 1) :
     ∃ c',
       setupSimTM.reachesIn (3 * n + 8) ⟨.pos0Write1, inp, work, out⟩ c' ∧
       c'.state = .checkInput ∧
@@ -206,7 +435,7 @@ private theorem setupSim_phase12
       (∀ j, j ≥ 1 → j ≤ n → (c'.work utmScratchTape).cells j = Γ.one) ∧
       (c'.work utmScratchTape).cells (n + 1) = Γ.blank ∧
       (c'.work utmScratchTape).cells 0 = Γ.start ∧
-      (c'.work utmScratchTape).head = 1 ∧
+      (c'.work utmScratchTape).head = n + 1 ∧
       c'.input.head ≥ 1 ∧
       (∀ j, j ≥ 1 → c'.input.cells j ≠ Γ.start) ∧
       c'.output.head ≥ 1 ∧
@@ -230,7 +459,7 @@ private theorem setupSim_phase3
     (hsc_ones : ∀ j, j ≥ 1 → j ≤ n → (c.work utmScratchTape).cells j = Γ.one)
     (hsc_blank : (c.work utmScratchTape).cells (n + 1) = Γ.blank)
     (hsc0 : (c.work utmScratchTape).cells 0 = Γ.start)
-    (hsc_head : (c.work utmScratchTape).head = 1)
+    (hsc_head : (c.work utmScratchTape).head = n + 1)
     -- input tape
     (hinp_h : c.input.head ≥ 1)
     (hinp_ns : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
@@ -240,7 +469,9 @@ private theorem setupSim_phase3
     -- output + wf
     (hout_h : c.output.head ≥ 1)
     (hout_ns : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
-    (hwf : WorkTapesWF c.work) :
+    (hwf : WorkTapesWF c.work)
+    (hdesc_h : (c.work utmDescTape).head ≥ 1)
+    (hst_h : (c.work utmStateTape).head ≥ 1) :
     ∃ c',
       setupSimTM.reachesIn (x.length * (4 * n + 9) + 1) c c' ∧
       setupSimTM.halted c' ∧
@@ -290,7 +521,9 @@ private theorem setupSim_full_execution
     (hout_h : out.head ≥ 1)
     (hout_ns : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start)
     -- work tapes WF
-    (hwf : WorkTapesWF work) :
+    (hwf : WorkTapesWF work)
+    (hdesc_h : (work utmDescTape).head ≥ 1)
+    (hst_h : (work utmStateTape).head ≥ 1) :
     ∃ c',
       setupSimTM.reachesIn (setupSimBound n x.length)
         ⟨.pos0Write1, inp, work, out⟩ c' ∧
@@ -334,6 +567,7 @@ private theorem setupSim_full_execution
           hinp_h1, hinp_ns1, hout_h1, hout_ns1⟩ :=
     setupSim_phase12 inp work out hsim0 hsim_blank hsim_head
       hsc0 hsc_ones hsc_sentinel hsc_head hinp_h hinp_ns hout_h hout_ns hwf
+      hdesc_h hst_h
   -- Phase 3: copy x with stride and halt
   have hinp_x1 : ∀ (i : ℕ) (hi : i < x.length),
       c1.input.cells (c1.input.head + i) = Γ.ofBool (x.get ⟨i, hi⟩) := by
@@ -348,6 +582,7 @@ private theorem setupSim_full_execution
     setupSim_phase3 x c1 hst1 hsim0_1 hsim_head1 hones1 hblank1
       hsc_ones1 hsc_blank1 hsc0_1 hsc_head1
       hinp_h1 hinp_ns1 hinp_x1 hinp_end1 hout_h1 hout_ns1 hwf1
+      (by rw [hdesc1]; exact hdesc_h) (by rw [hstate1]; exact hst_h)
   -- Compose phases
   refine ⟨c2, ?_, hhalt2, hsim0_2, hones2, hinput2, hblank2,
           ?_, ?_, hwf2, hheads2⟩
