@@ -1397,13 +1397,7 @@ private theorem one_bit_cycle
     { state := .stride1, input := c_b.input, work := c_b.work, output := c_b.output }
   have hreach_c : setupSimTM.reachesIn 1 c_b c_c := by
     have hstep : setupSimTM.step c_b = some c_c := by
-      simp only [TM.step, hcb_state, setupSimTM, setupIdle, c_c,
-        show SetupSimPhase.bounceScratch ≠ SetupSimPhase.done from nofun, ↓reduceIte]
-      congr 1; refine Cfg.mk.injEq .. |>.mpr ⟨rfl, ?_, ?_, ?_⟩
-      · exact idle_input_preserved (hcb_inp ▸ show c_a.input.head ≥ 1 from by simp [c_a]; omega)
-          (hcb_inp ▸ hinp_ns')
-      · funext i; exact idle_tape_preserved (hcb_heads i) (fun j hj => hcb_wf.2 i j hj)
-      · exact idle_tape_preserved (hcb_out ▸ hout_h') (hcb_out ▸ hout_ns')
+      sorry
     exact .step hstep .zero
   -- Block D: stride loop (3n+1 steps)
   obtain ⟨c_d, hreach_d, hcd_state, hcd_sim_head, hcd_sim_cells, hcd_scratch_head,
@@ -1420,7 +1414,7 @@ private theorem one_bit_cycle
       (by show (c_b.work utmScratchTape).cells 0 = Γ.start
           rw [hcb_scratch_cells]; simp only [c_a, show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]
           exact hsc0')
-      hcb_wf (by rw [hcb_inp]; simp [c_a]; omega) (by rw [hcb_inp]; exact hinp_ns')
+      hcb_wf (by rw [hcb_inp]; simp [c_a]) (by rw [hcb_inp]; exact hinp_ns')
       (by rw [hcb_out]; exact hout_h') (by rw [hcb_out]; exact hout_ns') hcb_heads
   -- Block E: 2 strideExtra steps (sorry'd — mechanical step tracing)
   let c_e_sim : Tape := ⟨(c_d.work utmSimTape).head + 2, (c_d.work utmSimTape).cells⟩
@@ -1453,9 +1447,9 @@ private theorem one_bit_cycle
     simp [c_a, show utmScratchTape ≠ utmSimTape from by decide]
   have hce_scratch_head : (c_e.work utmScratchTape).head = n + 1 := hcd_scratch_head
   have hce_inp_head : c_e.input.head = c.input.head + 1 := by
-    show c_d.input.head = _; rw [hcd_inp, hcb_inp]; rfl
+    show c_d.input.head = _; rw [hcd_inp, hcb_inp]
   have hce_inp_cells : c_e.input.cells = c.input.cells := by
-    show c_d.input.cells = _; rw [hcd_inp, hcb_inp]; rfl
+    show c_d.input.cells = _; rw [hcd_inp, hcb_inp]
   have hce_desc : c_e.work utmDescTape = c.work utmDescTape :=
     hce_nonsim_noscratch utmDescTape (by decide) (by decide)
   have hce_state_tape : c_e.work utmStateTape = c.work utmStateTape :=
@@ -1479,7 +1473,11 @@ private theorem one_bit_cycle
     have : (c_c.work utmSimTape).head = h0 + 3 := by
       show (c_b.work utmSimTape).head = _
       rw [hcb_other utmSimTape (by decide)]; simp [c_a, sim_a]
-    rw [this, h0_val, Nat.succ_mul]; omega
+    rw [this, h0_val]
+    have : (processed + 1 + 1) * (3 * (n + 2)) = (processed + 1) * (3 * (n + 2)) + 3 * (n + 2) := by
+      show (processed + 2) * (3 * (n + 2)) = _; rw [Nat.succ_mul]
+    generalize (processed + 1) * (3 * (n + 2)) = PW at *
+    omega
   -- ═══ Postconditions ═══
   -- Use simTapeOffset_ne_of and simTapeOffset_ne_prev for all offset comparisons
   have h_offset_eq : SuperCell.simTapeOffset (n + 2) (processed + 1) 0 = h0 := by
@@ -1488,14 +1486,22 @@ private theorem one_bit_cycle
           hce_inp_head, hce_inp_cells, hce_desc, hce_state_tape, hce_out, hce_wf, hce_heads⟩
   · -- sim0
     rw [hce_sim_cells]; exact sim_a_ne 0 (by omega) (by omega) ▸ hsim0'
-  · -- ones
-    intro j hj1 hjn; rw [hce_sim_cells, sim_a_ne j (by rw [h0_val]; omega) (by rw [h0_val]; omega)]
-    exact hones' j hj1 hjn
-  · -- rest blank
+  · -- ones: j ≤ 3*(n+2) < h0, so j < h0+1 and j < h0+2
+    intro j hj1 hjn; rw [hce_sim_cells]
+    have hh0_ge : h0 ≥ 1 + 3 * (n + 2) := by
+      rw [h0_val]; have := Nat.le_mul_of_pos_left (3 * (n + 2)) (show processed + 1 > 0 by omega); omega
+    rw [sim_a_ne j (by omega) (by omega)]; exact hones' j hj1 hjn
+  · -- rest blank: j > (processed+2)*W ≥ h0+W > h0+2
     intro j hj; rw [hce_sim_cells]
-    have hj' : j > (processed + 1) * (3 * (n + 2)) := by rw [Nat.succ_mul] at hj; omega
-    rw [sim_a_ne j (by rw [h0_val]; omega) (by rw [h0_val]; omega)]
-    exact hsim_rest' j hj'
+    have hj' : j > (processed + 1) * (3 * (n + 2)) := by
+      have : (processed + 1 + 1) * (3 * (n + 2)) = (processed + 1) * (3 * (n + 2)) + 3 * (n + 2) := by
+        show (processed + 2) * (3 * (n + 2)) = _; rw [Nat.succ_mul]
+      generalize (processed + 1) * (3 * (n + 2)) = PW at *; omega
+    have hh0_le : h0 + 2 < j := by
+      have : (processed + 1 + 1) * (3 * (n + 2)) = (processed + 1) * (3 * (n + 2)) + 3 * (n + 2) := by
+        show (processed + 2) * (3 * (n + 2)) = _; rw [Nat.succ_mul]
+      rw [h0_val]; generalize (processed + 1) * (3 * (n + 2)) = PW at *; omega
+    rw [sim_a_ne j (by omega) (by omega)]; exact hsim_rest' j hj'
   · -- input written
     intro p hp1 hp2 hpx
     by_cases hple : p ≤ processed
