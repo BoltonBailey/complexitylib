@@ -1283,15 +1283,15 @@ private theorem setupSim_phase3
       (∀ i, (c'.work i).head ≥ 1) := by
   -- Generalized induction with processed counter.
   -- We add explicit p < x.length bounds so that by omega inside the type works.
-  suffices h_gen : ∀ (processed : ℕ) (xs : List Bool) (c : Cfg 4 setupSimTM.Q),
-      processed + xs.length = x.length →
-      processed ≤ x.length →
+  suffices h_gen : ∀ (processed : ℕ) (xs : List Bool) (c : Cfg 4 setupSimTM.Q)
+      (hlen_g : processed + xs.length = x.length)
+      (hple_g : processed ≤ x.length),
       c.state = .checkInput →
       (c.work utmSimTape).cells 0 = Γ.start →
       (c.work utmSimTape).head = 1 + (processed + 1) * (3 * (n + 2)) →
       (∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → (c.work utmSimTape).cells j = Γ.one) →
       (∀ j, j > (processed + 1) * (3 * (n + 2)) → (c.work utmSimTape).cells j = Γ.blank) →
-      (∀ (p : ℕ), p ≥ 1 → p ≤ processed →
+      (∀ (p : ℕ) (_hp1 : p ≥ 1) (_hp2 : p ≤ processed),
         (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank ∧
         (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
         (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
@@ -1341,12 +1341,12 @@ private theorem setupSim_phase3
       hstate hsim0
       (by convert hsim_head using 2; omega)
       hpos0_ones
-      (by convert hsim_rest using 1; constructor <;> intro h <;> omega)
+      (by intro j hj; exact hsim_rest j (by omega))
       (by intro p _ hp2; omega)
       (by intro _ pos _ hp2; omega)
       hsc_ones hsc_blank hsc0 hsc_head
       hinp_h hinp_ns hinp_x hinp_end
-      (by intro i hi; rfl)
+      (by intro i hi; simp)
       hout_h hout_ns hwf hdesc_h hst_h
   -- Proof of h_gen by induction on xs
   intro processed xs
@@ -1377,22 +1377,23 @@ private theorem setupSim_phase3
       congr 1
       refine Cfg.mk.injEq .. |>.mpr ⟨rfl, rfl, ?_, rfl⟩
       funext i; exact idle_tape_preserved (hwk_heads i) (fun j hj => hwf'.2 i j hj)
-    have hreach : setupSimTM.reachesIn ([].length * (4 * n + 9) + 1) c c' := by
+    have hreach : setupSimTM.reachesIn (([] : List Bool).length * (4 * n + 9) + 1) c c' := by
       simp only [List.length_nil, Nat.zero_mul, Nat.zero_add]; exact .step hstep .zero
-    refine ⟨c', hreach, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, hwf', hwk_heads⟩
-    · -- halted
-      show c'.state = setupSimTM.qhalt; rfl
-    · exact hsim0'
-    · exact hones'
-    · -- input written: p ≤ x.length = processed
-      intro p hp hp2; exact hinput_written p hp (by omega)
-    · -- blank cells
-      intro numTapes tapeIdx pos hpos htape hnt hor off hoff; subst hnt
-      rcases hor with htgt0 | hpgt
-      · by_cases hple : pos ≤ processed
-        · exact hblank_written tapeIdx pos (by omega) hple (by omega) htape off hoff
-        · exact hsim_rest' _ (by simp [SuperCell.simTapeOffset, SuperCell.width]; omega)
-      · exact hsim_rest' _ (by simp [SuperCell.simTapeOffset, SuperCell.width]; omega)
+    exact ⟨c', hreach,
+      show c'.state = setupSimTM.qhalt from rfl,
+      hsim0', hones',
+      fun p hp hp2 => hinput_written p hp (by omega),
+      (by intro numTapes tapeIdx pos hpos htape hnt hor off hoff; subst hnt
+          rcases hor with htgt0 | hpgt
+          · by_cases hple : pos ≤ processed
+            · exact hblank_written tapeIdx pos (by omega) hple (by omega) htape off hoff
+            · apply hsim_rest'
+              have := Nat.mul_le_mul_right (3 * (n + 2)) (show processed + 1 ≤ pos from by omega)
+              simp only [SuperCell.simTapeOffset, SuperCell.width]; omega
+          · apply hsim_rest'
+            have := Nat.mul_le_mul_right (3 * (n + 2)) (show processed + 1 ≤ pos from by omega)
+            simp only [SuperCell.simTapeOffset, SuperCell.width]; omega),
+      rfl, rfl, hwf', hwk_heads⟩
   | cons b rest ih =>
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
