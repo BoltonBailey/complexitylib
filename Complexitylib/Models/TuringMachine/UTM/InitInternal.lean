@@ -212,19 +212,27 @@ private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- **initTM_hoareTime**: from initial tapes with encoded `⟨M, x⟩`,
-    `initTM` establishes `SimInvariant` for `tm.initCfg x`.
-
-    The composition chains 9 sub-machines via `seqTM_hoareTime`.
-    Proved by composing all sub-machine HoareTime specs via seqTM_hoareTime. -/
+    `initTM` establishes `SimInvariant` for `tm.initCfg x`. -/
 theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
-    (x : List Bool) (B : ℕ)
+    (x : List Bool)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
     let desc := TMEncoding.encodeTM tm
+    let descLen := desc.length
+    let B_copy := descLen + 2
+    let B_rewind0a := descLen + 4
+    let B_setupState := 3 * k + n + 5
+    let B_rewind3a := n + 3
+    let B_setupSim := 3 * n + 9 + x.length * (4 * n + 9)
+    let B_rewindAll := (3 * k + n + 5) + (k + 1) + ((x.length + 1) * 3 * (n + 2) + 1) + (n + 1) + 11
+    let B_total := B_copy + 1 + (B_rewind0a + 1 + (B_setupState + 1 + (B_rewind3a + 1 + (B_setupSim + 1 + B_rewindAll))))
     initTM.HoareTime
-      (fun inp _work _out =>
-        inp = initTape (encodeUTMInput tm x))
+      (initTM_pre tm x)
       (SimInvariant tm k hk desc)
-      B := by
+      B_total := by
+  simp only [initTM]
+  apply (seqTM_hoareTime _ _ (copyInputToWorkTM_hoareTime tm x)
+    (fun inp work out h => h_trans_envelope (postCopy_to_initEnvelope tm x) inp work out h)
+    _).mono_bound (by omega)
   sorry
 
 end TM

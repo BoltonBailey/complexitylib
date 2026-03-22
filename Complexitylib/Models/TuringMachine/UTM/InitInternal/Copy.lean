@@ -353,7 +353,7 @@ private theorem copy_loop (desc : List Bool) (rest : List Γ) :
 -- Main theorem
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem copyInputToWorkTM_hoareTime (tm : TM n) (x : List Bool) :
+theorem copyInputToWorkTM_hoareTime (tm : TM n) (x : List Bool) :
     (copyInputToWorkTM (0 : Fin 4)).HoareTime
       (initTM_pre tm x)
       (postCopy tm x)
