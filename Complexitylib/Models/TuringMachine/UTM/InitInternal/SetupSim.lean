@@ -1397,7 +1397,11 @@ private theorem one_bit_cycle
     { state := .stride1, input := c_b.input, work := c_b.work, output := c_b.output }
   have hreach_c : setupSimTM.reachesIn 1 c_b c_c := by
     have hstep : setupSimTM.step c_b = some c_c := by
-      sorry
+      simp only [TM.step, hcb_state, setupSimTM, setupIdle, c_c,
+        show SetupSimPhase.bounceScratch ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+        idle_input_preserved (hcb_inp ▸ show c_a.input.head ≥ 1 from by simp [c_a]) (hcb_inp ▸ hinp_ns'),
+        idle_tape_preserved (hcb_out ▸ hout_h') (hcb_out ▸ hout_ns')]
+      congr 2; funext i; exact idle_tape_preserved (hcb_heads i) (fun j hj => hcb_wf.2 i j hj)
     exact .step hstep .zero
   -- Block D: stride loop (3n+1 steps)
   obtain ⟨c_d, hreach_d, hcd_state, hcd_sim_head, hcd_sim_cells, hcd_scratch_head,
