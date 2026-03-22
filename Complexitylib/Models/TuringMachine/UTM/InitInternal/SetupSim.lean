@@ -1231,6 +1231,59 @@ private theorem stride_loop :
       rw [hwk_other' i hi1 hi2]; show c₃.work i = c.work i
       simp only [c₃, hi1, hi2, ↓reduceIte]
 
+-- Helper: for any pos ≠ pos' or tapeIdx ≥ 1, the super-cell offsets don't collide
+-- with h0+1 or h0+2 (which are at position pos', tape 0, offsets 1 and 2).
+private theorem simTapeOffset_ne_of
+    (n pos pos' tapeIdx off : ℕ) (hoff : off ≤ 2) (htlt : tapeIdx < n + 2)
+    (h : pos ≠ pos' ∨ tapeIdx ≥ 1) :
+    1 + pos * (3 * (n + 2)) + 3 * tapeIdx + off ≠ 1 + pos' * (3 * (n + 2)) + 1 ∧
+    1 + pos * (3 * (n + 2)) + 3 * tapeIdx + off ≠ 1 + pos' * (3 * (n + 2)) + 2 := by
+  -- Key: if pos ≤ pos' - 1, then pos * W ≤ (pos' - 1) * W, so pos' * W ≥ pos * W + W
+  -- And W = 3*(n+2) ≥ 6, so the gap is large enough that offsets 1,2 vs 3*t+off can't collide
+  -- Strategy: derive ALL needed gap inequalities FIRST (as products), THEN generalize
+  -- to make the products opaque for omega.
+  -- For pos < pos': pos'*W ≥ (pos+1)*W = pos*W + W, so gap ≥ W ≥ 6
+  -- For pos > pos': pos*W ≥ (pos'+1)*W = pos'*W + W
+  have hW_ge : 3 * (n + 2) ≥ 6 := by omega
+  -- Expand succ multiplications to get linear forms
+  have hsucc_pos : (pos + 1) * (3 * (n + 2)) = pos * (3 * (n + 2)) + 3 * (n + 2) := Nat.succ_mul _ _
+  have hsucc_pos' : (pos' + 1) * (3 * (n + 2)) = pos' * (3 * (n + 2)) + 3 * (n + 2) := Nat.succ_mul _ _
+  -- Derive all possible gap bounds before generalizing
+  rcases h with hne | htge
+  · rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+    · have hgap := Nat.mul_le_mul_right (3 * (n + 2)) (show pos + 1 ≤ pos' from hlt)
+      rw [hsucc_pos] at hgap
+      -- hgap : pos*W + W ≤ pos'*W. Now generalize.
+      generalize pos * (3 * (n + 2)) = A at *
+      generalize pos' * (3 * (n + 2)) = B at *
+      constructor <;> omega
+    · have hgap := Nat.mul_le_mul_right (3 * (n + 2)) (show pos' + 1 ≤ pos from hgt)
+      rw [hsucc_pos'] at hgap
+      generalize pos * (3 * (n + 2)) = A at *
+      generalize pos' * (3 * (n + 2)) = B at *
+      constructor <;> omega
+  · by_cases hpe : pos = pos'
+    · subst hpe; constructor <;> omega
+    · rcases Nat.lt_or_gt_of_ne hpe with hlt | hgt
+      · have hgap := Nat.mul_le_mul_right (3 * (n + 2)) (show pos + 1 ≤ pos' from hlt)
+        rw [hsucc_pos] at hgap
+        generalize pos * (3 * (n + 2)) = A at *
+        generalize pos' * (3 * (n + 2)) = B at *
+        constructor <;> omega
+      · have hgap := Nat.mul_le_mul_right (3 * (n + 2)) (show pos' + 1 ≤ pos from hgt)
+        rw [hsucc_pos'] at hgap
+        generalize pos * (3 * (n + 2)) = A at *
+        generalize pos' * (3 * (n + 2)) = B at *
+        constructor <;> omega
+
+private theorem simTapeOffset_ne_prev (n processed p : ℕ) (off : ℕ) (hoff : off ≤ 2)
+    (hp : p ≤ processed) :
+    1 + p * (3 * (n + 2)) + off ≠ 1 + (processed + 1) * (3 * (n + 2)) + 1 ∧
+    1 + p * (3 * (n + 2)) + off ≠ 1 + (processed + 1) * (3 * (n + 2)) + 2 :=
+  -- p ≤ processed < processed + 1, so this is a special case of simTapeOffset_ne_of
+  -- with tapeIdx = 0, pos = p, pos' = processed + 1
+  simTapeOffset_ne_of n p (processed + 1) 0 off hoff (by omega) (Or.inl (by omega))
+
 /-- One-bit cycle: process one input bit, advancing from checkInput back to checkInput.
     Takes 4n+9 steps. Writes head-marker/sym_hi/sym_lo at the current super-cell position,
     then strides the sim tape to the next super-cell. -/
