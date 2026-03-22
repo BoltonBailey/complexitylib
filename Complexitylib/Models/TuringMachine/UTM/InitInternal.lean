@@ -221,6 +221,16 @@ theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
       (initTM_pre tm x)
       (SimInvariant tm k hk desc)
       B := by
+  simp only [initTM]
+  constructor
+  apply seqTM_hoareTime _ _ (copyInputToWorkTM_hoareTime tm x)
+    (h_trans_envelope (postCopy_to_initEnvelope tm x))
+  apply seqTM_hoareTime _ _ ((rewindDesc_hoareTime ((TMEncoding.encodeTM tm).length + 1)).weaken_pre
+    (fun inp work out h => ⟨postCopy_to_initEnvelope tm x inp work out h, by have := h.2.1; omega⟩))
+    (h_trans_envelope (fun _ _ _ (h : InitEnvelope _ _ _ ∧ _) => h.1))
+  apply seqTM_hoareTime _ _ ((setupStateTM_hoareTime' tm k x hk).weaken_pre
+    (fun inp work out (h : InitEnvelope _ _ _ ∧ _) => sorry))
+    (h_trans_envelope (fun _ _ _ h => h.1))
   sorry
 
 end TM
