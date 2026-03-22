@@ -1231,6 +1231,68 @@ private theorem stride_loop :
       rw [hwk_other' i hi1 hi2]; show c₃.work i = c.work i
       simp only [c₃, hi1, hi2, ↓reduceIte]
 
+/-- One-bit cycle: process one input bit, advancing from checkInput back to checkInput.
+    Takes 4n+9 steps. Writes head-marker/sym_hi/sym_lo at the current super-cell position,
+    then strides the sim tape to the next super-cell. -/
+private theorem one_bit_cycle
+    (b : Bool) (x : List Bool) (processed : ℕ)
+    (c : Cfg 4 setupSimTM.Q)
+    (hlen : processed + 1 ≤ x.length)
+    (hstate' : c.state = .checkInput)
+    (hsim0' : (c.work utmSimTape).cells 0 = Γ.start)
+    (hsim_head' : (c.work utmSimTape).head = 1 + (processed + 1) * (3 * (n + 2)))
+    (hones' : ∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → (c.work utmSimTape).cells j = Γ.one)
+    (hsim_rest' : ∀ j, j > (processed + 1) * (3 * (n + 2)) → (c.work utmSimTape).cells j = Γ.blank)
+    (hinput_written : ∀ (p : ℕ) (_hp1 : p ≥ 1) (_hp2 : p ≤ processed),
+      (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank ∧
+      (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
+      (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
+        Γ.ofBool (x.get ⟨p - 1, by omega⟩))
+    (hblank_written : ∀ (tapeIdx pos : ℕ), pos ≥ 1 → pos ≤ processed →
+      tapeIdx ≥ 1 → tapeIdx < n + 2 → ∀ off, off < 3 →
+        (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + off) = Γ.blank)
+    (hsc_ones' : ∀ j, j ≥ 1 → j ≤ n → (c.work utmScratchTape).cells j = Γ.one)
+    (hsc_blank' : (c.work utmScratchTape).cells (n + 1) = Γ.blank)
+    (hsc0' : (c.work utmScratchTape).cells 0 = Γ.start)
+    (hsc_head' : (c.work utmScratchTape).head = n + 1)
+    (hinp_h' : c.input.head ≥ 1)
+    (hinp_ns' : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hinp_read : c.input.read = Γ.ofBool b)
+    (hb_eq : b = x.get ⟨processed, by omega⟩)
+    (hout_h' : c.output.head ≥ 1)
+    (hout_ns' : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
+    (hwf' : WorkTapesWF c.work)
+    (hdesc_h' : (c.work utmDescTape).head ≥ 1)
+    (hst_h' : (c.work utmStateTape).head ≥ 1)
+    (hwk_heads : ∀ i : Fin 4, (c.work i).head ≥ 1) :
+    ∃ c_next,
+      setupSimTM.reachesIn (4 * n + 9) c c_next ∧
+      c_next.state = .checkInput ∧
+      (c_next.work utmSimTape).cells 0 = Γ.start ∧
+      (c_next.work utmSimTape).head = 1 + (processed + 1 + 1) * (3 * (n + 2)) ∧
+      (∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → (c_next.work utmSimTape).cells j = Γ.one) ∧
+      (∀ j, j > (processed + 1 + 1) * (3 * (n + 2)) → (c_next.work utmSimTape).cells j = Γ.blank) ∧
+      (∀ (p : ℕ) (_hp1 : p ≥ 1) (_hp2 : p ≤ processed + 1) (_hpx : p ≤ x.length),
+        (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank ∧
+        (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
+        (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
+          Γ.ofBool (x.get ⟨p - 1, by omega⟩)) ∧
+      (∀ (tapeIdx pos : ℕ), pos ≥ 1 → pos ≤ processed + 1 → tapeIdx ≥ 1 → tapeIdx < n + 2 →
+        ∀ off, off < 3 →
+          (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + off) = Γ.blank) ∧
+      (∀ j, j ≥ 1 → j ≤ n → (c_next.work utmScratchTape).cells j = Γ.one) ∧
+      (c_next.work utmScratchTape).cells (n + 1) = Γ.blank ∧
+      (c_next.work utmScratchTape).cells 0 = Γ.start ∧
+      (c_next.work utmScratchTape).head = n + 1 ∧
+      c_next.input.head = c.input.head + 1 ∧
+      c_next.input.cells = c.input.cells ∧
+      c_next.work utmDescTape = c.work utmDescTape ∧
+      c_next.work utmStateTape = c.work utmStateTape ∧
+      c_next.output = c.output ∧
+      WorkTapesWF c_next.work ∧
+      (∀ i : Fin 4, (c_next.work i).head ≥ 1) := by
+  sorry
+
 /-- Phase 3: copy x with stride, then halt on blank.
 
     Each x bit takes 4n+9 steps. Final blank check takes 1 step.
@@ -1402,36 +1464,12 @@ private theorem setupSim_phase3
       | ⟨0, _⟩ => hdesc_h' | ⟨1, _⟩ => hst_h'
       | ⟨2, _⟩ => by show (c.work utmSimTape).head ≥ 1; omega
       | ⟨3, _⟩ => by show (c.work utmScratchTape).head ≥ 1; rw [hsc_head']; omega
-    -- The one-bit cycle takes 4n+9 steps and produces a config satisfying IH preconditions.
-    -- We prove this via sorry for now (it requires composing 3 write steps, rewindScratch_loop,
-    -- bounceScratch, stride_loop, and 2 strideExtra steps) and then apply IH.
-    have hcycle : ∃ c_next,
-        setupSimTM.reachesIn (4 * n + 9) c c_next ∧
-        c_next.state = .checkInput ∧
-        (c_next.work utmSimTape).cells 0 = Γ.start ∧
-        (c_next.work utmSimTape).head = 1 + (processed + 1 + 1) * (3 * (n + 2)) ∧
-        (∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → (c_next.work utmSimTape).cells j = Γ.one) ∧
-        (∀ j, j > (processed + 1 + 1) * (3 * (n + 2)) → (c_next.work utmSimTape).cells j = Γ.blank) ∧
-        (∀ (p : ℕ) (_hp1 : p ≥ 1) (_hp2 : p ≤ processed + 1) (_hpx : p ≤ x.length),
-          (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank ∧
-          (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
-          (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
-            Γ.ofBool (x.get ⟨p - 1, by omega⟩)) ∧
-        (∀ (tapeIdx pos : ℕ), pos ≥ 1 → pos ≤ processed + 1 → tapeIdx ≥ 1 → tapeIdx < n + 2 →
-          ∀ off, off < 3 →
-            (c_next.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + off) = Γ.blank) ∧
-        (∀ j, j ≥ 1 → j ≤ n → (c_next.work utmScratchTape).cells j = Γ.one) ∧
-        (c_next.work utmScratchTape).cells (n + 1) = Γ.blank ∧
-        (c_next.work utmScratchTape).cells 0 = Γ.start ∧
-        (c_next.work utmScratchTape).head = n + 1 ∧
-        c_next.input.head = c.input.head + 1 ∧
-        c_next.input.cells = c.input.cells ∧
-        c_next.work utmDescTape = c.work utmDescTape ∧
-        c_next.work utmStateTape = c.work utmStateTape ∧
-        c_next.output = c.output ∧
-        WorkTapesWF c_next.work ∧
-        (∀ i : Fin 4, (c_next.work i).head ≥ 1) := by
-      sorry
+    have hcycle := one_bit_cycle b x processed c (by simp at hlen; omega)
+      hstate' hsim0' hsim_head' hones' hsim_rest' hinput_written hblank_written
+      hsc_ones' hsc_blank' hsc0' hsc_head' hinp_h' hinp_ns'
+      (by simp only [Tape.read]; exact hinp_xs' 0 (by simp))
+      (hxs_eq 0 (by simp))
+      hout_h' hout_ns' hwf' hdesc_h' hst_h' hwk_heads
     obtain ⟨c_next, hreach_cycle, hst_next, hsim0_next, hsim_head_next, hones_next,
             hrest_next, hinput_next, hblank_next, hsc_ones_next, hsc_blank_next,
             hsc0_next, hsc_head_next, hinp_head_next, hinp_cells_next,
