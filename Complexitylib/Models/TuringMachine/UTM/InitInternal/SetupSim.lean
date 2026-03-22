@@ -1355,7 +1355,44 @@ private theorem setupSim_phase3
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
       hinp_h' hinp_ns' hinp_xs' hinp_end' hxs_eq hout_h' hout_ns' hwf' hdesc_h' hst_h'
-    sorry
+    have hproc : processed = x.length := by simp at hlen; exact hlen
+    -- Input reads blank
+    have hinp_blank : c.input.read = Γ.blank := by
+      simp only [Tape.read]; simpa using hinp_end'
+    have hinp_idle : c.input.move (idleDir c.input.read) = c.input :=
+      idle_input_preserved hinp_h' hinp_ns'
+    have hout_idle : c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read) = c.output :=
+      idle_tape_preserved hout_h' hout_ns'
+    have hwk_heads : ∀ i : Fin 4, (c.work i).head ≥ 1 := fun
+      | ⟨0, _⟩ => hdesc_h' | ⟨1, _⟩ => hst_h'
+      | ⟨2, _⟩ => by show (c.work utmSimTape).head ≥ 1; omega
+      | ⟨3, _⟩ => by show (c.work utmScratchTape).head ≥ 1; rw [hsc_head']; omega
+    -- checkInput with blank → setupIdle .done → all tapes preserved
+    let c' : Cfg 4 setupSimTM.Q :=
+      { state := .done, input := c.input, work := c.work, output := c.output }
+    have hstep : setupSimTM.step c = some c' := by
+      simp only [TM.step, hstate', setupSimTM, hinp_blank, setupIdle, c',
+        show SetupSimPhase.checkInput ≠ SetupSimPhase.done from nofun, ↓reduceIte,
+        hinp_idle, hout_idle]
+      congr 1
+      refine Cfg.mk.injEq .. |>.mpr ⟨rfl, rfl, ?_, rfl⟩
+      funext i; exact idle_tape_preserved (hwk_heads i) (fun j hj => hwf'.2 i j hj)
+    have hreach : setupSimTM.reachesIn ([].length * (4 * n + 9) + 1) c c' := by
+      simp only [List.length_nil, Nat.zero_mul, Nat.zero_add]; exact .step hstep .zero
+    refine ⟨c', hreach, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, hwf', hwk_heads⟩
+    · -- halted
+      show c'.state = setupSimTM.qhalt; rfl
+    · exact hsim0'
+    · exact hones'
+    · -- input written: p ≤ x.length = processed
+      intro p hp hp2; exact hinput_written p hp (by omega)
+    · -- blank cells
+      intro numTapes tapeIdx pos hpos htape hnt hor off hoff; subst hnt
+      rcases hor with htgt0 | hpgt
+      · by_cases hple : pos ≤ processed
+        · exact hblank_written tapeIdx pos (by omega) hple (by omega) htape off hoff
+        · exact hsim_rest' _ (by simp [SuperCell.simTapeOffset, SuperCell.width]; omega)
+      · exact hsim_rest' _ (by simp [SuperCell.simTapeOffset, SuperCell.width]; omega)
   | cons b rest ih =>
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
