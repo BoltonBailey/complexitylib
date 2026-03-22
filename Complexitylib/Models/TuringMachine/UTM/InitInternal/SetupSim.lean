@@ -1752,7 +1752,10 @@ private theorem setupSim_phase3
       WorkTapesWF c'.work ∧
       (∀ i, (c'.work i).head ≥ 1) ∧
       (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-      (c'.work utmScratchTape).head ≤ n + 1 := by
+      (c'.work utmScratchTape).head ≤ n + 1 ∧
+      c'.input.cells = c.input.cells ∧
+      c'.input.head ≥ 1 ∧
+      c'.output = c.output := by
   -- Generalized induction with processed counter.
   -- We add explicit p < x.length bounds so that by omega inside the type works.
   suffices h_gen : ∀ (processed : ℕ) (xs : List Bool) (c : Cfg 4 setupSimTM.Q)
@@ -1810,7 +1813,10 @@ private theorem setupSim_phase3
         WorkTapesWF c'.work ∧
         (∀ i, (c'.work i).head ≥ 1) ∧
         (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-        (c'.work utmScratchTape).head ≤ n + 1 by
+        (c'.work utmScratchTape).head ≤ n + 1 ∧
+        c'.input.cells = c.input.cells ∧
+        c'.input.head ≥ 1 ∧
+        c'.output = c.output by
     exact h_gen 0 x c (by omega) (by omega)
       hstate hsim0
       (by convert hsim_head using 2; omega)
@@ -1872,7 +1878,8 @@ private theorem setupSim_phase3
          show 1 + (x.length + 1) * (3 * (n + 2)) ≤ (x.length + 1) * 3 * (n + 2) + 1
          have : (x.length + 1) * (3 * (n + 2)) = (x.length + 1) * 3 * (n + 2) := (Nat.mul_assoc _ _ _).symm
          omega,
-      by show (c.work utmScratchTape).head ≤ _; rw [hsc_head']⟩
+      by show (c.work utmScratchTape).head ≤ _; rw [hsc_head'],
+      rfl, hinp_h', rfl⟩
   | cons b rest ih =>
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
@@ -1922,7 +1929,8 @@ private theorem setupSim_phase3
     obtain ⟨c_final, hreach_final, hhalt, hsim0_f, hones_f, hinput_f, hblank_f,
             hdesc_f, hstate_f, hwf_f, hheads_f, hsim_hd_f, hsc_hd_f⟩ := hih
     refine ⟨c_final, ?_, hhalt, hsim0_f, hones_f, hinput_f, hblank_f, ?_, ?_, hwf_f,
-            hheads_f, hsim_hd_f, hsc_hd_f⟩
+            hheads_f, hsim_hd_f, hsc_hd_f.1,
+            hsc_hd_f.2.1.trans hinp_cells_next, hsc_hd_f.2.2.1, hsc_hd_f.2.2.2.trans hout_next⟩
     · -- reachesIn composition: (b::rest).length * (4n+9) + 1 = (4n+9) + rest.length*(4n+9) + 1
       have : (b :: rest).length * (4 * n + 9) + 1 = (4 * n + 9) + (rest.length * (4 * n + 9) + 1) := by
         simp only [List.length_cons]; rw [Nat.succ_mul]; omega
@@ -1987,7 +1995,11 @@ private theorem setupSim_full_execution
       (∀ i, (c'.work i).head ≥ 1) ∧
       -- Head bounds
       (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-      (c'.work utmScratchTape).head ≤ n + 1 := by
+      (c'.work utmScratchTape).head ≤ n + 1 ∧
+      -- Input/output preservation
+      c'.input.cells = inp.cells ∧
+      c'.input.head ≥ 1 ∧
+      c'.output = out := by
   -- Extract scratch tape properties from tapeStoresBools
   have hsc0 : (work utmScratchTape).cells 0 = Γ.start := hsc_bools.1
   have hsc_ones : ∀ j, j ≥ 1 → j ≤ n →
@@ -2024,7 +2036,10 @@ private theorem setupSim_full_execution
       (by rw [hdesc1]; exact hdesc_h) (by rw [hstate1]; exact hst_h)
   -- Compose phases
   refine ⟨c2, ?_, hhalt2, hsim0_2, hones2, hinput2, hblank2,
-          ?_, ?_, hwf2, hheads2, hsim_hd2, hsc_hd2⟩
+          ?_, ?_, hwf2, hheads2, hsim_hd2, hsc_hd2.1,
+          hsc_hd2.2.1.trans hinp_cells1,
+          hsc_hd2.2.2.1,
+          hsc_hd2.2.2.2.trans hout1⟩
   -- reachesIn composition
   · have : setupSimBound n x.length = (3 * n + 8) + (x.length * (4 * n + 9) + 1) := by
       simp [setupSimBound]; omega
@@ -2091,13 +2106,22 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
   -- desc/state preserved (hdesc' and hstate' are tape equalities from setupSim_full_execution)
   have hdesc_post : descOnTape (TMEncoding.encodeTM tm) (c'.work utmDescTape) := hdesc' ▸ hdesc
   have hstate_post : stateOnTapeAt k (e tm.qstart) (c'.work utmStateTape) := hstate' ▸ hstate
-  -- InitEnvelope: setupSimTM preserves input cells 0=start, output cells 0=start, WF
-  -- The halted config has same input/output cell structure (preserved through execution)
-  -- For now, sorry InitEnvelope — it requires tracking through all steps
-  have henv' : InitEnvelope c'.input c'.work c'.output := by sorry
+  -- InitEnvelope for halted config
+  -- setupSimTM preserves input cells and output entirely (only work tapes change)
+  -- We need to add input/output preservation to setupSim_full_execution, or derive here.
+  -- For now: output is fully idle-preserved, input cells preserved but head advanced.
+  -- We add these to setupSim_full_execution's postcondition.
+  obtain ⟨hsc_hd_bound, hinp_cells_eq, hinp_hd_ge, hout_eq⟩ := hsc_hd
+  have henv' : InitEnvelope c'.input c'.work c'.output :=
+    ⟨by rw [hinp_cells_eq]; exact hinp0,
+     by intro j hj; rw [hinp_cells_eq]; exact hinp_ns j hj,
+     hinp_hd_ge, hwf', hheads,
+     by rw [hout_eq]; exact hout0,
+     by intro j hj; rw [hout_eq]; exact hout_ns j hj,
+     by rw [hout_eq]; exact hout_h⟩
   exact ⟨henv', hdesc_post, hstate_post, hsc,
     by rw [hdesc']; exact hdesc_head_bound,
     by rw [hstate']; exact hstate_head_bound,
-    hsim_hd, hsc_hd⟩
+    hsim_hd, hsc_hd_bound⟩
 
 end TM
