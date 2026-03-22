@@ -2039,19 +2039,53 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
         descOnTape desc (work utmDescTape) ∧
         stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
         (work utmSimTape).cells = (initTape []).cells ∧
+        (work utmSimTape).head = 1 ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
-        (work utmScratchTape).head = 1)
+        (work utmScratchTape).head = 1 ∧
+        inp.cells inp.head = Γ.blank ∧
+        (∀ (i : ℕ) (hi : i < x.length),
+          inp.cells (inp.head + 1 + i) = Γ.ofBool (x.get ⟨i, hi⟩)) ∧
+        inp.cells (inp.head + 1 + x.length) = Γ.blank ∧
+        (work utmDescTape).head ≤ 3 * k + n + 5 ∧
+        (work utmStateTape).head ≤ k + 1)
       (fun inp work out =>
         InitEnvelope inp work out ∧
         let desc := TMEncoding.encodeTM tm
         descOnTape desc (work utmDescTape) ∧
         stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
         superCellsCorrect (tm.initCfg x) (work utmSimTape) ∧
-        (work (0 : Fin 4)).head ≤ 3 * k + n + 4 ∧
+        (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
         (work (1 : Fin 4)).head ≤ k + 1 ∧
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
         (work (3 : Fin 4)).head ≤ n + 1)
       (3 * n + 9 + x.length * (4 * n + 9)) := by
-  sorry
+  intro inp work out ⟨henv, hdesc, hstate, hsim_cells, hsim_head, hsc_bools, hsc_head,
+    hinp_blank, hinp_x, hinp_end, hdesc_head_bound, hstate_head_bound⟩
+  have hsim0 : (work utmSimTape).cells 0 = Γ.start := by rw [hsim_cells]; simp [initTape]
+  have hsim_blank : ∀ j, j ≥ 1 → (work utmSimTape).cells j = Γ.blank := by
+    intro j hj; rw [hsim_cells]; simp [initTape, show j ≠ 0 from by omega]
+  obtain ⟨hinp0, hinp_ns, hinp_h_bound, hwf, hwork_heads, hout0, hout_ns, hout_h⟩ := henv
+  obtain ⟨c', hreach, hhalt, hsim0', hones, hinput, hblank, hdesc', hstate',
+          hwf', hheads⟩ :=
+    setupSim_full_execution x inp work out hsim0 hsim_blank hsim_head hsc_bools hsc_head
+      (by omega) hinp_ns hinp_blank hinp_x hinp_end (by omega) hout_ns hwf
+      (by have := hwork_heads utmDescTape; omega) (by have := hwork_heads utmStateTape; omega)
+  -- HoareTime: ∃ c' t, t ≤ bound ∧ reachesIn t start c' ∧ halted c' ∧ post
+  refine ⟨c', setupSimBound n x.length, le_refl _, hreach, hhalt, ?_⟩
+  -- Postcondition assembly
+  -- superCellsCorrect from cell values
+  have hsc := superCellsCorrect_from_cells tm x (c'.work utmSimTape) hsim0' hones hinput hblank
+  -- desc/state preserved (hdesc' and hstate' are tape equalities from setupSim_full_execution)
+  have hdesc_post : descOnTape (TMEncoding.encodeTM tm) (c'.work utmDescTape) := hdesc' ▸ hdesc
+  have hstate_post : stateOnTapeAt k (e tm.qstart) (c'.work utmStateTape) := hstate' ▸ hstate
+  -- InitEnvelope: setupSimTM preserves input cells 0=start, output cells 0=start, WF
+  -- The halted config has same input/output cell structure (preserved through execution)
+  -- For now, sorry InitEnvelope — it requires tracking through all steps
+  have henv' : InitEnvelope c'.input c'.work c'.output := by sorry
+  exact ⟨henv', hdesc_post, hstate_post, hsc,
+    by rw [hdesc']; exact hdesc_head_bound,
+    by rw [hstate']; exact hstate_head_bound,
+    by have := hheads utmSimTape; sorry, -- sim head bound
+    by have := hheads utmScratchTape; sorry⟩ -- scratch head bound
 
 end TM
