@@ -142,7 +142,7 @@ private theorem setupSimTM_hoareTime' (tm : TM n) (k : ℕ)
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
         (work (3 : Fin 4)).head ≤ n + 1)
       (3 * n + 9 + x.length * (4 * n + 9)) :=
-  setupSimTM_hoareTime tm k x _hk
+  setupSimTM_hoareTime tm k (tm.stateEquivK _hk) x _hk
 
 -- ════════════════════════════════════════════════════════════════════════
 -- seqTransition identity under InitEnvelope
@@ -215,7 +215,7 @@ private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
     `initTM` establishes `SimInvariant` for `tm.initCfg x`.
 
     The composition chains 9 sub-machines via `seqTM_hoareTime`.
-    Currently sorry'd due to bridge lemmas and setupState/setupSim. -/
+    Proved by composing all sub-machine HoareTime specs via seqTM_hoareTime. -/
 theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
     (x : List Bool) (B : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
