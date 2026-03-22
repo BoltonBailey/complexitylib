@@ -1344,7 +1344,224 @@ private theorem one_bit_cycle
       c_next.output = c.output ∧
       WorkTapesWF c_next.work ∧
       (∀ i : Fin 4, (c_next.work i).head ≥ 1) := by
-  sorry
+  -- Abbreviations
+  set h0 := (c.work utmSimTape).head with h0_def
+  have h0_val : h0 = 1 + (processed + 1) * (3 * (n + 2)) := by rw [h0_def]; exact hsim_head'
+  have hinp_not_blank : c.input.read ≠ Γ.blank := by rw [hinp_read]; cases b <;> simp [Γ.ofBool]
+  have hinp_idle : c.input.move (idleDir c.input.read) = c.input :=
+    idle_input_preserved hinp_h' hinp_ns'
+  have hout_idle : c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read) = c.output :=
+    idle_tape_preserved hout_h' hout_ns'
+  -- Sim tape after 3 write steps: cells updated at h0+1 (Γ.zero) and h0+2 (w.toΓ)
+  let w : Γw := if c.input.read = Γ.one then .one else .zero
+  let sim_a : Tape := {
+    head := h0 + 3,
+    cells := fun j =>
+      if j = h0 + 1 then Γ.zero
+      else if j = h0 + 2 then w.toΓ
+      else (c.work utmSimTape).cells j }
+  let c_a : Cfg 4 setupSimTM.Q := {
+    state := .rewindScratch,
+    input := ⟨c.input.head + 1, c.input.cells⟩,
+    work := fun i => if i = utmSimTape then sim_a else c.work i,
+    output := c.output }
+  -- Block A: 3 write steps (sorry'd — mechanical step tracing)
+  have hreach_a : setupSimTM.reachesIn 3 c c_a := by sorry
+  have hca_wf : WorkTapesWF c_a.work := by
+    constructor
+    · intro i; simp only [c_a]; split
+      · simp only [sim_a, show h0 + 1 ≠ 0 from by omega, show h0 + 2 ≠ 0 from by omega, ↓reduceIte]
+        exact hsim0'
+      · exact hwf'.1 _
+    · intro i j hj; simp only [c_a]; split
+      · simp only [sim_a]; split
+        · simp [Γ.zero]
+        · split
+          · cases w <;> simp [Γw.toΓ]
+          · exact hwf'.2 utmSimTape j hj
+      · exact hwf'.2 _ j hj
+  -- Block B: rewind scratch (n+2 steps)
+  obtain ⟨c_b, hreach_b, hcb_state, hcb_scratch_head, hcb_scratch_cells,
+          hcb_other, hcb_inp, hcb_out, hcb_wf, hcb_heads⟩ :=
+    rewindScratch_loop (n + 1) c_a rfl
+      (show (c_a.work utmScratchTape).head = n + 1 from by
+        simp only [c_a, show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]; exact hsc_head')
+      hca_wf (show c_a.input.head ≥ 1 from by simp only [c_a]; omega) hinp_ns' hout_h' hout_ns'
+      (fun i hi => by
+        show (c_a.work i).head ≥ 1; simp only [c_a]
+        by_cases hi2 : i = utmSimTape
+        · subst hi2; simp only [↓reduceIte, sim_a]; have := hwk_heads utmSimTape; omega
+        · simp only [hi2, ↓reduceIte]; exact hwk_heads _)
+  -- Block C: bounce (1 step)
+  let c_c : Cfg 4 setupSimTM.Q :=
+    { state := .stride1, input := c_b.input, work := c_b.work, output := c_b.output }
+  have hreach_c : setupSimTM.reachesIn 1 c_b c_c := by
+    have hstep : setupSimTM.step c_b = some c_c := by
+      simp only [TM.step, hcb_state, setupSimTM, setupIdle, c_c,
+        show SetupSimPhase.bounceScratch ≠ SetupSimPhase.done from nofun, ↓reduceIte]
+      congr 1; refine Cfg.mk.injEq .. |>.mpr ⟨rfl, ?_, ?_, ?_⟩
+      · exact idle_input_preserved (hcb_inp ▸ show c_a.input.head ≥ 1 from by simp [c_a]; omega)
+          (hcb_inp ▸ hinp_ns')
+      · funext i; exact idle_tape_preserved (hcb_heads i) (fun j hj => hcb_wf.2 i j hj)
+      · exact idle_tape_preserved (hcb_out ▸ hout_h') (hcb_out ▸ hout_ns')
+    exact .step hstep .zero
+  -- Block D: stride loop (3n+1 steps)
+  obtain ⟨c_d, hreach_d, hcd_state, hcd_sim_head, hcd_sim_cells, hcd_scratch_head,
+          hcd_scratch_cells, hcd_other, hcd_inp, hcd_out, hcd_wf, hcd_heads⟩ :=
+    stride_loop 0 c_c (by omega) rfl
+      (show (c_c.work utmScratchTape).head = 1 + 0 from by
+        show (c_b.work utmScratchTape).head = 1; exact hcb_scratch_head)
+      (by intro j hj hjn; show (c_b.work utmScratchTape).cells j = Γ.one
+          rw [hcb_scratch_cells]; simp only [c_a, show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]
+          exact hsc_ones' j hj hjn)
+      (by show (c_b.work utmScratchTape).cells (n + 1) = Γ.blank
+          rw [hcb_scratch_cells]; simp only [c_a, show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]
+          exact hsc_blank')
+      (by show (c_b.work utmScratchTape).cells 0 = Γ.start
+          rw [hcb_scratch_cells]; simp only [c_a, show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]
+          exact hsc0')
+      hcb_wf (by rw [hcb_inp]; simp [c_a]; omega) (by rw [hcb_inp]; exact hinp_ns')
+      (by rw [hcb_out]; exact hout_h') (by rw [hcb_out]; exact hout_ns') hcb_heads
+  -- Block E: 2 strideExtra steps (sorry'd — mechanical step tracing)
+  let c_e_sim : Tape := ⟨(c_d.work utmSimTape).head + 2, (c_d.work utmSimTape).cells⟩
+  let c_e : Cfg 4 setupSimTM.Q := {
+    state := .checkInput, input := c_d.input,
+    work := fun i => if i = utmSimTape then c_e_sim else c_d.work i,
+    output := c_d.output }
+  have hreach_e : setupSimTM.reachesIn 2 c_d c_e := by sorry
+  -- Compose all blocks: 3 + (n+2) + 1 + (3n+1) + 2 = 4n+9
+  have hreach_total : setupSimTM.reachesIn (4 * n + 9) c c_e := by
+    have : 4 * n + 9 = 3 + ((n + 1 + 1) + (1 + ((3 * (n - 0) + 1) + 2))) := by omega
+    rw [this]; exact reachesIn_trans setupSimTM hreach_a
+      (reachesIn_trans setupSimTM hreach_b
+        (reachesIn_trans setupSimTM hreach_c
+          (reachesIn_trans setupSimTM hreach_d hreach_e)))
+  -- ═══ Track sim cells: c_e sim cells = sim_a cells ═══
+  have hce_sim_cells : ∀ j, (c_e.work utmSimTape).cells j = sim_a.cells j := by
+    intro j; show c_e_sim.cells j = sim_a.cells j; simp only [c_e_sim]
+    rw [hcd_sim_cells, show (c_c.work utmSimTape) = c_b.work utmSimTape from rfl,
+      hcb_other utmSimTape (by decide)]; simp [c_a]
+  have sim_a_ne : ∀ j, j ≠ h0 + 1 → j ≠ h0 + 2 → sim_a.cells j = (c.work utmSimTape).cells j := by
+    intro j h1 h2; simp [sim_a, h1, h2]
+  -- ═══ Non-sim tape tracking ═══
+  have hce_nonsim_noscratch : ∀ i : Fin 4, i ≠ utmSimTape → i ≠ utmScratchTape → c_e.work i = c.work i := by
+    intro i hi hi3; show (if i = utmSimTape then _ else c_d.work i) = _; simp only [hi, ↓reduceIte]
+    rw [hcd_other i hi hi3, show c_c.work i = c_b.work i from rfl, hcb_other i hi3]; simp [c_a, hi]
+  have hce_scratch_cells : (c_e.work utmScratchTape).cells = (c.work utmScratchTape).cells := by
+    show (c_d.work utmScratchTape).cells = _; rw [hcd_scratch_cells]
+    show (c_b.work utmScratchTape).cells = _; rw [hcb_scratch_cells]
+    simp [c_a, show utmScratchTape ≠ utmSimTape from by decide]
+  have hce_scratch_head : (c_e.work utmScratchTape).head = n + 1 := hcd_scratch_head
+  have hce_inp_head : c_e.input.head = c.input.head + 1 := by
+    show c_d.input.head = _; rw [hcd_inp, hcb_inp]; rfl
+  have hce_inp_cells : c_e.input.cells = c.input.cells := by
+    show c_d.input.cells = _; rw [hcd_inp, hcb_inp]; rfl
+  have hce_desc : c_e.work utmDescTape = c.work utmDescTape :=
+    hce_nonsim_noscratch utmDescTape (by decide) (by decide)
+  have hce_state_tape : c_e.work utmStateTape = c.work utmStateTape :=
+    hce_nonsim_noscratch utmStateTape (by decide) (by decide)
+  have hce_out : c_e.output = c.output := by show c_d.output = _; rw [hcd_out, hcb_out]
+  have hce_wf : WorkTapesWF c_e.work := by
+    constructor
+    · intro i; simp only [c_e]; split
+      · simp only [c_e_sim]; rw [hcd_sim_cells]; exact hcb_wf.1 utmSimTape
+      · exact hcd_wf.1 _
+    · intro i j hj; simp only [c_e]; split
+      · simp only [c_e_sim]; rw [hcd_sim_cells]; exact hcb_wf.2 utmSimTape j hj
+      · exact hcd_wf.2 _ j hj
+  have hce_heads : ∀ i : Fin 4, (c_e.work i).head ≥ 1 := by
+    intro i; simp only [c_e]; split
+    · simp only [c_e_sim]; have := hcd_heads utmSimTape; omega
+    · exact hcd_heads _
+  -- ═══ Sim head ═══
+  have hce_sim_head : (c_e.work utmSimTape).head = 1 + (processed + 1 + 1) * (3 * (n + 2)) := by
+    show c_e_sim.head = _; simp only [c_e_sim]; rw [hcd_sim_head]
+    have : (c_c.work utmSimTape).head = h0 + 3 := by
+      show (c_b.work utmSimTape).head = _
+      rw [hcb_other utmSimTape (by decide)]; simp [c_a, sim_a]
+    rw [this, h0_val, Nat.succ_mul]; omega
+  -- ═══ Postconditions ═══
+  -- Use simTapeOffset_ne_of and simTapeOffset_ne_prev for all offset comparisons
+  have h_offset_eq : SuperCell.simTapeOffset (n + 2) (processed + 1) 0 = h0 := by
+    simp [SuperCell.simTapeOffset, SuperCell.width, h0_val]
+  refine ⟨c_e, hreach_total, rfl, ?_, hce_sim_head, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hce_scratch_head,
+          hce_inp_head, hce_inp_cells, hce_desc, hce_state_tape, hce_out, hce_wf, hce_heads⟩
+  · -- sim0
+    rw [hce_sim_cells]; exact sim_a_ne 0 (by omega) (by omega) ▸ hsim0'
+  · -- ones
+    intro j hj1 hjn; rw [hce_sim_cells, sim_a_ne j (by rw [h0_val]; omega) (by rw [h0_val]; omega)]
+    exact hones' j hj1 hjn
+  · -- rest blank
+    intro j hj; rw [hce_sim_cells]
+    have hj' : j > (processed + 1) * (3 * (n + 2)) := by rw [Nat.succ_mul] at hj; omega
+    rw [sim_a_ne j (by rw [h0_val]; omega) (by rw [h0_val]; omega)]
+    exact hsim_rest' j hj'
+  · -- input written
+    intro p hp1 hp2 hpx
+    by_cases hple : p ≤ processed
+    · -- Previously written: use simTapeOffset_ne_prev to show offsets don't collide with h0+1/h0+2
+      have ⟨g1, g2, g3⟩ := hinput_written p hp1 hple
+      -- Use sim_a_ne: the key is that p ≤ processed < processed+1, so offsets don't collide
+      have hsane : ∀ k, k ≤ 2 →
+          sim_a.cells (SuperCell.simTapeOffset (n + 2) p 0 + k) =
+          (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + k) := by
+        intro k hk
+        have hne := simTapeOffset_ne_prev n processed p k hk hple
+        apply sim_a_ne
+        · show SuperCell.simTapeOffset (n + 2) p 0 + k ≠ h0 + 1
+          simp only [SuperCell.simTapeOffset, SuperCell.width, h0_val]; exact hne.1
+        · show SuperCell.simTapeOffset (n + 2) p 0 + k ≠ h0 + 2
+          simp only [SuperCell.simTapeOffset, SuperCell.width, h0_val]; exact hne.2
+      refine ⟨?_, ?_, ?_⟩ <;> rw [hce_sim_cells]
+      · rw [show SuperCell.simTapeOffset (n + 2) p 0 = SuperCell.simTapeOffset (n + 2) p 0 + 0 from by omega,
+          hsane 0 (by omega)]; exact g1
+      · rw [hsane 1 (by omega)]; exact g2
+      · rw [hsane 2 (by omega)]; exact g3
+    · -- Newly written: p = processed + 1
+      have hpeq : p = processed + 1 := by omega
+      subst hpeq
+      refine ⟨?_, ?_, ?_⟩ <;> rw [hce_sim_cells]
+      · -- head marker = blank (at offset 0, which is h0, not h0+1 or h0+2)
+        rw [sim_a_ne _ (by rw [h_offset_eq]; omega) (by rw [h_offset_eq]; omega)]
+        apply hsim_rest'; rw [h_offset_eq]; omega
+      · -- sym_hi = zero (at offset 1 = h0+1)
+        show sim_a.cells (SuperCell.simTapeOffset (n + 2) (processed + 1) 0 + 1) = Γ.zero
+        rw [show SuperCell.simTapeOffset (n + 2) (processed + 1) 0 + 1 = h0 + 1 from by rw [h_offset_eq]]
+        simp [sim_a]
+      · -- sym_lo = ofBool(x[processed])
+        show sim_a.cells (SuperCell.simTapeOffset (n + 2) (processed + 1) 0 + 2) =
+          Γ.ofBool (x.get ⟨processed, _⟩)
+        rw [show SuperCell.simTapeOffset (n + 2) (processed + 1) 0 + 2 = h0 + 2 from by rw [h_offset_eq]]
+        simp only [sim_a, show h0 + 2 ≠ h0 + 1 from by omega, ↓reduceIte]
+        show w.toΓ = Γ.ofBool (x.get ⟨processed, _⟩)
+        simp only [w, hinp_read, ← hb_eq]; cases b <;> simp [Γ.ofBool, Γw.toΓ]
+  · -- blank written (tapeIdx ≥ 1)
+    intro tapeIdx pos hpos hple htge htlt off hoff
+    rw [hce_sim_cells]
+    have ⟨hne1, hne2⟩ := simTapeOffset_ne_of n pos (processed + 1) tapeIdx off (by omega) htlt
+      (Or.inr htge)
+    -- hne1/hne2 have form: 1 + pos*W + 3*tapeIdx + off ≠ 1 + (processed+1)*W + 1/2
+    -- sim_a_ne needs j ≠ h0 + 1 and j ≠ h0 + 2 where j = SuperCell.simTapeOffset + off
+    -- These match after unfolding SuperCell.simTapeOffset and h0_val
+    have : sim_a.cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + off) =
+        (c.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + off) := by
+      apply sim_a_ne
+      · simp only [SuperCell.simTapeOffset, SuperCell.width]; rw [h0_val]; exact hne1
+      · simp only [SuperCell.simTapeOffset, SuperCell.width]; rw [h0_val]; exact hne2
+    rw [this]
+    by_cases hple' : pos ≤ processed
+    · exact hblank_written tapeIdx pos hpos hple' htge htlt off hoff
+    · have hpeq : pos = processed + 1 := by omega
+      subst hpeq; apply hsim_rest'
+      simp only [SuperCell.simTapeOffset, SuperCell.width]
+      generalize (processed + 1) * (3 * (n + 2)) = PW
+      omega
+  · -- scratch ones
+    intro j hj hjn; rw [hce_scratch_cells]; exact hsc_ones' j hj hjn
+  · -- scratch blank
+    rw [hce_scratch_cells]; exact hsc_blank'
+  · -- scratch start
+    rw [hce_scratch_cells]; exact hsc0'
 
 /-- Phase 3: copy x with stride, then halt on blank.
 
