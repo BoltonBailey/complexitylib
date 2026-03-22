@@ -1426,7 +1426,56 @@ private theorem one_bit_cycle
     state := .checkInput, input := c_d.input,
     work := fun i => if i = utmSimTape then c_e_sim else c_d.work i,
     output := c_d.output }
-  have hreach_e : setupSimTM.reachesIn 2 c_d c_e := by sorry
+  have hreach_e : setupSimTM.reachesIn 2 c_d c_e := by
+    -- strideExtra2 → strideExtra3 → checkInput (both simAdvanceRight)
+    -- Intermediate: sim head +1, cells preserved, rest idle
+    set sim_d1 := (c_d.work utmSimTape).writeAndMove (readBackWrite (c_d.work utmSimTape).read) Dir3.right
+    have hd_inp_h : c_d.input.head ≥ 1 := by rw [hcd_inp, hcb_inp]; simp [c_a]
+    have hd_inp_ns : ∀ j, j ≥ 1 → c_d.input.cells j ≠ Γ.start := by rw [hcd_inp, hcb_inp]; exact hinp_ns'
+    have hd_out_h : c_d.output.head ≥ 1 := by rw [hcd_out, hcb_out]; exact hout_h'
+    have hd_out_ns : ∀ j, j ≥ 1 → c_d.output.cells j ≠ Γ.start := by rw [hcd_out, hcb_out]; exact hout_ns'
+    have hd_inp := idle_input_preserved hd_inp_h hd_inp_ns
+    have hd_out := idle_tape_preserved hd_out_h hd_out_ns
+    -- Use same pattern as stride_loop: define intermediate sim tapes, match via head/cells
+    set sim_d2 : Tape := ⟨(c_d.work utmSimTape).head + 2, (c_d.work utmSimTape).cells⟩
+    -- Step 1: strideExtra2 → strideExtra3
+    have hstep1 : setupSimTM.step c_d = some
+        { state := .strideExtra3, input := c_d.input,
+          work := fun i => if i = utmSimTape then sim_d1 else c_d.work i,
+          output := c_d.output } := by
+      simp only [TM.step, hcd_state, setupSimTM, simAdvanceRight, simWriteRight,
+        show SetupSimPhase.strideExtra2 ≠ SetupSimPhase.done from nofun, ↓reduceIte, hd_inp, hd_out]
+      congr 2; funext i; by_cases hi : i = utmSimTape
+      · subst hi; simp only [utmSimTape, show (2 : Fin 4).val = 2 from rfl, ↓reduceIte, sim_d1]
+      · have hival : ¬((i : Fin 4).val = 2) := fun heq => hi (Fin.ext heq)
+        simp only [hival, ↓reduceIte, hi]
+        exact idle_tape_preserved (hcd_heads i) (fun j hj => hcd_wf.2 i j hj)
+    -- Step 2: strideExtra3 → checkInput
+    have hstep2 : setupSimTM.step
+        { state := .strideExtra3, input := c_d.input,
+          work := fun i => if i = utmSimTape then sim_d1 else c_d.work i,
+          output := c_d.output } = some c_e := by
+      simp only [TM.step, setupSimTM, simAdvanceRight, simWriteRight,
+        show SetupSimPhase.strideExtra3 ≠ SetupSimPhase.done from nofun, ↓reduceIte, hd_inp, hd_out]
+      congr 2; funext i; by_cases hi : i = utmSimTape
+      · subst hi; simp only [utmSimTape, show (2 : Fin 4).val = 2 from rfl, ↓reduceIte, c_e, c_e_sim]
+        have hh := @writeAndMove_right_head sim_d1 (readBackWrite sim_d1.read)
+        have hc := readBackWrite_cells
+          (show sim_d1.head ≥ 1 from by rw [writeAndMove_right_head]; have := hcd_heads utmSimTape; omega)
+          (fun j hj => by rw [show sim_d1.cells = (c_d.work utmSimTape).cells from
+            readBackWrite_cells (hcd_heads utmSimTape) (fun k hk => hcd_wf.2 utmSimTape k hk)]; exact hcd_wf.2 utmSimTape j hj)
+          (d := Dir3.right)
+        show sim_d1.writeAndMove _ Dir3.right = sim_d2
+        have : sim_d2 = ⟨sim_d1.head + 1, sim_d1.cells⟩ := by
+          simp only [sim_d2, sim_d1, writeAndMove_right_head,
+            readBackWrite_cells (hcd_heads utmSimTape) (fun j hj => hcd_wf.2 utmSimTape j hj)]
+        rw [this]
+        exact match sim_d1.writeAndMove _ Dir3.right, hh, hc with
+          | ⟨_, _⟩, rfl, rfl => rfl
+      · have hival : ¬((i : Fin 4).val = 2) := fun heq => hi (Fin.ext heq)
+        simp only [hival, ↓reduceIte, hi, c_e]
+        exact idle_tape_preserved (hcd_heads i) (fun j hj => hcd_wf.2 i j hj)
+    exact .step hstep1 (.step hstep2 .zero)
   -- Compose all blocks: 3 + (n+2) + 1 + (3n+1) + 2 = 4n+9
   have hreach_total : setupSimTM.reachesIn (4 * n + 9) c c_e := by
     have : 4 * n + 9 = 3 + ((n + 1 + 1) + (1 + ((3 * (n - 0) + 1) + 2))) := by omega
