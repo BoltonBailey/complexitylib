@@ -1398,6 +1398,11 @@ private theorem setupSim_phase3
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
       hinp_h' hinp_ns' hinp_xs' hinp_end' hxs_eq hout_h' hout_ns' hwf' hdesc_h' hst_h'
+    -- Apply IH with processed+1 and rest
+    -- First we need to show the one-bit cycle (4n+9 steps) produces a config
+    -- satisfying the IH preconditions, then compose.
+    -- For now, sorry — this requires ~250 lines of step-tracing.
+    -- The cycle: checkInput→writeSymHi→writeSymLo→rewindScratch(n+2)→bounce(1)→stride(3n+1)→extra(2)
     sorry
 
 -- ════════════════════════════════════════════════════════════════════════
