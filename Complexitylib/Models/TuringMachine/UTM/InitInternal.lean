@@ -79,7 +79,7 @@ private theorem postCopy_to_initEnvelope (tm : TM n) (x : List Bool) :
     Postcondition: state tape has qstart one-hot, scratch has n ones.
     Proof delegated to SetupState module. -/
 private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (_x : List Bool)
+    (_x : List Bool)
     (_hk : k = @Fintype.card tm.Q tm.finQ) :
     setupStateTM.HoareTime
       (fun inp work out =>
@@ -88,19 +88,21 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
         descOnTape desc (work utmDescTape) ∧
         (work utmDescTape).head = 1 ∧
         (work utmStateTape).cells = (initTape []).cells ∧
+        (work utmStateTape).head = 1 ∧
         (work utmSimTape).cells = (initTape []).cells ∧
-        (work utmScratchTape).cells = (initTape []).cells)
+        (work utmScratchTape).cells = (initTape []).cells ∧
+        (work utmScratchTape).head = 1)
       (fun inp work out =>
         InitEnvelope inp work out ∧
         let desc := TMEncoding.encodeTM tm
         descOnTape desc (work utmDescTape) ∧
-        stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
+        stateOnTapeAt k (tm.stateEquivK _hk tm.qstart) (work utmStateTape) ∧
         (work utmSimTape).cells = (initTape []).cells ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
-        (work utmDescTape).head ≤ 3 * k + n + 4 ∧
+        (work utmDescTape).head ≤ 3 * k + n + 5 ∧
         (work utmScratchTape).head ≤ n + 1)
-      (3 * k + n + 4) :=
-  setupStateTM_hoareTime tm k e _x _hk
+      (3 * k + n + 5) :=
+  setupStateTM_hoareTime tm k _x _hk
 
 -- ════════════════════════════════════════════════════════════════════════
 -- SetupSim (sorry'd)
@@ -111,29 +113,36 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
     Postcondition: sim tape has super-cells for initCfg x.
     Proof delegated to SetupSim module. -/
 private theorem setupSimTM_hoareTime' (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (x : List Bool)
+    (x : List Bool)
     (_hk : k = @Fintype.card tm.Q tm.finQ) :
     setupSimTM.HoareTime
       (fun inp work out =>
         InitEnvelope inp work out ∧
         let desc := TMEncoding.encodeTM tm
         descOnTape desc (work utmDescTape) ∧
-        stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
+        stateOnTapeAt k (tm.stateEquivK _hk tm.qstart) (work utmStateTape) ∧
         (work utmSimTape).cells = (initTape []).cells ∧
+        (work utmSimTape).head = 1 ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
-        (work utmScratchTape).head = 1)
+        (work utmScratchTape).head = 1 ∧
+        inp.cells inp.head = Γ.blank ∧
+        (∀ (i : ℕ) (hi : i < x.length),
+          inp.cells (inp.head + 1 + i) = Γ.ofBool (x.get ⟨i, hi⟩)) ∧
+        inp.cells (inp.head + 1 + x.length) = Γ.blank ∧
+        (work utmDescTape).head ≤ 3 * k + n + 5 ∧
+        (work utmStateTape).head ≤ k + 1)
       (fun inp work out =>
         InitEnvelope inp work out ∧
         let desc := TMEncoding.encodeTM tm
         descOnTape desc (work utmDescTape) ∧
-        stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
+        stateOnTapeAt k (tm.stateEquivK _hk tm.qstart) (work utmStateTape) ∧
         superCellsCorrect (tm.initCfg x) (work utmSimTape) ∧
-        (work (0 : Fin 4)).head ≤ 3 * k + n + 4 ∧
+        (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
         (work (1 : Fin 4)).head ≤ k + 1 ∧
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
         (work (3 : Fin 4)).head ≤ n + 1)
       (3 * n + 9 + x.length * (4 * n + 9)) :=
-  setupSimTM_hoareTime tm k e x _hk
+  setupSimTM_hoareTime tm k x _hk
 
 -- ════════════════════════════════════════════════════════════════════════
 -- seqTransition identity under InitEnvelope
@@ -165,19 +174,19 @@ private theorem h_trans_envelope {P : TapePred 4}
 
 /-- The setupSim postcondition implies the rewindAll precondition. -/
 private theorem postSetupSim_to_rewindAll (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (x : List Bool) :
+    (hk : k = @Fintype.card tm.Q tm.finQ) (x : List Bool) :
     ∀ inp work out,
     (InitEnvelope inp work out ∧
       let desc := TMEncoding.encodeTM tm
       descOnTape desc (work utmDescTape) ∧
-      stateOnTapeAt k (e tm.qstart) (work utmStateTape) ∧
+      stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape) ∧
       superCellsCorrect (tm.initCfg x) (work utmSimTape) ∧
-      (work (0 : Fin 4)).head ≤ 3 * k + n + 4 ∧
+      (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
       (work (1 : Fin 4)).head ≤ k + 1 ∧
       (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
       (work (3 : Fin 4)).head ≤ n + 1) →
     (InitEnvelope inp work out ∧
-      (work (0 : Fin 4)).head ≤ 3 * k + n + 4 ∧
+      (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
       (work (1 : Fin 4)).head ≤ k + 1 ∧
       (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
       (work (3 : Fin 4)).head ≤ n + 1) :=
@@ -186,15 +195,15 @@ private theorem postSetupSim_to_rewindAll (tm : TM n) (k : ℕ)
 
 /-- After all rewinds + SimInvariant data, construct SimInvariant. -/
 private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (x : List Bool)
-    (_hk : k = @Fintype.card tm.Q tm.finQ)
+    (x : List Bool)
+    (hk : k = @Fintype.card tm.Q tm.finQ)
     (inp : Tape) (work : Fin 4 → Tape) (out : Tape)
     (henv : InitEnvelope inp work out)
     (hheads : ∀ i, (work i).head = 1)
     (hdesc : descOnTape (TMEncoding.encodeTM tm) (work utmDescTape))
-    (hstate : stateOnTapeAt k (e tm.qstart) (work utmStateTape))
+    (hstate : stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape))
     (hsim : superCellsCorrect (tm.initCfg x) (work utmSimTape)) :
-    SimInvariant tm k e (TMEncoding.encodeTM tm) inp work out := by
+    SimInvariant tm k hk (TMEncoding.encodeTM tm) inp work out := by
   exact ⟨tm.initCfg x, hdesc, hstate, hsim,
     fun i => by have := hheads i; omega, henv.2.2.2.1⟩
 
@@ -208,13 +217,13 @@ private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
     The composition chains 9 sub-machines via `seqTM_hoareTime`.
     Currently sorry'd due to bridge lemmas and setupState/setupSim. -/
 theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (x : List Bool) (B : ℕ)
+    (x : List Bool) (B : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
     let desc := TMEncoding.encodeTM tm
     initTM.HoareTime
       (fun inp _work _out =>
         inp = initTape (encodeUTMInput tm x))
-      (SimInvariant tm k e desc)
+      (SimInvariant tm k hk desc)
       B := by
   sorry
 

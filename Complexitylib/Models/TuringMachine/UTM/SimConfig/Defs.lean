@@ -153,11 +153,11 @@ def scratchHasTransOutput (k n : ℕ) (q' : Fin k)
     - All work tape heads at cell 1 (rewound)
     - All work tapes well-formed (cell 0 = ▷, cells ≥ 1 ≠ ▷) -/
 noncomputable def SimInvariant {n : ℕ} (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (desc : List Bool) : TapePred 4 :=
+    (hk : k = @Fintype.card tm.Q tm.finQ) (desc : List Bool) : TapePred 4 :=
   fun _inp work _out =>
     ∃ (simCfg : Cfg n tm.Q),
       descOnTape desc (work utmDescTape) ∧
-      stateOnTapeAt k (e simCfg.state) (work utmStateTape) ∧
+      stateOnTapeAt k (tm.stateEquivK hk simCfg.state) (work utmStateTape) ∧
       superCellsCorrect simCfg (work utmSimTape) ∧
       (∀ i, (work i).head ≥ 1) ∧
       WorkTapesWF work

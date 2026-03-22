@@ -43,8 +43,10 @@ noncomputable def applyTransitionTM : TM 4 := writeTM .blank
     **Post**: State + sim tapes encode the stepped config; desc preserved;
     heads at 1. -/
 theorem applyTransitionTM_hoareTime (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (desc : List Bool) (simCfg : Cfg n tm.Q) (B : ℕ)
+    (hk : k = @Fintype.card tm.Q tm.finQ) (desc : List Bool)
+    (simCfg : Cfg n tm.Q) (B : ℕ)
     (hNotHalted : simCfg.state ≠ tm.qhalt) :
+    let e := tm.stateEquivK hk
     let iHead := simCfg.input.read
     let wHeads := fun i => (simCfg.work i).read
     let oHead := simCfg.output.read

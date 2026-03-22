@@ -373,7 +373,7 @@ def setupStateTM : TM 4 where
         -- Forced to move state right (to cell 1) by δ_right_of_start.
         -- Desc stays (already past qhalt + separator).
         (.copyQstart,
-         fun _ => .blank,
+         fun i => if i.val = 0 then readBackWrite (wHeads 0) else .blank,
          .blank, idleDir iHead,
          fun i => if i.val = 1 then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
@@ -391,7 +391,11 @@ def setupStateTM : TM 4 where
     | .copyQstart =>
       if wHeads 1 = Γ.blank then
         -- State tape reads blank sentinel: copy complete
-        allIdle .done iHead wHeads oHead
+        (.done,
+         fun i => if i.val = 0 then readBackWrite (wHeads 0) else .blank,
+         .blank, idleDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
       else
         -- Copy desc bit to state tape, advance both right
         (.copyQstart,
@@ -447,7 +451,8 @@ def setupStateTM : TM 4 where
           · exact idleDir_right_of_start hwi
     | .copyQstart =>
       dsimp only []; split
-      · exact ros_allIdle iHead wHeads oHead
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; exact idleDir_right_of_start hwi
       · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
         intro i hwi; simp only []; split
         · rfl
@@ -531,18 +536,35 @@ instance : Fintype SetupSimPhase where
             .done}
   complete := fun x => by cases x <;> simp
 
--- Helper: advance only sim tape (work 2) right, writing `w` to it
-private def simWriteRight (next : SetupSimPhase) (w : Γw)
+-- Helper: idle transition that preserves all cell contents via readBackWrite
+def setupIdle (next : SetupSimPhase)
     (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
     SetupSimPhase × (Fin 4 → Γw) × Γw × Dir3 × (Fin 4 → Dir3) × Dir3 :=
   (next,
-   fun i => if i.val = 2 then w else .blank,
-   .blank, idleDir iHead,
+   fun i => readBackWrite (wHeads i),
+   readBackWrite oHead, idleDir iHead,
+   fun i => idleDir (wHeads i),
+   idleDir oHead)
+
+private theorem ros_setupIdle (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
+    (iHead = Γ.start → idleDir iHead = Dir3.right) ∧
+    (∀ i, wHeads i = Γ.start → idleDir (wHeads i) = Dir3.right) ∧
+    (oHead = Γ.start → idleDir oHead = Dir3.right) :=
+  ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, idleDir_right_of_start⟩
+
+-- Helper: advance only sim tape (work 2) right, writing `w` to it.
+-- Non-sim tapes use readBackWrite to preserve cell contents.
+def simWriteRight (next : SetupSimPhase) (w : Γw)
+    (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
+    SetupSimPhase × (Fin 4 → Γw) × Γw × Dir3 × (Fin 4 → Dir3) × Dir3 :=
+  (next,
+   fun i => if i.val = 2 then w else readBackWrite (wHeads i),
+   readBackWrite oHead, idleDir iHead,
    fun i => if i.val = 2 then Dir3.right else idleDir (wHeads i),
    idleDir oHead)
 
 -- Helper: advance sim tape right preserving cell contents
-private def simAdvanceRight (next : SetupSimPhase)
+def simAdvanceRight (next : SetupSimPhase)
     (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
     SetupSimPhase × (Fin 4 → Γw) × Γw × Dir3 × (Fin 4 → Dir3) × Dir3 :=
   simWriteRight next (readBackWrite (wHeads 2)) iHead wHeads oHead
@@ -569,15 +591,15 @@ def setupSimTM : TM 4 where
         simWriteRight .pos0Write2 .one iHead wHeads oHead
       else
         -- Scratch exhausted (n work tapes done): write 6 extras
-        allIdle .pos0Extra1 iHead wHeads oHead
+        setupIdle .pos0Extra1 iHead wHeads oHead
     | .pos0Write2 => simWriteRight .pos0Write3 .one iHead wHeads oHead
     | .pos0Write3 =>
       -- Write 3rd one, advance scratch right, loop back
       (.pos0Write1,
        fun i => if i.val = 2 then Γw.one
                 else if i.val = 3 then readBackWrite (wHeads 3)
-                else .blank,
-       .blank, idleDir iHead,
+                else readBackWrite (wHeads i),
+       readBackWrite oHead, idleDir iHead,
        fun i => if i.val = 2 then Dir3.right
                 else if i.val = 3 then Dir3.right
                 else idleDir (wHeads i),
@@ -594,7 +616,7 @@ def setupSimTM : TM 4 where
     -- ══════════════════════════════════════════════════════════════════
     | .advanceInput =>
       (.checkInput,
-       fun _ => .blank, .blank,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
        Dir3.right, -- advance input past Γ.blank separator
        fun i => idleDir (wHeads i),
        idleDir oHead)
@@ -604,7 +626,7 @@ def setupSimTM : TM 4 where
     | .checkInput =>
       if iHead = Γ.blank then
         -- End of x: done
-        allIdle .done iHead wHeads oHead
+        setupIdle .done iHead wHeads oHead
       else
         -- x bit present: skip head marker on sim (advance sim right)
         simAdvanceRight .writeSymHi iHead wHeads oHead
@@ -615,8 +637,8 @@ def setupSimTM : TM 4 where
       -- Write sym_lo based on input bit, advance both sim and input
       let w : Γw := if iHead = Γ.one then .one else .zero
       (.rewindScratch,
-       fun i => if i.val = 2 then w else .blank,
-       .blank, Dir3.right, -- advance input
+       fun i => if i.val = 2 then w else readBackWrite (wHeads i),
+       readBackWrite oHead, Dir3.right, -- advance input
        fun i => if i.val = 2 then Dir3.right else idleDir (wHeads i),
        idleDir oHead)
     -- ══════════════════════════════════════════════════════════════════
@@ -626,19 +648,20 @@ def setupSimTM : TM 4 where
       if wHeads 3 = Γ.start then
         -- Scratch at ▷ (cell 0): bounce right to cell 1
         (.bounceScratch,
-         fun _ => .blank, .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead, idleDir iHead,
          fun i => if i.val = 3 then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
       else
         -- Keep moving scratch left, preserving cells
         (.rewindScratch,
-         fun i => if i.val = 3 then readBackWrite (wHeads 3) else .blank,
-         .blank, idleDir iHead,
+         fun i => if i.val = 3 then readBackWrite (wHeads 3)
+                  else readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
          fun i => if i.val = 3 then Dir3.left else idleDir (wHeads i),
          idleDir oHead)
     | .bounceScratch =>
       -- Scratch at cell 1: enter stride loop (no tape movement this step)
-      allIdle .stride1 iHead wHeads oHead
+      setupIdle .stride1 iHead wHeads oHead
     | .stride1 =>
       if wHeads 3 = Γ.one then
         -- Scratch one: advance sim right (1st of 3)
@@ -652,8 +675,8 @@ def setupSimTM : TM 4 where
       (.stride1,
        fun i => if i.val = 2 then readBackWrite (wHeads 2)
                 else if i.val = 3 then readBackWrite (wHeads 3)
-                else .blank,
-       .blank, idleDir iHead,
+                else readBackWrite (wHeads i),
+       readBackWrite oHead, idleDir iHead,
        fun i => if i.val = 2 then Dir3.right
                 else if i.val = 3 then Dir3.right
                 else idleDir (wHeads i),
@@ -677,8 +700,8 @@ def setupSimTM : TM 4 where
       · exact idleDir_right_of_start hwi
     -- checkInput (two branches)
     | .checkInput =>
-      dsimp only [simAdvanceRight, simWriteRight]; split
-      · exact ros_allIdle iHead wHeads oHead
+      dsimp only [setupIdle, simAdvanceRight, simWriteRight]; split
+      · exact ros_setupIdle iHead wHeads oHead
       · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
         intro i hwi; simp only []; split
         · rfl
@@ -696,12 +719,12 @@ def setupSimTM : TM 4 where
         · exact idleDir_right_of_start hwi
     -- pos0Write1 (split on scratch)
     | .pos0Write1 =>
-      dsimp only [simWriteRight]; split
+      dsimp only [setupIdle, simWriteRight]; split
       · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
         intro i hwi; simp only []; split
         · rfl
         · exact idleDir_right_of_start hwi
-      · exact ros_allIdle iHead wHeads oHead
+      · exact ros_setupIdle iHead wHeads oHead
     -- pos0Write3 (advance sim + scratch)
     | .pos0Write3 =>
       refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
@@ -740,7 +763,11 @@ def setupSimTM : TM 4 where
           have : i = (3 : Fin 4) := by ext; exact heq
           subst this; contradiction
         · exact idleDir_right_of_start hwi
-    -- bounceScratch, done (allIdle)
-    | .bounceScratch | .done => exact ros_allIdle iHead wHeads oHead
+    -- bounceScratch (setupIdle)
+    | .bounceScratch =>
+      dsimp only [setupIdle]
+      exact ros_setupIdle iHead wHeads oHead
+    -- done (allIdle — never reached since state = qhalt)
+    | .done => exact ros_allIdle iHead wHeads oHead
 
 end TM

@@ -28,9 +28,21 @@ variable {n : ℕ}
 -- State normalization
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- The canonical equivalence between a TM's states and `Fin k`. -/
+/-- The canonical equivalence between a TM's states and `Fin (Fintype.card Q)`. -/
 noncomputable def stateEquiv (tm : TM n) : tm.Q ≃ Fin (Fintype.card tm.Q) :=
   @Fintype.equivFin tm.Q tm.finQ
+
+/-- The canonical equivalence cast to `Fin k` given `k = Fintype.card Q`.
+    This is the single source of truth for state ↔ index mapping in the UTM. -/
+noncomputable def stateEquivK (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ) :
+    tm.Q ≃ Fin k :=
+  hk ▸ tm.stateEquiv
+
+/-- `stateEquivK` agrees with `stateEquiv` on values.
+    This discharges `he_val` hypotheses in CheckHaltInternal. -/
+theorem stateEquivK_val (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ)
+    (q : tm.Q) : (tm.stateEquivK hk q).val = (tm.stateEquiv q).val := by
+  subst hk; rfl
 
 /-- Normalize a TM's state type to `Fin (Fintype.card Q)` via the canonical
     equivalence. This preserves all computational behavior.

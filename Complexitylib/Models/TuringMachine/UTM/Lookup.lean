@@ -41,8 +41,9 @@ noncomputable def lookupTM : TM 4 := writeTM .blank
     **Pre**: Desc tape valid + head at 1; scratch has input pattern.
     **Post**: Desc tape preserved; scratch has transition output from δ. -/
 theorem lookupTM_hoareTime (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (desc : List Bool)
+    (hk : k = @Fintype.card tm.Q tm.finQ) (desc : List Bool)
     (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) (B : ℕ) :
+    let e := tm.stateEquivK hk
     lookupTM.HoareTime
       (fun _inp work _out =>
         descOnTape desc (work utmDescTape) ∧
