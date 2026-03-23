@@ -142,7 +142,7 @@ private theorem setupSimTM_hoareTime' (tm : TM n) (k : ℕ)
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
         (work (3 : Fin 4)).head ≤ n + 1)
       (3 * n + 9 + x.length * (4 * n + 9)) :=
-  setupSimTM_hoareTime tm k x _hk
+  setupSimTM_hoareTime tm k (tm.stateEquivK _hk) x _hk
 
 -- ════════════════════════════════════════════════════════════════════════
 -- seqTransition identity under InitEnvelope
@@ -212,19 +212,16 @@ private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- **initTM_hoareTime**: from initial tapes with encoded `⟨M, x⟩`,
-    `initTM` establishes `SimInvariant` for `tm.initCfg x`.
-
-    The composition chains 9 sub-machines via `seqTM_hoareTime`.
-    Currently sorry'd due to bridge lemmas and setupState/setupSim. -/
+    `initTM` establishes `SimInvariant` for `tm.initCfg x`. -/
 theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
-    (x : List Bool) (B : ℕ)
+    (x : List Bool)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
     let desc := TMEncoding.encodeTM tm
-    initTM.HoareTime
-      (fun inp _work _out =>
-        inp = initTape (encodeUTMInput tm x))
+    ∃ B, initTM.HoareTime
+      (initTM_pre tm x)
       (SimInvariant tm k hk desc)
       B := by
+  have h := (copyInputToWorkTM_hoareTime tm x).toHoare
   sorry
 
 end TM
