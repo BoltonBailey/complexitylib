@@ -1370,6 +1370,64 @@ private theorem encodeInputPattern_matches_scratch
   rfl
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Phase 2 iteration: per_tape_simulation across all n+2 tapes
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Helper: the head position of simulated tape t_idx in simCfg. -/
+private noncomputable def simHeadPos {n : ℕ} {Q : Type} (simCfg : Cfg n Q)
+    (t_idx : Fin (n + 2)) : ℕ :=
+  if h0 : t_idx.val = 0 then simCfg.input.head
+  else if h1 : t_idx.val ≤ n then
+    (simCfg.work ⟨t_idx.val - 1, by omega⟩).head
+  else simCfg.output.head
+
+/-- Helper: the cell function of simulated tape t_idx in simCfg. -/
+private noncomputable def simCellsFn {n : ℕ} {Q : Type} (simCfg : Cfg n Q)
+    (t_idx : Fin (n + 2)) : ℕ → Γ :=
+  if h0 : t_idx.val = 0 then simCfg.input.cells
+  else if h1 : t_idx.val ≤ n then
+    (simCfg.work ⟨t_idx.val - 1, by omega⟩).cells
+  else simCfg.output.cells
+
+/-- Phase 2: iterate per_tape_simulation over tapes [target..n+1], accumulating
+    encoded head symbols onto the scratch tape.
+
+    Starts at `.scan target 0` with scratch head at `sc_pos` and produces
+    `.rewindState` with scratch head at `sc_pos + 2 * (n + 2 - target.val)`. -/
+private theorem all_tapes_simulation
+    {Q : Type} [DecidableEq Q] [Fintype Q]
+    (simCfg : Cfg n Q) :
+    ∀ (remaining : ℕ) (target : Fin (n + 2))
+    (htarget : target.val = n + 2 - remaining) (hrem : remaining ≤ n + 2)
+    (c : Cfg 4 (readCurrentTM (n := n)).Q)
+    (sc_pos : ℕ),
+    c.state = .scan target ⟨0, by omega⟩ →
+    (c.work utmSimTape).head = 1 →
+    (c.work utmSimTape).cells 0 = Γ.start →
+    superCellsCorrect simCfg ⟨1, (c.work utmSimTape).cells⟩ →
+    (c.work utmScratchTape).head = sc_pos →
+    sc_pos ≥ 1 →
+    WorkTapesWF c.work →
+    c.input.read ≠ Γ.start → c.input.head ≥ 1 →
+    c.output.read ≠ Γ.start → c.output.head ≥ 1 →
+    (∀ i, (c.work i).head ≥ 1) →
+    -- Scratch cells below sc_pos are already written
+    ∃ c' t,
+      (readCurrentTM (n := n)).reachesIn t c c' ∧
+      c'.state = .rewindState ∧
+      (c'.work utmSimTape).head = 1 ∧
+      (c'.work utmSimTape).cells = (c.work utmSimTape).cells ∧
+      (c'.work utmDescTape) = (c.work utmDescTape) ∧
+      (c'.work utmStateTape) = (c.work utmStateTape) ∧
+      (c'.work utmScratchTape).head = sc_pos + 2 * remaining ∧
+      -- Scratch cells below sc_pos are preserved
+      (∀ j, j < sc_pos → (c'.work utmScratchTape).cells j =
+        (c.work utmScratchTape).cells j) ∧
+      c'.input = c.input ∧ c'.output = c.output ∧
+      WorkTapesWF c'.work := by
+  sorry
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Full readCurrentTM_hoareTime
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -1380,9 +1438,9 @@ private theorem encodeInputPattern_matches_scratch
     state and head symbols. Heads returned to cell 1. -/
 theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ)
-    (desc : List Bool) (simCfg : Cfg n tm.Q) (B : ℕ) :
+    (desc : List Bool) (simCfg : Cfg n tm.Q) :
     let e := tm.stateEquivK hk
-    (readCurrentTM (n := n)).HoareTime
+    ∃ B, (readCurrentTM (n := n)).HoareTime
       (fun inp work out =>
         descOnTape desc (work utmDescTape) ∧
         stateOnTapeAt k (e simCfg.state) (work utmStateTape) ∧
