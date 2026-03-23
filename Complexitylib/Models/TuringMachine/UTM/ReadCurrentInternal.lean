@@ -1389,6 +1389,48 @@ private noncomputable def simCellsFn {n : ℕ} {Q : Type} (simCfg : Cfg n Q)
     (simCfg.work ⟨t_idx.val - 1, by omega⟩).cells
   else simCfg.output.cells
 
+/-- Extract per-tape sim conditions from superCellsCorrect for a given target tape. -/
+private theorem extract_sim_conditions
+    {Q : Type} (simCfg : Cfg n Q) (cells : ℕ → Γ)
+    (hscc : superCellsCorrect simCfg ⟨1, cells⟩) (target : Fin (n + 2)) :
+    (∀ pos, cells (SuperCell.simTapeOffset (n + 2) pos target.val) =
+      if simHeadPos simCfg target = pos then Γ.one else Γ.blank) ∧
+    (∀ pos, cells (SuperCell.simTapeOffset (n + 2) pos target.val + 1) =
+      (SuperCell.symToCellPair (simCellsFn simCfg target pos)).1) ∧
+    (∀ pos, cells (SuperCell.simTapeOffset (n + 2) pos target.val + 2) =
+      (SuperCell.symToCellPair (simCellsFn simCfg target pos)).2) := by
+  obtain ⟨_, hscc_inp, hscc_work, hscc_out⟩ := hscc
+  rcases target with ⟨tv, htv⟩
+  simp only [] at *
+  by_cases h0 : tv = 0
+  · -- Input tape
+    subst h0
+    simp only [simHeadPos, simCellsFn, ↓reduceDIte]
+    exact ⟨fun pos => (hscc_inp pos).1,
+           fun pos => (hscc_inp pos).2.1,
+           fun pos => (hscc_inp pos).2.2⟩
+  · by_cases hlast : tv = n + 1
+    · -- Output tape
+      subst hlast
+      simp only [simHeadPos, simCellsFn, show (n + 1) ≠ 0 from by omega,
+        show ¬(n + 1 ≤ n) from by omega, ↓reduceDIte]
+      exact ⟨fun pos => (hscc_out pos).1,
+             fun pos => (hscc_out pos).2.1,
+             fun pos => (hscc_out pos).2.2⟩
+    · -- Work tape
+      have hle : tv ≤ n := by omega
+      have hlt : tv - 1 < n := by omega
+      simp only [simHeadPos, simCellsFn, h0, hle, ↓reduceDIte]
+      have hvaleq : (⟨tv - 1, hlt⟩ : Fin n).val + 1 = tv := by
+        show tv - 1 + 1 = tv; omega
+      refine ⟨fun pos => ?_, fun pos => ?_, fun pos => ?_⟩
+      · have := (hscc_work ⟨tv - 1, hlt⟩ pos).1
+        simp only [hvaleq] at this; exact this
+      · have := (hscc_work ⟨tv - 1, hlt⟩ pos).2.1
+        simp only [hvaleq] at this; exact this
+      · have := (hscc_work ⟨tv - 1, hlt⟩ pos).2.2
+        simp only [hvaleq] at this; exact this
+
 /-- Phase 2: iterate per_tape_simulation over tapes [target..n+1], accumulating
     encoded head symbols onto the scratch tape.
 
@@ -1411,7 +1453,6 @@ private theorem all_tapes_simulation
     c.input.read ≠ Γ.start → c.input.head ≥ 1 →
     c.output.read ≠ Γ.start → c.output.head ≥ 1 →
     (∀ i, (c.work i).head ≥ 1) →
-    -- Scratch cells below sc_pos are already written
     ∃ c' t,
       (readCurrentTM (n := n)).reachesIn t c c' ∧
       c'.state = .rewindState ∧
@@ -1420,12 +1461,60 @@ private theorem all_tapes_simulation
       (c'.work utmDescTape) = (c.work utmDescTape) ∧
       (c'.work utmStateTape) = (c.work utmStateTape) ∧
       (c'.work utmScratchTape).head = sc_pos + 2 * remaining ∧
-      -- Scratch cells below sc_pos are preserved
       (∀ j, j < sc_pos → (c'.work utmScratchTape).cells j =
         (c.work utmScratchTape).cells j) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
-  sorry
+  intro remaining
+  induction remaining with
+  | zero =>
+    intro target htarget; exact absurd htarget (by omega)
+  | succ m ih =>
+    intro target htarget hrem c sc_pos hstate hsim_head hsim_cell0 hscc
+      hsc_head hsc_ge hwf hinp hinp_h hout hout_h hwork_heads
+    -- Extract marker/hi/lo conditions for current target
+    have ⟨hmarker, hhi, hlo⟩ := extract_sim_conditions simCfg _ hscc target
+    -- Apply per_tape_simulation
+    obtain ⟨c', t', hreach', hnext', hsim_head', hsim_cells', hsc_head', hsc0, hsc1,
+      hsc_prev, hdesc', hstate', hinp', hout', hwf'⟩ :=
+      per_tape_simulation (simCellsFn simCfg target) c target
+        (simHeadPos simCfg target) sc_pos hstate hsim_head hmarker hhi hlo
+        hsc_head hsc_ge hwf hinp hinp_h hout hout_h hsim_cell0 hwork_heads
+    -- Case split: last tape or not?
+    by_cases hlast : target.val = n + 1
+    · -- Last tape (m = 0): per_tape_simulation reached .rewindState
+      have hm0 : m = 0 := by omega
+      subst hm0; simp [hlast] at hnext'
+      exact ⟨c', t', hreach', hnext', hsim_head', hsim_cells', hdesc', hstate',
+        by rw [hsc_head'], hsc_prev, hinp', hout', hwf'⟩
+    · -- Not last tape: per_tape_simulation reached .scan ⟨target+1, _⟩, recurse
+      simp [hlast] at hnext'
+      have htarget1 : (⟨target.val + 1, by omega⟩ : Fin (n + 2)).val = n + 2 - m := by
+        show target.val + 1 = n + 2 - m; omega
+      obtain ⟨c'', t'', hreach'', hst'', hsim_head'', hsim_cells'', hdesc'', hstate'',
+        hsc_head'', hsc_prev'', hinp'', hout'', hwf''⟩ :=
+        ih ⟨target.val + 1, by omega⟩ htarget1 (by omega) c' (sc_pos + 2) hnext'
+          hsim_head' (by rw [hsim_cells']; exact hsim_cell0)
+          (by rw [hsim_cells']; exact hscc) hsc_head' (by omega) hwf'
+          (by rw [hinp']; exact hinp) (by rw [hinp']; exact hinp_h)
+          (by rw [hout']; exact hout) (by rw [hout']; exact hout_h)
+          (by intro i
+              by_cases hi2 : i = utmSimTape
+              · rw [hi2]; omega
+              · by_cases hi3 : i = utmScratchTape
+                · rw [hi3, hsc_head']; omega
+                · have : i = utmDescTape ∨ i = utmStateTape := by
+                    simp only [Fin.ext_iff, utmSimTape, utmScratchTape, utmDescTape, utmStateTape] at *
+                    omega
+                  rcases this with rfl | rfl
+                  · rw [hdesc']; exact hwork_heads _
+                  · rw [hstate']; exact hwork_heads _)
+      exact ⟨c'', t' + t'', reachesIn_trans readCurrentTM hreach' hreach'', hst'',
+        hsim_head'', by rw [hsim_cells'', hsim_cells'],
+        by rw [hdesc'', hdesc'], by rw [hstate'', hstate'],
+        by rw [hsc_head'']; omega,
+        fun j hj => by rw [hsc_prev'' j (by omega), hsc_prev j hj],
+        by rw [hinp'', hinp'], by rw [hout'', hout'], hwf''⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Full readCurrentTM_hoareTime
