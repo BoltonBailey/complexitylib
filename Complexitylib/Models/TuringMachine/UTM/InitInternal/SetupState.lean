@@ -1422,6 +1422,121 @@ private theorem copyQstart_loop (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ
     exact ⟨c_f, .step hstep hreach, hprops⟩
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Frame lemmas: sim tape and input tape are preserved throughout setupState
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- In any non-done state, setupStateTM writes .blank to tape 2 and uses idleDir. -/
+private theorem setupStateTM_sim_tape_idle (state : SetupStatePhase)
+    (hnd : state ≠ .done)
+    (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
+    let (_, workWrites, _, _, workDirs, _) := setupStateTM.δ state iHead wHeads oHead
+    workWrites (2 : Fin 4) = .blank ∧ workDirs (2 : Fin 4) = idleDir (wHeads 2) := by
+  match state with
+  | .skipK =>
+    simp only [setupStateTM, show (2 : Fin 4).val = 2 from rfl, show (2 : ℕ) ≠ 0 from by decide,
+      show (2 : ℕ) ≠ 1 from by decide]
+    split <;> simp
+  | .copyN =>
+    simp only [setupStateTM, show (2 : Fin 4).val = 2 from rfl, show (2 : ℕ) ≠ 0 from by decide,
+      show (2 : ℕ) ≠ 3 from by decide]
+    split <;> simp
+  | .skipQhalt =>
+    simp only [setupStateTM, show (2 : Fin 4).val = 2 from rfl, show (2 : ℕ) ≠ 0 from by decide,
+      show (2 : ℕ) ≠ 1 from by decide]
+    split <;> simp
+  | .copyQstart =>
+    simp only [setupStateTM, show (2 : Fin 4).val = 2 from rfl, show (2 : ℕ) ≠ 0 from by decide,
+      show (2 : ℕ) ≠ 1 from by decide]
+    split <;> simp
+  | .done => exact absurd rfl hnd
+
+/-- In any non-done state, setupStateTM uses idleDir for the input direction. -/
+private theorem setupStateTM_inp_dir_idle (state : SetupStatePhase)
+    (hnd : state ≠ .done)
+    (iHead : Γ) (wHeads : Fin 4 → Γ) (oHead : Γ) :
+    let (_, _, _, inDir, _, _) := setupStateTM.δ state iHead wHeads oHead
+    inDir = idleDir iHead := by
+  match state with
+  | .skipK => simp [setupStateTM]; split <;> rfl
+  | .copyN => simp [setupStateTM]; split <;> rfl
+  | .skipQhalt => simp [setupStateTM]; split <;> rfl
+  | .copyQstart => simp [setupStateTM]; split <;> rfl
+  | .done => exact absurd rfl hnd
+
+/-- One step of setupStateTM preserves the sim tape exactly (tape 2 is idle). -/
+private theorem setupStateTM_step_sim_preserved
+    (c c' : Cfg 4 setupStateTM.Q)
+    (hstep : setupStateTM.step c = some c')
+    (hsim_c : (c.work utmSimTape).cells = (initTape []).cells)
+    (hsim_h : (c.work utmSimTape).head ≥ 1) :
+    c'.work utmSimTape = c.work utmSimTape := by
+  unfold TM.step at hstep
+  have hnd : c.state ≠ setupStateTM.qhalt := by
+    intro h; simp [h] at hstep
+  simp only [hnd, ↓reduceIte] at hstep
+  -- Extract delta output
+  set δout := setupStateTM.δ c.state c.input.read (fun i => (c.work i).read) c.output.read
+  have hδ := setupStateTM_sim_tape_idle c.state hnd
+    c.input.read (fun i => (c.work i).read) c.output.read
+  simp only [show δout.2.1 (2 : Fin 4) = (setupStateTM.δ c.state c.input.read
+    (fun i => (c.work i).read) c.output.read).2.1 (2 : Fin 4) from rfl] at hδ
+  obtain ⟨hw_blank, hd_idle⟩ := hδ
+  -- The step result's work field
+  have hc' := Option.some.inj hstep.symm
+  rw [show c'.work utmSimTape = (c.work utmSimTape).writeAndMove
+    (δout.2.1 utmSimTape).toΓ (δout.2.2.2.2.1 utmSimTape) from by rw [hc']]
+  simp only [show (utmSimTape : Fin 4) = (2 : Fin 4) from rfl]
+  rw [hw_blank, hd_idle]
+  exact idle_tape_initTape hsim_h hsim_c
+
+/-- One step of setupStateTM preserves the input tape exactly. -/
+private theorem setupStateTM_step_inp_preserved
+    (c c' : Cfg 4 setupStateTM.Q)
+    (hstep : setupStateTM.step c = some c')
+    (hinp_h : c.input.head ≥ 1)
+    (hinp_ns : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) :
+    c'.input = c.input := by
+  unfold TM.step at hstep
+  have hnd : c.state ≠ setupStateTM.qhalt := by
+    intro h; simp [h] at hstep
+  simp only [hnd, ↓reduceIte] at hstep
+  set δout := setupStateTM.δ c.state c.input.read (fun i => (c.work i).read) c.output.read
+  have hδ := setupStateTM_inp_dir_idle c.state hnd
+    c.input.read (fun i => (c.work i).read) c.output.read
+  simp only [show δout.2.2.2.1 = (setupStateTM.δ c.state c.input.read
+    (fun i => (c.work i).read) c.output.read).2.2.2.1 from rfl] at hδ
+  have hc' : c'.input = c.input.move δout.2.2.2.1 := by
+    have := Option.some.inj hstep.symm; rw [this]
+  rw [hc', hδ]
+  exact idle_input hinp_h hinp_ns
+
+/-- setupStateTM preserves the sim tape exactly over any reachesIn. -/
+private theorem setupStateTM_reachesIn_sim_preserved {t : ℕ}
+    (c c' : Cfg 4 setupStateTM.Q)
+    (h : setupStateTM.reachesIn t c c')
+    (hsim_c : (c.work utmSimTape).cells = (initTape []).cells)
+    (hsim_h : (c.work utmSimTape).head ≥ 1) :
+    c'.work utmSimTape = c.work utmSimTape := by
+  induction h with
+  | zero => rfl
+  | step hstep hrest ih =>
+    have hpres_mid := setupStateTM_step_sim_preserved _ _ hstep hsim_c hsim_h
+    rw [ih (by rw [hpres_mid]; exact hsim_c) (by rw [hpres_mid]; exact hsim_h), hpres_mid]
+
+/-- setupStateTM preserves the input tape exactly over any reachesIn. -/
+private theorem setupStateTM_reachesIn_inp_preserved {t : ℕ}
+    (c c' : Cfg 4 setupStateTM.Q)
+    (h : setupStateTM.reachesIn t c c')
+    (hinp_h : c.input.head ≥ 1)
+    (hinp_ns : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) :
+    c'.input = c.input := by
+  induction h with
+  | zero => rfl
+  | step hstep hrest ih =>
+    have hpres_mid := setupStateTM_step_inp_preserved _ _ hstep hinp_h hinp_ns
+    rw [ih (by rw [hpres_mid]; exact hinp_h) (by rw [hpres_mid]; exact hinp_ns), hpres_mid]
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Full simulation
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -1735,7 +1850,7 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
 
   -- Postconditions
   · change descOnTape desc (c₄.work utmDescTape) ∧ _
-    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, by rw [hst_h4], sorry, sorry⟩
+    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, by rw [hst_h4], ?_, ?_⟩
     -- descOnTape desc (c₄.work utmDescTape)
     · constructor
       · rw [hdesc_c4]; exact hdesc.1
@@ -1772,6 +1887,16 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
     · rw [hdesc_h4]; omega
     -- scratch head bound
     · rw [hsc_h4]
+    -- sim tape preservation: by frame lemma, tape 2 is idle throughout
+    · show c₄.work utmSimTape = work utmSimTape
+      have := setupStateTM_reachesIn_sim_preserved c₀ c₄ hreach1234
+        (by simp only [c₀]; exact hsim_c) (by simp only [c₀]; exact hheads utmSimTape)
+      simp only [c₀] at this; exact this
+    -- input tape preservation: by frame lemma, input is idle throughout
+    · show c₄.input = inp
+      have := setupStateTM_reachesIn_inp_preserved c₀ c₄ hreach1234
+        (by simp only [c₀]; exact hih) (by simp only [c₀]; exact hins)
+      simp only [c₀] at this; exact this
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Main theorem
