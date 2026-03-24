@@ -70,12 +70,14 @@ def initTM : TM 4 :=
     The postcondition is `SimInvariant`, which existentially quantifies
     over `simCfg`. The witness is `tm.initCfg x`. -/
 theorem initTM_hoareTime (tm : TM n) (k : ℕ)
-    (x : List Bool) (B : ℕ)
+    (x : List Bool)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
     let desc := TMEncoding.encodeTM tm
-    initTM.HoareTime
-      (fun inp _work _out =>
-        inp = initTape (encodeUTMInput tm x))
+    ∃ B, initTM.HoareTime
+      (fun inp work out =>
+        inp = initTape (encodeUTMInput tm x) ∧
+        work = (fun _ => initTape []) ∧
+        out = initTape [])
       (SimInvariant tm k hk desc)
       B := by
   sorry
