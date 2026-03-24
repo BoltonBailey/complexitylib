@@ -499,18 +499,42 @@ private theorem rewind0_copyData_hoareTime (tm : TM n) (x : List Bool) :
         copyData tm x inp work out ∧
         (work (0 : Fin 4)).head = 1)
       ((TMEncoding.encodeTM tm).length + 3) := by
-  -- Uses rewindWorkTM_rich_hoareTime with P = copyData, then consequence to match pre/post.
-  -- Pre-adaptation: copyData ∧ head ≤ B → rich_rewind pre (WF + read conditions + P)
-  -- Post-adaptation: head = 1 ∧ P → P ∧ head = 1 (trivial reorder)
-  exact (rewindWorkTM_rich_hoareTime (0 : Fin 4) ((TMEncoding.encodeTM tm).length + 1)
-    (copyData_preserved tm x)).consequence
-    (fun inp work out h => by
-      obtain ⟨⟨hdesc, hother, hwf, hinpc, hinph, houtc, houth⟩, hhead⟩ := h
-      refine ⟨hwf.1 0, hwf.2 0, hhead, ?_, ?_, ?_, ?_,
-              hdesc, hother, hwf, hinpc, hinph, houtc, houth⟩
-      all_goals sorry)
-    (fun _ _ _ ⟨hhead, hdata⟩ => ⟨hdata, hhead⟩)
-    (by omega)
+  apply (rewindWorkTM_rich_hoareTime (0 : Fin 4) ((TMEncoding.encodeTM tm).length + 1)
+    (P := copyData tm x) (copyData_preserved tm x)).consequence
+  · -- Pre adaptation: copyData ∧ head ≤ B → rich rewind pre
+    intro inp work out ⟨hcopy, hhead⟩
+    have ⟨hdesc, hother, hwf, _hh0, hinpc, hinph, houtc, houth⟩ := hcopy
+    refine ⟨hdesc.1, hwf.2 0, hhead, ?_, ?_, by rw [houth], ?_, hcopy⟩
+    · -- inp.read ≠ Γ.start (inp cells = initTape(encoded), head = desc.length+1)
+      simp only [Tape.read, hinpc]
+      have hne0 : inp.head ≠ 0 := by rw [hinph]; omega
+      simp only [initTape, hne0, ↓reduceIte]
+      rw [hinph]
+      cases hg : (encodeUTMInput tm x)[(TMEncoding.encodeTM tm).length]? with
+      | none => simp [hg]
+      | some g =>
+        simp [hg]
+        have hlt : (TMEncoding.encodeTM tm).length < (encodeUTMInput tm x).length := by
+          by_contra hge; have : (encodeUTMInput tm x).length ≤ (TMEncoding.encodeTM tm).length := by omega
+          simp [List.getElem?_eq_none_iff.mpr this] at hg
+        have hmem : g ∈ encodeUTMInput tm x := by
+          rw [List.getElem?_eq_getElem hlt] at hg
+          exact Option.some.inj hg.symm ▸ List.getElem_mem ..
+        exact encodeUTMInput_ne_start tm x g hmem
+    · -- out.read ≠ Γ.start (out cells = initTape [], head = 1)
+      simp only [Tape.read, houtc, houth, initTape, show (1 : ℕ) ≠ 0 from by omega, ↓reduceIte]
+      decide
+    · -- ∀ i ≠ 0, (work i).read ≠ Γ.start ∧ (work i).head ≥ 1
+      intro i hi
+      have ⟨hcells, hhead_i⟩ := hother i hi
+      constructor
+      · simp only [Tape.read, hcells, hhead_i, initTape, show (1 : ℕ) ≠ 0 from by omega, ↓reduceIte]
+        decide
+      · rw [hhead_i]
+  · -- Post adaptation: head = 1 ∧ P → P ∧ head = 1
+    intro _ _ _ ⟨hhead, hdata⟩; exact ⟨hdata, hhead⟩
+  · -- Bound
+    omega
 
 /-- (copyData + head=1) implies setupStateTM precondition. -/
 private theorem copyDataHead1_to_setupStatePre (tm : TM n) (k : ℕ)
