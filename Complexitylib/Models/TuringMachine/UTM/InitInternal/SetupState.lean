@@ -1449,7 +1449,9 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
        tapeStoresBools (List.replicate n true) (c'.work utmScratchTape) ∧
        (c'.work utmDescTape).head ≤ 3 * k + n + 5 ∧
        (c'.work utmScratchTape).head ≤ n + 1 ∧
-       (c'.work utmStateTape).head = k + 1) := by
+       (c'.work utmStateTape).head ≤ k + 1 ∧
+       c'.work utmSimTape = work utmSimTape ∧
+       c'.input = inp) := by
   -- Extract InitEnvelope components
   obtain ⟨hic0, hins, hih, hwf, hheads, hoc0, hons, hoh⟩ := henv
   -- WorkTapesWF gives us cells-level properties for all work tapes
@@ -1733,7 +1735,7 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
 
   -- Postconditions
   · change descOnTape desc (c₄.work utmDescTape) ∧ _
-    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, hst_h4⟩
+    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, by rw [hst_h4], sorry, sorry⟩
     -- descOnTape desc (c₄.work utmDescTape)
     · constructor
       · rw [hdesc_c4]; exact hdesc.1
@@ -1801,14 +1803,27 @@ theorem setupStateTM_hoareTime (tm : TM n) (k : ℕ)
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
         (work utmScratchTape).head ≤ n + 1 ∧
-        (work utmStateTape).head ≤ k + 1)
+        (work utmStateTape).head ≤ k + 1 ∧
+        (work utmSimTape) = (work utmSimTape) ∧
+        inp = inp)
       (3 * k + n + 5) := by
   intro inp work out hpre
   obtain ⟨henv, hdesc, hdesc_h, hst_c, hst_h, hsim_c, hsc_c, hsc_h⟩ := hpre
-  obtain ⟨c', hreach, hhalt, henv', hdesc', hstate', hsim', hsc', hd_head', hsc_head', hst_head'⟩ :=
-    setupStateTM_simulation tm k _x hk inp work out
+  have hsim := setupStateTM_simulation tm k _x hk inp work out
       hdesc hdesc_h hst_c hst_h hsim_c hsc_c hsc_h henv
+  obtain ⟨c', hreach, hhalt, henv', hpost⟩ := hsim
+  -- Extract all fields from the simulation postcondition
+  have hdesc' := hpost.1
+  have hstate' := hpost.2.1
+  have hsim' := hpost.2.2.1
+  have hsc' := hpost.2.2.2.1
+  have hd_head' := hpost.2.2.2.2.1
+  have hsc_head' := hpost.2.2.2.2.2.1
+  have hst_head' := hpost.2.2.2.2.2.2.1
+  have hsim_pres := hpost.2.2.2.2.2.2.2.1
+  have hinp_pres := hpost.2.2.2.2.2.2.2.2
   exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv',
-         hdesc', hstate', hsim', hsc', hd_head', hsc_head', by omega⟩
+         hdesc', hstate', hsim', hsc', hd_head', hsc_head', hst_head',
+         by rw [hsim_pres], by rw [hinp_pres]⟩
 
 end TM

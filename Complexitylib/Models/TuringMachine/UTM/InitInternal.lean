@@ -77,6 +77,7 @@ private theorem postCopy_to_initEnvelope (tm : TM n) (x : List Bool) :
 /-- HoareTime for setupStateTM.
     Precondition: desc tape with head at 1, other work tapes blank.
     Postcondition: state tape has qstart one-hot, scratch has n ones.
+    Also preserves: sim tape head = 1, input cells, input head.
     Proof delegated to SetupState module. -/
 private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
     (_x : List Bool)
@@ -90,8 +91,11 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
         (work utmStateTape).cells = (initTape []).cells ∧
         (work utmStateTape).head = 1 ∧
         (work utmSimTape).cells = (initTape []).cells ∧
+        (work utmSimTape).head = 1 ∧
         (work utmScratchTape).cells = (initTape []).cells ∧
-        (work utmScratchTape).head = 1)
+        (work utmScratchTape).head = 1 ∧
+        inp.cells = (initTape (encodeUTMInput tm _x)).cells ∧
+        inp.head = (TMEncoding.encodeTM tm).length + 1)
       (fun inp work out =>
         InitEnvelope inp work out ∧
         let desc := TMEncoding.encodeTM tm
@@ -101,9 +105,33 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
         (work utmScratchTape).head ≤ n + 1 ∧
-        (work utmStateTape).head ≤ k + 1)
-      (3 * k + n + 5) :=
-  setupStateTM_hoareTime tm k _x _hk
+        (work utmStateTape).head ≤ k + 1 ∧
+        (work utmSimTape).head = 1 ∧
+        inp.cells = (initTape (encodeUTMInput tm _x)).cells ∧
+        inp.head = (TMEncoding.encodeTM tm).length + 1)
+      (3 * k + n + 5) := by
+  intro inp work out ⟨henv, hdesc, hdesc_h, hst_c, hst_h, hsim_c, hsim_h1,
+    hsc_c, hsc_h, hinpc, hinph⟩
+  have hsim := setupStateTM_simulation tm k _x _hk inp work out
+      hdesc hdesc_h hst_c hst_h hsim_c hsc_c hsc_h henv
+  obtain ⟨c', hreach, hhalt, henv', hpost⟩ := hsim
+  -- Extract all fields from hpost
+  -- Extract fields from hpost manually to avoid dependent elimination on ≤
+  have hdesc' := hpost.1
+  have hstate' := hpost.2.1
+  have hsim_c' := hpost.2.2.1
+  have hsc' := hpost.2.2.2.1
+  have hd_head' := hpost.2.2.2.2.1
+  have hsc_head' := hpost.2.2.2.2.2.1
+  have hst_head' := hpost.2.2.2.2.2.2.1
+  have hsim_pres := hpost.2.2.2.2.2.2.2.1
+  have hinp_pres := hpost.2.2.2.2.2.2.2.2
+  exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv',
+         hdesc', hstate', hsim_c',
+         hsc', hd_head', hsc_head', hst_head',
+         by rw [hsim_pres]; exact hsim_h1,
+         by rw [hinp_pres]; exact hinpc,
+         by rw [hinp_pres]; exact hinph⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- SetupSim (sorry'd)
@@ -579,15 +607,19 @@ private theorem copyDataHead1_to_setupStatePre (tm : TM n) (k : ℕ)
       (work utmStateTape).cells = (initTape []).cells ∧
       (work utmStateTape).head = 1 ∧
       (work utmSimTape).cells = (initTape []).cells ∧
+      (work utmSimTape).head = 1 ∧
       (work utmScratchTape).cells = (initTape []).cells ∧
-      (work utmScratchTape).head = 1) := by
+      (work utmScratchTape).head = 1 ∧
+      inp.cells = (initTape (encodeUTMInput tm x)).cells ∧
+      inp.head = (TMEncoding.encodeTM tm).length + 1) := by
   intro inp work out ⟨hcd, hhead⟩
-  have ⟨hdesc, hother, _, _, _, _, _, _⟩ := hcd
+  have ⟨hdesc, hother, _, _, hinp_c, hinp_h, _, _⟩ := hcd
   exact ⟨copyData_to_initEnvelope tm x inp work out hcd,
          hdesc, hhead,
          (hother 1 (by decide)).1, (hother 1 (by decide)).2,
-         (hother 2 (by decide)).1,
-         (hother 3 (by decide)).1, (hother 3 (by decide)).2⟩
+         (hother 2 (by decide)).1, (hother 2 (by decide)).2,
+         (hother 3 (by decide)).1, (hother 3 (by decide)).2,
+         hinp_c, hinp_h⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 3+4: setupState + rewind tape 3 (rich rewind preserving state data)
@@ -700,13 +732,16 @@ private theorem setupStatePost_to_rewind3Pre (tm : TM n) (k : ℕ)
       tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
       (work utmDescTape).head ≤ 3 * k + n + 5 ∧
       (work utmScratchTape).head ≤ n + 1 ∧
-      (work utmStateTape).head ≤ k + 1) →
+      (work utmStateTape).head ≤ k + 1 ∧
+      (work utmSimTape).head = 1 ∧
+      inp.cells = (initTape (encodeUTMInput tm x)).cells ∧
+      inp.head = (TMEncoding.encodeTM tm).length + 1) →
     (setupStateData tm k hk x inp work out ∧
       (work (3 : Fin 4)).head ≤ n + 1) := by
-  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hd_head, hsc_head, hst_head⟩
-  -- sim head and inp layout are preserved by setupState (which doesn't modify sim/inp)
-  -- These would follow from strengthening setupStateTM_simulation to track idle tapes.
-  exact ⟨⟨henv, hdesc, hstate, hsim, sorry, hsc, hd_head, hst_head, sorry, sorry⟩, hsc_head⟩
+  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hd_head, hsc_head, hst_head,
+                       hsim_head, hinp_c, hinp_h⟩
+  exact ⟨⟨henv, hdesc, hstate, hsim, hsim_head, hsc, hd_head, hst_head, hinp_c, hinp_h⟩,
+         hsc_head⟩
 
 /-- (setupStateData + head(3)=1) → setupSim precondition. -/
 private theorem setupStateDataHead1_to_setupSimPre (tm : TM n) (k : ℕ)
