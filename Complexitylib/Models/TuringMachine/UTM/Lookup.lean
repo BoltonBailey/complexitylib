@@ -115,12 +115,14 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
     | .skipHeader rem =>
       if rem.val = 0 then
         -- At transition table. Start comparing first entry.
-        allIdle (.compare ⟨0, by omega⟩) iHead wHeads oHead
+        (.compare ⟨0, by omega⟩,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       else
         -- Skip one desc bit.
         (.skipHeader ⟨rem.val - 1, by omega⟩,
-         fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .compare pos =>
@@ -128,10 +130,8 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
         if h : pos.val + 1 < ipw then
           -- Match, more bits to compare.
           (.compare ⟨pos.val + 1, by omega⟩,
-           fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape)
-                    else if i = utmScratchTape then readBackWrite (wHeads utmScratchTape)
-                    else .blank,
-           .blank, idleDir iHead,
+           fun i => readBackWrite (wHeads i), readBackWrite oHead,
+           idleDir iHead,
            fun i => if i = utmDescTape then Dir3.right
                     else if i = utmScratchTape then Dir3.right
                     else idleDir (wHeads i),
@@ -139,63 +139,74 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
         else
           -- Full pattern matched! Advance desc past separator.
           (.matchRewind,
-           fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
-           .blank, idleDir iHead,
+           fun i => readBackWrite (wHeads i), readBackWrite oHead,
+           idleDir iHead,
            fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
            idleDir oHead)
       else
         -- Mismatch. Skip rest of this entry.
         (.skipRest ⟨ew - pos.val - 1, by omega⟩,
-         fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .skipRest rem =>
       if rem.val = 0 then
-        (.rewindScratch, fun _ => .blank, .blank,
+        (.rewindScratch,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       else
         (.skipRest ⟨rem.val - 1, by omega⟩,
-         fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .rewindScratch =>
       if wHeads utmScratchTape = Γ.start then
-        (.rewindScratchR, fun _ => .blank, .blank,
+        (.rewindScratchR,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => if i = utmScratchTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
       else
         (.rewindScratch,
-         fun i => if i = utmScratchTape then readBackWrite (wHeads utmScratchTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmScratchTape then moveLeftDir (wHeads utmScratchTape)
                   else idleDir (wHeads i),
          idleDir oHead)
     | .rewindScratchR =>
-      allIdle (.compare ⟨0, by omega⟩) iHead wHeads oHead
+      (.compare ⟨0, by omega⟩,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
+       idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
     | .matchRewind =>
       -- Desc already advanced past separator. Now rewind scratch.
       if wHeads utmScratchTape = Γ.start then
-        (.matchRewindR, fun _ => .blank, .blank,
+        (.matchRewindR,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => if i = utmScratchTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
       else
         (.matchRewind,
-         fun i => if i = utmScratchTape then readBackWrite (wHeads utmScratchTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmScratchTape then moveLeftDir (wHeads utmScratchTape)
                   else idleDir (wHeads i),
          idleDir oHead)
     | .matchRewindR =>
-      -- Scratch at cell 1. Start copying output from desc to scratch.
-      allIdle (.copyOutput ⟨ow, by omega⟩) iHead wHeads oHead
+      -- Scratch at cell 1, desc at separator. Advance desc past separator,
+      -- then start copying output from desc to scratch.
+      (.copyOutput ⟨ow, by omega⟩,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
+       idleDir iHead,
+       fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
+       idleDir oHead)
     | .copyOutput rem =>
       if rem.val = 0 then
         -- Done copying. Rewind desc.
-        (.rewindDesc, fun _ => .blank, .blank,
+        (.rewindDesc,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => if i = utmDescTape then moveLeftDir (wHeads utmDescTape)
                   else idleDir (wHeads i),
@@ -205,49 +216,51 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
         let w : Γw := match wHeads utmDescTape with
           | .zero => .zero | .one => .one | .blank => .blank | .start => .blank
         (.copyOutput ⟨rem.val - 1, by omega⟩,
-         fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape)
-                  else if i = utmScratchTape then w
-                  else .blank,
-         .blank, idleDir iHead,
+         fun i => if i = utmScratchTape then w else readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right
                   else if i = utmScratchTape then Dir3.right
                   else idleDir (wHeads i),
          idleDir oHead)
     | .rewindDesc =>
       if wHeads utmDescTape = Γ.start then
-        (.rewindDescR, fun _ => .blank, .blank,
+        (.rewindDescR,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
       else
         (.rewindDesc,
-         fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmDescTape then moveLeftDir (wHeads utmDescTape)
                   else idleDir (wHeads i),
          idleDir oHead)
     | .rewindDescR =>
       -- Desc at cell 1. Rewind scratch.
-      (.rewindScratchFinal, fun _ => .blank, .blank,
+      (.rewindScratchFinal,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
        idleDir iHead,
        fun i => if i = utmScratchTape then moveLeftDir (wHeads utmScratchTape)
                 else idleDir (wHeads i),
        idleDir oHead)
     | .rewindScratchFinal =>
       if wHeads utmScratchTape = Γ.start then
-        (.rewindScratchFinalR, fun _ => .blank, .blank,
+        (.rewindScratchFinalR,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => if i = utmScratchTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
       else
         (.rewindScratchFinal,
-         fun i => if i = utmScratchTape then readBackWrite (wHeads utmScratchTape) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead,
          fun i => if i = utmScratchTape then moveLeftDir (wHeads utmScratchTape)
                   else idleDir (wHeads i),
          idleDir oHead)
     | .rewindScratchFinalR =>
-      allIdle .done iHead wHeads oHead
+      (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+       idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
     | .done => allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
@@ -296,7 +309,7 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
         · next heq => subst heq; rw [hi]; rfl
         · exact idleDir_right_of_start hi
     | .matchRewindR =>
-      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+      exact ⟨hros, descRos, hrosO⟩
     | .copyOutput rem =>
       dsimp only []; split
       · refine ⟨hros, ?_, hrosO⟩
@@ -332,22 +345,30 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
 -- HoareTime specification
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- HoareTime specification for `lookupTM`. -/
+/-- HoareTime specification for `lookupTM`.
+
+    The `hdesc` hypothesis links the desc tape contents to the TM's
+    transition table, which is required for the linear-scan lookup
+    to find the correct entry. -/
 theorem lookupTM_hoareTime (tm : TM n) (k : ℕ)
-    (hk : k = @Fintype.card tm.Q tm.finQ) (desc : List Bool)
+    (hk : k = @Fintype.card tm.Q tm.finQ)
+    (hdesc : desc = TMEncoding.encodeTM tm)
     (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
     let e := tm.stateEquivK hk
     ∃ B, (lookupTM (n := n) k).HoareTime
-      (fun _inp work _out =>
+      (fun inp work out =>
         descOnTape desc (work utmDescTape) ∧
-        (work utmDescTape).head = 1 ∧
+        (∀ i, (work i).head ≥ 1) ∧
         scratchHasInputPattern k n q iHead wHeads oHead (work utmScratchTape) ∧
-        WorkTapesWF work)
+        WorkTapesWF work ∧
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        out.read ≠ Γ.start ∧ out.head ≥ 1)
       (fun _inp work _out =>
         let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iHead wHeads oHead
         descOnTape desc (work utmDescTape) ∧
         scratchHasTransOutput k n (e q') wW oW iD wD oD (work utmScratchTape) ∧
         (work utmDescTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
         WorkTapesWF work)
       B := by
   sorry
