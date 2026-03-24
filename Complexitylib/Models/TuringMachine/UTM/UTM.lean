@@ -51,20 +51,22 @@ variable {n : ℕ}
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- The simulation step machine performs one step of the simulated TM.
-    Composed as: readCurrentTM ; lookupTM ; applyTransitionTM. -/
-noncomputable def utmSimStepTM : TM 4 :=
-  seqTM (readCurrentTM (n := n)) (seqTM lookupTM applyTransitionTM)
+    Composed as: readCurrentTM ; lookupTM ; applyTransitionTM.
+    Parametric in `k` (number of states of the simulated TM). -/
+noncomputable def utmSimStepTM (k : ℕ) : TM 4 :=
+  seqTM (readCurrentTM (n := n)) (seqTM (lookupTM (n := n) k) (applyTransitionTM (n := n) k))
 
 -- ════════════════════════════════════════════════════════════════════════
 -- The Universal Turing Machine
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- The Universal Turing Machine.
-    Architecture: initTM ; loop(simStepTM, checkHaltTM) ; extractOutputTM. -/
-noncomputable def utmTM : TM 4 :=
+    Architecture: initTM ; loop(simStepTM, checkHaltTM) ; extractOutputTM.
+    Parametric in `k` (number of states of the simulated TM). -/
+noncomputable def utmTM (k : ℕ) : TM 4 :=
   seqTM initTM
-    (seqTM (loopTM (utmSimStepTM (n := n)) utmCheckHaltTM)
-      extractOutputTM)
+    (seqTM (loopTM (utmSimStepTM (n := n) k) utmCheckHaltTM)
+      (extractOutputTM (n := n)))
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Simulation correctness
@@ -73,27 +75,22 @@ noncomputable def utmTM : TM 4 :=
 /-- The UTM's initial configuration with input `⟨M, x⟩` encoded as `List Γ`.
     Uses `initTape` directly since `encodeUTMInput` returns `List Γ`
     (not `List Bool`), which already includes the blank separator. -/
-noncomputable def utmInitCfg (tm : TM n) (x : List Bool) : Cfg 4 (utmTM (n := n)).Q :=
-  { state := (utmTM (n := n)).qstart,
+noncomputable def utmInitCfg (tm : TM n) (k : ℕ) (x : List Bool) :
+    Cfg 4 (utmTM (n := n) k).Q :=
+  { state := (utmTM (n := n) k).qstart,
     input := initTape (encodeUTMInput tm x),
     work := fun _ => initTape [],
     output := initTape [] }
 
 /-- The UTM correctly simulates any TM M: if M decides L in time T,
     then running the UTM on `encodeUTMInput tm x` produces the same
-    accept/reject decision as M on x.
-
-    This connects all the sub-machine specs:
-    - `initTM` establishes `SimInvariant` for `tm.initCfg x`
-    - Each iteration of `loopTM` advances the simulated config by one step
-      (via `readCurrentTM` → `lookupTM` → `applyTransitionTM`)
-    - `utmCheckHaltTM` detects when the simulated TM halts
-    - `extractOutputTM` copies the simulated output to real output -/
-theorem utm_simulates (tm : TM n) (L : Language) (T : ℕ → ℕ)
+    accept/reject decision as M on x. -/
+theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
+    (L : Language) (T : ℕ → ℕ)
     (hM : tm.DecidesInTime L T) (x : List Bool) :
-    ∃ (c' : Cfg 4 (utmTM (n := n)).Q) (t : ℕ),
-      (utmTM (n := n)).reachesIn t (utmInitCfg tm x) c' ∧
-      (utmTM (n := n)).halted c' ∧
+    ∃ (c' : Cfg 4 (utmTM (n := n) k).Q) (t : ℕ),
+      (utmTM (n := n) k).reachesIn t (utmInitCfg tm k x) c' ∧
+      (utmTM (n := n) k).halted c' ∧
       (x ∈ L → c'.output.cells 1 = Γ.one) ∧
       (x ∉ L → c'.output.cells 1 = Γ.zero) := by
   sorry
@@ -107,10 +104,11 @@ theorem utm_simulates (tm : TM n) (L : Language) (T : ℕ → ℕ)
     For every TM M that decides language L in time T, there exists a
     constant C (depending on |M| but not the input) such that the UTM
     decides L in time C · T². -/
-theorem utm_correct (tm : TM n) (L : Language) (T : ℕ → ℕ)
+theorem utm_correct (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
+    (L : Language) (T : ℕ → ℕ)
     (hM : tm.DecidesInTime L T) :
     ∃ (C : ℕ),
-      (utmTM (n := n)).DecidesInTime L (fun len => C * (T len) ^ 2) := by
+      (utmTM (n := n) k).DecidesInTime L (fun len => C * (T len) ^ 2) := by
   sorry
 
 end TM

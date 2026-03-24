@@ -1,4 +1,4 @@
-import Complexitylib.Models.TuringMachine.UTM.Init
+import Complexitylib.Models.TuringMachine.UTM.Init.Defs
 import Complexitylib.Models.TuringMachine.UTM.InitInternal.Copy
 import Complexitylib.Models.TuringMachine.UTM.InitInternal.Rewind
 import Complexitylib.Models.TuringMachine.UTM.InitInternal.SetupState

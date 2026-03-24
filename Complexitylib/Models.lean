@@ -11,6 +11,7 @@ import Complexitylib.Models.TuringMachine.UTM.Defs
 import Complexitylib.Models.TuringMachine.UTM.Helpers
 import Complexitylib.Models.TuringMachine.UTM.HelpersInternal
 import Complexitylib.Models.TuringMachine.UTM.SimConfig.Defs
+import Complexitylib.Models.TuringMachine.UTM.Init.Defs
 import Complexitylib.Models.TuringMachine.UTM.Init
 import Complexitylib.Models.TuringMachine.UTM.InitInternal
 import Complexitylib.Models.TuringMachine.UTM.InitInternal.Copy

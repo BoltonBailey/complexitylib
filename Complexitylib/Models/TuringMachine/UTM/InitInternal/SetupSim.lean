@@ -1,4 +1,4 @@
-import Complexitylib.Models.TuringMachine.UTM.Init
+import Complexitylib.Models.TuringMachine.UTM.Init.Defs
 import Complexitylib.Models.TuringMachine.UTM.HelpersInternal
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.UTM.InitInternal.Rewind
