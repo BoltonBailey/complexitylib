@@ -1448,7 +1448,8 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
        (c'.work utmSimTape).cells = (initTape []).cells ∧
        tapeStoresBools (List.replicate n true) (c'.work utmScratchTape) ∧
        (c'.work utmDescTape).head ≤ 3 * k + n + 5 ∧
-       (c'.work utmScratchTape).head ≤ n + 1) := by
+       (c'.work utmScratchTape).head ≤ n + 1 ∧
+       (c'.work utmStateTape).head = k + 1) := by
   -- Extract InitEnvelope components
   obtain ⟨hic0, hins, hih, hwf, hheads, hoc0, hons, hoh⟩ := henv
   -- WorkTapesWF gives us cells-level properties for all work tapes
@@ -1732,7 +1733,7 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
 
   -- Postconditions
   · change descOnTape desc (c₄.work utmDescTape) ∧ _
-    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, hst_h4⟩
     -- descOnTape desc (c₄.work utmDescTape)
     · constructor
       · rw [hdesc_c4]; exact hdesc.1
@@ -1799,13 +1800,15 @@ theorem setupStateTM_hoareTime (tm : TM n) (k : ℕ)
         (work utmSimTape).cells = (initTape []).cells ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
-        (work utmScratchTape).head ≤ n + 1)
+        (work utmScratchTape).head ≤ n + 1 ∧
+        (work utmStateTape).head ≤ k + 1)
       (3 * k + n + 5) := by
   intro inp work out hpre
   obtain ⟨henv, hdesc, hdesc_h, hst_c, hst_h, hsim_c, hsc_c, hsc_h⟩ := hpre
-  obtain ⟨c', hreach, hhalt, henv', hpost⟩ :=
+  obtain ⟨c', hreach, hhalt, henv', hdesc', hstate', hsim', hsc', hd_head', hsc_head', hst_head'⟩ :=
     setupStateTM_simulation tm k _x hk inp work out
       hdesc hdesc_h hst_c hst_h hsim_c hsc_c hsc_h henv
-  exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv', hpost⟩
+  exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv',
+         hdesc', hstate', hsim', hsc', hd_head', hsc_head', by omega⟩
 
 end TM

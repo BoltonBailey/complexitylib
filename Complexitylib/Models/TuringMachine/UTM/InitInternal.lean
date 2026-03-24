@@ -100,7 +100,8 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
         (work utmSimTape).cells = (initTape []).cells ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
-        (work utmScratchTape).head ≤ n + 1)
+        (work utmScratchTape).head ≤ n + 1 ∧
+        (work utmStateTape).head ≤ k + 1)
       (3 * k + n + 5) :=
   setupStateTM_hoareTime tm k _x _hk
 
@@ -698,15 +699,14 @@ private theorem setupStatePost_to_rewind3Pre (tm : TM n) (k : ℕ)
       (work utmSimTape).cells = (initTape []).cells ∧
       tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
       (work utmDescTape).head ≤ 3 * k + n + 5 ∧
-      (work utmScratchTape).head ≤ n + 1) →
+      (work utmScratchTape).head ≤ n + 1 ∧
+      (work utmStateTape).head ≤ k + 1) →
     (setupStateData tm k hk x inp work out ∧
       (work (3 : Fin 4)).head ≤ n + 1) := by
-  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hd_head, hsc_head⟩
-  -- The setupState postcondition doesn't include sim head, state head bound,
-  -- or inp layout. These are preserved by setupState (which doesn't modify sim/inp)
-  -- and would follow from strengthening setupStateTM_hoareTime.
-  -- For now, we sorry these fields; they're provable from setupStateTM's internals.
-  exact ⟨⟨henv, hdesc, hstate, hsim, sorry, hsc, hd_head, sorry, sorry, sorry⟩, hsc_head⟩
+  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hd_head, hsc_head, hst_head⟩
+  -- sim head and inp layout are preserved by setupState (which doesn't modify sim/inp)
+  -- These would follow from strengthening setupStateTM_simulation to track idle tapes.
+  exact ⟨⟨henv, hdesc, hstate, hsim, sorry, hsc, hd_head, hst_head, sorry, sorry⟩, hsc_head⟩
 
 /-- (setupStateData + head(3)=1) → setupSim precondition. -/
 private theorem setupStateDataHead1_to_setupSimPre (tm : TM n) (k : ℕ)
@@ -732,16 +732,25 @@ private theorem setupStateDataHead1_to_setupSimPre (tm : TM n) (k : ℕ)
   · -- inp.cells inp.head = Γ.blank (separator in encoded input)
     rw [hinpc, hinph]
     simp only [initTape, show (TMEncoding.encodeTM tm).length + 1 ≠ 0 from by omega, ↓reduceIte]
-    -- Position desc.length in encodeUTMInput is the blank separator
-    -- Position desc.length in encodeUTMInput is the blank separator
-    sorry -- follows from encodeUTMInput = desc.map ofBool ++ [blank] ++ x.map ofBool
+    simp [encodeUTMInput]
   · -- ∀ i < x.length, inp.cells (inp.head + 1 + i) = Γ.ofBool x[i]
     intro i hi
     rw [hinpc, hinph]
-    sorry -- follows from encodeUTMInput structure at positions desc.length + 1 + i
+    simp [initTape, encodeUTMInput]
+    rw [List.getElem?_append_right (by simp; omega)]
+    simp only [List.length_map]
+    rw [show (TMEncoding.encodeTM tm).length + 1 + i - (TMEncoding.encodeTM tm).length = 1 + i from by omega,
+        show 1 + i = i + 1 from by omega, List.getElem?_cons_succ]
+    simp [hi]
   · -- inp.cells (inp.head + 1 + x.length) = Γ.blank
     rw [hinpc, hinph]
-    sorry -- follows from encodeUTMInput structure: blank after x data
+    simp [initTape, encodeUTMInput]
+    rw [List.getElem?_append_right (by simp; omega)]
+    simp only [List.length_map]
+    rw [show (TMEncoding.encodeTM tm).length + 1 + x.length - (TMEncoding.encodeTM tm).length =
+        1 + x.length from by omega,
+        show 1 + x.length = x.length + 1 from by omega, List.getElem?_cons_succ]
+    simp
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Main composition
