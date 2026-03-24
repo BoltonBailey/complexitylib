@@ -447,6 +447,7 @@ private def copyData (tm : TM n) (x : List Bool) : TapePred 4 :=
     descOnTape desc (work 0) ∧
     (∀ i : Fin 4, i ≠ 0 → (work i).cells = (initTape []).cells ∧ (work i).head = 1) ∧
     WorkTapesWF work ∧
+    (work 0).head ≥ 1 ∧
     inp.cells = (initTape (encodeUTMInput tm x)).cells ∧
     inp.head = desc.length + 1 ∧
     out.cells = (initTape []).cells ∧
@@ -463,9 +464,9 @@ private theorem copyData_preserved (tm : TM n) (x : List Bool) :
     inp' = inp → out'.cells = out.cells → out'.head = out.head →
     copyData tm x inp' work' out' := by
   intro inp work out inp' work' out'
-    ⟨hdesc, hother, hwf, hinp_cells, hinp_head, hout_cells, hout_head⟩
-    hw0_cells _hw0_head hother' hinp' hout_cells' hout_head'
-  refine ⟨tapeStoresBools_cells_eq hw0_cells hdesc, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ⟨hdesc, hother, hwf, hh0, hinpc, hinph, houtc, houth⟩
+    hw0_cells hw0_head hother' hinp' hout_cells' hout_head'
+  refine ⟨tapeStoresBools_cells_eq hw0_cells hdesc, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro i hi; rw [hother' i hi]; exact hother i hi
   · constructor
     · intro i; by_cases hi : i = (0 : Fin 4)
@@ -474,17 +475,19 @@ private theorem copyData_preserved (tm : TM n) (x : List Bool) :
     · intro i j hj; by_cases hi : i = (0 : Fin 4)
       · subst hi; rw [hw0_cells]; exact hwf.2 0 j hj
       · rw [hother' i hi]; exact hwf.2 i j hj
-  · rw [hinp']; exact hinp_cells
-  · rw [hinp']; exact hinp_head
-  · rw [hout_cells']; exact hout_cells
-  · rw [hout_head']; exact hout_head
+  · rw [hw0_head]
+  · rw [hinp']; exact hinpc
+  · rw [hinp']; exact hinph
+  · rw [hout_cells']; exact houtc
+  · rw [hout_head']; exact houth
 
 /-- postCopy implies copyData (strip head-dependent data for tape 0). -/
 private theorem postCopy_to_copyData (tm : TM n) (x : List Bool) :
     ∀ inp work out, postCopy tm x inp work out → copyData tm x inp work out := by
   intro inp work out h
-  obtain ⟨hd, _hw0, hinp, hhead, hout_head, hwf, hcells, hinp_cells, hout_cells⟩ := h
-  exact ⟨hd, fun i hi => ⟨hcells i hi, hhead i hi⟩, hwf, hinp_cells, hinp, hout_cells, hout_head⟩
+  obtain ⟨hd, hw0, hinp, hhead, hout_head, hwf, hcells, hinp_cells, hout_cells⟩ := h
+  exact ⟨hd, fun i hi => ⟨hcells i hi, hhead i hi⟩, hwf, by rw [hw0]; omega,
+         hinp_cells, hinp, hout_cells, hout_head⟩
 
 /-- HoareTime for rewindWorkTM 0 preserving copyData. -/
 private theorem rewind0_copyData_hoareTime (tm : TM n) (x : List Bool) :
@@ -522,10 +525,36 @@ private theorem copyDataHead1_to_setupStatePre (tm : TM n) (k : ℕ)
       (work utmSimTape).cells = (initTape []).cells ∧
       (work utmScratchTape).cells = (initTape []).cells ∧
       (work utmScratchTape).head = 1) := by
-  -- copyData + head(0)=1 implies postCopy (with adjusted head)
-  -- then postCopy_to_initEnvelope gives InitEnvelope
-  -- Rest is direct from copyData fields
-  sorry
+  intro inp work out ⟨⟨hdesc, hother, hwf, _, hinpc, hinph, houtc, houth⟩, hhead⟩
+  have h1 := hother 1 (by decide)
+  have h2 := hother 2 (by decide)
+  have h3 := hother 3 (by decide)
+  -- Reconstruct InitEnvelope from cell data (same pattern as postCopy_to_initEnvelope)
+  have initTape_ne_start : ∀ (contents : List Γ) (j : ℕ),
+      (∀ g ∈ contents, g ≠ Γ.start) → j ≥ 1 → (initTape contents).cells j ≠ Γ.start := by
+    intro contents j hns hj habs
+    simp only [initTape, show j ≠ 0 from by omega] at habs
+    cases hg : contents[j - 1]? with
+    | none => simp [hg] at habs
+    | some val =>
+      simp [hg] at habs
+      have hlt : j - 1 < contents.length := by
+        by_contra hge; have : contents.length ≤ j - 1 := by omega
+        simp [List.getElem?_eq_none_iff.mpr this] at hg
+      have heq := List.getElem?_eq_getElem hlt; rw [hg] at heq
+      have : contents[j - 1] = val := Option.some.inj heq.symm
+      exact hns val (this ▸ List.getElem_mem ..) habs
+  have henv : InitEnvelope inp work out := by
+    refine ⟨by rw [hinpc]; rfl,
+            by intro j hj; rw [hinpc]; exact initTape_ne_start _ j (encodeUTMInput_ne_start tm x) hj,
+            by rw [hinph]; omega,
+            hwf, ?_, by rw [houtc]; rfl,
+            by intro j hj; rw [houtc]; exact initTape_ne_start _ j (by intro g hg; simp at hg) hj,
+            by rw [houth]⟩
+    intro i; by_cases h : i = (0 : Fin 4)
+    · subst h; omega
+    · have := (hother i h).2; omega
+  exact ⟨henv, hdesc, hhead, h1.1, h1.2, h2.1, h3.1, h3.2⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 3+4: setupState + rewind tape 3 (rich rewind preserving state data)
@@ -701,6 +730,8 @@ theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
   have h_copyData_env : ∀ inp work out,
       (copyData tm x inp work out ∧ (work (0 : Fin 4)).head ≤ desc.length + 1) →
       InitEnvelope inp work out := by
+    -- Derivable from copyData (which includes WorkTapesWF, head ≥ 1, cell data)
+    -- Same InitEnvelope construction as in copyDataHead1_to_setupStatePre
     sorry
   have h_copyDataPost_env : ∀ inp work out,
       (copyData tm x inp work out ∧ (work (0 : Fin 4)).head = 1) →
