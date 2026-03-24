@@ -86,6 +86,8 @@ private theorem copyState_simulation
       (c'.work utmScratchTape).head = k + 1 ∧
       (∀ j, j < k → (c'.work utmScratchTape).cells (j + 1) =
         if j = q.val then Γ.one else Γ.zero) ∧
+      (∀ j, j ≥ k + 1 → (c'.work utmScratchTape).cells j =
+        (c.work utmScratchTape).cells j) ∧
       (c'.work utmSimTape).head = 1 ∧
       (c'.work utmSimTape).cells = (c.work utmSimTape).cells ∧
       (c'.work utmDescTape) = (c.work utmDescTape) ∧
@@ -104,6 +106,8 @@ private theorem copyState_simulation
       (∀ j, j < k - rem →
         (c'.work utmScratchTape).cells (j + 1) =
           if j = q.val then Γ.one else Γ.zero) →
+      (∀ j, j ≥ k + 1 → (c'.work utmScratchTape).cells j =
+        (c.work utmScratchTape).cells j) →
       WorkTapesWF c'.work →
       ∃ c_f,
         readCurrentTM.reachesIn (rem + 1) c' c_f ∧
@@ -114,16 +118,18 @@ private theorem copyState_simulation
         (∀ j, j < k →
           (c_f.work utmScratchTape).cells (j + 1) =
             if j = q.val then Γ.one else Γ.zero) ∧
+        (∀ j, j ≥ k + 1 → (c_f.work utmScratchTape).cells j =
+          (c.work utmScratchTape).cells j) ∧
         (c_f.work utmSimTape).head = 1 ∧
         (c_f.work utmSimTape).cells = (c.work utmSimTape).cells ∧
         c_f.work utmDescTape = c.work utmDescTape ∧
         c_f.input = c.input ∧ c_f.output = c.output ∧
         WorkTapesWF c_f.work by
     exact loop k c le_rfl hstate (by omega) (by omega) hsim_head rfl rfl rfl rfl rfl
-      (fun _ hj => absurd hj (by omega)) hwf
+      (fun _ hj => absurd hj (by omega)) (fun _ _ => rfl) hwf
   intro rem; induction rem with
   | zero =>
-    intro c' _ hstate' hst_h' hsc_h' hsim_h' hdesc' hst_c' hsim_c' hinp' hout' hsc_done hwf'
+    intro c' _ hstate' hst_h' hsc_h' hsim_h' hdesc' hst_c' hsim_c' hinp' hout' hsc_done hsc_high hwf'
     have hdesc_h' : (c'.work utmDescTape).head ≥ 1 := by rw [hdesc']; exact hdesc_head
     have hheads : ∀ i, (c'.work i).head ≥ 1 := by
       intro i
@@ -149,11 +155,12 @@ private theorem copyState_simulation
       · rw [hinp']; simp only [idleDir, hinp, ↓reduceIte, Tape.move]
       · rw [hout']; exact rc_tape_idle_preserve c.output hout hout_h
     obtain ⟨c₁, hstep', hst1, hwork1, hinp1, hout1⟩ := hstep
-    refine ⟨c₁, .step hstep' .zero, hst1, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨c₁, .step hstep' .zero, hst1, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rw [hwork1]; omega
     · rw [hwork1, hst_c']
     · rw [hwork1]; omega
     · intro j hj; rw [hwork1]; exact hsc_done j (by omega)
+    · intro j hj; rw [hwork1]; exact hsc_high j hj
     · rw [hwork1, hsim_h']
     · rw [hwork1, hsim_c']
     · rw [hwork1, hdesc']
@@ -161,7 +168,7 @@ private theorem copyState_simulation
     · rw [hout1, hout']
     · rw [hwork1]; exact hwf'
   | succ m ih =>
-    intro c' hle hstate' hst_h' hsc_h' hsim_h' hdesc' hst_c' hsim_c' hinp' hout' hsc_done hwf'
+    intro c' hle hstate' hst_h' hsc_h' hsim_h' hdesc' hst_c' hsim_c' hinp' hout' hsc_done hsc_high hwf'
     have hdesc_h' : (c'.work utmDescTape).head ≥ 1 := by rw [hdesc']; exact hdesc_head
     have hheads : ∀ i, (c'.work i).head ≥ 1 := by
       intro i
@@ -297,8 +304,12 @@ private theorem copyState_simulation
         rw [hc₁_sc_cell, rc_readBackWrite_toΓ_eq hread_ne_start, hread_val]
       · rw [hc₁_sc_other (j + 1) (by omega)]
         exact hsc_done j (by omega)
+    -- Scratch high cells preserved for IH
+    have hsc_high₁ : ∀ j, j ≥ k + 1 →
+        (c₁.work utmScratchTape).cells j = (c.work utmScratchTape).cells j := by
+      intro j hj; rw [hc₁_sc_other j (by omega)]; exact hsc_high j hj
     -- Apply IH
-    obtain ⟨c_f, hreach, hst_f, hhead_f, hcells_f, hsch_f, hsc_f, hsimh_f, hsimc_f,
+    obtain ⟨c_f, hreach, hst_f, hhead_f, hcells_f, hsch_f, hsc_f, hsc_high_f, hsimh_f, hsimc_f,
             hdesc_f, hinp_f, hout_f, hwf_f⟩ :=
       ih c₁ (by omega) hc₁st (by omega) (by omega)
         (by rw [hc₁sim]; exact hsim_h')
@@ -307,8 +318,8 @@ private theorem copyState_simulation
         (by rw [hc₁sim]; exact hsim_c')
         (by rw [hc₁inp]; exact hinp')
         (by rw [hc₁out]; exact hout')
-        hsc_done₁ hwf₁
-    exact ⟨c_f, .step hstep' hreach, hst_f, hhead_f, hcells_f, hsch_f, hsc_f, hsimh_f, hsimc_f,
+        hsc_done₁ hsc_high₁ hwf₁
+    exact ⟨c_f, .step hstep' hreach, hst_f, hhead_f, hcells_f, hsch_f, hsc_f, hsc_high_f, hsimh_f, hsimc_f,
             hdesc_f, hinp_f, hout_f, hwf_f⟩
 
 /-- Rewind sim tape from some position to cell 1 (reaching rewindSimR). -/
@@ -467,7 +478,8 @@ private theorem per_tape_simulation
       (c'.work utmDescTape) = (c.work utmDescTape) ∧
       (c'.work utmStateTape) = (c.work utmStateTape) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
-      WorkTapesWF c'.work := by
+      WorkTapesWF c'.work ∧
+      t ≤ 2 * SuperCell.simTapeOffset (n + 2) h_target target.val + 7 := by
   -- Abbreviations for key values
   set W := 3 * (n + 2) with hW_def
   set offset := SuperCell.simTapeOffset (n + 2) h_target target.val with hoffset_def
@@ -1093,8 +1105,9 @@ private theorem per_tape_simulation
   -- output preserved
   · rw [hout6, hout5, hout4, hout3, hout2, hout1]
   -- WorkTapesWF preserved (two conjuncts)
-  · intro i; rw [hw6]; exact hwf5.1 i
-  · intro i j hj; rw [hw6]; exact hwf5.2 i j hj
+  · exact ⟨fun i => by rw [hw6]; exact hwf5.1 i, fun i j hj => by rw [hw6]; exact hwf5.2 i j hj⟩
+  -- Time bound: 2 * offset + 7
+  · omega
 
 /-- Phase 3: rewind state tape from some position to cell 1. -/
 private theorem rewindState_simulation :
@@ -1446,6 +1459,17 @@ private theorem extract_sim_conditions
       · have := (hscc_work ⟨tv - 1, hlt⟩ pos).2.2
         simp only [hvaleq] at this; exact this
 
+/-- Time bound for all_tapes_simulation: sum of per-tape costs from `targetVal`
+    for `remaining` tapes. Each tape costs `2 * simTapeOffset(n+2, head_pos, idx) + 7`. -/
+private noncomputable def allTapesBound {n : ℕ} {Q : Type} (simCfg : Cfg n Q)
+    (remaining : ℕ) (targetVal : ℕ) : ℕ :=
+  match remaining with
+  | 0 => 0
+  | m + 1 =>
+    (2 * SuperCell.simTapeOffset (n + 2)
+      (if h : targetVal < n + 2 then simHeadPos simCfg ⟨targetVal, h⟩ else 0) targetVal + 7) +
+    allTapesBound simCfg m (targetVal + 1)
+
 /-- Phase 2: iterate per_tape_simulation over tapes [target..n+1], accumulating
     encoded head symbols onto the scratch tape.
 
@@ -1488,7 +1512,8 @@ private theorem all_tapes_simulation
           Γ.ofBool ((simCellsFn simCfg ⟨target.val + p, by omega⟩
             (simHeadPos simCfg ⟨target.val + p, by omega⟩)).encode[1]'(by rw [Γ.encode_length]; omega))) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
-      WorkTapesWF c'.work := by
+      WorkTapesWF c'.work ∧
+      t ≤ allTapesBound simCfg remaining target.val := by
   intro remaining
   induction remaining with
   | zero =>
@@ -1500,7 +1525,7 @@ private theorem all_tapes_simulation
     have ⟨hmarker, hhi, hlo⟩ := extract_sim_conditions simCfg _ hscc target
     -- Apply per_tape_simulation
     obtain ⟨c', t', hreach', hnext', hsim_head', hsim_cells', hsc_head', hsc0, hsc1,
-      hsc_prev, hsc_above, hdesc', hstate', hinp', hout', hwf'⟩ :=
+      hsc_prev, hsc_above, hdesc', hstate', hinp', hout', hwf', ht'_bound⟩ :=
       per_tape_simulation (simCellsFn simCfg target) c target
         (simHeadPos simCfg target) sc_pos hstate hsim_head hmarker hhi hlo
         hsc_head hsc_ge hwf hinp hinp_h hout hout_h hsim_cell0 hwork_heads
@@ -1512,16 +1537,22 @@ private theorem all_tapes_simulation
       refine ⟨c', t', hreach', hnext', hsim_head', hsim_cells', hdesc', hstate',
         by rw [hsc_head'], hsc_prev,
         fun j hj => hsc_above j (by omega),
-        fun p hp => ?_, hinp', hout', hwf'⟩
-      have hp0 : p = 0 := by omega
-      subst hp0; simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add]
-      exact ⟨hsc0, hsc1⟩
+        fun p hp => ?_, hinp', hout', hwf', ?_⟩
+      · have hp0 : p = 0 := by omega
+        subst hp0; simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add]
+        exact ⟨hsc0, hsc1⟩
+      · -- Time bound for last tape
+        show t' ≤ allTapesBound simCfg (0 + 1) target.val
+        simp only [allTapesBound]
+        have : target.val < n + 2 := target.isLt
+        rw [dif_pos this]
+        omega
     · -- Not last tape: per_tape_simulation reached .scan ⟨target+1, _⟩, recurse
       simp [hlast] at hnext'
       have htarget1 : (⟨target.val + 1, by omega⟩ : Fin (n + 2)).val = n + 2 - m := by
         show target.val + 1 = n + 2 - m; omega
       obtain ⟨c'', t'', hreach'', hst'', hsim_head'', hsim_cells'', hdesc'', hstate'',
-        hsc_head'', hsc_prev'', hsc_above'', hsc_vals'', hinp'', hout'', hwf''⟩ :=
+        hsc_head'', hsc_prev'', hsc_above'', hsc_vals'', hinp'', hout'', hwf'', ht''_bound⟩ :=
         ih ⟨target.val + 1, by omega⟩ htarget1 (by omega) c' (sc_pos + 2) hnext'
           hsim_head' (by rw [hsim_cells']; exact hsim_cell0)
           (by rw [hsim_cells']; exact hscc) hsc_head' (by omega) hwf'
@@ -1544,7 +1575,7 @@ private theorem all_tapes_simulation
         by rw [hsc_head'']; omega,
         fun j hj => by rw [hsc_prev'' j (by omega), hsc_prev j hj],
         fun j hj => by rw [hsc_above'' j (by omega), hsc_above j (by omega)],
-        fun p hp => ?_, by rw [hinp'', hinp'], by rw [hout'', hout'], hwf''⟩
+        fun p hp => ?_, by rw [hinp'', hinp'], by rw [hout'', hout'], hwf'', ?_⟩
       -- Prove the per-cell values for remaining = m + 1
       cases p with
       | zero =>
@@ -1562,10 +1593,133 @@ private theorem all_tapes_simulation
         constructor
         · rw [show sc_pos + 2 * (p' + 1) = sc_pos + 2 + 2 * p' from by omega]; exact h.1
         · rw [show sc_pos + 2 * (p' + 1) + 1 = sc_pos + 2 + 2 * p' + 1 from by omega]; exact h.2
+      -- Time bound for recursive case
+      · show t' + t'' ≤ allTapesBound simCfg (m + 1) target.val
+        simp only [allTapesBound]
+        have htlt : target.val < n + 2 := target.isLt
+        rw [dif_pos htlt]
+        have : (⟨target.val + 1, by omega⟩ : Fin (n + 2)).val = target.val + 1 := rfl
+        have hfin_eq : (⟨target.val, htlt⟩ : Fin (n + 2)) = target := Fin.ext rfl
+        calc t' + t''
+            ≤ (2 * SuperCell.simTapeOffset (n + 2) (simHeadPos simCfg target) target.val + 7) +
+              allTapesBound simCfg m (target.val + 1) :=
+              Nat.add_le_add ht'_bound (by rw [show (⟨target.val + 1, by omega⟩ : Fin (n + 2)).val = target.val + 1 from rfl] at ht''_bound; exact ht''_bound)
+          _ = _ := by rw [hfin_eq]
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Helper lemmas for scratchHasInputPattern proof
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Length of flatMap of Γ.encode lists. -/
+private lemma flatMap_encode_length {α : Type} (l : List α) (f : α → Γ) :
+    (l.flatMap (fun x => (f x).encode)).length = 2 * l.length := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+    simp only [List.flatMap_cons, List.length_append, Γ.encode_length, ih, List.length_cons]
+    omega
+
+/-- Length of encodeInputPattern equals k + 2*(n+2). -/
+private lemma encodeInputPattern_length_eq (k n : ℕ) (q : Fin k) (iH : Γ)
+    (wH : Fin n → Γ) (oH : Γ) :
+    (TMEncoding.encodeInputPattern k n q iH wH oH).length = k + 2 * (n + 2) := by
+  simp only [TMEncoding.encodeInputPattern, List.length_append, List.length_map,
+             List.length_finRange, Γ.encode_length, flatMap_encode_length]
+  omega
+
+/-- Indexing into flatMap of Γ.encode lists: the (2m+b)-th element is
+    the b-th encode bit of the m-th list element. -/
+private lemma flatMap_encode_getElem {α : Type} (l : List α) (f : α → Γ)
+    (m : ℕ) (hm : m < l.length) (b : ℕ) (hb : b < 2) :
+    (l.flatMap (fun x => (f x).encode))[2 * m + b]'(by rw [flatMap_encode_length]; omega) =
+    (f l[m]).encode[b]'(by rw [Γ.encode_length]; exact hb) := by
+  induction l generalizing m with
+  | nil => exact absurd hm (by simp)
+  | cons a as ih =>
+    simp only [List.flatMap_cons]
+    match m with
+    | 0 =>
+      simp only [Nat.mul_zero, Nat.zero_add, List.getElem_cons_zero]
+      exact List.getElem_append_left (show b < (f a).encode.length by rw [Γ.encode_length]; exact hb)
+    | m' + 1 =>
+      rw [List.getElem_append_right
+        (show (f a).encode.length ≤ 2 * (m' + 1) + b by rw [Γ.encode_length]; omega)]
+      simp only [Γ.encode_length, show 2 * (m' + 1) + b - 2 = 2 * m' + b from by omega,
+                  List.getElem_cons_succ]
+      exact ih m' (by simp only [List.length_cons] at hm; omega)
+
+/-- For tape-encoding indices i in [k, k + 2*(n+2)), the i-th bit of
+    encodeInputPattern equals the b-th encode bit of the appropriate tape head,
+    where p = (i-k)/2 selects the tape and b = (i-k)%2 selects the encode bit. -/
+private lemma encodeInputPattern_tape_getElem (k n : ℕ) (q : Fin k) (iH : Γ)
+    (wH : Fin n → Γ) (oH : Γ) (p b : ℕ) (hp : p < n + 2) (hb : b < 2) :
+    let bits := TMEncoding.encodeInputPattern k n q iH wH oH
+    (bits[k + (2 * p + b)]'(by rw [encodeInputPattern_length_eq]; omega)) =
+    (if h₀ : p = 0 then iH
+     else if h₁ : p ≤ n then wH ⟨p - 1, by omega⟩
+     else oH).encode[b]'(by rw [Γ.encode_length]; omega) := by
+  intro bits
+  -- bits = stateMap ++ iH.encode ++ flatMap ++ oH.encode
+  -- The stateMap has length k, so bits[k + (2*p+b)] = (iH.encode ++ flatMap ++ oH.encode)[2*p+b]
+  show (TMEncoding.encodeInputPattern k n q iH wH oH)[k + (2 * p + b)]'(by
+    rw [encodeInputPattern_length_eq]; omega) = _
+  simp only [TMEncoding.encodeInputPattern, List.append_assoc]
+  -- Now the LHS is ((map ++ (iH.encode ++ (flatMap ++ oH.encode))))[k + (2*p+b)]
+  -- Skip past the map (length k)
+  rw [List.getElem_append_right (show ((List.finRange k).map (· == q)).length ≤ k + (2 * p + b)
+    from by simp [List.length_map, List.length_finRange])]
+  simp only [List.length_map, List.length_finRange,
+    show k + (2 * p + b) - k = 2 * p + b from by omega]
+  -- Case split on p
+  by_cases hp0 : p = 0
+  · -- p = 0: indexing into iH.encode
+    simp only [hp0, ↓reduceDIte, Nat.mul_zero, Nat.zero_add]
+    exact List.getElem_append_left
+      (show b < iH.encode.length by rw [Γ.encode_length]; exact hb)
+  · by_cases hpn : p ≤ n
+    · -- 1 ≤ p ≤ n: indexing into flatMap(wH)
+      simp only [hp0, hpn, ↓reduceDIte]
+      rw [List.getElem_append_right
+        (show iH.encode.length ≤ 2 * p + b by rw [Γ.encode_length]; omega)]
+      simp only [Γ.encode_length, show 2 * p + b - 2 = 2 * (p - 1) + b from by omega]
+      -- Goal: (flatMap ++ oH.encode)[2*(p-1)+b] = (wH ⟨p-1,_⟩).encode[b]
+      -- Since p ≤ n and p ≥ 1, 2*(p-1)+b < 2*n = flatMap.length
+      rw [List.getElem_append_left
+        (show 2 * (p - 1) + b <
+            ((List.finRange n).flatMap (fun j => (wH j).encode)).length by
+          rw [flatMap_encode_length, List.length_finRange]; omega)]
+      have hpm : p - 1 < n := by omega
+      rw [flatMap_encode_getElem _ _ (p - 1) (by simp [List.length_finRange]; exact hpm) b hb]
+      simp only [List.getElem_finRange, Fin.cast_mk]
+    · -- p = n + 1: indexing into oH.encode
+      have hpeq : p = n + 1 := by omega
+      simp only [hp0, show ¬(p ≤ n) from hpn, ↓reduceDIte]
+      rw [List.getElem_append_right
+        (show iH.encode.length ≤ 2 * p + b by rw [Γ.encode_length]; omega)]
+      simp only [Γ.encode_length, show 2 * p + b - 2 = 2 * (p - 1) + b from by omega]
+      -- Now we need (flatMap ++ oH.encode)[2*(p-1)+b], where p-1 = n, so index is 2*n + b
+      -- flatMap has length 2*n, so we skip it to reach oH.encode[b]
+      rw [List.getElem_append_right
+        (show ((List.finRange n).flatMap (fun j => (wH j).encode)).length ≤
+            2 * (p - 1) + b by
+          rw [flatMap_encode_length, List.length_finRange, hpeq]; omega)]
+      congr 1
+      rw [flatMap_encode_length, List.length_finRange, hpeq]
+      omega
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Full readCurrentTM_hoareTime
 -- ════════════════════════════════════════════════════════════════════════
+
+/-- Total time bound for readCurrentTM:
+    Phase 1 (copyState): k + 1 steps
+    Phase 2 (all tapes): allTapesBound steps
+    Phase 3a (rewindState): k + 3 steps
+    Phase 3b (rewindScratch): k + 2*(n+2) + 3 steps -/
+private noncomputable def readCurrentTimeBound {n : ℕ} {Q : Type} [DecidableEq Q] [Fintype Q]
+    (k : ℕ) (simCfg : Cfg n Q) : ℕ :=
+  (k + 1) + allTapesBound simCfg (n + 2) 0 + (k + 1 + 2) + (k + 1 + 2 * (n + 2) + 2)
 
 /-- HoareTime specification for `readCurrentTM`.
 
@@ -1614,10 +1768,10 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
   have fin4_cases : ∀ (i : Fin 4),
       i = utmDescTape ∨ i = utmStateTape ∨ i = utmSimTape ∨ i = utmScratchTape := by
     decide
-  refine ⟨sorry, fun inp work out ⟨hdesc, hstate_tape, hscc, hdesc_h, hstate_h,
+  refine ⟨readCurrentTimeBound k simCfg, fun inp work out ⟨hdesc, hstate_tape, hscc, hdesc_h, hstate_h,
       hsim_h, hsc_h, hsc_blank, hwf, hinp_r, hinp_h, hout_r, hout_h⟩ => ?_⟩
   -- ── Phase 1: copyState ──────────────────────────────────────────────
-  obtain ⟨c₁, hreach₁, hst₁, hst_head₁, hst_cells₁, hsc_head₁, hsc_cells₁,
+  obtain ⟨c₁, hreach₁, hst₁, hst_head₁, hst_cells₁, hsc_head₁, hsc_cells₁, hsc_high₁,
       hsim_head₁, hsim_cells₁, hdesc₁, hinp₁, hout₁, hwf₁⟩ :=
     copyState_simulation
       ⟨(readCurrentTM (n := n)).qstart, inp, work, out⟩
@@ -1634,7 +1788,7 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
     · omega
     · omega
   obtain ⟨c₂, t₂, hreach₂, hst₂, hsim_head₂, hsim_cells₂, hdesc₂, hstate₂,
-      hsc_head₂, hsc_prev₂, hsc_above₂, hsc_vals₂, hinp₂, hout₂, hwf₂⟩ :=
+      hsc_head₂, hsc_prev₂, hsc_above₂, hsc_vals₂, hinp₂, hout₂, hwf₂, ht₂_bound⟩ :=
     all_tapes_simulation simCfg (n + 2) ⟨0, by omega⟩ (by simp) le_rfl c₁ (k + 1)
       hst₁ hsim_head₁ (by rw [hsim_cells₁]; exact hwf.1 utmSimTape) hscc₁
       hsc_head₁ (by omega) hwf₁
@@ -1673,7 +1827,13 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
   have hreaches := reachesIn_trans readCurrentTM hreach₁
     (reachesIn_trans readCurrentTM hreach₂
       (reachesIn_trans readCurrentTM hreach₃ hreach₄))
-  refine ⟨c₄, _, sorry, hreaches, hhalted₄, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨c₄, _, ?_, hreaches, hhalted₄, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  -- Time bound
+  · show k + 1 + (t₂ + (k + 1 + 2 + (k + 1 + 2 * (n + 2) + 2))) ≤ readCurrentTimeBound k simCfg
+    unfold readCurrentTimeBound
+    have : (⟨0, by omega⟩ : Fin (n + 2)).val = 0 := rfl
+    rw [this] at ht₂_bound
+    omega
   -- Post 1: descOnTape
   · rw [hother₄ utmDescTape hne_desc_sc, hother₃ utmDescTape hne_desc_st,
         hdesc₂, hdesc₁]; exact hdesc
@@ -1696,7 +1856,66 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
     unfold superCellsCorrect simTapeCellCorrect at hscc ⊢
     simp only [hcells]; exact hscc
   -- Post 4: scratchHasInputPattern
-  · sorry
+  · -- Establish cell chain: c₄ scratch cells = c₂ scratch cells
+    have h_sc₃₂ : c₃.work utmScratchTape = c₂.work utmScratchTape :=
+      hother₃ utmScratchTape (Ne.symm hne_st_sc)
+    have hcc : ∀ j, (c₄.work utmScratchTape).cells j =
+        (c₂.work utmScratchTape).cells j := by
+      intro j; exact congr_fun hsc_cells₄ j ▸ congr_fun (congr_arg Tape.cells h_sc₃₂) j
+    refine ⟨⟨hwf₄.1 utmScratchTape, ?_, ?_⟩, hsc_head₄⟩
+    · -- Per-cell: ∀ i < bits.length, cells(i+1) = Γ.ofBool bits[i]
+      intro i hi
+      rw [encodeInputPattern_length_eq] at hi
+      by_cases hik : i < k
+      · -- State bits (i < k)
+        rw [hcc, hsc_prev₂ (i + 1) (by omega), hsc_cells₁ i hik]; symm
+        simp only [TMEncoding.encodeInputPattern, List.append_assoc]
+        rw [List.getElem_append_left (show i < ((List.finRange k).map (· == e simCfg.state)).length
+          from by simp [List.length_map, List.length_finRange]; omega)]
+        rw [List.getElem_map, List.getElem_finRange]
+        simp only [Fin.cast_mk, Γ.ofBool]
+        by_cases h : i = (e simCfg.state).val
+        · have : ((⟨i, hik⟩ : Fin k) == e simCfg.state) = true := by
+            rw [beq_iff_eq, Fin.ext_iff]; exact h
+          simp [h]
+        · have : ((⟨i, hik⟩ : Fin k) == e simCfg.state) = false := by
+            rw [beq_eq_false_iff_ne]; exact fun heq => h (Fin.ext_iff.mp heq)
+          simp [this, h]
+
+      · -- Tape encoding bits (i ≥ k)
+        push_neg at hik
+        have hp : (i - k) / 2 < n + 2 := by omega
+        have hvals := hsc_vals₂ ((i - k) / 2) hp
+        -- Normalize the ↑⟨0, ⋯⟩ + p to just p in hvals
+        simp only [Nat.zero_add] at hvals
+        -- Connect simCellsFn/simHeadPos to encodeInputPattern via tape_getElem
+        have h_sim_eq : simCellsFn simCfg ⟨(i - k) / 2, by omega⟩
+            (simHeadPos simCfg ⟨(i - k) / 2, by omega⟩) =
+            (if h₀ : (i - k) / 2 = 0 then simCfg.input.read
+             else if h₁ : (i - k) / 2 ≤ n then
+               (simCfg.work ⟨(i - k) / 2 - 1, by omega⟩).read
+             else simCfg.output.read) := by
+          simp only [simCellsFn, simHeadPos, Tape.read]
+          split <;> [rfl; split <;> rfl]
+        -- Show cell(i+1) = cell in c₂ at the right position
+        rw [hcc, show i + 1 = k + 1 + 2 * ((i - k) / 2) + (i - k) % 2 from by omega]
+        rcases Nat.mod_two_eq_zero_or_one (i - k) with h0 | h1
+        · -- b = 0
+          rw [h0, Nat.add_zero]; rw [hvals.1]; congr 1
+          have h_tape := encodeInputPattern_tape_getElem k n (e simCfg.state)
+            simCfg.input.read (fun j => (simCfg.work j).read) simCfg.output.read
+            ((i - k) / 2) 0 hp (by omega)
+          simp only [h_sim_eq]; convert h_tape.symm using 2; omega
+        · -- b = 1
+          rw [h1]; rw [hvals.2]; congr 1
+          have h_tape := encodeInputPattern_tape_getElem k n (e simCfg.state)
+            simCfg.input.read (fun j => (simCfg.work j).read) simCfg.output.read
+            ((i - k) / 2) 1 hp (by omega)
+          simp only [h_sim_eq]; convert h_tape.symm using 2; omega
+    · -- Sentinel blank: cells(bits.length + 1) = Γ.blank
+      rw [encodeInputPattern_length_eq, hcc, hsc_above₂ _ (by omega),
+          hsc_high₁ _ (by omega)]
+      exact hsc_blank _ (by omega)
   -- Post 5: desc head = 1
   · rw [hother₄ utmDescTape hne_desc_sc, hother₃ utmDescTape hne_desc_st, hdesc₂, hdesc₁]
     exact hdesc_h

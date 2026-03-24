@@ -43,18 +43,18 @@ variable {n : ℕ}
 /-- States for the apply transition machine. -/
 inductive ApplyTransQ (n k : ℕ) where
   /-- Clear old state tape: write zeros to cells 1..k. -/
-  | clearState (rem : ℕ)
+  | clearState (rem : Fin (k + 1))
   /-- Write new state: read one-hot from scratch, write to state tape. -/
-  | writeState (rem : ℕ)
+  | writeState (rem : Fin (k + 1))
   /-- Rewind state and scratch tapes after state update. -/
   | rewindAfterState
   /-- For simulated tape `tapeIdx`, read write-symbol and direction from scratch.
       `scratchPos` tracks position in the output. -/
-  | readTransData (tapeIdx : ℕ) (scratchPos : ℕ)
+  | readTransData (tapeIdx : Fin (n + 2)) (scratchPos : Fin (TMEncoding.outputWidth k n + 1))
   /-- Scan sim tape right to find head marker for `tapeIdx`. -/
-  | findHead (tapeIdx : ℕ) (writeHi writeLo : Γ) (dir : Dir3)
+  | findHead (tapeIdx : Fin (n + 2)) (writeHi writeLo : Γ) (dir : Dir3)
   /-- Found head marker. Write new symbol and move marker. -/
-  | applyWrite (tapeIdx : ℕ) (writeHi writeLo : Γ) (dir : Dir3)
+  | applyWrite (tapeIdx : Fin (n + 2)) (writeHi writeLo : Γ) (dir : Dir3)
   /-- Rewind sim tape after update. -/
   | rewindSim
   /-- Sim tape at ▷, move right. -/
@@ -71,10 +71,50 @@ inductive ApplyTransQ (n k : ℕ) where
   | done
   deriving DecidableEq
 
-/-- Fintype instance for ApplyTransQ. Sorry'd as the state space is bounded
-    but encoding Fintype for ℕ-parameterized constructors requires truncation. -/
-private noncomputable instance : Fintype (ApplyTransQ n k) := by
-  sorry
+private instance : Fintype (ApplyTransQ n k) where
+  elems :=
+    {.rewindAfterState, .rewindSim, .rewindSimR, .clearScratch, .rewindAll, .done} ∪
+    (Finset.univ.image fun (r : Fin (k + 1)) =>
+      ApplyTransQ.clearState r) ∪
+    (Finset.univ.image fun (r : Fin (k + 1)) =>
+      ApplyTransQ.writeState r) ∪
+    (Finset.univ.image fun (p : Fin (n + 2) × Fin (TMEncoding.outputWidth k n + 1)) =>
+      ApplyTransQ.readTransData p.1 p.2) ∪
+    (Finset.univ.image fun (p : Fin (n + 2) × Γ × Γ × Dir3) =>
+      ApplyTransQ.findHead p.1 p.2.1 p.2.2.1 p.2.2.2) ∪
+    (Finset.univ.image fun (p : Fin (n + 2) × Γ × Γ × Dir3) =>
+      ApplyTransQ.applyWrite p.1 p.2.1 p.2.2.1 p.2.2.2) ∪
+    (Finset.univ.image fun (t : Fin 4) => ApplyTransQ.rewindTape t) ∪
+    (Finset.univ.image fun (t : Fin 4) => ApplyTransQ.rewindTapeR t)
+  complete x := by
+    cases x with
+    | clearState r =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; left; left; left; left; left; right; exact ⟨r, rfl⟩
+    | writeState r =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; left; left; left; left; right; exact ⟨r, rfl⟩
+    | readTransData t s =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and, Prod.exists]
+      left; left; left; left; right; exact ⟨t, s, rfl⟩
+    | findHead t whi wlo d =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and, Prod.exists]
+      left; left; left; right; exact ⟨t, whi, wlo, d, rfl⟩
+    | applyWrite t whi wlo d =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and, Prod.exists]
+      left; left; right; exact ⟨t, whi, wlo, d, rfl⟩
+    | rewindTape t =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; right; exact ⟨t, rfl⟩
+    | rewindTapeR t =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      right; exact ⟨t, rfl⟩
+    | rewindAfterState => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindSim => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindSimR => simp [Finset.mem_union, Finset.mem_insert]
+    | clearScratch => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindAll => simp [Finset.mem_union, Finset.mem_insert]
+    | done => simp [Finset.mem_union, Finset.mem_insert]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Machine definition
@@ -87,30 +127,30 @@ private noncomputable instance : Fintype (ApplyTransQ n k) := by
     Parametric in `k` (number of states of the simulated TM). -/
 noncomputable def applyTransitionTM (k : ℕ) : TM 4 where
   Q := ApplyTransQ n k
-  qstart := .clearState k
+  qstart := .clearState ⟨k, by omega⟩
   qhalt := .done
   δ := fun state iHead wHeads oHead =>
     match state with
     | .clearState rem =>
-      if rem = 0 then
+      if rem.val = 0 then
         -- Done clearing. Rewind state tape, start reading new state from scratch.
-        allIdle (.writeState k) iHead wHeads oHead
+        allIdle (.writeState ⟨k, by omega⟩) iHead wHeads oHead
       else
         -- Write zero to current state tape cell, advance right.
-        (.clearState (rem - 1),
+        (.clearState ⟨rem.val - 1, by omega⟩,
          fun i => if i = utmStateTape then .zero else .blank,
          .blank, idleDir iHead,
          fun i => if i = utmStateTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .writeState rem =>
-      if rem = 0 then
+      if rem.val = 0 then
         -- Done writing new state. Proceed to read transition data.
         allIdle (.rewindAfterState) iHead wHeads oHead
       else
         -- Copy scratch bit to state tape, advance both right.
         let w : Γw := match wHeads utmScratchTape with
           | .zero => .zero | .one => .one | .blank => .blank | .start => .blank
-        (.writeState (rem - 1),
+        (.writeState ⟨rem.val - 1, by omega⟩,
          fun i => if i = utmStateTape then w
                   else if i = utmScratchTape then readBackWrite (wHeads utmScratchTape)
                   else .blank,
@@ -121,7 +161,7 @@ noncomputable def applyTransitionTM (k : ℕ) : TM 4 where
          idleDir oHead)
     | .rewindAfterState =>
       -- Rewind both state and scratch tapes to cell 1 (simplified: just idle)
-      allIdle (.readTransData 0 0) iHead wHeads oHead
+      allIdle (.readTransData ⟨0, by omega⟩ ⟨0, by omega⟩) iHead wHeads oHead
     -- The remaining states handle per-tape updates on the sim tape.
     -- This is complex and involves scanning the sim tape for each tape's
     -- head marker, writing the new symbol, and moving the marker.
@@ -138,7 +178,27 @@ noncomputable def applyTransitionTM (k : ℕ) : TM 4 where
     | .done => allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
-    cases state <;> simp only [] <;> sorry
+    have hros := fun (h : iHead = Γ.start) => idleDir_right_of_start h
+    have hrosO := fun (h : oHead = Γ.start) => idleDir_right_of_start h
+    match state with
+    | .clearState rem =>
+      dsimp only []; split
+      · exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split <;> [rfl; exact idleDir_right_of_start hi]
+    | .writeState rem =>
+      dsimp only []; split
+      · exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split <;> [rfl; split <;> [rfl; exact idleDir_right_of_start hi]]
+    | .rewindAfterState
+    | .readTransData _ _
+    | .findHead _ _ _ _
+    | .applyWrite _ _ _ _
+    | .rewindSim | .rewindSimR | .clearScratch | .rewindAll
+    | .rewindTape _ | .rewindTapeR _
+    | .done =>
+      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- HoareTime specification

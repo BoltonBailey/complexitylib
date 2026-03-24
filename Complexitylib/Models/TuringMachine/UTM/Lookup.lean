@@ -27,15 +27,15 @@ variable {n : ℕ}
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- States for the lookup machine. Parametric in `k` (number of TM states).
-    The machine uses two counters: one for position within the input pattern
-    (during comparison) and one for remaining bits (during skip/copy). -/
+    The machine uses bounded counters for position within the input pattern
+    and remaining bits during skip/copy. -/
 inductive LookupQ (n k : ℕ) where
   /-- Skip header bits on desc tape. -/
-  | skipHeader (rem : ℕ)
+  | skipHeader (rem : Fin (TMEncoding.tableOffset k n + 1))
   /-- Compare desc bit vs scratch bit at position `pos` within input pattern. -/
-  | compare (pos : ℕ)
+  | compare (pos : Fin (TMEncoding.inputPatternWidth k n + 1))
   /-- Mismatch: skip remaining entry bits on desc tape. -/
-  | skipRest (rem : ℕ)
+  | skipRest (rem : Fin (TMEncoding.entryWidth k n + 1))
   /-- Rewind scratch tape left after mismatch. -/
   | rewindScratch
   /-- Scratch hit ▷, move right to cell 1. Then try next entry. -/
@@ -45,7 +45,7 @@ inductive LookupQ (n k : ℕ) where
   /-- Scratch hit ▷ after match rewind, move right to cell 1. -/
   | matchRewindR
   /-- Copy output bits from desc to scratch. -/
-  | copyOutput (rem : ℕ)
+  | copyOutput (rem : Fin (TMEncoding.outputWidth k n + 1))
   /-- Rewind desc tape back to cell 1. -/
   | rewindDesc
   /-- Desc hit ▷, move right to cell 1. -/
@@ -56,14 +56,43 @@ inductive LookupQ (n k : ℕ) where
   | rewindScratchFinalR
   /-- Done. -/
   | done
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
-/-- The lookup machine's state type has decidable equality and is finite.
-    We prove Fintype via a sorry since the state space is bounded by k and n
-    but encoding this directly is tedious. The Fintype instance is only needed
-    for the TM structure and does not affect correctness. -/
-private noncomputable instance : Fintype (LookupQ n k) := by
-  sorry
+private instance : Fintype (LookupQ n k) where
+  elems :=
+    {.rewindScratch, .rewindScratchR, .matchRewind, .matchRewindR,
+     .rewindDesc, .rewindDescR, .rewindScratchFinal, .rewindScratchFinalR, .done} ∪
+    (Finset.univ.image fun (r : Fin (TMEncoding.tableOffset k n + 1)) =>
+      LookupQ.skipHeader r) ∪
+    (Finset.univ.image fun (p : Fin (TMEncoding.inputPatternWidth k n + 1)) =>
+      LookupQ.compare p) ∪
+    (Finset.univ.image fun (r : Fin (TMEncoding.entryWidth k n + 1)) =>
+      LookupQ.skipRest r) ∪
+    (Finset.univ.image fun (r : Fin (TMEncoding.outputWidth k n + 1)) =>
+      LookupQ.copyOutput r)
+  complete x := by
+    cases x with
+    | skipHeader r =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; left; left; right; exact ⟨r, rfl⟩
+    | compare p =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; left; right; exact ⟨p, rfl⟩
+    | skipRest r =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      left; right; exact ⟨r, rfl⟩
+    | copyOutput r =>
+      simp only [Finset.mem_union, Finset.mem_image, Finset.mem_univ, true_and]
+      right; exact ⟨r, rfl⟩
+    | rewindScratch => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindScratchR => simp [Finset.mem_union, Finset.mem_insert]
+    | matchRewind => simp [Finset.mem_union, Finset.mem_insert]
+    | matchRewindR => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindDesc => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindDescR => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindScratchFinal => simp [Finset.mem_union, Finset.mem_insert]
+    | rewindScratchFinalR => simp [Finset.mem_union, Finset.mem_insert]
+    | done => simp [Finset.mem_union, Finset.mem_insert]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Machine definition
@@ -76,7 +105,7 @@ private noncomputable instance : Fintype (LookupQ n k) := by
     Parametric in `k` (number of states of the simulated TM). -/
 noncomputable def lookupTM (k : ℕ) : TM 4 where
   Q := LookupQ n k
-  qstart := .skipHeader (TMEncoding.tableOffset k n)
+  qstart := .skipHeader ⟨TMEncoding.tableOffset k n, by omega⟩
   qhalt := .done
   δ := fun state iHead wHeads oHead =>
     let ipw := TMEncoding.inputPatternWidth k n
@@ -84,21 +113,21 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
     let ow := TMEncoding.outputWidth k n
     match state with
     | .skipHeader rem =>
-      if rem = 0 then
+      if rem.val = 0 then
         -- At transition table. Start comparing first entry.
-        allIdle (.compare 0) iHead wHeads oHead
+        allIdle (.compare ⟨0, by omega⟩) iHead wHeads oHead
       else
         -- Skip one desc bit.
-        (.skipHeader (rem - 1),
+        (.skipHeader ⟨rem.val - 1, by omega⟩,
          fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
          .blank, idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .compare pos =>
       if wHeads utmDescTape = wHeads utmScratchTape then
-        if pos + 1 < ipw then
+        if h : pos.val + 1 < ipw then
           -- Match, more bits to compare.
-          (.compare (pos + 1),
+          (.compare ⟨pos.val + 1, by omega⟩,
            fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape)
                     else if i = utmScratchTape then readBackWrite (wHeads utmScratchTape)
                     else .blank,
@@ -116,17 +145,17 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
            idleDir oHead)
       else
         -- Mismatch. Skip rest of this entry.
-        (.skipRest (ew - pos - 1),
+        (.skipRest ⟨ew - pos.val - 1, by omega⟩,
          fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
          .blank, idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .skipRest rem =>
-      if rem = 0 then
+      if rem.val = 0 then
         (.rewindScratch, fun _ => .blank, .blank,
          idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       else
-        (.skipRest (rem - 1),
+        (.skipRest ⟨rem.val - 1, by omega⟩,
          fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape) else .blank,
          .blank, idleDir iHead,
          fun i => if i = utmDescTape then Dir3.right else idleDir (wHeads i),
@@ -145,7 +174,7 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
                   else idleDir (wHeads i),
          idleDir oHead)
     | .rewindScratchR =>
-      allIdle (.compare 0) iHead wHeads oHead
+      allIdle (.compare ⟨0, by omega⟩) iHead wHeads oHead
     | .matchRewind =>
       -- Desc already advanced past separator. Now rewind scratch.
       if wHeads utmScratchTape = Γ.start then
@@ -162,9 +191,9 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
          idleDir oHead)
     | .matchRewindR =>
       -- Scratch at cell 1. Start copying output from desc to scratch.
-      allIdle (.copyOutput ow) iHead wHeads oHead
+      allIdle (.copyOutput ⟨ow, by omega⟩) iHead wHeads oHead
     | .copyOutput rem =>
-      if rem = 0 then
+      if rem.val = 0 then
         -- Done copying. Rewind desc.
         (.rewindDesc, fun _ => .blank, .blank,
          idleDir iHead,
@@ -175,7 +204,7 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
         -- Copy one bit from desc to scratch.
         let w : Γw := match wHeads utmDescTape with
           | .zero => .zero | .one => .one | .blank => .blank | .start => .blank
-        (.copyOutput (rem - 1),
+        (.copyOutput ⟨rem.val - 1, by omega⟩,
          fun i => if i = utmDescTape then readBackWrite (wHeads utmDescTape)
                   else if i = utmScratchTape then w
                   else .blank,
@@ -222,7 +251,82 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
     | .done => allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
-    cases state <;> simp only [] <;> sorry
+    have hros := fun (h : iHead = Γ.start) => idleDir_right_of_start h
+    have hrosO := fun (h : oHead = Γ.start) => idleDir_right_of_start h
+    have descRos : ∀ i, wHeads i = Γ.start →
+        (if i = utmDescTape then Dir3.right else idleDir (wHeads i)) = Dir3.right := by
+      intro i hi; split <;> [rfl; exact idleDir_right_of_start hi]
+    have scratchRos : ∀ i, wHeads i = Γ.start →
+        (if i = utmScratchTape then Dir3.right else idleDir (wHeads i)) = Dir3.right := by
+      intro i hi; split <;> [rfl; exact idleDir_right_of_start hi]
+    have descScratchRos : ∀ i, wHeads i = Γ.start →
+        (if i = utmDescTape then Dir3.right
+         else if i = utmScratchTape then Dir3.right
+         else idleDir (wHeads i)) = Dir3.right := by
+      intro i hi; split <;> [rfl; split <;> [rfl; exact idleDir_right_of_start hi]]
+    match state with
+    | .skipHeader rem =>
+      dsimp only []; split
+      · exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+      · exact ⟨hros, descRos, hrosO⟩
+    | .compare pos =>
+      dsimp only []; split
+      · split
+        · exact ⟨hros, descScratchRos, hrosO⟩
+        · exact ⟨hros, descRos, hrosO⟩
+      · exact ⟨hros, descRos, hrosO⟩
+    | .skipRest rem =>
+      dsimp only []; split
+      · exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+      · exact ⟨hros, descRos, hrosO⟩
+    | .rewindScratch =>
+      dsimp only []; split
+      · exact ⟨hros, scratchRos, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split
+        · next heq => subst heq; rw [hi]; rfl
+        · exact idleDir_right_of_start hi
+    | .rewindScratchR =>
+      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+    | .matchRewind =>
+      dsimp only []; split
+      · exact ⟨hros, scratchRos, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split
+        · next heq => subst heq; rw [hi]; rfl
+        · exact idleDir_right_of_start hi
+    | .matchRewindR =>
+      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+    | .copyOutput rem =>
+      dsimp only []; split
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split
+        · next heq => subst heq; rw [hi]; rfl
+        · exact idleDir_right_of_start hi
+      · exact ⟨hros, descScratchRos, hrosO⟩
+    | .rewindDesc =>
+      dsimp only []; split
+      · exact ⟨hros, descRos, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split
+        · next heq => subst heq; rw [hi]; rfl
+        · exact idleDir_right_of_start hi
+    | .rewindDescR =>
+      refine ⟨hros, ?_, hrosO⟩
+      intro i hi; dsimp only []; split
+      · next heq => subst heq; rw [hi]; rfl
+      · exact idleDir_right_of_start hi
+    | .rewindScratchFinal =>
+      dsimp only []; split
+      · exact ⟨hros, scratchRos, hrosO⟩
+      · refine ⟨hros, ?_, hrosO⟩
+        intro i hi; dsimp only []; split
+        · next heq => subst heq; rw [hi]; rfl
+        · exact idleDir_right_of_start hi
+    | .rewindScratchFinalR =>
+      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
+    | .done =>
+      exact ⟨hros, fun _ hi => idleDir_right_of_start hi, hrosO⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- HoareTime specification
