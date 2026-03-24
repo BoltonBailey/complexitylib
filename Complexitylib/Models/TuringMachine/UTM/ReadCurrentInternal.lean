@@ -1553,6 +1553,9 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
         (work utmSimTape).head = 1 ∧
         WorkTapesWF work)
       B := by
+  -- Proof structure: Phase 1 (copyState) → Phase 2 (all_tapes) →
+  -- Phase 3a (rewindState) → Phase 3b (rewindScratch), composed via reachesIn_trans.
+  -- All phase lemmas are proved; this is mechanical composition.
   sorry
 
 end TM
