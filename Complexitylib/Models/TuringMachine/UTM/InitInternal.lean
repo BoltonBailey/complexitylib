@@ -496,7 +496,18 @@ private theorem rewind0_copyData_hoareTime (tm : TM n) (x : List Bool) :
         copyData tm x inp work out ∧
         (work (0 : Fin 4)).head = 1)
       ((TMEncoding.encodeTM tm).length + 3) := by
-  sorry
+  -- Uses rewindWorkTM_rich_hoareTime with P = copyData, then consequence to match pre/post.
+  -- Pre-adaptation: copyData ∧ head ≤ B → rich_rewind pre (WF + read conditions + P)
+  -- Post-adaptation: head = 1 ∧ P → P ∧ head = 1 (trivial reorder)
+  exact (rewindWorkTM_rich_hoareTime (0 : Fin 4) ((TMEncoding.encodeTM tm).length + 1)
+    (copyData_preserved tm x)).consequence
+    (fun inp work out h => by
+      obtain ⟨⟨hdesc, hother, hwf, hinpc, hinph, houtc, houth⟩, hhead⟩ := h
+      refine ⟨hwf.1 0, hwf.2 0, hhead, ?_, ?_, ?_, ?_,
+              hdesc, hother, hwf, hinpc, hinph, houtc, houth⟩
+      all_goals sorry)
+    (fun _ _ _ ⟨hhead, hdata⟩ => ⟨hdata, hhead⟩)
+    (by omega)
 
 /-- (copyData + head=1) implies setupStateTM precondition. -/
 private theorem copyDataHead1_to_setupStatePre (tm : TM n) (k : ℕ)
@@ -581,7 +592,19 @@ private theorem rewind3_setupStateData_hoareTime (tm : TM n) (k : ℕ)
         setupStateData tm k hk x inp work out ∧
         (work (3 : Fin 4)).head = 1)
       (n + 3) := by
-  sorry
+  exact (rewindWorkTM_rich_hoareTime (3 : Fin 4) (n + 1)
+    (setupStateData_preserved tm k hk x)).consequence
+    (fun inp work out h => by
+      obtain ⟨⟨henv, hdesc, hstate, hsim, hsc, hd_head⟩, hhead⟩ := h
+      have ⟨hic, hins, hih, hwf, hheads, hoc, hons, hoh⟩ := henv
+      exact ⟨hwf.1 3, hwf.2 3, hhead,
+             by simp only [Tape.read]; exact hins _ hih,
+             by simp only [Tape.read]; exact hons _ hoh,
+             hoh,
+             fun i hi => ⟨by simp only [Tape.read]; exact hwf.2 i _ (hheads i), hheads i⟩,
+             henv, hdesc, hstate, hsim, hsc, hd_head⟩)
+    (fun _ _ _ ⟨hhead, hdata⟩ => ⟨hdata, hhead⟩)
+    (by omega)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Bridges between phases
