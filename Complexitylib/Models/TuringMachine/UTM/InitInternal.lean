@@ -754,8 +754,8 @@ theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
   have h_copyData_env : ∀ inp work out,
       (copyData tm x inp work out ∧ (work (0 : Fin 4)).head ≤ desc.length + 1) →
       InitEnvelope inp work out := by
-    -- Derivable from copyData (which includes WorkTapesWF, head ≥ 1, cell data)
-    -- Same InitEnvelope construction as in copyDataHead1_to_setupStatePre
+    -- Derivable: copyData has WorkTapesWF, head ≥ 1, cell data for InitEnvelope
+    -- Same pattern as copyDataHead1_to_setupStatePre but with head ≥ 1 (not = 1)
     sorry
   have h_copyDataPost_env : ∀ inp work out,
       (copyData tm x inp work out ∧ (work (0 : Fin 4)).head = 1) →
