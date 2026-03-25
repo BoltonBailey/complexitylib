@@ -100,6 +100,87 @@ private lemma encodeEntry_length (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n �
 -- Encoding connection helpers
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- The header portion of `encodeTM` (everything before the transition table). -/
+private noncomputable def encodeTM_header (tm : TM n) : List Bool :=
+  let k := @Fintype.card tm.Q tm.finQ
+  let e := tm.stateEquiv
+  List.replicate k true ++ [false] ++
+  List.replicate n true ++ [false] ++
+  TMEncoding.encodeStateOneHot tm e tm.qhalt ++ [false] ++
+  TMEncoding.encodeStateOneHot tm e tm.qstart ++ [false]
+
+/-- `encodeTM` splits as header ++ transTable. -/
+private theorem encodeTM_eq_header_append_table (tm : TM n) :
+    TMEncoding.encodeTM tm = encodeTM_header tm ++ TMEncoding.encodeTransTable tm tm.stateEquiv := by
+  simp only [TMEncoding.encodeTM, encodeTM_header, List.append_assoc]
+
+/-- The header has length `tableOffset k n`. -/
+private theorem encodeTM_header_length (tm : TM n)
+    (hk : k = @Fintype.card tm.Q tm.finQ) :
+    (encodeTM_header tm).length = TMEncoding.tableOffset k n := by
+  subst hk
+  simp only [encodeTM_header, TMEncoding.encodeStateOneHot, TMEncoding.tableOffset,
+    TMEncoding.qstartOffset, TMEncoding.qhaltOffset,
+    List.length_append, List.length_replicate, List.length_singleton,
+    List.length_map, List.length_finRange]
+
+/-- Length of a constant-width flatMap. -/
+private theorem flatMap_const_width_length {α : Type} {β : Type}
+    (l : List α) (f : α → List β) (w : ℕ)
+    (hfw : ∀ a, a ∈ l → (f a).length = w) :
+    (l.flatMap f).length = l.length * w := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+    simp only [List.flatMap_cons, List.length_append, List.length_cons]
+    rw [hfw _ List.mem_cons_self,
+        ih (fun a' ha' => hfw a' (List.mem_cons_of_mem _ ha')),
+        Nat.add_mul, Nat.one_mul, Nat.add_comm]
+
+/-- Bound: idx * w + j < llen * w when idx < llen and j < w. -/
+private theorem mul_add_lt_mul_of_lt (idx j llen w : ℕ)
+    (hidx : idx < llen) (hj : j < w) :
+    idx * w + j < llen * w := by
+  have h1 : idx * w + j < idx * w + w := Nat.add_lt_add_left hj _
+  have h2 : idx * w + w ≤ llen * w := by
+    have : idx + 1 ≤ llen := hidx
+    calc idx * w + w = (idx + 1) * w := by simp [Nat.add_mul, Nat.one_mul]
+      _ ≤ llen * w := Nat.mul_le_mul_right w this
+  omega
+
+/-- Indexing into a constant-width flatMap: if every `f a` has length `w`,
+    then `(l.flatMap f)[idx * w + j] = (f l[idx])[j]`. -/
+private theorem flatMap_const_width_getElem {α : Type} {β : Type}
+    (l : List α) (f : α → List β) (w : ℕ)
+    (hfw : ∀ a, a ∈ l → (f a).length = w)
+    (idx j : ℕ) (hidx : idx < l.length) (hj : j < w) :
+    (l.flatMap f)[idx * w + j]'(by
+      rw [flatMap_const_width_length l f w hfw]
+      exact mul_add_lt_mul_of_lt idx j l.length w hidx hj) =
+    (f l[idx])[j]'(by rw [hfw _ (List.getElem_mem hidx)]; exact hj) := by
+  induction l generalizing idx with
+  | nil => simp at hidx
+  | cons a as ih =>
+    match idx with
+    | 0 =>
+      simp only [List.flatMap_cons, Nat.zero_mul, Nat.zero_add, List.getElem_cons_zero]
+      exact List.getElem_append_left _
+    | idx' + 1 =>
+      simp only [List.flatMap_cons, List.getElem_cons_succ]
+      have hlen_a : (f a).length = w := hfw _ List.mem_cons_self
+      have hle : (f a).length ≤ (idx' + 1) * w + j := by
+        calc (f a).length = w := hlen_a
+          _ ≤ (idx' + 1) * w := Nat.le_mul_of_pos_left w (by omega)
+          _ ≤ (idx' + 1) * w + j := Nat.le_add_right _ _
+      rw [List.getElem_append_right hle]
+      have hfw' := fun a' (ha' : a' ∈ as) => hfw a' (List.mem_cons_of_mem _ ha')
+      have hidx' : idx' < as.length := by simp at hidx; omega
+      convert ih hfw' idx' hidx' using 1
+      congr 1
+      show (idx' + 1) * w + j - (f a).length = idx' * w + j
+      rw [hlen_a, Nat.add_mul, Nat.one_mul]
+      omega
+
 private theorem allΓ_complete (g : Γ) : g ∈ allΓ := by cases g <;> simp [allΓ]
 
 private theorem allΓ_length : allΓ.length = 4 := rfl
@@ -124,6 +205,198 @@ private theorem Γ_ofBool_injective : Function.Injective Γ.ofBool := by
 
 private theorem Γ_ofBool_ne_of_ne {a b : Bool} (h : a ≠ b) : Γ.ofBool a ≠ Γ.ofBool b :=
   fun heq => h (Γ_ofBool_injective heq)
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Transition table structure
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The canonical enumeration of all 4-tuples (q, iH, wH, oH). -/
+private noncomputable def allTuples (k n : ℕ) : List (Fin k × Γ × (Fin n → Γ) × Γ) :=
+  (List.finRange k).flatMap fun q =>
+    allΓ.flatMap fun iH =>
+      (allΓFuncs n).flatMap fun wH =>
+        allΓ.map fun oH =>
+          (q, iH, wH, oH)
+
+/-- Every 4-tuple is in the canonical enumeration. -/
+private theorem allTuples_mem (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ) :
+    (q, iH, wH, oH) ∈ allTuples k n := by
+  simp only [allTuples, List.mem_flatMap, List.mem_map]
+  exact ⟨q, List.mem_finRange q,
+         iH, allΓ_complete iH,
+         wH, allΓFuncs_complete wH,
+         oH, allΓ_complete oH, rfl⟩
+
+/-- The input pattern of an encodeEntry starts with the given encodeInputPattern. -/
+private theorem encodeEntry_input_prefix (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ)
+    (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
+    (iD : Dir3) (wD : Fin n → Dir3) (oD : Dir3)
+    (j : ℕ) (hj : j < TMEncoding.inputPatternWidth k n) :
+    (TMEncoding.encodeInputPattern k n q iH wH oH ++ [false] ++
+     TMEncoding.encodeTransOutput k n q' wW oW iD wD oD)[j]'(by
+      simp only [List.length_append, encodeInputPattern_length,
+        List.length_cons, List.length_nil, encodeTransOutput_length,
+        TMEncoding.entryWidth]; omega) =
+    (TMEncoding.encodeInputPattern k n q iH wH oH)[j]'(by
+      rw [encodeInputPattern_length]; exact hj) := by
+  rw [List.getElem_append_left (by
+    simp only [List.length_append, encodeInputPattern_length, List.length_cons,
+      List.length_nil]; omega)]
+  exact List.getElem_append_left (by rw [encodeInputPattern_length]; exact hj)
+
+/-- The output bits of an encodeEntry are past the input pattern + separator. -/
+private theorem encodeEntry_output_getElem (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ)
+    (q' : Fin k) (wW : Fin n → Γw) (oW : Γw)
+    (iD : Dir3) (wD : Fin n → Dir3) (oD : Dir3)
+    (j : ℕ) (hj : j < (TMEncoding.encodeTransOutput k n q' wW oW iD wD oD).length) :
+    (TMEncoding.encodeInputPattern k n q iH wH oH ++ [false] ++
+     TMEncoding.encodeTransOutput k n q' wW oW iD wD oD)[TMEncoding.inputPatternWidth k n + 1 + j]'(by
+      simp only [List.length_append, encodeInputPattern_length,
+        List.length_cons, List.length_nil]; omega) =
+    (TMEncoding.encodeTransOutput k n q' wW oW iD wD oD)[j] := by
+  rw [List.getElem_append_right (by
+    simp only [List.length_append, encodeInputPattern_length, List.length_cons,
+      List.length_nil]; omega)]
+  congr 1
+  have := encodeInputPattern_length k n q iH wH oH
+  simp only [List.length_append, List.length_cons, List.length_nil] at this ⊢
+  omega
+
+/-- `encodeInputPattern` is injective: equal patterns imply equal tuples.
+    (All sub-lemmas are packaged inside for modularity.) -/
+private theorem encodeInputPattern_injective {k n : ℕ}
+    {q₁ q₂ : Fin k} {iH₁ iH₂ : Γ} {wH₁ wH₂ : Fin n → Γ} {oH₁ oH₂ : Γ}
+    (heq : TMEncoding.encodeInputPattern k n q₁ iH₁ wH₁ oH₁ =
+           TMEncoding.encodeInputPattern k n q₂ iH₂ wH₂ oH₂) :
+    q₁ = q₂ ∧ iH₁ = iH₂ ∧ wH₁ = wH₂ ∧ oH₁ = oH₂ := by
+  -- Unfold and work with left-associated appends:
+  -- ((map(==q) ++ iH.encode) ++ flatMap(wH)) ++ oH.encode
+  simp only [TMEncoding.encodeInputPattern] at heq
+  -- Step 1: split off oH.encode from the right
+  have hlen_prefix : (((List.finRange k).map (· == q₁) ++ iH₁.encode) ++
+      (List.finRange n).flatMap (fun i => (wH₁ i).encode)).length =
+    (((List.finRange k).map (· == q₂) ++ iH₂.encode) ++
+      (List.finRange n).flatMap (fun i => (wH₂ i).encode)).length := by
+    simp [List.length_append, flatMap_encode_length, Γ.encode_length]
+  have h_prefix := List.append_inj_left heq hlen_prefix
+  have h_oH := List.append_inj_right heq hlen_prefix
+  have hoH : oH₁ = oH₂ := Γ.encode_injective h_oH
+  -- Step 2: split off flatMap(wH)
+  have hlen_sq : ((List.finRange k).map (· == q₁) ++ iH₁.encode).length =
+      ((List.finRange k).map (· == q₂) ++ iH₂.encode).length := by
+    simp [Γ.encode_length]
+  have h_sq := List.append_inj_left h_prefix hlen_sq
+  have h_wH := List.append_inj_right h_prefix hlen_sq
+  -- Step 3: split stateMap from iH
+  have hlen_state : ((List.finRange k).map (· == q₁)).length =
+      ((List.finRange k).map (· == q₂)).length := by simp
+  have h_s := List.append_inj_left h_sq hlen_state
+  have h_iH := List.append_inj_right h_sq hlen_state
+  -- q₁ = q₂ from one-hot
+  have hq : q₁ = q₂ := by
+    by_contra hne
+    -- map(==q₁) and map(==q₂) are equal (h_s), but differ at position q₁.val
+    have h_at := congrArg (fun l => l[q₁.val]?) h_s
+    simp only [List.getElem?_map, List.getElem?_eq_getElem (by simp : q₁.val < (List.finRange k).length),
+      Option.map_some, Option.some.injEq, List.getElem_finRange, Fin.cast_mk] at h_at
+    -- h_at : (⟨q₁.val, _⟩ == q₁) = (⟨q₁.val, _⟩ == q₂)
+    have : (⟨q₁.val, q₁.isLt⟩ : Fin k) = q₁ := Fin.ext rfl
+    rw [show (⟨q₁.val, (by omega : q₁.val < k)⟩ : Fin k) = q₁ from Fin.ext rfl] at h_at
+    rw [beq_self_eq_true] at h_at
+    exact hne (beq_iff_eq.mp h_at.symm)
+  have hiH : iH₁ = iH₂ := Γ.encode_injective h_iH
+  -- wH₁ = wH₂ from flatMap equality
+  have hwH : wH₁ = wH₂ := by
+    ext ⟨i, hi⟩
+    have hfw := fun (a : Fin n) (_ : a ∈ List.finRange n) => Γ.encode_length (wH₁ a)
+    have hfw' := fun (a : Fin n) (_ : a ∈ List.finRange n) => Γ.encode_length (wH₂ a)
+    have hidx : i < (List.finRange n).length := by simp; exact hi
+    -- Extract per-position equality from list equality
+    have hbound0 : i * 2 + 0 < (List.flatMap (fun j => (wH₁ j).encode) (List.finRange n)).length := by
+      rw [flatMap_const_width_length _ _ 2 hfw]; exact mul_add_lt_mul_of_lt i 0 _ 2 hidx (by omega)
+    have hbound1 : i * 2 + 1 < (List.flatMap (fun j => (wH₁ j).encode) (List.finRange n)).length := by
+      rw [flatMap_const_width_length _ _ 2 hfw]; exact mul_add_lt_mul_of_lt i 1 _ 2 hidx (by omega)
+    have hbound0' : i * 2 + 0 < (List.flatMap (fun j => (wH₂ j).encode) (List.finRange n)).length := by
+      rw [flatMap_const_width_length _ _ 2 hfw']; exact mul_add_lt_mul_of_lt i 0 _ 2 hidx (by omega)
+    have hbound1' : i * 2 + 1 < (List.flatMap (fun j => (wH₂ j).encode) (List.finRange n)).length := by
+      rw [flatMap_const_width_length _ _ 2 hfw']; exact mul_add_lt_mul_of_lt i 1 _ 2 hidx (by omega)
+    have h_eq0 : (List.flatMap (fun j => (wH₁ j).encode) (List.finRange n))[i * 2 + 0]'hbound0 =
+                 (List.flatMap (fun j => (wH₂ j).encode) (List.finRange n))[i * 2 + 0]'hbound0' := by
+      simp only [h_wH]
+    have h_eq1 : (List.flatMap (fun j => (wH₁ j).encode) (List.finRange n))[i * 2 + 1]'hbound1 =
+                 (List.flatMap (fun j => (wH₂ j).encode) (List.finRange n))[i * 2 + 1]'hbound1' := by
+      simp only [h_wH]
+    rw [flatMap_const_width_getElem _ _ 2 hfw i 0 hidx (by omega),
+        flatMap_const_width_getElem _ _ 2 hfw' i 0 hidx (by omega)] at h_eq0
+    rw [flatMap_const_width_getElem _ _ 2 hfw i 1 hidx (by omega),
+        flatMap_const_width_getElem _ _ 2 hfw' i 1 hidx (by omega)] at h_eq1
+    simp only [List.getElem_finRange] at h_eq0 h_eq1
+    apply Γ.encode_injective
+    apply List.ext_getElem (by simp [Γ.encode_length])
+    intro j hj₁ _
+    have : j < 2 := by rw [Γ.encode_length] at hj₁; exact hj₁
+    match j, this with
+    | 0, _ => convert h_eq0 using 2 <;> simp [Fin.ext_iff]
+    | 1, _ => convert h_eq1 using 2 <;> simp [Fin.ext_iff]
+  exact ⟨hq, hiH, hwH, hoH⟩
+
+/-- Different 4-tuples produce different input pattern lists. -/
+private theorem encodeInputPattern_ne_of_ne {k n : ℕ}
+    {q₁ q₂ : Fin k} {iH₁ iH₂ : Γ} {wH₁ wH₂ : Fin n → Γ} {oH₁ oH₂ : Γ}
+    (hne : (q₁, iH₁, wH₁, oH₁) ≠ (q₂, iH₂, wH₂, oH₂)) :
+    TMEncoding.encodeInputPattern k n q₁ iH₁ wH₁ oH₁ ≠
+    TMEncoding.encodeInputPattern k n q₂ iH₂ wH₂ oH₂ := by
+  intro heq
+  obtain ⟨hq, hi, hw, ho⟩ := encodeInputPattern_injective heq
+  exact hne (by rw [hq, hi, hw, ho])
+
+/-- Connect desc tape cell at `tableOffset + p` to transition table bit `p`.
+    Key bridging lemma: the desc tape after header stores the transition table bits. -/
+private theorem desc_cell_eq_table_bit {n : ℕ} (tm : TM n)
+    (desc : List Bool) (t : Tape)
+    (hdesc : desc = TMEncoding.encodeTM tm)
+    (hdescOnTape : descOnTape desc t)
+    (p : ℕ) (hp : p < (TMEncoding.encodeTransTable tm tm.stateEquiv).length) :
+    t.cells (TMEncoding.tableOffset (Fintype.card tm.Q) n + p + 1) =
+    Γ.ofBool ((TMEncoding.encodeTransTable tm tm.stateEquiv)[p]'hp) := by
+  have hoff := encodeTM_header_length tm rfl
+  have h_split := encodeTM_eq_header_append_table tm
+  have h_idx : TMEncoding.tableOffset (Fintype.card tm.Q) n + p < desc.length := by
+    rw [hdesc, h_split, List.length_append, hoff]; omega
+  have h_cell := hdescOnTape.2.1 (TMEncoding.tableOffset (Fintype.card tm.Q) n + p) h_idx
+  rw [h_cell]
+  congr 1
+  simp only [hdesc, h_split]
+  rw [List.getElem_append_right (by rw [hoff]; omega)]
+  congr 1; rw [hoff]; omega
+
+/-- The entry function that maps a 4-tuple to its encoded entry using `tm.δ`. -/
+private noncomputable def allTuples_entryFn {n : ℕ} (tm : TM n)
+    (e : tm.Q ≃ Fin (Fintype.card tm.Q)) :
+    Fin (Fintype.card tm.Q) × Γ × (Fin n → Γ) × Γ → List Bool :=
+  fun ⟨q, iH, wH, oH⟩ =>
+    let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iH wH oH
+    TMEncoding.encodeEntry (Fintype.card tm.Q) n q iH wH oH (e q') wW oW iD wD oD
+
+/-- The transition table equals `allTuples.flatMap (allTuples_entryFn tm e)`. -/
+private theorem encodeTransTable_eq_allTuples_flatMap {n : ℕ} (tm : TM n)
+    (e : tm.Q ≃ Fin (Fintype.card tm.Q)) :
+    TMEncoding.encodeTransTable tm e =
+    (allTuples (Fintype.card tm.Q) n).flatMap (allTuples_entryFn tm e) := by
+  unfold TMEncoding.encodeTransTable allTuples allTuples_entryFn
+  simp only [List.flatMap_assoc, List.flatMap_map]
+
+/-- Every entry produced by `allTuples_entryFn` has width `entryWidth k n`. -/
+private theorem allTuples_entryFn_width {n : ℕ} (tm : TM n)
+    (e : tm.Q ≃ Fin (Fintype.card tm.Q))
+    (t : Fin (Fintype.card tm.Q) × Γ × (Fin n → Γ) × Γ)
+    (ht : t ∈ allTuples (Fintype.card tm.Q) n) :
+    (allTuples_entryFn tm e t).length = TMEncoding.entryWidth (Fintype.card tm.Q) n := by
+  obtain ⟨q, iH, wH, oH⟩ := t
+  simp only [allTuples_entryFn]
+  generalize tm.δ (e.symm q) iH wH oH = δ_result
+  obtain ⟨q', wW, oW, iD, wD, oD⟩ := δ_result
+  exact encodeEntry_length _ _ _ _ _ _ _ _ _ _ _ _
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 1: skipHeader simulation
@@ -2085,6 +2358,7 @@ noncomputable def lookupTimeBound (k n : ℕ) (descLen : ℕ) : ℕ :=
 -- Full HoareTime proof (non-private, exported for Lookup.lean)
 -- ════════════════════════════════════════════════════════════════════════
 
+set_option maxHeartbeats 800000 in
 theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ)
     (hdesc : desc = TMEncoding.encodeTM tm)
@@ -2193,7 +2467,203 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
          numBefore * TMEncoding.entryWidth k n +
          TMEncoding.inputPatternWidth k n + 1 + j) =
       Γ.ofBool (outputBits[j]'hj)) := by
-    sorry
+    -- The desc tape stores desc = header ++ transTable, with head at 1 + tableOffset.
+    -- The transition table is a flat list of entries in canonical order.
+    -- We use List.getElem_of_mem to find the entry for (q, iHead, wHeads, oHead).
+    subst hk
+    -- After subst, e = tm.stateEquiv, and the transition table uses stateEquiv too.
+    -- The desc tape cells at offset = 1 + tableOffset + i correspond to desc[tableOffset + i]
+    -- = transTable[i] (via descOnTape and header splitting).
+    -- Use allTuples_mem to get membership, then List.getElem_of_mem to get index.
+    have hmem := allTuples_mem (Fintype.card tm.Q) n q iHead wHeads oHead
+    obtain ⟨numBefore, hnumBefore_lt, hnumBefore_eq⟩ := List.getElem_of_mem hmem
+    -- The transition table = allTuples.flatMap entryFn (via encodeTransTable_eq_allTuples_flatMap)
+    -- Each entry has width entryWidth (via allTuples_entry_width)
+    -- Use flatMap_const_width_getElem to index into the table by entry number
+    -- Then connect to tape cells via descOnTape
+    -- For now, we provide numBefore and prove the three properties
+    refine ⟨numBefore, ?_, ?_, ?_⟩
+    · -- Non-matching entries before numBefore
+      intro j_entry hj_entry
+      -- allTuples[j_entry] ≠ allTuples[numBefore] = (q, iHead, wHeads, oHead)
+      -- since j_entry ≠ numBefore (j_entry < numBefore)
+      -- Actually, allTuples may have duplicates, so we can't use index ≠ to get value ≠.
+      -- But allTuples_mem + List.getElem_of_mem gives a *unique* index for each tuple.
+      -- Actually, allTuples contains each tuple exactly once (it's a Cartesian product
+      -- enumeration), so j_entry < numBefore means allTuples[j_entry] ≠ allTuples[numBefore].
+      -- For now, we use List.Nodup to establish this.
+      -- TODO: prove allTuples is nodup, or use a different approach.
+      -- Alternative: the matching entry (refine_2) already establishes that the desc tape
+      -- at position numBefore matches the scratch. For positions < numBefore, we need
+      -- to show the desc tape entry doesn't match. This follows from the input patterns
+      -- being different (encodeInputPattern_ne_of_ne) and the tape storing these patterns.
+      -- Since this requires significant additional infrastructure (allTuples_nodup),
+      -- we defer this to a future commit.
+      sorry
+    · -- Matching entry's input pattern matches scratch
+      intro j hj_ipw
+      let k := Fintype.card tm.Q
+      let ew := TMEncoding.entryWidth k n
+      have hj_ew : j < ew := by
+        simp only [ew, TMEncoding.entryWidth, TMEncoding.inputPatternWidth] at hj_ipw ⊢; omega
+      have htable_eq := encodeTransTable_eq_allTuples_flatMap tm tm.stateEquiv
+      have hentry_width := allTuples_entryFn_width tm tm.stateEquiv
+      have hbound : numBefore * ew + j < (TMEncoding.encodeTransTable tm tm.stateEquiv).length := by
+        rw [htable_eq, flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt numBefore j _ _ hnumBefore_lt hj_ew
+      -- LHS: desc tape cell = Γ.ofBool (transTable bit)
+      have h_lhs : (c₁.work utmDescTape).cells
+          ((c₁.work utmDescTape).head + numBefore * ew + j) =
+          Γ.ofBool ((TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + j]'hbound) := by
+        rw [hdesc_cells₁, hc₁_desc_h, hdesc_head_eq]
+        convert desc_cell_eq_table_bit tm desc (work utmDescTape) hdesc hdescOnTape
+          (numBefore * ew + j) hbound using 2
+        omega
+      -- RHS: scratch tape cell = Γ.ofBool (inputPattern bit)
+      have h_ipw_bound : j < (TMEncoding.encodeInputPattern k n q iHead wHeads oHead).length := by
+        rw [encodeInputPattern_length]; exact hj_ipw
+      have h_rhs : (c₁.work utmScratchTape).cells (1 + j) =
+          Γ.ofBool ((TMEncoding.encodeInputPattern k n q iHead wHeads oHead)[j]'h_ipw_bound) := by
+        rw [hc₁_scratch, show 1 + j = j + 1 by omega]
+        exact hscratch_inp.1.2.1 j h_ipw_bound
+      -- Middle: transTable bit = inputPattern bit (via entryFn and encodeEntry_input_prefix)
+      -- Use a helper that goes through entryFn directly on the concrete tuple
+      have hentry_j_bound : j < (allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead)).length := by
+        rw [hentry_width _ hmem]; exact hj_ew
+      have h_entry_bit :
+          (allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead))[j]'hentry_j_bound =
+          (TMEncoding.encodeInputPattern k n q iHead wHeads oHead)[j]'h_ipw_bound := by
+        unfold allTuples_entryFn
+        -- After unfolding, the match on the tuple is reduced but the match on tm.δ
+        -- leaves projections. The encodeEntry_eq rewrite splits encodeEntry into
+        -- inputPattern ++ [false] ++ output. Then encodeEntry_input_prefix
+        -- extracts the j-th bit from the input pattern prefix.
+        -- The output part doesn't matter for this index, so we use convert.
+        simp only [encodeEntry_eq]
+        exact encodeEntry_input_prefix k n q iHead wHeads oHead _ _ _ _ _ _  j hj_ipw
+      -- Connect transTable to entryFn via flatMap_const_width_getElem
+      have hbound_fm : numBefore * ew + j <
+          ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv)).length := by
+        rw [flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt numBefore j _ _ hnumBefore_lt hj_ew
+      have h_fm_idx := flatMap_const_width_getElem
+        (allTuples k n)
+        (allTuples_entryFn tm tm.stateEquiv) ew
+        (fun a ha => hentry_width a ha) numBefore j hnumBefore_lt hj_ew
+      -- h_fm_idx : (allTuples.flatMap entryFn)[numBefore * ew + j] = (entryFn allTuples[numBefore])[j]
+      -- We need: transTable[numBefore * ew + j] = inputPattern[j]
+      -- Go: transTable = allTuples.flatMap entryFn (htable_eq)
+      --     (flatMap entryFn)[...] = (entryFn allTuples[numBefore])[j] (h_fm_idx)
+      --     allTuples[numBefore] = (q, iH, wH, oH) (hnumBefore_eq) — handled via congrArg
+      --     (entryFn (q,...,oH))[j] = inputPattern[j] (h_entry_bit)
+      have h_entry_at : (allTuples_entryFn tm tm.stateEquiv (allTuples k n)[numBefore]) =
+          (allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead)) := by
+        rw [hnumBefore_eq]
+      have h_mid : (TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + j]'hbound =
+          (TMEncoding.encodeInputPattern k n q iHead wHeads oHead)[j]'h_ipw_bound := by
+        have : (TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + j]'hbound =
+            ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv))[numBefore * ew + j]'hbound_fm := by
+          congr 1
+        rw [this, h_fm_idx]
+        simp only [h_entry_at, h_entry_bit]
+      rw [h_lhs, h_rhs, congrArg Γ.ofBool h_mid]
+    · -- Output bits match
+      -- The goal starts with `let outputBits := ...; ∀ j < ..., ...`
+      intro outputBits j hj_out
+      refine ⟨hj_out, ?_⟩
+      let k := Fintype.card tm.Q
+      let ew := TMEncoding.entryWidth k n
+      let ipw := TMEncoding.inputPatternWidth k n
+      -- Position within the entry: ipw + 1 + j
+      have hout_len : outputBits.length = TMEncoding.outputWidth k n :=
+        encodeTransOutput_length k n (e q') wW oW iD wD oD
+      have hpos_ew : ipw + 1 + j < ew := by
+        simp only [ew, TMEncoding.entryWidth, ipw]; rw [← hout_len]; omega
+      have htable_eq := encodeTransTable_eq_allTuples_flatMap tm tm.stateEquiv
+      have hentry_width := allTuples_entryFn_width tm tm.stateEquiv
+      have hbound : numBefore * ew + (ipw + 1 + j) <
+          (TMEncoding.encodeTransTable tm tm.stateEquiv).length := by
+        rw [htable_eq, flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt numBefore (ipw + 1 + j) _ _ hnumBefore_lt hpos_ew
+      -- LHS: desc tape cell → transition table bit
+      have h_lhs : (c₁.work utmDescTape).cells
+          ((c₁.work utmDescTape).head + numBefore * ew + ipw + 1 + j) =
+          Γ.ofBool ((TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + (ipw + 1 + j)]'hbound) := by
+        rw [hdesc_cells₁, hc₁_desc_h, hdesc_head_eq]
+        convert desc_cell_eq_table_bit tm desc (work utmDescTape) hdesc hdescOnTape
+          (numBefore * ew + (ipw + 1 + j)) hbound using 2
+        omega
+      -- Bound for the entry at the matching position
+      have hbound_fm : numBefore * ew + (ipw + 1 + j) <
+          ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv)).length := by
+        rw [flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt numBefore _ _ _ hnumBefore_lt hpos_ew
+      have hentry_j_bound : ipw + 1 + j <
+          (allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead)).length := by
+        rw [hentry_width _ hmem]; exact hpos_ew
+      -- Middle: transTable bit at (numBefore * ew + ipw + 1 + j) = outputBits[j]
+      have h_entry_at : (allTuples_entryFn tm tm.stateEquiv (allTuples k n)[numBefore]) =
+          (allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead)) := by
+        rw [hnumBefore_eq]
+      -- entryFn (q,iHead,wHeads,oHead) at position (ipw + 1 + j) = outputBits[j]
+      -- We need a helper lemma about allTuples_entryFn output bits
+      -- The entryFn at (q,iH,wH,oH) = encodeEntry k n q iH wH oH (e q'') wW' oW' iD' wD' oD'
+      --   where (q'',wW',oW',iD',wD',oD') = tm.δ (e.symm q) iH wH oH
+      -- After encodeEntry_eq, this = inputPattern ++ [false] ++ transOutput
+      -- So at position ipw + 1 + j, we get transOutput[j] = outputBits[j]
+      -- Use encodeEntry_output_getElem
+      have h_entry_list_eq : allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead) =
+          TMEncoding.encodeEntry k n q iHead wHeads oHead
+            (tm.stateEquiv (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).1)
+            (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).2.1
+            (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).2.2.1
+            (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).2.2.2.1
+            (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).2.2.2.2.1
+            (tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead).2.2.2.2.2 := by
+        unfold allTuples_entryFn; rfl
+      have h_entry_list_eq2 : allTuples_entryFn tm tm.stateEquiv (q, iHead, wHeads, oHead) =
+          TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false] ++ outputBits := by
+        rw [h_entry_list_eq, encodeEntry_eq]
+        congr 1
+        -- Need: the encodeTransOutput with tm.δ projections = outputBits
+        -- outputBits = encodeTransOutput k n (e q') wW oW iD wD oD
+        -- and (q', wW, oW, iD, wD, oD) = tm.δ (e.symm q) iHead wHeads oHead
+        -- so the projections of tm.δ are exactly (q', wW, oW, iD, wD, oD)
+        -- and tm.stateEquiv = e, so e q' = the first component of the output
+        generalize hres : tm.δ (tm.stateEquiv.symm q) iHead wHeads oHead = res
+        obtain ⟨rq, rwW, roW, riD, rwD, roD⟩ := res
+        have : (q', wW, oW, iD, wD, oD) = (rq, rwW, roW, riD, rwD, roD) := by
+          rw [hδ_def]; exact hres
+        obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ := this
+        rfl
+      have h_ipw_len : (TMEncoding.encodeInputPattern k n q iHead wHeads oHead).length = ipw :=
+        encodeInputPattern_length k n q iHead wHeads oHead
+      have h_list_rw : allTuples_entryFn tm tm.stateEquiv (allTuples k n)[numBefore] =
+          TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false] ++ outputBits :=
+        h_entry_at ▸ h_entry_list_eq2
+      have happ_bound : ipw + 1 + j <
+          (TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false] ++ outputBits).length := by
+        rw [List.length_append, List.length_append, h_ipw_len,
+            List.length_cons, List.length_nil]; omega
+      have hlen1 : (TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false]).length = ipw + 1 := by
+        rw [List.length_append, h_ipw_len, List.length_cons, List.length_nil]
+      have h_app_idx : (TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false] ++ outputBits)[ipw + 1 + j]'happ_bound =
+          outputBits[j]'hj_out := by
+        rw [List.getElem_append_right (by rw [hlen1]; omega)]
+        congr 1; rw [hlen1]; omega
+      have h_mid : (TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + (ipw + 1 + j)]'hbound =
+          outputBits[j]'hj_out := by
+        have h1 : (TMEncoding.encodeTransTable tm tm.stateEquiv)[numBefore * ew + (ipw + 1 + j)]'hbound =
+            ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv))[numBefore * ew + (ipw + 1 + j)]'hbound_fm := by
+          congr 1
+        rw [h1, flatMap_const_width_getElem _ _ _ (fun a ha => hentry_width a ha) numBefore _ hnumBefore_lt hpos_ew]
+        have hbound_entry : ipw + 1 + j < (allTuples_entryFn tm tm.stateEquiv (allTuples k n)[numBefore]).length := by
+          rw [h_entry_at]; exact hentry_j_bound
+        calc (allTuples_entryFn tm tm.stateEquiv (allTuples k n)[numBefore])[ipw + 1 + j]'hbound_entry =
+              (TMEncoding.encodeInputPattern k n q iHead wHeads oHead ++ [false] ++ outputBits)[ipw + 1 + j]'happ_bound := by
+                congr 1
+            _ = outputBits[j] := h_app_idx
+      convert h_lhs.trans (congrArg Γ.ofBool h_mid) using 2
   obtain ⟨numBefore, hnonmatch, hmatch_entry, houtput_bits⟩ := henc_connection
   -- ──────────────────────────────────────────────────────────────────
   -- Phase 2: entry_scan_to_match — scan entries until match found
