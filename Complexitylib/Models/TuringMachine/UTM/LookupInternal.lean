@@ -264,7 +264,66 @@ private theorem compare_match_loop
       (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
-  sorry
+  intro ipw
+  -- Generalized loop: induction on diff = ipw - pos, universally quantifying c and pos
+  suffices h_loop : ∀ (diff : ℕ) (c : Cfg 4 (lookupTM (n := n) k).Q) (pos : ℕ)
+      (hpos : pos < ipw), diff = ipw - pos →
+      c.state = .compare ⟨pos, by omega⟩ →
+      WorkTapesWF c.work →
+      c.input.read ≠ Γ.start → c.input.head ≥ 1 →
+      c.output.read ≠ Γ.start → c.output.head ≥ 1 →
+      (∀ j, j ≥ 1 → (c.work utmDescTape).cells j ≠ Γ.start) →
+      (c.work utmDescTape).head ≥ 1 →
+      (∀ j, j ≥ 1 → (c.work utmScratchTape).cells j ≠ Γ.start) →
+      (c.work utmScratchTape).head ≥ 1 →
+      (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → (c.work i).read ≠ Γ.start ∧ (c.work i).head ≥ 1) →
+      (∀ j, j < ipw - pos → (c.work utmDescTape).cells ((c.work utmDescTape).head + j) =
+        (c.work utmScratchTape).cells ((c.work utmScratchTape).head + j)) →
+      ∃ c', (lookupTM (n := n) k).reachesIn diff c c' ∧
+        c'.state = .matchRewind ∧
+        (c'.work utmDescTape).head = (c.work utmDescTape).head + diff ∧
+        (c'.work utmDescTape).cells = (c.work utmDescTape).cells ∧
+        (c'.work utmScratchTape).head = (c.work utmScratchTape).head + (diff - 1) ∧
+        (c'.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
+        c'.input = c.input ∧ c'.output = c.output ∧ WorkTapesWF c'.work from
+    h_loop _ c pos hpos rfl hstate hwf hinp hinp_h hout hout_h hdesc_ns hdesc_h
+      hscratch_ns hscratch_h hother hmatch
+  intro diff; induction diff with
+  | zero => intro c pos hpos hdiff; omega
+  | succ diff ih =>
+    intro c pos hpos hdiff hstate hwf hinp hinp_h hout hout_h hdesc_ns hdesc_h
+      hscratch_ns hscratch_h hother hmatch_bits
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by simp [lookupTM, hstate]
+    have hdesc_read := lu_tape_read_ne_start_of_wf _ hdesc_h hdesc_ns
+    have hscratch_read := lu_tape_read_ne_start_of_wf _ hscratch_h hscratch_ns
+    have hmatch0 : (c.work utmDescTape).read = (c.work utmScratchTape).read := by
+      simp only [Tape.read]; exact hmatch_bits 0 (by omega)
+    by_cases hlast : pos + 1 < ipw
+    · -- Match, more bits: both tapes right, state → compare(pos+1), then IH
+      have hstep : (lookupTM (n := n) k).step c = some
+          { state := .compare ⟨pos + 1, by omega⟩,
+            input := c.input.move (idleDir c.input.read),
+            work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+              (if i = utmDescTape then Dir3.right
+               else if i = utmScratchTape then Dir3.right
+               else idleDir (c.work i).read),
+            output := c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read) } := by
+        simp only [TM.step, lookupTM, hstate]
+        split_ifs <;> first | rfl | contradiction
+      sorry
+    · -- Last bit: full match. desc +1, scratch stays. State → matchRewind.
+      have hstep : (lookupTM (n := n) k).step c = some
+          { state := .matchRewind,
+            input := c.input.move (idleDir c.input.read),
+            work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+              (if i = utmDescTape then Dir3.right else idleDir (c.work i).read),
+            output := c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read) } := by
+        simp only [TM.step, lookupTM, hstate]
+        split_ifs <;> first | rfl | contradiction
+      sorry
 
 /-- Compare mismatch: the first mismatch is at position `mismatchPos`.
     From `compare 0` with a mismatch at position `mismatchPos < ipw`,
