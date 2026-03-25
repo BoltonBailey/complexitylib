@@ -358,8 +358,10 @@ theorem lookupTM_hoareTime (tm : TM n) (k : ℕ)
     ∃ B, (lookupTM (n := n) k).HoareTime
       (fun inp work out =>
         descOnTape desc (work utmDescTape) ∧
+        (work utmDescTape).head = 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
         scratchHasInputPattern k n q iHead wHeads oHead (work utmScratchTape) ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         out.read ≠ Γ.start ∧ out.head ≥ 1)

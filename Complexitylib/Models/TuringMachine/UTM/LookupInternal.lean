@@ -97,6 +97,35 @@ private lemma encodeEntry_length (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n �
     encodeInputPattern_length, encodeTransOutput_length]
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Encoding connection helpers
+-- ════════════════════════════════════════════════════════════════════════
+
+private theorem allΓ_complete (g : Γ) : g ∈ allΓ := by cases g <;> simp [allΓ]
+
+private theorem allΓ_length : allΓ.length = 4 := rfl
+
+private theorem allΓFuncs_complete : ∀ (f : Fin n → Γ), f ∈ allΓFuncs n := by
+  induction n with
+  | zero => intro f; simp [allΓFuncs]; ext i; exact i.elim0
+  | succ n ih =>
+    intro f
+    simp only [allΓFuncs, List.mem_flatMap, List.mem_map]
+    refine ⟨fun i => f ⟨i.val, by omega⟩, ih _, f ⟨n, by omega⟩, allΓ_complete _, ?_⟩
+    ext i
+    simp only
+    split
+    · rfl
+    · next h =>
+        have hiv : i.val = n := Nat.le_antisymm (by omega) (by omega)
+        exact congrArg f (Fin.ext hiv.symm)
+
+private theorem Γ_ofBool_injective : Function.Injective Γ.ofBool := by
+  intro a b h; cases a <;> cases b <;> simp_all [Γ.ofBool]
+
+private theorem Γ_ofBool_ne_of_ne {a b : Bool} (h : a ≠ b) : Γ.ofBool a ≠ Γ.ofBool b :=
+  fun heq => h (Γ_ofBool_injective heq)
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Phase 1: skipHeader simulation
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -1401,11 +1430,15 @@ private theorem copyOutput_loop
       (lookupTM (n := n) k).reachesIn (rem + 1) c c' ∧
       c'.state = .rewindDesc ∧
       (c'.work utmDescTape).head = (c.work utmDescTape).head + rem - 1 ∧
+      (c'.work utmDescTape).cells = (c.work utmDescTape).cells ∧
       -- Scratch now has the output bits written
       (∀ (j : ℕ) (hj : j < outputBits.length),
         j < TMEncoding.outputWidth k n →
         (c'.work utmScratchTape).cells (1 + j) = Γ.ofBool (outputBits[j]'hj)) ∧
       (c'.work utmScratchTape).cells 0 = Γ.start ∧
+      (c'.work utmScratchTape).head = TMEncoding.outputWidth k n + 1 ∧
+      (∀ j, j ≥ TMEncoding.outputWidth k n + 1 →
+        (c'.work utmScratchTape).cells j = (c.work utmScratchTape).cells j) ∧
       (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
@@ -1453,16 +1486,22 @@ private theorem copyOutput_loop
       split
       · rfl
       · rw [lu_readBackWrite_toΓ_eq hdesc_read]; exact Function.update_eq_self _ _
-    refine ⟨c', .step hstep' .zero, hst', ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨c', .step hstep' .zero, hst', ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- desc head
       rw [hdesc₁, Tape.writeAndMove, hmld, Tape.move]
       show (Tape.write _ _).head - 1 = _
       rw [lu_tape_write_head]; omega
+    · -- desc cells
+      exact hdesc_cells
     · -- scratch bits (from hscratch_bits)
       intro j hj hjow
       rw [hscratch_eq]; exact hscratch_bits j hj (by omega)
     · -- scratch cell 0
       rw [hscratch_eq]; exact hwf.1 utmScratchTape
+    · -- scratch head
+      rw [hscratch_eq, hscratch_h]; omega
+    · -- scratch cells beyond ow preserved
+      intro j _; rw [hscratch_eq]
     · -- other tapes
       intro i hne_desc hne_scratch
       rw [hother₁ i hne_desc]
@@ -1631,7 +1670,8 @@ private theorem copyOutput_loop
         rw [Function.update_apply, if_neg hjh]
         exact hscratch_bits j hjlen (by omega)
     -- Apply IH
-    obtain ⟨c', hreach', hst', hhead', hbits', hcell0', hother', hinp', hout', hwf'⟩ :=
+    obtain ⟨c', hreach', hst', hhead', hdcells', hbits', hcell0',
+            hscratch_head', hscratch_beyond', hother', hinp', hout', hwf'⟩ :=
       ih c₁ (by omega) hst₁ hc₁_wf
         (by rw [hc₁_inp]; exact hinp) (by rw [hc₁_inp]; exact hinp_h)
         (by rw [hc₁_out]; exact hout) (by rw [hc₁_out]; exact hout_h)
@@ -1642,9 +1682,19 @@ private theorem copyOutput_loop
         (by intro i hne_d hne_s; rw [hc₁_other i hne_d hne_s]; exact hother i hne_d hne_s)
         hc₁_desc_bits
         hc₁_scratch_bits
-    refine ⟨c', .step hstep' hreach', hst', ?_, hbits', hcell0', ?_, ?_, ?_, hwf'⟩
+    refine ⟨c', .step hstep' hreach', hst', ?_, ?_, hbits', hcell0',
+            hscratch_head', ?_, ?_, ?_, ?_, hwf'⟩
     · -- desc head: (c.head + 1) + rem - 1 = c.head + (rem + 1) - 1
       rw [hhead', hc₁_desc_h]; omega
+    · -- desc cells
+      rw [hdcells', hc₁_desc_cells]
+    · -- scratch cells beyond ow preserved
+      intro j hj
+      rw [hscratch_beyond' j hj, hscratch₁]
+      simp only [Tape.writeAndMove, Tape.move, Tape.write]
+      simp only [show ¬((c.work utmScratchTape).head = 0) from by rw [hscratch_h]; omega,
+                  ↓reduceIte]
+      rw [Function.update_apply, if_neg (by rw [hscratch_h]; omega)]
     · -- other tapes
       intro i hne_d hne_s
       rw [hother' i hne_d hne_s, hc₁_other i hne_d hne_s]
@@ -2043,8 +2093,10 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     ∃ B, (lookupTM (n := n) k).HoareTime
       (fun inp work out =>
         descOnTape desc (work utmDescTape) ∧
+        (work utmDescTape).head = 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
         scratchHasInputPattern k n q iHead wHeads oHead (work utmScratchTape) ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         out.read ≠ Γ.start ∧ out.head ≥ 1)
@@ -2064,7 +2116,7 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
   refine ⟨lookupTimeBound k n desc.length, ?_⟩
   -- Unfold HoareTime
   intro inp work out hpre
-  obtain ⟨hdescOnTape, hheads, hscratch_inp, hwf, hinp_ns, hinp_h, hout_ns, hout_h⟩ := hpre
+  obtain ⟨hdescOnTape, hdesc_head_eq, hheads, hscratch_inp, hscratchSentinel, hwf, hinp_ns, hinp_h, hout_ns, hout_h⟩ := hpre
   -- Build the initial configuration
   set c₀ : Cfg 4 (lookupTM (n := n) k).Q :=
     { state := (lookupTM k).qstart
@@ -2249,7 +2301,8 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
       (c₄.work utmScratchTape).cells (1 + j) =
       Γ.ofBool (outputBits[j]'hj) := by
     intro j _ hj; omega
-  obtain ⟨c₅, hreach₅, hst₅, hdesc_h₅, hbits₅, hcell0₅, hother₅, hinp₅, hout₅, hwf₅⟩ :=
+  obtain ⟨c₅, hreach₅, hst₅, hdesc_h₅, hdesc_cells₅, hbits₅, hcell0₅,
+          hscratch_h₅, hscratch_beyond₅, hother₅, hinp₅, hout₅, hwf₅⟩ :=
     copyOutput_loop c₄ (TMEncoding.outputWidth k n) (le_refl _)
       (by exact hst₄)
       hwf₄
@@ -2283,7 +2336,7 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
       (by rw [hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_ns)
       (by rw [hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_h)
       hc₅_desc_ns rfl hc₅_scratch_ns
-      (by sorry)
+      (by rw [hscratch_h₅]; omega)
       hc₅_other
   -- ──────────────────────────────────────────────────────────────────
   -- Phase 7: rewindScratchFinal — rewind scratch and halt
@@ -2326,7 +2379,8 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     -- descOnTape: desc tape cells unchanged throughout
     have hfinal_descOnTape : descOnTape desc (c₇.work utmDescTape) := by
       have hcells : (c₇.work utmDescTape).cells = (work utmDescTape).cells := by
-        sorry
+        rw [hc₇_desc, hdesc_cells₆, hdesc_cells₅, hdesc_cells₄, hc₃_desc,
+            hdesc_cells₂, hdesc_cells₁]
       constructor
       · rw [hcells]; exact hdescOnTape.1
       constructor
@@ -2350,7 +2404,14 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
             hbits₅ i hi (by rw [houtLen] at hi; exact hi)
           rw [show i + 1 = 1 + i from by omega]; exact this
         · -- cells (length + 1) = blank
-          sorry
+          show (c₇.work utmScratchTape).cells (outputBits.length + 1) = Γ.blank
+          rw [hcells]
+          have hge : outputBits.length + 1 ≥ TMEncoding.outputWidth k n + 1 := by
+            rw [houtLen]
+          have h_beyond := hscratch_beyond₅ (outputBits.length + 1) hge
+          rw [h_beyond, hc₄_scratch, hscratch_cells₃, hscratch_cells₂,
+              hc₁_scratch, houtLen]
+          exact hscratchSentinel
       · exact hscratch_h₇
     refine ⟨hfinal_descOnTape, hfinal_scratchOutput, ?_, hscratch_h₇, hwf₇⟩
     -- desc head = 1
