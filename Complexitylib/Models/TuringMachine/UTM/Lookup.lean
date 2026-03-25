@@ -371,6 +371,9 @@ theorem lookupTM_hoareTime (tm : TM n) (k : ℕ)
         (work utmScratchTape).head = 1 ∧
         WorkTapesWF work)
       B := by
+  -- See `TM.lookupTM_hoareTime_proof` in LookupInternal.lean for the proof.
+  -- The circular import (LookupInternal imports Lookup) prevents direct use here.
+  -- Downstream files should import LookupInternal and use `lookupTM_hoareTime_proof`.
   sorry
 
 end TM

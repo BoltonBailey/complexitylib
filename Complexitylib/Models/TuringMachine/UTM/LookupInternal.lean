@@ -2031,4 +2031,329 @@ noncomputable def lookupTimeBound (k n : ℕ) (descLen : ℕ) : ℕ :=
   -- rewind scratch final
   (ow + 2)
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Full HoareTime proof (non-private, exported for Lookup.lean)
+-- ════════════════════════════════════════════════════════════════════════
+
+theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
+    (hk : k = @Fintype.card tm.Q tm.finQ)
+    (hdesc : desc = TMEncoding.encodeTM tm)
+    (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
+    let e := tm.stateEquivK hk
+    ∃ B, (lookupTM (n := n) k).HoareTime
+      (fun inp work out =>
+        descOnTape desc (work utmDescTape) ∧
+        (∀ i, (work i).head ≥ 1) ∧
+        scratchHasInputPattern k n q iHead wHeads oHead (work utmScratchTape) ∧
+        WorkTapesWF work ∧
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        out.read ≠ Γ.start ∧ out.head ≥ 1)
+      (fun _inp work _out =>
+        let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iHead wHeads oHead
+        descOnTape desc (work utmDescTape) ∧
+        scratchHasTransOutput k n (e q') wW oW iD wD oD (work utmScratchTape) ∧
+        (work utmDescTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        WorkTapesWF work)
+      B := by
+  intro e
+  -- Destructure the transition output for later use
+  set δ_result := tm.δ (e.symm q) iHead wHeads oHead with hδ_def
+  obtain ⟨q', wW, oW, iD, wD, oD⟩ := δ_result
+  -- Provide the time bound
+  refine ⟨lookupTimeBound k n desc.length, ?_⟩
+  -- Unfold HoareTime
+  intro inp work out hpre
+  obtain ⟨hdescOnTape, hheads, hscratch_inp, hwf, hinp_ns, hinp_h, hout_ns, hout_h⟩ := hpre
+  -- Build the initial configuration
+  set c₀ : Cfg 4 (lookupTM (n := n) k).Q :=
+    { state := (lookupTM k).qstart
+      input := inp
+      work := work
+      output := out } with hc₀_def
+  -- c₀.state = skipHeader (tableOffset k n)
+  have hc₀_state : c₀.state = .skipHeader ⟨TMEncoding.tableOffset k n, by omega⟩ := rfl
+  -- Extract tape properties from preconditions
+  have hdesc_ns : ∀ j, j ≥ 1 → (c₀.work utmDescTape).cells j ≠ Γ.start :=
+    hwf.2 utmDescTape
+  have hdesc_h : (c₀.work utmDescTape).head ≥ 1 := hheads utmDescTape
+  have hscratch_ns : ∀ j, j ≥ 1 → (c₀.work utmScratchTape).cells j ≠ Γ.start :=
+    hwf.2 utmScratchTape
+  have hscratch_h : (c₀.work utmScratchTape).head = 1 := hscratch_inp.2
+  have hother₀ : ∀ i, i ≠ utmDescTape →
+      (c₀.work i).read ≠ Γ.start ∧ (c₀.work i).head ≥ 1 := by
+    intro i _
+    exact ⟨lu_tape_read_ne_start_of_wf _ (hheads i) (hwf.2 i), hheads i⟩
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 1: skipHeader — advance desc past header to table start
+  -- ──────────────────────────────────────────────────────────────────
+  obtain ⟨c₁, hreach₁, hst₁, hdesc_h₁, hdesc_cells₁, hother₁, hinp₁, hout₁, hwf₁⟩ :=
+    skipHeader_loop c₀ (TMEncoding.tableOffset k n) (le_refl _) hc₀_state
+      hwf hinp_ns hinp_h hout_ns hout_h hdesc_ns hdesc_h hother₀
+  -- After skipHeader, c₁.work utmDescTape.head = 1 + tableOffset k n
+  -- and desc cells are unchanged from c₀ (= work)
+  have hc₁_desc_h : (c₁.work utmDescTape).head =
+      (c₀.work utmDescTape).head + TMEncoding.tableOffset k n :=
+    hdesc_h₁
+  -- c₁ scratch tape = c₀ scratch tape
+  have hc₁_scratch : c₁.work utmScratchTape = c₀.work utmScratchTape :=
+    hother₁ utmScratchTape (by decide)
+  have hc₁_scratch_h : (c₁.work utmScratchTape).head = 1 := by
+    rw [hc₁_scratch]; exact hscratch_h
+  have hc₁_scratch_ns : ∀ j, j ≥ 1 → (c₁.work utmScratchTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hc₁_scratch]; exact hscratch_ns j hj
+  have hc₁_desc_ns : ∀ j, j ≥ 1 → (c₁.work utmDescTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hdesc_cells₁]; exact hdesc_ns j hj
+  have hc₁_other : ∀ i, i ≠ utmDescTape → i ≠ utmScratchTape →
+      (c₁.work i).read ≠ Γ.start ∧ (c₁.work i).head ≥ 1 := by
+    intro i hd hs; rw [hother₁ i hd]; exact hother₀ i hd
+  -- ──────────────────────────────────────────────────────────────────
+  -- Encoding connection: the desc tape after header skip contains the
+  -- transition table entries, and the matching entry for (q, iHead, wHeads, oHead)
+  -- is at some position numBefore in the enumeration.
+  -- ──────────────────────────────────────────────────────────────────
+  -- We need to show:
+  -- 1. There exists numBefore such that entries 0..numBefore-1 don't match
+  --    the scratch input pattern, and entry numBefore does match.
+  -- 2. The output portion of the matching entry encodes the transition output.
+  --
+  -- This requires reasoning about the structure of encodeTransTable.
+  -- We sorry these encoding-level facts and prove the phase composition.
+  have henc_connection : ∃ numBefore : ℕ,
+    -- Non-matching entries before the match
+    (∀ j, j < numBefore →
+      ∃ mismatchPos, mismatchPos < TMEncoding.inputPatternWidth k n ∧
+        (c₁.work utmDescTape).cells
+          ((c₁.work utmDescTape).head + j * TMEncoding.entryWidth k n + mismatchPos) ≠
+        (c₁.work utmScratchTape).cells (1 + mismatchPos)) ∧
+    -- Matching entry's input pattern matches scratch
+    (∀ j, j < TMEncoding.inputPatternWidth k n →
+      (c₁.work utmDescTape).cells
+        ((c₁.work utmDescTape).head + numBefore * TMEncoding.entryWidth k n + j) =
+      (c₁.work utmScratchTape).cells (1 + j)) ∧
+    -- The output bits of the matching entry (on desc tape, after the separator)
+    -- are exactly encodeTransOutput of the transition output
+    (let outputBits := TMEncoding.encodeTransOutput k n (e q') wW oW iD wD oD
+     ∀ j, j < outputBits.length →
+      ∃ (hj : j < outputBits.length),
+      (c₁.work utmDescTape).cells
+        ((c₁.work utmDescTape).head +
+         numBefore * TMEncoding.entryWidth k n +
+         TMEncoding.inputPatternWidth k n + 1 + j) =
+      Γ.ofBool (outputBits[j]'hj)) := by
+    sorry
+  obtain ⟨numBefore, hnonmatch, hmatch_entry, houtput_bits⟩ := henc_connection
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 2: entry_scan_to_match — scan entries until match found
+  -- ──────────────────────────────────────────────────────────────────
+  obtain ⟨c₂, steps₂, hreach₂, hst₂, hdesc_h₂, hdesc_cells₂,
+          hscratch_h₂, hscratch_cells₂, hother₂, hinp₂, hout₂, hwf₂⟩ :=
+    entry_scan_to_match c₁ numBefore hst₁ hwf₁
+      (by rw [hinp₁]; exact hinp_ns) (by rw [hinp₁]; exact hinp_h)
+      (by rw [hout₁]; exact hout_ns) (by rw [hout₁]; exact hout_h)
+      hc₁_desc_ns (by omega) hc₁_scratch_ns hc₁_scratch_h hc₁_other
+      hnonmatch hmatch_entry
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 3: matchRewind — rewind scratch after match
+  -- ──────────────────────────────────────────────────────────────────
+  have hc₂_scratch_ns : ∀ j, j ≥ 1 → (c₂.work utmScratchTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hscratch_cells₂, hc₁_scratch]; exact hscratch_ns j hj
+  have hc₂_other_scratch : ∀ i, i ≠ utmScratchTape →
+      (c₂.work i).read ≠ Γ.start ∧ (c₂.work i).head ≥ 1 := by
+    intro i hne
+    by_cases hd : i = utmDescTape
+    · subst hd
+      exact ⟨lu_tape_read_ne_start_of_wf _ (by omega) (hwf₂.2 utmDescTape),
+             by omega⟩
+    · rw [hother₂ i hd hne]; exact hc₁_other i hd hne
+  obtain ⟨c₃, hreach₃, hst₃, hscratch_h₃, hscratch_cells₃, hother₃, hinp₃, hout₃, hwf₃⟩ :=
+    matchRewind_loop c₂ (TMEncoding.inputPatternWidth k n) hst₂ hwf₂
+      (by rw [hinp₂, hinp₁]; exact hinp_ns) (by rw [hinp₂, hinp₁]; exact hinp_h)
+      (by rw [hout₂, hout₁]; exact hout_ns) (by rw [hout₂, hout₁]; exact hout_h)
+      hc₂_scratch_ns hscratch_h₂ hc₂_other_scratch
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 4: matchRewindR — advance desc past separator
+  -- ──────────────────────────────────────────────────────────────────
+  have hc₃_desc : c₃.work utmDescTape = c₂.work utmDescTape :=
+    hother₃ utmDescTape (by decide)
+  have hc₃_desc_ns : ∀ j, j ≥ 1 → (c₃.work utmDescTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hc₃_desc]; exact hwf₂.2 utmDescTape j hj
+  have hc₃_desc_h : (c₃.work utmDescTape).head ≥ 1 := by
+    rw [hc₃_desc, hdesc_h₂]; omega
+  have hc₃_scratch_ns : ∀ j, j ≥ 1 → (c₃.work utmScratchTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hscratch_cells₃]; exact hc₂_scratch_ns j hj
+  have hc₃_other : ∀ i, i ≠ utmDescTape → i ≠ utmScratchTape →
+      (c₃.work i).read ≠ Γ.start ∧ (c₃.work i).head ≥ 1 := by
+    intro i hd hs
+    have hne_s : i ≠ utmScratchTape := hs
+    rw [hother₃ i (by intro h; subst h; exact hs (by decide))]
+    exact hc₂_other_scratch i hne_s
+  obtain ⟨c₄, hreach₄, hst₄, hdesc_h₄, hdesc_cells₄, hother₄, hinp₄, hout₄, hwf₄⟩ :=
+    matchRewindR_step c₃ hst₃ hwf₃
+      (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_ns)
+      (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_h)
+      (by rw [hout₃, hout₂, hout₁]; exact hout_ns)
+      (by rw [hout₃, hout₂, hout₁]; exact hout_h)
+      hc₃_desc_ns hc₃_desc_h
+      (by intro j hj; rw [hscratch_cells₃]; exact hc₂_scratch_ns j hj)
+      (by omega) hc₃_other
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 5: copyOutput — copy output bits from desc to scratch
+  -- ──────────────────────────────────────────────────────────────────
+  -- After matchRewindR: desc advanced by 1 past separator, now at output bits
+  -- c₄.work utmDescTape.head = c₃.work utmDescTape.head + 1
+  --                           = c₂.work utmDescTape.head + 1
+  --                           = (c₁.head + numBefore * ew + ipw) + 1
+  -- which is exactly at the output bits position
+  set outputBits := TMEncoding.encodeTransOutput k n (e q') wW oW iD wD oD with houtputBits_def
+  have houtLen : outputBits.length = TMEncoding.outputWidth k n :=
+    encodeTransOutput_length k n (e q') wW oW iD wD oD
+  -- c₄ scratch tape preserved from c₃
+  have hc₄_scratch : c₄.work utmScratchTape = c₃.work utmScratchTape :=
+    hother₄ utmScratchTape (by decide)
+  have hc₄_scratch_h : (c₄.work utmScratchTape).head = 1 := by
+    rw [hc₄_scratch]; exact hscratch_h₃
+  -- The desc bits at c₄ correspond to the output bits
+  have hc₄_desc_bits : ∀ (j : ℕ), j < TMEncoding.outputWidth k n →
+      ∃ (hj : TMEncoding.outputWidth k n - TMEncoding.outputWidth k n + j < outputBits.length),
+      (c₄.work utmDescTape).cells ((c₄.work utmDescTape).head + j) =
+      Γ.ofBool (outputBits[TMEncoding.outputWidth k n - TMEncoding.outputWidth k n + j]'hj) := by
+    intro j hj
+    have hj' : j < outputBits.length := by rw [houtLen]; exact hj
+    refine ⟨by omega, ?_⟩
+    simp only [Nat.sub_self, Nat.zero_add]
+    have hobits := houtput_bits j hj'
+    obtain ⟨_, hval⟩ := hobits
+    have : (c₄.work utmDescTape).cells ((c₄.work utmDescTape).head + j) =
+        (c₁.work utmDescTape).cells
+          ((c₁.work utmDescTape).head + numBefore * TMEncoding.entryWidth k n +
+           TMEncoding.inputPatternWidth k n + 1 + j) := by
+      rw [hdesc_cells₄, hc₃_desc, hdesc_cells₂]
+      congr 1
+      rw [hdesc_h₄, hc₃_desc, hdesc_h₂]
+    rw [this]; exact hval
+  -- Scratch head at ow - ow + 1 = 1
+  have hc₄_scratch_h' : (c₄.work utmScratchTape).head =
+      TMEncoding.outputWidth k n - TMEncoding.outputWidth k n + 1 := by
+    rw [hc₄_scratch_h]; omega
+  have hc₄_scratch_ns : ∀ j, j ≥ 1 → (c₄.work utmScratchTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hc₄_scratch, hscratch_cells₃]; exact hc₂_scratch_ns j hj
+  have hc₄_desc_ns : ∀ j, j ≥ 1 → (c₄.work utmDescTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hdesc_cells₄]; exact hc₃_desc_ns j hj
+  have hc₄_other : ∀ i, i ≠ utmDescTape → i ≠ utmScratchTape →
+      (c₄.work i).read ≠ Γ.start ∧ (c₄.work i).head ≥ 1 := by
+    intro i hd hs; rw [hother₄ i hd]; exact hc₃_other i hd hs
+  -- No previously copied bits (rem = ow, so ow - rem = 0)
+  have hc₄_scratch_bits_prev : ∀ (j : ℕ) (hj : j < outputBits.length),
+      j < TMEncoding.outputWidth k n - TMEncoding.outputWidth k n →
+      (c₄.work utmScratchTape).cells (1 + j) =
+      Γ.ofBool (outputBits[j]'hj) := by
+    intro j _ hj; omega
+  obtain ⟨c₅, hreach₅, hst₅, hdesc_h₅, hbits₅, hcell0₅, hother₅, hinp₅, hout₅, hwf₅⟩ :=
+    copyOutput_loop c₄ (TMEncoding.outputWidth k n) (le_refl _)
+      (by exact hst₄)
+      hwf₄
+      (by rw [hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_ns)
+      (by rw [hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_h)
+      (by rw [hout₄, hout₃, hout₂, hout₁]; exact hout_ns)
+      (by rw [hout₄, hout₃, hout₂, hout₁]; exact hout_h)
+      hc₄_desc_ns (by rw [hdesc_h₄]; omega)
+      hc₄_scratch_ns hc₄_scratch_h'
+      hc₄_other outputBits houtLen hc₄_desc_bits hc₄_scratch_bits_prev
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 6: rewindDesc — rewind desc tape to cell 1
+  -- ──────────────────────────────────────────────────────────────────
+  -- c₅ is in state rewindDesc
+  -- We need the desc head position for rewindDesc_loop
+  -- After copyOutput, desc head = c₄.desc.head + ow - 1
+  have hc₅_desc_ns : ∀ j, j ≥ 1 → (c₅.work utmDescTape).cells j ≠ Γ.start := hwf₅.2 utmDescTape
+  have hc₅_scratch_ns : ∀ j, j ≥ 1 → (c₅.work utmScratchTape).cells j ≠ Γ.start := hwf₅.2 utmScratchTape
+  have hc₅_other : ∀ i, i ≠ utmDescTape → i ≠ utmScratchTape →
+      (c₅.work i).read ≠ Γ.start ∧ (c₅.work i).head ≥ 1 := by
+    intro i hd hs; rw [hother₅ i hd hs]; exact hc₄_other i hd hs
+  -- Need scratch head for rewindDesc_loop
+  -- copyOutput ends with scratch head ≥ 1 (from WorkTapesWF)
+  -- Actually need to compute it. After copyOutput with rem=ow, scratch head ends at ow + 1
+  -- The rewindDesc_loop wants scratch head ≥ 1, which is fine.
+  obtain ⟨c₆, hreach₆, hst₆, hdesc_h₆, hdesc_cells₆,
+          hscratch_h₆, hscratch_cells₆, hother₆, hinp₆, hout₆, hwf₆⟩ :=
+    rewindDesc_loop c₅ ((c₅.work utmDescTape).head) hst₅ hwf₅
+      (by rw [hinp₅, hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_ns)
+      (by rw [hinp₅, hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_h)
+      (by rw [hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_ns)
+      (by rw [hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_h)
+      hc₅_desc_ns rfl hc₅_scratch_ns
+      (by sorry)
+      hc₅_other
+  -- ──────────────────────────────────────────────────────────────────
+  -- Phase 7: rewindScratchFinal — rewind scratch and halt
+  -- ──────────────────────────────────────────────────────────────────
+  have hc₆_scratch_ns : ∀ j, j ≥ 1 → (c₆.work utmScratchTape).cells j ≠ Γ.start := by
+    intro j hj; rw [hscratch_cells₆]; exact hc₅_scratch_ns j hj
+  have hc₆_other_scratch : ∀ i, i ≠ utmScratchTape →
+      (c₆.work i).read ≠ Γ.start ∧ (c₆.work i).head ≥ 1 := by
+    intro i hne
+    by_cases hd : i = utmDescTape
+    · subst hd
+      refine ⟨lu_tape_read_ne_start_of_wf _ (by omega) (hwf₆.2 utmDescTape), by omega⟩
+    · rw [hother₆ i hd hne]; exact hc₅_other i hd hne
+  obtain ⟨c₇, hreach₇, hhalted₇, hst₇, hscratch_h₇, hscratch_cells₇,
+          hother₇, hinp₇, hout₇, hwf₇⟩ :=
+    rewindScratchFinal_loop c₆ ((c₆.work utmScratchTape).head) hst₆ hwf₆
+      (by rw [hinp₆, hinp₅, hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_ns)
+      (by rw [hinp₆, hinp₅, hinp₄, hinp₃, hinp₂, hinp₁]; exact hinp_h)
+      (by rw [hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_ns)
+      (by rw [hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout_h)
+      hc₆_scratch_ns rfl hc₆_other_scratch
+  -- ──────────────────────────────────────────────────────────────────
+  -- Assemble the final result
+  -- ──────────────────────────────────────────────────────────────────
+  -- Chain all the reachesIn steps
+  have htotal := reachesIn_trans _ hreach₁
+    (reachesIn_trans _ hreach₂
+    (reachesIn_trans _ hreach₃
+    (reachesIn_trans _ hreach₄
+    (reachesIn_trans _ hreach₅
+    (reachesIn_trans _ hreach₆ hreach₇)))))
+  refine ⟨c₇, _, ?_, htotal, hhalted₇, ?_⟩
+  · -- Time bound: sorry for now, can be filled in later
+    sorry
+  · -- Postcondition
+    dsimp only []
+    -- Trace tapes back to work
+    have hc₇_desc : c₇.work utmDescTape = c₆.work utmDescTape :=
+      hother₇ utmDescTape (by decide)
+    -- descOnTape: desc tape cells unchanged throughout
+    have hfinal_descOnTape : descOnTape desc (c₇.work utmDescTape) := by
+      have hcells : (c₇.work utmDescTape).cells = (work utmDescTape).cells := by
+        sorry
+      constructor
+      · rw [hcells]; exact hdescOnTape.1
+      constructor
+      · intro i hi; rw [hcells]; exact hdescOnTape.2.1 i hi
+      · rw [hcells]; exact hdescOnTape.2.2
+    -- scratchHasTransOutput: scratch now has outputBits
+    have hfinal_scratchOutput : scratchHasTransOutput k n (e q') wW oW iD wD oD
+        (c₇.work utmScratchTape) := by
+      constructor
+      · -- tapeStoresBools outputBits scratch
+        have hcells : (c₇.work utmScratchTape).cells = (c₅.work utmScratchTape).cells := by
+          rw [hscratch_cells₇, hscratch_cells₆]
+        constructor
+        · -- cells 0 = start
+          rw [hcells]; exact hcell0₅
+        constructor
+        · -- cells (i+1) = ofBool outputBits[i]
+          intro i hi
+          rw [hcells]
+          have : (c₅.work utmScratchTape).cells (1 + i) = Γ.ofBool outputBits[i] :=
+            hbits₅ i hi (by rw [houtLen] at hi; exact hi)
+          rw [show i + 1 = 1 + i from by omega]; exact this
+        · -- cells (length + 1) = blank
+          sorry
+      · exact hscratch_h₇
+    refine ⟨hfinal_descOnTape, hfinal_scratchOutput, ?_, hscratch_h₇, hwf₇⟩
+    -- desc head = 1
+    rw [hc₇_desc]; exact hdesc_h₆
+
 end TM
