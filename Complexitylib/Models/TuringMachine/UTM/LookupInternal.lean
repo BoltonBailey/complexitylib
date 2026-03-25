@@ -258,7 +258,8 @@ private theorem compare_match_loop
       c'.state = .matchRewind ∧
       (c'.work utmDescTape).head = (c.work utmDescTape).head + (ipw - pos) ∧
       (c'.work utmDescTape).cells = (c.work utmDescTape).cells ∧
-      (c'.work utmScratchTape).head = (c.work utmScratchTape).head + (ipw - pos) ∧
+      -- Scratch advances by ipw - pos - 1 (last step only advances desc)
+      (c'.work utmScratchTape).head = (c.work utmScratchTape).head + (ipw - pos - 1) ∧
       (c'.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
       (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
@@ -646,7 +647,8 @@ private theorem entry_scan_to_match
         (c.work utmDescTape).head + numBefore * TMEncoding.entryWidth k n +
           TMEncoding.inputPatternWidth k n ∧
       (c'.work utmDescTape).cells = (c.work utmDescTape).cells ∧
-      (c'.work utmScratchTape).head = 1 + TMEncoding.inputPatternWidth k n ∧
+      -- Scratch advanced by ipw - 1 (last compare step only advances desc)
+      (c'.work utmScratchTape).head = TMEncoding.inputPatternWidth k n ∧
       (c'.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
       (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
