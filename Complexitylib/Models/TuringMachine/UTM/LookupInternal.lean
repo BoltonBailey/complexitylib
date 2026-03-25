@@ -237,7 +237,7 @@ private theorem skipHeader_loop
     `j < ipw`. -/
 private theorem compare_match_loop
     (c : Cfg 4 (lookupTM (n := n) k).Q)
-    (pos : ℕ) (hpos : pos ≤ TMEncoding.inputPatternWidth k n)
+    (pos : ℕ) (hpos : pos < TMEncoding.inputPatternWidth k n)
     (hstate : c.state = .compare ⟨pos, by omega⟩)
     (hwf : WorkTapesWF c.work)
     (hinp : c.input.read ≠ Γ.start) (hinp_h : c.input.head ≥ 1)
@@ -452,7 +452,115 @@ private theorem rewindScratch_loop
       (∀ i, i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
-  sorry
+  induction sh generalizing c with
+  | zero =>
+    -- scratch head = 0, so read ▷ at cell 0
+    have hread : (c.work utmScratchTape).read = Γ.start := by
+      simp [Tape.read, hscratch_h, hwf.1 utmScratchTape]
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    -- Step 1: rewindScratch → rewindScratchR (read ▷, move right)
+    have hstep1 : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .rewindScratchR ∧
+        (c₁.work utmScratchTape).head = 1 ∧
+        (c₁.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmScratchTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hscratch_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hscratch_h]
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        exact lu_tape_idle_preserve _ (hother i hne).1 (hother i hne).2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep1', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep1
+    -- Step 2: rewindScratchR → compare 0 (all idle)
+    have hheads1 : ∀ i, (c₁.work i).head ≥ 1 := by
+      intro i; by_cases h : i = utmScratchTape
+      · rw [h]; omega
+      · rw [hw1 i h]; exact (hother i h).2
+    have hwf1 : WorkTapesWF c₁.work := by
+      constructor
+      · intro i; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.1 utmScratchTape
+        · rw [hw1 i h]; exact hwf.1 i
+      · intro i j hj; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.2 utmScratchTape j hj
+        · rw [hw1 i h]; exact hwf.2 i j hj
+    have hinp1' : c₁.input.read ≠ Γ.start := by rw [hinp1]; exact hinp
+    have hout1' : c₁.output.read ≠ Γ.start := by rw [hout1]; exact hout
+    have hstep2 : ∃ c₂, (lookupTM (n := n) k).step c₁ = some c₂ ∧
+        c₂.state = .compare ⟨0, by omega⟩ ∧
+        c₂.work = c₁.work ∧
+        c₂.input = c₁.input ∧ c₂.output = c₁.output := by
+      simp only [TM.step, lookupTM, hst1]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+      · ext i; dsimp only []
+        exact lu_tape_idle_preserve (c₁.work i)
+          (lu_tape_read_ne_start_of_wf _ (hheads1 i) (hwf1.2 i)) (hheads1 i)
+      · simp only [idleDir, hinp1', ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve c₁.output hout1' (by rw [hout1]; exact hout_h)
+    obtain ⟨c₂, hstep2', hst2, hwork2, hinp2, hout2⟩ := hstep2
+    refine ⟨c₂, .step hstep1' (.step hstep2' .zero), hst2, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hwork2]; exact hhead1
+    · rw [hwork2, hcells1]
+    · intro i hne; rw [hwork2, hw1 i hne]
+    · rw [hinp2, hinp1]
+    · rw [hout2, hout1]
+    · rw [hwork2]; exact hwf1
+  | succ sh ih =>
+    have hread_ne : (c.work utmScratchTape).read ≠ Γ.start := by
+      simp [Tape.read, hscratch_h]; exact hscratch_ns (sh + 1) (by omega)
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    have hstep : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .rewindScratch ∧
+        (c₁.work utmScratchTape).head = sh ∧
+        (c₁.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmScratchTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread_ne]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · omega
+        · simp [hscratch_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · rfl
+        · exact Function.update_eq_self _ _
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        exact lu_tape_idle_preserve _ (hother i hne).1 (hother i hne).2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep
+    have hwf1 : WorkTapesWF c₁.work := by
+      constructor
+      · intro i; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.1 utmScratchTape
+        · rw [hw1 i h]; exact hwf.1 i
+      · intro i j hj; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.2 utmScratchTape j hj
+        · rw [hw1 i h]; exact hwf.2 i j hj
+    obtain ⟨c_f, hreach, hst_f, hhead_f, hcells_f, hw_f, hinp_f, hout_f, hwf_f⟩ := ih c₁
+      hst1 hwf1
+      (by rw [hinp1]; exact hinp) (by rw [hinp1]; exact hinp_h)
+      (by rw [hout1]; exact hout) (by rw [hout1]; exact hout_h)
+      (by intro j hj; rw [hcells1]; exact hscratch_ns j hj)
+      hhead1
+      (by intro i hne; rw [hw1 i hne]; exact hother i hne)
+    refine ⟨c_f, .step hstep' hreach, hst_f, hhead_f, ?_, ?_, ?_, ?_, hwf_f⟩
+    · rw [hcells_f, hcells1]
+    · intro i hne; rw [hw_f i hne, hw1 i hne]
+    · rw [hinp_f, hinp1]
+    · rw [hout_f, hout1]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 5: process a non-matching entry
@@ -572,7 +680,89 @@ private theorem matchRewind_loop
       (∀ i, i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
-  sorry
+  induction sh generalizing c with
+  | zero =>
+    -- scratch head = 0, so read ▷ at cell 0
+    have hread : (c.work utmScratchTape).read = Γ.start := by
+      simp [Tape.read, hscratch_h, hwf.1 utmScratchTape]
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    -- Step: matchRewind → matchRewindR (read ▷, move right)
+    have hstep : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .matchRewindR ∧
+        (c₁.work utmScratchTape).head = 1 ∧
+        (c₁.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmScratchTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hscratch_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hscratch_h]
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        exact lu_tape_idle_preserve _ (hother i hne).1 (hother i hne).2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep
+    refine ⟨c₁, .step hstep' .zero, hst1, hhead1, hcells1, hw1, hinp1, hout1, ?_⟩
+    constructor
+    · intro i; by_cases h : i = utmScratchTape
+      · rw [h, hcells1]; exact hwf.1 utmScratchTape
+      · rw [hw1 i h]; exact hwf.1 i
+    · intro i j hj; by_cases h : i = utmScratchTape
+      · rw [h, hcells1]; exact hwf.2 utmScratchTape j hj
+      · rw [hw1 i h]; exact hwf.2 i j hj
+  | succ sh ih =>
+    have hread_ne : (c.work utmScratchTape).read ≠ Γ.start := by
+      simp [Tape.read, hscratch_h]; exact hscratch_ns (sh + 1) (by omega)
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    have hstep : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .matchRewind ∧
+        (c₁.work utmScratchTape).head = sh ∧
+        (c₁.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmScratchTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread_ne]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · omega
+        · simp [hscratch_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · rfl
+        · exact Function.update_eq_self _ _
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        exact lu_tape_idle_preserve _ (hother i hne).1 (hother i hne).2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep
+    have hwf1 : WorkTapesWF c₁.work := by
+      constructor
+      · intro i; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.1 utmScratchTape
+        · rw [hw1 i h]; exact hwf.1 i
+      · intro i j hj; by_cases h : i = utmScratchTape
+        · rw [h, hcells1]; exact hwf.2 utmScratchTape j hj
+        · rw [hw1 i h]; exact hwf.2 i j hj
+    obtain ⟨c_f, hreach, hst_f, hhead_f, hcells_f, hw_f, hinp_f, hout_f, hwf_f⟩ := ih c₁
+      hst1 hwf1
+      (by rw [hinp1]; exact hinp) (by rw [hinp1]; exact hinp_h)
+      (by rw [hout1]; exact hout) (by rw [hout1]; exact hout_h)
+      (by intro j hj; rw [hcells1]; exact hscratch_ns j hj)
+      hhead1
+      (by intro i hne; rw [hw1 i hne]; exact hother i hne)
+    refine ⟨c_f, .step hstep' hreach, hst_f, hhead_f, ?_, ?_, ?_, ?_, hwf_f⟩
+    · rw [hcells_f, hcells1]
+    · intro i hne; rw [hw_f i hne, hw1 i hne]
+    · rw [hinp_f, hinp1]
+    · rw [hout_f, hout1]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 8: matchRewindR step
@@ -588,6 +778,8 @@ private theorem matchRewindR_step
     (hout : c.output.read ≠ Γ.start) (hout_h : c.output.head ≥ 1)
     (hdesc_ns : ∀ j, j ≥ 1 → (c.work utmDescTape).cells j ≠ Γ.start)
     (hdesc_h : (c.work utmDescTape).head ≥ 1)
+    (hscratch_ns : ∀ j, j ≥ 1 → (c.work utmScratchTape).cells j ≠ Γ.start)
+    (hscratch_h : (c.work utmScratchTape).head ≥ 1)
     (hother : ∀ i, i ≠ utmDescTape → i ≠ utmScratchTape →
       (c.work i).read ≠ Γ.start ∧ (c.work i).head ≥ 1) :
     let ow := TMEncoding.outputWidth k n
@@ -603,6 +795,8 @@ private theorem matchRewindR_step
   have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by simp [lookupTM, hstate]
   have hdesc_read : (c.work utmDescTape).read ≠ Γ.start :=
     lu_tape_read_ne_start_of_wf _ hdesc_h hdesc_ns
+  have hscratch_read : (c.work utmScratchTape).read ≠ Γ.start :=
+    lu_tape_read_ne_start_of_wf _ hscratch_h hscratch_ns
   -- matchRewindR: desc moves right, scratch and others idle
   have hstep : ∃ c', (lookupTM (n := n) k).step c = some c' ∧
       c'.state = .copyOutput ⟨ow, by omega⟩ ∧
@@ -634,10 +828,30 @@ private theorem matchRewindR_step
     · rfl
     · rw [lu_readBackWrite_toΓ_eq hdesc_read]; exact Function.update_eq_self _ _
   · -- other tapes
-    sorry
+    intro i hne; rw [hother₁ i hne]
+    by_cases hi : i = utmScratchTape
+    · subst hi; exact lu_tape_idle_preserve _ hscratch_read hscratch_h
+    · exact lu_tape_idle_preserve _ (hother i hne hi).1 (hother i hne hi).2
   · rw [hinp₁]; simp only [idleDir, hinp, ↓reduceIte, Tape.move]
   · rw [hout₁]; exact lu_tape_idle_preserve _ hout hout_h
-  · sorry
+  · -- WorkTapesWF
+    have hdesc_cells : (c'.work utmDescTape).cells = (c.work utmDescTape).cells := by
+      rw [hdesc₁]; simp only [Tape.writeAndMove, Tape.move, Tape.write]
+      split
+      · rfl
+      · rw [lu_readBackWrite_toΓ_eq hdesc_read]; exact Function.update_eq_self _ _
+    have hother_eq : ∀ i, i ≠ utmDescTape → c'.work i = c.work i := by
+      intro i hne; rw [hother₁ i hne]
+      by_cases hi : i = utmScratchTape
+      · subst hi; exact lu_tape_idle_preserve _ hscratch_read hscratch_h
+      · exact lu_tape_idle_preserve _ (hother i hne hi).1 (hother i hne hi).2
+    constructor
+    · intro i; by_cases hi : i = utmDescTape
+      · subst hi; rw [hdesc_cells]; exact hwf.1 _
+      · rw [hother_eq i hi]; exact hwf.1 _
+    · intro i j hj; by_cases hi : i = utmDescTape
+      · subst hi; rw [hdesc_cells]; exact hwf.2 _ j hj
+      · rw [hother_eq i hi]; exact hwf.2 _ j hj
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 9: copyOutput simulation
@@ -718,7 +932,171 @@ private theorem rewindDesc_loop
       (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
       WorkTapesWF c'.work := by
-  sorry
+  induction dh generalizing c with
+  | zero =>
+    -- desc head = 0, so read ▷ at cell 0
+    have hread : (c.work utmDescTape).read = Γ.start := by
+      simp [Tape.read, hdesc_h, hwf.1 utmDescTape]
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    have hscratch_read : (c.work utmScratchTape).read ≠ Γ.start :=
+      lu_tape_read_ne_start_of_wf _ hscratch_h hscratch_ns
+    -- Step 1: rewindDesc → rewindDescR (desc moves right)
+    have hstep1 : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .rewindDescR ∧
+        (c₁.work utmDescTape).head = 1 ∧
+        (c₁.work utmDescTape).cells = (c.work utmDescTape).cells ∧
+        (∀ i, i ≠ utmDescTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hdesc_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write, hdesc_h]
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        have : (c.work i).read ≠ Γ.start ∧ (c.work i).head ≥ 1 := by
+          by_cases hi : i = utmScratchTape
+          · subst hi; exact ⟨hscratch_read, hscratch_h⟩
+          · exact hother i hne hi
+        exact lu_tape_idle_preserve _ this.1 this.2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep1', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep1
+    -- Prepare for step 2
+    have hwf1 : WorkTapesWF c₁.work := by
+      constructor
+      · intro i; by_cases h : i = utmDescTape
+        · rw [h, hcells1]; exact hwf.1 utmDescTape
+        · rw [hw1 i h]; exact hwf.1 i
+      · intro i j hj; by_cases h : i = utmDescTape
+        · rw [h, hcells1]; exact hwf.2 utmDescTape j hj
+        · rw [hw1 i h]; exact hwf.2 i j hj
+    have hinp1' : c₁.input.read ≠ Γ.start := by rw [hinp1]; exact hinp
+    have hout1' : c₁.output.read ≠ Γ.start := by rw [hout1]; exact hout
+    have hscratch_read1 : (c₁.work utmScratchTape).read ≠ Γ.start := by
+      rw [hw1 utmScratchTape (by decide)]; exact hscratch_read
+    have hscratch_h1 : (c₁.work utmScratchTape).head ≥ 1 := by
+      rw [hw1 utmScratchTape (by decide)]; exact hscratch_h
+    have hheads1_desc : (c₁.work utmDescTape).head ≥ 1 := by omega
+    -- Step 2: rewindDescR → rewindScratchFinal (desc idle, scratch moves left)
+    have hstep2 : ∃ c₂, (lookupTM (n := n) k).step c₁ = some c₂ ∧
+        c₂.state = .rewindScratchFinal ∧
+        c₂.work utmDescTape = c₁.work utmDescTape ∧
+        (c₂.work utmScratchTape).head = (c₁.work utmScratchTape).head - 1 ∧
+        (c₂.work utmScratchTape).cells = (c₁.work utmScratchTape).cells ∧
+        (∀ i, i ≠ utmDescTape → i ≠ utmScratchTape → c₂.work i = c₁.work i) ∧
+        c₂.input = c₁.input ∧ c₂.output = c₁.output := by
+      simp only [TM.step, lookupTM, hst1]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        have : ¬(utmDescTape = utmScratchTape) := by decide
+        rw [if_neg this]
+        exact lu_tape_idle_preserve _ (lu_tape_read_ne_start_of_wf _
+          hheads1_desc (hwf1.2 utmDescTape)) hheads1_desc
+      · dsimp only []
+        simp only [↓reduceIte,
+          Tape.writeAndMove, Tape.move, moveLeftDir, hscratch_read1, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hscratch_read1]
+        simp only [Tape.write]; split
+        · omega
+        · simp
+      · dsimp only []
+        simp only [↓reduceIte,
+          Tape.writeAndMove, Tape.move, moveLeftDir, hscratch_read1, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hscratch_read1]
+        simp only [Tape.write]; split
+        · rfl
+        · exact Function.update_eq_self _ _
+      · intro i hne_d hne_s; dsimp only []
+        rw [if_neg hne_s]
+        have : (c₁.work i).read ≠ Γ.start ∧ (c₁.work i).head ≥ 1 := by
+          rw [hw1 i hne_d]; exact hother i hne_d hne_s
+        exact lu_tape_idle_preserve _ this.1 this.2
+      · simp only [idleDir, hinp1', ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve c₁.output hout1' (by rw [hout1]; exact hout_h)
+    obtain ⟨c₂, hstep2', hst2, hdesc2, hshead2, hscells2, hw2, hinp2, hout2⟩ := hstep2
+    refine ⟨c₂, .step hstep1' (.step hstep2' .zero), hst2, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hdesc2]; exact hhead1
+    · rw [hdesc2, hcells1]
+    · rw [hshead2, hw1 utmScratchTape (by decide)]
+    · rw [hscells2, hw1 utmScratchTape (by decide)]
+    · intro i hne_d hne_s; rw [hw2 i hne_d hne_s, hw1 i hne_d]
+    · rw [hinp2, hinp1]
+    · rw [hout2, hout1]
+    · constructor
+      · intro i
+        by_cases hi_d : i = utmDescTape
+        · rw [hi_d, hdesc2, hcells1]; exact hwf.1 utmDescTape
+        · by_cases hi_s : i = utmScratchTape
+          · rw [hi_s, hscells2, hw1 utmScratchTape (by decide)]; exact hwf.1 utmScratchTape
+          · rw [hw2 i hi_d hi_s, hw1 i hi_d]; exact hwf.1 i
+      · intro i j hj
+        by_cases hi_d : i = utmDescTape
+        · rw [hi_d, hdesc2, hcells1]; exact hwf.2 utmDescTape j hj
+        · by_cases hi_s : i = utmScratchTape
+          · rw [hi_s, hscells2, hw1 utmScratchTape (by decide)]; exact hwf.2 utmScratchTape j hj
+          · rw [hw2 i hi_d hi_s, hw1 i hi_d]; exact hwf.2 i j hj
+  | succ dh ih =>
+    have hread_ne : (c.work utmDescTape).read ≠ Γ.start := by
+      simp [Tape.read, hdesc_h]; exact hdesc_ns (dh + 1) (by omega)
+    have hne_halt : c.state ≠ (lookupTM (n := n) k).qhalt := by
+      simp [lookupTM, hstate]
+    have hscratch_read : (c.work utmScratchTape).read ≠ Γ.start :=
+      lu_tape_read_ne_start_of_wf _ hscratch_h hscratch_ns
+    have hstep : ∃ c₁, (lookupTM (n := n) k).step c = some c₁ ∧
+        c₁.state = .rewindDesc ∧
+        (c₁.work utmDescTape).head = dh ∧
+        (c₁.work utmDescTape).cells = (c.work utmDescTape).cells ∧
+        (∀ i, i ≠ utmDescTape → c₁.work i = c.work i) ∧
+        c₁.input = c.input ∧ c₁.output = c.output := by
+      simp only [TM.step, ↓reduceIte, lookupTM, hstate, hread_ne]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · omega
+        · simp [hdesc_h]
+      · dsimp only []
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, moveLeftDir, hread_ne, ↓reduceIte]
+        rw [lu_readBackWrite_toΓ_eq hread_ne]
+        simp only [Tape.write]; split
+        · rfl
+        · exact Function.update_eq_self _ _
+      · intro i hne; dsimp only []; rw [if_neg hne]
+        have : (c.work i).read ≠ Γ.start ∧ (c.work i).head ≥ 1 := by
+          by_cases hi : i = utmScratchTape
+          · subst hi; exact ⟨hscratch_read, hscratch_h⟩
+          · exact hother i hne hi
+        exact lu_tape_idle_preserve _ this.1 this.2
+      · simp only [idleDir, hinp, ↓reduceIte, Tape.move]
+      · exact lu_tape_idle_preserve _ hout hout_h
+    obtain ⟨c₁, hstep', hst1, hhead1, hcells1, hw1, hinp1, hout1⟩ := hstep
+    have hwf1 : WorkTapesWF c₁.work := by
+      constructor
+      · intro i; by_cases h : i = utmDescTape
+        · rw [h, hcells1]; exact hwf.1 utmDescTape
+        · rw [hw1 i h]; exact hwf.1 i
+      · intro i j hj; by_cases h : i = utmDescTape
+        · rw [h, hcells1]; exact hwf.2 utmDescTape j hj
+        · rw [hw1 i h]; exact hwf.2 i j hj
+    obtain ⟨c_f, hreach, hst_f, hhead_f, hcells_f, hshead_f, hscells_f, hw_f, hinp_f, hout_f, hwf_f⟩ :=
+      ih c₁ hst1 hwf1
+        (by rw [hinp1]; exact hinp) (by rw [hinp1]; exact hinp_h)
+        (by rw [hout1]; exact hout) (by rw [hout1]; exact hout_h)
+        (by intro j hj; rw [hcells1]; exact hdesc_ns j hj)
+        hhead1
+        (by intro j hj; rw [hw1 utmScratchTape (by decide)]; exact hscratch_ns j hj)
+        (by rw [hw1 utmScratchTape (by decide)]; exact hscratch_h)
+        (by intro i hne_d hne_s; rw [hw1 i hne_d]; exact hother i hne_d hne_s)
+    refine ⟨c_f, .step hstep' hreach, hst_f, hhead_f, ?_, ?_, ?_, ?_, ?_, ?_, hwf_f⟩
+    · rw [hcells_f, hcells1]
+    · rw [hshead_f, hw1 utmScratchTape (by decide)]
+    · rw [hscells_f, hw1 utmScratchTape (by decide)]
+    · intro i hne_d hne_s; rw [hw_f i hne_d hne_s, hw1 i hne_d]
+    · rw [hinp_f, hinp1]
+    · rw [hout_f, hout1]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 11: rewindScratchFinal simulation
