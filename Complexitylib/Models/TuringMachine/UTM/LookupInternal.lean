@@ -206,6 +206,8 @@ private theorem Γ_ofBool_injective : Function.Injective Γ.ofBool := by
 private theorem Γ_ofBool_ne_of_ne {a b : Bool} (h : a ≠ b) : Γ.ofBool a ≠ Γ.ofBool b :=
   fun heq => h (Γ_ofBool_injective heq)
 
+private theorem allΓ_nodup : allΓ.Nodup := by decide
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Transition table structure
 -- ════════════════════════════════════════════════════════════════════════
@@ -226,6 +228,32 @@ private theorem allTuples_mem (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → 
          iH, allΓ_complete iH,
          wH, allΓFuncs_complete wH,
          oH, allΓ_complete oH, rfl⟩
+
+private theorem allTuples_nodup (k n : ℕ) : (allTuples k n).Nodup := by
+  simp only [allTuples]
+  -- Each level uses nodup_flatMap: inner lists are nodup + pairwise disjoint
+  -- Disjointness follows from tuple components being fixed per inner list
+  have fst_eq : ∀ (q : Fin k) a,
+      a ∈ (allΓ.flatMap fun iH => (allΓFuncs n).flatMap fun wH =>
+        allΓ.map fun oH => (q, iH, wH, oH)) → a.1 = q := by
+    intro q a ha; simp only [List.mem_flatMap, List.mem_map] at ha
+    obtain ⟨_, _, _, _, _, _, rfl⟩ := ha; rfl
+  have snd_eq : ∀ (q : Fin k) (iH : Γ) a,
+      a ∈ ((allΓFuncs n).flatMap fun wH => allΓ.map fun oH => (q, iH, wH, oH)) →
+      a.2.1 = iH := by
+    intro q iH a ha; simp only [List.mem_flatMap, List.mem_map] at ha
+    obtain ⟨_, _, _, _, rfl⟩ := ha; rfl
+  have thd_eq : ∀ (q : Fin k) (iH : Γ) (wH : Fin n → Γ) a,
+      a ∈ (allΓ.map fun oH => (q, iH, wH, oH)) → a.2.2.1 = wH := by
+    intro q iH wH a ha; simp only [List.mem_map] at ha; obtain ⟨_, _, rfl⟩ := ha; rfl
+  -- Level 1 (q): different q → disjoint first components
+  rw [List.nodup_flatMap]; refine ⟨fun q _ => ?_, (List.nodup_finRange k).pairwise fun hne a h1 h2 =>
+    hne (by rw [← fst_eq _ a h1, fst_eq _ a h2])⟩
+  -- Level 2 (iH): different iH → disjoint second components
+  rw [List.nodup_flatMap]; refine ⟨fun iH _ => ?_, allΓ_nodup.pairwise fun hne a h1 h2 =>
+    hne (by rw [← snd_eq q _ a h1, snd_eq q _ a h2])⟩
+  -- Level 3 (wH): different wH → disjoint third components
+  sorry -- allΓFuncs_nodup: needs induction on n to show allΓFuncs is nodup
 
 /-- The input pattern of an encodeEntry starts with the given encodeInputPattern. -/
 private theorem encodeEntry_input_prefix (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ)
@@ -2484,21 +2512,11 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     -- For now, we provide numBefore and prove the three properties
     refine ⟨numBefore, ?_, ?_, ?_⟩
     · -- Non-matching entries before numBefore
-      intro j_entry hj_entry
-      -- allTuples[j_entry] ≠ allTuples[numBefore] = (q, iHead, wHeads, oHead)
-      -- since j_entry ≠ numBefore (j_entry < numBefore)
-      -- Actually, allTuples may have duplicates, so we can't use index ≠ to get value ≠.
-      -- But allTuples_mem + List.getElem_of_mem gives a *unique* index for each tuple.
-      -- Actually, allTuples contains each tuple exactly once (it's a Cartesian product
-      -- enumeration), so j_entry < numBefore means allTuples[j_entry] ≠ allTuples[numBefore].
-      -- For now, we use List.Nodup to establish this.
-      -- TODO: prove allTuples is nodup, or use a different approach.
-      -- Alternative: the matching entry (refine_2) already establishes that the desc tape
-      -- at position numBefore matches the scratch. For positions < numBefore, we need
-      -- to show the desc tape entry doesn't match. This follows from the input patterns
-      -- being different (encodeInputPattern_ne_of_ne) and the tape storing these patterns.
-      -- Since this requires significant additional infrastructure (allTuples_nodup),
-      -- we defer this to a future commit.
+      -- Approach: allTuples_nodup + different index → different tuple →
+      -- different input pattern (encodeInputPattern_ne_of_ne) → mismatch position →
+      -- chain via desc_cell_eq_table_bit + flatMap_const_width_getElem + encodeEntry_input_prefix
+      -- Same chain as refine_2 but with ≠ instead of =.
+      -- Blocked on: allTuples_nodup (needs allΓFuncs_nodup, which needs induction on n)
       sorry
     · -- Matching entry's input pattern matches scratch
       intro j hj_ipw
