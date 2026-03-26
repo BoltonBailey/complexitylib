@@ -84,12 +84,27 @@ noncomputable def utmInitCfg (tm : TM n) (k : ℕ) (x : List Bool) :
     work := fun _ => initTape [],
     output := initTape [] }
 
+/-- Simulated work/output tape heads stay at position ≥ 1 throughout computation.
+
+    This holds for TMs where `δ_right_of_start` ensures the first step moves all
+    heads from position 0 (▷) to position 1, and no subsequent step moves
+    work/output tape heads back to position 0. Required because `applyTransitionTM`
+    writes symbol cells at the head position, which corrupts the super-cell encoding
+    at position 0 (where `Tape.write` is a no-op but the encoding gets overwritten). -/
+def SimHeadsGe1 (tm : TM n) (x : List Bool) : Prop :=
+  ∀ (c : Cfg n tm.Q) (t : ℕ), t ≥ 1 → tm.reachesIn t (tm.initCfg x) c →
+    (∀ i, (c.work i).head ≥ 1) ∧ c.output.head ≥ 1
+
 /-- The UTM correctly simulates any TM M: if M decides L in time T,
     then running the UTM on `encodeUTMInput tm x` produces the same
-    accept/reject decision as M on x. -/
+    accept/reject decision as M on x.
+
+    The `hHeads` hypothesis requires that simulated work/output tape heads
+    stay at position ≥ 1 throughout computation (see `SimHeadsGe1`). -/
 theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     (L : Language) (T : ℕ → ℕ)
-    (hM : tm.DecidesInTime L T) (x : List Bool) :
+    (hM : tm.DecidesInTime L T) (x : List Bool)
+    (hHeads : tm.SimHeadsGe1 x) :
     ∃ (c' : Cfg 4 (utmTM (n := n) k).Q) (t : ℕ),
       (utmTM (n := n) k).reachesIn t (utmInitCfg tm k x) c' ∧
       (utmTM (n := n) k).halted c' ∧
@@ -105,10 +120,14 @@ theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ
 
     For every TM M that decides language L in time T, there exists a
     constant C (depending on |M| but not the input) such that the UTM
-    decides L in time C · T². -/
+    decides L in time C · T².
+
+    The `hHeads` hypothesis requires that for every input x, the simulated
+    work/output tape heads stay at position ≥ 1 (see `SimHeadsGe1`). -/
 theorem utm_correct (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     (L : Language) (T : ℕ → ℕ)
-    (hM : tm.DecidesInTime L T) :
+    (hM : tm.DecidesInTime L T)
+    (hHeads : ∀ x, tm.SimHeadsGe1 x) :
     ∃ (C : ℕ),
       (utmTM (n := n) k).DecidesInTime L (fun len => C * (T len) ^ 2) := by
   sorry
