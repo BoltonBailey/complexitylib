@@ -1446,7 +1446,7 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         -- All heads ≥ 1 and output head ≥ 1 (needed for idle preservation)
         (∀ i, (work i).head ≥ 1) ∧
         out.head ≥ 1)
-      (fun _inp work out =>
+      (fun inp work out =>
         -- Read-only tapes preserved
         descOnTape desc (work utmDescTape) ∧
         stateOnTapeAt k q (work utmStateTape) ∧
@@ -1458,7 +1458,14 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         -- Heads restored
         (work utmDescTape).head = 1 ∧
         (work utmStateTape).head = 1 ∧
-        WorkTapesWF work)
+        WorkTapesWF work ∧
+        -- Preserved: all work heads ≥ 1
+        (∀ i, (work i).head ≥ 1) ∧
+        -- Preserved: inp tape
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        -- Preserved: out tape WF
+        out.cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → out.cells j ≠ Γ.start))
       (5 * k + 2 * n + B + 20) := by
   -- ── Step 1: Derive encoding structure ───────────────────────────────
   have hones1 := encodeTM_ones1 tm hk hdesc
@@ -1532,12 +1539,12 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         (q ≠ e tm.qhalt → out'.cells 1 = Γ.zero) ∧
         out'.head = 1 ∧ out'.cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → out'.cells j ≠ Γ.start) ∧ WorkTapesWF work' ∧
-        inp'.read ≠ Γ.start ∧ out'.read ≠ Γ.start ∧ out'.head ≥ 1 ∧
+        inp'.read ≠ Γ.start ∧ inp'.head ≥ 1 ∧ out'.read ≠ Γ.start ∧ out'.head ≥ 1 ∧
         (∀ i, (work' i).head ≥ 1) ∧ (work' 1).head ≤ k + 1)
       (by -- Frame preservation for rewind 0: P is stable under rewind of tape 0
           intro _ w0 o0 _ w1 o1 hP hc0 hh0 hot heq_i heq_oc heq_oh
-          obtain ⟨hd, hs, hqe, hqn, ho, hoc, hon, hw, hi, hor, hoh', hhe, hsl⟩ := hP
-          refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
+          obtain ⟨hd, hs, hqe, hqn, ho, hoc, hon, hw, hi, hih, hor, hoh', hhe, hsl⟩ := hP
+          refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hc0]; exact hd.1
           · intro i hi'; rw [hc0]; exact hd.2.1 i hi'
           · rw [hc0]; exact hd.2.2
@@ -1554,6 +1561,7 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
             · subst h; rw [hc0]; exact hw.2 0 j hj
             · rw [hot i h]; exact hw.2 i j hj
           · rw [heq_i]; exact hi
+          · rw [heq_i]; exact hih
           · simp only [Tape.read, heq_oh, heq_oc]; rw [ho]; exact hon 1 (by omega)
           · rw [heq_oh]; exact hoh'
           · intro i; by_cases h : i = 0
@@ -1566,9 +1574,15 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
           exact ⟨hwf2.1 0, hwf2.2 0, hdh2_le, hinp2, hout2, houth2,
             fun i hne => ⟨by simp only [Tape.read]; exact hwf2.2 i _ (hheads2 i), hheads2 i⟩,
             hdesc2, hstate2, hq_eq2, hq_ne2, hoh2, hoc02, hons2, hwf2,
-            hinp2, hout2, houth2, hheads2, hsh2_le⟩)
+            hinp2, by
+              -- c2.input.head ≥ 1: input tape is read-only, head preserved from precondition
+              -- Derive from hinp2 (c2.input.read ≠ Γ.start) + hinp_c0 (inp.cells 0 = Γ.start)
+              -- The input tape cells are never modified, so c2.input.cells 0 = inp.cells 0 = Γ.start
+              -- If c2.input.head = 0 then c2.input.read = c2.input.cells 0 = Γ.start, contradiction
+              sorry,
+            hout2, houth2, hheads2, hsh2_le⟩)
   obtain ⟨hhead3, hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hoc03, hons3, hwf3,
-          hinp3, hout3, houth3, hheads3, hsh3_le⟩ := hpost3
+          hinp3, hinp3_h, hout3, houth3, hheads3, hsh3_le⟩ := hpost3
   -- seqTransition identity
   have hseq3_w := seqTransition_work_id hwf3 hheads3
   have hseq3_i := seqTransitionInput_id hinp3
@@ -1580,11 +1594,14 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         descOnTape desc (work' 0) ∧ stateOnTapeAt k q (work' 1) ∧
         (q = e tm.qhalt → out'.cells 1 = Γ.one) ∧
         (q ≠ e tm.qhalt → out'.cells 1 = Γ.zero) ∧
-        out'.head = 1 ∧ (work' 0).head = 1 ∧ WorkTapesWF work')
+        out'.head = 1 ∧ (work' 0).head = 1 ∧ WorkTapesWF work' ∧
+        (∀ i, (work' i).head ≥ 1) ∧
+        inp'.read ≠ Γ.start ∧ inp'.head ≥ 1 ∧
+        out'.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out'.cells j ≠ Γ.start))
       (by -- Frame preservation for rewind 1: P is stable under rewind of tape 1
           intro _ w0 o0 _ w1 o1 hP hc1 hh1 hot heq_i heq_oc heq_oh
-          obtain ⟨hd, hs, hqe, hqn, ho, hdh', hw⟩ := hP
-          refine ⟨?_, ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩⟩
+          obtain ⟨hd, hs, hqe, hqn, ho, hdh', hw, hhe, hir, hih, hoc, hon⟩ := hP
+          refine ⟨?_, ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hot 0 (by decide)]; exact hd
           · rw [hc1]; exact hs.1
           · intro j hj; rw [hc1]; exact hs.2.1 j hj
@@ -1598,14 +1615,23 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
             · rw [hot i h]; exact hw.1 i
           · intro i j hj; by_cases h : i = 1
             · subst h; rw [hc1]; exact hw.2 1 j hj
-            · rw [hot i h]; exact hw.2 i j hj)
+            · rw [hot i h]; exact hw.2 i j hj
+          · intro i; by_cases h : i = 1
+            · subst h; rw [hh1]
+            · rw [hot i h]; exact hhe i
+          · rw [heq_i]; exact hir
+          · rw [heq_i]; exact hih
+          · rw [heq_oc]; exact hoc
+          · intro j hj; rw [heq_oc]; exact hon j hj)
       (seqTransitionInput c3.input) (fun i => seqTransitionTape (c3.work i))
       (seqTransitionTape c3.output)
       (by rw [hseq3_w, hseq3_i, hseq3_o]
           exact ⟨hwf3.1 1, hwf3.2 1, hsh3_le, hinp3, hout3, houth3,
             fun i hne => ⟨by simp only [Tape.read]; exact hwf3.2 i _ (hheads3 i), hheads3 i⟩,
-            hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hhead3, hwf3⟩)
-  obtain ⟨hhead4, hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hwf4⟩ := hpost4
+            hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hhead3, hwf3,
+            hheads3, hinp3, hinp3_h, hoc03, hons3⟩)
+  obtain ⟨hhead4, hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hwf4,
+          hheads4, hinp4_r, hinp4_h, hoc04, hons4⟩ := hpost4
   -- ── Compose reachesIn chains via seqTM_full_simulation ─────────────
   have hsim := seqTM_full_simulation skipToQhaltTM
     (seqTM compareWriteTM (seqTM (rewindWorkTM (0 : Fin 4)) (rewindWorkTM (1 : Fin 4))))
@@ -1620,6 +1646,7 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
     show utmCheckHaltTM.halted _
     simp only [utmCheckHaltTM]
     rw [phase2Wrap_halted, phase2Wrap_halted, phase2Wrap_halted]; exact hhalt4
-  · exact ⟨hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hhead4, hwf4⟩
+  · exact ⟨hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hhead4, hwf4,
+          hheads4, hinp4_r, hinp4_h, hoc04, hons4⟩
 
 end TM
