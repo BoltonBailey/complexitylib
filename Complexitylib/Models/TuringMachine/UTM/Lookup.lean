@@ -15,7 +15,7 @@ description on work tape 0.
 ## Main results
 
 - `lookupTM` — the lookup machine definition (parametric in `k`)
-- `lookupTM_hoareTime` — HoareTime spec: parametric in state and symbols
+- `lookupTM_hoareTime_proof` — HoareTime spec (in `LookupInternal.lean`)
 -/
 
 namespace TM
@@ -345,37 +345,9 @@ noncomputable def lookupTM (k : ℕ) : TM 4 where
 -- HoareTime specification
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- HoareTime specification for `lookupTM`.
-
-    The `hdesc` hypothesis links the desc tape contents to the TM's
-    transition table, which is required for the linear-scan lookup
-    to find the correct entry. -/
-theorem lookupTM_hoareTime (tm : TM n) (k : ℕ)
-    (hk : k = @Fintype.card tm.Q tm.finQ)
-    (hdesc : desc = TMEncoding.encodeTM tm)
-    (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
-    let e := tm.stateEquivK hk
-    ∃ B, (lookupTM (n := n) k).HoareTime
-      (fun inp work out =>
-        descOnTape desc (work utmDescTape) ∧
-        (work utmDescTape).head = 1 ∧
-        (∀ i, (work i).head ≥ 1) ∧
-        scratchHasInputPattern k n q iHead wHeads oHead (work utmScratchTape) ∧
-        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
-        WorkTapesWF work ∧
-        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
-        out.read ≠ Γ.start ∧ out.head ≥ 1)
-      (fun _inp work _out =>
-        let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iHead wHeads oHead
-        descOnTape desc (work utmDescTape) ∧
-        scratchHasTransOutput k n (e q') wW oW iD wD oD (work utmScratchTape) ∧
-        (work utmDescTape).head = 1 ∧
-        (work utmScratchTape).head = 1 ∧
-        WorkTapesWF work)
-      B := by
-  -- See `TM.lookupTM_hoareTime_proof` in LookupInternal.lean for the proof.
-  -- The circular import (LookupInternal imports Lookup) prevents direct use here.
-  -- Downstream files should import LookupInternal and use `lookupTM_hoareTime_proof`.
-  sorry
+-- The HoareTime proof for `lookupTM` lives in LookupInternal.lean as
+-- `TM.lookupTM_hoareTime_proof`.  The circular import (LookupInternal
+-- imports Lookup) prevents placing it here.  Downstream files should
+-- import LookupInternal and use `lookupTM_hoareTime_proof` directly.
 
 end TM

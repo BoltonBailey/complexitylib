@@ -208,6 +208,25 @@ private theorem Γ_ofBool_ne_of_ne {a b : Bool} (h : a ≠ b) : Γ.ofBool a ≠ 
 
 private theorem allΓ_nodup : allΓ.Nodup := by decide
 
+private theorem allΓFuncs_nodup (m : ℕ) : (allΓFuncs m).Nodup := by
+  induction m with
+  | zero => exact List.nodup_singleton _
+  | succ m ih =>
+    simp only [allΓFuncs]
+    rw [List.nodup_flatMap]
+    refine ⟨fun f _ => allΓ_nodup.map fun g₁ g₂ heq => ?_,
+            ih.pairwise_of_forall_ne fun f₁ _ f₂ _ hne a h1 h2 => ?_⟩
+    · have := congr_fun heq ⟨m, by omega⟩
+      simp only [dif_neg (show ¬(m < m) from by omega)] at this
+      exact this
+    · simp only [List.mem_map] at h1 h2
+      obtain ⟨_, _, rfl⟩ := h1
+      obtain ⟨_, _, heq⟩ := h2
+      exact hne (funext fun i => by
+        have := congr_fun heq ⟨i.val, by omega⟩
+        simp only [dif_pos i.isLt] at this
+        exact this.symm)
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Transition table structure
 -- ════════════════════════════════════════════════════════════════════════
@@ -247,13 +266,19 @@ private theorem allTuples_nodup (k n : ℕ) : (allTuples k n).Nodup := by
       a ∈ (allΓ.map fun oH => (q, iH, wH, oH)) → a.2.2.1 = wH := by
     intro q iH wH a ha; simp only [List.mem_map] at ha; obtain ⟨_, _, rfl⟩ := ha; rfl
   -- Level 1 (q): different q → disjoint first components
-  rw [List.nodup_flatMap]; refine ⟨fun q _ => ?_, (List.nodup_finRange k).pairwise fun hne a h1 h2 =>
-    hne (by rw [← fst_eq _ a h1, fst_eq _ a h2])⟩
+  rw [List.nodup_flatMap]; refine ⟨fun q _ => ?_,
+    (List.nodup_finRange k).pairwise_of_forall_ne fun q₁ _ q₂ _ hne a h1 h2 =>
+      hne (by rw [← fst_eq _ a h1, fst_eq _ a h2])⟩
   -- Level 2 (iH): different iH → disjoint second components
-  rw [List.nodup_flatMap]; refine ⟨fun iH _ => ?_, allΓ_nodup.pairwise fun hne a h1 h2 =>
-    hne (by rw [← snd_eq q _ a h1, snd_eq q _ a h2])⟩
+  rw [List.nodup_flatMap]; refine ⟨fun iH _ => ?_,
+    allΓ_nodup.pairwise_of_forall_ne fun iH₁ _ iH₂ _ hne a h1 h2 =>
+      hne (by rw [← snd_eq q _ a h1, snd_eq q _ a h2])⟩
   -- Level 3 (wH): different wH → disjoint third components
-  sorry -- allΓFuncs_nodup: needs induction on n to show allΓFuncs is nodup
+  rw [List.nodup_flatMap]
+  exact ⟨fun wH _ => allΓ_nodup.map (fun oH₁ oH₂ heq => by
+      simp only [Prod.mk.injEq] at heq; exact heq.2.2.2),
+    (allΓFuncs_nodup n).pairwise_of_forall_ne fun wH₁ _ wH₂ _ hne a h1 h2 =>
+      hne (by rw [← thd_eq q iH _ a h1, thd_eq q iH _ a h2])⟩
 
 /-- The input pattern of an encodeEntry starts with the given encodeInputPattern. -/
 private theorem encodeEntry_input_prefix (k n : ℕ) (q : Fin k) (iH : Γ) (wH : Fin n → Γ) (oH : Γ)
@@ -1286,6 +1311,7 @@ private theorem process_nonmatch_entry
       (c.work utmDescTape).cells ((c.work utmDescTape).head + mismatchPos) ≠
       (c.work utmScratchTape).cells ((c.work utmScratchTape).head + mismatchPos)) :
     ∃ (c' : Cfg 4 (lookupTM (n := n) k).Q) (steps : ℕ),
+      steps ≤ TMEncoding.entryWidth k n + TMEncoding.inputPatternWidth k n + 3 ∧
       (lookupTM (n := n) k).reachesIn steps c c' ∧
       c'.state = .compare ⟨0, by omega⟩ ∧
       (c'.work utmDescTape).head = (c.work utmDescTape).head + TMEncoding.entryWidth k n ∧
@@ -1340,8 +1366,12 @@ private theorem process_nonmatch_entry
             · rw [ho₂ i (show i ≠ utmDescTape from hi_d), ho₁ i hi_d hne]
               exact (hother i hi_d hne).2)
   -- Compose all three
-  refine ⟨c₃, _, reachesIn_trans _ (reachesIn_trans _ hreach₁ hreach₂) hreach₃,
+  refine ⟨c₃, _, ?_, reachesIn_trans _ (reachesIn_trans _ hreach₁ hreach₂) hreach₃,
     hst₃, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hwf₃⟩
+  · -- step bound: (mismatchPos + 1) + (ew - mismatchPos - 1 + 1) + (1 + mismatchPos + 2) ≤ ew + ipw + 3
+    have : TMEncoding.entryWidth k n ≥ mismatchPos + 1 := by
+      simp [TMEncoding.entryWidth, TMEncoding.inputPatternWidth] at hmp ⊢; omega
+    rw [hscratch_h]; omega
   · -- desc head
     rw [ho₃ utmDescTape (by decide), hd₂, hd₁]
     have : TMEncoding.entryWidth k n ≥ mismatchPos + 1 := by
@@ -1392,6 +1422,8 @@ private theorem entry_scan_to_match
         ((c.work utmDescTape).head + numBefore * TMEncoding.entryWidth k n + j) =
       (c.work utmScratchTape).cells (1 + j)) :
     ∃ (c' : Cfg 4 (lookupTM (n := n) k).Q) (steps : ℕ),
+      steps ≤ numBefore * (TMEncoding.entryWidth k n + TMEncoding.inputPatternWidth k n + 4) +
+        TMEncoding.inputPatternWidth k n ∧
       (lookupTM (n := n) k).reachesIn steps c c' ∧
       c'.state = .matchRewind ∧
       (c'.work utmDescTape).head =
@@ -1415,7 +1447,8 @@ private theorem entry_scan_to_match
         (by intro j hj; rw [hscratch_h]
             have := hmatch_entry j hj; simp only [Nat.zero_mul, Nat.zero_add] at this
             exact this)
-    refine ⟨c', _, hreach, hst, ?_, hdc, ?_, hsc, ho, hi, hou, hwf'⟩
+    refine ⟨c', _, ?_, hreach, hst, ?_, hdc, ?_, hsc, ho, hi, hou, hwf'⟩
+    · omega
     · rw [hd]; omega
     · rw [hs, hscratch_h]; omega
   | succ numBefore ih =>
@@ -1443,7 +1476,7 @@ private theorem entry_scan_to_match
     have hfm_le : firstMismatch ≤ mpPos := Nat.find_min' hex_raw hne
     have hfm_lt : firstMismatch < TMEncoding.inputPatternWidth k n := by omega
     -- Apply process_nonmatch_entry
-    obtain ⟨c₁, steps₁, hreach₁, hst₁, hd₁, hdc₁, hs₁, hsc₁, ho₁, hi₁, hou₁, hwf₁⟩ :=
+    obtain ⟨c₁, steps₁, hbound₁, hreach₁, hst₁, hd₁, hdc₁, hs₁, hsc₁, ho₁, hi₁, hou₁, hwf₁⟩ :=
       process_nonmatch_entry c firstMismatch hfm_lt hstate hwf hinp hinp_h hout hout_h
         hdesc_ns hdesc_h hscratch_ns hscratch_h hother hfm_before hfm_ne
     -- Apply IH to c₁
@@ -1472,7 +1505,7 @@ private theorem entry_scan_to_match
         numBefore * TMEncoding.entryWidth k n + j =
         (c.work utmDescTape).head + (numBefore + 1) * TMEncoding.entryWidth k n + j
       rw [Nat.add_mul]; omega
-    obtain ⟨c', steps', hreach', hst', hd', hdc', hs', hsc', ho', hi', hou', hwf'⟩ :=
+    obtain ⟨c', steps', hbound', hreach', hst', hd', hdc', hs', hsc', ho', hi', hou', hwf'⟩ :=
       ih c₁ hst₁ hwf₁
         (by rw [hi₁]; exact hinp) (by rw [hi₁]; exact hinp_h)
         (by rw [hou₁]; exact hout) (by rw [hou₁]; exact hout_h)
@@ -1482,7 +1515,10 @@ private theorem entry_scan_to_match
         hs₁
         (by intro i hne_d hne_s; rw [ho₁ i hne_d hne_s]; exact hother i hne_d hne_s)
         ih_hnonmatch ih_hmatch
-    refine ⟨c', _, reachesIn_trans _ hreach₁ hreach', hst', ?_, ?_, ?_, ?_, ?_, ?_, ?_, hwf'⟩
+    refine ⟨c', _, ?_, reachesIn_trans _ hreach₁ hreach', hst', ?_, ?_, ?_, ?_, ?_, ?_, ?_, hwf'⟩
+    · -- step bound: steps₁ + steps' ≤ (numBefore + 1) * (ew + ipw + 4) + ipw
+      have h1 := Nat.add_le_add hbound₁ hbound'
+      rw [Nat.succ_mul] at *; omega
     · rw [hd', hd₁]; rw [Nat.add_mul]; omega
     · rw [hdc', hdc₁]
     · exact hs'
@@ -2474,6 +2510,7 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
   -- This requires reasoning about the structure of encodeTransTable.
   -- We sorry these encoding-level facts and prove the phase composition.
   have henc_connection : ∃ numBefore : ℕ,
+    numBefore < (allTuples k n).length ∧
     -- Non-matching entries before the match
     (∀ j, j < numBefore →
       ∃ mismatchPos, mismatchPos < TMEncoding.inputPatternWidth k n ∧
@@ -2510,14 +2547,81 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     -- Use flatMap_const_width_getElem to index into the table by entry number
     -- Then connect to tape cells via descOnTape
     -- For now, we provide numBefore and prove the three properties
-    refine ⟨numBefore, ?_, ?_, ?_⟩
+    refine ⟨numBefore, hnumBefore_lt, ?_, ?_, ?_⟩
     · -- Non-matching entries before numBefore
-      -- Approach: allTuples_nodup + different index → different tuple →
-      -- different input pattern (encodeInputPattern_ne_of_ne) → mismatch position →
-      -- chain via desc_cell_eq_table_bit + flatMap_const_width_getElem + encodeEntry_input_prefix
-      -- Same chain as refine_2 but with ≠ instead of =.
-      -- Blocked on: allTuples_nodup (needs allΓFuncs_nodup, which needs induction on n)
-      sorry
+      intro j_entry hj_entry
+      let k := Fintype.card tm.Q
+      let ew := TMEncoding.entryWidth k n
+      let ipw := TMEncoding.inputPatternWidth k n
+      have hj_lt : j_entry < (allTuples k n).length := by simp only [k]; omega
+      -- Different index → different tuple (via nodup)
+      have htuple_ne : (allTuples k n)[j_entry] ≠ (q, iHead, wHeads, oHead) := by
+        rw [← hnumBefore_eq]; intro heq
+        exact absurd ((allTuples_nodup k n).getElem_inj_iff.mp heq) (by omega)
+      -- Destructure j_entry-th tuple
+      set tup_j := (allTuples k n)[j_entry] with htup_j_eq
+      obtain ⟨q_j, iH_j, wH_j, oH_j⟩ := tup_j
+      -- Pattern not equal (contrapositive of encodeInputPattern_injective)
+      have hpat_ne : TMEncoding.encodeInputPattern k n q_j iH_j wH_j oH_j ≠
+          TMEncoding.encodeInputPattern k n q iHead wHeads oHead := by
+        intro heq
+        exact htuple_ne (by
+          obtain ⟨h1, h2, h3, h4⟩ := encodeInputPattern_injective heq; rw [h1, h2, h3, h4])
+      -- By contradiction: if all positions match, patterns are equal
+      by_contra hmatch_all; push_neg at hmatch_all
+      apply hpat_ne
+      apply List.ext_getElem (by rw [encodeInputPattern_length, encodeInputPattern_length])
+      intro j_pos hj₁ hj₂
+      have hj_ipw : j_pos < ipw := by rw [encodeInputPattern_length] at hj₁; exact hj₁
+      have h_eq := hmatch_all j_pos hj_ipw
+      have hj_ew : j_pos < ew := by
+        simp only [ew, TMEncoding.entryWidth, ipw, TMEncoding.inputPatternWidth] at hj_ipw ⊢; omega
+      have htable_eq := encodeTransTable_eq_allTuples_flatMap tm tm.stateEquiv
+      have hentry_width := allTuples_entryFn_width tm tm.stateEquiv
+      have hbound : j_entry * ew + j_pos < (TMEncoding.encodeTransTable tm tm.stateEquiv).length := by
+        rw [htable_eq, flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt j_entry j_pos _ _ hj_lt hj_ew
+      -- LHS: desc tape cell = Γ.ofBool(transTable[j_entry * ew + j_pos])
+      have h_lhs : (c₁.work utmDescTape).cells
+          ((c₁.work utmDescTape).head + j_entry * ew + j_pos) =
+          Γ.ofBool ((TMEncoding.encodeTransTable tm tm.stateEquiv)[j_entry * ew + j_pos]'hbound) := by
+        rw [hdesc_cells₁, hc₁_desc_h, hdesc_head_eq]
+        convert desc_cell_eq_table_bit tm desc (work utmDescTape) hdesc hdescOnTape
+          (j_entry * ew + j_pos) hbound using 2
+        omega
+      -- RHS: scratch tape cell = Γ.ofBool(pattern_match[j_pos])
+      have h_rhs : (c₁.work utmScratchTape).cells (1 + j_pos) =
+          Γ.ofBool ((TMEncoding.encodeInputPattern k n q iHead wHeads oHead)[j_pos]'hj₂) := by
+        rw [hc₁_scratch, show 1 + j_pos = j_pos + 1 by omega]
+        exact hscratch_inp.1.2.1 j_pos hj₂
+      -- Middle: transTable bit = pattern_j bit
+      have hbound_fm : j_entry * ew + j_pos <
+          ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv)).length := by
+        rw [flatMap_const_width_length _ _ _ (fun a ha => hentry_width a ha)]
+        exact mul_add_lt_mul_of_lt j_entry j_pos _ _ hj_lt hj_ew
+      have h_fm_idx := flatMap_const_width_getElem
+        (allTuples k n) (allTuples_entryFn tm tm.stateEquiv) ew
+        (fun a ha => hentry_width a ha) j_entry j_pos hj_lt hj_ew
+      have hentry_j_bound : j_pos <
+          (allTuples_entryFn tm tm.stateEquiv (q_j, iH_j, wH_j, oH_j)).length := by
+        rw [hentry_width _ (htup_j_eq ▸ List.getElem_mem hj_lt)]; exact hj_ew
+      have h_entry_bit :
+          (allTuples_entryFn tm tm.stateEquiv (q_j, iH_j, wH_j, oH_j))[j_pos]'hentry_j_bound =
+          (TMEncoding.encodeInputPattern k n q_j iH_j wH_j oH_j)[j_pos]'hj₁ := by
+        unfold allTuples_entryFn
+        simp only [encodeEntry_eq]
+        exact encodeEntry_input_prefix k n q_j iH_j wH_j oH_j _ _ _ _ _ _ j_pos hj_ipw
+      have h_entry_at : (allTuples_entryFn tm tm.stateEquiv (allTuples k n)[j_entry]) =
+          (allTuples_entryFn tm tm.stateEquiv (q_j, iH_j, wH_j, oH_j)) := by
+        rw [htup_j_eq]
+      have h_mid : (TMEncoding.encodeTransTable tm tm.stateEquiv)[j_entry * ew + j_pos]'hbound =
+          (TMEncoding.encodeInputPattern k n q_j iH_j wH_j oH_j)[j_pos]'hj₁ := by
+        have : (TMEncoding.encodeTransTable tm tm.stateEquiv)[j_entry * ew + j_pos]'hbound =
+            ((allTuples k n).flatMap (allTuples_entryFn tm tm.stateEquiv))[j_entry * ew + j_pos]'hbound_fm := by
+          congr 1
+        rw [this, h_fm_idx]; simp only [h_entry_at, h_entry_bit]
+      -- Combine: Γ.ofBool(pattern_j[j_pos]) = Γ.ofBool(pattern_match[j_pos]) → bits equal
+      exact Γ_ofBool_injective (by rw [← congrArg Γ.ofBool h_mid, ← h_lhs, h_eq, h_rhs])
     · -- Matching entry's input pattern matches scratch
       intro j hj_ipw
       let k := Fintype.card tm.Q
@@ -2682,11 +2786,11 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
                 congr 1
             _ = outputBits[j] := h_app_idx
       convert h_lhs.trans (congrArg Γ.ofBool h_mid) using 2
-  obtain ⟨numBefore, hnonmatch, hmatch_entry, houtput_bits⟩ := henc_connection
+  obtain ⟨numBefore, hnumBefore_lt, hnonmatch, hmatch_entry, houtput_bits⟩ := henc_connection
   -- ──────────────────────────────────────────────────────────────────
   -- Phase 2: entry_scan_to_match — scan entries until match found
   -- ──────────────────────────────────────────────────────────────────
-  obtain ⟨c₂, steps₂, hreach₂, hst₂, hdesc_h₂, hdesc_cells₂,
+  obtain ⟨c₂, steps₂, hsteps₂_bound, hreach₂, hst₂, hdesc_h₂, hdesc_cells₂,
           hscratch_h₂, hscratch_cells₂, hother₂, hinp₂, hout₂, hwf₂⟩ :=
     entry_scan_to_match c₁ numBefore hst₁ hwf₁
       (by rw [hinp₁]; exact hinp_ns) (by rw [hinp₁]; exact hinp_h)
@@ -2857,8 +2961,67 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     (reachesIn_trans _ hreach₅
     (reachesIn_trans _ hreach₆ hreach₇)))))
   refine ⟨c₇, _, ?_, htotal, hhalted₇, ?_⟩
-  · -- Time bound: sorry for now, can be filled in later
-    sorry
+  · -- Time bound
+    subst hk
+    -- Compute intermediate head positions
+    have hc₆_sh : (c₆.work utmScratchTape).head = TMEncoding.outputWidth (Fintype.card tm.Q) n := by
+      rw [hscratch_h₆, hscratch_h₅]; omega
+    have hew_eq : TMEncoding.entryWidth (Fintype.card tm.Q) n =
+        TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 1 +
+        TMEncoding.outputWidth (Fintype.card tm.Q) n := by
+      simp [TMEncoding.entryWidth]
+    have hc₅_dh : (c₅.work utmDescTape).head =
+        TMEncoding.tableOffset (Fintype.card tm.Q) n +
+        (numBefore + 1) * TMEncoding.entryWidth (Fintype.card tm.Q) n := by
+      rw [hdesc_h₅, hdesc_h₄, hc₃_desc, hdesc_h₂, hc₁_desc_h, hdesc_head_eq]
+      rw [Nat.succ_mul, hew_eq]; omega
+    -- desc.length decomposition
+    have hDescLen : desc.length = TMEncoding.tableOffset (Fintype.card tm.Q) n +
+        (allTuples (Fintype.card tm.Q) n).length *
+        TMEncoding.entryWidth (Fintype.card tm.Q) n := by
+      rw [hdesc, encodeTM_eq_header_append_table, List.length_append,
+          encodeTM_header_length tm rfl,
+          encodeTransTable_eq_allTuples_flatMap tm tm.stateEquiv,
+          flatMap_const_width_length _ _ _ (fun a ha =>
+            allTuples_entryFn_width tm tm.stateEquiv a ha)]
+    -- Key bounds
+    have hc₅_le : (c₅.work utmDescTape).head ≤ desc.length := by
+      rw [hc₅_dh, hDescLen]
+      exact Nat.add_le_add_left (Nat.mul_le_mul_right _ hnumBefore_lt) _
+    have hDescGe : desc.length ≥ (allTuples (Fintype.card tm.Q) n).length := by
+      rw [hDescLen]
+      calc (allTuples (Fintype.card tm.Q) n).length
+          ≤ (allTuples (Fintype.card tm.Q) n).length *
+            TMEncoding.entryWidth (Fintype.card tm.Q) n :=
+              Nat.le_mul_of_pos_right _ (by simp [TMEncoding.entryWidth]; omega)
+        _ ≤ _ := Nat.le_add_left _ _
+    have hstep_le : steps₂ ≤ desc.length *
+        (TMEncoding.entryWidth (Fintype.card tm.Q) n +
+         TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 4) := by
+      calc steps₂
+          ≤ numBefore * (TMEncoding.entryWidth (Fintype.card tm.Q) n +
+              TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 4) +
+            TMEncoding.inputPatternWidth (Fintype.card tm.Q) n := hsteps₂_bound
+        _ ≤ (numBefore + 1) * (TMEncoding.entryWidth (Fintype.card tm.Q) n +
+              TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 4) := by
+            rw [Nat.succ_mul]; omega
+        _ ≤ (allTuples (Fintype.card tm.Q) n).length *
+              (TMEncoding.entryWidth (Fintype.card tm.Q) n +
+               TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 4) :=
+            Nat.mul_le_mul_right _ hnumBefore_lt
+        _ ≤ desc.length * (TMEncoding.entryWidth (Fintype.card tm.Q) n +
+              TMEncoding.inputPatternWidth (Fintype.card tm.Q) n + 4) :=
+            Nat.mul_le_mul_right _ hDescGe
+    -- Combine: use hstep_le and hc₅_le to reduce to linear arithmetic
+    -- After rw, LHS has steps₂ and (numBefore+1)*ew; RHS has desc.length*(ew+ipw+4) and desc.length
+    -- omega handles cancellation since steps₂ ≤ desc.length*(ew+ipw+4) and
+    -- tableOff + (numBefore+1)*ew ≤ desc.length are both in context
+    have hc₅_le' : TMEncoding.tableOffset (Fintype.card tm.Q) n +
+        (numBefore + 1) * TMEncoding.entryWidth (Fintype.card tm.Q) n ≤ desc.length := by
+      rw [← hc₅_dh]; exact hc₅_le
+    simp only [lookupTimeBound]
+    rw [hc₅_dh, hc₆_sh]
+    omega
   · -- Postcondition
     dsimp only []
     -- Trace tapes back to work

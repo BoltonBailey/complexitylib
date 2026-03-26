@@ -7,7 +7,9 @@ import Complexitylib.Models.TuringMachine.UTM.SimConfig.Defs
 import Complexitylib.Models.TuringMachine.UTM.Init
 import Complexitylib.Models.TuringMachine.UTM.ReadCurrent
 import Complexitylib.Models.TuringMachine.UTM.Lookup
+import Complexitylib.Models.TuringMachine.UTM.LookupInternal
 import Complexitylib.Models.TuringMachine.UTM.ApplyTransition
+import Complexitylib.Models.TuringMachine.UTM.ApplyTransitionInternal
 import Complexitylib.Models.TuringMachine.UTM.CheckHalt
 import Complexitylib.Models.TuringMachine.UTM.CheckHaltInternal
 import Complexitylib.Models.TuringMachine.UTM.ExtractOutput
