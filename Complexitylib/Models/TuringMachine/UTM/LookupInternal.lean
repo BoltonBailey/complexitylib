@@ -2437,14 +2437,21 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
         (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
-        out.read ≠ Γ.start ∧ out.head ≥ 1)
-      (fun _inp work _out =>
+        out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
+        stateOnTapeAt k q (work utmStateTape))
+      (fun inp work out =>
         let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iHead wHeads oHead
         descOnTape desc (work utmDescTape) ∧
         scratchHasTransOutput k n (e q') wW oW iD wD oD (work utmScratchTape) ∧
         (work utmDescTape).head = 1 ∧
         (work utmScratchTape).head = 1 ∧
-        WorkTapesWF work)
+        WorkTapesWF work ∧
+        -- Preserved: state tape one-hot encoding, all heads ≥ 1
+        stateOnTapeAt k q (work utmStateTape) ∧
+        (∀ i, (work i).head ≥ 1) ∧
+        -- Preserved: inp/out tapes
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        out.read ≠ Γ.start ∧ out.head ≥ 1)
       B := by
   intro e
   -- Destructure the transition output for later use
@@ -2454,7 +2461,7 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
   refine ⟨lookupTimeBound k n desc.length, ?_⟩
   -- Unfold HoareTime
   intro inp work out hpre
-  obtain ⟨hdescOnTape, hdesc_head_eq, hheads, hscratch_inp, hscratchSentinel, hwf, hinp_ns, hinp_h, hout_ns, hout_h⟩ := hpre
+  obtain ⟨hdescOnTape, hdesc_head_eq, hheads, hscratch_inp, hscratchSentinel, hwf, hinp_ns, hinp_h, hout_ns, hout_h, hstateOnTape⟩ := hpre
   -- Build the initial configuration
   set c₀ : Cfg 4 (lookupTM (n := n) k).Q :=
     { state := (lookupTM k).qstart
@@ -3064,8 +3071,47 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
               hc₁_scratch, houtLen]
           exact hscratchSentinel
       · exact hscratch_h₇
-    refine ⟨hfinal_descOnTape, hfinal_scratchOutput, ?_, hscratch_h₇, hwf₇⟩
+    -- Trace state/sim tapes back to work (preserved through all phases)
+    have hc₇_state : c₇.work utmStateTape = work utmStateTape := by
+      rw [hother₇ utmStateTape (by decide),
+          hother₆ utmStateTape (by decide) (by decide),
+          hother₅ utmStateTape (by decide) (by decide),
+          hother₄ utmStateTape (by decide),
+          hother₃ utmStateTape (by decide),
+          hother₂ utmStateTape (by decide) (by decide),
+          hother₁ utmStateTape (by decide)]
+    have hc₇_sim : c₇.work utmSimTape = work utmSimTape := by
+      rw [hother₇ utmSimTape (by decide),
+          hother₆ utmSimTape (by decide) (by decide),
+          hother₅ utmSimTape (by decide) (by decide),
+          hother₄ utmSimTape (by decide),
+          hother₃ utmSimTape (by decide),
+          hother₂ utmSimTape (by decide) (by decide),
+          hother₁ utmSimTape (by decide)]
+    have hc₇_inp : c₇.input = inp := by
+      rw [hinp₇, hinp₆, hinp₅, hinp₄, hinp₃, hinp₂, hinp₁]
+    have hc₇_out : c₇.output = out := by
+      rw [hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]
+    refine ⟨hfinal_descOnTape, hfinal_scratchOutput, ?_, hscratch_h₇, hwf₇,
+            ?_, ?_, ?_, ?_, ?_, ?_⟩
     -- desc head = 1
-    rw [hc₇_desc]; exact hdesc_h₆
+    · rw [hc₇_desc]; exact hdesc_h₆
+    -- stateOnTapeAt preserved
+    · rw [hc₇_state]; exact hstateOnTape
+    -- all heads ≥ 1
+    · intro i
+      have him : i = utmDescTape ∨ i = utmStateTape ∨ i = utmSimTape ∨ i = utmScratchTape := by
+        revert i; decide
+      rcases him with rfl | rfl | rfl | rfl
+      · rw [hc₇_desc, hdesc_h₆]
+      · rw [hc₇_state]; exact hheads utmStateTape
+      · rw [hc₇_sim]; exact hheads utmSimTape
+      · rw [hscratch_h₇]
+    -- inp preserved
+    · rw [hc₇_inp]; exact hinp_ns
+    · rw [hc₇_inp]; exact hinp_h
+    -- out preserved
+    · rw [hc₇_out]; exact hout_ns
+    · rw [hc₇_out]; exact hout_h
 
 end TM

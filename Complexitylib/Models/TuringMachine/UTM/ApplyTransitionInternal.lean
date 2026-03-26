@@ -3918,7 +3918,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
         (∀ i, (simCfg.work i).head ≥ 1) ∧ simCfg.output.head ≥ 1)
-      (fun _inp work _out =>
+      (fun inp work out =>
         let simCfg' : Cfg n tm.Q :=
           ⟨q', simCfg.input.move iD,
            fun i => (simCfg.work i).writeAndMove (wW i).toΓ (wD i),
@@ -3929,7 +3929,10 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         (work utmDescTape).head = 1 ∧
         (work utmStateTape).head = 1 ∧
         (work utmSimTape).head = 1 ∧
-        WorkTapesWF work) := by
+        WorkTapesWF work ∧
+        -- Preserved: inp/out tapes (applyTransition only modifies work tapes)
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        out.read ≠ Γ.start ∧ out.head ≥ 1) := by
   intro e iHead wHeads oHead
   set δ_result := tm.δ simCfg.state iHead wHeads oHead with hδ_def
   obtain ⟨q', wW, oW, iD, wD, oD⟩ := δ_result
@@ -4379,8 +4382,13 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
               exact hhead))
           rw [hpres.2, hc₁_cells, horig]; congr 1; congr 1
           exact (Tape.writeAndMove_cells_ne _ _ _ _ hhead).symm
+  -- Chain inp/out back to the original
+  have hinp_final : c₄.input = inp := by rw [hinp₄, hinp₃, hinp₂, hinp₁]
+  have hout_final : c₄.output = out := by rw [hout₄, hout₃, hout₂, hout₁]
   refine ⟨c₄, reachesIn_toReaches' htotal, hhalted₄, ?_, hsuperCells', ?_,
-    hheads₄ utmDescTape, hheads₄ utmStateTape, hheads₄ utmSimTape, hwf₄⟩
+    hheads₄ utmDescTape, hheads₄ utmStateTape, hheads₄ utmSimTape, hwf₄,
+    by rw [hinp_final]; exact hinp_ns, by rw [hinp_final]; exact hinp_h,
+    by rw [hout_final]; exact hout_ns, by rw [hout_final]; exact hout_h⟩
   · -- stateOnTapeAt k (e q') (c₄.work utmStateTape)
     refine ⟨?_, ?_, ?_⟩
     · rw [hstate_cells_final]; exact hcell0₁
