@@ -60,21 +60,47 @@ theorem P_sub_EXP : P ⊆ EXP :=
     `O(T)` space, since the tape heads can move at most one cell per step. -/
 theorem DTIME_sub_DSPACE (T : ℕ → ℕ) : DTIME T ⊆ DSPACE T := by
   intro L ⟨k, tm, f, hdec, hbig⟩
-  refine ⟨k, tm, f, ⟨?_, ?_⟩, hbig⟩
-  · -- Space bound: all reachable configs have work tape heads ≤ f(|x|)
+  refine ⟨k, tm, fun n => f n + 1, ⟨?_, ?_⟩, ?_⟩
+  · -- Space bound: all reachable configs have work tape heads ≤ f(|x|) + 1
     intro x c' hreach i
     obtain ⟨c_halt, t_halt, hle, hreachIn_halt, hhalt, _, _⟩ := hdec x
     obtain ⟨t, hreachIn⟩ := TM.reaches_to_reachesIn tm hreach
     have ht_le := TM.reachesIn_le_halt tm hreachIn hreachIn_halt hhalt
     have hbound := TM.work_head_reachesIn_bound tm hreachIn i
-    have := TM.initCfg_work_head_zero tm x i
-    omega
+    have := TM.initCfg_work_head tm x i
+    show (c'.work i).head ≤ f x.length + 1; omega
   · -- Decision: reachesIn implies reaches, same output
     intro x
     obtain ⟨c', t, hle, hreachIn, hhalt, hyes, hno⟩ := hdec x
     refine ⟨c', ?_, hhalt, hyes, hno⟩
     exact TM.reachesIn.rec Relation.ReflTransGen.refl
       (fun hs _ ih => Relation.ReflTransGen.head hs ih) hreachIn
+  · -- (fun n => f n + 1) =O T
+    -- From DecidesInTime, f n ≥ 1 for all n, so f n + 1 ≤ 2 * f n
+    have hne : tm.qstart ≠ tm.qhalt := by
+      intro heq
+      obtain ⟨_, t, _, hreach, _, hmem, hnmem⟩ := hdec []
+      rcases t with _ | t
+      · cases hreach
+        have hblank : (tm.initCfg []).output.cells 1 = Γ.blank := by simp [initTape]
+        rcases Classical.em ([] ∈ L) with h | h
+        · exact absurd (hblank ▸ hmem h) (by decide)
+        · exact absurd (hblank ▸ hnmem h) (by decide)
+      · cases hreach with
+        | step hs _ =>
+          have hh : (tm.initCfg []).state = tm.qhalt := by simp [heq]
+          rw [TM.step, if_pos hh] at hs
+          exact absurd hs nofun
+    have hf_pos : ∀ m, f m ≥ 1 := by
+      intro m
+      obtain ⟨_, t, hle, hreach, hhalt, _, _⟩ := hdec (List.replicate m false)
+      have : t ≥ 1 := by
+        rcases t with _ | t
+        · cases hreach; exact absurd hhalt hne
+        · omega
+      simp [List.length_replicate] at hle; omega
+    exact BigO.trans (BigO.of_le (fun n => by have := hf_pos n; omega))
+      (BigO.const_mul_left 2 hbig)
 
 /-- **P ⊆ PSPACE**: every polynomial-time language uses polynomial space. -/
 theorem P_sub_PSPACE : P ⊆ PSPACE :=
@@ -216,9 +242,9 @@ theorem BPP_sub_PP : BPP ⊆ PP :=
 /-- **P is closed under complement**: if `L ∈ P` then `Lᶜ ∈ P`. -/
 theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
   obtain ⟨k, n_tapes, tm, f, hdec, hbig⟩ := Set.mem_iUnion.mp h
-  refine Set.mem_iUnion.mpr ⟨k + 1, n_tapes, tm.complementTM, fun n => 2 * f n + 4,
+  refine Set.mem_iUnion.mpr ⟨k + 1, n_tapes, tm.complementTM, fun n => 2 * f n + 5,
     tm.complementTM_decidesInTime hdec, ?_⟩
-  -- (fun n => 2 * f n + 4) =O (· ^ (k + 1))
+  -- (fun n => 2 * f n + 5) =O (· ^ (k + 1))
   open Asymptotics Filter in
   have hpow : (· ^ k) =O (· ^ (k + 1)) := by
     apply IsBigO.of_bound 1
@@ -227,7 +253,7 @@ theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
     exact_mod_cast Nat.pow_le_pow_right hn (Nat.le_succ k)
   open Asymptotics Filter in
   exact BigO.add (BigO.const_mul_left 2 (hbig.trans hpow)) (by
-    apply IsBigO.of_bound 4
+    apply IsBigO.of_bound 5
     filter_upwards [Ioi_mem_atTop 0] with n hn
     simp only [Real.norm_natCast]
     exact_mod_cast le_mul_of_one_le_right (by omega) (Nat.one_le_pow _ _ hn))

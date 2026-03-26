@@ -178,10 +178,10 @@ theorem complementTM_rewind_and_flip (tm : TM n)
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- If `tm` decides `L` in time `f`, then `complementTM tm` decides `Lᶜ`
-    in time `2 * f + 4`. -/
+    in time `2 * f + 5`. -/
 theorem complementTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
     (hdec : tm.DecidesInTime L f) :
-    tm.complementTM.DecidesInTime Lᶜ (fun n => 2 * f n + 4) := by
+    tm.complementTM.DecidesInTime Lᶜ (fun n => 2 * f n + 5) := by
   intro x
   obtain ⟨c', t, hle, hreach, hhalt, hyes, hno⟩ := hdec x
   have hsim := complementTM_simulation tm hreach
@@ -194,8 +194,8 @@ theorem complementTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
     complementTM_rewind_and_flip tm c' hhalt hcell0 hnostart
   have htotal := reachesIn_trans tm.complementTM hsim hreach_rw
   refine ⟨c_done, t + t_rw, ?_, htotal, hhalt_done, ?_, ?_⟩
-  · show t + t_rw ≤ 2 * f x.length + 4
-    have : t_rw ≤ t + 4 := le_trans hle_rw (by omega)
+  · show t + t_rw ≤ 2 * f x.length + 5
+    have : t_rw ≤ t + 5 := le_trans hle_rw (by omega)
     omega
   · intro hxc; rw [hflip, hno hxc]; simp [flipBit]
   · intro hxc

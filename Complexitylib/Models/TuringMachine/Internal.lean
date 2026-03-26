@@ -224,9 +224,9 @@ theorem TM.reachesIn_le_halt (tm : TM n) {c c' c_halt : Cfg n tm.Q}
       subst this
       exact Nat.succ_le_succ (ih hr' hh')
 
-/-- Initial work tape heads are all at position 0. -/
-lemma TM.initCfg_work_head_zero (tm : TM n) (x : List Bool) (i : Fin n) :
-    ((tm.initCfg x).work i).head = 0 := by
+/-- Initial work tape heads are all at position 1. -/
+lemma TM.initCfg_work_head (tm : TM n) (x : List Bool) (i : Fin n) :
+    ((tm.initCfg x).work i).head = 1 := by
   simp [initTape]
 
 /-- If a DTM is a transducer, so is its NTM embedding. -/

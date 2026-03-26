@@ -29,6 +29,6 @@ theorem DTIME_union {T₁ T₂ : ℕ → ℕ} {L₁ L₂ : Language}
     L₁ ∪ L₂ ∈ DTIME (fun n => T₁ n + T₂ n) := by
   obtain ⟨k₁, tm₁, f₁, hd₁, ho₁⟩ := h₁
   obtain ⟨k₂, tm₂, f₂, hd₂, ho₂⟩ := h₂
-  exact ⟨k₁ + 1 + k₂, TM.unionTM tm₁ tm₂, fun n => 10 * f₁ n + f₂ n,
+  exact ⟨k₁ + 1 + k₂, TM.unionTM tm₁ tm₂, fun n => 12 * f₁ n + f₂ n,
     TM.unionTM_decidesInTime hd₁ hd₂,
     bigO_union_bound ho₁ ho₂⟩

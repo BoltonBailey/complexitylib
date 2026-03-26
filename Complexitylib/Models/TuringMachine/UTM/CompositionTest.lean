@@ -111,7 +111,10 @@ has a "clear scratch" phase, but we need to verify this is exported.
 Independently of the composition gaps, `applyTransitionTM_hoare_proof`
 requires `(∀ i, (simCfg.work i).head ≥ 1) ∧ simCfg.output.head ≥ 1`.
 
-But `initCfg x` has all heads at 0 (`initTape` uses `head := 0`).
+With `initTape` now using `head := 1`, all initial heads are at position 1.
+Heads can still reach position 0 during computation (by moving left from 1),
+and `δ_right_of_start` forces immediate bounce back. But `applyTransition`
+corrupts the super-cell encoding at position 0 during the bounce step.
 
 The TM structure has `δ_right_of_start` which forces right-movement when
 reading ▷ (at position 0). This means after the first step, heads are ≥ 1.
@@ -120,10 +123,9 @@ applyTransition corrupts the super-cell encoding at position 0 because it
 writes the δ-returned symbol there (but Tape.write at head 0 is a no-op
 for the actual simulated tape, so cells[0] stays ▷).
 
-Options:
-1. Change `initTape` to `head := 1` (model change, many files affected)
-2. Add hypothesis to theorems (heads always ≥ 1)
-3. Weaken superCellsCorrect to ignore position 0
+The `initTape` has been changed to `head := 1`. For TMs where work/output
+tape heads stay ≥ 1 throughout computation, the UTM simulation is fully
+correct. For TMs that bounce off position 0, a hypothesis is needed.
 -/
 
 end TM

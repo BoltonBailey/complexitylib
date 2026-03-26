@@ -210,11 +210,11 @@ def unionTM (tm₁ : TM n₁) (tm₂ : TM n₂) : TM (n₁ + 1 + n₂) :=
             fun i => idleDir (wHeads i),
             idleDir oHead )
       | .setup2 =>
-        -- Move input, Phase-2 work tapes, and real output from cell 1 to cell 0
+        -- Transition to Phase 2; heads already at cell 1 (matching initTape)
         ( Sum.inr (Sum.inr tm₂.qstart),
-          fun _ => .blank, .blank, moveLeftDir iHead,
-          fun i => if i.val ≤ n₁ then idleDir (wHeads i) else moveLeftDir (wHeads i),
-          moveLeftDir oHead )
+          fun _ => .blank, .blank, idleDir iHead,
+          fun i => idleDir (wHeads i),
+          idleDir oHead )
     -- ══════════════════════════════════════════════════════════════════
     -- Phase 2: simulate tm₂ with the real output tape
     -- ══════════════════════════════════════════════════════════════════
@@ -282,10 +282,8 @@ def unionTM (tm₁ : TM n₁) (tm₂ : TM n₂) : TM (n₁ + 1 + n₂) :=
           · refine ⟨?_, fun _ => idleDir_right_of_start, idleDir_right_of_start⟩
             intro hiHead; next hn => exact absurd hiHead hn
         | .setup2 =>
-          refine ⟨moveLeftDir_right_of_start, ?_, moveLeftDir_right_of_start⟩
-          intro i hwi; simp only []; split
-          · exact idleDir_right_of_start hwi
-          · exact moveLeftDir_right_of_start hwi
+          exact ⟨idleDir_right_of_start, fun i hwi => idleDir_right_of_start hwi,
+                 idleDir_right_of_start⟩
       | Sum.inr (Sum.inr q) =>
         dsimp only []
         split

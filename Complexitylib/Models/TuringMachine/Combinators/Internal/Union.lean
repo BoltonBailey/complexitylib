@@ -420,9 +420,9 @@ private theorem unionTM_delta_setup2 (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ) :
     (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.setup2)) iHead wHeads oHead =
     ( Sum.inr (Sum.inr tm₂.qstart),
-      fun _ => .blank, .blank, moveLeftDir iHead,
-      fun i => if i.val ≤ n₁ then idleDir (wHeads i) else moveLeftDir (wHeads i),
-      moveLeftDir oHead ) := by
+      fun _ => .blank, .blank, idleDir iHead,
+      fun i => idleDir (wHeads i),
+      idleDir oHead ) := by
   unfold unionTM; rfl
 
 /-- Delta computation for Phase 1 halted state (transition to rewindOut). -/
@@ -542,10 +542,10 @@ private theorem step_setup2_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     (hstate : c.state = Sum.inr (Sum.inl Mid.setup2)) :
     (unionTM tm₁ tm₂).step c = some
       { state := Sum.inr (Sum.inr tm₂.qstart),
-        input := c.input.move (moveLeftDir c.input.read),
+        input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move
-          (if i.val ≤ n₁ then idleDir (c.work i).read else moveLeftDir (c.work i).read),
-        output := (c.output.write Γw.blank.toΓ).move (moveLeftDir c.output.read) } := by
+          (idleDir (c.work i).read),
+        output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) } := by
   have hne : c.state ≠ (unionTM tm₁ tm₂).qhalt := by rw [hstate]; exact fun h => nomatch h
   simp only [step, if_neg hne]; rw [hstate]; rfl
 
@@ -959,10 +959,14 @@ private theorem rewind_input_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
       ih c' hst' hhead' hnostart' hcell0' hout'
     exact ⟨c'', .step hstep hreach, hst'', hhead'', by rw [hcells'', hcells'], hout''⟩
 
-/-- Writing blank to idleTape and moving left yields initTape []. -/
-private theorem idleTape_moveLeft :
-    (idleTape.write Γw.blank.toΓ).move (moveLeftDir idleTape.read) = initTape [] := by
-  simp [idleTape, moveLeftDir, Tape.write, Tape.move, Tape.read, initTape]
+/-- idleTape equals initTape []. -/
+private theorem idleTape_eq_initTape : idleTape = initTape [] := by
+  simp [idleTape, initTape]
+
+/-- Writing blank to idleTape and moving with idleDir yields initTape []. -/
+private theorem idleTape_idle_initTape :
+    (idleTape.write Γw.blank.toΓ).move (idleDir idleTape.read) = initTape [] := by
+  rw [idleTape_step_idle]; exact idleTape_eq_initTape
 
 /-- idleTape stays idleTape when written with blank and moved by idleDir (on any tape). -/
 private theorem tape_idle_step (t : Tape) (ht : t = idleTape) :
@@ -1236,22 +1240,20 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
   have hstep7 := step_setup2_cfg tm₁ tm₂ (show c_s2.state = Sum.inr (Sum.inl Mid.setup2) from rfl)
   set c_mid : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inr tm₂.qstart),
-      input := c_s2.input.move (moveLeftDir c_s2.input.read),
+      input := c_s2.input.move (idleDir c_s2.input.read),
       work := fun i => ((c_s2.work i).write (Γw.blank : Γw).toΓ).move
-        (if i.val ≤ n₁ then idleDir (c_s2.work i).read else moveLeftDir (c_s2.work i).read),
-      output := (c_s2.output.write Γw.blank.toΓ).move (moveLeftDir c_s2.output.read) }
+        (idleDir (c_s2.work i).read),
+      output := (c_s2.output.write Γw.blank.toΓ).move (idleDir c_s2.output.read) }
     with hc_mid_def
   -- Now prove all properties of c_mid.
   -- c_mid.state
   have hst_mid : c_mid.state = Sum.inr (Sum.inr tm₂.qstart) := rfl
   -- c_mid.input = initTape (x.map Γ.ofBool)
-  -- c_mid.input = c_s2.input.move (moveLeftDir c_s2.input.read)
+  -- c_mid.input = c_s2.input.move (idleDir c_s2.input.read)
   -- c_s2.input = c_ri0.input.move Dir3.right
   -- c_ri0.input.head = 0, so moving right gives head = 1
-  -- c_s2.input.head = 1, c_s2.input.cells = c_ri0.input.cells (move preserves)
-  -- c_s2.input.read = cells[1] which is from initTape, not start
-  -- moveLeftDir(non-start) = left, so head goes from 1 to 0
-  -- c_mid.input = { head := 0, cells := initTape cells } = initTape (x.map Γ.ofBool)
+  -- c_s2.input.head = 1, c_s2.input.read = cells[1] ≠ start
+  -- idleDir(non-start) = stay, so head stays at 1 = initTape head
   have hcells_ri0_eq : c_ri0.input.cells = (initTape (x.map Γ.ofBool)).cells := by
     rw [hcells_ri0, hin_cells_chain]
   have hin_mid : c_mid.input = initTape (x.map Γ.ofBool) := by
@@ -1269,26 +1271,24 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
     have hs2_read_ne : c_s2.input.read ≠ Γ.start := by
       rw [Tape.read, hs2_head, hs2_cells, hcells_ri0]
       exact hin_nostart_ri 1 (by omega)
-    -- c_mid.input.head = 0 (moveLeftDir of non-start = left, from head 1 → 0)
-    have h1 : c_mid.input.head = 0 := by
-      show (c_s2.input.move (moveLeftDir c_s2.input.read)).head = 0
-      rw [moveLeftDir, if_neg hs2_read_ne]; simp [Tape.move, hs2_head]
+    -- c_mid.input.head = 1 (idleDir of non-start = stay, head stays at 1)
+    have h1 : c_mid.input.head = 1 := by
+      show (c_s2.input.move (idleDir c_s2.input.read)).head = 1
+      rw [idleDir, if_neg hs2_read_ne]; simp [Tape.move, hs2_head]
     -- Combine
     have hcfg : ∀ (a b : Tape), a.head = b.head → a.cells = b.cells → a = b := by
       intros a b hh hc; cases a; cases b; simp only [Tape.mk.injEq] at *; exact ⟨hh, hc⟩
     exact hcfg _ _ (by rw [h1]; rfl) h2
   -- c_mid.output = initTape []
-  -- c_mid.output = (c_s2.output.write blank).move (moveLeftDir c_s2.output.read)
-  -- c_s2.output = (c_ri0.output.write blank).move (idleDir c_ri0.output.read)
-  -- c_ri0.output = idleTape
+  -- c_mid.output = (c_s2.output.write blank).move (idleDir c_s2.output.read)
   -- c_s2.output = idleTape (write blank + move idle on idleTape)
-  -- c_mid.output = (idleTape.write blank).move (moveLeftDir idleTape.read) = initTape []
+  -- c_mid.output = (idleTape.write blank).move (idleDir idleTape.read) = initTape []
   have hout_s2 : c_s2.output = idleTape := by
     show (c_ri0.output.write Γw.blank.toΓ).move (idleDir c_ri0.output.read) = idleTape
     rw [hout_ri0]; exact idleTape_step_idle
   have hout_mid : c_mid.output = initTape [] := by
-    show (c_s2.output.write Γw.blank.toΓ).move (moveLeftDir c_s2.output.read) = initTape []
-    rw [hout_s2]; exact idleTape_moveLeft
+    show (c_s2.output.write Γw.blank.toΓ).move (idleDir c_s2.output.read) = initTape []
+    rw [hout_s2]; exact idleTape_idle_initTape
   -- Phase 2 work tapes = initTape []
   -- Strategy: show work tapes at > n₁ indices stay idleTape through each phase,
   -- then setup2 sends idleTape to initTape [].
@@ -1349,9 +1349,9 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
       c_mid.work ⟨n₁ + 1 + j.val, by omega⟩ = initTape [] := by
     intro j
     show ((c_s2.work ⟨n₁ + 1 + j.val, by omega⟩).write _).move
-      (if (n₁ + 1 + j.val) ≤ n₁ then _ else _) = _
-    rw [if_neg (show ¬(n₁ + 1 + j.val ≤ n₁) from by omega), hwork_s2_idle j]
-    exact idleTape_moveLeft
+      (idleDir (c_s2.work ⟨n₁ + 1 + j.val, by omega⟩).read) = _
+    rw [hwork_s2_idle j]
+    exact idleTape_idle_initTape
   -- Compose all reachesIn steps
   have hreach_total : (unionTM tm₁ tm₂).reachesIn
       (1 + (h_rw + (1 + 1)) + (h_ri + (1 + 1)))
@@ -1565,18 +1565,18 @@ private theorem step_head_bound (tm : TM n₁) (c c' : Cfg n₁ tm.Q)
       exact hm
 
 /-- A tape head moves at most 1 cell per step. After `t` steps starting
-    from `initCfg`, the head is at position ≤ `t`. -/
+    from `initCfg`, the head is at position ≤ `t + 1`. -/
 theorem head_bound_of_reachesIn (tm : TM n₁)
     {t : ℕ} {c : Cfg n₁ tm.Q}
     (hreach : tm.reachesIn t (tm.initCfg x) c) :
-    c.input.head ≤ t ∧ c.output.head ≤ t ∧ ∀ i, (c.work i).head ≤ t := by
+    c.input.head ≤ t + 1 ∧ c.output.head ≤ t + 1 ∧ ∀ i, (c.work i).head ≤ t + 1 := by
   suffices gen : ∀ (t : ℕ) (c₀ c : Cfg n₁ tm.Q), tm.reachesIn t c₀ c →
       c.input.head ≤ c₀.input.head + t ∧
       c.output.head ≤ c₀.output.head + t ∧
       ∀ i, (c.work i).head ≤ (c₀.work i).head + t by
     have h := gen t (tm.initCfg x) c hreach
     simp [initTape] at h
-    exact h
+    exact ⟨by omega, by omega, fun i => by have := (h.2.2 i); omega⟩
   intro t c₀ c hreach
   induction hreach with
   | zero => simp

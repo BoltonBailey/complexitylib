@@ -83,32 +83,43 @@ private theorem readBackWrite_cells {t : Tape} {d : Dir3}
 
 private theorem simTapeCellCorrect_pos0
     (simTape : Tape) (tapeIdx : ℕ) (htape : tapeIdx < n + 2)
-    (hcells : ∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → simTape.cells j = Γ.one) :
-    simTapeCellCorrect (n + 2) tapeIdx 0 0 Γ.start simTape := by
+    (hhead : simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx) = Γ.blank)
+    (hsym : simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 1) = Γ.one ∧
+            simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 2) = Γ.one) :
+    simTapeCellCorrect (n + 2) tapeIdx 0 1 Γ.start simTape := by
   simp only [simTapeCellCorrect, SuperCell.simTapeOffset, SuperCell.width, ↓reduceIte,
              SuperCell.symToCellPair]
-  refine ⟨?_, ?_, ?_⟩ <;> (apply hcells <;> omega)
+  exact ⟨hhead, hsym.1, hsym.2⟩
 
 private theorem simTapeCellCorrect_blank_cells
-    (simTape : Tape) (numTapes tapeIdx pos : ℕ) (hpos : pos > 0)
+    (simTape : Tape) (numTapes tapeIdx pos simHead : ℕ) (hne : simHead ≠ pos)
     (hbase : ∀ off, off < 3 →
       simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx + off) = Γ.blank) :
-    simTapeCellCorrect numTapes tapeIdx pos 0 Γ.blank simTape := by
+    simTapeCellCorrect numTapes tapeIdx pos simHead Γ.blank simTape := by
   simp only [simTapeCellCorrect, SuperCell.symToCellPair]
-  have hne : (0 : ℕ) ≠ pos := by omega
   simp only [hne, ↓reduceIte]
   exact ⟨hbase 0 (by omega), hbase 1 (by omega), hbase 2 (by omega)⟩
 
 private theorem simTapeCellCorrect_input_written
-    (simTape : Tape) (pos : ℕ) (b : Bool) (hpos : pos > 0)
+    (simTape : Tape) (pos : ℕ) (b : Bool) (simHead : ℕ) (hne : simHead ≠ pos)
     (hc0 : simTape.cells (SuperCell.simTapeOffset (n + 2) pos 0) = Γ.blank)
     (hc1 : simTape.cells (SuperCell.simTapeOffset (n + 2) pos 0 + 1) = Γ.zero)
     (hc2 : simTape.cells (SuperCell.simTapeOffset (n + 2) pos 0 + 2) = Γ.ofBool b) :
-    simTapeCellCorrect (n + 2) 0 pos 0 (Γ.ofBool b) simTape := by
+    simTapeCellCorrect (n + 2) 0 pos simHead (Γ.ofBool b) simTape := by
   simp only [simTapeCellCorrect, SuperCell.symToCellPair]
-  have hne : (0 : ℕ) ≠ pos := by omega
   simp only [hne, ↓reduceIte]
   cases b <;> simp only [Γ.ofBool, SuperCell.symToCellPair] at * <;> exact ⟨hc0, hc1, hc2⟩
+
+private theorem simTapeCellCorrect_at_head
+    (simTape : Tape) (numTapes tapeIdx pos : ℕ) (sym : Γ)
+    (hc0 : simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx) = Γ.one)
+    (hc1 : simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx + 1) =
+      (SuperCell.symToCellPair sym).1)
+    (hc2 : simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx + 2) =
+      (SuperCell.symToCellPair sym).2) :
+    simTapeCellCorrect numTapes tapeIdx pos pos sym simTape := by
+  simp only [simTapeCellCorrect, show pos = pos from rfl, ↓reduceIte]
+  exact ⟨hc0, hc1, hc2⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- superCellsCorrect from cell values
@@ -117,24 +128,37 @@ private theorem simTapeCellCorrect_input_written
 private theorem superCellsCorrect_from_cells
     (tm : TM n) (x : List Bool) (simTape : Tape)
     (h0 : simTape.cells 0 = Γ.start)
-    (hpos0 : ∀ j, j ≥ 1 → j ≤ 3 * (n + 2) → simTape.cells j = Γ.one)
+    (hpos0_head : ∀ tapeIdx, tapeIdx < n + 2 →
+      simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx) = Γ.blank)
+    (hpos0_sym : ∀ tapeIdx, tapeIdx < n + 2 →
+      simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 1) = Γ.one ∧
+      simTape.cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 2) = Γ.one)
+    (hhead1 : ∀ tapeIdx, tapeIdx < n + 2 →
+      simTape.cells (SuperCell.simTapeOffset (n + 2) 1 tapeIdx) = Γ.one)
     (hinput : ∀ (p : ℕ) (hp : p ≥ 1) (hp2 : p ≤ x.length),
-      simTape.cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank ∧
       simTape.cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
       simTape.cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
         Γ.ofBool (x.get ⟨p - 1, by omega⟩))
     (hblank : ∀ (numTapes tapeIdx pos : ℕ),
       pos > 0 → tapeIdx < numTapes → numTapes = n + 2 →
       (tapeIdx > 0 ∨ pos > x.length) →
-      ∀ off, off < 3 →
-        simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx + off) = Γ.blank) :
+      ∀ off, 1 ≤ off → off < 3 →
+        simTape.cells (SuperCell.simTapeOffset numTapes pos tapeIdx + off) = Γ.blank)
+    (hblank_hd : ∀ (tapeIdx pos : ℕ),
+      pos > 1 → tapeIdx < n + 2 →
+      (tapeIdx > 0 ∨ pos > x.length) →
+        simTape.cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx) = Γ.blank)
+    (hinput_hd : ∀ (p : ℕ), p > 1 → p ≤ x.length →
+        simTape.cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank) :
     superCellsCorrect (tm.initCfg x) simTape := by
   refine ⟨h0, ?_, ?_, ?_⟩
-  · intro pos
+  · -- Input tape (tapeIdx = 0)
+    intro pos
     by_cases hpos0' : pos = 0
     · subst hpos0'
-      simp only [TM.initCfg, Cfg.init, initTape]
-      exact simTapeCellCorrect_pos0 simTape 0 (by omega) hpos0
+      simp only [TM.initCfg, Cfg.init, initTape, ite_true]
+      exact simTapeCellCorrect_pos0 simTape 0 (by omega)
+        (hpos0_head 0 (by omega)) (hpos0_sym 0 (by omega))
     · have hpge : pos ≥ 1 := by omega
       simp only [TM.initCfg, Cfg.init, initTape]
       rw [if_neg hpos0']
@@ -145,41 +169,84 @@ private theorem superCellsCorrect_from_cells
           rw [List.getElem?_map]
           simp [hlt]
         simp only [hmapped, Option.getD]
-        obtain ⟨hc0, hc1, hc2⟩ := hinput pos hpge hle
-        exact simTapeCellCorrect_input_written simTape pos
-          (x.get ⟨pos - 1, hlt⟩) (by omega) hc0 hc1 hc2
+        obtain ⟨hc1, hc2⟩ := hinput pos hpge hle
+        by_cases hpos1 : pos = 1
+        · subst hpos1
+          simp only [simTapeCellCorrect, show (1 : ℕ) = 1 from rfl, ↓reduceIte]
+          cases hb_val : (x.get ⟨1 - 1, hlt⟩) <;>
+            simp only [hb_val, Γ.ofBool, SuperCell.symToCellPair] at hc1 hc2 ⊢ <;>
+            exact ⟨hhead1 0 (by omega), hc1, hc2⟩
+        · exact simTapeCellCorrect_input_written simTape pos
+            (x.get ⟨pos - 1, hlt⟩) 1 (by omega) (hinput_hd pos (by omega) hle) hc1 hc2
       · have : (List.map Γ.ofBool x)[pos - 1]? = none := by
           rw [List.getElem?_eq_none]; simp; omega
         simp only [this, Option.getD]
-        exact simTapeCellCorrect_blank_cells simTape (n + 2) 0 pos (by omega)
-          (fun off hoff => hblank (n + 2) 0 pos (by omega) (by omega) rfl
-            (Or.inr (by omega)) off hoff)
-  · intro i pos
+        by_cases hpos1 : pos = 1
+        · subst hpos1
+          exact simTapeCellCorrect_at_head simTape (n + 2) 0 1 Γ.blank
+            (hhead1 0 (by omega))
+            (by simp [SuperCell.symToCellPair];
+                exact (hblank (n + 2) 0 1 (by omega) (by omega) rfl (Or.inr (by omega)) 1 (by omega) (by omega)))
+            (by simp [SuperCell.symToCellPair];
+                exact (hblank (n + 2) 0 1 (by omega) (by omega) rfl (Or.inr (by omega)) 2 (by omega) (by omega)))
+        · exact simTapeCellCorrect_blank_cells simTape (n + 2) 0 pos 1 (by omega)
+            (fun off hoff => by
+              rcases off with _ | off
+              · simp; exact hblank_hd 0 pos (by omega) (by omega) (Or.inr (by omega))
+              · exact hblank (n + 2) 0 pos (by omega) (by omega) rfl
+                  (Or.inr (by omega)) (off + 1) (by omega) (by omega))
+  · -- Work tapes (tapeIdx = i.val + 1)
+    intro i pos
     by_cases hpos0' : pos = 0
     · subst hpos0'
-      simp only [TM.initCfg, Cfg.init, initTape]
-      exact simTapeCellCorrect_pos0 simTape (i.val + 1) (by omega) hpos0
+      simp only [TM.initCfg, Cfg.init, initTape, ite_true]
+      exact simTapeCellCorrect_pos0 simTape (i.val + 1) (by omega)
+        (hpos0_head (i.val + 1) (by omega)) (hpos0_sym (i.val + 1) (by omega))
     · simp only [TM.initCfg, Cfg.init, initTape]
       rw [if_neg hpos0']
       have : ([] : List Γ)[pos - 1]? = (none : Option Γ) := by
         rw [List.getElem?_eq_none]; simp
       simp only [this, Option.getD]
-      exact simTapeCellCorrect_blank_cells simTape (n + 2) (i.val + 1) pos (by omega)
-        (fun off hoff => hblank (n + 2) (i.val + 1) pos (by omega) (by omega) rfl
-          (Or.inl (by omega)) off hoff)
-  · intro pos
+      by_cases hpos1 : pos = 1
+      · subst hpos1
+        exact simTapeCellCorrect_at_head simTape (n + 2) (i.val + 1) 1 Γ.blank
+          (hhead1 (i.val + 1) (by omega))
+          (by simp [SuperCell.symToCellPair];
+              exact (hblank (n + 2) (i.val + 1) 1 (by omega) (by omega) rfl (Or.inl (by omega)) 1 (by omega) (by omega)))
+          (by simp [SuperCell.symToCellPair];
+              exact (hblank (n + 2) (i.val + 1) 1 (by omega) (by omega) rfl (Or.inl (by omega)) 2 (by omega) (by omega)))
+      · exact simTapeCellCorrect_blank_cells simTape (n + 2) (i.val + 1) pos 1 (by omega)
+          (fun off hoff => by
+            rcases off with _ | off
+            · simp; exact hblank_hd (i.val + 1) pos (by omega) (by omega) (Or.inl (by omega))
+            · exact hblank (n + 2) (i.val + 1) pos (by omega) (by omega) rfl
+                (Or.inl (by omega)) (off + 1) (by omega) (by omega))
+  · -- Output tape (tapeIdx = n + 1)
+    intro pos
     by_cases hpos0' : pos = 0
     · subst hpos0'
-      simp only [TM.initCfg, Cfg.init, initTape]
-      exact simTapeCellCorrect_pos0 simTape (n + 1) (by omega) hpos0
+      simp only [TM.initCfg, Cfg.init, initTape, ite_true]
+      exact simTapeCellCorrect_pos0 simTape (n + 1) (by omega)
+        (hpos0_head (n + 1) (by omega)) (hpos0_sym (n + 1) (by omega))
     · simp only [TM.initCfg, Cfg.init, initTape]
       rw [if_neg hpos0']
       have : ([] : List Γ)[pos - 1]? = (none : Option Γ) := by
         rw [List.getElem?_eq_none]; simp
       simp only [this, Option.getD]
-      exact simTapeCellCorrect_blank_cells simTape (n + 2) (n + 1) pos (by omega)
-        (fun off hoff => hblank (n + 2) (n + 1) pos (by omega) (by omega) rfl
-          (Or.inl (by omega)) off hoff)
+      by_cases hpos1 : pos = 1
+      · subst hpos1
+        exact simTapeCellCorrect_at_head simTape (n + 2) (n + 1) 1 Γ.blank
+          (hhead1 (n + 1) (by omega))
+          (by simp [SuperCell.symToCellPair];
+              exact (hblank (n + 2) (n + 1) 1 (by omega) (by omega) rfl (Or.inl (by omega)) 1 (by omega) (by omega)))
+          (by simp [SuperCell.symToCellPair];
+              exact (hblank (n + 2) (n + 1) 1 (by omega) (by omega) rfl (Or.inl (by omega)) 2 (by omega) (by omega)))
+      · exact simTapeCellCorrect_blank_cells simTape (n + 2) (n + 1) pos 1 (by omega)
+          (fun off hoff => by
+            rcases off with _ | off
+            · simp; exact hblank_hd (n + 1) pos (by omega) (by omega) (Or.inl (by omega))
+            · exact hblank (n + 2) (n + 1) pos (by omega) (by omega) rfl
+                (Or.inl (by omega)) (off + 1) (by omega) (by omega))
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase simulation stubs (sorry'd)
@@ -2102,7 +2169,46 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
   refine ⟨c', setupSimBound n x.length, le_refl _, hreach, hhalt, ?_⟩
   -- Postcondition assembly
   -- superCellsCorrect from cell values
-  have hsc := superCellsCorrect_from_cells tm x (c'.work utmSimTape) hsim0' hones hinput hblank
+  -- Derive new-style hypotheses from old-style setupSim_full_execution outputs.
+  -- hpos0_head and hhead1 require Phase 1 to write head markers correctly for head=1;
+  -- the current phases are sorry'd and will be updated when they are filled in.
+  have hpos0_head : ∀ tapeIdx, tapeIdx < n + 2 →
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx) = Γ.blank := by
+    sorry
+  have hpos0_sym : ∀ tapeIdx, tapeIdx < n + 2 →
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 1) = Γ.one ∧
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) 0 tapeIdx + 2) = Γ.one := by
+    intro tapeIdx htape
+    constructor
+    · apply hones <;> simp [SuperCell.simTapeOffset, SuperCell.width] <;> omega
+    · apply hones <;> simp [SuperCell.simTapeOffset, SuperCell.width] <;> omega
+  have hhead1 : ∀ tapeIdx, tapeIdx < n + 2 →
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) 1 tapeIdx) = Γ.one := by
+    sorry
+  have hinput' : ∀ (p : ℕ) (hp : p ≥ 1) (hp2 : p ≤ x.length),
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 1) = Γ.zero ∧
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0 + 2) =
+        Γ.ofBool (x.get ⟨p - 1, by omega⟩) := by
+    intro p hp hp2; exact ⟨(hinput p hp hp2).2.1, (hinput p hp hp2).2.2⟩
+  have hblank' : ∀ (numTapes tapeIdx pos : ℕ),
+      pos > 0 → tapeIdx < numTapes → numTapes = n + 2 →
+      (tapeIdx > 0 ∨ pos > x.length) →
+      ∀ off, 1 ≤ off → off < 3 →
+        (c'.work utmSimTape).cells (SuperCell.simTapeOffset numTapes pos tapeIdx + off) = Γ.blank := by
+    intro numTapes tapeIdx pos hpos htape hnt hor off hoff1 hoff3
+    exact hblank numTapes tapeIdx pos hpos htape hnt hor off (by omega)
+  have hblank_hd : ∀ (tapeIdx pos : ℕ),
+      pos > 1 → tapeIdx < n + 2 →
+      (tapeIdx > 0 ∨ pos > x.length) →
+        (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx) = Γ.blank := by
+    intro tapeIdx pos hpos htape hor
+    exact hblank (n + 2) tapeIdx pos (by omega) htape rfl hor 0 (by omega)
+  have hinput_hd : ∀ (p : ℕ), p > 1 → p ≤ x.length →
+      (c'.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) p 0) = Γ.blank := by
+    intro p hp hle
+    exact (hinput p (by omega) hle).1
+  have hsc := superCellsCorrect_from_cells tm x (c'.work utmSimTape) hsim0'
+    hpos0_head hpos0_sym hhead1 hinput' hblank' hblank_hd hinput_hd
   -- desc/state preserved (hdesc' and hstate' are tape equalities from setupSim_full_execution)
   have hdesc_post : descOnTape (TMEncoding.encodeTM tm) (c'.work utmDescTape) := hdesc' ▸ hdesc
   have hstate_post : stateOnTapeAt k (e tm.qstart) (c'.work utmStateTape) := hstate' ▸ hstate
