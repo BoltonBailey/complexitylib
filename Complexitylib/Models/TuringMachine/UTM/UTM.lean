@@ -110,6 +110,17 @@ theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ
       (utmTM (n := n) k).halted c' ∧
       (x ∈ L → c'.output.cells 1 = Γ.one) ∧
       (x ∉ L → c'.output.cells 1 = Γ.zero) := by
+  -- Step 1: Get the simulated TM's halting computation
+  obtain ⟨c_sim, t_sim, _ht_sim, hreach_sim, hhalt_sim, hmem, hnmem⟩ := hM x
+  -- Step 2: The proof composes initTM, loopTM, and extractOutputTM.
+  -- This requires threading Hoare specs through seqTM composition
+  -- with all tape invariants (SimInvariant, scratch blank, inp/out WF).
+  -- The composition is extremely involved (~500 lines) and requires:
+  -- - initTM_hoareTime for initialization
+  -- - Strong induction on t_sim for the loop body
+  -- - extractOutputTM_hoareTime for output extraction
+  -- - seqTM lifting lemmas from SeqInternal.lean
+  -- - loopTM iteration lemmas from LoopInternal.lean
   sorry
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -130,6 +141,12 @@ theorem utm_correct (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     (hHeads : ∀ x, tm.SimHeadsGe1 x) :
     ∃ (C : ℕ),
       (utmTM (n := n) k).DecidesInTime L (fun len => C * (T len) ^ 2) := by
+  -- NOTE: DecidesInTime uses (utmTM k).initCfg x which puts raw x on the
+  -- input tape. But the UTM needs encodeUTMInput tm x (with TM description
+  -- prefix). Since Γ.ofBool cannot produce Γ.blank (the separator), there
+  -- is no y : List Bool such that (utmTM k).initCfg y matches
+  -- utmInitCfg tm k x. This theorem requires reformulation.
+  -- See utm_simulates for the correctly formulated simulation result.
   sorry
 
 end TM

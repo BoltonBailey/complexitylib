@@ -3926,9 +3926,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         stateOnTapeAt k (e q') (work utmStateTape) ∧
         superCellsCorrect simCfg' (work utmSimTape) ∧
         descOnTape desc (work utmDescTape) ∧
-        (work utmDescTape).head = 1 ∧
-        (work utmStateTape).head = 1 ∧
-        (work utmSimTape).head = 1 ∧
+        (∀ i, (work i).head = 1) ∧
         WorkTapesWF work ∧
         -- Preserved: inp/out tapes (applyTransition only modifies work tapes)
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
@@ -4386,7 +4384,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
   have hinp_final : c₄.input = inp := by rw [hinp₄, hinp₃, hinp₂, hinp₁]
   have hout_final : c₄.output = out := by rw [hout₄, hout₃, hout₂, hout₁]
   refine ⟨c₄, reachesIn_toReaches' htotal, hhalted₄, ?_, hsuperCells', ?_,
-    hheads₄ utmDescTape, hheads₄ utmStateTape, hheads₄ utmSimTape, hwf₄,
+    hheads₄, hwf₄,
     by rw [hinp_final]; exact hinp_ns, by rw [hinp_final]; exact hinp_h,
     by rw [hout_final]; exact hout_ns, by rw [hout_final]; exact hout_h⟩
   · -- stateOnTapeAt k (e q') (c₄.work utmStateTape)

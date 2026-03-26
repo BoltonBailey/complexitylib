@@ -1575,11 +1575,18 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
             fun i hne => ⟨by simp only [Tape.read]; exact hwf2.2 i _ (hheads2 i), hheads2 i⟩,
             hdesc2, hstate2, hq_eq2, hq_ne2, hoh2, hoc02, hons2, hwf2,
             hinp2, by
-              -- c2.input.head ≥ 1: input tape is read-only, head preserved from precondition
-              -- Derive from hinp2 (c2.input.read ≠ Γ.start) + hinp_c0 (inp.cells 0 = Γ.start)
-              -- The input tape cells are never modified, so c2.input.cells 0 = inp.cells 0 = Γ.start
-              -- If c2.input.head = 0 then c2.input.read = c2.input.cells 0 = Γ.start, contradiction
-              sorry,
+              -- c2.input.head ≥ 1: input tape is read-only, cells 0 is always Γ.start
+              by_contra h; push_neg at h
+              have hh0 : c2.input.head = 0 := by omega
+              -- Input cells are preserved through reachesIn
+              have hcells2 : c2.input.cells = (seqTransitionInput c1.input).cells :=
+                input_cells_of_reachesIn hreach2
+              rw [hseq1_i] at hcells2
+              have hcells1 : c1.input.cells = inp.cells :=
+                input_cells_of_reachesIn hreach1
+              have : c2.input.read = Γ.start := by
+                simp only [Tape.read, hh0, hcells2, hcells1]; exact hinp_c0
+              exact hinp2 this,
             hout2, houth2, hheads2, hsh2_le⟩)
   obtain ⟨hhead3, hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hoc03, hons3, hwf3,
           hinp3, hinp3_h, hout3, houth3, hheads3, hsh3_le⟩ := hpost3
