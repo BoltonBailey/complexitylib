@@ -144,7 +144,7 @@ end Tape
 /-- Initialize a tape: `▷` at cell 0, `contents` at cells 1, 2, ..., `□` elsewhere.
     Head starts at position 0 (on `▷`). -/
 def initTape (contents : List Γ) : Tape where
-  head := 1
+  head := 0
   cells := fun i =>
     if i = 0 then Γ.start
     else (contents[i - 1]?).getD Γ.blank

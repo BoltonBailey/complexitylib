@@ -361,37 +361,41 @@ theorem copyInputToWorkTM_hoareTime (tm : TM n) (x : List Bool) :
   intro inp work out ⟨hinp, hwork, hout⟩
   set desc := TMEncoding.encodeTM tm
   set rest := x.map Γ.ofBool
-  -- With head := 1, the initial config already has all heads at position 1,
-  -- so we can directly apply copy_loop without an initial ▷-skip step.
+  -- First step: head 0, reads ▷ (not blank), moves all right to position 1
+  have hinp_read_start : (initTape (desc.map Γ.ofBool ++ [Γ.blank] ++ rest)).read = Γ.start := by
+    simp [Tape.read, initTape]
+  have hinp_read_ne : (initTape (desc.map Γ.ofBool ++ [Γ.blank] ++ rest)).read ≠ Γ.blank := by
+    rw [hinp_read_start]; exact Γ.noConfusion
+  -- The initial config
   set c₀ : Cfg 4 (copyInputToWorkTM (0 : Fin 4)).Q :=
     { state := CopyPhase.copying, input := inp, work := work, output := out }
-  -- Verify copy_loop preconditions hold for the initial config
-  have hinp_cells₀ : c₀.input.cells =
-      (initTape (desc.map Γ.ofBool ++ [Γ.blank] ++ rest)).cells := by
-    simp only [c₀, hinp, encodeUTMInput, desc, rest]
-  have hinp_head₀ : c₀.input.head = 0 + 1 := by
-    simp [c₀, hinp, initTape]
-  have hw0_head₀ : (c₀.work 0).head = 0 + 1 := by
-    simp [c₀, hwork, initTape]
-  have hw0_cell0₀ : (c₀.work 0).cells 0 = Γ.start := by
-    simp [c₀, hwork, initTape]
-  have hw0_blank₀ : ∀ j, j ≥ 0 + 1 → (c₀.work 0).cells j = Γ.blank := by
-    intro j hj; simp only [c₀, hwork, initTape]
-    have : j ≠ 0 := by omega
-    simp [this]
-  have hother₀ : ∀ i : Fin 4, i ≠ 0 →
-      (c₀.work i).cells = (initTape []).cells ∧ (c₀.work i).head = 1 := by
-    intro i _; exact ⟨by simp [c₀, hwork], by simp [c₀, hwork, initTape]⟩
-  have hout_cells₀ : c₀.output.cells = (initTape []).cells := by
-    simp [c₀, hout]
-  have hout_head₀ : c₀.output.head = 1 := by
-    simp [c₀, hout, initTape]
+  -- Step result after first step
+  have hstep₀ : ∃ c₁, (copyInputToWorkTM (0 : Fin 4)).step c₀ = some c₁ ∧
+      c₁.state = CopyPhase.copying ∧
+      c₁.input.cells = (initTape (desc.map Γ.ofBool ++ [Γ.blank] ++ rest)).cells ∧
+      c₁.input.head = 1 ∧
+      (c₁.work 0).head = 1 ∧
+      (c₁.work 0).cells 0 = Γ.start ∧
+      (∀ j, j ≥ 1 → (c₁.work 0).cells j = Γ.blank) ∧
+      (∀ i : Fin 4, i ≠ 0 → (c₁.work i).cells = (initTape []).cells ∧ (c₁.work i).head = 1) ∧
+      c₁.output.cells = (initTape []).cells ∧
+      c₁.output.head = 1 := by
+    subst hinp; subst hwork; subst hout
+    simp only [c₀, TM.step, copyInputToWorkTM, encodeUTMInput]
+    refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    all_goals simp [Tape.writeAndMove, Tape.move, Tape.write, initTape, Tape.read, idleDir]
+    · ext i; simp [desc, rest]
+    · intro j hj; omega
+  obtain ⟨c₁, hstep₁, hstate₁, hinp_cells₁, hinp_head₁, hw0_head₁, hw0_cell0₁,
+    hw0_blank₁, hother₁, hout_cells₁, hout_head₁⟩ := hstep₀
   -- Apply copy_loop from copied=0
   obtain ⟨c', hreach, hhalt, r1, r2, r3, r4, r5, r6, r7, r8, r9, r9b, r10, r11⟩ :=
-    copy_loop desc rest desc.length 0 (by omega) (by omega) c₀ rfl
-      hinp_cells₀ hinp_head₀ hw0_head₀ hw0_cell0₀
-      (by intro j hj; omega) hw0_blank₀ hother₀ hout_cells₀ hout_head₀
-  refine ⟨c', desc.length + 1, by unfold copyBound; omega, hreach, hhalt, ?_⟩
-  · exact ⟨⟨r1, r2, r3⟩, r4, r5, r6, r7, ⟨r8, r9⟩, r9b, r10.trans hinp_cells₀, r11⟩
+    copy_loop desc rest desc.length 0 (by omega) (by omega) c₁ hstate₁
+      hinp_cells₁ hinp_head₁ hw0_head₁ hw0_cell0₁
+      (by intro j hj; omega) hw0_blank₁ hother₁ hout_cells₁ hout_head₁
+  refine ⟨c', desc.length + 2, le_refl _, ?_, hhalt, ?_⟩
+  · rw [show desc.length + 2 = 1 + (desc.length + 1) by omega]
+    exact reachesIn_trans (copyInputToWorkTM (0 : Fin 4)) (.step hstep₁ .zero) hreach
+  · exact ⟨⟨r1, r2, r3⟩, r4, r5, r6, r7, ⟨r8, r9⟩, r9b, r10.trans hinp_cells₁, r11⟩
 
 end TM
