@@ -1562,6 +1562,7 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
        stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (c'.work utmStateTape) ∧
        (c'.work utmSimTape).cells = (initTape []).cells ∧
        tapeStoresBools (List.replicate n true) (c'.work utmScratchTape) ∧
+       (∀ j, j ≥ n + 1 → (c'.work utmScratchTape).cells j = (initTape []).cells j) ∧
        (c'.work utmDescTape).head ≤ 3 * k + n + 5 ∧
        (c'.work utmScratchTape).head ≤ n + 1 ∧
        (c'.work utmStateTape).head ≤ k + 1 ∧
@@ -1850,7 +1851,7 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
 
   -- Postconditions
   · change descOnTape desc (c₄.work utmDescTape) ∧ _
-    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, by rw [hst_h4], ?_, ?_⟩
+    refine ⟨?_, ?_, hsim_c4, ?_, ?_, ?_, ?_, by rw [hst_h4], ?_, ?_⟩
     -- descOnTape desc (c₄.work utmDescTape)
     · constructor
       · rw [hdesc_c4]; exact hdesc.1
@@ -1883,6 +1884,9 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
         have := hsc_tail4 (n + 1) (by omega)
         rw [show n + 1 = n + 1 from rfl] at this
         rw [this]; exact initTape_nil_cell_ge1 (by omega)
+    -- scratch tail remains blank
+    · intro j hj
+      rw [hsc_tail4 j hj]
     -- desc head bound
     · rw [hdesc_h4]; omega
     -- scratch head bound
@@ -1926,6 +1930,7 @@ theorem setupStateTM_hoareTime (tm : TM n) (k : ℕ)
         stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape) ∧
         (work utmSimTape).cells = (initTape []).cells ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
         (work utmScratchTape).head ≤ n + 1 ∧
         (work utmStateTape).head ≤ k + 1 ∧
@@ -1942,13 +1947,14 @@ theorem setupStateTM_hoareTime (tm : TM n) (k : ℕ)
   have hstate' := hpost.2.1
   have hsim' := hpost.2.2.1
   have hsc' := hpost.2.2.2.1
-  have hd_head' := hpost.2.2.2.2.1
-  have hsc_head' := hpost.2.2.2.2.2.1
-  have hst_head' := hpost.2.2.2.2.2.2.1
-  have hsim_pres := hpost.2.2.2.2.2.2.2.1
-  have hinp_pres := hpost.2.2.2.2.2.2.2.2
+  have hsc_tail' := hpost.2.2.2.2.1
+  have hd_head' := hpost.2.2.2.2.2.1
+  have hsc_head' := hpost.2.2.2.2.2.2.1
+  have hst_head' := hpost.2.2.2.2.2.2.2.1
+  have hsim_pres := hpost.2.2.2.2.2.2.2.2.1
+  have hinp_pres := hpost.2.2.2.2.2.2.2.2.2
   exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv',
-         hdesc', hstate', hsim', hsc', hd_head', hsc_head', hst_head',
+         hdesc', hstate', hsim', hsc', hsc_tail', hd_head', hsc_head', hst_head',
          by rw [hsim_pres], by rw [hinp_pres]⟩
 
 end TM

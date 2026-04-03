@@ -1064,7 +1064,8 @@ variable {n : ℕ}
 
 /-- HoareTime wrapper for skipToQhaltTM. Navigates desc tape from cell 1
     past header to qhalt one-hot position. Preserves all other tapes. -/
-private theorem skipToQhaltTM_asHoareTime (k' n' : ℕ) (desc : List Bool)
+private theorem skipToQhaltTM_asHoareTime {Q : Type} [DecidableEq Q]
+    (k' n' : ℕ) (desc : List Bool) (simCfg : Cfg n Q)
     (q : Fin k')
     -- Header structure on the desc tape
     (hones1 : ∀ j, j < k' → desc[j]? = some true)
@@ -1084,7 +1085,12 @@ private theorem skipToQhaltTM_asHoareTime (k' n' : ℕ) (desc : List Bool)
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
-        out.head ≤ B_out)
+        out.head ≤ B_out ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k' n' + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k' n' + 1) = Γ.blank)
       (fun inp work out =>
         descOnTape desc (work (0 : Fin 4)) ∧
         stateOnTapeAt k' q (work (1 : Fin 4)) ∧
@@ -1095,9 +1101,15 @@ private theorem skipToQhaltTM_asHoareTime (k' n' : ℕ) (desc : List Bool)
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
-        out.head ≤ B_out)
+        out.head ≤ B_out ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k' n' + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k' n' + 1) = Γ.blank)
       (k' + n' + 2) := by
-  intro inp work out ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hwf, hinp, hout_ns, hout_h, hheads, hout_le⟩
+  intro inp work out ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hwf, hinp, hout_ns, hout_h,
+    hheads, hout_le, hsim, hsim_h, hscratch_h, hscratch_inp_blank, hscratch_out_blank⟩
   -- Derive the header structure on the tape from descOnTape + desc structure
   have hones1_tape : ∀ j, j < k' → (work (0 : Fin 4)).cells (1 + j) = Γ.one := by
     intro j hj
@@ -1148,7 +1160,7 @@ private theorem skipToQhaltTM_asHoareTime (k' n' : ℕ) (desc : List Bool)
   change c'.output = out at hout'
   change ∀ i, i ≠ (0 : Fin 4) → c'.work i = work i at hwork'
   refine ⟨c', k' + n' + 2, le_rfl, hreach, hhalt, ?_⟩
-  refine ⟨?_, ?_, hh', ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, hh', ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · -- descOnTape preserved (cells unchanged)
     obtain ⟨h0, hbits, hblank⟩ := hdesc_tape
     refine ⟨?_, ?_, ?_⟩
@@ -1190,9 +1202,20 @@ private theorem skipToQhaltTM_asHoareTime (k' n' : ℕ) (desc : List Bool)
     · rw [hwork' i h]; exact hheads i
   · -- output head bound preserved
     rw [hout']; exact hout_le
+  · -- sim tape preserved
+    rw [hwork' 2 (by decide)]; exact hsim
+  · -- sim head preserved
+    rw [hwork' 2 (by decide)]; exact hsim_h
+  · -- scratch head preserved
+    rw [hwork' 3 (by decide)]; exact hscratch_h
+  · -- scratch input-pattern sentinel preserved
+    rw [hwork' 3 (by decide)]; exact hscratch_inp_blank
+  · -- scratch output sentinel preserved
+    rw [hwork' 3 (by decide)]; exact hscratch_out_blank
 
 /-- HoareTime for compareWriteTM with rich postcondition. -/
-private theorem compareWriteTM_asHoareTime (tm : TM n) (k : ℕ)
+private theorem compareWriteTM_asHoareTime {Q : Type} [DecidableEq Q]
+    (tm : TM n) (k : ℕ) (simCfg : Cfg n Q)
     (e : tm.Q ≃ Fin k) (desc : List Bool) (q : Fin k) (B : ℕ)
     (he_val : ∀ q : tm.Q, (e q).val = (tm.stateEquiv q).val)
     -- qhalt encoding on desc at position k+n+3
@@ -1209,7 +1232,12 @@ private theorem compareWriteTM_asHoareTime (tm : TM n) (k : ℕ)
         out.head ≤ B ∧
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
-        (∀ i, (work i).head ≥ 1))
+        (∀ i, (work i).head ≥ 1) ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (fun inp work out =>
         descOnTape desc (work (0 : Fin 4)) ∧
         stateOnTapeAt k q (work (1 : Fin 4)) ∧
@@ -1221,9 +1249,15 @@ private theorem compareWriteTM_asHoareTime (tm : TM n) (k : ℕ)
         inp.read ≠ Γ.start ∧ out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
         (work (0 : Fin 4)).head ≤ 2 * k + n + 3 ∧
-        (work (1 : Fin 4)).head ≤ k + 1)
+        (work (1 : Fin 4)).head ≤ k + 1 ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (k + B + 3) := by
-  intro inp work out ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hoh, hwf, hinp, hout_ns, hout_h, hheads⟩
+  intro inp work out ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hoh, hwf, hinp, hout_ns, hout_h,
+    hheads, hsim, hsim_h, hscratch_h, hscratch_inp_blank, hscratch_out_blank⟩
   have hh0 : k + n + 3 ≥ 1 := by omega
   -- Desc tape one-hot for qhalt at position k+n+3
   have hdesc_qhalt : ∀ j, j < k → (work (0 : Fin 4)).cells (k + n + 3 + j) =
@@ -1250,7 +1284,7 @@ private theorem compareWriteTM_asHoareTime (tm : TM n) (k : ℕ)
   refine ⟨?_, ?_, fun h => hq_eq h.symm, fun h => hq_ne (fun h' => h h'.symm),
     hhead1, hoc0', hons', ?_, by rw [hinp']; exact hinp,
     by simp only [Tape.read, hhead1]; exact hons' 1 (by omega),
-    by rw [hhead1], ?_⟩
+    by rw [hhead1], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · obtain ⟨h0, hbits, hblank⟩ := hdesc_tape
     exact ⟨by rw [hcw0]; exact h0,
       fun i hi => by rw [hcw0]; exact hbits i hi,
@@ -1272,17 +1306,26 @@ private theorem compareWriteTM_asHoareTime (tm : TM n) (k : ℕ)
       · by_cases h1 : i = 1
         · subst h1; rw [hcw1]; exact hwf.2 1 j hj
         · rw [hw_other i h0 h1]; exact hwf.2 i j hj
-  · refine ⟨?_, ?_, ?_⟩
-    · intro i
-      by_cases h0 : i = 0
-      · subst h0; exact hh0_ge
-      · by_cases h1 : i = 1
-        · subst h1; exact hh1_ge
-        · rw [hw_other i h0 h1]; exact hheads i
-    · -- desc head ≤ 2*k + n + 3
-      have := hh0_le; omega
-    · -- state head ≤ k + 1
-      have := hh1_le; omega
+  · intro i
+    by_cases h0 : i = 0
+    · subst h0; exact hh0_ge
+    · by_cases h1 : i = 1
+      · subst h1; exact hh1_ge
+      · rw [hw_other i h0 h1]; exact hheads i
+  · -- desc head ≤ 2*k + n + 3
+    have := hh0_le; omega
+  · -- state head ≤ k + 1
+    have := hh1_le; omega
+  · -- sim tape preserved
+    rw [hw_other 2 (by decide) (by decide)]; exact hsim
+  · -- sim head preserved
+    rw [hw_other 2 (by decide) (by decide)]; exact hsim_h
+  · -- scratch head preserved
+    rw [hw_other 3 (by decide) (by decide)]; exact hscratch_h
+  · -- scratch input-pattern sentinel preserved
+    rw [hw_other 3 (by decide) (by decide)]; exact hscratch_inp_blank
+  · -- scratch output sentinel preserved
+    rw [hw_other 3 (by decide) (by decide)]; exact hscratch_out_blank
 
 -- rewindWorkTM_rich_hoareTime is now public in HelpersInternal.lean
 
@@ -1424,7 +1467,7 @@ private theorem encodeTM_long2 (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ)
 
     **Time**: O(k + n + B). -/
 theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
-    (e : tm.Q ≃ Fin k) (desc : List Bool) (q : Fin k) (B : ℕ)
+    (e : tm.Q ≃ Fin k) (desc : List Bool) (q : Fin k) (simCfg : Cfg n tm.Q) (B : ℕ)
     -- Encoding structure
     (hk : k = @Fintype.card tm.Q tm.finQ)
     (hdesc : desc = TMEncoding.encodeTM tm)
@@ -1445,7 +1488,12 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         inp.head ≥ 1 ∧
         -- All heads ≥ 1 and output head ≥ 1 (needed for idle preservation)
         (∀ i, (work i).head ≥ 1) ∧
-        out.head ≥ 1)
+        out.head ≥ 1 ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (fun inp work out =>
         -- Read-only tapes preserved
         descOnTape desc (work utmDescTape) ∧
@@ -1465,7 +1513,13 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         -- Preserved: out tape WF
         out.cells 0 = Γ.start ∧
-        (∀ j, j ≥ 1 → out.cells j ≠ Γ.start))
+        (∀ j, j ≥ 1 → out.cells j ≠ Γ.start) ∧
+        -- Preserved: sim/scratch facts for the next readCurrent call
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmSimTape).head = 1 ∧
+        (work utmScratchTape).head = 1 ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (5 * k + 2 * n + B + 20) := by
   -- ── Step 1: Derive encoding structure ───────────────────────────────
   have hones1 := encodeTM_ones1 tm hk hdesc
@@ -1477,7 +1531,8 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
   have hdesc_long2 := encodeTM_long2 tm hk hdesc
   -- ── Step 2: Unfold HoareTime and run each phase ────────────────────
   intro inp work out ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hoh_le, hwf,
-    hinp_c0, hinp_ns, hinp_h, hheads, hout_h⟩
+    hinp_c0, hinp_ns, hinp_h, hheads, hout_h, hsim, hsim_h, hscratch_h,
+    hscratch_inp_blank, hscratch_out_blank⟩
   -- Derive read-level facts
   have hinp_read : inp.read ≠ Γ.start := by
     simp only [Tape.read]; exact hinp_ns _ hinp_h
@@ -1485,11 +1540,13 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
     simp only [Tape.read]; exact hons _ hout_h
   -- ── Phase 1: skipToQhaltTM ─────────────────────────────────────────
   obtain ⟨c1, t1, ht1, hreach1, hhalt1, hdesc1, hstate1, hdh1, hsh1,
-          hoc01, hons1, hwf1, hinp1, hout1, houth1, hheads1, hoh1_le⟩ :=
-    skipToQhaltTM_asHoareTime (B_out := B) k n desc q hones1 hsep1 hones2 hsep2 hdesc_long1
+          hoc01, hons1, hwf1, hinp1, hout1, houth1, hheads1, hoh1_le,
+          hsim1, hsim_h1, hscratch_h1, hscratch_inp_blank1, hscratch_out_blank1⟩ :=
+    skipToQhaltTM_asHoareTime (B_out := B) k n desc simCfg q hones1 hsep1 hones2 hsep2 hdesc_long1
       inp work out
       ⟨hdesc_tape, hstate_tape, hdh, hsh, hoc0, hons, hwf,
-       hinp_read, hout_read, hout_h, hheads, hoh_le⟩
+       hinp_read, hout_read, hout_h, hheads, hoh_le,
+       hsim, hsim_h, hscratch_h, hscratch_inp_blank, hscratch_out_blank⟩
   -- seqTransition identity
   have hseq1_w := seqTransition_work_id hwf1 hheads1
   have hseq1_i := seqTransitionInput_id hinp1
@@ -1519,13 +1576,15 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
   -- hoh1_le : c1.output.head ≤ B (from skip postcondition, output preserved)
   obtain ⟨c2, t2, ht2, hreach2, hhalt2, hdesc2, hstate2, hq_eq2, hq_ne2,
           hoh2, hoc02, hons2, hwf2, hinp2, hout2, houth2, hheads2,
-          hdh2_le, hsh2_le⟩ :=
-    compareWriteTM_asHoareTime tm k e desc q B he_val hqhalt hdesc_long2
+          hdh2_le, hsh2_le, hsim2, hsim_h2, hscratch_h2,
+          hscratch_inp_blank2, hscratch_out_blank2⟩ :=
+    compareWriteTM_asHoareTime tm k simCfg e desc q B he_val hqhalt hdesc_long2
       (seqTransitionInput c1.input) (fun i => seqTransitionTape (c1.work i))
       (seqTransitionTape c1.output)
       (by rw [hseq1_w, hseq1_i, hseq1_o]
           exact ⟨hdesc1, hstate1, hdh1, hsh1, hoc01, hons1,
-            hoh1_le, hwf1, hinp1, hout1, houth1, hheads1⟩)
+            hoh1_le, hwf1, hinp1, hout1, houth1, hheads1,
+            hsim1, hsim_h1, hscratch_h1, hscratch_inp_blank1, hscratch_out_blank1⟩)
   -- seqTransition identity
   have hseq2_w := seqTransition_work_id hwf2 hheads2
   have hseq2_i := seqTransitionInput_id hinp2
@@ -1540,11 +1599,17 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         out'.head = 1 ∧ out'.cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → out'.cells j ≠ Γ.start) ∧ WorkTapesWF work' ∧
         inp'.read ≠ Γ.start ∧ inp'.head ≥ 1 ∧ out'.read ≠ Γ.start ∧ out'.head ≥ 1 ∧
-        (∀ i, (work' i).head ≥ 1) ∧ (work' 1).head ≤ k + 1)
+        (∀ i, (work' i).head ≥ 1) ∧ (work' 1).head ≤ k + 1 ∧
+        superCellsCorrect simCfg (work' utmSimTape) ∧
+        (work' utmSimTape).head = 1 ∧
+        (work' utmScratchTape).head = 1 ∧
+        (work' utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work' utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (by -- Frame preservation for rewind 0: P is stable under rewind of tape 0
           intro _ w0 o0 _ w1 o1 hP hc0 hh0 hot heq_i heq_oc heq_oh
-          obtain ⟨hd, hs, hqe, hqn, ho, hoc, hon, hw, hi, hih, hor, hoh', hhe, hsl⟩ := hP
-          refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_⟩
+          obtain ⟨hd, hs, hqe, hqn, ho, hoc, hon, hw, hi, hih, hor, hoh', hhe, hsl,
+            hsim', hsim_h', hscratch_h', hscratch_inp_blank', hscratch_out_blank'⟩ := hP
+          refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hc0]; exact hd.1
           · intro i hi'; rw [hc0]; exact hd.2.1 i hi'
           · rw [hc0]; exact hd.2.2
@@ -1567,7 +1632,12 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
           · intro i; by_cases h : i = 0
             · subst h; rw [hh0]
             · rw [hot i h]; exact hhe i
-          · rw [hot 1 (by decide)]; exact hsl)
+          · rw [hot 1 (by decide)]; exact hsl
+          · rw [hot 2 (by decide)]; exact hsim'
+          · rw [hot 2 (by decide)]; exact hsim_h'
+          · rw [hot 3 (by decide)]; exact hscratch_h'
+          · rw [hot 3 (by decide)]; exact hscratch_inp_blank'
+          · rw [hot 3 (by decide)]; exact hscratch_out_blank')
       (seqTransitionInput c2.input) (fun i => seqTransitionTape (c2.work i))
       (seqTransitionTape c2.output)
       (by rw [hseq2_w, hseq2_i, hseq2_o]
@@ -1587,9 +1657,11 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
               have : c2.input.read = Γ.start := by
                 simp only [Tape.read, hh0, hcells2, hcells1]; exact hinp_c0
               exact hinp2 this,
-            hout2, houth2, hheads2, hsh2_le⟩)
+            hout2, houth2, hheads2, hsh2_le,
+            hsim2, hsim_h2, hscratch_h2, hscratch_inp_blank2, hscratch_out_blank2⟩)
   obtain ⟨hhead3, hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hoc03, hons3, hwf3,
-          hinp3, hinp3_h, hout3, houth3, hheads3, hsh3_le⟩ := hpost3
+          hinp3, hinp3_h, hout3, houth3, hheads3, hsh3_le,
+          hsim3, hsim_h3, hscratch_h3, hscratch_inp_blank3, hscratch_out_blank3⟩ := hpost3
   -- seqTransition identity
   have hseq3_w := seqTransition_work_id hwf3 hheads3
   have hseq3_i := seqTransitionInput_id hinp3
@@ -1604,11 +1676,17 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
         out'.head = 1 ∧ (work' 0).head = 1 ∧ WorkTapesWF work' ∧
         (∀ i, (work' i).head ≥ 1) ∧
         inp'.read ≠ Γ.start ∧ inp'.head ≥ 1 ∧
-        out'.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out'.cells j ≠ Γ.start))
+        out'.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out'.cells j ≠ Γ.start) ∧
+        superCellsCorrect simCfg (work' utmSimTape) ∧
+        (work' utmSimTape).head = 1 ∧
+        (work' utmScratchTape).head = 1 ∧
+        (work' utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work' utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank)
       (by -- Frame preservation for rewind 1: P is stable under rewind of tape 1
           intro _ w0 o0 _ w1 o1 hP hc1 hh1 hot heq_i heq_oc heq_oh
-          obtain ⟨hd, hs, hqe, hqn, ho, hdh', hw, hhe, hir, hih, hoc, hon⟩ := hP
-          refine ⟨?_, ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
+          obtain ⟨hd, hs, hqe, hqn, ho, hdh', hw, hhe, hir, hih, hoc, hon,
+            hsim', hsim_h', hscratch_h', hscratch_inp_blank', hscratch_out_blank'⟩ := hP
+          refine ⟨?_, ⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
           · rw [hot 0 (by decide)]; exact hd
           · rw [hc1]; exact hs.1
           · intro j hj; rw [hc1]; exact hs.2.1 j hj
@@ -1629,16 +1707,23 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
           · rw [heq_i]; exact hir
           · rw [heq_i]; exact hih
           · rw [heq_oc]; exact hoc
-          · intro j hj; rw [heq_oc]; exact hon j hj)
+          · intro j hj; rw [heq_oc]; exact hon j hj
+          · rw [hot 2 (by decide)]; exact hsim'
+          · rw [hot 2 (by decide)]; exact hsim_h'
+          · rw [hot 3 (by decide)]; exact hscratch_h'
+          · rw [hot 3 (by decide)]; exact hscratch_inp_blank'
+          · rw [hot 3 (by decide)]; exact hscratch_out_blank')
       (seqTransitionInput c3.input) (fun i => seqTransitionTape (c3.work i))
       (seqTransitionTape c3.output)
       (by rw [hseq3_w, hseq3_i, hseq3_o]
           exact ⟨hwf3.1 1, hwf3.2 1, hsh3_le, hinp3, hout3, houth3,
             fun i hne => ⟨by simp only [Tape.read]; exact hwf3.2 i _ (hheads3 i), hheads3 i⟩,
             hdesc3, hstate3, hq_eq3, hq_ne3, hoh3, hhead3, hwf3,
-            hheads3, hinp3, hinp3_h, hoc03, hons3⟩)
+            hheads3, hinp3, hinp3_h, hoc03, hons3,
+            hsim3, hsim_h3, hscratch_h3, hscratch_inp_blank3, hscratch_out_blank3⟩)
   obtain ⟨hhead4, hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hwf4,
-          hheads4, hinp4_r, hinp4_h, hoc04, hons4⟩ := hpost4
+          hheads4, hinp4_r, hinp4_h, hoc04, hons4,
+          hsim4, hsim_h4, hscratch_h4, hscratch_inp_blank4, hscratch_out_blank4⟩ := hpost4
   -- ── Compose reachesIn chains via seqTM_full_simulation ─────────────
   have hsim := seqTM_full_simulation skipToQhaltTM
     (seqTM compareWriteTM (seqTM (rewindWorkTM (0 : Fin 4)) (rewindWorkTM (1 : Fin 4))))
@@ -1654,6 +1739,7 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
     simp only [utmCheckHaltTM]
     rw [phase2Wrap_halted, phase2Wrap_halted, phase2Wrap_halted]; exact hhalt4
   · exact ⟨hdesc4, hstate4, hq_eq4, hq_ne4, hoh4, hdh4, hhead4, hwf4,
-          hheads4, hinp4_r, hinp4_h, hoc04, hons4⟩
+          hheads4, hinp4_r, hinp4_h, hoc04, hons4,
+          hsim4, hsim_h4, hscratch_h4, hscratch_inp_blank4, hscratch_out_blank4⟩
 
 end TM

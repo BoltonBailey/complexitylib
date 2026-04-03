@@ -1740,21 +1740,26 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
         (work utmStateTape).head = 1 ∧
         (work utmSimTape).head = 1 ∧
         (work utmScratchTape).head = 1 ∧
-        (∀ j, j ≥ 1 → (work utmScratchTape).cells j = Γ.blank) ∧
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         out.read ≠ Γ.start ∧ out.head ≥ 1)
-      (fun _inp work _out =>
+      (fun inp work out =>
         descOnTape desc (work utmDescTape) ∧
         stateOnTapeAt k (e simCfg.state) (work utmStateTape) ∧
         superCellsCorrect simCfg (work utmSimTape) ∧
         scratchHasInputPattern k n (e simCfg.state)
           simCfg.input.read (fun i => (simCfg.work i).read) simCfg.output.read
           (work utmScratchTape) ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank ∧
         (work utmDescTape).head = 1 ∧
         (work utmStateTape).head = 1 ∧
         (work utmSimTape).head = 1 ∧
-        WorkTapesWF work)
+        WorkTapesWF work ∧
+        (∀ i, (work i).head ≥ 1) ∧
+        inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
+        out.read ≠ Γ.start ∧ out.head ≥ 1)
       B := by
   intro e
   -- Helper: tape index facts for `decide`
@@ -1769,7 +1774,7 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
       i = utmDescTape ∨ i = utmStateTape ∨ i = utmSimTape ∨ i = utmScratchTape := by
     decide
   refine ⟨readCurrentTimeBound k simCfg, fun inp work out ⟨hdesc, hstate_tape, hscc, hdesc_h, hstate_h,
-      hsim_h, hsc_h, hsc_blank, hwf, hinp_r, hinp_h, hout_r, hout_h⟩ => ?_⟩
+      hsim_h, hsc_h, hsc_inp_blank, hsc_out_blank, hwf, hinp_r, hinp_h, hout_r, hout_h⟩ => ?_⟩
   -- ── Phase 1: copyState ──────────────────────────────────────────────
   obtain ⟨c₁, hreach₁, hst₁, hst_head₁, hst_cells₁, hsc_head₁, hsc_cells₁, hsc_high₁,
       hsim_head₁, hsim_cells₁, hdesc₁, hinp₁, hout₁, hwf₁⟩ :=
@@ -1823,11 +1828,37 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
       (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_r) (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_h)
       (by rw [hout₃, hout₂, hout₁]; exact hout_r) (by rw [hout₃, hout₂, hout₁]; exact hout_h)
       hheads₃_ne
+  have hheads₄ : ∀ i : Fin 4, (c₄.work i).head ≥ 1 := by
+    intro i
+    have him : i = utmDescTape ∨ i = utmStateTape ∨ i = utmSimTape ∨ i = utmScratchTape := by
+      revert i
+      decide
+    rcases him with rfl | rfl | rfl | rfl
+    · rw [hother₄ utmDescTape hne_desc_sc, hother₃ utmDescTape hne_desc_st, hdesc₂, hdesc₁, hdesc_h]
+    · rw [hother₄ utmStateTape hne_st_sc, hstate_head₃]
+    · rw [hother₄ utmSimTape hne_sim_sc, hother₃ utmSimTape hne_sim_st, hsim_head₂]
+    · rw [hsc_head₄]
+  have hinp₄_final : c₄.input = inp := by
+    rw [hinp₄, hinp₃, hinp₂, hinp₁]
+  have hout₄_final : c₄.output = out := by
+    rw [hout₄, hout₃, hout₂, hout₁]
+  have h_sc₃₂ : c₃.work utmScratchTape = c₂.work utmScratchTape :=
+    hother₃ utmScratchTape (Ne.symm hne_st_sc)
+  have hcc : ∀ j, (c₄.work utmScratchTape).cells j =
+      (c₂.work utmScratchTape).cells j := by
+    intro j
+    exact congr_fun hsc_cells₄ j ▸ congr_fun (congr_arg Tape.cells h_sc₃₂) j
+  have houtput_sentinel_ge_input : TMEncoding.outputWidth k n + 1 ≥ k + 1 + 2 * (n + 2) := by
+    simp only [TMEncoding.outputWidth]
+    omega
+  have houtput_sentinel_ge_state : TMEncoding.outputWidth k n + 1 ≥ k + 1 := by
+    simp only [TMEncoding.outputWidth]
+    omega
   -- ── Compose all phases ──────────────────────────────────────────────
   have hreaches := reachesIn_trans readCurrentTM hreach₁
     (reachesIn_trans readCurrentTM hreach₂
       (reachesIn_trans readCurrentTM hreach₃ hreach₄))
-  refine ⟨c₄, _, ?_, hreaches, hhalted₄, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨c₄, _, ?_, hreaches, hhalted₄, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   -- Time bound
   · show k + 1 + (t₂ + (k + 1 + 2 + (k + 1 + 2 * (n + 2) + 2))) ≤ readCurrentTimeBound k simCfg
     unfold readCurrentTimeBound
@@ -1856,12 +1887,7 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
     unfold superCellsCorrect simTapeCellCorrect at hscc ⊢
     simp only [hcells]; exact hscc
   -- Post 4: scratchHasInputPattern
-  · -- Establish cell chain: c₄ scratch cells = c₂ scratch cells
-    have h_sc₃₂ : c₃.work utmScratchTape = c₂.work utmScratchTape :=
-      hother₃ utmScratchTape (Ne.symm hne_st_sc)
-    have hcc : ∀ j, (c₄.work utmScratchTape).cells j =
-        (c₂.work utmScratchTape).cells j := by
-      intro j; exact congr_fun hsc_cells₄ j ▸ congr_fun (congr_arg Tape.cells h_sc₃₂) j
+  · -- Establish the serialized input pattern on scratch.
     refine ⟨⟨hwf₄.1 utmScratchTape, ?_, ?_⟩, hsc_head₄⟩
     · -- Per-cell: ∀ i < bits.length, cells(i+1) = Γ.ofBool bits[i]
       intro i hi
@@ -1915,15 +1941,30 @@ theorem readCurrentTM_hoareTime' (tm : TM n) (k : ℕ)
     · -- Sentinel blank: cells(bits.length + 1) = Γ.blank
       rw [encodeInputPattern_length_eq, hcc, hsc_above₂ _ (by omega),
           hsc_high₁ _ (by omega)]
-      exact hsc_blank _ (by omega)
-  -- Post 5: desc head = 1
+      have h_inp_idx : TMEncoding.inputPatternWidth k n + 1 = k + 2 * (n + 2) + 1 := by
+        simp only [TMEncoding.inputPatternWidth]
+        omega
+      rw [← h_inp_idx]
+      exact hsc_inp_blank
+  -- Post 5: scratch output sentinel blank
+  · rw [hcc, hsc_above₂ _ houtput_sentinel_ge_input, hsc_high₁ _ houtput_sentinel_ge_state]
+    exact hsc_out_blank
+  -- Post 6: desc head = 1
   · rw [hother₄ utmDescTape hne_desc_sc, hother₃ utmDescTape hne_desc_st, hdesc₂, hdesc₁]
     exact hdesc_h
-  -- Post 6: state head = 1
+  -- Post 7: state head = 1
   · rw [hother₄ utmStateTape hne_st_sc]; exact hstate_head₃
-  -- Post 7: sim head = 1
+  -- Post 8: sim head = 1
   · rw [hother₄ utmSimTape hne_sim_sc, hother₃ utmSimTape hne_sim_st]; exact hsim_head₂
-  -- Post 8: WorkTapesWF
+  -- Post 9: WorkTapesWF
   · exact hwf₄
+  -- Post 10: all work heads ≥ 1
+  · exact hheads₄
+  -- Post 11-12: input preserved
+  · rw [hinp₄_final]; exact hinp_r
+  · rw [hinp₄_final]; exact hinp_h
+  -- Post 13-14: output preserved
+  · rw [hout₄_final]; exact hout_r
+  · rw [hout₄_final]; exact hout_h
 
 end TM

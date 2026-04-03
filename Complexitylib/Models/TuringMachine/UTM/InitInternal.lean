@@ -103,6 +103,7 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
         stateOnTapeAt k (tm.stateEquivK _hk tm.qstart) (work utmStateTape) ∧
         (work utmSimTape).cells = (initTape []).cells ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
         (work utmDescTape).head ≤ 3 * k + n + 5 ∧
         (work utmScratchTape).head ≤ n + 1 ∧
         (work utmStateTape).head ≤ k + 1 ∧
@@ -121,14 +122,15 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
   have hstate' := hpost.2.1
   have hsim_c' := hpost.2.2.1
   have hsc' := hpost.2.2.2.1
-  have hd_head' := hpost.2.2.2.2.1
-  have hsc_head' := hpost.2.2.2.2.2.1
-  have hst_head' := hpost.2.2.2.2.2.2.1
-  have hsim_pres := hpost.2.2.2.2.2.2.2.1
-  have hinp_pres := hpost.2.2.2.2.2.2.2.2
+  have hsc_tail' := hpost.2.2.2.2.1
+  have hd_head' := hpost.2.2.2.2.2.1
+  have hsc_head' := hpost.2.2.2.2.2.2.1
+  have hst_head' := hpost.2.2.2.2.2.2.2.1
+  have hsim_pres := hpost.2.2.2.2.2.2.2.2.1
+  have hinp_pres := hpost.2.2.2.2.2.2.2.2.2
   exact ⟨c', 3 * k + n + 5, le_refl _, hreach, hhalt, henv',
          hdesc', hstate', hsim_c',
-         hsc', hd_head', hsc_head', hst_head',
+         hsc', hsc_tail', hd_head', hsc_head', hst_head',
          by rw [hsim_pres]; exact hsim_h1,
          by rw [hinp_pres]; exact hinpc,
          by rw [hinp_pres]; exact hinph⟩
@@ -154,6 +156,7 @@ private theorem setupSimTM_hoareTime' (tm : TM n) (k : ℕ)
         (work utmSimTape).head = 1 ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmScratchTape).head = 1 ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
         inp.cells inp.head = Γ.blank ∧
         (∀ (i : ℕ) (hi : i < x.length),
           inp.cells (inp.head + 1 + i) = Γ.ofBool (x.get ⟨i, hi⟩)) ∧
@@ -169,7 +172,8 @@ private theorem setupSimTM_hoareTime' (tm : TM n) (k : ℕ)
         (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
         (work (1 : Fin 4)).head ≤ k + 1 ∧
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-        (work (3 : Fin 4)).head ≤ n + 1)
+        (work (3 : Fin 4)).head ≤ n + 1 ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j))
       (3 * n + 9 + x.length * (4 * n + 9)) :=
   setupSimTM_hoareTime tm k (tm.stateEquivK _hk) x _hk
 
@@ -217,6 +221,10 @@ private theorem postRewindsAndData_to_simInvariant (tm : TM n) (k : ℕ)
   exact ⟨tm.initCfg x, hdesc, hstate, hsim,
     fun i => by have := hheads i; omega, henv.2.2.2.1⟩
 
+private theorem initTape_nil_cell_ge1 {j : ℕ} (hj : j ≥ 1) :
+    (initTape ([] : List Γ)).cells j = Γ.blank := by
+  simp [initTape, Nat.ne_of_gt (by omega : j > 0)]
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Data-preserving rewind helpers
 -- ════════════════════════════════════════════════════════════════════════
@@ -228,7 +236,25 @@ private def initData (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     let desc := TMEncoding.encodeTM tm
     descOnTape desc (work utmDescTape) ∧
     stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape) ∧
-    superCellsCorrect (tm.initCfg x) (work utmSimTape)
+    superCellsCorrect (tm.initCfg x) (work utmSimTape) ∧
+    (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = Γ.blank)
+
+/-- Exact init postcondition before forgetting to `SimInvariant`. -/
+private def initExactPost (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
+    (x : List Bool) : TapePred 4 :=
+  fun inp work out =>
+    InitEnvelope inp work out ∧
+    initData tm k hk x inp work out ∧
+    (∀ i, (work i).head = 1)
+
+/-- The exact init postcondition implies the existential `SimInvariant`. -/
+private theorem initExactPost_to_simInvariant (tm : TM n) (k : ℕ)
+    (hk : k = @Fintype.card tm.Q tm.finQ) (x : List Bool) :
+    ∀ inp work out,
+      initExactPost tm k hk x inp work out →
+      SimInvariant tm k hk (TMEncoding.encodeTM tm) inp work out := by
+  intro inp work out ⟨he, ⟨hdesc, hstate, hsim, _hsc_tail⟩, hheads⟩
+  exact postRewindsAndData_to_simInvariant tm k x hk inp work out he hheads hdesc hstate hsim
 
 /-- The setupSim postcondition implies the rewindAll precondition (keeping data). -/
 private theorem postSetupSim_to_rewindAll (tm : TM n) (k : ℕ)
@@ -242,15 +268,18 @@ private theorem postSetupSim_to_rewindAll (tm : TM n) (k : ℕ)
       (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
       (work (1 : Fin 4)).head ≤ k + 1 ∧
       (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-      (work (3 : Fin 4)).head ≤ n + 1) →
+      (work (3 : Fin 4)).head ≤ n + 1 ∧
+      (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j)) →
     (InitEnvelope inp work out ∧
       initData tm k hk x inp work out ∧
       (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
       (work (1 : Fin 4)).head ≤ k + 1 ∧
       (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
       (work (3 : Fin 4)).head ≤ n + 1) :=
-  fun _ _ _ ⟨henv, hdesc, hstate, hsim, hb0, hb1, hb2, hb3⟩ =>
-    ⟨henv, ⟨hdesc, hstate, hsim⟩, hb0, hb1, hb2, hb3⟩
+  fun _ _ _ ⟨henv, hdesc, hstate, hsim, hb0, hb1, hb2, hb3, hsc_tail⟩ =>
+    ⟨henv, ⟨hdesc, hstate, hsim, fun j hj => by
+      rw [hsc_tail j hj]
+      exact initTape_nil_cell_ge1 (by omega)⟩, hb0, hb1, hb2, hb3⟩
 
 /-- tapeStoresBools depends only on cells. -/
 private theorem tapeStoresBools_cells_eq {bits : List Bool} {t t' : Tape}
@@ -290,8 +319,8 @@ private theorem initData_preserved_by_rewind (tm : TM n) (k : ℕ)
     (∀ i, i ≠ idx → work' i = work i) →
     inp' = inp → out'.cells = out.cells → out'.head = out.head →
     initData tm k hk x inp' work' out' := by
-  intro inp work out inp' work' out' ⟨hdesc, hstate, hsim⟩ hcells _ hother _ _ _
-  refine ⟨?_, ?_, ?_⟩
+  intro inp work out inp' work' out' ⟨hdesc, hstate, hsim, hsc_tail⟩ hcells _ hother _ _ _
+  refine ⟨?_, ?_, ?_, ?_⟩
   · -- descOnTape on tape 0
     show descOnTape _ (work' utmDescTape)
     by_cases h : idx = (0 : Fin 4)
@@ -309,6 +338,14 @@ private theorem initData_preserved_by_rewind (tm : TM n) (k : ℕ)
     by_cases h : idx = (2 : Fin 4)
     · subst h; exact superCellsCorrect_cells_eq hcells hsim
     · rw [hother 2 (Ne.symm h)]; exact hsim
+  · -- scratch tail blank on tape 3
+    intro j hj
+    by_cases h : idx = (3 : Fin 4)
+    · subst h
+      rw [hcells]
+      exact hsc_tail j hj
+    · rw [hother 3 (Ne.symm h)]
+      exact hsc_tail j hj
 
 /-- Enriched single rewind: carries InitEnvelope + initData + per-tape head bounds. -/
 private theorem rewindWorkTM_initData_bounds_hoareTime (tm : TM n) (k : ℕ)
@@ -375,7 +412,7 @@ private theorem rewindWorkTM_initData_bounds_hoareTime (tm : TM n) (k : ℕ)
 -- Compose 4 data-preserving rewinds
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Compose 4 rewinds preserving initData, producing SimInvariant. -/
+/-- Compose 4 rewinds preserving the exact init data and rewinding all heads to 1. -/
 private theorem rewindAll_data_hoareTime (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ) (x : List Bool)
     (B0 B1 B2 B3 : ℕ) :
@@ -390,8 +427,7 @@ private theorem rewindAll_data_hoareTime (tm : TM n) (k : ℕ)
         (work (1 : Fin 4)).head ≤ B1 ∧
         (work (2 : Fin 4)).head ≤ B2 ∧
         (work (3 : Fin 4)).head ≤ B3)
-      (fun inp work out =>
-        SimInvariant tm k hk (TMEncoding.encodeTM tm) inp work out)
+      (initExactPost tm k hk x)
       (B0 + B1 + B2 + B3 + 11) := by
   let b0 : Fin 4 → ℕ := fun i => match i with | 0 => B0 | 1 => B1 | 2 => B2 | 3 => B3
   let b1 : Fin 4 → ℕ := fun i => match i with | 0 => 1  | 1 => B1 | 2 => B2 | 3 => B3
@@ -431,20 +467,18 @@ private theorem rewindAll_data_hoareTime (tm : TM n) (k : ℕ)
       (merge_bounds 2 b2 b3 (by intro i hi; match i with | 0 => rfl | 1 => rfl | 3 => rfl) rfl)
       (by show B2 + 2 ≤ B2 + 2; omega)
   have h_rw3 : (rewindWorkTM (3 : Fin 4)).HoareTime (midP b3)
-      (fun inp work out => SimInvariant tm k hk (TMEncoding.encodeTM tm) inp work out)
+      (initExactPost tm k hk x)
       (B3 + 2) :=
     (rewindWorkTM_initData_bounds_hoareTime tm k hk x 3 b3).consequence
       (fun _ _ _ h => h)
-      (fun inp work out ⟨he, ⟨hdesc, hstate, hsim⟩, hh3, hrest⟩ =>
-        postRewindsAndData_to_simInvariant tm k x hk inp work out he
-          (fun i => by
-            have hge := he.2.2.2.2.1 i
-            match i with
-            | 0 => have := hrest 0 (by decide); dsimp [b3] at this; omega
-            | 1 => have := hrest 1 (by decide); dsimp [b3] at this; omega
-            | 2 => have := hrest 2 (by decide); dsimp [b3] at this; omega
-            | 3 => exact hh3)
-          hdesc hstate hsim)
+      (fun inp work out ⟨he, hd, hh3, hrest⟩ =>
+        ⟨he, hd, fun i => by
+          have hge := he.2.2.2.2.1 i
+          match i with
+          | 0 => have := hrest 0 (by decide); dsimp [b3] at this; omega
+          | 1 => have := hrest 1 (by decide); dsimp [b3] at this; omega
+          | 2 => have := hrest 2 (by decide); dsimp [b3] at this; omega
+          | 3 => exact hh3⟩)
       (by show B3 + 2 ≤ B3 + 2; omega)
   -- h_trans: InitEnvelope → seqTransition is identity
   have h_trans_midP : ∀ bds, ∀ inp work out, midP bds inp work out →
@@ -637,6 +671,7 @@ private def setupStateData (tm : TM n) (k : ℕ)
     (work utmSimTape).cells = (initTape []).cells ∧
     (work utmSimTape).head = 1 ∧
     tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
+    (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
     (work utmDescTape).head ≤ 3 * k + n + 5 ∧
     (work utmStateTape).head ≤ k + 1 ∧
     inp.cells = (initTape (encodeUTMInput tm x)).cells ∧
@@ -654,7 +689,7 @@ private theorem setupStateData_preserved (tm : TM n) (k : ℕ)
     inp' = inp → out'.cells = out.cells → out'.head = out.head →
     setupStateData tm k hk x inp' work' out' := by
   intro inp work out inp' work' out'
-    ⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hd_head, hst_head, hinpc, hinph⟩
+    ⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_tail, hd_head, hst_head, hinpc, hinph⟩
     hw3_cells _hw3_head hother' hinp' hout_cells' hout_head'
   obtain ⟨hic, hins, hih, hwf, hheads, hoc, hons, hoh⟩ := henv
   have hwf' : WorkTapesWF work' := by
@@ -679,6 +714,9 @@ private theorem setupStateData_preserved (tm : TM n) (k : ℕ)
          by rw [hother' 2 (by decide)]; exact hsim_c,
          by rw [hother' 2 (by decide)]; exact hsim_h,
          tapeStoresBools_cells_eq hw3_cells hsc,
+         by intro j hj
+            rw [hw3_cells]
+            exact hsc_tail j hj,
          by rw [hother' 0 (by decide)]; exact hd_head,
          by rw [hother' 1 (by decide)]; exact hst_head,
          by rw [hinp']; exact hinpc,
@@ -698,14 +736,14 @@ private theorem rewind3_setupStateData_hoareTime (tm : TM n) (k : ℕ)
   exact (rewindWorkTM_rich_hoareTime (3 : Fin 4) (n + 1)
     (setupStateData_preserved tm k hk x)).consequence
     (fun inp work out h => by
-      obtain ⟨⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hd_head, hst_head, hinpc, hinph⟩, hhead⟩ := h
+      obtain ⟨⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_tail, hd_head, hst_head, hinpc, hinph⟩, hhead⟩ := h
       have ⟨hic, hins, hih, hwf, hheads, hoc, hons, hoh⟩ := henv
       exact ⟨hwf.1 3, hwf.2 3, hhead,
              by simp only [Tape.read]; exact hins _ hih,
              by simp only [Tape.read]; exact hons _ hoh,
              hoh,
              fun i hi => ⟨by simp only [Tape.read]; exact hwf.2 i _ (hheads i), hheads i⟩,
-             henv, hdesc, hstate, hsim_c, hsim_h, hsc, hd_head, hst_head, hinpc, hinph⟩)
+             henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_tail, hd_head, hst_head, hinpc, hinph⟩)
     (fun _ _ _ ⟨hhead, hdata⟩ => ⟨hdata, hhead⟩)
     (by omega)
 
@@ -730,6 +768,7 @@ private theorem setupStatePost_to_rewind3Pre (tm : TM n) (k : ℕ)
       stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape) ∧
       (work utmSimTape).cells = (initTape []).cells ∧
       tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
+      (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
       (work utmDescTape).head ≤ 3 * k + n + 5 ∧
       (work utmScratchTape).head ≤ n + 1 ∧
       (work utmStateTape).head ≤ k + 1 ∧
@@ -738,9 +777,9 @@ private theorem setupStatePost_to_rewind3Pre (tm : TM n) (k : ℕ)
       inp.head = (TMEncoding.encodeTM tm).length + 1) →
     (setupStateData tm k hk x inp work out ∧
       (work (3 : Fin 4)).head ≤ n + 1) := by
-  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hd_head, hsc_head, hst_head,
+  intro inp work out ⟨henv, hdesc, hstate, hsim, hsc, hsc_tail, hd_head, hsc_head, hst_head,
                        hsim_head, hinp_c, hinp_h⟩
-  exact ⟨⟨henv, hdesc, hstate, hsim, hsim_head, hsc, hd_head, hst_head, hinp_c, hinp_h⟩,
+  exact ⟨⟨henv, hdesc, hstate, hsim, hsim_head, hsc, hsc_tail, hd_head, hst_head, hinp_c, hinp_h⟩,
          hsc_head⟩
 
 /-- (setupStateData + head(3)=1) → setupSim precondition. -/
@@ -755,15 +794,16 @@ private theorem setupStateDataHead1_to_setupSimPre (tm : TM n) (k : ℕ)
       (work utmSimTape).head = 1 ∧
       tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
       (work utmScratchTape).head = 1 ∧
+      (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
       inp.cells inp.head = Γ.blank ∧
       (∀ (i : ℕ) (hi : i < x.length),
         inp.cells (inp.head + 1 + i) = Γ.ofBool (x.get ⟨i, hi⟩)) ∧
       inp.cells (inp.head + 1 + x.length) = Γ.blank ∧
       (work utmDescTape).head ≤ 3 * k + n + 5 ∧
       (work utmStateTape).head ≤ k + 1) := by
-  intro inp work out ⟨⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hd_head,
+  intro inp work out ⟨⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_tail, hd_head,
     hst_head, hinpc, hinph⟩, hsc_head⟩
-  refine ⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_head, ?_, ?_, ?_, hd_head, hst_head⟩
+  refine ⟨henv, hdesc, hstate, hsim_c, hsim_h, hsc, hsc_head, hsc_tail, ?_, ?_, ?_, hd_head, hst_head⟩
   · -- inp.cells inp.head = Γ.blank (separator in encoded input)
     rw [hinpc, hinph]
     simp only [initTape, show (TMEncoding.encodeTM tm).length + 1 ≠ 0 from by omega, ↓reduceIte]
@@ -791,15 +831,21 @@ private theorem setupStateDataHead1_to_setupSimPre (tm : TM n) (k : ℕ)
 -- Main composition
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- **initTM_hoareTime'**: from initial tapes with encoded `⟨M, x⟩`,
-    `initTM` establishes `SimInvariant` for `tm.initCfg x`. -/
-theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
+/-- **initTM_hoareTime_exact'**: from initial tapes with encoded `⟨M, x⟩`,
+    `initTM` establishes the exact initial encoded configuration for `tm.initCfg x`. -/
+theorem initTM_hoareTime_exact' (tm : TM n) (k : ℕ)
     (x : List Bool)
     (hk : k = @Fintype.card tm.Q tm.finQ) :
     let desc := TMEncoding.encodeTM tm
     ∃ B, initTM.HoareTime
       (initTM_pre tm x)
-      (SimInvariant tm k hk desc)
+      (fun inp work out =>
+        InitEnvelope inp work out ∧
+        descOnTape desc (work utmDescTape) ∧
+        stateOnTapeAt k (tm.stateEquivK hk tm.qstart) (work utmStateTape) ∧
+        superCellsCorrect (tm.initCfg x) (work utmSimTape) ∧
+        (∀ i, (work i).head = 1) ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = Γ.blank))
       B := by
   set desc := TMEncoding.encodeTM tm with desc_def
   -- ── Phase specs ────────────────────────────────────────────────────
@@ -898,7 +944,25 @@ theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
               -- Phases 6-9: final 4 rewinds
               h_rewinds))))).consequence
       (fun _ _ _ h => h)
-      (fun _ _ _ h => h)
+      (fun _ _ _ ⟨henv, ⟨hdesc, hstate, hsim, hsc_tail⟩, hheads⟩ =>
+        ⟨henv, hdesc, hstate, hsim, hheads, hsc_tail⟩)
       (by simp only [desc_def, copyBound]; omega)
+
+/-- **initTM_hoareTime'**: from initial tapes with encoded `⟨M, x⟩`,
+    `initTM` establishes `SimInvariant` for `tm.initCfg x`. -/
+theorem initTM_hoareTime' (tm : TM n) (k : ℕ)
+    (x : List Bool)
+    (hk : k = @Fintype.card tm.Q tm.finQ) :
+    let desc := TMEncoding.encodeTM tm
+    ∃ B, initTM.HoareTime
+      (initTM_pre tm x)
+      (SimInvariant tm k hk desc)
+      B := by
+  intro desc
+  obtain ⟨B, hB⟩ := initTM_hoareTime_exact' tm k x hk
+  refine ⟨B, hB.consequence (fun _ _ _ h => h) ?_ le_rfl⟩
+  intro inp work out hpost
+  exact initExactPost_to_simInvariant tm k hk x inp work out
+    ⟨hpost.1, ⟨hpost.2.1, hpost.2.2.1, hpost.2.2.2.1, hpost.2.2.2.2.2⟩, hpost.2.2.2.2.1⟩
 
 end TM

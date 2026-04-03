@@ -1,6 +1,7 @@
 import Complexitylib.Models.TuringMachine.UTM.Defs
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
+import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
 
 /-!
 # Simulation Configuration
@@ -208,5 +209,31 @@ theorem seqTransition_work_id {work : Fin 4 → Tape}
     rw [Tape.read] at h
     exact this h
   · exact hheads i
+
+-- ════════════════════════════════════════════════════════════════════════
+-- loopTM transition preservation
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- `loopTransitionTape` is identity when the tape reads a non-▷ symbol
+    and head ≥ 1. (Definitionally equal to `seqTransitionTape`.) -/
+theorem loopTransitionTape_id {t : Tape}
+    (hread : t.read ≠ Γ.start) (hhead : t.head ≥ 1) :
+    loopTransitionTape t = t :=
+  seqTransitionTape_id hread hhead
+
+/-- `loopTransitionInput` is identity when the tape reads a non-▷ symbol.
+    (Definitionally equal to `seqTransitionInput`.) -/
+theorem loopTransitionInput_id {t : Tape}
+    (hread : t.read ≠ Γ.start) :
+    loopTransitionInput t = t :=
+  seqTransitionInput_id hread
+
+/-- When all work tapes are well-formed and heads ≥ 1, `loopTransitionTape` is
+    identity on every work tape. -/
+theorem loopTransition_work_id {work : Fin 4 → Tape}
+    (hwf : WorkTapesWF work)
+    (hheads : ∀ i, (work i).head ≥ 1) :
+    (fun i => loopTransitionTape (work i)) = work :=
+  seqTransition_work_id hwf hheads
 
 end TM

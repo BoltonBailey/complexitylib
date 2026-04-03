@@ -2426,7 +2426,7 @@ set_option maxHeartbeats 800000 in
 theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ)
     (hdesc : desc = TMEncoding.encodeTM tm)
-    (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
+    (simCfg : Cfg n tm.Q) (q : Fin k) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
     let e := tm.stateEquivK hk
     ∃ B, (lookupTM (n := n) k).HoareTime
       (fun inp work out =>
@@ -2438,7 +2438,10 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
         WorkTapesWF work ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
         out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
-        stateOnTapeAt k q (work utmStateTape))
+        stateOnTapeAt k q (work utmStateTape) ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmStateTape).head = 1 ∧
+        (work utmSimTape).head = 1)
       (fun inp work out =>
         let (q', wW, oW, iD, wD, oD) := tm.δ (e.symm q) iHead wHeads oHead
         descOnTape desc (work utmDescTape) ∧
@@ -2446,8 +2449,11 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
         (work utmDescTape).head = 1 ∧
         (work utmScratchTape).head = 1 ∧
         WorkTapesWF work ∧
-        -- Preserved: state tape one-hot encoding, all heads ≥ 1
+        -- Preserved: state/sim tapes and exact head positions
         stateOnTapeAt k q (work utmStateTape) ∧
+        superCellsCorrect simCfg (work utmSimTape) ∧
+        (work utmStateTape).head = 1 ∧
+        (work utmSimTape).head = 1 ∧
         (∀ i, (work i).head ≥ 1) ∧
         -- Preserved: inp/out tapes
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
@@ -2461,7 +2467,9 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
   refine ⟨lookupTimeBound k n desc.length, ?_⟩
   -- Unfold HoareTime
   intro inp work out hpre
-  obtain ⟨hdescOnTape, hdesc_head_eq, hheads, hscratch_inp, hscratchSentinel, hwf, hinp_ns, hinp_h, hout_ns, hout_h, hstateOnTape⟩ := hpre
+  obtain ⟨hdescOnTape, hdesc_head_eq, hheads, hscratch_inp, hscratchSentinel, hwf,
+    hinp_ns, hinp_h, hout_ns, hout_h, hstateOnTape, hsimCorrect, hstate_head_eq,
+    hsim_head_eq⟩ := hpre
   -- Build the initial configuration
   set c₀ : Cfg 4 (lookupTM (n := n) k).Q :=
     { state := (lookupTM k).qstart
@@ -3093,11 +3101,16 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
     have hc₇_out : c₇.output = out := by
       rw [hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]
     refine ⟨hfinal_descOnTape, hfinal_scratchOutput, ?_, hscratch_h₇, hwf₇,
-            ?_, ?_, ?_, ?_, ?_, ?_⟩
+            ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     -- desc head = 1
     · rw [hc₇_desc]; exact hdesc_h₆
     -- stateOnTapeAt preserved
     · rw [hc₇_state]; exact hstateOnTape
+    -- superCellsCorrect preserved
+    · rw [hc₇_sim]; exact hsimCorrect
+    -- exact state/sim heads preserved
+    · rw [hc₇_state, hstate_head_eq]
+    · rw [hc₇_sim, hsim_head_eq]
     -- all heads ≥ 1
     · intro i
       have him : i = utmDescTape ∨ i = utmStateTape ∨ i = utmSimTape ∨ i = utmScratchTape := by

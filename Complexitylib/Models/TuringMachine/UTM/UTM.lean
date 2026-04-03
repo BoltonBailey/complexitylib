@@ -1,18 +1,5 @@
-import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Hoare
-import Complexitylib.Models.TuringMachine.UTM.Defs
-import Complexitylib.Models.TuringMachine.UTM.Helpers
-import Complexitylib.Models.TuringMachine.UTM.HelpersInternal
-import Complexitylib.Models.TuringMachine.UTM.SimConfig.Defs
-import Complexitylib.Models.TuringMachine.UTM.Init
-import Complexitylib.Models.TuringMachine.UTM.ReadCurrent
-import Complexitylib.Models.TuringMachine.UTM.Lookup
-import Complexitylib.Models.TuringMachine.UTM.LookupInternal
-import Complexitylib.Models.TuringMachine.UTM.ApplyTransition
-import Complexitylib.Models.TuringMachine.UTM.ApplyTransitionInternal
-import Complexitylib.Models.TuringMachine.UTM.CheckHalt
-import Complexitylib.Models.TuringMachine.UTM.CheckHaltInternal
-import Complexitylib.Models.TuringMachine.UTM.ExtractOutput
+import Complexitylib.Models.TuringMachine.UTM.Machine
+import Complexitylib.Models.TuringMachine.UTM.SimLoop
 
 /-!
 # Universal Turing Machine (AB Theorem 1.9)
@@ -39,7 +26,7 @@ utmSimStepTM =
 
 ## Main results
 
-- `utmTM` — the Universal Turing Machine definition
+- `utmTM` — the Universal Turing Machine definition (in Machine.lean)
 - `utm_simulates` — simulation correctness theorem
 - `utm_correct` — AB Theorem 1.9: O(T²) time overhead
 -/
@@ -47,53 +34,6 @@ utmSimStepTM =
 namespace TM
 
 variable {n : ℕ}
-
--- ════════════════════════════════════════════════════════════════════════
--- Simulation step machine: one step of the simulated TM
--- ════════════════════════════════════════════════════════════════════════
-
-/-- The simulation step machine performs one step of the simulated TM.
-    Composed as: readCurrentTM ; lookupTM ; applyTransitionTM.
-    Parametric in `k` (number of states of the simulated TM). -/
-noncomputable def utmSimStepTM (k : ℕ) : TM 4 :=
-  seqTM (readCurrentTM (n := n)) (seqTM (lookupTM (n := n) k) (applyTransitionTM (n := n) k))
-
--- ════════════════════════════════════════════════════════════════════════
--- The Universal Turing Machine
--- ════════════════════════════════════════════════════════════════════════
-
-/-- The Universal Turing Machine.
-    Architecture: initTM ; loop(simStepTM, checkHaltTM) ; extractOutputTM.
-    Parametric in `k` (number of states of the simulated TM). -/
-noncomputable def utmTM (k : ℕ) : TM 4 :=
-  seqTM initTM
-    (seqTM (loopTM (utmSimStepTM (n := n) k) utmCheckHaltTM)
-      (extractOutputTM (n := n)))
-
--- ════════════════════════════════════════════════════════════════════════
--- Simulation correctness
--- ════════════════════════════════════════════════════════════════════════
-
-/-- The UTM's initial configuration with input `⟨M, x⟩` encoded as `List Γ`.
-    Uses `initTape` directly since `encodeUTMInput` returns `List Γ`
-    (not `List Bool`), which already includes the blank separator. -/
-noncomputable def utmInitCfg (tm : TM n) (k : ℕ) (x : List Bool) :
-    Cfg 4 (utmTM (n := n) k).Q :=
-  { state := (utmTM (n := n) k).qstart,
-    input := initTape (encodeUTMInput tm x),
-    work := fun _ => initTape [],
-    output := initTape [] }
-
-/-- Simulated work/output tape heads stay at position ≥ 1 throughout computation.
-
-    This holds for TMs where `δ_right_of_start` ensures the first step moves all
-    heads from position 0 (▷) to position 1, and no subsequent step moves
-    work/output tape heads back to position 0. Required because `applyTransitionTM`
-    writes symbol cells at the head position, which corrupts the super-cell encoding
-    at position 0 (where `Tape.write` is a no-op but the encoding gets overwritten). -/
-def SimHeadsGe1 (tm : TM n) (x : List Bool) : Prop :=
-  ∀ (c : Cfg n tm.Q) (t : ℕ), t ≥ 1 → tm.reachesIn t (tm.initCfg x) c →
-    (∀ i, (c.work i).head ≥ 1) ∧ c.output.head ≥ 1
 
 /-- The UTM correctly simulates any TM M: if M decides L in time T,
     then running the UTM on `encodeUTMInput tm x` produces the same
@@ -109,8 +49,8 @@ theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ
       (utmTM (n := n) k).reachesIn t (utmInitCfg tm k x) c' ∧
       (utmTM (n := n) k).halted c' ∧
       (x ∈ L → c'.output.cells 1 = Γ.one) ∧
-      (x ∉ L → c'.output.cells 1 = Γ.zero) := by
-  sorry
+      (x ∉ L → c'.output.cells 1 = Γ.zero) :=
+  utm_simulates_proof tm k hk L T hM x hHeads
 
 -- ════════════════════════════════════════════════════════════════════════
 -- AB Theorem 1.9: O(T²) overhead

@@ -577,6 +577,7 @@ private theorem setupSim_phase12
       (c'.work utmScratchTape).cells (n + 1) = Γ.blank ∧
       (c'.work utmScratchTape).cells 0 = Γ.start ∧
       (c'.work utmScratchTape).head = n + 1 ∧
+      (c'.work utmScratchTape).cells = (work utmScratchTape).cells ∧
       c'.input.head ≥ 1 ∧
       (∀ j, j ≥ 1 → c'.input.cells j ≠ Γ.start) ∧
       c'.output.head ≥ 1 ∧
@@ -785,7 +786,7 @@ private theorem setupSim_phase12
     have : 3 * n + 8 = (3 * (n - 0) + 1) + 7 := by omega
     rw [this]; exact reachesIn_trans setupSimTM hreach1 hreach_67
   -- ── Witness ──
-  refine ⟨cfinal, hreach_all, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨cfinal, hreach_all, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact s6_cell0
   · show s6.head = 1 + 3 * (n + 2); rw [s6_head]; omega
   · intro j hj hjn; exact s6_all_ones j hj hjn
@@ -820,6 +821,10 @@ private theorem setupSim_phase12
     exact hwf1.1 utmScratchTape
   · show (if utmScratchTape = utmSimTape then s6 else c1.work utmScratchTape).head = n + 1
     simp only [show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]; exact hsc_head1
+  · show (if utmScratchTape = utmSimTape then s6 else c1.work utmScratchTape).cells =
+      (work utmScratchTape).cells
+    simp only [show utmScratchTape ≠ utmSimTape from by decide, ↓reduceIte]
+    exact hsc_cells1
   · show (c1.input.move Dir3.right).head ≥ 1
     rw [hinp1]; simp [Tape.move]
   · show ∀ j, j ≥ 1 → (c1.input.move Dir3.right).cells j ≠ Γ.start
@@ -1337,6 +1342,7 @@ private theorem one_bit_cycle
       (c_next.work utmScratchTape).cells (n + 1) = Γ.blank ∧
       (c_next.work utmScratchTape).cells 0 = Γ.start ∧
       (c_next.work utmScratchTape).head = n + 1 ∧
+      (c_next.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
       c_next.input.head = c.input.head + 1 ∧
       c_next.input.cells = c.input.cells ∧
       c_next.work utmDescTape = c.work utmDescTape ∧
@@ -1615,7 +1621,8 @@ private theorem one_bit_cycle
   have h_offset_eq : SuperCell.simTapeOffset (n + 2) (processed + 1) 0 = h0 := by
     simp [SuperCell.simTapeOffset, SuperCell.width, h0_val]
   refine ⟨c_e, hreach_total, rfl, ?_, hce_sim_head, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hce_scratch_head,
-          hce_inp_head, hce_inp_cells, hce_desc, hce_state_tape, hce_out, hce_wf, hce_heads⟩
+          hce_scratch_cells, hce_inp_head, hce_inp_cells, hce_desc, hce_state_tape, hce_out,
+          hce_wf, hce_heads⟩
   · -- sim0
     rw [hce_sim_cells]; exact sim_a_ne 0 (by omega) (by omega) ▸ hsim0'
   · -- ones: j ≤ 3*(n+2) < h0, so j < h0+1 and j < h0+2
@@ -1753,6 +1760,7 @@ private theorem setupSim_phase3
       (∀ i, (c'.work i).head ≥ 1) ∧
       (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
       (c'.work utmScratchTape).head ≤ n + 1 ∧
+      (c'.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
       c'.input.cells = c.input.cells ∧
       c'.input.head ≥ 1 ∧
       c'.output = c.output := by
@@ -1814,6 +1822,7 @@ private theorem setupSim_phase3
         (∀ i, (c'.work i).head ≥ 1) ∧
         (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
         (c'.work utmScratchTape).head ≤ n + 1 ∧
+        (c'.work utmScratchTape).cells = (c.work utmScratchTape).cells ∧
         c'.input.cells = c.input.cells ∧
         c'.input.head ≥ 1 ∧
         c'.output = c.output by
@@ -1879,7 +1888,7 @@ private theorem setupSim_phase3
          have : (x.length + 1) * (3 * (n + 2)) = (x.length + 1) * 3 * (n + 2) := (Nat.mul_assoc _ _ _).symm
          omega,
       by show (c.work utmScratchTape).head ≤ _; rw [hsc_head'],
-      rfl, hinp_h', rfl⟩
+      rfl, rfl, hinp_h', rfl⟩
   | cons b rest ih =>
     intro c hlen hproc_le hstate' hsim0' hsim_head' hones' hsim_rest'
       hinput_written hblank_written hsc_ones' hsc_blank' hsc0' hsc_head'
@@ -1896,7 +1905,7 @@ private theorem setupSim_phase3
       hout_h' hout_ns' hwf' hdesc_h' hst_h' hwk_heads
     obtain ⟨c_next, hreach_cycle, hst_next, hsim0_next, hsim_head_next, hones_next,
             hrest_next, hinput_next, hblank_next, hsc_ones_next, hsc_blank_next,
-            hsc0_next, hsc_head_next, hinp_head_next, hinp_cells_next,
+            hsc0_next, hsc_head_next, hsc_cells_next, hinp_head_next, hinp_cells_next,
             hdesc_next, hstate_next, hout_next, hwf_next, hwk_heads_next⟩ := hcycle
     -- Apply IH for rest
     have hrest_len : rest.length + 1 = (b :: rest).length := by simp
@@ -1929,8 +1938,9 @@ private theorem setupSim_phase3
     obtain ⟨c_final, hreach_final, hhalt, hsim0_f, hones_f, hinput_f, hblank_f,
             hdesc_f, hstate_f, hwf_f, hheads_f, hsim_hd_f, hsc_hd_f⟩ := hih
     refine ⟨c_final, ?_, hhalt, hsim0_f, hones_f, hinput_f, hblank_f, ?_, ?_, hwf_f,
-            hheads_f, hsim_hd_f, hsc_hd_f.1,
-            hsc_hd_f.2.1.trans hinp_cells_next, hsc_hd_f.2.2.1, hsc_hd_f.2.2.2.trans hout_next⟩
+            hheads_f, hsim_hd_f, hsc_hd_f.1, hsc_hd_f.2.1.trans hsc_cells_next,
+            hsc_hd_f.2.2.1.trans hinp_cells_next, hsc_hd_f.2.2.2.1,
+            hsc_hd_f.2.2.2.2.trans hout_next⟩
     · -- reachesIn composition: (b::rest).length * (4n+9) + 1 = (4n+9) + rest.length*(4n+9) + 1
       have : (b :: rest).length * (4 * n + 9) + 1 = (4 * n + 9) + (rest.length * (4 * n + 9) + 1) := by
         simp only [List.length_cons]; rw [Nat.succ_mul]; omega
@@ -1996,6 +2006,7 @@ private theorem setupSim_full_execution
       -- Head bounds
       (c'.work utmSimTape).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
       (c'.work utmScratchTape).head ≤ n + 1 ∧
+      (c'.work utmScratchTape).cells = (work utmScratchTape).cells ∧
       -- Input/output preservation
       c'.input.cells = inp.cells ∧
       c'.input.head ≥ 1 ∧
@@ -2014,7 +2025,7 @@ private theorem setupSim_full_execution
   -- Phase 1+2: write position-0 ones and advance input
   obtain ⟨c1, hreach1, hst1, hsim0_1, hsim_head1, hones1, hblank1,
           hdesc1, hstate1, hinp_head1, hinp_cells1, hout1, hwf1,
-          hsc_ones1, hsc_blank1, hsc0_1, hsc_head1,
+          hsc_ones1, hsc_blank1, hsc0_1, hsc_head1, hsc_cells1,
           hinp_h1, hinp_ns1, hout_h1, hout_ns1⟩ :=
     setupSim_phase12 inp work out hsim0 hsim_blank hsim_head
       hsc0 hsc_ones hsc_sentinel hsc_head hinp_h hinp_ns hout_h hout_ns hwf
@@ -2036,10 +2047,10 @@ private theorem setupSim_full_execution
       (by rw [hdesc1]; exact hdesc_h) (by rw [hstate1]; exact hst_h)
   -- Compose phases
   refine ⟨c2, ?_, hhalt2, hsim0_2, hones2, hinput2, hblank2,
-          ?_, ?_, hwf2, hheads2, hsim_hd2, hsc_hd2.1,
-          hsc_hd2.2.1.trans hinp_cells1,
-          hsc_hd2.2.2.1,
-          hsc_hd2.2.2.2.trans hout1⟩
+          ?_, ?_, hwf2, hheads2, hsim_hd2, hsc_hd2.1, hsc_hd2.2.1.trans hsc_cells1,
+          hsc_hd2.2.2.1.trans hinp_cells1,
+          hsc_hd2.2.2.2.1,
+          hsc_hd2.2.2.2.2.trans hout1⟩
   -- reachesIn composition
   · have : setupSimBound n x.length = (3 * n + 8) + (x.length * (4 * n + 9) + 1) := by
       simp [setupSimBound]; omega
@@ -2070,6 +2081,7 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
         (work utmSimTape).head = 1 ∧
         tapeStoresBools (List.replicate n true) (work utmScratchTape) ∧
         (work utmScratchTape).head = 1 ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j) ∧
         inp.cells inp.head = Γ.blank ∧
         (∀ (i : ℕ) (hi : i < x.length),
           inp.cells (inp.head + 1 + i) = Γ.ofBool (x.get ⟨i, hi⟩)) ∧
@@ -2085,10 +2097,11 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
         (work (0 : Fin 4)).head ≤ 3 * k + n + 5 ∧
         (work (1 : Fin 4)).head ≤ k + 1 ∧
         (work (2 : Fin 4)).head ≤ (x.length + 1) * 3 * (n + 2) + 1 ∧
-        (work (3 : Fin 4)).head ≤ n + 1)
+        (work (3 : Fin 4)).head ≤ n + 1 ∧
+        (∀ j, j ≥ n + 1 → (work utmScratchTape).cells j = (initTape []).cells j))
       (3 * n + 9 + x.length * (4 * n + 9)) := by
   intro inp work out ⟨henv, hdesc, hstate, hsim_cells, hsim_head, hsc_bools, hsc_head,
-    hinp_blank, hinp_x, hinp_end, hdesc_head_bound, hstate_head_bound⟩
+    hsc_tail, hinp_blank, hinp_x, hinp_end, hdesc_head_bound, hstate_head_bound⟩
   have hsim0 : (work utmSimTape).cells 0 = Γ.start := by rw [hsim_cells]; simp [initTape]
   have hsim_blank : ∀ j, j ≥ 1 → (work utmSimTape).cells j = Γ.blank := by
     intro j hj; rw [hsim_cells]; simp [initTape, show j ≠ 0 from by omega]
@@ -2111,7 +2124,11 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
   -- We need to add input/output preservation to setupSim_full_execution, or derive here.
   -- For now: output is fully idle-preserved, input cells preserved but head advanced.
   -- We add these to setupSim_full_execution's postcondition.
-  obtain ⟨hsc_hd_bound, hinp_cells_eq, hinp_hd_ge, hout_eq⟩ := hsc_hd
+  obtain ⟨hsc_hd_bound, hsc_cells_eq, hinp_cells_eq, hinp_hd_ge, hout_eq⟩ := hsc_hd
+  have hsc_tail_post : ∀ j, j ≥ n + 1 → (c'.work utmScratchTape).cells j = (initTape []).cells j := by
+    intro j hj
+    rw [hsc_cells_eq]
+    exact hsc_tail j hj
   have henv' : InitEnvelope c'.input c'.work c'.output :=
     ⟨by rw [hinp_cells_eq]; exact hinp0,
      by intro j hj; rw [hinp_cells_eq]; exact hinp_ns j hj,
@@ -2122,6 +2139,6 @@ theorem setupSimTM_hoareTime (tm : TM n) (k : ℕ)
   exact ⟨henv', hdesc_post, hstate_post, hsc,
     by rw [hdesc']; exact hdesc_head_bound,
     by rw [hstate']; exact hstate_head_bound,
-    hsim_hd, hsc_hd_bound⟩
+    hsim_hd, hsc_hd_bound, hsc_tail_post⟩
 
 end TM

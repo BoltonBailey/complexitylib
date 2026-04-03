@@ -1809,7 +1809,10 @@ private theorem phase2_moveHeads {Q : Type} [DecidableEq Q]
       -- New head marker positions after Phase 2
       (∀ (ti : Fin (n + 2)) (pos : ℕ),
         (c₃.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos ti.val) =
-        if newHeadPos ti = pos then Γ.one else Γ.blank) := by
+        if newHeadPos ti = pos then Γ.one else Γ.blank) ∧
+      -- Scratch tape tracking for phase3 sentinel proofs
+      (c₃.work utmScratchTape).head = (c₂.work utmScratchTape).head + 2 * (n + 2) ∧
+      (c₃.work utmScratchTape).cells = (c₂.work utmScratchTape).cells := by
   -- Outer induction: process tapes mvIdx = 0, ..., n+1
   suffices outer : ∀ (fuel mvIdx : ℕ) (hmvi : mvIdx < n + 2)
       (c : Cfg 4 (applyTransitionTM (n := n) k).Q),
@@ -1853,7 +1856,9 @@ private theorem phase2_moveHeads {Q : Type} [DecidableEq Q]
           (c₂.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos tapeIdx + 2)) ∧
         (∀ (ti : Fin (n + 2)) (pos : ℕ),
           (c₃.work utmSimTape).cells (SuperCell.simTapeOffset (n + 2) pos ti.val) =
-          if newHeadPos ti = pos then Γ.one else Γ.blank) by
+          if newHeadPos ti = pos then Γ.one else Γ.blank) ∧
+        (c₃.work utmScratchTape).head = (c₂.work utmScratchTape).head + 2 * (n + 2) ∧
+        (c₃.work utmScratchTape).cells = (c₂.work utmScratchTape).cells by
     exact outer (n + 2) 0 (by omega) c₂ (by omega) hstate hsim_h hwf hheads
       (fun ti _ pos => hmarkers ti pos) rfl rfl rfl rfl (fun pos tapeIdx => ⟨rfl, rfl⟩)
       (by simp) rfl (fun ti h => by omega)
@@ -1952,7 +1957,8 @@ private theorem phase2_moveHeads {Q : Type} [DecidableEq Q]
             if newHeadPos ti = pos then Γ.one else Γ.blank :=
           fun ti pos => hprocessed_t ti (by omega) pos
         exact ⟨steps_t, c_t, hreach_t, hst_t, hsimh_t, hdesc_t, hstatecells_t,
-          hinp_t, hout_t, hwf_t, hheads_t, hsymcells_composed, hnewmarkers_all⟩
+          hinp_t, hout_t, hwf_t, hheads_t, hsymcells_composed, hnewmarkers_all,
+          by rw [hscrh_t, hall], hscrc_t⟩
     -- ── Prove one_tape ──
     -- ── Steps 1-2: rdMvHi → rdMvLo → scanMv (2 fixed steps) ──
     have hsteps_12 : ∃ (c₁₂ : Cfg 4 (applyTransitionTM (n := n) k).Q) (dir : Dir3),
@@ -3189,7 +3195,10 @@ private theorem phase3_clrScr_loop (k : ℕ) :
       (c'.work utmScratchTape).head = 1 ∧
       (∀ i : Fin 4, i ≠ utmScratchTape → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output ∧
-      WorkTapesWF c'.work := by
+      WorkTapesWF c'.work ∧
+      (∀ j, j ≥ 1 → j ≤ h → (c'.work utmScratchTape).cells j = Γ.blank) ∧
+      (∀ j, j > h → (c'.work utmScratchTape).cells j =
+        (c.work utmScratchTape).cells j) := by
   intro h
   induction h with
   | zero =>
@@ -3238,7 +3247,9 @@ private theorem phase3_clrScr_loop (k : ℕ) :
        fun i j hj => by
         by_cases hi : i = utmScratchTape
         · simp [c', hi, hwf.2 utmScratchTape j hj]
-        · simp [c', hi, hwf.2 i j hj]⟩⟩
+        · simp [c', hi, hwf.2 i j hj]⟩,
+      fun _ _ hj2 => absurd hj2 (by omega),
+      fun _ _ => by simp [c']⟩
   | succ h ih =>
     intro c hst hhead hwf hother hinp hinp_h hout hout_h
     have hscr_ge1 : (c.work utmScratchTape).head ≥ 1 := by omega
@@ -3300,13 +3311,25 @@ private theorem phase3_clrScr_loop (k : ℕ) :
         · rw [hc'_other i hi]; exact hwf.2 i j hj
     have hc'_hother : ∀ i, i ≠ utmScratchTape → (c'.work i).head ≥ 1 := by
       intro i hi; rw [hc'_other i hi]; exact hother i hi
-    obtain ⟨c_f, hreach, hst_f, hhead_f, hother_f, hinp_f, hout_f, hwf_f⟩ :=
+    obtain ⟨c_f, hreach, hst_f, hhead_f, hother_f, hinp_f, hout_f, hwf_f,
+            hblank_f, hpres_f⟩ :=
       ih c' hc'_state hc'_head hc'_wf hc'_hother
         (by rw [hc'_inp]; exact hinp) (by rw [hc'_inp]; exact hinp_h)
         (by rw [hc'_out]; exact hout) (by rw [hc'_out]; exact hout_h)
     exact ⟨c_f, reachesIn.step hstep hreach, hst_f, hhead_f,
       fun i hi => by rw [hother_f i hi, hc'_other i hi],
-      by rw [hinp_f, hc'_inp], by rw [hout_f, hc'_out], hwf_f⟩
+      by rw [hinp_f, hc'_inp], by rw [hout_f, hc'_out], hwf_f,
+      fun j hj1 hj2 => by
+        by_cases hjh : j ≤ h
+        · exact hblank_f j hj1 hjh
+        · have hjeq : j = h + 1 := by omega
+          subst hjeq; rw [hpres_f (h + 1) (by omega)]
+          show newScrCells (h + 1) = Γ.blank
+          simp [newScrCells],
+      fun j hj => by
+        rw [hpres_f j (by omega)]
+        show newScrCells j = (c.work utmScratchTape).cells j
+        simp [newScrCells, show j ≠ h + 1 from by omega]⟩
 
 set_option maxHeartbeats 800000 in
 private theorem phase3_rwTp_loop (k : ℕ) (t : Fin 4) :
@@ -3495,9 +3518,12 @@ private theorem phase3_cleanup
       (∀ i, (c₄.work i).head = 1) ∧
       (∀ i, i ≠ utmScratchTape → (c₄.work i).cells = (c₃.work i).cells) ∧
       c₄.input = c₃.input ∧ c₄.output = c₃.output ∧
-      WorkTapesWF c₄.work := by
+      WorkTapesWF c₄.work ∧
+      (∀ j, j ≥ 1 → j ≤ (c₃.work utmScratchTape).head →
+        (c₄.work utmScratchTape).cells j = Γ.blank) := by
   -- Phase 3a: clear scratch tape
-  obtain ⟨ca, hreach_a, hst_a, hscr_h_a, hother_a, hinp_a, hout_a, hwf_a⟩ :=
+  obtain ⟨ca, hreach_a, hst_a, hscr_h_a, hother_a, hinp_a, hout_a, hwf_a,
+          hblank_a, hpres_a⟩ :=
     phase3_clrScr_loop k ((c₃.work utmScratchTape).head) c₃ hstate rfl hwf
       (fun i hi => hw_h i) hinp hinp_h hout hout_h
   have hw_h_a : ∀ i : Fin 4, (ca.work i).head ≥ 1 := by
@@ -3624,7 +3650,26 @@ private theorem phase3_cleanup
     rw [hinp_e', hinp_e, hinp_d', hinp_d, hinp_c', hinp_c, hinp_b', hinp_b, hinp_a]
   have hout_final : ce'.output = c₃.output := by
     rw [hout_e', hout_e, hout_d', hout_d, hout_c', hout_c, hout_b', hout_b, hout_a]
-  exact ⟨_, ce', htotal, hst_e'_done, hheads, hcells, hinp_final, hout_final, hwf_e'⟩
+  -- Scratch cells: trace through rewind phases (all preserve scratch cells)
+  have hscr_cells_chain : (ce'.work utmScratchTape).cells =
+      (ca.work utmScratchTape).cells := by
+    have hne32 : utmScratchTape ≠ (⟨2, by omega⟩ : Fin 4) :=
+      fne 3 2 (by omega) (by omega) (by omega)
+    have hne31 : utmScratchTape ≠ (⟨1, by omega⟩ : Fin 4) :=
+      fne 3 1 (by omega) (by omega) (by omega)
+    have hne30 : utmScratchTape ≠ (⟨0, by omega⟩ : Fin 4) :=
+      fne 3 0 (by omega) (by omega) (by omega)
+    calc (ce'.work utmScratchTape).cells
+      _ = (ce.work utmScratchTape).cells := by rw [hw_e' utmScratchTape]
+      _ = (cd'.work utmScratchTape).cells := hcells_e
+      _ = (cd.work utmScratchTape).cells := by rw [hw_d' utmScratchTape]
+      _ = (cc'.work utmScratchTape).cells := by rw [hother_d utmScratchTape hne32]
+      _ = (cc.work utmScratchTape).cells := by rw [hw_c' utmScratchTape]
+      _ = (cb'.work utmScratchTape).cells := by rw [hother_c utmScratchTape hne31]
+      _ = (cb.work utmScratchTape).cells := by rw [hw_b' utmScratchTape]
+      _ = (ca.work utmScratchTape).cells := by rw [hother_b utmScratchTape hne30]
+  exact ⟨_, ce', htotal, hst_e'_done, hheads, hcells, hinp_final, hout_final, hwf_e',
+    fun j hj1 hj2 => by rw [hscr_cells_chain]; exact hblank_a j hj1 hj2⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Encoding connection: scratchHasTransOutput → per-phase scratch bits
@@ -3930,7 +3975,10 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         WorkTapesWF work ∧
         -- Preserved: inp/out tapes (applyTransition only modifies work tapes)
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
-        out.read ≠ Γ.start ∧ out.head ≥ 1) := by
+        out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
+        -- Scratch tape sentinels (cleared by phase3_clrScr)
+        (work utmScratchTape).cells (TMEncoding.inputPatternWidth k n + 1) = Γ.blank ∧
+        (work utmScratchTape).cells (TMEncoding.outputWidth k n + 1) = Γ.blank) := by
   intro e iHead wHeads oHead
   set δ_result := tm.δ simCfg.state iHead wHeads oHead with hδ_def
   obtain ⟨q', wW, oW, iD, wD, oD⟩ := δ_result
@@ -4112,7 +4160,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         simp only [heq0, heq1] at hb0 hb1 ⊢
         rw [hb0, hb1, decodeDir3_ofBool_encode]
   obtain ⟨steps₃, c₃, hreach₃, hst₃, hsim_h₃, hdesc₃, hstatecells₃, hinp₃, hout₃, hwf₃, hheads₃,
-          hsymcells₃, hmarkers₃_raw⟩ :=
+          hsymcells₃, hmarkers₃_raw, hscr_head₃, hscr_cells₃⟩ :=
     phase2_moveHeads c₂ simCfg iD wD oD headPos_p2 newHeadPos_p2 hnewHead_p2
       hst₂ hwf₂ hsim_h₂ hheads₂ hmarkers_p2
       (by rw [hinp₂, hinp₁]; exact hinp_ns) (by rw [hinp₂, hinp₁]; exact hinp_h)
@@ -4120,7 +4168,8 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
   -- ──────────────────────────────────────────────────────────────────
   -- Phase 3: cleanup
   -- ──────────────────────────────────────────────────────────────────
-  obtain ⟨steps₄, c₄, hreach₄, hhalted₄, hheads₄, hcells₄, hinp₄, hout₄, hwf₄⟩ :=
+  obtain ⟨steps₄, c₄, hreach₄, hhalted₄, hheads₄, hcells₄, hinp₄, hout₄, hwf₄,
+          hscr_blank₄⟩ :=
     phase3_cleanup c₃ hst₃ hwf₃ hheads₃
       (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_ns)
       (by rw [hinp₃, hinp₂, hinp₁]; exact hinp_h)
@@ -4386,7 +4435,8 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
   refine ⟨c₄, reachesIn_toReaches' htotal, hhalted₄, ?_, hsuperCells', ?_,
     hheads₄, hwf₄,
     by rw [hinp_final]; exact hinp_ns, by rw [hinp_final]; exact hinp_h,
-    by rw [hout_final]; exact hout_ns, by rw [hout_final]; exact hout_h⟩
+    by rw [hout_final]; exact hout_ns, by rw [hout_final]; exact hout_h,
+    ?_, ?_⟩
   · -- stateOnTapeAt k (e q') (c₄.work utmStateTape)
     refine ⟨?_, ?_, ?_⟩
     · rw [hstate_cells_final]; exact hcell0₁
@@ -4399,6 +4449,14 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
     · rw [hdesc_cells_final]; exact hd0
     · intro i hi; rw [hdesc_cells_final]; exact hdbits i hi
     · rw [hdesc_cells_final]; exact hdblank
+  · -- inputPatternWidth sentinel
+    exact hscr_blank₄ _ (by omega) (by
+      rw [hscr_head₃, hscr_head₂, hsch₁]
+      simp only [TMEncoding.inputPatternWidth]; omega)
+  · -- outputWidth sentinel
+    exact hscr_blank₄ _ (by omega) (by
+      rw [hscr_head₃, hscr_head₂, hsch₁]
+      simp only [TMEncoding.outputWidth]; omega)
 
 
 end TM
