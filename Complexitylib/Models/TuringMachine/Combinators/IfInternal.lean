@@ -145,23 +145,14 @@ theorem ifTM_else_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
 -- Halt transitions: branch halt → done
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- The tape transformation applied by halt-to-done transitions. Same as
-    `seqTransitionTape`/`seqTransitionInput`: preserves cells, moves heads
-    at position 0 to position 1. -/
-def ifTransitionTape (t : Tape) : Tape :=
-  t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read)
-
-def ifTransitionInput (t : Tape) : Tape :=
-  t.move (idleDir t.read)
-
 /-- When `tmThen` halts, one step transitions to `done`. -/
 theorem ifTM_then_halt_step (tmTest tmThen tmElse : TM n) {c : Cfg n tmThen.Q}
     (hhalt : c.state = tmThen.qhalt) :
     (ifTM tmTest tmThen tmElse).step (ifThenWrap tmTest tmThen tmElse c) =
       some { state := Sum.inr (Sum.inl IfPhase.done),
-             input := ifTransitionInput c.input,
-             work := fun i => ifTransitionTape (c.work i),
-             output := ifTransitionTape c.output } := by
+             input := transitionInput c.input,
+             work := fun i => transitionTape (c.work i),
+             output := transitionTape c.output } := by
   show (if (ifThenWrap tmTest tmThen tmElse c).state =
            (ifTM tmTest tmThen tmElse).qhalt then none else some _) = some _
   simp only [ifThenWrap, ifTM, if_neg ifQ_then_ne_halt, hhalt, ↓reduceIte]
@@ -172,9 +163,9 @@ theorem ifTM_else_halt_step (tmTest tmThen tmElse : TM n) {c : Cfg n tmElse.Q}
     (hhalt : c.state = tmElse.qhalt) :
     (ifTM tmTest tmThen tmElse).step (ifElseWrap tmTest tmThen tmElse c) =
       some { state := Sum.inr (Sum.inl IfPhase.done),
-             input := ifTransitionInput c.input,
-             work := fun i => ifTransitionTape (c.work i),
-             output := ifTransitionTape c.output } := by
+             input := transitionInput c.input,
+             work := fun i => transitionTape (c.work i),
+             output := transitionTape c.output } := by
   show (if (ifElseWrap tmTest tmThen tmElse c).state =
            (ifTM tmTest tmThen tmElse).qhalt then none else some _) = some _
   simp only [ifElseWrap, ifTM, if_neg ifQ_else_ne_halt, hhalt, ↓reduceIte]
@@ -189,9 +180,9 @@ theorem ifTM_test_to_rewind (tmTest tmThen tmElse : TM n) {c : Cfg n tmTest.Q}
     (hhalt : c.state = tmTest.qhalt) :
     (ifTM tmTest tmThen tmElse).step (ifTestWrap tmTest tmThen tmElse c) =
       some { state := Sum.inr (Sum.inl IfPhase.rewindOut),
-             input := ifTransitionInput c.input,
-             work := fun i => ifTransitionTape (c.work i),
-             output := ifTransitionTape c.output } := by
+             input := transitionInput c.input,
+             work := fun i => transitionTape (c.work i),
+             output := transitionTape c.output } := by
   show (if (ifTestWrap tmTest tmThen tmElse c).state =
            (ifTM tmTest tmThen tmElse).qhalt then none else some _) = some _
   simp only [ifTestWrap, ifTM, if_neg ifQ_test_ne_halt, hhalt, ↓reduceIte]
@@ -209,51 +200,6 @@ theorem ifTM_halted_done (tmTest tmThen tmElse : TM n)
     (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
     (h : c.state = Sum.inr (Sum.inl IfPhase.done)) :
     (ifTM tmTest tmThen tmElse).halted c := h
-
--- ════════════════════════════════════════════════════════════════════════
--- Transition tape properties
--- ════════════════════════════════════════════════════════════════════════
-
-/-- `ifTransitionTape` preserves cells under the WF condition. -/
-theorem ifTransitionTape_cells (t : Tape)
-    (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
-    (ifTransitionTape t).cells = t.cells := by
-  simp only [ifTransitionTape, Tape.writeAndMove, tape_move_cells]
-  by_cases hh : t.head = 0
-  · simp only [Tape.write, hh, ↓reduceIte]
-  · have hge : t.head ≥ 1 := by omega
-    rw [readBackWrite_toΓ_eq (by simp only [Tape.read]; exact hns t.head hge)]
-    simp only [Tape.write, hh, ↓reduceIte, Tape.read, Function.update_eq_self]
-
-/-- `ifTransitionInput` preserves cells. -/
-theorem ifTransitionInput_cells (t : Tape) :
-    (ifTransitionInput t).cells = t.cells := by
-  simp [ifTransitionInput, Tape.move]; split <;> rfl
-
-/-- After `ifTransitionTape`, the head is ≥ 1 when cell 0 = start. -/
-theorem ifTransitionTape_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
-    (ifTransitionTape t).head ≥ 1 := by
-  unfold ifTransitionTape Tape.writeAndMove
-  by_cases hh : t.head = 0
-  · simp only [Tape.write, hh, ↓reduceIte, Tape.read, h0, idleDir, Tape.move]; omega
-  · have hge : t.head ≥ 1 := by omega
-    cases hdir : idleDir t.read with
-    | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-    | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-    | left =>
-      exfalso; revert hdir; simp only [idleDir]; split <;> simp
-
-/-- After `ifTransitionInput`, the head is ≥ 1 when cell 0 = start. -/
-theorem ifTransitionInput_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
-    (ifTransitionInput t).head ≥ 1 := by
-  unfold ifTransitionInput
-  by_cases hh : t.head = 0
-  · simp only [Tape.read, hh, h0, idleDir, ↓reduceIte, Tape.move]; omega
-  · cases hdir : idleDir t.read with
-    | stay => simp only [Tape.move]; omega
-    | right => simp only [Tape.move]; omega
-    | left =>
-      exfalso; revert hdir; simp only [idleDir]; split <;> simp
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Rewind loop (via generic rewind)

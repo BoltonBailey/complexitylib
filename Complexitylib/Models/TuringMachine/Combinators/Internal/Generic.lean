@@ -228,4 +228,74 @@ theorem generic_rewind_loop_full (tm : TM n)
       by rw [hinp_t, hinp],
       by rw [hwork_t, hwork]⟩
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Standard phase-transition tape operations
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The standard tape transformation applied at combinator phase boundaries
+    (work tapes and output tape). Writes back the current symbol (preserving
+    cells) and stays in place; if at cell 0, `δ_right_of_start` forces a
+    right move to cell 1.
+
+    Used by all combinators (`seqTM`, `ifTM`, `loopTM`, `complementTM`)
+    at transitions between phases. -/
+def transitionTape (t : Tape) : Tape :=
+  t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read)
+
+/-- The standard input-tape transformation at combinator phase boundaries.
+    The input tape is read-only (no write), so only the head moves: stay
+    in place unless at cell 0, where `δ_right_of_start` forces right. -/
+def transitionInput (t : Tape) : Tape :=
+  t.move (idleDir t.read)
+
+/-- `transitionTape` preserves cells when cells ≥ 1 ≠ start. -/
+theorem transitionTape_cells (t : Tape)
+    (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
+    (transitionTape t).cells = t.cells := by
+  simp only [transitionTape, Tape.writeAndMove, tape_move_cells]
+  by_cases hh : t.head = 0
+  · simp only [Tape.write, hh, ↓reduceIte]
+  · have hge : t.head ≥ 1 := by omega
+    rw [readBackWrite_toΓ_eq (by simp only [Tape.read]; exact hns t.head hge)]
+    simp only [Tape.write, hh, ↓reduceIte, Tape.read, Function.update_eq_self]
+
+/-- `transitionInput` preserves cells (always, since input has no write). -/
+theorem transitionInput_cells (t : Tape) :
+    (transitionInput t).cells = t.cells := by
+  simp [transitionInput, Tape.move]; split <;> rfl
+
+/-- After `transitionTape`, head ≥ 1 when cell 0 = start. -/
+theorem transitionTape_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
+    (transitionTape t).head ≥ 1 := by
+  unfold transitionTape Tape.writeAndMove
+  by_cases hh : t.head = 0
+  · simp only [Tape.write, hh, ↓reduceIte, Tape.read, h0, idleDir, Tape.move]; omega
+  · cases hdir : idleDir t.read with
+    | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+
+/-- After `transitionInput`, head ≥ 1 when cell 0 = start. -/
+theorem transitionInput_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
+    (transitionInput t).head ≥ 1 := by
+  unfold transitionInput
+  by_cases hh : t.head = 0
+  · simp only [Tape.read, hh, h0, idleDir, ↓reduceIte, Tape.move]; omega
+  · cases hdir : idleDir t.read with
+    | stay => simp only [Tape.move]; omega
+    | right => simp only [Tape.move]; omega
+    | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+
+/-- Bound on `transitionTape` output head: ≤ original head + 1. -/
+theorem transitionTape_head_bound {t : Tape} {p_bound : ℕ}
+    (hcell0 : t.cells 0 = Γ.start) (hhead : t.head ≤ p_bound) :
+    (transitionTape t).head ≤ p_bound + 1 := by
+  unfold transitionTape Tape.writeAndMove
+  by_cases hh : t.head = 0
+  · simp only [Tape.write, hh, ↓reduceIte, Tape.read, hcell0, idleDir, Tape.move]; omega
+  · cases hdir : idleDir t.read with
+    | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
+    | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+
 end TM

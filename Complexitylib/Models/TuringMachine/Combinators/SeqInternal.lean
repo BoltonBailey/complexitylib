@@ -10,7 +10,7 @@ This file contains the simulation lemmas for `seqTM tm₁ tm₂`.
 
 - `phase1Wrap` — embed a `tm₁` config into the `seqTM` config space
 - `phase2Wrap` — embed a `tm₂` config into the `seqTM` config space
-- `seqTransitionTape` / `seqTransitionInput` — tape transformations at transition
+- Tape transformations use the shared `transitionTape` / `transitionInput`
 -/
 
 variable {n : ℕ}
@@ -36,18 +36,6 @@ def phase2Wrap (tm₁ : TM n) (tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
   input := c₂.input
   work := c₂.work
   output := c₂.output
-
--- ════════════════════════════════════════════════════════════════════════
--- Tape transition helpers
--- ════════════════════════════════════════════════════════════════════════
-
-/-- The tape transformation applied by the transition step to work/output tapes. -/
-def seqTransitionTape (t : Tape) : Tape :=
-  t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read)
-
-/-- The tape transformation applied to the input tape (read-only: only head moves). -/
-def seqTransitionInput (t : Tape) : Tape :=
-  t.move (idleDir t.read)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 1: seqTM simulates tm₁ (via generic simulation lifting)
@@ -86,9 +74,9 @@ theorem seqTM_transition_step (tm₁ tm₂ : TM n) {c₁ : Cfg n tm₁.Q}
     (seqTM tm₁ tm₂).step (phase1Wrap tm₁ tm₂ c₁) =
       some (phase2Wrap tm₁ tm₂
         { state := tm₂.qstart,
-          input := seqTransitionInput c₁.input,
-          work := fun i => seqTransitionTape (c₁.work i),
-          output := seqTransitionTape c₁.output }) := by
+          input := transitionInput c₁.input,
+          work := fun i => transitionTape (c₁.work i),
+          output := transitionTape c₁.output }) := by
   show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
         else some _) = some _
   simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, hhalt, ↓reduceIte]
@@ -133,9 +121,9 @@ theorem seqTM_full_simulation (tm₁ tm₂ : TM n)
     {t₂ : ℕ} {c₂_end : Cfg n tm₂.Q}
     (hreach₂ : tm₂.reachesIn t₂
       { state := tm₂.qstart,
-        input := seqTransitionInput c₁_end.input,
-        work := fun i => seqTransitionTape (c₁_end.work i),
-        output := seqTransitionTape c₁_end.output }
+        input := transitionInput c₁_end.input,
+        work := fun i => transitionTape (c₁_end.work i),
+        output := transitionTape c₁_end.output }
       c₂_end) :
     (seqTM tm₁ tm₂).reachesIn (t₁ + 1 + t₂)
       (phase1Wrap tm₁ tm₂ c₁_start)
@@ -158,27 +146,5 @@ theorem phase2Wrap_halted (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
 
 theorem phase2Wrap_output (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     (phase2Wrap tm₁ tm₂ c₂).output = c₂.output := rfl
-
--- ════════════════════════════════════════════════════════════════════════
--- Transition step tape properties
--- ════════════════════════════════════════════════════════════════════════
-
-theorem seqTransitionInput_cells (t : Tape) :
-    (seqTransitionInput t).cells = t.cells := by
-  simp [seqTransitionInput, Tape.move]; split <;> rfl
-
-theorem seqTransitionTape_cells (t : Tape)
-    (hne : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
-    (seqTransitionTape t).cells = t.cells := by
-  simp only [seqTransitionTape, Tape.writeAndMove, tape_move_cells]
-  simp only [Tape.write]
-  by_cases hh : t.head = 0
-  · simp only [hh, ↓reduceIte]
-  · simp only [hh, ↓reduceIte]
-    have hge : t.head ≥ 1 := Nat.one_le_iff_ne_zero.mpr hh
-    have hread : t.read ≠ Γ.start := by
-      simp only [Tape.read]; exact hne t.head hge
-    rw [readBackWrite_toΓ_eq hread, show t.read = t.cells t.head from rfl,
-        Function.update_eq_self]
 
 end TM

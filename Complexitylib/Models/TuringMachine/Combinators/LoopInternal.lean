@@ -10,7 +10,7 @@ This file contains the simulation lemmas for `loopTM tmBody tmTest`.
 
 - `loopBodyWrap` — embed a `tmBody` config into the `loopTM` config space
 - `loopTestWrap` — embed a `tmTest` config into the `loopTM` config space
-- `loopTransitionTape` / `loopTransitionInput` — tape transformations at transitions
+- Tape transformations use the shared `transitionTape` / `transitionInput`
 -/
 
 variable {n : ℕ}
@@ -34,16 +34,6 @@ def loopTestWrap (tmBody : TM n) (tmTest : TM n) (c : Cfg n tmTest.Q) :
   input := c.input
   work := c.work
   output := c.output
-
--- ════════════════════════════════════════════════════════════════════════
--- Tape transition helpers
--- ════════════════════════════════════════════════════════════════════════
-
-def loopTransitionTape (t : Tape) : Tape :=
-  t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read)
-
-def loopTransitionInput (t : Tape) : Tape :=
-  t.move (idleDir t.read)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Sum discrimination helpers
@@ -88,9 +78,9 @@ theorem loopTM_body_to_test (tmBody tmTest : TM n) {c : Cfg n tmBody.Q}
     (loopTM tmBody tmTest).step (loopBodyWrap tmBody tmTest c) =
       some (loopTestWrap tmBody tmTest
         { state := tmTest.qstart,
-          input := loopTransitionInput c.input,
-          work := fun i => loopTransitionTape (c.work i),
-          output := loopTransitionTape c.output }) := by
+          input := transitionInput c.input,
+          work := fun i => transitionTape (c.work i),
+          output := transitionTape c.output }) := by
   show (if (loopBodyWrap tmBody tmTest c).state =
            (loopTM tmBody tmTest).qhalt then none else some _) = some _
   simp only [loopBodyWrap, loopTM, if_neg loopQ_body_ne_halt, hhalt, ↓reduceIte]
@@ -131,9 +121,9 @@ theorem loopTM_test_to_rewind (tmBody tmTest : TM n) {c : Cfg n tmTest.Q}
     (hhalt : c.state = tmTest.qhalt) :
     (loopTM tmBody tmTest).step (loopTestWrap tmBody tmTest c) =
       some { state := Sum.inr (Sum.inl LoopPhase.rewindOut),
-             input := loopTransitionInput c.input,
-             work := fun i => loopTransitionTape (c.work i),
-             output := loopTransitionTape c.output } := by
+             input := transitionInput c.input,
+             work := fun i => transitionTape (c.work i),
+             output := transitionTape c.output } := by
   show (if (loopTestWrap tmBody tmTest c).state =
            (loopTM tmBody tmTest).qhalt then none else some _) = some _
   simp only [loopTestWrap, loopTM, if_neg loopQ_test_ne_halt, hhalt, ↓reduceIte]
@@ -259,28 +249,6 @@ theorem loopTM_halted_done (tmBody tmTest : TM n)
     (loopTM tmBody tmTest).halted c := h
 
 -- ════════════════════════════════════════════════════════════════════════
--- Tape transition properties
--- ════════════════════════════════════════════════════════════════════════
-
-theorem loopTransitionInput_cells (t : Tape) :
-    (loopTransitionInput t).cells = t.cells := by
-  simp [loopTransitionInput, Tape.move]; split <;> rfl
-
-theorem loopTransitionTape_cells (t : Tape)
-    (hne : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
-    (loopTransitionTape t).cells = t.cells := by
-  simp only [loopTransitionTape, Tape.writeAndMove, tape_move_cells]
-  simp only [Tape.write]
-  by_cases hh : t.head = 0
-  · simp only [hh, ↓reduceIte]
-  · simp only [hh, ↓reduceIte]
-    have hge : t.head ≥ 1 := Nat.one_le_iff_ne_zero.mpr hh
-    have hread : t.read ≠ Γ.start := by
-      simp only [Tape.read]; exact hne t.head hge
-    rw [readBackWrite_toΓ_eq hread, show t.read = t.cells t.head from rfl,
-        Function.update_eq_self]
-
--- ════════════════════════════════════════════════════════════════════════
 -- One full iteration ending in halt
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -291,17 +259,17 @@ theorem loopTM_iteration_halt (tmBody tmTest : TM n)
     {t_test : ℕ} {c_test_end : Cfg n tmTest.Q}
     (hreach_test : tmTest.reachesIn t_test
       { state := tmTest.qstart,
-        input := loopTransitionInput c_body_end.input,
-        work := fun i => loopTransitionTape (c_body_end.work i),
-        output := loopTransitionTape c_body_end.output }
+        input := transitionInput c_body_end.input,
+        work := fun i => transitionTape (c_body_end.work i),
+        output := transitionTape c_body_end.output }
       c_test_end)
     (hhalt_test : c_test_end.state = tmTest.qhalt)
     {p : ℕ}
-    (hcell0 : (loopTransitionTape c_test_end.output).cells 0 = Γ.start)
+    (hcell0 : (transitionTape c_test_end.output).cells 0 = Γ.start)
     (hnostart : ∀ j, j ≥ 1 →
-      (loopTransitionTape c_test_end.output).cells j ≠ Γ.start)
-    (hhead : (loopTransitionTape c_test_end.output).head = p)
-    (hcell1 : (loopTransitionTape c_test_end.output).cells 1 = Γ.one) :
+      (transitionTape c_test_end.output).cells j ≠ Γ.start)
+    (hhead : (transitionTape c_test_end.output).head = p)
+    (hcell1 : (transitionTape c_test_end.output).cells 1 = Γ.one) :
     ∃ c_final,
       (loopTM tmBody tmTest).reachesIn (t_body + 1 + t_test + 1 + (p + 1) + 1)
         (loopBodyWrap tmBody tmTest c_body_start) c_final ∧
@@ -319,17 +287,17 @@ theorem loopTM_iteration_halt (tmBody tmTest : TM n)
   have h_tr2 : (loopTM tmBody tmTest).reachesIn 1
       (loopTestWrap tmBody tmTest c_test_end)
       { state := Sum.inr (Sum.inl LoopPhase.rewindOut),
-        input := loopTransitionInput c_test_end.input,
-        work := fun i => loopTransitionTape (c_test_end.work i),
-        output := loopTransitionTape c_test_end.output } :=
+        input := transitionInput c_test_end.input,
+        work := fun i => transitionTape (c_test_end.work i),
+        output := transitionTape c_test_end.output } :=
     .step (loopTM_test_to_rewind tmBody tmTest hhalt_test) .zero
   -- Rewind (p + 1 steps)
   obtain ⟨c_check, hreach_rw, hst_check, hh_check, hcells_check⟩ :=
     loopTM_rewind_loop tmBody tmTest p
       { state := Sum.inr (Sum.inl LoopPhase.rewindOut),
-        input := loopTransitionInput c_test_end.input,
-        work := fun i => loopTransitionTape (c_test_end.work i),
-        output := loopTransitionTape c_test_end.output }
+        input := transitionInput c_test_end.input,
+        work := fun i => transitionTape (c_test_end.work i),
+        output := transitionTape c_test_end.output }
       rfl hcell0 hnostart hhead
   -- Check: output at cell 1 is Γ.one
   obtain ⟨c_done, hstep_done, hst_done, hcells_done⟩ :=

@@ -15,8 +15,6 @@ import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 - `loopTM_hoareTime` — loop invariant rule
 -/
 
-set_option linter.unusedSimpArgs false
-
 namespace TM
 
 variable {n : ℕ}
@@ -26,9 +24,9 @@ theorem seqTM_hoareTime (tm₁ tm₂ : TM n)
     {pre mid mid' post : TapePred n} {b₁ b₂ : ℕ}
     (h₁ : tm₁.HoareTime pre mid b₁)
     (h_trans : ∀ inp work out, mid inp work out →
-        mid' (seqTransitionInput inp)
-             (fun i => seqTransitionTape (work i))
-             (seqTransitionTape out))
+        mid' (transitionInput inp)
+             (fun i => transitionTape (work i))
+             (transitionTape out))
     (h₂ : tm₂.HoareTime mid' post b₂) :
     (seqTM tm₁ tm₂).HoareTime pre post (b₁ + 1 + b₂) := by
   intro inp work out hpre
@@ -48,38 +46,26 @@ def AllTapesWF (inp : Tape) (work : Fin n → Tape) (out : Tape) : Prop :=
   out.cells 0 = Γ.start ∧ (∀ j, j ≥ 1 → out.cells j ≠ Γ.start)
 
 -- ════════════════════════════════════════════════════════════════════════
--- AllTapesWF propagation through ifTransition
+-- AllTapesWF propagation through phase transitions
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- AllTapesWF is preserved through ifTransition (readBackWrite + idleDir). -/
-theorem AllTapesWF.ifTransition {inp : Tape} {work : Fin n → Tape} {out : Tape}
+/-- AllTapesWF is preserved through the standard combinator phase transition
+    (`transitionTape` / `transitionInput`). -/
+theorem AllTapesWF.transition {inp : Tape} {work : Fin n → Tape} {out : Tape}
     (h : AllTapesWF inp work out) :
-    (ifTransitionInput inp).head ≥ 1 ∧
-    (∀ j, j ≥ 1 → (ifTransitionInput inp).cells j ≠ Γ.start) ∧
-    (∀ i, (ifTransitionTape (work i)).head ≥ 1) ∧
-    (∀ i j, j ≥ 1 → (ifTransitionTape (work i)).cells j ≠ Γ.start) ∧
-    (ifTransitionTape out).cells = out.cells ∧
-    (ifTransitionTape out).head ≥ 1 := by
+    (transitionInput inp).head ≥ 1 ∧
+    (∀ j, j ≥ 1 → (transitionInput inp).cells j ≠ Γ.start) ∧
+    (∀ i, (transitionTape (work i)).head ≥ 1) ∧
+    (∀ i j, j ≥ 1 → (transitionTape (work i)).cells j ≠ Γ.start) ∧
+    (transitionTape out).cells = out.cells ∧
+    (transitionTape out).head ≥ 1 := by
   obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := h
-  exact ⟨ifTransitionInput_head_ge inp hic0,
-    by rw [ifTransitionInput_cells]; exact hins,
-    fun i => ifTransitionTape_head_ge _ (hwc0 i),
-    fun i j hj => by rw [ifTransitionTape_cells _ (hwns i)]; exact hwns i j hj,
-    ifTransitionTape_cells out hons,
-    ifTransitionTape_head_ge out hoc0⟩
-
-/-- Bound on ifTransitionTape output head: ≤ original head + 1. -/
-theorem ifTransitionTape_head_bound {out : Tape} {p_bound : ℕ}
-    (hoc0 : out.cells 0 = Γ.start)
-    (hhead : out.head ≤ p_bound) :
-    (ifTransitionTape out).head ≤ p_bound + 1 := by
-  unfold ifTransitionTape Tape.writeAndMove
-  by_cases hh : out.head = 0
-  · simp only [Tape.write, hh, ↓reduceIte, Tape.read, hoc0, idleDir, Tape.move]; omega
-  · cases hdir : idleDir out.read with
-    | stay => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-    | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
-    | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
+  exact ⟨transitionInput_head_ge inp hic0,
+    by rw [transitionInput_cells]; exact hins,
+    fun i => transitionTape_head_ge _ (hwc0 i),
+    fun i j hj => by rw [transitionTape_cells _ (hwns i)]; exact hwns i j hj,
+    transitionTape_cells out hons,
+    transitionTape_head_ge out hoc0⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Complement rule
@@ -132,19 +118,19 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     (h_wf : ∀ inp work out, mid_test inp work out → AllTapesWF inp work out)
     (h_head : ∀ inp work out, mid_test inp work out → out.head ≤ p_bound)
     (h_to_then : ∀ inp work out, mid_test inp work out → out.cells 1 = Γ.one →
-      mid_then (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+      mid_then (transitionInput inp) (fun i => transitionTape (work i))
                ⟨1, out.cells⟩)
     (h_to_else : ∀ inp work out, mid_test inp work out → out.cells 1 ≠ Γ.one →
-      mid_else (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
+      mid_else (transitionInput inp) (fun i => transitionTape (work i))
                ⟨1, out.cells⟩)
     (h_then : tmThen.HoareTime mid_then post_then b_then)
     (h_else : tmElse.HoareTime mid_else post_else b_else)
     (h_post_then : ∀ inp work out, post_then inp work out →
-      post (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
-           (ifTransitionTape out))
+      post (transitionInput inp) (fun i => transitionTape (work i))
+           (transitionTape out))
     (h_post_else : ∀ inp work out, post_else inp work out →
-      post (ifTransitionInput inp) (fun i => ifTransitionTape (work i))
-           (ifTransitionTape out)) :
+      post (transitionInput inp) (fun i => transitionTape (work i))
+           (transitionTape out)) :
     (ifTM tmTest tmThen tmElse).HoareTime pre post
       (b_test + p_bound + max b_then b_else + 5) := by
   intro inp work out hpre
@@ -158,14 +144,14 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
   have h_tr := ifTM_test_to_rewind tmTest tmThen tmElse hhalt₁
   -- Phase 3: rewind loop (tracks all tapes, using AllTapesWF propagation)
   obtain ⟨h_inp_ge, h_inp_ns, h_work_ge, h_work_ns, h_out_cells, _⟩ :=
-    AllTapesWF.ifTransition (h_wf _ _ _ hmid)
-  have h_out_head_bound := ifTransitionTape_head_bound hoc0 hhead_bound
+    AllTapesWF.transition (h_wf _ _ _ hmid)
+  have h_out_head_bound := transitionTape_head_bound hoc0 hhead_bound
   obtain ⟨c_check, hreach_rw, hst_check, hh_check, hcells_check, hinp_check, hwork_check⟩ :=
-    ifTM_rewind_loop_full tmTest tmThen tmElse (ifTransitionTape c_test.output).head
+    ifTM_rewind_loop_full tmTest tmThen tmElse (transitionTape c_test.output).head
       { state := Sum.inr (Sum.inl IfPhase.rewindOut),
-        input := ifTransitionInput c_test.input,
-        work := fun i => ifTransitionTape (c_test.work i),
-        output := ifTransitionTape c_test.output }
+        input := transitionInput c_test.input,
+        work := fun i => transitionTape (c_test.work i),
+        output := transitionTape c_test.output }
       rfl (by rw [h_out_cells]; exact hoc0)
       (by intro j hj; rw [h_out_cells]; exact hons j hj) rfl
       h_inp_ge h_inp_ns h_work_ge h_work_ns
@@ -184,7 +170,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     intro i j hj; rw [hwork_check]; exact h_work_ns i j hj
   -- Time for transition + rewind
   have hreach_tr_rw : (ifTM tmTest tmThen tmElse).reachesIn
-      (1 + ((ifTransitionTape c_test.output).head + 1))
+      (1 + ((transitionTape c_test.output).head + 1))
       (ifTestWrap tmTest tmThen tmElse c_test) c_check :=
     reachesIn_trans _ (.step h_tr .zero) hreach_rw
   -- Branch on output cell 1
@@ -203,19 +189,19 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     -- Compose: test sim + transition + rewind + check + branch sim + halt
     let c_done : Cfg n (ifTM tmTest tmThen tmElse).Q :=
       ⟨(ifTM tmTest tmThen tmElse).qhalt,
-       ifTransitionInput c_then.input,
-       fun i => ifTransitionTape (c_then.work i),
-       ifTransitionTape c_then.output⟩
-    refine ⟨c_done, t₁ + (1 + ((ifTransitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
+       transitionInput c_then.input,
+       fun i => transitionTape (c_then.work i),
+       transitionTape c_then.output⟩
+    refine ⟨c_done, t₁ + (1 + ((transitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
       ?_, ?_, ?_, ?_⟩
-    · have : (ifTransitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
+    · have : (transitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
       calc t₁ + _ + 1 + t₃ + 1
           ≤ b_test + (1 + (p_bound + 2)) + 1 + b_then + 1 := by omega
         _ ≤ b_test + p_bound + max b_then b_else + 5 := by omega
     · have hstep_branch : (ifTM tmTest tmThen tmElse).step c_check =
           some (ifThenWrap tmTest tmThen tmElse
-            ⟨tmThen.qstart, ifTransitionInput c_test.input,
-             fun i => ifTransitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
+            ⟨tmThen.qstart, transitionInput c_test.input,
+             fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifThenWrap]
         have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
@@ -243,19 +229,19 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     have hpost := h_post_else c_else.input c_else.work c_else.output hpost_else
     let c_done_else : Cfg n (ifTM tmTest tmThen tmElse).Q :=
       ⟨(ifTM tmTest tmThen tmElse).qhalt,
-       ifTransitionInput c_else.input,
-       fun i => ifTransitionTape (c_else.work i),
-       ifTransitionTape c_else.output⟩
-    refine ⟨c_done_else, t₁ + (1 + ((ifTransitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
+       transitionInput c_else.input,
+       fun i => transitionTape (c_else.work i),
+       transitionTape c_else.output⟩
+    refine ⟨c_done_else, t₁ + (1 + ((transitionTape c_test.output).head + 1)) + 1 + t₃ + 1,
       ?_, ?_, ?_, ?_⟩
-    · have : (ifTransitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
+    · have : (transitionTape c_test.output).head + 1 ≤ p_bound + 2 := by omega
       calc t₁ + _ + 1 + t₃ + 1
           ≤ b_test + (1 + (p_bound + 2)) + 1 + b_else + 1 := by omega
         _ ≤ b_test + p_bound + max b_then b_else + 5 := by omega
     · have hstep_branch : (ifTM tmTest tmThen tmElse).step c_check =
           some (ifElseWrap tmTest tmThen tmElse
-            ⟨tmElse.qstart, ifTransitionInput c_test.input,
-             fun i => ifTransitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
+            ⟨tmElse.qstart, transitionInput c_test.input,
+             fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifElseWrap]
         have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
