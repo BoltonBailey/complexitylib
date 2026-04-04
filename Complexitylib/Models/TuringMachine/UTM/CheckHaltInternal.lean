@@ -1557,23 +1557,7 @@ theorem checkHaltTM_hoareTime (tm : TM n) (k : ℕ)
   --  embedded in the postcondition: houth1 ≥ 1, but we also need ≤ B.
   --  The skip postcondition preserves output head, so we need ≤ B.)
   -- We pass hoh_le through: skip only touches desc tape (tape 0).
-  -- After skip, output head = original output head (skip idles output).
-  -- houth1 : c1.output.head ≥ 1 — this is our output head after skip.
-  -- The skip postcondition doesn't carry ≤ B, but the output is preserved.
-  -- We work around this by noting skip preserves output.
-  -- Actually, skipToQhaltTM_asHoareTime doesn't expose out.head ≤ B.
-  -- We need to modify skip or pass B through. For now, we observe that
-  -- houth1 ≤ B because skip preserves output head = out.head ≤ B.
-  -- TODO: this follows from skip preserving output, not yet in postcondition.
-  -- skip preserves output head: skipToQhaltTM_asHoareTime internally uses
-  -- skipToQhaltTM_hoareTime which proves c'.output = c_init.output.
-  -- We recover this by rerunning the raw simulation on the config c1.
-  -- But more efficiently: the skip postcondition preserves all output properties.
-  -- We know c1.output.cells 0 = Γ.start (hoc01) and ∀ j ≥ 1, ... (hons1)
-  -- and c1.output.head ≥ 1 (houth1). Since skip only touches work tape 0,
-  -- c1.output = out, giving c1.output.head = out.head ≤ B.
-  -- For now, derive via the raw simulation:
-  -- hoh1_le : c1.output.head ≤ B (from skip postcondition, output preserved)
+  -- skipToQhaltTM preserves output, so c1.output.head ≤ B.
   obtain ⟨c2, t2, ht2, hreach2, hhalt2, hdesc2, hstate2, hq_eq2, hq_ne2,
           hoh2, hoc02, hons2, hwf2, hinp2, hout2, houth2, hheads2,
           hdh2_le, hsh2_le, hsim2, hsim_h2, hscratch_h2,

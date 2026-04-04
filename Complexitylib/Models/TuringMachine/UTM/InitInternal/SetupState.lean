@@ -1617,23 +1617,14 @@ theorem setupStateTM_simulation (tm : TM n) (k : ℕ)
   have hsim_ne : ∀ j, j ≥ 1 → (work utmSimTape).cells j ≠ Γ.start := by
     intro j hj; rw [hsim_c]; intro h; simp [initTape, show j ≠ 0 from by omega] at h
 
-  -- The proof is organized as 4 sorry'd phase claims composed via reachesIn_trans.
-  -- Each phase claim is then proved separately by induction.
-
-  -- Phase 1 claim: from initial c₀, reach c₁ in k+1 steps
-  -- Phase 2 claim: from c₁, reach c₂ in n+1 steps
-  -- Phase 3 claim: from c₂, reach c₃ in k+2 steps
-  -- Phase 4 claim: from c₃, reach c₄ in k+1 steps
+  -- The proof is organized as 4 phase claims composed via reachesIn_trans.
+  -- Each phase claim is proved separately by induction.
+  --
+  -- Phase 1: from initial c₀, reach c₁ in k+1 steps
+  -- Phase 2: from c₁, reach c₂ in n+1 steps
+  -- Phase 3: from c₂, reach c₃ in k+2 steps
+  -- Phase 4: from c₃, reach c₄ in k+1 steps
   -- Total: (k+1)+(n+1)+(k+2)+(k+1) = 3k+n+5
-
-  -- We define intermediate configs c₁..c₄ via sorry and prove the claims.
-  -- At the end, we verify postconditions on c₄.
-
-  -- Step 1: Construct the proof via sorry'd claims, then fill each in.
-  -- This lets us verify the overall structure first.
-
-  -- Actually, to avoid defining explicit configs (which is very verbose),
-  -- we use existential witnesses throughout.
 
   -- Phase 1: k+1 steps from skipK to copyN
   have phase1 : ∃ c₁, setupStateTM.reachesIn (k + 1) c₀ c₁ ∧

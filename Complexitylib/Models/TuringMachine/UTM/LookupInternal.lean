@@ -2523,7 +2523,7 @@ theorem lookupTM_hoareTime_proof (tm : TM n) (k : ℕ)
   -- 2. The output portion of the matching entry encodes the transition output.
   --
   -- This requires reasoning about the structure of encodeTransTable.
-  -- We sorry these encoding-level facts and prove the phase composition.
+  -- We establish these encoding-level facts and prove the phase composition.
   have henc_connection : ∃ numBefore : ℕ,
     numBefore < (allTuples k n).length ∧
     -- Non-matching entries before the match

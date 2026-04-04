@@ -182,7 +182,7 @@ private theorem superCellsCorrect_from_cells
           (Or.inl (by omega)) off hoff)
 
 -- ════════════════════════════════════════════════════════════════════════
--- Phase simulation stubs (sorry'd)
+-- Phase simulations
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Phase 1 loop: write 3 ones per scratch-one.
@@ -329,7 +329,7 @@ private theorem phase1_loop :
         else if i = utmScratchTape then sc₃
         else c.work i
       output := c.output }
-    -- 3-step reachesIn (sorry for now, will be filled by agent)
+    -- 3-step reachesIn
     have hreach3 : setupSimTM.reachesIn 3 c c₃ := by
       -- ── Idle-preservation helpers ──
       have hinp_idle : c.input.move (idleDir c.input.read) = c.input :=
@@ -1371,7 +1371,7 @@ private theorem one_bit_cycle
     input := ⟨c.input.head + 1, c.input.cells⟩,
     work := fun i => if i = utmSimTape then sim_a else c.work i,
     output := c.output }
-  -- Block A: 3 write steps (sorry'd — mechanical step tracing)
+  -- Block A: 3 write steps
   have hreach_a : setupSimTM.reachesIn 3 c c_a := by
     -- Step 1: checkInput(non-blank) → writeSymHi via simAdvanceRight
     set sim1 := (c.work utmSimTape).writeAndMove (readBackWrite (c.work utmSimTape).read) Dir3.right
@@ -1505,7 +1505,7 @@ private theorem one_bit_cycle
           exact hsc0')
       hcb_wf (by rw [hcb_inp]; simp [c_a]) (by rw [hcb_inp]; exact hinp_ns')
       (by rw [hcb_out]; exact hout_h') (by rw [hcb_out]; exact hout_ns') hcb_heads
-  -- Block E: 2 strideExtra steps (sorry'd — mechanical step tracing)
+  -- Block E: 2 strideExtra steps
   let c_e_sim : Tape := ⟨(c_d.work utmSimTape).head + 2, (c_d.work utmSimTape).cells⟩
   let c_e : Cfg 4 setupSimTM.Q := {
     state := .checkInput, input := c_d.input,

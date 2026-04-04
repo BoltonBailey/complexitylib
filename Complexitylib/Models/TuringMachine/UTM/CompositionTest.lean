@@ -3,26 +3,12 @@ import Complexitylib.Models.TuringMachine.UTM.UTM
 /-!
 # UTM Composition Test
 
-This file attempts to chain the sub-machine Hoare specs into a single
-loop iteration proof. Each `sorry` marks a **composition gap** — a property
-needed by the next machine but not exported by the current one.
+Historical scratch file that documented composition gaps between sub-machine
+Hoare specs. These gaps have since been resolved in `SimLoop.lean`, which
+successfully chains the full loop iteration proof.
 
-## Architecture reminder
-
-Loop body = `seqTM readCurrentTM (seqTM lookupTM applyTransitionTM)`
-Loop test = `utmCheckHaltTM`
-Full loop = `loopTM body test`
-
-One iteration: body ; (loopTransition) ; test ; (rewind+check) → halt or continue.
-
-## Identified gaps
-
-1. **lookup → applyTransition**: lookup doesn't export stateOnTapeAt,
-   superCellsCorrect, state/sim heads = 1, or inp/out conditions.
-2. **applyTransition → checkHalt**: applyTransition doesn't export
-   inp/out tape preservation or scratch head.
-3. **checkHalt → next iteration**: checkHalt doesn't export
-   superCellsCorrect, sim/scratch head = 1, scratch blank, or inp conditions.
+The examples below are retained as documentation of the interface requirements
+between sub-machines.
 -/
 
 namespace TM

@@ -18,10 +18,10 @@ Composes the sub-machine HoareTime proofs for `initTM` into a single
 - `InitInternal.Rewind` — fully proved frame-preserving `rewindWorkTM` +
   `rewindAll_hoareTime` composition
 
-## Remaining sorry's
+## Sub-machines
 
-- `setupStateTM_hoareTime` — 5-phase header parser (1 sorry: step simulation)
-- `setupSimTM_hoareTime` — 20+ state super-cell writer (3 sorry's: phase simulations)
+- `setupStateTM_hoareTime` — 5-phase header parser (fully proved)
+- `setupSimTM_hoareTime` — 20+ state super-cell writer (fully proved)
 -/
 
 namespace TM
@@ -71,7 +71,7 @@ private theorem postCopy_to_initEnvelope (tm : TM n) (x : List Bool) :
     by rw [hout_head]⟩
 
 -- ════════════════════════════════════════════════════════════════════════
--- SetupState (sorry'd)
+-- SetupState
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- HoareTime for setupStateTM.
@@ -136,7 +136,7 @@ private theorem setupStateTM_hoareTime' (tm : TM n) (k : ℕ)
          by rw [hinp_pres]; exact hinph⟩
 
 -- ════════════════════════════════════════════════════════════════════════
--- SetupSim (sorry'd)
+-- SetupSim
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- HoareTime for setupSimTM.
