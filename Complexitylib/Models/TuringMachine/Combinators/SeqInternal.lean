@@ -21,7 +21,8 @@ namespace TM
 -- Config wrapping
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Embed a `tm₁` configuration into the `seqTM` config space. -/
+/-- Embed a `tm₁` configuration into the `seqTM` config space (Phase 1).
+    State is wrapped in `Sum.inl`; tapes are shared. -/
 def phase1Wrap (tm₁ : TM n) (tm₂ : TM n) (c₁ : Cfg n tm₁.Q) :
     Cfg n (SeqQ tm₁.Q tm₂.Q) where
   state := Sum.inl c₁.state
@@ -29,7 +30,8 @@ def phase1Wrap (tm₁ : TM n) (tm₂ : TM n) (c₁ : Cfg n tm₁.Q) :
   work := c₁.work
   output := c₁.output
 
-/-- Embed a `tm₂` configuration into the `seqTM` config space. -/
+/-- Embed a `tm₂` configuration into the `seqTM` config space (Phase 2).
+    State is wrapped in `Sum.inr`; tapes are shared. -/
 def phase2Wrap (tm₁ : TM n) (tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     Cfg n (SeqQ tm₁.Q tm₂.Q) where
   state := Sum.inr c₂.state

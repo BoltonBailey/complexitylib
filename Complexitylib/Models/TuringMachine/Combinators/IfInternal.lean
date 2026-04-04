@@ -21,6 +21,7 @@ namespace TM
 -- Config wrapping
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Embed a `tmTest` config into the `ifTM` config space (test phase). -/
 def ifTestWrap (tmTest : TM n) (tmThen : TM n) (tmElse : TM n)
     (c : Cfg n tmTest.Q) : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q) where
   state := Sum.inl c.state
@@ -28,6 +29,7 @@ def ifTestWrap (tmTest : TM n) (tmThen : TM n) (tmElse : TM n)
   work := c.work
   output := c.output
 
+/-- Embed a `tmThen` config into the `ifTM` config space (then branch). -/
 def ifThenWrap (tmTest : TM n) (tmThen : TM n) (tmElse : TM n)
     (c : Cfg n tmThen.Q) : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q) where
   state := Sum.inr (Sum.inr (Sum.inl c.state))
@@ -35,6 +37,7 @@ def ifThenWrap (tmTest : TM n) (tmThen : TM n) (tmElse : TM n)
   work := c.work
   output := c.output
 
+/-- Embed a `tmElse` config into the `ifTM` config space (else branch). -/
 def ifElseWrap (tmTest : TM n) (tmThen : TM n) (tmElse : TM n)
     (c : Cfg n tmElse.Q) : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q) where
   state := Sum.inr (Sum.inr (Sum.inr c.state))

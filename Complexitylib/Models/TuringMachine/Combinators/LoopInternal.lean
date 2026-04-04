@@ -21,6 +21,7 @@ namespace TM
 -- Config wrapping
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Embed a `tmBody` config into the `loopTM` config space (body phase). -/
 def loopBodyWrap (tmBody : TM n) (tmTest : TM n) (c : Cfg n tmBody.Q) :
     Cfg n (LoopQ tmBody.Q tmTest.Q) where
   state := Sum.inl c.state
@@ -28,6 +29,7 @@ def loopBodyWrap (tmBody : TM n) (tmTest : TM n) (c : Cfg n tmBody.Q) :
   work := c.work
   output := c.output
 
+/-- Embed a `tmTest` config into the `loopTM` config space (test phase). -/
 def loopTestWrap (tmBody : TM n) (tmTest : TM n) (c : Cfg n tmTest.Q) :
     Cfg n (LoopQ tmBody.Q tmTest.Q) where
   state := Sum.inr (Sum.inr c.state)

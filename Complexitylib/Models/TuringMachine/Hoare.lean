@@ -7,12 +7,21 @@ import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 /-!
 # Hoare-style composition rules for TM combinators
 
+This file provides Hoare-triple composition rules for all four TM combinators.
+Each rule specifies how pre/postconditions and time bounds compose.
+
 ## Main results
 
-- `seqTM_hoareTime` — sequential composition of Hoare triples
-- `complementTM_hoareTime` — complement flips output cell 1
-- `ifTM_hoareTime` — if-then-else branching
-- `loopTM_hoareTime` — loop invariant rule
+- `seqTM_hoareTime` — sequential composition: time `b₁ + 1 + b₂`
+- `complementTM_hoareTime` — complement flips output cell 1: time `b + p_bound + 4`
+- `ifTM_hoareTime` — if-then-else branching: time `b_test + p_bound + max b_then b_else + 5`
+- `loopTM_hoareTime` — loop invariant with variant: time `(k + 1) * b_iter`
+
+## Tape transition effects
+
+All combinators apply `transitionTape` / `transitionInput` at phase boundaries.
+These are the identity on stable tapes (head ≥ 1, read ≠ ▷) — see `transitionTape_id`.
+The `AllTapesWF` invariant ensures stability is preserved across transitions.
 -/
 
 namespace TM
