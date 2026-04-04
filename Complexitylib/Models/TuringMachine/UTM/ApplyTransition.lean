@@ -72,7 +72,7 @@ inductive ApplyTransQ (n k : ℕ) where
   -- Phase 1: write new symbols to sim tape (n+1 operations)
   | rdWrHi (wrIdx : Fin (n + 1))
   | rdWrLo (wrIdx : Fin (n + 1)) (hi : Γ)
-  | scanWr (wrIdx : Fin (n + 1)) (pos : Fin (3 * (n + 2))) (sHi sLo : Γw)
+  | scanWr (wrIdx : Fin (n + 1)) (pos : Fin (3 * (n + 2))) (sHi sLo : Γw) (wrapped : Bool)
   | wrHi (wrIdx : Fin (n + 1)) (sHi sLo : Γw)
   | wrLo (wrIdx : Fin (n + 1)) (sLo : Γw)
   | rwWr (wrIdx : Fin (n + 1))
@@ -100,8 +100,8 @@ private instance : Fintype (ApplyTransQ n k) where
     (Finset.univ.image fun r : Fin (k + 1) => ApplyTransQ.writeState r) ∪
     (Finset.univ.image fun i : Fin (n + 1) => ApplyTransQ.rdWrHi i) ∪
     (Finset.univ.image fun p : Fin (n + 1) × Γ => ApplyTransQ.rdWrLo p.1 p.2) ∪
-    (Finset.univ.image fun p : Fin (n + 1) × Fin (3 * (n + 2)) × Γw × Γw =>
-      ApplyTransQ.scanWr p.1 p.2.1 p.2.2.1 p.2.2.2) ∪
+    (Finset.univ.image fun p : Fin (n + 1) × Fin (3 * (n + 2)) × Γw × Γw × Bool =>
+      ApplyTransQ.scanWr p.1 p.2.1 p.2.2.1 p.2.2.2.1 p.2.2.2.2) ∪
     (Finset.univ.image fun p : Fin (n + 1) × Γw × Γw =>
       ApplyTransQ.wrHi p.1 p.2.1 p.2.2) ∪
     (Finset.univ.image fun p : Fin (n + 1) × Γw =>
@@ -137,10 +137,10 @@ private instance : Fintype (ApplyTransQ n k) where
       left; left; left; left; left; left; left; left; left
       left; left; left; left; left; left
       right; exact ⟨i, g, rfl⟩
-    | scanWr i p h l =>                                                   -- 14L R
+    | scanWr i p h l w =>                                                  -- 14L R
       left; left; left; left; left; left; left; left; left
       left; left; left; left; left
-      right; exact ⟨i, p, h, l, rfl⟩
+      right; exact ⟨i, p, h, l, w, rfl⟩
     | wrHi i h l =>                                                       -- 13L R
       left; left; left; left; left; left; left; left; left
       left; left; left; left
@@ -243,31 +243,41 @@ noncomputable def applyTransitionTM (k : ℕ) : TM 4 where
     | .rdWrLo wrIdx hi =>
       let lo := wH utmScratchTape
       let sym := decodeΓw hi lo
-      (.scanWr wrIdx ⟨0, by omega⟩ (symToSimHi sym) (symToSimLo sym),
+      (.scanWr wrIdx ⟨0, by omega⟩ (symToSimHi sym) (symToSimLo sym) false,
        fun i => readBackWrite (wH i), readBackWrite oH,
        idleDir iH,
        fun i => if i = utmScratchTape then Dir3.right else idleDir (wH i),
        idleDir oH)
 
     -- ── Phase 1: scan sim tape for head marker ──────────────────────────
-    | .scanWr wrIdx pos sHi sLo =>
+    | .scanWr wrIdx pos sHi sLo wrapped =>
       -- tapeIdx on the sim tape: work tape wrIdx → tapeIdx wrIdx+1, output → n+1
+      let newWrapped := wrapped || (pos.val + 1 == 3 * (n + 2))
       if pos.val = 3 * (wrIdx.val + 1) then
         if wH utmSimTape = Γ.one then
-          -- Head marker found.  Advance sim to sym_hi cell.
-          (.wrHi wrIdx sHi sLo,
-           fun i => readBackWrite (wH i), readBackWrite oH,
-           idleDir iH,
-           fun i => if i = utmSimTape then Dir3.right else idleDir (wH i),
-           idleDir oH)
+          if wrapped then
+            -- Head marker found at position > 0.  Advance sim to sym_hi cell.
+            (.wrHi wrIdx sHi sLo,
+             fun i => readBackWrite (wH i), readBackWrite oH,
+             idleDir iH,
+             fun i => if i = utmSimTape then Dir3.right else idleDir (wH i),
+             idleDir oH)
+          else
+            -- Head marker found at position 0.  Skip write (Tape.write is
+            -- no-op at cell 0, so the symbol is always ▷ — no need to update).
+            (.rwWr wrIdx,
+             fun i => readBackWrite (wH i), readBackWrite oH,
+             idleDir iH, fun i => idleDir (wH i), idleDir oH)
         else
-          (.scanWr wrIdx ⟨(pos.val + 1) % (3 * (n + 2)), Nat.mod_lt _ (by omega)⟩ sHi sLo,
+          (.scanWr wrIdx ⟨(pos.val + 1) % (3 * (n + 2)), Nat.mod_lt _ (by omega)⟩
+            sHi sLo newWrapped,
            fun i => readBackWrite (wH i), readBackWrite oH,
            idleDir iH,
            fun i => if i = utmSimTape then Dir3.right else idleDir (wH i),
            idleDir oH)
       else
-        (.scanWr wrIdx ⟨(pos.val + 1) % (3 * (n + 2)), Nat.mod_lt _ (by omega)⟩ sHi sLo,
+        (.scanWr wrIdx ⟨(pos.val + 1) % (3 * (n + 2)), Nat.mod_lt _ (by omega)⟩
+          sHi sLo newWrapped,
          fun i => readBackWrite (wH i), readBackWrite oH,
          idleDir iH,
          fun i => if i = utmSimTape then Dir3.right else idleDir (wH i),
@@ -487,9 +497,13 @@ noncomputable def applyTransitionTM (k : ℕ) : TM 4 where
         split <;> [rfl; split <;> [rfl; exact idleDir_right_of_start h]]
     | .rdWrHi _ | .rdWrLo _ _ | .rdMvHi _ | .rdMvLo _ _ =>
       dsimp only []; exact ⟨hI, hOneR utmScratchTape, hO⟩
-    | .scanWr _ pos _ _ =>
+    | .scanWr _ pos _ _ wrapped =>
       dsimp only []; split
-      · split <;> exact ⟨hI, hOneR utmSimTape, hO⟩
+      · split
+        · split
+          · exact ⟨hI, hOneR utmSimTape, hO⟩
+          · exact ⟨hI, hAll, hO⟩
+        · exact ⟨hI, hOneR utmSimTape, hO⟩
       · exact ⟨hI, hOneR utmSimTape, hO⟩
     | .wrHi _ _ _ =>
       exact ⟨hI, hOneR utmSimTape, hO⟩
