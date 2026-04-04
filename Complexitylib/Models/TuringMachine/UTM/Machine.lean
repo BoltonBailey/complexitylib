@@ -19,7 +19,6 @@ internals (SimLoop) to import them without circular dependencies.
 - `utmSimStepTM` — one simulation step (readCurrent ; lookup ; applyTransition)
 - `utmTM` — the full UTM (init ; loop(simStep, checkHalt) ; extractOutput)
 - `utmInitCfg` — the UTM's initial configuration with encoded input
-- `SimHeadsGe1` — hypothesis that simulated tape heads stay ≥ 1
 -/
 
 namespace TM
@@ -49,16 +48,5 @@ noncomputable def utmInitCfg (tm : TM n) (k : ℕ) (x : List Bool) :
     input := initTape (encodeUTMInput tm x),
     work := fun _ => initTape [],
     output := initTape [] }
-
-/-- Simulated work/output tape heads stay at position ≥ 1 throughout computation.
-
-    This holds for TMs where `δ_right_of_start` ensures the first step moves all
-    heads from position 0 (▷) to position 1, and no subsequent step moves
-    work/output tape heads back to position 0. Required because `applyTransitionTM`
-    writes symbol cells at the head position, which corrupts the super-cell encoding
-    at position 0 (where `Tape.write` is a no-op but the encoding gets overwritten). -/
-def SimHeadsGe1 (tm : TM n) (x : List Bool) : Prop :=
-  ∀ (c : Cfg n tm.Q) (t : ℕ), t ≥ 1 → tm.reachesIn t (tm.initCfg x) c →
-    (∀ i, (c.work i).head ≥ 1) ∧ c.output.head ≥ 1
 
 end TM

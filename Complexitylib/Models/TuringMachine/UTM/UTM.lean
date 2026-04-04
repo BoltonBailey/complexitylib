@@ -37,20 +37,16 @@ variable {n : ℕ}
 
 /-- The UTM correctly simulates any TM M: if M decides L in time T,
     then running the UTM on `encodeUTMInput tm x` produces the same
-    accept/reject decision as M on x.
-
-    The `hHeads` hypothesis requires that simulated work/output tape heads
-    stay at position ≥ 1 throughout computation (see `SimHeadsGe1`). -/
+    accept/reject decision as M on x. -/
 theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     (L : Language) (T : ℕ → ℕ)
-    (hM : tm.DecidesInTime L T) (x : List Bool)
-    (hHeads : tm.SimHeadsGe1 x) :
+    (hM : tm.DecidesInTime L T) (x : List Bool) :
     ∃ (c' : Cfg 4 (utmTM (n := n) k).Q) (t : ℕ),
       (utmTM (n := n) k).reachesIn t (utmInitCfg tm k x) c' ∧
       (utmTM (n := n) k).halted c' ∧
       (x ∈ L → c'.output.cells 1 = Γ.one) ∧
       (x ∉ L → c'.output.cells 1 = Γ.zero) :=
-  utm_simulates_proof tm k hk L T hM x hHeads
+  utm_simulates_proof tm k hk L T hM x
 
 -- ════════════════════════════════════════════════════════════════════════
 -- AB Theorem 1.9: O(T²) overhead
@@ -60,14 +56,10 @@ theorem utm_simulates (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ
 
     For every TM M that decides language L in time T, there exists a
     constant C (depending on |M| but not the input) such that the UTM
-    decides L in time C · T².
-
-    The `hHeads` hypothesis requires that for every input x, the simulated
-    work/output tape heads stay at position ≥ 1 (see `SimHeadsGe1`). -/
+    decides L in time C · T². -/
 theorem utm_correct (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
     (L : Language) (T : ℕ → ℕ)
-    (hM : tm.DecidesInTime L T)
-    (hHeads : ∀ x, tm.SimHeadsGe1 x) :
+    (hM : tm.DecidesInTime L T) :
     ∃ (C : ℕ),
       (utmTM (n := n) k).DecidesInTime L (fun len => C * (T len) ^ 2) := by
   sorry

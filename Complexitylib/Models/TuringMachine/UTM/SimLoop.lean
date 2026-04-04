@@ -679,8 +679,7 @@ private theorem utm_loop_terminates (tm : TM n) (k : ℕ)
 theorem utm_simulates_proof (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ)
     (L : Language) (T : ℕ → ℕ)
-    (hM : tm.DecidesInTime L T) (x : List Bool)
-    (hHeads : tm.SimHeadsGe1 x) :
+    (hM : tm.DecidesInTime L T) (x : List Bool) :
     ∃ (c' : Cfg 4 (utmTM (n := n) k).Q) (t : ℕ),
       (utmTM (n := n) k).reachesIn t (utmInitCfg tm k x) c' ∧
       (utmTM (n := n) k).halted c' ∧
@@ -689,25 +688,171 @@ theorem utm_simulates_proof (tm : TM n) (k : ℕ)
   -- Extract the halting guarantee from DecidesInTime
   obtain ⟨c'_halt, t_halt, _, hreach_halt, hhalt, hmem, hnmem⟩ := hM x
   let desc := TMEncoding.encodeTM tm
+  -- ── Show qstart ≠ qhalt ───────────────────────────────────────────
+  -- If t_halt = 0, then initCfg x = c'_halt, so output.cells 1 = blank.
+  -- But hmem/hnmem says it should be one or zero. Contradiction.
+  have hstart_ne_halt : tm.qstart ≠ tm.qhalt := by
+    intro heq
+    have : t_halt = 0 ∧ c'_halt = tm.initCfg x := by
+      cases hreach_halt with
+      | zero => exact ⟨rfl, rfl⟩
+      | step hs _ =>
+        simp only [step, heq] at hs
+        split at hs <;> simp_all [halted, Cfg.isHalted]
+    obtain ⟨_, hceq⟩ := this
+    have hout : c'_halt.output.cells 1 = Γ.blank := by
+      rw [hceq]; simp [initTape]
+    by_cases hx : x ∈ L
+    · have := hmem hx; rw [hout] at this; exact absurd this (by decide)
+    · have := hnmem hx; rw [hout] at this; exact absurd this (by decide)
   -- ── Phase 1: Init ──────────────────────────────────────────────────
   obtain ⟨B_init, h_init⟩ := initTM_hoareTime_exact tm k x hk
-  -- ── Phase 2: Loop ──────────────────────────────────────────────────
-  -- The simulation loop (utm_loop_terminates) requires LoopInv, which needs
-  -- simCfg.work/output heads ≥ 1. But initCfg x has heads at 0.
-  --
-  -- Resolution requires handling the first iteration specially:
-  -- 1. Show t_halt ≥ 1 (if t_halt = 0, output = Γ.blank, contradicting hmem/hnmem)
-  -- 2. Decompose: initCfg x →[1] c₁ →[t_halt-1] c'_halt
-  -- 3. SimHeadsGe1 gives c₁.work/output heads ≥ 1
-  -- 4. Run first UTM loop iteration (readCurrent→lookup→applyTransition→checkHalt)
-  --    for simCfg = initCfg x. This needs a variant of applyTransitionTM that
-  --    handles the head-at-0 case (where Tape.write is a no-op at cell 0).
-  -- 5. Construct LoopInv for c₁, then use utm_loop_terminates for remaining steps.
-  -- 6. Compose: init → first iteration → loop → extractOutput via seqTM_full_simulation.
-  --
-  -- Blocked on: applyTransitionTM_hoare_proof requires (∀ i, simCfg.work i).head ≥ 1)
-  -- in its precondition. A weaker variant for the head-at-0 case is needed.
-  -- ── Phase 3: Extract output ────────────────────────────────────────
-  sorry
+  -- Apply init HoareTime to the initial tapes
+  have h_init_pre : (initTape (encodeUTMInput tm x)) = initTape (encodeUTMInput tm x) ∧
+      ((fun _ : Fin 4 => initTape ([] : List Γ)) = fun _ => initTape []) ∧
+      (initTape ([] : List Γ)) = initTape [] := ⟨rfl, rfl, rfl⟩
+  obtain ⟨c_init, t_init, ht_init_le, hreach_init, hhalt_init, hpost_init⟩ :=
+    h_init _ _ _ h_init_pre
+  obtain ⟨henv, hdesc_init, hstate_init, hscc_init, hheads_init, hscratch_init⟩ := hpost_init
+  -- ── Phase 2: Construct LoopInv for initCfg x ──────────────────────
+  -- Extract InitEnvelope facts
+  obtain ⟨hinp_c0, hinp_ns, hinp_h, hwf_init, hwork_heads_ge1, hout_c0, hout_ns, hout_h⟩ := henv
+  have hinv : LoopInv tm k hk desc c_init.input c_init.work c_init.output (tm.initCfg x) := {
+    hNotHalted := hstart_ne_halt
+    hdesc := hdesc_init
+    hstate := by convert hstate_init using 2
+    hsim := hscc_init
+    hheads := fun i => by have := hheads_init i; omega
+    hwf := hwf_init
+    hscratch_inp_blank := by
+      apply hscratch_init; simp [TMEncoding.inputPatternWidth]; omega
+    hscratch_out_blank := by
+      apply hscratch_init; simp [TMEncoding.outputWidth]; omega
+    hinp_c0 := hinp_c0
+    hinp_ns := hinp_ns
+    hinp_h := hinp_h
+    hout_c0 := hout_c0
+    hout_ns := hout_ns
+    hout_h := hout_h
+  }
+  -- ── Abbreviations for the sub-machines ─────────────────────────────
+  let tm_loop := loopTM (utmSimStepTM (n := n) k) utmCheckHaltTM
+  let tm_extract := extractOutputTM (n := n)
+  -- ── Phase 2: Run the simulation loop ───────────────────────────────
+  obtain ⟨c_loop, t_loop, hreach_loop, hhalt_loop, hscc_loop, hsimh_loop,
+          hoc0_loop, hons_loop, hinp_r_loop⟩ :=
+    utm_loop_terminates tm k hk desc rfl L c'_halt hhalt hmem hnmem
+      t_halt c_init.input c_init.work c_init.output (tm.initCfg x) 0
+      .zero hinv hreach_halt
+  -- ── Phase 3: Run extractOutputTM ───────────────────────────────────
+  -- The simulated c'_halt.output.cells 1 ≠ Γ.start
+  have hout_sym : c'_halt.output.cells 1 ≠ Γ.start := by
+    by_cases hx : x ∈ L
+    · rw [hmem hx]; decide
+    · rw [hnmem hx]; decide
+  -- Show sim tape read ≠ Γ.start (for seqTransition identity)
+  -- cells 1 is the head marker of (pos=0, tapeIdx=0) super-cell
+  have hsim_read_loop : (c_loop.work utmSimTape).read ≠ Γ.start := by
+    rw [Tape.read, hsimh_loop]
+    -- cells 1 = simTapeOffset (n+2) 0 0 = 1, and simTapeCellCorrect says
+    -- it's either Γ.one or Γ.blank (head marker)
+    obtain ⟨_, hinp_scc, _, _⟩ := hscc_loop
+    have h := hinp_scc 0
+    simp only [simTapeCellCorrect, SuperCell.simTapeOffset, SuperCell.width] at h
+    obtain ⟨h0, _, _⟩ := h
+    simp only [Nat.zero_mul, Nat.mul_zero, Nat.add_zero] at h0
+    split at h0 <;> (rw [h0]; decide)
+  have hsim_seq_id : seqTransitionTape (c_loop.work utmSimTape) = c_loop.work utmSimTape :=
+    seqTransitionTape_id hsim_read_loop (by omega)
+  -- Show output tape seqTransition preserves cells
+  have hout_seq_cells : (seqTransitionTape c_loop.output).cells = c_loop.output.cells :=
+    seqTransitionTape_cells c_loop.output hons_loop
+  -- Show output tape seqTransition head ≤ original head + 1
+  -- (seqTransition moves head right by at most 1, when read = start)
+  have hout_seq_head_le : (seqTransitionTape c_loop.output).head ≤ c_loop.output.head + 1 := by
+    by_cases hr : c_loop.output.read = Γ.start
+    · -- read = start → idleDir = right → head + 1
+      unfold seqTransitionTape Tape.writeAndMove idleDir
+      rw [hr]; simp only [ite_true, Tape.move, Tape.write]
+      split_ifs with h0 <;> simp_all
+    · -- read ≠ start → seqTransitionTape is identity
+      have hge1 : c_loop.output.head ≥ 1 := by
+        by_contra h; push_neg at h
+        have h0 : c_loop.output.head = 0 := by omega
+        rw [Tape.read, h0] at hr; exact hr hoc0_loop
+      rw [seqTransitionTape_id hr hge1]; omega
+  -- Show input seqTransition preserves read ≠ start
+  have hinp_seq_read : (seqTransitionInput c_loop.input).read ≠ Γ.start := by
+    rw [seqTransitionInput_id (by exact hinp_r_loop)]
+    exact hinp_r_loop
+  -- Apply extractOutputTM_hoareTime with B = c_loop.output.head + 1
+  have h_extract_pre :
+      superCellsCorrect c'_halt ((fun i => seqTransitionTape (c_loop.work i)) utmSimTape) ∧
+      ((fun i => seqTransitionTape (c_loop.work i)) utmSimTape).head = 1 ∧
+      (seqTransitionTape c_loop.output).cells 0 = Γ.start ∧
+      (∀ j, j ≥ 1 → (seqTransitionTape c_loop.output).cells j ≠ Γ.start) ∧
+      (seqTransitionTape c_loop.output).head ≤ (c_loop.output.head + 1) ∧
+      (seqTransitionInput c_loop.input).read ≠ Γ.start := by
+    refine ⟨?_, ?_, ?_, ?_, ?_, hinp_seq_read⟩
+    · simp only [hsim_seq_id]; exact hscc_loop
+    · simp only [hsim_seq_id]; exact hsimh_loop
+    · rw [hout_seq_cells]; exact hoc0_loop
+    · intro j hj; rw [hout_seq_cells]; exact hons_loop j hj
+    · exact hout_seq_head_le
+  obtain ⟨c_extract, t_extract, _, hreach_extract, hhalt_extract, hpost_extract⟩ :=
+    (extractOutputTM_hoareTime (n := n) c'_halt (c_loop.output.head + 1) hout_sym)
+      (seqTransitionInput c_loop.input)
+      (fun i => seqTransitionTape (c_loop.work i))
+      (seqTransitionTape c_loop.output)
+      h_extract_pre
+  -- ── Phase 4: Compose loop → extract via seqTM_full_simulation ──────
+  have hhalt_loop_state : c_loop.state = tm_loop.qhalt := hhalt_loop
+  have hreach_inner : (seqTM tm_loop tm_extract).reachesIn (t_loop + 1 + t_extract)
+      (phase1Wrap tm_loop tm_extract
+        ⟨tm_loop.qstart, c_init.input, c_init.work, c_init.output⟩)
+      (phase2Wrap tm_loop tm_extract c_extract) :=
+    seqTM_full_simulation tm_loop tm_extract hreach_loop hhalt_loop_state hreach_extract
+  -- ── Phase 5: Compose init → (loop;extract) via seqTM_full_simulation
+  have hhalt_init_state : c_init.state = initTM.qhalt := hhalt_init
+  -- The init postcondition gives WF + heads = 1, so seqTransition is identity
+  have hwork_seq_init_id : (fun i => seqTransitionTape (c_init.work i)) = c_init.work :=
+    seqTransition_work_id hwf_init (fun i => by have := hheads_init i; omega)
+  have hout_seq_init_id : seqTransitionTape c_init.output = c_init.output :=
+    seqTransitionTape_id (by rw [Tape.read]; exact hout_ns _ hout_h) hout_h
+  have hinp_seq_init_id : seqTransitionInput c_init.input = c_init.input :=
+    seqTransitionInput_id (by rw [Tape.read]; exact hinp_ns _ hinp_h)
+  -- The inner machine starts from the seqTransitioned init output = identity
+  have hreach_inner' : (seqTM tm_loop tm_extract).reachesIn (t_loop + 1 + t_extract)
+      { state := (seqTM tm_loop tm_extract).qstart,
+        input := seqTransitionInput c_init.input,
+        work := fun i => seqTransitionTape (c_init.work i),
+        output := seqTransitionTape c_init.output }
+      (phase2Wrap tm_loop tm_extract c_extract) := by
+    rw [hwork_seq_init_id, hout_seq_init_id, hinp_seq_init_id]
+    convert hreach_inner using 1
+  -- The full composition: init → (loop;extract)
+  have hreach_full := seqTM_full_simulation initTM (seqTM tm_loop tm_extract)
+    hreach_init hhalt_init_state hreach_inner'
+  -- The starting config matches utmInitCfg
+  have hstart_eq : phase1Wrap initTM (seqTM tm_loop tm_extract)
+      ⟨initTM.qstart, initTape (encodeUTMInput tm x), fun _ => initTape [], initTape []⟩ =
+      utmInitCfg tm k x := by
+    simp [phase1Wrap, utmInitCfg, utmTM, seqTM]
+  -- The final config
+  let c_final := phase2Wrap initTM (seqTM tm_loop tm_extract) (phase2Wrap tm_loop tm_extract c_extract)
+  -- Output of the final config
+  have hfinal_output : c_final.output = c_extract.output := rfl
+  -- The final config is halted in utmTM
+  have hfinal_halted : (utmTM (n := n) k).halted c_final := by
+    show (seqTM initTM (seqTM tm_loop tm_extract)).halted c_final
+    rw [phase2Wrap_halted]
+    rw [phase2Wrap_halted]
+    exact hhalt_extract
+  -- Output correctness
+  have hfinal_mem : x ∈ L → c_final.output.cells 1 = Γ.one := by
+    intro hx; rw [hfinal_output, hpost_extract]; exact hmem hx
+  have hfinal_nmem : x ∉ L → c_final.output.cells 1 = Γ.zero := by
+    intro hx; rw [hfinal_output, hpost_extract]; exact hnmem hx
+  exact ⟨c_final, _, hstart_eq ▸ hreach_full, hfinal_halted, hfinal_mem, hfinal_nmem⟩
 
 end TM
