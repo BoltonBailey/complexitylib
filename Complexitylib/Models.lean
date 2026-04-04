@@ -7,3 +7,6 @@ import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
 import Complexitylib.Models.TuringMachine.Combinators.IfInternal
 import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
 import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Encoding
+import Complexitylib.Models.TuringMachine.Subroutines
+import Complexitylib.Models.TuringMachine.Subroutines.Internal

@@ -298,4 +298,27 @@ theorem transitionTape_head_bound {t : Tape} {p_bound : ℕ}
     | right => simp only [Tape.move, Tape.write, hh, ↓reduceIte]; omega
     | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Frame rules: transitionTape/transitionInput are identity on stable tapes
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Frame rule**: `transitionTape` is the identity when the tape reads a
+    non-▷ symbol. This is the key lemma for threading invariants through
+    `seqTM` / `loopTM` / `ifTM` composition: tapes that are "stable"
+    (head not at cell 0) pass through phase transitions unchanged. -/
+theorem transitionTape_id {t : Tape} (hread : t.read ≠ Γ.start) :
+    transitionTape t = t := by
+  unfold transitionTape Tape.writeAndMove
+  rw [readBackWrite_toΓ_eq hread]
+  simp only [idleDir, hread, ↓reduceIte, Tape.move, Tape.write]
+  split
+  · rfl
+  · simp only [Tape.read, Function.update_eq_self]
+
+/-- **Frame rule**: `transitionInput` is the identity when the tape reads a
+    non-▷ symbol. -/
+theorem transitionInput_id {t : Tape} (hread : t.read ≠ Γ.start) :
+    transitionInput t = t := by
+  simp only [transitionInput, idleDir, hread, ↓reduceIte, Tape.move]
+
 end TM
