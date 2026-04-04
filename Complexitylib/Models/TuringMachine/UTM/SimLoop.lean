@@ -71,8 +71,6 @@ structure LoopInv (tm : TM n) (k : ℕ) (hk : k = @Fintype.card tm.Q tm.finQ)
   hout_c0 : out.cells 0 = Γ.start
   hout_ns : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start
   hout_h : out.head ≥ 1
-  hSimWork : ∀ i, (simCfg.work i).head ≥ 1
-  hSimOut : simCfg.output.head ≥ 1
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 2: One iteration of the simulation loop
@@ -200,11 +198,9 @@ private theorem utm_body_step (tm : TM n) (k : ℕ)
       (c_lu.work utmSimTape).head = 1 ∧
       (c_lu.work utmDescTape).head = 1 ∧
       c_lu.input.read ≠ Γ.start ∧ c_lu.input.head ≥ 1 ∧
-      c_lu.output.read ≠ Γ.start ∧ c_lu.output.head ≥ 1 ∧
-      (∀ i, (simCfg.work i).head ≥ 1) ∧ simCfg.output.head ≥ 1 :=
+      c_lu.output.read ≠ Γ.start ∧ c_lu.output.head ≥ 1 :=
     ⟨hlu_state, hlu_sim, hlu_scratch, hlu_desc, hlu_wf, hlu_sth, hlu_simh, hlu_dh,
-     hlu_inp_read, hlu_inp_head, hlu_out_read, hlu_out_head,
-     hinv.hSimWork, hinv.hSimOut⟩
+     hlu_inp_read, hlu_inp_head, hlu_out_read, hlu_out_head⟩
   -- Apply Hoare to get applyTransition result
   obtain ⟨c_at, hreach_at, hhalt_at, hpost_at⟩ := hat c_lu.input c_lu.work c_lu.output hat_pre
   -- Convert reaches to reachesIn
@@ -310,9 +306,7 @@ private theorem utm_one_iteration (tm : TM n) (k : ℕ)
     (desc : List Bool) (hdesc_eq : desc = TMEncoding.encodeTM tm)
     (inp : Tape) (work : Fin 4 → Tape) (out : Tape)
     (simCfg : Cfg n tm.Q)
-    (hinv : LoopInv tm k hk desc inp work out simCfg)
-    (hSimHeads : ∀ c', tm.step simCfg = some c' →
-      (∀ i, (c'.work i).head ≥ 1) ∧ c'.output.head ≥ 1) :
+    (hinv : LoopInv tm k hk desc inp work out simCfg) :
     -- Either the loop halts (simulated TM stepped to qhalt)
     (∃ c' t,
       (loopTM (utmSimStepTM (n := n) k) utmCheckHaltTM).reachesIn t
@@ -575,8 +569,6 @@ private theorem utm_one_iteration (tm : TM n) (k : ℕ)
       exact hcont_state
     -- q' ≠ tm.qhalt from hqhalt and injectivity
     have hq'_ne_halt : q' ≠ tm.qhalt := fun h => hqhalt (congrArg e h)
-    -- Use hSimHeads to get simCfg' work/output head facts
-    obtain ⟨hSimWork', hSimOut'⟩ := hSimHeads simCfg' hstep_eq
     -- Get input cells facts for c_cont
     have hcont_inp_c0 : c_cont.input.cells 0 = Γ.start := by
       rw [hcont_input, hcheck_input', hchk_inp_cells, hinp_cells_body]; exact hinv.hinp_c0
@@ -607,8 +599,6 @@ private theorem utm_one_iteration (tm : TM n) (k : ℕ)
         hout_c0 := by rw [hcont_cells]; exact hcheck_out_c0
         hout_ns := by intro j hj; rw [hcont_cells]; exact hcheck_out_ns j hj
         hout_h := by rw [hcont_head]
-        hSimWork := hSimWork'
-        hSimOut := hSimOut'
       }⟩
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -619,7 +609,6 @@ private theorem utm_one_iteration (tm : TM n) (k : ℕ)
 private theorem utm_loop_terminates (tm : TM n) (k : ℕ)
     (hk : k = @Fintype.card tm.Q tm.finQ)
     (desc : List Bool) (hdesc_eq : desc = TMEncoding.encodeTM tm)
-    (x : List Bool) (hHeads : tm.SimHeadsGe1 x)
     (L : Language)
     (c'_halt : Cfg n tm.Q) (hhalt : tm.halted c'_halt)
     (hmem : x ∈ L → c'_halt.output.cells 1 = Γ.one)
@@ -647,14 +636,8 @@ private theorem utm_loop_terminates (tm : TM n) (k : ℕ)
   | succ t_remain ih =>
     intro inp work out simCfg s hreach_sim hinv hhalt_reach
     -- One iteration of the UTM loop
-    have hSimHeads_arg : ∀ c', tm.step simCfg = some c' →
-        (∀ i, (c'.work i).head ≥ 1) ∧ c'.output.head ≥ 1 := by
-      intro c' hstep
-      have hreach' : tm.reachesIn (s + 1) (tm.initCfg x) c' :=
-        reachesIn_trans _ hreach_sim (.step hstep .zero)
-      exact hHeads c' (s + 1) (by omega) hreach'
     obtain h_halt | h_cont := utm_one_iteration tm k hk desc hdesc_eq
-      inp work out simCfg hinv hSimHeads_arg
+      inp work out simCfg hinv
     · -- Loop halted: the stepped simCfg' has state = qhalt
       obtain ⟨c', t, hreach_loop, hhalted_loop, simCfg', hstep_eq, hhalt_sim',
               hsim', hsimh', hoc0', hons', hinp_r'⟩ := h_halt

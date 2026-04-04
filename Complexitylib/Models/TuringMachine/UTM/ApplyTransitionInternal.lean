@@ -3987,6 +3987,11 @@ private theorem Tape.writeAndMove_cells_head (t : Tape) (g : Γ) (d : Dir3)
   simp only [Tape.writeAndMove, Tape.write, hne, ite_false]
   simp only [Tape.move]; cases d <;> simp [Function.update]
 
+private theorem Tape.writeAndMove_cells_at_zero (t : Tape) (g : Γ) (d : Dir3)
+    (hh : t.head = 0) : (t.writeAndMove g d).cells = t.cells := by
+  simp only [Tape.writeAndMove, Tape.write, hh, ↓reduceIte, Tape.move]
+  cases d <;> simp
+
 private theorem decodeDir3_ofBool_encode (d : Dir3) :
     decodeDir3 (Γ.ofBool (d.encode[0]'(by cases d <;> decide)))
                (Γ.ofBool (d.encode[1]'(by cases d <;> decide))) = d := by
@@ -4220,8 +4225,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         (work utmSimTape).head = 1 ∧
         (work utmDescTape).head = 1 ∧
         inp.read ≠ Γ.start ∧ inp.head ≥ 1 ∧
-        out.read ≠ Γ.start ∧ out.head ≥ 1 ∧
-        (∀ i, (simCfg.work i).head ≥ 1) ∧ simCfg.output.head ≥ 1)
+        out.read ≠ Γ.start ∧ out.head ≥ 1)
       (fun inp work out =>
         let simCfg' : Cfg n tm.Q :=
           ⟨q', simCfg.input.move iD,
@@ -4243,8 +4247,7 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
   obtain ⟨q', wW, oW, iD, wD, oD⟩ := δ_result
   intro inp work out hpre
   obtain ⟨hstateOnTape, hsuperCells, hscratchTrans, hdescOnTape, hwf,
-          hstate_head, hsim_head, hdesc_head, hinp_ns, hinp_h, hout_ns, hout_h,
-          hsimWork_heads, hsimOut_head⟩ := hpre
+          hstate_head, hsim_head, hdesc_head, hinp_ns, hinp_h, hout_ns, hout_h⟩ := hpre
   -- Build initial config
   set c₀ : Cfg 4 (applyTransitionTM (n := n) k).Q :=
     { state := (applyTransitionTM k).qstart
@@ -4471,16 +4474,16 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
                       else simCfg.output.head
       let w := if hw : wrIdx' < n then wW ⟨wrIdx', hw⟩ else oW
       let base := SuperCell.simTapeOffset (n + 2) h_target tapeIdx
-      (c₂.work utmSimTape).cells (base + 1) = (symToSimHi w).toΓ ∧
-      (c₂.work utmSimTape).cells (base + 2) = (symToSimLo w).toΓ := by
+      (h_target ≥ 1 ∧
+       (c₂.work utmSimTape).cells (base + 1) = (symToSimHi w).toΓ ∧
+       (c₂.work utmSimTape).cells (base + 2) = (symToSimLo w).toΓ) ∨
+      (h_target = 0 ∧
+       (c₂.work utmSimTape).cells (base + 1) =
+         (c₁.work utmSimTape).cells (base + 1) ∧
+       (c₂.work utmSimTape).cells (base + 2) =
+         (c₁.work utmSimTape).cells (base + 2)) := by
     intro wrIdx' hwi'
-    -- h_target ≥ 1 always holds (all simulated heads are ≥ 1)
-    have h_target_ge1 : (if hw : wrIdx' < n then (simCfg.work ⟨wrIdx', hw⟩).head
-                          else simCfg.output.head) ≥ 1 := by
-      split <;> rename_i hw
-      · exact hsimWork_heads ⟨wrIdx', hw⟩
-      · exact hsimOut_head
-    obtain ⟨_, hhi, hlo⟩ | ⟨h0, _, _⟩ := hwritten₂ wrIdx' hwi'
+    obtain ⟨hge1, hhi, hlo⟩ | ⟨h0, hhi, hlo⟩ := hwritten₂ wrIdx' hwi'
     · -- Normal write path (h_target ≥ 1)
       -- Chain scratch cells: c₁.scratch.cells = c₀.scratch.cells = (work utmScratchTape).cells
       have hscr_chain : (c₁.work utmScratchTape).cells = (work utmScratchTape).cells := by
@@ -4511,24 +4514,24 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
       -- Extract encoding bits for write values
       by_cases hwn : wrIdx' < n
       · -- wrIdx' < n: write is wW
-        simp only [hw_def, hwn, dite_true] at hhi hlo ⊢
+        simp only [hw_def, hwn, dite_true] at hhi hlo hge1 ⊢
         have hb0 := getElem_eq hidxw0 _ (encodeTransOutput_write_bits k n (e q') wW oW iD wD oD wrIdx' hwn 0 (by omega))
         have hb1 := getElem_eq hidxw1 _ (encodeTransOutput_write_bits k n (e q') wW oW iD wD oD wrIdx' hwn 1 (by omega))
         rw [hscell0, hb0, hscell1, hb1] at hhi hlo
         rw [decodeΓw_ofBool_encode] at hhi hlo
-        exact ⟨hhi, hlo⟩
+        exact Or.inl ⟨hge1, hhi, hlo⟩
       · -- wrIdx' = n: write is oW
         have heqn : wrIdx' = n := by omega
-        simp only [hwn, dite_false] at hhi hlo ⊢
+        simp only [hwn, dite_false] at hhi hlo hge1 ⊢
         have hw_oW : w = oW := by simp only [hw_def, hwn, dite_false]
         simp only [heqn, hw_oW] at hscell0 hscell1 hhi hlo hidxw0 hidxw1 ⊢
         have hb0 := getElem_eq hidxw0 _ (encodeTransOutput_owrite_bits k n (e q') wW oW iD wD oD 0 (by omega))
         have hb1 := getElem_eq hidxw1 _ (encodeTransOutput_owrite_bits k n (e q') wW oW iD wD oD 1 (by omega))
         rw [hscell0, hb0, hscell1, hb1] at hhi hlo
         rw [decodeΓw_ofBool_encode] at hhi hlo
-        exact ⟨hhi, hlo⟩
-    · -- h_target = 0 contradicts h_target ≥ 1
-      exact absurd h0 (by omega)
+        exact Or.inl ⟨hge1, hhi, hlo⟩
+    · -- h_target = 0: cells preserved from c₁
+      exact Or.inr ⟨h0, hhi, hlo⟩
   have hsymcells₂_pres : ∀ pos tapeIdx,
       tapeIdx < n + 2 →
       (tapeIdx = 0 ∨
@@ -4608,11 +4611,16 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         simp only [simTapeCellCorrect, htapeIdx_def] at horig
         by_cases hhead : pos = (simCfg.work i).head
         · subst hhead
-          have hwr := (hsymcells₂ i.val (by omega)).1
-          simp only [i.isLt, dite_true, htapeIdx_def] at hwr
-          rw [hwr, symToSimHi_toΓ_eq]
-          have := Tape.writeAndMove_cells_head (simCfg.work i) (wW i).toΓ (wD i) (by have := hsimWork_heads i; omega)
-          rw [this]
+          obtain ⟨hge1w, hwr, _⟩ | ⟨hh0, hwr, _⟩ := hsymcells₂ i.val (by omega)
+          · simp only [i.isLt, dite_true, htapeIdx_def] at hwr hge1w
+            rw [hwr, symToSimHi_toΓ_eq]
+            rw [show (⟨i.val, i.isLt⟩ : Fin n) = i from Fin.ext rfl] at hge1w
+            have := Tape.writeAndMove_cells_head (simCfg.work i) (wW i).toΓ (wD i) (by omega)
+            rw [this]
+          · simp only [i.isLt, dite_true, htapeIdx_def] at hh0 hwr
+            rw [show (⟨i.val, i.isLt⟩ : Fin n) = i from Fin.ext rfl] at hh0
+            rw [hwr, hc₁_cells, horig]; congr 1; congr 1
+            exact (Tape.writeAndMove_cells_at_zero _ _ _ hh0).symm ▸ rfl
         · have hpres := hsymcells₂_pres pos tapeIdx (by omega)
             (Or.inr (fun wrIdx' hwi' htie => by
               simp only [htapeIdx_def] at htie
@@ -4628,11 +4636,16 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         simp only [simTapeCellCorrect, htapeIdx_def] at horig
         by_cases hhead : pos = (simCfg.work i).head
         · subst hhead
-          have hwr := (hsymcells₂ i.val (by omega)).2
-          simp only [i.isLt, dite_true, htapeIdx_def] at hwr
-          rw [hwr, symToSimLo_toΓ_eq]
-          have := Tape.writeAndMove_cells_head (simCfg.work i) (wW i).toΓ (wD i) (by have := hsimWork_heads i; omega)
-          rw [this]
+          obtain ⟨hge1w, _, hwr⟩ | ⟨hh0, _, hwr⟩ := hsymcells₂ i.val (by omega)
+          · simp only [i.isLt, dite_true, htapeIdx_def] at hwr hge1w
+            rw [hwr, symToSimLo_toΓ_eq]
+            rw [show (⟨i.val, i.isLt⟩ : Fin n) = i from Fin.ext rfl] at hge1w
+            have := Tape.writeAndMove_cells_head (simCfg.work i) (wW i).toΓ (wD i) (by omega)
+            rw [this]
+          · simp only [i.isLt, dite_true, htapeIdx_def] at hh0 hwr
+            rw [show (⟨i.val, i.isLt⟩ : Fin n) = i from Fin.ext rfl] at hh0
+            rw [hwr, hc₁_cells, horig]; congr 1; congr 1
+            exact (Tape.writeAndMove_cells_at_zero _ _ _ hh0).symm ▸ rfl
         · have hpres := hsymcells₂_pres pos tapeIdx (by omega)
             (Or.inr (fun wrIdx' hwi' htie => by
               simp only [htapeIdx_def] at htie
@@ -4665,11 +4678,14 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         simp only [simTapeCellCorrect, htapeIdx_def] at horig
         by_cases hhead : pos = simCfg.output.head
         · subst hhead
-          have hwr := (hsymcells₂ n (by omega)).1
-          simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hwr
-          rw [hwr, symToSimHi_toΓ_eq]
-          have := Tape.writeAndMove_cells_head simCfg.output oW.toΓ oD (by omega)
-          rw [this]
+          obtain ⟨hge1o, hwr, _⟩ | ⟨hh0, hwr, _⟩ := hsymcells₂ n (by omega)
+          · simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hwr hge1o
+            rw [hwr, symToSimHi_toΓ_eq]
+            have := Tape.writeAndMove_cells_head simCfg.output oW.toΓ oD (by omega)
+            rw [this]
+          · simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hh0 hwr
+            rw [hwr, hc₁_cells, horig]; congr 1; congr 1
+            exact (Tape.writeAndMove_cells_at_zero _ _ _ hh0).symm ▸ rfl
         · have hpres := hsymcells₂_pres pos tapeIdx (by omega)
             (Or.inr (fun wrIdx' hwi' htie => by
               simp only [htapeIdx_def] at htie
@@ -4684,11 +4700,14 @@ theorem applyTransitionTM_hoare_proof {tm : TM n} (k : ℕ)
         simp only [simTapeCellCorrect, htapeIdx_def] at horig
         by_cases hhead : pos = simCfg.output.head
         · subst hhead
-          have hwr := (hsymcells₂ n (by omega)).2
-          simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hwr
-          rw [hwr, symToSimLo_toΓ_eq]
-          have := Tape.writeAndMove_cells_head simCfg.output oW.toΓ oD (by omega)
-          rw [this]
+          obtain ⟨hge1o, _, hwr⟩ | ⟨hh0, _, hwr⟩ := hsymcells₂ n (by omega)
+          · simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hwr hge1o
+            rw [hwr, symToSimLo_toΓ_eq]
+            have := Tape.writeAndMove_cells_head simCfg.output oW.toΓ oD (by omega)
+            rw [this]
+          · simp only [show ¬(n < n) from by omega, dite_false, htapeIdx_def] at hh0 hwr
+            rw [hwr, hc₁_cells, horig]; congr 1; congr 1
+            exact (Tape.writeAndMove_cells_at_zero _ _ _ hh0).symm ▸ rfl
         · have hpres := hsymcells₂_pres pos tapeIdx (by omega)
             (Or.inr (fun wrIdx' hwi' htie => by
               simp only [htapeIdx_def] at htie
