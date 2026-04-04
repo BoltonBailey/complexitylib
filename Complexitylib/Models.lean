@@ -3,3 +3,10 @@ import Complexitylib.Models.TuringMachine.Internal
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
+import Complexitylib.Models.TuringMachine.Combinators.IfInternal
+import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
+import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Encoding
+import Complexitylib.Models.TuringMachine.Subroutines
+import Complexitylib.Models.TuringMachine.Subroutines.Internal
