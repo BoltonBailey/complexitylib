@@ -992,7 +992,7 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
     -- Read 2 bits from scratch, enter scan mode. Sim tape unchanged.
     have hsteps_12 : ∃ c₁₂ sHi sLo,
         (applyTransitionTM (n := n) k).reachesIn 2 c c₁₂ ∧
-        c₁₂.state = .scanWr ⟨wrIdx, hwi⟩ ⟨0, by omega⟩ sHi sLo ∧
+        c₁₂.state = .scanWr ⟨wrIdx, hwi⟩ ⟨0, by omega⟩ sHi sLo false ∧
         c₁₂.work utmSimTape = c.work utmSimTape ∧
         (∀ i, i ≠ utmScratchTape → i ≠ utmSimTape → c₁₂.work i = c.work i) ∧
         c₁₂.input = c.input ∧ c₁₂.output = c.output ∧
@@ -1085,6 +1085,7 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
         { state := .scanWr ⟨wrIdx, hwi⟩ ⟨0, by omega⟩
             (symToSimHi (decodeΓw (c.work utmScratchTape).read (c_a.work utmScratchTape).read))
             (symToSimLo (decodeΓw (c.work utmScratchTape).read (c_a.work utmScratchTape).read))
+            false
           input := c.input
           work := fun i => if i = utmScratchTape
             then ⟨(c.work utmScratchTape).head + 2, (c.work utmScratchTape).cells⟩
@@ -1133,12 +1134,16 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
     obtain ⟨c₁₂, sHi, sLo, hreach₁₂, hst₁₂, hsim₁₂, hother₁₂, hinp₁₂,
             hout₁₂, hwf₁₂, hheads₁₂, hscr₁₂,
             hsHi_eq, hsLo_eq, hscr_cells₁₂, hscr_head₁₂⟩ := hsteps_12
-    -- ── Step 3: scanWr loop → wrHi (variable steps) ──
+    -- ── Step 3: scanWr loop → wrHi or rwWr (variable steps) ──
     -- Scan sim tape for head marker, find it at position offset.
+    -- If wrapped=true when marker found → wrHi (normal write path)
+    -- If wrapped=false when marker found → rwWr (skip write at position 0)
     have hstep_scan : ∃ steps_s c_s,
         (applyTransitionTM (n := n) k).reachesIn steps_s c₁₂ c_s ∧
-        c_s.state = .wrHi ⟨wrIdx, hwi⟩ sHi sLo ∧
-        (c_s.work utmSimTape).head = offset + 1 ∧
+        ((c_s.state = .wrHi ⟨wrIdx, hwi⟩ sHi sLo ∧
+          (c_s.work utmSimTape).head = offset + 1) ∨
+         (c_s.state = .rwWr ⟨wrIdx, hwi⟩ ∧
+          (c_s.work utmSimTape).head = offset)) ∧
         (c_s.work utmSimTape).cells = (c₁₂.work utmSimTape).cells ∧
         (∀ i, i ≠ utmSimTape → c_s.work i = c₁₂.work i) ∧
         c_s.input = c₁₂.input ∧ c_s.output = c₁₂.output ∧
@@ -1149,10 +1154,11 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
       -- sim tape head of c₁₂ = 1
       have hsimh₁₂ : (c₁₂.work utmSimTape).head = 1 := by rw [hsim₁₂, hsimh]
       -- Induction on remaining distance from current sim head to offset
-      suffices loop : ∀ (rem : ℕ) (c' : Cfg 4 (applyTransitionTM (n := n) k).Q),
+      suffices loop : ∀ (rem : ℕ) (wrapped : Bool)
+          (c' : Cfg 4 (applyTransitionTM (n := n) k).Q),
           (c'.work utmSimTape).head + rem = offset →
           c'.state = .scanWr ⟨wrIdx, hwi⟩
-            ⟨((c'.work utmSimTape).head - 1) % W, Nat.mod_lt _ (by omega)⟩ sHi sLo →
+            ⟨((c'.work utmSimTape).head - 1) % W, Nat.mod_lt _ (by omega)⟩ sHi sLo wrapped →
           (c'.work utmSimTape).cells = (c₁₂.work utmSimTape).cells →
           (∀ i, i ≠ utmSimTape → c'.work i = c₁₂.work i) →
           c'.input = c₁₂.input → c'.output = c₁₂.output →
@@ -1160,21 +1166,23 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
           (∀ i, (c'.work i).head ≥ 1) →
           ∃ c_s,
             (applyTransitionTM (n := n) k).reachesIn (rem + 1) c' c_s ∧
-            c_s.state = .wrHi ⟨wrIdx, hwi⟩ sHi sLo ∧
-            (c_s.work utmSimTape).head = offset + 1 ∧
+            ((c_s.state = .wrHi ⟨wrIdx, hwi⟩ sHi sLo ∧
+              (c_s.work utmSimTape).head = offset + 1) ∨
+             (c_s.state = .rwWr ⟨wrIdx, hwi⟩ ∧
+              (c_s.work utmSimTape).head = offset)) ∧
             (c_s.work utmSimTape).cells = (c₁₂.work utmSimTape).cells ∧
             (∀ i, i ≠ utmSimTape → c_s.work i = c₁₂.work i) ∧
             c_s.input = c₁₂.input ∧ c_s.output = c₁₂.output ∧
             WorkTapesWF c_s.work by
-        obtain ⟨c_s, hr, hst_s, hh_s, hcells_s, ho_s, hinp_s, hout_s, hwf_s⟩ :=
-          loop (offset - 1) c₁₂ (by omega)
+        obtain ⟨c_s, hr, hst_s, hcells_s, ho_s, hinp_s, hout_s, hwf_s⟩ :=
+          loop (offset - 1) false c₁₂ (by omega)
             (by convert hst₁₂ using 2; ext; simp [hsimh₁₂])
             rfl (fun _ _ => rfl) rfl rfl hwf₁₂ (fun i => hheads₁₂ i)
         exact ⟨offset, c_s, by rwa [show offset - 1 + 1 = offset by omega] at hr,
-               hst_s, hh_s, hcells_s, ho_s, hinp_s, hout_s, hwf_s⟩
+               hst_s, hcells_s, ho_s, hinp_s, hout_s, hwf_s⟩
       intro rem; induction rem with
       | zero =>
-        intro c' hhead hstate' hcells' ho' hinp' hout' hwf' hheads'
+        intro wrapped c' hhead hstate' hcells' ho' hinp' hout' hwf' hheads'
         -- head = offset, we're at the marker
         have hsim_head' : (c'.work utmSimTape).head = offset := by omega
         -- pos = 3 * tapeIdx = 3 * (wrIdx + 1) (the marker column)
@@ -1210,47 +1218,81 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
           tape_idle_preserve _
             (by rw [hout', hout₁₂, hout_eq]; exact hout)
             (by rw [hout', hout₁₂, hout_eq]; exact hout_h)
-        -- Sim tape writeAndMove readBackWrite right = ⟨head+1, cells⟩
-        have hsim_wam : (c'.work utmSimTape).writeAndMove
-            ((readBackWrite ((c'.work utmSimTape).read)).toΓ) Dir3.right =
-            ⟨(c'.work utmSimTape).head + 1, (c'.work utmSimTape).cells⟩ := by
-          simp only [Tape.writeAndMove, Tape.write,
-            show ¬(c'.work utmSimTape).head = 0 from by have := hheads' utmSimTape; omega,
-            ↓reduceIte, Tape.move]
-          congr 1; rw [readBackWrite_toΓ_eq hread_ne_start]
-          simp only [Tape.read, Function.update_eq_self]
-        -- One step to wrHi
-        set c_next : Cfg 4 (applyTransitionTM (n := n) k).Q :=
-          { state := .wrHi ⟨wrIdx, hwi⟩ sHi sLo
-            input := c'.input
-            work := fun i => if i = utmSimTape
-              then ⟨(c'.work utmSimTape).head + 1, (c'.work utmSimTape).cells⟩
-              else c'.work i
-            output := c'.output }
-        have hstep : (applyTransitionTM (n := n) k).step c' = some c_next := by
-          simp only [TM.step, hne, ↓reduceIte]
-          congr 1; rw [hstate']; simp only [applyTransitionTM]
-          simp only [hpos_val, hpos_eq_wrIdx, ↓reduceIte, hread_one]
-          simp only [c_next, Cfg.mk.injEq]
-          refine ⟨trivial, hinp_idle, funext fun i => ?_, hout_idle⟩
-          by_cases hi : i = utmSimTape
-          · subst hi; simp only [↓reduceIte]; exact hsim_wam
-          · simp only [hi, ↓reduceIte]; exact hw_idle i hi
-        have hwf_next : WorkTapesWF c_next.work := by
-          constructor
-          · intro i; by_cases hi : i = utmSimTape
-            · simp [c_next, hi, hwf'.1 utmSimTape]
-            · simp [c_next, hi, hwf'.1 i]
-          · intro i j hj; by_cases hi : i = utmSimTape
-            · simp [c_next, hi, hwf'.2 utmSimTape j hj]
-            · simp [c_next, hi, hwf'.2 i j hj]
-        exact ⟨c_next, .step hstep .zero, rfl,
-          by simp [c_next, hsim_head'],
-          by simp [c_next]; exact hcells',
-          fun i hi => by simp [c_next, hi]; exact ho' i hi,
-          hinp', hout', hwf_next⟩
+        -- Case split on wrapped
+        by_cases hwrapped : wrapped = true
+        · -- wrapped = true: advance sim right, go to wrHi
+          -- Sim tape writeAndMove readBackWrite right = ⟨head+1, cells⟩
+          have hsim_wam : (c'.work utmSimTape).writeAndMove
+              ((readBackWrite ((c'.work utmSimTape).read)).toΓ) Dir3.right =
+              ⟨(c'.work utmSimTape).head + 1, (c'.work utmSimTape).cells⟩ := by
+            simp only [Tape.writeAndMove, Tape.write,
+              show ¬(c'.work utmSimTape).head = 0 from by have := hheads' utmSimTape; omega,
+              ↓reduceIte, Tape.move]
+            congr 1; rw [readBackWrite_toΓ_eq hread_ne_start]
+            simp only [Tape.read, Function.update_eq_self]
+          -- One step to wrHi
+          set c_next : Cfg 4 (applyTransitionTM (n := n) k).Q :=
+            { state := .wrHi ⟨wrIdx, hwi⟩ sHi sLo
+              input := c'.input
+              work := fun i => if i = utmSimTape
+                then ⟨(c'.work utmSimTape).head + 1, (c'.work utmSimTape).cells⟩
+                else c'.work i
+              output := c'.output }
+          have hstep : (applyTransitionTM (n := n) k).step c' = some c_next := by
+            simp only [TM.step, hne, ↓reduceIte]
+            congr 1; rw [hstate']; simp only [applyTransitionTM]
+            simp only [hpos_val, hpos_eq_wrIdx, ↓reduceIte, hread_one, hwrapped]
+            simp only [c_next, Cfg.mk.injEq]
+            refine ⟨trivial, hinp_idle, funext fun i => ?_, hout_idle⟩
+            by_cases hi : i = utmSimTape
+            · subst hi; simp only [↓reduceIte]; exact hsim_wam
+            · simp only [hi, ↓reduceIte]; exact hw_idle i hi
+          have hwf_next : WorkTapesWF c_next.work := by
+            constructor
+            · intro i; by_cases hi : i = utmSimTape
+              · simp [c_next, hi, hwf'.1 utmSimTape]
+              · simp [c_next, hi, hwf'.1 i]
+            · intro i j hj; by_cases hi : i = utmSimTape
+              · simp [c_next, hi, hwf'.2 utmSimTape j hj]
+              · simp [c_next, hi, hwf'.2 i j hj]
+          exact ⟨c_next, .step hstep .zero,
+            Or.inl ⟨rfl, by simp [c_next, hsim_head']⟩,
+            by simp [c_next]; exact hcells',
+            fun i hi => by simp [c_next, hi]; exact ho' i hi,
+            hinp', hout', hwf_next⟩
+        · -- wrapped = false: all tapes idle, go to rwWr
+          have hwrapped_false : wrapped = false := by
+            cases wrapped with | true => exact absurd rfl hwrapped | false => rfl
+          -- All tapes idle including sim tape
+          have hsim_idle : (c'.work utmSimTape).writeAndMove
+              ((readBackWrite ((c'.work utmSimTape).read)).toΓ)
+              (idleDir ((c'.work utmSimTape).read)) = c'.work utmSimTape :=
+            tape_idle_preserve _ hread_ne_start (hheads' utmSimTape)
+          have hw_idle_all : ∀ i,
+              (c'.work i).writeAndMove ((readBackWrite ((c'.work i).read)).toΓ)
+                (idleDir ((c'.work i).read)) = c'.work i :=
+            fun i => tape_idle_preserve _
+              (at_read_ne_start _ (hheads' i) (hwf'.2 i)) (hheads' i)
+          set c_next : Cfg 4 (applyTransitionTM (n := n) k).Q :=
+            { state := .rwWr ⟨wrIdx, hwi⟩
+              input := c'.input
+              work := fun i => c'.work i
+              output := c'.output }
+          have hstep : (applyTransitionTM (n := n) k).step c' = some c_next := by
+            simp only [TM.step, hne, ↓reduceIte]
+            congr 1; rw [hstate']; simp only [applyTransitionTM]
+            simp only [hpos_val, hpos_eq_wrIdx, ↓reduceIte, hread_one, hwrapped_false,
+              Bool.false_eq_true]
+            simp only [c_next, Cfg.mk.injEq]
+            refine ⟨trivial, hinp_idle, funext fun i => ?_, hout_idle⟩
+            exact hw_idle_all i
+          exact ⟨c_next, .step hstep .zero,
+            Or.inr ⟨rfl, by simp [c_next, hsim_head']⟩,
+            by simp [c_next]; exact hcells',
+            fun i hi => by simp [c_next]; exact ho' i hi,
+            hinp', hout', hwf'⟩
       | succ m ih =>
-        intro c' hhead hstate' hcells' ho' hinp' hout' hwf' hheads'
+        intro wrapped c' hhead hstate' hcells' ho' hinp' hout' hwf' hheads'
         -- head < offset since head + (m+1) = offset
         have hhead_lt : (c'.work utmSimTape).head < offset := by omega
         have hhead_ge : (c'.work utmSimTape).head ≥ 1 := hheads' utmSimTape
@@ -1307,9 +1349,10 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
           simp only [Tape.read, Function.update_eq_self]
         -- Both branches produce the same tape effects: advance sim right, idle rest.
         -- Define the next config explicitly
+        set newWrapped : Bool := wrapped || ((pos + 1) == W) with hnw_def
         set c_next : Cfg 4 (applyTransitionTM (n := n) k).Q :=
           { state := .scanWr ⟨wrIdx, hwi⟩
-              ⟨(pos + 1) % W, Nat.mod_lt _ (by omega)⟩ sHi sLo
+              ⟨(pos + 1) % W, Nat.mod_lt _ (by omega)⟩ sHi sLo newWrapped
             input := c'.input
             work := fun i => if i = utmSimTape
               then ⟨(c'.work utmSimTape).head + 1, (c'.work utmSimTape).cells⟩
@@ -1326,6 +1369,8 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
             simp only [hpeq, ↓reduceIte, hread_ne]
             have hpos_eq_rw : (3 * (wrIdx + 1) + 1) % (3 * (n + 2)) = (pos + 1) % W := by
               rw [hpos_def, hpeq, hW_def]
+            have hnw_rw : (wrapped || (3 * (wrIdx + 1) + 1) == 3 * (n + 2)) = newWrapped := by
+              rw [hnw_def, hpos_def, hpeq, hW_def]
             simp only [c_next, Cfg.mk.injEq]
             refine ⟨?_, hinp_idle, funext fun i => ?_, hout_idle⟩
             · congr 1; ext1; exact hpos_eq_rw
@@ -1335,7 +1380,7 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
           · -- pos ≠ 3*(wrIdx+1)
             simp only [hpeq, ↓reduceIte]
             simp only [c_next, Cfg.mk.injEq]
-            exact ⟨by congr 1, hinp_idle,
+            refine ⟨by congr 1, hinp_idle,
               funext fun i => by
                 by_cases hi : i = utmSimTape
                 · subst hi; simp only [↓reduceIte]; exact hsim_wam
@@ -1366,17 +1411,28 @@ private theorem phase1_writeSymbols {Q : Type} [DecidableEq Q]
           rw [hpos_def]
           rw [Nat.mod_add_mod, Nat.sub_add_cancel hhead_ge]
         have hstate1 : c_next.state = .scanWr ⟨wrIdx, hwi⟩
-            ⟨((c_next.work utmSimTape).head - 1) % W, Nat.mod_lt _ (by omega)⟩ sHi sLo := by
+            ⟨((c_next.work utmSimTape).head - 1) % W, Nat.mod_lt _ (by omega)⟩
+            sHi sLo newWrapped := by
           simp only [c_next]; congr 1; ext; exact hmod_step
         -- Apply IH
         have hhead1 : (c_next.work utmSimTape).head + m = offset := by omega
-        obtain ⟨c_f, hreach, hst_f, hh_f, hcells_f, ho_f, hinp_f, hout_f, hwf_f⟩ :=
-          ih c_next hhead1 hstate1 (by rw [hcells1, hcells'])
+        obtain ⟨c_f, hreach, hst_f, hcells_f, ho_f, hinp_f, hout_f, hwf_f⟩ :=
+          ih newWrapped c_next hhead1 hstate1 (by rw [hcells1, hcells'])
             (by intro i hne_i; rw [ho1 i hne_i, ho' i hne_i])
             (by simp [c_next, hinp']) (by simp [c_next, hout']) hwf1 hheads1
-        exact ⟨c_f, .step hstep hreach, hst_f, hh_f, hcells_f, ho_f, hinp_f, hout_f, hwf_f⟩
-    obtain ⟨steps_s, c_s, hreach_s, hst_s, hsimh_s, hsimcells_s,
+        exact ⟨c_f, .step hstep hreach, hst_f, hcells_f, ho_f, hinp_f, hout_f, hwf_f⟩
+    obtain ⟨steps_s, c_s, hreach_s, hst_s_disj, hsimcells_s,
             hother_s, hinp_s, hout_s, hwf_s⟩ := hstep_scan
+    -- Handle the rwWr skip case (wrapped=false, h_target=0) separately
+    -- The wrHi case falls through to the existing code below
+    obtain ⟨hst_s, hsimh_s⟩ : c_s.state = .wrHi ⟨wrIdx, hwi⟩ sHi sLo ∧
+        (c_s.work utmSimTape).head = offset + 1 := by
+      rcases hst_s_disj with h | ⟨hst_s_rw, hsimh_s_rw⟩
+      · exact h
+      · -- Path B: wrapped=false, scan ended at rwWr (skip write at position 0)
+        -- The sim tape cells are unchanged. We need to prove the overall postcondition
+        -- for `one_tape` directly from the rwWr state.
+        exfalso; sorry
     -- ── Steps 4-5: wrHi → wrLo → rwWr (2 fixed steps) ──
     -- Write sHi and sLo to sim tape. Only sim cells at offset+1, offset+2 change.
     have hsteps_45 : ∃ c₄₅,
