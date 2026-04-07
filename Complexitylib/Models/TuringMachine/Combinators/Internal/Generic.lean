@@ -96,20 +96,70 @@ theorem simulation_reachesIn {tm tm' : TM n}
   | step hstep _ ih => exact .step (h_step _ _ hstep) ih
 
 -- ════════════════════════════════════════════════════════════════════════
--- Generic output-tape rewind loop
+-- Generic tape rewind loop (parameterized by tape accessor)
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- **Generic rewind loop (output tape only)**.
+/-- **Generic rewind loop (abstract tape accessor)**.
 
-    For any TM with a designated "rewind state" where:
-    - At head > 0: one step stays in rewind, moves head left by 1, preserves cells
-    - At head = 0: one step enters target state, moves head to 1, preserves cells
+    For any TM with a designated "rewind state" where stepping:
+    - At head > 0: stays in rewind, moves head left by 1, preserves cells
+    - At head = 0: enters target state, moves head to 1, preserves cells
 
-    Then from rewind state with output head at `p`, the machine reaches the
-    target state with output head at 1 in exactly `p + 1` steps.
+    Then from rewind state with tape head at `p`, the machine reaches the
+    target state with tape head at 1 in exactly `p + 1` steps.
 
+    The `tape` parameter selects which tape to track (output, work, etc.).
     This captures the common rewind pattern used in `complementTM`, `ifTM`,
-    and `loopTM`. -/
+    `loopTM`, `writeTM`, and `rewindWorkTM`. -/
+theorem generic_rewind_loop_tape (tm : TM n) (tape : Cfg n tm.Q → Tape)
+    {rewindState targetState : tm.Q}
+    (h_step_left : ∀ c : Cfg n tm.Q,
+      c.state = rewindState →
+      (tape c).read ≠ Γ.start →
+      (tape c).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (tape c).cells j ≠ Γ.start) →
+      ∃ c', tm.step c = some c' ∧
+        c'.state = rewindState ∧
+        (tape c').head = (tape c).head - 1 ∧
+        (tape c').cells = (tape c).cells)
+    (h_step_base : ∀ c : Cfg n tm.Q,
+      c.state = rewindState →
+      (tape c).read = Γ.start →
+      (tape c).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (tape c).cells j ≠ Γ.start) →
+      ∃ c', tm.step c = some c' ∧
+        c'.state = targetState ∧
+        (tape c').head = 1 ∧
+        (tape c').cells = (tape c).cells) :
+    ∀ (p : ℕ) (c : Cfg n tm.Q),
+    c.state = rewindState →
+    (tape c).cells 0 = Γ.start →
+    (∀ j, j ≥ 1 → (tape c).cells j ≠ Γ.start) →
+    (tape c).head = p →
+    ∃ c_target,
+      tm.reachesIn (p + 1) c c_target ∧
+      c_target.state = targetState ∧
+      (tape c_target).head = 1 ∧
+      (tape c_target).cells = (tape c).cells := by
+  intro p
+  induction p with
+  | zero =>
+    intro c hstate hcell0 _ hhead
+    have hread : (tape c).read = Γ.start := by simp [Tape.read, hhead, hcell0]
+    obtain ⟨c', hstep, hst, hh, hc⟩ := h_step_base c hstate hread hcell0 (by assumption)
+    exact ⟨c', .step hstep .zero, hst, hh, hc⟩
+  | succ p ih =>
+    intro c hstate hcell0 hnostart hhead
+    have hread_ne : (tape c).read ≠ Γ.start := by
+      simp [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
+    obtain ⟨c', hstep, hst, hh, hcells⟩ := h_step_left c hstate hread_ne hcell0 hnostart
+    have hh' : (tape c').head = p := by rw [hh, hhead]; omega
+    obtain ⟨c_target, hreach, hst_t, hh_t, hcells_t⟩ := ih c' hst
+      (by rw [hcells]; exact hcell0)
+      (by intro j hj; rw [hcells]; exact hnostart j hj) hh'
+    exact ⟨c_target, .step hstep hreach, hst_t, hh_t, by rw [hcells_t, hcells]⟩
+
+/-- Specialization of `generic_rewind_loop_tape` for the output tape. -/
 theorem generic_rewind_loop (tm : TM n)
     {rewindState targetState : tm.Q}
     (h_step_left : ∀ c : Cfg n tm.Q,
@@ -139,24 +189,8 @@ theorem generic_rewind_loop (tm : TM n)
       tm.reachesIn (p + 1) c c_target ∧
       c_target.state = targetState ∧
       c_target.output.head = 1 ∧
-      c_target.output.cells = c.output.cells := by
-  intro p
-  induction p with
-  | zero =>
-    intro c hstate hcell0 _ hhead
-    have hread : c.output.read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    obtain ⟨c', hstep, hst, hh, hc⟩ := h_step_base c hstate hread hcell0 (by assumption)
-    exact ⟨c', .step hstep .zero, hst, hh, hc⟩
-  | succ p ih =>
-    intro c hstate hcell0 hnostart hhead
-    have hread_ne : c.output.read ≠ Γ.start := by
-      simp [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
-    obtain ⟨c', hstep, hst, hh, hcells⟩ := h_step_left c hstate hread_ne hcell0 hnostart
-    have hh' : c'.output.head = p := by rw [hh, hhead]; omega
-    obtain ⟨c_target, hreach, hst_t, hh_t, hcells_t⟩ := ih c' hst
-      (by rw [hcells]; exact hcell0)
-      (by intro j hj; rw [hcells]; exact hnostart j hj) hh'
-    exact ⟨c_target, .step hstep hreach, hst_t, hh_t, by rw [hcells_t, hcells]⟩
+      c_target.output.cells = c.output.cells :=
+  generic_rewind_loop_tape tm (fun c => c.output) h_step_left h_step_base
 
 /-- **Generic rewind loop (full tape tracking)**.
 

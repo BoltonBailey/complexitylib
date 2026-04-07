@@ -23,6 +23,39 @@ variable {n : ℕ}
 -- writeTM: rewind loop
 -- ════════════════════════════════════════════════════════════════════════
 
+private theorem writeTM_rewind_step_left (sym : Γw) (c : Cfg n (writeTM sym).Q)
+    (hst : c.state = WritePhase.rewind) (hread : c.output.read ≠ Γ.start)
+    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (writeTM sym).step c = some c' ∧
+      c'.state = WritePhase.rewind ∧
+      c'.output.head = c.output.head - 1 ∧
+      c'.output.cells = c.output.cells := by
+  simp only [TM.step, ↓reduceIte, hst, writeTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp only [Tape.writeAndMove, Tape.move]
+    rw [readBackWrite_toΓ_eq hread]
+    simp only [Tape.write, Tape.read]; split <;> simp
+  · simp only [Tape.writeAndMove, tape_move_cells]
+    rw [readBackWrite_toΓ_eq hread]
+    simp only [Tape.write, Tape.read]; split
+    · rfl
+    · exact Function.update_eq_self _ _
+
+private theorem writeTM_rewind_step_base (sym : Γw) (c : Cfg n (writeTM sym).Q)
+    (hst : c.state = WritePhase.rewind) (hread : c.output.read = Γ.start)
+    (_ : c.output.cells 0 = Γ.start)
+    (hns : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
+    ∃ c', (writeTM sym).step c = some c' ∧
+      c'.state = WritePhase.goRight ∧
+      c'.output.head = 1 ∧
+      c'.output.cells = c.output.cells := by
+  have hhead : c.output.head = 0 := by
+    by_contra h; exact hns c.output.head (by omega) (by rwa [Tape.read] at hread)
+  simp only [TM.step, ↓reduceIte, hst, writeTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+
 private theorem writeTM_rewind_loop (sym : Γw) :
     ∀ (h : ℕ) (c : Cfg n (writeTM sym).Q),
     c.state = WritePhase.rewind →
@@ -33,46 +66,10 @@ private theorem writeTM_rewind_loop (sym : Γw) :
       (writeTM sym).reachesIn (h + 1) c c' ∧
       c'.state = WritePhase.goRight ∧
       c'.output.head = 1 ∧
-      c'.output.cells = c.output.cells := by
-  intro h
-  induction h with
-  | zero =>
-    intro c hstate hcell0 _ hhead
-    have hread : c.output.read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    have hstep : ∃ c', (writeTM sym).step c = some c' ∧
-        c'.state = WritePhase.goRight ∧
-        c'.output.head = 1 ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, writeTM, hread]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    exact ⟨c', .step hstep' .zero, hst', hh', hc'⟩
-  | succ h ih =>
-    intro c hstate hcell0 hnostart hhead
-    have hread_ne : c.output.read ≠ Γ.start := by
-      simp [Tape.read, hhead]; exact hnostart (h + 1) (by omega)
-    have hstep : ∃ c', (writeTM sym).step c = some c' ∧
-        c'.state = WritePhase.rewind ∧
-        c'.output.head = h ∧
-        c'.output.cells = c.output.cells := by
-      simp only [TM.step, ↓reduceIte, hstate, writeTM, hread_ne]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · simp only [Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write]; split
-        · omega
-        · simp [hhead]
-      · simp only [Tape.writeAndMove, tape_move_cells]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write]; split
-        · rfl
-        · exact Function.update_eq_self _ _
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    obtain ⟨c_go, hreach, hst_go, hh_go, hc_go⟩ := ih c' hst'
-      (by rw [hc']; exact hcell0) (by intro j hj; rw [hc']; exact hnostart j hj) hh'
-    exact ⟨c_go, .step hstep' hreach, hst_go, hh_go, by rw [hc_go, hc']⟩
+      c'.output.cells = c.output.cells :=
+  generic_rewind_loop (writeTM sym)
+    (fun c hst hread hc0 hns => writeTM_rewind_step_left sym c hst hread hc0 hns)
+    (fun c hst hread hc0 hns => writeTM_rewind_step_base sym c hst hread hc0 hns)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- writeTM: goRight and write steps
@@ -144,6 +141,39 @@ theorem writeTM_hoareTime (sym : Γw) (B : ℕ) :
 -- rewindWorkTM: rewind loop
 -- ════════════════════════════════════════════════════════════════════════
 
+private theorem rewindWorkTM_rewind_step_left (idx : Fin n) (c : Cfg n (rewindWorkTM idx).Q)
+    (hst : c.state = RewindPhase.moveLeft) (hread : (c.work idx).read ≠ Γ.start)
+    (_ : (c.work idx).cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → (c.work idx).cells j ≠ Γ.start) :
+    ∃ c', (rewindWorkTM idx).step c = some c' ∧
+      c'.state = RewindPhase.moveLeft ∧
+      (c'.work idx).head = (c.work idx).head - 1 ∧
+      (c'.work idx).cells = (c.work idx).cells := by
+  simp only [TM.step, ↓reduceIte, hst, rewindWorkTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
+    rw [readBackWrite_toΓ_eq hread]
+    simp only [Tape.write, Tape.read]; split <;> simp
+  · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, tape_move_cells]
+    rw [readBackWrite_toΓ_eq hread]
+    simp only [Tape.write, Tape.read]; split
+    · rfl
+    · exact Function.update_eq_self _ _
+
+private theorem rewindWorkTM_rewind_step_base (idx : Fin n) (c : Cfg n (rewindWorkTM idx).Q)
+    (hst : c.state = RewindPhase.moveLeft) (hread : (c.work idx).read = Γ.start)
+    (_ : (c.work idx).cells 0 = Γ.start)
+    (hns : ∀ j, j ≥ 1 → (c.work idx).cells j ≠ Γ.start) :
+    ∃ c', (rewindWorkTM idx).step c = some c' ∧
+      c'.state = RewindPhase.moveRight ∧
+      (c'.work idx).head = 1 ∧
+      (c'.work idx).cells = (c.work idx).cells := by
+  have hhead : (c.work idx).head = 0 := by
+    by_contra h; exact hns (c.work idx).head (by omega) (by rwa [Tape.read] at hread)
+  simp only [TM.step, ↓reduceIte, hst, rewindWorkTM, hread]
+  refine ⟨_, rfl, rfl, ?_, ?_⟩
+  · dsimp only []; simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+  · dsimp only []; simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+
 private theorem rewindWorkTM_rewind_loop (idx : Fin n) :
     ∀ (h : ℕ) (c : Cfg n (rewindWorkTM idx).Q),
     c.state = RewindPhase.moveLeft →
@@ -154,48 +184,10 @@ private theorem rewindWorkTM_rewind_loop (idx : Fin n) :
       (rewindWorkTM idx).reachesIn (h + 1) c c' ∧
       c'.state = RewindPhase.moveRight ∧
       (c'.work idx).head = 1 ∧
-      (c'.work idx).cells = (c.work idx).cells := by
-  intro h
-  induction h with
-  | zero =>
-    intro c hstate hcell0 _ hhead
-    have hread : (c.work idx).read = Γ.start := by simp [Tape.read, hhead, hcell0]
-    have hstep : ∃ c', (rewindWorkTM idx).step c = some c' ∧
-        c'.state = RewindPhase.moveRight ∧
-        (c'.work idx).head = 1 ∧
-        (c'.work idx).cells = (c.work idx).cells := by
-      simp only [TM.step, ↓reduceIte, hstate, rewindWorkTM, hread]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · dsimp only []; simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · dsimp only []; simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    exact ⟨c', .step hstep' .zero, hst', hh', hc'⟩
-  | succ h ih =>
-    intro c hstate hcell0 hnostart hhead
-    have hread_ne : (c.work idx).read ≠ Γ.start := by
-      simp [Tape.read, hhead]; exact hnostart (h + 1) (by omega)
-    have hstep : ∃ c', (rewindWorkTM idx).step c = some c' ∧
-        c'.state = RewindPhase.moveLeft ∧
-        (c'.work idx).head = h ∧
-        (c'.work idx).cells = (c.work idx).cells := by
-      simp only [TM.step, ↓reduceIte, hstate, rewindWorkTM, hread_ne]
-      refine ⟨_, rfl, rfl, ?_, ?_⟩
-      · dsimp only []
-        simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write]; split
-        · omega
-        · simp [hhead]
-      · dsimp only []
-        simp only [↓reduceIte, Tape.writeAndMove, tape_move_cells]
-        rw [readBackWrite_toΓ_eq hread_ne]
-        simp only [Tape.write]; split
-        · rfl
-        · exact Function.update_eq_self _ _
-    obtain ⟨c', hstep', hst', hh', hc'⟩ := hstep
-    obtain ⟨c_mr, hreach, hst_mr, hh_mr, hc_mr⟩ := ih c' hst'
-      (by rw [hc']; exact hcell0) (by intro j hj; rw [hc']; exact hnostart j hj) hh'
-    exact ⟨c_mr, .step hstep' hreach, hst_mr, hh_mr, by rw [hc_mr, hc']⟩
+      (c'.work idx).cells = (c.work idx).cells :=
+  generic_rewind_loop_tape (rewindWorkTM idx) (fun c => c.work idx)
+    (fun c hst hread hc0 hns => rewindWorkTM_rewind_step_left idx c hst hread hc0 hns)
+    (fun c hst hread hc0 hns => rewindWorkTM_rewind_step_base idx c hst hread hc0 hns)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- rewindWorkTM: moveRight step

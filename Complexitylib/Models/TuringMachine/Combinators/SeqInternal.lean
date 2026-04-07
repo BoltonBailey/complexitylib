@@ -50,7 +50,7 @@ private theorem sum_inl_ne_inr {α β : Type} {a : α} {b : β} :
 theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
     (hstep : tm₁.step c₁ = some c₁') :
     (seqTM tm₁ tm₂).step (phase1Wrap tm₁ tm₂ c₁) = some (phase1Wrap tm₁ tm₂ c₁') := by
-  have hne : c₁.state ≠ tm₁.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
@@ -95,7 +95,7 @@ private theorem sum_inr_ne_of_ne {α β : Type} {a b : β} (h : a ≠ b) :
 theorem seqTM_phase2_step (tm₁ tm₂ : TM n) {c₂ c₂' : Cfg n tm₂.Q}
     (hstep : tm₂.step c₂ = some c₂') :
     (seqTM tm₁ tm₂).step (phase2Wrap tm₁ tm₂ c₂) = some (phase2Wrap tm₁ tm₂ c₂') := by
-  have hne : c₂.state ≠ tm₂.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (phase2Wrap tm₁ tm₂ c₂).state = (seqTM tm₁ tm₂).qhalt then none

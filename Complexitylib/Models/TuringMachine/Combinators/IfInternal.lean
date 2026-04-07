@@ -75,7 +75,7 @@ theorem ifTM_test_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmTest.Q}
     (hstep : tmTest.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifTestWrap tmTest tmThen tmElse c) =
       some (ifTestWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmTest.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne : c.state ≠ tmTest.qhalt := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifTestWrap tmTest tmThen tmElse c).state =
@@ -101,7 +101,7 @@ theorem ifTM_then_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmThen.Q}
     (hstep : tmThen.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifThenWrap tmTest tmThen tmElse c) =
       some (ifThenWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmThen.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne : c.state ≠ tmThen.qhalt := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifThenWrap tmTest tmThen tmElse c).state =
@@ -127,7 +127,7 @@ theorem ifTM_else_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmElse.Q}
     (hstep : tmElse.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifElseWrap tmTest tmThen tmElse c) =
       some (ifElseWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmElse.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne : c.state ≠ tmElse.qhalt := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifElseWrap tmTest tmThen tmElse c).state =
@@ -203,69 +203,6 @@ theorem ifTM_halted_done (tmTest tmThen tmElse : TM n)
     (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
     (h : c.state = Sum.inr (Sum.inl IfPhase.done)) :
     (ifTM tmTest tmThen tmElse).halted c := h
-
--- ════════════════════════════════════════════════════════════════════════
--- Rewind loop (via generic rewind)
--- ════════════════════════════════════════════════════════════════════════
-
-private theorem if_rewind_step_left (tmTest tmThen tmElse : TM n)
-    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
-    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
-    (hread_ne : c.output.read ≠ Γ.start)
-    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
-    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inl IfPhase.rewindOut) ∧
-      c'.output.head = c.output.head - 1 ∧
-      c'.output.cells = c.output.cells := by
-  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
-  refine ⟨_, rfl, rfl, ?_, ?_⟩
-  · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread_ne]
-    simp only [Tape.write, Tape.read]; split
-    · omega
-    · simp
-  · simp only [Tape.writeAndMove, tape_move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne]
-    simp only [Tape.write, Tape.read]; split
-    · rfl
-    · exact Function.update_eq_self _ _
-
-private theorem if_rewind_step_base (tmTest tmThen tmElse : TM n)
-    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
-    (hstate : c.state = Sum.inr (Sum.inl IfPhase.rewindOut))
-    (hread : c.output.read = Γ.start)
-    (_ : c.output.cells 0 = Γ.start)
-    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
-    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inl IfPhase.check) ∧
-      c'.output.head = 1 ∧
-      c'.output.cells = c.output.cells := by
-  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-  have hhead : c.output.head = 0 := by
-    by_contra hne
-    exact hnostart c.output.head (by omega) (by simp only [Tape.read] at hread; exact hread)
-  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
-  refine ⟨_, rfl, rfl, ?_, ?_⟩
-  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-
-/-- The full rewind loop: from rewindOut with output head at position `p`,
-    reach check state at cell 1 in `p + 1` steps. Output cells are preserved. -/
-theorem ifTM_rewind_loop (tmTest tmThen tmElse : TM n) :
-    ∀ (p : ℕ) (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q)),
-    c.state = Sum.inr (Sum.inl IfPhase.rewindOut) →
-    c.output.cells 0 = Γ.start →
-    (∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) →
-    c.output.head = p →
-    ∃ c_check,
-      (ifTM tmTest tmThen tmElse).reachesIn (p + 1) c c_check ∧
-      c_check.state = Sum.inr (Sum.inl IfPhase.check) ∧
-      c_check.output.head = 1 ∧
-      c_check.output.cells = c.output.cells :=
-  generic_rewind_loop (ifTM tmTest tmThen tmElse)
-    (fun c hst hread hc0 hns => if_rewind_step_left tmTest tmThen tmElse c hst hread hc0 hns)
-    (fun c hst hread hc0 hns => if_rewind_step_base tmTest tmThen tmElse c hst hread hc0 hns)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Rewind loop (full tape tracking, via generic rewind)
@@ -346,51 +283,6 @@ theorem ifTM_rewind_loop_full (tmTest tmThen tmElse : TM n) :
       if_rewind_step_left_full tmTest tmThen tmElse c hst hread hc0 hns h_ih h_ins h_wh h_wns)
     (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
       if_rewind_step_base_full tmTest tmThen tmElse c hst hread hc0 hns h_ih h_ins h_wh h_wns)
-
--- ════════════════════════════════════════════════════════════════════════
--- Check step: read output at cell 1, branch to then or else
--- ════════════════════════════════════════════════════════════════════════
-
-/-- Check step when output cell 1 = Γ.one: branch to tmThen.
-    Requires the nostart invariant on output for cell preservation. -/
-theorem ifTM_check_step_then (tmTest tmThen tmElse : TM n)
-    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
-    (hstate : c.state = Sum.inr (Sum.inl IfPhase.check))
-    (hhead : c.output.head = 1)
-    (hcell1 : c.output.cells 1 = Γ.one) :
-    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inr (Sum.inl tmThen.qstart)) ∧
-      c'.output.cells = c.output.cells := by
-  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-  have hread : c.output.read = Γ.one := by simp [Tape.read, hhead, hcell1]
-  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread]
-  refine ⟨_, rfl, rfl, ?_⟩
-  show (c.output.writeAndMove (readBackWrite Γ.one).toΓ (idleDir Γ.one)).cells = c.output.cells
-  simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, tape_move_cells]
-  simp only [Tape.write]; split
-  · omega
-  · dsimp only []; rw [hhead, ← hcell1]; exact Function.update_eq_self _ _
-
-/-- Check step when output cell 1 ≠ Γ.one: branch to tmElse.
-    Requires the nostart invariant on output for cell preservation. -/
-theorem ifTM_check_step_else (tmTest tmThen tmElse : TM n)
-    (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
-    (hstate : c.state = Sum.inr (Sum.inl IfPhase.check))
-    (hhead : c.output.head = 1)
-    (hcell1 : c.output.cells 1 ≠ Γ.one)
-    (hnostart_out : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
-    ∃ c', (ifTM tmTest tmThen tmElse).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inr (Sum.inr tmElse.qstart)) ∧
-      c'.output.cells = c.output.cells := by
-  have hne : c.state ≠ (ifTM tmTest tmThen tmElse).qhalt := by rw [hstate]; nofun
-  have hread_ne_one : c.output.read ≠ Γ.one := by
-    simp [Tape.read, hhead]; exact hcell1
-  have hread_ne_start : c.output.read ≠ Γ.start := by
-    simp only [Tape.read, hhead]; exact hnostart_out 1 (by omega)
-  simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne_one]
-  refine ⟨_, rfl, rfl, ?_⟩
-  apply tape_readBackWrite_preserves
-  right; exact hread_ne_start
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Check step (full tape tracking)

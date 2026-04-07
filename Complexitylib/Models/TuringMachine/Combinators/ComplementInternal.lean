@@ -33,7 +33,7 @@ theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : T
 private theorem complementTM_step_sim (tm : TM n) {c c' : Cfg n tm.Q}
     (hstep : tm.step c = some c') :
     tm.complementTM.step (compCfg tm c) = some (compCfg tm c') := by
-  have hne : c.state ≠ tm.qhalt := by intro heq; simp [TM.step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   simp only [TM.step, complementTM, compCfg] at hstep ⊢
   have hne2 : (Sum.inl c.state : ComplementQ tm.Q) ≠ Sum.inr .done := nofun
   simp only [hne, hne2, ↓reduceIte, Option.some.injEq] at hstep ⊢

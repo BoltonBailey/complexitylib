@@ -93,7 +93,7 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
     have hoh := hbounds.2.1  -- c₁.output.head ≤ t₁
     refine ⟨c_final, t₁ + t_tr, ?_, reachesIn_trans _ hphase1 htrans, hhalt_f, ?_, ?_⟩
     · show t₁ + t_tr ≤ 10 * f₁ x.length + f₂ x.length; omega
-    · intro _; exact hout_f
+    · exact fun _ => hout_f
     · intro hx; exfalso; exact hx (Or.inl hx₁)
   · -- tm₁ rejected: output cell 1 = Γ.zero
     have hcell := hnmem₁ hx₁

@@ -32,14 +32,7 @@ theorem tagRelation_pairLang_in_P {R₁ R₂ : List Bool → List Bool → Prop}
     pairLang (tagRelation R₁ R₂) ∈ P := by
   -- pairLang (tagRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂
   have heq : pairLang (tagRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂ := by
-    ext z; simp only [pairLang, tagRelation, Set.mem_setOf_eq, Set.mem_union]
-    constructor
-    · rintro ⟨x, y, rfl, h | h⟩
-      · exact Or.inl ⟨x, y, rfl, h⟩
-      · exact Or.inr ⟨x, y, rfl, h⟩
-    · rintro (⟨x, y, rfl, h⟩ | ⟨x, y, rfl, h⟩)
-      · exact ⟨x, y, rfl, Or.inl h⟩
-      · exact ⟨x, y, rfl, Or.inr h⟩
+    ext z; simp only [pairLang, tagRelation, Set.mem_setOf_eq, Set.mem_union]; aesop
   rw [heq]
   -- Extract polynomial degrees from P = ⋃ k, DTIME(· ^ k)
   obtain ⟨d₁, hd₁⟩ := Set.mem_iUnion.mp h₁

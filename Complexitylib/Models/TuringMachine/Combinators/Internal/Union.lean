@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # unionTM simulation — proof internals
@@ -43,15 +44,9 @@ def idleTape : Tape :=
 private theorem idleTape_read : idleTape.read = Γ.blank := by
   simp [idleTape, Tape.read, initTape]
 
-private theorem idleTape_head : idleTape.head = 1 := rfl
-
 /-- Writing blank to an idle tape at position 1 is a no-op. -/
 private theorem idleTape_write_blank : idleTape.write Γ.blank = idleTape := by
   simp [idleTape, Tape.write, initTape, Function.update_eq_self_iff]
-
-/-- Moving stay on an idle tape is a no-op. -/
-private theorem idleTape_move_stay : idleTape.move Dir3.stay = idleTape := by
-  rfl
 
 /-- An idle tape stays idle when written with blank and moved by idleDir. -/
 private theorem idleTape_step_idle :
@@ -115,8 +110,7 @@ private theorem phase1Cfg_state (tm₁ : TM n₁) (tm₂ : TM n₂) (c : Cfg n�
 private theorem phase1_step_corr (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c c' : Cfg n₁ tm₁.Q} (hstep : tm₁.step c = some c') :
     (unionTM tm₁ tm₂).step (phase1Cfg tm₁ tm₂ c) = some (phase1Cfg tm₁ tm₂ c') := by
-  have hne : c.state ≠ tm₁.qhalt := by
-    intro heq; simp [step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   -- Extract c' from tm₁.step
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
@@ -179,8 +173,7 @@ private theorem phase1_steps (tm₁ : TM n₁) (tm₂ : TM n₂)
 private theorem phase1_init_step (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
     {c_mid : Cfg n₁ tm₁.Q} (hstep : tm₁.step (tm₁.initCfg x) = some c_mid) :
     (unionTM tm₁ tm₂).step ((unionTM tm₁ tm₂).initCfg x) = some (phase1Cfg tm₁ tm₂ c_mid) := by
-  have hne : tm₁.qstart ≠ tm₁.qhalt := by
-    intro heq; simp [step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   simp only [step] at hstep ⊢
   rw [if_neg hne] at hstep
   simp only [Option.some.injEq] at hstep
@@ -250,10 +243,6 @@ theorem reachesIn_det {tm : TM n₁} {t : ℕ} {c c' c'' : Cfg n₁ tm.Q}
 -- Tape invariant helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem Tape.move_cells (t : Tape) (d : Dir3) :
-    (t.move d).cells = t.cells := by
-  cases d <;> rfl
-
 /-- If a tape has head ≥ 1 and cells[≥1] ≠ start, idleDir gives stay (head unchanged). -/
 private theorem idleDir_stay_of_ge_one (t : Tape)
     (hhead : t.head ≥ 1) (hno : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
@@ -269,18 +258,11 @@ private theorem idle_move_preserves_head (t : Tape)
 private theorem Γw_toΓ_ne_start (w : Γw) : w.toΓ ≠ Γ.start := by
   cases w <;> decide
 
-private theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
-    (readBackWrite g).toΓ = g := by
-  cases g <;> simp_all [readBackWrite, Γw.toΓ]
-
-private theorem readBackWrite_toΓ_ne_start (g : Γ) : (readBackWrite g).toΓ ≠ Γ.start := by
-  cases g <;> simp [readBackWrite, Γw.toΓ]
-
 /-- Cell 0 stays Γ.start after write + move. -/
 private theorem tape_cell0_preserved (t : Tape) (s : Γ) (d : Dir3)
     (h0 : t.cells 0 = Γ.start) :
     ((t.write s).move d).cells 0 = Γ.start := by
-  rw [Tape.move_cells]; simp only [Tape.write]
+  rw [tape_move_cells]; simp only [Tape.write]
   split
   · exact h0
   · simp only [Function.update, dif_neg (show (0 : ℕ) ≠ t.head from fun h => by omega)]
@@ -290,7 +272,7 @@ private theorem tape_cell0_preserved (t : Tape) (s : Γ) (d : Dir3)
 private theorem tape_noStart_preserved (t : Tape) (s : Γ) (d : Dir3)
     (hs : s ≠ Γ.start) (hno : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
     ∀ i, i ≥ 1 → ((t.write s).move d).cells i ≠ Γ.start := by
-  intro i hi; rw [Tape.move_cells]; simp only [Tape.write]
+  intro i hi; rw [tape_move_cells]; simp only [Tape.write]
   split
   · exact hno i hi
   · simp only [Function.update]; split
@@ -301,7 +283,7 @@ private theorem tape_noStart_preserved (t : Tape) (s : Γ) (d : Dir3)
 private theorem output_cell0_step {tm : TM n₁} {c c' : Cfg n₁ tm.Q}
     (hs : tm.step c = some c') (h0 : c.output.cells 0 = Γ.start) :
     c'.output.cells 0 = Γ.start := by
-  have hne : c.state ≠ tm.qhalt := by intro heq; simp [step, heq] at hs
+  have hne := ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
   exact tape_cell0_preserved _ _ _ h0
 
@@ -309,7 +291,7 @@ private theorem output_cell0_step {tm : TM n₁} {c c' : Cfg n₁ tm.Q}
 private theorem output_noStart_step {tm : TM n₁} {c c' : Cfg n₁ tm.Q}
     (hs : tm.step c = some c') (hno : ∀ i, i ≥ 1 → c.output.cells i ≠ Γ.start) :
     ∀ i, i ≥ 1 → c'.output.cells i ≠ Γ.start := by
-  have hne : c.state ≠ tm.qhalt := by intro heq; simp [step, heq] at hs
+  have hne := ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
   exact tape_noStart_preserved _ _ _ (Γw_toΓ_ne_start _) hno
 
@@ -330,9 +312,9 @@ theorem output_noStart_of_reachesIn {tm : TM n₁} {t : ℕ} {c₀ c : Cfg n₁ 
 
 theorem input_cells_of_step {tm : TM n₁} {c c' : Cfg n₁ tm.Q}
     (hs : tm.step c = some c') : c'.input.cells = c.input.cells := by
-  have hne : c.state ≠ tm.qhalt := by intro heq; simp [step, heq] at hs
+  have hne := ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
-  exact Tape.move_cells _ _
+  exact tape_move_cells _ _
 
 theorem input_cells_of_reachesIn {tm : TM n₁} {t : ℕ} {c₀ c : Cfg n₁ tm.Q}
     (h : tm.reachesIn t c₀ c) : c.input.cells = c₀.input.cells := by
@@ -567,16 +549,6 @@ private theorem step_inl_qhalt_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 -- Rewind fake output loop
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- The fake output tape's head position 0 corresponds to reading Γ.start. -/
-private theorem fakeOut_read_start_iff_head_zero (t : Tape) (h0 : t.cells 0 = Γ.start)
-    (hno : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
-    t.read = Γ.start ↔ t.head = 0 := by
-  constructor
-  · intro hr
-    by_contra hne
-    exact hno t.head (by omega) (by rwa [Tape.read] at hr)
-  · intro heq; rw [Tape.read, heq]; exact h0
-
 /-- readBackWrite preserves cells at non-zero head positions. -/
 private theorem write_readBack_cells_eq (t : Tape) (hne : t.read ≠ Γ.start) :
     (t.write (readBackWrite t.read).toΓ).cells = t.cells := by
@@ -587,69 +559,6 @@ private theorem write_readBack_cells_eq (t : Tape) (hne : t.read ≠ Γ.start) :
   · ext i; simp only [Function.update]; split
     · next heq => subst heq; rfl
     · rfl
-
-/-- Moving left from a non-zero position decreases the head. -/
-private theorem move_left_head (t : Tape) (_h : t.head ≥ 1) :
-    (t.move Dir3.left).head = t.head - 1 := by
-  simp [Tape.move]
-
-/-- Rewind the fake output tape from head position `h` to head position 0.
-    After `h` steps in `rewindOut` state, we reach a config where the fake
-    output head is at 0, and one more step transitions to `checkResult`. -/
-private theorem rewind_fakeOut_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
-    ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindOut) →
-    (c.work fakeOutIdx).head = h →
-    (c.work fakeOutIdx).cells 0 = Γ.start →
-    (∀ i, i ≥ 1 → (c.work fakeOutIdx).cells i ≠ Γ.start) →
-    ∃ c', (unionTM tm₁ tm₂).reachesIn h c c' ∧
-      c'.state = Sum.inr (Sum.inl Mid.rewindOut) ∧
-      (c'.work fakeOutIdx).head = 0 ∧
-      (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells := by
-  intro h
-  induction h with
-  | zero =>
-    intro c hst hhead _ _
-    exact ⟨c, .zero, hst, hhead, rfl⟩
-  | succ n ih =>
-    intro c hst hhead hcell0 hnostart
-    -- The fake output head is at n+1 ≥ 1, so read ≠ Γ.start
-    have hread_ne : (c.work fakeOutIdx).read ≠ Γ.start := by
-      rw [Tape.read]; exact hnostart _ (by omega)
-    -- One rewindOut step
-    -- One rewindOut step using the step cfg lemma directly
-    have hstep := step_rewindOut_nostart_cfg tm₁ tm₂ hst hread_ne
-    -- Extract the next config
-    set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
-        input := c.input.move (idleDir c.input.read),
-        work := fun i => ((c.work i).write
-          ((if i.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
-          (if i.val = n₁ then Dir3.left else idleDir (c.work i).read),
-        output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
-      with hc'_def
-    -- c' state
-    have hst' : c'.state = Sum.inr (Sum.inl Mid.rewindOut) := rfl
-    -- c' fake output head
-    have hhead' : (c'.work fakeOutIdx).head = n := by
-      -- c'.work fakeOutIdx unfolds via set definition
-      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [readBackWrite_toΓ_eq hread_ne]
-      simp only [Tape.write]
-      split
-      · -- head = 0, contradiction since head = n+1
-        omega
-      · simp [Tape.move, hhead]
-    -- c' fake output cells preserved
-    have hcells' : (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells := by
-      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [Tape.move_cells, write_readBack_cells_eq _ hread_ne]
-    -- Apply IH
-    have hcell0' : (c'.work fakeOutIdx).cells 0 = Γ.start := by rw [hcells']; exact hcell0
-    have hnostart' : ∀ i, i ≥ 1 → (c'.work fakeOutIdx).cells i ≠ Γ.start := by
-      rw [hcells']; exact hnostart
-    obtain ⟨c'', hreach, hst'', hhead'', hcells''⟩ := ih c' hst' hhead' hcell0' hnostart'
-    exact ⟨c'', .step hstep hreach, hst'', hhead'', by rw [hcells'', hcells']⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Transition phase: accept path (x ∈ L₁)
@@ -696,7 +605,7 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
   · -- fake output cells preserved
     simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
     rw [phase1Cfg_fakeOut]
-    rw [Tape.move_cells]
+    rw [tape_move_cells]
     simp only [Tape.write]
     split
     · rfl  -- head = 0: write is no-op
@@ -709,9 +618,10 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
   · -- output is idleTape write blank / move idle
     simp only [hc'_def, phase1Cfg_output]
 
-/-- Rewind the fake output tape, preserving output = idleTape.
-    This is the same loop as `rewind_fakeOut_loop` but also tracks the output. -/
-private theorem rewind_fakeOut_preserves_output (tm₁ : TM n₁) (tm₂ : TM n₂) :
+/-- Rewind the fake output tape, tracking all loop invariants:
+    state, fakeOut head/cells, output = idleTape, and conditionally
+    input head preservation and work tape idleness for tapes > n₁. -/
+private theorem rewind_fakeOut_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
     ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
     c.state = Sum.inr (Sum.inl Mid.rewindOut) →
     c.output = idleTape →
@@ -722,12 +632,15 @@ private theorem rewind_fakeOut_preserves_output (tm₁ : TM n₁) (tm₂ : TM n�
       c'.state = Sum.inr (Sum.inl Mid.rewindOut) ∧
       (c'.work fakeOutIdx).head = 0 ∧
       (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells ∧
-      c'.output = idleTape := by
+      c'.output = idleTape ∧
+      (c.input.head ≥ 1 → (∀ i, i ≥ 1 → c.input.cells i ≠ Γ.start) →
+        c'.input.head = c.input.head) ∧
+      (∀ i : Fin (n₁ + 1 + n₂), i.val > n₁ → c.work i = idleTape → c'.work i = idleTape) := by
   intro h
   induction h with
   | zero =>
     intro c hst hout hhead _ _
-    exact ⟨c, .zero, hst, hhead, rfl, hout⟩
+    exact ⟨c, .zero, hst, hhead, rfl, hout, fun _ _ => rfl, fun _ _ h => h⟩
   | succ n ih =>
     intro c hst hout hhead hcell0 hnostart
     have hread_ne : (c.work fakeOutIdx).read ≠ Γ.start := by
@@ -741,81 +654,33 @@ private theorem rewind_fakeOut_preserves_output (tm₁ : TM n₁) (tm₂ : TM n�
           (if i.val = n₁ then Dir3.left else idleDir (c.work i).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
       with hc'_def
-    have hst' : c'.state = Sum.inr (Sum.inl Mid.rewindOut) := rfl
     have hout' : c'.output = idleTape := by
       simp only [hc'_def]; rw [hout, idleTape_step_idle]
     have hhead' : (c'.work fakeOutIdx).head = n := by
       simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [readBackWrite_toΓ_eq hread_ne]
-      simp only [Tape.write]
-      split
-      · omega
-      · simp [Tape.move, hhead]
-    have hcells' : (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells := by
-      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [Tape.move_cells, write_readBack_cells_eq _ hread_ne]
-    have hcell0' : (c'.work fakeOutIdx).cells 0 = Γ.start := by rw [hcells']; exact hcell0
-    have hnostart' : ∀ i, i ≥ 1 → (c'.work fakeOutIdx).cells i ≠ Γ.start := by
-      rw [hcells']; exact hnostart
-    obtain ⟨c'', hreach, hst'', hhead'', hcells'', hout''⟩ :=
-      ih c' hst' hout' hhead' hcell0' hnostart'
-    exact ⟨c'', .step hstep hreach, hst'', hhead'', by rw [hcells'', hcells'], hout''⟩
-
-/-- Through the rewind_fakeOut loop, input head is preserved when head ≥ 1
-    and cells[≥1] ≠ start (since all steps move input by idleDir = stay). -/
-private theorem rewind_fakeOut_input_head (tm₁ : TM n₁) (tm₂ : TM n₂) :
-    ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindOut) →
-    (c.work fakeOutIdx).head = h →
-    (c.work fakeOutIdx).cells 0 = Γ.start →
-    (∀ i, i ≥ 1 → (c.work fakeOutIdx).cells i ≠ Γ.start) →
-    c.input.head ≥ 1 →
-    (∀ i, i ≥ 1 → c.input.cells i ≠ Γ.start) →
-    ∃ c', (unionTM tm₁ tm₂).reachesIn h c c' ∧
-      c'.input.head = c.input.head := by
-  intro h
-  induction h with
-  | zero => intro c _ _ _ _ _ _; exact ⟨c, .zero, rfl⟩
-  | succ n ih =>
-    intro c hst hhead hcell0 hnostart hih hino
-    have hread_ne : (c.work fakeOutIdx).read ≠ Γ.start := by
-      rw [Tape.read]; exact hnostart _ (by omega)
-    have hstep := step_rewindOut_nostart_cfg tm₁ tm₂ hst hread_ne
-    set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
-        input := c.input.move (idleDir c.input.read),
-        work := fun j => ((c.work j).write
-          ((if j.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
-          (if j.val = n₁ then Dir3.left else idleDir (c.work j).read),
-        output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
-    have hih' : c'.input.head = c.input.head := idle_move_preserves_head _ hih hino
-    have hih'ge : c'.input.head ≥ 1 := by omega
-    have hino' : ∀ i, i ≥ 1 → c'.input.cells i ≠ Γ.start := by
-      intro i hi; show (c.input.move _).cells i ≠ _; rw [Tape.move_cells]; exact hino i hi
-    have hhead' : (c'.work fakeOutIdx).head = n := by
-      show (((c.work fakeOutIdx).write (if (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁
-        then readBackWrite (c.work fakeOutIdx).read else Γw.blank).toΓ).move
-        (if (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ then Dir3.left
-         else idleDir (c.work fakeOutIdx).read)).head = n
-      simp only [show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
       rw [readBackWrite_toΓ_eq hread_ne]; simp only [Tape.write]
       split
       · omega
       · simp [Tape.move, hhead]
     have hcells' : (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells := by
-      show (((c.work fakeOutIdx).write (if (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁
-        then readBackWrite (c.work fakeOutIdx).read else Γw.blank).toΓ).move
-        (if (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ then Dir3.left
-         else idleDir (c.work fakeOutIdx).read)).cells = _
-      simp only [show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [Tape.move_cells, write_readBack_cells_eq _ hread_ne]
-    obtain ⟨c'', hreach, hhead''⟩ := ih c' rfl hhead'
-      (by rw [hcells']; exact hcell0) (by intro i hi; rw [hcells']; exact hnostart i hi)
-      hih'ge hino'
-    exact ⟨c'', .step hstep hreach, by rw [hhead'', hih']⟩
-
-/-- `Γw.blank.toΓ = Γ.blank` -/
-private theorem Γw_blank_toΓ : (Γw.blank : Γw).toΓ = Γ.blank := rfl
+      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
+      rw [tape_move_cells, write_readBack_cells_eq _ hread_ne]
+    obtain ⟨c'', hreach, hst'', hhead'', hcells'', hout'', hinp'', hwork''⟩ :=
+      ih c' rfl hout' hhead'
+        (by rw [hcells']; exact hcell0)
+        (by intro i hi; rw [hcells']; exact hnostart i hi)
+    refine ⟨c'', .step hstep hreach, hst'', hhead'', by rw [hcells'', hcells'], hout'',
+      fun hih hino => ?_, fun i hi hidle => ?_⟩
+    · -- Input head: chain c → c' → c''
+      have hih' : c'.input.head = c.input.head := idle_move_preserves_head _ hih hino
+      have hino' : ∀ i, i ≥ 1 → c'.input.cells i ≠ Γ.start := by
+        intro i hi; show (c.input.move _).cells i ≠ _; rw [tape_move_cells]; exact hino i hi
+      rw [hinp'' (by omega) hino', hih']
+    · -- Work tapes: chain c → c' → c''
+      have hidle' : c'.work i = idleTape := by
+        simp only [hc'_def, show (i : ℕ) ≠ n₁ from by omega, ↓reduceIte]
+        rw [hidle]; exact idleTape_step_idle
+      exact hwork'' i hi hidle'
 
 /-- After Phase 1, if tm₁ accepted (output cell 1 = `Γ.one`), the union
     machine rewinds the fake output, checks the result, writes `Γ.one` to
@@ -858,8 +723,8 @@ theorem transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
     rw [hout_rw]; exact idleTape_step_idle
   -- Step 2: Rewind loop (h_rw steps), also preserving output = idleTape
   set h_rw := (c_rw.work fakeOutIdx).head with hh_rw_def
-  obtain ⟨c_at0, hreach_rw, hst_at0, hhead_at0, hcells_at0, hout_at0⟩ :=
-    rewind_fakeOut_preserves_output tm₁ tm₂ h_rw c_rw hst_rw hout_rw_eq rfl hcell0_rw hnostart_rw
+  obtain ⟨c_at0, hreach_rw, hst_at0, hhead_at0, hcells_at0, hout_at0, -, -⟩ :=
+    rewind_fakeOut_loop tm₁ tm₂ h_rw c_rw hst_rw hout_rw_eq rfl hcell0_rw hnostart_rw
   -- Step 3: rewindOut at head 0 → checkResult (1 step)
   have hread_start : (c_at0.work fakeOutIdx).read = Γ.start := by
     rw [Tape.read, hhead_at0, hcells_at0, hcells_rw]; exact hcell0
@@ -878,7 +743,7 @@ theorem transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
   -- c_cr fake output cells preserved (write blank at head 0 is no-op)
   have hcr_fo_cells : (c_cr.work fakeOutIdx).cells = (c_at0.work fakeOutIdx).cells := by
     simp only [hc_cr_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-    rw [Tape.move_cells]; simp only [Tape.write, if_pos hhead_at0]
+    rw [tape_move_cells]; simp only [Tape.write, if_pos hhead_at0]
   -- c_cr fake output reads cell 1 = Γ.one
   have hcr_read : (c_cr.work fakeOutIdx).read = Γ.one := by
     rw [Tape.read, hcr_fo_head, hcr_fo_cells, hcells_at0, hcells_rw]; exact haccept
@@ -900,7 +765,7 @@ theorem transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
   -- c_final output cell 1 = Γ.one
   have hcells_final : c_final.output.cells 1 = Γ.one := by
     show ((c_cr.output.write Γw.one.toΓ).move (idleDir c_cr.output.read)).cells 1 = Γ.one
-    rw [Tape.move_cells, hout_cr]
+    rw [tape_move_cells, hout_cr]
     simp [Tape.write, idleTape, Γw.toΓ, Function.update, initTape]
   -- Compose all steps: 1 + h_rw + 1 + 1 steps total
   have htotal : (unionTM tm₁ tm₂).reachesIn (1 + (h_rw + (1 + 1)))
@@ -948,7 +813,7 @@ private theorem rewind_input_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
     have hst' : c'.state = Sum.inr (Sum.inl Mid.rewindIn) := rfl
     have hhead' : c'.input.head = n := by
       show (c.input.move Dir3.left).head = n; simp [Tape.move, hhead]
-    have hcells' : c'.input.cells = c.input.cells := Tape.move_cells _ _
+    have hcells' : c'.input.cells = c.input.cells := tape_move_cells _ _
     have hcell0' : c'.input.cells 0 = Γ.start := by rw [hcells']; exact hcell0
     have hnostart' : ∀ i, i ≥ 1 → c'.input.cells i ≠ Γ.start := by
       intro i hi; rw [hcells']; exact hnostart i hi
@@ -973,9 +838,9 @@ private theorem tape_idle_step (t : Tape) (ht : t = idleTape) :
 private theorem union_input_cells_of_step (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c c' : Cfg (n₁ + 1 + n₂) (unionTM tm₁ tm₂).Q}
     (hs : (unionTM tm₁ tm₂).step c = some c') : c'.input.cells = c.input.cells := by
-  have hne : c.state ≠ (unionTM tm₁ tm₂).qhalt := by intro heq; simp [step, heq] at hs
+  have hne := ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
-  exact Tape.move_cells _ _
+  exact tape_move_cells _ _
 
 private theorem union_input_cells_of_reachesIn (tm₁ : TM n₁) (tm₂ : TM n₂)
     {t : ℕ} {c₀ c : Cfg (n₁ + 1 + n₂) (unionTM tm₁ tm₂).Q}
@@ -1017,50 +882,6 @@ private theorem phase2_work_step_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
   · rw [hq]; dsimp only [unionTM]; split <;> rfl
   · rw [hq]; dsimp only [unionTM]; split <;> rfl
 
-/-- Rewind fake output loop also preserves phase 2 work tapes. -/
-private theorem rewind_fakeOut_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
-    {i : Fin (n₁ + 1 + n₂)} (hi : i.val > n₁) :
-    ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindOut) →
-    (c.work fakeOutIdx).head = h →
-    (c.work fakeOutIdx).cells 0 = Γ.start →
-    (∀ j, j ≥ 1 → (c.work fakeOutIdx).cells j ≠ Γ.start) →
-    c.work i = idleTape →
-    ∃ c', (unionTM tm₁ tm₂).reachesIn h c c' ∧
-      c'.work i = idleTape := by
-  intro h
-  induction h with
-  | zero =>
-    intro c _ _ _ _ hidle; exact ⟨c, .zero, hidle⟩
-  | succ n ih =>
-    intro c hst hhead hcell0 hnostart hidle
-    have hread_ne : (c.work fakeOutIdx).read ≠ Γ.start := by
-      rw [Tape.read]; exact hnostart _ (by omega)
-    have hstep := step_rewindOut_nostart_cfg tm₁ tm₂ hst hread_ne
-    set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
-        input := c.input.move (idleDir c.input.read),
-        work := fun j => ((c.work j).write
-          ((if j.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
-          (if j.val = n₁ then Dir3.left else idleDir (c.work j).read),
-        output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
-      with hc'_def
-    have hidle' : c'.work i = idleTape := by
-      simp only [hc'_def, show (i : ℕ) ≠ n₁ from by omega, ↓reduceIte]
-      rw [hidle]; exact idleTape_step_idle
-    have hhead' : (c'.work fakeOutIdx).head = n := by
-      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [readBackWrite_toΓ_eq hread_ne]; simp only [Tape.write]
-      split
-      · omega
-      · simp [Tape.move, hhead]
-    have hcells' : (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells := by
-      simp only [hc'_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-      rw [Tape.move_cells, write_readBack_cells_eq _ hread_ne]
-    obtain ⟨c'', hreach, hidle''⟩ := ih c' rfl hhead'
-      (by rw [hcells']; exact hcell0) (by intro j hj; rw [hcells']; exact hnostart j hj) hidle'
-    exact ⟨c'', .step hstep hreach, hidle''⟩
-
 /-- Rewind input loop also preserves phase 2 work tapes. -/
 private theorem rewind_input_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
     {i : Fin (n₁ + 1 + n₂)} (_hi : i.val > n₁) :
@@ -1091,8 +912,8 @@ private theorem rewind_input_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
       show ((c.work i).write _).move _ = _; rw [hidle]; exact idleTape_step_idle
     obtain ⟨c'', hreach, hidle''⟩ := ih c' rfl
       (by show (c.input.move Dir3.left).head = n; simp [Tape.move, hhead])
-      (by intro j hj; show (c.input.move Dir3.left).cells j ≠ _; rw [Tape.move_cells]; exact hnostart j hj)
-      (by show (c.input.move Dir3.left).cells 0 = _; rw [Tape.move_cells]; exact hcell0)
+      (by intro j hj; show (c.input.move Dir3.left).cells j ≠ _; rw [tape_move_cells]; exact hnostart j hj)
+      (by show (c.input.move Dir3.left).cells 0 = _; rw [tape_move_cells]; exact hcell0)
       hidle'
     exact ⟨c'', .step hstep hreach, hidle''⟩
 
@@ -1136,8 +957,8 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
   have hout_rw_eq : c_rw.output = idleTape := by rw [hout_rw]; exact idleTape_step_idle
   -- Step 2: Rewind fake output (h_rw steps)
   set h_rw := (c_rw.work fakeOutIdx).head with hh_rw_def
-  obtain ⟨c_at0, hreach_rw, hst_at0, hhead_at0, hcells_at0, hout_at0⟩ :=
-    rewind_fakeOut_preserves_output tm₁ tm₂ h_rw c_rw hst_rw hout_rw_eq rfl hcell0_rw hnostart_rw
+  obtain ⟨c_at0, hreach_rw, hst_at0, hhead_at0, hcells_at0, hout_at0, hinp_at0, hwork_at0⟩ :=
+    rewind_fakeOut_loop tm₁ tm₂ h_rw c_rw hst_rw hout_rw_eq rfl hcell0_rw hnostart_rw
   -- Step 3: rewindOut at head 0 → checkResult (1 step)
   have hread_start : (c_at0.work fakeOutIdx).read = Γ.start := by
     rw [Tape.read, hhead_at0, hcells_at0, hcells_rw]; exact hcell0_out
@@ -1158,7 +979,7 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
     simp only [Tape.write, hhead_at0, ↓reduceIte, Tape.move]
   have hcr_fo_cells : (c_cr.work fakeOutIdx).cells = (c_at0.work fakeOutIdx).cells := by
     simp only [hc_cr_def, show (fakeOutIdx : Fin (n₁ + 1 + n₂)).val = n₁ from rfl, ite_true]
-    rw [Tape.move_cells]; simp only [Tape.write, if_pos hhead_at0]
+    rw [tape_move_cells]; simp only [Tape.write, if_pos hhead_at0]
   have hcr_read_ne_one : (c_cr.work fakeOutIdx).read ≠ Γ.one := by
     rw [Tape.read, hcr_fo_head, hcr_fo_cells, hcells_at0, hcells_rw, hreject]; decide
   -- Step 4: checkResult ≠ Γ.one → rewindIn (1 step)
@@ -1176,15 +997,15 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
   -- phase1Cfg → c_rw → (rewind) → c_at0 → c_cr → c_ri all preserve input.cells
   have hin_cells_chain : c_ri.input.cells = (initTape (x.map Γ.ofBool)).cells := by
     -- c_ri.input.cells = c_cr.input.cells (move)
-    show (c_cr.input.move _).cells = _; rw [Tape.move_cells]
+    show (c_cr.input.move _).cells = _; rw [tape_move_cells]
     -- c_cr.input.cells = c_at0.input.cells (move)
-    show (c_at0.input.move _).cells = _; rw [Tape.move_cells]
+    show (c_at0.input.move _).cells = _; rw [tape_move_cells]
     -- c_at0.input.cells = c_rw.input.cells (reachesIn)
     rw [union_input_cells_of_reachesIn tm₁ tm₂ hreach_rw]
     -- c_rw.input.cells = phase1Cfg.input.cells (step)
     have hstep1' := hstep1
     simp only [step, if_neg hne_p1, Option.some.injEq] at hstep1'; subst hstep1'
-    rw [Tape.move_cells]; exact hinput_cells
+    rw [tape_move_cells]; exact hinput_cells
   -- Input cells ≥ 1 ≠ Γ.start
   have hin_nostart_ri : ∀ i, i ≥ 1 → c_ri.input.cells i ≠ Γ.start := by
     intro i hi; rw [hin_cells_chain]
@@ -1258,13 +1079,13 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
     -- c_mid.input.cells = initTape cells
     have h2 : c_mid.input.cells = (initTape (x.map Γ.ofBool)).cells := by
       show (c_s2.input.move _).cells = _
-      rw [Tape.move_cells]; show (c_ri0.input.move Dir3.right).cells = _
-      rw [Tape.move_cells]; exact hcells_ri0_eq
+      rw [tape_move_cells]; show (c_ri0.input.move Dir3.right).cells = _
+      rw [tape_move_cells]; exact hcells_ri0_eq
     -- c_s2.input = c_ri0.input.move Dir3.right, head = 1
     have hs2_head : c_s2.input.head = 1 := by
       show (c_ri0.input.move Dir3.right).head = 1
       simp [Tape.move, hhead_ri0]
-    have hs2_cells : c_s2.input.cells = c_ri0.input.cells := Tape.move_cells _ _
+    have hs2_cells : c_s2.input.cells = c_ri0.input.cells := tape_move_cells _ _
     -- c_s2.input.read ≠ Γ.start (cells[1] is from initTape, not start)
     have hs2_read_ne : c_s2.input.read ≠ Γ.start := by
       rw [Tape.read, hs2_head, hs2_cells, hcells_ri0]
@@ -1306,15 +1127,10 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
             show ¬(n₁ + 1 + j.val = n₁) from by omega]
     rw [hp1]; exact idleTape_step_idle
   -- Step 2: Through rewind_fakeOut (hreach_rw), work tapes > n₁ stay idleTape
-  -- Use reachesIn determinism: rewind_fakeOut_work_idle produces the same endpoint as hreach_rw
   have hwork_at0_idle : ∀ (j : Fin n₂),
       c_at0.work ⟨n₁ + 1 + j.val, by omega⟩ = idleTape := by
-    intro j
-    obtain ⟨c_at0', hreach', hidle'⟩ := rewind_fakeOut_work_idle tm₁ tm₂
-      (show n₁ + 1 + j.val > n₁ from by omega)
-      h_rw c_rw hst_rw rfl hcell0_rw hnostart_rw (hwork_rw_idle j)
-    have hdet := reachesIn_det hreach_rw hreach'
-    rw [hdet]; exact hidle'
+    intro j; exact hwork_at0 ⟨n₁ + 1 + j.val, by omega⟩
+      (show n₁ + 1 + j.val > n₁ by omega) (hwork_rw_idle j)
   -- Step 3 (rewindOut→checkResult): c_cr.work at > n₁ = idleTape
   have hwork_cr_idle : ∀ (j : Fin n₂),
       c_cr.work ⟨n₁ + 1 + j.val, by omega⟩ = idleTape := by
@@ -1405,13 +1221,9 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
         have hc1_ino : ∀ i, i ≥ 1 → c₁.input.cells i ≠ Γ.start := by
           intro i hi; rw [← hcrw_cells]; exact hcrw_ino i hi
         rw [idleDir_stay_of_ge_one _ hge hc1_ino]; simp [Tape.move]; omega
-    -- Through rewind_fakeOut loop: input head preserved (all steps move input by idleDir = stay)
-    obtain ⟨c_at0', hreach_at0', hat0_head'⟩ := rewind_fakeOut_input_head tm₁ tm₂
-      h_rw c_rw hst_rw rfl hcell0_rw hnostart_rw hcrw_hge hcrw_ino
-    have hat0_det := reachesIn_det hreach_rw hreach_at0'
-    -- c_at0.input.head = c_rw.input.head
-    have hat0_head : c_at0.input.head = c_rw.input.head := by
-      rw [hat0_det]; exact hat0_head'
+    -- Through rewind_fakeOut loop: input head preserved
+    have hat0_head : c_at0.input.head = c_rw.input.head :=
+      hinp_at0 hcrw_hge hcrw_ino
     -- c_at0.input.cells[≥1] ≠ start (preserved through reachesIn)
     have hat0_ino : ∀ i, i ≥ 1 → c_at0.input.cells i ≠ Γ.start := by
       intro i hi; rw [union_input_cells_of_reachesIn tm₁ tm₂ hreach_rw]; exact hcrw_ino i hi
@@ -1421,7 +1233,7 @@ theorem transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
       exact idle_move_preserves_head _ (by omega) hat0_ino
     -- c_ri.input.head = c_cr.input.head (idleDir step from head ≥ 1)
     have hcr_ino : ∀ i, i ≥ 1 → c_cr.input.cells i ≠ Γ.start := by
-      intro i hi; show (c_at0.input.move _).cells i ≠ _; rw [Tape.move_cells]; exact hat0_ino i hi
+      intro i hi; show (c_at0.input.move _).cells i ≠ _; rw [tape_move_cells]; exact hat0_ino i hi
     have hri_head : c_ri.input.head = c_cr.input.head := by
       show (c_cr.input.move (idleDir c_cr.input.read)).head = _
       exact idle_move_preserves_head _ (by omega) hcr_ino
@@ -1454,7 +1266,7 @@ private theorem phase2_step_corr (tm₁ : TM n₁) (tm₂ : TM n₂)
     (hcompat : Phase2Compat tm₁ tm₂ c_u c₂) :
     ∃ c_u', (unionTM tm₁ tm₂).step c_u = some c_u' ∧
       Phase2Compat tm₁ tm₂ c_u' c₂' := by
-  have hne : c₂.state ≠ tm₂.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne := ne_qhalt_of_step hstep
   -- Extract c₂' from tm₂.step
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep; subst hstep
   -- c_u is not halted in the union machine
@@ -1467,31 +1279,15 @@ private theorem phase2_step_corr (tm₁ : TM n₁) (tm₂ : TM n₂)
   have hwork_reads : phase2WorkReads (fun i => (c_u.work i).read) =
       fun j => (c₂.work j).read := by
     ext ⟨j, hj⟩; simp only [phase2WorkReads]; exact congrArg Tape.read (hcompat.work_eq ⟨j, hj⟩)
-  -- Construct Phase2Compat
-  constructor
-  · -- state_eq
-    dsimp only []
-    rw [hcompat.state_eq]
+  -- Construct Phase2Compat (state_eq, input_eq, output_eq all close; work_eq needs dif reduction)
+  refine ⟨?_, ?_, fun ⟨j, hj⟩ => ?_, ?_⟩ <;> dsimp only [] <;> rw [hcompat.state_eq] <;>
     simp only [unionTM_delta_inr_inr tm₁ tm₂ hne, hcompat.input_eq, hcompat.output_eq, hwork_reads]
-  · -- input_eq
-    dsimp only []
-    rw [hcompat.state_eq]
-    simp only [unionTM_delta_inr_inr tm₁ tm₂ hne, hcompat.input_eq, hcompat.output_eq, hwork_reads]
-  · -- work_eq
-    intro ⟨j, hj⟩
-    dsimp only []
-    rw [hcompat.state_eq]
-    simp only [unionTM_delta_inr_inr tm₁ tm₂ hne, hcompat.input_eq, hcompat.output_eq, hwork_reads]
-    have hgt : ¬((n₁ + 1 + j) ≤ n₁) := by omega
-    rw [dif_neg hgt]
-    have hfin : ∀ (p : n₁ + 1 + j - (n₁ + 1) < n₂),
-        (⟨n₁ + 1 + j - (n₁ + 1), p⟩ : Fin n₂) = ⟨j, hj⟩ := by
-      intro p; apply Fin.ext; show n₁ + 1 + j - (n₁ + 1) = j; omega
-    simp only [hfin, hcompat.work_eq ⟨j, hj⟩, dif_neg hgt]
-  · -- output_eq
-    dsimp only []
-    rw [hcompat.state_eq]
-    simp only [unionTM_delta_inr_inr tm₁ tm₂ hne, hcompat.input_eq, hcompat.output_eq, hwork_reads]
+  have hgt : ¬((n₁ + 1 + j) ≤ n₁) := by omega
+  rw [dif_neg hgt]
+  have hfin : ∀ (p : n₁ + 1 + j - (n₁ + 1) < n₂),
+      (⟨n₁ + 1 + j - (n₁ + 1), p⟩ : Fin n₂) = ⟨j, hj⟩ := by
+    intro p; apply Fin.ext; show n₁ + 1 + j - (n₁ + 1) = j; omega
+  simp only [hfin, hcompat.work_eq ⟨j, hj⟩, dif_neg hgt]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 2 simulation

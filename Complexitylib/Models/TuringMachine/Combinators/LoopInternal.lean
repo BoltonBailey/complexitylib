@@ -56,7 +56,7 @@ theorem loopTM_body_step (tmBody tmTest : TM n) {c c' : Cfg n tmBody.Q}
     (hstep : tmBody.step c = some c') :
     (loopTM tmBody tmTest).step (loopBodyWrap tmBody tmTest c) =
       some (loopBodyWrap tmBody tmTest c') := by
-  have hne : c.state ≠ tmBody.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne : c.state ≠ tmBody.qhalt := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (loopBodyWrap tmBody tmTest c).state =
@@ -100,7 +100,7 @@ theorem loopTM_test_step (tmBody tmTest : TM n) {c c' : Cfg n tmTest.Q}
     (hstep : tmTest.step c = some c') :
     (loopTM tmBody tmTest).step (loopTestWrap tmBody tmTest c) =
       some (loopTestWrap tmBody tmTest c') := by
-  have hne : c.state ≠ tmTest.qhalt := by intro heq; simp [step, heq] at hstep
+  have hne : c.state ≠ tmTest.qhalt := ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (loopTestWrap tmBody tmTest c).state =
@@ -145,7 +145,7 @@ private theorem loop_rewind_step_left (tmBody tmTest : TM n)
       c'.output.head = c.output.head - 1 ∧
       c'.output.cells = c.output.cells := by
   have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+    rw [hstate]; nofun
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp only [Tape.writeAndMove, Tape.move]
@@ -170,7 +170,7 @@ private theorem loop_rewind_step_base (tmBody tmTest : TM n)
       c'.output.head = 1 ∧
       c'.output.cells = c.output.cells := by
   have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+    rw [hstate]; nofun
   have hhead : c.output.head = 0 := by
     by_contra hne
     have hge : c.output.head ≥ 1 := by omega
@@ -208,7 +208,7 @@ theorem loopTM_check_halt (tmBody tmTest : TM n)
       c'.state = Sum.inr (Sum.inl LoopPhase.done) ∧
       c'.output.cells = c.output.cells := by
   have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+    rw [hstate]; nofun
   have hread : c.output.read = Γ.one := by simp [Tape.read, hhead, hcell1]
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
   refine ⟨_, rfl, rfl, ?_⟩
@@ -228,7 +228,7 @@ theorem loopTM_check_continue (tmBody tmTest : TM n)
       c'.state = Sum.inl tmBody.qstart ∧
       c'.output.cells = c.output.cells := by
   have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
+    rw [hstate]; nofun
   have hread_ne : c.output.read ≠ Γ.one := by
     simp [Tape.read, hhead]; exact hcell1
   have hread_ne_start : c.output.read ≠ Γ.start := by
@@ -313,151 +313,5 @@ theorem loopTM_iteration_halt (tmBody tmTest : TM n)
   refine ⟨c_done, ?_, hst_done, ?_⟩
   · exact h_all
   · rw [hcells_done, hcells_check]; exact hcell1
-
--- ════════════════════════════════════════════════════════════════════════
--- Full variants: rewind and check with input/work tape preservation
--- ════════════════════════════════════════════════════════════════════════
-
-private theorem loop_rewind_step_left_full (tmBody tmTest : TM n)
-    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
-    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.rewindOut))
-    (hread_ne : c.output.read ≠ Γ.start)
-    (_ : c.output.cells 0 = Γ.start) (_ : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
-    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
-    (h_wh : ∀ i, (c.work i).head ≥ 1) (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
-    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inl LoopPhase.rewindOut) ∧
-      c'.output.head = c.output.head - 1 ∧
-      c'.output.cells = c.output.cells ∧
-      c'.input = c.input ∧ c'.work = c.work := by
-  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
-  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread_ne]
-    simp only [Tape.write, Tape.read]; split
-    · omega
-    · simp
-  · simp only [Tape.writeAndMove, tape_move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne]
-    simp only [Tape.write, Tape.read]; split
-    · rfl
-    · exact Function.update_eq_self _ _
-  · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
-
-private theorem loop_rewind_step_base_full (tmBody tmTest : TM n)
-    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
-    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.rewindOut))
-    (hread : c.output.read = Γ.start)
-    (_ : c.output.cells 0 = Γ.start)
-    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
-    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
-    (h_wh : ∀ i, (c.work i).head ≥ 1) (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
-    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inl LoopPhase.check) ∧
-      c'.output.head = 1 ∧
-      c'.output.cells = c.output.cells ∧
-      c'.input = c.input ∧ c'.work = c.work := by
-  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-  have hhead : c.output.head = 0 := by
-    by_contra hne
-    have hge : c.output.head ≥ 1 := by omega
-    exact hnostart c.output.head hge (by simp only [Tape.read] at hread; exact hread)
-  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
-  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
-  · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
-
-/-- Extended rewind loop: also tracks that input and work tapes are preserved
-    when they satisfy the stability condition (head ≥ 1, cells ≥ 1 ≠ start). -/
-theorem loopTM_rewind_loop_full (tmBody tmTest : TM n) :
-    ∀ (p : ℕ) (c : Cfg n (LoopQ tmBody.Q tmTest.Q)),
-    c.state = Sum.inr (Sum.inl LoopPhase.rewindOut) →
-    c.output.cells 0 = Γ.start →
-    (∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) →
-    c.output.head = p →
-    c.input.head ≥ 1 → (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
-    (∀ i, (c.work i).head ≥ 1) → (∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) →
-    ∃ c_check,
-      (loopTM tmBody tmTest).reachesIn (p + 1) c c_check ∧
-      c_check.state = Sum.inr (Sum.inl LoopPhase.check) ∧
-      c_check.output.head = 1 ∧
-      c_check.output.cells = c.output.cells ∧
-      c_check.input = c.input ∧
-      c_check.work = c.work :=
-  generic_rewind_loop_full (loopTM tmBody tmTest)
-    (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
-      loop_rewind_step_left_full tmBody tmTest c hst hread hc0 hns h_ih h_ins h_wh h_wns)
-    (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
-      loop_rewind_step_base_full tmBody tmTest c hst hread hc0 hns h_ih h_ins h_wh h_wns)
-
-/-- Check-halt step with full tape tracking. -/
-theorem loopTM_check_halt_full (tmBody tmTest : TM n)
-    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
-    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.check))
-    (hhead : c.output.head = 1)
-    (hcell1 : c.output.cells 1 = Γ.one)
-    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
-    (h_wh : ∀ i, (c.work i).head ≥ 1)
-    (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
-    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-      c'.state = Sum.inr (Sum.inl LoopPhase.done) ∧
-      c'.output.cells = c.output.cells ∧
-      c'.output.head = 1 ∧
-      c'.input = c.input ∧ c'.work = c.work := by
-  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-  have hread : c.output.read = Γ.one := by simp [Tape.read, hhead, hcell1]
-  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
-  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · show (c.output.writeAndMove (readBackWrite Γ.one).toΓ (idleDir Γ.one)).cells = c.output.cells
-    simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, tape_move_cells]
-    simp only [Tape.write]; split
-    · omega
-    · dsimp only []; rw [hhead, ← hcell1]; exact Function.update_eq_self _ _
-  · simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, Tape.move, Tape.write]
-    split <;> simp_all
-  · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
-
-/-- Check-continue step with full tape tracking. -/
-theorem loopTM_check_continue_full (tmBody tmTest : TM n)
-    (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
-    (hstate : c.state = Sum.inr (Sum.inl LoopPhase.check))
-    (hhead : c.output.head = 1)
-    (hcell1 : c.output.cells 1 ≠ Γ.one)
-    (hnostart : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start)
-    (h_ih : c.input.head ≥ 1) (h_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
-    (h_wh : ∀ i, (c.work i).head ≥ 1)
-    (h_wns : ∀ i j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) :
-    ∃ c', (loopTM tmBody tmTest).step c = some c' ∧
-      c'.state = Sum.inl tmBody.qstart ∧
-      c'.output.cells = c.output.cells ∧
-      c'.output.head = 1 ∧
-      c'.input = c.input ∧ c'.work = c.work := by
-  have hne : c.state ≠ (loopTM tmBody tmTest).qhalt := by
-    rw [hstate]; exact fun h => LoopPhase.noConfusion (Sum.inl.inj (Sum.inr.inj h))
-  have hread_ne : c.output.read ≠ Γ.one := by
-    simp [Tape.read, hhead]; exact hcell1
-  have hread_ne_start : c.output.read ≠ Γ.start := by
-    simp only [Tape.read, hhead]; exact hnostart 1 (by omega)
-  simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
-  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · simp only [Tape.writeAndMove, tape_move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne_start]
-    simp only [Tape.write, Tape.read]; split
-    · omega
-    · rw [hhead]; exact Function.update_eq_self _ _
-  · have hstable := tape_writeAndMove_stable c.output (by omega) hnostart
-    show (c.output.writeAndMove (readBackWrite c.output.read).toΓ
-      (idleDir c.output.read)).head = 1
-    rw [hstable, hhead]
-  · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 end TM

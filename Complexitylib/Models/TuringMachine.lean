@@ -240,6 +240,11 @@ abbrev initCfg (tm : TM n) (x : List Bool) : Cfg n tm.Q :=
 abbrev halted (tm : TM n) (c : Cfg n tm.Q) : Prop :=
   Cfg.isHalted tm.qhalt c
 
+/-- If `step` returns `some`, the machine was not halted. -/
+theorem ne_qhalt_of_step {tm : TM n} {c c' : Cfg n tm.Q}
+    (h : tm.step c = some c') : c.state ≠ tm.qhalt :=
+  fun heq => by simp [step, heq] at h
+
 /-- One-step relation for a deterministic TM. -/
 def stepRel (tm : TM n) (c c' : Cfg n tm.Q) : Prop := tm.step c = some c'
 

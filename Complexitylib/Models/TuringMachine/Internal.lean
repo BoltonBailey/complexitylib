@@ -25,7 +25,7 @@ private lemma TM.reaches_toNTM_trace (tm : TM n) {a c' : Cfg n tm.Q}
   | @head a₀ b₀ hstep _ ih =>
     obtain ⟨T, hT⟩ := ih
     have hne : a₀.state ≠ tm.qhalt := by
-      intro heq; simp [TM.stepRel, TM.step, heq] at hstep
+      rw [TM.stepRel] at hstep; exact ne_qhalt_of_step hstep
     refine ⟨T + 1, fun ch => ?_⟩
     rw [tm.toNTM_trace_step T ch hne]
     have : (tm.step a₀).get (by simp [TM.step, hne]) = b₀ := by
@@ -75,8 +75,7 @@ private lemma TM.toNTM_reachesIn_trace (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
   induction h with
   | zero => rfl
   | @step c₀ c_mid _ _ hstep _ ih =>
-    have hne : c₀.state ≠ tm.qhalt := by
-      intro heq; simp [TM.step, heq] at hstep
+    have hne := ne_qhalt_of_step hstep
     rw [tm.toNTM_trace_step _ ch hne]
     have : (tm.step c₀).get (by simp [TM.step, hne]) = c_mid := by
       simp [TM.step, hne] at hstep ⊢; exact hstep

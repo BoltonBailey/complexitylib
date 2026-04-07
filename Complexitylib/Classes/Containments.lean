@@ -88,31 +88,18 @@ theorem RTIME_sub_NTIME (T : ℕ → ℕ) : RTIME T ⊆ NTIME T := by
   refine ⟨k, tm, f, ⟨hhalt, fun x => ?_⟩, hbig⟩
   constructor
   · -- x ∈ L → AcceptsInTime: acceptProb ≥ 1/2 > 0 implies ∃ accepting path
-    intro hx
-    have hprob := hacc x hx
-    -- If acceptCount = 0 then acceptProb = 0, contradicting ≥ 1/2
-    by_contra hno
-    simp only [NTM.AcceptsInTime] at hno
-    push_neg at hno
-    have hempty : ∀ ch : Fin (f x.length) → Bool,
-        ¬((tm.trace (f x.length) ch (tm.initCfg x)).state = tm.qhalt ∧
-          (tm.trace (f x.length) ch (tm.initCfg x)).output.cells 1 = Γ.one) := by
-      intro ch ⟨h1, h2⟩; exact hno ch h1 h2
+    intro hx; by_contra hno
+    simp only [NTM.AcceptsInTime] at hno; push_neg at hno
     have hcount : tm.acceptCount x (f x.length) = 0 := by
       simp only [NTM.acceptCount]
-      rw [Finset.filter_eq_empty_iff.mpr (fun ch _ => hempty ch)]
+      rw [Finset.filter_eq_empty_iff.mpr (fun ch _ => fun ⟨h1, h2⟩ => hno ch h1 h2)]
       exact Finset.card_empty
-    simp [NTM.acceptProb, hcount] at hprob
-    norm_num at hprob
+    have hprob := hacc x hx
+    simp [NTM.acceptProb, hcount] at hprob; norm_num at hprob
   · -- AcceptsInTime → x ∈ L (contrapositive: x ∉ L → ¬AcceptsInTime)
-    intro ⟨choices, hhalt_ch, hout_ch⟩
-    by_contra hx
-    have hprob := hrej x hx
-    -- acceptProb ≤ 0 and ≥ 0 so = 0, meaning acceptCount = 0
-    have hnn : tm.acceptProb x (f x.length) ≥ 0 := by
-      unfold NTM.acceptProb; positivity
-    have hzero : tm.acceptProb x (f x.length) = 0 := le_antisymm hprob hnn
-    -- acceptCount = 0
+    intro ⟨choices, hhalt_ch, hout_ch⟩; by_contra hx
+    have hzero : tm.acceptProb x (f x.length) = 0 :=
+      le_antisymm (hrej x hx) (by unfold NTM.acceptProb; positivity)
     have hcount : tm.acceptCount x (f x.length) = 0 := by
       unfold NTM.acceptProb at hzero
       have h2T : (0:ℚ) < 2 ^ f x.length := by positivity
@@ -120,11 +107,9 @@ theorem RTIME_sub_NTIME (T : ℕ → ℕ) : RTIME T ⊆ NTIME T := by
       cases hzero with
       | inl h => exact_mod_cast h
       | inr h => linarith
-    -- But choices is an accepting path, so acceptCount > 0 — contradiction
     have hpos : 0 < tm.acceptCount x (f x.length) := by
       unfold NTM.acceptCount
-      apply Finset.card_pos.mpr
-      exact ⟨choices, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hhalt_ch, hout_ch⟩⟩
+      exact Finset.card_pos.mpr ⟨choices, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hhalt_ch, hout_ch⟩⟩
     omega
 
 /-- **RP ⊆ NP**. -/
