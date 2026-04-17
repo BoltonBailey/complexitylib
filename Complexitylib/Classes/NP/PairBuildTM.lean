@@ -230,6 +230,51 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Phase lemmas (building blocks for the main correctness theorem)
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **init step.** From the `.init` state with input, `yIdx`, and `pIdx`
+    all at head 0 on ▷, one step transitions to `.copyX1` with all three
+    heads at cell 1 and cells unchanged. -/
+private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .init)
+    (hi0 : c.input.head = 0) (hic0 : c.input.cells 0 = Γ.start)
+    (hyi0 : (c.work yIdx).head = 0) (hyic0 : (c.work yIdx).cells 0 = Γ.start)
+    (hpi0 : (c.work pIdx).head = 0) (hpic0 : (c.work pIdx).cells 0 = Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .copyX1 ∧
+      c'.input.head = 1 ∧ c'.input.cells = c.input.cells ∧
+      (c'.work yIdx).head = 1 ∧ (c'.work yIdx).cells = (c.work yIdx).cells ∧
+      (c'.work pIdx).head = 1 ∧ (c'.work pIdx).cells = (c.work pIdx).cells := by
+  have hiread : c.input.read = Γ.start := by simp [Tape.read, hi0, hic0]
+  have hyread : (c.work yIdx).read = Γ.start := by simp [Tape.read, hyi0, hyic0]
+  have hpread : (c.work pIdx).read = Γ.start := by simp [Tape.read, hpi0, hpic0]
+  simp only [TM.step, hst, pairBuildTM]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- input.head = 1
+    show (c.input.move (idleDir c.input.read)).head = 1
+    simp [idleDir, hiread, Tape.move, hi0]
+  · -- input.cells unchanged
+    exact tape_move_cells _ _
+  · -- (work yIdx).head = 1
+    show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
+          (idleDir (c.work yIdx).read)).head = 1
+    simp [idleDir, hyread, Tape.writeAndMove, Tape.write, Tape.move, hyi0]
+  · -- (work yIdx).cells unchanged
+    show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
+          (idleDir (c.work yIdx).read)).cells = (c.work yIdx).cells
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hyi0]
+  · -- (work pIdx).head = 1
+    show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
+          (idleDir (c.work pIdx).read)).head = 1
+    simp [idleDir, hpread, Tape.writeAndMove, Tape.write, Tape.move, hpi0]
+  · -- (work pIdx).cells unchanged
+    show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
+          (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 -- ════════════════════════════════════════════════════════════════════════
 
