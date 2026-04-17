@@ -25,6 +25,16 @@ private theorem pair_cons_eq (b : Bool) (x y : List Bool) :
     pair (b :: x) y = b :: b :: pair x y := by
   simp [pair, List.append_assoc]
 
+/-- `|pair x y| = 2·|x| + 2 + |y|`. The `2·|x|` comes from doubling every
+    bit of `x`; the `+2` is the separator `[false, true]`. -/
+@[simp] theorem pair_length (x y : List Bool) :
+    (pair x y).length = 2 * x.length + 2 + y.length := by
+  induction x with
+  | nil => simp [pair]; omega
+  | cons b xs ih =>
+    rw [pair_cons_eq, List.length_cons, List.length_cons, List.length_cons, ih]
+    omega
+
 /-- `pair` is injective: if `pair x₁ y₁ = pair x₂ y₂` then `x₁ = x₂` and `y₁ = y₂`. -/
 theorem pair_injective {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
     (h : pair x₁ y₁ = pair x₂ y₂) : x₁ = x₂ ∧ y₁ = y₂ := by
