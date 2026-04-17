@@ -274,6 +274,95 @@ private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
           (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
     simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
 
+/-- **copyX1 halt step.** In `.copyX1` reading blank on input, transition
+    to `.writeSep1`. All three tracked tapes unchanged (they're past ▷ so
+    `tape_writeAndMove_stable` applies). -/
+private theorem pairBuild_copyX1_halt_step {k : ℕ} (yIdx pIdx : Fin k)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .copyX1) (hread : c.input.read = Γ.blank)
+    (hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hph : (c.work pIdx).head ≥ 1)
+    (hins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start)
+    (hpns : ∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .writeSep1 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      c'.work pIdx = c.work pIdx := by
+  simp only [TM.step, hst, pairBuildTM, if_pos hread]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+  · exact tape_move_idleDir_stable c.input hih hins
+  · exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · exact tape_writeAndMove_stable (c.work pIdx) hph hpns
+
+/-- **copyX1 continue step.** In `.copyX1` reading a data bit on input,
+    transition to `.copyX2`, writing that bit to `pIdx`, advancing `pIdx`.
+    Input head unchanged; yIdx unchanged. -/
+private theorem pairBuild_copyX1_cont_step {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .copyX1) (hread_nb : c.input.read ≠ Γ.blank)
+    (hread_ns : c.input.read ≠ Γ.start)
+    (hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hph : (c.work pIdx).head ≥ 1)
+    (hins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start)
+    (_hpns : ∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .copyX2 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      (c'.work pIdx).head = (c.work pIdx).head + 1 ∧
+      (c'.work pIdx).cells =
+        Function.update (c.work pIdx).cells (c.work pIdx).head c.input.read := by
+  simp only [TM.step, hst, pairBuildTM, if_neg hread_nb]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · exact tape_move_idleDir_stable c.input hih hins
+  · simp only [if_neg hne]
+    exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · simp only [↓reduceIte]
+    simp [Tape.writeAndMove, Tape.write, Tape.move,
+          show (c.work pIdx).head ≠ 0 from by omega]
+  · simp only [↓reduceIte]
+    rw [readBackWrite_toΓ_eq hread_ns]
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+          show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
+
+/-- **copyX2 step.** In `.copyX2` (reading the same data bit), transition
+    back to `.copyX1`, writing that bit to `pIdx` (second copy), advancing
+    both input and `pIdx`. yIdx unchanged. -/
+private theorem pairBuild_copyX2_step {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .copyX2)
+    (hread_ns : c.input.read ≠ Γ.start)
+    (_hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hph : (c.work pIdx).head ≥ 1)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .copyX1 ∧
+      c'.input.head = c.input.head + 1 ∧
+      c'.input.cells = c.input.cells ∧
+      c'.work yIdx = c.work yIdx ∧
+      (c'.work pIdx).head = (c.work pIdx).head + 1 ∧
+      (c'.work pIdx).cells =
+        Function.update (c.work pIdx).cells (c.work pIdx).head c.input.read := by
+  simp only [TM.step, hst, pairBuildTM]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · show (c.input.move .right).head = c.input.head + 1
+    simp [Tape.move]
+  · exact tape_move_cells _ _
+  · simp only [if_neg hne]
+    exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · simp only [↓reduceIte]
+    simp [Tape.writeAndMove, Tape.write, Tape.move,
+          show (c.work pIdx).head ≠ 0 from by omega]
+  · simp only [↓reduceIte]
+    rw [readBackWrite_toΓ_eq hread_ns]
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+          show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 -- ════════════════════════════════════════════════════════════════════════
