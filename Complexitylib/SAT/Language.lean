@@ -2,6 +2,7 @@ import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Encoding
 import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.FNP
+import Complexitylib.Classes.NP.Witness
 
 /-!
 # SAT: Language and Witness Relation
@@ -108,6 +109,16 @@ theorem R_SAT_polyBalanced : PolyBalanced R_SAT := by
     `R_SAT_polyBalanced`. -/
 theorem R_SAT_in_FNP_of_verifier (h : pairLang R_SAT ∈ P) : R_SAT ∈ FNP :=
   ⟨R_SAT_polyBalanced, h⟩
+
+/-- **SAT is in NP modulo the verifier.** If the verifier's pair language
+    is in P, then `L_SAT ∈ NP`.
+
+    Combines `R_SAT_in_FNP_of_verifier` (SAT's FNP witness relation) with
+    the generic NP witness theorem `NP_of_FNP_witness`. The only remaining
+    obligation is the concrete poly-time TM construction for the SAT
+    verifier (tracked in `SAT/Verifier.lean`, forthcoming). -/
+theorem L_SAT_in_NP_of_verifier (h : pairLang R_SAT ∈ P) : L_SAT ∈ NP :=
+  NP.NP_of_FNP_witness (R_SAT_in_FNP_of_verifier h) L_SAT_iff_witness
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Worked examples: end-to-end sanity check of the semantic layer
