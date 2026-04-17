@@ -808,4 +808,96 @@ def loopTM (tmBody : TM n) (tmTest : TM n) : TM n :=
                  idleDir_right_of_start⟩
         · exact tmTest.δ_right_of_start q iHead wHeads oHead }
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Finite-state scanner
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Control states of a generic finite-state scanner parameterized by a
+    user-supplied scan-state type `S`. The machine has a one-time `start`
+    step that advances off cell 0, then a stream of `scan s` states holding
+    the current scan state, and finally a `done` halt state. -/
+inductive ScannerPhase (S : Type) where
+  | start
+  | scan (s : S)
+  | done
+
+instance {S : Type} [DecidableEq S] : DecidableEq (ScannerPhase S)
+  | .start, .start => isTrue rfl
+  | .start, .scan _ => isFalse (fun h => by cases h)
+  | .start, .done => isFalse (fun h => by cases h)
+  | .scan _, .start => isFalse (fun h => by cases h)
+  | .scan _, .done => isFalse (fun h => by cases h)
+  | .done, .start => isFalse (fun h => by cases h)
+  | .done, .scan _ => isFalse (fun h => by cases h)
+  | .done, .done => isTrue rfl
+  | .scan s₁, .scan s₂ =>
+    if h : s₁ = s₂ then isTrue (by rw [h])
+    else isFalse (fun heq => h (by cases heq; rfl))
+
+instance {S : Type} [DecidableEq S] [Fintype S] : Fintype (ScannerPhase S) where
+  elems := insert ScannerPhase.start
+           (insert (ScannerPhase.done : ScannerPhase S)
+             (Finset.univ.image ScannerPhase.scan))
+  complete := fun x => by
+    cases x with
+    | start => exact Finset.mem_insert_self _ _
+    | done => exact Finset.mem_insert_of_mem (Finset.mem_insert_self _ _)
+    | scan s =>
+      apply Finset.mem_insert_of_mem
+      apply Finset.mem_insert_of_mem
+      exact Finset.mem_image.mpr ⟨s, Finset.mem_univ s, rfl⟩
+
+/-- **Generic finite-state scanner.**
+
+    A 0-work-tape TM parameterized by a scan-state type `S`, an initial
+    state `s₀`, a transition function `scanStep : S → Bool → S` (called on
+    each input bit), and a finalizer `finalOutput : S → Γw` (the symbol to
+    emit when end-of-input is reached).
+
+    Semantics: runs left-to-right through the input, folding `scanStep` over
+    the bits starting from `s₀`; when a blank is reached, writes
+    `finalOutput (finalState)` to output cell 1 and halts.
+
+    This captures the common "read once, fold into a fixed-size state"
+    pattern used by `evenLength`, `allZeros`/`allOnes`, `containsZero`/`containsOne`,
+    `lengthDivBy k`, `lastBit`, and similar regular-language scanners.
+
+    Halts in `|x| + 2` steps on every input (1 start + `|x|` scans + 1 halt). -/
+def scannerTM {S : Type} [DecidableEq S] [Fintype S]
+    (s₀ : S) (scanStep : S → Bool → S) (finalOutput : S → Γw) : TM 0 where
+  Q := ScannerPhase S
+  qstart := .start
+  qhalt := .done
+  δ := fun state iHead _wHeads oHead =>
+    match state with
+    | .start =>
+      -- Advance input and output from cell 0 (▷) to cell 1. Writes at cell 0
+      -- are no-ops. Enter the initial scan state.
+      (.scan s₀, fun i => i.elim0, .blank,
+       .right, fun i => i.elim0, .right)
+    | .scan s =>
+      if iHead = Γ.blank then
+        -- End of input. Emit `finalOutput s` and halt.
+        (.done, fun i => i.elim0, finalOutput s,
+         idleDir iHead, fun i => i.elim0, idleDir oHead)
+      else
+        -- Read a bit: `Γ.one ↦ true`, anything else (including the
+        -- structurally-unreachable `Γ.start`) ↦ `false`.
+        let b : Bool := decide (iHead = Γ.one)
+        (.scan (scanStep s b), fun i => i.elim0, readBackWrite oHead,
+         .right, fun i => i.elim0, idleDir oHead)
+    | .done =>
+      allIdle .done iHead _wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .start =>
+      refine ⟨fun _ => rfl, fun i => i.elim0, fun _ => rfl⟩
+    | .scan _ =>
+      dsimp only []; split
+      · exact ⟨idleDir_right_of_start, fun i => i.elim0, idleDir_right_of_start⟩
+      · exact ⟨fun _ => rfl, fun i => i.elim0, idleDir_right_of_start⟩
+    | .done =>
+      exact rightOfStart_allIdle iHead wHeads oHead
+
 end TM
