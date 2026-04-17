@@ -76,7 +76,19 @@ def witnessLang (R : List Bool → List Bool → Prop) : Language :=
     It is a substantial but mechanical TM engineering exercise (comparable
     in scope to `unionTM`/`seqTM` in `Models/TuringMachine/Combinators.lean`).
     It will be discharged in a future pass by explicitly constructing the
-    NTM and proving its semantic equivalence to the witness language. -/
+    NTM and proving its semantic equivalence to the witness language.
+
+    ## Supporting utilities
+    When discharging this sorry, the following lemmas from
+    `Complexitylib.Asymptotics` will be useful for packaging the running-time
+    bound of the constructed NTM:
+    - `BigO.pow_polynomial_bound` — turn the hypothesis `f =O (·^c)` into
+      an explicit `Polynomial ℕ` bound on `f`.
+    - `BigO.of_polynomial_bound` — turn the computed polynomial bound on
+      the constructed NTM's running time back into `g =O (·^d)`.
+    The `pair_length` simp lemma in `Complexitylib.Classes.Pairing` gives
+    `|pair x y| = 2·|x| + 2 + |y|`, needed when substituting the simulated
+    verifier's input length. -/
 theorem witness_ntm_of_dtm_verifier
     {R : List Bool → List Bool → Prop}
     {p : Polynomial ℕ} {c k : ℕ}
