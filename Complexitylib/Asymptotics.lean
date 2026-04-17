@@ -1,4 +1,8 @@
 import Mathlib.Analysis.Asymptotics.Defs
+import Mathlib.Analysis.Asymptotics.Lemmas
+import Mathlib.Algebra.Polynomial.Eval.Defs
+import Mathlib.Data.Finset.Lattice.Fold
+import Mathlib.Algebra.Order.Floor.Semiring
 
 /-!
 # Asymptotic notation for natural number functions
@@ -241,5 +245,48 @@ theorem BigO.pow_add_pow (j k : ℕ) :
   have h2 : n ^ k ≤ n ^ max j k := Nat.pow_le_pow_right hn (Nat.le_max_right j k)
   have : n ^ j + n ^ k ≤ 2 * n ^ max j k := by omega
   exact_mod_cast this
+
+-- ════════════════════════════════════════════════════════════════════════
+-- BigO ⇒ polynomial bound
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **From `f =O (·^k)` to an explicit polynomial bound.** If `f : ℕ → ℕ`
+    is big-O of `n^k`, then there exists a polynomial `p` in `Polynomial ℕ`
+    with `f n ≤ p.eval n` *for every* `n` (not just eventually).
+
+    The standard big-O definition gives only an asymptotic bound; this lemma
+    turns that into an everywhere-bound by (i) extracting a real constant
+    `C` and threshold `N` such that `f n ≤ C · n^k` for `n ≥ N`, (ii)
+    rounding `C` up to a natural number, and (iii) adding a constant term
+    that dominates `f` on the initial segment `[0, N)`.
+
+    This is the bridge from big-O hypotheses to the explicit
+    `Polynomial ℕ` shape expected by definitions like `PolyBalanced` and
+    by time-bound packaging in the `witness_ntm_of_dtm_verifier`
+    construction. -/
+theorem BigO.pow_polynomial_bound {f : ℕ → ℕ} {k : ℕ} (h : f =O (· ^ k)) :
+    ∃ p : Polynomial ℕ, ∀ n, f n ≤ p.eval n := by
+  rw [BigO, Asymptotics.isBigO_iff] at h
+  obtain ⟨C, hC⟩ := h
+  rw [Filter.eventually_atTop] at hC
+  obtain ⟨N, hN⟩ := hC
+  refine ⟨Polynomial.C ⌈C⌉₊ * Polynomial.X ^ k +
+          Polynomial.C ((Finset.range N).sup f), ?_⟩
+  intro n
+  simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_C,
+             Polynomial.eval_pow, Polynomial.eval_X]
+  by_cases hn : n < N
+  · have : f n ≤ (Finset.range N).sup f :=
+      Finset.le_sup (f := f) (Finset.mem_range.mpr hn)
+    omega
+  · push_neg at hn
+    have hb := hN n hn
+    simp only [Real.norm_natCast] at hb
+    have hC_le : C ≤ (⌈C⌉₊ : ℝ) := Nat.le_ceil C
+    have h_nk_nonneg : (0 : ℝ) ≤ ((n ^ k : ℕ) : ℝ) := by positivity
+    have h_real : (f n : ℝ) ≤ (⌈C⌉₊ : ℝ) * ((n ^ k : ℕ) : ℝ) :=
+      le_trans hb (mul_le_mul_of_nonneg_right hC_le h_nk_nonneg)
+    have h_nat : f n ≤ ⌈C⌉₊ * n ^ k := by exact_mod_cast h_real
+    omega
 
 end Complexity
