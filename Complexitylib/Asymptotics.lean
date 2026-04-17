@@ -1,6 +1,7 @@
 import Mathlib.Analysis.Asymptotics.Defs
 import Mathlib.Analysis.Asymptotics.Lemmas
 import Mathlib.Algebra.Polynomial.Eval.Defs
+import Mathlib.Algebra.Polynomial.Eval.Degree
 import Mathlib.Data.Finset.Lattice.Fold
 import Mathlib.Algebra.Order.Floor.Semiring
 
@@ -288,5 +289,27 @@ theorem BigO.pow_polynomial_bound {f : ℕ → ℕ} {k : ℕ} (h : f =O (· ^ k)
       le_trans hb (mul_le_mul_of_nonneg_right hC_le h_nk_nonneg)
     have h_nat : f n ≤ ⌈C⌉₊ * n ^ k := by exact_mod_cast h_real
     omega
+
+/-- **From a polynomial bound to `=O (·^deg)`.** If `f : ℕ → ℕ` is
+    pointwise bounded by a polynomial `p`, then `f =O (·^p.natDegree)`.
+
+    Companion to `BigO.pow_polynomial_bound`; the pair lets you convert
+    freely between the big-O form used by complexity classes and the
+    explicit `Polynomial ℕ` shape used in `PolyBalanced` and in
+    running-time packaging for composite machines. -/
+theorem BigO.of_polynomial_bound {f : ℕ → ℕ} (p : Polynomial ℕ)
+    (h : ∀ n, f n ≤ p.eval n) : f =O (· ^ p.natDegree) := by
+  set S : ℕ := ∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i with hS
+  apply IsBigO.of_bound S
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  simp only [Real.norm_natCast]
+  have hp : p.eval n ≤ S * n ^ p.natDegree := by
+    rw [Polynomial.eval_eq_sum_range, hS, Finset.sum_mul]
+    refine Finset.sum_le_sum (fun i hi => ?_)
+    have hi' : i ≤ p.natDegree := by
+      rw [Finset.mem_range] at hi; omega
+    have : n ^ i ≤ n ^ p.natDegree := Nat.pow_le_pow_right hn hi'
+    exact Nat.mul_le_mul_left _ this
+  exact_mod_cast le_trans (h n) hp
 
 end Complexity
