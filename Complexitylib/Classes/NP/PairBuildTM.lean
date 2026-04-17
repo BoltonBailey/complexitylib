@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Classes.Pairing
 
@@ -81,7 +82,7 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
     -- Input, pIdx, yIdx, and output all start at ▷; `idleDir` sends them right.
     | .init =>
       (.copyX1,
-       fun _ => .blank, .blank,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
        idleDir iHead,
        fun i => idleDir (wHeads i),
        idleDir oHead)
@@ -89,23 +90,26 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
     | .copyX1 =>
       if iHead = Γ.blank then
         -- End of x: transition to separator writing.
-        (.writeSep1, fun _ => .blank, .blank,
+        (.writeSep1,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => idleDir (wHeads i),
          idleDir oHead)
       else
         -- Write the current input bit to pIdx, advance pIdx only.
         (.copyX2,
-         fun i => if i = pIdx then readBackWrite iHead else .blank,
-         .blank,
+         fun i => if i = pIdx then readBackWrite iHead
+                  else readBackWrite (wHeads i),
+         readBackWrite oHead,
          idleDir iHead,
          fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     -- copyX2: write the *second* copy of the current bit to pIdx; advance input+pIdx.
     | .copyX2 =>
       (.copyX1,
-       fun i => if i = pIdx then readBackWrite iHead else .blank,
-       .blank,
+       fun i => if i = pIdx then readBackWrite iHead
+                else readBackWrite (wHeads i),
+       readBackWrite oHead,
        Dir3.right,                                           -- input advances
        fun i => if i = pIdx then Dir3.right
                 else idleDir (wHeads i),
@@ -113,30 +117,32 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
     -- writeSep1: write the `false` (= Γw.zero) bit of the separator.
     | .writeSep1 =>
       (.writeSep2,
-       fun i => if i = pIdx then Γw.zero else .blank,
-       .blank,
+       fun i => if i = pIdx then Γw.zero else readBackWrite (wHeads i),
+       readBackWrite oHead,
        idleDir iHead,
        fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
        idleDir oHead)
     -- writeSep2: write the `true` (= Γw.one) bit of the separator.
     | .writeSep2 =>
       (.copyY,
-       fun i => if i = pIdx then Γw.one else .blank,
-       .blank,
+       fun i => if i = pIdx then Γw.one else readBackWrite (wHeads i),
+       readBackWrite oHead,
        idleDir iHead,
        fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
        idleDir oHead)
     -- copyY: copy y-bits from work[yIdx] to pIdx until blank.
     | .copyY =>
       if wHeads yIdx = Γ.blank then
-        (.rewindP1, fun _ => .blank, .blank,
+        (.rewindP1,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead,
          fun i => idleDir (wHeads i),
          idleDir oHead)
       else
         (.copyY,
-         fun i => if i = pIdx then readBackWrite (wHeads yIdx) else .blank,
-         .blank,
+         fun i => if i = pIdx then readBackWrite (wHeads yIdx)
+                  else readBackWrite (wHeads i),
+         readBackWrite oHead,
          idleDir iHead,
          fun i => if i = pIdx then Dir3.right
                   else if i = yIdx then Dir3.right
@@ -159,9 +165,14 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
          fun i => if i = pIdx then Dir3.left else idleDir (wHeads i),
          idleDir oHead)
     -- rewindP2: one more step, go to done. Leaves pIdx head at 1.
+    -- (Uses readBackWrite so non-pIdx tapes are preserved even if mid-tape.)
     | .rewindP2 =>
-      allIdle .done iHead wHeads oHead
-    -- done: halt.
+      (.done,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
+       idleDir iHead,
+       fun i => idleDir (wHeads i),
+       idleDir oHead)
+    -- done: halt. δ never actually fires; we just need δ_right_of_start to hold.
     | .done => allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
@@ -213,7 +224,9 @@ def pairBuildTM (yIdx pIdx : Fin k) : TM k where
         intro i hwi; simp only []; split
         · rename_i heq; subst heq; contradiction
         · exact idleDir_right_of_start hwi
-    | .rewindP2 => exact rightOfStart_allIdle iHead wHeads oHead
+    | .rewindP2 =>
+      exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+             idleDir_right_of_start⟩
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 -- ════════════════════════════════════════════════════════════════════════
