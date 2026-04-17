@@ -27,3 +27,16 @@ def DTIME (T : ℕ → ℕ) : Set Language :=
 def NTIME (T : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
     tm.DecidesInTime L f ∧ f =O T}
+
+/-- **Complement class** constructor: `complClass C = {L | Lᶜ ∈ C}`.
+    Used to uniformly define `coNP`, `coRP`, `coNL`, etc. -/
+def complClass (C : Set Language) : Set Language :=
+  {L | Lᶜ ∈ C}
+
+/-- Membership in `complClass C` is exactly membership of the complement in `C`. -/
+@[simp] theorem mem_complClass {L : Language} {C : Set Language} :
+    L ∈ complClass C ↔ Lᶜ ∈ C := Iff.rfl
+
+/-- The complement class is involutive: `complClass (complClass C) = C`. -/
+theorem complClass_complClass (C : Set Language) : complClass (complClass C) = C := by
+  ext L; simp [complClass]

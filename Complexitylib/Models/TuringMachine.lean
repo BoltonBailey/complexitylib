@@ -327,6 +327,19 @@ theorem reachesIn_trans (tm : TM n) {t₁ t₂ : ℕ} {c₁ c₂ c₃ : Cfg n tm
     rw [Nat.add_right_comm]
     exact reachesIn.step hstep (ih h₂)
 
+/-- Bounded reachability implies unbounded reachability. -/
+theorem reaches_of_reachesIn {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q}
+    (h : tm.reachesIn t c c') : tm.reaches c c' := by
+  induction h with
+  | zero => exact Relation.ReflTransGen.refl
+  | step hs _ ih => exact Relation.ReflTransGen.head hs ih
+
+/-- `AcceptsInTime` implies `Accepts` — forget the time bound. -/
+theorem Accepts_of_AcceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
+    (h : tm.AcceptsInTime x T) : tm.Accepts x := by
+  obtain ⟨c', t, _, hreach, hhalt, hcell⟩ := h
+  exact ⟨c', reaches_of_reachesIn hreach, hhalt, hcell⟩
+
 end TM
 
 namespace NTM
@@ -359,6 +372,15 @@ abbrev initCfg (tm : NTM n) (x : List Bool) : Cfg n tm.Q :=
 abbrev halted (tm : NTM n) (c : Cfg n tm.Q) : Prop :=
   Cfg.isHalted tm.qhalt c
 
+/-- Once halted, the NTM trace stays at the same configuration regardless of
+    the remaining choices. -/
+theorem trace_halted (tm : NTM n) {c : Cfg n tm.Q}
+    (T : ℕ) (choices : Fin T → Bool) (h : tm.halted c) :
+    tm.trace T choices c = c := by
+  induction T with
+  | zero => rfl
+  | succ T _ => simp [NTM.trace, h]
+
 /-- NTM accepts `x`: there exists a time bound and choice sequence leading to
     `qhalt` with output cell 1 = `1`. -/
 def Accepts (tm : NTM n) (x : List Bool) : Prop :=
@@ -372,6 +394,51 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
   ∃ choices : Fin T → Bool,
     let c' := tm.trace T choices (tm.initCfg x)
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
+
+/-- `AcceptsInTime` implies `Accepts` — package the time bound existentially. -/
+theorem Accepts_of_AcceptsInTime {tm : NTM n} {x : List Bool} {T : ℕ}
+    (h : tm.AcceptsInTime x T) : tm.Accepts x :=
+  ⟨T, h⟩
+
+/-- `Accepts` is exactly `∃ T, AcceptsInTime x T`. -/
+theorem Accepts_iff_exists_AcceptsInTime {tm : NTM n} {x : List Bool} :
+    tm.Accepts x ↔ ∃ T, tm.AcceptsInTime x T := Iff.rfl
+
+/-- Running the NTM trace for more steps preserves the final configuration:
+    if the machine halts within `T` steps and the extended choice sequence
+    agrees with the original on the first `T` positions, the extra steps are
+    no-ops. -/
+theorem trace_mono (tm : NTM n) {T T' : ℕ} (hle : T ≤ T')
+    {choices : Fin T → Bool} {choices' : Fin T' → Bool} {c : Cfg n tm.Q}
+    (hagree : ∀ i : Fin T, choices' ⟨i.val, by omega⟩ = choices i)
+    (h : tm.halted (tm.trace T choices c)) :
+    tm.trace T' choices' c = tm.trace T choices c := by
+  induction T generalizing T' choices' c with
+  | zero =>
+    have hhalt : tm.halted c := by simpa [NTM.trace] using h
+    simpa [NTM.trace] using tm.trace_halted T' choices' hhalt
+  | succ T ih =>
+    rcases T' with _ | T'
+    · omega
+    by_cases hc : c.state = tm.qhalt
+    · have hcT : tm.trace (T + 1) choices c = c := by simp [NTM.trace, hc]
+      have hcT' : tm.trace (T' + 1) choices' c = c := by simp [NTM.trace, hc]
+      rw [hcT, hcT']
+    · have hch0 := hagree ⟨0, Nat.zero_lt_succ _⟩
+      have hle' : T ≤ T' := Nat.le_of_succ_le_succ hle
+      simp only [NTM.trace, hc, hch0, if_false] at h ⊢
+      exact ih hle' (fun i => hagree ⟨i.val + 1, by omega⟩) h
+
+/-- NTM acceptance is monotone in the time bound: `AcceptsInTime x T` implies
+    `AcceptsInTime x T'` for any `T' ≥ T`. Extra steps are no-ops once halted. -/
+theorem AcceptsInTime_mono {tm : NTM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
+    (h : tm.AcceptsInTime x T) : tm.AcceptsInTime x T' := by
+  obtain ⟨choices, hhalt, hout⟩ := h
+  let choices' : Fin T' → Bool := fun i =>
+    if hi : i.val < T then choices ⟨i.val, hi⟩ else false
+  have heq := tm.trace_mono hle (choices := choices) (choices' := choices')
+    (c := tm.initCfg x) (fun i => by simp [choices', i.isLt]) hhalt
+  exact ⟨choices', heq ▸ hhalt, heq ▸ hout⟩
 
 /-- All computation paths of the NTM halt within `T(|x|)` steps, for every
     input `x` and every choice sequence. This is the core time-boundedness

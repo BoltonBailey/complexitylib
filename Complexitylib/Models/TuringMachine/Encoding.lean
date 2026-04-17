@@ -189,12 +189,46 @@ def Nat.fromBits : List Bool → ℕ
   | [] => 0
   | b :: rest => (if b then 1 else 0) * 2 ^ rest.length + Nat.fromBits rest
 
--- ════════════════════════════════════════════════════════════════════════
--- Enumeration of all Fin n → Γ functions
--- ════════════════════════════════════════════════════════════════════════
+/-- Decoded values are bounded by `2 ^ length`. -/
+theorem Nat.fromBits_lt_pow_length : ∀ (l : List Bool), Nat.fromBits l < 2 ^ l.length
+  | [] => by simp [Nat.fromBits]
+  | b :: rest => by
+    have ih := Nat.fromBits_lt_pow_length rest
+    simp only [Nat.fromBits, List.length_cons, pow_succ]
+    rcases b with _ | _ <;> simp <;> omega
+
+/-- `fromBits ∘ toBits w` reduces any input modulo `2 ^ w`. -/
+theorem Nat.fromBits_toBits_mod : ∀ (w val : ℕ),
+    Nat.fromBits (Nat.toBits w val) = val % 2 ^ w
+  | 0, val => by simp [Nat.toBits, Nat.fromBits, Nat.mod_one]
+  | w + 1, val => by
+    have ih := Nat.fromBits_toBits_mod w val
+    simp only [Nat.toBits, Nat.fromBits, Nat.toBits_length, ih]
+    have hbit : (val / 2 ^ w) % 2 = if (val / 2 ^ w % 2 == 1) then 1 else 0 := by
+      rcases Nat.mod_two_eq_zero_or_one (val / 2 ^ w) with h | h <;> simp [h]
+    have hpow : (2 : ℕ) ^ (w + 1) = 2 ^ w * 2 := by rw [pow_succ]
+    have hkey : val % 2 ^ (w + 1) = (val / 2 ^ w) % 2 * 2 ^ w + val % 2 ^ w := by
+      rw [hpow, Nat.mod_mul, Nat.mul_comm (2^w) _, Nat.add_comm]
+    rw [hkey, ← hbit]
+
+/-- `Nat.fromBits` is a left inverse of `Nat.toBits` on values below `2 ^ w`. -/
+theorem Nat.fromBits_toBits {w val : ℕ} (hv : val < 2 ^ w) :
+    Nat.fromBits (Nat.toBits w val) = val := by
+  rw [Nat.fromBits_toBits_mod, Nat.mod_eq_of_lt hv]
 
 /-- All 4 tape symbols in canonical order. -/
 def allΓ : List Γ := [.zero, .one, .blank, .start]
+
+/-- Every tape symbol appears in `allΓ`. -/
+theorem allΓ_complete (g : Γ) : g ∈ allΓ := by
+  cases g <;> simp [allΓ]
+
+/-- `allΓ` contains no duplicates. -/
+theorem allΓ_nodup : allΓ.Nodup := by
+  simp [allΓ, List.Nodup]
+
+/-- `allΓ` has exactly 4 elements (one per `Γ` constructor). -/
+theorem allΓ_length : allΓ.length = 4 := rfl
 
 /-- Enumerate all functions `Fin n → Γ` in canonical (lexicographic) order. -/
 def allΓFuncs : (n : ℕ) → List (Fin n → Γ)
@@ -203,3 +237,18 @@ def allΓFuncs : (n : ℕ) → List (Fin n → Γ)
       allΓ.map fun g =>
         fun i : Fin (n + 1) =>
           if h : i.val < n then f ⟨i.val, h⟩ else g
+
+/-- Every function `Fin n → Γ` appears in `allΓFuncs n`. -/
+theorem allΓFuncs_complete : ∀ (n : ℕ) (f : Fin n → Γ), f ∈ allΓFuncs n
+  | 0, f => by
+    simp only [allΓFuncs, List.mem_singleton]
+    funext i; exact i.elim0
+  | n + 1, f => by
+    simp only [allΓFuncs, List.mem_flatMap, List.mem_map]
+    refine ⟨fun i => f ⟨i.val, by omega⟩, allΓFuncs_complete n _,
+            f ⟨n, Nat.lt_succ_self _⟩, allΓ_complete _, ?_⟩
+    funext i
+    by_cases hi : i.val < n
+    · simp [hi]
+    · have : i.val = n := by omega
+      simp [hi]; congr 1; exact Fin.ext this.symm

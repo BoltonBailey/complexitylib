@@ -47,14 +47,6 @@ lemma TM.toNTM_trace_reaches (tm : TM n) (c : Cfg n tm.Q)
         (show tm.stepRel c _ by simp [TM.stepRel, TM.step, hne, TM.toNTM])
         (ih _ _)
 
-/-- Once halted, NTM trace stays at the same configuration. -/
-private lemma NTM.trace_halted (tm : NTM n) {c : Cfg n tm.Q}
-    (T : ℕ) (choices : Fin T → Bool) (h : tm.halted c) :
-    tm.trace T choices c = c := by
-  induction T with
-  | zero => rfl
-  | succ T _ => simp [NTM.trace, h]
-
 /-- For `toNTM`, the trace is independent of the choice sequence since both
     transition functions are identical. -/
 lemma TM.toNTM_trace_choice_irrel (tm : TM n) (T : ℕ) (c : Cfg n tm.Q)

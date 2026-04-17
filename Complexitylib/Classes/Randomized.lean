@@ -1,5 +1,6 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
+import Complexitylib.Classes.Time
 
 /-!
 # Randomized complexity classes
@@ -77,8 +78,7 @@ def RP : Set Language :=
 /-- **coRP** is the class of languages whose complements are in RP.
     Equivalently: yes-instances always accepted (probability 1), no-instances
     accepted with probability ≤ 1/2. -/
-def CoRP : Set Language :=
-  {L | Lᶜ ∈ RP}
+def CoRP : Set Language := complClass RP
 
 /-- **ZPP** (zero-error probabilistic polynomial time) is RP ∩ coRP. A language
     is in ZPP iff it has a PTM with zero-error expected polynomial running

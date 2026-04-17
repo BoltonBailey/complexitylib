@@ -51,14 +51,13 @@ def Hoare (tm : TM n) (pre post : TapePred n) : Prop :=
       tm.halted c' ∧ post c'.input c'.work c'.output
 
 -- ════════════════════════════════════════════════════════════════════════
--- Helper: reachesIn implies reaches
+-- Helper: reachesIn implies reaches (re-export of TM.reaches_of_reachesIn)
 -- ════════════════════════════════════════════════════════════════════════
 
+@[inherit_doc TM.reaches_of_reachesIn]
 private theorem reachesIn_toReaches {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q}
-    (h : tm.reachesIn t c c') : tm.reaches c c' := by
-  induction h with
-  | zero => exact Relation.ReflTransGen.refl
-  | step hs _ ih => exact Relation.ReflTransGen.head hs ih
+    (h : tm.reachesIn t c c') : tm.reaches c c' :=
+  TM.reaches_of_reachesIn h
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Structural rules

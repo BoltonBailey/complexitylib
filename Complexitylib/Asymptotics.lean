@@ -182,4 +182,64 @@ theorem BigO.const_mul_add (c : ℕ) {f₁ f₂ T₁ T₂ : ℕ → ℕ}
   convert this using 1
   ext n; push_cast; ring
 
+-- ════════════════════════════════════════════════════════════════════════
+-- BigO max and power bounds
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- `T₁` is big-O of `max T₁ T₂`. -/
+theorem BigO.le_max_left (T₁ T₂ : ℕ → ℕ) :
+    T₁ =O (fun n => max (T₁ n) (T₂ n)) :=
+  BigO.of_le fun _ => Nat.le_max_left _ _
+
+/-- `T₂` is big-O of `max T₁ T₂`. -/
+theorem BigO.le_max_right (T₁ T₂ : ℕ → ℕ) :
+    T₂ =O (fun n => max (T₁ n) (T₂ n)) :=
+  BigO.of_le fun _ => Nat.le_max_right _ _
+
+/-- `max T₁ T₂ =O (T₁ + T₂)`. -/
+theorem BigO.max_le_add (T₁ T₂ : ℕ → ℕ) :
+    (fun n => max (T₁ n) (T₂ n)) =O (fun n => T₁ n + T₂ n) :=
+  BigO.of_le fun _ => Nat.max_le.mpr ⟨Nat.le_add_right _ _, Nat.le_add_left _ _⟩
+
+/-- Any function is big-O of itself-plus-constant: `f =O (fun n => f n + c)`. -/
+theorem BigO.self_le_add_const (f : ℕ → ℕ) (c : ℕ) :
+    f =O (fun n => f n + c) :=
+  BigO.of_le fun _ => Nat.le_add_right _ _
+
+/-- `n^k` is big-O of `n^(k+1)` on sequences with `n ≥ 1`. -/
+theorem BigO.pow_le_pow_succ (k : ℕ) :
+    (· ^ k) =O ((· ^ (k + 1)) : ℕ → ℕ) := by
+  apply IsBigO.of_bound 1
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  simp only [one_mul, Real.norm_natCast]
+  exact_mod_cast Nat.pow_le_pow_right hn (Nat.le_succ k)
+
+/-- `n^j =O n^k` when `j ≤ k` (on sequences with `n ≥ 1`). -/
+theorem BigO.pow_le_pow_right {j k : ℕ} (hjk : j ≤ k) :
+    (· ^ j) =O ((· ^ k) : ℕ → ℕ) := by
+  apply IsBigO.of_bound 1
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  simp only [one_mul, Real.norm_natCast]
+  exact_mod_cast Nat.pow_le_pow_right hn hjk
+
+/-- A constant function is big-O of `n^k` (eventually `n^k ≥ 1`). -/
+theorem BigO.const_le_pow (c k : ℕ) :
+    (fun _ : ℕ => c) =O ((· ^ k) : ℕ → ℕ) := by
+  apply IsBigO.of_bound c
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  simp only [Real.norm_natCast]
+  have : 1 ≤ n ^ k := Nat.one_le_pow _ _ hn
+  exact_mod_cast le_mul_of_one_le_right (Nat.zero_le _) this
+
+/-- `n^j + n^k =O n^(max j k)` on sequences with `n ≥ 1`. -/
+theorem BigO.pow_add_pow (j k : ℕ) :
+    (fun n => n ^ j + n ^ k) =O ((· ^ max j k) : ℕ → ℕ) := by
+  apply IsBigO.of_bound 2
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  simp only [Real.norm_natCast]
+  have h1 : n ^ j ≤ n ^ max j k := Nat.pow_le_pow_right hn (Nat.le_max_left j k)
+  have h2 : n ^ k ≤ n ^ max j k := Nat.pow_le_pow_right hn (Nat.le_max_right j k)
+  have : n ^ j + n ^ k ≤ 2 * n ^ max j k := by omega
+  exact_mod_cast this
+
 end Complexity

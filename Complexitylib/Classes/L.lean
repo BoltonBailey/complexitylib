@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine
+import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
 import Complexitylib.Classes.Pairing
 import Complexitylib.Asymptotics
@@ -37,8 +38,7 @@ def NL : Set Language :=
 
 /-- **coNL** is the class of languages whose complements are in NL.
     By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
-def CoNL : Set Language :=
-  {L | Lᶜ ∈ NL}
+def CoNL : Set Language := complClass NL
 
 /-- **FL** is the class of functions computable by a deterministic log-space
     transducer: a DTM with `O(log n)` work tape space whose output tape head

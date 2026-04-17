@@ -203,19 +203,8 @@ theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
   obtain ⟨k, n_tapes, tm, f, hdec, hbig⟩ := Set.mem_iUnion.mp h
   refine Set.mem_iUnion.mpr ⟨k + 1, n_tapes, tm.complementTM, fun n => 2 * f n + 4,
     tm.complementTM_decidesInTime hdec, ?_⟩
-  -- (fun n => 2 * f n + 4) =O (· ^ (k + 1))
-  open Asymptotics Filter in
-  have hpow : (· ^ k) =O (· ^ (k + 1)) := by
-    apply IsBigO.of_bound 1
-    filter_upwards [Ioi_mem_atTop 0] with n hn
-    simp only [one_mul, Real.norm_natCast]
-    exact_mod_cast Nat.pow_le_pow_right hn (Nat.le_succ k)
-  open Asymptotics Filter in
-  exact BigO.add (BigO.const_mul_left 2 (hbig.trans hpow)) (by
-    apply IsBigO.of_bound 4
-    filter_upwards [Ioi_mem_atTop 0] with n hn
-    simp only [Real.norm_natCast]
-    exact_mod_cast le_mul_of_one_le_right (by omega) (Nat.one_le_pow _ _ hn))
+  have hpow : f =O (· ^ (k + 1)) := hbig.trans (BigO.pow_le_pow_succ k)
+  exact BigO.add (BigO.const_mul_left 2 hpow) (BigO.const_le_pow 4 (k + 1))
 
 /-- **DSPACE ⊆ NSPACE**: every language decidable by a DTM in space `O(S)` is also
     decidable by an NTM in space `O(S)`, via the `TM.toNTM` embedding. -/
@@ -232,4 +221,43 @@ theorem NSPACE_mono {S₁ S₂ : ℕ → ℕ} (h : S₁ =O S₂) : NSPACE S₁ �
 theorem L_sub_NL : L ⊆ NL := by
   intro L ⟨k, tm, f, htrans, hdec, hbig⟩
   exact ⟨k, tm.toNTM, f, tm.toNTM_isTransducer htrans, tm.toNTM_decidesInSpace hdec, hbig⟩
+
+/-- **ZPP ⊆ RP**: zero-error probabilistic ⊆ one-sided error. -/
+theorem ZPP_sub_RP : ZPP ⊆ RP := Set.inter_subset_left
+
+/-- **ZPP ⊆ coRP**. -/
+theorem ZPP_sub_CoRP : ZPP ⊆ CoRP := Set.inter_subset_right
+
+/-- **DTIME ⊆ NSPACE** (composition of `DTIME ⊆ DSPACE` and `DSPACE ⊆ NSPACE`). -/
+theorem DTIME_sub_NSPACE (T : ℕ → ℕ) : DTIME T ⊆ NSPACE T :=
+  (DTIME_sub_DSPACE T).trans (DSPACE_sub_NSPACE T)
+
+/-- **P ⊆ NPSPACE** via `P ⊆ PSPACE ⊆ NPSPACE`. -/
+theorem P_sub_NPSPACE : P ⊆ NPSPACE :=
+  Set.iUnion_mono fun _ => (DTIME_sub_DSPACE _).trans (DSPACE_sub_NSPACE _)
+
+/-- **EXP ⊆ NEXP** was proved above; this is the containment via `P ⊆ EXP`. -/
+theorem P_sub_NEXP : P ⊆ NEXP :=
+  P_sub_EXP.trans EXP_sub_NEXP
+
+/-- **P ⊆ PP** via `P ⊆ BPP ⊆ PP`. -/
+theorem P_sub_PP : P ⊆ PP := P_sub_BPP.trans BPP_sub_PP
+
+/-- **P is closed under union**: derived from `DTIME_union` and
+    polynomial-bound composition. -/
+theorem P_union {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) : L₁ ∪ L₂ ∈ P := by
+  obtain ⟨k₁, hdt₁⟩ := Set.mem_iUnion.mp h₁
+  obtain ⟨k₂, hdt₂⟩ := Set.mem_iUnion.mp h₂
+  have hunion := DTIME_union hdt₁ hdt₂
+  refine Set.mem_iUnion.mpr ⟨max k₁ k₂, DTIME_mono ?_ hunion⟩
+  exact BigO.add
+    (BigO.pow_le_pow_right (Nat.le_max_left k₁ k₂))
+    (BigO.pow_le_pow_right (Nat.le_max_right k₁ k₂))
+
+/-- **P is closed under intersection**: via `L₁ ∩ L₂ = (L₁ᶜ ∪ L₂ᶜ)ᶜ`. -/
+theorem P_inter {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) : L₁ ∩ L₂ ∈ P := by
+  have hcomp : (L₁ᶜ ∪ L₂ᶜ)ᶜ ∈ P := P_compl (P_union (P_compl h₁) (P_compl h₂))
+  have heq : (L₁ᶜ ∪ L₂ᶜ)ᶜ = L₁ ∩ L₂ := by
+    ext x; simp
+  rwa [heq] at hcomp
 
