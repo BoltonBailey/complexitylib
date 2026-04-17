@@ -109,4 +109,20 @@ theorem R_SAT_polyBalanced : PolyBalanced R_SAT := by
 theorem R_SAT_in_FNP_of_verifier (h : pairLang R_SAT ∈ P) : R_SAT ∈ FNP :=
   ⟨R_SAT_polyBalanced, h⟩
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Worked examples: end-to-end sanity check of the semantic layer
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- `[[x₀]]` is satisfiable. Checked by the `decide` tactic using
+    `CNF.decidableSatisfiable`. -/
+example : CNF.Satisfiable [[{sign := true, var := 0}]] := by decide
+
+/-- `[[x₀], [¬x₀]]` is unsatisfiable: no assignment can make both clauses true. -/
+example : ¬ CNF.Satisfiable [[{sign := true, var := 0}], [{sign := false, var := 0}]] := by
+  decide
+
+/-- `[[x₀, ¬x₁], [x₁]]` is satisfiable: `α = [true, true]` works. -/
+example : CNF.Satisfiable [[{sign := true, var := 0}, {sign := false, var := 1}],
+                           [{sign := true, var := 1}]] := by decide
+
 end SAT

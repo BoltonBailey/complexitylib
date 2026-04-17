@@ -1,4 +1,5 @@
 import Mathlib.Data.List.Basic
+import Mathlib.Data.Fintype.Pi
 import Mathlib.Tactic.Linarith
 
 /-!
@@ -245,5 +246,96 @@ theorem CNF.satisfiable_iff_short_witness (φ : CNF) :
       exact hα
   · rintro ⟨α, _, hα⟩
     exact ⟨α, hα⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Pointwise agreement and decidability of `Satisfiable`
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- If two assignments give the same value at every index (via `Assignment.get`),
+    they produce the same literal evaluation. -/
+theorem Lit.eval_eq_of_agree (α β : Assignment) (ℓ : Lit)
+    (h : Assignment.get α ℓ.var = Assignment.get β ℓ.var) :
+    Lit.eval α ℓ = Lit.eval β ℓ := by
+  simp [Lit.eval, h]
+
+/-- Pointwise agreement of `Assignment.get` implies equal `Clause.eval`. -/
+theorem Clause.eval_eq_of_agree (α β : Assignment) (c : Clause)
+    (h : ∀ i, Assignment.get α i = Assignment.get β i) :
+    Clause.eval α c = Clause.eval β c := by
+  induction c with
+  | nil => rfl
+  | cons ℓ ℓs ih =>
+    show ((ℓ :: ℓs).any (Lit.eval α)) = ((ℓ :: ℓs).any (Lit.eval β))
+    simp only [List.any_cons, Lit.eval_eq_of_agree α β ℓ (h ℓ.var)]
+    exact congrArg _ ih
+
+/-- Pointwise agreement of `Assignment.get` implies equal `CNF.eval`. -/
+theorem CNF.eval_eq_of_agree (α β : Assignment) (φ : CNF)
+    (h : ∀ i, Assignment.get α i = Assignment.get β i) :
+    CNF.eval α φ = CNF.eval β φ := by
+  induction φ with
+  | nil => rfl
+  | cons c cs ih =>
+    show ((c :: cs).all (Clause.eval α)) = ((c :: cs).all (Clause.eval β))
+    simp only [List.all_cons, Clause.eval_eq_of_agree α β c h]
+    exact congrArg _ ih
+
+/-- Appending `false`s doesn't change `Assignment.get`: out-of-range positions
+    default to `false` anyway. -/
+theorem Assignment.get_append_replicate_false (α : Assignment) (k i : Nat) :
+    Assignment.get (α ++ List.replicate k false) i = Assignment.get α i := by
+  simp only [Assignment.get]
+  by_cases hi : i < α.length
+  · rw [List.getElem?_append_left hi]
+  · push_neg at hi
+    rw [List.getElem?_eq_none hi]
+    by_cases hi' : i < α.length + k
+    · rw [List.getElem?_append_right hi]
+      have hrepl : (i - α.length) < (List.replicate k false : List Bool).length := by
+        simp; omega
+      rw [List.getElem?_eq_getElem hrepl]
+      simp [List.getElem_replicate]
+    · push_neg at hi'
+      rw [List.getElem?_eq_none (by simp; omega)]
+
+/-- Padding an assignment with `false`s doesn't change `CNF.eval`. -/
+theorem CNF.eval_append_replicate_false (α : Assignment) (k : Nat) (φ : CNF) :
+    CNF.eval (α ++ List.replicate k false) φ = CNF.eval α φ :=
+  CNF.eval_eq_of_agree _ _ _ (fun _ => Assignment.get_append_replicate_false α k _)
+
+/-- **Brute-force decidability.** Satisfiability is decidable by enumerating
+    all `2^(φ.maxVar + 1)` assignments of length `φ.maxVar + 1`. Not
+    poly-time, but establishes that the semantic layer is concretely
+    computable and enables `decide` on small instances. -/
+instance CNF.decidableSatisfiable (φ : CNF) : Decidable φ.Satisfiable := by
+  suffices h : φ.Satisfiable ↔
+      ∃ f : Fin (φ.maxVar + 1) → Bool, CNF.eval (List.ofFn f) φ = true from
+    decidable_of_iff _ h.symm
+  rw [CNF.satisfiable_iff_short_witness]
+  constructor
+  · rintro ⟨α, hlen, heval⟩
+    -- Pad α with `false`s up to length `maxVar + 1`, then identify with a Fin-indexed function.
+    let α' : Assignment := α ++ List.replicate (φ.maxVar + 1 - α.length) false
+    have hα'_len : α'.length = φ.maxVar + 1 := by
+      simp only [α', List.length_append, List.length_replicate]; omega
+    refine ⟨fun i => α'[i.val]'(by rw [hα'_len]; exact i.isLt), ?_⟩
+    rw [← CNF.eval_append_replicate_false α (φ.maxVar + 1 - α.length) φ] at heval
+    change CNF.eval α' φ = true at heval
+    -- List.ofFn (fun i => α'[i.val]) agrees pointwise with α' via Assignment.get,
+    -- so CNF.eval is the same.
+    rw [CNF.eval_eq_of_agree _ α' φ (fun i => ?_)]
+    · exact heval
+    · simp only [Assignment.get]
+      by_cases hi : i < φ.maxVar + 1
+      · have h1 : i < (List.ofFn (fun j : Fin (φ.maxVar + 1) =>
+            α'[j.val]'(by rw [hα'_len]; exact j.isLt))).length := by simp [hi]
+        have hi' : i < α'.length := by rw [hα'_len]; exact hi
+        rw [List.getElem?_eq_getElem h1, List.getElem_ofFn,
+            List.getElem?_eq_getElem hi']
+      · push_neg at hi
+        rw [List.getElem?_eq_none (by simp; omega),
+            List.getElem?_eq_none (by rw [hα'_len]; exact hi)]
+  · rintro ⟨f, hf⟩
+    exact ⟨List.ofFn f, by simp, hf⟩
 
 end SAT
