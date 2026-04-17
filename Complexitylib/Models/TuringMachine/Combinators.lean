@@ -900,4 +900,67 @@ def scannerTM {S : Type} [DecidableEq S] [Fintype S]
     | .done =>
       exact rightOfStart_allIdle iHead wHeads oHead
 
+-- ════════════════════════════════════════════════════════════════════════
+-- retargetInput: read virtual input from work tape k instead of input tape
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Given a DTM `M : TM k`, construct a DTM `retargetInput M : TM (k + 1)`
+    that behaves like `M` but reads its "input" from work tape `k` (the last
+    work tape) instead of the real input tape.
+
+    Tape layout:
+    - Real input tape: ignored (moved idly each step, never read).
+    - Work tapes `0..k-1`: mirror `M`'s work tapes.
+    - Work tape `k`: plays the role of `M`'s input tape (read-only, no
+      writes except a no-op `readBackWrite` that preserves cells).
+
+    When work tape `k` is initialized with `initTape (z.map Γ.ofBool)`, the
+    machine simulates `M` on input `z`.
+
+    Used in `witnessLang` NTM constructions where the verifier DTM's
+    "input" (e.g. `pair(x, y)`) is built on a work tape rather than
+    supplied on the real input tape. -/
+def retargetInput {k : ℕ} (M : TM k) : TM (k + 1) where
+  Q := M.Q
+  qstart := M.qstart
+  qhalt := M.qhalt
+  δ := fun q _iHead wHeads oHead =>
+    let virtualInput : Γ := wHeads ⟨k, by omega⟩
+    let innerWork : Fin k → Γ := fun i => wHeads ⟨i.val, by omega⟩
+    let (q', workWrites, outWrite, inDir, workDirs, outDir) :=
+      M.δ q virtualInput innerWork oHead
+    ( q',
+      fun i =>
+        if h : i.val < k then workWrites ⟨i.val, h⟩
+        else readBackWrite virtualInput,
+      outWrite,
+      idleDir _iHead,
+      fun i =>
+        if h : i.val < k then workDirs ⟨i.val, h⟩
+        else inDir,
+      outDir )
+  δ_right_of_start := by
+    intro q iHead wHeads oHead
+    have hδ := M.δ_right_of_start q (wHeads ⟨k, by omega⟩)
+      (fun i => wHeads ⟨i.val, by omega⟩) oHead
+    obtain ⟨hinp, hwork, hout⟩ := hδ
+    refine ⟨idleDir_right_of_start, ?_, hout⟩
+    intro i hwi
+    dsimp only []
+    split
+    · next hi =>
+      -- i.val < k: use M's work condition
+      exact hwork ⟨i.val, hi⟩ (by
+        change wHeads ⟨i.val, _⟩ = _
+        rwa [show wHeads ⟨i.val, by omega⟩ = wHeads i from by congr 1])
+    · next hi =>
+      -- i.val = k: use M's input condition
+      have hik : i.val = k := by
+        have := i.isLt
+        omega
+      have : wHeads ⟨k, by omega⟩ = Γ.start := by
+        rw [show (⟨k, by omega⟩ : Fin (k + 1)) = i from by ext; simp [hik]]
+        exact hwi
+      exact hinp this
+
 end TM
