@@ -487,6 +487,143 @@ private theorem pairBuild_copyY_cont_step {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, tape_move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
+/-- **rewindP1 continue step.** pIdx reads non-▷; move pIdx left one cell;
+    stay in `.rewindP1`. Input, yIdx, pIdx-cells unchanged. -/
+private theorem pairBuild_rewindP1_step_cont {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .rewindP1) (hpread_ns : (c.work pIdx).read ≠ Γ.start)
+    (hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hph : (c.work pIdx).head ≥ 1)
+    (hins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .rewindP1 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      (c'.work pIdx).head = (c.work pIdx).head - 1 ∧
+      (c'.work pIdx).cells = (c.work pIdx).cells := by
+  simp only [TM.step, hst, pairBuildTM, if_neg hpread_ns]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · exact tape_move_idleDir_stable c.input hih hins
+  · -- yIdx stable (yIdx ≠ pIdx picks else branch; readBackWrite + idle)
+    simp only [if_neg hne]
+    exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · -- pIdx head = head - 1
+    simp only [↓reduceIte]
+    simp [Tape.writeAndMove, Tape.write, Tape.move,
+          show (c.work pIdx).head ≠ 0 from by omega]
+  · -- pIdx cells unchanged (readBackWrite preserves at non-start read)
+    simp only [↓reduceIte]
+    rw [readBackWrite_toΓ_eq hpread_ns]
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+          show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
+
+/-- **rewindP1 base step.** pIdx reads ▷ (head=0); transition to
+    `.rewindP2` with pIdx advancing to head=1. All other tapes stable. -/
+private theorem pairBuild_rewindP1_step_base {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .rewindP1) (hpread : (c.work pIdx).read = Γ.start)
+    (hph0 : (c.work pIdx).head = 0)
+    (hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .rewindP2 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      (c'.work pIdx).head = 1 ∧
+      (c'.work pIdx).cells = (c.work pIdx).cells := by
+  simp only [TM.step, hst, pairBuildTM, if_pos hpread]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · exact tape_move_idleDir_stable c.input hih hins
+  · -- yIdx stable (yIdx ≠ pIdx picks else branch)
+    simp only [if_neg hne]
+    exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · -- pIdx head = 1
+    simp only [↓reduceIte]
+    simp [Tape.writeAndMove, Tape.write, Tape.move, hph0]
+  · -- pIdx cells unchanged (write at head=0 is no-op)
+    simp only [↓reduceIte]
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hph0]
+
+/-- **rewindP2 step.** Transition to `.done`; all tapes stable
+    (head ≥ 1 and cells ≥ 1 ≠ start). -/
+private theorem pairBuild_rewindP2_step {k : ℕ} (yIdx pIdx : Fin k)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .rewindP2)
+    (hih : c.input.head ≥ 1) (hyh : (c.work yIdx).head ≥ 1)
+    (hph : (c.work pIdx).head ≥ 1)
+    (hins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start)
+    (hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start)
+    (hpns : ∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .done ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      c'.work pIdx = c.work pIdx := by
+  simp only [TM.step, hst, pairBuildTM]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+  · exact tape_move_idleDir_stable c.input hih hins
+  · exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
+  · exact tape_writeAndMove_stable (c.work pIdx) hph hpns
+
+/-- **rewindP1 loop.** From `.rewindP1` with pIdx at head=`p`, in `p+1`
+    steps reach `.rewindP2` with pIdx at head=1 and all pIdx/input/yIdx
+    cells preserved. -/
+private theorem pairBuild_rewindP1_loop {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx) :
+    ∀ (p : ℕ) (c : Cfg k (pairBuildTM yIdx pIdx).Q),
+      c.state = .rewindP1 →
+      (c.work pIdx).head = p →
+      (c.work pIdx).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) →
+      c.input.head ≥ 1 → (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
+      (c.work yIdx).head ≥ 1 →
+      (∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) →
+      ∃ c',
+        (pairBuildTM yIdx pIdx).reachesIn (p + 1) c c' ∧
+        c'.state = .rewindP2 ∧
+        c'.input = c.input ∧
+        c'.work yIdx = c.work yIdx ∧
+        (c'.work pIdx).head = 1 ∧
+        (c'.work pIdx).cells = (c.work pIdx).cells := by
+  intro p
+  induction p with
+  | zero =>
+    intro c hst hhead hcell0 _ hih hins hyh hyns
+    have hpread : (c.work pIdx).read = Γ.start := by
+      simp [Tape.read, hhead, hcell0]
+    obtain ⟨c', hstep, hst', hinp, hyw, hph, hpcells⟩ :=
+      pairBuild_rewindP1_step_base yIdx pIdx hne c hst hpread hhead hih hyh hins hyns
+    exact ⟨c', .step hstep .zero, hst', hinp, hyw, hph, hpcells⟩
+  | succ p ih =>
+    intro c hst hhead hcell0 hnostart hih hins hyh hyns
+    have hph_ge : (c.work pIdx).head ≥ 1 := by omega
+    have hpread_ns : (c.work pIdx).read ≠ Γ.start := by
+      simp only [Tape.read, hhead]; exact hnostart (p + 1) (by omega)
+    obtain ⟨c₁, hstep, hst₁, hinp₁, hyw₁, hph₁, hpcells₁⟩ :=
+      pairBuild_rewindP1_step_cont yIdx pIdx hne c hst hpread_ns hih hyh hph_ge hins hyns
+    have hhead₁ : (c₁.work pIdx).head = p := by rw [hph₁, hhead]; omega
+    have hcell0₁ : (c₁.work pIdx).cells 0 = Γ.start := by rw [hpcells₁]; exact hcell0
+    have hnostart₁ : ∀ j, j ≥ 1 → (c₁.work pIdx).cells j ≠ Γ.start := by
+      intro j hj; rw [hpcells₁]; exact hnostart j hj
+    have hih₁ : c₁.input.head ≥ 1 := hinp₁ ▸ hih
+    have hins₁ : ∀ j, j ≥ 1 → c₁.input.cells j ≠ Γ.start := by
+      intro j hj; rw [hinp₁]; exact hins j hj
+    have hyh₁ : (c₁.work yIdx).head ≥ 1 := by rw [hyw₁]; exact hyh
+    have hyns₁ : ∀ j, j ≥ 1 → (c₁.work yIdx).cells j ≠ Γ.start := by
+      intro j hj; rw [hyw₁]; exact hyns j hj
+    obtain ⟨c', hreach, hst', hinp', hyw', hph', hpcells'⟩ :=
+      ih c₁ hst₁ hhead₁ hcell0₁ hnostart₁ hih₁ hins₁ hyh₁ hyns₁
+    exact ⟨c', .step hstep hreach, hst',
+      hinp'.trans hinp₁, hyw'.trans hyw₁, hph',
+      by rw [hpcells', hpcells₁]⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Correctness specification (proof deferred)
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 -- ════════════════════════════════════════════════════════════════════════
