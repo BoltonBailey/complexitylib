@@ -1,0 +1,263 @@
+import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Hoare.Defs
+import Complexitylib.Classes.Pairing
+
+/-!
+# `pairBuildTM`: construct `pair x y` on a work tape
+
+The DTM `pairBuildTM k yIdx pIdx` assumes:
+- `x` lives on the **input tape** (standard layout: head 0 on ▷, `x` in
+  cells 1..|x|, blanks beyond),
+- `y` lives on **work tape `yIdx`** (same layout: head 0 on ▷, `y` in
+  cells 1..|y|, blanks beyond),
+- **work tape `pIdx`** is the empty `initTape []`.
+
+After running, work tape `pIdx` carries `pair x y` — the doubled-bits
+encoding of `x` followed by the `[false, true]` separator followed by
+`y` verbatim — with head positioned at cell `1`, matching the convention
+used by the other `rewindWorkTM`-based subroutines.
+
+## Phase structure
+
+```
+init        advance every ▷-reading tape past ▷ (one step)
+copyX1      if input blank → writeSep1; else write bit to pIdx, advance pIdx
+copyX2      write the same bit to pIdx, advance input *and* pIdx
+writeSep1   write `false` to pIdx, advance pIdx
+writeSep2   write `true`  to pIdx, advance pIdx
+copyY       if y blank → rewindP1; else write y-bit to pIdx, advance y+pIdx
+rewindP1    if pIdx reads ▷ → rewindP2; else move pIdx left
+rewindP2    one extra right step, transition to done (leaves pIdx head=1)
+done        halt
+```
+
+Total running time: linear in `|x| + |y|` (see `pairBuildTM_hoareTime`).
+
+## Status
+
+This file contains the **skeleton**: the machine's transition function and
+the `δ_right_of_start` proof are fully worked out, while the correctness
+theorem `pairBuildTM_hoareTime` is stated but sorry-gated. Discharging
+that sorry is the remaining piece of A1.
+-/
+
+namespace TM
+
+-- ════════════════════════════════════════════════════════════════════════
+-- State type
+-- ════════════════════════════════════════════════════════════════════════
+
+inductive PairBuildPhase where
+  | init
+  | copyX1 | copyX2
+  | writeSep1 | writeSep2
+  | copyY
+  | rewindP1 | rewindP2
+  | done
+  deriving DecidableEq
+
+instance : Fintype PairBuildPhase where
+  elems := {.init, .copyX1, .copyX2, .writeSep1, .writeSep2,
+            .copyY, .rewindP1, .rewindP2, .done}
+  complete := fun x => by cases x <;> simp
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Definition
+-- ════════════════════════════════════════════════════════════════════════
+
+variable {k : ℕ}
+
+/-- Build `pair x y` on work tape `pIdx`, reading `x` from the input tape
+    and `y` from work tape `yIdx`. Requires `yIdx ≠ pIdx` for the
+    construction to make sense; the definition itself is valid for any
+    indices. -/
+def pairBuildTM (yIdx pIdx : Fin k) : TM k where
+  Q := PairBuildPhase
+  qstart := .init
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    -- Step 0: advance every tape currently reading ▷ past it.
+    -- Input, pIdx, yIdx, and output all start at ▷; `idleDir` sends them right.
+    | .init =>
+      (.copyX1,
+       fun _ => .blank, .blank,
+       idleDir iHead,
+       fun i => idleDir (wHeads i),
+       idleDir oHead)
+    -- copyX1: "new iteration" state. Decides continue-vs-switch based on input.
+    | .copyX1 =>
+      if iHead = Γ.blank then
+        -- End of x: transition to separator writing.
+        (.writeSep1, fun _ => .blank, .blank,
+         idleDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
+      else
+        -- Write the current input bit to pIdx, advance pIdx only.
+        (.copyX2,
+         fun i => if i = pIdx then readBackWrite iHead else .blank,
+         .blank,
+         idleDir iHead,
+         fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
+         idleDir oHead)
+    -- copyX2: write the *second* copy of the current bit to pIdx; advance input+pIdx.
+    | .copyX2 =>
+      (.copyX1,
+       fun i => if i = pIdx then readBackWrite iHead else .blank,
+       .blank,
+       Dir3.right,                                           -- input advances
+       fun i => if i = pIdx then Dir3.right
+                else idleDir (wHeads i),
+       idleDir oHead)
+    -- writeSep1: write the `false` (= Γw.zero) bit of the separator.
+    | .writeSep1 =>
+      (.writeSep2,
+       fun i => if i = pIdx then Γw.zero else .blank,
+       .blank,
+       idleDir iHead,
+       fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
+       idleDir oHead)
+    -- writeSep2: write the `true` (= Γw.one) bit of the separator.
+    | .writeSep2 =>
+      (.copyY,
+       fun i => if i = pIdx then Γw.one else .blank,
+       .blank,
+       idleDir iHead,
+       fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
+       idleDir oHead)
+    -- copyY: copy y-bits from work[yIdx] to pIdx until blank.
+    | .copyY =>
+      if wHeads yIdx = Γ.blank then
+        (.rewindP1, fun _ => .blank, .blank,
+         idleDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
+      else
+        (.copyY,
+         fun i => if i = pIdx then readBackWrite (wHeads yIdx) else .blank,
+         .blank,
+         idleDir iHead,
+         fun i => if i = pIdx then Dir3.right
+                  else if i = yIdx then Dir3.right
+                  else idleDir (wHeads i),
+         idleDir oHead)
+    -- rewindP1: move pIdx left until reading ▷.
+    | .rewindP1 =>
+      if wHeads pIdx = Γ.start then
+        (.rewindP2,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead,
+         idleDir iHead,
+         fun i => if i = pIdx then Dir3.right else idleDir (wHeads i),
+         idleDir oHead)
+      else
+        (.rewindP1,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead,
+         idleDir iHead,
+         fun i => if i = pIdx then Dir3.left else idleDir (wHeads i),
+         idleDir oHead)
+    -- rewindP2: one more step, go to done. Leaves pIdx head at 1.
+    | .rewindP2 =>
+      allIdle .done iHead wHeads oHead
+    -- done: halt.
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .init =>
+      refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+      intro i hwi; exact idleDir_right_of_start hwi
+    | .copyX1 =>
+      dsimp only []; split
+      · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+               idleDir_right_of_start⟩
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; simp only []; split
+        · rfl
+        · exact idleDir_right_of_start hwi
+    | .copyX2 =>
+      refine ⟨fun _ => rfl, ?_, idleDir_right_of_start⟩
+      intro i hwi; simp only []; split
+      · rfl
+      · exact idleDir_right_of_start hwi
+    | .writeSep1 =>
+      refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+      intro i hwi; simp only []; split
+      · rfl
+      · exact idleDir_right_of_start hwi
+    | .writeSep2 =>
+      refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+      intro i hwi; simp only []; split
+      · rfl
+      · exact idleDir_right_of_start hwi
+    | .copyY =>
+      dsimp only []; split
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; exact idleDir_right_of_start hwi
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; simp only []
+        split
+        · rfl
+        · split
+          · rfl
+          · exact idleDir_right_of_start hwi
+    | .rewindP1 =>
+      dsimp only []; split
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; simp only []; split
+        · rfl
+        · exact idleDir_right_of_start hwi
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; simp only []; split
+        · rename_i heq; subst heq; contradiction
+        · exact idleDir_right_of_start hwi
+    | .rewindP2 => exact rightOfStart_allIdle iHead wHeads oHead
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Correctness specification (proof deferred)
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Running-time bound: `pairBuildTM` finishes in `4·|x| + |y| + 8` steps.
+
+    Breakdown:
+    - `init`: 1 step.
+    - `copyX1`+`copyX2`: 2·|x| + 1 steps (one final `copyX1` detects blank).
+    - `writeSep1`+`writeSep2`: 2 steps.
+    - `copyY`: |y| + 1 steps.
+    - `rewindP1`: one step per cell left from `2|x|+2+|y|+1` to `0`,
+      so `2|x|+|y|+3` steps; plus the `rewindP2` step; plus the
+      `done` transition step. -/
+def pairBuildTime (xLen yLen : ℕ) : ℕ :=
+  4 * xLen + 2 * yLen + 10
+
+/-- **`pairBuildTM` correctness.** Given `x` on the input tape and `y` on
+    work tape `yIdx` (with `yIdx ≠ pIdx`), `pairBuildTM yIdx pIdx` halts
+    leaving work tape `pIdx` carrying `pair x y` (in the cells indexed
+    `1..|pair x y|`) with head at cell `1`, within `pairBuildTime` steps.
+
+    This statement is in HoareTime form so it composes with the rest of
+    the NTM assembly in A3.
+
+    **Status**: sorry-gated. Discharging this sorry is the remaining
+    mechanical proof obligation for A1. -/
+theorem pairBuildTM_hoareTime
+    {k : ℕ} (yIdx pIdx : Fin k) (_hne : yIdx ≠ pIdx)
+    (x y : List Bool) :
+    (pairBuildTM yIdx pIdx).HoareTime
+      (fun inp work _ =>
+        inp = _root_.initTape (x.map Γ.ofBool) ∧
+        work yIdx = _root_.initTape (y.map Γ.ofBool) ∧
+        work pIdx = _root_.initTape [])
+      (fun _ work _ =>
+        (work pIdx).head = 1 ∧
+        (work pIdx).cells 0 = Γ.start ∧
+        (∀ i : ℕ, (h : i < (pair x y).length) →
+          (work pIdx).cells (i + 1) = Γ.ofBool ((pair x y)[i]'h)) ∧
+        (work pIdx).cells ((pair x y).length + 1) = Γ.blank)
+      (pairBuildTime x.length y.length) := by
+  sorry
+
+end TM
