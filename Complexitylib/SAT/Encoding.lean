@@ -89,6 +89,18 @@ def encodeRaw (ℓ : Lit) : List Bool := ℓ.sign :: Unary.encode ℓ.var
 theorem var_lt_encodeRaw_length (ℓ : Lit) : ℓ.var < ℓ.encodeRaw.length := by
   simp
 
+/-- The raw literal encoding is injective: sign and var are recoverable. -/
+theorem encodeRaw_injective : Function.Injective Lit.encodeRaw := by
+  rintro ⟨s₁, v₁⟩ ⟨s₂, v₂⟩ h
+  have hlen : v₁ + 1 = v₂ + 1 := by
+    have := congrArg List.length h
+    simpa using this
+  have hvar : v₁ = v₂ := by omega
+  subst hvar
+  have hsign : s₁ = s₂ := by simpa [encodeRaw] using h
+  subst hsign
+  rfl
+
 end Lit
 
 -- ════════════════════════════════════════════════════════════════════════
