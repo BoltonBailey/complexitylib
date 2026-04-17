@@ -1,6 +1,7 @@
 import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Encoding
 import Complexitylib.Classes.Pairing
+import Complexitylib.Classes.FNP
 
 /-!
 # SAT: Language and Witness Relation
@@ -85,5 +86,27 @@ theorem R_SAT_polyBalanced : PolyBalanced R_SAT := by
   obtain ⟨_, _, hlen, _⟩ := hR
   simp only [Polynomial.eval_add, Polynomial.eval_X, Polynomial.eval_C]
   exact hlen
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Route to SAT ∈ NP
+-- ════════════════════════════════════════════════════════════════════════
+--
+-- With `R_SAT_polyBalanced` in hand, SAT ∈ NP reduces to the single
+-- remaining obligation: the verifier's pair language `pairLang R_SAT`
+-- is in P. That is, there is a poly-time deterministic TM that, given
+-- `pair(z, α)`, decides whether `R_SAT z α` holds — equivalently, that
+-- parses `z` as a CNF and evaluates it at `α`.
+--
+-- Once that is proved, `R_SAT ∈ FNP` by definition; combined with a
+-- generic NP-witness theorem (`L ∈ NP ↔ ∃ R ∈ FNP, L = {z | ∃ y, R z y}`),
+-- this gives `L_SAT ∈ NP`. See `Complexitylib/SAT/Verifier.lean`
+-- (forthcoming) for the TM construction.
+
+/-- **SAT is in FNP modulo the verifier.** If the verifier's pair language
+    is in P, then `R_SAT` is an FNP relation — and hence a candidate NP
+    witness relation for `L_SAT`. The only nontrivial content is
+    `R_SAT_polyBalanced`. -/
+theorem R_SAT_in_FNP_of_verifier (h : pairLang R_SAT ∈ P) : R_SAT ∈ FNP :=
+  ⟨R_SAT_polyBalanced, h⟩
 
 end SAT
