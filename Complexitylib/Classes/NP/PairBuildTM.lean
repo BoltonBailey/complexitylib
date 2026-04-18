@@ -1433,8 +1433,159 @@ theorem pairBuildTM_hoareTime
       hc8_ins hc8_yns hc8_pns
   -- c9 invariants: head = 1 on pIdx, state = .done, tapes same as c8.
   have hc9_ph_val : (c9.work pIdx).head = 1 := by rw [hc9_pw]; exact hc8_ph
-  have hc9_pc_eq : (c9.work pIdx).cells = (c7.work pIdx).cells := by
-    rw [hc9_pw]; exact hc8_pc_eq
-  sorry
+  have hc9_pc_via_c6 : (c9.work pIdx).cells = (c6.work pIdx).cells := by
+    rw [hc9_pw, hc8_pc_eq, hc7_pc]
+  -- ═══════════════════════════════════════════════════════════════════
+  -- Assemble the reachesIn chain.
+  -- ═══════════════════════════════════════════════════════════════════
+  have hreach_01 : (pairBuildTM yIdx pIdx).reachesIn 1 c0 c1 := .step hstep_init .zero
+  have hreach_02 : (pairBuildTM yIdx pIdx).reachesIn (1 + 2 * x.length) c0 c2 :=
+    reachesIn_trans _ hreach_01 hreach_copyX
+  have hreach_03 : (pairBuildTM yIdx pIdx).reachesIn (1 + 2 * x.length + 1) c0 c3 :=
+    reachesIn_trans _ hreach_02 (.step hstep3 .zero)
+  have hreach_04 : (pairBuildTM yIdx pIdx).reachesIn (1 + 2 * x.length + 1 + 1) c0 c4 :=
+    reachesIn_trans _ hreach_03 (.step hstep4 .zero)
+  have hreach_05 : (pairBuildTM yIdx pIdx).reachesIn (1 + 2 * x.length + 1 + 1 + 1) c0 c5 :=
+    reachesIn_trans _ hreach_04 (.step hstep5 .zero)
+  have hreach_06 : (pairBuildTM yIdx pIdx).reachesIn
+      (1 + 2 * x.length + 1 + 1 + 1 + y.length) c0 c6 :=
+    reachesIn_trans _ hreach_05 hreach_copyY
+  have hreach_07 : (pairBuildTM yIdx pIdx).reachesIn
+      (1 + 2 * x.length + 1 + 1 + 1 + y.length + 1) c0 c7 :=
+    reachesIn_trans _ hreach_06 (.step hstep7 .zero)
+  have hreach_08 : (pairBuildTM yIdx pIdx).reachesIn
+      (1 + 2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1))
+      c0 c8 := reachesIn_trans _ hreach_07 hreach_rewind
+  have hreach_09 : (pairBuildTM yIdx pIdx).reachesIn
+      (1 + 2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1) + 1)
+      c0 c9 := reachesIn_trans _ hreach_08 (.step hstep9 .zero)
+  have hbound :
+      1 + 2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1) + 1
+        ≤ pairBuildTime x.length y.length := by
+    show _ ≤ 4 * x.length + 2 * y.length + 10; omega
+  have hhalted : (pairBuildTM yIdx pIdx).halted c9 := hc9_state
+  refine ⟨c9, _, hbound, hreach_09, hhalted, hc9_ph_val, ?_, ?_, ?_⟩
+  · -- (work pIdx).cells 0 = Γ.start
+    rw [hc9_pc_via_c6]; exact hc6_pc0
+  · -- (work pIdx).cells (i + 1) = Γ.ofBool (pair x y)[i] for i < |pair x y|
+    intro i hi
+    rw [pair_length] at hi
+    -- Three case ranges: [0, 2|x|), {2|x|}, {2|x|+1}, [2|x|+2, 2|x|+2+|y|).
+    by_cases hx : i < 2 * x.length
+    · -- Case 1: i < 2|x|. Use hc2_data via hc6_below chain.
+      have hdecomp : i = 2 * (i / 2) ∨ i = 2 * (i / 2) + 1 := by omega
+      have hidiv : i / 2 < x.length := by omega
+      have hpair : (pair x y)[i]'(by rw [pair_length]; omega) = x[i / 2]'hidiv := by
+        rcases hdecomp with hi_even | hi_odd
+        · exact (getElem_congr_idx hi_even).trans
+            (pair_getElem_doubled_even x y (i / 2) hidiv)
+        · exact (getElem_congr_idx hi_odd).trans
+            (pair_getElem_doubled_odd x y (i / 2) hidiv)
+      -- i + 1 < c5.pIdx.head = 3 + 2|x|, so hc6_below applies.
+      have hi_c5 : i + 1 < 3 + 2 * x.length := by omega
+      have hc6_at : (c6.work pIdx).cells (i + 1) = (c5.work pIdx).cells (i + 1) := by
+        have := hc6_below (i + 1) (by rw [hc5_ph_val]; exact hi_c5)
+        exact this
+      -- i + 1 ≠ 2 + 2|x| and ≠ 1 + 2|x|, so c5 → c4 → c3 chain stable.
+      have hc5_at : (c5.work pIdx).cells (i + 1) = (c4.work pIdx).cells (i + 1) :=
+        hc5_pc_other (i + 1) (by omega)
+      -- Further decompose: i+1 = 1+2|x| iff i = 2|x|. But we have i < 2|x|, so ≠.
+      have hi_ne_ws1 : i + 1 ≠ 1 + 2 * x.length := by omega
+      have hc4_at : (c4.work pIdx).cells (i + 1) = (c3.work pIdx).cells (i + 1) :=
+        hc4_pc_other (i + 1) hi_ne_ws1
+      -- c3.pc = c2.pc, and use hc2_data.
+      rw [hc9_pc_via_c6, hc6_at, hc5_at, hc4_at, hc3_pw_cells]
+      -- Now goal: c2.cells[i+1] = Γ.ofBool (pair x y)[i]
+      rw [hpair]
+      -- Use hc2_data on i/2.
+      obtain ⟨heven, hodd⟩ := hc2_data (i / 2) hidiv
+      rcases hdecomp with hi_even | hi_odd
+      · -- i = 2 * (i/2): cell at i+1 = c1.pIdx.head + 2*(i/2) + 1? No wait.
+        -- c1.pIdx.head + 2*(i/2) = 1 + 2*(i/2) = i + 1 (since i = 2*(i/2)).
+        have hheq : (c1.work pIdx).head + 2 * (i / 2) = i + 1 := by rw [hc1_ph]; omega
+        rw [← hheq, heven]
+        -- Now: c1.input.cells (c1.input.head + i/2) = Γ.ofBool x[i/2]
+        rw [hc1_ic, hc1_ih]
+        show c0.input.cells (1 + (i / 2)) = Γ.ofBool (x[i / 2]'hidiv)
+        show inp.cells _ = _
+        rw [hinp, show 1 + (i / 2) = (i / 2) + 1 from by omega]
+        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+      · -- i = 2*(i/2) + 1: cell at i+1 = c1.pIdx.head + 2*(i/2) + 1 + 1.
+        -- c1.pIdx.head + 2*(i/2) + 1 = 1 + 2*(i/2) + 1 = i + 1.
+        have hheq : (c1.work pIdx).head + 2 * (i / 2) + 1 = i + 1 := by rw [hc1_ph]; omega
+        rw [← hheq, hodd]
+        rw [hc1_ic, hc1_ih]
+        show c0.input.cells (1 + (i / 2)) = Γ.ofBool (x[i / 2]'hidiv)
+        show inp.cells _ = _
+        rw [hinp, show 1 + (i / 2) = (i / 2) + 1 from by omega]
+        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+    · -- i ≥ 2|x|. Two subcases: i = 2|x|, i = 2|x|+1, or i ≥ 2|x|+2.
+      push_neg at hx
+      by_cases hx2 : i = 2 * x.length
+      · -- Case 2: i = 2|x|. pair[2|x|] = false = Γ.ofBool false.
+        subst hx2
+        have hpair : (pair x y)[2 * x.length]'(by rw [pair_length]; omega) = false :=
+          pair_getElem_sep0 x y
+        rw [hpair]
+        -- cells at 2|x|+1 via c5 → c4 at position 1+2|x|.
+        rw [hc9_pc_via_c6]
+        have hi_c5 : 2 * x.length + 1 < 3 + 2 * x.length := by omega
+        rw [hc6_below (2 * x.length + 1) (by rw [hc5_ph_val]; exact hi_c5)]
+        rw [hc5_pc_other (2 * x.length + 1) (by omega)]
+        -- c4.cells[2|x|+1] = c4.cells[1+2|x|] = Γ.zero
+        have : 2 * x.length + 1 = 1 + 2 * x.length := by omega
+        rw [this, hc4_pc_zero]
+        rfl
+      · by_cases hx3 : i = 2 * x.length + 1
+        · -- Case 3: i = 2|x| + 1. pair[2|x|+1] = true.
+          subst hx3
+          have hpair : (pair x y)[2 * x.length + 1]'(by rw [pair_length]; omega) = true :=
+            pair_getElem_sep1 x y
+          rw [hpair]
+          rw [hc9_pc_via_c6]
+          have hi_c5 : 2 * x.length + 1 + 1 < 3 + 2 * x.length := by omega
+          rw [hc6_below (2 * x.length + 1 + 1) (by rw [hc5_ph_val]; exact hi_c5)]
+          -- c5.cells[2|x|+2] = Γ.one
+          have : 2 * x.length + 1 + 1 = 2 + 2 * x.length := by omega
+          rw [this, hc5_pc_one]
+          rfl
+        · -- Case 4: i ≥ 2|x| + 2. Use hc6_data for y-region.
+          have hi_lo : i ≥ 2 * x.length + 2 := by omega
+          -- Let j := i - 2|x| - 2, so i = 2|x| + 2 + j, with j < |y|.
+          set j := i - 2 * x.length - 2 with hj_def
+          have hi_eq : i = 2 * x.length + 2 + j := by omega
+          have hj_lt : j < y.length := by omega
+          have hpair : (pair x y)[i]'(by rw [pair_length]; omega) = y[j]'hj_lt := by
+            exact (getElem_congr_idx hi_eq).trans (pair_getElem_y x y j hj_lt)
+          rw [hpair]
+          -- cells at i+1 = c5.pIdx.head + j = 3+2|x|+j. Use hc6_data.
+          rw [hc9_pc_via_c6]
+          have hheq : (c5.work pIdx).head + j = i + 1 := by rw [hc5_ph_val]; omega
+          rw [← hheq]
+          rw [hc6_data j hj_lt]
+          -- Now: c5.yIdx.cells[c5.yIdx.head + j] = Γ.ofBool y[j]
+          rw [hc5_yw_cells_eq, hc5_yh_val]
+          show (work yIdx).cells (1 + j) = Γ.ofBool (y[j]'hj_lt)
+          rw [hyw, show 1 + j = j + 1 from by omega]
+          exact initTape_ofBool_cells_lt y j hj_lt
+  · -- (work pIdx).cells (|pair x y| + 1) = Γ.blank
+    rw [pair_length, hc9_pc_via_c6]
+    -- Position: 2|x| + 2 + |y| + 1.
+    -- ≥ c5.pIdx.head + |y| = 3+2|x|+|y|: use hc6_above.
+    have hi_above : 2 * x.length + 2 + y.length + 1 ≥ (c5.work pIdx).head + y.length := by
+      rw [hc5_ph_val]; omega
+    rw [hc6_above _ hi_above]
+    -- c5.cells[2|x|+|y|+3]: ≠ 2+2|x|, so hc5_pc_other applies.
+    rw [hc5_pc_other _ (by omega)]
+    -- c4.cells[2|x|+|y|+3]: ≠ 1+2|x|, so hc4_pc_other applies.
+    rw [hc4_pc_other _ (by omega)]
+    -- c3.cells = c2.cells. Position ≥ 1+2|x| = c1.pIdx.head + 2|x|. Use hc2_above.
+    rw [hc3_pw_cells]
+    have hi_c2 : 2 * x.length + 2 + y.length + 1 ≥ (c1.work pIdx).head + 2 * x.length := by
+      rw [hc1_ph]; omega
+    rw [hc2_above _ hi_c2]
+    -- c1.cells = c0.cells. Initial tape is initTape [], cells at j ≥ 1 = blank.
+    rw [hc1_pc, hc0_pw_cells]
+    rw [if_neg (by omega : (2 * x.length + 2 + y.length + 1 : ℕ) ≠ 0)]
 
 end TM
