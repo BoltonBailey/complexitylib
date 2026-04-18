@@ -922,7 +922,89 @@ private theorem pairBuild_copyY_loop {k : ℕ} (yIdx pIdx : Fin k)
         rw [heq_p, h_d, hyc1, heq_y]
 
 -- ════════════════════════════════════════════════════════════════════════
--- Correctness specification (proof deferred)
+-- Indexing lemmas for `pair x y`
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Helper: `pair (b :: xs) y = b :: b :: pair xs y`. -/
+private theorem pair_build_cons_eq (b : Bool) (xs y : List Bool) :
+    pair (b :: xs) y = b :: b :: pair xs y := by
+  simp [pair, List.append_assoc]
+
+/-- Shift lemma: accessing `pair (b :: xs) y` at index `k+2` is the same as
+    accessing `pair xs y` at index `k`. -/
+private theorem pair_getElem_cons_shift (b : Bool) (xs y : List Bool) (k : ℕ)
+    (hk : k < (pair xs y).length) :
+    (pair (b :: xs) y)[k + 2]'(by
+      rw [pair_build_cons_eq, List.length_cons, List.length_cons]; omega) =
+      (pair xs y)[k]'hk := by
+  rw [List.getElem_of_eq (pair_build_cons_eq b xs y)]
+  rfl
+
+/-- In `pair x y`, the cell at even position `2*j` (j < |x|) equals `x[j]`. -/
+private theorem pair_getElem_doubled_even (x y : List Bool) (j : ℕ)
+    (hj : j < x.length) :
+    (pair x y)[2 * j]'(by rw [pair_length]; omega) = x[j]'hj := by
+  induction x generalizing j with
+  | nil => simp at hj
+  | cons b xs ih =>
+    match j with
+    | 0 =>
+      rw [List.getElem_of_eq (pair_build_cons_eq b xs y)]; rfl
+    | j + 1 =>
+      have hj' : j < xs.length := by rw [List.length_cons] at hj; omega
+      have hbound : 2 * j < (pair xs y).length := by rw [pair_length]; omega
+      have h1 : (pair (b :: xs) y)[2 * (j + 1)]'(by rw [pair_length]; simp; omega)
+                = (pair xs y)[2 * j]'hbound := by
+        show (pair (b :: xs) y)[2 * j + 2]'_ = _
+        exact pair_getElem_cons_shift b xs y (2 * j) hbound
+      rw [h1, ih j hj']
+      rfl
+
+/-- In `pair x y`, the cell at odd position `2*j + 1` (j < |x|) also equals `x[j]`. -/
+private theorem pair_getElem_doubled_odd (x y : List Bool) (j : ℕ)
+    (hj : j < x.length) :
+    (pair x y)[2 * j + 1]'(by rw [pair_length]; omega) = x[j]'hj := by
+  induction x generalizing j with
+  | nil => simp at hj
+  | cons b xs ih =>
+    match j with
+    | 0 =>
+      rw [List.getElem_of_eq (pair_build_cons_eq b xs y)]; rfl
+    | j + 1 =>
+      have hj' : j < xs.length := by rw [List.length_cons] at hj; omega
+      have hbound : 2 * j + 1 < (pair xs y).length := by rw [pair_length]; omega
+      have h1 : (pair (b :: xs) y)[2 * (j + 1) + 1]'(by rw [pair_length]; simp; omega)
+                = (pair xs y)[2 * j + 1]'hbound := by
+        show (pair (b :: xs) y)[(2 * j + 1) + 2]'_ = _
+        exact pair_getElem_cons_shift b xs y (2 * j + 1) hbound
+      rw [h1, ih j hj']
+      rfl
+
+/-- In `pair x y`, the cell at position `2 * |x|` is the first separator bit `false`. -/
+private theorem pair_getElem_sep0 (x y : List Bool) :
+    (pair x y)[2 * x.length]'(by rw [pair_length]; omega) = false := by
+  induction x with
+  | nil => rfl
+  | cons b xs ih =>
+    have hbound : 2 * xs.length < (pair xs y).length := by rw [pair_length]; omega
+    have h1 : (pair (b :: xs) y)[2 * (b :: xs).length]'(by rw [pair_length]; omega)
+              = (pair xs y)[2 * xs.length]'hbound := by
+      show (pair (b :: xs) y)[2 * xs.length + 2]'_ = _
+      exact pair_getElem_cons_shift b xs y (2 * xs.length) hbound
+    rw [h1, ih]
+
+/-- In `pair x y`, the cell at position `2 * |x| + 1` is the second separator bit `true`. -/
+private theorem pair_getElem_sep1 (x y : List Bool) :
+    (pair x y)[2 * x.length + 1]'(by rw [pair_length]; omega) = true := by
+  induction x with
+  | nil => rfl
+  | cons b xs ih =>
+    have hbound : 2 * xs.length + 1 < (pair xs y).length := by rw [pair_length]; omega
+    have h1 : (pair (b :: xs) y)[2 * (b :: xs).length + 1]'(by rw [pair_length]; omega)
+              = (pair xs y)[2 * xs.length + 1]'hbound := by
+      show (pair (b :: xs) y)[2 * xs.length + 1 + 2]'_ = _
+      exact pair_getElem_cons_shift b xs y (2 * xs.length + 1) hbound
+    rw [h1, ih]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
