@@ -1007,6 +1007,33 @@ private theorem pair_getElem_sep1 (x y : List Bool) :
     rw [h1, ih]
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Small alphabet / initTape helpers
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- `Γ.ofBool b` is never the start symbol `▷`. -/
+private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
+  cases b <;> simp [Γ.ofBool]
+
+/-- `Γ.ofBool b` is never the blank symbol `□`. -/
+private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
+  cases b <;> simp [Γ.ofBool]
+
+/-- Every cell of `initTape (l.map Γ.ofBool)` at position `≥ 1` differs from
+    `Γ.start`: the cell is either `Γ.blank` (beyond `l`) or `Γ.ofBool _`. -/
+private theorem initTape_ofBool_cells_ne_start (l : List Bool) (i : ℕ) (hi : i ≥ 1) :
+    (_root_.initTape (l.map Γ.ofBool)).cells i ≠ Γ.start := by
+  show (if i = 0 then _ else _) ≠ _
+  rw [if_neg (by omega)]
+  cases hget : (l.map Γ.ofBool)[i - 1]? with
+  | none => simp
+  | some a =>
+    simp
+    have hmem : a ∈ l.map Γ.ofBool := List.mem_of_getElem? hget
+    rw [List.mem_map] at hmem
+    obtain ⟨b, _, hb⟩ := hmem
+    subst hb; exact ofBool_ne_start b
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 -- ════════════════════════════════════════════════════════════════════════
 
