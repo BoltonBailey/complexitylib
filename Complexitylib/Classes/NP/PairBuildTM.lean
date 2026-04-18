@@ -622,6 +622,181 @@ private theorem pairBuild_rewindP1_loop {k : ℕ} (yIdx pIdx : Fin k)
       by rw [hpcells', hpcells₁]⟩
 
 -- ════════════════════════════════════════════════════════════════════════
+-- Loop lemmas: copyX and copyY
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **copyX loop.** Starting from `.copyX1` with input head at `q`, pIdx
+    head at `p`, and the next `m` input cells being data bits (non-blank,
+    non-start), after `2m` steps we return to `.copyX1` with:
+    - input head at `q + m`, cells unchanged,
+    - yIdx unchanged,
+    - pIdx head at `p + 2m`, with cells below `p` and at `≥ p + 2m`
+      unchanged, and cells in between doubly populated with the
+      corresponding input data bit. -/
+private theorem pairBuild_copyX_loop {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx) :
+    ∀ (m : ℕ) (c : Cfg k (pairBuildTM yIdx pIdx).Q),
+      c.state = .copyX1 →
+      c.input.head ≥ 1 →
+      c.input.cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
+      (∀ i, i < m → c.input.cells (c.input.head + i) ≠ Γ.blank ∧
+                      c.input.cells (c.input.head + i) ≠ Γ.start) →
+      (c.work yIdx).head ≥ 1 →
+      (∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) →
+      (c.work pIdx).head ≥ 1 →
+      (c.work pIdx).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) →
+      ∃ c',
+        (pairBuildTM yIdx pIdx).reachesIn (2 * m) c c' ∧
+        c'.state = .copyX1 ∧
+        c'.input.cells = c.input.cells ∧
+        c'.input.head = c.input.head + m ∧
+        c'.work yIdx = c.work yIdx ∧
+        (c'.work pIdx).head = (c.work pIdx).head + 2 * m ∧
+        (c'.work pIdx).cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → (c'.work pIdx).cells j ≠ Γ.start) ∧
+        (∀ j, j < (c.work pIdx).head → (c'.work pIdx).cells j = (c.work pIdx).cells j) ∧
+        (∀ j, j ≥ (c.work pIdx).head + 2 * m →
+            (c'.work pIdx).cells j = (c.work pIdx).cells j) ∧
+        (∀ i, i < m →
+            (c'.work pIdx).cells ((c.work pIdx).head + 2 * i) =
+              c.input.cells (c.input.head + i) ∧
+            (c'.work pIdx).cells ((c.work pIdx).head + 2 * i + 1) =
+              c.input.cells (c.input.head + i)) := by
+  intro m
+  induction m with
+  | zero =>
+    intro c hst hih _hic0 _hins _hdata hyh hyns hph hpc0 hpns
+    refine ⟨c, .zero, hst, rfl, by omega, rfl, by omega, hpc0, hpns, ?_, ?_, ?_⟩
+    · intro j _; rfl
+    · intro j _; rfl
+    · intro i hi; exact absurd hi (by omega)
+  | succ m ih =>
+    intro c hst hih hic0 hins hdata hyh hyns hph hpc0 hpns
+    -- Read the current input bit.
+    have hread : c.input.read = c.input.cells c.input.head := rfl
+    have hread_nb : c.input.read ≠ Γ.blank := (hdata 0 (by omega)).1
+    have hread_ns : c.input.read ≠ Γ.start := by
+      rw [hread]; have h := hins c.input.head hih; exact h
+    -- One `copyX1` step (writes to pIdx, advances pIdx).
+    obtain ⟨c1, hstep1, hst1, hinp1, hyw1, hph1, hpc1⟩ :=
+      pairBuild_copyX1_cont_step yIdx pIdx hne c hst hread_nb hread_ns
+        hih hyh hph hins hyns hpns
+    -- One `copyX2` step (writes second copy, advances input and pIdx).
+    have hih1 : c1.input.head ≥ 1 := by rw [hinp1]; exact hih
+    have hyh1 : (c1.work yIdx).head ≥ 1 := by rw [hyw1]; exact hyh
+    have hph1_ge : (c1.work pIdx).head ≥ 1 := by rw [hph1]; omega
+    have hyns1 : ∀ j, j ≥ 1 → (c1.work yIdx).cells j ≠ Γ.start := by
+      intro j hj; rw [hyw1]; exact hyns j hj
+    -- c1.input.read = c.input.read (input hasn't moved).
+    have hc1_iread : c1.input.read = c.input.read := by
+      rw [Tape.read, Tape.read, hinp1]
+    have hread1_ns : c1.input.read ≠ Γ.start := by rw [hc1_iread]; exact hread_ns
+    obtain ⟨c2, hstep2, hst2, hinp2h, hinp2c, hyw2, hph2, hpc2⟩ :=
+      pairBuild_copyX2_step yIdx pIdx hne c1 hst1 hread1_ns hih1 hyh1 hph1_ge hyns1
+    -- Derive invariants on c2.
+    have hih2 : c2.input.head ≥ 1 := by rw [hinp2h]; omega
+    have hic02 : c2.input.cells 0 = Γ.start := by rw [hinp2c, hinp1]; exact hic0
+    have hins2 : ∀ j, j ≥ 1 → c2.input.cells j ≠ Γ.start := by
+      intro j hj; rw [hinp2c, hinp1]; exact hins j hj
+    have hyh2 : (c2.work yIdx).head ≥ 1 := by rw [hyw2]; exact hyh1
+    have hyns2 : ∀ j, j ≥ 1 → (c2.work yIdx).cells j ≠ Γ.start := by
+      intro j hj; rw [hyw2]; exact hyns1 j hj
+    have hph2_ge : (c2.work pIdx).head ≥ 1 := by rw [hph2, hph1]; omega
+    have hpc02 : (c2.work pIdx).cells 0 = Γ.start := by
+      rw [hpc2, Function.update_of_ne (by omega), hpc1,
+          Function.update_of_ne (by omega)]; exact hpc0
+    have hpns2 : ∀ j, j ≥ 1 → (c2.work pIdx).cells j ≠ Γ.start := by
+      intro j hj
+      rw [hpc2]
+      by_cases hj1 : j = (c1.work pIdx).head
+      · rw [hj1, Function.update_self, hc1_iread]; exact hread_ns
+      · rw [Function.update_of_ne hj1, hpc1]
+        by_cases hj2 : j = (c.work pIdx).head
+        · rw [hj2, Function.update_self]; exact hread_ns
+        · rw [Function.update_of_ne hj2]; exact hpns j hj
+    -- The next `m` data bits: starting from c2.input.head = c.input.head + 1.
+    have hdata2 : ∀ i, i < m →
+        c2.input.cells (c2.input.head + i) ≠ Γ.blank ∧
+        c2.input.cells (c2.input.head + i) ≠ Γ.start := by
+      intro i hi
+      have hrw : c2.input.head + i = c.input.head + (i + 1) := by
+        rw [hinp2h, hinp1]; omega
+      rw [hinp2c, hinp1, hrw]
+      exact hdata (i + 1) (by omega)
+    -- Apply IH.
+    obtain ⟨c', hreach, hst', hc_ic, hc_ih, hc_yw, hc_ph, hc_pc0, hc_pns,
+            hc_below, hc_above, hc_data⟩ :=
+      ih c2 hst2 hih2 hic02 hins2 hdata2 hyh2 hyns2 hph2_ge hpc02 hpns2
+    -- Assemble.
+    have hstep_total : (pairBuildTM yIdx pIdx).reachesIn (2 * (m + 1)) c c' := by
+      have h1 : (pairBuildTM yIdx pIdx).reachesIn 2 c c2 :=
+        .step hstep1 (.step hstep2 .zero)
+      have htot : (pairBuildTM yIdx pIdx).reachesIn (2 + 2 * m) c c' :=
+        reachesIn_trans _ h1 hreach
+      have heq : 2 * (m + 1) = 2 + 2 * m := by ring
+      rw [heq]; exact htot
+    refine ⟨c', hstep_total, hst', ?_, ?_, ?_, ?_, hc_pc0, hc_pns, ?_, ?_, ?_⟩
+    · rw [hc_ic, hinp2c, hinp1]
+    · rw [hc_ih, hinp2h, hinp1]; omega
+    · rw [hc_yw, hyw2, hyw1]
+    · rw [hc_ph, hph2, hph1]; ring
+    · -- cells below c.work pIdx .head unchanged
+      intro j hj
+      have hj1 : j < (c2.work pIdx).head := by rw [hph2, hph1]; omega
+      rw [hc_below j hj1, hpc2, Function.update_of_ne (by rw [hph1]; omega),
+          hpc1, Function.update_of_ne (by omega)]
+    · -- cells ≥ c.work pIdx .head + 2*(m+1) unchanged
+      intro j hj
+      have hj2 : j ≥ (c2.work pIdx).head + 2 * m := by
+        rw [hph2, hph1]; omega
+      rw [hc_above j hj2, hpc2, Function.update_of_ne (by rw [hph1]; omega),
+          hpc1, Function.update_of_ne (by omega)]
+    · -- Cells at 2i positions
+      intro i hi
+      by_cases hi_zero : i = 0
+      · subst hi_zero
+        refine ⟨?_, ?_⟩
+        · -- cells at c.pIdx.head = c.input.cells c.input.head
+          have hj1 : (c.work pIdx).head + 2 * 0 < (c2.work pIdx).head := by
+            rw [hph2, hph1]; omega
+          rw [hc_below _ hj1, hpc2]
+          have hne1 : (c.work pIdx).head + 2 * 0 ≠ (c1.work pIdx).head := by
+            rw [hph1]; omega
+          rw [Function.update_of_ne hne1, hpc1]
+          have heq0 : (c.work pIdx).head + 2 * 0 = (c.work pIdx).head := by omega
+          rw [heq0, Function.update_self]
+          have hhead_eq : c.input.head + 0 = c.input.head := by omega
+          rw [hhead_eq]
+          rfl
+        · -- cells at c.pIdx.head + 1 = c1.pIdx.head = c.input.cells (c.input.head + 0)
+          -- But c.input.head + 0 = c.input.head.
+          have hj1 : (c.work pIdx).head + 2 * 0 + 1 < (c2.work pIdx).head := by
+            rw [hph2, hph1]; omega
+          rw [hc_below _ hj1, hpc2]
+          have heq1 : (c.work pIdx).head + 2 * 0 + 1 = (c1.work pIdx).head := by
+            rw [hph1]
+          rw [heq1, Function.update_self, hc1_iread]
+          have hhead_eq : c.input.head + 0 = c.input.head := by omega
+          rw [hhead_eq]
+          rfl
+      · -- i ≥ 1. Use hc_data on i - 1 with c2.
+        have hi_pred : i - 1 < m := by omega
+        have ⟨h_a, h_b⟩ := hc_data (i - 1) hi_pred
+        refine ⟨?_, ?_⟩
+        · have heq_pos : (c.work pIdx).head + 2 * i =
+                 (c2.work pIdx).head + 2 * (i - 1) := by
+            rw [hph2, hph1]; omega
+          rw [heq_pos, h_a, hinp2c, hinp1, hinp2h, hinp1]
+          congr 1; omega
+        · have heq_pos : (c.work pIdx).head + 2 * i + 1 =
+                 (c2.work pIdx).head + 2 * (i - 1) + 1 := by
+            rw [hph2, hph1]; omega
+          rw [heq_pos, h_b, hinp2c, hinp1, hinp2h, hinp1]
+          congr 1; omega
+
+-- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 
 -- ════════════════════════════════════════════════════════════════════════
