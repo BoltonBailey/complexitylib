@@ -1349,6 +1349,92 @@ theorem pairBuildTM_hoareTime
       exact initTape_ofBool_cells_lt y i hi
     exact ⟨by rw [heq]; exact ofBool_ne_blank _,
            by rw [heq]; exact ofBool_ne_start _⟩
+  have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
+    rw [hc5_yw_cells_eq]; exact hc0_yw_cell0
+  -- ═══════════════════════════════════════════════════════════════════
+  -- Phase 6: copyY loop (|y| steps)
+  -- ═══════════════════════════════════════════════════════════════════
+  obtain ⟨c6, hreach_copyY, hc6_state, hc6_inp, hc6_yh, hc6_yc, hc6_ph, hc6_pc0,
+          hc6_pns, hc6_below, hc6_above, hc6_data⟩ :=
+    pairBuild_copyY_loop yIdx pIdx hne y.length c5 hc5_state hc5_ih_ge
+      hc5_ins hc5_yh_ge hc5_yw_cell0 hc5_yns hc5_yw_data hc5_ph_ge hc5_pc0 hc5_pns
+  -- Derived c6 invariants.
+  have hc6_yh_val : (c6.work yIdx).head = 1 + y.length := by
+    rw [hc6_yh, hc5_yh_val]
+  have hc6_ph_val : (c6.work pIdx).head = 3 + 2 * x.length + y.length := by
+    rw [hc6_ph, hc5_ph_val]
+  have hc6_ih_val : c6.input.head = 1 + x.length := by rw [hc6_inp]; exact hc5_ih_val
+  have hc6_ih_ge : c6.input.head ≥ 1 := by rw [hc6_ih_val]; omega
+  have hc6_yh_ge : (c6.work yIdx).head ≥ 1 := by rw [hc6_yh_val]; omega
+  have hc6_ph_ge : (c6.work pIdx).head ≥ 1 := by rw [hc6_ph_val]; omega
+  have hc6_ic : c6.input.cells = c5.input.cells := by rw [hc6_inp]
+  have hc6_ic0 : c6.input.cells 0 = Γ.start := by rw [hc6_ic]; exact hc5_ic0
+  have hc6_ins : ∀ j, j ≥ 1 → c6.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc6_ic]; exact hc5_ins j hj
+  have hc6_yc_eq : (c6.work yIdx).cells = (c5.work yIdx).cells := hc6_yc
+  have hc6_yns : ∀ j, j ≥ 1 → (c6.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc6_yc_eq]; exact hc5_yns j hj
+  -- c6 reads blank on work yIdx: cells at (1 + y.length).
+  have hc6_yread : (c6.work yIdx).read = Γ.blank := by
+    show (c6.work yIdx).cells (c6.work yIdx).head = Γ.blank
+    rw [hc6_yc_eq, hc5_yw_cells_eq, hc6_yh_val]
+    show (work yIdx).cells _ = _
+    rw [hyw, show 1 + y.length = y.length + 1 from by omega]
+    exact initTape_ofBool_cells_ge y y.length (le_refl _)
+  -- ═══════════════════════════════════════════════════════════════════
+  -- Phase 7: copyY halt (1 step) — all tapes stable.
+  -- ═══════════════════════════════════════════════════════════════════
+  obtain ⟨c7, hstep7, hc7_state, hc7_inp, hc7_yw, hc7_pw⟩ :=
+    pairBuild_copyY_halt_step yIdx pIdx c6 hc6_state hc6_yread
+      hc6_ih_ge hc6_yh_ge hc6_ph_ge hc6_ins hc6_yns hc6_pns
+  have hc7_ih_val : c7.input.head = 1 + x.length := by rw [hc7_inp]; exact hc6_ih_val
+  have hc7_ih_ge : c7.input.head ≥ 1 := by rw [hc7_ih_val]; omega
+  have hc7_ic : c7.input.cells = c6.input.cells := by rw [hc7_inp]
+  have hc7_ic0 : c7.input.cells 0 = Γ.start := by rw [hc7_ic]; exact hc6_ic0
+  have hc7_ins : ∀ j, j ≥ 1 → c7.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_ic]; exact hc6_ins j hj
+  have hc7_yh_ge : (c7.work yIdx).head ≥ 1 := by rw [hc7_yw]; exact hc6_yh_ge
+  have hc7_yc : (c7.work yIdx).cells = (c6.work yIdx).cells := by rw [hc7_yw]
+  have hc7_yns : ∀ j, j ≥ 1 → (c7.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_yw]; exact hc6_yns j hj
+  have hc7_ph_val : (c7.work pIdx).head = 3 + 2 * x.length + y.length := by
+    rw [hc7_pw]; exact hc6_ph_val
+  have hc7_pc : (c7.work pIdx).cells = (c6.work pIdx).cells := by rw [hc7_pw]
+  have hc7_ph_ge : (c7.work pIdx).head ≥ 1 := by rw [hc7_ph_val]; omega
+  have hc7_pc0 : (c7.work pIdx).cells 0 = Γ.start := by rw [hc7_pc]; exact hc6_pc0
+  have hc7_pns : ∀ j, j ≥ 1 → (c7.work pIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_pw]; exact hc6_pns j hj
+  -- ═══════════════════════════════════════════════════════════════════
+  -- Phase 8: rewindP1 loop (p + 1 = 4 + 2|x| + |y| steps)
+  -- ═══════════════════════════════════════════════════════════════════
+  obtain ⟨c8, hreach_rewind, hc8_state, hc8_inp, hc8_yw, hc8_ph, hc8_pc⟩ :=
+    pairBuild_rewindP1_loop yIdx pIdx hne (3 + 2 * x.length + y.length) c7
+      hc7_state hc7_ph_val hc7_pc0 hc7_pns hc7_ih_ge hc7_ins hc7_yh_ge hc7_yns
+  have hc8_ih_val : c8.input.head = 1 + x.length := by rw [hc8_inp]; exact hc7_ih_val
+  have hc8_ih_ge : c8.input.head ≥ 1 := by rw [hc8_ih_val]; omega
+  have hc8_ic : c8.input.cells = c7.input.cells := by rw [hc8_inp]
+  have hc8_ic0 : c8.input.cells 0 = Γ.start := by rw [hc8_ic]; exact hc7_ic0
+  have hc8_ins : ∀ j, j ≥ 1 → c8.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_ic]; exact hc7_ins j hj
+  have hc8_yh_ge : (c8.work yIdx).head ≥ 1 := by rw [hc8_yw]; exact hc7_yh_ge
+  have hc8_yc : (c8.work yIdx).cells = (c7.work yIdx).cells := by rw [hc8_yw]
+  have hc8_yns : ∀ j, j ≥ 1 → (c8.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_yw]; exact hc7_yns j hj
+  have hc8_ph_ge : (c8.work pIdx).head ≥ 1 := by rw [hc8_ph]
+  have hc8_pc_eq : (c8.work pIdx).cells = (c7.work pIdx).cells := hc8_pc
+  have hc8_pc0 : (c8.work pIdx).cells 0 = Γ.start := by rw [hc8_pc_eq]; exact hc7_pc0
+  have hc8_pns : ∀ j, j ≥ 1 → (c8.work pIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_pc_eq]; exact hc7_pns j hj
+  -- ═══════════════════════════════════════════════════════════════════
+  -- Phase 9: rewindP2 → done (1 step).
+  -- ═══════════════════════════════════════════════════════════════════
+  obtain ⟨c9, hstep9, hc9_state, hc9_inp, hc9_yw, hc9_pw⟩ :=
+    pairBuild_rewindP2_step yIdx pIdx c8 hc8_state hc8_ih_ge hc8_yh_ge hc8_ph_ge
+      hc8_ins hc8_yns hc8_pns
+  -- c9 invariants: head = 1 on pIdx, state = .done, tapes same as c8.
+  have hc9_ph_val : (c9.work pIdx).head = 1 := by rw [hc9_pw]; exact hc8_ph
+  have hc9_pc_eq : (c9.work pIdx).cells = (c7.work pIdx).cells := by
+    rw [hc9_pw]; exact hc8_pc_eq
   sorry
 
 end TM
