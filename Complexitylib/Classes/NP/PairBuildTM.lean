@@ -796,6 +796,131 @@ private theorem pairBuild_copyX_loop {k : ℕ} (yIdx pIdx : Fin k)
           rw [heq_pos, h_b, hinp2c, hinp1, hinp2h, hinp1]
           congr 1; omega
 
+/-- **copyY loop.** Starting from `.copyY` with yIdx head at `q`, pIdx
+    head at `p`, and the next `m` yIdx cells being data bits (non-blank,
+    non-start), after `m` steps we return to `.copyY` with:
+    - input unchanged,
+    - yIdx head at `q + m`, cells unchanged,
+    - pIdx head at `p + m`, with cells below `p` and at `≥ p + m`
+      unchanged, and cells in between populated with the corresponding
+      yIdx data bits. -/
+private theorem pairBuild_copyY_loop {k : ℕ} (yIdx pIdx : Fin k)
+    (hne : yIdx ≠ pIdx) :
+    ∀ (m : ℕ) (c : Cfg k (pairBuildTM yIdx pIdx).Q),
+      c.state = .copyY →
+      c.input.head ≥ 1 →
+      (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
+      (c.work yIdx).head ≥ 1 →
+      (c.work yIdx).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start) →
+      (∀ i, i < m → (c.work yIdx).cells ((c.work yIdx).head + i) ≠ Γ.blank ∧
+                      (c.work yIdx).cells ((c.work yIdx).head + i) ≠ Γ.start) →
+      (c.work pIdx).head ≥ 1 →
+      (c.work pIdx).cells 0 = Γ.start →
+      (∀ j, j ≥ 1 → (c.work pIdx).cells j ≠ Γ.start) →
+      ∃ c',
+        (pairBuildTM yIdx pIdx).reachesIn m c c' ∧
+        c'.state = .copyY ∧
+        c'.input = c.input ∧
+        (c'.work yIdx).head = (c.work yIdx).head + m ∧
+        (c'.work yIdx).cells = (c.work yIdx).cells ∧
+        (c'.work pIdx).head = (c.work pIdx).head + m ∧
+        (c'.work pIdx).cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → (c'.work pIdx).cells j ≠ Γ.start) ∧
+        (∀ j, j < (c.work pIdx).head → (c'.work pIdx).cells j = (c.work pIdx).cells j) ∧
+        (∀ j, j ≥ (c.work pIdx).head + m →
+            (c'.work pIdx).cells j = (c.work pIdx).cells j) ∧
+        (∀ i, i < m →
+            (c'.work pIdx).cells ((c.work pIdx).head + i) =
+              (c.work yIdx).cells ((c.work yIdx).head + i)) := by
+  intro m
+  induction m with
+  | zero =>
+    intro c hst _ _ _ _ _ _ _ _ hpns
+    refine ⟨c, .zero, hst, rfl, by omega, rfl, by omega, ‹_›, hpns, ?_, ?_, ?_⟩
+    · intro j _; rfl
+    · intro j _; rfl
+    · intro i hi; exact absurd hi (by omega)
+  | succ m ih =>
+    intro c hst hih hins hyh hyc0 hyns hdata hph hpc0 hpns
+    -- Read the current yIdx bit.
+    have hyread : (c.work yIdx).read = (c.work yIdx).cells (c.work yIdx).head := rfl
+    have hyread_nb : (c.work yIdx).read ≠ Γ.blank := (hdata 0 (by omega)).1
+    have hyread_ns : (c.work yIdx).read ≠ Γ.start := by
+      rw [hyread]; exact hyns (c.work yIdx).head hyh
+    -- One `copyY` step (writes to pIdx, advances yIdx and pIdx).
+    obtain ⟨c1, hstep1, hst1, hinp1, hyh1, hyc1, hph1, hpc1⟩ :=
+      pairBuild_copyY_cont_step yIdx pIdx hne c hst hyread_nb hyread_ns
+        hih hyh hph hins hyns
+    -- Derive invariants on c1.
+    have hih1 : c1.input.head ≥ 1 := by rw [hinp1]; exact hih
+    have hins1 : ∀ j, j ≥ 1 → c1.input.cells j ≠ Γ.start := by
+      intro j hj; rw [hinp1]; exact hins j hj
+    have hyh1_ge : (c1.work yIdx).head ≥ 1 := by rw [hyh1]; omega
+    have hyc01 : (c1.work yIdx).cells 0 = Γ.start := by rw [hyc1]; exact hyc0
+    have hyns1 : ∀ j, j ≥ 1 → (c1.work yIdx).cells j ≠ Γ.start := by
+      intro j hj; rw [hyc1]; exact hyns j hj
+    have hph1_ge : (c1.work pIdx).head ≥ 1 := by rw [hph1]; omega
+    have hpc01 : (c1.work pIdx).cells 0 = Γ.start := by
+      rw [hpc1, Function.update_of_ne (by omega)]; exact hpc0
+    have hpns1 : ∀ j, j ≥ 1 → (c1.work pIdx).cells j ≠ Γ.start := by
+      intro j hj
+      rw [hpc1]
+      by_cases hj1 : j = (c.work pIdx).head
+      · rw [hj1, Function.update_self]; exact hyread_ns
+      · rw [Function.update_of_ne hj1]; exact hpns j hj
+    have hdata1 : ∀ i, i < m →
+        (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.blank ∧
+        (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.start := by
+      intro i hi
+      have hrw : (c1.work yIdx).head + i = (c.work yIdx).head + (i + 1) := by
+        rw [hyh1]; omega
+      rw [hyc1, hrw]
+      exact hdata (i + 1) (by omega)
+    -- Apply IH.
+    obtain ⟨c', hreach, hst', hc_inp, hc_yh, hc_yc, hc_ph, hc_pc0, hc_pns,
+            hc_below, hc_above, hc_data⟩ :=
+      ih c1 hst1 hih1 hins1 hyh1_ge hyc01 hyns1 hdata1 hph1_ge hpc01 hpns1
+    -- Assemble.
+    have hstep_total : (pairBuildTM yIdx pIdx).reachesIn (m + 1) c c' := by
+      have h1 : (pairBuildTM yIdx pIdx).reachesIn 1 c c1 := .step hstep1 .zero
+      have htot : (pairBuildTM yIdx pIdx).reachesIn (1 + m) c c' :=
+        reachesIn_trans _ h1 hreach
+      have heq : m + 1 = 1 + m := by ring
+      rw [heq]; exact htot
+    refine ⟨c', hstep_total, hst', ?_, ?_, ?_, ?_, hc_pc0, hc_pns, ?_, ?_, ?_⟩
+    · rw [hc_inp, hinp1]
+    · rw [hc_yh, hyh1]; omega
+    · rw [hc_yc, hyc1]
+    · rw [hc_ph, hph1]; omega
+    · -- cells below (c.work pIdx).head unchanged
+      intro j hj
+      have hj1 : j < (c1.work pIdx).head := by rw [hph1]; omega
+      rw [hc_below j hj1, hpc1, Function.update_of_ne (by omega)]
+    · -- cells ≥ (c.work pIdx).head + (m+1) unchanged
+      intro j hj
+      have hj2 : j ≥ (c1.work pIdx).head + m := by rw [hph1]; omega
+      rw [hc_above j hj2, hpc1, Function.update_of_ne (by omega)]
+    · -- Cells at the m+1 written positions
+      intro i hi
+      by_cases hi_zero : i = 0
+      · subst hi_zero
+        have hj1 : (c.work pIdx).head + 0 < (c1.work pIdx).head := by
+          rw [hph1]; omega
+        rw [hc_below _ hj1, hpc1]
+        have hheadeq : (c.work pIdx).head + 0 = (c.work pIdx).head := by omega
+        rw [hheadeq, Function.update_self]
+        have hyhead0 : (c.work yIdx).head + 0 = (c.work yIdx).head := by omega
+        rw [hyhead0]
+        rfl
+      · have hi_pred : i - 1 < m := by omega
+        have h_d := hc_data (i - 1) hi_pred
+        have heq_p : (c.work pIdx).head + i = (c1.work pIdx).head + (i - 1) := by
+          rw [hph1]; omega
+        have heq_y : (c.work yIdx).head + i = (c1.work yIdx).head + (i - 1) := by
+          rw [hyh1]; omega
+        rw [heq_p, h_d, hyc1, heq_y]
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Correctness specification (proof deferred)
 
