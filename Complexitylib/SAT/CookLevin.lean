@@ -1,5 +1,6 @@
 import Complexitylib.SAT.Headline
 import Complexitylib.Classes.NP.Reduction
+import Complexitylib.Models.TuringMachine.SingleTape
 
 /-!
 # Cook–Levin: SAT is NP-complete
@@ -29,14 +30,26 @@ open Complexity
 
 namespace SAT
 
-/-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
-    decides `L` within a polynomial time bound `T` (`T =O (·^c)`), then `L`
-    polynomial-time many-one reduces to `L_SAT`, via the computation-tableau
-    formula. -/
-theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ) (c : ℕ)
+/-- **Single-tape Cook–Levin reduction.** The core construction: a single-work-tape
+    machine deciding `L` in polynomial time yields a polynomial-time reduction to
+    `L_SAT`, via the computation-tableau formula `tableauCNF` (whose definition,
+    satisfiability characterization, and `FP`-computable encoding are the
+    remaining obligations). Restricting to one work tape keeps the tableau small. -/
+theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → ℕ) (c : ℕ)
     (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
     L ≤ₚ L_SAT := by
   sorry
+
+/-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
+    decides `L` within a polynomial time bound `T` (`T =O (·^c)`), then `L`
+    polynomial-time many-one reduces to `L_SAT`. Reduces to the single-work-tape
+    case (`NTM.exists_singleTape_decider`) and then builds the computation-tableau
+    formula (`cookLevin_reduction_singleTape`). -/
+theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ) (c : ℕ)
+    (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
+    L ≤ₚ L_SAT := by
+  obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decider hdec hTO
+  exact cookLevin_reduction_singleTape N' T' c' hdec' hTO'
 
 /-- **NP-hardness of SAT.** Every language in `NP` polynomial-time reduces to
     `L_SAT`. -/
