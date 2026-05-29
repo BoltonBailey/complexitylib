@@ -94,6 +94,15 @@ theorem BigO.add {f₁ f₂ g : ℕ → ℕ} (h₁ : f₁ =O g) (h₂ : f₂ =O 
   convert key using 1
   ext n; push_cast; ring
 
+/-- Product of two big-O bounds: `f₁ = O(g₁) → f₂ = O(g₂) → (f₁·f₂) = O(g₁·g₂)`. -/
+theorem BigO.mul {f₁ f₂ g₁ g₂ : ℕ → ℕ} (h₁ : f₁ =O g₁) (h₂ : f₂ =O g₂) :
+    (fun n => f₁ n * f₂ n) =O (fun n => g₁ n * g₂ n) := by
+  show (fun n => ((f₁ n * f₂ n : ℕ) : ℝ)) =O[atTop] (fun n => ((g₁ n * g₂ n : ℕ) : ℝ))
+  have key := IsBigO.mul h₁ h₂
+  convert key using 1
+  · ext n; push_cast; ring
+  · ext n; push_cast; ring
+
 /-- Constant multiple preserves big-O. -/
 theorem BigO.const_mul_left (c : ℕ) {f g : ℕ → ℕ} (h : f =O g) :
     (fun n => c * f n) =O g := by

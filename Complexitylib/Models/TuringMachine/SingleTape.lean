@@ -42,7 +42,21 @@ def singleTapeSimTime (T : ℕ → ℕ) : ℕ → ℕ := fun n => (T n + n + 1) 
 /-- The simulation's time overhead stays polynomial. -/
 theorem singleTapeSimTime_bigO {T : ℕ → ℕ} {c : ℕ} (hTO : T =O (· ^ c)) :
     singleTapeSimTime T =O (· ^ (2 * c + 2)) := by
-  sorry
+  -- `T n + n + 1` is `O(n^(c+1))`: each summand is.
+  have hsum : (fun n => T n + n + 1) =O ((· ^ (c + 1)) : ℕ → ℕ) := by
+    have hT : T =O ((· ^ (c + 1)) : ℕ → ℕ) :=
+      hTO.trans (BigO.pow_le_pow_right (Nat.le_succ c))
+    have hn : (fun n : ℕ => n) =O ((· ^ (c + 1)) : ℕ → ℕ) := by
+      simpa [pow_one] using (BigO.pow_le_pow_right (j := 1) (k := c + 1) (by omega))
+    exact BigO.add (BigO.add hT hn) (BigO.const_le_pow 1 (c + 1))
+  -- Squaring stays polynomial: `(n^(c+1))² = n^(2c+2)`.
+  have hmul : (fun n => (T n + n + 1) * (T n + n + 1))
+      =O (fun n => n ^ (c + 1) * n ^ (c + 1)) := BigO.mul hsum hsum
+  have hL : singleTapeSimTime T =O (fun n => (T n + n + 1) * (T n + n + 1)) :=
+    BigO.of_le fun n => le_of_eq (by simp [singleTapeSimTime, pow_two])
+  have hR : (fun n : ℕ => n ^ (c + 1) * n ^ (c + 1)) =O ((· ^ (2 * c + 2)) : ℕ → ℕ) :=
+    BigO.of_le fun n => le_of_eq (by rw [← pow_add]; congr 1; omega)
+  exact (hL.trans hmul).trans hR
 
 /-- The simulator halts on all computation paths within the overhead time bound,
     whenever `N` does. -/
