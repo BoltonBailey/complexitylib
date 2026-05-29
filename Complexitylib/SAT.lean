@@ -5,6 +5,7 @@ import Complexitylib.SAT.Verifier
 import Complexitylib.SAT.VerifierTM
 import Complexitylib.SAT.GuessVerify
 import Complexitylib.SAT.Headline
+import Complexitylib.SAT.CookLevin
 
 /-!
 # SAT: Boolean satisfiability
