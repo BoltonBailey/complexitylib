@@ -17,6 +17,18 @@ search-problem classes.
 def pair (x y : List Bool) : List Bool :=
   (x.flatMap fun b => [b, b]) ++ [false, true] ++ y
 
+/-- Partial inverse to `pair`. It scans doubled bits until the first
+    separator `[false, true]`, returning the decoded left component together
+    with the remaining suffix. Invalid doubled prefixes return `none`. -/
+def unpair? : List Bool → Option (List Bool × List Bool)
+  | [] => none
+  | false :: true :: y => some ([], y)
+  | false :: false :: z =>
+      Option.map (fun (xy : List Bool × List Bool) => (false :: xy.1, xy.2)) (unpair? z)
+  | true :: true :: z =>
+      Option.map (fun (xy : List Bool × List Bool) => (true :: xy.1, xy.2)) (unpair? z)
+  | _ => none
+
 private theorem pair_nil_eq (y : List Bool) :
     pair [] y = false :: true :: y := by
   simp [pair]
@@ -65,6 +77,63 @@ theorem pair_injective {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
       have ⟨hx, hy⟩ := ih htail
       subst hb; subst hx
       exact ⟨rfl, hy⟩
+
+@[simp] theorem unpair?_pair (x y : List Bool) :
+    unpair? (pair x y) = some (x, y) := by
+  induction x with
+  | nil =>
+    simp [unpair?, pair_nil_eq]
+  | cons b xs ih =>
+    rw [pair_cons_eq]
+    cases b <;> simp [unpair?, ih]
+
+theorem unpair?_sound {z x y : List Bool} (h : unpair? z = some (x, y)) :
+    z = pair x y := by
+  have hsound :
+      ∀ z x y, unpair? z = some (x, y) → z = pair x y := by
+    intro z x y h
+    induction hlen : z.length using Nat.strong_induction_on generalizing z x y with
+    | h n ih =>
+        cases z with
+        | nil =>
+            simp [unpair?] at h
+        | cons a z1 =>
+            cases z1 with
+            | nil =>
+                cases a <;> simp [unpair?] at h
+            | cons b z2 =>
+                cases a
+                · cases b
+                  · simp [unpair?] at h
+                    rcases h with ⟨x', htail, rfl⟩
+                    have hz2lt : z2.length < n := by
+                      rw [← hlen]
+                      have : z2.length < z2.length + 1 + 1 := by omega
+                      exact this
+                    have hz2 : z2 = pair x' y := ih z2.length hz2lt z2 x' y htail rfl
+                    simpa [pair_cons_eq] using congrArg (fun t => false :: false :: t) hz2
+                  · simp [unpair?] at h
+                    rcases h with ⟨rfl, rfl⟩
+                    simp [pair_nil_eq]
+                · cases b
+                  · simp [unpair?] at h
+                  · simp [unpair?] at h
+                    rcases h with ⟨x', htail, rfl⟩
+                    have hz2lt : z2.length < n := by
+                      rw [← hlen]
+                      have : z2.length < z2.length + 1 + 1 := by omega
+                      exact this
+                    have hz2 : z2 = pair x' y := ih z2.length hz2lt z2 x' y htail rfl
+                    simpa [pair_cons_eq] using congrArg (fun t => true :: true :: t) hz2
+  exact hsound z x y h
+
+theorem unpair?_eq_some_iff {z x y : List Bool} :
+    unpair? z = some (x, y) ↔ z = pair x y := by
+  constructor
+  · exact unpair?_sound
+  · intro hz
+    subst hz
+    exact unpair?_pair x y
 
 /-- A binary relation is **polynomially balanced** if witness length is bounded
     by a polynomial in the input length. This is the standard "short witness"

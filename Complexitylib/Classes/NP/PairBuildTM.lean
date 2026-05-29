@@ -36,10 +36,8 @@ Total running time: linear in `|x| + |y|` (see `pairBuildTM_hoareTime`).
 
 ## Status
 
-This file contains the **skeleton**: the machine's transition function and
-the `δ_right_of_start` proof are fully worked out, while the correctness
-theorem `pairBuildTM_hoareTime` is stated but sorry-gated. Discharging
-that sorry is the remaining piece of A1.
+The machine transition function, `δ_right_of_start`, and the main
+`pairBuildTM_hoareTime` correctness theorem are proved.
 -/
 
 namespace TM
@@ -273,6 +271,61 @@ private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
     show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
           (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
     simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
+
+/-- Variant of the init step for phase composition: input and witness tapes
+    may already be positioned at their first data cells, while the pair tape
+    is still the fresh head-0 tape. -/
+theorem pairBuild_init_step_started {k : ℕ} (yIdx pIdx : Fin k)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .init)
+    (hinp : c.input.read ≠ Γ.start)
+    (hy : (c.work yIdx).read ≠ Γ.start)
+    (hpi0 : (c.work pIdx).head = 0) (hpic0 : (c.work pIdx).cells 0 = Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .copyX1 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      (c'.work pIdx).head = 1 ∧
+      (c'.work pIdx).cells = (c.work pIdx).cells := by
+  have hpread : (c.work pIdx).read = Γ.start := by
+    simp [Tape.read, hpi0, hpic0]
+  simp only [TM.step, hst, pairBuildTM]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+  · show c.input.move (idleDir c.input.read) = c.input
+    exact transitionInput_id hinp
+  · show (c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
+        (idleDir (c.work yIdx).read) = c.work yIdx
+    exact transitionTape_id hy
+  · show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
+        (idleDir (c.work pIdx).read)).head = 1
+    simp [idleDir, hpread, Tape.writeAndMove, Tape.write, Tape.move, hpi0]
+  · show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
+        (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
+    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
+
+/-- Variant of the init step for fully-started phase composition: input,
+    witness, and pair tapes may all already be positioned past `▷`. -/
+theorem pairBuild_init_step_all_started {k : ℕ} (yIdx pIdx : Fin k)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hst : c.state = .init)
+    (hinp : c.input.read ≠ Γ.start)
+    (hy : (c.work yIdx).read ≠ Γ.start)
+    (hp : (c.work pIdx).read ≠ Γ.start) :
+    ∃ c', (pairBuildTM yIdx pIdx).step c = some c' ∧
+      c'.state = .copyX1 ∧
+      c'.input = c.input ∧
+      c'.work yIdx = c.work yIdx ∧
+      c'.work pIdx = c.work pIdx := by
+  simp only [TM.step, hst, pairBuildTM]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+  · show c.input.move (idleDir c.input.read) = c.input
+    exact transitionInput_id hinp
+  · show (c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
+        (idleDir (c.work yIdx).read) = c.work yIdx
+    exact transitionTape_id hy
+  · show (c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
+        (idleDir (c.work pIdx).read) = c.work pIdx
+    exact transitionTape_id hp
 
 /-- **copyX1 halt step.** In `.copyX1` reading blank on input, transition
     to `.writeSep1`. All three tracked tapes unchanged (they're past ▷ so
@@ -1116,10 +1169,425 @@ private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.
   rw [List.getElem?_eq_none hmap]
   simp
 
+/-- A tape with head at cell 1, a start marker at cell 0, binary contents
+    `bits`, and a blank tail is exactly the standard initialized tape for
+    `bits`, moved right once. -/
+theorem tape_eq_initTape_move_right_of_binary {t : Tape} {bits : List Bool}
+    (hhead : t.head = 1)
+    (h0 : t.cells 0 = Γ.start)
+    (hbits : ∀ i : ℕ, (h : i < bits.length) →
+      t.cells (i + 1) = Γ.ofBool (bits[i]'h))
+    (htail : ∀ i : ℕ, bits.length ≤ i → t.cells (i + 1) = Γ.blank) :
+    t = (_root_.initTape (bits.map Γ.ofBool)).move Dir3.right := by
+  cases t with
+  | mk head cells =>
+    simp only at hhead h0 hbits htail
+    subst head
+    simp only [Tape.move]
+    congr
+    funext j
+    by_cases hj0 : j = 0
+    · subst hj0
+      simp [_root_.initTape, h0]
+    · let i := j - 1
+      have hj : j = i + 1 := by omega
+      rw [hj]
+      by_cases hi : i < bits.length
+      · rw [hbits i hi, initTape_ofBool_cells_lt bits i hi]
+      · have hge : bits.length ≤ i := by omega
+        rw [htail i hge, initTape_ofBool_cells_ge bits i hge]
+
+/-- Core correctness for the post-init state of `pairBuildTM`. This is the
+    phase-composition entry point: all tracked tapes are already positioned at
+    cell `1`, so execution begins in `.copyX1` with no dependence on a fresh
+    head-0 setup step. -/
+private theorem pairBuildTM_from_copyX1_initTape_move_right
+    {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
+    (x y : List Bool)
+    (c1 : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hc1_state : c1.state = .copyX1)
+    (hc1_input : c1.input = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right)
+    (hc1_yw : c1.work yIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right)
+    (hc1_pw : c1.work pIdx = (_root_.initTape []).move Dir3.right) :
+    ∃ c9 t, t ≤ 4 * x.length + 2 * y.length + 9 ∧
+      (pairBuildTM yIdx pIdx).reachesIn t c1 c9 ∧
+      (pairBuildTM yIdx pIdx).halted c9 ∧
+      (c9.work pIdx).head = 1 ∧
+      (c9.work pIdx).cells 0 = Γ.start ∧
+      (∀ i : ℕ, (h : i < (pair x y).length) →
+        (c9.work pIdx).cells (i + 1) = Γ.ofBool ((pair x y)[i]'h)) ∧
+      (∀ i : ℕ, (pair x y).length ≤ i →
+        (c9.work pIdx).cells (i + 1) = Γ.blank) := by
+  have hc1_ih : c1.input.head = 1 := by
+    rw [hc1_input]
+    rfl
+  have hc1_ic : c1.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells := by
+    rw [hc1_input]
+    exact tape_move_cells _ _
+  have hc1_ih_ge : c1.input.head ≥ 1 := by rw [hc1_ih]
+  have hc1_ic0 : c1.input.cells 0 = Γ.start := by
+    rw [hc1_ic]
+    rfl
+  have hc1_ins : ∀ j, j ≥ 1 → c1.input.cells j ≠ Γ.start := by
+    intro j hj
+    rw [hc1_ic]
+    exact initTape_ofBool_cells_ne_start x j hj
+  have hc1_yh : (c1.work yIdx).head = 1 := by
+    rw [hc1_yw]
+    rfl
+  have hc1_yc : (c1.work yIdx).cells =
+      (_root_.initTape (y.map Γ.ofBool)).cells := by
+    rw [hc1_yw]
+    exact tape_move_cells _ _
+  have hc1_yh_ge : (c1.work yIdx).head ≥ 1 := by rw [hc1_yh]
+  have hc1_yns : ∀ j, j ≥ 1 → (c1.work yIdx).cells j ≠ Γ.start := by
+    intro j hj
+    rw [hc1_yc]
+    exact initTape_ofBool_cells_ne_start y j hj
+  have hc1_ph : (c1.work pIdx).head = 1 := by
+    rw [hc1_pw]
+    rfl
+  have hc1_pc : (c1.work pIdx).cells = (_root_.initTape []).cells := by
+    rw [hc1_pw]
+    exact tape_move_cells _ _
+  have hc1_ph_ge : (c1.work pIdx).head ≥ 1 := by rw [hc1_ph]
+  have hc1_pc0 : (c1.work pIdx).cells 0 = Γ.start := by
+    rw [hc1_pc]
+    rfl
+  have hc1_pns : ∀ j, j ≥ 1 → (c1.work pIdx).cells j ≠ Γ.start := by
+    intro j hj
+    rw [hc1_pc]
+    show (_root_.initTape []).cells j ≠ Γ.start
+    show (if j = 0 then Γ.start else ([][j - 1]?).getD Γ.blank) ≠ Γ.start
+    rw [if_neg (by omega)]
+    simp
+  have hc1_input_data : ∀ i, i < x.length →
+      c1.input.cells (c1.input.head + i) ≠ Γ.blank ∧
+      c1.input.cells (c1.input.head + i) ≠ Γ.start := by
+    intro i hi
+    rw [hc1_ic, hc1_ih]
+    have heq :
+        (_root_.initTape (x.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (x[i]'hi) := by
+      rw [show 1 + i = i + 1 from by omega]
+      exact initTape_ofBool_cells_lt x i hi
+    refine ⟨?_, ?_⟩
+    · rw [heq]; exact ofBool_ne_blank _
+    · rw [heq]; exact ofBool_ne_start _
+  have hc1_yw_data : ∀ i, i < y.length →
+      (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.blank ∧
+      (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.start := by
+    intro i hi
+    rw [hc1_yc, hc1_yh]
+    have heq :
+        (_root_.initTape (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
+      rw [show 1 + i = i + 1 from by omega]
+      exact initTape_ofBool_cells_lt y i hi
+    refine ⟨?_, ?_⟩
+    · rw [heq]; exact ofBool_ne_blank _
+    · rw [heq]; exact ofBool_ne_start _
+  obtain ⟨c2, hreach_copyX, hc2_state, hc2_ic, hc2_ih, hc2_yw, hc2_ph, hc2_pc0,
+          hc2_pns, hc2_below, hc2_above, hc2_data⟩ :=
+    pairBuild_copyX_loop yIdx pIdx hne x.length c1 hc1_state hc1_ih_ge hc1_ic0
+      hc1_ins hc1_input_data hc1_yh_ge hc1_yns hc1_ph_ge hc1_pc0 hc1_pns
+  have hc2_ih_val : c2.input.head = 1 + x.length := by rw [hc2_ih, hc1_ih]
+  have hc2_ph_val : (c2.work pIdx).head = 1 + 2 * x.length := by
+    rw [hc2_ph, hc1_ph]
+  have hc2_ih_ge : c2.input.head ≥ 1 := by rw [hc2_ih_val]; omega
+  have hc2_yh_ge : (c2.work yIdx).head ≥ 1 := by rw [hc2_yw]; exact hc1_yh_ge
+  have hc2_ph_ge : (c2.work pIdx).head ≥ 1 := by rw [hc2_ph_val]; omega
+  have hc2_ic0 : c2.input.cells 0 = Γ.start := by rw [hc2_ic]; exact hc1_ic0
+  have hc2_ins : ∀ j, j ≥ 1 → c2.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc2_ic]; exact hc1_ins j hj
+  have hc2_yns : ∀ j, j ≥ 1 → (c2.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc2_yw]; exact hc1_yns j hj
+  have hc2_iread : c2.input.read = Γ.blank := by
+    show c2.input.cells c2.input.head = Γ.blank
+    rw [hc2_ic, hc1_ic, hc2_ih_val]
+    rw [show 1 + x.length = x.length + 1 from by omega]
+    exact initTape_ofBool_cells_ge x x.length (le_refl _)
+  obtain ⟨c3, hstep3, hc3_state, hc3_inp, hc3_yw, hc3_pw⟩ :=
+    pairBuild_copyX1_halt_step yIdx pIdx c2 hc2_state hc2_iread
+      hc2_ih_ge hc2_yh_ge hc2_ph_ge hc2_ins hc2_yns hc2_pns
+  have hc3_ih : c3.input.head = 1 + x.length := by rw [hc3_inp]; exact hc2_ih_val
+  have hc3_ic : c3.input.cells = c2.input.cells := by rw [hc3_inp]
+  have hc3_ih_ge : c3.input.head ≥ 1 := by rw [hc3_ih]; omega
+  have hc3_ic0 : c3.input.cells 0 = Γ.start := by rw [hc3_ic]; exact hc2_ic0
+  have hc3_ins : ∀ j, j ≥ 1 → c3.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc3_ic]; exact hc2_ins j hj
+  have hc3_yw_head : (c3.work yIdx).head ≥ 1 := by rw [hc3_yw]; exact hc2_yh_ge
+  have hc3_yw_cells : (c3.work yIdx).cells = (c2.work yIdx).cells := by rw [hc3_yw]
+  have hc3_yns : ∀ j, j ≥ 1 → (c3.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc3_yw]; exact hc2_yns j hj
+  have hc3_pw_head : (c3.work pIdx).head = 1 + 2 * x.length := by
+    rw [hc3_pw]; exact hc2_ph_val
+  have hc3_pw_cells : (c3.work pIdx).cells = (c2.work pIdx).cells := by rw [hc3_pw]
+  have hc3_ph_ge : (c3.work pIdx).head ≥ 1 := by rw [hc3_pw_head]; omega
+  have hc3_pc0 : (c3.work pIdx).cells 0 = Γ.start := by rw [hc3_pw_cells]; exact hc2_pc0
+  have hc3_pns : ∀ j, j ≥ 1 → (c3.work pIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc3_pw]; exact hc2_pns j hj
+  obtain ⟨c4, hstep4, hc4_state, hc4_inp, hc4_yw, hc4_ph, hc4_pc⟩ :=
+    pairBuild_writeSep1_step yIdx pIdx hne c3 hc3_state
+      hc3_ih_ge hc3_yw_head hc3_ph_ge hc3_ins hc3_yns
+  have hc4_ih_val : c4.input.head = 1 + x.length := by rw [hc4_inp]; exact hc3_ih
+  have hc4_ic : c4.input.cells = c3.input.cells := by rw [hc4_inp]
+  have hc4_ih_ge : c4.input.head ≥ 1 := by rw [hc4_ih_val]; omega
+  have hc4_ic0 : c4.input.cells 0 = Γ.start := by rw [hc4_ic]; exact hc3_ic0
+  have hc4_ins : ∀ j, j ≥ 1 → c4.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc4_ic]; exact hc3_ins j hj
+  have hc4_yh_ge : (c4.work yIdx).head ≥ 1 := by rw [hc4_yw]; exact hc3_yw_head
+  have hc4_yw_cells : (c4.work yIdx).cells = (c3.work yIdx).cells := by rw [hc4_yw]
+  have hc4_yns : ∀ j, j ≥ 1 → (c4.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc4_yw]; exact hc3_yns j hj
+  have hc4_ph_val : (c4.work pIdx).head = 2 + 2 * x.length := by
+    rw [hc4_ph, hc3_pw_head]; omega
+  have hc4_ph_ge : (c4.work pIdx).head ≥ 1 := by rw [hc4_ph_val]; omega
+  have hc4_pc_zero : (c4.work pIdx).cells (1 + 2 * x.length) = Γ.zero := by
+    rw [hc4_pc, ← hc3_pw_head, Function.update_self]
+  have hc4_pc_other : ∀ j, j ≠ 1 + 2 * x.length →
+      (c4.work pIdx).cells j = (c3.work pIdx).cells j := by
+    intro j hj
+    rw [hc4_pc, Function.update_of_ne (by rw [hc3_pw_head]; exact hj)]
+  have hc4_pc0 : (c4.work pIdx).cells 0 = Γ.start := by
+    rw [hc4_pc_other 0 (by omega)]; exact hc3_pc0
+  have hc4_pns : ∀ j, j ≥ 1 → (c4.work pIdx).cells j ≠ Γ.start := by
+    intro j hj
+    by_cases heq : j = 1 + 2 * x.length
+    · rw [heq, hc4_pc_zero]; decide
+    · rw [hc4_pc_other j heq]; exact hc3_pns j hj
+  obtain ⟨c5, hstep5, hc5_state, hc5_inp, hc5_yw, hc5_ph, hc5_pc⟩ :=
+    pairBuild_writeSep2_step yIdx pIdx hne c4 hc4_state
+      hc4_ih_ge hc4_yh_ge hc4_ph_ge hc4_ins hc4_yns
+  have hc5_ih_val : c5.input.head = 1 + x.length := by rw [hc5_inp]; exact hc4_ih_val
+  have hc5_ic : c5.input.cells = c4.input.cells := by rw [hc5_inp]
+  have hc5_ih_ge : c5.input.head ≥ 1 := by rw [hc5_ih_val]; omega
+  have hc5_ic0 : c5.input.cells 0 = Γ.start := by rw [hc5_ic]; exact hc4_ic0
+  have hc5_ins : ∀ j, j ≥ 1 → c5.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc5_ic]; exact hc4_ins j hj
+  have hc5_yh_ge : (c5.work yIdx).head ≥ 1 := by rw [hc5_yw]; exact hc4_yh_ge
+  have hc5_yw_cells : (c5.work yIdx).cells = (c4.work yIdx).cells := by rw [hc5_yw]
+  have hc5_yns : ∀ j, j ≥ 1 → (c5.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc5_yw]; exact hc4_yns j hj
+  have hc5_ph_val : (c5.work pIdx).head = 3 + 2 * x.length := by
+    rw [hc5_ph, hc4_ph_val]
+    omega
+  have hc5_ph_ge : (c5.work pIdx).head ≥ 1 := by rw [hc5_ph_val]; omega
+  have hc5_pc_one : (c5.work pIdx).cells (2 + 2 * x.length) = Γ.one := by
+    rw [hc5_pc, ← hc4_ph_val, Function.update_self]
+  have hc5_pc_other : ∀ j, j ≠ 2 + 2 * x.length →
+      (c5.work pIdx).cells j = (c4.work pIdx).cells j := by
+    intro j hj
+    rw [hc5_pc, Function.update_of_ne (by rw [hc4_ph_val]; exact hj)]
+  have hc5_pc0 : (c5.work pIdx).cells 0 = Γ.start := by
+    rw [hc5_pc_other 0 (by omega)]; exact hc4_pc0
+  have hc5_pns : ∀ j, j ≥ 1 → (c5.work pIdx).cells j ≠ Γ.start := by
+    intro j hj
+    by_cases heq : j = 2 + 2 * x.length
+    · rw [heq, hc5_pc_one]; decide
+    · rw [hc5_pc_other j heq]; exact hc4_pns j hj
+  have hc5_yh_val : (c5.work yIdx).head = 1 := by
+    rw [hc5_yw, hc4_yw, hc3_yw, hc2_yw, hc1_yh]
+  have hc5_yw_cells_eq : (c5.work yIdx).cells =
+      (_root_.initTape (y.map Γ.ofBool)).cells := by
+    rw [hc5_yw_cells, hc4_yw_cells, hc3_yw_cells, hc2_yw, hc1_yc]
+  have hc5_yw_data : ∀ i, i < y.length →
+      (c5.work yIdx).cells ((c5.work yIdx).head + i) ≠ Γ.blank ∧
+      (c5.work yIdx).cells ((c5.work yIdx).head + i) ≠ Γ.start := by
+    intro i hi
+    rw [hc5_yw_cells_eq, hc5_yh_val]
+    have heq :
+        (_root_.initTape (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
+      rw [show 1 + i = i + 1 from by omega]
+      exact initTape_ofBool_cells_lt y i hi
+    exact ⟨by rw [heq]; exact ofBool_ne_blank _,
+           by rw [heq]; exact ofBool_ne_start _⟩
+  have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
+    rw [hc5_yw_cells_eq]
+    rfl
+  obtain ⟨c6, hreach_copyY, hc6_state, hc6_inp, hc6_yh, hc6_yc, hc6_ph, hc6_pc0,
+          hc6_pns, hc6_below, hc6_above, hc6_data⟩ :=
+    pairBuild_copyY_loop yIdx pIdx hne y.length c5 hc5_state hc5_ih_ge
+      hc5_ins hc5_yh_ge hc5_yw_cell0 hc5_yns hc5_yw_data hc5_ph_ge hc5_pc0 hc5_pns
+  have hc6_yh_val : (c6.work yIdx).head = 1 + y.length := by
+    rw [hc6_yh, hc5_yh_val]
+  have hc6_ph_val : (c6.work pIdx).head = 3 + 2 * x.length + y.length := by
+    rw [hc6_ph, hc5_ph_val]
+  have hc6_ih_val : c6.input.head = 1 + x.length := by rw [hc6_inp]; exact hc5_ih_val
+  have hc6_ih_ge : c6.input.head ≥ 1 := by rw [hc6_ih_val]; omega
+  have hc6_yh_ge : (c6.work yIdx).head ≥ 1 := by rw [hc6_yh_val]; omega
+  have hc6_ph_ge : (c6.work pIdx).head ≥ 1 := by rw [hc6_ph_val]; omega
+  have hc6_ic : c6.input.cells = c5.input.cells := by rw [hc6_inp]
+  have hc6_ic0 : c6.input.cells 0 = Γ.start := by rw [hc6_ic]; exact hc5_ic0
+  have hc6_ins : ∀ j, j ≥ 1 → c6.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc6_ic]; exact hc5_ins j hj
+  have hc6_yc_eq : (c6.work yIdx).cells = (c5.work yIdx).cells := hc6_yc
+  have hc6_yns : ∀ j, j ≥ 1 → (c6.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc6_yc_eq]; exact hc5_yns j hj
+  have hc6_yread : (c6.work yIdx).read = Γ.blank := by
+    show (c6.work yIdx).cells (c6.work yIdx).head = Γ.blank
+    rw [hc6_yc_eq, hc5_yw_cells_eq, hc6_yh_val]
+    rw [show 1 + y.length = y.length + 1 from by omega]
+    exact initTape_ofBool_cells_ge y y.length (le_refl _)
+  obtain ⟨c7, hstep7, hc7_state, hc7_inp, hc7_yw, hc7_pw⟩ :=
+    pairBuild_copyY_halt_step yIdx pIdx c6 hc6_state hc6_yread
+      hc6_ih_ge hc6_yh_ge hc6_ph_ge hc6_ins hc6_yns hc6_pns
+  have hc7_ih_val : c7.input.head = 1 + x.length := by rw [hc7_inp]; exact hc6_ih_val
+  have hc7_ih_ge : c7.input.head ≥ 1 := by rw [hc7_ih_val]; omega
+  have hc7_ic : c7.input.cells = c6.input.cells := by rw [hc7_inp]
+  have hc7_ic0 : c7.input.cells 0 = Γ.start := by rw [hc7_ic]; exact hc6_ic0
+  have hc7_ins : ∀ j, j ≥ 1 → c7.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_ic]; exact hc6_ins j hj
+  have hc7_yh_ge : (c7.work yIdx).head ≥ 1 := by rw [hc7_yw]; exact hc6_yh_ge
+  have hc7_yc : (c7.work yIdx).cells = (c6.work yIdx).cells := by rw [hc7_yw]
+  have hc7_yns : ∀ j, j ≥ 1 → (c7.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_yw]; exact hc6_yns j hj
+  have hc7_ph_val : (c7.work pIdx).head = 3 + 2 * x.length + y.length := by
+    rw [hc7_pw]; exact hc6_ph_val
+  have hc7_pc : (c7.work pIdx).cells = (c6.work pIdx).cells := by rw [hc7_pw]
+  have hc7_ph_ge : (c7.work pIdx).head ≥ 1 := by rw [hc7_ph_val]; omega
+  have hc7_pc0 : (c7.work pIdx).cells 0 = Γ.start := by rw [hc7_pc]; exact hc6_pc0
+  have hc7_pns : ∀ j, j ≥ 1 → (c7.work pIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc7_pw]; exact hc6_pns j hj
+  obtain ⟨c8, hreach_rewind, hc8_state, hc8_inp, hc8_yw, hc8_ph, hc8_pc⟩ :=
+    pairBuild_rewindP1_loop yIdx pIdx hne (3 + 2 * x.length + y.length) c7
+      hc7_state hc7_ph_val hc7_pc0 hc7_pns hc7_ih_ge hc7_ins hc7_yh_ge hc7_yns
+  have hc8_ih_val : c8.input.head = 1 + x.length := by rw [hc8_inp]; exact hc7_ih_val
+  have hc8_ih_ge : c8.input.head ≥ 1 := by rw [hc8_ih_val]; omega
+  have hc8_ic : c8.input.cells = c7.input.cells := by rw [hc8_inp]
+  have hc8_ic0 : c8.input.cells 0 = Γ.start := by rw [hc8_ic]; exact hc7_ic0
+  have hc8_ins : ∀ j, j ≥ 1 → c8.input.cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_ic]; exact hc7_ins j hj
+  have hc8_yh_ge : (c8.work yIdx).head ≥ 1 := by rw [hc8_yw]; exact hc7_yh_ge
+  have hc8_yc : (c8.work yIdx).cells = (c7.work yIdx).cells := by rw [hc8_yw]
+  have hc8_yns : ∀ j, j ≥ 1 → (c8.work yIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_yw]; exact hc7_yns j hj
+  have hc8_ph_ge : (c8.work pIdx).head ≥ 1 := by rw [hc8_ph]
+  have hc8_pc_eq : (c8.work pIdx).cells = (c7.work pIdx).cells := hc8_pc
+  have hc8_pc0 : (c8.work pIdx).cells 0 = Γ.start := by rw [hc8_pc_eq]; exact hc7_pc0
+  have hc8_pns : ∀ j, j ≥ 1 → (c8.work pIdx).cells j ≠ Γ.start := by
+    intro j hj; rw [hc8_pc_eq]; exact hc7_pns j hj
+  obtain ⟨c9, hstep9, hc9_state, _hc9_inp, _hc9_yw, hc9_pw⟩ :=
+    pairBuild_rewindP2_step yIdx pIdx c8 hc8_state hc8_ih_ge hc8_yh_ge hc8_ph_ge
+      hc8_ins hc8_yns hc8_pns
+  have hc9_ph_val : (c9.work pIdx).head = 1 := by rw [hc9_pw]; exact hc8_ph
+  have hc9_pc_via_c6 : (c9.work pIdx).cells = (c6.work pIdx).cells := by
+    rw [hc9_pw, hc8_pc_eq, hc7_pc]
+  have hreach_13 : (pairBuildTM yIdx pIdx).reachesIn (2 * x.length + 1) c1 c3 :=
+    reachesIn_trans _ hreach_copyX (.step hstep3 .zero)
+  have hreach_14 : (pairBuildTM yIdx pIdx).reachesIn (2 * x.length + 1 + 1) c1 c4 :=
+    reachesIn_trans _ hreach_13 (.step hstep4 .zero)
+  have hreach_15 : (pairBuildTM yIdx pIdx).reachesIn (2 * x.length + 1 + 1 + 1) c1 c5 :=
+    reachesIn_trans _ hreach_14 (.step hstep5 .zero)
+  have hreach_16 : (pairBuildTM yIdx pIdx).reachesIn
+      (2 * x.length + 1 + 1 + 1 + y.length) c1 c6 :=
+    reachesIn_trans _ hreach_15 hreach_copyY
+  have hreach_17 : (pairBuildTM yIdx pIdx).reachesIn
+      (2 * x.length + 1 + 1 + 1 + y.length + 1) c1 c7 :=
+    reachesIn_trans _ hreach_16 (.step hstep7 .zero)
+  have hreach_18 : (pairBuildTM yIdx pIdx).reachesIn
+      (2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1))
+      c1 c8 := reachesIn_trans _ hreach_17 hreach_rewind
+  have hreach_19 : (pairBuildTM yIdx pIdx).reachesIn
+      (2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1) + 1)
+      c1 c9 := reachesIn_trans _ hreach_18 (.step hstep9 .zero)
+  have hbound :
+      2 * x.length + 1 + 1 + 1 + y.length + 1 + (3 + 2 * x.length + y.length + 1) + 1
+        ≤ 4 * x.length + 2 * y.length + 9 := by
+    omega
+  refine ⟨c9, _, hbound, hreach_19, hc9_state, hc9_ph_val, ?_, ?_, ?_⟩
+  · rw [hc9_pc_via_c6]; exact hc6_pc0
+  · intro i hi
+    rw [pair_length] at hi
+    by_cases hx : i < 2 * x.length
+    · have hdecomp : i = 2 * (i / 2) ∨ i = 2 * (i / 2) + 1 := by omega
+      have hidiv : i / 2 < x.length := by omega
+      have hpair : (pair x y)[i]'(by rw [pair_length]; omega) = x[i / 2]'hidiv := by
+        rcases hdecomp with hi_even | hi_odd
+        · exact (getElem_congr_idx hi_even).trans
+            (pair_getElem_doubled_even x y (i / 2) hidiv)
+        · exact (getElem_congr_idx hi_odd).trans
+            (pair_getElem_doubled_odd x y (i / 2) hidiv)
+      have hi_c5 : i + 1 < 3 + 2 * x.length := by omega
+      have hc6_at : (c6.work pIdx).cells (i + 1) = (c5.work pIdx).cells (i + 1) := by
+        have := hc6_below (i + 1) (by rw [hc5_ph_val]; exact hi_c5)
+        exact this
+      have hc5_at : (c5.work pIdx).cells (i + 1) = (c4.work pIdx).cells (i + 1) :=
+        hc5_pc_other (i + 1) (by omega)
+      have hi_ne_ws1 : i + 1 ≠ 1 + 2 * x.length := by omega
+      have hc4_at : (c4.work pIdx).cells (i + 1) = (c3.work pIdx).cells (i + 1) :=
+        hc4_pc_other (i + 1) hi_ne_ws1
+      rw [hc9_pc_via_c6, hc6_at, hc5_at, hc4_at, hc3_pw_cells]
+      rw [hpair]
+      obtain ⟨heven, hodd⟩ := hc2_data (i / 2) hidiv
+      rcases hdecomp with hi_even | hi_odd
+      · have hheq : (c1.work pIdx).head + 2 * (i / 2) = i + 1 := by rw [hc1_ph]; omega
+        rw [← hheq, heven]
+        rw [hc1_ic, hc1_ih]
+        rw [show 1 + (i / 2) = (i / 2) + 1 from by omega]
+        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+      · have hheq : (c1.work pIdx).head + 2 * (i / 2) + 1 = i + 1 := by
+          rw [hc1_ph]; omega
+        rw [← hheq, hodd]
+        rw [hc1_ic, hc1_ih]
+        rw [show 1 + (i / 2) = (i / 2) + 1 from by omega]
+        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+    · push_neg at hx
+      by_cases hx2 : i = 2 * x.length
+      · subst hx2
+        have hpair : (pair x y)[2 * x.length]'(by rw [pair_length]; omega) = false :=
+          pair_getElem_sep0 x y
+        rw [hpair]
+        rw [hc9_pc_via_c6]
+        have hi_c5 : 2 * x.length + 1 < 3 + 2 * x.length := by omega
+        rw [hc6_below (2 * x.length + 1) (by rw [hc5_ph_val]; exact hi_c5)]
+        rw [hc5_pc_other (2 * x.length + 1) (by omega)]
+        have : 2 * x.length + 1 = 1 + 2 * x.length := by omega
+        rw [this, hc4_pc_zero]
+        rfl
+      · by_cases hx3 : i = 2 * x.length + 1
+        · subst hx3
+          have hpair : (pair x y)[2 * x.length + 1]'(by rw [pair_length]; omega) = true :=
+            pair_getElem_sep1 x y
+          rw [hpair]
+          rw [hc9_pc_via_c6]
+          have hi_c5 : 2 * x.length + 1 + 1 < 3 + 2 * x.length := by omega
+          rw [hc6_below (2 * x.length + 1 + 1) (by rw [hc5_ph_val]; exact hi_c5)]
+          have : 2 * x.length + 1 + 1 = 2 + 2 * x.length := by omega
+          rw [this, hc5_pc_one]
+          rfl
+        · have hi_lo : i ≥ 2 * x.length + 2 := by omega
+          set j := i - 2 * x.length - 2 with hj_def
+          have hi_eq : i = 2 * x.length + 2 + j := by omega
+          have hj_lt : j < y.length := by omega
+          have hpair : (pair x y)[i]'(by rw [pair_length]; omega) = y[j]'hj_lt := by
+            exact (getElem_congr_idx hi_eq).trans (pair_getElem_y x y j hj_lt)
+          rw [hpair]
+          rw [hc9_pc_via_c6]
+          have hheq : (c5.work pIdx).head + j = i + 1 := by rw [hc5_ph_val]; omega
+          rw [← hheq]
+          rw [hc6_data j hj_lt]
+          rw [hc5_yw_cells_eq, hc5_yh_val]
+          rw [show 1 + j = j + 1 from by omega]
+          exact initTape_ofBool_cells_lt y j hj_lt
+  · intro i hi_tail
+    rw [pair_length] at hi_tail
+    rw [hc9_pc_via_c6]
+    have hi_above : i + 1 ≥ (c5.work pIdx).head + y.length := by
+      rw [hc5_ph_val]; omega
+    rw [hc6_above _ hi_above]
+    rw [hc5_pc_other _ (by omega)]
+    rw [hc4_pc_other _ (by omega)]
+    rw [hc3_pw_cells]
+    have hi_c2 : i + 1 ≥ (c1.work pIdx).head + 2 * x.length := by
+      rw [hc1_ph]; omega
+    rw [hc2_above _ hi_c2]
+    rw [hc1_pc]
+    exact initTape_nil_cells_succ i
+
 /-- **`pairBuildTM` correctness.** Given `x` on the input tape and `y` on
     work tape `yIdx` (with `yIdx ≠ pIdx`), `pairBuildTM yIdx pIdx` halts
     leaving work tape `pIdx` carrying `pair x y` (in the cells indexed
-    `1..|pair x y|`) with head at cell `1`, within `pairBuildTime` steps. -/
+    `1..|pair x y|`), blank thereafter, with head at cell `1`, within
+    `pairBuildTime` steps. -/
 theorem pairBuildTM_hoareTime
     {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
     (x y : List Bool) :
@@ -1133,7 +1601,8 @@ theorem pairBuildTM_hoareTime
         (work pIdx).cells 0 = Γ.start ∧
         (∀ i : ℕ, (h : i < (pair x y).length) →
           (work pIdx).cells (i + 1) = Γ.ofBool ((pair x y)[i]'h)) ∧
-        (work pIdx).cells ((pair x y).length + 1) = Γ.blank)
+        (∀ i : ℕ, (pair x y).length ≤ i →
+          (work pIdx).cells (i + 1) = Γ.blank))
       (pairBuildTime x.length y.length) := by
   intro inp work out ⟨hinp, hyw, hpw⟩
   -- c0 = initial configuration. Unfold using the starting tapes.
@@ -1568,24 +2037,268 @@ theorem pairBuildTM_hoareTime
           show (work yIdx).cells (1 + j) = Γ.ofBool (y[j]'hj_lt)
           rw [hyw, show 1 + j = j + 1 from by omega]
           exact initTape_ofBool_cells_lt y j hj_lt
-  · -- (work pIdx).cells (|pair x y| + 1) = Γ.blank
-    rw [pair_length, hc9_pc_via_c6]
-    -- Position: 2|x| + 2 + |y| + 1.
+  · -- (work pIdx).cells are blank after the encoded pair.
+    intro i hi_tail
+    rw [pair_length] at hi_tail
+    rw [hc9_pc_via_c6]
+    -- Position: i + 1, with i beyond 2|x| + 2 + |y|.
     -- ≥ c5.pIdx.head + |y| = 3+2|x|+|y|: use hc6_above.
-    have hi_above : 2 * x.length + 2 + y.length + 1 ≥ (c5.work pIdx).head + y.length := by
+    have hi_above : i + 1 ≥ (c5.work pIdx).head + y.length := by
       rw [hc5_ph_val]; omega
     rw [hc6_above _ hi_above]
-    -- c5.cells[2|x|+|y|+3]: ≠ 2+2|x|, so hc5_pc_other applies.
+    -- c5/c4/c3 chain is stable at this tail position.
     rw [hc5_pc_other _ (by omega)]
-    -- c4.cells[2|x|+|y|+3]: ≠ 1+2|x|, so hc4_pc_other applies.
     rw [hc4_pc_other _ (by omega)]
-    -- c3.cells = c2.cells. Position ≥ 1+2|x| = c1.pIdx.head + 2|x|. Use hc2_above.
     rw [hc3_pw_cells]
-    have hi_c2 : 2 * x.length + 2 + y.length + 1 ≥ (c1.work pIdx).head + 2 * x.length := by
+    -- Position ≥ 1+2|x| = c1.pIdx.head + 2|x|. Use hc2_above.
+    have hi_c2 : i + 1 ≥ (c1.work pIdx).head + 2 * x.length := by
       rw [hc1_ph]; omega
     rw [hc2_above _ hi_c2]
     -- c1.cells = c0.cells. Initial tape is initTape [], cells at j ≥ 1 = blank.
     rw [hc1_pc, hc0_pw_cells]
-    rw [if_neg (by omega : (2 * x.length + 2 + y.length + 1 : ℕ) ≠ 0)]
+    rw [if_neg (by omega : i + 1 ≠ 0)]
+
+/-- A compact corollary of `pairBuildTM_hoareTime`: the pair tape satisfies
+    exact equality with the standard initialized pair tape, moved to cell 1. -/
+theorem pairBuildTM_hoareTime_initTape_move_right
+    {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
+    (x y : List Bool) :
+    (pairBuildTM yIdx pIdx).HoareTime
+      (fun inp work _ =>
+        inp = _root_.initTape (x.map Γ.ofBool) ∧
+        work yIdx = _root_.initTape (y.map Γ.ofBool) ∧
+        work pIdx = _root_.initTape [])
+      (fun _ work _ =>
+        work pIdx = (_root_.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (pairBuildTime x.length y.length) := by
+  exact (pairBuildTM_hoareTime yIdx pIdx hne x y).strengthen_post
+    (fun _ work _ hpost => by
+      exact tape_eq_initTape_move_right_of_binary hpost.1 hpost.2.1
+        hpost.2.2.1 hpost.2.2.2)
+
+/-- `pairBuildTM` correctness for phase composition where input, witness,
+    and pair tapes have already passed the start marker. This is the layout
+    produced by earlier setup phases that idle untouched tapes once from `▷`
+    to cell `1`. -/
+theorem pairBuildTM_hoareTime_all_started_initTape_move_right
+    {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
+    (x y : List Bool) :
+    (pairBuildTM yIdx pIdx).HoareTime
+      (fun inp work _ =>
+        inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work yIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right ∧
+        work pIdx = (_root_.initTape []).move Dir3.right)
+      (fun _ work _ =>
+        work pIdx = (_root_.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (pairBuildTime x.length y.length) := by
+  intro inp work out ⟨hinp, hyw, hpw⟩
+  let c0 : Cfg k (pairBuildTM yIdx pIdx).Q :=
+    { state := (pairBuildTM yIdx pIdx).qstart, input := inp, work := work, output := out }
+  have hc0_state : c0.state = .init := rfl
+  have hinp_read : c0.input.read ≠ Γ.start := by
+    show inp.read ≠ Γ.start
+    rw [hinp]
+    show ((_root_.initTape (x.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
+    simp only [Tape.read, Tape.move]
+    exact initTape_ofBool_cells_ne_start x 1 (by omega)
+  have hy_read : (c0.work yIdx).read ≠ Γ.start := by
+    show (work yIdx).read ≠ Γ.start
+    rw [hyw]
+    show ((_root_.initTape (y.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
+    simp only [Tape.read, Tape.move]
+    exact initTape_ofBool_cells_ne_start y 1 (by omega)
+  have hp_read : (c0.work pIdx).read ≠ Γ.start := by
+    show (work pIdx).read ≠ Γ.start
+    rw [hpw]
+    show ((_root_.initTape []).move Dir3.right).read ≠ Γ.start
+    simp only [Tape.read, Tape.move]
+    show (_root_.initTape []).cells 1 ≠ Γ.start
+    simp [_root_.initTape]
+  obtain ⟨c1, hstep_init, hc1_state, hc1_inp, hc1_yw, hc1_pw⟩ :=
+    pairBuild_init_step_all_started yIdx pIdx c0 hc0_state hinp_read hy_read hp_read
+  have hc1_input : c1.input =
+      (_root_.initTape (x.map Γ.ofBool)).move Dir3.right := by
+    rw [hc1_inp]
+    exact hinp
+  have hc1_y : c1.work yIdx =
+      (_root_.initTape (y.map Γ.ofBool)).move Dir3.right := by
+    rw [hc1_yw]
+    exact hyw
+  have hc1_p : c1.work pIdx = (_root_.initTape []).move Dir3.right := by
+    rw [hc1_pw]
+    exact hpw
+  obtain ⟨c9, t, ht, hreach_core, hhalt, hpost⟩ :=
+    pairBuildTM_from_copyX1_initTape_move_right yIdx pIdx hne x y c1
+      hc1_state hc1_input hc1_y hc1_p
+  refine ⟨c9, 1 + t, ?_, ?_, hhalt, ?_⟩
+  · dsimp [pairBuildTime]
+    omega
+  · exact reachesIn_trans _ (.step hstep_init .zero) hreach_core
+  · exact tape_eq_initTape_move_right_of_binary hpost.1 hpost.2.1
+      hpost.2.2.1 hpost.2.2.2
+
+/-- Nondeterministic lift of
+    `pairBuildTM_hoareTime_all_started_initTape_move_right`. -/
+theorem pairBuildTM_toNTM_hoareTime_all_started_initTape_move_right
+    {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
+    (x y : List Bool) :
+    ((pairBuildTM yIdx pIdx).toNTM).HoareTime
+      (fun inp work _ =>
+        inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work yIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right ∧
+        work pIdx = (_root_.initTape []).move Dir3.right)
+      (fun _ work _ =>
+        work pIdx = (_root_.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (pairBuildTime x.length y.length) :=
+  (pairBuildTM_hoareTime_all_started_initTape_move_right yIdx pIdx hne x y).toNTM
+
+/-- Local tape fact for pair-builder preservation proofs. -/
+private theorem pairBuild_writeAndMove_readBack_idle_of_ne_start (t : Tape)
+    (hread : t.read ≠ Γ.start) :
+    t.writeAndMove (readBackWrite t.read) (idleDir t.read) = t := by
+  have hback : (readBackWrite t.read).toΓ = t.read := by
+    cases h : t.read with
+    | zero => rfl
+    | one => rfl
+    | blank => rfl
+    | start => exact (hread h).elim
+  have hdir : idleDir t.read = Dir3.stay := by
+    simp [idleDir, hread]
+  rw [hback]
+  simp only [Tape.writeAndMove, hdir, Tape.move]
+  by_cases h0 : t.head = 0
+  · simp [Tape.write, h0]
+  · simp [Tape.write, h0, Tape.read, Function.update_eq_self]
+
+private theorem pairBuild_ntm_trace_succ_eq_trace_one (tm : NTM k) (T : ℕ)
+    (choices : Fin (T + 1) → Bool) (c : Cfg k tm.Q) :
+    tm.trace (T + 1) choices c =
+      tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩)
+        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
+  by_cases hhalt : c.state = tm.qhalt
+  · simp [NTM.trace, hhalt]
+    exact (tm.trace_halted T (fun i => choices ⟨i.val + 1, by omega⟩) hhalt).symm
+  · simp [NTM.trace, hhalt]
+
+/-- One pair-builder step preserves the output tape once the output head is
+    past the start marker. -/
+theorem pairBuildTM_trace_one_preserves_output
+    {k : ℕ} (yIdx pIdx : Fin k) (choice : Bool)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hread : c.output.read ≠ Γ.start) :
+    ((((pairBuildTM yIdx pIdx).toNTM).trace 1 (fun _ => choice) c).output) =
+      c.output := by
+  have hpres := pairBuild_writeAndMove_readBack_idle_of_ne_start c.output hread
+  by_cases hhalt : c.state = PairBuildPhase.done
+  · simp [NTM.trace, TM.toNTM, pairBuildTM, hhalt]
+  · cases hstate : c.state
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt] using hpres
+    · by_cases hi : c.input.read = Γ.blank <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hi] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt] using hpres
+    · by_cases hy : (c.work yIdx).read = Γ.blank <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy] using hpres
+    · by_cases hp : (c.work pIdx).read = Γ.start <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hp] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt] using hpres
+    · exact (hhalt hstate).elim
+
+/-- Pair-builder traces preserve the output tape once the output head is
+    past the start marker. -/
+theorem pairBuildTM_trace_preserves_output
+    {k : ℕ} (yIdx pIdx : Fin k) (T : ℕ)
+    (choices : Fin T → Bool)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hread : c.output.read ≠ Γ.start) :
+    ((((pairBuildTM yIdx pIdx).toNTM).trace T choices c).output) =
+      c.output := by
+  induction T generalizing c with
+  | zero => rfl
+  | succ T ih =>
+      rw [pairBuild_ntm_trace_succ_eq_trace_one ((pairBuildTM yIdx pIdx).toNTM) T choices c]
+      have hfirst := pairBuildTM_trace_one_preserves_output yIdx pIdx
+        (choices ⟨0, by omega⟩) c hread
+      have hread' :
+          ((((pairBuildTM yIdx pIdx).toNTM).trace 1
+            (fun _ => choices ⟨0, by omega⟩) c).output).read ≠ Γ.start := by
+        rw [hfirst]
+        exact hread
+      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
+        (((pairBuildTM yIdx pIdx).toNTM).trace 1
+          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+
+/-- One pair-builder step preserves a non-active work tape once that tape's
+    head is past the start marker. -/
+theorem pairBuildTM_trace_one_preserves_other_work
+    {k : ℕ} (yIdx pIdx otherIdx : Fin k) (choice : Bool)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hy : otherIdx ≠ yIdx) (hp : otherIdx ≠ pIdx)
+    (hread : (c.work otherIdx).read ≠ Γ.start) :
+    (((((pairBuildTM yIdx pIdx).toNTM).trace 1 (fun _ => choice) c).work
+      otherIdx)) = c.work otherIdx := by
+  have hpres := pairBuild_writeAndMove_readBack_idle_of_ne_start
+    (c.work otherIdx) hread
+  by_cases hhalt : c.state = PairBuildPhase.done
+  · simp [NTM.trace, TM.toNTM, pairBuildTM, hhalt]
+  · cases hstate : c.state
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy, hp] using hpres
+    · by_cases hi : c.input.read = Γ.blank <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hi, hy, hp]
+          using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy, hp] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy, hp] using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy, hp] using hpres
+    · by_cases hyb : (c.work yIdx).read = Γ.blank <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hyb, hy, hp]
+          using hpres
+    · by_cases hps : (c.work pIdx).read = Γ.start <;>
+        simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hps, hy, hp]
+          using hpres
+    · simpa [NTM.trace, TM.toNTM, pairBuildTM, hstate, hhalt, hy, hp] using hpres
+    · exact (hhalt hstate).elim
+
+/-- Pair-builder traces preserve a non-active work tape once that tape's head
+    is past the start marker. -/
+theorem pairBuildTM_trace_preserves_other_work
+    {k : ℕ} (yIdx pIdx otherIdx : Fin k) (T : ℕ)
+    (choices : Fin T → Bool)
+    (c : Cfg k (pairBuildTM yIdx pIdx).Q)
+    (hy : otherIdx ≠ yIdx) (hp : otherIdx ≠ pIdx)
+    (hread : (c.work otherIdx).read ≠ Γ.start) :
+    ((((pairBuildTM yIdx pIdx).toNTM).trace T choices c).work otherIdx) =
+      c.work otherIdx := by
+  induction T generalizing c with
+  | zero => rfl
+  | succ T ih =>
+      rw [pairBuild_ntm_trace_succ_eq_trace_one ((pairBuildTM yIdx pIdx).toNTM) T choices c]
+      have hfirst := pairBuildTM_trace_one_preserves_other_work yIdx pIdx otherIdx
+        (choices ⟨0, by omega⟩) c hy hp hread
+      have hread' :
+          (((((pairBuildTM yIdx pIdx).toNTM).trace 1
+            (fun _ => choices ⟨0, by omega⟩) c).work otherIdx)).read ≠ Γ.start := by
+        rw [hfirst]
+        exact hread
+      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
+        (((pairBuildTM yIdx pIdx).toNTM).trace 1
+          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+
+/-- A compact corollary of `pairBuildTM_hoareTime`: the pair tape satisfies
+    the standard `Tape.hasOutput` predicate for `pair x y`. -/
+theorem pairBuildTM_hoareTime_hasOutput
+    {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
+    (x y : List Bool) :
+    (pairBuildTM yIdx pIdx).HoareTime
+      (fun inp work _ =>
+        inp = _root_.initTape (x.map Γ.ofBool) ∧
+        work yIdx = _root_.initTape (y.map Γ.ofBool) ∧
+        work pIdx = _root_.initTape [])
+      (fun _ work _ =>
+        (work pIdx).head = 1 ∧ (work pIdx).hasOutput (pair x y))
+      (pairBuildTime x.length y.length) := by
+  exact (pairBuildTM_hoareTime yIdx pIdx hne x y).strengthen_post
+    (fun _ work _ hpost => by
+      exact ⟨hpost.1, hpost.2.2.1, hpost.2.2.2 (pair x y).length le_rfl⟩)
 
 end TM

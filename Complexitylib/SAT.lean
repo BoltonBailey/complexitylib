@@ -1,12 +1,16 @@
 import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Encoding
 import Complexitylib.SAT.Language
+import Complexitylib.SAT.Verifier
+import Complexitylib.SAT.VerifierTM
+import Complexitylib.SAT.GuessVerify
+import Complexitylib.SAT.Headline
 
 /-!
 # SAT: Boolean satisfiability
 
-This module formalizes the language **SAT** and a polynomial-time Turing
-machine verifier for it.
+This module formalizes the language **SAT** and the semantic/encoding
+infrastructure used by the polynomial-time verifier.
 
 ## Submodules
 
@@ -16,6 +20,10 @@ machine verifier for it.
 - `Encoding`  — `CNF.encode : CNF → List Bool`, the bit-level format the
   verifier parses.
 - `Language`  — `L_SAT`, the witness relation `R_SAT`, and the proofs
-  `L_SAT_iff_witness` / `R_SAT_polyBalanced` that reduce SAT ∈ NP to the
-  decidability of the verifier's pair language.
+  `L_SAT_iff_witness` / `R_SAT_polyBalanced`.
+- `Verifier` — executable decoding and checking for `pair(z, α)`.
+- `VerifierTM` — deterministic TM components for the machine-level verifier.
+- `GuessVerify` — the SAT-specialized composed NTM skeleton for
+  counter setup, bounded guessing, pair construction, and verifier
+  simulation.
 -/

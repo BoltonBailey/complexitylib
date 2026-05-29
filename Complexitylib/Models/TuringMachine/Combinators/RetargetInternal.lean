@@ -1,5 +1,9 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Hoare.Defs
+import Complexitylib.Models.TuringMachine.CounterSubroutines
+import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
 /-!
 # retargetInput simulation — proof internals
@@ -324,5 +328,421 @@ theorem retargetInput_decidesVirtual (M : TM k) {L : Language} {T : ℕ → ℕ}
   · intro hz
     show (retargetWrap M finalReal c_M).output.cells 1 = Γ.zero
     exact hno hz
+
+/-- A verifier that decides a language cannot have `qstart = qhalt`, because
+    the initial output cell is blank, not an accepting or rejecting bit. -/
+theorem qstart_ne_qhalt_of_decidesInTime (M : TM k) {L : Language} {T : ℕ → ℕ}
+    (hM : M.DecidesInTime L T) : M.qstart ≠ M.qhalt := by
+  intro hstart
+  obtain ⟨c', t, _ht, hreach, _hhalt, hyes, hno⟩ := hM []
+  have hinit_halt : M.halted (M.initCfg []) := by
+    simpa [TM.halted, Cfg.isHalted, Cfg.init] using hstart
+  have ht0 : t = 0 := by
+    have hle := M.reachesIn_le_halt hreach (TM.reachesIn.zero : M.reachesIn 0 (M.initCfg []) (M.initCfg []))
+      hinit_halt
+    omega
+  subst ht0
+  cases hreach
+  by_cases hmem : ([] : List Bool) ∈ L
+  · have hcell := hyes hmem
+    simp [initTape] at hcell
+  · have hcell := hno hmem
+    simp [initTape] at hcell
+
+/-- The verifier configuration after its forced first move off the start cells.
+    For a deciding machine this is well-defined by `qstart_ne_qhalt_of_decidesInTime`. -/
+noncomputable def startedCfg (M : TM k) (z : List Bool) (hne : M.qstart ≠ M.qhalt) :
+    Cfg k M.Q :=
+  (M.step (M.initCfg z)).get (by
+    simp [TM.step, hne])
+
+/-- `startedCfg` is the result of one deterministic verifier step from
+    `M.initCfg z`. -/
+theorem step_initCfg_startedCfg (M : TM k) (z : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    M.step (M.initCfg z) = some (startedCfg M z hne) := by
+  simp [startedCfg, TM.step, hne]
+
+/-- The verifier state immediately after the forced first move off `▷` is
+    independent of the concrete input string: the first step reads only the
+    start symbols on every tape. -/
+theorem startedCfg_state_eq (M : TM k) (z₁ z₂ : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    (startedCfg M z₁ hne).state = (startedCfg M z₂ hne).state := by
+  simp [startedCfg, TM.step, hne, Tape.read, initTape]
+
+/-- The verifier work tapes immediately after the forced first move off `▷`
+    are independent of the concrete input string. -/
+theorem startedCfg_work_eq (M : TM k) (z₁ z₂ : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    (startedCfg M z₁ hne).work = (startedCfg M z₂ hne).work := by
+  funext i
+  simp [startedCfg, TM.step, hne, Tape.read, initTape]
+
+/-- The verifier output tape immediately after the forced first move off `▷`
+    is independent of the concrete input string. -/
+theorem startedCfg_output_eq (M : TM k) (z₁ z₂ : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    (startedCfg M z₁ hne).output = (startedCfg M z₂ hne).output := by
+  simp [startedCfg, TM.step, hne, Tape.read, initTape]
+
+/-- The verifier input tape immediately after the forced first move off `▷`
+    is the ordinary initialized input moved right to cell 1. -/
+theorem startedCfg_input_eq (M : TM k) (z : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    (startedCfg M z hne).input = (_root_.initTape (z.map Γ.ofBool)).move Dir3.right := by
+  have hinDir :
+      (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.1 =
+        Dir3.right :=
+    (M.δ_right_of_start M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).1 rfl
+  change (M.6 M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.1 =
+    Dir3.right at hinDir
+  simp [startedCfg, TM.step, hne, Tape.read, initTape]
+  rw [hinDir]
+
+/-- Each verifier work tape immediately after the forced first move off `▷`
+    is a blank initialized tape moved right to cell 1. -/
+theorem startedCfg_work_eq_init (M : TM k) (z : List Bool)
+    (hne : M.qstart ≠ M.qhalt) (i : Fin k) :
+    (startedCfg M z hne).work i = (_root_.initTape []).move Dir3.right := by
+  have hworkDir :
+      (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.1 i =
+        Dir3.right :=
+    (M.δ_right_of_start M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.1 i rfl
+  change (M.6 M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.1 i =
+    Dir3.right at hworkDir
+  simp [startedCfg, TM.step, hne, Tape.read, initTape, Tape.writeAndMove, Tape.write]
+  rw [hworkDir]
+
+/-- The verifier output tape immediately after the forced first move off `▷`
+    is a blank initialized tape moved right to cell 1. -/
+theorem startedCfg_output_eq_init (M : TM k) (z : List Bool)
+    (hne : M.qstart ≠ M.qhalt) :
+    (startedCfg M z hne).output = (_root_.initTape []).move Dir3.right := by
+  have houtDir :
+      (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.2 =
+        Dir3.right :=
+    (M.δ_right_of_start M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2 rfl
+  change (M.6 M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.2 =
+    Dir3.right at houtDir
+  simp [startedCfg, TM.step, hne, Tape.read, initTape, Tape.writeAndMove, Tape.write]
+  rw [houtDir]
+
+/-- User-facing simulation from the post-start verifier configuration.
+
+    If `M` decides `L`, then `retargetInput M` can start from `retargetWrap`
+    of the verifier state immediately after `M`'s first step on `z`, and it
+    reaches the same accepting/rejecting output. This is the form needed by
+    phase-composed machines whose earlier phases have already moved every
+    tape off `▷`. -/
+theorem retargetInput_decidesVirtual_started (M : TM k) {L : Language} {T : ℕ → ℕ}
+    (hM : M.DecidesInTime L T) (z : List Bool) (realInput : Tape) :
+    ∃ c' t, t + 1 ≤ T z.length ∧
+      (retargetInput M).reachesIn t
+        (retargetWrap M realInput (startedCfg M z (qstart_ne_qhalt_of_decidesInTime M hM))) c' ∧
+      (retargetInput M).halted c' ∧
+      (z ∈ L → c'.output.cells 1 = Γ.one) ∧
+      (z ∉ L → c'.output.cells 1 = Γ.zero) := by
+  let hne := qstart_ne_qhalt_of_decidesInTime M hM
+  obtain ⟨c_M, t, ht, hreach, hhalt, hyes, hno⟩ := hM z
+  have ht_ne : t ≠ 0 := by
+    intro ht0
+    subst ht0
+    cases hreach
+    exact hne hhalt
+  obtain ⟨t', ht'⟩ := Nat.exists_eq_succ_of_ne_zero ht_ne
+  subst ht'
+  obtain ⟨c_mid, hstep, hrest⟩ : ∃ c_mid,
+      M.step (M.initCfg z) = some c_mid ∧ M.reachesIn t' c_mid c_M := by
+    cases hreach with
+    | step hstep hrest => exact ⟨_, hstep, hrest⟩
+  have hstarted : c_mid = startedCfg M z hne := by
+    have hs : some c_mid = some (startedCfg M z hne) := by
+      rw [← hstep, step_initCfg_startedCfg M z hne]
+    exact Option.some.inj hs
+  subst hstarted
+  have hinp : TapeInvariant (startedCfg M z hne).input := by
+    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.initTape_ofBool z
+    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.initTape_nil
+    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.initTape_nil
+    obtain ⟨hinp', _, _⟩ :=
+      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+    exact hinp'
+  have hwork : ∀ i, TapeInvariant ((startedCfg M z hne).work i) := by
+    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.initTape_ofBool z
+    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.initTape_nil
+    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.initTape_nil
+    obtain ⟨_, hwork', _⟩ :=
+      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+    exact hwork'
+  have hout : TapeInvariant (startedCfg M z hne).output := by
+    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.initTape_ofBool z
+    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.initTape_nil
+    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.initTape_nil
+    obtain ⟨_, _, hout'⟩ :=
+      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+    exact hout'
+  obtain ⟨finalReal, hreachSim⟩ :=
+    retargetInput_reachesIn_simulate M hrest hinp hwork hout realInput
+  refine ⟨retargetWrap M finalReal c_M, t', by omega, hreachSim, ?_, ?_, ?_⟩
+  · show (retargetWrap M finalReal c_M).state = (retargetInput M).qhalt
+    show c_M.state = M.qhalt
+    exact hhalt
+  · intro hz
+    show (retargetWrap M finalReal c_M).output.cells 1 = Γ.one
+    exact hyes hz
+  · intro hz
+    show (retargetWrap M finalReal c_M).output.cells 1 = Γ.zero
+    exact hno hz
+
+/-- Hoare lifting for `retargetInput`: if a deterministic TM satisfies a
+    Hoare triple on its ordinary input tape, then `retargetInput` satisfies
+    the corresponding triple when that input is supplied on the last work
+    tape. The real input tape is ignored. -/
+theorem retargetInput_hoareTime (M : TM k)
+    {pre post : TapePred k} {b : ℕ}
+    (hM : M.HoareTime pre post b)
+    (hpre_inp : ∀ inp work out, pre inp work out → TapeInvariant inp)
+    (hpre_work : ∀ inp work out, pre inp work out → ∀ i, TapeInvariant (work i))
+    (hpre_out : ∀ inp work out, pre inp work out → TapeInvariant out) :
+    (retargetInput M).HoareTime
+      (fun _inp work out =>
+        pre (work ⟨k, by omega⟩) (fun i => work ⟨i.val, by omega⟩) out)
+      (fun _inp work out =>
+        ∃ vin : Tape, ∃ innerWork : Fin k → Tape,
+          post vin innerWork out ∧
+          (∀ i : Fin k, work ⟨i.val, by omega⟩ = innerWork i) ∧
+          work ⟨k, by omega⟩ = vin)
+      b := by
+  intro realInput work out hpre
+  let vin : Tape := work ⟨k, by omega⟩
+  let innerWork : Fin k → Tape := fun i => work ⟨i.val, by omega⟩
+  have hpreM : pre vin innerWork out := hpre
+  obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := hM vin innerWork out hpreM
+  have hinp : TapeInvariant vin := hpre_inp vin innerWork out hpreM
+  have hwork : ∀ i, TapeInvariant (innerWork i) := hpre_work vin innerWork out hpreM
+  have hout : TapeInvariant out := hpre_out vin innerWork out hpreM
+  obtain ⟨finalReal, hreachSim⟩ :=
+    retargetInput_reachesIn_simulate M hreach hinp hwork hout realInput
+  let c0 : Cfg k M.Q :=
+    { state := M.qstart, input := vin, work := innerWork, output := out }
+  have hworkField : (retargetWrap M realInput c0).work = work := by
+    funext j
+    by_cases hj : j.val < k
+    · simp [retargetWrap, c0, vin, innerWork, hj]
+    · have hjval : j.val = k := by
+        omega
+      have hjk : j = ⟨k, by omega⟩ := by
+        apply Fin.ext
+        simp [hjval]
+      simp [retargetWrap, c0, vin, innerWork, hjk]
+  have hstart :
+      retargetWrap M realInput c0 =
+        ({ state := (retargetInput M).qstart, input := realInput, work := work, output := out } :
+          Cfg (k + 1) (retargetInput M).Q) := by
+    refine Cfg.mk.injEq _ _ _ _ _ _ _ _ |>.mpr ⟨rfl, rfl, ?_, rfl⟩
+    simpa [retargetInput] using hworkField
+  refine ⟨retargetWrap M finalReal c', t, ht, ?_, ?_, ?_⟩
+  · rw [← hstart]
+    exact hreachSim
+  · show (retargetWrap M finalReal c').state = (retargetInput M).qhalt
+    simpa [retargetInput, retargetWrap] using hhalt
+  · refine ⟨c'.input, c'.work, hpost, ?_, ?_⟩
+    · intro i
+      simp [retargetWrap_work_lt]
+    · simp [retargetWrap_work_last]
+
+/-- Virtual-input version of `copyInputToWorkTM_started_hoareTime`: if the
+virtual input is a Boolean string at head `1` and work tape `idx` is a blank
+started tape, then `retargetInput (copyInputToWorkTM idx)` copies that virtual
+input onto work tape `idx` within `|x| + 1` steps. -/
+theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : List Bool) :
+    (retargetInput (copyInputToWorkTM idx)).HoareTime
+      (fun _inp work out =>
+        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨idx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        TapeInvariant out ∧
+        (∀ i : Fin k, i ≠ idx → TapeInvariant (work ⟨i.val, by omega⟩)))
+      (fun _inp work _out =>
+        (work ⟨k, by omega⟩).cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).head = x.length + 1 ∧
+        (work ⟨idx.val, by omega⟩).hasBinaryPrefix x)
+      (x.length + 1) := by
+  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+    intro t ht
+    refine ⟨?_, ?_⟩
+    · simpa [tape_move_cells] using ht.1
+    · intro j hj
+      simpa [tape_move_cells] using ht.2 j hj
+  have hcopy :
+      (copyInputToWorkTM idx).HoareTime
+        (fun inp work out =>
+          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work idx = (_root_.initTape []).move Dir3.right ∧
+          TapeInvariant out ∧
+          (∀ i : Fin k, i ≠ idx → TapeInvariant (work i)))
+        (fun inp work _out =>
+          inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+          inp.head = x.length + 1 ∧
+          (work idx).hasBinaryPrefix x)
+        (x.length + 1) :=
+    (copyInputToWorkTM_started_hoareTime idx x).weaken_pre (by
+      intro inp work out hpre
+      refine ⟨hpre.1, ?_⟩
+      rw [hpre.2.1]
+      exact Tape.initTape_nil_move_right_hasBinaryPrefix_nil)
+  have hret := retargetInput_hoareTime (M := copyInputToWorkTM idx) hcopy
+    (hpre_inp := by
+      intro _inp work out hpre
+      rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
+      rw [hvin]
+      exact hmove_right_invariant (TapeInvariant.initTape_ofBool x))
+    (hpre_work := by
+      intro _inp work out hpre i
+      rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
+      by_cases hi : i = idx
+      · subst hi
+        rw [hidx]
+        exact hmove_right_invariant TapeInvariant.initTape_nil
+      · exact hrest i hi)
+    (hpre_out := by
+      intro _inp work out hpre
+      exact hpre.2.2.1)
+  refine hret.strengthen_post ?_
+  intro _inp work out hpost
+  rcases hpost with ⟨vin, innerWork, hinner, hmap, hvin⟩
+  exact ⟨by simpa [hvin] using hinner.1,
+    by simpa [hvin] using hinner.2.1,
+    by simpa [hmap idx] using hinner.2.2⟩
+
+/-- Virtual-input version of `inputLengthPlusOneCounterTM_started_hoareTime`:
+if the virtual input is a started Boolean string and work tape `counterIdx`
+is a started blank tape, then `retargetInput (inputLengthPlusOneCounterTM
+counterIdx)` materializes a unary counter of length `|x| + 1` on that tape. -/
+theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
+    (counterIdx : Fin k) (x : List Bool) :
+    (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
+      (fun _inp work out =>
+        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        TapeInvariant out ∧
+        (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
+      (fun _inp work _out =>
+        (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
+        (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start)) 
+      (inputLengthPlusOneCounterTime x.length) := by
+  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+    intro t ht
+    refine ⟨?_, ?_⟩
+    · simpa [tape_move_cells] using ht.1
+    · intro j hj
+      simpa [tape_move_cells] using ht.2 j hj
+  have hcounter :
+      (inputLengthPlusOneCounterTM counterIdx).HoareTime
+        (fun inp work _out =>
+          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (_root_.initTape []).move Dir3.right ∧
+          TapeInvariant _out ∧
+          (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
+        (fun _inp work _out =>
+          (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+          (work counterIdx).cells 0 = Γ.start ∧
+          (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
+        (inputLengthPlusOneCounterTime x.length) :=
+    (inputLengthPlusOneCounterTM_started_hoareTime counterIdx x).weaken_pre (by
+      intro inp work out hpre
+      exact ⟨hpre.1, hpre.2.1⟩)
+  have hret := retargetInput_hoareTime (M := inputLengthPlusOneCounterTM counterIdx) hcounter
+    (hpre_inp := by
+      intro _inp work out hpre
+      rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
+      rw [hvin]
+      exact hmove_right_invariant (TapeInvariant.initTape_ofBool x))
+    (hpre_work := by
+      intro _inp work out hpre i
+      rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
+      by_cases hi : i = counterIdx
+      · subst hi
+        rw [hidx]
+        exact hmove_right_invariant TapeInvariant.initTape_nil
+      · exact hrest i hi)
+    (hpre_out := by
+      intro _inp work out hpre
+      exact hpre.2.2.1)
+  refine hret.strengthen_post ?_
+  intro _inp work out hpost
+  rcases hpost with ⟨vin, innerWork, hinner, hmap, hvin⟩
+  exact ⟨by simpa [hmap counterIdx] using hinner.1,
+    by simpa [hmap counterIdx] using hinner.2.1,
+    by simpa [hmap counterIdx] using hinner.2.2⟩
+
+/-- Virtual-input version of
+`inputLengthPlusOneCounterTM_started_tracksInput_hoareTime`: besides building
+the unary counter on work tape `counterIdx`, the postcondition also records
+the final cells and head of the virtual-input tape itself. -/
+theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
+    (counterIdx : Fin k) (x : List Bool) :
+    (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
+      (fun _inp work out =>
+        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        TapeInvariant out ∧
+        (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
+      (fun _inp work _out =>
+        (work ⟨k, by omega⟩).cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).head = x.length + 1 ∧
+        (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
+        (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
+        (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start))
+      (inputLengthPlusOneCounterTime x.length) := by
+  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+    intro t ht
+    refine ⟨?_, ?_⟩
+    · simpa [tape_move_cells] using ht.1
+    · intro j hj
+      simpa [tape_move_cells] using ht.2 j hj
+  have hcounter :
+      (inputLengthPlusOneCounterTM counterIdx).HoareTime
+        (fun inp work _out =>
+          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (_root_.initTape []).move Dir3.right ∧
+          TapeInvariant _out ∧
+          (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
+        (fun inp work _out =>
+          inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+          inp.head = x.length + 1 ∧
+          (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+          (work counterIdx).cells 0 = Γ.start ∧
+          (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
+        (inputLengthPlusOneCounterTime x.length) :=
+    (inputLengthPlusOneCounterTM_started_tracksInput_hoareTime counterIdx x).weaken_pre (by
+      intro inp work out hpre
+      exact ⟨hpre.1, hpre.2.1⟩)
+  have hret := retargetInput_hoareTime (M := inputLengthPlusOneCounterTM counterIdx) hcounter
+    (hpre_inp := by
+      intro _inp work out hpre
+      rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
+      rw [hvin]
+      exact hmove_right_invariant (TapeInvariant.initTape_ofBool x))
+    (hpre_work := by
+      intro _inp work out hpre i
+      rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
+      by_cases hi : i = counterIdx
+      · subst hi
+        rw [hidx]
+        exact hmove_right_invariant TapeInvariant.initTape_nil
+      · exact hrest i hi)
+    (hpre_out := by
+      intro _inp work out hpre
+      exact hpre.2.2.1)
+  refine hret.strengthen_post ?_
+  intro _inp work out hpost
+  rcases hpost with ⟨vin, innerWork, hinner, hmap, hvin⟩
+  exact ⟨by rw [hvin]; exact hinner.1,
+    by rw [hvin]; exact hinner.2.1,
+    by simpa [hmap counterIdx] using hinner.2.2.1,
+    by simpa [hmap counterIdx] using hinner.2.2.2.1,
+    by simpa [hmap counterIdx] using hinner.2.2.2.2⟩
 
 end TM

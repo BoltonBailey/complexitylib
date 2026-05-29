@@ -14,14 +14,14 @@ The forward direction (`NP ⊆ witness form`) is a *computation-path* witness
 argument and is left for a later pass.
 
 The reverse direction — **the FNP ⇒ NP bridge** used by SAT ∈ NP — is
-captured here by `NP_of_FNP_witness`. Its proof is reduced to a single
-TM-engineering lemma, `witness_ntm_of_dtm_verifier`, which constructs the
+captured here by `NP_of_FNP_witness`, parameterized by the single
+TM-engineering construction interface `WitnessNTMConstruction`: build the
 nondeterministic "guess-and-verify" machine from a deterministic verifier
-of `pairLang R`. Everything *above* that lemma — unpacking FNP, computing
-polynomial bounds, and packaging the result as membership in `NP` — is
-proved here unconditionally.
+of `pairLang R`. Everything above that construction — unpacking FNP,
+computing polynomial bounds, and packaging the result as membership in
+`NP` — is proved here unconditionally.
 
-## Proof strategy for `witness_ntm_of_dtm_verifier`
+## Proof strategy for `WitnessNTMConstruction`
 
 Given:
 - a DTM `M` deciding `pairLang R` in polynomial time, and
@@ -59,10 +59,10 @@ def witnessLang (R : List Bool → List Bool → Prop) : Language :=
     x ∈ witnessLang R ↔ ∃ y, R x y := Iff.rfl
 
 -- ════════════════════════════════════════════════════════════════════════
--- The core TM-engineering lemma (sorry-gated)
+-- The core TM-engineering construction interface
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- **Guess-and-verify NTM construction.** Given a DTM `M` deciding
+/-- **Guess-and-verify NTM construction interface.** Given a DTM `M` deciding
     `pairLang R` within a time bound `T(n) ≤ O(n^c)` and a polynomial `p`
     bounding witness length, there exists an NTM deciding
     `witnessLang R = {x | ∃ y, R x y}` in polynomial time.
@@ -71,15 +71,12 @@ def witnessLang (R : List Bool → List Bool → Prop) : Language :=
     nondeterministically write a witness of length `≤ p(|x|)` onto a work
     tape, build `pair(x, y)` on another work tape, then simulate `M`.
 
-    ## Status
-    This is the only remaining proof obligation for `NP_of_FNP_witness`.
-    It is a substantial but mechanical TM engineering exercise (comparable
-    in scope to `unionTM`/`seqTM` in `Models/TuringMachine/Combinators.lean`).
-    It will be discharged in a future pass by explicitly constructing the
-    NTM and proving its semantic equivalence to the witness language.
+    This is isolated as a named proposition so results can state precisely
+    when they rely on the still-to-be-built machine construction, instead of
+    importing an unproved theorem.
 
     ## Supporting utilities
-    When discharging this sorry, the following lemmas from
+    When implementing this construction, the following lemmas from
     `Complexitylib.Asymptotics` will be useful for packaging the running-time
     bound of the constructed NTM:
     - `BigO.pow_polynomial_bound` — turn the hypothesis `f =O (·^c)` into
@@ -89,27 +86,28 @@ def witnessLang (R : List Bool → List Bool → Prop) : Language :=
     The `pair_length` simp lemma in `Complexitylib.Classes.Pairing` gives
     `|pair x y| = 2·|x| + 2 + |y|`, needed when substituting the simulated
     verifier's input length. -/
-theorem witness_ntm_of_dtm_verifier
-    {R : List Bool → List Bool → Prop}
+def WitnessNTMConstruction : Prop :=
+  ∀ {R : List Bool → List Bool → Prop}
     {p : Polynomial ℕ} {c k : ℕ}
-    {M : TM k} {f : ℕ → ℕ}
-    (_hp : ∀ x y, R x y → y.length ≤ p.eval x.length)
-    (_hM : M.DecidesInTime (pairLang R) f)
-    (_hfO : f =O (· ^ c)) :
+    {M : TM k} {f : ℕ → ℕ},
+    (∀ x y, R x y → y.length ≤ p.eval x.length) →
+    M.DecidesInTime (pairLang R) f →
+    f =O (· ^ c) →
     ∃ (k' d : ℕ) (N : NTM k') (g : ℕ → ℕ),
-      N.DecidesInTime (witnessLang R) g ∧ g =O (· ^ d) := by
-  sorry
+      N.DecidesInTime (witnessLang R) g ∧ g =O (· ^ d)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Main theorem: FNP witness relations put L in NP
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- **FNP ⇒ NP via witnesses.** If `R ∈ FNP` and `x ∈ L ↔ ∃ y, R x y`, then
+/-- **FNP ⇒ NP via witnesses.** If the generic guess-and-verify construction
+    has been implemented, `R ∈ FNP`, and `x ∈ L ↔ ∃ y, R x y`, then
     `L ∈ NP`. Proof: unpack FNP to get a polynomial-time DTM verifier
-    `M` for `pairLang R` and a polynomial witness-length bound, apply
-    `witness_ntm_of_dtm_verifier` to build the guess-and-verify NTM, and
-    package the result as NP membership. -/
+    `M` for `pairLang R` and a polynomial witness-length bound, apply the
+    construction to build the guess-and-verify NTM, and package the result as
+    NP membership. -/
 theorem NP_of_FNP_witness
+    (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} {L : Language}
     (hR : R ∈ FNP)
     (hchar : ∀ x, x ∈ L ↔ ∃ y, R x y) :
@@ -120,7 +118,7 @@ theorem NP_of_FNP_witness
   -- Unpack `PolyBalanced R` to a polynomial witness-length bound.
   obtain ⟨p, hp⟩ := hPB
   -- Build the NTM via the core construction.
-  obtain ⟨k', d, N, g, hN, hgO⟩ := witness_ntm_of_dtm_verifier hp hM hfO
+  obtain ⟨k', d, N, g, hN, hgO⟩ := hwitness hp hM hfO
   -- `L = witnessLang R` up to set extensionality.
   have hLeq : L = witnessLang R := Set.ext fun x => by
     simpa [witnessLang] using hchar x
@@ -136,8 +134,9 @@ theorem NP_of_FNP_witness
     `witnessLang R ∈ NP`. This is the useful form for applying to
     concrete relations like `R_SAT`. -/
 theorem witnessLang_mem_NP_of_FNP
+    (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} (hR : R ∈ FNP) :
     witnessLang R ∈ NP :=
-  NP_of_FNP_witness hR fun _ => Iff.rfl
+  NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
 
 end NP

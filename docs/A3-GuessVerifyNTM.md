@@ -1,18 +1,25 @@
 # A3 — Guess-and-Verify NTM Design Doc
 
-**Status:** design, pre-implementation
+**Status:** SAT-specialized composed machine, full setup/pair/verify
+correctness spine, uniform `DecidesInTime` theorem for `L_SAT`,
+polynomial runtime wrapper, direct conditional theorem
+`pairLang R_SAT ∈ P → L_SAT ∈ NP`, and an executable SAT verifier spec
+(`SAT.verifyPair`) with exact language characterization
+`w ∈ pairLang R_SAT ↔ SAT.verifyPair w = true` implemented; remaining
+headline work is the deterministic verifier TM establishing
+`pairLang R_SAT ∈ P`
 **Branch:** `feat/sat-verifier`
-**Target theorem:** `NP.witness_ntm_of_dtm_verifier` in
-`Complexitylib/Classes/NP/Witness.lean:92`
-**Unblocks:** `SAT ∈ NP` (the headline of the branch) once the SAT-specific
-verifier in P (task B) is also built.
+**Target construction interface:** `NP.WitnessNTMConstruction` in
+`Complexitylib/Classes/NP/Witness.lean`
+**Unblocks:** the guess-and-verify side of `SAT ∈ NP`; the remaining
+headline blocker is the SAT-specific verifier-in-`P` theorem (task B)
 
 ## 1. Goal
 
-Discharge the sorry at `Witness.lean:92`:
+Implement `NP.WitnessNTMConstruction`:
 
 ```lean
-theorem witness_ntm_of_dtm_verifier
+def WitnessNTMConstruction : Prop :=
     {R : List Bool → List Bool → Prop}
     {p : Polynomial ℕ} {c k : ℕ}
     {M : TM k} {f : ℕ → ℕ}
@@ -36,13 +43,28 @@ From the existing codebase (all proved, no sorries):
   `pair x y` onto work tape `pIdx`. Hoare spec:
   `pairBuildTM_hoareTime` with bound `pairBuildTime |x| |y| = 4·|x| + 2·|y| + 10`.
   Postcondition: `pIdx` head = 1, cell 0 = `▷`, cells 1..|pair| =
-  `Γ.ofBool pair[i]`, cell |pair|+1 = `□`.
+  `Γ.ofBool pair[i]`, and all cells after the encoded pair are `□`.
+  The helper `TM.tape_eq_initTape_move_right_of_binary` converts that
+  strengthened cell/tail postcondition into exact equality with
+  `initTape (pair x y).map` moved to cell 1, which is the virtual-input
+  shape used by `retargetInput_decidesVirtual_started`; the corollary
+  `TM.pairBuildTM_hoareTime_initTape_move_right` packages this directly.
+  For phase composition, `TM.pairBuildTM_hoareTime_all_started_initTape_move_right`
+  and its `TM.toNTM` lift handle the real post-setup layout where input,
+  witness, and blank pair tapes have all already moved from `▷` to cell 1.
 - **`retargetInput M : TM (k+1)`** (`Combinators.lean`, proved).
   Theorem `retargetInput_decidesVirtual`: given `M.DecidesInTime L T`, for
   any `z : List Bool` and any real input `realInput`, running
   `retargetInput M` from the initial config *where work tape k holds
   `initTape (z.map Γ.ofBool)`* reaches a halting config in `≤ T |z|` steps,
   outputting `1/0` per `z ∈ L`.
+  The helper `retargetInput_decidesVirtual_started` covers the more useful
+  post-start configuration where the virtual-input tape head is already at
+  cell 1, which is the shape produced by `pairBuildTM`.
+  The branch now also exposes `startedCfg_state_eq`, `startedCfg_work_eq`,
+  `startedCfg_output_eq`, `startedCfg_input_eq`, `startedCfg_work_eq_init`,
+  and `startedCfg_output_eq_init`, which pin down the verifier's forced
+  first-step configuration for phase transitions.
   → This gives us "simulate M on whatever is on work tape k, ignoring the
   input tape."
 - **`TM.toNTM : TM n → NTM n`** (proved, `TuringMachine.lean:516`).
@@ -52,10 +74,18 @@ From the existing codebase (all proved, no sorries):
   (`Asymptotics.lean`, proved). Convert between `f =O (·^c)` and
   `∀ n, f n ≤ p.eval n`.
 
-**What does not exist:** any NTM-side Hoare framework, any NTM
-combinator (`unionNTM`, `seqNTM`, …), any NTM-specific composition
-reasoning infrastructure. Everything about the nondeterministic machine
-must be proved directly against `NTM.trace`.
+**What exists now:** a small NTM-side Hoare layer (`NTM.HoareTime`) and
+`TM.HoareTime.toNTM`, enough to reuse DTM Hoare triples after lifting a DTM
+with `TM.toNTM`. The branch also has `NTM.guessBoundedNTM`, a reusable
+bounded witness-guessing subroutine driven by a preloaded unary counter tape,
+plus the first counter-consumption invariants. For the SAT-specific route,
+`TM.inputLengthPlusOneCounterTM` now materializes the linear bound
+`|input| + 1` as a unary counter, with both deterministic and `TM.toNTM`
+Hoare-time specs.
+
+**What does not exist:** generic NTM combinators (`unionNTM`, `seqNTM`, …) or a
+generic unary `p.eval |x|` setup machine. The SAT-specialized construction now
+uses direct `NTM.trace` reasoning over a concrete composed machine.
 
 ## 3. High-level architecture
 
@@ -381,8 +411,10 @@ lemma toNTM_trace_eq_iterate_step (tm : TM n) (c : Cfg n tm.Q) (t : ℕ)
 ```
 
 which would reduce NTM trace reasoning about a lifted DTM into DTM
-`reaches`/`reachesIn` reasoning. This **does not yet exist** and must
-be written.
+`reaches`/`reachesIn` reasoning. The currently available
+`TM.HoareTime.toNTM` covers the Hoare-triple form of this need; more
+specialized phase-simulation lemmas may still be useful when assembling the
+full composed NTM.
 
 ### 7c. Non-acceptance direction (`x ∉ L → ¬ AcceptsInTime x (g |x|)`)
 
@@ -402,25 +434,255 @@ guess produces some `y'`, verify rejects.
 
 ## 8. Subtask breakdown
 
-I'd build A3 in this order, committing after each:
+Remaining work, in dependency order:
 
-1. **A3.0** — Add `NTM.HoareTime` / `NTM.Hoare` analogues in
+1. **A3.0 (done)** — Add `NTM.HoareTime` / `NTM.Hoare` analogues in
    `Hoare/Defs.lean`. Pre/post predicates abstracted over choice
    sequences. Not strictly necessary if I'm willing to inline, but
    ~200 LOC up front saves ~1000 later.
-2. **A3.1** — DTM-in-NTM simulation lemma:
+2. **A3.1 (partially done)** — DTM-in-NTM simulation lemma:
    `toNTM_trace_eq_reachesIn` (roughly). Lifts DTM Hoare triples to
-   NTM-trace reasoning.
-3. **A3.2** — Unary polynomial evaluator DTM + Hoare triple.
-   (Writes `p.eval |x|` tallies on a work tape.) Large — may warrant
-   its own design doc.
-4. **A3.3** — Guess-phase NTM + Hoare triple.
-5. **A3.4** — Composed NTM: state type, δ/δ₀, phase-transition glue.
-6. **A3.5** — Phase simulation lemmas (guess / pair / verify).
-7. **A3.6** — `AllPathsHaltIn` proof.
-8. **A3.7** — Acceptance + non-acceptance proofs.
-9. **A3.8** — Polynomial time bound via `Asymptotics`.
-10. **A3.9** — Assemble `witness_ntm_of_dtm_verifier`.
+   NTM-trace reasoning. The branch now has `TM.HoareTime.toNTM`.
+3. **A3.2 (SAT-specific slice started)** — Unary bound setup.
+   The generic `p.eval |x|` evaluator is still open, but the SAT-specialized
+   machine `TM.inputLengthPlusOneCounterTM` now writes the needed
+   `|input| + 1` counter and has a full Hoare/correctness theorem plus
+   `TM.toNTM` lift.
+4. **A3.3 (done for the bounded guess subroutine)** — Guess-phase NTM +
+   Hoare triple. The branch now defines `NTM.guessBoundedNTM` and proves
+   the continue/write invariant, rewind correctness, immediate-stop
+   branches, the recursive all-path bounded halting theorem, and the
+   Hoare-style wrappers `NTM.guessBoundedNTM_hoareTime` and
+   `NTM.guessBoundedNTM_hoareTime_with_cell0`. It also proves the matching
+   completeness theorem
+   `NTM.guessBoundedNTM_choose_generates_witness`: every target suffix
+   within the unary counter bound is produced by some choice sequence. The
+   public all-path and generation APIs preserve the witness tape's left-end
+   marker. `Tape.hasBinaryString_hasOutput` bridges completed witnesses to
+   the standard cell-content predicate, and
+   `Tape.hasBinaryString_eq_initTape_move_right` /
+   `Tape.hasBoundedBinaryString_eq_initTape_move_right` convert guessed
+   witnesses into the exact initialized tape shape consumed by `pairBuildTM`;
+   `NTM.guessBoundedNTM_hoareTime_initTape_move_right_with_frames` packages
+   that exact witness postcondition together with preservation of the real
+   input, output, and every non-witness/non-counter work tape that is already
+   past `▷`.
+   The branch also has trace-level preservation lemmas for the guess phase:
+   `NTM.guessBoundedNTM_trace_preserves_input`,
+   `NTM.guessBoundedNTM_trace_preserves_output`, and
+   `NTM.guessBoundedNTM_trace_preserves_other_work`. These are the facts
+   needed to thread the real input, pair tape, verifier work tapes, and
+   output through guessing. Remaining integration work is now sequencing/setup
+   and verifier composition.
+5. **A3.4 (started)** — Composed NTM: state type, δ/δ₀, phase-transition glue.
+   The pair-builder side now has `TM.pairBuild_init_step_started` for the
+   partially-started layout and `TM.pairBuild_init_step_all_started` for the
+   actual post-setup layout where even the pair tape has already idled to
+   cell 1. The corresponding started-tape Hoare theorem and `TM.toNTM` lift
+   are proved. The branch also has `TM.rewindInputTM` with deterministic,
+   rich, and `TM.toNTM` Hoare-time specs, so the counter phase's end-of-input
+   head position can be restored before pair building. The SAT-specific
+   composed machine skeleton now lives in `Complexitylib/SAT/GuessVerify.lean`:
+   `SAT.satGuessVerifyNTM M` sequences counter setup, input rewind, bounded
+   guessing, pair construction, and verifier simulation over the concrete
+   `k + 3` tape layout. It also defines the pair/witness/counter indices and
+   proves both state-only and full tape-level one-step lemmas for the four
+   phase handoffs.
+6. **A3.5 (mostly done)** — Phase simulation lemmas.
+   The composed machine now has one-step and prefix trace simulations for all
+   five phases: counter setup, input rewind, bounded guessing, pair building,
+   and verifier simulation. The verifier phase is factored as
+   `SAT.satVerifyPhaseTM M`; `SAT.satVerifyInnerCfg` projects that phase back
+   to an ordinary verifier configuration, and
+   `SAT.satVerifyPhaseTM_trace_one_project` /
+   `SAT.satVerifyPhaseTM_trace_project_prefix` prove one-step and multi-step
+   projection to `M.toNTM` when the pair tape is stable under
+   `readBackWrite`. The phase-level simulation spine is in place.
+7. **A3.6 (done for the SAT-specialized construction)** — `AllPathsHaltIn`
+   proof.
+   The branch now has first-halt exit lemmas for every setup phase:
+   `SAT.satGuessVerify_counter_trace_exit`,
+   `SAT.satGuessVerify_rewindInput_trace_exit`,
+   `SAT.satGuessVerify_guess_trace_exit`, and
+   `SAT.satGuessVerify_pair_trace_exit`. These bridge the prefix simulations
+   to the next phase when the corresponding subroutine reaches its local
+   `done` state, including the full tape-level boundary transform. The generic
+   helper `NTM.exists_first_halt_time_of_trace_halted` and Hoare corollaries
+   `NTM.HoareTime.exists_first_halt_time` /
+   `NTM.HoareTime.exists_first_halt_time_with_post` now package the “some
+   first halt time within the Hoare bound” argument and carry the Hoare
+   postcondition back to that first halted prefix. The SAT module uses those helpers in
+   `SAT.satGuessVerify_counter_init_exits`,
+   `SAT.satGuessVerify_rewindInput_exits`,
+   `SAT.satGuessVerify_guess_exits`, and
+   `SAT.satGuessVerify_pair_exits`; these phase exits now expose the counter
+   tape, exact input cells, universal non-counter work-tape frames, output
+   frame, rewound exact input tape, exact guessed witness tape, preserved blank
+   pair tape, and exact pair tape invariants needed by the next phases.
+   `SAT.satGuessVerify_guess_exits_with_frames` now packages the
+   arbitrary-choice guess exit with preservation of the real input, blank pair
+   tape, output, and verifier work frame.
+   Additional integration lemmas now package the most important handoffs:
+   `SAT.satGuessVerify_rewindInput_exits_with_frames_exact_input` turns the
+   counter/rewrite input-cell facts into the exact `initTape x` shape expected
+   by pair building, and
+   `SAT.satGuessVerify_guess_generates_with_pair_frame` lifts the guess-phase
+   completeness theorem to the composed SAT boundary while preserving the pair
+   tape; `SAT.satGuessVerify_guess_generates_with_input_pair_frame` also keeps
+   the exact started input tape for the pair phase. The verifier side now has
+   `SAT.satVerifyPhaseTM_halts_of_inner_trace_halts` plus
+   `SAT.satGuessVerify_verify_halts_of_inner_trace_halts`, transferring
+   halting from the projected `M.toNTM` trace back to the composed SAT
+   machine. The former manual verifier-phase pair-tape guard is now discharged
+   from a clean-tape invariant via
+   `SAT.satVerifyPhaseTM_pair_guard_of_clean`,
+   `SAT.satGuessVerify_verify_halts_of_inner_trace_halts_clean`, and
+   `SAT.satPair_cells_ne_start_of_initTape_ofBool_move_right`.
+   The first composition layer is also proved:
+   `SAT.satGuessVerify_halts_after_prefix`,
+   `SAT.satGuessVerify_accepts_after_prefix`,
+   `SAT.satGuessVerify_counter_exit_then_suffix_halts`,
+   `SAT.satGuessVerify_rewindInput_exit_then_suffix_halts`,
+   `SAT.satGuessVerify_guess_exit_then_suffix_halts`,
+   `SAT.satGuessVerify_halts_after_verify_prefix`,
+   `SAT.satGuessVerify_accepts_after_verify_prefix`,
+   `SAT.satGuessVerify_pair_exit_then_verify_halts`, and
+   `SAT.satGuessVerify_pair_exits_then_verify_halts` combine a pair-phase exit
+   with a halting projected verifier suffix. The accepting-output path is now
+   mirrored by `SAT.satGuessVerify_verify_accepts_of_inner_trace_accepts_clean`,
+   `SAT.satGuessVerify_pair_exit_then_verify_accepts`, and
+   `SAT.satGuessVerify_pair_start_accepts_of_decidesInTime`. The post-pair
+   verifier frame is now exposed by
+   `SAT.satGuessVerify_pair_exits_with_verifier_frames`, backed by
+   `TM.pairBuildTM_trace_preserves_output` and
+   `TM.pairBuildTM_trace_preserves_other_work`. The bridge
+   `SAT.satVerifyInnerCfg_eq_startedCfg` identifies that framed verifier
+   configuration with `M`'s post-start configuration on `pair x y`, and
+   `SAT.verifier_started_trace_halts_of_decidesInTime` /
+   `SAT.verifier_started_trace_decides_of_decidesInTime` supply the concrete
+   verifier suffix from `M.DecidesInTime`.
+   The SAT-specific uniform time helpers
+   `SAT.satGuessVerifySetupTime`, `SAT.satVerifierWindowTime`, and
+   `SAT.satGuessVerifyTime` now package the fixed `|x|`-only bound needed by
+   `NTM.DecidesInTime`; `SAT.satVerifierWindowTime_bounds_pair` handles the
+   non-monotone verifier bound by taking a finite maximum over all witness
+   lengths up to `|x|+1`. The pair/verifier suffix now has an all-path bound:
+   `SAT.satGuessVerify_pair_start_halts_within_bound_of_decidesInTime` shows
+   that every remaining choice sequence halts once setup has produced any
+   bounded witness with blank verifier frames.
+   The upstream setup is now composed too:
+   `SAT.satGuessVerify_rewind_then_guess_generates_pair` packages rewind+guess
+   into a pair-phase start, `SAT.satGuessVerify_setup_generates_pair` runs
+   counter+rewind+guess from the real initial configuration while preserving the
+   blank verifier frame, and
+   `SAT.satGuessVerify_init_generates_witness_halts_of_decidesInTime` gives the
+   end-to-end completeness-halting spine from `satGuessVerifyNTM.initCfg`, and
+   `SAT.satGuessVerify_init_generates_witness_accepts_of_decidesInTime` upgrades
+   it to accepting output when `pair x y ∈ L`, using a real deciding verifier.
+   The wrappers
+   `SAT.satGuessVerify_acceptsInTime_of_mem_LSAT_of_decidesInTime` and
+   `SAT.satGuessVerify_accepts_of_mem_LSAT_of_decidesInTime` expose the
+   yes-instance half directly for `L_SAT`. The all-path halting theorem is
+   now packaged as
+   `SAT.satGuessVerify_allPathsHaltIn_of_decidesInTime`.
+8. **A3.7 (done for the SAT-specialized construction)** — Acceptance +
+   non-acceptance proofs.
+   The rejecting direction is now carried by
+   `SAT.satGuessVerify_trace_decides_for_some_setup_witness_of_decidesInTime`,
+   which extracts the bounded witness produced by any full setup trace and
+   records the final output bit as a correct decision for `pair x y`. From
+   that, `SAT.satGuessVerify_not_acceptsInTime_of_not_mem_LSAT_of_decidesInTime`
+   rules out accepting runs on inputs outside `L_SAT`, and
+   `SAT.satGuessVerify_decidesInTime_of_decidesInTime` packages the
+   SAT-specialized machine as a full `NTM.DecidesInTime` proof for `L_SAT`
+   under the uniform bound `satGuessVerifyTime`.
+9. **A3.8 (done for the SAT-specialized construction)** — Polynomial time
+   bound via `Asymptotics`.
+   `SAT.satGuessVerifyTime_polynomial_bound` now turns a verifier bound
+   `f =O (· ^ c)` into an explicit polynomial upper bound on the uniform
+   SAT runtime, and `SAT.satGuessVerifyTime_bigO_of_bigO` packages that as a
+   polynomial-growth theorem. With this asymptotic wrapper in place,
+   `SAT.L_SAT_in_NP_of_verifierP_direct` directly proves
+   `pairLang R_SAT ∈ P → L_SAT ∈ NP` from the concrete machine in
+   `SAT/GuessVerify.lean`.
+10. **A3.9 (remaining)** — Deterministic verifier TM plus optional generic
+    interface assembly.
+    The branch now has the exact SAT verifier specification in
+    `SAT/Verifier.lean`: tokenization, CNF decoding, executable checking,
+    decoder soundness (`CNF.decode?_sound`), and the exact characterization
+    `SAT.verifyPair_eq_true_iff_mem_pairLang`. The remaining SAT-specific
+    proof work is therefore a cleaner task: build a deterministic TM that
+    computes this fixed Boolean verifier in polynomial time. The TM support
+    side also moved forward: `TM.retargetInput_hoareTime` now lifts ordinary
+    Hoare triples to virtual-input runs, `TM.copyInputToWorkTM_started_hoareTime`
+    packages linear-time started copying, and
+    `TM.retargetInput_copyInputToWorkTM_started_hoareTime` gives a ready-made
+    virtual-input copy primitive for the upcoming verifier pipeline. In
+    addition, `Classes/NP/PairSplitTM.lean` now defines the deterministic
+    inverse staging machine `TM.pairSplitCoreTM`, together with exact
+    `pair`-indexing lemmas (`pair_get_left_first`, `pair_get_left_second`,
+    `pair_get_sep_zero`, `pair_get_sep_one`, `pair_get_right`) and the first
+    real correctness spine for that machine: local `scanX`/`afterFalse`/
+    `writeTrue` transition lemmas, two-step doubled-bit lemmas for `00`,
+    `11`, and separator `01`, plus an exact `.copyY` suffix theorem that
+    copies an input segment to the `y` tape and halts in `|y| + 1` steps.
+    That front half is now composed all the way through: the file proves the
+    `x`-prefix loop, the full valid-input started-state theorem
+    `pairSplitCoreTM_from_scanX_initTape_move_right`, and the `.init`
+    entry theorem `pairSplitCoreTM_from_init_initTape_move_right` with the
+    advertised runtime `pairSplitCoreTime`. So the splitter is no longer the
+    missing piece; the next SAT-verifier work is to add the deterministic
+    evaluation phase that consumes the staged `x`/`y` tapes. The generic
+    `WitnessNTMConstruction` interface is still open, but no longer the
+    shortest path to the SAT headline theorem.
+
+Since then, `SAT/VerifierTM.lean` has gained the first concrete verifier-side
+machine theorem: `satLengthCheckTM_started_hoareTime`, a deterministic
+linear-time checker for the witness side condition `|α| ≤ B` when `α` is on a
+started input tape and `B` is stored as a unary counter. To support the next
+composition layer, `Models/TuringMachine/Subroutines.lean` and
+`Subroutines/Internal.lean` now also provide `TM.copyWorkToWorkTM` and
+`copyWorkToWorkTM_started_hoareTime`, so staged Boolean work tapes can be
+copied between verifier phases without re-proving ad hoc scan loops. In
+addition, `CounterSubroutines.lean` now exports the started-input counter
+builder `inputLengthPlusOneCounterTM_started_hoareTime`, plus the stronger
+`inputLengthPlusOneCounterTM_started_tracksInput_hoareTime`, which also
+records the final input cells/head after scanning. `Subroutines/Internal.lean`
+now also provides `clearWorkTM_started_rich_hoareTime` plus the new
+`copyWorkToWorkTM_started_rich_hoareTime`, so both clearing and copying a
+started Boolean work tape are available in the same frame-preserving Hoare
+style as the other setup subroutines. `RetargetInternal.lean` / `SAT/VerifierTM.lean`
+lift both the counter builder and the SAT length checker to work-tape form via
+`retargetInput_inputLengthPlusOneCounterTM_started_hoareTime`,
+`retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime`, and
+`retargetInput_satLengthCheckTM_started_hoareTime`. `SAT/VerifierTM.lean` now
+goes further on both verifier-side subphases. On the counter side, the file
+now defines the actual verifier-facing three-work-tape counter slice
+`satCounter3TM` with theorem `satCounter3TM_started_hoareTime`: tape `2`
+supplies the staged formula bits, tape `0` receives the unary counter
+`|z| + 1`, tape `1` is preserved exactly, and the output tape remains the
+started blank tape. On the witness-length side, the file defines the
+passive-preserving two-work-tape checker `satLengthCheckPassiveTM` with theorem
+`satLengthCheckPassiveTM_started_hoareTime`, and then retargets that to the
+actual verifier-facing three-work-tape slice `satLengthCheck3TM` with theorem
+`satLengthCheck3TM_started_hoareTime`. So the branch now has both real
+verifier-side 3-tape slices in place: the counter phase and the length-check
+phase. `VerifierTM.lean` now also adds the stable-real-input wrapper
+`satCounter3TM_started_stableInput_hoareTime`, so the counter slice can be
+used cleanly inside larger `seqTM` proofs without redoing the retargeted-input
+frame argument each time. It also defines the first explicit tail composition
+surface `satWitnessLengthTailTM` / `satWitnessLengthTailTime`, covering the
+"rewind staged witness tapes, then run the 3-tape length check" suffix.
+The next clean SAT target is still the full composition theorem for that tail,
+and then the earlier prefix that rewinds/clears/copies into it, before moving
+on to the CNF evaluator.
+To support that without committing to an extra permanent scratch tape,
+`Models/TuringMachine/Subroutines.lean` /
+`Subroutines/Internal.lean` now also provide `TM.blankWorkTM` and
+`blankWorkTM_started_hoareTime`: a linear-time primitive that erases a started
+Boolean work tape while preserving the head bound information needed for a
+following rewind. That gives the verifier a clean way to recycle the staged
+`z` tape as later virtual-input scratch.
 
 Estimated LOC: 2000–3000, comparable to the full combinators file plus
 pairBuildTM.
@@ -454,8 +716,8 @@ pairBuildTM.
 
 ## 10. Recommendation
 
-Start with **A3.0 (NTM Hoare)** and **A3.1 (DTM-in-NTM simulation)**,
-get them compiling, then revisit whether to tackle A3.2 (polynomial
-evaluator) or explore if an ordinal-like counter on a binary tape is
-cleaner. The polynomial evaluator is the biggest unknown; prototyping
-it early would de-risk the rest.
+Next, finish task B: the deterministic TM implementing `SAT.verifyPair` in
+polynomial time, which now directly yields `pairLang R_SAT ∈ P` via the
+equivalence in `SAT/Verifier.lean`, and therefore the branch headline theorem
+via `SAT.L_SAT_in_NP_of_verifierP_direct`. The generic witness interface can be
+revisited afterward as cleanup/generalization work.

@@ -13,8 +13,12 @@ Each subroutine has a corresponding `HoareTime` specification in
 
 - `TM.writeTM` — write a symbol to output cell 1 and halt
 - `TM.rewindWorkTM` — rewind a work tape head to cell 1
+- `TM.rewindInputTM` — rewind the input tape head to cell 1
 - `TM.scanRightTM` — scan a work tape right until blank
+- `TM.blankWorkTM` — blank a started work tape while scanning right
+- `TM.clearWorkTM` — blank a started work tape and rewind it to cell 1
 - `TM.copyInputToWorkTM` — copy input tape contents to a work tape
+- `TM.copyWorkToWorkTM` — copy one work tape's contents to another
 - `TM.compareWorkTapesTM` — compare two work tapes cell by cell
 -/
 
@@ -129,6 +133,50 @@ def rewindWorkTM (idx : Fin n) : TM n where
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 -- ════════════════════════════════════════════════════════════════════════
+-- rewindInputTM: rewind the input tape to cell 1
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Rewind the input tape to cell 1 (first data cell after ▷). Work and
+    output tapes are only written with `readBackWrite`, so their contents are
+    preserved under the usual no-start-under-head side conditions. -/
+def rewindInputTM : TM n where
+  Q := RewindPhase
+  qstart := .moveLeft
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .moveLeft =>
+      if iHead = Γ.start then
+        (.moveRight, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+      else
+        (.moveLeft,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead, moveLeftDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
+    | .moveRight =>
+        (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .moveLeft =>
+      dsimp only []; split
+      · refine ⟨fun _ => rfl, ?_, idleDir_right_of_start⟩
+        intro i hwi
+        exact idleDir_right_of_start hwi
+      · rename_i hne
+        refine ⟨?_, ?_, idleDir_right_of_start⟩
+        · intro hi; exact (hne hi).elim
+        · intro i hwi; exact idleDir_right_of_start hwi
+    | .moveRight =>
+      exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+             idleDir_right_of_start⟩
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+-- ════════════════════════════════════════════════════════════════════════
 -- scanRightTM: scan a work tape right until blank
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -168,6 +216,50 @@ def scanRightTM (idx : Fin n) : TM n where
         · rfl
         · exact idleDir_right_of_start hwi
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+-- ════════════════════════════════════════════════════════════════════════
+-- blankWorkTM: blank a work tape while scanning right
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Scan work tape `idx` right until finding `Γ.blank`, overwriting every
+visited nonblank cell with `Γ.blank`. This consumes a started Boolean string
+and leaves the tape blank to the right of the current head. -/
+def blankWorkTM (idx : Fin n) : TM n where
+  Q := ScanPhase
+  qstart := .scanning
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .scanning =>
+      if wHeads idx = Γ.blank then
+        (.done,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
+      else
+        (.scanning,
+         fun i => if i = idx then .blank else readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
+         fun i => if i = idx then Dir3.right else idleDir (wHeads i),
+         idleDir oHead)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .scanning =>
+      dsimp only []; split
+      · exact rightOfStart_allIdle iHead wHeads oHead
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi; simp only []; split
+        · rfl
+        · exact idleDir_right_of_start hwi
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- Blank a started work tape and rewind it to cell `1`, yielding the standard
+started blank tape shape. -/
+def clearWorkTM (idx : Fin n) : TM n :=
+  seqTM (blankWorkTM idx) (rewindWorkTM idx)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- copyInputToWorkTM: copy input tape to a work tape
@@ -211,6 +303,48 @@ def copyInputToWorkTM (idx : Fin n) : TM n where
         intro i hwi; simp only []; split
         · rfl
         · exact idleDir_right_of_start hwi
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- Copy the contents of work tape `src` to work tape `dst`. Reads `src`
+right, writes the same bits to `dst`, and stops when `src` reads `Γ.blank`.
+The source tape contents are preserved by writing the currently read symbol
+back before moving right. -/
+def copyWorkToWorkTM (src dst : Fin n) : TM n where
+  Q := CopyPhase
+  qstart := .copying
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .copying =>
+      if wHeads src = Γ.blank then
+        (.done,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
+         fun i => idleDir (wHeads i),
+         idleDir oHead)
+      else
+        let w : Γw := match wHeads src with
+          | .zero => .zero | .one => .one | .blank => .blank | .start => .blank
+        (.copying,
+         fun i => if i = dst then w else readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
+         fun i => if i = dst then Dir3.right else if i = src then Dir3.right else idleDir (wHeads i),
+         idleDir oHead)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .copying =>
+      dsimp only []; split
+      · exact rightOfStart_allIdle iHead wHeads oHead
+      · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
+        intro i hwi
+        simp only []
+        split
+        · rfl
+        · split
+          · rfl
+          · exact idleDir_right_of_start hwi
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 -- ════════════════════════════════════════════════════════════════════════

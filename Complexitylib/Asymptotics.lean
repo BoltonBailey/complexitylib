@@ -263,7 +263,7 @@ theorem BigO.pow_add_pow (j k : ℕ) :
 
     This is the bridge from big-O hypotheses to the explicit
     `Polynomial ℕ` shape expected by definitions like `PolyBalanced` and
-    by time-bound packaging in the `witness_ntm_of_dtm_verifier`
+    by time-bound packaging in the `WitnessNTMConstruction`
     construction. -/
 theorem BigO.pow_polynomial_bound {f : ℕ → ℕ} {k : ℕ} (h : f =O (· ^ k)) :
     ∃ p : Polynomial ℕ, ∀ n, f n ≤ p.eval n := by
