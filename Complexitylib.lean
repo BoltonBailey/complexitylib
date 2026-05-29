@@ -4,3 +4,4 @@ import Complexitylib.TimeConstructible
 import Complexitylib.Classes
 import Complexitylib.Languages
 import Complexitylib.SAT
+import Complexitylib.Circuits
