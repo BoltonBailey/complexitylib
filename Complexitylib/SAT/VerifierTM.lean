@@ -1654,6 +1654,7 @@ private theorem satEval_rewindAlpha_left_step (mode : SatEvalMode)
   · have hread0 : (c.work (0 : Fin 1)).read ≠ Γ.start := by
       simpa using hread
     simp [c', satEvalOnInputTM, _root_.TM.step, satEvalDelta, hstate, hread0]
+    rfl
   · exact _root_.TM.transitionInput_id hinp
   · simp [c', Tape.writeAndMove, Tape.move, _root_.TM.tape_write_head]
   · exact _root_.TM.tape_readBackWrite_preserves _ _ (Or.inr hread)
@@ -1691,6 +1692,7 @@ private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
   · have hread0 : (c.work (0 : Fin 1)).read = Γ.start := by
       simpa using hread
     simp [c', satEvalOnInputTM, _root_.TM.step, satEvalDelta, hstate, hread0]
+    rfl
   · exact _root_.TM.transitionInput_id hinp
   · have hhead00 : (c.work (0 : Fin 1)).head = 0 := by
       simpa using hhead0
@@ -3655,6 +3657,7 @@ private theorem verifyPairSplit_rewindCounter_left_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.left).head = _
@@ -3700,6 +3703,7 @@ private theorem verifyPairSplit_rewindCounter_base_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.right).head = _
@@ -3742,6 +3746,7 @@ private theorem verifyPairSplit_rewindFormula_left_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.left).head = _
@@ -3786,6 +3791,7 @@ private theorem verifyPairSplit_rewindFormula_base_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.right).head = _
@@ -3828,6 +3834,7 @@ private theorem verifyPairSplit_rewindAssignment_left_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.left).head = _
@@ -3873,6 +3880,7 @@ private theorem verifyPairSplit_rewindAssignment_base_step
   have hstep : verifyPairTM.step c = some c' := by
     simp [c', verifyPairTM, _root_.TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
+    rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.right).head = _
@@ -5216,7 +5224,7 @@ theorem verifyPairTM_decidesInTime :
             have hvs : verifyPairSem (pair z α) = satEvalSemBits α z := by
               simp [verifyPairSem, hlen]
             rw [hvs]
-        · push_neg at hlen
+        · push Not at hlen
           obtain ⟨c', t, ht, hreach, hhalt, hzero⟩ := verifyPairSplit_reject_long z α hlen
           refine ⟨c', t, ?_, hreach, hhalt, ?_⟩
           · have hb : 4 * z.length + 10 ≤ verifyPairTMTime (pair z α).length := by

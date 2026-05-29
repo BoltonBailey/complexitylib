@@ -89,7 +89,7 @@ theorem RTIME_sub_NTIME (T : ℕ → ℕ) : RTIME T ⊆ NTIME T := by
   constructor
   · -- x ∈ L → AcceptsInTime: acceptProb ≥ 1/2 > 0 implies ∃ accepting path
     intro hx; by_contra hno
-    simp only [NTM.AcceptsInTime] at hno; push_neg at hno
+    simp only [NTM.AcceptsInTime] at hno; push Not at hno
     have hcount : tm.acceptCount x (f x.length) = 0 := by
       simp only [NTM.acceptCount]
       rw [Finset.filter_eq_empty_iff.mpr (fun ch _ => fun ⟨h1, h2⟩ => hno ch h1 h2)]

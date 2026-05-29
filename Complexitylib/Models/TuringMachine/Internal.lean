@@ -246,7 +246,7 @@ theorem TM.toNTM_decidesInSpace (tm : TM n) {L : Language} {f : ℕ → ℕ}
     intro x
     show t_fn x ≤ Finset.sup Finset.univ (fun v => t_fn (List.ofFn v))
     conv_lhs => rw [show x = List.ofFn (fun i : Fin x.length => x[↑i]) from
-      (List.ofFn_getElem (l := x)).symm]
+      (List.ofFn_getElem (xs := x)).symm]
     exact Finset.le_sup (f := fun v => t_fn (List.ofFn v))
       (Finset.mem_univ (fun i : Fin x.length => x[↑i]))
   refine ⟨T, ⟨?_, ?_⟩, ?_⟩

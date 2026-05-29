@@ -86,6 +86,7 @@ theorem normalize_step_comm (tm : TM n) (c : Cfg n tm.Q) :
   · have hne : tm.stateEquiv c.state ≠ tm.stateEquiv tm.qhalt := by
       intro heq; exact h (tm.stateEquiv.injective heq)
     simp only [h, hne, ↓reduceIte, Option.map, Equiv.symm_apply_apply, normalizeCfg]
+    rfl
 
 /-- Multi-step simulation: normalized TM mirrors original TM. -/
 theorem normalize_reachesIn (tm : TM n) {t : ℕ} {c c' : Cfg n tm.Q}

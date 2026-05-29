@@ -300,7 +300,7 @@ private theorem work_ns (inv : CopyInv c x k) :
   by_cases hjk : j ≤ k
   · rw [inv.wcopy j hj hjk]
     exact palindromes_initTape_ns _ (palindromes_map_ofBool_ns x) j hj
-  · push_neg at hjk
+  · push Not at hjk
     rw [inv.wblank j hjk]; decide
 
 private theorem read_bit (inv : CopyInv c x k) (hk : k < x.length) :
@@ -360,7 +360,7 @@ private theorem work_ns (inv : RewindInv c x j) :
   by_cases hix : i ≤ x.length
   · rw [inv.wcopy i hi hix]
     exact palindromes_initTape_ns _ (palindromes_map_ofBool_ns x) i hi
-  · push_neg at hix
+  · push Not at hix
     rw [inv.wblank i hix]; decide
 
 private theorem work_read (inv : RewindInv c x j) :
@@ -410,7 +410,7 @@ private theorem work_ns (inv : CompareInv c x k) :
   by_cases hix : i ≤ x.length
   · rw [inv.wcopy i hi hix]
     exact palindromes_initTape_ns _ (palindromes_map_ofBool_ns x) i hi
-  · push_neg at hix
+  · push Not at hix
     rw [inv.wblank i hix]; decide
 
 private theorem output_read_ne_start (inv : CompareInv c x k) :

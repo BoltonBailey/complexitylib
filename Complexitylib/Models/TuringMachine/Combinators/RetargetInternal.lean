@@ -212,11 +212,14 @@ theorem retargetInput_step_commute (M : TM k) {c c' : Cfg k M.Q}
     funext i
     show (if h : i.val < k then c.work ⟨i.val, h⟩ else c.input).read = (c.work i).read
     rw [dif_pos i.isLt]
-  -- Unfold step on the LHS.
+  -- Unfold step on the LHS. `split` reduces the halting ite (the stored
+  -- decidability instance blocks `simp`/`if_neg` post-v4.30).
   simp only [step, show (retargetWrap M realInput c).state = c.state from rfl,
              show (retargetInput M).qhalt = M.qhalt from rfl,
-             hne, ↓reduceIte, retargetWrap_input, retargetWrap_output,
-             Option.some.injEq]
+             retargetWrap_input, retargetWrap_output]
+  split
+  · exact absurd ‹_› hne
+  simp only [Option.some.injEq]
   -- Unfold retargetInput's δ.
   dsimp only [retargetInput]
   rw [hwHead_last, hinner]

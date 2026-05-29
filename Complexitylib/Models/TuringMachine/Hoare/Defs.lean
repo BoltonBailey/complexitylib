@@ -350,8 +350,7 @@ theorem HoareTime.toNTM {tm : TM n} {pre post : TapePred n} {b : ℕ}
   constructor
   · change (tm.toNTM.trace b choices
       { state := tm.qstart, input := inp, work := work, output := out }).state = tm.qhalt
-    rw [htrace]
-    exact hhalt
+    exact htrace ▸ hhalt
   · change post
       (tm.toNTM.trace b choices
         { state := tm.qstart, input := inp, work := work, output := out }).input
@@ -359,7 +358,6 @@ theorem HoareTime.toNTM {tm : TM n} {pre post : TapePred n} {b : ℕ}
         { state := tm.qstart, input := inp, work := work, output := out }).work
       (tm.toNTM.trace b choices
         { state := tm.qstart, input := inp, work := work, output := out }).output
-    rw [htrace]
-    exact hpost
+    exact htrace ▸ hpost
 
 end TM

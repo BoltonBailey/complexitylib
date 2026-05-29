@@ -194,7 +194,7 @@ theorem Assignment.get_take (α : Assignment) (i k : Nat) (hi : i < k) :
       simp only [List.length_take]; omega
     rw [List.getElem?_eq_getElem hl, List.getElem?_eq_getElem htl,
         List.getElem_take]
-  · push_neg at hl
+  · push Not at hl
     have h1 : α[i]? = none := List.getElem?_eq_none hl
     have h2 : (α.take k)[i]? = none := by
       apply List.getElem?_eq_none
@@ -287,7 +287,7 @@ theorem Assignment.get_append_replicate_false (α : Assignment) (k i : Nat) :
   simp only [Assignment.get]
   by_cases hi : i < α.length
   · rw [List.getElem?_append_left hi]
-  · push_neg at hi
+  · push Not at hi
     rw [List.getElem?_eq_none hi]
     by_cases hi' : i < α.length + k
     · rw [List.getElem?_append_right hi]
@@ -295,7 +295,7 @@ theorem Assignment.get_append_replicate_false (α : Assignment) (k i : Nat) :
         simp; omega
       rw [List.getElem?_eq_getElem hrepl]
       simp [List.getElem_replicate]
-    · push_neg at hi'
+    · push Not at hi'
       rw [List.getElem?_eq_none (by simp; omega)]
 
 /-- Padding an assignment with `false`s doesn't change `CNF.eval`. -/
@@ -332,7 +332,7 @@ instance CNF.decidableSatisfiable (φ : CNF) : Decidable φ.Satisfiable := by
         have hi' : i < α'.length := by rw [hα'_len]; exact hi
         rw [List.getElem?_eq_getElem h1, List.getElem_ofFn,
             List.getElem?_eq_getElem hi']
-      · push_neg at hi
+      · push Not at hi
         rw [List.getElem?_eq_none (by simp; omega),
             List.getElem?_eq_none (by rw [hα'_len]; exact hi)]
   · rintro ⟨f, hf⟩

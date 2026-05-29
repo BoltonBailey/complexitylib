@@ -1530,7 +1530,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
         rw [hc1_ic, hc1_ih]
         rw [show 1 + (i / 2) = (i / 2) + 1 from by omega]
         exact initTape_ofBool_cells_lt x (i / 2) hidiv
-    · push_neg at hx
+    · push Not at hx
       by_cases hx2 : i = 2 * x.length
       · subst hx2
         have hpair : (pair x y)[2 * x.length]'(by rw [pair_length]; omega) = false :=
@@ -1989,7 +1989,7 @@ theorem pairBuildTM_hoareTime
         rw [hinp, show 1 + (i / 2) = (i / 2) + 1 from by omega]
         exact initTape_ofBool_cells_lt x (i / 2) hidiv
     · -- i ≥ 2|x|. Two subcases: i = 2|x|, i = 2|x|+1, or i ≥ 2|x|+2.
-      push_neg at hx
+      push Not at hx
       by_cases hx2 : i = 2 * x.length
       · -- Case 2: i = 2|x|. pair[2|x|] = false = Γ.ofBool false.
         subst hx2

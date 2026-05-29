@@ -280,7 +280,7 @@ theorem BigO.pow_polynomial_bound {f : ℕ → ℕ} {k : ℕ} (h : f =O (· ^ k)
   · have : f n ≤ (Finset.range N).sup f :=
       Finset.le_sup (f := f) (Finset.mem_range.mpr hn)
     omega
-  · push_neg at hn
+  · push Not at hn
     have hb := hN n hn
     simp only [Real.norm_natCast] at hb
     have hC_le : C ≤ (⌈C⌉₊ : ℝ) := Nat.le_ceil C
