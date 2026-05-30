@@ -80,6 +80,12 @@ theorem encSymΓ_ne_start (s : Γ) :
     (encSymΓ s).1 ≠ Γ.start ∧ (encSymΓ s).2 ≠ Γ.start := by
   cases s <;> exact ⟨by decide, by decide⟩
 
+/-- Neither code cell is `□`: codes use only `{0,1}`, so a literal `□` can mark
+    the end of the used region. -/
+theorem encSymΓ_ne_blank (s : Γ) :
+    (encSymΓ s).1 ≠ Γ.blank ∧ (encSymΓ s).2 ≠ Γ.blank := by
+  cases s <;> exact ⟨by decide, by decide⟩
+
 /-! ## Block layout
 
 Position-major: super-position `p ≥ 1` occupies a block of `blockWidth k = 3*k`
@@ -202,5 +208,50 @@ theorem SimInvAt.head0_read {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
     (h : SimInvAt k t w M) (j : Fin k) (h0 : (w j).head = 0) :
     (w j).read = Γ.start := by
   rw [Tape.read, h0]; exact h.wfStart j
+
+/-- **No `□` inside the materialized region.** Every cell strictly between the
+    `▷` (cell 0) and the sentinel block is a code or head-bit cell, hence in
+    `{0,1}` — so the first `□` a rightward sweep meets is exactly the sentinel
+    at `blockStart k (M+1)`. (Holds vacuously for `k = 0`.) -/
+theorem SimInvAt.materialized_ne_blank {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {M : ℕ} (h : SimInvAt k t w M) {c : ℕ}
+    (hc1 : 1 ≤ c) (hc2 : c < blockStart k (M + 1)) : t.cells c ≠ Γ.blank := by
+  have hbs : blockStart k (M + 1) = 1 + M * blockWidth k := by
+    simp only [blockStart, Nat.add_sub_cancel]
+  rw [hbs] at hc2
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · subst hk; simp only [blockWidth] at hc2; omega
+  have hW : 0 < blockWidth k := by simp only [blockWidth]; omega
+  -- decompose c - 1 = blockWidth k * q + ib, with block index q+1 ∈ [1, M]
+  have hr : c - 1 < blockWidth k * M := by rw [Nat.mul_comm]; omega
+  -- introduce the block index `q+1` and in-block offset `ib` as opaque naturals
+  -- (forgetting the non-literal division so `omega` can reason about them)
+  obtain ⟨q, ib, hqM, hibW, hdm⟩ :
+      ∃ q ib, q < M ∧ ib < blockWidth k ∧ blockWidth k * q + ib = c - 1 :=
+    ⟨(c - 1) / blockWidth k, (c - 1) % blockWidth k,
+      Nat.div_lt_of_lt_mul hr, Nat.mod_lt _ hW, Nat.div_add_mod _ _⟩
+  have hp1 : 1 ≤ q + 1 := by omega
+  have hpM : q + 1 ≤ M := by omega
+  have hbq : blockStart k (q + 1) = 1 + q * blockWidth k := by
+    show 1 + (q + 1 - 1) * blockWidth k = 1 + q * blockWidth k
+    rw [Nat.add_sub_cancel]
+  have hdm' : q * blockWidth k + ib = c - 1 := by rw [Nat.mul_comm] at hdm; exact hdm
+  have hceq : c = blockStart k (q + 1) + ib := by rw [hbq]; omega
+  -- decompose ib = 3*j + off within the block, j ∈ [0, k), off ∈ [0,3)
+  have hib3 : ib < 3 * k := by have h' := hibW; simp only [blockWidth] at h'; exact h'
+  have hjk : ib / 3 < k := Nat.div_lt_of_lt_mul hib3
+  have hibdm : 3 * (ib / 3) + ib % 3 = ib := Nat.div_add_mod _ _
+  have hc_full : c = blockStart k (q + 1) + (3 * (ib / 3) + ib % 3) := by rw [hceq, hibdm]
+  have hcases : ib % 3 = 0 ∨ ib % 3 = 1 ∨ ib % 3 = 2 := by omega
+  rcases hcases with h3 | h3 | h3 <;> rw [h3] at hc_full
+  · -- offset 0 : high symbol cell
+    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).1]; exact (encSymΓ_ne_blank _).1
+  · -- offset 1 : low symbol cell
+    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ + 1 := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_blank _).2
+  · -- offset 2 : head-bit cell
+    have hcs : c = headBitCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [headBitCell]; omega
+    rw [hcs, h.headBit (q + 1) hp1 hpM ⟨ib / 3, hjk⟩]; split <;> decide
 
 end NTM.SingleTape
