@@ -49,6 +49,37 @@ theorem encSym_ne_start (s : Γw) :
     (encSym s).1 ≠ Γ.start ∧ (encSym s).2 ≠ Γ.start := by
   cases s <;> exact ⟨by decide, by decide⟩
 
+/-- Codec on the full read alphabet `Γ`, used by the invariant (which ranges
+    over work-tape cells of type `Γ`). `▷ ↦ 00` is junk: `▷` never occurs at a
+    work-tape position `≥ 1`, so the round-trip below excludes it. -/
+def encSymΓ : Γ → Γ × Γ
+  | .blank => (Γ.zero, Γ.zero)
+  | .zero  => (Γ.zero, Γ.one)
+  | .one   => (Γ.one, Γ.zero)
+  | .start => (Γ.zero, Γ.zero)
+
+/-- Decode a 2-cell code over `Γ` (any non-code pair ↦ `□`). -/
+def decSymΓ : Γ → Γ → Γ
+  | Γ.zero, Γ.one => Γ.zero
+  | Γ.one,  Γ.zero => Γ.one
+  | _,      _      => Γ.blank
+
+/-- The full-alphabet codec round-trips on every non-`▷` symbol. -/
+theorem decSymΓ_encSymΓ {s : Γ} (hs : s ≠ Γ.start) :
+    decSymΓ (encSymΓ s).1 (encSymΓ s).2 = s := by
+  cases s <;> first | rfl | exact absurd rfl hs
+
+/-- Bridge: encoding a writable symbol agrees with the full-alphabet codec on
+    its image. Lets `δ'` write via `encSym` while the invariant reads `encSymΓ`. -/
+theorem encSymΓ_toΓ (s : Γw) : encSymΓ (Γw.toΓ s) = encSym s := by
+  cases s <;> rfl
+
+/-- Both code cells are writable (`≠ ▷`), so encoding never introduces a second
+    `▷` (holds even for the junk `▷ ↦ 00` case). -/
+theorem encSymΓ_ne_start (s : Γ) :
+    (encSymΓ s).1 ≠ Γ.start ∧ (encSymΓ s).2 ≠ Γ.start := by
+  cases s <;> exact ⟨by decide, by decide⟩
+
 /-! ## Block layout
 
 Position-major: super-position `p ≥ 1` occupies a block of `blockWidth k = 3*k`
@@ -104,5 +135,72 @@ theorem headBitCell_lt_next (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
   have hj : j.val < k := j.isLt
   simp only [headBitCell, blockWidth]
   omega
+
+/-! ## The simulation invariant
+
+`SimInvAt k t w M` asserts that the single work tape `t` encodes the `k`
+work tapes `w`, with the used region materialized up to super-position `M`
+(the maximum position any head has reached). This is the relation preserved by
+one simulated macro-step; the two behavioural lemmas of `singleTapeSim` follow
+from base case + preservation + iteration. See `docs/A4-SingleTapeSimulation.md`. -/
+
+/-- The single tape `t` encodes the `k` work tapes `w`, materialized up to `M`. -/
+structure SimInvAt (k : ℕ) (t : Tape) (w : Fin k → Tape) (M : ℕ) : Prop where
+  /-- Cell 0 is the global start marker `▷`. -/
+  cell0 : t.cells 0 = Γ.start
+  /-- Each encoded work tape has `▷` at its own cell 0. -/
+  wfStart : ∀ j : Fin k, (w j).cells 0 = Γ.start
+  /-- No encoded work tape has `▷` at a position `≥ 1` (writes use `Γw`). -/
+  noStart : ∀ (j : Fin k) (p : ℕ), 1 ≤ p → (w j).cells p ≠ Γ.start
+  /-- Every head is within the materialized region. -/
+  heads_le : ∀ j : Fin k, (w j).head ≤ M
+  /-- Head-present bit at `(p, j)` is set iff tape `j`'s head is at position `p`. -/
+  headBit : ∀ (p : ℕ), 1 ≤ p → p ≤ M → ∀ j : Fin k,
+    t.cells (headBitCell k p j) = (if (w j).head = p then Γ.one else Γ.zero)
+  /-- The two symbol cells at `(p, j)` hold the code of tape `j`'s symbol at `p`. -/
+  sym : ∀ (p : ℕ), 1 ≤ p → p ≤ M → ∀ j : Fin k,
+    t.cells (symCell k p j) = (encSymΓ ((w j).cells p)).1 ∧
+    t.cells (symCell k p j + 1) = (encSymΓ ((w j).cells p)).2
+  /-- Everything from block `M+1` onward is blank — the `□` sentinel region. -/
+  sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
+
+/-- **Base case.** The initial single tape `initTape []` encodes the initial
+    `k`-tape configuration (all heads at 0, all blank), materialized to `M = 0`
+    (empty used region — the sentinel `□` starts right at cell 1). -/
+theorem simInvAt_init (k : ℕ) :
+    SimInvAt k (initTape []) (fun _ => initTape []) 0 where
+  cell0 := by simp [initTape]
+  wfStart := fun _ => by simp [initTape]
+  noStart := fun _ p hp => by
+    simp only [initTape]
+    rw [if_neg (by omega : ¬ p = 0)]
+    simp
+  heads_le := fun _ => by simp [initTape]
+  headBit := fun p hp1 hp0 _ => by omega
+  sym := fun p hp1 hp0 _ => by omega
+  sentinel := fun c hc => by
+    rw [blockStart_one] at hc
+    simp only [initTape]
+    rw [if_neg (by omega : ¬ c = 0)]
+    simp
+
+/-- **GATHER decode kernel (head off cell 0).** When tape `j`'s head is in the
+    materialized region, decoding its two symbol cells recovers exactly the
+    symbol under that head — what the sweep accumulates. -/
+theorem SimInvAt.decode_headSym {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
+    (h : SimInvAt k t w M) (j : Fin k)
+    (hp1 : 1 ≤ (w j).head) (hpM : (w j).head ≤ M) :
+    decSymΓ (t.cells (symCell k ((w j).head) j))
+            (t.cells (symCell k ((w j).head) j + 1)) = (w j).read := by
+  obtain ⟨c1, c2⟩ := h.sym ((w j).head) hp1 hpM j
+  rw [c1, c2, decSymΓ_encSymΓ (h.noStart j ((w j).head) hp1)]
+  rfl
+
+/-- **GATHER decode kernel (head on cell 0).** A head at position 0 reads `▷`;
+    the sweep finds no marker for it and records `▷`. -/
+theorem SimInvAt.head0_read {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
+    (h : SimInvAt k t w M) (j : Fin k) (h0 : (w j).head = 0) :
+    (w j).read = Γ.start := by
+  rw [Tape.read, h0]; exact h.wfStart j
 
 end NTM.SingleTape
