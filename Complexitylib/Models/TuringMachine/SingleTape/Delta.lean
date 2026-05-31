@@ -17,6 +17,55 @@ See `docs/A4-SingleTapeSimulation.md`.
 
 namespace NTM.SingleTape
 
+/-- The **run** step starts a macro-step: read the input/output head symbols,
+    initialise GATHER (accumulator all `▷` = the heads-at-0 default that the
+    sweep overwrites for heads it finds; sweep at tape 0, slot 0), and reposition
+    the work head to cell 1. `idleDir wH` moves the work head right off `▷` on
+    the very first step (initial config) and stays on cell 1 afterwards;
+    `idleDir` on input/output performs the `▷`-dodge. -/
+def runStep {k : ℕ} {Q : Type} (q : Q) (iHead wH oHead : Γ) :
+    SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
+  ( SimQ.gather (q, (fun _ => Γ.start), iHead, oHead, (0, 0), false, Γ.blank),
+    (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
+    TM.idleDir iHead, (fun _ => TM.idleDir wH), TM.idleDir oHead )
+
+/-- `run`'s directions are `▷`-safe (everything is `idleDir`). -/
+theorem runStep_right_of_start {k : ℕ} {Q : Type} (q : Q) (iHead wH oHead : Γ) :
+    (iHead = Γ.start → (runStep (k := k) q iHead wH oHead).2.2.2.1 = Dir3.right) ∧
+    (∀ i, wH = Γ.start → (runStep (k := k) q iHead wH oHead).2.2.2.2.1 i = Dir3.right) ∧
+    (oHead = Γ.start → (runStep (k := k) q iHead wH oHead).2.2.2.2.2 = Dir3.right) :=
+  ⟨fun h => TM.idleDir_right_of_start h, fun _ h => TM.idleDir_right_of_start h,
+    fun h => TM.idleDir_right_of_start h⟩
+
+/-- The **rewind** step sweeps the work head leftward, carrying the `δ` results
+    untouched, until it reads `▷` (cell 0); then it steps right to cell 1 and
+    enters SCATTER sweep 1 (empty carries). Moves left otherwise. -/
+def rewindStep {k : ℕ} {Q : Type} (d : RewindData k Q) (iHead wH oHead : Γ) :
+    SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
+  let (q', wact, oWoD, iD, iSym, oSym) := d
+  if wH = Γ.start then
+    ( SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0),
+        (fun _ => false), (fun _ => false), false),
+      (fun _ => Γw.blank), TM.readBackWrite oHead,
+      TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
+  else
+    ( SimQ.rewind (q', wact, oWoD, iD, iSym, oSym),
+      (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
+      TM.idleDir iHead, (fun _ => Dir3.left), TM.idleDir oHead )
+
+/-- `rewind`'s directions are `▷`-safe: the work head moves left only off `▷`
+    (it moves right on `▷`); input/output use `idleDir`. -/
+theorem rewindStep_right_of_start {k : ℕ} {Q : Type} (d : RewindData k Q)
+    (iHead wH oHead : Γ) :
+    (iHead = Γ.start → (rewindStep d iHead wH oHead).2.2.2.1 = Dir3.right) ∧
+    (∀ i, wH = Γ.start → (rewindStep d iHead wH oHead).2.2.2.2.1 i = Dir3.right) ∧
+    (oHead = Γ.start → (rewindStep d iHead wH oHead).2.2.2.2.2 = Dir3.right) := by
+  obtain ⟨q', wact, oWoD, iD, iSym, oSym⟩ := d
+  refine ⟨fun h => ?_, fun _ h => ?_, fun h => ?_⟩
+  · simp only [rewindStep]; split <;> exact TM.idleDir_right_of_start h
+  · subst h; simp [rewindStep]
+  · simp only [rewindStep]; split <;> exact TM.idleDir_right_of_start h
+
 /-- Clamp a direction to be `▷`-safe: a head reading `▷` is forced right
     (`δ_right_of_start`). On non-`▷` cells (the reachable case) it is the
     identity, so it never changes the simulated behaviour. -/
