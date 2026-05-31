@@ -128,11 +128,14 @@ theorem blockStart_lt_blockStart {k : ℕ} (hk : 1 ≤ k) {p q : ℕ}
   rw [Nat.add_mul, one_mul] at hmono
   omega
 
-/-- The cell holding tape `j`'s head-present bit within block `p`. -/
-def headBitCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val + 2
+/-- The cell holding tape `j`'s head-present bit within block `p` (offset 0 of
+    the triple: **head-bit-first**, so a sweep learns "head here" before passing
+    the symbol cells). -/
+def headBitCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val
 
-/-- The first (high) symbol cell of tape `j` within block `p`. -/
-def symCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val
+/-- The first (high) symbol cell of tape `j` within block `p` (offset 1; the low
+    symbol cell is `symCell + 1` at offset 2). -/
+def symCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val + 1
 
 /-- Within a block, tape `j`'s three cells stay inside `[blockStart, blockStart+3k)`. -/
 theorem headBitCell_lt_next (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
@@ -244,14 +247,14 @@ theorem SimInvAt.materialized_ne_blank {k : ℕ} {t : Tape} {w : Fin k → Tape}
   have hc_full : c = blockStart k (q + 1) + (3 * (ib / 3) + ib % 3) := by rw [hceq, hibdm]
   have hcases : ib % 3 = 0 ∨ ib % 3 = 1 ∨ ib % 3 = 2 := by omega
   rcases hcases with h3 | h3 | h3 <;> rw [h3] at hc_full
-  · -- offset 0 : high symbol cell
-    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [symCell]; omega
-    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).1]; exact (encSymΓ_ne_blank _).1
-  · -- offset 1 : low symbol cell
-    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ + 1 := by simp only [symCell]; omega
-    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_blank _).2
-  · -- offset 2 : head-bit cell
+  · -- offset 0 : head-bit cell
     have hcs : c = headBitCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [headBitCell]; omega
     rw [hcs, h.headBit (q + 1) hp1 hpM ⟨ib / 3, hjk⟩]; split <;> decide
+  · -- offset 1 : high symbol cell
+    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).1]; exact (encSymΓ_ne_blank _).1
+  · -- offset 2 : low symbol cell
+    have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ + 1 := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_blank _).2
 
 end NTM.SingleTape

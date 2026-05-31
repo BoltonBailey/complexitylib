@@ -53,18 +53,18 @@ def gatherStep {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
   else
     let pos' := advanceSweep pos
     if pos.2 = 0 then
-      -- sym-hi: stash
-      ( SimQ.gather (q, acc, iSym, oSym, pos', rf, wH),
+      -- head-bit: record whether this tape's head is here
+      ( SimQ.gather (q, acc, iSym, oSym, pos', decide (wH = Γ.one), pending),
         (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
         TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
     else if pos.2 = 1 then
-      -- sym-lo: decode
-      ( SimQ.gather (q, acc, iSym, oSym, pos', rf, decSymΓ pending wH),
+      -- sym-hi: stash the high code cell
+      ( SimQ.gather (q, acc, iSym, oSym, pos', rf, wH),
         (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
         TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
     else
-      -- head-bit: record if a head is here
-      let acc' := if wH = Γ.one then Function.update acc pos.1 pending else acc
+      -- sym-lo: decode the symbol and, if a head is here, record it in `acc`
+      let acc' := if rf then Function.update acc pos.1 (decSymΓ pending wH) else acc
       ( SimQ.gather (q, acc', iSym, oSym, pos', rf, pending),
         (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
         TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
