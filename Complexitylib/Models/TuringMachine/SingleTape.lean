@@ -33,10 +33,19 @@ open Complexity
 
 namespace NTM
 
-/-- The single-work-tape machine simulating the `k`-work-tape machine `N`
-    (storing the `k` work tapes interleaved on one, with head markers).
-    **Definition to be supplied.** -/
-noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 := sorry
+/-- The single-work-tape machine simulating the `k`-work-tape machine `N`. It
+    stores the `k` work tapes block-encoded (binary, `□`-sentinel) on its one
+    work tape and simulates each `N`-step by the phase machine
+    `run → gather → rewind → scatter1 → scatter2 → commit` (see `Delta.lean` and
+    `docs/A4-SingleTapeSimulation.md`). State, transition, and `δ_right_of_start`
+    come from `SingleTape.SimQ` / `SingleTape.simDelta`; the `Fintype`/`DecidableEq`
+    instances on `SimQ` are noncomputable. -/
+noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 where
+  Q := SingleTape.SimQ k N.Q
+  qstart := SingleTape.SimQ.run N.qstart
+  qhalt := SingleTape.SimQ.halt
+  δ := SingleTape.simDelta N
+  δ_right_of_start := SingleTape.simDelta_right_of_start N
 
 /-- Time overhead of the single-tape simulation: the classic quadratic blow-up
     (plus a linear term to scan the input region). -/

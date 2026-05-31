@@ -312,4 +312,53 @@ theorem scatter2Step_right_of_start {k : ℕ} {Q : Type} (d : Scatter2Data k Q)
   · simp only [scatter2Step]; rw [if_pos h]
   · exact TM.idleDir_right_of_start h
 
+/-- The assembled single-tape transition function: dispatch on the phase. The
+    work head symbol is `wHead 0` (the single work tape). -/
+def simDelta {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
+    (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) :
+    SimQ k N.Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
+  match state with
+  | SimQ.run q => runStep q iHead (wHead 0) oHead
+  | SimQ.gather d => gatherStep N b d iHead (wHead 0) oHead
+  | SimQ.rewind d => rewindStep d iHead (wHead 0) oHead
+  | SimQ.scatter1 d => scatter1Step d iHead (wHead 0) oHead
+  | SimQ.scatter2 d => scatter2Step d iHead (wHead 0) oHead
+  | SimQ.commit d => commitStep d iHead (wHead 0) oHead
+  | SimQ.halt =>
+    (SimQ.halt, (fun _ => Γw.blank), Γw.blank,
+      TM.idleDir iHead, (fun _ => TM.idleDir (wHead 0)), TM.idleDir oHead)
+
+/-- The assembled transition satisfies `δ_right_of_start`: every phase moves a
+    head reading `▷` to the right. Each case is the corresponding phase's
+    `*_right_of_start`; the work-head condition uses `wHeads i = wHeads 0`
+    (`Fin 1` is a subsingleton). -/
+theorem simDelta_right_of_start {k : ℕ} (N : NTM k) (b : Bool) (q : SimQ k N.Q)
+    (iHead : Γ) (wHeads : Fin 1 → Γ) (oHead : Γ) :
+    (iHead = Γ.start → (simDelta N b q iHead wHeads oHead).2.2.2.1 = Dir3.right) ∧
+    (∀ i, wHeads i = Γ.start → (simDelta N b q iHead wHeads oHead).2.2.2.2.1 i = Dir3.right) ∧
+    (oHead = Γ.start → (simDelta N b q iHead wHeads oHead).2.2.2.2.2 = Dir3.right) := by
+  have hw : ∀ i : Fin 1, wHeads i = wHeads 0 := fun i => by rw [Subsingleton.elim i 0]
+  rcases q with q | d | d | d | d | d | ⟨⟩
+  · exact ⟨(runStep_right_of_start q iHead (wHeads 0) oHead).1,
+      fun i hi => (runStep_right_of_start q iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (runStep_right_of_start q iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨(gatherStep_right_of_start N b d iHead (wHeads 0) oHead).1,
+      fun i hi => (gatherStep_right_of_start N b d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (gatherStep_right_of_start N b d iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨(rewindStep_right_of_start d iHead (wHeads 0) oHead).1,
+      fun i hi => (rewindStep_right_of_start d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (rewindStep_right_of_start d iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨(scatter1Step_right_of_start d iHead (wHeads 0) oHead).1,
+      fun i hi => (scatter1Step_right_of_start d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (scatter1Step_right_of_start d iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨(scatter2Step_right_of_start d iHead (wHeads 0) oHead).1,
+      fun i hi => (scatter2Step_right_of_start d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (scatter2Step_right_of_start d iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨(commitStep_right_of_start d iHead (wHeads 0) oHead).1,
+      fun i hi => (commitStep_right_of_start d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
+      (commitStep_right_of_start d iHead (wHeads 0) oHead).2.2⟩
+  · exact ⟨fun h => TM.idleDir_right_of_start h,
+      fun i hi => TM.idleDir_right_of_start (hw i ▸ hi),
+      fun h => TM.idleDir_right_of_start h⟩
+
 end NTM.SingleTape
