@@ -62,10 +62,10 @@ theorem commitStep_right_of_start {k : ℕ} {Q : Type} (d : CommitData Q)
 /-- Advance the sweep one cell within the block layout: slot `0 → 1 → 2` within
     a tape's triple, then on to the next tape's slot `0` (wrapping past the last
     tape into the next block's tape `0`). -/
-def advanceSweep {k : ℕ} (pos : SweepPos k) : SweepPos k :=
+def advanceSweep (k : ℕ) (pos : SweepPos k) : SweepPos k :=
   if pos.2 = 2 then
-    -- next tape (cyclically; `k > 0` since `pos.1 : Fin k` is inhabited)
-    (⟨(pos.1.val + 1) % k, Nat.mod_lt _ (by have := pos.1.isLt; omega)⟩, 0)
+    -- next tape: `t+1` if still a real tape, else wrap to tape `0` (next block)
+    (⟨if pos.1.val + 1 < k then pos.1.val + 1 else 0, by split <;> omega⟩, 0)
   else (pos.1, pos.2 + 1)
 
 /-- One **GATHER** step. The work head sweeps rightward over the encoded region,
@@ -87,13 +87,13 @@ def gatherStep {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
     SimQ k N.Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
   let (q, acc, iSym, oSym, pos, rf, pending) := d
   if wH = Γ.blank then
-    -- sentinel reached: compute one N-step and enter SCATTER
+    -- sentinel reached: compute one N-step and rewind leftward to cell 1
     let (q', wW, oW, iD, wD, oD) := N.δ b q iSym acc oSym
-    ( SimQ.scatter (q', (fun i => (wW i, wD i)), (oW, oD), iD, iSym, oSym, (pos.1, 0)),
+    ( SimQ.rewind (q', (fun i => (wW i, wD i)), (oW, oD), iD, iSym, oSym),
       (fun _ => Γw.blank), TM.readBackWrite oHead,
       TM.idleDir iHead, (fun _ => Dir3.left), TM.idleDir oHead )
   else
-    let pos' := advanceSweep pos
+    let pos' := advanceSweep k pos
     if pos.2 = 0 then
       -- head-bit: record whether this tape's head is here
       ( SimQ.gather (q, acc, iSym, oSym, pos', decide (wH = Γ.one), pending),
@@ -106,7 +106,10 @@ def gatherStep {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
         TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
     else
       -- sym-lo: decode the symbol and, if a head is here, record it in `acc`
-      let acc' := if rf then Function.update acc pos.1 (decSymΓ pending wH) else acc
+      let acc' := if rf then
+          (if h : pos.1.val < k then Function.update acc ⟨pos.1.val, h⟩ (decSymΓ pending wH)
+           else acc)
+        else acc
       ( SimQ.gather (q, acc', iSym, oSym, pos', rf, pending),
         (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
         TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
