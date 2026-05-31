@@ -115,6 +115,31 @@ The choice bit: `N'`'s `δ b …` uses `b` only at the `compute` transition (to
 pick `N.δ b`), so a single `N`-step consumes exactly one *meaningful* choice;
 the sweep sub-steps ignore `b`.
 
+### State-type instances (`Fintype`/`DecidableEq`) — the recipe
+
+`Q'` carries function-typed data (`Fin k → Γ` accumulator, `Fin k → Γw×Dir3`
+writes/dirs), and synthesizing its instances directly **fails**:
+
+* `Fintype`/`DecidableEq` of any product/sum need
+  `import Mathlib.Data.Fintype.{Pi, Prod, Sum}` (only `Pi` is transitively in
+  the model file).
+* With those, `Fintype (Q')` synthesizes — but `DecidableEq (Q')` does **not**:
+  flat product chains break at ≈7 components, and `Fin k → _` fields compound
+  it; grouping into balanced subtrees and bumping `synthInstance.maxSize` do
+  not rescue the *whole* tree.
+
+Escape (verified): `singleTapeSim` is `noncomputable`, so computable instances
+are unnecessary. `Finite` is a `Prop` and composes with no size limit, so:
+
+```lean
+noncomputable instance : Fintype Q'    := Fintype.ofFinite _   -- via `Finite Q'`
+noncomputable instance : DecidableEq Q' := Classical.decEq _
+```
+
+`Finite Q'` synthesizes from the `Finite` instances of `Sum`/`Prod`/`Pi`
+(needs `N.finQ` in scope). `trace`/`step` use `decEq` only inside proofs, so a
+classical `DecidableEq` is fine.
+
 ## 5. One macro-step (simulating one `N`-step)
 
 From `run q` with single work head returned to cell 1:

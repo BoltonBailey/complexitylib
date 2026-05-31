@@ -1,5 +1,6 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.SingleTape.Internal
+import Complexitylib.Models.TuringMachine.SingleTape.Sim
 import Complexitylib.Asymptotics
 
 /-!
