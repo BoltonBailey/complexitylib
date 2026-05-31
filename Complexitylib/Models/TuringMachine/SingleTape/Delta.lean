@@ -45,7 +45,7 @@ def rewindStep {k : ℕ} {Q : Type} (d : RewindData k Q) (iHead wH oHead : Γ) :
   let (q', wact, oWoD, iD, iSym, oSym) := d
   if wH = Γ.start then
     ( SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0),
-        (fun _ => false), (fun _ => false), false),
+        (fun _ => false), (fun _ => false), false, false),
       (fun _ => Γw.blank), TM.readBackWrite oHead,
       TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
   else
@@ -179,5 +179,137 @@ theorem gatherStep_right_of_start {k : ℕ} (N : NTM k) (b : Bool)
     rw [if_neg (by decide : ¬ (Γ.start = Γ.blank))]
     split_ifs <;> rfl
   · simp only [gatherStep]; split_ifs <;> exact TM.idleDir_right_of_start h
+
+/-- Retreat the sweep one cell (leftward): slot `2 → 1 → 0`, then to the previous
+    tape's slot `2` (wrapping past tape `0` to tape `k-1` of the previous block). -/
+def retreatSweep (k : ℕ) (pos : SweepPos k) : SweepPos k :=
+  if pos.2 = 0 then
+    (⟨if pos.1.val = 0 then k - 1 else pos.1.val - 1, by have := pos.1.isLt; split <;> omega⟩, 2)
+  else (pos.1, pos.2 - 1)
+
+/-- One **SCATTER sweep-1** step (rightward). Writes each head's new symbol,
+    places `stay`/`right` markers (carrying `right` ones to the next block via
+    `rightCarry`), records `left`-movers (`isLeftMover`) for sweep 2, and — on
+    reaching the `□` sentinel — materializes a fresh block (`mat`) before turning
+    around (leftward) into sweep 2 once the block is complete. Directions are
+    factored out: input/output idle, work head moves right except the single
+    `□`-only turn-around, so `δ_right_of_start` is immediate. -/
+def scatter1Step {k : ℕ} {Q : Type} (d : Scatter1Data k Q) (iHead wH oHead : Γ) :
+    SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
+  let (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat) := d
+  let t := pos.1.val
+  let stWr : SimQ k Q × Γw :=
+    if wH = Γ.blank then
+      if mat = true ∧ pos = (0, 0) then
+        -- new block complete: turn around into sweep 2
+        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, pos, isLeftMover, fun _ => false), Γw.blank)
+      else
+        -- materialize this cell of the new block (head-bit per `rightCarry`, symbol `□`)
+        let wv : Γw :=
+          if pos.2 = 0 then
+            (if h : t < k then (if rightCarry ⟨t, h⟩ then Γw.one else Γw.zero) else Γw.zero)
+          else Γw.zero
+        let rc' : Fin k → Bool :=
+          if pos.2 = 0 then
+            (if h : t < k then Function.update rightCarry ⟨t, h⟩ false else rightCarry)
+          else rightCarry
+        (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos, rc',
+          isLeftMover, false, true), wv)
+    else if pos.2 = 0 then
+      -- real head-bit cell
+      if h : t < k then
+        if wH = Γ.one then
+          match (wact ⟨t, h⟩).2 with
+          | Dir3.stay =>
+            (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+              rightCarry, isLeftMover, true, mat), Γw.one)
+          | Dir3.right =>
+            (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+              Function.update rightCarry ⟨t, h⟩ true, isLeftMover, true, mat), Γw.zero)
+          | Dir3.left =>
+            (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+              rightCarry, Function.update isLeftMover ⟨t, h⟩ true, true, mat), Γw.one)
+        else if rightCarry ⟨t, h⟩ then
+          (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+            Function.update rightCarry ⟨t, h⟩ false, isLeftMover, false, mat), Γw.one)
+        else
+          (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+            rightCarry, isLeftMover, false, mat), Γw.zero)
+      else
+        (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+          rightCarry, isLeftMover, false, mat), TM.readBackWrite wH)
+    else
+      -- real symbol cell: overwrite with the new symbol if a head was here
+      let wv : Γw :=
+        if writeFlag then
+          (if h : t < k then
+            (if pos.2 = 1 then (encSymW (wact ⟨t, h⟩).1).1 else (encSymW (wact ⟨t, h⟩).1).2)
+           else TM.readBackWrite wH)
+        else TM.readBackWrite wH
+      (SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k pos,
+        rightCarry, isLeftMover, (if pos.2 = 2 then false else writeFlag), mat), wv)
+  ( stWr.1, (fun _ => stWr.2), TM.readBackWrite oHead, TM.idleDir iHead,
+    (fun _ => if wH = Γ.blank ∧ mat = true ∧ pos = (0, 0) then Dir3.left else Dir3.right),
+    TM.idleDir oHead )
+
+/-- One **SCATTER sweep-2** step (leftward). Deposits the recorded left-movers
+    (`isLeftMover`): clears each one's old marker and re-sets it one block left
+    (`leftCarry`). On reaching `▷` (cell 0) it steps right to cell 1 and enters
+    COMMIT. Directions factored: input/output idle, work head moves left except
+    the `▷`-only turn into COMMIT, so `δ_right_of_start` is immediate. -/
+def scatter2Step {k : ℕ} {Q : Type} (d : Scatter2Data k Q) (iHead wH oHead : Γ) :
+    SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
+  let (q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry) := d
+  let t := pos.1.val
+  let stWr : SimQ k Q × Γw :=
+    if wH = Γ.start then
+      (SimQ.commit (q', oWoD.1, oWoD.2, iD, iSym, oSym), Γw.blank)
+    else if pos.2 = 0 then
+      if h : t < k then
+        if wH = Γ.one ∧ isLeftMover ⟨t, h⟩ = true then
+          (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos, isLeftMover,
+            Function.update leftCarry ⟨t, h⟩ true), Γw.zero)
+        else if leftCarry ⟨t, h⟩ = true then
+          (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos,
+            Function.update isLeftMover ⟨t, h⟩ false, Function.update leftCarry ⟨t, h⟩ false), Γw.one)
+        else
+          (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos, isLeftMover, leftCarry),
+            TM.readBackWrite wH)
+      else
+        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos, isLeftMover, leftCarry),
+          TM.readBackWrite wH)
+    else
+      (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos, isLeftMover, leftCarry),
+        TM.readBackWrite wH)
+  ( stWr.1, (fun _ => stWr.2), TM.readBackWrite oHead, TM.idleDir iHead,
+    (fun _ => if wH = Γ.start then Dir3.right else Dir3.left),
+    TM.idleDir oHead )
+
+/-- `scatter1`'s directions are `▷`-safe. -/
+theorem scatter1Step_right_of_start {k : ℕ} {Q : Type} (d : Scatter1Data k Q)
+    (iHead wH oHead : Γ) :
+    (iHead = Γ.start → (scatter1Step d iHead wH oHead).2.2.2.1 = Dir3.right) ∧
+    (∀ i, wH = Γ.start → (scatter1Step d iHead wH oHead).2.2.2.2.1 i = Dir3.right) ∧
+    (oHead = Γ.start → (scatter1Step d iHead wH oHead).2.2.2.2.2 = Dir3.right) := by
+  obtain ⟨q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat⟩ := d
+  refine ⟨fun h => ?_, fun _ h => ?_, fun h => ?_⟩
+  · exact TM.idleDir_right_of_start h
+  · subst h; simp only [scatter1Step]
+    split
+    · rename_i hc; exact absurd hc.1 (by decide)
+    · rfl
+  · exact TM.idleDir_right_of_start h
+
+/-- `scatter2`'s directions are `▷`-safe (work moves left only off `▷`). -/
+theorem scatter2Step_right_of_start {k : ℕ} {Q : Type} (d : Scatter2Data k Q)
+    (iHead wH oHead : Γ) :
+    (iHead = Γ.start → (scatter2Step d iHead wH oHead).2.2.2.1 = Dir3.right) ∧
+    (∀ i, wH = Γ.start → (scatter2Step d iHead wH oHead).2.2.2.2.1 i = Dir3.right) ∧
+    (oHead = Γ.start → (scatter2Step d iHead wH oHead).2.2.2.2.2 = Dir3.right) := by
+  obtain ⟨q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry⟩ := d
+  refine ⟨fun h => ?_, fun _ h => ?_, fun h => ?_⟩
+  · exact TM.idleDir_right_of_start h
+  · simp only [scatter2Step]; rw [if_pos h]
+  · exact TM.idleDir_right_of_start h
 
 end NTM.SingleTape

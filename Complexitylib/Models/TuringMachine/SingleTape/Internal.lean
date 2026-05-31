@@ -26,11 +26,23 @@ def encSym : Γw → Γ × Γ
   | .zero  => (Γ.zero, Γ.one)
   | .one   => (Γ.one, Γ.zero)
 
+/-- Encode a writable symbol into a 2-cell **writable** code (for SCATTER's
+    symbol writes; agrees with `encSym` under `Γw.toΓ`, see `encSymW_toΓ`). -/
+def encSymW : Γw → Γw × Γw
+  | .blank => (.zero, .zero)
+  | .zero  => (.zero, .one)
+  | .one   => (.one, .zero)
+
 /-- Decode a 2-cell code back to a writable symbol (any non-code pair ↦ `□`). -/
 def decSym : Γ → Γ → Γw
   | Γ.zero, Γ.one => .zero
   | Γ.one,  Γ.zero => .one
   | _,      _      => .blank
+
+/-- The writable codec agrees with the `Γ`-valued one under `Γw.toΓ`. -/
+theorem encSymW_toΓ (s : Γw) :
+    ((encSymW s).1.toΓ, (encSymW s).2.toΓ) = encSym s := by
+  cases s <;> rfl
 
 /-- The codec round-trips. -/
 @[simp] theorem decSym_encSym (s : Γw) :

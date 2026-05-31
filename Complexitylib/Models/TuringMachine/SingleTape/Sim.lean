@@ -46,7 +46,7 @@ abbrev RewindData (k : ℕ) (Q : Type) :=
     for sweep 2), and a `writeFlag` (currently overwriting a head's symbol). -/
 abbrev Scatter1Data (k : ℕ) (Q : Type) :=
   Q × (Fin k → Γw × Dir3) × (Γw × Dir3) × Dir3 × Γ × Γ × SweepPos k ×
-    (Fin k → Bool) × (Fin k → Bool) × Bool
+    (Fin k → Bool) × (Fin k → Bool) × Bool × Bool
 
 /-- SCATTER sweep-2 data (leftward: deposit left-movers, rewind to cell 1): the
     deferred commit info, the sweep position, the `isLeftMover` set (from sweep
