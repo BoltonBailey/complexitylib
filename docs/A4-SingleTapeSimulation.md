@@ -168,6 +168,51 @@ Each macro-step touches `O(w*M) = O(k*M)` cells; with `k` fixed and
 `O(T)`. Over `≤ T` macro-steps the total is `O(T²)`, plus an `O(n)` term to
 first reach input positions — comfortably inside `(T + n + 1)²`.
 
+### SCATTER protocol (the marker-move problem and its resolution)
+
+A rightward sweep can place a head-marker for a `stay` or `right` move locally
+(at the current block, or carried to the next block) but **not** for a `left`
+move — the destination `p-1` is already behind it. A leftward sweep has the
+mirror problem. Resolution: **two sub-sweeps**, where the second doubles as the
+rewind that must happen anyway to reposition for the next macro-step. With the
+head-bit-first layout, symbol-writes are local in a *rightward* sweep (the
+head-bit is seen before the symbol cells).
+
+Head-position bookkeeping across the macro-step: GATHER ends at the **right**
+(sentinel), and the write-sweep wants to run **rightward from cell 1** (for
+local writes), while COMMIT wants the head back at the **left**. So the phase
+order is `gather (R) → rewind (L, → cell 1) → scatter1 (R) → scatter2 (L,
+→ cell 1) → commit`. `rewind` carries the `δ` results leftward untouched;
+`scatter2` (leftward) handles the recorded left-movers and doubles as the final
+rewind. (An alternative single leftward scatter with 2-cell write back-ups was
+considered; the two clean sweeps keep head motion uniform for the proof.)
+
+**`scatter1` (rightward, cell 1 → sentinel).** At each tape `j`'s triple
+(head-bit at slot 0, then sym-hi/sym-lo):
+- slot 0 (head-bit): read it. If `1` (head at this block `p`): set `writeFlag`,
+  and per `(wact j).dir` — `stay` keep the bit `1`; `right` clear it (`0`) and
+  set `rightCarry j`; `left` keep the bit `1` and set `isLeftMover j` (sweep 2
+  moves it). If `0`: if `rightCarry j` is set, this is the deposit block `p` =
+  (prev head)+1 → write `1`, clear `rightCarry j`; else keep `0`.
+- slots 1,2 (sym-hi/lo): if `writeFlag`, overwrite with `encSym (wact j).write`;
+  else preserve (`readBackWrite`).
+- On the `□` sentinel with pending `rightCarry`s: **materialize** one new block
+  (head-bits per `rightCarry`, symbols `□`), pushing the sentinel right by `3k`;
+  then enter `scatter2`. (At most one new block: heads move ≤ 1/step.)
+
+**`scatter2` (leftward, sentinel → cell 1).** At each tape `j`'s triple:
+- if `isLeftMover j` and head-bit `= 1` here (the un-cleared left-mover marker):
+  clear it, set `leftCarry j`.
+- if `leftCarry j` set (deposit block = (old `p`)−1): write head-bit `1`, clear
+  `leftCarry j` and `isLeftMover j`.
+Reaching cell 1 (work head back at block 1) → `commit`.
+
+State (carried through scatter, all `Fin k → _` fine under the noncomputable
+`Finite` instances): `q'`, `wact : Fin k → Γw × Dir3`, the deferred
+`(oW, oD)`/`iD`/`iSym`/`oSym`, the sweep `pos`, and the per-tape carries
+`rightCarry`/`isLeftMover`/`leftCarry : Fin k → Bool` plus a `writeFlag : Bool`.
+`scatter1`/`scatter2` are separate `SimQ` constructors.
+
 ## 6. Time bound
 
 `singleTapeSimTime T n = (T n + n + 1)²`. Per §5 each of the `≤ T(|x|)`
