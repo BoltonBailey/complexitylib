@@ -111,11 +111,21 @@ theorem haltCorr {k : ℕ} (N : NTM k) {M : ℕ}
         ↓reduceIte]
     rw [hout, accept_bit_preserved, hcorr.outputEq]
 
+/-- Per-macro-step sim-step budget at materialization level `M`: a generous bound
+    covering the four sweeps over an `≈ 3k·M`-cell region plus the `run`/`commit`
+    steps. The `16·(k+1)` constant matches `singleTapeSimTime`. -/
+def macroBound (k M : ℕ) : ℕ := 16 * (k + 1) * (M + 1)
+
+theorem macroBound_mono {k M M' : ℕ} (h : M ≤ M') : macroBound k M ≤ macroBound k M' := by
+  unfold macroBound
+  exact Nat.mul_le_mul_left _ (by omega)
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
     `bit` at the COMPUTE sub-step) and lands in a configuration corresponding to
-    `N`'s one-step image under `bit`, with the materialized region grown by one.
+    `N`'s one-step image under `bit`, with the materialized region grown by one,
+    within `macroBound k M` sim steps.
 
     This is the heart of the behavioural correctness proof: it is established by
     tracing the phase machine `run → gather → rewind → scatter1 → scatter2 →
@@ -124,7 +134,8 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bitf : Fin 1 → Bool) :
     ∃ (m : ℕ) (choices : Fin m → Bool),
-      Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c) := by
+      Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c)
+        ∧ m ≤ macroBound k M := by
   sorry
 
 /-- **Iterated correspondence.** Simulating `t` steps of `N` (choices `g`): the
@@ -137,39 +148,52 @@ theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
     (hcorr : Corr N M c1 c) (g : ℕ → Bool) (t : ℕ) :
     ∃ (m M' : ℕ) (F : ℕ → Bool),
       Corr N M' ((singleTapeSim N).trace m (fun i => F i.val) c1)
-        (N.trace t (fun i => g i.val) c) := by
+        (N.trace t (fun i => g i.val) c)
+        ∧ M' ≤ M + t ∧ m ≤ t * macroBound k (M + t) := by
   induction t with
-  | zero => exact ⟨0, M, g, hcorr⟩
+  | zero => exact ⟨0, M, g, hcorr, by omega, by omega⟩
   | succ t ih =>
-    obtain ⟨m, M', f, hcorr_t⟩ := ih
+    obtain ⟨m, M', f, hcorr_t, hM'le, hmle⟩ := ih
     set s_t := (singleTapeSim N).trace m (fun i => f i.val) c1 with hs_t
     set c_t := N.trace t (fun i => g i.val) c with hc_t
     -- N's (t+1)-step trace splits as one step from c_t
     have hNsplit : N.trace (t + 1) (fun i => g i.val) c
         = N.trace 1 (fun i => g (t + i.val)) c_t := by
       rw [hc_t]; exact N.trace_add t 1 g c
+    -- the new bound `(t+1)·macroBound k (M+(t+1))` dominates the old one
+    have hgrow : t * macroBound k (M + t) ≤ (t + 1) * macroBound k (M + (t + 1)) :=
+      le_trans (Nat.mul_le_mul (Nat.le_succ t) (macroBound_mono (by omega)))
+        (le_refl _)
     by_cases hh : c_t.state = N.qhalt
     · -- N has halted: the (t+1) step is a no-op, reuse the IH config
-      refine ⟨m, M', f, ?_⟩
+      refine ⟨m, M', f, ?_, by omega, le_trans hmle hgrow⟩
       rw [hNsplit, N.trace_halted 1 _ hh]
       exact hcorr_t
     · -- N steps: apply the macro-step correspondence and concatenate choices
-      obtain ⟨m', choices', hstep⟩ :=
+      obtain ⟨m', choices', hstep, hbound'⟩ :=
         macroStepCorr N hcorr_t hh (fun i => g (t + i.val))
       -- concatenate `f` (first m steps) and `choices'` (next m') into one `F`
       set F : ℕ → Bool :=
         fun j => if j < m then f j else if h : j - m < m' then choices' ⟨j - m, h⟩ else false
         with hF
-      refine ⟨m + m', M' + 1, F, ?_⟩
-      rw [hNsplit, (singleTapeSim N).trace_add m m' F c1]
-      have hpre : (fun i : Fin m => F i.val) = (fun i : Fin m => f i.val) := by
-        funext i; rw [hF]; simp only []; rw [if_pos i.isLt]
-      have hsuf : (fun i : Fin m' => F (m + i.val)) = choices' := by
-        funext i; rw [hF]; simp only []
-        rw [if_neg (by omega), dif_pos (by omega)]
-        have hsub : m + i.val - m = i.val := by omega
-        simp only [hsub, Fin.eta]
-      rw [hpre, ← hs_t, hsuf]
-      exact hstep
+      refine ⟨m + m', M' + 1, F, ?_, by omega, ?_⟩
+      · rw [hNsplit, (singleTapeSim N).trace_add m m' F c1]
+        have hpre : (fun i : Fin m => F i.val) = (fun i : Fin m => f i.val) := by
+          funext i; rw [hF]; simp only []; rw [if_pos i.isLt]
+        have hsuf : (fun i : Fin m' => F (m + i.val)) = choices' := by
+          funext i; rw [hF]; simp only []
+          rw [if_neg (by omega), dif_pos (by omega)]
+          have hsub : m + i.val - m = i.val := by omega
+          simp only [hsub, Fin.eta]
+        rw [hpre, ← hs_t, hsuf]
+        exact hstep
+      · -- m + m' ≤ (t+1)·macroBound k (M+(t+1))
+        have hb1 : m ≤ t * macroBound k (M + (t + 1)) :=
+          le_trans hmle (Nat.mul_le_mul (le_refl t) (macroBound_mono (by omega)))
+        have hb2 : m' ≤ macroBound k (M + (t + 1)) :=
+          le_trans hbound' (macroBound_mono (by omega))
+        calc m + m' ≤ t * macroBound k (M + (t + 1)) + macroBound k (M + (t + 1)) :=
+              Nat.add_le_add hb1 hb2
+          _ = (t + 1) * macroBound k (M + (t + 1)) := by rw [Nat.succ_mul]
 
 end NTM.SingleTape
