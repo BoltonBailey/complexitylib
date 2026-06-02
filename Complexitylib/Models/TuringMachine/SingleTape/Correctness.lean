@@ -120,6 +120,30 @@ theorem macroBound_mono {k M M' : ℕ} (h : M ≤ M') : macroBound k M ≤ macro
   unfold macroBound
   exact Nat.mul_le_mul_left _ (by omega)
 
+/-! ### Per-phase config transitions (building blocks for `macroStepCorr`)
+
+Each lemma reduces `trace`-of-a-phase to the explicit next configuration; the
+full macro-step composes them via `trace_add`. -/
+
+/-- The **run** step (1 sim step): from a `run q` config with `q ≠ N.qhalt`, the
+    simulator initialises GATHER (`acc = ▷`, reads `iSym`/`oSym`, sweep at the
+    start) and repositions the work head to cell 1. Input/output are advanced by
+    `idleDir` (the `▷`-dodge); the work tape's cells are preserved
+    (`readBackWrite`). -/
+theorem run_step {k : ℕ} (N : NTM k) (q : N.Q) (hq : q ≠ N.qhalt) (b : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.run q) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      { state := SimQ.gather (q, (fun _ => Γ.start), c1.input.read, c1.output.read,
+          (0, 0), false, Γ.blank),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun i => (c1.work i).writeAndMove
+          ((TM.readBackWrite ((c1.work 0).read) : Γw) : Γ) (TM.idleDir ((c1.work 0).read)),
+        output := c1.output.writeAndMove
+          ((TM.readBackWrite c1.output.read : Γw) : Γ) (TM.idleDir c1.output.read) } := by
+  rw [NTM.trace]
+  simp only [hst, singleTapeSim, simDelta, runStep, SimQ.run, SimQ.halt, SimQ.gather,
+    hq, reduceCtorEq, ↓reduceIte, NTM.trace]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
