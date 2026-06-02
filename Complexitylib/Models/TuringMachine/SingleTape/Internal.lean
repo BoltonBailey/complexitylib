@@ -205,6 +205,18 @@ theorem simInvAt_init (k : ℕ) :
     rw [if_neg (by omega : ¬ c = 0)]
     simp
 
+/-- `SimInvAt` depends on the encoding tape only through its cells (never its
+    head), so it transfers along any cell-preserving change (e.g. a head move). -/
+theorem SimInvAt.cells_congr {k : ℕ} {t t' : Tape} {w : Fin k → Tape} {M : ℕ}
+    (h : SimInvAt k t w M) (hc : t'.cells = t.cells) : SimInvAt k t' w M where
+  cell0 := by rw [hc]; exact h.cell0
+  wfStart := h.wfStart
+  noStart := h.noStart
+  heads_le := h.heads_le
+  headBit := fun p hp1 hpM j => by rw [hc]; exact h.headBit p hp1 hpM j
+  sym := fun p hp1 hpM j => by rw [hc]; exact h.sym p hp1 hpM j
+  sentinel := fun c hc' => by rw [hc]; exact h.sentinel c hc'
+
 /-- **GATHER decode kernel (head off cell 0).** When tape `j`'s head is in the
     materialized region, decoding its two symbol cells recovers exactly the
     symbol under that head — what the sweep accumulates. -/

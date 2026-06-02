@@ -428,6 +428,70 @@ theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M 
       · by_cases hb : (c.work ⟨m, hmk⟩).head = b <;>
           simp [hb, hjb, Function.update_of_ne hjm]
 
+/-- **GATHER full sweep (`trace (3*k*B)`).** Sweeping the first `B ≤ M` blocks
+    (starting at block `1`, tape `0`, slot `0`, work head `blockStart k 1`, `acc`
+    all `▷`): after `B` blocks the work head is at `blockStart k (B+1)`, the sweep
+    is back at tape `0` slot `0`, and `acc` records the read symbol of every tape
+    whose head sits in blocks `[1, B]` (and `▷` otherwise). Proved by induction on
+    `B`, each step one `gather_block_aux` at block `B+1`. At `B = M` (with
+    `heads_le`) every head is covered, so `acc` is exactly the per-tape reads. -/
+theorem gather_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (q : N.Q) (iSym oSym : Γ) (c1 : Cfg 1 (SimQ k N.Q)) (rf₀ : Bool) (pending₀ : Γ)
+    (hst : c1.state =
+      SimQ.gather (q, (fun _ => Γ.start), iSym, oSym, (⟨0, by omega⟩, 0), rf₀, pending₀))
+    (hhead : (c1.work 0).head = blockStart k 1)
+    (hinv : SimInvAt k (c1.work 0) c.work M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (B : ℕ) (hB : B ≤ M) :
+    ∃ (rf' : Bool) (pending' : Γ),
+      (singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1 =
+        { state := SimQ.gather (q,
+            (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B then (c.work j).read
+                      else Γ.start),
+            iSym, oSym, (⟨0, by omega⟩, 0), rf', pending'),
+          input := c1.input, output := c1.output,
+          work := fun _ => { c1.work 0 with head := blockStart k (B + 1) } } := by
+  induction B with
+  | zero =>
+    refine ⟨rf₀, pending₀, ?_⟩
+    have h0 : (singleTapeSim N).trace (3 * k * 0) (fun _ => bb) c1 = c1 := by
+      simp only [Nat.mul_zero]; rfl
+    rw [h0]
+    obtain ⟨cst, cin, cwk, cout⟩ := c1
+    subst hst
+    refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, ?_, rfl⟩
+    · congr 3
+      funext j
+      rw [if_neg (by omega)]
+    · funext x
+      obtain rfl : x = 0 := Subsingleton.elim x 0
+      show cwk 0 = { cwk 0 with head := blockStart k 1 }
+      rw [← hhead]
+  | succ B ih =>
+    obtain ⟨rfB, pendingB, hBeq⟩ := ih (by omega)
+    obtain ⟨rf', pending', hstep⟩ := gather_block_aux N bb c (B + 1) M (by omega) hB q iSym oSym
+      (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B then (c.work j).read else Γ.start)
+      ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1) rfB pendingB
+      (by rw [hBeq]) (by rw [hBeq]) (by rw [hBeq]; exact hinv.cells_congr rfl)
+      (by rw [hBeq]; exact his) (by rw [hBeq]; exact hos) k (le_refl k)
+    refine ⟨rf', pending', ?_⟩
+    rw [show 3 * k * (B + 1) = 3 * k * B + 3 * k from Nat.mul_succ (3 * k) B,
+        trace_const_add, hstep, hBeq]
+    dsimp only
+    simp only [lt_self_iff_false, ↓reduceIte]
+    rw [blockStart_succ k (B + 1) (by omega), blockWidth]
+    refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, rfl, rfl⟩
+    congr 3
+    funext j
+    simp only [j.isLt, true_and]
+    by_cases hjb : (c.work j).head = B + 1
+    · simp only [hjb, ↓reduceIte, le_refl, and_true]
+      rw [if_pos (by omega)]
+    · rw [if_neg hjb]
+      by_cases hr : 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B
+      · rw [if_pos hr, if_pos (by omega)]
+      · rw [if_neg hr, if_neg (by omega)]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
