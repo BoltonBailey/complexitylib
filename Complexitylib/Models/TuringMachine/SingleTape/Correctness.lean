@@ -122,9 +122,54 @@ theorem haltCorr {k : ℕ} (N : NTM k) {M : ℕ}
     commit` and showing each phase preserves/advances `SimInvAt`. -/
 theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
-    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bit : Bool) :
+    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bitf : Fin 1 → Bool) :
     ∃ (m : ℕ) (choices : Fin m → Bool),
-      Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 (fun _ => bit) c) := by
+      Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c) := by
   sorry
+
+/-- **Iterated correspondence.** Simulating `t` steps of `N` (choices `g`): the
+    simulator reaches, in some number `m` of steps (choices from a single
+    `ℕ`-indexed `F`), a configuration corresponding to `N.trace t g c` (at some
+    materialization level `M'`). Proved by induction on `t`, composing
+    macro-steps with `trace_add`; the halted case reuses the previous one. -/
+theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (g : ℕ → Bool) (t : ℕ) :
+    ∃ (m M' : ℕ) (F : ℕ → Bool),
+      Corr N M' ((singleTapeSim N).trace m (fun i => F i.val) c1)
+        (N.trace t (fun i => g i.val) c) := by
+  induction t with
+  | zero => exact ⟨0, M, g, hcorr⟩
+  | succ t ih =>
+    obtain ⟨m, M', f, hcorr_t⟩ := ih
+    set s_t := (singleTapeSim N).trace m (fun i => f i.val) c1 with hs_t
+    set c_t := N.trace t (fun i => g i.val) c with hc_t
+    -- N's (t+1)-step trace splits as one step from c_t
+    have hNsplit : N.trace (t + 1) (fun i => g i.val) c
+        = N.trace 1 (fun i => g (t + i.val)) c_t := by
+      rw [hc_t]; exact N.trace_add t 1 g c
+    by_cases hh : c_t.state = N.qhalt
+    · -- N has halted: the (t+1) step is a no-op, reuse the IH config
+      refine ⟨m, M', f, ?_⟩
+      rw [hNsplit, N.trace_halted 1 _ hh]
+      exact hcorr_t
+    · -- N steps: apply the macro-step correspondence and concatenate choices
+      obtain ⟨m', choices', hstep⟩ :=
+        macroStepCorr N hcorr_t hh (fun i => g (t + i.val))
+      -- concatenate `f` (first m steps) and `choices'` (next m') into one `F`
+      set F : ℕ → Bool :=
+        fun j => if j < m then f j else if h : j - m < m' then choices' ⟨j - m, h⟩ else false
+        with hF
+      refine ⟨m + m', M' + 1, F, ?_⟩
+      rw [hNsplit, (singleTapeSim N).trace_add m m' F c1]
+      have hpre : (fun i : Fin m => F i.val) = (fun i : Fin m => f i.val) := by
+        funext i; rw [hF]; simp only []; rw [if_pos i.isLt]
+      have hsuf : (fun i : Fin m' => F (m + i.val)) = choices' := by
+        funext i; rw [hF]; simp only []
+        rw [if_neg (by omega), dif_pos (by omega)]
+        have hsub : m + i.val - m = i.val := by omega
+        simp only [hsub, Fin.eta]
+      rw [hpre, ← hs_t, hsuf]
+      exact hstep
 
 end NTM.SingleTape
