@@ -1,4 +1,5 @@
 import Complexitylib.Models.TuringMachine.SingleTape.Delta
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # Single-tape simulation — correctness internals
@@ -177,6 +178,155 @@ theorem gather_trace1 {k : ℕ} (N : NTM k) (d : GatherData k N.Q) (b : Bool)
   rw [NTM.trace]
   simp only [hst, singleTapeSim, simDelta, SimQ.gather, SimQ.halt, Sum.inr.injEq,
     reduceCtorEq, ↓reduceIte, NTM.trace]
+
+/-- A GATHER work step (`readBackWrite`, move right) on a tape reading a non-`▷`
+    cell just advances the head by one, leaving contents intact. -/
+private theorem work_gather_step (t : Tape) (h : t.read ≠ Γ.start) :
+    t.writeAndMove (TM.readBackWrite t.read).toΓ Dir3.right = { t with head := t.head + 1 } := by
+  rw [TM.readBackWrite_toΓ_eq h]
+  show (t.write t.read).move Dir3.right = { t with head := t.head + 1 }
+  unfold Tape.write Tape.read
+  split <;> simp [Tape.move, Function.update_eq_self]
+
+/-- An idle (`stay`) move on a tape reading a non-`▷` cell is a no-op. -/
+private theorem tape_idle_stay (t : Tape) (h : t.read ≠ Γ.start) :
+    t.move (TM.idleDir t.read) = t := by
+  simp [TM.idleDir, h, Tape.move]
+
+/-- A `readBackWrite`+idle step on a tape reading a non-`▷` cell is a no-op. -/
+private theorem tape_idle_writeMove (t : Tape) (h : t.read ≠ Γ.start) :
+    t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read) = t := by
+  rw [TM.readBackWrite_toΓ_eq h]
+  simp only [TM.idleDir, h, ↓reduceIte]
+  show (t.write t.read).move Dir3.stay = t
+  unfold Tape.write Tape.read
+  split <;> simp [Tape.move, Function.update_eq_self]
+
+/-- `trace 3` with a constant choice unfolds into three single steps. -/
+private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
+    M.trace 3 (fun _ => bb) c
+      = M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)) := by
+  have h1 := M.trace_add 1 2 (fun _ => bb) c
+  have h2 := M.trace_add 1 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)
+  simp only [Fin.val] at h1 h2
+  rw [show (3 : ℕ) = 1 + 2 from rfl, h1, show (2 : ℕ) = 1 + 1 from rfl, h2]
+
+/-- GATHER slot-`0` step (head-bit): records whether this tape's head marker is
+    present (`rf := wH = one`), advances to slot `1`, leaves contents/heads put. -/
+private theorem gather_slot0 {k : ℕ} (N : NTM k) (bb : Bool)
+    (q : N.Q) (acc : Fin k → Γ) (iSym oSym : Γ) (pt : Fin (k + 1)) (rf : Bool) (pending : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.gather (q, acc, iSym, oSym, (pt, 0), rf, pending))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hws : (c1.work 0).read ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.gather (q, acc, iSym, oSym, (pt, 1),
+          decide ((c1.work 0).read = Γ.one), pending),
+        input := c1.input, output := c1.output,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 } } := by
+  rw [gather_trace1 N (q, acc, iSym, oSym, (pt, 0), rf, pending) bb c1 hst]
+  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq, Fin.reduceAdd,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_gather_step (c1.work 0) hws
+
+/-- GATHER slot-`1` step (sym-hi): stashes the high code cell into `pending`,
+    advances to slot `2`, leaves contents/heads put. -/
+private theorem gather_slot1 {k : ℕ} (N : NTM k) (bb : Bool)
+    (q : N.Q) (acc : Fin k → Γ) (iSym oSym : Γ) (pt : Fin (k + 1)) (rf : Bool) (pending : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.gather (q, acc, iSym, oSym, (pt, 1), rf, pending))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hws : (c1.work 0).read ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.gather (q, acc, iSym, oSym, (pt, 2), rf, (c1.work 0).read),
+        input := c1.input, output := c1.output,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 } } := by
+  rw [gather_trace1 N (q, acc, iSym, oSym, (pt, 1), rf, pending) bb c1 hst]
+  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq, Fin.reduceAdd,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_gather_step (c1.work 0) hws
+
+/-- GATHER slot-`2` step (sym-lo): decodes the symbol and, if this tape's head
+    marker was seen (`rf`), records it into `acc`; advances to the next tape's
+    slot `0`, leaves contents/heads put. -/
+private theorem gather_slot2 {k : ℕ} (N : NTM k) (bb : Bool)
+    (q : N.Q) (acc : Fin k → Γ) (iSym oSym : Γ) (pt : Fin (k + 1)) (rf : Bool) (pending : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.gather (q, acc, iSym, oSym, (pt, 2), rf, pending))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hws : (c1.work 0).read ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.gather (q,
+          (if rf = true then
+             (if h : pt.val < k then
+                Function.update acc ⟨pt.val, h⟩ (decSymΓ pending (c1.work 0).read) else acc)
+           else acc),
+          iSym, oSym, (⟨if pt.val + 1 < k then pt.val + 1 else 0, by split <;> omega⟩, 0),
+          rf, pending),
+        input := c1.input, output := c1.output,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 } } := by
+  rw [gather_trace1 N (q, acc, iSym, oSym, (pt, 2), rf, pending) bb c1 hst]
+  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq, Fin.reduceAdd,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_gather_step (c1.work 0) hws
+
+/-- One gather **triple** (`trace 3`): starting at slot `0` of tape `j`'s triple
+    in the encoded region (work head at `h`), three GATHER steps read the head-bit
+    (`cells h`), sym-hi (`cells (h+1)`), and sym-lo (`cells (h+2)`) cells, advance
+    the sweep to the next tape's slot `0`, leave the work tape contents unchanged
+    (read-only sweep, head at `h+3`), and — if the head-bit is set — record this
+    tape's decoded symbol into `acc`. Input/output stay put (off `▷`, so `idleDir`
+    is `stay`). The block/sweep inductions iterate this over the `k` tapes and `M`
+    blocks. Code-cell hypotheses (`≠ □`, `≠ ▷`) keep all three steps in the slot
+    branch (no sentinel) and make `readBackWrite` cell-preserving. -/
+theorem gather_triple {k : ℕ} (N : NTM k) (bb : Bool)
+    (q : N.Q) (acc : Fin k → Γ) (iSym oSym : Γ) (rf₀ : Bool) (pending₀ : Γ)
+    (j : ℕ) (hj : j < k) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.gather (q, acc, iSym, oSym, (⟨j, by omega⟩, 0), rf₀, pending₀))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (hb0 : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.blank)
+    (hb1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.blank)
+    (hb2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.blank)
+    (hs0 : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.start)
+    (hs1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.start)
+    (hs2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.gather (q,
+          (if (c1.work 0).cells ((c1.work 0).head) = Γ.one then
+             Function.update acc ⟨j, hj⟩ (decSymΓ ((c1.work 0).cells ((c1.work 0).head + 1))
+               ((c1.work 0).cells ((c1.work 0).head + 2)))
+           else acc),
+          iSym, oSym, (⟨if j + 1 < k then j + 1 else 0, by split <;> omega⟩, 0),
+          decide ((c1.work 0).cells ((c1.work 0).head) = Γ.one),
+          (c1.work 0).cells ((c1.work 0).head + 1)),
+        input := c1.input, output := c1.output,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 3 } } := by
+  have e0 : (singleTapeSim N).trace 1 (fun _ => bb) c1 = _ :=
+    gather_slot0 N bb q acc iSym oSym ⟨j, by omega⟩ rf₀ pending₀ c1 hst hb0 hs0 his hos
+  have e1 : (singleTapeSim N).trace 1 (fun _ => bb)
+      ((singleTapeSim N).trace 1 (fun _ => bb) c1) = _ :=
+    gather_slot1 N bb q acc iSym oSym ⟨j, by omega⟩ (decide ((c1.work 0).read = Γ.one)) pending₀
+      ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+      (by rw [e0]) (by rw [e0]; exact hb1) (by rw [e0]; exact hs1)
+      (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 : (singleTapeSim N).trace 1 (fun _ => bb)
+      ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1)) = _ :=
+    gather_slot2 N bb q acc iSym oSym ⟨j, by omega⟩ (decide ((c1.work 0).read = Γ.one))
+      (((singleTapeSim N).trace 1 (fun _ => bb) c1).work 0).read
+      ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+      (by rw [e1]) (by rw [e1, e0]; exact hb2) (by rw [e1, e0]; exact hs2)
+      (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  simp only [Tape.read, decide_eq_true_eq, dif_pos hj]; rfl
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
