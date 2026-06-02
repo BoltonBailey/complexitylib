@@ -492,6 +492,38 @@ theorem gather_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : 
       · rw [if_pos hr, if_pos (by omega)]
       · rw [if_neg hr, if_neg (by omega)]
 
+/-- One **GATHER sentinel** step (`trace 1`): reading the `□` that ends the used
+    region fires `N.δ` (the one meaningful use of the choice `bb`) and hands the
+    write/move actions to REWIND, turning the work head leftward. -/
+theorem gather_sentinel {k : ℕ} (N : NTM k) (bb : Bool) (q : N.Q) (acc : Fin k → Γ)
+    (iSym oSym : Γ) (pos : SweepPos k) (rf : Bool) (pending : Γ) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.gather (q, acc, iSym, oSym, pos, rf, pending))
+    (hblank : (c1.work 0).read = Γ.blank) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.rewind ((N.δ bb q iSym acc oSym).1,
+          (fun i => ((N.δ bb q iSym acc oSym).2.1 i, (N.δ bb q iSym acc oSym).2.2.2.2.1 i)),
+          ((N.δ bb q iSym acc oSym).2.2.1, (N.δ bb q iSym acc oSym).2.2.2.2.2),
+          (N.δ bb q iSym acc oSym).2.2.2.1, iSym, oSym, (fun j => decide (acc j = Γ.start))),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun i => (c1.work i).writeAndMove Γw.blank.toΓ Dir3.left,
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+  rw [gather_trace1 N (q, acc, iSym, oSym, pos, rf, pending) bb c1 hst]
+  simp only [gatherStep, hblank, ↓reduceIte]; rfl
+
+/-- The sweep accumulator at `B = M` is exactly the per-tape reads: a head in
+    `[1, M]` had its symbol recorded; a head at `0` reads `▷`, which is also the
+    `▷` default the sweep leaves. Uses `heads_le` (every head `≤ M`) and
+    `head0_read` (a head at `0` reads `▷`). -/
+theorem gather_acc_eq {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
+    (hinv : SimInvAt k t w M) :
+    (fun j => if 1 ≤ (w j).head ∧ (w j).head ≤ M then (w j).read else Γ.start)
+      = (fun j : Fin k => (w j).read) := by
+  funext j
+  by_cases h1 : 1 ≤ (w j).head
+  · rw [if_pos ⟨h1, hinv.heads_le j⟩]
+  · rw [if_neg (fun h => h1 h.1), hinv.head0_read j (by omega)]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
