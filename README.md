@@ -50,4 +50,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for commit format, code style, and guidel
 
 ## License
 
-TBD
+Licensed under the [Apache License, Version 2.0](LICENSE).
