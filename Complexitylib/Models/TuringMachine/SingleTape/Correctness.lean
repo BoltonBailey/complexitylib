@@ -279,6 +279,13 @@ private theorem gather_slot2 {k : ℕ} (N : NTM k) (bb : Bool)
   obtain rfl : x = 0 := Subsingleton.elim x 0
   exact work_gather_step (c1.work 0) hws
 
+/-- Split a constant-choice trace: `trace (a + a') = trace a' ∘ trace a`. -/
+private theorem trace_const_add {n : ℕ} (M : NTM n) (a a' : ℕ) (bb : Bool) (c : Cfg n M.Q) :
+    M.trace (a + a') (fun _ => bb) c
+      = M.trace a' (fun _ => bb) (M.trace a (fun _ => bb) c) := by
+  have h := M.trace_add a a' (fun _ => bb) c
+  simpa using h
+
 /-- One gather **triple** (`trace 3`): starting at slot `0` of tape `j`'s triple
     in the encoded region (work head at `h`), three GATHER steps read the head-bit
     (`cells h`), sym-hi (`cells (h+1)`), and sym-lo (`cells (h+2)`) cells, advance
@@ -327,6 +334,99 @@ theorem gather_triple {k : ℕ} (N : NTM k) (bb : Bool)
       (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
   rw [trace_three, e2, e1, e0]
   simp only [Tape.read, decide_eq_true_eq, dif_pos hj]; rfl
+
+/-- **GATHER one block (`trace (3*m)`).** Sweeping the `k`-tape block `b` (`1 ≤ b
+    ≤ M`) starting at tape `0`, slot `0` (work head at `blockStart k b`): after
+    `m ≤ k` triples the work head is at `blockStart k b + 3*m`, the sweep is at
+    tape `(if m < k then m else 0)` slot `0`, and `acc` has recorded the read
+    symbol of every tape `j < m` whose head sits in block `b` (others untouched).
+    The `rf`/`pending` leftovers from the last triple are existential — the next
+    block's slot-`0`/`1` steps overwrite them. Proved by induction on `m`, each
+    step one `gather_triple` with the cell facts from `SimInvAt`. -/
+theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+    (hb1 : 1 ≤ b) (hbM : b ≤ M) (q : N.Q) (iSym oSym : Γ) (acc₀ : Fin k → Γ)
+    (c1 : Cfg 1 (SimQ k N.Q)) (rf₀ : Bool) (pending₀ : Γ)
+    (hst : c1.state = SimQ.gather (q, acc₀, iSym, oSym, (⟨0, by omega⟩, 0), rf₀, pending₀))
+    (hhead : (c1.work 0).head = blockStart k b)
+    (hinv : SimInvAt k (c1.work 0) c.work M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (m : ℕ) (hm : m ≤ k) :
+    ∃ (rf' : Bool) (pending' : Γ),
+      (singleTapeSim N).trace (3 * m) (fun _ => bb) c1 =
+        { state := SimQ.gather (q,
+            (fun j => if j.val < m ∧ (c.work j).head = b then (c.work j).read else acc₀ j),
+            iSym, oSym, (⟨if m < k then m else 0, by split <;> omega⟩, 0), rf', pending'),
+          input := c1.input, output := c1.output,
+          work := fun _ => { c1.work 0 with head := blockStart k b + 3 * m } } := by
+  induction m with
+  | zero =>
+    refine ⟨rf₀, pending₀, ?_⟩
+    have h0 : (singleTapeSim N).trace (3 * 0) (fun _ => bb) c1 = c1 := by
+      simp only [Nat.mul_zero]; rfl
+    rw [h0]
+    obtain ⟨cst, cin, cwk, cout⟩ := c1
+    simp only [Nat.not_lt_zero, false_and, ↓reduceIte, ite_self, Nat.mul_zero,
+      Nat.add_zero] at hst hhead ⊢
+    subst hst
+    refine Cfg.mk.injEq .. |>.mpr ⟨rfl, rfl, ?_, rfl⟩
+    funext x
+    obtain rfl : x = 0 := Subsingleton.elim x 0
+    rw [← hhead]
+  | succ m ih =>
+    obtain ⟨rfm, pendingm, hmeq⟩ := ih (by omega)
+    have hmk : m < k := by omega
+    have hbit := hinv.headBit b hb1 hbM ⟨m, hmk⟩
+    have hsym := hinv.sym b hb1 hbM ⟨m, hmk⟩
+    have hc0 : (c1.work 0).cells (blockStart k b + 3 * m)
+        = if (c.work ⟨m, hmk⟩).head = b then Γ.one else Γ.zero := by
+      rw [show blockStart k b + 3 * m = headBitCell k b ⟨m, hmk⟩ from by simp [headBitCell]]
+      exact hbit
+    have hc1 : (c1.work 0).cells (blockStart k b + 3 * m + 1)
+        = (encSymΓ ((c.work ⟨m, hmk⟩).cells b)).1 := by
+      rw [show blockStart k b + 3 * m + 1 = symCell k b ⟨m, hmk⟩ from by simp [symCell]]
+      exact hsym.1
+    have hc2 : (c1.work 0).cells (blockStart k b + 3 * m + 2)
+        = (encSymΓ ((c.work ⟨m, hmk⟩).cells b)).2 := by
+      rw [show blockStart k b + 3 * m + 2 = symCell k b ⟨m, hmk⟩ + 1 from by simp [symCell]]
+      exact hsym.2
+    refine ⟨decide ((c1.work 0).cells (blockStart k b + 3 * m) = Γ.one),
+            (c1.work 0).cells (blockStart k b + 3 * m + 1), ?_⟩
+    rw [show 3 * (m + 1) = 3 * m + 3 from by omega, trace_const_add,
+        gather_triple N bb q
+          (fun j => if ↑j < m ∧ (c.work j).head = b then (c.work j).read else acc₀ j)
+          iSym oSym rfm pendingm m hmk
+          ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1)
+          (by rw [hmeq]; simp only [if_pos hmk])
+          (by rw [hmeq]; exact his)
+          (by rw [hmeq]; exact hos)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m) ≠ Γ.blank; rw [hc0]; split <;> decide)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m + 1) ≠ Γ.blank; rw [hc1]; exact (encSymΓ_ne_blank _).1)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m + 2) ≠ Γ.blank; rw [hc2]; exact (encSymΓ_ne_blank _).2)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m) ≠ Γ.start; rw [hc0]; split <;> decide)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m + 1) ≠ Γ.start; rw [hc1]; exact (encSymΓ_ne_start _).1)
+          (by rw [hmeq]; show (c1.work 0).cells (blockStart k b + 3 * m + 2) ≠ Γ.start; rw [hc2]; exact (encSymΓ_ne_start _).2)]
+    rw [hmeq]
+    dsimp only
+    rw [hc0, hc1, hc2, decSymΓ_encSymΓ (hinv.noStart ⟨m, hmk⟩ b hb1)]
+    refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, rfl, rfl⟩
+    congr 3
+    funext j
+    by_cases hjm : j = (⟨m, hmk⟩ : Fin k)
+    · subst hjm
+      by_cases hb : (c.work ⟨m, hmk⟩).head = b
+      · simp only [hb, ↓reduceIte, Function.update_self, Fin.val_mk, and_true]
+        rw [if_pos (Nat.lt_succ_self m), Tape.read, hb]
+      · simp only [hb, ↓reduceIte, reduceCtorEq, Fin.val_mk, Nat.lt_irrefl, false_and,
+          and_false]
+    · have hjv : (j : ℕ) ≠ m := fun h => hjm (Fin.ext h)
+      by_cases hjb : (c.work j).head = b
+      · by_cases hlt : (↑j : ℕ) < m
+        · by_cases hb : (c.work ⟨m, hmk⟩).head = b <;>
+            simp [hb, hjb, hlt, Function.update_of_ne hjm, show (↑j : ℕ) < m + 1 from by omega]
+        · by_cases hb : (c.work ⟨m, hmk⟩).head = b <;>
+            simp [hb, hjb, hlt, Function.update_of_ne hjm, show ¬(↑j : ℕ) < m + 1 from by omega]
+      · by_cases hb : (c.work ⟨m, hmk⟩).head = b <;>
+          simp [hb, hjb, Function.update_of_ne hjm]
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
