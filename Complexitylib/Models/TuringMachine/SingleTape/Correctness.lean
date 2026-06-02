@@ -144,6 +144,26 @@ theorem run_step {k : ℕ} (N : NTM k) (q : N.Q) (hq : q ≠ N.qhalt) (b : Bool)
   simp only [hst, singleTapeSim, simDelta, runStep, SimQ.run, SimQ.halt, SimQ.gather,
     hq, reduceCtorEq, ↓reduceIte, NTM.trace]
 
+/-- The **commit** step (1 sim step): from a `commit (q', oW, oD, iD, iSym, oSym)`
+    config, the simulator applies the deferred output write/move and input move
+    (accounting for the `▷`-dodge via the `iSym`/`oSym` guards) and returns to
+    `run q'`. The work tape is preserved. -/
+theorem commit_step {k : ℕ} (N : NTM k) (q' : N.Q) (oW : Γw) (oD iD : Dir3)
+    (iSym oSym : Γ) (b : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.commit (q', oW, oD, iD, iSym, oSym)) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      { state := SimQ.run q',
+        input := c1.input.move
+          (if iSym = Γ.start then TM.idleDir c1.input.read else safeDir c1.input.read iD),
+        work := fun i => (c1.work i).writeAndMove
+          ((TM.readBackWrite ((c1.work 0).read) : Γw) : Γ) (TM.idleDir ((c1.work 0).read)),
+        output := c1.output.writeAndMove
+          ((if oSym = Γ.start then TM.readBackWrite c1.output.read else oW : Γw) : Γ)
+          (if oSym = Γ.start then TM.idleDir c1.output.read else safeDir c1.output.read oD) } := by
+  rw [NTM.trace]
+  simp only [hst, singleTapeSim, simDelta, commitStep, SimQ.commit, SimQ.run, SimQ.halt,
+    Sum.inr.injEq, reduceCtorEq, ↓reduceIte, NTM.trace]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
