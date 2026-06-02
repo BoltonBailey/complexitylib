@@ -42,14 +42,14 @@ theorem runStep_right_of_start {k : ℕ} {Q : Type} (q : Q) (iHead wH oHead : Γ
     enters SCATTER sweep 1 (empty carries). Moves left otherwise. -/
 def rewindStep {k : ℕ} {Q : Type} (d : RewindData k Q) (iHead wH oHead : Γ) :
     SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
-  let (q', wact, oWoD, iD, iSym, oSym) := d
+  let (q', wact, oWoD, iD, iSym, oSym, initRC) := d
   if wH = Γ.start then
     ( SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0),
-        (fun _ => false), (fun _ => false), false, false),
+        initRC, (fun _ => false), false, false),
       (fun _ => Γw.blank), TM.readBackWrite oHead,
       TM.idleDir iHead, (fun _ => Dir3.right), TM.idleDir oHead )
   else
-    ( SimQ.rewind (q', wact, oWoD, iD, iSym, oSym),
+    ( SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC),
       (fun _ => TM.readBackWrite wH), TM.readBackWrite oHead,
       TM.idleDir iHead, (fun _ => Dir3.left), TM.idleDir oHead )
 
@@ -138,7 +138,8 @@ def gatherStep {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
   if wH = Γ.blank then
     -- sentinel reached: compute one N-step and rewind leftward to cell 1
     let (q', wW, oW, iD, wD, oD) := N.δ b q iSym acc oSym
-    ( SimQ.rewind (q', (fun i => (wW i, wD i)), (oW, oD), iD, iSym, oSym),
+    ( SimQ.rewind (q', (fun i => (wW i, wD i)), (oW, oD), iD, iSym, oSym,
+        (fun j => decide (acc j = Γ.start))),
       (fun _ => Γw.blank), TM.readBackWrite oHead,
       TM.idleDir iHead, (fun _ => Dir3.left), TM.idleDir oHead )
   else
@@ -201,8 +202,10 @@ def scatter1Step {k : ℕ} {Q : Type} (d : Scatter1Data k Q) (iHead wH oHead : �
   let stWr : SimQ k Q × Γw :=
     if wH = Γ.blank then
       if mat = true ∧ pos = (0, 0) then
-        -- new block complete: turn around into sweep 2
-        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, pos, isLeftMover, fun _ => false), Γw.blank)
+        -- new block complete: turn around into sweep 2, starting at the last cell
+        -- of the last materialized block (tape k-1, slot 2), since sweep 2 sweeps left
+        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover, fun _ => false),
+          Γw.blank)
       else
         -- materialize this cell of the new block (head-bit per `rightCarry`, symbol `□`)
         let wv : Γw :=

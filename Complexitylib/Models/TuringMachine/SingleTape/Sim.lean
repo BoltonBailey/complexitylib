@@ -34,11 +34,13 @@ abbrev SweepPos (k : ℕ) := Fin (k + 1) × Fin 3
     pending high symbol cell read. -/
 abbrev GatherData (k : ℕ) (Q : Type) := Q × (Fin k → Γ) × Γ × Γ × SweepPos k × Bool × Γ
 
-/-- REWIND-phase data (between GATHER and SCATTER): the next state `q'` and the
-    `δ` results carried leftward back to cell 1 — per-tape write+move action, the
-    deferred output write/dir, input dir, and the original input/output symbols. -/
+/-- REWIND-phase data (between GATHER and SCATTER): the next state `q'`, the `δ`
+    results carried leftward back to cell 1 — per-tape write+move action, the
+    deferred output write/dir, input dir, original input/output symbols — and the
+    initial `rightCarry` marking heads that were at position 0 (`acc = ▷`, forced
+    right off `▷`), whose new marker must be deposited at block 1 by SCATTER. -/
 abbrev RewindData (k : ℕ) (Q : Type) :=
-  Q × (Fin k → Γw × Dir3) × (Γw × Dir3) × Dir3 × Γ × Γ
+  Q × (Fin k → Γw × Dir3) × (Γw × Dir3) × Dir3 × Γ × Γ × (Fin k → Bool)
 
 /-- SCATTER sweep-1 data (rightward: write new symbols, place stay/right markers,
     materialize): the carried `δ` results, the sweep position, the per-tape
