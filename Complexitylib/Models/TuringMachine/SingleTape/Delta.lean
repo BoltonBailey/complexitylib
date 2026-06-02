@@ -318,7 +318,12 @@ def simDelta {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
     (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) :
     SimQ k N.Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
   match state with
-  | SimQ.run q => runStep q iHead (wHead 0) oHead
+  | SimQ.run q =>
+    if q = N.qhalt then
+      -- N has halted: stop, preserving the tapes (the accept bit lives on output)
+      (SimQ.halt, (fun _ => TM.readBackWrite (wHead 0)), TM.readBackWrite oHead,
+        TM.idleDir iHead, (fun _ => TM.idleDir (wHead 0)), TM.idleDir oHead)
+    else runStep q iHead (wHead 0) oHead
   | SimQ.gather d => gatherStep N b d iHead (wHead 0) oHead
   | SimQ.rewind d => rewindStep d iHead (wHead 0) oHead
   | SimQ.scatter1 d => scatter1Step d iHead (wHead 0) oHead
@@ -339,9 +344,11 @@ theorem simDelta_right_of_start {k : ℕ} (N : NTM k) (b : Bool) (q : SimQ k N.Q
     (oHead = Γ.start → (simDelta N b q iHead wHeads oHead).2.2.2.2.2 = Dir3.right) := by
   have hw : ∀ i : Fin 1, wHeads i = wHeads 0 := fun i => by rw [Subsingleton.elim i 0]
   rcases q with q | d | d | d | d | d | ⟨⟩
-  · exact ⟨(runStep_right_of_start q iHead (wHeads 0) oHead).1,
-      fun i hi => (runStep_right_of_start q iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
-      (runStep_right_of_start q iHead (wHeads 0) oHead).2.2⟩
+  · -- run q: the halt-branch and the runStep-branch both use `idleDir` for every head
+    refine ⟨fun h => ?_, fun i hi => ?_, fun h => ?_⟩
+    · simp only [simDelta]; split <;> exact TM.idleDir_right_of_start h
+    · simp only [simDelta]; split <;> exact TM.idleDir_right_of_start (hw i ▸ hi)
+    · simp only [simDelta]; split <;> exact TM.idleDir_right_of_start h
   · exact ⟨(gatherStep_right_of_start N b d iHead (wHeads 0) oHead).1,
       fun i hi => (gatherStep_right_of_start N b d iHead (wHeads 0) oHead).2.1 i (hw i ▸ hi),
       (gatherStep_right_of_start N b d iHead (wHeads 0) oHead).2.2⟩
