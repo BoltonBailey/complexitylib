@@ -196,4 +196,38 @@ theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
               Nat.add_le_add hb1 hb2
           _ = (t + 1) * macroBound k (M + (t + 1)) := by rw [Nat.succ_mul]
 
+/-- **Forward acceptance.** If `N` accepts `x` within `Tn` steps, then
+    `singleTapeSim N` accepts `x` within `Tn · macroBound k Tn + 1` steps:
+    simulate `N`'s accepting run (`iterCorr`), then one `haltCorr` step lands in
+    a halted accepting simulator config; pad via `AcceptsInTime_mono`. -/
+theorem accepts_fwd {k : ℕ} (N : NTM k) (x : List Bool) (Tn : ℕ)
+    (h : N.AcceptsInTime x Tn) :
+    (singleTapeSim N).AcceptsInTime x (Tn * macroBound k Tn + 1) := by
+  obtain ⟨chN, hhalt, hacc⟩ := h
+  set g : ℕ → Bool := fun i => if hi : i < Tn then chN ⟨i, hi⟩ else false with hg
+  obtain ⟨m, M', F, hcorr, _hM', hm⟩ := iterCorr N (corr_init N x) g Tn
+  have hgN : (fun i : Fin Tn => g i.val) = chN := by
+    funext i; rw [hg]; simp only []; rw [dif_pos i.isLt]
+  rw [hgN] at hcorr
+  -- one halt step lands in a halted, accepting simulator config
+  obtain ⟨hhalted, hbit⟩ := haltCorr N hcorr hhalt
+  -- the accepting config is reached after `m + 1` sim steps
+  set sCfg := (singleTapeSim N).trace m (fun i => F i.val) ((singleTapeSim N).initCfg x) with hsCfg
+  set F' : ℕ → Bool := fun j => if j < m then F j else false with hF'
+  have hcompose : (singleTapeSim N).trace (m + 1) (fun i => F' i.val) ((singleTapeSim N).initCfg x)
+      = (singleTapeSim N).trace 1 (fun _ => false) sCfg := by
+    rw [(singleTapeSim N).trace_add m 1 F']
+    have e1 : (fun i : Fin m => F' i.val) = (fun i : Fin m => F i.val) := by
+      funext i; rw [hF']; simp only [i.isLt, if_true]
+    have e2 : (fun i : Fin 1 => F' (m + i.val)) = (fun _ => false) := by
+      funext i; rw [hF']; simp only []; rw [if_neg (by omega)]
+    rw [e1, e2, ← hsCfg]
+  have key : (singleTapeSim N).AcceptsInTime x (m + 1) := by
+    refine ⟨fun i => F' i.val, ?_, ?_⟩
+    · rw [hcompose]; exact hhalted
+    · rw [hcompose]; exact hbit.mpr hacc
+  exact NTM.AcceptsInTime_mono (by
+    have : Tn * macroBound k (0 + Tn) = Tn * macroBound k Tn := by rw [Nat.zero_add]
+    omega) key
+
 end NTM.SingleTape
