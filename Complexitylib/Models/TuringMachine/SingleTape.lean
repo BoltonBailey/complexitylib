@@ -2,6 +2,7 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.SingleTape.Internal
 import Complexitylib.Models.TuringMachine.SingleTape.Sim
 import Complexitylib.Models.TuringMachine.SingleTape.Delta
+import Complexitylib.Models.TuringMachine.SingleTape.Correctness
 import Complexitylib.Asymptotics
 
 /-!
@@ -32,20 +33,6 @@ This is a reusable robustness lemma:
 open Complexity
 
 namespace NTM
-
-/-- The single-work-tape machine simulating the `k`-work-tape machine `N`. It
-    stores the `k` work tapes block-encoded (binary, `□`-sentinel) on its one
-    work tape and simulates each `N`-step by the phase machine
-    `run → gather → rewind → scatter1 → scatter2 → commit` (see `Delta.lean` and
-    `docs/A4-SingleTapeSimulation.md`). State, transition, and `δ_right_of_start`
-    come from `SingleTape.SimQ` / `SingleTape.simDelta`; the `Fintype`/`DecidableEq`
-    instances on `SimQ` are noncomputable. -/
-noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 where
-  Q := SingleTape.SimQ k N.Q
-  qstart := SingleTape.SimQ.run N.qstart
-  qhalt := SingleTape.SimQ.halt
-  δ := SingleTape.simDelta N
-  δ_right_of_start := SingleTape.simDelta_right_of_start N
 
 /-- Time overhead of the single-tape simulation: the classic quadratic blow-up
     `(T + n + 1)²`, times a per-machine constant `16·(k+1)` that absorbs the

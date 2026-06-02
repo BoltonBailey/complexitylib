@@ -369,3 +369,20 @@ theorem simDelta_right_of_start {k : ℕ} (N : NTM k) (b : Bool) (q : SimQ k N.Q
       fun h => TM.idleDir_right_of_start h⟩
 
 end NTM.SingleTape
+
+namespace NTM
+
+/-- The single-work-tape machine simulating the `k`-work-tape machine `N`. It
+    stores the `k` work tapes block-encoded (binary, `□`-sentinel) on its one
+    work tape and simulates each `N`-step by the phase machine
+    `run → gather → rewind → scatter1 → scatter2 → commit` (see this file and
+    `docs/A4-SingleTapeSimulation.md`). The `Fintype`/`DecidableEq` instances on
+    the state type `SingleTape.SimQ` are noncomputable. -/
+noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 where
+  Q := SingleTape.SimQ k N.Q
+  qstart := SingleTape.SimQ.run N.qstart
+  qhalt := SingleTape.SimQ.halt
+  δ := SingleTape.simDelta N
+  δ_right_of_start := SingleTape.simDelta_right_of_start N
+
+end NTM
