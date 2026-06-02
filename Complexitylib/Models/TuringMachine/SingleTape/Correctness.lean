@@ -67,6 +67,50 @@ theorem corr_init {k : ℕ} (N : NTM k) (x : List Bool) :
   outputEq := rfl
   inv := simInvAt_init k
 
+/-- Writing back the read symbol preserves whether a cell holds the accept bit
+    `1` (`readBackWrite` fixes `0/1/□` and maps `▷ ↦ □`, never producing a
+    spurious `1`). -/
+theorem readBackWrite_one_iff (g : Γ) :
+    ((TM.readBackWrite g : Γw) : Γ) = Γ.one ↔ g = Γ.one := by
+  cases g <;> decide
+
+/-- The halt step's output action — `writeAndMove` writing back the read
+    symbol — preserves the accept bit at cell 1. -/
+theorem accept_bit_preserved (t : Tape) (d : Dir3) :
+    (t.writeAndMove ((TM.readBackWrite t.read : Γw) : Γ) d).cells 1 = Γ.one
+      ↔ t.cells 1 = Γ.one := by
+  have hcells : (t.writeAndMove ((TM.readBackWrite t.read : Γw) : Γ) d).cells
+              = (t.write ((TM.readBackWrite t.read : Γw) : Γ)).cells := by
+    cases d <;> rfl
+  rw [hcells, Tape.write]
+  by_cases hh0 : t.head = 0
+  · simp [hh0]
+  · rw [if_neg hh0]
+    simp only [Function.update_apply]
+    by_cases h1 : (1 : ℕ) = t.head
+    · rw [if_pos h1, Tape.read, ← h1, readBackWrite_one_iff]
+    · rw [if_neg h1]
+
+/-- **Halt correspondence.** When `N` has halted, the simulator (parked at
+    `run N.qhalt`) takes one step to `SimQ.halt`, preserving the accept bit. -/
+theorem haltCorr {k : ℕ} (N : NTM k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (hh : c.state = N.qhalt) :
+    (singleTapeSim N).halted ((singleTapeSim N).trace 1 (fun _ => false) c1) ∧
+    (((singleTapeSim N).trace 1 (fun _ => false) c1).output.cells 1 = Γ.one
+      ↔ c.output.cells 1 = Γ.one) := by
+  have hst : c1.state = SimQ.run N.qhalt := by rw [hcorr.state, hh]
+  refine ⟨?_, ?_⟩
+  · show ((singleTapeSim N).trace 1 (fun _ => false) c1).state = (singleTapeSim N).qhalt
+    simp only [NTM.trace, singleTapeSim, simDelta, hst, SimQ.run, SimQ.halt, reduceCtorEq,
+      ↓reduceIte]
+  · have hout : ((singleTapeSim N).trace 1 (fun _ => false) c1).output
+        = c1.output.writeAndMove ((TM.readBackWrite c1.output.read : Γw) : Γ)
+            (TM.idleDir c1.output.read) := by
+      simp only [NTM.trace, singleTapeSim, simDelta, hst, SimQ.run, SimQ.halt, reduceCtorEq,
+        ↓reduceIte]
+    rw [hout, accept_bit_preserved, hcorr.outputEq]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
