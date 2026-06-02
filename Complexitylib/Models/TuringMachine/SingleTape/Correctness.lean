@@ -12,6 +12,32 @@ iterating `macroStepCorr` over `N`'s computation and translating acceptance.
 See `docs/A4-SingleTapeSimulation.md`. Proof internals only.
 -/
 
+namespace NTM
+
+variable {n : ℕ}
+
+/-- Split a trace into a first `a` steps and a remaining `b` steps, with the
+    choice sequence drawn from a single `ℕ`-indexed function `f` (avoiding the
+    dependent-`Fin` reindexing pain). Generalizes `trace_succ_eq_trace_one`. -/
+theorem trace_add (tm : NTM n) (a b : ℕ) (f : ℕ → Bool) (c : Cfg n tm.Q) :
+    tm.trace (a + b) (fun i => f i.val) c =
+      tm.trace b (fun i => f (a + i.val)) (tm.trace a (fun i => f i.val) c) := by
+  induction a generalizing f c with
+  | zero => rw [Nat.zero_add]; simp [NTM.trace]
+  | succ a ih =>
+    rw [show a + 1 + b = a + b + 1 from by omega]
+    by_cases hhalt : c.state = tm.qhalt
+    · simp only [NTM.trace, hhalt, if_true]
+      exact (tm.trace_halted b _ hhalt).symm
+    · simp only [NTM.trace, hhalt, if_false]
+      rw [ih (fun j => f (j + 1))]
+      congr 1
+      funext i
+      congr 1
+      omega
+
+end NTM
+
 namespace NTM.SingleTape
 
 /-- **Config correspondence.** At a macro-step boundary, the `singleTapeSim N`
