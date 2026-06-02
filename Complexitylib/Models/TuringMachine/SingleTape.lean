@@ -48,12 +48,16 @@ noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 where
   δ_right_of_start := SingleTape.simDelta_right_of_start N
 
 /-- Time overhead of the single-tape simulation: the classic quadratic blow-up
-    (plus a linear term to scan the input region). -/
-def singleTapeSimTime (T : ℕ → ℕ) : ℕ → ℕ := fun n => (T n + n + 1) ^ 2
+    `(T + n + 1)²`, times a per-machine constant `16·(k+1)` that absorbs the
+    block width (each super-position is `3k` cells) and the four sweeps per
+    simulated step. The constant is deliberately generous; only the `=O` class
+    (which absorbs it) is used downstream. -/
+def singleTapeSimTime (k : ℕ) (T : ℕ → ℕ) : ℕ → ℕ :=
+  fun n => 16 * (k + 1) * (T n + n + 1) ^ 2
 
 /-- The simulation's time overhead stays polynomial. -/
-theorem singleTapeSimTime_bigO {T : ℕ → ℕ} {c : ℕ} (hTO : T =O (· ^ c)) :
-    singleTapeSimTime T =O (· ^ (2 * c + 2)) := by
+theorem singleTapeSimTime_bigO {k : ℕ} {T : ℕ → ℕ} {c : ℕ} (hTO : T =O (· ^ c)) :
+    singleTapeSimTime k T =O (· ^ (2 * c + 2)) := by
   -- `T n + n + 1` is `O(n^(c+1))`: each summand is.
   have hsum : (fun n => T n + n + 1) =O ((· ^ (c + 1)) : ℕ → ℕ) := by
     have hT : T =O ((· ^ (c + 1)) : ℕ → ℕ) :=
@@ -64,23 +68,24 @@ theorem singleTapeSimTime_bigO {T : ℕ → ℕ} {c : ℕ} (hTO : T =O (· ^ c))
   -- Squaring stays polynomial: `(n^(c+1))² = n^(2c+2)`.
   have hmul : (fun n => (T n + n + 1) * (T n + n + 1))
       =O (fun n => n ^ (c + 1) * n ^ (c + 1)) := BigO.mul hsum hsum
-  have hL : singleTapeSimTime T =O (fun n => (T n + n + 1) * (T n + n + 1)) :=
-    BigO.of_le fun n => le_of_eq (by simp [singleTapeSimTime, pow_two])
+  have hsq : (fun n => (T n + n + 1) ^ 2) =O (fun n => (T n + n + 1) * (T n + n + 1)) :=
+    BigO.of_le fun n => le_of_eq (by rw [pow_two])
   have hR : (fun n : ℕ => n ^ (c + 1) * n ^ (c + 1)) =O ((· ^ (2 * c + 2)) : ℕ → ℕ) :=
     BigO.of_le fun n => le_of_eq (by rw [← pow_add]; congr 1; omega)
-  exact (hL.trans hmul).trans hR
+  -- the `16·(k+1)` factor is a constant multiple, absorbed by `=O`
+  exact BigO.const_mul_left (16 * (k + 1)) ((hsq.trans hmul).trans hR)
 
 /-- The simulator halts on all computation paths within the overhead time bound,
     whenever `N` does. -/
 theorem singleTapeSim_allPathsHaltIn {k : ℕ} (N : NTM k) {T : ℕ → ℕ}
     (hN : N.AllPathsHaltIn T) :
-    (singleTapeSim N).AllPathsHaltIn (singleTapeSimTime T) := by
+    (singleTapeSim N).AllPathsHaltIn (singleTapeSimTime k T) := by
   sorry
 
 /-- The simulator accepts `x` within the overhead time bound iff `N` accepts `x`
     within its original time bound. -/
 theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (T : ℕ → ℕ) (x : List Bool) :
-    (singleTapeSim N).AcceptsInTime x (singleTapeSimTime T x.length)
+    (singleTapeSim N).AcceptsInTime x (singleTapeSimTime k T x.length)
       ↔ N.AcceptsInTime x (T x.length) := by
   sorry
 
@@ -88,7 +93,7 @@ theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (T : ℕ → ℕ) 
     bound. -/
 theorem singleTapeSim_decides {k : ℕ} {L : Language} (N : NTM k) {T : ℕ → ℕ}
     (hdec : N.DecidesInTime L T) :
-    (singleTapeSim N).DecidesInTime L (singleTapeSimTime T) :=
+    (singleTapeSim N).DecidesInTime L (singleTapeSimTime k T) :=
   ⟨singleTapeSim_allPathsHaltIn N hdec.1,
     fun x => (hdec.2 x).trans (singleTapeSim_acceptsInTime_iff N T x).symm⟩
 
@@ -98,7 +103,7 @@ theorem singleTapeSim_decides {k : ℕ} {L : Language} (N : NTM k) {T : ℕ → 
 theorem exists_singleTape_decider {k : ℕ} {L : Language} (N : NTM k)
     {T : ℕ → ℕ} {c : ℕ} (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
     ∃ (N' : NTM 1) (T' : ℕ → ℕ) (c' : ℕ), N'.DecidesInTime L T' ∧ T' =O (· ^ c') :=
-  ⟨singleTapeSim N, singleTapeSimTime T, 2 * c + 2,
+  ⟨singleTapeSim N, singleTapeSimTime k T, 2 * c + 2,
     singleTapeSim_decides N hdec, singleTapeSimTime_bigO hTO⟩
 
 end NTM
