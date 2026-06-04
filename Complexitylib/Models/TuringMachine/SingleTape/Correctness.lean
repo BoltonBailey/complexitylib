@@ -747,6 +747,67 @@ theorem Scatter1MidInv.done {k : ℕ} {t : Tape} {w : Fin k → Tape}
       t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2 :=
   h.donePart p hp1 (by omega) j
 
+/-- **Within-block partial invariant** for the SCATTER sweep-1 block step: like
+    `Scatter1MidInv` at boundary `b`, but block `b` itself is split — its first
+    `m` tapes are already intermediate-encoded (`scatterInterWork`), the rest still
+    old. The tape-by-tape block step advances `m → m+1`; `… b 0` is `Scatter1MidInv
+    … b` and `… b k` is `Scatter1MidInv … (b+1)` (see `ofMid`/`toMidSucc`). -/
+structure Scatter1BlockInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
+    (wact : Fin k → Γw × Dir3) (M b m : ℕ) : Prop where
+  /-- Cell 0 is the global start marker `▷`. -/
+  cell0 : t.cells 0 = Γ.start
+  /-- Blocks `[1, b)`: intermediate (`scatterInterWork`) encoding. -/
+  donePart : ∀ p, 1 ≤ p → p < b → ∀ j : Fin k,
+    t.cells (headBitCell k p j)
+        = (if (scatterInterWork (w j) (wact j)).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2
+  /-- Block `b`, tapes `[0, m)`: already intermediate-encoded. -/
+  doneTape : ∀ j : Fin k, (j : ℕ) < m →
+    t.cells (headBitCell k b j)
+        = (if (scatterInterWork (w j) (wact j)).head = b then Γ.one else Γ.zero) ∧
+      t.cells (symCell k b j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells b)).1 ∧
+      t.cells (symCell k b j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells b)).2
+  /-- Block `b`, tapes `[m, k)`: still old. -/
+  oldTape : ∀ j : Fin k, m ≤ (j : ℕ) →
+    t.cells (headBitCell k b j) = (if (w j).head = b then Γ.one else Γ.zero) ∧
+      t.cells (symCell k b j) = (encSymΓ ((w j).cells b)).1 ∧
+      t.cells (symCell k b j + 1) = (encSymΓ ((w j).cells b)).2
+  /-- Blocks `(b, M]`: still old. -/
+  oldPart : ∀ p, b < p → p ≤ M → ∀ j : Fin k,
+    t.cells (headBitCell k p j) = (if (w j).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((w j).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((w j).cells p)).2
+  /-- The sentinel region (block `M+1` onward) is blank. -/
+  sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
+
+/-- Entering block `b` (no tapes processed yet): `Scatter1MidInv … b` is the block
+    invariant at `m = 0`. The block-`b` old facts come from `oldPart` at `p = b`. -/
+theorem Scatter1BlockInv.ofMid {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M b : ℕ} (hbM : b ≤ M)
+    (h : Scatter1MidInv t w wact M b) : Scatter1BlockInv t w wact M b 0 where
+  cell0 := h.cell0
+  donePart := h.donePart
+  doneTape := fun _ hj => absurd hj (by omega)
+  oldTape := fun j _ => h.oldPart b (le_refl b) hbM j
+  oldPart := fun p hp hpM j => h.oldPart p (by omega) hpM j
+  sentinel := h.sentinel
+
+/-- Leaving block `b` (all `k` tapes processed): `Scatter1BlockInv … b k` is
+    `Scatter1MidInv … (b+1)`. The new `donePart` at `p = b` is the just-finished
+    `doneTape` (every `j : Fin k` satisfies `j < k`). -/
+theorem Scatter1BlockInv.toMidSucc {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M b : ℕ}
+    (h : Scatter1BlockInv t w wact M b k) : Scatter1MidInv t w wact M (b + 1) where
+  cell0 := h.cell0
+  donePart := fun p hp1 hpb j => by
+    rcases Nat.lt_or_ge p b with hlt | hge
+    · exact h.donePart p hp1 hlt j
+    · obtain rfl : p = b := by omega
+      exact h.doneTape j j.isLt
+  oldPart := fun p hp hpM j => h.oldPart p (by omega) hpM j
+  sentinel := h.sentinel
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then
