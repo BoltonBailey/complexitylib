@@ -195,6 +195,13 @@ private theorem work_write_right (t : Tape) (s : Γ) (h : 1 ≤ t.head) :
   show (t.write s).move Dir3.right = _
   simp only [Tape.write, show ¬(t.head = 0) by omega, ↓reduceIte, Tape.move]
 
+/-- Writing a value to a cell (head ≥ 1) and moving left updates that cell and
+    retreats the head. Used for SCATTER sweep-2 cells (head-bits moved left). -/
+private theorem work_write_left (t : Tape) (s : Γ) (h : 1 ≤ t.head) :
+    t.writeAndMove s Dir3.left = ⟨t.head - 1, Function.update t.cells t.head s⟩ := by
+  show (t.write s).move Dir3.left = _
+  simp only [Tape.write, show ¬(t.head = 0) by omega, ↓reduceIte, Tape.move]
+
 /-- Writing a cell its own current value and moving right just advances the head
     (the write is a no-op). Used for SCATTER cells that aren't overwritten. -/
 private theorem work_write_eq (t : Tape) (s : Γ) (h : t.read = s) :
@@ -2524,6 +2531,83 @@ theorem scatter2_sym {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw ×
   rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, s), isLeftMover, leftCarry) bb c1 hst]
   simp only [scatter2Step, hns, ↓reduceIte, hs, tape_idle_stay c1.input his,
     tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_rewind_step (c1.work 0) hns
+
+/-- A SCATTER sweep-2 **clear** step (slot `0`, head-bit `one`, this tape is a recorded
+    left-mover): clear the bit here (`zero`) and set `leftCarry` so the bit is re-deposited
+    one block to the left; the head retreats. -/
+theorem scatter2_clear_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry))
+    (hone : (c1.work 0).read = Γ.one) (hlm : isLeftMover ⟨t, ht⟩ = true) (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          isLeftMover, Function.update leftCarry ⟨t, ht⟩ true),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head - 1,
+          Function.update (c1.work 0).cells (c1.work 0).head Γw.zero.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry) bb c1 hst]
+  simp only [scatter2Step, hone, ↓reduceIte, hlm, dif_pos ht, and_self,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_left (c1.work 0) Γw.zero.toΓ hh
+
+/-- A SCATTER sweep-2 **deposit** step (slot `0`, incoming `leftCarry`, not itself a
+    left-mover to clear): deposit the head-bit here (`one`), clearing both this tape's
+    `isLeftMover` mark and the carry; the head retreats. The left-mover lands one block left. -/
+theorem scatter2_deposit_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry))
+    (hns : (c1.work 0).read ≠ Γ.start)
+    (hnc : ¬((c1.work 0).read = Γ.one ∧ isLeftMover ⟨t, ht⟩ = true))
+    (hlc : leftCarry ⟨t, ht⟩ = true) (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          Function.update isLeftMover ⟨t, ht⟩ false, Function.update leftCarry ⟨t, ht⟩ false),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head - 1,
+          Function.update (c1.work 0).cells (c1.work 0).head Γw.one.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry) bb c1 hst]
+  simp only [scatter2Step, hns, ↓reduceIte, hnc, hlc, dif_pos ht,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_left (c1.work 0) Γw.one.toΓ hh
+
+/-- A SCATTER sweep-2 **keep** step (slot `0`, neither a left-mover to clear nor an
+    incoming carry): the head-bit is read back unchanged and the head retreats. -/
+theorem scatter2_keep_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry))
+    (hns : (c1.work 0).read ≠ Γ.start)
+    (hnc : ¬((c1.work 0).read = Γ.one ∧ isLeftMover ⟨t, ht⟩ = true))
+    (hnl : leftCarry ⟨t, ht⟩ ≠ true)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          isLeftMover, leftCarry),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head - 1 },
+        output := c1.output } := by
+  rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), isLeftMover, leftCarry) bb c1 hst]
+  simp only [scatter2Step, hns, ↓reduceIte, hnc, hnl, dif_pos ht,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
   congr 1
   funext x
   obtain rfl : x = 0 := Subsingleton.elim x 0
