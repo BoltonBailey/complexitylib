@@ -2613,6 +2613,126 @@ theorem scatter2_keep_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD :
   obtain rfl : x = 0 := Subsingleton.elim x 0
   exact work_rewind_step (c1.work 0) hns
 
+/-- **SCATTER sweep-2 clear triple** (`trace 3`): three leftward steps over a tape whose
+    head-bit (slot 0) is `one` and which is a recorded left-mover — two symbol cells read
+    back unchanged, then the head-bit cleared (`zero`) with `leftCarry` set. Head retreats 3. -/
+theorem scatter2_clear_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 2), isLeftMover, leftCarry))
+    (hh : 3 ≤ (c1.work 0).head)
+    (hns2 : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.start)
+    (hns1 : (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start)
+    (hone : (c1.work 0).cells ((c1.work 0).head - 2) = Γ.one)
+    (hlm : isLeftMover ⟨t, ht⟩ = true)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          isLeftMover, Function.update leftCarry ⟨t, ht⟩ true),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head - 3,
+          Function.update (c1.work 0).cells ((c1.work 0).head - 2) Γw.zero.toΓ⟩,
+        output := c1.output } := by
+  have e0 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 2 (by decide) isLeftMover leftCarry c1 hst
+    (by rw [Tape.read]; exact hns2) his hos
+  have e1 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 1 (by decide) isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+    (by rw [e0]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e0]; show (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start; exact hns1)
+    (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 := scatter2_clear_slot0 N bb q' oWoD iD iSym oSym t ht isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+    (by rw [e1]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e1, e0]; show (c1.work 0).cells ((c1.work 0).head - 1 - 1) = Γ.one;
+        rw [show (c1.work 0).head - 1 - 1 = (c1.work 0).head - 2 from by omega]; exact hone)
+    hlm (by rw [e1, e0]; show 1 ≤ (c1.work 0).head - 1 - 1; omega)
+    (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  rfl
+
+/-- **SCATTER sweep-2 deposit triple** (`trace 3`): three leftward steps over a tape with
+    an incoming `leftCarry` (and not itself a clear) — two symbol cells unchanged, then the
+    head-bit deposited (`one`), clearing `isLeftMover` and the carry. Head retreats 3. -/
+theorem scatter2_deposit_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 2), isLeftMover, leftCarry))
+    (hh : 3 ≤ (c1.work 0).head)
+    (hns2 : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.start)
+    (hns1 : (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start)
+    (hns0 : (c1.work 0).cells ((c1.work 0).head - 2) ≠ Γ.start)
+    (hnc : ¬((c1.work 0).cells ((c1.work 0).head - 2) = Γ.one ∧ isLeftMover ⟨t, ht⟩ = true))
+    (hlc : leftCarry ⟨t, ht⟩ = true)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          Function.update isLeftMover ⟨t, ht⟩ false, Function.update leftCarry ⟨t, ht⟩ false),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head - 3,
+          Function.update (c1.work 0).cells ((c1.work 0).head - 2) Γw.one.toΓ⟩,
+        output := c1.output } := by
+  have e0 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 2 (by decide) isLeftMover leftCarry c1 hst
+    (by rw [Tape.read]; exact hns2) his hos
+  have e1 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 1 (by decide) isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+    (by rw [e0]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e0]; show (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start; exact hns1)
+    (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 := scatter2_deposit_slot0 N bb q' oWoD iD iSym oSym t ht isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+    (by rw [e1]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e1, e0]; show (c1.work 0).cells ((c1.work 0).head - 1 - 1) ≠ Γ.start;
+        rw [show (c1.work 0).head - 1 - 1 = (c1.work 0).head - 2 from by omega]; exact hns0)
+    (by rw [e1, e0]; show ¬((c1.work 0).cells ((c1.work 0).head - 1 - 1) = Γ.one ∧
+          isLeftMover ⟨t, ht⟩ = true);
+        rw [show (c1.work 0).head - 1 - 1 = (c1.work 0).head - 2 from by omega]; exact hnc)
+    hlc (by rw [e1, e0]; show 1 ≤ (c1.work 0).head - 1 - 1; omega)
+    (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  rfl
+
+/-- **SCATTER sweep-2 keep triple** (`trace 3`): three leftward steps over a tape that is
+    neither a left-mover to clear nor a carry to deposit — all three cells read back
+    unchanged, head retreats 3. -/
+theorem scatter2_keep_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 2), isLeftMover, leftCarry))
+    (hh : 2 ≤ (c1.work 0).head)
+    (hns2 : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.start)
+    (hns1 : (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start)
+    (hns0 : (c1.work 0).cells ((c1.work 0).head - 2) ≠ Γ.start)
+    (hnc : ¬((c1.work 0).cells ((c1.work 0).head - 2) = Γ.one ∧ isLeftMover ⟨t, ht⟩ = true))
+    (hnl : leftCarry ⟨t, ht⟩ ≠ true)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, 0),
+          isLeftMover, leftCarry),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head - 3 },
+        output := c1.output } := by
+  have e0 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 2 (by decide) isLeftMover leftCarry c1 hst
+    (by rw [Tape.read]; exact hns2) his hos
+  have e1 := scatter2_sym N bb q' oWoD iD iSym oSym t ht 1 (by decide) isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+    (by rw [e0]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e0]; show (c1.work 0).cells ((c1.work 0).head - 1) ≠ Γ.start; exact hns1)
+    (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 := scatter2_keep_slot0 N bb q' oWoD iD iSym oSym t ht isLeftMover leftCarry
+    ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+    (by rw [e1]; simp only [retreatSweep, Fin.reduceEq, Fin.reduceSub, ↓reduceIte])
+    (by rw [e1, e0]; show (c1.work 0).cells ((c1.work 0).head - 1 - 1) ≠ Γ.start;
+        rw [show (c1.work 0).head - 1 - 1 = (c1.work 0).head - 2 from by omega]; exact hns0)
+    (by rw [e1, e0]; show ¬((c1.work 0).cells ((c1.work 0).head - 1 - 1) = Γ.one ∧
+          isLeftMover ⟨t, ht⟩ = true);
+        rw [show (c1.work 0).head - 1 - 1 = (c1.work 0).head - 2 from by omega]; exact hnc)
+    hnl (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  rfl
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
