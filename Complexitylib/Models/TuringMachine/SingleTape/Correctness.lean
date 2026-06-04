@@ -2007,6 +2007,78 @@ theorem scatter1_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b
     simp only [lt_irrefl, if_false]
   · rw [hwh, blockStart_succ k b hb1, blockWidth]
 
+/-- **SCATTER full block sweep (`trace (3*k*B)`).** Sweeping the first `B ≤ M`
+    blocks (from block `1`, tape `0`, slot `0`, work head `blockStart k 1`, incoming
+    carry `decide(head = 0 ∧ right)`, the REWIND output `SimInvAt M`): after `B`
+    blocks the head is at `blockStart k (B+1)`, the sweep is back at tape `0` slot
+    `0`, the carry records the right-movers whose head is at `B`, `ilm` records the
+    left-movers in blocks `[1, B]`, and the tape is `Scatter1MidInv … (B+1)`. Proved
+    by induction on `B`, each step one `scatter1_block_step` at block `B+1`. -/
+theorem scatter1_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (ilm_in : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+      (fun j => decide ((c.work j).head = 0 ∧ (wact j).2 = Dir3.right)), ilm_in, false, false))
+    (hhead : (c1.work 0).head = blockStart k 1)
+    (hsim : SimInvAt k (c1.work 0) c.work M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (B : ℕ) (hB : B ≤ M) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1 =
+        { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+            (fun j => decide ((c.work j).head = B ∧ (wact j).2 = Dir3.right)),
+            (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B ∧ (wact j).2 = Dir3.left then
+                true else ilm_in j),
+            false, false),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k (B + 1)
+      ∧ Scatter1MidInv wt c.work wact M (B + 1) := by
+  induction B with
+  | zero =>
+    refine ⟨c1.work 0, ?_, ?_, scatter1MidInv_init wact hsim⟩
+    · have h0 : (singleTapeSim N).trace (3 * k * 0) (fun _ => bb) c1 = c1 := by
+        simp only [Nat.mul_zero]; rfl
+      rw [h0]
+      obtain ⟨cst, cin, cwk, cout⟩ := c1
+      subst hst
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, ?_, rfl⟩
+      · rw [show (fun (j : Fin k) => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ 0 ∧
+              (wact j).2 = Dir3.left then true else ilm_in j) = ilm_in from by
+          funext j; rw [if_neg (by rintro ⟨h1, h2, _⟩; omega)]]
+      · funext x
+        obtain rfl : x = 0 := Subsingleton.elim x 0
+        rfl
+    · exact hhead
+  | succ B ih =>
+    obtain ⟨wtB, htB, hwhB, hmidB⟩ := ih (by omega)
+    have hcw : ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).work 0 = wtB := by rw [htB]
+    have hci : ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).input = c1.input := by rw [htB]
+    have hco : ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).output = c1.output := by rw [htB]
+    obtain ⟨wt, htr, hwh, hmid'⟩ := scatter1_block_step N bb c (B + 1) M (by omega) hB
+      q' wact oWoD iD iSym oSym
+      (fun j => decide ((c.work j).head = B ∧ (wact j).2 = Dir3.right))
+      (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B ∧ (wact j).2 = Dir3.left then
+          true else ilm_in j)
+      (fun j => by simp only [Nat.add_sub_cancel])
+      ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1) (by rw [htB])
+      (by rw [hcw]; exact hwhB) (by rw [hcw]; exact hmidB)
+      (by rw [hci]; exact his) (by rw [hco]; exact hos)
+    refine ⟨wt, ?_, ?_, hmid'⟩
+    · rw [show 3 * k * (B + 1) = 3 * k * B + 3 * k from Nat.mul_succ (3 * k) B,
+        trace_const_add, htr, hci, hco]
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, rfl, rfl⟩
+      rw [show (fun (j : Fin k) => if (c.work j).head = B + 1 ∧ (wact j).2 = Dir3.left then true
+            else if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B ∧ (wact j).2 = Dir3.left then
+              true else ilm_in j)
+          = (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B + 1 ∧ (wact j).2 = Dir3.left then
+              true else ilm_in j) from by
+        funext j
+        by_cases hL : (wact j).2 = Dir3.left
+        · simp only [hL, and_true]
+          split_ifs with h1 h2 h3 <;> first | rfl | omega
+        · simp only [hL, and_false, if_false]]
+    · rw [hwh]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
