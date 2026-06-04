@@ -689,6 +689,15 @@ theorem scatterInterWork_cells_at_head (ct : Tape) (wd : Γw × Dir3)
   show Function.update ct.cells ct.head wd.1.toΓ ct.head = wd.1.toΓ
   rw [Function.update_self]
 
+/-- The SCATTER head triples write the symbol via the **writable** codec
+    (`encSymW s`), but the `scatterInterWork` target reads it via the
+    full-alphabet codec applied to the written cell (`encSymΓ s.toΓ`). They
+    agree (both route through `encSym`): this matches a head triple's two symbol
+    writes to the intermediate encoding at the head's block. -/
+theorem encSymW_toΓ_eq_encSymΓ (s : Γw) :
+    (encSymW s).1.toΓ = (encSymΓ s.toΓ).1 ∧ (encSymW s).2.toΓ = (encSymΓ s.toΓ).2 := by
+  cases s <;> exact ⟨rfl, rfl⟩
+
 /-- **Mid-sweep invariant for SCATTER sweep-1**, at block boundary `b`: the work
     tape `t` holds the **intermediate** encoding (`scatterInterWork`) on blocks
     `[1, b)` already swept, and the **old** encoding (`w`) on blocks `[b, M]` not
