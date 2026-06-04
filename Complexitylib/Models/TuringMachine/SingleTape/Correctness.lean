@@ -696,6 +696,30 @@ structure Scatter1MidInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
   /-- The sentinel region (block `M+1` onward) is blank. -/
   sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
 
+/-- **Base case** of the mid-sweep invariant: the REWIND output (whole region
+    still old-encoded, `SimInvAt M`) is `Scatter1MidInv` at `b = 1` (no swept
+    blocks yet). -/
+theorem scatter1MidInv_init {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    (wact : Fin k → Γw × Dir3) {M : ℕ} (h : SimInvAt k t w M) :
+    Scatter1MidInv t w wact M 1 where
+  cell0 := h.cell0
+  donePart := fun _ _ hp2 _ => absurd hp2 (by omega)
+  oldPart := fun p hp1 hpM j =>
+    ⟨h.headBit p hp1 hpM j, (h.sym p hp1 hpM j).1, (h.sym p hp1 hpM j).2⟩
+  sentinel := h.sentinel
+
+/-- **Final case** of the mid-sweep invariant: once all `M` blocks are swept
+    (`b = M+1`), the whole materialized region is intermediate-encoded — exactly
+    the `SimInvAt M`-style facts for `scatterInterWork (w j) (wact j)` on `[1, M]`. -/
+theorem Scatter1MidInv.done {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M : ℕ} (h : Scatter1MidInv t w wact M (M + 1))
+    (p : ℕ) (hp1 : 1 ≤ p) (hpM : p ≤ M) (j : Fin k) :
+    t.cells (headBitCell k p j)
+        = (if (scatterInterWork (w j) (wact j)).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2 :=
+  h.donePart p hp1 (by omega) j
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then
