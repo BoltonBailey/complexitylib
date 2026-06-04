@@ -600,6 +600,21 @@ theorem rewind_sweep {k : ℕ} (N : NTM k) (bb : Bool)
     exact ih _ rfl (by simp [hhead]) hcell0
       (fun p' hp1 hp2 => hne p' hp1 (by omega)) his hos
 
+/-- One **scatter sweep-1** step (`trace 1`): from a `scatter1 d` config, the
+    result is the configuration built from `scatter1Step`'s output. Basis of the
+    SCATTER sweep-1 correctness (the phase that writes `N`'s new configuration and
+    materializes a fresh block). -/
+theorem scatter1_trace1 {k : ℕ} (N : NTM k) (d : Scatter1Data k N.Q) (b : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.scatter1 d) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      (let r := scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read
+       { state := r.1, input := c1.input.move r.2.2.2.1,
+         work := fun i => (c1.work i).writeAndMove (r.2.1 i) (r.2.2.2.2.1 i),
+         output := c1.output.writeAndMove r.2.2.1 r.2.2.2.2.2 } : Cfg 1 (SimQ k N.Q)) := by
+  rw [NTM.trace]
+  simp only [hst, singleTapeSim, simDelta, SimQ.scatter1, SimQ.halt, Sum.inr.injEq,
+    reduceCtorEq, ↓reduceIte, NTM.trace]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
