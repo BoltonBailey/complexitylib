@@ -1570,6 +1570,71 @@ theorem scatter1_tape_deposit {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) 
       show Function.update (c1.work 0).cells (c1.work 0).head Γw.one.toΓ c = (c1.work 0).cells c
       rw [Function.update_of_ne (by rw [hhead]; exact hc)]
 
+/-- **SCATTER block step — head, stay.** Tape `m` has its head at block `b`
+    (`(c.work m).head = b`) with `δ`-action `stay`: keep the head-bit `one`, write
+    the new symbol into the two symbol cells. The intermediate head stays at `b`
+    (`scatterInterWork.head = b`, since `stay ≠ right`) and the intermediate symbol
+    at `b` is the new write (`scatterInterWork.cells b = (wact m).1`, via
+    `cells_at_head`), matched to the triple's `encSymW` writes by the codec bridge.
+    Advances `b m → b (m+1)`, `rc`/`ilm` unchanged. -/
+theorem scatter1_tape_head_stay {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+    (hb1 : 1 ≤ b) (hbM : b ≤ M) (m : ℕ) (hmk : m < k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rc ilm : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨m, by omega⟩, 0), rc, ilm, false, false))
+    (hhead : (c1.work 0).head = headBitCell k b ⟨m, hmk⟩)
+    (hbm : Scatter1BlockInv (c1.work 0) c.work wact M b m)
+    (hhdb : (c.work ⟨m, hmk⟩).head = b) (hstay : (wact ⟨m, hmk⟩).2 = Dir3.stay)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+        { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+            (⟨if m + 1 < k then m + 1 else 0, by split <;> omega⟩, 0), rc, ilm, false, false),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = headBitCell k b ⟨m, hmk⟩ + 3
+      ∧ Scatter1BlockInv wt c.work wact M b (m + 1) := by
+  have hot := hbm.oldTape ⟨m, hmk⟩ (le_refl m)
+  have hsym : symCell k b ⟨m, hmk⟩ = headBitCell k b ⟨m, hmk⟩ + 1 := by
+    simp only [symCell, headBitCell]
+  have hsym2 : symCell k b ⟨m, hmk⟩ + 1 = headBitCell k b ⟨m, hmk⟩ + 2 := by
+    simp only [symCell, headBitCell]
+  have hh1 : 1 ≤ (c1.work 0).head := by
+    rw [hhead]; simp only [headBitCell]; have := one_le_blockStart k b; omega
+  have hscat : (scatterInterWork (c.work ⟨m, hmk⟩) (wact ⟨m, hmk⟩)).head = b := by
+    rw [scatterInterWork_head, if_neg (show ¬ (wact ⟨m, hmk⟩).2 = Dir3.right by rw [hstay]; decide)]
+    exact hhdb
+  have hcbh : (scatterInterWork (c.work ⟨m, hmk⟩) (wact ⟨m, hmk⟩)).cells b = (wact ⟨m, hmk⟩).1.toΓ := by
+    rw [← hhdb]; exact scatterInterWork_cells_at_head (c.work ⟨m, hmk⟩) (wact ⟨m, hmk⟩) (by omega)
+  have htriple := scatter1_head_stay_triple N bb q' wact oWoD iD iSym oSym m hmk rc ilm false c1 hst
+    (by rw [hhead]; exact hot.1.trans (if_pos hhdb))
+    hstay hh1
+    (by rw [hhead, ← hsym, hot.2.1]; exact (encSymΓ_ne_blank _).1)
+    (by rw [hhead, ← hsym2, hot.2.2]; exact (encSymΓ_ne_blank _).2)
+    his hos
+  refine ⟨⟨(c1.work 0).head + 3,
+      Function.update (Function.update (c1.work 0).cells
+        ((c1.work 0).head + 1) (encSymW (wact ⟨m, hmk⟩).1).1.toΓ)
+        ((c1.work 0).head + 2) (encSymW (wact ⟨m, hmk⟩).1).2.toΓ⟩, htriple, ?_, ?_⟩
+  · show (c1.work 0).head + 3 = headBitCell k b ⟨m, hmk⟩ + 3
+    rw [hhead]
+  · apply scatter1_blockinv_step hb1 hbM hmk hbm
+    · show Function.update (Function.update (c1.work 0).cells _ _) _ _ (headBitCell k b ⟨m, hmk⟩) = _
+      rw [Function.update_of_ne (by rw [hhead]; omega), Function.update_of_ne (by rw [hhead]; omega),
+          hot.1, if_pos hhdb, if_pos hscat]
+    · show Function.update (Function.update (c1.work 0).cells _ _) _ _ (symCell k b ⟨m, hmk⟩) = _
+      rw [show symCell k b ⟨m, hmk⟩ = (c1.work 0).head + 1 by rw [hsym, hhead],
+          Function.update_of_ne (by omega), Function.update_self, hcbh]
+      exact (encSymW_toΓ_eq_encSymΓ _).1
+    · show Function.update (Function.update (c1.work 0).cells _ _) _ _ (symCell k b ⟨m, hmk⟩ + 1) = _
+      rw [show symCell k b ⟨m, hmk⟩ + 1 = (c1.work 0).head + 2 by rw [hsym2, hhead],
+          Function.update_self, hcbh]
+      exact (encSymW_toΓ_eq_encSymΓ _).2
+    · intro c _ hc2 hc3
+      show Function.update (Function.update (c1.work 0).cells _ _) _ _ c = (c1.work 0).cells c
+      rw [Function.update_of_ne (show c ≠ (c1.work 0).head + 2 by rw [hhead, ← hsym2]; exact hc3),
+          Function.update_of_ne (show c ≠ (c1.work 0).head + 1 by rw [hhead, ← hsym]; exact hc2)]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
