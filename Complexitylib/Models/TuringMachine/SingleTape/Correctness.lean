@@ -188,6 +188,15 @@ private theorem work_gather_step (t : Tape) (h : t.read ≠ Γ.start) :
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
 
+/-- Writing a cell its own current value and moving right just advances the head
+    (the write is a no-op). Used for SCATTER cells that aren't overwritten. -/
+private theorem work_write_eq (t : Tape) (s : Γ) (h : t.read = s) :
+    t.writeAndMove s Dir3.right = { t with head := t.head + 1 } := by
+  obtain rfl : s = t.cells t.head := h.symm
+  show (t.write (t.cells t.head)).move Dir3.right = { t with head := t.head + 1 }
+  unfold Tape.write
+  split <;> simp [Tape.move, Function.update_eq_self]
+
 /-- A REWIND work step (`readBackWrite`, move left) on a tape reading a non-`▷`
     cell just retreats the head by one, leaving contents intact. -/
 private theorem work_rewind_step (t : Tape) (h : t.read ≠ Γ.start) :
@@ -741,6 +750,93 @@ theorem scatter1_materialize {k : ℕ} (N : NTM k) (b : Bool) (q' : N.Q)
         c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.2.2
       = TM.idleDir c1.output.read from rfl,
     hwd, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+
+/-- SCATTER sweep-1 **no-head slot-0** step: at a head-bit cell with no head
+    (`wH = zero`) and no incoming carry (`rc t = false`), write `zero` (preserving
+    the cell) and advance to slot 1. The common case for tapes without a head in
+    this block. -/
+theorem scatter1_nohead_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat))
+    (hz : (c1.work 0).read = Γ.zero) (hrc : rc ⟨j, hj⟩ = false)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1
+          (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1), rc, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 },
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat) bb c1 hst]
+  simp only [scatter1Step, hz, reduceCtorEq, ↓reduceIte, advanceSweep, Fin.reduceEq, Fin.reduceAdd,
+    dif_pos hj, hrc, Bool.false_eq_true, false_and, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_eq (c1.work 0) Γw.zero.toΓ hz
+
+/-- SCATTER sweep-1 **no-head symbol** step (slot 1 or 2 with `writeFlag = false`):
+    the symbol cell is preserved (`readBackWrite`) and the sweep advances. -/
+theorem scatter1_nohead_sym {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (pt : Fin (k + 1)) (s : Fin 3) (hs : s ≠ 0) (rc ilm : Fin k → Bool) (mat : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (pt, s), rc, ilm, false, mat))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hws : (c1.work 0).read ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1
+          (q', wact, oWoD, iD, iSym, oSym, advanceSweep k (pt, s), rc, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 },
+        output := c1.output } := by
+  rw [scatter1_trace1 N (q', wact, oWoD, iD, iSym, oSym, (pt, s), rc, ilm, false, mat) bb c1 hst]
+  simp only [scatter1Step, hwb, hs, ↓reduceIte, Bool.false_eq_true, ite_self,
+    tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_gather_step (c1.work 0) hws
+
+/-- SCATTER sweep-1 **no-head triple** (`trace 3`): a tape with no head in this
+    block (head-bit `zero`) and no incoming carry (`rc = false`) is passed through
+    untouched — its three cells are preserved and the sweep advances to the next
+    tape, carries/markers unchanged. The common per-tape case in a block. -/
+theorem scatter1_nohead_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat))
+    (hrc : rc ⟨j, hj⟩ = false)
+    (hz0 : (c1.work 0).cells ((c1.work 0).head) = Γ.zero)
+    (hb1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.blank)
+    (hb2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.blank)
+    (hs1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.start)
+    (hs2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+          (⟨if j + 1 < k then j + 1 else 0, by split <;> omega⟩, 0), rc, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 3 },
+        output := c1.output } := by
+  have e0 := scatter1_nohead_slot0 N bb q' wact oWoD iD iSym oSym j hj rc ilm mat c1 hst
+    (by rw [Tape.read]; exact hz0) hrc his hos
+  have e1 := scatter1_nohead_sym N bb q' wact oWoD iD iSym oSym ⟨j, by omega⟩ 1 (by decide)
+    rc ilm mat ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+    (by rw [e0]) (by rw [e0]; exact hb1) (by rw [e0]; exact hs1)
+    (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 := scatter1_nohead_sym N bb q' wact oWoD iD iSym oSym ⟨j, by omega⟩ 2 (by decide)
+    rc ilm mat ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+    (by rw [e1]; simp only [advanceSweep, Fin.reduceEq, Fin.reduceAdd, ↓reduceIte])
+    (by rw [e1, e0]; exact hb2) (by rw [e1, e0]; exact hs2)
+    (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  simp only [advanceSweep, ↓reduceIte]
 
 /-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
     materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
