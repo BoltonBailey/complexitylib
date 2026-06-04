@@ -671,6 +671,31 @@ theorem scatterInterWork_head_le (ct : Tape) (wd : Γw × Dir3) {M : ℕ}
   show (if wd.2 = Dir3.right then ct.head + 1 else ct.head) ≤ M + 1
   split <;> omega
 
+/-- **Mid-sweep invariant for SCATTER sweep-1**, at block boundary `b`: the work
+    tape `t` holds the **intermediate** encoding (`scatterInterWork`) on blocks
+    `[1, b)` already swept, and the **old** encoding (`w`) on blocks `[b, M]` not
+    yet reached, with the `▷` at cell 0 and the sentinel region blank beyond block
+    `M`. (The in-flight `rightCarry` lives in the SCATTER state, not the tape.) The
+    block step advances this `b → b+1`; at `b = 1` it's the REWIND output (all old),
+    at `b = M+1` the whole region is intermediate-encoded. -/
+structure Scatter1MidInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
+    (wact : Fin k → Γw × Dir3) (M b : ℕ) : Prop where
+  /-- Cell 0 is the global start marker `▷`. -/
+  cell0 : t.cells 0 = Γ.start
+  /-- Blocks `[1, b)` already swept: intermediate (`scatterInterWork`) encoding. -/
+  donePart : ∀ p, 1 ≤ p → p < b → ∀ j : Fin k,
+    t.cells (headBitCell k p j)
+        = (if (scatterInterWork (w j) (wact j)).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2
+  /-- Blocks `[b, M]` not yet reached: the old encoding (`SimInvAt M`). -/
+  oldPart : ∀ p, b ≤ p → p ≤ M → ∀ j : Fin k,
+    t.cells (headBitCell k p j) = (if (w j).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((w j).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((w j).cells p)).2
+  /-- The sentinel region (block `M+1` onward) is blank. -/
+  sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then
