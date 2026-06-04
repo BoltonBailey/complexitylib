@@ -1090,6 +1090,75 @@ theorem scatter1_head_right_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
     (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
   rw [trace_three, e2, e1, e0]
 
+/-- SCATTER sweep-1 **deposit slot-0** step: at a head-bit cell with no head
+    (`wH = zero`) but an incoming carry (`rc t = true` — a head moved right into
+    this block), deposit the head-bit (write `one`, clearing the carry); the symbol
+    cells are not overwritten (`writeFlag` stays false). -/
+theorem scatter1_deposit_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat))
+    (hz : (c1.work 0).read = Γ.zero) (hrc : rc ⟨j, hj⟩ = true) (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1),
+          Function.update rc ⟨j, hj⟩ false, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head + 1,
+          Function.update (c1.work 0).cells (c1.work 0).head Γw.one.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat) bb c1 hst]
+  simp only [scatter1Step, hz, reduceCtorEq, ↓reduceIte, advanceSweep, Fin.reduceEq,
+    Fin.reduceAdd, dif_pos hj, hrc, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_right (c1.work 0) Γw.one.toΓ hh
+
+/-- SCATTER sweep-1 **deposit triple** (`trace 3`): a no-head tape with an incoming
+    carry gets its head-bit deposited (write `one`), symbols preserved, carry
+    cleared, advance. The right-mover landing case. -/
+theorem scatter1_deposit_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, false, mat))
+    (hz0 : (c1.work 0).cells ((c1.work 0).head) = Γ.zero)
+    (hrc : rc ⟨j, hj⟩ = true) (hh : 1 ≤ (c1.work 0).head)
+    (hb1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.blank)
+    (hb2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.blank)
+    (hs1 : (c1.work 0).cells ((c1.work 0).head + 1) ≠ Γ.start)
+    (hs2 : (c1.work 0).cells ((c1.work 0).head + 2) ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+          (⟨if j + 1 < k then j + 1 else 0, by split <;> omega⟩, 0),
+          Function.update rc ⟨j, hj⟩ false, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head + 3,
+          Function.update (c1.work 0).cells (c1.work 0).head Γw.one.toΓ⟩,
+        output := c1.output } := by
+  have e0 := scatter1_deposit_slot0 N bb q' wact oWoD iD iSym oSym j hj rc ilm mat c1 hst
+    (by rw [Tape.read]; exact hz0) hrc hh his hos
+  have e1 := scatter1_nohead_sym N bb q' wact oWoD iD iSym oSym ⟨j, by omega⟩ 1 (by decide)
+    (Function.update rc ⟨j, hj⟩ false) ilm mat ((singleTapeSim N).trace 1 (fun _ => bb) c1)
+    (by rw [e0])
+    (by rw [e0]; simp only [Tape.read]; rw [Function.update_of_ne (by omega)]; exact hb1)
+    (by rw [e0]; simp only [Tape.read]; rw [Function.update_of_ne (by omega)]; exact hs1)
+    (by rw [e0]; exact his) (by rw [e0]; exact hos)
+  have e2 := scatter1_nohead_sym N bb q' wact oWoD iD iSym oSym ⟨j, by omega⟩ 2 (by decide)
+    (Function.update rc ⟨j, hj⟩ false) ilm mat
+    ((singleTapeSim N).trace 1 (fun _ => bb) ((singleTapeSim N).trace 1 (fun _ => bb) c1))
+    (by rw [e1]; simp only [advanceSweep, Fin.reduceEq, Fin.reduceAdd, ↓reduceIte])
+    (by rw [e1, e0]; simp only [Tape.read]; rw [Function.update_of_ne (by omega)]; exact hb2)
+    (by rw [e1, e0]; simp only [Tape.read]; rw [Function.update_of_ne (by omega)]; exact hs2)
+    (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
+  rw [trace_three, e2, e1, e0]
+  simp only [advanceSweep, ↓reduceIte]
+
 /-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
     materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
     `□` past it), the sweep turns leftward into sweep-2 at the last block's last
