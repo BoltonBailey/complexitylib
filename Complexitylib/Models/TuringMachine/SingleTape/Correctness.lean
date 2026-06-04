@@ -1124,6 +1124,157 @@ theorem scatter1_mat_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
   rw [trace_three, e2, e1, e0]
   simp only [advanceSweep, Fin.isValue, ↓reduceIte]
 
+/-- SCATTER sweep-1 **materialize sweep** (`trace (3*m)`): materialize the first
+    `m ≤ k` tapes of the fresh block `M+1` (all `□` sentinel cells). After `m` tapes
+    the head is at `blockStart (M+1) + 3*m`, the first `m` tapes hold their head-bit
+    (`one` iff the incoming `rc`) and `□` symbols, the rest are still blank, the
+    carries `[0,m)` are cleared, and `mat` is set (once any cell is materialized).
+    Cells below block `M+1` (blocks `[1,M]`, cell 0) are untouched. -/
+theorem scatter1_mat_aux {k : ℕ} (N : NTM k) (bb : Bool) (M : ℕ) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rc ilm : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0), rc, ilm, false, false))
+    (hhead : (c1.work 0).head = blockStart k (M + 1))
+    (hsent : ∀ cc, blockStart k (M + 1) ≤ cc → (c1.work 0).cells cc = Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (m : ℕ) (hm : m ≤ k) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * m) (fun _ => bb) c1 =
+        { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+            (⟨if m < k then m else 0, by split <;> omega⟩, 0),
+            (fun j => if (j : ℕ) < m then false else rc j), ilm, false,
+            if m = 0 then false else true),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k (M + 1) + 3 * m
+      ∧ (∀ cc, cc < blockStart k (M + 1) → wt.cells cc = (c1.work 0).cells cc)
+      ∧ (∀ j : Fin k, (j : ℕ) < m →
+          wt.cells (headBitCell k (M + 1) j) = (if rc j then Γ.one else Γ.zero) ∧
+          wt.cells (symCell k (M + 1) j) = Γ.zero ∧
+          wt.cells (symCell k (M + 1) j + 1) = Γ.zero)
+      ∧ (∀ cc, blockStart k (M + 1) + 3 * m ≤ cc → wt.cells cc = Γ.blank) := by
+  induction m with
+  | zero =>
+    refine ⟨c1.work 0, ?_, ?_, ?_, ?_, ?_⟩
+    · have h0 : (singleTapeSim N).trace (3 * 0) (fun _ => bb) c1 = c1 := by
+        simp only [Nat.mul_zero]; rfl
+      rw [h0]
+      obtain ⟨cst, cin, cwk, cout⟩ := c1
+      subst hst
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, ?_, rfl⟩
+      · simp only [↓reduceIte, ite_self, Nat.not_lt_zero]
+      · funext x; obtain rfl : x = 0 := Subsingleton.elim x 0; rfl
+    · simp only [Nat.mul_zero, Nat.add_zero]; exact hhead
+    · intro cc _; rfl
+    · intro j hj; omega
+    · simp only [Nat.mul_zero, Nat.add_zero]; exact hsent
+  | succ m ih =>
+    obtain ⟨wtm, htm, hwhm, hpres, hmat, hblank⟩ := ih (by omega)
+    have hmk : m < k := by omega
+    have hh : 1 ≤ wtm.head := by
+      rw [hwhm]; have := one_le_blockStart k (M + 1); omega
+    have hb0 : wtm.cells wtm.head = Γ.blank := by rw [hwhm]; exact hblank _ (by omega)
+    have hb1 : wtm.cells (wtm.head + 1) = Γ.blank := by rw [hwhm]; exact hblank _ (by omega)
+    have hb2 : wtm.cells (wtm.head + 2) = Γ.blank := by rw [hwhm]; exact hblank _ (by omega)
+    have hcs : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).state
+        = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨m, by omega⟩, 0),
+            (fun j => if (j : ℕ) < m then false else rc j), ilm, false, if m = 0 then false else true) := by
+      rw [htm]; simp only [if_pos hmk]
+    have hcw : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).work 0 = wtm := by rw [htm]
+    have hcis : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input.read ≠ Γ.start := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input = c1.input from by rw [htm]]
+      exact his
+    have hcos : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output.read ≠ Γ.start := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output = c1.output from by rw [htm]]
+      exact hos
+    have hrcm : (fun (j : Fin k) => if (j : ℕ) < m then false else rc j) ⟨m, hmk⟩ = rc ⟨m, hmk⟩ := by
+      simp only [lt_irrefl, if_false]
+    have hnt : ¬((if m = 0 then false else true) = true ∧
+        ((⟨m, by omega⟩, 0) : SweepPos k) = (0, 0)) := by
+      rintro ⟨hmat', hpos⟩
+      have : m = 0 := by
+        by_contra h; rw [if_neg h] at hmat'
+        exact absurd (congrArg (fun p => (Prod.fst p).val) hpos) (by simp [h])
+      simp [this] at hmat'
+    have htr := scatter1_mat_triple N bb q' wact oWoD iD iSym oSym m hmk
+      (fun j => if (j : ℕ) < m then false else rc j) ilm (if m = 0 then false else true)
+      ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1) hcs (by rw [hcw]; exact hh)
+      (by rw [hcw]; exact hb0) (by rw [hcw]; exact hb1) (by rw [hcw]; exact hb2) hnt hcis hcos
+    rw [hcw, hrcm] at htr
+    refine ⟨⟨wtm.head + 3, Function.update (Function.update (Function.update wtm.cells wtm.head
+        (if rc ⟨m, hmk⟩ then Γw.one else Γw.zero).toΓ) (wtm.head + 1) Γw.zero.toΓ)
+        (wtm.head + 2) Γw.zero.toΓ⟩, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [show 3 * (m + 1) = 3 * m + 3 from Nat.mul_succ 3 m, trace_const_add, htr,
+        show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input = c1.input from by rw [htm],
+        show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output = c1.output from by rw [htm]]
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, rfl, rfl⟩
+      rw [show (if m + 1 = 0 then false else true) = true from if_neg (by omega),
+        show Function.update (fun (j : Fin k) => if (j : ℕ) < m then false else rc j) ⟨m, hmk⟩ false
+            = (fun (j : Fin k) => if (j : ℕ) < m + 1 then false else rc j) from by
+          funext j
+          by_cases hj : j = ⟨m, hmk⟩
+          · subst hj; rw [Function.update_self]; simp only [Nat.lt_succ_self, if_true]
+          · rw [Function.update_of_ne hj]
+            have hjm : (j : ℕ) ≠ m := fun h => hj (Fin.ext h)
+            by_cases hlt : (j : ℕ) < m
+            · simp only [if_pos hlt, if_pos (show (j : ℕ) < m + 1 by omega)]
+            · simp only [if_neg hlt, if_neg (show ¬ (j : ℕ) < m + 1 by omega)]]
+    · show wtm.head + 3 = blockStart k (M + 1) + 3 * (m + 1)
+      rw [hwhm]; omega
+    · intro cc hcc
+      have hlt : cc < wtm.head := by rw [hwhm]; have := one_le_blockStart k (M + 1); omega
+      show Function.update (Function.update (Function.update wtm.cells _ _) _ _) _ _ cc = _
+      rw [Function.update_of_ne (by omega), Function.update_of_ne (by omega),
+        Function.update_of_ne (by omega)]
+      exact hpres cc hcc
+    · intro j hj
+      by_cases hjm : (j : ℕ) < m
+      · obtain ⟨ha, hb, hc⟩ := hmat j hjm
+        have key : blockStart k (M + 1) + 3 * (j : ℕ) + 2 < wtm.head := by rw [hwhm]; omega
+        refine ⟨?_, ?_, ?_⟩
+        · show Function.update (Function.update (Function.update wtm.cells _ _) _ _) _ _
+            (headBitCell k (M + 1) j) = _
+          rw [Function.update_of_ne (by simp only [headBitCell]; omega),
+            Function.update_of_ne (by simp only [headBitCell]; omega),
+            Function.update_of_ne (by simp only [headBitCell]; omega)]
+          exact ha
+        · show Function.update (Function.update (Function.update wtm.cells _ _) _ _) _ _
+            (symCell k (M + 1) j) = _
+          rw [Function.update_of_ne (by simp only [symCell]; omega),
+            Function.update_of_ne (by simp only [symCell]; omega),
+            Function.update_of_ne (by simp only [symCell]; omega)]
+          exact hb
+        · show Function.update (Function.update (Function.update wtm.cells _ _) _ _) _ _
+            (symCell k (M + 1) j + 1) = _
+          rw [Function.update_of_ne (by simp only [symCell]; omega),
+            Function.update_of_ne (by simp only [symCell]; omega),
+            Function.update_of_ne (by simp only [symCell]; omega)]
+          exact hc
+      · have hjeq : (j : ℕ) = m := by omega
+        obtain rfl : j = ⟨m, hmk⟩ := Fin.ext hjeq
+        have hhb : headBitCell k (M + 1) ⟨m, hmk⟩ = wtm.head := by
+          simp only [headBitCell]; rw [hwhm]
+        have hsc : symCell k (M + 1) ⟨m, hmk⟩ = wtm.head + 1 := by
+          simp only [symCell]; rw [hwhm]
+        refine ⟨?_, ?_, ?_⟩
+        · rw [hhb]
+          show Function.update (Function.update (Function.update wtm.cells wtm.head _) _ _) _ _ wtm.head = _
+          rw [Function.update_of_ne (by omega), Function.update_of_ne (by omega), Function.update_self]
+          split <;> rfl
+        · rw [hsc]
+          show Function.update (Function.update (Function.update wtm.cells _ _) (wtm.head + 1) _) _ _
+            (wtm.head + 1) = _
+          rw [Function.update_of_ne (by omega), Function.update_self]; rfl
+        · rw [hsc]
+          show Function.update (Function.update (Function.update wtm.cells _ _) _ _) (wtm.head + 2) _
+            (wtm.head + 1 + 1) = _
+          rw [Function.update_self]; rfl
+    · intro cc hcc
+      show Function.update (Function.update (Function.update wtm.cells _ _) _ _) _ _ cc = _
+      rw [Function.update_of_ne (by omega), Function.update_of_ne (by omega),
+        Function.update_of_ne (by omega)]
+      exact hblank cc (by omega)
+
 /-- SCATTER sweep-1 **no-head slot-0** step: at a head-bit cell with no head
     (`wH = zero`) and no incoming carry (`rc t = false`), write `zero` (preserving
     the cell) and advance to slot 1. The common case for tapes without a head in
