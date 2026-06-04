@@ -732,6 +732,62 @@ theorem scatterFinalWork_cells_ne_start (ct : Tape) (wd : Γw × Dir3) {p : ℕ}
     (scatterFinalWork ct wd).cells p ≠ Γ.start := by
   rw [scatterFinalWork_cells]; exact scatterInterWork_cells_ne_start ct wd hp hns
 
+/-- **Mid-sweep invariant for SCATTER sweep-2**, at block boundary `b`: the work tape
+    holds the **final** head-bit encoding (`scatterFinalWork` — left-movers retreated) on
+    blocks `[b, M+1]` already swept (leftward), and the **intermediate** encoding
+    (`scatterInterWork`) on blocks `[1, b)` not yet reached. Symbol cells are the same in
+    both (sweep-2 only moves head-bits). The in-flight `leftCarry` lives in the state. At
+    `b = M+2` it's the sweep-1 output (`SimInvAt (M+1)` for `scatterInterWork`); at `b = 1`
+    the whole region is `scatterFinalWork`-encoded. -/
+structure Scatter2MidInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
+    (wact : Fin k → Γw × Dir3) (M b : ℕ) : Prop where
+  /-- Cell 0 is the global start marker `▷`. -/
+  cell0 : t.cells 0 = Γ.start
+  /-- Blocks `[b, M+1]` already swept: final (`scatterFinalWork`) head-bits. -/
+  donePart : ∀ q, b ≤ q → q ≤ M + 1 → ∀ j : Fin k,
+    t.cells (headBitCell k q j)
+        = (if (scatterFinalWork (w j) (wact j)).head = q then Γ.one else Γ.zero) ∧
+      t.cells (symCell k q j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).1 ∧
+      t.cells (symCell k q j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).2
+  /-- Blocks `[1, b)` not yet reached: intermediate (`scatterInterWork`) head-bits. -/
+  oldPart : ∀ q, 1 ≤ q → q < b → ∀ j : Fin k,
+    t.cells (headBitCell k q j)
+        = (if (scatterInterWork (w j) (wact j)).head = q then Γ.one else Γ.zero) ∧
+      t.cells (symCell k q j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).1 ∧
+      t.cells (symCell k q j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).2
+  /-- The sentinel region (block `M+2` onward) is blank. -/
+  sentinel : ∀ c : ℕ, blockStart k (M + 2) ≤ c → t.cells c = Γ.blank
+
+/-- Entering SCATTER sweep-2: the sweep-1 output `SimInvAt (M+1)` for `scatterInterWork`
+    is `Scatter2MidInv` at `b = M+2` (no blocks swept yet — `donePart` vacuous). -/
+theorem Scatter2MidInv.ofSimInv {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M : ℕ}
+    (h : SimInvAt k t (fun j => scatterInterWork (w j) (wact j)) (M + 1)) :
+    Scatter2MidInv t w wact M (M + 2) where
+  cell0 := h.cell0
+  donePart := fun _ hq _ _ => absurd hq (by omega)
+  oldPart := fun q hq1 hqb j =>
+    ⟨h.headBit q hq1 (by omega) j, (h.sym q hq1 (by omega) j).1, (h.sym q hq1 (by omega) j).2⟩
+  sentinel := h.sentinel
+
+/-- Leaving SCATTER sweep-2 (all blocks swept, `b = 1`): `Scatter2MidInv` is `SimInvAt
+    (M+1)` for the **final** config `scatterFinalWork`. The structural fields use the
+    original work tapes' `wfStart`/`noStart`/`heads_le`. -/
+theorem Scatter2MidInv.toSimInv {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M : ℕ}
+    (hwf : ∀ j : Fin k, (w j).cells 0 = Γ.start)
+    (hns : ∀ (j : Fin k) (p : ℕ), 1 ≤ p → (w j).cells p ≠ Γ.start)
+    (hle : ∀ j : Fin k, (w j).head ≤ M)
+    (h : Scatter2MidInv t w wact M 1) :
+    SimInvAt k t (fun j => scatterFinalWork (w j) (wact j)) (M + 1) where
+  cell0 := h.cell0
+  wfStart := fun j => (scatterFinalWork_cells_zero (w j) (wact j)).trans (hwf j)
+  noStart := fun j p hp => scatterFinalWork_cells_ne_start (w j) (wact j) hp (hns j p hp)
+  heads_le := fun j => scatterFinalWork_head_le (w j) (wact j) (hle j)
+  headBit := fun q hq1 hqM j => (h.donePart q hq1 hqM j).1
+  sym := fun q hq1 hqM j => ⟨(h.donePart q hq1 hqM j).2.1, (h.donePart q hq1 hqM j).2.2⟩
+  sentinel := h.sentinel
+
 /-- The SCATTER head triples write the symbol via the **writable** codec
     (`encSymW s`), but the `scatterInterWork` target reads it via the
     full-alphabet codec applied to the written cell (`encSymΓ s.toΓ`). They
