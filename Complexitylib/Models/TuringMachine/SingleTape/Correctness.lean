@@ -1022,6 +1022,63 @@ theorem scatter1_materialize {k : ℕ} (N : NTM k) (b : Bool) (q' : N.Q)
       = TM.idleDir c1.output.read from rfl,
     hwd, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
 
+/-- SCATTER sweep-1 **materialize slot-0** step: at the `□` sentinel, slot `0` of
+    a fresh block-tape, deposit the head-bit (`one` if `rightCarry t`, else `zero`),
+    clear that carry, set `mat`, and advance to slot 1. The right-movers carried out
+    of the last old block land here. -/
+theorem scatter1_mat_slot0 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (t : ℕ) (ht : t < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 0), rc, ilm, false, mat))
+    (hblank : (c1.work 0).read = Γ.blank)
+    (hnt : ¬(mat = true ∧ ((⟨t, by omega⟩, 0) : SweepPos k) = (0, 0)))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨t, by omega⟩, 1),
+          Function.update rc ⟨t, ht⟩ false, ilm, false, true),
+        input := c1.input,
+        work := fun _ => (c1.work 0).writeAndMove
+          (if rc ⟨t, ht⟩ then Γw.one else Γw.zero).toΓ Dir3.right,
+        output := c1.output } := by
+  rw [scatter1_materialize N bb q' wact oWoD iD iSym oSym (⟨t, by omega⟩, 0) rc ilm false mat c1 hst
+    hnt his hos]
+  simp only [scatter1Step, hblank, ↓reduceIte, if_neg hnt, dif_pos ht, advanceSweep, Fin.reduceEq,
+    Fin.isValue]
+  congr 1
+  funext i
+  obtain rfl : i = 0 := Subsingleton.elim i 0
+  rfl
+
+/-- SCATTER sweep-1 **materialize symbol** step: at the `□` sentinel, slot `1` or `2`
+    of a fresh block-tape, write the blank-symbol code cell (`Γw.zero`) and advance.
+    `rightCarry`/`isLeftMover` untouched; the new block's symbols are all `□`. -/
+theorem scatter1_mat_sym {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (t : ℕ) (ht : t < k) (s : Fin 3) (hs : s ≠ 0) (rc ilm : Fin k → Bool) (wf : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨t, by omega⟩, s), rc, ilm, wf, true))
+    (hblank : (c1.work 0).read = Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, advanceSweep k (⟨t, by omega⟩, s),
+          rc, ilm, false, true),
+        input := c1.input,
+        work := fun _ => (c1.work 0).writeAndMove Γw.zero.toΓ Dir3.right,
+        output := c1.output } := by
+  have hpos : (((⟨t, by omega⟩, s) : SweepPos k) = (0, 0)) = False :=
+    eq_false (fun h => hs (congrArg Prod.snd h))
+  have hnt : ¬(true = true ∧ ((⟨t, by omega⟩, s) : SweepPos k) = (0, 0)) := by
+    rintro ⟨-, h⟩; exact hs (congrArg Prod.snd h)
+  rw [scatter1_materialize N bb q' wact oWoD iD iSym oSym (⟨t, by omega⟩, s) rc ilm wf true c1 hst
+    hnt his hos]
+  simp only [scatter1Step, hblank, hpos, and_false, hs, ↓reduceIte, Fin.isValue]
+  congr 1
+  funext i
+  obtain rfl : i = 0 := Subsingleton.elim i 0
+  rfl
+
 /-- SCATTER sweep-1 **no-head slot-0** step: at a head-bit cell with no head
     (`wH = zero`) and no incoming carry (`rc t = false`), write `zero` (preserving
     the cell) and advance to slot 1. The common case for tapes without a head in
