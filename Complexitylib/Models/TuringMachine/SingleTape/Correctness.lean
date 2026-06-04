@@ -908,31 +908,6 @@ theorem scatter1_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
     `SimInvAt (M+1)` for `c'`. (Proof: the research-grade core, in progress.) -/
 theorem scatter1_sweep_PLAN : True := trivial
 
-/-- **SCATTER sweep-1 — target (the crux, proof in progress).** From the
-    REWIND-produced `scatter1` config (cell 1, `pos (0,0)`, `rightCarry` marking
-    the position-0 heads, all else empty, encoding the old `c.work` at `M`), the
-    sweep runs `3*k*(M+1) + 1` steps and lands in SCATTER sweep-2 with the work
-    tape encoding the **intermediate** configuration (`scatterInterWork` — new
-    symbols everywhere, right/stay heads relocated, left-movers parked at the old
-    spot) materialized to `M+1`, recording the left-movers in `isLeftMover`. The
-    work tape is existential (its exact head position is incidental — sweep-2
-    consumes it). This is the research-grade core; the proof will decompose as
-    `triple → block (rightCarry in→out) → M-block sweep → materialize → turnaround`. -/
-theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
-    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
-    (c1 : Cfg 1 (SimQ k N.Q))
-    (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0),
-        (fun j => decide ((c.work j).read = Γ.start)), (fun _ => false), false, false))
-    (hhead : (c1.work 0).head = blockStart k 1)
-    (hinv : SimInvAt k (c1.work 0) c.work M)
-    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
-    ∃ wfin : Fin 1 → Tape,
-      (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bb) c1 =
-        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
-            (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)),
-          input := c1.input, work := wfin, output := c1.output }
-      ∧ SimInvAt k (wfin 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1) := by
-  sorry
 
 /-- One **scatter sweep-1** step (`trace 1`): from a `scatter1 d` config, the
     result is the configuration built from `scatter1Step`'s output. Basis of the
@@ -2331,6 +2306,172 @@ theorem scatter1_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M 
           split_ifs with h1 h2 h3 <;> first | rfl | omega
         · simp only [hL, and_false, if_false]]
     · rw [hwh]
+
+/-- **SCATTER sweep-1 — target (the crux, proof in progress).** From the
+    REWIND-produced `scatter1` config (cell 1, `pos (0,0)`, `rightCarry` marking
+    the position-0 heads, all else empty, encoding the old `c.work` at `M`), the
+    sweep runs `3*k*(M+1) + 1` steps and lands in SCATTER sweep-2 with the work
+    tape encoding the **intermediate** configuration (`scatterInterWork` — new
+    symbols everywhere, right/stay heads relocated, left-movers parked at the old
+    spot) materialized to `M+1`, recording the left-movers in `isLeftMover`. The
+    work tape is existential (its exact head position is incidental — sweep-2
+    consumes it). This is the research-grade core; the proof will decompose as
+    `triple → block (rightCarry in→out) → M-block sweep → materialize → turnaround`. -/
+theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+        (fun j => decide ((c.work j).read = Γ.start)), (fun _ => false), false, false))
+    (hhead : (c1.work 0).head = blockStart k 1)
+    (hinv : SimInvAt k (c1.work 0) c.work M) (hk : 1 ≤ k)
+    (hr0 : ∀ j : Fin k, (c.work j).head = 0 → (wact j).2 = Dir3.right)
+    (hwb : ∀ (j : Fin k) (p : ℕ), M < p → (c.work j).cells p = Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wfin : Fin 1 → Tape,
+      (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+            (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)),
+          input := c1.input, work := wfin, output := c1.output }
+      ∧ SimInvAt k (wfin 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1) := by
+  -- `scatterInterWork.head = M+1` ⟺ the tape's head was at `M` moving right
+  have hheadEq : ∀ j : Fin k,
+      decide ((c.work j).head = M ∧ (wact j).2 = Dir3.right)
+        = decide ((scatterInterWork (c.work j) (wact j)).head = M + 1) := by
+    intro j
+    rw [decide_eq_decide, scatterInterWork_head]
+    have hle := hinv.heads_le j
+    by_cases hr : (wact j).2 = Dir3.right
+    · rw [if_pos hr]
+      exact ⟨fun h => by obtain ⟨h1, _⟩ := h; omega, fun h => ⟨by omega, hr⟩⟩
+    · rw [if_neg hr]
+      exact ⟨fun h => absurd h.2 hr, fun h => absurd h (by omega)⟩
+  -- bridge: the REWIND carry `initRC` is the block-1 carry
+  have hrc : (fun j => decide ((c.work j).read = Γ.start))
+      = (fun (j : Fin k) => decide ((c.work j).head = 0 ∧ (wact j).2 = Dir3.right)) := by
+    funext j
+    rw [decide_eq_decide]
+    have hreadhead : ((c.work j).read = Γ.start) ↔ ((c.work j).head = 0) := by
+      rw [Tape.read]
+      refine ⟨fun h => ?_, fun h => ?_⟩
+      · by_contra hne; exact hinv.noStart j _ (by omega) h
+      · rw [h]; exact hinv.wfStart j
+    rw [hreadhead]
+    exact ⟨fun h => ⟨h, hr0 j h⟩, fun h => h.1⟩
+  -- Phase 1: sweep the M old blocks
+  obtain ⟨wtS, hS, hwhS, hmidS⟩ := scatter1_sweep_aux N bb c M q' wact oWoD iD iSym oSym
+    (fun _ => false) c1 (by rw [hst, hrc]) hhead hinv his hos M (le_refl M)
+  -- Phase 2: materialize block M+1
+  have hcwS : ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1).work 0 = wtS := by rw [hS]
+  have hSin : ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1).input = c1.input := by rw [hS]
+  have hSout : ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1).output = c1.output := by rw [hS]
+  obtain ⟨wtMat, hMat, hwhMat, hpres, hmat, hblank⟩ := scatter1_mat_aux N bb M q' wact oWoD iD iSym oSym
+    (fun j => decide ((c.work j).head = M ∧ (wact j).2 = Dir3.right))
+    (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ M ∧ (wact j).2 = Dir3.left then
+        true else (fun _ => false) j)
+    ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1) (by rw [hS])
+    (by rw [hcwS]; exact hwhS) (by rw [hcwS]; exact hmidS.sentinel)
+    (by rw [hSin]; exact his) (by rw [hSout]; exact hos) k (le_refl k)
+  -- Phase 3: turn around into SCATTER sweep-2
+  have hcwMat : ((singleTapeSim N).trace (3 * k) (fun _ => bb)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).work 0 = wtMat := by rw [hMat]
+  have hbs : blockStart k (M + 1) + 3 * k = blockStart k (M + 2) := by
+    rw [show (M : ℕ) + 2 = (M + 1) + 1 from rfl, blockStart_succ k (M + 1) (by omega), blockWidth]
+  have hmatHead : wtMat.head = blockStart k (M + 2) := by rw [hwhMat]; exact hbs
+  have hmatBlank : wtMat.cells wtMat.head = Γ.blank := by
+    rw [hmatHead]; exact hblank _ (by omega)
+  have hTurn := scatter1_turnaround N bb q' wact oWoD iD iSym oSym
+    (fun j => if (j : ℕ) < k then false else
+      decide ((c.work j).head = M ∧ (wact j).2 = Dir3.right))
+    (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ M ∧ (wact j).2 = Dir3.left then
+        true else (fun _ => false) j) false
+    ((singleTapeSim N).trace (3 * k) (fun _ => bb)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1))
+    (by rw [hMat]; simp only [if_neg (show ¬ k < k from Nat.lt_irrefl k),
+        if_neg (show ¬ k = 0 from by omega), Fin.mk_zero])
+    (by rw [hcwMat]; exact hmatBlank)
+  have hMatin : ((singleTapeSim N).trace (3 * k) (fun _ => bb)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).input = c1.input := by
+    rw [hMat]; exact hSin
+  have hMatout : ((singleTapeSim N).trace (3 * k) (fun _ => bb)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).output = c1.output := by
+    rw [hMat]; exact hSout
+  refine ⟨fun i => (((singleTapeSim N).trace (3 * k) (fun _ => bb)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).work i).writeAndMove
+      Γw.blank.toΓ Dir3.left, ?_, ?_⟩
+  · rw [show 3 * k * (M + 1) + 1 = 3 * k * M + (3 * k + 1) from by rw [Nat.mul_succ]; omega,
+      trace_const_add, trace_const_add, hTurn, hMatin, hMatout]
+    refine (Cfg.mk.injEq ..).mpr ⟨?_, tape_idle_stay c1.input his, rfl,
+      tape_idle_writeMove c1.output hos⟩
+    rw [show (fun (j : Fin k) => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ M ∧
+            (wact j).2 = Dir3.left then true else (fun _ => false) j)
+        = (fun t => decide ((wact t).2 = Dir3.left)) from by
+      funext j
+      by_cases hL : (wact j).2 = Dir3.left
+      · have h1 : 1 ≤ (c.work j).head := by
+          rcases Nat.eq_zero_or_pos (c.work j).head with h0 | hp
+          · have hrr := hr0 j h0; rw [hL] at hrr; exact absurd hrr (by decide)
+          · exact hp
+        rw [if_pos ⟨h1, hinv.heads_le j, hL⟩]; simp [hL]
+      · rw [if_neg (fun h => hL h.2.2)]; simp [hL]]
+  · -- SimInvAt (M+1) for the intermediate config
+    have hhead0 : ¬ wtMat.head = 0 := by rw [hmatHead]; have := one_le_blockStart k (M + 2); omega
+    have hfc : ((((singleTapeSim N).trace (3 * k) (fun _ => bb)
+        ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).work 0).writeAndMove
+          Γw.blank.toΓ Dir3.left).cells = wtMat.cells := by
+      rw [hcwMat]
+      show (wtMat.write Γw.blank.toΓ).cells = wtMat.cells
+      unfold Tape.write
+      rw [if_neg hhead0]
+      show Function.update wtMat.cells wtMat.head Γw.blank.toΓ = wtMat.cells
+      rw [show (Γw.blank.toΓ : Γ) = wtMat.cells wtMat.head from hmatBlank.symm, Function.update_eq_self]
+    -- below block M+1, the materialized tape equals the swept tape (blocks [1,M] + cell 0)
+    have hbelow : ∀ cc, cc < blockStart k (M + 1) → wtMat.cells cc = wtS.cells cc := fun cc h => by
+      rw [hpres cc h, hcwS]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · -- cell0
+      rw [congrFun hfc 0, hbelow 0 (by have := one_le_blockStart k (M + 1); omega)]
+      exact hmidS.cell0
+    · -- wfStart
+      exact fun j => (scatterInterWork_cells_zero (c.work j) (wact j)).trans (hinv.wfStart j)
+    · -- noStart
+      exact fun j p hp => scatterInterWork_cells_ne_start (c.work j) (wact j) hp (hinv.noStart j p hp)
+    · -- heads_le
+      exact fun j => scatterInterWork_head_le (c.work j) (wact j) (hinv.heads_le j)
+    · -- headBit
+      intro p hp1 hpM1 j
+      rw [congrFun hfc (headBitCell k p j)]
+      rcases Nat.lt_or_ge p (M + 1) with hlt | hge
+      · rw [hbelow _ (by
+          have := headBitCell_add_three_le k p j hp1
+          have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
+          simp only [headBitCell] at *; omega)]
+        exact (hmidS.donePart p hp1 hlt j).1
+      · obtain rfl : p = M + 1 := by omega
+        rw [(hmat j j.isLt).1]; simp only [hheadEq j, decide_eq_true_eq]
+    · -- sym
+      intro p hp1 hpM1 j
+      rw [congrFun hfc (symCell k p j), congrFun hfc (symCell k p j + 1)]
+      rcases Nat.lt_or_ge p (M + 1) with hlt | hge
+      · rw [hbelow _ (by
+            have := headBitCell_add_three_le k p j hp1
+            have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
+            simp only [headBitCell, symCell] at *; omega),
+          hbelow _ (by
+            have := headBitCell_add_three_le k p j hp1
+            have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
+            simp only [headBitCell, symCell] at *; omega)]
+        exact hmidS.donePart p hp1 hlt j |>.2
+      · obtain rfl : p = M + 1 := by omega
+        have hcb : (scatterInterWork (c.work j) (wact j)).cells (M + 1) = (c.work j).cells (M + 1) :=
+          scatterInterWork_cells_of_ne (c.work j) (wact j)
+            (show (M + 1 : ℕ) ≠ (c.work j).head by have := hinv.heads_le j; omega)
+        rw [(hmat j j.isLt).2.1, (hmat j j.isLt).2.2, hcb,
+          show ((c.work j).cells (M + 1)) = Γ.blank from hwb j (M + 1) (by omega)]
+        exact ⟨rfl, rfl⟩
+    · -- sentinel
+      intro cc hcc
+      rw [congrFun hfc cc]
+      exact hblank cc (by rw [← hbs] at hcc; omega)
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
