@@ -643,6 +643,50 @@ theorem scatter1_step_right {k : ℕ} (N : NTM k) (d : Scatter1Data k N.Q) (b : 
       = TM.idleDir c1.output.read from rfl,
     hwd, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]; rfl
 
+/-- A SCATTER sweep-1 **materialize step** (`trace 1`): at the `□` sentinel, before
+    the new block is complete (`¬(mat ∧ pos = (0,0))`), the head writes the fresh
+    cell's value (`scatter1Step`'s symbol — a head-bit per `rightCarry` at slot 0,
+    `□` otherwise) and moves right, growing the region by one cell. Same shape as
+    `scatter1_step_right`; the work direction is right because the turn-around
+    guard is false. -/
+theorem scatter1_materialize {k : ℕ} (N : NTM k) (b : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (pos : SweepPos k) (rightCarry isLeftMover : Fin k → Bool) (writeFlag mat : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat))
+    (hnt : ¬(mat = true ∧ pos = (0, 0)))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      (let d := (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat)
+       { state := (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).1,
+         input := c1.input,
+         work := fun i => (c1.work i).writeAndMove
+           ((scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.1 i).toΓ Dir3.right,
+         output := c1.output } : Cfg 1 (SimQ k N.Q)) := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat) b c1 hst]
+  have hwd : (scatter1Step
+      (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat)
+      c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.2.1 = fun _ => Dir3.right := by
+    funext i
+    show (if (c1.work 0).read = Γ.blank ∧ mat = true ∧ pos = (0, 0) then Dir3.left
+          else Dir3.right) = Dir3.right
+    rw [if_neg (fun h => hnt h.2)]
+  simp only [show (scatter1Step
+        (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat)
+        c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.1
+      = TM.idleDir c1.input.read from rfl,
+    show (scatter1Step
+        (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat)
+        c1.input.read ((c1.work 0).read) c1.output.read).2.2.1
+      = TM.readBackWrite c1.output.read from rfl,
+    show (scatter1Step
+        (q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat)
+        c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.2.2
+      = TM.idleDir c1.output.read from rfl,
+    hwd, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+
 /-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
     materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
     `□` past it), the sweep turns leftward into sweep-2 at the last block's last
