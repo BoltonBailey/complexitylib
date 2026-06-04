@@ -808,6 +808,89 @@ theorem Scatter1BlockInv.toMidSucc {k : ℕ} {t : Tape} {w : Fin k → Tape}
   oldPart := fun p hp hpM j => h.oldPart p (by omega) hpM j
   sentinel := h.sentinel
 
+/-- **Block-step cell bookkeeping (pure).** Advancing the within-block invariant
+    one tape: if a new tape `t'` agrees with `t` everywhere except block `b` tape
+    `m`'s three cells, which now hold the **intermediate** (`scatterInterWork`)
+    encoding, and `t` satisfies `Scatter1BlockInv … b m`, then `t'` satisfies
+    `Scatter1BlockInv … b (m+1)`. All other queried cells are untouched (block `b`
+    tape `m`'s triple sits at `[blockStart b + 3m, +2]`, disjoint from every other
+    `(p,j)` triple, cell 0 and the sentinel region). The five SCATTER triples each
+    discharge the three value hypotheses; this lemma does the disjointness once. -/
+theorem scatter1_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M b m : ℕ} (hb1 : 1 ≤ b) (hbM : b ≤ M) (hmk : m < k)
+    (hbm : Scatter1BlockInv t w wact M b m)
+    (hbit : t'.cells (headBitCell k b ⟨m, hmk⟩)
+        = if (scatterInterWork (w ⟨m, hmk⟩) (wact ⟨m, hmk⟩)).head = b then Γ.one else Γ.zero)
+    (hs1 : t'.cells (symCell k b ⟨m, hmk⟩)
+        = (encSymΓ ((scatterInterWork (w ⟨m, hmk⟩) (wact ⟨m, hmk⟩)).cells b)).1)
+    (hs2 : t'.cells (symCell k b ⟨m, hmk⟩ + 1)
+        = (encSymΓ ((scatterInterWork (w ⟨m, hmk⟩) (wact ⟨m, hmk⟩)).cells b)).2)
+    (hpres : ∀ c, c ≠ headBitCell k b ⟨m, hmk⟩ → c ≠ symCell k b ⟨m, hmk⟩ →
+        c ≠ symCell k b ⟨m, hmk⟩ + 1 → t'.cells c = t.cells c) :
+    Scatter1BlockInv t' w wact M b (m + 1) where
+  cell0 := by
+    rw [hpres 0 (by simp only [headBitCell]; have := one_le_blockStart k b; omega)
+      (by simp only [symCell]; have := one_le_blockStart k b; omega)
+      (by simp only [symCell]; have := one_le_blockStart k b; omega)]
+    exact hbm.cell0
+  donePart := fun p hp1 hpb j => by
+    have key : blockStart k p + 3 * (j : ℕ) + 2 < blockStart k b + 3 * m := by
+      have hA := headBitCell_add_three_le k p j hp1
+      have hB := blockStart_le k (show p + 1 ≤ b by omega)
+      simp only [headBitCell] at hA; omega
+    rw [hpres (headBitCell k p j) (by simp only [headBitCell]; omega)
+          (by simp only [headBitCell, symCell]; omega) (by simp only [headBitCell, symCell]; omega),
+        hpres (symCell k p j) (by simp only [headBitCell, symCell]; omega)
+          (by simp only [symCell]; omega) (by simp only [symCell]; omega),
+        hpres (symCell k p j + 1) (by simp only [headBitCell, symCell]; omega)
+          (by simp only [symCell]; omega) (by simp only [symCell]; omega)]
+    exact hbm.donePart p hp1 hpb j
+  doneTape := fun j hj => by
+    rcases Nat.lt_or_ge (j : ℕ) m with hlt | hge
+    · have key : blockStart k b + 3 * (j : ℕ) + 2 < blockStart k b + 3 * m := by omega
+      rw [hpres (headBitCell k b j) (by simp only [headBitCell]; omega)
+            (by simp only [headBitCell, symCell]; omega) (by simp only [headBitCell, symCell]; omega),
+          hpres (symCell k b j) (by simp only [headBitCell, symCell]; omega)
+            (by simp only [symCell]; omega) (by simp only [symCell]; omega),
+          hpres (symCell k b j + 1) (by simp only [headBitCell, symCell]; omega)
+            (by simp only [symCell]; omega) (by simp only [symCell]; omega)]
+      exact hbm.doneTape j hlt
+    · have hjm : (j : ℕ) = m := by omega
+      obtain rfl : j = ⟨m, hmk⟩ := Fin.ext hjm
+      exact ⟨hbit, hs1, hs2⟩
+  oldTape := fun j hj => by
+    have key : blockStart k b + 3 * m + 2 < blockStart k b + 3 * (j : ℕ) := by omega
+    rw [hpres (headBitCell k b j) (by simp only [headBitCell]; omega)
+          (by simp only [headBitCell, symCell]; omega) (by simp only [headBitCell, symCell]; omega),
+        hpres (symCell k b j) (by simp only [headBitCell, symCell]; omega)
+          (by simp only [symCell]; omega) (by simp only [symCell]; omega),
+        hpres (symCell k b j + 1) (by simp only [headBitCell, symCell]; omega)
+          (by simp only [symCell]; omega) (by simp only [symCell]; omega)]
+    exact hbm.oldTape j (by omega)
+  oldPart := fun p hp hpM j => by
+    have key : blockStart k b + 3 * m + 2 < blockStart k p := by
+      have hC := blockStart_le k (show b + 1 ≤ p by omega)
+      have hD := blockStart_succ k b hb1
+      have hbw : blockWidth k = 3 * k := rfl
+      omega
+    rw [hpres (headBitCell k p j) (by simp only [headBitCell]; have := j.isLt; omega)
+          (by simp only [headBitCell, symCell]; have := j.isLt; omega)
+          (by simp only [headBitCell, symCell]; have := j.isLt; omega),
+        hpres (symCell k p j) (by simp only [headBitCell, symCell]; have := j.isLt; omega)
+          (by simp only [symCell]; have := j.isLt; omega) (by simp only [symCell]; have := j.isLt; omega),
+        hpres (symCell k p j + 1) (by simp only [headBitCell, symCell]; have := j.isLt; omega)
+          (by simp only [symCell]; have := j.isLt; omega) (by simp only [symCell]; have := j.isLt; omega)]
+    exact hbm.oldPart p hp hpM j
+  sentinel := fun c hc => by
+    have key : blockStart k b + 3 * m + 2 < blockStart k (M + 1) := by
+      have hE := blockStart_le k (show b + 1 ≤ M + 1 by omega)
+      have hD := blockStart_succ k b hb1
+      have hbw : blockWidth k = 3 * k := rfl
+      omega
+    rw [hpres c (by simp only [headBitCell]; omega) (by simp only [symCell]; omega)
+          (by simp only [symCell]; omega)]
+    exact hbm.sentinel c hc
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then

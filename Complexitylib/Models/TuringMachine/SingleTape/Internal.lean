@@ -157,6 +157,21 @@ theorem headBitCell_lt_next (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
   simp only [headBitCell, blockWidth]
   omega
 
+/-- Block starts are monotone (non-strict) in the position. -/
+theorem blockStart_le (k : ℕ) {p q : ℕ} (hpq : p ≤ q) :
+    blockStart k p ≤ blockStart k q := by
+  simp only [blockStart]
+  exact Nat.add_le_add_left (Nat.mul_le_mul (by omega) (le_refl _)) 1
+
+/-- Tape `j`'s whole triple fits strictly before the next block:
+    `headBitCell + 3 ≤ blockStart (p+1)` (the `+2` cell is the last of the triple). -/
+theorem headBitCell_add_three_le (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
+    headBitCell k p j + 3 ≤ blockStart k (p + 1) := by
+  rw [blockStart_succ k p hp]
+  have hj : j.val < k := j.isLt
+  simp only [headBitCell, blockWidth]
+  omega
+
 /-! ## The simulation invariant
 
 `SimInvAt k t w M` asserts that the single work tape `t` encodes the `k`
