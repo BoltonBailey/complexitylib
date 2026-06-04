@@ -671,6 +671,24 @@ theorem scatterInterWork_head_le (ct : Tape) (wd : Γw × Dir3) {M : ℕ}
   show (if wd.2 = Dir3.right then ct.head + 1 else ct.head) ≤ M + 1
   split <;> omega
 
+/-- `scatterInterWork`'s head value: a right-mover advances by one, every other
+    move keeps the old head position. (The `head` half of the intermediate
+    encoding's head-bit.) -/
+theorem scatterInterWork_head (ct : Tape) (wd : Γw × Dir3) :
+    (scatterInterWork ct wd).head = if wd.2 = Dir3.right then ct.head + 1 else ct.head :=
+  rfl
+
+/-- `scatterInterWork` writes the new symbol at the old head position (when the
+    head is `≥ 1`, where `write` is not a no-op). The `sym` half of the
+    intermediate encoding at the head's block. -/
+theorem scatterInterWork_cells_at_head (ct : Tape) (wd : Γw × Dir3)
+    (hh : 1 ≤ ct.head) : (scatterInterWork ct wd).cells ct.head = wd.1.toΓ := by
+  show (ct.write wd.1.toΓ).cells ct.head = wd.1.toΓ
+  unfold Tape.write
+  rw [if_neg (show ¬ ct.head = 0 by omega)]
+  show Function.update ct.cells ct.head wd.1.toΓ ct.head = wd.1.toΓ
+  rw [Function.update_self]
+
 /-- **Mid-sweep invariant for SCATTER sweep-1**, at block boundary `b`: the work
     tape `t` holds the **intermediate** encoding (`scatterInterWork`) on blocks
     `[1, b)` already swept, and the **old** encoding (`w`) on blocks `[b, M]` not
