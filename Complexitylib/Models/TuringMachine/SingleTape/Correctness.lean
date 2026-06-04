@@ -647,6 +647,30 @@ theorem scatterInterWork_cells_zero (ct : Tape) (wd : Γw × Dir3) :
   · rfl
   · exact Function.update_of_ne (by omega) _ _
 
+/-- `scatterInterWork` keeps every cell `≥ 1` non-`▷`: untouched cells inherit it
+    from `ct`, and the rewritten head cell holds a writable symbol (`Γw`, which
+    excludes `▷`). The `noStart` precondition for the post-sweep `SimInvAt (M+1)`. -/
+theorem scatterInterWork_cells_ne_start (ct : Tape) (wd : Γw × Dir3) {p : ℕ}
+    (hp : 1 ≤ p) (hns : ct.cells p ≠ Γ.start) :
+    (scatterInterWork ct wd).cells p ≠ Γ.start := by
+  by_cases hph : p = ct.head
+  · rw [hph]
+    show (ct.write wd.1.toΓ).cells ct.head ≠ Γ.start
+    unfold Tape.write
+    rw [if_neg (show ¬ ct.head = 0 by omega)]
+    show Function.update ct.cells ct.head wd.1.toΓ ct.head ≠ Γ.start
+    rw [Function.update_self]
+    cases wd.1 <;> decide
+  · rw [scatterInterWork_cells_of_ne ct wd hph]; exact hns
+
+/-- `scatterInterWork`'s head stays within the materialized region after growth:
+    a right-mover advances by one (to `≤ M+1`), others stay. The `heads_le`
+    precondition for the post-sweep `SimInvAt (M+1)`. -/
+theorem scatterInterWork_head_le (ct : Tape) (wd : Γw × Dir3) {M : ℕ}
+    (h : ct.head ≤ M) : (scatterInterWork ct wd).head ≤ M + 1 := by
+  show (if wd.2 = Dir3.right then ct.head + 1 else ct.head) ≤ M + 1
+  split <;> omega
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then
