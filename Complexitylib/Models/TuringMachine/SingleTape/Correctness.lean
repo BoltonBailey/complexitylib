@@ -627,6 +627,26 @@ def scatterInterWork (ct : Tape) (wd : Γw × Dir3) : Tape where
   head := if wd.2 = Dir3.right then ct.head + 1 else ct.head
   cells := (ct.write wd.1.toΓ).cells
 
+/-- `scatterInterWork` only rewrites the old head cell: every other cell is
+    unchanged. (The new symbol is written at the old head position.) -/
+theorem scatterInterWork_cells_of_ne (ct : Tape) (wd : Γw × Dir3) {c : ℕ}
+    (h : c ≠ ct.head) : (scatterInterWork ct wd).cells c = ct.cells c := by
+  show (ct.write wd.1.toΓ).cells c = ct.cells c
+  unfold Tape.write
+  split
+  · rfl
+  · exact Function.update_of_ne h _ _
+
+/-- `scatterInterWork` preserves cell `0` (the `▷` marker): writing at the head
+    never touches cell `0` (it's either a no-op there, or the head is `≥ 1`). -/
+theorem scatterInterWork_cells_zero (ct : Tape) (wd : Γw × Dir3) :
+    (scatterInterWork ct wd).cells 0 = ct.cells 0 := by
+  show (ct.write wd.1.toΓ).cells 0 = ct.cells 0
+  unfold Tape.write
+  split
+  · rfl
+  · exact Function.update_of_ne (by omega) _ _
+
 /-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
     `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
     right), all other flags empty. It sweeps right over the `M` old blocks then
