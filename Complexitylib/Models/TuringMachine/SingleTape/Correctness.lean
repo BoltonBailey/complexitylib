@@ -615,6 +615,27 @@ theorem scatter1_trace1 {k : ℕ} (N : NTM k) (d : Scatter1Data k N.Q) (b : Bool
   simp only [hst, singleTapeSim, simDelta, SimQ.scatter1, SimQ.halt, Sum.inr.injEq,
     reduceCtorEq, ↓reduceIte, NTM.trace]
 
+/-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
+    materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
+    `□` past it), the sweep turns leftward into sweep-2 at the last block's last
+    cell. -/
+theorem scatter1_turnaround {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rightCarry isLeftMover : Fin k → Bool) (writeFlag : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (0, 0), rightCarry, isLeftMover, writeFlag, true))
+    (hblank : (c1.work 0).read = Γ.blank) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter2
+          (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover, fun _ => false),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun i => (c1.work i).writeAndMove Γw.blank.toΓ Dir3.left,
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (0, 0), rightCarry, isLeftMover, writeFlag, true) bb c1 hst]
+  simp only [scatter1Step, hblank, ↓reduceIte, and_self, true_and, and_true]; rfl
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
