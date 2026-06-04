@@ -202,7 +202,7 @@ private theorem work_rewind_step (t : Tape) (h : t.read ≠ Γ.start) :
 private theorem work_blank_right_at0 (t : Tape) (h : t.head = 0) :
     t.writeAndMove Γw.blank.toΓ Dir3.right = { t with head := 1 } := by
   show (t.write Γw.blank.toΓ).move Dir3.right = { t with head := 1 }
-  simp only [Tape.write, h, ↓reduceIte, Tape.move, h]
+  simp only [Tape.write, h, ↓reduceIte, Tape.move]
 
 /-- An idle (`stay`) move on a tape reading a non-`▷` cell is a no-op. -/
 private theorem tape_idle_stay (t : Tape) (h : t.read ≠ Γ.start) :
@@ -224,7 +224,7 @@ private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
       = M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)) := by
   have h1 := M.trace_add 1 2 (fun _ => bb) c
   have h2 := M.trace_add 1 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)
-  simp only [Fin.val] at h1 h2
+  simp only [] at h1 h2
   rw [show (3 : ℕ) = 1 + 2 from rfl, h1, show (2 : ℕ) = 1 + 1 from rfl, h2]
 
 /-- GATHER slot-`0` step (head-bit): records whether this tape's head marker is
@@ -261,7 +261,7 @@ private theorem gather_slot1 {k : ℕ} (N : NTM k) (bb : Bool)
         input := c1.input, output := c1.output,
         work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 } } := by
   rw [gather_trace1 N (q, acc, iSym, oSym, (pt, 1), rf, pending) bb c1 hst]
-  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq, Fin.reduceAdd,
+  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq,
     tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
   congr 1
   funext x
@@ -288,7 +288,7 @@ private theorem gather_slot2 {k : ℕ} (N : NTM k) (bb : Bool)
         input := c1.input, output := c1.output,
         work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 } } := by
   rw [gather_trace1 N (q, acc, iSym, oSym, (pt, 2), rf, pending) bb c1 hst]
-  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq, Fin.reduceAdd,
+  simp only [gatherStep, advanceSweep, hwb, ↓reduceIte, Fin.reduceEq,
     tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
   congr 1
   funext x
@@ -430,10 +430,9 @@ theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M 
     by_cases hjm : j = (⟨m, hmk⟩ : Fin k)
     · subst hjm
       by_cases hb : (c.work ⟨m, hmk⟩).head = b
-      · simp only [hb, ↓reduceIte, Function.update_self, Fin.val_mk, and_true]
+      · simp only [hb, ↓reduceIte, Function.update_self, and_true]
         rw [if_pos (Nat.lt_succ_self m), Tape.read, hb]
-      · simp only [hb, ↓reduceIte, reduceCtorEq, Fin.val_mk, Nat.lt_irrefl, false_and,
-          and_false]
+      · simp only [hb, ↓reduceIte, reduceCtorEq, Nat.lt_irrefl, and_false]
     · have hjv : (j : ℕ) ≠ m := fun h => hjm (Fin.ext h)
       by_cases hjb : (c.work j).head = b
       · by_cases hlt : (↑j : ℕ) < m
@@ -615,6 +614,35 @@ theorem scatter1_trace1 {k : ℕ} (N : NTM k) (d : Scatter1Data k N.Q) (b : Bool
   simp only [hst, singleTapeSim, simDelta, SimQ.scatter1, SimQ.halt, Sum.inr.injEq,
     reduceCtorEq, ↓reduceIte, NTM.trace]
 
+/-- A SCATTER sweep-1 **non-sentinel step** (`trace 1`): on any cell other than the
+    `□` sentinel, the work head writes `scatter1Step`'s computed symbol and moves
+    right (input/output idle), landing in `scatter1Step`'s next state. The case
+    logic (head-bit handling, symbol writes, marker carries) stays packaged inside
+    `scatter1Step` for the sweep induction to unfold per cell. -/
+theorem scatter1_step_right {k : ℕ} (N : NTM k) (d : Scatter1Data k N.Q) (b : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.scatter1 d)
+    (hwb : (c1.work 0).read ≠ Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      { state := (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).1,
+        input := c1.input,
+        work := fun i => (c1.work i).writeAndMove
+          ((scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.1 i).toΓ Dir3.right,
+        output := c1.output } := by
+  rw [scatter1_trace1 N d b c1 hst]
+  have hwd : (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.2.1
+      = fun _ => Dir3.right := by
+    funext i
+    show (if (c1.work 0).read = Γ.blank ∧ _ then Dir3.left else Dir3.right) = Dir3.right
+    rw [if_neg (fun h => hwb h.1)]
+  simp only [show (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.1
+      = TM.idleDir c1.input.read from rfl,
+    show (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.2.1
+      = TM.readBackWrite c1.output.read from rfl,
+    show (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).2.2.2.2.2
+      = TM.idleDir c1.output.read from rfl,
+    hwd, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]; rfl
+
 /-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
     materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
     `□` past it), the sweep turns leftward into sweep-2 at the last block's last
@@ -634,7 +662,7 @@ theorem scatter1_turnaround {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
           (TM.idleDir c1.output.read) } := by
   rw [scatter1_trace1 N
     (q', wact, oWoD, iD, iSym, oSym, (0, 0), rightCarry, isLeftMover, writeFlag, true) bb c1 hst]
-  simp only [scatter1Step, hblank, ↓reduceIte, and_self, true_and, and_true]; rfl
+  simp only [scatter1Step, hblank, ↓reduceIte, and_self]; rfl
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
