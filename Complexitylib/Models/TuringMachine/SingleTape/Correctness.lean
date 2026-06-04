@@ -188,6 +188,22 @@ private theorem work_gather_step (t : Tape) (h : t.read ≠ Γ.start) :
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
 
+/-- A REWIND work step (`readBackWrite`, move left) on a tape reading a non-`▷`
+    cell just retreats the head by one, leaving contents intact. -/
+private theorem work_rewind_step (t : Tape) (h : t.read ≠ Γ.start) :
+    t.writeAndMove (TM.readBackWrite t.read).toΓ Dir3.left = { t with head := t.head - 1 } := by
+  rw [TM.readBackWrite_toΓ_eq h]
+  show (t.write t.read).move Dir3.left = { t with head := t.head - 1 }
+  unfold Tape.write Tape.read
+  split <;> simp [Tape.move, Function.update_eq_self]
+
+/-- A blank-write + move right on a tape at cell `0` lands at cell `1`, contents
+    intact (the write at cell `0` is a no-op). The REWIND→SCATTER turn-around. -/
+private theorem work_blank_right_at0 (t : Tape) (h : t.head = 0) :
+    t.writeAndMove Γw.blank.toΓ Dir3.right = { t with head := 1 } := by
+  show (t.write Γw.blank.toΓ).move Dir3.right = { t with head := 1 }
+  simp only [Tape.write, h, ↓reduceIte, Tape.move, h]
+
 /-- An idle (`stay`) move on a tape reading a non-`▷` cell is a no-op. -/
 private theorem tape_idle_stay (t : Tape) (h : t.read ≠ Γ.start) :
     t.move (TM.idleDir t.read) = t := by
@@ -523,6 +539,66 @@ theorem gather_acc_eq {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
   by_cases h1 : 1 ≤ (w j).head
   · rw [if_pos ⟨h1, hinv.heads_le j⟩]
   · rw [if_neg (fun h => h1 h.1), hinv.head0_read j (by omega)]
+
+/-- One **rewind** step (`trace 1`): from a `rewind d` config, the result is the
+    configuration built from `rewindStep`'s output. Basis of the rewind sweep. -/
+theorem rewind_trace1 {k : ℕ} (N : NTM k) (d : RewindData k N.Q) (b : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.rewind d) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      (let r := rewindStep d c1.input.read ((c1.work 0).read) c1.output.read
+       { state := r.1, input := c1.input.move r.2.2.2.1,
+         work := fun i => (c1.work i).writeAndMove (r.2.1 i) (r.2.2.2.2.1 i),
+         output := c1.output.writeAndMove r.2.2.1 r.2.2.2.2.2 } : Cfg 1 (SimQ k N.Q)) := by
+  rw [NTM.trace]
+  simp only [hst, singleTapeSim, simDelta, SimQ.rewind, SimQ.halt, Sum.inr.injEq,
+    reduceCtorEq, ↓reduceIte, NTM.trace]
+
+/-- **REWIND full sweep (`trace (p+1)`).** From a `rewind` config with the work
+    head at cell `p` (every cell in `[1,p]` a non-`▷` code cell, cell `0` the `▷`),
+    the leftward sweep carries the `δ` results untouched back to cell `0`, then
+    turns around into SCATTER sweep-1 at cell `1` (empty stay/left carries). Proved
+    by induction on `p` (one `rewindStep` per cell), contents preserved throughout. -/
+theorem rewind_sweep {k : ℕ} (N : NTM k) (bb : Bool)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (initRC : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q)) (p : ℕ)
+    (hst : c1.state = SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC))
+    (hhead : (c1.work 0).head = p)
+    (hcell0 : (c1.work 0).cells 0 = Γ.start)
+    (hne : ∀ p', 1 ≤ p' → p' ≤ p → (c1.work 0).cells p' ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace (p + 1) (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0), initRC,
+          (fun _ => false), false, false),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := 1 },
+        output := c1.output } := by
+  induction p generalizing c1 with
+  | zero =>
+    have hread : (c1.work 0).read = Γ.start := by rw [Tape.read, hhead]; exact hcell0
+    rw [rewind_trace1 N (q', wact, oWoD, iD, iSym, oSym, initRC) bb c1 hst]
+    simp only [rewindStep, hread, ↓reduceIte, tape_idle_stay c1.input his,
+      tape_idle_writeMove c1.output hos]
+    congr 1
+    funext x
+    obtain rfl : x = 0 := Subsingleton.elim x 0
+    exact work_blank_right_at0 (c1.work 0) hhead
+  | succ p ih =>
+    have hread : (c1.work 0).read ≠ Γ.start := by
+      rw [Tape.read, hhead]; exact hne (p + 1) (by omega) (le_refl _)
+    have e1 : (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+        { state := SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC),
+          input := c1.input,
+          work := fun _ => { c1.work 0 with head := (c1.work 0).head - 1 },
+          output := c1.output } := by
+      rw [rewind_trace1 N (q', wact, oWoD, iD, iSym, oSym, initRC) bb c1 hst]
+      simp only [rewindStep, hread, ↓reduceIte, tape_idle_stay c1.input his,
+        tape_idle_writeMove c1.output hos]
+      congr 1
+      funext x; obtain rfl : x = 0 := Subsingleton.elim x 0
+      exact work_rewind_step (c1.work 0) hread
+    rw [show p + 1 + 1 = 1 + (p + 1) from by omega, trace_const_add, e1]
+    exact ih _ rfl (by simp [hhead]) hcell0
+      (fun p' hp1 hp2 => hne p' hp1 (by omega)) his hos
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
