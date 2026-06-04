@@ -696,6 +696,42 @@ theorem scatterInterWork_cells_at_head (ct : Tape) (wd : Γw × Dir3)
   show Function.update ct.cells ct.head wd.1.toΓ ct.head = wd.1.toΓ
   rw [Function.update_self]
 
+/-- The post-SCATTER-sweep-2 work tape: `scatterInterWork` with a **left**-mover's head
+    decremented one cell. This is the actual `N.trace 1` image of `ct` under action `wd`
+    — sweep-1 placed stay/right heads, sweep-2 finishes the left-movers. The cells are
+    identical to `scatterInterWork` (only the head position changes). -/
+def scatterFinalWork (ct : Tape) (wd : Γw × Dir3) : Tape :=
+  { scatterInterWork ct wd with
+    head := if wd.2 = Dir3.left then ct.head - 1 else (scatterInterWork ct wd).head }
+
+/-- `scatterFinalWork` has the same cells as `scatterInterWork` (only the head moves). -/
+theorem scatterFinalWork_cells (ct : Tape) (wd : Γw × Dir3) :
+    (scatterFinalWork ct wd).cells = (scatterInterWork ct wd).cells := rfl
+
+/-- `scatterFinalWork`'s head: a left-mover retreats one cell, everything else is as in
+    `scatterInterWork`. -/
+theorem scatterFinalWork_head (ct : Tape) (wd : Γw × Dir3) :
+    (scatterFinalWork ct wd).head
+      = if wd.2 = Dir3.left then ct.head - 1 else (scatterInterWork ct wd).head := rfl
+
+/-- `scatterFinalWork`'s head stays within the grown region `[0, M+1]`. -/
+theorem scatterFinalWork_head_le (ct : Tape) (wd : Γw × Dir3) {M : ℕ} (h : ct.head ≤ M) :
+    (scatterFinalWork ct wd).head ≤ M + 1 := by
+  rw [scatterFinalWork_head]; split
+  · omega
+  · exact scatterInterWork_head_le ct wd h
+
+/-- `scatterFinalWork` preserves cell `0` (the `▷` marker). -/
+theorem scatterFinalWork_cells_zero (ct : Tape) (wd : Γw × Dir3) :
+    (scatterFinalWork ct wd).cells 0 = ct.cells 0 := by
+  rw [scatterFinalWork_cells]; exact scatterInterWork_cells_zero ct wd
+
+/-- `scatterFinalWork` keeps every cell `≥ 1` non-`▷`. -/
+theorem scatterFinalWork_cells_ne_start (ct : Tape) (wd : Γw × Dir3) {p : ℕ}
+    (hp : 1 ≤ p) (hns : ct.cells p ≠ Γ.start) :
+    (scatterFinalWork ct wd).cells p ≠ Γ.start := by
+  rw [scatterFinalWork_cells]; exact scatterInterWork_cells_ne_start ct wd hp hns
+
 /-- The SCATTER head triples write the symbol via the **writable** codec
     (`encSymW s`), but the `scatterInterWork` target reads it via the
     full-alphabet codec applied to the written cell (`encSymΓ s.toΓ`). They
