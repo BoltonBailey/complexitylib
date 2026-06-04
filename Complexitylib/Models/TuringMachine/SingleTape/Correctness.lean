@@ -2473,6 +2473,62 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
       rw [congrFun hfc cc]
       exact hblank cc (by rw [← hbs] at hcc; omega)
 
+/-- One **scatter sweep-2** step (`trace 1`): from a `scatter2 d` config, the result is
+    the configuration built from `scatter2Step`'s output. Basis of the SCATTER sweep-2
+    correctness (the leftward phase that deposits the recorded left-movers). -/
+theorem scatter2_trace1 {k : ℕ} (N : NTM k) (d : Scatter2Data k N.Q) (b : Bool)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.scatter2 d) :
+    (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      (let r := scatter2Step d c1.input.read ((c1.work 0).read) c1.output.read
+       { state := r.1, input := c1.input.move r.2.2.2.1,
+         work := fun i => (c1.work i).writeAndMove (r.2.1 i) (r.2.2.2.2.1 i),
+         output := c1.output.writeAndMove r.2.2.1 r.2.2.2.2.2 } : Cfg 1 (SimQ k N.Q)) := by
+  rw [NTM.trace]
+  simp only [hst, singleTapeSim, simDelta, SimQ.scatter2, SimQ.halt, Sum.inr.injEq,
+    reduceCtorEq, ↓reduceIte, NTM.trace]
+
+/-- **SCATTER sweep-2 → COMMIT turn-around** (`trace 1`): reading `▷` at cell 0 ends the
+    leftward sweep, hands the deferred output write/move to COMMIT, and steps the work
+    head right to cell 1. -/
+theorem scatter2_start {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (pos : SweepPos k) (isLeftMover leftCarry : Fin k → Bool)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry))
+    (hstart : (c1.work 0).read = Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.commit (q', oWoD.1, oWoD.2, iD, iSym, oSym),
+        input := c1.input,
+        work := fun i => (c1.work i).writeAndMove Γw.blank.toΓ Dir3.right,
+        output := c1.output } := by
+  rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry) bb c1 hst]
+  simp only [scatter2Step, hstart, ↓reduceIte, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]; rfl
+
+/-- A SCATTER sweep-2 **symbol** step (slot `1` or `2`, non-`▷`): the leftward sweep
+    only touches head-bit cells, so a symbol cell is read back unchanged and the head
+    retreats one cell. -/
+theorem scatter2_sym {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD : Γw × Dir3)
+    (iD : Dir3) (iSym oSym : Γ) (t : ℕ) (ht : t < k) (s : Fin 3) (hs : s ≠ 0)
+    (isLeftMover leftCarry : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, s), isLeftMover, leftCarry))
+    (hns : (c1.work 0).read ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k (⟨t, by omega⟩, s),
+          isLeftMover, leftCarry),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head - 1 },
+        output := c1.output } := by
+  rw [scatter2_trace1 N (q', oWoD, iD, iSym, oSym, (⟨t, by omega⟩, s), isLeftMover, leftCarry) bb c1 hst]
+  simp only [scatter2Step, hns, ↓reduceIte, hs, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_rewind_step (c1.work 0) hns
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
