@@ -188,6 +188,13 @@ private theorem work_gather_step (t : Tape) (h : t.read ≠ Γ.start) :
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
 
+/-- Writing a value to a cell (head ≥ 1) and moving right updates that cell and
+    advances the head. Used for SCATTER cells that are overwritten. -/
+private theorem work_write_right (t : Tape) (s : Γ) (h : 1 ≤ t.head) :
+    t.writeAndMove s Dir3.right = ⟨t.head + 1, Function.update t.cells t.head s⟩ := by
+  show (t.write s).move Dir3.right = _
+  simp only [Tape.write, show ¬(t.head = 0) by omega, ↓reduceIte, Tape.move]
+
 /-- Writing a cell its own current value and moving right just advances the head
     (the write is a no-op). Used for SCATTER cells that aren't overwritten. -/
 private theorem work_write_eq (t : Tape) (s : Γ) (h : t.read = s) :
@@ -837,6 +844,137 @@ theorem scatter1_nohead_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
     (by rw [e1, e0]; exact his) (by rw [e1, e0]; exact hos)
   rw [trace_three, e2, e1, e0]
   simp only [advanceSweep, ↓reduceIte]
+
+/-- SCATTER sweep-1 **head slot-0, stay** step: at a head-bit cell with a head
+    (`wH = one`) whose `δ` action is `stay`, keep the bit (`one`, preserving the
+    cell), set `writeFlag` (so the symbol cells get the new symbol), advance. -/
+theorem scatter1_head_slot0_stay {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (wf mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat))
+    (hone : (c1.work 0).read = Γ.one) (hstay : (wact ⟨j, hj⟩).2 = Dir3.stay)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1
+          (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1), rc, ilm, true, mat),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 },
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat) bb c1 hst]
+  simp only [scatter1Step, hone, reduceCtorEq, ↓reduceIte, advanceSweep, Fin.reduceEq,
+    Fin.reduceAdd, dif_pos hj, hstay, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_eq (c1.work 0) Γw.one.toΓ hone
+
+/-- SCATTER sweep-1 **head slot-0, left** step: a head whose `δ` action is `left`
+    keeps its bit here for now (`one`, cell preserved) and is recorded in
+    `isLeftMover` (sweep-2 moves it one block left); `writeFlag` is set, advance. -/
+theorem scatter1_head_slot0_left {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (wf mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat))
+    (hone : (c1.work 0).read = Γ.one) (hleft : (wact ⟨j, hj⟩).2 = Dir3.left)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1), rc,
+          Function.update ilm ⟨j, hj⟩ true, true, mat),
+        input := c1.input,
+        work := fun _ => { c1.work 0 with head := (c1.work 0).head + 1 },
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat) bb c1 hst]
+  simp only [scatter1Step, hone, reduceCtorEq, ↓reduceIte, advanceSweep, Fin.reduceEq,
+    Fin.reduceAdd, dif_pos hj, hleft, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_eq (c1.work 0) Γw.one.toΓ hone
+
+/-- SCATTER sweep-1 **head slot-0, right** step: a head whose `δ` action is `right`
+    leaves this cell (`zero` — the bit is cleared, changing the cell), carries the
+    head one block right via `rightCarry`, sets `writeFlag`, and advances. -/
+theorem scatter1_head_slot0_right {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (wf mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat))
+    (hone : (c1.work 0).read = Γ.one) (hright : (wact ⟨j, hj⟩).2 = Dir3.right)
+    (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1),
+          Function.update rc ⟨j, hj⟩ true, ilm, true, mat),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head + 1,
+          Function.update (c1.work 0).cells (c1.work 0).head Γw.zero.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 0), rc, ilm, wf, mat) bb c1 hst]
+  simp only [scatter1Step, hone, reduceCtorEq, ↓reduceIte, advanceSweep, Fin.reduceEq,
+    Fin.reduceAdd, dif_pos hj, hright, tape_idle_stay c1.input his,
+    tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_right (c1.work 0) Γw.zero.toΓ hh
+
+/-- SCATTER sweep-1 **head sym-hi** step (slot 1, `writeFlag = true`): overwrite the
+    high symbol cell with the new symbol's high bit; `writeFlag` stays set. -/
+theorem scatter1_head_sym1 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1), rc, ilm, true, mat))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1
+          (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 2), rc, ilm, true, mat),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head + 1, Function.update (c1.work 0).cells
+          (c1.work 0).head (encSymW (wact ⟨j, hj⟩).1).1.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 1), rc, ilm, true, mat) bb c1 hst]
+  simp only [scatter1Step, hwb, ↓reduceIte, advanceSweep, Fin.reduceEq, Fin.reduceAdd,
+    dif_pos hj, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_right (c1.work 0) (encSymW (wact ⟨j, hj⟩).1).1.toΓ hh
+
+/-- SCATTER sweep-1 **head sym-lo** step (slot 2, `writeFlag = true`): overwrite the
+    low symbol cell with the new symbol's low bit; `writeFlag` is reset, advancing
+    to the next tape. -/
+theorem scatter1_head_sym2 {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (j : ℕ) (hj : j < k) (rc ilm : Fin k → Bool) (mat : Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 2), rc, ilm, true, mat))
+    (hwb : (c1.work 0).read ≠ Γ.blank) (hh : 1 ≤ (c1.work 0).head)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    (singleTapeSim N).trace 1 (fun _ => bb) c1 =
+      { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+          (⟨if j + 1 < k then j + 1 else 0, by split <;> omega⟩, 0), rc, ilm, false, mat),
+        input := c1.input,
+        work := fun _ => ⟨(c1.work 0).head + 1, Function.update (c1.work 0).cells
+          (c1.work 0).head (encSymW (wact ⟨j, hj⟩).1).2.toΓ⟩,
+        output := c1.output } := by
+  rw [scatter1_trace1 N
+    (q', wact, oWoD, iD, iSym, oSym, (⟨j, by omega⟩, 2), rc, ilm, true, mat) bb c1 hst]
+  simp only [scatter1Step, hwb, ↓reduceIte, advanceSweep, Fin.reduceEq,
+    dif_pos hj, tape_idle_stay c1.input his, tape_idle_writeMove c1.output hos]
+  congr 1
+  funext x
+  obtain rfl : x = 0 := Subsingleton.elim x 0
+  exact work_write_right (c1.work 0) (encSymW (wact ⟨j, hj⟩).1).2.toΓ hh
 
 /-- The **SCATTER sweep-1 → sweep-2 turn-around** (`trace 1`): once the freshly
     materialized block is complete (`mat`, back at tape `0` slot `0`, reading the
