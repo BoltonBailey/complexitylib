@@ -1965,6 +1965,48 @@ theorem scatter1_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b 
         · rw [hstep_ilm, if_neg (show ¬((c.work ⟨m, hmk⟩).head = b ∧ _) from fun h => hhd h.1),
             ← hILMm_at, Function.update_eq_self]
 
+/-- **SCATTER one full block (`trace (3*k)`).** Sweeping all `k` tapes of block `b`
+    advances the mid-sweep invariant `Scatter1MidInv … b → … (b+1)`: the head moves
+    to `blockStart k (b+1)`, the carry `rc` updates from the incoming
+    `decide(head = b-1 ∧ right)` to the outgoing `decide(head = b ∧ right)` (= the
+    incoming carry of block `b+1`), and `ilm` records block `b`'s left-movers.
+    Wraps `scatter1_block_aux` at `m = k` between `ofMid` and `toMidSucc`. -/
+theorem scatter1_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+    (hb1 : 1 ≤ b) (hbM : b ≤ M)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rc_in ilm_in : Fin k → Bool)
+    (hrc_in : ∀ j : Fin k, rc_in j = decide ((c.work j).head = b - 1 ∧ (wact j).2 = Dir3.right))
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0), rc_in, ilm_in, false, false))
+    (hhead : (c1.work 0).head = blockStart k b)
+    (hmid : Scatter1MidInv (c1.work 0) c.work wact M b)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * k) (fun _ => bb) c1 =
+        { state := SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+            (fun j => decide ((c.work j).head = b ∧ (wact j).2 = Dir3.right)),
+            (fun j => if (c.work j).head = b ∧ (wact j).2 = Dir3.left then true else ilm_in j),
+            false, false),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k (b + 1)
+      ∧ Scatter1MidInv wt c.work wact M (b + 1) := by
+  obtain ⟨wt, htr, hwh, hbi⟩ := scatter1_block_aux N bb c b M hb1 hbM q' wact oWoD iD iSym oSym
+    rc_in ilm_in hrc_in c1 hst hhead (Scatter1BlockInv.ofMid hbM hmid) his hos k (le_refl k)
+  refine ⟨wt, ?_, ?_, Scatter1BlockInv.toMidSucc hbi⟩
+  · rw [htr]
+    have hrc_k : (fun (j : Fin k) => if (j : ℕ) < k then
+          decide ((c.work j).head = b ∧ (wact j).2 = Dir3.right) else rc_in j)
+        = (fun j => decide ((c.work j).head = b ∧ (wact j).2 = Dir3.right)) := by
+      funext j; rw [if_pos j.isLt]
+    have hilm_k : (fun (j : Fin k) => if (j : ℕ) < k ∧ (c.work j).head = b ∧ (wact j).2 = Dir3.left then
+          true else ilm_in j)
+        = (fun j => if (c.work j).head = b ∧ (wact j).2 = Dir3.left then true else ilm_in j) := by
+      funext j; simp only [j.isLt, true_and]
+    rw [hrc_k, hilm_k]
+    simp only [lt_irrefl, if_false]
+  · rw [hwh, blockStart_succ k b hb1, blockWidth]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
