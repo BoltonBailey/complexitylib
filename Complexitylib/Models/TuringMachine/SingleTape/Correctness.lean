@@ -599,6 +599,61 @@ theorem rewind_sweep {k : ℕ} (N : NTM k) (bb : Bool)
     exact ih _ rfl (by simp [hhead]) hcell0
       (fun p' hp1 hp2 => hne p' hp1 (by omega)) his hos
 
+/-- **Intermediate work tape after SCATTER sweep-1** (before sweep-2 relocates the
+    left-movers). For tape `t` with old tape `ct` and `N.δ` action `(w, d)`: the
+    new symbol `w` is written at the old head position; the head-bit is placed at
+    the new position for `stay`/`right` movers, but is **left at the old position**
+    for left-movers — SCATTER sweep-2 moves those one block left. A head reading
+    `▷` (position 0) is forced `right` by `δ_right_of_start`, so it lands at
+    position 1 (the `▷` symbol write is a no-op at cell 0). Thus `head` here is
+    `ct.head + 1` for right-movers and `ct.head` for stay/left-movers. -/
+def scatterInterWork (ct : Tape) (wd : Γw × Dir3) : Tape where
+  head := if wd.2 = Dir3.right then ct.head + 1 else ct.head
+  cells := (ct.write wd.1.toΓ).cells
+
+/-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
+    `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
+    right), all other flags empty. It sweeps right over the `M` old blocks then
+    materializes block `M+1`, in `3*k*(M+1) + 1` steps, ending in SCATTER sweep-2.
+
+    The correctness invariant (mid-sweep, head at block `b`): cells of blocks
+    `< b` hold the **intermediate** encoding (`scatterInterWork`), cells of blocks
+    `≥ b` (in the old region) still hold the **old** encoding (`SimInvAt M`), and
+    `rightCarry t` flags a head that moved right out of block `b-1` and is pending
+    deposit at block `b`. Suggested decomposition mirrors GATHER:
+    `triple → block (incoming rc → outgoing rc) → sweep over M blocks → materialize
+    block M+1 → turnaround`. The post-sweep tape is `SimInvAt (M+1)` for
+    `fun t => scatterInterWork (c.work t) (wact t)`, with `isLeftMover t = decide
+    ((wact t).2 = .left)`; SCATTER sweep-2 then finishes the left-movers to reach
+    `SimInvAt (M+1)` for `c'`. (Proof: the research-grade core, in progress.) -/
+theorem scatter1_sweep_PLAN : True := trivial
+
+/-- **SCATTER sweep-1 — target (the crux, proof in progress).** From the
+    REWIND-produced `scatter1` config (cell 1, `pos (0,0)`, `rightCarry` marking
+    the position-0 heads, all else empty, encoding the old `c.work` at `M`), the
+    sweep runs `3*k*(M+1) + 1` steps and lands in SCATTER sweep-2 with the work
+    tape encoding the **intermediate** configuration (`scatterInterWork` — new
+    symbols everywhere, right/stay heads relocated, left-movers parked at the old
+    spot) materialized to `M+1`, recording the left-movers in `isLeftMover`. The
+    work tape is existential (its exact head position is incidental — sweep-2
+    consumes it). This is the research-grade core; the proof will decompose as
+    `triple → block (rightCarry in→out) → M-block sweep → materialize → turnaround`. -/
+theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (0, 0),
+        (fun j => decide ((c.work j).read = Γ.start)), (fun _ => false), false, false))
+    (hhead : (c1.work 0).head = blockStart k 1)
+    (hinv : SimInvAt k (c1.work 0) c.work M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wfin : Fin 1 → Tape,
+      (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+            (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)),
+          input := c1.input, work := wfin, output := c1.output }
+      ∧ SimInvAt k (wfin 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1) := by
+  sorry
+
 /-- One **scatter sweep-1** step (`trace 1`): from a `scatter1 d` config, the
     result is the configuration built from `scatter1Step`'s output. Basis of the
     SCATTER sweep-1 correctness (the phase that writes `N`'s new configuration and
