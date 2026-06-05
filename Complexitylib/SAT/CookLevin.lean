@@ -246,24 +246,32 @@ def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
 /-- The seven transition clauses for one read-config + choice tuple at time `t`
     (state `q`; input head `pi` reading `si`; work head `pw` reading `sw`; output
     head `po` reading `so`; choice `b`). With `out := N.δ b q si (fun _ => sw) so`,
-    each clause is `¬(read-config) ∨ consequence`: next state `out.1`, unchanged
-    input cell, work/output writes, and the three head moves (`posMove`). -/
+    each clause is `¬(read-config) ∨ consequence`, encoding **`N.trace`'s step**:
+    if `q = qhalt` the configuration stays (the machine has halted), otherwise the
+    next state is `out.1`, the work/output cells under their heads become `out`'s
+    writes, and the three heads move per `out` (the input cell is read-only). -/
 noncomputable def activeClausesAt (N : NTM 1) (t : ℕ) (q : N.Q)
     (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : List Clause :=
   let out := N.δ b q si (fun _ => sw) so
+  let nextState := if q = N.qhalt then q else out.1
+  let wSym := if q = N.qhalt then sw else (out.2.1 0).toΓ
+  let oSym := if q = N.qhalt then so else out.2.2.1.toΓ
+  let iH := if q = N.qhalt then pi else posMove pi out.2.2.2.1
+  let wH := if q = N.qhalt then pw else posMove pw (out.2.2.2.2.1 0)
+  let oH := if q = N.qhalt then po else posMove po out.2.2.2.2.2
   let cond : Clause :=
     [⟨false, vState t (stateIdx N q)⟩,
      ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
      ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
      ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
      ⟨!b, vChoice t⟩]
-  [cond ++ [⟨true, vState (t + 1) (stateIdx N out.1)⟩],
+  [cond ++ [⟨true, vState (t + 1) (stateIdx N nextState)⟩],
    cond ++ [⟨true, vCell (t + 1) 0 pi (symIdx si)⟩],
-   cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx (out.2.1 0).toΓ)⟩],
-   cond ++ [⟨true, vCell (t + 1) 2 po (symIdx out.2.2.1.toΓ)⟩],
-   cond ++ [⟨true, vHead (t + 1) 0 (posMove pi out.2.2.2.1)⟩],
-   cond ++ [⟨true, vHead (t + 1) 1 (posMove pw (out.2.2.2.2.1 0))⟩],
-   cond ++ [⟨true, vHead (t + 1) 2 (posMove po out.2.2.2.2.2)⟩]]
+   cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx wSym)⟩],
+   cond ++ [⟨true, vCell (t + 1) 2 po (symIdx oSym)⟩],
+   cond ++ [⟨true, vHead (t + 1) 0 iH⟩],
+   cond ++ [⟨true, vHead (t + 1) 1 wH⟩],
+   cond ++ [⟨true, vHead (t + 1) 2 oH⟩]]
 
 /-- **Active transition clauses** — `activeClausesAt` for every time `t < steps`,
     state `q`, the three head positions/read symbols, and choice bit `b`. Together
