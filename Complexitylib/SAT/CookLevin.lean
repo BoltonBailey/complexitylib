@@ -150,6 +150,10 @@ theorem clause_cond_conseq (α : Assignment) (cond : Clause) (c : Lit)
     hcond, Bool.false_or] at hsat
   exact hsat
 
+/-- A satisfied positive literal `⟨true, v⟩` means its variable is true. -/
+theorem litTrue {α : Assignment} {v : ℕ} (h : Lit.eval α ⟨true, v⟩ = true) :
+    α.get v = true := by simpa [Lit.eval] using h
+
 /-- A positive unit clause `[v]` is satisfied iff its variable is true. -/
 @[simp] theorem unit_eval (α : Assignment) (v : ℕ) :
     Clause.eval α [(⟨true, v⟩ : Lit)] = α.get v := by
@@ -474,6 +478,47 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
   · rw [hci]; exact hcells 0 (by norm_num) pos hpos
   · rw [hcw]; exact hcells 1 (by norm_num) pos hpos
   · rw [hco]; exact hcells 2 (by norm_num) pos hpos
+
+open Tableau in
+/-- The seven consequence variables of the matching active-transition tuple are all
+    true: when `α` represents `c` at time `t`, the read-config matches, so each
+    `activeClausesAt` clause forces its consequence. -/
+theorem represents_conseqs (N : NTM 1) (α : Assignment) (steps P : ℕ)
+    (hactive : CNF.eval α (activeTransitionClauses N steps P) = true)
+    (t : ℕ) (ht : t < steps) (c : Cfg 1 N.Q) (hrep : Represents N α P t c)
+    (hhi : c.input.head ≤ P) (hhw : (c.work 0).head ≤ P) (hho : c.output.head ≤ P) :
+    let b := α.get (vChoice t)
+    let out := N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read
+    α.get (vState (t+1) (stateIdx N (if c.state = N.qhalt then c.state else out.1))) = true ∧
+    α.get (vCell (t+1) 0 c.input.head (symIdx c.input.read)) = true ∧
+    α.get (vCell (t+1) 1 (c.work 0).head (symIdx (if c.state = N.qhalt then (c.work 0).read
+      else if (c.work 0).head = 0 then (c.work 0).read else (out.2.1 0).toΓ))) = true ∧
+    α.get (vCell (t+1) 2 c.output.head (symIdx (if c.state = N.qhalt then c.output.read
+      else if c.output.head = 0 then c.output.read else out.2.2.1.toΓ))) = true ∧
+    α.get (vHead (t+1) 0 (if c.state = N.qhalt then c.input.head
+      else posMove c.input.head out.2.2.2.1)) = true ∧
+    α.get (vHead (t+1) 1 (if c.state = N.qhalt then (c.work 0).head
+      else posMove (c.work 0).head (out.2.2.2.2.1 0))) = true ∧
+    α.get (vHead (t+1) 2 (if c.state = N.qhalt then c.output.head
+      else posMove c.output.head out.2.2.2.2.2)) = true := by
+  obtain ⟨hst, hIci, hIcw, hIco, hHi, hHw, hHo⟩ := hrep
+  intro b out
+  have hcond := activeCond_false N α t c.state c.input.head c.input.read (c.work 0).head
+    (c.work 0).read c.output.head c.output.read b
+    hst hHi (hIci c.input.head hhi) hHw (hIcw (c.work 0).head hhw) hHo (hIco c.output.head hho) rfl
+  have hat := (activeTransitionClauses_sat N steps P α).mp hactive t ht c.state
+    c.input.head hhi c.input.read (c.work 0).head hhw (c.work 0).read c.output.head hho
+    c.output.read b
+  simp only [activeClausesAt, CNF.eval, List.all_cons, List.all_nil, Bool.and_true,
+    Bool.and_eq_true] at hat
+  obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := hat
+  exact ⟨litTrue (clause_cond_conseq α _ _ ha1 hcond),
+    litTrue (clause_cond_conseq α _ _ ha2 hcond),
+    litTrue (clause_cond_conseq α _ _ ha3 hcond),
+    litTrue (clause_cond_conseq α _ _ ha4 hcond),
+    litTrue (clause_cond_conseq α _ _ ha5 hcond),
+    litTrue (clause_cond_conseq α _ _ ha6 hcond),
+    litTrue (clause_cond_conseq α _ _ ha7 hcond)⟩
 
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
