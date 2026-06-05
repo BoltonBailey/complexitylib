@@ -57,6 +57,9 @@ structure Corr {k : ℕ} (N : NTM k) (M : ℕ)
   outputEq : c1.output = c.output
   /-- The single work tape encodes `N`'s `k` work tapes. -/
   inv : SimInvAt k (c1.work 0) c.work M
+  /-- Each `N` work tape is blank beyond the materialized region (heads never
+      reached there). Needed to materialize the fresh block at SCATTER. -/
+  wbeyond : ∀ (j : Fin k) (p : ℕ), M < p → (c.work j).cells p = Γ.blank
 
 /-- **Base case.** The initial `singleTapeSim N` configuration corresponds to
     `N`'s initial configuration, materialized to `M = 0` (empty used region). -/
@@ -67,6 +70,11 @@ theorem corr_init {k : ℕ} (N : NTM k) (x : List Bool) :
   inputEq := rfl
   outputEq := rfl
   inv := simInvAt_init k
+  wbeyond := fun _ p hp => by
+    show (initTape []).cells p = Γ.blank
+    simp only [initTape]
+    rw [if_neg (by omega : ¬ p = 0)]
+    simp
 
 /-- Writing back the read symbol preserves whether a cell holds the accept bit
     `1` (`readBackWrite` fixes `0/1/□` and maps `▷ ↦ □`, never producing a
