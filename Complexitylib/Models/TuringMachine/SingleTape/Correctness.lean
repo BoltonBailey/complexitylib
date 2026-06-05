@@ -788,6 +788,68 @@ theorem Scatter2MidInv.toSimInv {k : ℕ} {t : Tape} {w : Fin k → Tape}
   sym := fun q hq1 hqM j => ⟨(h.donePart q hq1 hqM j).2.1, (h.donePart q hq1 hqM j).2.2⟩
   sentinel := h.sentinel
 
+/-- **Within-block partial invariant** for the SCATTER sweep-2 block step: like
+    `Scatter2MidInv` at boundary `p+1`, but block `p` itself is split — its top `m`
+    tapes `[k-m, k-1]` (swept first, leftward) hold the final (`scatterFinalWork`)
+    head-bits, the rest still intermediate. `… p 0` ⇔ `Scatter2MidInv … (p+1)`; `… p k`
+    ⇔ `Scatter2MidInv … p` (see `ofMid`/`toMidPred`). -/
+structure Scatter2BlockInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
+    (wact : Fin k → Γw × Dir3) (M p m : ℕ) : Prop where
+  /-- Cell 0 is the global start marker `▷`. -/
+  cell0 : t.cells 0 = Γ.start
+  /-- Blocks `(p, M+1]`: final (`scatterFinalWork`) head-bits. -/
+  donePart : ∀ q, p < q → q ≤ M + 1 → ∀ j : Fin k,
+    t.cells (headBitCell k q j)
+        = (if (scatterFinalWork (w j) (wact j)).head = q then Γ.one else Γ.zero) ∧
+      t.cells (symCell k q j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).1 ∧
+      t.cells (symCell k q j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).2
+  /-- Block `p`, tapes `[k-m, k-1]`: already final-encoded. -/
+  doneTape : ∀ j : Fin k, k - m ≤ (j : ℕ) →
+    t.cells (headBitCell k p j)
+        = (if (scatterFinalWork (w j) (wact j)).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2
+  /-- Block `p`, tapes `[0, k-m)`: still intermediate. -/
+  oldTape : ∀ j : Fin k, (j : ℕ) < k - m →
+    t.cells (headBitCell k p j)
+        = (if (scatterInterWork (w j) (wact j)).head = p then Γ.one else Γ.zero) ∧
+      t.cells (symCell k p j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).1 ∧
+      t.cells (symCell k p j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells p)).2
+  /-- Blocks `[1, p)`: still intermediate. -/
+  oldPart : ∀ q, 1 ≤ q → q < p → ∀ j : Fin k,
+    t.cells (headBitCell k q j)
+        = (if (scatterInterWork (w j) (wact j)).head = q then Γ.one else Γ.zero) ∧
+      t.cells (symCell k q j) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).1 ∧
+      t.cells (symCell k q j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).2
+  /-- The sentinel region (block `M+2` onward) is blank. -/
+  sentinel : ∀ c : ℕ, blockStart k (M + 2) ≤ c → t.cells c = Γ.blank
+
+/-- Entering block `p` (no tapes swept): `Scatter2MidInv … (p+1)` is `Scatter2BlockInv …
+    p 0` (block `p` still all intermediate). -/
+theorem Scatter2BlockInv.ofMid {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M p : ℕ} (hp1 : 1 ≤ p)
+    (h : Scatter2MidInv t w wact M (p + 1)) : Scatter2BlockInv t w wact M p 0 where
+  cell0 := h.cell0
+  donePart := fun q hq hqM j => h.donePart q (by omega) hqM j
+  doneTape := fun j hj => absurd hj (by have := j.isLt; omega)
+  oldTape := fun j _ => h.oldPart p hp1 (by omega) j
+  oldPart := fun q hq1 hqp j => h.oldPart q hq1 (by omega) j
+  sentinel := h.sentinel
+
+/-- Leaving block `p` (all `k` tapes swept): `Scatter2BlockInv … p k` is `Scatter2MidInv
+    … p` (block `p` now all final). -/
+theorem Scatter2BlockInv.toMidPred {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M p : ℕ}
+    (h : Scatter2BlockInv t w wact M p k) : Scatter2MidInv t w wact M p where
+  cell0 := h.cell0
+  donePart := fun q hq hqM j => by
+    rcases Nat.lt_or_ge p q with hlt | hge
+    · exact h.donePart q hlt hqM j
+    · obtain rfl : q = p := by omega
+      exact h.doneTape j (by omega)
+  oldPart := fun q hq1 hqp j => h.oldPart q hq1 hqp j
+  sentinel := h.sentinel
+
 /-- The SCATTER head triples write the symbol via the **writable** codec
     (`encSymW s`), but the `scatterInterWork` target reads it via the
     full-alphabet codec applied to the written cell (`encSymΓ s.toΓ`). They
