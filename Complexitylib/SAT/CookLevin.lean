@@ -762,6 +762,14 @@ theorem tableau_sat_to_accepts (N : NTM 1) (steps : ℕ) (x : List Bool)
     exact symIdx_inj ((Nat.pair_eq_pair.mp (enc_inj hu).2.2.2.1).2)
   exact ⟨fun i => α.get (vChoice i.val), hHalt, hOut⟩
 
+/-- Assignment backed by a function `g`, truncated to `[0, M)`; reads back as `g`
+    on that range. The forward direction builds its satisfying witness this way. -/
+def assignOf (M : ℕ) (g : ℕ → Bool) : Assignment := (List.range M).map g
+
+theorem assignOf_get {M : ℕ} (g : ℕ → Bool) {v : ℕ} (h : v < M) :
+    (assignOf M g).get v = g v := by
+  simp [assignOf, Assignment.get, h]
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
