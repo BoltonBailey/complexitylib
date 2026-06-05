@@ -371,6 +371,34 @@ theorem simDelta_right_of_start {k : ℕ} (N : NTM k) (b : Bool) (q : SimQ k N.Q
       fun i hi => TM.idleDir_right_of_start (hw i ▸ hi),
       fun h => TM.idleDir_right_of_start h⟩
 
+/-- **Choice irrelevance — GATHER step.** Off the `□` sentinel, the GATHER step
+    does not consult the nondeterministic bit `b` (only the sentinel step fires
+    `N.δ b`), so it produces the same output under any choice. -/
+theorem gatherStep_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (d : GatherData k N.Q)
+    (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
+    gatherStep N b d iHead wH oHead = gatherStep N b' d iHead wH oHead := by
+  simp only [gatherStep, if_neg h]
+
+/-- **Choice irrelevance — one simulator step.** The single-tape simulator's
+    transition consults the nondeterministic bit only at a GATHER step reading the
+    `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
+    steps identically under any choice. -/
+theorem simDelta_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (state : SimQ k N.Q)
+    (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ)
+    (h : ∀ d, state = SimQ.gather d → wHead 0 ≠ Γ.blank) :
+    simDelta N b state iHead wHead oHead = simDelta N b' state iHead wHead oHead := by
+  rcases state with q | d | d | d | d | d | ⟨⟩
+  · rfl
+  · show simDelta N b (SimQ.gather d) iHead wHead oHead
+      = simDelta N b' (SimQ.gather d) iHead wHead oHead
+    simp only [simDelta]
+    exact gatherStep_choice_irrel N b b' d iHead (wHead 0) oHead (h d rfl)
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+
 end NTM.SingleTape
 
 namespace NTM
