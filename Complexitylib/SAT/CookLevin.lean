@@ -942,6 +942,53 @@ theorem fassign_get_vHead (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps 
   ⟨fun h => (vHead_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
    fun h => listAssign_get_true ((vHead_mem_ftraceVars N x g steps P).mpr h)⟩
 
+open Tableau in
+/-- A one-hot constraint over `(range n).map f` is satisfied when exactly variable
+    `f k` is true (`k < n`, and `f j` true forces `j = k`). -/
+theorem exactlyOne_of_unique {α : Assignment} {n : ℕ} {f : ℕ → ℕ} {k : ℕ} (hk : k < n)
+    (htrue : α.get (f k) = true) (huniq : ∀ j, α.get (f j) = true → j = k) :
+    CNF.eval α (exactlyOne ((List.range n).map f)) = true := by
+  rw [exactlyOne_sat]
+  refine ⟨⟨f k, List.mem_map.mpr ⟨k, List.mem_range.mpr hk, rfl⟩, htrue⟩, ?_⟩
+  rw [List.pairwise_map]
+  exact (List.nodup_range (n := n)).imp
+    (fun {a b} hne hc => hne ((huniq a hc.1).trans (huniq b hc.2).symm))
+
+theorem fheadPos_le (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp : ℕ) :
+    fheadPos N x g t tp ≤ t := by
+  obtain ⟨hi, hw, ho⟩ := trace_heads_le N g x t
+  unfold fheadPos fcfg
+  split_ifs <;> assumption
+
+open Tableau in
+theorem fassign_oneHotStates (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
+    CNF.eval (fassign N x g steps P) (oneHotStates N steps) = true := by
+  rw [oneHotStates_sat]
+  intro t ht
+  exact exactlyOne_of_unique (stateIdx_lt N _)
+    ((fassign_get_vState N x g steps P).mpr ⟨ht, rfl⟩)
+    (fun j hj => ((fassign_get_vState N x g steps P).mp hj).2)
+
+open Tableau in
+theorem fassign_oneHotCells (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
+    CNF.eval (fassign N x g steps P) (oneHotCells 1 steps P) = true := by
+  rw [oneHotCells_sat]
+  intro t ht tp htp pos hpos
+  exact exactlyOne_of_unique (symIdx_lt _)
+    ((fassign_get_vCell N x g steps P).mpr ⟨ht, htp, hpos, rfl⟩)
+    (fun j hj => ((fassign_get_vCell N x g steps P).mp hj).2.2.2)
+
+open Tableau in
+theorem fassign_oneHotHeads (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    (hP : steps ≤ P) :
+    CNF.eval (fassign N x g steps P) (oneHotHeads 1 steps P) = true := by
+  rw [oneHotHeads_sat]
+  intro t ht tp htp
+  exact exactlyOne_of_unique
+    (Nat.lt_succ_of_le (le_trans (fheadPos_le N x g t tp) (le_trans ht hP)))
+    ((fassign_get_vHead N x g steps P).mpr ⟨ht, htp, rfl⟩)
+    (fun j hj => ((fassign_get_vHead N x g steps P).mp hj).2.2)
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
