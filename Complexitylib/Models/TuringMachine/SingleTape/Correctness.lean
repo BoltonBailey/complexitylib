@@ -3863,7 +3863,96 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
         ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
           ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1)))
       (by rw [hs2])
-    sorry
+    -- `N.trace 1` in SCATTER-final form (defeq to `dr`)
+    have htr1 : N.trace 1 bitf c =
+        { state := dr.1, input := c.input.move dr.2.2.2.1,
+          work := fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t),
+          output := c.output.writeAndMove dr.2.2.1 dr.2.2.2.2.2 } := by
+      rw [trace_one_scatterFinal N bitf c hne]
+    refine ⟨1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1,
+      fun _ => bitf 0, ?_, ?_⟩
+    · rw [show 1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1
+            = 1 + 3 * k * M + 1 + blockStart k (M + 1)
+              + ((3 * k * (M + 1) + 1) + ((3 * k * (M + 1) + 1) + 1)) from by omega,
+        trace_const_add, trace_const_add, trace_const_add, hcommit, htr1]
+      -- abbreviate the COMMIT-config (input/output/work after the two scatter sweeps)
+      set cc := (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
+        ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
+          ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1))
+      have hci : cc.input = c.input.move (TM.idleDir c.input.read) := by rw [hs2, hs1, hr1]
+      have hco : cc.output =
+          c.output.writeAndMove (TM.readBackWrite c.output.read).toΓ (TM.idleDir c.output.read) := by
+        rw [hs2, hs1, hr1]
+      have hcw0 : cc.work 0 = wfin2 0 := by rw [hs2]
+      have hns1' : (wfin2 0).cells 1 ≠ Γ.start := by
+        by_cases h1 : 1 < blockStart k (M + 1 + 1)
+        · exact hsi3.materialized_ne_start (le_refl 1) h1
+        · rw [hsi3.sentinel 1 (by omega)]; decide
+      have hfw : (cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+          (TM.idleDir (cc.work 0).read) = { head := 1, cells := (wfin2 0).cells } := by
+        rw [hcw0, run_work_eq (wfin2 0) (by omega) hsi3.cell0 hns1']
+      refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · -- headLe
+        show ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+          (TM.idleDir (cc.work 0).read)).head ≤ 1
+        rw [hfw]
+      · -- inputEq
+        show cc.input.move (if c.input.read = Γ.start then TM.idleDir cc.input.read
+          else safeDir cc.input.read dr.2.2.2.1) = c.input.move dr.2.2.2.1
+        rw [hci]
+        exact commit_input_eq c.input dr.2.2.2.1 hcorr.inputWf
+          (N.δ_right_of_start (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read).1
+      · -- outputEq
+        show cc.output.writeAndMove (if c.output.read = Γ.start then
+              TM.readBackWrite cc.output.read else dr.2.2.1).toΓ
+            (if c.output.read = Γ.start then TM.idleDir cc.output.read
+             else safeDir cc.output.read dr.2.2.2.2.2)
+          = c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2
+        rw [hco]
+        exact commit_output_eq c.output dr.2.2.1 dr.2.2.2.2.2 hcorr.outputWf
+          (N.δ_right_of_start (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2
+      · -- inv
+        show SimInvAt k ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+          (TM.idleDir (cc.work 0).read)) (fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t)) (M + 1)
+        rw [hfw]
+        exact hsi3.cells_congr rfl
+      · -- wbeyond
+        intro j p hp
+        show (scatterFinalWork (c.work j) (dr.2.1 j, dr.2.2.2.2.1 j)).cells p = Γ.blank
+        rw [scatterFinalWork_cells,
+          scatterInterWork_cells_of_ne (c.work j) _ (by have := hcorr.inv.heads_le j; omega)]
+        exact hcorr.wbeyond j p (by omega)
+      · -- inputWf
+        intro p hp
+        show (c.input.move dr.2.2.2.1).cells p ≠ Γ.start
+        cases dr.2.2.2.1 <;> exact hcorr.inputWf p hp
+      · -- outputWf
+        intro p hp
+        show (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells p ≠ Γ.start
+        have hc : (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells
+            = (c.output.write dr.2.2.1.toΓ).cells := by cases dr.2.2.2.2.2 <;> rfl
+        rw [hc, Tape.write]
+        split
+        · exact hcorr.outputWf p hp
+        · show Function.update c.output.cells c.output.head dr.2.2.1.toΓ p ≠ Γ.start
+          rw [Function.update_apply]
+          split
+          · cases dr.2.2.1 <;> decide
+          · exact hcorr.outputWf p hp
+    · -- step count ≤ macroBound k M
+      have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
+        simp only [blockStart, blockWidth, Nat.add_sub_cancel]
+        rw [Nat.mul_comm M (3 * k)]
+      have h3 : 3 * k * (M + 1) = 3 * k * M + 3 * k := by rw [Nat.mul_add, Nat.mul_one]
+      have hmb : macroBound k M = 16 * k * M + 16 * k + 16 * M + 16 := by
+        unfold macroBound
+        rw [Nat.mul_add 16 k 1, Nat.mul_one, Nat.add_mul, Nat.mul_add (16 * k) M 1, Nat.mul_one,
+          Nat.mul_add 16 M 1, Nat.mul_one]
+        omega
+      have hle : 4 * (3 * k * M) ≤ 16 * k * M := by
+        calc 4 * (3 * k * M) = 4 * (3 * k) * M := by rw [← Nat.mul_assoc]
+          _ ≤ 16 * k * M := Nat.mul_le_mul (by omega) (le_refl M)
+      rw [hbs, h3, hmb]; omega
   · -- `k = 0` (no work tapes)
     sorry
 
