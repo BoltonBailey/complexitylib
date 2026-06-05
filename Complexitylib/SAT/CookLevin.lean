@@ -148,6 +148,21 @@ noncomputable def acceptClauses {k : ℕ} (N : NTM k) (steps : ℕ) : List Claus
   [[⟨true, vState steps (stateIdx N N.qhalt)⟩],
    [⟨true, vCell steps (k + 1) 1 (symIdx Γ.one)⟩]]
 
+/-- **Transition frame.** A cell not under its tape's head keeps its symbol from
+    time `t` to `t+1`. For each tape/position/symbol, the two clauses encode
+    `¬(head at pos) → (cellₜ = cellₜ₊₁)` (a head literal disjoined with each
+    direction of the `↔`). The complementary "active" clauses (cell under the head
+    updated per `N.δ`) are supplied separately. -/
+def frameClauses (k steps P : ℕ) : List Clause :=
+  (List.range steps).flatMap fun t =>
+    (List.range (k + 2)).flatMap fun tp =>
+      (List.range (P + 1)).flatMap fun pos =>
+        (List.range 4).flatMap fun s =>
+          [([⟨true, vHead t tp pos⟩, ⟨false, vCell t tp pos s⟩,
+              ⟨true, vCell (t + 1) tp pos s⟩] : Clause),
+           ([⟨true, vHead t tp pos⟩, ⟨true, vCell t tp pos s⟩,
+              ⟨false, vCell (t + 1) tp pos s⟩] : Clause)]
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
