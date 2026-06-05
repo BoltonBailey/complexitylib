@@ -3664,7 +3664,7 @@ theorem trace_one_scatterFinal {k : ℕ} (N : NTM k) (bitf : Fin 1 → Bool) (c 
 theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bit : Bool) :
-    (singleTapeSim N).trace (3 + 6 * k * M) (fun _ => bit) c1 =
+    (singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bit) c1 =
       { state := SimQ.scatter1
           ((N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).1,
            (fun i => ((N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.1 i,
@@ -3709,9 +3709,58 @@ theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
   refine ⟨?_, hinv.cells_congr rfl⟩
   have hir : c1.input.read = c.input.read := by rw [hinputEq]
   have hor : c1.output.read = c.output.read := by rw [houtputEq]
-  -- Phase 2 (gather_sentinel: COMPUTE) + Phase 3 (rewind_sweep) + trace_const_add
-  -- chaining remain; the COMPUTE δ already matches trace_one's δr (iSym/acc/oSym).
-  sorry
+  -- the gather-sweep config's input/output/work, in simplified form
+  have hcgi : ((singleTapeSim N).trace (3 * k * M) (fun _ => bit)
+      ((singleTapeSim N).trace 1 (fun _ => bit) c1)).input
+      = c1.input.move (TM.idleDir c1.input.read) := by rw [hgather, e1]
+  have hcgo : ((singleTapeSim N).trace (3 * k * M) (fun _ => bit)
+      ((singleTapeSim N).trace 1 (fun _ => bit) c1)).output
+      = c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ (TM.idleDir c1.output.read) := by
+    rw [hgather, e1]
+  have hcgw : ((singleTapeSim N).trace (3 * k * M) (fun _ => bit)
+      ((singleTapeSim N).trace 1 (fun _ => bit) c1)).work 0
+      = { head := blockStart k (M + 1), cells := (c1.work 0).cells } := by
+    rw [hgather]; dsimp only; rw [e1]
+  -- Phase 2: gather sentinel (the one COMPUTE step — fires `N.δ bit …`)
+  have hsent : (singleTapeSim N).trace 1 (fun _ => bit)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => bit)
+        ((singleTapeSim N).trace 1 (fun _ => bit) c1)) =
+      { state := SimQ.rewind
+          ((N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).1,
+           (fun i => ((N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.1 i,
+              (N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.1 i)),
+           ((N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.1,
+            (N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.2),
+           (N.δ bit c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.1,
+           c1.input.read, c1.output.read, (fun j => decide ((c.work j).read = Γ.start))),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun _ => { head := blockStart k (M + 1) - 1, cells := (c1.work 0).cells },
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+    rw [gather_sentinel N bit c.state (fun j => (c.work j).read) c1.input.read c1.output.read
+        (⟨0, by omega⟩, 0) rf' pending' _ (by rw [hgather])
+        (by rw [hcgw]; exact hinv.sentinel (blockStart k (M + 1)) (le_refl _))]
+    refine (Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩
+    · rw [hcgi]; exact tape_idle_stay _ hisR
+    · funext i; obtain rfl : i = 0 := Subsingleton.elim i 0
+      rw [hcgw, work_write_left _ Γw.blank.toΓ (by have := one_le_blockStart k (M + 1); omega),
+        show Γw.blank.toΓ = (c1.work 0).cells (blockStart k (M + 1)) from
+          (hinv.sentinel (blockStart k (M + 1)) (le_refl _)).symm, Function.update_eq_self]
+    · rw [hcgo]; exact tape_idle_writeMove _ hosR
+  -- Phase 3: rewind sweep + trace_const_add chaining
+  have hbs1 : blockStart k (M + 1) = blockStart k (M + 1) - 1 + 1 := by
+    have := one_le_blockStart k (M + 1); omega
+  rw [trace_const_add, trace_const_add, trace_const_add, hbs1,
+      rewind_sweep N bit _ _ _ _ c1.input.read c1.output.read
+        (fun j => decide ((c.work j).read = Γ.start))
+        ((singleTapeSim N).trace 1 (fun _ => bit)
+          ((singleTapeSim N).trace (3 * k * M) (fun _ => bit)
+            ((singleTapeSim N).trace 1 (fun _ => bit) c1)))
+        (blockStart k (M + 1) - 1)
+        (by rw [hsent]) (by rw [hsent]) (by rw [hsent]; exact hinv.cell0)
+        (fun p' hp1 hp2 => by rw [hsent]; exact hinv.materialized_ne_start hp1 (by omega))
+        (by rw [hsent]; exact hisR) (by rw [hsent]; exact hosR),
+      hsent, hir, hor, hinputEq, houtputEq]
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
