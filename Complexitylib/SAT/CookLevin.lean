@@ -253,13 +253,22 @@ def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
 
 @[simp] theorem mem_true_false (b : Bool) : b ∈ [true, false] := by cases b <;> simp
 
-/-- The seven transition clauses for one read-config + choice tuple at time `t`
-    (state `q`; input head `pi` reading `si`; work head `pw` reading `sw`; output
-    head `po` reading `so`; choice `b`). With `out := N.δ b q si (fun _ => sw) so`,
-    each clause is `¬(read-config) ∨ consequence`, encoding **`N.trace`'s step**:
-    if `q = qhalt` the configuration stays (the machine has halted), otherwise the
-    next state is `out.1`, the work/output cells under their heads become `out`'s
-    writes, and the three heads move per `out` (the input cell is read-only). -/
+/-- The shared "read-config" condition literals (all negated) of one transition
+    tuple: state `q`, the three heads at `pi`/`pw`/`po` reading `si`/`sw`/`so`, and
+    choice `b`. When `α` exhibits exactly this read-config every literal is false. -/
+noncomputable def activeCond (N : NTM 1) (t : ℕ) (q : N.Q)
+    (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : Clause :=
+  [⟨false, vState t (stateIdx N q)⟩,
+   ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
+   ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
+   ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
+   ⟨!b, vChoice t⟩]
+
+/-- The seven transition clauses for one read-config + choice tuple at time `t`,
+    encoding **`N.trace`'s step**: if `q = qhalt` the configuration stays (the
+    machine has halted), otherwise the next state is `out.1` (`out := N.δ b q …`),
+    the work/output cells under their heads become `out`'s writes, and the three
+    heads move per `out` (the input cell is read-only). -/
 noncomputable def activeClausesAt (N : NTM 1) (t : ℕ) (q : N.Q)
     (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : List Clause :=
   let out := N.δ b q si (fun _ => sw) so
@@ -269,12 +278,7 @@ noncomputable def activeClausesAt (N : NTM 1) (t : ℕ) (q : N.Q)
   let iH := if q = N.qhalt then pi else posMove pi out.2.2.2.1
   let wH := if q = N.qhalt then pw else posMove pw (out.2.2.2.2.1 0)
   let oH := if q = N.qhalt then po else posMove po out.2.2.2.2.2
-  let cond : Clause :=
-    [⟨false, vState t (stateIdx N q)⟩,
-     ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
-     ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
-     ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
-     ⟨!b, vChoice t⟩]
+  let cond : Clause := activeCond N t q pi si pw sw po so b
   [cond ++ [⟨true, vState (t + 1) (stateIdx N nextState)⟩],
    cond ++ [⟨true, vCell (t + 1) 0 pi (symIdx si)⟩],
    cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx wSym)⟩],
@@ -370,6 +374,20 @@ theorem activeTransitionClauses_sat (N : NTM 1) (steps P : ℕ) (α : Assignment
   simp only [activeTransitionClauses, cnf_eval_flatMap, List.all_eq_true, List.mem_range,
     Nat.lt_succ_iff, Finset.mem_toList, Finset.mem_univ, mem_allSyms, mem_true_false,
     forall_true_left]
+
+/-- When `α` exhibits the read-config of a transition tuple — state `q`, the heads
+    at `pi`/`pw`/`po` reading `si`/`sw`/`so`, and choice `b` — every literal of
+    `activeCond` is false (so each transition clause forces its consequence). -/
+theorem activeCond_false (N : NTM 1) (α : Assignment) (t : ℕ) (q : N.Q)
+    (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool)
+    (h1 : α.get (vState t (stateIdx N q)) = true)
+    (h2 : α.get (vHead t 0 pi) = true) (h3 : α.get (vCell t 0 pi (symIdx si)) = true)
+    (h4 : α.get (vHead t 1 pw) = true) (h5 : α.get (vCell t 1 pw (symIdx sw)) = true)
+    (h6 : α.get (vHead t 2 po) = true) (h7 : α.get (vCell t 2 po (symIdx so)) = true)
+    (h8 : α.get (vChoice t) = b) :
+    (activeCond N t q pi si pw sw po so b).any (Lit.eval α) = false := by
+  simp only [activeCond, List.any_cons, List.any_nil, Lit.eval, h1, h2, h3, h4, h5, h6, h7, h8]
+  cases b <;> simp
 
 end Tableau
 
