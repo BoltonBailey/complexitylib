@@ -298,6 +298,30 @@ theorem frameClauses_sat (k steps P : ℕ) (α : Assignment) :
   generalize α.get (vCell (t + 1) tp pos s) = b
   cases h <;> cases a <;> cases b <;> simp
 
+/-- The state one-hot clauses hold iff every time-step satisfies its exactly-one
+    state constraint. -/
+theorem oneHotStates_sat (N : NTM 1) (steps : ℕ) (α : Assignment) :
+    CNF.eval α (oneHotStates N steps) = true ↔
+      ∀ t, t ≤ steps →
+        CNF.eval α (exactlyOne ((List.range (Fintype.card N.Q)).map (vState t))) = true := by
+  simp only [oneHotStates, cnf_eval_flatMap, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
+
+/-- The cell one-hot clauses hold iff every cell satisfies its exactly-one symbol
+    constraint. -/
+theorem oneHotCells_sat (k steps P : ℕ) (α : Assignment) :
+    CNF.eval α (oneHotCells k steps P) = true ↔
+      ∀ t, t ≤ steps → ∀ tp, tp < k + 2 → ∀ pos, pos ≤ P →
+        CNF.eval α (exactlyOne ((List.range 4).map (vCell t tp pos))) = true := by
+  simp only [oneHotCells, cnf_eval_flatMap, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
+
+/-- The head one-hot clauses hold iff every tape head satisfies its exactly-one
+    position constraint. -/
+theorem oneHotHeads_sat (k steps P : ℕ) (α : Assignment) :
+    CNF.eval α (oneHotHeads k steps P) = true ↔
+      ∀ t, t ≤ steps → ∀ tp, tp < k + 2 →
+        CNF.eval α (exactlyOne ((List.range (P + 1)).map (vHead t tp))) = true := by
+  simp only [oneHotHeads, cnf_eval_flatMap, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
