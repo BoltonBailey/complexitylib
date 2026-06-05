@@ -3482,6 +3482,65 @@ theorem scatter2_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M 
     · rw [hwh, show M + 2 - (B + 1) = M + 1 - B from by omega]
     · rw [show M + 2 - (B + 1) = M + 1 - B from by omega]; exact hmid'
 
+/-- **SCATTER sweep-2 → COMMIT (`trace (3*k*(M+1) + 1)`).** From the sweep-1 output
+    (scatter2 entry: `isLeftMover = decide(left)`, `leftCarry = 0`, head at
+    `blockStart (M+2) - 1`, the work tape `SimInvAt (M+1)`-encoding `scatterInterWork`),
+    sweep all `M+1` blocks leftward (turning each left-mover's head-bit) and then read
+    `▷` to hand off to COMMIT. The work tape now `SimInvAt (M+1)`-encodes the **final**
+    config `scatterFinalWork` — exactly `N`'s one-step images. Wraps `scatter2_sweep_aux`
+    (at `B = M+1`) between `ofSimInv` and `toSimInv`, then `scatter2_start`. -/
+theorem scatter2_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ) (hk : 1 ≤ k)
+    (q' : N.Q) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ) (wact : Fin k → Γw × Dir3)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+        (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)))
+    (hhead : (c1.work 0).head = blockStart k (M + 2) - 1)
+    (hinv : SimInvAt k (c1.work 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1))
+    (hwf0 : ∀ j : Fin k, (c.work j).cells 0 = Γ.start)
+    (hns0 : ∀ (j : Fin k) (p : ℕ), 1 ≤ p → (c.work j).cells p ≠ Γ.start)
+    (hle : ∀ j : Fin k, (c.work j).head ≤ M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wfin : Fin 1 → Tape,
+      (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bb) c1 =
+        { state := SimQ.commit (q', oWoD.1, oWoD.2, iD, iSym, oSym),
+          input := c1.input, work := wfin, output := c1.output }
+      ∧ SimInvAt k (wfin 0) (fun t => scatterFinalWork (c.work t) (wact t)) (M + 1) := by
+  have hilm_eq : (fun t : Fin k => decide ((wact t).2 = Dir3.left))
+      = (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2)) := by
+    funext j; rw [decide_eq_decide]
+    exact ⟨fun h => ⟨h, by have := hle j; omega⟩, fun h => h.1⟩
+  have hlc_eq : (fun _ : Fin k => false)
+      = (fun j => decide ((c.work j).head = M + 2 ∧ (wact j).2 = Dir3.left)) := by
+    funext j; symm; exact decide_eq_false (by rintro ⟨h1, _⟩; have := hle j; omega)
+  obtain ⟨wtS, hS, hwhS, hmidS⟩ := scatter2_sweep_aux N bb c M hk q' wact oWoD iD iSym oSym c1
+    (by rw [hst, hilm_eq, hlc_eq]) hhead (Scatter2MidInv.ofSimInv hinv) his hos (M + 1) (le_refl _)
+  rw [show M + 2 - (M + 1) = 1 from by omega] at hS hwhS hmidS
+  have hcwS : ((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work 0 = wtS := by rw [hS]
+  have hSin : ((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).input = c1.input := by
+    rw [hS]
+  have hSout : ((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).output = c1.output := by
+    rw [hS]
+  have hh0 : wtS.head = 0 := by rw [hwhS, blockStart_one]
+  have hsimFinal : SimInvAt k wtS (fun t => scatterFinalWork (c.work t) (wact t)) (M + 1) :=
+    Scatter2MidInv.toSimInv hwf0 hns0 hle hmidS
+  have hstart := scatter2_start N bb q' oWoD iD iSym oSym (⟨k - 1, by omega⟩, 2)
+    (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ 1))
+    (fun j => decide ((c.work j).head = 1 ∧ (wact j).2 = Dir3.left))
+    ((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1)
+    (by rw [hS])
+    (by simp only [Tape.read]; rw [hcwS, hh0]; exact hsimFinal.cell0)
+    (by rw [hSin]; exact his) (by rw [hSout]; exact hos)
+  refine ⟨fun i => (((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work i).writeAndMove
+      Γw.blank.toΓ Dir3.right, ?_, ?_⟩
+  · rw [trace_const_add, hstart, hSin, hSout]
+  · apply hsimFinal.cells_congr
+    show ((((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work 0).writeAndMove
+        Γw.blank.toΓ Dir3.right).cells = wtS.cells
+    rw [hcwS]
+    show (wtS.write Γw.blank.toΓ).cells = wtS.cells
+    unfold Tape.write
+    rw [if_pos hh0]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
