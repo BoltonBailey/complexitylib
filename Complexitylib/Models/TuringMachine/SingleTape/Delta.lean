@@ -458,6 +458,26 @@ theorem simDelta_run_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
   · exact ⟨d, rfl⟩
   · exact absurd h (by simp [simDelta, SimQ.run, SimQ.halt])
 
+/-- **SCATTER-1 lands in `scatter1` or `scatter2`.** One sweep-1 step either
+    continues the rightward materialization (`scatter1`) or, on completing the new
+    block, turns around into sweep-2 (`scatter2`) — never any other phase. -/
+theorem scatter1Step_scatter1_or_scatter2 {k : ℕ} {Q : Type} (d : Scatter1Data k Q)
+    (iHead wH oHead : Γ) :
+    (∃ d', (scatter1Step d iHead wH oHead).1 = SimQ.scatter1 d') ∨
+    (∃ d', (scatter1Step d iHead wH oHead).1 = SimQ.scatter2 d') := by
+  simp only [scatter1Step]
+  (repeat' split) <;> first | exact Or.inl ⟨_, rfl⟩ | exact Or.inr ⟨_, rfl⟩
+
+/-- **SCATTER-2 lands in `scatter2` or `commit`.** One sweep-2 step either
+    continues the leftward deposit (`scatter2`) or, on reaching `▷`, enters
+    `commit` — never any other phase. -/
+theorem scatter2Step_scatter2_or_commit {k : ℕ} {Q : Type} (d : Scatter2Data k Q)
+    (iHead wH oHead : Γ) :
+    (∃ d', (scatter2Step d iHead wH oHead).1 = SimQ.scatter2 d') ∨
+    (∃ d', (scatter2Step d iHead wH oHead).1 = SimQ.commit d') := by
+  simp only [scatter2Step]
+  (repeat' split) <;> first | exact Or.inl ⟨_, rfl⟩ | exact Or.inr ⟨_, rfl⟩
+
 /-- **Choice irrelevance — one simulator step.** The single-tape simulator's
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
