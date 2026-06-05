@@ -826,6 +826,55 @@ theorem rewind_sweep {k : ℕ} (N : NTM k) (bb : Bool)
     exact ih _ rfl (by simp [hhead]) hcell0
       (fun p' hp1 hp2 => hne p' hp1 (by omega)) his hos
 
+/-- **REWIND stays in REWIND (per step).** Throughout the leftward sweep (head at
+    `p - i ≥ 0`, every cell in `[1,p]` non-`▷`), each intermediate config keeps the
+    `rewind` state (data unchanged — only the head moves). Since `rewind ≠ gather`,
+    this supplies the back-phase `¬gather` needed by the backward correspondence. -/
+theorem rewind_sweep_states {k : ℕ} (N : NTM k) (bb : Bool)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (initRC : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q)) (p : ℕ)
+    (hst : c1.state = SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC))
+    (hhead : (c1.work 0).head = p)
+    (hne : ∀ p', 1 ≤ p' → p' ≤ p → (c1.work 0).cells p' ≠ Γ.start)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∀ i, i ≤ p →
+      (singleTapeSim N).trace i (fun _ => bb) c1
+        = { state := SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC),
+            input := c1.input,
+            work := fun _ => { c1.work 0 with head := p - i },
+            output := c1.output } := by
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    refine (Cfg.mk.injEq ..).mpr ⟨hst, rfl, ?_, rfl⟩
+    funext x; obtain rfl : x = 0 := Subsingleton.elim x 0
+    simp only [Nat.sub_zero]
+    exact congrArg (fun h => ({ (c1.work 0) with head := h } : Tape)) hhead
+  | succ i ih =>
+    intro hsucc
+    rw [trace_const_add (singleTapeSim N) i 1 bb c1]
+    set ci := (singleTapeSim N).trace i (fun _ => bb) c1 with hci
+    have hih : ci = { state := SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC),
+                      input := c1.input, work := fun _ => { c1.work 0 with head := p - i },
+                      output := c1.output } := ih (by omega)
+    have hst_i : ci.state = SimQ.rewind (q', wact, oWoD, iD, iSym, oSym, initRC) := by rw [hih]
+    have hread_i : (ci.work 0).read ≠ Γ.start := by
+      rw [hih]; show (c1.work 0).cells (p - i) ≠ Γ.start
+      exact hne (p - i) (by omega) (by omega)
+    have hisi : ci.input.read ≠ Γ.start := by rw [hih]; exact his
+    have hosi : ci.output.read ≠ Γ.start := by rw [hih]; exact hos
+    rw [rewind_trace1 N (q', wact, oWoD, iD, iSym, oSym, initRC) bb ci hst_i]
+    simp only [rewindStep, hread_i, ↓reduceIte, tape_idle_stay ci.input hisi,
+      tape_idle_writeMove ci.output hosi]
+    refine (Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩
+    · rw [hih]
+    · funext x; obtain rfl : x = 0 := Subsingleton.elim x 0
+      rw [work_rewind_step (ci.work 0) hread_i, hih]
+      show ({ c1.work 0 with head := p - i - 1 } : Tape) = { c1.work 0 with head := p - (i + 1) }
+      congr 1
+    · rw [hih]
+
 /-- **Intermediate work tape after SCATTER sweep-1** (before sweep-2 relocates the
     left-movers). For tape `t` with old tape `ct` and `N.δ` action `(w, d)`: the
     new symbol `w` is written at the old head position; the head-bit is placed at
