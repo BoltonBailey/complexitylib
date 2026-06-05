@@ -770,6 +770,34 @@ theorem assignOf_get {M : ℕ} (g : ℕ → Bool) {v : ℕ} (h : v < M) :
     (assignOf M g).get v = g v := by
   simp [assignOf, Assignment.get, h]
 
+theorem le_foldr_max {v : ℕ} {l : List ℕ} (h : v ∈ l) : v ≤ l.foldr max 0 := by
+  induction l with
+  | nil => simp at h
+  | cons a t ih =>
+    rw [List.foldr_cons]
+    rcases List.mem_cons.mp h with h' | h'
+    · subst h'; exact le_max_left _ _
+    · exact le_trans (ih h') (le_max_right _ _)
+
+/-- Indicator assignment for a finite list of "true" variables: every listed
+    variable reads `true`, every other variable reads `false`. The truncation
+    length is one past the list's maximum, so listed variables stay in range while
+    unlisted ones are either out of range or decided `false`. -/
+def listAssign (l : List ℕ) : Assignment := assignOf (l.foldr max 0 + 1) (fun i => decide (i ∈ l))
+
+theorem listAssign_get_true {l : List ℕ} {v : ℕ} (h : v ∈ l) :
+    (listAssign l).get v = true := by
+  rw [listAssign, assignOf_get _ (Nat.lt_succ_of_le (le_foldr_max h))]
+  simp [h]
+
+theorem listAssign_get_false {l : List ℕ} {v : ℕ} (h : v ∉ l) :
+    (listAssign l).get v = false := by
+  by_cases hv : v < l.foldr max 0 + 1
+  · rw [listAssign, assignOf_get _ hv]; simp [h]
+  · simp only [listAssign, assignOf, Assignment.get]
+    rw [List.getElem?_eq_none (by simp only [List.length_map, List.length_range]; omega)]
+    rfl
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
