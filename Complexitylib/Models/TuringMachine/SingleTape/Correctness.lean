@@ -3054,7 +3054,7 @@ theorem scatter2_tape_clear {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p
   · apply scatter2_blockinv_step hp1 hpM hmk hbm
     · show Function.update (c1.work 0).cells ((c1.work 0).head - 2) Γw.zero.toΓ
         (headBitCell k p ⟨k - 1 - m, by omega⟩) = _
-      rw [← heq2, Function.update_self, if_neg hfinne]
+      rw [← heq2, Function.update_self, if_neg hfinne]; rfl
     · intro cc hcc
       exact Function.update_of_ne (fun h => hcc (h.trans heq2)) _ _
 
@@ -3107,9 +3107,238 @@ theorem scatter2_tape_deposit {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) 
   · apply scatter2_blockinv_step hp1 hpM hmk hbm
     · show Function.update (c1.work 0).cells ((c1.work 0).head - 2) Γw.one.toΓ
         (headBitCell k p ⟨k - 1 - m, by omega⟩) = _
-      rw [← heq2, Function.update_self, if_pos hfineq]
+      rw [← heq2, Function.update_self, if_pos hfineq]; rfl
     · intro cc hcc
       exact Function.update_of_ne (fun h => hcc (h.trans heq2)) _ _
+
+/-- **SCATTER sweep-2 one block (`trace (3*m)`).** Sweeping the top `m` tapes of block
+    `p` (leftward, tapes `k-1` down to `k-m`) advances `Scatter2BlockInv … p 0 → … p m`,
+    threading per-tape `leftCarry` (set by clears at `p`, the outgoing carry for block
+    `p-1`) and `isLeftMover` (cleared on deposit). Dispatches `scatter2_tape_clear/
+    deposit/keep` per tape from the pinned-down inputs `isLeftMover_in`/`leftCarry_in`.
+    Mirrors `scatter1_block_aux` with `k-1-j < m` (descending) as the "processed" test. -/
+theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
+    (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (isLeftMover_in leftCarry_in : Fin k → Bool)
+    (hilm_in : ∀ j : Fin k,
+      isLeftMover_in j = decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ p + 1))
+    (hlc_in : ∀ j : Fin k,
+      leftCarry_in j = decide ((c.work j).head = p + 1 ∧ (wact j).2 = Dir3.left))
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover_in, leftCarry_in))
+    (hhead : (c1.work 0).head = headBitCell k p ⟨k - 1, by omega⟩ + 2)
+    (hbm : Scatter2BlockInv (c1.work 0) c.work wact M p 0)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (m : ℕ) (hm : m ≤ k) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * m) (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym,
+            (⟨if m < k then k - 1 - m else k - 1, by split <;> omega⟩, 2),
+            (fun j => if k - 1 - (j : ℕ) < m ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+                false else isLeftMover_in j),
+            (fun j => if k - 1 - (j : ℕ) < m then
+                decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p) else leftCarry_in j)),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k p + 3 * (k - 1) + 2 - 3 * m
+      ∧ Scatter2BlockInv wt c.work wact M p m := by
+  induction m with
+  | zero =>
+    refine ⟨c1.work 0, ?_, ?_, hbm⟩
+    · have h0 : (singleTapeSim N).trace (3 * 0) (fun _ => bb) c1 = c1 := by
+        simp only [Nat.mul_zero]; rfl
+      rw [h0]
+      obtain ⟨cst, cin, cwk, cout⟩ := c1
+      simp only [Nat.not_lt_zero, false_and, ↓reduceIte] at hst ⊢
+      subst hst
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, ?_, rfl⟩
+      · split <;> rfl
+      · funext x
+        obtain rfl : x = 0 := Subsingleton.elim x 0
+        rfl
+    · simp only [Nat.mul_zero, Nat.sub_zero]; rw [hhead, headBitCell]
+  | succ m ih =>
+    obtain ⟨wtm, htm, hwhm, hbim⟩ := ih (by omega)
+    have hmk : m < k := by omega
+    set ILMm := (fun (j : Fin k) =>
+        if k - 1 - (j : ℕ) < m ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+          false else isLeftMover_in j) with hILMm
+    set LCm := (fun (j : Fin k) =>
+        if k - 1 - (j : ℕ) < m then decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p)
+          else leftCarry_in j) with hLCm
+    have hjval : k - 1 - (↑(⟨k - 1 - m, by omega⟩ : Fin k) : ℕ) = m := by
+      show k - 1 - (k - 1 - m) = m; omega
+    -- structural step lemmas: the m+1 closed forms are single-slot updates of the m forms
+    have hstep_lc : (fun (j : Fin k) => if k - 1 - (j : ℕ) < m + 1 then
+          decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p) else leftCarry_in j)
+        = Function.update LCm ⟨k - 1 - m, by omega⟩
+            (decide ((wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left
+              ∧ (c.work ⟨k - 1 - m, by omega⟩).head = p)) := by
+      funext j
+      by_cases hj : j = ⟨k - 1 - m, by omega⟩
+      · subst hj; rw [Function.update_self, if_pos (by rw [hjval]; omega)]
+      · rw [Function.update_of_ne hj, hLCm]
+        have hjm : (j : ℕ) ≠ k - 1 - m := fun h => hj (Fin.ext h)
+        have hjlt := j.isLt
+        by_cases hlt : k - 1 - (j : ℕ) < m
+        · simp only [if_pos hlt, if_pos (show k - 1 - (j : ℕ) < m + 1 by omega)]
+        · simp only [if_neg hlt, if_neg (show ¬ k - 1 - (j : ℕ) < m + 1 by omega)]
+    have hstep_ilm : (fun (j : Fin k) =>
+          if k - 1 - (j : ℕ) < m + 1 ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+            false else isLeftMover_in j)
+        = Function.update ILMm ⟨k - 1 - m, by omega⟩
+            (if (wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left
+              ∧ (c.work ⟨k - 1 - m, by omega⟩).head = p + 1 then false
+              else isLeftMover_in ⟨k - 1 - m, by omega⟩) := by
+      funext j
+      by_cases hj : j = ⟨k - 1 - m, by omega⟩
+      · subst hj; rw [Function.update_self]; simp only [hjval, Nat.lt_succ_self, true_and]
+      · rw [Function.update_of_ne hj, hILMm]
+        have hjm : (j : ℕ) ≠ k - 1 - m := fun h => hj (Fin.ext h)
+        have hjlt := j.isLt
+        have hiff : (k - 1 - (j : ℕ) < m + 1 ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1)
+            ↔ (k - 1 - (j : ℕ) < m ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1) :=
+          ⟨fun h => ⟨by omega, h.2⟩, fun h => ⟨by omega, h.2⟩⟩
+        simp only [hiff]
+    have hLCm_at : LCm ⟨k - 1 - m, by omega⟩ = leftCarry_in ⟨k - 1 - m, by omega⟩ := by
+      rw [hLCm]; simp only [hjval, lt_irrefl, if_false]
+    have hILMm_at : ILMm ⟨k - 1 - m, by omega⟩ = isLeftMover_in ⟨k - 1 - m, by omega⟩ := by
+      rw [hILMm]; simp only [hjval, lt_irrefl, false_and, if_false]
+    -- facts about the IH config cM = trace (3*m) c1
+    have hcs : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).state
+        = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1 - m, by omega⟩, 2), ILMm, LCm) := by
+      rw [htm]; simp only [if_pos hmk]
+    have hch : (((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).work 0).head
+        = headBitCell k p ⟨k - 1 - m, by omega⟩ + 2 := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).work 0 = wtm from by rw [htm], hwhm]
+      simp only [headBitCell]; omega
+    have hcbi : Scatter2BlockInv (((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).work 0)
+        c.work wact M p m := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).work 0 = wtm from by rw [htm]]
+      exact hbim
+    have hcis : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input.read ≠ Γ.start := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input = c1.input from by rw [htm]]
+      exact his
+    have hcos : ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output.read ≠ Γ.start := by
+      rw [show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output = c1.output from by rw [htm]]
+      exact hos
+    -- pos reconciliation: retreatSweep ↦ the m+1 closed-form tape index
+    have hpos_eq : retreatSweep k (⟨k - 1 - m, by omega⟩, (0 : Fin 3))
+        = ((⟨if m + 1 < k then k - 1 - (m + 1) else k - 1, by split <;> omega⟩ : Fin (k + 1)),
+            (2 : Fin 3)) := by
+      simp only [retreatSweep, ↓reduceIte]
+      apply Prod.ext
+      · apply Fin.ext; simp only; split <;> split <;> omega
+      · rfl
+    -- assembly closure (trace_const_add + input/output reconciliation, done once)
+    have key : ∀ (wt : Tape) (ilm' lc' : Fin k → Bool),
+        (singleTapeSim N).trace 3 (fun _ => bb)
+            ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1)
+          = { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym,
+                (⟨if m + 1 < k then k - 1 - (m + 1) else k - 1, by split <;> omega⟩, 2), ilm', lc'),
+              input := ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input,
+              work := fun _ => wt,
+              output := ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output } →
+        ilm' = (fun (j : Fin k) =>
+            if k - 1 - (j : ℕ) < m + 1 ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+              false else isLeftMover_in j) →
+        lc' = (fun (j : Fin k) => if k - 1 - (j : ℕ) < m + 1 then
+            decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p) else leftCarry_in j) →
+        wt.head = headBitCell k p ⟨k - 1 - m, by omega⟩ - 1 →
+        Scatter2BlockInv wt c.work wact M p (m + 1) →
+        ∃ wt' : Tape,
+          (singleTapeSim N).trace (3 * (m + 1)) (fun _ => bb) c1 =
+            { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym,
+                (⟨if m + 1 < k then k - 1 - (m + 1) else k - 1, by split <;> omega⟩, 2),
+                (fun j => if k - 1 - (j : ℕ) < m + 1 ∧ (wact j).2 = Dir3.left
+                    ∧ (c.work j).head = p + 1 then false else isLeftMover_in j),
+                (fun j => if k - 1 - (j : ℕ) < m + 1 then
+                    decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p) else leftCarry_in j)),
+              input := c1.input, work := fun _ => wt', output := c1.output }
+          ∧ wt'.head = blockStart k p + 3 * (k - 1) + 2 - 3 * (m + 1)
+          ∧ Scatter2BlockInv wt' c.work wact M p (m + 1) := by
+      intro wt ilm' lc' htr hilm hlc hwh hbi
+      refine ⟨wt, ?_, ?_, hbi⟩
+      · rw [show 3 * (m + 1) = 3 * m + 3 from by omega, trace_const_add, htr, hilm, hlc,
+          show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).input = c1.input from by rw [htm],
+          show ((singleTapeSim N).trace (3 * m) (fun _ => bb) c1).output = c1.output from by rw [htm]]
+      · rw [hwh]; simp only [headBitCell]; omega
+    -- head facts for the tape currently processed (j = k-1-m)
+    have hih : (scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head
+        = if (wact ⟨k - 1 - m, by omega⟩).2 = Dir3.right then (c.work ⟨k - 1 - m, by omega⟩).head + 1
+          else (c.work ⟨k - 1 - m, by omega⟩).head := scatterInterWork_head _ _
+    have hfh : (scatterFinalWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head
+        = if (wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left then (c.work ⟨k - 1 - m, by omega⟩).head - 1
+          else (scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head :=
+      scatterFinalWork_head _ _
+    -- dispatch on the action / head of tape k-1-m
+    by_cases hleft : (wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left
+    · have hihl : (scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head
+          = (c.work ⟨k - 1 - m, by omega⟩).head := by
+        rw [hih, if_neg (by rw [hleft]; decide)]
+      have hfhl : (scatterFinalWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head
+          = (c.work ⟨k - 1 - m, by omega⟩).head - 1 := by rw [hfh, if_pos hleft]
+      by_cases hcp : (c.work ⟨k - 1 - m, by omega⟩).head = p
+      · -- clear
+        obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_tape_clear N bb c p M hp1 hpM m hmk
+          q' wact oWoD iD iSym oSym ILMm LCm _ hcs hch hcbi
+          (by rw [hihl]; exact hcp)
+          (by rw [hILMm_at, hilm_in]; exact decide_eq_true ⟨hleft, by omega⟩)
+          (by rw [hfhl]; omega) hcis hcos
+        rw [hpos_eq] at htr
+        refine key wt ILMm (Function.update LCm ⟨k - 1 - m, by omega⟩ true) htr ?_ ?_ hwh hbi
+        · rw [hstep_ilm, if_neg (by rintro ⟨_, h2⟩; omega), ← hILMm_at, Function.update_eq_self]
+        · rw [hstep_lc, decide_eq_true ⟨hleft, hcp⟩]
+      · by_cases hcp1 : (c.work ⟨k - 1 - m, by omega⟩).head = p + 1
+        · -- deposit
+          obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_tape_deposit N bb c p M hp1 hpM m hmk
+            q' wact oWoD iD iSym oSym ILMm LCm _ hcs hch hcbi
+            (by rw [hihl]; omega)
+            (by rw [hLCm_at, hlc_in]; exact decide_eq_true ⟨hcp1, hleft⟩)
+            (by rw [hfhl]; omega) hcis hcos
+          rw [hpos_eq] at htr
+          refine key wt (Function.update ILMm ⟨k - 1 - m, by omega⟩ false)
+            (Function.update LCm ⟨k - 1 - m, by omega⟩ false) htr ?_ ?_ hwh hbi
+          · rw [hstep_ilm, if_pos ⟨hleft, hcp1⟩]
+          · rw [hstep_lc, decide_eq_false (by rintro ⟨_, h2⟩; omega)]
+        · -- keep (left-mover, head not p or p+1)
+          obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_tape_keep N bb c p M hp1 hpM m hmk
+            q' wact oWoD iD iSym oSym ILMm LCm _ hcs hch hcbi
+            (by rw [hihl]; rintro ⟨h1, _⟩; exact hcp h1)
+            (by rw [hLCm_at, hlc_in]; simp only [ne_eq, decide_eq_true_eq]
+                rintro ⟨h1, _⟩; exact hcp1 h1)
+            (by rw [hihl, hfhl]; constructor <;> intro h <;> omega) hcis hcos
+          rw [hpos_eq] at htr
+          refine key wt ILMm LCm htr ?_ ?_ hwh hbi
+          · rw [hstep_ilm, if_neg (by rintro ⟨_, h3⟩; omega), ← hILMm_at, Function.update_eq_self]
+          · rw [hstep_lc,
+              show (decide ((wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left
+                  ∧ (c.work ⟨k - 1 - m, by omega⟩).head = p)) = LCm ⟨k - 1 - m, by omega⟩ from by
+                rw [hLCm_at, hlc_in, decide_eq_false (fun h => hcp h.2),
+                  decide_eq_false (fun h => hcp1 h.1)],
+              Function.update_eq_self]
+    · -- keep (not a left-mover: isLeftMover/leftCarry both false here)
+      have hilmf : isLeftMover_in ⟨k - 1 - m, by omega⟩ = false := by
+        rw [hilm_in]; exact decide_eq_false (by rintro ⟨h1, _⟩; exact hleft h1)
+      have hlcf : leftCarry_in ⟨k - 1 - m, by omega⟩ = false := by
+        rw [hlc_in]; exact decide_eq_false (by rintro ⟨_, h2⟩; exact hleft h2)
+      have hfhnl : (scatterFinalWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head
+          = (scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head := by
+        rw [hfh, if_neg hleft]
+      obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_tape_keep N bb c p M hp1 hpM m hmk
+        q' wact oWoD iD iSym oSym ILMm LCm _ hcs hch hcbi
+        (by rw [hILMm_at, hilmf]; rintro ⟨_, h2⟩; exact absurd h2 (by decide))
+        (by rw [hLCm_at, hlcf]; decide)
+        (by rw [hfhnl]) hcis hcos
+      rw [hpos_eq] at htr
+      refine key wt ILMm LCm htr ?_ ?_ hwh hbi
+      · rw [hstep_ilm, if_neg (by rintro ⟨h2, _⟩; exact hleft h2), ← hILMm_at, Function.update_eq_self]
+      · rw [hstep_lc,
+          show (decide ((wact ⟨k - 1 - m, by omega⟩).2 = Dir3.left
+              ∧ (c.work ⟨k - 1 - m, by omega⟩).head = p)) = LCm ⟨k - 1 - m, by omega⟩ from by
+            rw [hLCm_at, hlcf]; exact decide_eq_false (fun h => hleft h.1),
+          Function.update_eq_self]
 
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
