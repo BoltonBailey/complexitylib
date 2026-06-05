@@ -311,6 +311,55 @@ private theorem writeMove_idle_read_ne (t : Tape) (hwf : ∀ p, 1 ≤ p → t.ce
     exact hwf 1 (le_refl 1)
   · rw [tape_idle_writeMove t hr]; exact hr
 
+/-- **COMMIT input reconciliation.** The COMMIT input move (guarded by the recorded
+    `iSym = t.read`) exactly undoes the RUN dodge: composed with the RUN move it equals
+    `N`'s single input move `t.move iD`. At `▷` both nets to `right` (`δ_right_of_start`);
+    off `▷` the RUN move is a no-op and COMMIT's `safeDir` yields `iD`. -/
+private theorem commit_input_eq (t : Tape) (iD : Dir3)
+    (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) (hright : t.read = Γ.start → iD = Dir3.right) :
+    (t.move (TM.idleDir t.read)).move
+        (if t.read = Γ.start then TM.idleDir (t.move (TM.idleDir t.read)).read
+         else safeDir (t.move (TM.idleDir t.read)).read iD)
+      = t.move iD := by
+  by_cases hr : t.read = Γ.start
+  · rw [if_pos hr, tape_idle_stay _ (move_idle_read_ne t hwf), hright hr,
+      TM.idleDir_right_of_start hr]
+  · rw [if_neg hr, tape_idle_stay t hr,
+      show safeDir t.read iD = iD from by simp only [safeDir, hr, ↓reduceIte]]
+
+/-- **COMMIT output reconciliation.** Same as `commit_input_eq` but for the output
+    write-move: COMMIT's `oSym`-guarded write-move composed with the RUN write-move
+    equals `N`'s single output write-move `t.writeAndMove oW.toΓ oD`. -/
+private theorem commit_output_eq (t : Tape) (oW : Γw) (oD : Dir3)
+    (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) (hcell0 : t.cells 0 = Γ.start)
+    (hright : t.read = Γ.start → oD = Dir3.right) :
+    (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).writeAndMove
+        (if t.read = Γ.start then
+            TM.readBackWrite (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).read
+          else oW).toΓ
+        (if t.read = Γ.start then
+            TM.idleDir (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).read
+          else safeDir (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).read oD)
+      = t.writeAndMove oW.toΓ oD := by
+  by_cases hr : t.read = Γ.start
+  · have h0 : t.head = 0 := by
+      rw [Tape.read] at hr; by_contra h; exact hwf t.head (by omega) hr
+    have hpr : t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)
+        = { t with head := 1 } := by
+      rw [hr, TM.idleDir_start]
+      show (t.write (TM.readBackWrite Γ.start).toΓ).move Dir3.right = { t with head := 1 }
+      rw [Tape.write, if_pos h0]; simp [Tape.move, h0]
+    have hr1ne : ({ t with head := 1 } : Tape).read ≠ Γ.start := by
+      rw [Tape.read]; exact hwf 1 (le_refl 1)
+    rw [hpr]
+    simp only [if_pos hr]
+    rw [tape_idle_writeMove _ hr1ne, hright hr]
+    show ({ t with head := 1 } : Tape) = (t.write oW.toΓ).move Dir3.right
+    rw [Tape.write, if_pos h0]; simp [Tape.move, h0]
+  · simp only [if_neg hr]
+    rw [tape_idle_writeMove t hr,
+      show safeDir t.read oD = oD from by simp only [safeDir, hr, ↓reduceIte]]
+
 /-- `trace 3` with a constant choice unfolds into three single steps. -/
 private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
     M.trace 3 (fun _ => bb) c
