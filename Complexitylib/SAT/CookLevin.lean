@@ -798,6 +798,117 @@ theorem listAssign_get_false {l : List ℕ} {v : ℕ} (h : v ∉ l) :
     rw [List.getElem?_eq_none (by simp only [List.length_map, List.length_range]; omega)]
     rfl
 
+theorem listAssign_mem_of_get {l : List ℕ} {v : ℕ} (h : (listAssign l).get v = true) :
+    v ∈ l := by
+  by_contra hv; rw [listAssign_get_false hv] at h; exact absurd h (by simp)
+
+/-- The configuration of `N` after `t` steps under the choice function `g`. -/
+def fcfg (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t : ℕ) : Cfg 1 N.Q :=
+  N.trace t (fun i => g i.val) (N.initCfg x)
+
+/-- Symbol on tape `tp` (0=input, 1=work, 2=output) at position `pos` in `fcfg t`. -/
+def fcellSym (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp pos : ℕ) : Γ :=
+  if tp = 0 then (fcfg N x g t).input.cells pos
+  else if tp = 1 then ((fcfg N x g t).work 0).cells pos
+  else (fcfg N x g t).output.cells pos
+
+/-- Head position of tape `tp` in `fcfg t`. -/
+def fheadPos (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp : ℕ) : ℕ :=
+  if tp = 0 then (fcfg N x g t).input.head
+  else if tp = 1 then ((fcfg N x g t).work 0).head
+  else (fcfg N x g t).output.head
+
+open Tableau in
+/-- The variables that hold of the run `fcfg` (over `steps` steps, positions `≤ P`):
+    the one-hot state/cell/head variables and the true choice bits. The forward
+    direction's satisfying assignment marks exactly these true. -/
+noncomputable def ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) : List ℕ :=
+  (List.range (steps + 1)).map (fun t => vState t (stateIdx N (fcfg N x g t).state)) ++
+  (List.range steps).filterMap (fun t => if g t then some (vChoice t) else none) ++
+  (List.range (steps + 1)).flatMap (fun t => (List.range 3).flatMap (fun tp =>
+    (List.range (P + 1)).map (fun pos => vCell t tp pos (symIdx (fcellSym N x g t tp pos))))) ++
+  (List.range (steps + 1)).flatMap (fun t => (List.range 3).map (fun tp =>
+    vHead t tp (fheadPos N x g t tp)))
+
+open Tableau in
+theorem vState_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t q : ℕ} :
+    vState t q ∈ ftraceVars N x g steps P ↔ t ≤ steps ∧ q = stateIdx N (fcfg N x g t).state := by
+  unfold ftraceVars
+  simp only [List.mem_append, List.mem_map, List.mem_filterMap, List.mem_flatMap,
+    List.mem_range, Nat.lt_succ_iff]
+  constructor
+  · rintro (((⟨t', ht', heq⟩ | ⟨t', ht', heq⟩) | ⟨t', ht', tp, htp, pos, hpos, heq⟩) |
+      ⟨t', ht', tp, htp, heq⟩)
+    · obtain ⟨_, rfl, hq, _, _⟩ := enc_inj heq; exact ⟨ht', hq.symm⟩
+    · split at heq
+      · exact absurd (enc_inj (Option.some.inj heq)).1 (by decide)
+      · simp at heq
+    · exact absurd (enc_inj heq).1 (by decide)
+    · exact absurd (enc_inj heq).1 (by decide)
+  · rintro ⟨ht, rfl⟩
+    exact Or.inl (Or.inl (Or.inl ⟨t, ht, rfl⟩))
+
+open Tableau in
+theorem vChoice_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t : ℕ} :
+    vChoice t ∈ ftraceVars N x g steps P ↔ t < steps ∧ g t = true := by
+  unfold ftraceVars
+  simp only [List.mem_append, List.mem_map, List.mem_filterMap, List.mem_flatMap,
+    List.mem_range, Nat.lt_succ_iff]
+  constructor
+  · rintro (((⟨t', ht', heq⟩ | ⟨t', ht', heq⟩) | ⟨t', ht', tp, htp, pos, hpos, heq⟩) |
+      ⟨t', ht', tp, htp, heq⟩)
+    · exact absurd (enc_inj heq).1 (by decide)
+    · split at heq
+      · rename_i hg; obtain ⟨_, rfl, _, _, _⟩ := enc_inj (Option.some.inj heq); exact ⟨ht', hg⟩
+      · simp at heq
+    · exact absurd (enc_inj heq).1 (by decide)
+    · exact absurd (enc_inj heq).1 (by decide)
+  · rintro ⟨ht, hg⟩
+    exact Or.inl (Or.inl (Or.inr ⟨t, ht, by rw [if_pos hg]⟩))
+
+open Tableau in
+theorem vCell_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t tp pos s : ℕ} :
+    vCell t tp pos s ∈ ftraceVars N x g steps P ↔
+      t ≤ steps ∧ tp < 3 ∧ pos ≤ P ∧ s = symIdx (fcellSym N x g t tp pos) := by
+  unfold ftraceVars
+  simp only [List.mem_append, List.mem_map, List.mem_filterMap, List.mem_flatMap,
+    List.mem_range, Nat.lt_succ_iff]
+  constructor
+  · rintro (((⟨t', ht', heq⟩ | ⟨t', ht', heq⟩) | ⟨t', ht', tp', htp', pos', hpos', heq⟩) |
+      ⟨t', ht', tp', htp', heq⟩)
+    · exact absurd (enc_inj heq).1 (by decide)
+    · split at heq
+      · exact absurd (enc_inj (Option.some.inj heq)).1 (by decide)
+      · simp at heq
+    · obtain ⟨_, rfl, rfl, hc, _⟩ := enc_inj heq
+      obtain ⟨rfl, hs⟩ := Nat.pair_eq_pair.mp hc
+      exact ⟨ht', by omega, hpos', hs.symm⟩
+    · exact absurd (enc_inj heq).1 (by decide)
+  · rintro ⟨ht, htp, hpos, rfl⟩
+    exact Or.inl (Or.inr ⟨t, ht, tp, htp, pos, hpos, rfl⟩)
+
+open Tableau in
+theorem vHead_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t tp pos : ℕ} :
+    vHead t tp pos ∈ ftraceVars N x g steps P ↔
+      t ≤ steps ∧ tp < 3 ∧ pos = fheadPos N x g t tp := by
+  unfold ftraceVars
+  simp only [List.mem_append, List.mem_map, List.mem_filterMap, List.mem_flatMap,
+    List.mem_range, Nat.lt_succ_iff]
+  constructor
+  · rintro (((⟨t', ht', heq⟩ | ⟨t', ht', heq⟩) | ⟨t', ht', tp', htp', pos', hpos', heq⟩) |
+      ⟨t', ht', tp', htp', heq⟩)
+    · exact absurd (enc_inj heq).1 (by decide)
+    · split at heq
+      · exact absurd (enc_inj (Option.some.inj heq)).1 (by decide)
+      · simp at heq
+    · exact absurd (enc_inj heq).1 (by decide)
+    · obtain ⟨_, rfl, rfl, hp, _⟩ := enc_inj heq
+      exact ⟨ht', by omega, hp.symm⟩
+  · rintro ⟨ht, htp, rfl⟩
+    exact Or.inr ⟨t, ht, tp, htp, rfl⟩
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
