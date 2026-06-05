@@ -358,6 +358,20 @@ noncomputable def tableauCNF (N : NTM 1) (steps : ℕ) (x : List Bool) : CNF :=
     Tableau.frameClauses 1 steps P ++ Tableau.activeTransitionClauses N steps P ++
     Tableau.acceptClauses N steps
 
+/-- The tableau is satisfied (by `α`) exactly when all seven clause families are —
+    the bridge from `tableauCNF` to the per-family characterizations. -/
+theorem tableauCNF_eval_split (N : NTM 1) (steps : ℕ) (x : List Bool) (α : Assignment) :
+    CNF.eval α (tableauCNF N steps x) = true ↔
+      (CNF.eval α (Tableau.oneHotStates N steps) = true ∧
+       CNF.eval α (Tableau.oneHotCells 1 steps (steps + x.length + 1)) = true ∧
+       CNF.eval α (Tableau.oneHotHeads 1 steps (steps + x.length + 1)) = true ∧
+       CNF.eval α (Tableau.startClauses N steps x) = true ∧
+       CNF.eval α (Tableau.frameClauses 1 steps (steps + x.length + 1)) = true ∧
+       CNF.eval α (Tableau.activeTransitionClauses N steps (steps + x.length + 1)) = true ∧
+       CNF.eval α (Tableau.acceptClauses N steps) = true) := by
+  rw [tableauCNF]
+  simp only [Tableau.eval_append, Bool.and_eq_true, and_assoc]
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
