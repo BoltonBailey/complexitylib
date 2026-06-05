@@ -331,8 +331,7 @@ private theorem commit_input_eq (t : Tape) (iD : Dir3)
     write-move: COMMIT's `oSym`-guarded write-move composed with the RUN write-move
     equals `N`'s single output write-move `t.writeAndMove oW.toΓ oD`. -/
 private theorem commit_output_eq (t : Tape) (oW : Γw) (oD : Dir3)
-    (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) (hcell0 : t.cells 0 = Γ.start)
-    (hright : t.read = Γ.start → oD = Dir3.right) :
+    (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) (hright : t.read = Γ.start → oD = Dir3.right) :
     (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).writeAndMove
         (if t.read = Γ.start then
             TM.readBackWrite (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).read
