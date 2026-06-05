@@ -1036,6 +1036,61 @@ theorem traceStep_output_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : 
   · rfl
   · exact tape_writeAndMove_cells_ne c.output _ _ h
 
+section traceStepFields
+variable (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool)
+
+private theorem ts_hout : (fun i : Fin 1 => (c.work i).read) = fun _ => (c.work 0).read := by
+  funext i; rw [Subsingleton.elim i 0]
+
+theorem traceStep_state : (traceStep N c b).state =
+    if c.state = N.qhalt then c.state
+    else (N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).1 := by
+  unfold traceStep; rw [ts_hout]; split_ifs <;> rfl
+
+theorem traceStep_input_head : (traceStep N c b).input.head =
+    if c.state = N.qhalt then c.input.head
+    else Tableau.posMove c.input.head
+      (N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.1 := by
+  unfold traceStep; rw [ts_hout]; split_ifs with hq
+  · rfl
+  · exact tape_move_head c.input _
+
+theorem traceStep_work_head : ((traceStep N c b).work 0).head =
+    if c.state = N.qhalt then (c.work 0).head
+    else Tableau.posMove (c.work 0).head
+      ((N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.2.1 0) := by
+  unfold traceStep; rw [ts_hout]; split_ifs with hq
+  · rfl
+  · exact tape_writeAndMove_head (c.work 0) _ _
+
+theorem traceStep_output_head : (traceStep N c b).output.head =
+    if c.state = N.qhalt then c.output.head
+    else Tableau.posMove c.output.head
+      (N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.2.2 := by
+  unfold traceStep; rw [ts_hout]; split_ifs with hq
+  · rfl
+  · exact tape_writeAndMove_head c.output _ _
+
+theorem traceStep_work_cells_self : ((traceStep N c b).work 0).cells (c.work 0).head =
+    if c.state = N.qhalt then (c.work 0).read
+    else if (c.work 0).head = 0 then (c.work 0).read
+    else ((N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.1 0).toΓ := by
+  unfold traceStep; rw [ts_hout]; split_ifs with hq h0
+  · rfl
+  · rw [tape_writeAndMove_cells_self, if_pos h0]; rfl
+  · rw [tape_writeAndMove_cells_self, if_neg h0]
+
+theorem traceStep_output_cells_self : (traceStep N c b).output.cells c.output.head =
+    if c.state = N.qhalt then c.output.read
+    else if c.output.head = 0 then c.output.read
+    else (N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.1.toΓ := by
+  unfold traceStep; rw [ts_hout]; split_ifs with hq h0
+  · rfl
+  · rw [tape_writeAndMove_cells_self, if_pos h0]; rfl
+  · rw [tape_writeAndMove_cells_self, if_neg h0]
+
+end traceStepFields
+
 theorem fcellSym_succ_ne (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp pos : ℕ)
     (h : pos ≠ fheadPos N x g t tp) :
     fcellSym N x g (t + 1) tp pos = fcellSym N x g t tp pos := by
