@@ -667,6 +667,92 @@ theorem gather_sentinel {k : ℕ} (N : NTM k) (bb : Bool) (q : N.Q) (acc : Fin k
   rw [gather_trace1 N (q, acc, iSym, oSym, pos, rf, pending) bb c1 hst]
   simp only [gatherStep, hblank, ↓reduceIte]; rfl
 
+/-- **One non-sentinel GATHER step.** Reading a non-`□`, non-`▷` work cell, one
+    GATHER step stays in GATHER (some evolved data `d'`), advances the work head
+    by one with contents intact, and leaves input/output put (idle off `▷`). The
+    inductive step of the per-step sweep characterization. -/
+theorem gather_sweep_step1 {k : ℕ} (N : NTM k) (bb : Bool) (d : GatherData k N.Q)
+    (c : Cfg 1 (SimQ k N.Q)) (hst : c.state = SimQ.gather d)
+    (hb : (c.work 0).read ≠ Γ.blank) (hs : (c.work 0).read ≠ Γ.start)
+    (his : c.input.read ≠ Γ.start) (hos : c.output.read ≠ Γ.start) :
+    ∃ d', (singleTapeSim N).trace 1 (fun _ => bb) c =
+      { state := SimQ.gather d', input := c.input,
+        work := fun _ => { (c.work 0) with head := (c.work 0).head + 1 },
+        output := c.output } := by
+  obtain ⟨d', hd'⟩ :=
+    gatherStep_stays_gather N bb d c.input.read ((c.work 0).read) c.output.read hb
+  obtain ⟨hw, ho_w, hi_d, hw_d, ho_d⟩ :=
+    gatherStep_components N bb d c.input.read ((c.work 0).read) c.output.read hb
+  refine ⟨d', ?_⟩
+  rw [gather_trace1 N d bb c hst]
+  simp only []
+  rw [hd', hi_d, hw_d, ho_w, ho_d, hw]
+  refine (Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩
+  · exact tape_idle_stay c.input his
+  · funext i; obtain rfl : i = 0 := Subsingleton.elim i 0
+    exact work_gather_step (c.work 0) hs
+  · exact tape_idle_writeMove c.output hos
+
+/-- **No sentinel during the GATHER sweep.** Starting from the post-run GATHER
+    config (work head at cell `1`, contents materialized at level `M`), every one
+    of the first `3*k*M` sweep steps keeps the simulator in a GATHER state reading
+    a non-`□` cell — the `□` sentinel is reached only at step `3*k*M`. This is the
+    crux of the backward correspondence: within a macro-step, a GATHER-on-`□`
+    configuration (the one choice-consuming step) occurs at exactly one position. -/
+theorem gather_sweep_no_sentinel {k : ℕ} (N : NTM k) (bb : Bool) {M : ℕ} {w : Fin k → Tape}
+    (c_g : Cfg 1 (SimQ k N.Q))
+    (hg0 : ∃ d, c_g.state = SimQ.gather d)
+    (hhead : (c_g.work 0).head = 1)
+    (hinv : SimInvAt k (c_g.work 0) w M)
+    (his : c_g.input.read ≠ Γ.start) (hos : c_g.output.read ≠ Γ.start) :
+    ∀ i, i < 3 * k * M →
+      (∃ d, ((singleTapeSim N).trace i (fun _ => bb) c_g).state = SimQ.gather d) ∧
+      (((singleTapeSim N).trace i (fun _ => bb) c_g).work 0).read ≠ Γ.blank := by
+  have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
+    simp only [blockStart, blockWidth, Nat.add_sub_cancel]; rw [Nat.mul_comm M (3 * k)]
+  suffices H : ∀ i, i ≤ 3 * k * M →
+      (∃ d, ((singleTapeSim N).trace i (fun _ => bb) c_g).state = SimQ.gather d) ∧
+      ((singleTapeSim N).trace i (fun _ => bb) c_g).work 0
+        = { head := 1 + i, cells := (c_g.work 0).cells } ∧
+      ((singleTapeSim N).trace i (fun _ => bb) c_g).input = c_g.input ∧
+      ((singleTapeSim N).trace i (fun _ => bb) c_g).output = c_g.output by
+    intro i hi
+    obtain ⟨hg, hwk, _, _⟩ := H i (le_of_lt hi)
+    refine ⟨hg, ?_⟩
+    rw [show ((singleTapeSim N).trace i (fun _ => bb) c_g).work 0 = _ from hwk]
+    show (c_g.work 0).cells (1 + i) ≠ Γ.blank
+    exact hinv.materialized_ne_blank (by omega) (by rw [hbs]; omega)
+  intro i
+  induction i with
+  | zero =>
+    intro _
+    obtain ⟨d, hd⟩ := hg0
+    refine ⟨⟨d, hd⟩, ?_, rfl, rfl⟩
+    show (c_g.work 0) = { head := 1 + 0, cells := (c_g.work 0).cells }
+    simp only [Nat.add_zero]
+    exact congrArg (fun h => ({ head := h, cells := (c_g.work 0).cells } : Tape)) hhead
+  | succ i ih =>
+    intro hsucc
+    obtain ⟨⟨d_i, hd_i⟩, hwk_i, hin_i, hout_i⟩ := ih (by omega)
+    rw [trace_const_add (singleTapeSim N) i 1 bb c_g]
+    set c_i := (singleTapeSim N).trace i (fun _ => bb) c_g with hci
+    have hread_b : (c_i.work 0).read ≠ Γ.blank := by
+      rw [show (c_i.work 0) = _ from hwk_i]
+      show (c_g.work 0).cells (1 + i) ≠ Γ.blank
+      exact hinv.materialized_ne_blank (by omega) (by rw [hbs]; omega)
+    have hread_s : (c_i.work 0).read ≠ Γ.start := by
+      rw [show (c_i.work 0) = _ from hwk_i]
+      show (c_g.work 0).cells (1 + i) ≠ Γ.start
+      exact hinv.materialized_ne_start (by omega) (by rw [hbs]; omega)
+    obtain ⟨d', hstep⟩ := gather_sweep_step1 N bb d_i c_i hd_i hread_b hread_s
+      (by rw [hin_i]; exact his) (by rw [hout_i]; exact hos)
+    rw [hstep]
+    refine ⟨⟨d', rfl⟩, ?_, hin_i, hout_i⟩
+    show { (c_i.work 0) with head := (c_i.work 0).head + 1 }
+      = { head := 1 + (i + 1), cells := (c_g.work 0).cells }
+    rw [hwk_i]
+    congr 1
+
 /-- The sweep accumulator at `B = M` is exactly the per-tape reads: a head in
     `[1, M]` had its symbol recorded; a head at `0` reads `▷`, which is also the
     `▷` default the sweep leaves. Uses `heads_le` (every head `≤ M`) and

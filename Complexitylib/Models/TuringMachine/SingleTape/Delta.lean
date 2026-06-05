@@ -391,6 +391,22 @@ theorem gatherStep_stays_gather {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData
   · exact ⟨_, rfl⟩
   · split <;> exact ⟨_, rfl⟩
 
+/-- **GATHER non-state components off the sentinel.** For `wH ≠ □` all three
+    sweep sub-branches (head-bit / sym-hi / sym-lo) agree on everything but the
+    next state: the work head reads-back-writes `wH` and moves right, input/output
+    stay idle. Lets the per-step sweep lemma treat one gather step uniformly. -/
+theorem gatherStep_components {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
+    (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
+    (gatherStep N b d iHead wH oHead).2.1 = (fun _ => TM.readBackWrite wH) ∧
+    (gatherStep N b d iHead wH oHead).2.2.1 = TM.readBackWrite oHead ∧
+    (gatherStep N b d iHead wH oHead).2.2.2.1 = TM.idleDir iHead ∧
+    (gatherStep N b d iHead wH oHead).2.2.2.2.1 = (fun _ => Dir3.right) ∧
+    (gatherStep N b d iHead wH oHead).2.2.2.2.2 = TM.idleDir oHead := by
+  simp only [gatherStep, if_neg h]
+  split
+  · exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+  · split <;> exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+
 /-- **Choice irrelevance — one simulator step.** The single-tape simulator's
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
