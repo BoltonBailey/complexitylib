@@ -60,6 +60,11 @@ structure Corr {k : ℕ} (N : NTM k) (M : ℕ)
   /-- Each `N` work tape is blank beyond the materialized region (heads never
       reached there). Needed to materialize the fresh block at SCATTER. -/
   wbeyond : ∀ (j : Fin k) (p : ℕ), M < p → (c.work j).cells p = Γ.blank
+  /-- The input tape has `▷` only at cell `0` (input is read-only; cells hold
+      `{0,1,□}`). Lets the phases keep the input head off `▷` (the `▷`-dodge). -/
+  inputWf : ∀ p : ℕ, 1 ≤ p → c.input.cells p ≠ Γ.start
+  /-- The output tape has `▷` only at cell `0` (writes use `Γw`, never `▷`). -/
+  outputWf : ∀ p : ℕ, 1 ≤ p → c.output.cells p ≠ Γ.start
 
 /-- **Base case.** The initial `singleTapeSim N` configuration corresponds to
     `N`'s initial configuration, materialized to `M = 0` (empty used region). -/
@@ -72,6 +77,19 @@ theorem corr_init {k : ℕ} (N : NTM k) (x : List Bool) :
   inv := simInvAt_init k
   wbeyond := fun _ p hp => by
     show (initTape []).cells p = Γ.blank
+    simp only [initTape]
+    rw [if_neg (by omega : ¬ p = 0)]
+    simp
+  inputWf := fun p hp => by
+    show (initTape (x.map Γ.ofBool)).cells p ≠ Γ.start
+    simp only [initTape, if_neg (show ¬ p = 0 by omega)]
+    cases h : (List.map Γ.ofBool x)[p - 1]? with
+    | none => decide
+    | some g =>
+      obtain ⟨b, _, rfl⟩ := List.mem_map.mp (List.mem_of_getElem? h)
+      cases b <;> decide
+  outputWf := fun p hp => by
+    show (initTape []).cells p ≠ Γ.start
     simp only [initTape]
     rw [if_neg (by omega : ¬ p = 0)]
     simp
@@ -248,6 +266,23 @@ private theorem tape_idle_writeMove (t : Tape) (h : t.read ≠ Γ.start) :
   show (t.write t.read).move Dir3.stay = t
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
+
+/-- The **run/commit work action** (`readBackWrite` + `idleDir`) leaves the work
+    tape's cells intact and parks the head at cell `1`. At cell `0` the write is a
+    no-op and `idleDir` (`▷ ↦ right`) advances to cell `1`; at cell `1` the read is a
+    non-`▷` code cell, so writing it back is a no-op and `idleDir` stays. -/
+private theorem run_work_eq (t : Tape) (h : t.head ≤ 1) (hcell0 : t.cells 0 = Γ.start)
+    (hns1 : t.cells 1 ≠ Γ.start) :
+    t.writeAndMove ((TM.readBackWrite t.read : Γw) : Γ) (TM.idleDir t.read)
+      = { head := 1, cells := t.cells } := by
+  by_cases h0 : t.head = 0
+  · have hr : t.read = Γ.start := by rw [Tape.read, h0]; exact hcell0
+    rw [hr]
+    show t.writeAndMove Γw.blank.toΓ Dir3.right = { head := 1, cells := t.cells }
+    rw [work_blank_right_at0 t h0]
+  · have hh1 : t.head = 1 := by omega
+    have hr : t.read ≠ Γ.start := by rw [Tape.read, hh1]; exact hns1
+    rw [tape_idle_writeMove t hr, ← hh1]
 
 /-- `trace 3` with a constant choice unfolds into three single steps. -/
 private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
