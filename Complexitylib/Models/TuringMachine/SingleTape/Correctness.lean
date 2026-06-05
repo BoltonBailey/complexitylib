@@ -3824,13 +3824,13 @@ theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
     This is the heart of the behavioural correctness proof: it is established by
     tracing the phase machine `run → gather → rewind → scatter1 → scatter2 →
     commit` and showing each phase preserves/advances `SimInvAt`. -/
-theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
+theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bitf : Fin 1 → Bool) :
     ∃ (m : ℕ) (choices : Fin m → Bool),
       Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c)
         ∧ m ≤ macroBound k M := by
-  by_cases hk : 1 ≤ k
+  by_cases hk0 : 1 ≤ k
   · -- main case `k ≥ 1`
     obtain ⟨hr1, hsi1⟩ := run_to_scatter1 N hcorr hne (bitf 0)
     set dr := N.δ (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read with hdr
@@ -3953,15 +3953,16 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
         calc 4 * (3 * k * M) = 4 * (3 * k) * M := by rw [← Nat.mul_assoc]
           _ ≤ 16 * k * M := Nat.mul_le_mul (by omega) (le_refl M)
       rw [hbs, h3, hmb]; omega
-  · -- `k = 0` (no work tapes)
-    sorry
+  · -- `k = 0` excluded by the `hk` hypothesis (the single-tape encoding needs ≥ 1
+    -- work tape; 0-tape machines are padded with a dummy tape before reduction)
+    exact absurd hk hk0
 
 /-- **Iterated correspondence.** Simulating `t` steps of `N` (choices `g`): the
     simulator reaches, in some number `m` of steps (choices from a single
     `ℕ`-indexed `F`), a configuration corresponding to `N.trace t g c` (at some
     materialization level `M'`). Proved by induction on `t`, composing
     macro-steps with `trace_add`; the halted case reuses the previous one. -/
-theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
+theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (g : ℕ → Bool) (t : ℕ) :
     ∃ (m M' : ℕ) (F : ℕ → Bool),
@@ -3989,7 +3990,7 @@ theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
       exact hcorr_t
     · -- N steps: apply the macro-step correspondence and concatenate choices
       obtain ⟨m', choices', hstep, hbound'⟩ :=
-        macroStepCorr N hcorr_t hh (fun i => g (t + i.val))
+        macroStepCorr N hk hcorr_t hh (fun i => g (t + i.val))
       -- concatenate `f` (first m steps) and `choices'` (next m') into one `F`
       set F : ℕ → Bool :=
         fun j => if j < m then f j else if h : j - m < m' then choices' ⟨j - m, h⟩ else false
@@ -4018,12 +4019,12 @@ theorem iterCorr {k : ℕ} (N : NTM k) {M : ℕ}
     `singleTapeSim N` accepts `x` within `Tn · macroBound k Tn + 1` steps:
     simulate `N`'s accepting run (`iterCorr`), then one `haltCorr` step lands in
     a halted accepting simulator config; pad via `AcceptsInTime_mono`. -/
-theorem accepts_fwd {k : ℕ} (N : NTM k) (x : List Bool) (Tn : ℕ)
+theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : ℕ)
     (h : N.AcceptsInTime x Tn) :
     (singleTapeSim N).AcceptsInTime x (Tn * macroBound k Tn + 1) := by
   obtain ⟨chN, hhalt, hacc⟩ := h
   set g : ℕ → Bool := fun i => if hi : i < Tn then chN ⟨i, hi⟩ else false with hg
-  obtain ⟨m, M', F, hcorr, _hM', hm⟩ := iterCorr N (corr_init N x) g Tn
+  obtain ⟨m, M', F, hcorr, _hM', hm⟩ := iterCorr N hk (corr_init N x) g Tn
   have hgN : (fun i : Fin Tn => g i.val) = chN := by
     funext i; rw [hg]; simp only []; rw [dif_pos i.isLt]
   rw [hgN] at hcorr
