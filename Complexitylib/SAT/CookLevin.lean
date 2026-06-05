@@ -571,6 +571,111 @@ theorem head_off (α : Assignment) (steps P : ℕ)
     exact hne (enc_inj (atMostOne_unique hpair hmp hma h hat)).2.2.2.1
   · exact h
 
+open Tableau in
+/-- **Backward inductive step.** If `α` represents `c` at time `t` and satisfies the
+    frame / head-one-hot / active-transition clauses, then it represents the next
+    configuration `traceStep N c (choice t)` at time `t+1`. -/
+theorem represents_step (N : NTM 1) (α : Assignment) (steps P : ℕ)
+    (hframe : CNF.eval α (frameClauses 1 steps P) = true)
+    (hheadOne : CNF.eval α (oneHotHeads 1 steps P) = true)
+    (hactive : CNF.eval α (activeTransitionClauses N steps P) = true)
+    (t : ℕ) (ht : t < steps) (c : Cfg 1 N.Q) (hrep : Represents N α P t c)
+    (hhi : c.input.head ≤ P) (hhw : (c.work 0).head ≤ P) (hho : c.output.head ≤ P) :
+    Represents N α P (t + 1) (traceStep N c (α.get (vChoice t))) := by
+  obtain ⟨C1, C2, C3, C4, C5, C6, C7⟩ :=
+    represents_conseqs N α steps P hactive t ht c hrep hhi hhw hho
+  obtain ⟨hst, hIci, hIcw, hIco, hHi, hHw, hHo⟩ := hrep
+  have hframe' := (frameClauses_sat 1 steps P α).mp hframe
+  have hout : (fun i : Fin 1 => (c.work i).read) = fun _ => (c.work 0).read := by
+    funext i; rw [Subsingleton.elim i 0]
+  have hsymlt : ∀ s : Γ, symIdx s < 4 := fun s => by cases s <;> decide
+  -- frame: an off-head cell keeps its symbol from `t` to `t+1`
+  have frameCell : ∀ tp, tp < 3 → ∀ ha, ha ≤ P → α.get (vHead t tp ha) = true →
+      ∀ pos, pos ≤ P → pos ≠ ha → ∀ sym : Γ,
+      α.get (vCell t tp pos (symIdx sym)) = true → α.get (vCell (t + 1) tp pos (symIdx sym)) = true := by
+    intro tp htp ha hal hahead pos hpos hne sym hcell
+    rw [← hframe' t ht tp (by omega) pos hpos (symIdx sym) (hsymlt sym)
+      (head_off α steps P hheadOne t (le_of_lt ht) tp htp ha hal hahead pos hpos hne)]
+    exact hcell
+  -- `traceStep`'s fields, matched against the consequence-variable forms
+  have hState : (traceStep N c (α.get (vChoice t))).state =
+      if c.state = N.qhalt then c.state
+      else (N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).1 := by
+    unfold traceStep; rw [hout]; split_ifs <;> rfl
+  have hInput : ∀ pos, (traceStep N c (α.get (vChoice t))).input.cells pos = c.input.cells pos := by
+    intro pos; unfold traceStep; split_ifs with hq
+    · rfl
+    · rw [tape_move_cells]
+  have hInputHead : (traceStep N c (α.get (vChoice t))).input.head =
+      if c.state = N.qhalt then c.input.head
+      else posMove c.input.head
+        (N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.1 := by
+    unfold traceStep; rw [hout]; split_ifs with hq
+    · rfl
+    · exact tape_move_head c.input _
+  have hWorkHead : ((traceStep N c (α.get (vChoice t))).work 0).head =
+      if c.state = N.qhalt then (c.work 0).head
+      else posMove (c.work 0).head
+        ((N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.2.1 0) := by
+    unfold traceStep; rw [hout]; split_ifs with hq
+    · rfl
+    · exact tape_writeAndMove_head (c.work 0) _ _
+  have hOutHead : (traceStep N c (α.get (vChoice t))).output.head =
+      if c.state = N.qhalt then c.output.head
+      else posMove c.output.head
+        (N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.2.2.2 := by
+    unfold traceStep; rw [hout]; split_ifs with hq
+    · rfl
+    · exact tape_writeAndMove_head c.output _ _
+  have hWorkSelf : ((traceStep N c (α.get (vChoice t))).work 0).cells (c.work 0).head =
+      if c.state = N.qhalt then (c.work 0).read
+      else if (c.work 0).head = 0 then (c.work 0).read
+      else ((N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.1 0).toΓ := by
+    unfold traceStep; rw [hout]; split_ifs with hq h0
+    · rfl
+    · rw [tape_writeAndMove_cells_self, if_pos h0]; rfl
+    · rw [tape_writeAndMove_cells_self, if_neg h0]
+  have hWorkNe : ∀ pos, pos ≠ (c.work 0).head →
+      ((traceStep N c (α.get (vChoice t))).work 0).cells pos = (c.work 0).cells pos := by
+    intro pos hpos; unfold traceStep; split_ifs with hq
+    · rfl
+    · exact tape_writeAndMove_cells_ne (c.work 0) _ _ hpos
+  have hOutSelf : (traceStep N c (α.get (vChoice t))).output.cells c.output.head =
+      if c.state = N.qhalt then c.output.read
+      else if c.output.head = 0 then c.output.read
+      else (N.δ (α.get (vChoice t)) c.state c.input.read (fun _ => (c.work 0).read) c.output.read).2.2.1.toΓ := by
+    unfold traceStep; rw [hout]; split_ifs with hq h0
+    · rfl
+    · rw [tape_writeAndMove_cells_self, if_pos h0]; rfl
+    · rw [tape_writeAndMove_cells_self, if_neg h0]
+  have hOutNe : ∀ pos, pos ≠ c.output.head →
+      (traceStep N c (α.get (vChoice t))).output.cells pos = c.output.cells pos := by
+    intro pos hpos; unfold traceStep; split_ifs with hq
+    · rfl
+    · exact tape_writeAndMove_cells_ne c.output _ _ hpos
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hState]; exact C1
+  · intro pos hpos
+    rw [hInput pos]
+    by_cases hph : pos = c.input.head
+    · subst hph; exact C2
+    · exact frameCell 0 (by omega) c.input.head hhi hHi pos hpos hph (c.input.cells pos) (hIci pos hpos)
+  · intro pos hpos
+    by_cases hph : pos = (c.work 0).head
+    · subst hph; rw [hWorkSelf]; exact C3
+    · rw [hWorkNe pos hph]
+      exact frameCell 1 (by omega) (c.work 0).head hhw hHw pos hpos hph ((c.work 0).cells pos)
+        (hIcw pos hpos)
+  · intro pos hpos
+    by_cases hph : pos = c.output.head
+    · subst hph; rw [hOutSelf]; exact C4
+    · rw [hOutNe pos hph]
+      exact frameCell 2 (by omega) c.output.head hho hHo pos hpos hph (c.output.cells pos)
+        (hIco pos hpos)
+  · rw [hInputHead]; exact C5
+  · rw [hWorkHead]; exact C6
+  · rw [hOutHead]; exact C7
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
