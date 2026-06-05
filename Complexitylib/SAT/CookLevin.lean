@@ -273,8 +273,9 @@ noncomputable def activeClausesAt (N : NTM 1) (t : ℕ) (q : N.Q)
     (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : List Clause :=
   let out := N.δ b q si (fun _ => sw) so
   let nextState := if q = N.qhalt then q else out.1
-  let wSym := if q = N.qhalt then sw else (out.2.1 0).toΓ
-  let oSym := if q = N.qhalt then so else out.2.2.1.toΓ
+  -- writing at cell `0` is a no-op (it stays `▷`), so a head at `0` keeps its symbol
+  let wSym := if q = N.qhalt then sw else if pw = 0 then sw else (out.2.1 0).toΓ
+  let oSym := if q = N.qhalt then so else if po = 0 then so else out.2.2.1.toΓ
   let iH := if q = N.qhalt then pi else posMove pi out.2.2.2.1
   let wH := if q = N.qhalt then pw else posMove pw (out.2.2.2.2.1 0)
   let oH := if q = N.qhalt then po else posMove po out.2.2.2.2.2
