@@ -140,6 +140,16 @@ theorem allUnit_eval (α : Assignment) (vs : List ℕ) :
     CNF.eval α (vs.map (fun v => ([⟨true, v⟩] : Clause))) = true ↔ ∀ v ∈ vs, α.get v = true := by
   simp only [CNF.eval, List.all_map, List.all_eq_true, Function.comp_apply, unit_eval]
 
+/-- `CNF.eval` of a `map`-built clause list: every mapped clause holds. -/
+theorem cnf_eval_map {β : Type*} (α : Assignment) (l : List β) (f : β → Clause) :
+    CNF.eval α (l.map f) = l.all (fun a => Clause.eval α (f a)) := by
+  simp [CNF.eval, List.all_map, Function.comp_def]
+
+/-- `CNF.eval` of a `flatMap`-built clause list: every sub-CNF holds. -/
+theorem cnf_eval_flatMap {β : Type*} (α : Assignment) (l : List β) (f : β → CNF) :
+    CNF.eval α (l.flatMap f) = l.all (fun a => CNF.eval α (f a)) := by
+  simp [CNF.eval, List.all_flatMap]
+
 /-- Index of a machine state as a natural, via the canonical `Fintype` enumeration
     of `N.Q`; injective, so a one-hot encoding over `Fin (card Q)` names the states. -/
 noncomputable def stateIdx {k : ℕ} (N : NTM k) (q : N.Q) : ℕ := (Fintype.equivFin N.Q q).val
@@ -258,6 +268,18 @@ theorem acceptClauses_sat (N : NTM 1) (steps : ℕ) (α : Assignment) :
       α.get (vState steps (stateIdx N N.qhalt)) = true ∧
       α.get (vCell steps 2 1 (symIdx Γ.one)) = true := by
   simp [acceptClauses, CNF.eval, Clause.eval, Lit.eval]
+
+/-- The start clauses hold iff time-`0` is the start configuration: state `qstart`,
+    every head (tapes `0,1,2`) at cell `0`, and every cell holding its
+    `initCellSym` value. -/
+theorem startClauses_sat (N : NTM 1) (steps : ℕ) (x : List Bool) (α : Assignment) :
+    CNF.eval α (startClauses N steps x) = true ↔
+      (α.get (vState 0 (stateIdx N N.qstart)) = true ∧
+       (∀ tp, tp < 3 → α.get (vHead 0 tp 0) = true) ∧
+       (∀ tp, tp < 3 → ∀ pos, pos ≤ steps + x.length + 1 →
+         α.get (vCell 0 tp pos (symIdx (initCellSym x tp pos))) = true)) := by
+  simp only [startClauses, CNF.eval_cons, eval_append, unit_eval, cnf_eval_map,
+    cnf_eval_flatMap, Bool.and_eq_true, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
 
 end Tableau
 
