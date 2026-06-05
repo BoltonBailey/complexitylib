@@ -63,6 +63,38 @@ def vCell (t tp pos s : ℕ) : ℕ := enc 2 t tp (Nat.pair pos s) 0
 /-- Variable: at time `t`, the head of tape `tp` is at cell `pos`. -/
 def vHead (t tp pos : ℕ) : ℕ := enc 3 t tp pos 0
 
+/-- The symbol index of a tape symbol: `0,1,2,3` for `0,1,□,▷`. Injective, so a
+    one-hot encoding over `{0,1,2,3}` faithfully names the four tape symbols. -/
+def symIdx : Γ → ℕ
+  | Γ.zero => 0
+  | Γ.one => 1
+  | Γ.blank => 2
+  | Γ.start => 3
+
+theorem symIdx_inj : Function.Injective symIdx := by
+  intro a b h; cases a <;> cases b <;> simp_all [symIdx]
+
+/-- "At least one of `vars` is true": the single disjunction of positive literals. -/
+def atLeastOne (vars : List ℕ) : Clause := vars.map (fun v => ⟨true, v⟩)
+
+/-- "At most one of `vars` is true": for every ordered pair `(vᵢ, vⱼ)` the binary
+    clause `¬vᵢ ∨ ¬vⱼ`. -/
+def atMostOne : List ℕ → List Clause
+  | [] => []
+  | v :: vs => vs.map (fun w => ([⟨false, v⟩, ⟨false, w⟩] : Clause)) ++ atMostOne vs
+
+/-- "Exactly one of `vars` is true" as a list of clauses (at-least-one and the
+    pairwise at-most-one constraints). -/
+def exactlyOne (vars : List ℕ) : List Clause := atLeastOne vars :: atMostOne vars
+
+/-- The at-least-one clause is satisfied iff some variable in the list is true. -/
+theorem atLeastOne_eval (α : Assignment) (vars : List ℕ) :
+    Clause.eval α (atLeastOne vars) = vars.any (fun v => α.get v) := by
+  simp only [atLeastOne, Clause.eval, List.any_map]
+  congr 1
+  funext v
+  simp [Lit.eval]
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
