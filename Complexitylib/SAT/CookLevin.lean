@@ -1014,6 +1014,21 @@ theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   · rw [fassign_get_vCell]
     exact ⟨Nat.zero_le _, htp, hP ▸ hpos, by rw [fcellSym_zero]⟩
 
+open Tableau in
+theorem fassign_acceptClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    (hP : 1 ≤ P) (hhalt : (fcfg N x g steps).state = N.qhalt)
+    (hout : (fcfg N x g steps).output.cells 1 = Γ.one) :
+    CNF.eval (fassign N x g steps P) (acceptClauses N steps) = true := by
+  rw [acceptClauses_sat]
+  refine ⟨?_, ?_⟩
+  · rw [fassign_get_vState]; exact ⟨le_refl _, by rw [hhalt]⟩
+  · rw [fassign_get_vCell]
+    refine ⟨le_refl _, by norm_num, hP, ?_⟩
+    congr 1
+    unfold fcellSym
+    rw [if_neg (by decide : ¬(2:ℕ) = 0), if_neg (by decide : ¬(2:ℕ) = 1)]
+    exact hout.symm
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
