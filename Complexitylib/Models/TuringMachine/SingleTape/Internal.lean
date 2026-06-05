@@ -296,4 +296,41 @@ theorem SimInvAt.materialized_ne_blank {k : ℕ} {t : Tape} {w : Fin k → Tape}
     have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ + 1 := by simp only [symCell]; omega
     rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_blank _).2
 
+/-- **No `▷` inside the materialized region.** Every cell strictly between the
+    `▷` (cell 0) and the sentinel block is a code or head-bit cell (in `{0,1}`),
+    hence never `▷` — so `▷` uniquely marks cell `0`. The REWIND sweep's precondition. -/
+theorem SimInvAt.materialized_ne_start {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {M : ℕ} (h : SimInvAt k t w M) {c : ℕ}
+    (hc1 : 1 ≤ c) (hc2 : c < blockStart k (M + 1)) : t.cells c ≠ Γ.start := by
+  have hbs : blockStart k (M + 1) = 1 + M * blockWidth k := by
+    simp only [blockStart, Nat.add_sub_cancel]
+  rw [hbs] at hc2
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · subst hk; simp only [blockWidth] at hc2; omega
+  have hW : 0 < blockWidth k := by simp only [blockWidth]; omega
+  have hr : c - 1 < blockWidth k * M := by rw [Nat.mul_comm]; omega
+  obtain ⟨q, ib, hqM, hibW, hdm⟩ :
+      ∃ q ib, q < M ∧ ib < blockWidth k ∧ blockWidth k * q + ib = c - 1 :=
+    ⟨(c - 1) / blockWidth k, (c - 1) % blockWidth k,
+      Nat.div_lt_of_lt_mul hr, Nat.mod_lt _ hW, Nat.div_add_mod _ _⟩
+  have hp1 : 1 ≤ q + 1 := by omega
+  have hpM : q + 1 ≤ M := by omega
+  have hbq : blockStart k (q + 1) = 1 + q * blockWidth k := by
+    show 1 + (q + 1 - 1) * blockWidth k = 1 + q * blockWidth k
+    rw [Nat.add_sub_cancel]
+  have hdm' : q * blockWidth k + ib = c - 1 := by rw [Nat.mul_comm] at hdm; exact hdm
+  have hceq : c = blockStart k (q + 1) + ib := by rw [hbq]; omega
+  have hib3 : ib < 3 * k := by have h' := hibW; simp only [blockWidth] at h'; exact h'
+  have hjk : ib / 3 < k := Nat.div_lt_of_lt_mul hib3
+  have hibdm : 3 * (ib / 3) + ib % 3 = ib := Nat.div_add_mod _ _
+  have hc_full : c = blockStart k (q + 1) + (3 * (ib / 3) + ib % 3) := by rw [hceq, hibdm]
+  have hcases : ib % 3 = 0 ∨ ib % 3 = 1 ∨ ib % 3 = 2 := by omega
+  rcases hcases with h3 | h3 | h3 <;> rw [h3] at hc_full
+  · have hcs : c = headBitCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [headBitCell]; omega
+    rw [hcs, h.headBit (q + 1) hp1 hpM ⟨ib / 3, hjk⟩]; split <;> decide
+  · have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).1]; exact (encSymΓ_ne_start _).1
+  · have hcs : c = symCell k (q + 1) ⟨ib / 3, hjk⟩ + 1 := by simp only [symCell]; omega
+    rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_start _).2
+
 end NTM.SingleTape

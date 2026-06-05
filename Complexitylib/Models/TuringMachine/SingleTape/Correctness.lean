@@ -284,6 +284,33 @@ private theorem run_work_eq (t : Tape) (h : t.head ≤ 1) (hcell0 : t.cells 0 = 
     have hr : t.read ≠ Γ.start := by rw [Tape.read, hh1]; exact hns1
     rw [tape_idle_writeMove t hr, ← hh1]
 
+/-- After an `idleDir` **move**, a tape whose cells `≥ 1` are non-`▷` reads a non-`▷`
+    cell: reading `▷` (necessarily at cell `0`) dodges right to cell `1`; off `▷` it
+    stays. The input head's `▷`-dodge invariant for the gather/rewind/scatter phases. -/
+private theorem move_idle_read_ne (t : Tape) (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) :
+    (t.move (TM.idleDir t.read)).read ≠ Γ.start := by
+  by_cases hr : t.read = Γ.start
+  · have h0 : t.head = 0 := by
+      by_contra h0; exact hwf t.head (Nat.one_le_iff_ne_zero.mpr h0) hr
+    rw [TM.idleDir_right_of_start hr]
+    show (t.move Dir3.right).cells (t.move Dir3.right).head ≠ Γ.start
+    simp only [Tape.move, h0]
+    exact hwf 1 (le_refl 1)
+  · rw [tape_idle_stay t hr]; exact hr
+
+/-- After the `readBackWrite`/`idleDir` **write-move** (the run/commit output action),
+    a tape whose cells `≥ 1` are non-`▷` reads a non-`▷` cell (same `▷`-dodge). -/
+private theorem writeMove_idle_read_ne (t : Tape) (hwf : ∀ p, 1 ≤ p → t.cells p ≠ Γ.start) :
+    (t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read)).read ≠ Γ.start := by
+  by_cases hr : t.read = Γ.start
+  · have h0 : t.head = 0 := by
+      by_contra h0; exact hwf t.head (Nat.one_le_iff_ne_zero.mpr h0) hr
+    rw [hr, TM.idleDir_start]
+    show (t.writeAndMove Γw.blank.toΓ Dir3.right).read ≠ Γ.start
+    rw [work_blank_right_at0 t h0]
+    exact hwf 1 (le_refl 1)
+  · rw [tape_idle_writeMove t hr]; exact hr
+
 /-- `trace 3` with a constant choice unfolds into three single steps. -/
 private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
     M.trace 3 (fun _ => bb) c
