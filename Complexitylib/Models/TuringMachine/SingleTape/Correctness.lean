@@ -3655,6 +3655,64 @@ theorem trace_one_scatterFinal {k : ℕ} (N : NTM k) (bitf : Fin 1 → Bool) (c 
   funext t
   rw [← writeAndMove_eq_scatterFinal]
 
+/-- **Deterministic front half (`run → gather → COMPUTE → rewind`).** From a
+    corresponding non-halted config, the simulator (constant choice `bit`) reaches
+    the SCATTER sweep-1 entry in `3 + 6*k*M` steps: the work tape still encodes
+    `c.work` at `M` (head parked at cell `1`), the SCATTER actions `wact`/`oWoD`/`iD`
+    are read off `N.δ bit …` (the one COMPUTE use of `bit`), and the input/output
+    heads have dodged off `▷`. -/
+theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bit : Bool) :
+    (singleTapeSim N).trace (3 + 6 * k * M) (fun _ => bit) c1 =
+      { state := SimQ.scatter1
+          ((N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).1,
+           (fun i => ((N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.1 i,
+              (N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2.2.2.1 i)),
+           ((N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2.1,
+            (N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2.2.2.2),
+           (N.δ bit c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2.2.1,
+           c.input.read, c.output.read, (0, 0),
+           (fun j => decide ((c.work j).read = Γ.start)), (fun _ => false), false, false),
+        input := c.input.move (TM.idleDir c.input.read),
+        output := c.output.writeAndMove (TM.readBackWrite c.output.read).toΓ (TM.idleDir c.output.read),
+        work := fun _ => { head := 1, cells := (c1.work 0).cells } }
+    ∧ SimInvAt k { head := 1, cells := (c1.work 0).cells } c.work M := by
+  obtain ⟨hstate, hheadLe, hinputEq, houtputEq, hinv, hwbeyond, hinputWf, houtputWf⟩ := hcorr
+  have hns1 : (c1.work 0).cells 1 ≠ Γ.start := by
+    by_cases h1 : 1 < blockStart k (M + 1)
+    · exact hinv.materialized_ne_start (le_refl 1) h1
+    · rw [hinv.sentinel 1 (by omega)]; decide
+  have hisR : (c1.input.move (TM.idleDir c1.input.read)).read ≠ Γ.start := by
+    rw [hinputEq]; exact move_idle_read_ne c.input hinputWf
+  have hosR : (c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+      (TM.idleDir c1.output.read)).read ≠ Γ.start := by
+    rw [houtputEq]; exact writeMove_idle_read_ne c.output houtputWf
+  -- Phase 0: run step (work head → 1, cells preserved)
+  have e1 : (singleTapeSim N).trace 1 (fun _ => bit) c1 =
+      { state := SimQ.gather (c.state, (fun _ => Γ.start), c1.input.read, c1.output.read,
+          (0, 0), false, Γ.blank),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun _ => { head := 1, cells := (c1.work 0).cells },
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+    rw [run_step N c.state hne bit c1 hstate]
+    refine (Cfg.mk.injEq ..).mpr ⟨rfl, rfl, ?_, rfl⟩
+    funext i; obtain rfl : i = 0 := Subsingleton.elim i 0
+    exact run_work_eq (c1.work 0) hheadLe hinv.cell0 hns1
+  -- Phase 1: gather sweep over the M materialized blocks (acc collects the head reads)
+  obtain ⟨rf', pending', hgather⟩ := gather_sweep_aux N bit c M c.state c1.input.read c1.output.read
+    ((singleTapeSim N).trace 1 (fun _ => bit) c1) false Γ.blank
+    (by rw [e1]; rfl) (by rw [e1, blockStart_one]) (by rw [e1]; exact hinv.cells_congr rfl)
+    (by rw [e1]; exact hisR) (by rw [e1]; exact hosR) M (le_refl M)
+  rw [gather_acc_eq hinv] at hgather
+  refine ⟨?_, hinv.cells_congr rfl⟩
+  have hir : c1.input.read = c.input.read := by rw [hinputEq]
+  have hor : c1.output.read = c.output.read := by rw [houtputEq]
+  -- Phase 2 (gather_sentinel: COMPUTE) + Phase 3 (rewind_sweep) + trace_const_add
+  -- chaining remain; the COMPUTE δ already matches trace_one's δr (iSym/acc/oSym).
+  sorry
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
