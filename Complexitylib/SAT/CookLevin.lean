@@ -171,6 +171,41 @@ def posMove (pos : ℕ) (d : Dir3) : ℕ :=
   | Dir3.right => pos + 1
   | Dir3.stay => pos
 
+/-- The four tape symbols, enumerated. -/
+def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
+
+/-- **Active transition clauses** (single work tape; tapes `0`=input, `1`=work,
+    `2`=output). For every time `t`, state `q`, head positions/symbols on the three
+    tapes, and choice bit `b`, let `(q', wW, oW, iD, wD, oD) = N.δ b q …` be the
+    induced step. Each emitted clause is `¬(read-config ∧ choice=b) ∨ consequence`,
+    one consequence per fact: the next state is `q'`, the input cell is unchanged
+    (read-only), the work/output cells under their heads become `wW`/`oW`, and the
+    three heads move per `iD`/`wD`/`oD` (via `posMove`). -/
+noncomputable def activeTransitionClauses (N : NTM 1) (steps P : ℕ) : List Clause :=
+  (List.range steps).flatMap fun t =>
+    (Finset.univ : Finset N.Q).toList.flatMap fun q =>
+      (List.range (P + 1)).flatMap fun pi =>
+        allSyms.flatMap fun si =>
+          (List.range (P + 1)).flatMap fun pw =>
+            allSyms.flatMap fun sw =>
+              (List.range (P + 1)).flatMap fun po =>
+                allSyms.flatMap fun so =>
+                  [true, false].flatMap fun b =>
+                    let out := N.δ b q si (fun _ => sw) so
+                    let cond : Clause :=
+                      [⟨false, vState t (stateIdx N q)⟩,
+                       ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
+                       ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
+                       ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
+                       ⟨!b, vChoice t⟩]
+                    [cond ++ [⟨true, vState (t + 1) (stateIdx N out.1)⟩],
+                     cond ++ [⟨true, vCell (t + 1) 0 pi (symIdx si)⟩],
+                     cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx (out.2.1 0).toΓ)⟩],
+                     cond ++ [⟨true, vCell (t + 1) 2 po (symIdx out.2.2.1.toΓ)⟩],
+                     cond ++ [⟨true, vHead (t + 1) 0 (posMove pi out.2.2.2.1)⟩],
+                     cond ++ [⟨true, vHead (t + 1) 1 (posMove pw (out.2.2.2.2.1 0))⟩],
+                     cond ++ [⟨true, vHead (t + 1) 2 (posMove po out.2.2.2.2.2)⟩]]
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
@@ -179,11 +214,16 @@ end Tableau
     head / state contents at each time-step together with the nondeterministic
     choice bits, and clauses enforce the start configuration, per-step transition
     validity, and acceptance. **Definition to be supplied.** -/
-noncomputable def tableauCNF {k : ℕ} (N : NTM k) (steps : ℕ) (x : List Bool) : CNF := sorry
+noncomputable def tableauCNF (N : NTM 1) (steps : ℕ) (x : List Bool) : CNF :=
+  let P := steps + x.length + 1
+  Tableau.oneHotStates N steps ++ Tableau.oneHotCells 1 steps P ++
+    Tableau.oneHotHeads 1 steps P ++ Tableau.startClauses N steps x ++
+    Tableau.frameClauses 1 steps P ++ Tableau.activeTransitionClauses N steps P ++
+    Tableau.acceptClauses N steps
 
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
-theorem tableauCNF_satisfiable_iff {k : ℕ} (N : NTM k) (steps : ℕ) (x : List Bool) :
+theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
     (tableauCNF N steps x).Satisfiable ↔ N.AcceptsInTime x steps := by
   sorry
 
@@ -201,7 +241,7 @@ theorem encode_mem_LSAT_iff (φ : CNF) : φ.encode ∈ L_SAT ↔ φ.Satisfiable 
 
 /-- The Cook–Levin reduction function: map each input to the encoding of its
     computation-tableau formula. -/
-noncomputable def reductionFn {k : ℕ} (N : NTM k) (T : ℕ → ℕ) : List Bool → List Bool :=
+noncomputable def reductionFn (N : NTM 1) (T : ℕ → ℕ) : List Bool → List Bool :=
   fun x => (tableauCNF N (T x.length) x).encode
 
 /-- **The reduction is polynomial-time computable.** The tableau has size
