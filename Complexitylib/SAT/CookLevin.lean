@@ -229,13 +229,35 @@ def posMove (pos : ℕ) (d : Dir3) : ℕ :=
 /-- The four tape symbols, enumerated. -/
 def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
 
-/-- **Active transition clauses** (single work tape; tapes `0`=input, `1`=work,
-    `2`=output). For every time `t`, state `q`, head positions/symbols on the three
-    tapes, and choice bit `b`, let `(q', wW, oW, iD, wD, oD) = N.δ b q …` be the
-    induced step. Each emitted clause is `¬(read-config ∧ choice=b) ∨ consequence`,
-    one consequence per fact: the next state is `q'`, the input cell is unchanged
-    (read-only), the work/output cells under their heads become `wW`/`oW`, and the
-    three heads move per `iD`/`wD`/`oD` (via `posMove`). -/
+@[simp] theorem mem_allSyms (s : Γ) : s ∈ allSyms := by cases s <;> simp [allSyms]
+
+@[simp] theorem mem_true_false (b : Bool) : b ∈ [true, false] := by cases b <;> simp
+
+/-- The seven transition clauses for one read-config + choice tuple at time `t`
+    (state `q`; input head `pi` reading `si`; work head `pw` reading `sw`; output
+    head `po` reading `so`; choice `b`). With `out := N.δ b q si (fun _ => sw) so`,
+    each clause is `¬(read-config) ∨ consequence`: next state `out.1`, unchanged
+    input cell, work/output writes, and the three head moves (`posMove`). -/
+noncomputable def activeClausesAt (N : NTM 1) (t : ℕ) (q : N.Q)
+    (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : List Clause :=
+  let out := N.δ b q si (fun _ => sw) so
+  let cond : Clause :=
+    [⟨false, vState t (stateIdx N q)⟩,
+     ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
+     ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
+     ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
+     ⟨!b, vChoice t⟩]
+  [cond ++ [⟨true, vState (t + 1) (stateIdx N out.1)⟩],
+   cond ++ [⟨true, vCell (t + 1) 0 pi (symIdx si)⟩],
+   cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx (out.2.1 0).toΓ)⟩],
+   cond ++ [⟨true, vCell (t + 1) 2 po (symIdx out.2.2.1.toΓ)⟩],
+   cond ++ [⟨true, vHead (t + 1) 0 (posMove pi out.2.2.2.1)⟩],
+   cond ++ [⟨true, vHead (t + 1) 1 (posMove pw (out.2.2.2.2.1 0))⟩],
+   cond ++ [⟨true, vHead (t + 1) 2 (posMove po out.2.2.2.2.2)⟩]]
+
+/-- **Active transition clauses** — `activeClausesAt` for every time `t < steps`,
+    state `q`, the three head positions/read symbols, and choice bit `b`. Together
+    with the frame clauses these enforce `c_{t+1} = step c_t (choice t)`. -/
 noncomputable def activeTransitionClauses (N : NTM 1) (steps P : ℕ) : List Clause :=
   (List.range steps).flatMap fun t =>
     (Finset.univ : Finset N.Q).toList.flatMap fun q =>
@@ -246,20 +268,7 @@ noncomputable def activeTransitionClauses (N : NTM 1) (steps P : ℕ) : List Cla
               (List.range (P + 1)).flatMap fun po =>
                 allSyms.flatMap fun so =>
                   [true, false].flatMap fun b =>
-                    let out := N.δ b q si (fun _ => sw) so
-                    let cond : Clause :=
-                      [⟨false, vState t (stateIdx N q)⟩,
-                       ⟨false, vHead t 0 pi⟩, ⟨false, vCell t 0 pi (symIdx si)⟩,
-                       ⟨false, vHead t 1 pw⟩, ⟨false, vCell t 1 pw (symIdx sw)⟩,
-                       ⟨false, vHead t 2 po⟩, ⟨false, vCell t 2 po (symIdx so)⟩,
-                       ⟨!b, vChoice t⟩]
-                    [cond ++ [⟨true, vState (t + 1) (stateIdx N out.1)⟩],
-                     cond ++ [⟨true, vCell (t + 1) 0 pi (symIdx si)⟩],
-                     cond ++ [⟨true, vCell (t + 1) 1 pw (symIdx (out.2.1 0).toΓ)⟩],
-                     cond ++ [⟨true, vCell (t + 1) 2 po (symIdx out.2.2.1.toΓ)⟩],
-                     cond ++ [⟨true, vHead (t + 1) 0 (posMove pi out.2.2.2.1)⟩],
-                     cond ++ [⟨true, vHead (t + 1) 1 (posMove pw (out.2.2.2.2.1 0))⟩],
-                     cond ++ [⟨true, vHead (t + 1) 2 (posMove po out.2.2.2.2.2)⟩]]
+                    activeClausesAt N t q pi si pw sw po so b
 
 /-- The acceptance clauses hold iff the final state is `qhalt` and output cell `1`
     holds `1` (the two facts witnessing an accepting halt). -/
@@ -321,6 +330,18 @@ theorem oneHotHeads_sat (k steps P : ℕ) (α : Assignment) :
       ∀ t, t ≤ steps → ∀ tp, tp < k + 2 →
         CNF.eval α (exactlyOne ((List.range (P + 1)).map (vHead t tp))) = true := by
   simp only [oneHotHeads, cnf_eval_flatMap, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
+
+/-- The active transition clauses hold iff, for every read-config + choice tuple,
+    its `activeClausesAt` block holds (which says: if `α` exhibits that read-config
+    at time `t`, then time `t+1` is the `N.δ`-step). -/
+theorem activeTransitionClauses_sat (N : NTM 1) (steps P : ℕ) (α : Assignment) :
+    CNF.eval α (activeTransitionClauses N steps P) = true ↔
+      ∀ t, t < steps → ∀ q : N.Q, ∀ pi, pi ≤ P → ∀ si : Γ, ∀ pw, pw ≤ P → ∀ sw : Γ,
+        ∀ po, po ≤ P → ∀ so : Γ, ∀ b : Bool,
+        CNF.eval α (activeClausesAt N t q pi si pw sw po so b) = true := by
+  simp only [activeTransitionClauses, cnf_eval_flatMap, List.all_eq_true, List.mem_range,
+    Nat.lt_succ_iff, Finset.mem_toList, Finset.mem_univ, mem_allSyms, mem_true_false,
+    forall_true_left, true_implies]
 
 end Tableau
 
