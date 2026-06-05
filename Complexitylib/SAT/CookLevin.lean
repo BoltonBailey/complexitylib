@@ -479,6 +479,36 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
   · rw [hcw]; exact hcells 1 (by norm_num) pos hpos
   · rw [hco]; exact hcells 2 (by norm_num) pos hpos
 
+/-! Tape `move`/`writeAndMove` cell/head behaviour, used to match `traceStep`'s
+    fields against the active-transition consequence variables. -/
+
+theorem tape_move_cells (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
+  cases d <;> rfl
+
+theorem tape_move_head (t : Tape) (d : Dir3) : (t.move d).head = Tableau.posMove t.head d := by
+  cases d <;> rfl
+
+theorem tape_write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
+  unfold Tape.write; split <;> rfl
+
+theorem tape_writeAndMove_head (t : Tape) (s : Γ) (d : Dir3) :
+    (t.writeAndMove s d).head = Tableau.posMove t.head d := by
+  rw [Tape.writeAndMove, tape_move_head, tape_write_head]
+
+theorem tape_writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {pos : ℕ} (h : pos ≠ t.head) :
+    (t.writeAndMove s d).cells pos = t.cells pos := by
+  rw [Tape.writeAndMove, tape_move_cells]
+  unfold Tape.write; split_ifs with hh
+  · rfl
+  · exact Function.update_of_ne h s t.cells
+
+theorem tape_writeAndMove_cells_self (t : Tape) (s : Γ) (d : Dir3) :
+    (t.writeAndMove s d).cells t.head = if t.head = 0 then t.cells t.head else s := by
+  rw [Tape.writeAndMove, tape_move_cells]
+  unfold Tape.write; split_ifs with hh
+  · rfl
+  · exact Function.update_self t.head s t.cells
+
 open Tableau in
 /-- The seven consequence variables of the matching active-transition tuple are all
     true: when `α` represents `c` at time `t`, the read-config matches, so each
@@ -519,6 +549,27 @@ theorem represents_conseqs (N : NTM 1) (α : Assignment) (steps P : ℕ)
     litTrue (clause_cond_conseq α _ _ ha5 hcond),
     litTrue (clause_cond_conseq α _ _ ha6 hcond),
     litTrue (clause_cond_conseq α _ _ ha7 hcond)⟩
+
+open Tableau in
+/-- Head-uniqueness: if `α` satisfies the head one-hot clauses and a head sits at
+    `ha`, then every other position's head variable is false (the frame's hypothesis). -/
+theorem head_off (α : Assignment) (steps P : ℕ)
+    (hheadOne : CNF.eval α (oneHotHeads 1 steps P) = true)
+    (t : ℕ) (ht : t ≤ steps) (tp : ℕ) (htp : tp < 3)
+    (ha : ℕ) (hal : ha ≤ P) (hat : α.get (vHead t tp ha) = true)
+    (pos : ℕ) (hpos : pos ≤ P) (hne : pos ≠ ha) :
+    α.get (vHead t tp pos) = false := by
+  have hex := (oneHotHeads_sat 1 steps P α).mp hheadOne t ht tp htp
+  rw [exactlyOne_sat] at hex
+  obtain ⟨_, hpair⟩ := hex
+  rcases Bool.eq_false_or_eq_true (α.get (vHead t tp pos)) with h | h
+  · exfalso
+    have hmp : vHead t tp pos ∈ (List.range (P + 1)).map (vHead t tp) :=
+      List.mem_map.mpr ⟨pos, List.mem_range.mpr (by omega), rfl⟩
+    have hma : vHead t tp ha ∈ (List.range (P + 1)).map (vHead t tp) :=
+      List.mem_map.mpr ⟨ha, List.mem_range.mpr (by omega), rfl⟩
+    exact hne (enc_inj (atMostOne_unique hpair hmp hma h hat)).2.2.2.1
+  · exact h
 
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
