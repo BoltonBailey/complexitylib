@@ -130,6 +130,16 @@ theorem exactlyOne_sat (α : Assignment) (vars : List ℕ) :
       vars.Pairwise (fun v w => ¬(α.get v = true ∧ α.get w = true)) := by
   rw [exactlyOne, CNF.eval_cons, Bool.and_eq_true, atLeastOne_sat, atMostOne_sat]
 
+/-- Under the at-most-one (pairwise) constraint, any two true listed variables
+    coincide — the uniqueness half of one-hot decoding. -/
+theorem atMostOne_unique {α : Assignment} {vars : List ℕ} {v w : ℕ}
+    (h : vars.Pairwise (fun a b => ¬(α.get a = true ∧ α.get b = true)))
+    (hv : v ∈ vars) (hw : w ∈ vars) (hvt : α.get v = true) (hwt : α.get w = true) : v = w := by
+  by_contra hne
+  have hsymm : Symmetric (fun a b => ¬(α.get a = true ∧ α.get b = true)) :=
+    fun a b hab hba => hab ⟨hba.2, hba.1⟩
+  exact (h.forall hsymm hv hw hne) ⟨hvt, hwt⟩
+
 /-- A positive unit clause `[v]` is satisfied iff its variable is true. -/
 @[simp] theorem unit_eval (α : Assignment) (v : ℕ) :
     Clause.eval α [(⟨true, v⟩ : Lit)] = α.get v := by
