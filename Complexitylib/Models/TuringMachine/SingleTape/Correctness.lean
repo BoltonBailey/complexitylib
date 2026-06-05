@@ -3778,7 +3778,42 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
     ∃ (m : ℕ) (choices : Fin m → Bool),
       Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c)
         ∧ m ≤ macroBound k M := by
-  sorry
+  by_cases hk : 1 ≤ k
+  · -- main case `k ≥ 1`
+    obtain ⟨hr1, hsi1⟩ := run_to_scatter1 N hcorr hne (bitf 0)
+    set dr := N.δ (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read with hdr
+    -- Phase 4: SCATTER sweep-1
+    obtain ⟨wfin1, hs1, hsi2, hh1⟩ := scatter1_sweep N (bitf 0) c M
+      dr.1 (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1
+      c.input.read c.output.read
+      ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1)
+      (by rw [hr1]; rfl) (by rw [hr1, blockStart_one]) (by rw [hr1]; exact hsi1) hk
+      (fun j hj => (N.δ_right_of_start (bitf 0) c.state c.input.read
+          (fun j => (c.work j).read) c.output.read).2.1 j
+        (by rw [Tape.read, hj]; exact hcorr.inv.wfStart j))
+      hcorr.wbeyond
+      (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+      (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+    -- Phase 5: SCATTER sweep-2 → COMMIT
+    obtain ⟨wfin2, hs2, hsi3⟩ := scatter2_sweep N (bitf 0) c M hk
+      dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
+      (fun i => (dr.2.1 i, dr.2.2.2.2.1 i))
+      ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
+        ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1))
+      (by rw [hs1]) (by rw [hs1]; exact hh1) (by rw [hs1]; exact hsi2)
+      hcorr.inv.wfStart hcorr.inv.noStart hcorr.inv.heads_le
+      (by rw [hs1, hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+      (by rw [hs1, hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+    -- Phase 6: COMMIT step → run q'
+    have hcommit := commit_step N dr.1 dr.2.2.1 dr.2.2.2.2.2 dr.2.2.2.1 c.input.read c.output.read
+      (bitf 0)
+      ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
+        ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
+          ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1)))
+      (by rw [hs2])
+    sorry
+  · -- `k = 0` (no work tapes)
+    sorry
 
 /-- **Iterated correspondence.** Simulating `t` steps of `N` (choices `g`): the
     simulator reaches, in some number `m` of steps (choices from a single
