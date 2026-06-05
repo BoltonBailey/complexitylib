@@ -3541,6 +3541,50 @@ theorem scatter2_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
     unfold Tape.write
     rw [if_pos hh0]
 
+/-- `N`'s one-step work-tape image (`writeAndMove w d`) is exactly the SCATTER
+    **final** tape `scatterFinalWork ct (w, d)`: both write `w` at the old head and
+    then move per `d` (left ↦ `head-1`, right ↦ `head+1`, stay ↦ `head`). This is the
+    bridge between `N.trace 1` and the SCATTER phases' encoding target. -/
+theorem writeAndMove_eq_scatterFinal (ct : Tape) (wd : Γw × Dir3) :
+    ct.writeAndMove (wd.1 : Γ) wd.2 = scatterFinalWork ct wd := by
+  obtain ⟨w, d⟩ := wd
+  show (ct.write (w : Γ)).move d = scatterFinalWork ct (w, d)
+  cases d <;>
+    · simp only [scatterFinalWork, scatterInterWork, Tape.move, Tape.write]
+      split <;> rfl
+
+/-- **`N.trace 1` in SCATTER-final form.** From a non-halted `c`, one `N`-step
+    (choice `bitf 0`) yields the state/input/output of `N.δ` and work tapes that are
+    exactly `scatterFinalWork` of the old tapes under the `δ`-action `wact` (work
+    write/dir). The encoding-side description that the SCATTER phases produce. -/
+theorem trace_one_scatterFinal {k : ℕ} (N : NTM k) (bitf : Fin 1 → Bool) (c : Cfg k N.Q)
+    (hne : c.state ≠ N.qhalt) :
+    N.trace 1 bitf c =
+      { state := (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).1,
+        input := c.input.move
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.1,
+        work := fun t => scatterFinalWork (c.work t)
+          ((N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.1 t,
+            (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.2.1 t),
+        output := c.output.writeAndMove
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.1
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.2.2 } := by
+  have hbase : N.trace 1 bitf c =
+      { state := (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).1,
+        input := c.input.move
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.1,
+        work := fun i => (c.work i).writeAndMove
+          ((N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.1 i : Γ)
+          ((N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.2.1 i),
+        output := c.output.writeAndMove
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.1
+          (N.δ (bitf 0) c.state c.input.read (fun i => (c.work i).read) c.output.read).2.2.2.2.2 } := by
+    rw [NTM.trace]; simp only [hne, ↓reduceIte]; rfl
+  rw [hbase]
+  refine (Cfg.mk.injEq ..).mpr ⟨rfl, rfl, ?_, rfl⟩
+  funext t
+  rw [← writeAndMove_eq_scatterFinal]
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
