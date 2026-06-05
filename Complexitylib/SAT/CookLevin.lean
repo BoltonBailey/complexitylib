@@ -130,6 +130,16 @@ theorem exactlyOne_sat (α : Assignment) (vars : List ℕ) :
       vars.Pairwise (fun v w => ¬(α.get v = true ∧ α.get w = true)) := by
   rw [exactlyOne, CNF.eval_cons, Bool.and_eq_true, atLeastOne_sat, atMostOne_sat]
 
+/-- A positive unit clause `[v]` is satisfied iff its variable is true. -/
+@[simp] theorem unit_eval (α : Assignment) (v : ℕ) :
+    Clause.eval α [(⟨true, v⟩ : Lit)] = α.get v := by
+  simp [Clause.eval, Lit.eval]
+
+/-- A list of positive unit clauses is satisfied iff every listed variable is true. -/
+theorem allUnit_eval (α : Assignment) (vs : List ℕ) :
+    CNF.eval α (vs.map (fun v => ([⟨true, v⟩] : Clause))) = true ↔ ∀ v ∈ vs, α.get v = true := by
+  simp only [CNF.eval, List.all_map, List.all_eq_true, Function.comp_apply, unit_eval]
+
 /-- Index of a machine state as a natural, via the canonical `Fintype` enumeration
     of `N.Q`; injective, so a one-hot encoding over `Fin (card Q)` names the states. -/
 noncomputable def stateIdx {k : ℕ} (N : NTM k) (q : N.Q) : ℕ := (Fintype.equivFin N.Q q).val
@@ -240,6 +250,14 @@ noncomputable def activeTransitionClauses (N : NTM 1) (steps P : ℕ) : List Cla
                      cond ++ [⟨true, vHead (t + 1) 0 (posMove pi out.2.2.2.1)⟩],
                      cond ++ [⟨true, vHead (t + 1) 1 (posMove pw (out.2.2.2.2.1 0))⟩],
                      cond ++ [⟨true, vHead (t + 1) 2 (posMove po out.2.2.2.2.2)⟩]]
+
+/-- The acceptance clauses hold iff the final state is `qhalt` and output cell `1`
+    holds `1` (the two facts witnessing an accepting halt). -/
+theorem acceptClauses_sat (N : NTM 1) (steps : ℕ) (α : Assignment) :
+    CNF.eval α (acceptClauses N steps) = true ↔
+      α.get (vState steps (stateIdx N N.qhalt)) = true ∧
+      α.get (vCell steps 2 1 (symIdx Γ.one)) = true := by
+  simp [acceptClauses, CNF.eval, Clause.eval, Lit.eval]
 
 end Tableau
 
