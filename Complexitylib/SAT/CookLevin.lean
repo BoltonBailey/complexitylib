@@ -676,6 +676,47 @@ theorem represents_step (N : NTM 1) (α : Assignment) (steps P : ℕ)
   · rw [hWorkHead]; exact C6
   · rw [hOutHead]; exact C7
 
+theorem posMove_le (pos : ℕ) (d : Dir3) : Tableau.posMove pos d ≤ pos + 1 := by
+  cases d <;> simp only [Tableau.posMove] <;> omega
+
+/-- After `t` steps each head has moved at most `t` cells from its start at `0`. -/
+theorem trace_heads_le (N : NTM 1) (g : ℕ → Bool) (x : List Bool) (t : ℕ) :
+    (N.trace t (fun i => g i.val) (N.initCfg x)).input.head ≤ t ∧
+    ((N.trace t (fun i => g i.val) (N.initCfg x)).work 0).head ≤ t ∧
+    (N.trace t (fun i => g i.val) (N.initCfg x)).output.head ≤ t := by
+  induction t with
+  | zero => refine ⟨?_, ?_, ?_⟩ <;> simp [NTM.trace, NTM.initCfg, Cfg.init, initTape]
+  | succ t ih =>
+    obtain ⟨ihi, ihw, iho⟩ := ih
+    rw [trace_succ_eq]
+    refine ⟨?_, ?_, ?_⟩ <;> unfold traceStep <;> split_ifs with hq
+    · omega
+    · rw [tape_move_head]; exact le_trans (posMove_le _ _) (by omega)
+    · omega
+    · rw [tape_writeAndMove_head]; exact le_trans (posMove_le _ _) (by omega)
+    · omega
+    · rw [tape_writeAndMove_head]; exact le_trans (posMove_le _ _) (by omega)
+
+open Tableau in
+/-- **Backward trace correspondence.** A satisfying assignment represents the whole
+    computation: at every time `t ≤ steps` it represents `N.trace t` from the start. -/
+theorem represents_trace (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bool)
+    (hstart : CNF.eval α (startClauses N steps x) = true)
+    (hframe : CNF.eval α (frameClauses 1 steps (steps + x.length + 1)) = true)
+    (hheadOne : CNF.eval α (oneHotHeads 1 steps (steps + x.length + 1)) = true)
+    (hactive : CNF.eval α (activeTransitionClauses N steps (steps + x.length + 1)) = true)
+    (t : ℕ) : t ≤ steps →
+    Represents N α (steps + x.length + 1) t
+      (N.trace t (fun i => α.get (vChoice i.val)) (N.initCfg x)) := by
+  induction t with
+  | zero => intro _; exact represents_init N α steps x hstart
+  | succ t ih =>
+    intro ht
+    rw [trace_succ_eq N (fun i => α.get (vChoice i)) t (N.initCfg x)]
+    obtain ⟨ihi, ihw, iho⟩ := trace_heads_le N (fun i => α.get (vChoice i)) x t
+    exact represents_step N α steps (steps + x.length + 1) hframe hheadOne hactive t (by omega)
+      _ (ih (by omega)) (by omega) (by omega) (by omega)
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
