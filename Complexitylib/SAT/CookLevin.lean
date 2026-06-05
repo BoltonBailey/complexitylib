@@ -95,6 +95,42 @@ theorem atLeastOne_eval (α : Assignment) (vars : List ℕ) :
   funext v
   simp [Lit.eval]
 
+/-- `CNF.eval` distributes over clause-list concatenation. -/
+theorem eval_append (α : Assignment) (φ ψ : CNF) :
+    CNF.eval α (φ ++ ψ) = (CNF.eval α φ && CNF.eval α ψ) := by
+  simp [CNF.eval, List.all_append]
+
+/-- The at-least-one clause is satisfied iff some listed variable is true (Prop form). -/
+theorem atLeastOne_sat (α : Assignment) (vars : List ℕ) :
+    Clause.eval α (atLeastOne vars) = true ↔ ∃ v ∈ vars, α.get v = true := by
+  rw [atLeastOne_eval]; simp [List.any_eq_true]
+
+/-- The at-most-one clauses are satisfied iff no two listed variables are both true. -/
+theorem atMostOne_sat (α : Assignment) (vars : List ℕ) :
+    CNF.eval α (atMostOne vars) = true ↔
+      vars.Pairwise (fun v w => ¬(α.get v = true ∧ α.get w = true)) := by
+  induction vars with
+  | nil => simp [atMostOne]
+  | cons v vs ih =>
+    rw [atMostOne, eval_append, Bool.and_eq_true, ih, List.pairwise_cons]
+    refine and_congr ?_ Iff.rfl
+    simp only [CNF.eval, List.all_map, List.all_eq_true, Clause.eval, List.any_cons,
+      List.any_nil, Bool.or_false, Lit.eval]
+    refine forall_congr' fun w => imp_congr Iff.rfl ?_
+    simp only [Function.comp_apply, Clause.eval, List.any_cons, List.any_nil,
+      Bool.or_false, Lit.eval]
+    generalize α.get v = a
+    generalize α.get w = b
+    cases a <;> cases b <;> simp
+
+/-- The exactly-one clauses are satisfied iff exactly one listed variable is true
+    (some variable is true, and no two are). The decoder for one-hot slots. -/
+theorem exactlyOne_sat (α : Assignment) (vars : List ℕ) :
+    CNF.eval α (exactlyOne vars) = true ↔
+      (∃ v ∈ vars, α.get v = true) ∧
+      vars.Pairwise (fun v w => ¬(α.get v = true ∧ α.get w = true)) := by
+  rw [exactlyOne, CNF.eval_cons, Bool.and_eq_true, atLeastOne_sat, atMostOne_sat]
+
 /-- Index of a machine state as a natural, via the canonical `Fintype` enumeration
     of `N.Q`; injective, so a one-hot encoding over `Fin (card Q)` names the states. -/
 noncomputable def stateIdx {k : ℕ} (N : NTM k) (q : N.Q) : ℕ := (Fintype.equivFin N.Q q).val
