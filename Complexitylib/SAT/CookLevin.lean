@@ -163,6 +163,14 @@ def frameClauses (k steps P : ℕ) : List Clause :=
            ([⟨true, vHead t tp pos⟩, ⟨true, vCell t tp pos s⟩,
               ⟨false, vCell (t + 1) tp pos s⟩] : Clause)]
 
+/-- New head position after a move (mirrors `Tape.move`): `left` decrements
+    (clamped at `0` by `Nat` subtraction), `right` increments, `stay` keeps. -/
+def posMove (pos : ℕ) (d : Dir3) : ℕ :=
+  match d with
+  | Dir3.left => pos - 1
+  | Dir3.right => pos + 1
+  | Dir3.stay => pos
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
