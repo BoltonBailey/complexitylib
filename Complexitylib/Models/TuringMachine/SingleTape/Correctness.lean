@@ -3340,6 +3340,55 @@ theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p 
             rw [hLCm_at, hlcf]; exact decide_eq_false (fun h => hleft h.1),
           Function.update_eq_self]
 
+/-- **SCATTER sweep-2 one full block (`trace (3*k)`).** Sweeping all `k` tapes of block
+    `p` (leftward) advances the mid-sweep invariant `Scatter2MidInv … (p+1) → … p`: the
+    work head moves from block `p`'s top to `blockStart k p - 1` (block `p-1`'s top, or
+    cell `0` when `p = 1`), the `leftCarry` updates to the clears recorded at `p` (= the
+    incoming carry for block `p-1`), and `isLeftMover` drops the tapes deposited at `p`.
+    Wraps `scatter2_block_aux` at `m = k` between `ofMid` and `toMidPred`. -/
+theorem scatter2_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
+    (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (isLeftMover_in leftCarry_in : Fin k → Bool)
+    (hilm_in : ∀ j : Fin k,
+      isLeftMover_in j = decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ p + 1))
+    (hlc_in : ∀ j : Fin k,
+      leftCarry_in j = decide ((c.work j).head = p + 1 ∧ (wact j).2 = Dir3.left))
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover_in, leftCarry_in))
+    (hhead : (c1.work 0).head = headBitCell k p ⟨k - 1, by omega⟩ + 2)
+    (hmid : Scatter2MidInv (c1.work 0) c.work wact M (p + 1))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * k) (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+            (fun j => if (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+                false else isLeftMover_in j),
+            (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p))),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k p - 1
+      ∧ Scatter2MidInv wt c.work wact M p := by
+  obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_block_aux N bb c p M hp1 hpM hk q' wact oWoD iD iSym oSym
+    isLeftMover_in leftCarry_in hilm_in hlc_in c1 hst hhead
+    (Scatter2BlockInv.ofMid hp1 hmid) his hos k (le_refl k)
+  refine ⟨wt, ?_, ?_, Scatter2BlockInv.toMidPred hbi⟩
+  · rw [htr]
+    have hilm_k : (fun (j : Fin k) =>
+          if k - 1 - (j : ℕ) < k ∧ (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+            false else isLeftMover_in j)
+        = (fun j => if (wact j).2 = Dir3.left ∧ (c.work j).head = p + 1 then
+            false else isLeftMover_in j) := by
+      funext j
+      simp only [show k - 1 - (j : ℕ) < k from by have := j.isLt; omega, true_and]
+    have hlc_k : (fun (j : Fin k) => if k - 1 - (j : ℕ) < k then
+          decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p) else leftCarry_in j)
+        = (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head = p)) := by
+      funext j; rw [if_pos (by have := j.isLt; omega)]
+    rw [hilm_k, hlc_k]
+    simp only [lt_irrefl, if_false]
+  · rw [hwh]; omega
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
