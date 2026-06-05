@@ -2557,7 +2557,8 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
         { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
             (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)),
           input := c1.input, work := wfin, output := c1.output }
-      ∧ SimInvAt k (wfin 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1) := by
+      ∧ SimInvAt k (wfin 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1)
+      ∧ (wfin 0).head = blockStart k (M + 2) - 1 := by
   -- `scatterInterWork.head = M+1` ⟺ the tape's head was at `M` moving right
   have hheadEq : ∀ j : Fin k,
       decide ((c.work j).head = M ∧ (wact j).2 = Dir3.right)
@@ -2622,7 +2623,7 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
     rw [hMat]; exact hSout
   refine ⟨fun i => (((singleTapeSim N).trace (3 * k) (fun _ => bb)
       ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).work i).writeAndMove
-      Γw.blank.toΓ Dir3.left, ?_, ?_⟩
+      Γw.blank.toΓ Dir3.left, ?_, ?_, ?_⟩
   · rw [show 3 * k * (M + 1) + 1 = 3 * k * M + (3 * k + 1) from by rw [Nat.mul_succ]; omega,
       trace_const_add, trace_const_add, hTurn, hMatin, hMatout]
     refine (Cfg.mk.injEq ..).mpr ⟨?_, tape_idle_stay c1.input his, rfl,
@@ -2697,6 +2698,14 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
       intro cc hcc
       rw [congrFun hfc cc]
       exact hblank cc (by rw [← hbs] at hcc; omega)
+  · -- head: the turn-around's left move lands at `blockStart (M+2) - 1`
+    show ((((singleTapeSim N).trace (3 * k) (fun _ => bb)
+        ((singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1)).work 0).writeAndMove
+          Γw.blank.toΓ Dir3.left).head = blockStart k (M + 2) - 1
+    rw [hcwMat, work_write_left wtMat Γw.blank.toΓ
+        (by rw [hmatHead]; have := one_le_blockStart k (M + 2); omega)]
+    show wtMat.head - 1 = blockStart k (M + 2) - 1
+    rw [hmatHead]
 
 /-- One **scatter sweep-2** step (`trace 1`): from a `scatter2 d` config, the result is
     the configuration built from `scatter2Step`'s output. Basis of the SCATTER sweep-2
