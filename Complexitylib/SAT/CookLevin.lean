@@ -404,11 +404,11 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
   rw [startClauses_sat] at hstart
   obtain ⟨hstate, hheads, hcells⟩ := hstart
   have hci : ∀ pos, (N.initCfg x).input.cells pos = initCellSym x 0 pos := by
-    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+    intro pos; simp [initTape, initCellSym]
   have hcw : ∀ pos, ((N.initCfg x).work 0).cells pos = initCellSym x 1 pos := by
-    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+    intro pos; simp [initTape, initCellSym]
   have hco : ∀ pos, (N.initCfg x).output.cells pos = initCellSym x 2 pos := by
-    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+    intro pos; simp [initTape, initCellSym]
   refine ⟨hstate, fun pos hpos => ?_, fun pos hpos => ?_, fun pos hpos => ?_,
     hheads 0 (by norm_num), hheads 1 (by norm_num), hheads 2 (by norm_num)⟩
   · rw [hci]; exact hcells 0 (by norm_num) pos hpos
