@@ -379,6 +379,18 @@ theorem gatherStep_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (d : GatherD
     gatherStep N b d iHead wH oHead = gatherStep N b' d iHead wH oHead := by
   simp only [gatherStep, if_neg h]
 
+/-- **GATHER stays in GATHER off the sentinel.** As long as the work head is not
+    on the `□` sentinel, the GATHER step's next state is again a GATHER state (the
+    sweep only leaves GATHER to enter REWIND when it reads `□`). The inductive
+    building block for characterizing the sweep's per-step states. -/
+theorem gatherStep_stays_gather {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
+    (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
+    ∃ d', (gatherStep N b d iHead wH oHead).1 = SimQ.gather d' := by
+  simp only [gatherStep, if_neg h]
+  split
+  · exact ⟨_, rfl⟩
+  · split <;> exact ⟨_, rfl⟩
+
 /-- **Choice irrelevance — one simulator step.** The single-tape simulator's
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
