@@ -111,6 +111,43 @@ def initCellSym (x : List Bool) (tp pos : ℕ) : Γ :=
   else if tp = 0 then ((x.map Γ.ofBool)[pos - 1]?).getD Γ.blank
   else Γ.blank
 
+/-- One-hot constraint that every time-step `0…steps` is in exactly one state. -/
+noncomputable def oneHotStates {k : ℕ} (N : NTM k) (steps : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    exactlyOne ((List.range (Fintype.card N.Q)).map (vState t))
+
+/-- One-hot constraint that every cell (each tape `0…k+1`, position `0…P`, time
+    `0…steps`) holds exactly one of the four symbols. -/
+def oneHotCells (k steps P : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    (List.range (k + 2)).flatMap fun tp =>
+      (List.range (P + 1)).flatMap fun pos =>
+        exactlyOne ((List.range 4).map (vCell t tp pos))
+
+/-- One-hot constraint that every tape head (each tape `0…k+1`, time `0…steps`) is
+    at exactly one position in `0…P`. -/
+def oneHotHeads (k steps P : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    (List.range (k + 2)).flatMap fun tp =>
+      exactlyOne ((List.range (P + 1)).map (vHead t tp))
+
+/-- Unit clauses fixing the start configuration at time `0`: state `qstart`, every
+    head at cell `0`, and every cell holding its `initCellSym` value. -/
+noncomputable def startClauses {k : ℕ} (N : NTM k) (steps : ℕ) (x : List Bool) :
+    List Clause :=
+  let P := steps + x.length + 1
+  ([⟨true, vState 0 (stateIdx N N.qstart)⟩] : Clause) ::
+    ((List.range (k + 2)).map (fun tp => ([⟨true, vHead 0 tp 0⟩] : Clause)) ++
+     (List.range (k + 2)).flatMap (fun tp =>
+       (List.range (P + 1)).map (fun pos =>
+         ([⟨true, vCell 0 tp pos (symIdx (initCellSym x tp pos))⟩] : Clause))))
+
+/-- Unit clauses fixing acceptance at time `steps`: the state is `qhalt` and cell
+    `1` of the output tape (index `k+1`) holds `1`. -/
+noncomputable def acceptClauses {k : ℕ} (N : NTM k) (steps : ℕ) : List Clause :=
+  [[⟨true, vState steps (stateIdx N N.qhalt)⟩],
+   [⟨true, vCell steps (k + 1) 1 (symIdx Γ.one)⟩]]
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
