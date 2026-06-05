@@ -431,6 +431,29 @@ def Represents (N : NTM 1) (α : Assignment) (P t : ℕ) (c : Cfg 1 N.Q) : Prop 
   α.get (vHead t 1 (c.work 0).head) = true ∧
   α.get (vHead t 2 c.output.head) = true
 
+/-- One step of `N.trace` from configuration `c` with choice bit `b`: stays if
+    halted, otherwise applies `N.δ`. (`N.trace (t+1)` is this applied to `N.trace t`.) -/
+def traceStep (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) : Cfg 1 N.Q :=
+  if c.state = N.qhalt then c
+  else
+    let out := N.δ b c.state c.input.read (fun i => (c.work i).read) c.output.read
+    { state := out.1, input := c.input.move out.2.2.2.1,
+      work := fun i => (c.work i).writeAndMove (out.2.1 i) (out.2.2.2.2.1 i),
+      output := c.output.writeAndMove out.2.2.1 out.2.2.2.2.2 }
+
+/-- `N.trace 1` is a single `traceStep`. -/
+theorem trace_one_eq (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) :
+    N.trace 1 (fun _ => b) c = traceStep N c b := by
+  simp only [NTM.trace, traceStep]
+
+/-- Peel the last step: `N.trace (t+1)` is one `traceStep` from `N.trace t`. -/
+theorem trace_succ_eq (N : NTM 1) (g : ℕ → Bool) (t : ℕ) (c : Cfg 1 N.Q) :
+    N.trace (t + 1) (fun i => g i.val) c = traceStep N (N.trace t (fun i => g i.val) c) (g t) := by
+  rw [N.trace_add t 1 g c]
+  have : (fun i : Fin 1 => g (t + i.val)) = (fun _ => g t) := by
+    funext i; obtain rfl : i = 0 := Subsingleton.elim i 0; simp
+  rw [this, trace_one_eq]
+
 open Tableau in
 /-- Base case: a satisfying assignment for the start clauses represents the initial
     configuration at time `0`. -/
