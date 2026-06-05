@@ -407,6 +407,30 @@ theorem gatherStep_components {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k
   · exact ⟨rfl, rfl, rfl, rfl, rfl⟩
   · split <;> exact ⟨rfl, rfl, rfl, rfl, rfl⟩
 
+/-- **A GATHER configuration arises only from `run` or `gather`.** The only
+    transitions producing a GATHER state are `run → gather` (starting the sweep)
+    and `gather → gather` (continuing it); every back-phase step
+    (`rewind`/`scatter1`/`scatter2`/`commit`) and `halt` produces a non-GATHER
+    state. The backward-chaining tool for locating the sweep within a macro-step. -/
+theorem simDelta_gather_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
+    (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) (d' : GatherData k N.Q)
+    (h : (simDelta N b state iHead wHead oHead).1 = SimQ.gather d') :
+    (∃ q, state = SimQ.run q) ∨ (∃ d, state = SimQ.gather d) := by
+  rcases state with q | d | d | d | d | d | ⟨⟩
+  · exact Or.inl ⟨q, rfl⟩
+  · exact Or.inr ⟨d, rfl⟩
+  · exact absurd h (by
+      simp only [simDelta, rewindStep]; split <;>
+        simp [SimQ.gather, SimQ.scatter1, SimQ.rewind])
+  · exact absurd h (by
+      simp only [simDelta, scatter1Step]; (repeat' split) <;>
+        simp [SimQ.gather, SimQ.scatter1, SimQ.scatter2])
+  · exact absurd h (by
+      simp only [simDelta, scatter2Step]; (repeat' split) <;>
+        simp [SimQ.gather, SimQ.scatter2, SimQ.commit])
+  · exact absurd h (by simp [simDelta, commitStep, SimQ.gather, SimQ.run])
+  · exact absurd h (by simp [simDelta, SimQ.gather, SimQ.halt])
+
 /-- **Choice irrelevance — one simulator step.** The single-tape simulator's
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
