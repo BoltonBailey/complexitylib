@@ -34,6 +34,37 @@ open Complexity
 
 namespace SAT
 
+/-! ## Tableau variable encoding
+
+The computation-tableau formula's Boolean variables are indexed by `ℕ`. Each
+"atom" of the tableau — a state bit, a nondeterministic choice bit, a tape-cell
+bit, or a head-position bit, all indexed by a time-step — is injected into `ℕ`
+by iterated `Nat.pair`, so distinct atoms receive distinct SAT variables. -/
+
+namespace Tableau
+
+/-- Inject a tagged 4-tuple of naturals into one natural by iterated `Nat.pair`. -/
+def enc (tag a b c d : ℕ) : ℕ :=
+  Nat.pair tag (Nat.pair a (Nat.pair b (Nat.pair c d)))
+
+/-- `enc` is injective on each component (it is a composition of bijective pairings). -/
+theorem enc_inj {tag a b c d tag' a' b' c' d' : ℕ}
+    (h : enc tag a b c d = enc tag' a' b' c' d') :
+    tag = tag' ∧ a = a' ∧ b = b' ∧ c = c' ∧ d = d' := by
+  simp only [enc, Nat.pair_eq_pair] at h
+  tauto
+
+/-- Variable: at time `t` the machine is in the state with index `q` (one-hot). -/
+def vState (t q : ℕ) : ℕ := enc 0 t q 0 0
+/-- Variable: at time `t` the nondeterministic choice bit is `true`. -/
+def vChoice (t : ℕ) : ℕ := enc 1 t 0 0 0
+/-- Variable: at time `t`, cell `pos` of tape `tp` holds the symbol with index `s`. -/
+def vCell (t tp pos s : ℕ) : ℕ := enc 2 t tp (Nat.pair pos s) 0
+/-- Variable: at time `t`, the head of tape `tp` is at cell `pos`. -/
+def vHead (t tp pos : ℕ) : ℕ := enc 3 t tp pos 0
+
+end Tableau
+
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
     satisfiable exactly when the (single-work-tape) machine `N` has an accepting
     computation on input `x` within `steps` steps — variables encode the tape /
