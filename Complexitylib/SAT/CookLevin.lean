@@ -1138,6 +1138,70 @@ theorem fassign_frameClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
     (by omega) (by omega) hpos
   rw [e1, e2, fcellSym_succ_ne N x g t tp pos hne]
 
+open Tableau in
+theorem fassign_get_vChoice_eq (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t : ℕ} (ht : t < steps) : (fassign N x g steps P).get (vChoice t) = g t := by
+  rw [Bool.eq_iff_iff, fassign_get_vChoice]
+  exact ⟨fun h => h.2, fun h => ⟨ht, h⟩⟩
+
+open Tableau in
+theorem fassign_activeClausesAt (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    (t : ℕ) (ht : t < steps) (q : N.Q) (pi : ℕ) (hpi : pi ≤ P) (si : Γ) (pw : ℕ) (hpw : pw ≤ P)
+    (sw : Γ) (po : ℕ) (hpo : po ≤ P) (so : Γ) (b : Bool) :
+    CNF.eval (fassign N x g steps P) (activeClausesAt N t q pi si pw sw po so b) = true := by
+  by_cases hcond : (activeCond N t q pi si pw sw po so b).any
+      (Lit.eval (fassign N x g steps P)) = true
+  · simp only [activeClausesAt, CNF.eval, List.all_cons, List.all_nil, Bool.and_true,
+      Clause.eval, List.any_append, hcond, Bool.true_or]
+  · rw [Bool.not_eq_true] at hcond
+    have hfacts := hcond
+    simp only [activeCond, List.any_cons, List.any_nil, Bool.or_eq_false_iff, Lit.eval,
+      beq_eq_false_iff_ne, ne_eq, Bool.not_eq_false] at hfacts
+    obtain ⟨hsv, hhi, hcvi, hhw, hcvw, hho, hcvo, hbv, _⟩ := hfacts
+    -- decode the read-config: the tuple equals `fcfg t`'s state/heads/reads and `b = g t`
+    have hq : q = (fcfg N x g t).state :=
+      stateIdx_inj N ((fassign_get_vState N x g steps P).mp hsv).2
+    have hpi : pi = (fcfg N x g t).input.head := ((fassign_get_vHead N x g steps P).mp hhi).2.2
+    have hpw : pw = ((fcfg N x g t).work 0).head := ((fassign_get_vHead N x g steps P).mp hhw).2.2
+    have hpo : po = (fcfg N x g t).output.head := ((fassign_get_vHead N x g steps P).mp hho).2.2
+    have hsi : si = (fcfg N x g t).input.read := by
+      rw [symIdx_inj ((fassign_get_vCell N x g steps P).mp hcvi).2.2.2]
+      unfold fcellSym Tape.read; rw [if_pos rfl, hpi]
+    have hsw : sw = ((fcfg N x g t).work 0).read := by
+      rw [symIdx_inj ((fassign_get_vCell N x g steps P).mp hcvw).2.2.2]
+      unfold fcellSym Tape.read; rw [if_neg (by decide : (1:ℕ) ≠ 0), if_pos rfl, hpw]
+    have hso : so = (fcfg N x g t).output.read := by
+      rw [symIdx_inj ((fassign_get_vCell N x g steps P).mp hcvo).2.2.2]
+      unfold fcellSym Tape.read
+      rw [if_neg (by decide : (2:ℕ) ≠ 0), if_neg (by decide : (2:ℕ) ≠ 1), hpo]
+    have hb : b = g t := by
+      have hbv' : (fassign N x g steps P).get (vChoice t) = b := by
+        cases hgc : (fassign N x g steps P).get (vChoice t) <;> cases b <;> simp_all
+      rw [← hbv', fassign_get_vChoice_eq N x g steps P ht]
+    subst hq hpi hpw hpo hsi hsw hso hb
+    simp only [activeClausesAt, CNF.eval, List.all_cons, List.all_nil, Clause.eval,
+      List.any_append, hcond, Bool.false_or, List.any_cons, List.any_nil, Bool.or_false,
+      Lit.eval, beq_iff_eq, Bool.and_true, Bool.and_eq_true]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · exact (fassign_get_vState N x g steps P).mpr ⟨by omega, by rw [fcfg_succ, traceStep_state]⟩
+    · refine (fassign_get_vCell N x g steps P).mpr ⟨by omega, by omega, hpi, ?_⟩
+      congr 1; unfold fcellSym Tape.read; rw [if_pos rfl, fcfg_succ, traceStep_input_cells]
+    · refine (fassign_get_vCell N x g steps P).mpr ⟨by omega, by omega, hpw, ?_⟩
+      congr 1; unfold fcellSym
+      rw [if_neg (by decide : (1:ℕ) ≠ 0), if_pos rfl, fcfg_succ, traceStep_work_cells_self]
+    · refine (fassign_get_vCell N x g steps P).mpr ⟨by omega, by omega, hpo, ?_⟩
+      congr 1; unfold fcellSym
+      rw [if_neg (by decide : (2:ℕ) ≠ 0), if_neg (by decide : (2:ℕ) ≠ 1), fcfg_succ,
+        traceStep_output_cells_self]
+    · refine (fassign_get_vHead N x g steps P).mpr ⟨by omega, by omega, ?_⟩
+      unfold fheadPos; rw [if_pos rfl, fcfg_succ, traceStep_input_head]
+    · refine (fassign_get_vHead N x g steps P).mpr ⟨by omega, by omega, ?_⟩
+      unfold fheadPos; rw [if_neg (by decide : (1:ℕ) ≠ 0), if_pos rfl, fcfg_succ, traceStep_work_head]
+    · refine (fassign_get_vHead N x g steps P).mpr ⟨by omega, by omega, ?_⟩
+      unfold fheadPos
+      rw [if_neg (by decide : (2:ℕ) ≠ 0), if_neg (by decide : (2:ℕ) ≠ 1), fcfg_succ,
+        traceStep_output_head]
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
