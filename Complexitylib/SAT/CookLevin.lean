@@ -114,8 +114,7 @@ theorem atMostOne_sat (α : Assignment) (vars : List ℕ) :
   | cons v vs ih =>
     rw [atMostOne, eval_append, Bool.and_eq_true, ih, List.pairwise_cons]
     refine and_congr ?_ Iff.rfl
-    simp only [CNF.eval, List.all_map, List.all_eq_true, Clause.eval, List.any_cons,
-      List.any_nil, Bool.or_false, Lit.eval]
+    simp only [CNF.eval, List.all_map, List.all_eq_true]
     refine forall_congr' fun w => imp_congr Iff.rfl ?_
     simp only [Function.comp_apply, Clause.eval, List.any_cons, List.any_nil,
       Bool.or_false, Lit.eval]
