@@ -382,6 +382,39 @@ theorem tableauCNF_eval_split (N : NTM 1) (steps : ℕ) (x : List Bool) (α : As
   rw [tableauCNF]
   simp only [Tableau.eval_append, Bool.and_eq_true, and_assoc]
 
+open Tableau in
+/-- `α` represents configuration `c` at time `t` (positions bounded by `P`): the
+    one-hot state/cell/head variables that hold of `c` are all set true in `α`. The
+    invariant carried through the backward (sat → accepts) direction. -/
+def Represents (N : NTM 1) (α : Assignment) (P t : ℕ) (c : Cfg 1 N.Q) : Prop :=
+  α.get (vState t (stateIdx N c.state)) = true ∧
+  (∀ pos, pos ≤ P → α.get (vCell t 0 pos (symIdx (c.input.cells pos))) = true) ∧
+  (∀ pos, pos ≤ P → α.get (vCell t 1 pos (symIdx ((c.work 0).cells pos))) = true) ∧
+  (∀ pos, pos ≤ P → α.get (vCell t 2 pos (symIdx (c.output.cells pos))) = true) ∧
+  α.get (vHead t 0 c.input.head) = true ∧
+  α.get (vHead t 1 (c.work 0).head) = true ∧
+  α.get (vHead t 2 c.output.head) = true
+
+open Tableau in
+/-- Base case: a satisfying assignment for the start clauses represents the initial
+    configuration at time `0`. -/
+theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bool)
+    (hstart : CNF.eval α (startClauses N steps x) = true) :
+    Represents N α (steps + x.length + 1) 0 (N.initCfg x) := by
+  rw [startClauses_sat] at hstart
+  obtain ⟨hstate, hheads, hcells⟩ := hstart
+  have hci : ∀ pos, (N.initCfg x).input.cells pos = initCellSym x 0 pos := by
+    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+  have hcw : ∀ pos, ((N.initCfg x).work 0).cells pos = initCellSym x 1 pos := by
+    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+  have hco : ∀ pos, (N.initCfg x).output.cells pos = initCellSym x 2 pos := by
+    intro pos; simp [NTM.initCfg, Cfg.init, initTape, initCellSym]
+  refine ⟨hstate, fun pos hpos => ?_, fun pos hpos => ?_, fun pos hpos => ?_,
+    hheads 0 (by norm_num), hheads 1 (by norm_num), hheads 2 (by norm_num)⟩
+  · rw [hci]; exact hcells 0 (by norm_num) pos hpos
+  · rw [hcw]; exact hcells 1 (by norm_num) pos hpos
+  · rw [hco]; exact hcells 2 (by norm_num) pos hpos
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
