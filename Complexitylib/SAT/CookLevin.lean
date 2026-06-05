@@ -1202,11 +1202,35 @@ theorem fassign_activeClausesAt (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (
       rw [if_neg (by decide : (2:ℕ) ≠ 0), if_neg (by decide : (2:ℕ) ≠ 1), fcfg_succ,
         traceStep_output_head]
 
+open Tableau in
+theorem fassign_activeTransitionClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
+    CNF.eval (fassign N x g steps P) (activeTransitionClauses N steps P) = true := by
+  rw [activeTransitionClauses_sat]
+  exact fun t ht q pi hpi si pw hpw sw po hpo so b =>
+    fassign_activeClausesAt N x g steps P t ht q pi hpi si pw hpw sw po hpo so b
+
+open Tableau in
+/-- **Forward direction.** If `N` accepts `x` within `steps` steps, the tableau is
+    satisfiable: the assignment marking exactly the accepting run's variables. -/
+theorem accepts_to_tableau_sat (N : NTM 1) (steps : ℕ) (x : List Bool)
+    (h : N.AcceptsInTime x steps) : (tableauCNF N steps x).Satisfiable := by
+  obtain ⟨choices, hhalt, hout⟩ := h
+  set g : ℕ → Bool := fun i => if hi : i < steps then choices ⟨i, hi⟩ else false with hg
+  have hcfg : fcfg N x g steps = N.trace steps choices (N.initCfg x) := by
+    unfold fcfg
+    congr 1; funext i; simp only [hg]; exact dif_pos i.isLt
+  refine ⟨fassign N x g steps (steps + x.length + 1), ?_⟩
+  rw [tableauCNF_eval_split]
+  exact ⟨fassign_oneHotStates N x g steps _, fassign_oneHotCells N x g steps _,
+    fassign_oneHotHeads N x g steps _ (by omega), fassign_startClauses N x g steps _ rfl,
+    fassign_frameClauses N x g steps _, fassign_activeTransitionClauses N x g steps _,
+    fassign_acceptClauses N x g steps _ (by omega) (hcfg ▸ hhalt) (hcfg ▸ hout)⟩
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
-    (tableauCNF N steps x).Satisfiable ↔ N.AcceptsInTime x steps := by
-  sorry
+    (tableauCNF N steps x).Satisfiable ↔ N.AcceptsInTime x steps :=
+  ⟨tableau_sat_to_accepts N steps x, accepts_to_tableau_sat N steps x⟩
 
 /-- An encoded CNF is in `L_SAT` iff it is satisfiable (`CNF.encode` is injective,
     via `CNF.decode?_encode`). -/
