@@ -850,6 +850,70 @@ theorem Scatter2BlockInv.toMidPred {k : ℕ} {t : Tape} {w : Fin k → Tape}
   oldPart := fun q hq1 hqp j => h.oldPart q hq1 hqp j
   sentinel := h.sentinel
 
+/-- **Block-step cell bookkeeping (pure)** for SCATTER sweep-2: advancing the within-block
+    invariant one tape. Sweep-2 only rewrites a head-bit cell, so if a new tape `t'` agrees
+    with `t` everywhere except block `p` tape `k-1-m`'s head-bit (now the final value), and
+    `t` satisfies `Scatter2BlockInv … p m`, then `t'` satisfies `Scatter2BlockInv … p (m+1)`.
+    The changed cell `headBitCell p (k-1-m)` is disjoint from every other queried cell
+    (same-block sym cells differ mod 3; other tapes by index; other blocks by layout). -/
+theorem scatter2_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M p m : ℕ} (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hmk : m < k)
+    (hbm : Scatter2BlockInv t w wact M p m)
+    (hbit : t'.cells (headBitCell k p ⟨k - 1 - m, by omega⟩)
+        = (if (scatterFinalWork (w ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head = p
+            then Γ.one else Γ.zero))
+    (hpres : ∀ c, c ≠ headBitCell k p ⟨k - 1 - m, by omega⟩ → t'.cells c = t.cells c) :
+    Scatter2BlockInv t' w wact M p (m + 1) where
+  cell0 := by
+    rw [hpres 0 (by simp only [headBitCell]; have := one_le_blockStart k p; omega)]; exact hbm.cell0
+  donePart := fun q hpq hqM j => by
+    have key : blockStart k p + 3 * (k - 1 - m) < blockStart k q := by
+      have hA := headBitCell_add_three_le k p ⟨k - 1 - m, by omega⟩ hp1
+      have hB := blockStart_le k (show p + 1 ≤ q by omega)
+      simp only [headBitCell] at hA; omega
+    rw [hpres (headBitCell k q j) (by simp only [headBitCell]; have := j.isLt; omega),
+        hpres (symCell k q j) (by simp only [headBitCell, symCell]; have := j.isLt; omega),
+        hpres (symCell k q j + 1) (by simp only [headBitCell, symCell]; have := j.isLt; omega)]
+    exact hbm.donePart q hpq hqM j
+  doneTape := fun j hj => by
+    rcases Nat.lt_or_ge (k - 1 - m) (j : ℕ) with hlt | hge
+    · rw [hpres (headBitCell k p j) (by simp only [headBitCell]; omega),
+          hpres (symCell k p j) (by simp only [headBitCell, symCell]; omega),
+          hpres (symCell k p j + 1) (by simp only [headBitCell, symCell]; omega)]
+      exact hbm.doneTape j (by omega)
+    · have hjeq : (j : ℕ) = k - 1 - m := by omega
+      rw [show j = (⟨k - 1 - m, by omega⟩ : Fin k) from Fin.ext hjeq]
+      obtain ⟨_, hs1, hs2⟩ := hbm.oldTape ⟨k - 1 - m, by omega⟩ (by show k - 1 - m < k - m; omega)
+      refine ⟨hbit, ?_, ?_⟩
+      · rw [hpres (symCell k p ⟨k - 1 - m, by omega⟩) (by simp only [headBitCell, symCell]; omega)]
+        exact hs1
+      · rw [hpres (symCell k p ⟨k - 1 - m, by omega⟩ + 1)
+          (by simp only [headBitCell, symCell]; omega)]
+        exact hs2
+  oldTape := fun j hj => by
+    rw [hpres (headBitCell k p j) (by simp only [headBitCell]; omega),
+        hpres (symCell k p j) (by simp only [headBitCell, symCell]; omega),
+        hpres (symCell k p j + 1) (by simp only [headBitCell, symCell]; omega)]
+    exact hbm.oldTape j (by omega)
+  oldPart := fun q hq1 hqp j => by
+    have key : blockStart k q + 3 * (k : ℕ) ≤ blockStart k p := by
+      have hC := blockStart_le k (show q + 1 ≤ p by omega)
+      have hD := blockStart_succ k q (by omega)
+      have hbw : blockWidth k = 3 * k := rfl
+      omega
+    rw [hpres (headBitCell k q j) (by simp only [headBitCell]; have := j.isLt; omega),
+        hpres (symCell k q j) (by simp only [headBitCell, symCell]; have := j.isLt; omega),
+        hpres (symCell k q j + 1) (by simp only [headBitCell, symCell]; have := j.isLt; omega)]
+    exact hbm.oldPart q hq1 hqp j
+  sentinel := fun c hc => by
+    have key : blockStart k p + 3 * k ≤ blockStart k (M + 2) := by
+      have hE := blockStart_le k (show p + 1 ≤ M + 2 by omega)
+      have hD := blockStart_succ k p (by omega)
+      have hbw : blockWidth k = 3 * k := rfl
+      omega
+    rw [hpres c (by simp only [headBitCell]; have := one_le_blockStart k p; omega)]
+    exact hbm.sentinel c hc
+
 /-- The SCATTER head triples write the symbol via the **writable** codec
     (`encSymW s`), but the `scatterInterWork` target reads it via the
     full-alphabet codec applied to the written cell (`encSymΓ s.toΓ`). They
