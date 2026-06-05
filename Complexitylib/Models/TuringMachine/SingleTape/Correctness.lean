@@ -3957,6 +3957,53 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     -- work tape; 0-tape machines are padded with a dummy tape before reduction)
     exact absurd hk hk0
 
+/-- **Trace-level choice irrelevance.** Two choice sequences that agree at every
+    step where the simulator is at a GATHER state reading the `□` sentinel (the
+    only step consulting the nondeterministic bit — the COMPUTE sub-step) drive
+    the simulator to the same configuration. Proved by induction on the step
+    count, using `simDelta_choice_irrel` at each step: where the configuration is
+    not a `□`-reading GATHER step the choice is irrelevant, and where it is the
+    hypothesis forces the two sequences to agree. -/
+theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
+    ∀ (m : ℕ) (choices choices' : ℕ → Bool) (c1 : Cfg 1 (SimQ k N.Q)),
+    (∀ i, i < m →
+       (∃ d, ((singleTapeSim N).trace i (fun j => choices j.val) c1).state = SimQ.gather d) →
+       (((singleTapeSim N).trace i (fun j => choices j.val) c1).work 0).read = Γ.blank →
+       choices i = choices' i) →
+    (singleTapeSim N).trace m (fun j => choices j.val) c1
+      = (singleTapeSim N).trace m (fun j => choices' j.val) c1 := by
+  intro m
+  induction m with
+  | zero => intro choices choices' c1 _; rfl
+  | succ m ih =>
+    intro choices choices' c1 hyp
+    rw [(singleTapeSim N).trace_add m 1 choices c1, (singleTapeSim N).trace_add m 1 choices' c1]
+    have hcm : (singleTapeSim N).trace m (fun j => choices j.val) c1
+        = (singleTapeSim N).trace m (fun j => choices' j.val) c1 :=
+      ih choices choices' c1 (fun i hi => hyp i (Nat.lt_succ_of_lt hi))
+    rw [← hcm]
+    set cm0 := (singleTapeSim N).trace m (fun j => choices j.val) c1 with hcm0def
+    by_cases hcmhalt : cm0.state = (singleTapeSim N).qhalt
+    · rw [(singleTapeSim N).trace_halted 1 _ hcmhalt,
+        (singleTapeSim N).trace_halted 1 _ hcmhalt]
+    · have hsimeq : simDelta N (choices m) cm0.state cm0.input.read
+            (fun i => (cm0.work i).read) cm0.output.read
+          = simDelta N (choices' m) cm0.state cm0.input.read
+            (fun i => (cm0.work i).read) cm0.output.read := by
+        by_cases hgather : (∃ d, cm0.state = SimQ.gather d) ∧ (cm0.work 0).read = Γ.blank
+        · obtain ⟨hd, hb⟩ := hgather
+          rw [hyp m (Nat.lt_succ_self m) hd hb]
+        · apply simDelta_choice_irrel
+          intro d hd_eq hbad
+          exact hgather ⟨⟨d, hd_eq⟩, hbad⟩
+      simp only [NTM.trace, if_neg hcmhalt, Nat.add_zero]
+      exact congrArg
+        (fun r => ({ state := r.1, input := cm0.input.move r.2.2.2.1,
+                     work := fun i => (cm0.work i).writeAndMove (r.2.1 i).toΓ (r.2.2.2.2.1 i),
+                     output := cm0.output.writeAndMove r.2.2.1.toΓ r.2.2.2.2.2 } :
+                   Cfg 1 N.singleTapeSim.Q))
+        hsimeq
+
 /-- **Iterated correspondence.** Simulating `t` steps of `N` (choices `g`): the
     simulator reaches, in some number `m` of steps (choices from a single
     `ℕ`-indexed `F`), a configuration corresponding to `N.trace t g c` (at some
