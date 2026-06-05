@@ -717,6 +717,51 @@ theorem represents_trace (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List B
     exact represents_step N α steps (steps + x.length + 1) hframe hheadOne hactive t (by omega)
       _ (ih (by omega)) (by omega) (by omega) (by omega)
 
+open Tableau in
+theorem symIdx_lt (s : Γ) : symIdx s < 4 := by cases s <;> decide
+
+open Tableau in
+theorem stateIdx_lt {k : ℕ} (N : NTM k) (q : N.Q) : stateIdx N q < Fintype.card N.Q :=
+  (Fintype.equivFin N.Q q).isLt
+
+open Tableau in
+/-- The exactly-one clauses force a unique true variable: two true variables in the
+    list must be the same. -/
+theorem oneHot_unique {α : Assignment} {vars : List ℕ}
+    (hex : CNF.eval α (exactlyOne vars) = true) {v w : ℕ} (hv : v ∈ vars) (hw : w ∈ vars)
+    (hvt : α.get v = true) (hwt : α.get w = true) : v = w := by
+  rw [exactlyOne_sat] at hex
+  exact atMostOne_unique hex.2 hv hw hvt hwt
+
+open Tableau in
+/-- **Backward direction.** If the tableau formula is satisfiable, `N` accepts `x`
+    within `steps` steps: a satisfying assignment's choice bits drive an accepting run. -/
+theorem tableau_sat_to_accepts (N : NTM 1) (steps : ℕ) (x : List Bool)
+    (h : (tableauCNF N steps x).Satisfiable) : N.AcceptsInTime x steps := by
+  obtain ⟨α, hα⟩ := h
+  rw [tableauCNF_eval_split] at hα
+  obtain ⟨hS, hC, hHd, hstart, hframe, hactive, haccept⟩ := hα
+  have hrep := represents_trace N α steps x hstart hframe hHd hactive steps (le_refl steps)
+  set c' := N.trace steps (fun i => α.get (vChoice i.val)) (N.initCfg x) with hc'
+  obtain ⟨hst, hIci, hIcw, hIco, hHi, hHw, hHo⟩ := hrep
+  rw [acceptClauses_sat] at haccept
+  obtain ⟨haccS, haccO⟩ := haccept
+  have h1P : (1 : ℕ) ≤ steps + x.length + 1 := by omega
+  have hHalt : c'.state = N.qhalt := by
+    have hu := oneHot_unique ((oneHotStates_sat N steps α).mp hS steps (le_refl steps))
+      (List.mem_map.mpr ⟨stateIdx N c'.state, List.mem_range.mpr (stateIdx_lt N c'.state), rfl⟩)
+      (List.mem_map.mpr ⟨stateIdx N N.qhalt, List.mem_range.mpr (stateIdx_lt N N.qhalt), rfl⟩)
+      hst haccS
+    exact stateIdx_inj N (enc_inj hu).2.2.1
+  have hOut : c'.output.cells 1 = Γ.one := by
+    have hu := oneHot_unique
+      ((oneHotCells_sat 1 steps (steps + x.length + 1) α).mp hC steps (le_refl steps) 2 (by omega) 1 h1P)
+      (List.mem_map.mpr ⟨symIdx (c'.output.cells 1), List.mem_range.mpr (symIdx_lt _), rfl⟩)
+      (List.mem_map.mpr ⟨symIdx Γ.one, List.mem_range.mpr (symIdx_lt _), rfl⟩)
+      (hIco 1 h1P) haccO
+    exact symIdx_inj ((Nat.pair_eq_pair.mp (enc_inj hu).2.2.2.1).2)
+  exact ⟨fun i => α.get (vChoice i.val), hHalt, hOut⟩
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
