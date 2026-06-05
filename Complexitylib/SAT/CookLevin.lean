@@ -341,7 +341,7 @@ theorem activeTransitionClauses_sat (N : NTM 1) (steps P : ℕ) (α : Assignment
         CNF.eval α (activeClausesAt N t q pi si pw sw po so b) = true := by
   simp only [activeTransitionClauses, cnf_eval_flatMap, List.all_eq_true, List.mem_range,
     Nat.lt_succ_iff, Finset.mem_toList, Finset.mem_univ, mem_allSyms, mem_true_false,
-    forall_true_left, true_implies]
+    forall_true_left]
 
 end Tableau
 
