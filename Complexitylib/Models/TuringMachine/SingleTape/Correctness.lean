@@ -3574,7 +3574,8 @@ theorem scatter2_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
       (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bb) c1 =
         { state := SimQ.commit (q', oWoD.1, oWoD.2, iD, iSym, oSym),
           input := c1.input, work := wfin, output := c1.output }
-      ∧ SimInvAt k (wfin 0) (fun t => scatterFinalWork (c.work t) (wact t)) (M + 1) := by
+      ∧ SimInvAt k (wfin 0) (fun t => scatterFinalWork (c.work t) (wact t)) (M + 1)
+      ∧ (wfin 0).head = 1 := by
   have hilm_eq : (fun t : Fin k => decide ((wact t).2 = Dir3.left))
       = (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2)) := by
     funext j; rw [decide_eq_decide]
@@ -3601,7 +3602,7 @@ theorem scatter2_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
     (by simp only [Tape.read]; rw [hcwS, hh0]; exact hsimFinal.cell0)
     (by rw [hSin]; exact his) (by rw [hSout]; exact hos)
   refine ⟨fun i => (((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work i).writeAndMove
-      Γw.blank.toΓ Dir3.right, ?_, ?_⟩
+      Γw.blank.toΓ Dir3.right, ?_, ?_, ?_⟩
   · rw [trace_const_add, hstart, hSin, hSout]
   · apply hsimFinal.cells_congr
     show ((((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work 0).writeAndMove
@@ -3610,6 +3611,9 @@ theorem scatter2_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
     show (wtS.write Γw.blank.toΓ).cells = wtS.cells
     unfold Tape.write
     rw [if_pos hh0]
+  · show ((((singleTapeSim N).trace (3 * k * (M + 1)) (fun _ => bb) c1).work 0).writeAndMove
+        Γw.blank.toΓ Dir3.right).head = 1
+    rw [hcwS, work_blank_right_at0 wtS hh0]
 
 /-- `N`'s one-step work-tape image (`writeAndMove w d`) is exactly the SCATTER
     **final** tape `scatterFinalWork ct (w, d)`: both write `w` at the old head and
@@ -3795,7 +3799,7 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) {M : ℕ}
       (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
       (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
     -- Phase 5: SCATTER sweep-2 → COMMIT
-    obtain ⟨wfin2, hs2, hsi3⟩ := scatter2_sweep N (bitf 0) c M hk
+    obtain ⟨wfin2, hs2, hsi3, hh2⟩ := scatter2_sweep N (bitf 0) c M hk
       dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
       (fun i => (dr.2.1 i, dr.2.2.2.2.1 i))
       ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
