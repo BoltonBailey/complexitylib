@@ -95,6 +95,22 @@ theorem atLeastOne_eval (α : Assignment) (vars : List ℕ) :
   funext v
   simp [Lit.eval]
 
+/-- Index of a machine state as a natural, via the canonical `Fintype` enumeration
+    of `N.Q`; injective, so a one-hot encoding over `Fin (card Q)` names the states. -/
+noncomputable def stateIdx {k : ℕ} (N : NTM k) (q : N.Q) : ℕ := (Fintype.equivFin N.Q q).val
+
+theorem stateIdx_inj {k : ℕ} (N : NTM k) : Function.Injective (stateIdx N) := by
+  intro a b h
+  exact (Fintype.equivFin N.Q).injective (Fin.val_injective h)
+
+/-- The symbol at position `pos` of tape `tp` in the start configuration on input
+    `x`: cell `0` is always `▷`; tape `0` (the input) carries `x` at cells `1…|x|`;
+    every other cell is blank. Mirrors `initTape` applied to each tape. -/
+def initCellSym (x : List Bool) (tp pos : ℕ) : Γ :=
+  if pos = 0 then Γ.start
+  else if tp = 0 then ((x.map Γ.ofBool)[pos - 1]?).getD Γ.blank
+  else Γ.blank
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
