@@ -1014,6 +1014,37 @@ theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   · rw [fassign_get_vCell]
     exact ⟨Nat.zero_le _, htp, hP ▸ hpos, by rw [fcellSym_zero]⟩
 
+theorem fcfg_succ (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t : ℕ) :
+    fcfg N x g (t + 1) = traceStep N (fcfg N x g t) (g t) :=
+  trace_succ_eq N g t (N.initCfg x)
+
+theorem traceStep_input_cells (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) (pos : ℕ) :
+    (traceStep N c b).input.cells pos = c.input.cells pos := by
+  unfold traceStep; split_ifs with hq
+  · rfl
+  · rw [tape_move_cells]
+
+theorem traceStep_work_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : ℕ}
+    (h : pos ≠ (c.work 0).head) : ((traceStep N c b).work 0).cells pos = (c.work 0).cells pos := by
+  unfold traceStep; split_ifs with hq
+  · rfl
+  · exact tape_writeAndMove_cells_ne (c.work 0) _ _ h
+
+theorem traceStep_output_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : ℕ}
+    (h : pos ≠ c.output.head) : (traceStep N c b).output.cells pos = c.output.cells pos := by
+  unfold traceStep; split_ifs with hq
+  · rfl
+  · exact tape_writeAndMove_cells_ne c.output _ _ h
+
+theorem fcellSym_succ_ne (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp pos : ℕ)
+    (h : pos ≠ fheadPos N x g t tp) :
+    fcellSym N x g (t + 1) tp pos = fcellSym N x g t tp pos := by
+  unfold fcellSym; rw [fcfg_succ]; unfold fheadPos at h
+  split_ifs at h ⊢ with h0 h1
+  · exact traceStep_input_cells N (fcfg N x g t) (g t) pos
+  · exact traceStep_work_cells_ne N (fcfg N x g t) (g t) h
+  · exact traceStep_output_cells_ne N (fcfg N x g t) (g t) h
+
 open Tableau in
 theorem fassign_acceptClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     (hP : 1 ≤ P) (hhalt : (fcfg N x g steps).state = N.qhalt)
@@ -1028,6 +1059,29 @@ theorem fassign_acceptClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (st
     unfold fcellSym
     rw [if_neg (by decide : ¬(2:ℕ) = 0), if_neg (by decide : ¬(2:ℕ) = 1)]
     exact hout.symm
+
+open Tableau in
+theorem fassign_get_vCell_eq (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t tp pos s : ℕ} (ht : t ≤ steps) (htp : tp < 3) (hpos : pos ≤ P) :
+    (fassign N x g steps P).get (vCell t tp pos s) =
+      decide (s = symIdx (fcellSym N x g t tp pos)) := by
+  rw [Bool.eq_iff_iff, decide_eq_true_eq, fassign_get_vCell]
+  exact ⟨fun h => h.2.2.2, fun h => ⟨ht, htp, hpos, h⟩⟩
+
+open Tableau in
+theorem fassign_frameClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
+    CNF.eval (fassign N x g steps P) (frameClauses 1 steps P) = true := by
+  rw [frameClauses_sat]
+  intro t ht tp htp pos hpos s hs hhead
+  have hne : pos ≠ fheadPos N x g t tp := by
+    intro he
+    rw [(fassign_get_vHead N x g steps P).mpr ⟨by omega, by omega, he⟩] at hhead
+    exact Bool.noConfusion hhead
+  have e1 := fassign_get_vCell_eq N x g steps P (t := t) (tp := tp) (pos := pos) (s := s)
+    (by omega) (by omega) hpos
+  have e2 := fassign_get_vCell_eq N x g steps P (t := t + 1) (tp := tp) (pos := pos) (s := s)
+    (by omega) (by omega) hpos
+  rw [e1, e2, fcellSym_succ_ne N x g t tp pos hne]
 
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
