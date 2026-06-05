@@ -281,6 +281,23 @@ theorem startClauses_sat (N : NTM 1) (steps : ℕ) (x : List Bool) (α : Assignm
   simp only [startClauses, CNF.eval_cons, eval_append, unit_eval, cnf_eval_map,
     cnf_eval_flatMap, Bool.and_eq_true, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
 
+/-- The frame clauses hold iff, whenever a tape head is *not* at a position, that
+    cell keeps its symbol from time `t` to `t+1`. -/
+theorem frameClauses_sat (k steps P : ℕ) (α : Assignment) :
+    CNF.eval α (frameClauses k steps P) = true ↔
+      ∀ t, t < steps → ∀ tp, tp < k + 2 → ∀ pos, pos ≤ P → ∀ s, s < 4 →
+        α.get (vHead t tp pos) = false →
+        α.get (vCell t tp pos s) = α.get (vCell (t + 1) tp pos s) := by
+  simp only [frameClauses, cnf_eval_flatMap, List.all_eq_true, List.mem_range, Nat.lt_succ_iff,
+    CNF.eval_cons, CNF.eval_nil, Bool.and_true, Clause.eval, List.any_cons, List.any_nil,
+    Bool.or_false, Lit.eval, Bool.and_eq_true]
+  refine forall_congr' fun t => imp_congr Iff.rfl <| forall_congr' fun tp => imp_congr Iff.rfl <|
+    forall_congr' fun pos => imp_congr Iff.rfl <| forall_congr' fun s => imp_congr Iff.rfl ?_
+  generalize α.get (vHead t tp pos) = h
+  generalize α.get (vCell t tp pos s) = a
+  generalize α.get (vCell (t + 1) tp pos s) = b
+  cases h <;> cases a <;> cases b <;> simp
+
 end Tableau
 
 /-- **Computation-tableau formula.** `tableauCNF N steps x` is the CNF that is
