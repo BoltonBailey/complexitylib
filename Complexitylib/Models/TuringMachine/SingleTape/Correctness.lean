@@ -3389,6 +3389,90 @@ theorem scatter2_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p
     simp only [lt_irrefl, if_false]
   · rw [hwh]; omega
 
+/-- **SCATTER sweep-2 full block sweep (`trace (3*k*B)`).** Sweeping the first `B ≤ M+1`
+    blocks (leftward, from block `M+1` down to `M+2-B`) starting from the sweep-1 output
+    `Scatter2MidInv … (M+2)`: after `B` blocks the head is at `blockStart k (M+2-B) - 1`,
+    the sweep is back at tape `k-1` slot `2`, the carry/`isLeftMover` track the
+    boundary-`(M+2-B)` forms, and the tape is `Scatter2MidInv … (M+2-B)`. Proved by
+    induction on `B`, each step one `scatter2_block_step` at block `M+1-B`. -/
+theorem scatter2_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ) (hk : 1 ≤ k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+        (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2)),
+        (fun j => decide ((c.work j).head = M + 2 ∧ (wact j).2 = Dir3.left))))
+    (hhead : (c1.work 0).head = blockStart k (M + 2) - 1)
+    (hmid : Scatter2MidInv (c1.work 0) c.work wact M (M + 2))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (B : ℕ) (hB : B ≤ M + 1) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+            (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - B)),
+            (fun j => decide ((c.work j).head = M + 2 - B ∧ (wact j).2 = Dir3.left))),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = blockStart k (M + 2 - B) - 1
+      ∧ Scatter2MidInv wt c.work wact M (M + 2 - B) := by
+  induction B with
+  | zero =>
+    refine ⟨c1.work 0, ?_, ?_, ?_⟩
+    · have h0 : (singleTapeSim N).trace (3 * k * 0) (fun _ => bb) c1 = c1 := by
+        simp only [Nat.mul_zero]; rfl
+      rw [h0]
+      obtain ⟨cst, cin, cwk, cout⟩ := c1
+      simp only [Nat.sub_zero] at hst ⊢
+      subst hst
+      refine (Cfg.mk.injEq ..).mpr ⟨rfl, rfl, ?_, rfl⟩
+      funext x
+      obtain rfl : x = 0 := Subsingleton.elim x 0
+      rfl
+    · simp only [Nat.sub_zero]; exact hhead
+    · simp only [Nat.sub_zero]; exact hmid
+  | succ B ih =>
+    obtain ⟨wtB, htB, hwhB, hmidB⟩ := ih (by omega)
+    have hci : ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).input = c1.input := by rw [htB]
+    have hco : ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).output = c1.output := by rw [htB]
+    have hsucc : M + 2 - B = (M + 1 - B) + 1 := by omega
+    obtain ⟨wt, htr, hwh, hmid'⟩ := scatter2_block_step N bb c (M + 1 - B) M (by omega) (by omega) hk
+      q' wact oWoD iD iSym oSym
+      (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - B))
+      (fun j => decide ((c.work j).head = M + 2 - B ∧ (wact j).2 = Dir3.left))
+      (fun j => by rw [show (M + 1 - B) + 1 = M + 2 - B from by omega])
+      (fun j => by rw [show (M + 1 - B) + 1 = M + 2 - B from by omega])
+      ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1) (by rw [htB])
+      (by rw [show ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).work 0 = wtB from by rw [htB],
+            hwhB, hsucc, blockStart_succ k (M + 1 - B) (by omega), headBitCell]
+          simp only [blockWidth]; omega)
+      (by rw [show ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1).work 0 = wtB from by rw [htB],
+            show (M + 1 - B) + 1 = M + 2 - B from by omega]
+          exact hmidB)
+      (by rw [hci]; exact his) (by rw [hco]; exact hos)
+    refine ⟨wt, ?_, ?_, ?_⟩
+    · rw [show 3 * k * (B + 1) = 3 * k * B + 3 * k from Nat.mul_succ (3 * k) B,
+        trace_const_add, htr, hci, hco]
+      refine (Cfg.mk.injEq ..).mpr ⟨?_, rfl, rfl, rfl⟩
+      rw [show (fun j : Fin k =>
+              if (wact j).2 = Dir3.left ∧ (c.work j).head = M + 1 - B + 1 then false
+              else decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - B))
+            = (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - (B + 1))) from by
+          funext j
+          by_cases hL : (wact j).2 = Dir3.left
+          · by_cases hh : (c.work j).head = M + 1 - B + 1
+            · rw [if_pos ⟨hL, hh⟩]; symm; exact decide_eq_false (by rintro ⟨_, h2⟩; omega)
+            · rw [if_neg (fun h => hh h.2), decide_eq_decide]
+              constructor
+              · rintro ⟨hl, _⟩; exact ⟨hl, by omega⟩
+              · rintro ⟨hl, _⟩; exact ⟨hl, by omega⟩
+          · rw [if_neg (fun h => hL h.1), decide_eq_false (fun h => hL h.1),
+              decide_eq_false (fun h => hL h.1)],
+        show (fun j : Fin k => decide ((wact j).2 = Dir3.left ∧ (c.work j).head = M + 1 - B))
+            = (fun j => decide ((c.work j).head = M + 2 - (B + 1) ∧ (wact j).2 = Dir3.left)) from by
+          funext j
+          rw [show M + 2 - (B + 1) = M + 1 - B from by omega, decide_eq_decide]
+          exact And.comm]
+    · rw [hwh, show M + 2 - (B + 1) = M + 1 - B from by omega]
+    · rw [show M + 2 - (B + 1) = M + 1 - B from by omega]; exact hmid'
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
