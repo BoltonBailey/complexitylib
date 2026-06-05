@@ -909,6 +909,39 @@ theorem vHead_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   · rintro ⟨ht, htp, rfl⟩
     exact Or.inr ⟨t, ht, tp, htp, rfl⟩
 
+/-- The forward direction's satisfying assignment: mark exactly the run's variables. -/
+noncomputable def fassign (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) : Assignment :=
+  listAssign (ftraceVars N x g steps P)
+
+open Tableau in
+theorem fassign_get_vState (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t q : ℕ} :
+    (fassign N x g steps P).get (vState t q) = true ↔
+      t ≤ steps ∧ q = stateIdx N (fcfg N x g t).state :=
+  ⟨fun h => (vState_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
+   fun h => listAssign_get_true ((vState_mem_ftraceVars N x g steps P).mpr h)⟩
+
+open Tableau in
+theorem fassign_get_vChoice (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t : ℕ} :
+    (fassign N x g steps P).get (vChoice t) = true ↔ t < steps ∧ g t = true :=
+  ⟨fun h => (vChoice_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
+   fun h => listAssign_get_true ((vChoice_mem_ftraceVars N x g steps P).mpr h)⟩
+
+open Tableau in
+theorem fassign_get_vCell (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t tp pos s : ℕ} :
+    (fassign N x g steps P).get (vCell t tp pos s) = true ↔
+      t ≤ steps ∧ tp < 3 ∧ pos ≤ P ∧ s = symIdx (fcellSym N x g t tp pos) :=
+  ⟨fun h => (vCell_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
+   fun h => listAssign_get_true ((vCell_mem_ftraceVars N x g steps P).mpr h)⟩
+
+open Tableau in
+theorem fassign_get_vHead (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    {t tp pos : ℕ} :
+    (fassign N x g steps P).get (vHead t tp pos) = true ↔
+      t ≤ steps ∧ tp < 3 ∧ pos = fheadPos N x g t tp :=
+  ⟨fun h => (vHead_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
+   fun h => listAssign_get_true ((vHead_mem_ftraceVars N x g steps P).mpr h)⟩
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
