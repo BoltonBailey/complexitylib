@@ -431,6 +431,33 @@ theorem simDelta_gather_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.
   · exact absurd h (by simp [simDelta, commitStep, SimQ.gather, SimQ.run])
   · exact absurd h (by simp [simDelta, SimQ.gather, SimQ.halt])
 
+/-- **A `run` configuration arises only from `commit`.** The only transition
+    producing a `run` state is `commit → run` (closing a macro-step); `run` itself
+    steps to `gather`/`halt`, and every other phase step stays within its own
+    cluster. Companion to `simDelta_gather_pred`; together they fix the phase
+    order `… → scatter2 → commit → run → gather → …` of the simulation. -/
+theorem simDelta_run_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
+    (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) (q' : N.Q)
+    (h : (simDelta N b state iHead wHead oHead).1 = SimQ.run q') :
+    ∃ d, state = SimQ.commit d := by
+  rcases state with q | d | d | d | d | d | ⟨⟩
+  · exact absurd h (by
+      simp only [simDelta]; split <;> simp [SimQ.run, SimQ.gather, SimQ.halt, runStep])
+  · exact absurd h (by
+      simp only [simDelta, gatherStep]; (repeat' split) <;>
+        simp [SimQ.run, SimQ.gather, SimQ.rewind])
+  · exact absurd h (by
+      simp only [simDelta, rewindStep]; split <;>
+        simp [SimQ.run, SimQ.scatter1, SimQ.rewind])
+  · exact absurd h (by
+      simp only [simDelta, scatter1Step]; (repeat' split) <;>
+        simp [SimQ.run, SimQ.scatter1, SimQ.scatter2])
+  · exact absurd h (by
+      simp only [simDelta, scatter2Step]; (repeat' split) <;>
+        simp [SimQ.run, SimQ.scatter2, SimQ.commit])
+  · exact ⟨d, rfl⟩
+  · exact absurd h (by simp [simDelta, SimQ.run, SimQ.halt])
+
 /-- **Choice irrelevance — one simulator step.** The single-tape simulator's
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
