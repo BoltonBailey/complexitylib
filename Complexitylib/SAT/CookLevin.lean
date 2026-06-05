@@ -989,6 +989,31 @@ theorem fassign_oneHotHeads (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (step
     ((fassign_get_vHead N x g steps P).mpr ⟨ht, htp, rfl⟩)
     (fun j hj => ((fassign_get_vHead N x g steps P).mp hj).2.2)
 
+theorem fheadPos_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp : ℕ) :
+    fheadPos N x g 0 tp = 0 := by
+  unfold fheadPos fcfg
+  split_ifs <;> simp [NTM.trace, NTM.initCfg, Cfg.init, initTape]
+
+open Tableau in
+theorem fcellSym_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp pos : ℕ) :
+    fcellSym N x g 0 tp pos = initCellSym x tp pos := by
+  unfold fcellSym fcfg
+  split_ifs with h0 h1
+  · subst h0; simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym]
+  · subst h1; simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym]
+  · simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym, h0]
+
+open Tableau in
+theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
+    (hP : steps + x.length + 1 = P) :
+    CNF.eval (fassign N x g steps P) (startClauses N steps x) = true := by
+  rw [startClauses_sat]
+  refine ⟨?_, fun tp htp => ?_, fun tp htp pos hpos => ?_⟩
+  · rw [fassign_get_vState]; exact ⟨Nat.zero_le _, rfl⟩
+  · rw [fassign_get_vHead]; exact ⟨Nat.zero_le _, htp, (fheadPos_zero N x g tp).symm⟩
+  · rw [fassign_get_vCell]
+    exact ⟨Nat.zero_le _, htp, hP ▸ hpos, by rw [fcellSym_zero]⟩
+
 /-- **Tableau correctness (core).** The tableau formula is satisfiable iff `N`
     accepts `x` within `steps` steps. -/
 theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
