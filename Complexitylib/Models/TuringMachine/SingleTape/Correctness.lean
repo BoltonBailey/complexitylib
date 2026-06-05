@@ -2951,6 +2951,62 @@ theorem scatter2_keep_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q) (oWoD 
   rw [trace_three, e2, e1, e0]
   rfl
 
+/-- **SCATTER sweep-2 per-tape — keep.** Tape `k-1-m` of block `p` is neither a
+    left-mover to clear at `p` (`¬(scatterInterWork.head = p ∧ isLeftMover)`) nor a
+    deposit target (`leftCarry ≠ true`): its head-bit is read back unchanged. The
+    intermediate and final head-bits at `p` agree (`hfin`), so this already IS the
+    final encoding. Advances `Scatter2BlockInv … p m → … p (m+1)`. -/
+theorem scatter2_tape_keep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
+    (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (m : ℕ) (hmk : m < k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (isLeftMover leftCarry : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨k - 1 - m, by omega⟩, 2), isLeftMover, leftCarry))
+    (hhead : (c1.work 0).head = headBitCell k p ⟨k - 1 - m, by omega⟩ + 2)
+    (hbm : Scatter2BlockInv (c1.work 0) c.work wact M p m)
+    (hnc : ¬((scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head = p
+        ∧ isLeftMover ⟨k - 1 - m, by omega⟩ = true))
+    (hnl : leftCarry ⟨k - 1 - m, by omega⟩ ≠ true)
+    (hfin : ((scatterFinalWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head = p)
+        ↔ ((scatterInterWork (c.work ⟨k - 1 - m, by omega⟩) (wact ⟨k - 1 - m, by omega⟩)).head = p))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∃ wt : Tape,
+      (singleTapeSim N).trace 3 (fun _ => bb) c1 =
+        { state := SimQ.scatter2 (q', oWoD, iD, iSym, oSym,
+            retreatSweep k (⟨k - 1 - m, by omega⟩, 0), isLeftMover, leftCarry),
+          input := c1.input, work := fun _ => wt, output := c1.output }
+      ∧ wt.head = headBitCell k p ⟨k - 1 - m, by omega⟩ - 1
+      ∧ Scatter2BlockInv wt c.work wact M p (m + 1) := by
+  have hot := hbm.oldTape ⟨k - 1 - m, by omega⟩ (by show k - 1 - m < k - m; omega)
+  have hsym1 : symCell k p ⟨k - 1 - m, by omega⟩ = headBitCell k p ⟨k - 1 - m, by omega⟩ + 1 := by
+    simp only [symCell, headBitCell]
+  have hsym2 : symCell k p ⟨k - 1 - m, by omega⟩ + 1 = headBitCell k p ⟨k - 1 - m, by omega⟩ + 2 := by
+    simp only [symCell, headBitCell]
+  have heq2 : (c1.work 0).head - 2 = headBitCell k p ⟨k - 1 - m, by omega⟩ := by rw [hhead]; omega
+  have htriple := scatter2_keep_triple N bb q' oWoD iD iSym oSym (k - 1 - m) (by omega)
+    isLeftMover leftCarry c1 hst
+    (by rw [hhead]; omega)
+    (by rw [hhead, ← hsym2, hot.2.2]; exact (encSymΓ_ne_start _).2)
+    (by rw [hhead, show headBitCell k p ⟨k - 1 - m, by omega⟩ + 2 - 1
+          = headBitCell k p ⟨k - 1 - m, by omega⟩ + 1 from by omega, ← hsym1, hot.2.1]
+        exact (encSymΓ_ne_start _).1)
+    (by rw [heq2, hot.1]; split_ifs <;> decide)
+    (by rw [heq2, hot.1]
+        rintro ⟨h1, h2⟩
+        refine hnc ⟨?_, h2⟩
+        by_cases hb : (scatterInterWork (c.work ⟨k - 1 - m, by omega⟩)
+            (wact ⟨k - 1 - m, by omega⟩)).head = p
+        · exact hb
+        · rw [if_neg hb] at h1; exact absurd h1 (by decide))
+    hnl his hos
+  refine ⟨{ c1.work 0 with head := (c1.work 0).head - 3 }, htriple, ?_, ?_⟩
+  · show (c1.work 0).head - 3 = headBitCell k p ⟨k - 1 - m, by omega⟩ - 1
+    rw [hhead]; omega
+  · apply scatter2_blockinv_step hp1 hpM hmk hbm
+    · show (c1.work 0).cells (headBitCell k p ⟨k - 1 - m, by omega⟩) = _
+      rw [hot.1]; exact (if_congr hfin rfl rfl).symm
+    · intro cc _; rfl
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
