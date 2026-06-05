@@ -140,6 +140,16 @@ theorem atMostOne_unique {α : Assignment} {vars : List ℕ} {v w : ℕ}
     fun a b hab hba => hab ⟨hba.2, hba.1⟩
   exact (h.forall hsymm hv hw hne) ⟨hvt, hwt⟩
 
+/-- An implication clause `cond ++ [conseq]` whose `cond` literals are all false is
+    satisfied only if its consequent literal is true. (Each active-transition clause
+    is of this shape; when the read-config matches, the consequence is forced.) -/
+theorem clause_cond_conseq (α : Assignment) (cond : Clause) (c : Lit)
+    (hsat : Clause.eval α (cond ++ [c]) = true)
+    (hcond : cond.any (Lit.eval α) = false) : Lit.eval α c = true := by
+  simp only [Clause.eval, List.any_append, List.any_cons, List.any_nil, Bool.or_false,
+    hcond, Bool.false_or] at hsat
+  exact hsat
+
 /-- A positive unit clause `[v]` is satisfied iff its variable is true. -/
 @[simp] theorem unit_eval (α : Assignment) (v : ℕ) :
     Clause.eval α [(⟨true, v⟩ : Lit)] = α.get v := by
