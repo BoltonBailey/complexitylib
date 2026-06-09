@@ -1011,6 +1011,60 @@ structure Scatter2MidInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
   /-- The sentinel region (block `M+2` onward) is blank. -/
   sentinel : ∀ c : ℕ, blockStart k (M + 2) ≤ c → t.cells c = Γ.blank
 
+/-- **`▷` uniquely marks cell 0 during SCATTER sweep-2.** Every cell `≥ 1` is a head-bit
+    (`{0,1}`), a code cell (`encSymΓ`, `≠ ▷`), or a sentinel blank — so none is `▷`. The
+    same shape as `SimInvAt.materialized_ne_start`, dispatched on `donePart`/`oldPart`/
+    `sentinel`. The per-step `read ≠ ▷` precondition for the `scatter2` sweep lemmas. -/
+theorem Scatter2MidInv.cells_ne_start {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M b : ℕ} (h : Scatter2MidInv t w wact M b)
+    {c : ℕ} (hc1 : 1 ≤ c) : t.cells c ≠ Γ.start := by
+  rcases Nat.lt_or_ge c (blockStart k (M + 2)) with hclt | hcge
+  swap
+  · rw [h.sentinel c hcge]; decide
+  -- `1 ≤ c < blockStart k (M+2)`: decompose into block `q+1` and intra-block offset
+  have hbs : blockStart k (M + 2) = 1 + (M + 1) * blockWidth k := by
+    simp only [blockStart, show M + 2 - 1 = M + 1 from rfl]
+  rw [hbs] at hclt
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · subst hk; simp only [blockWidth] at hclt; omega
+  have hW : 0 < blockWidth k := by simp only [blockWidth]; omega
+  have hr : c - 1 < blockWidth k * (M + 1) := by rw [Nat.mul_comm]; omega
+  obtain ⟨q, ib, hqM, hibW, hdm⟩ :
+      ∃ q ib, q < M + 1 ∧ ib < blockWidth k ∧ blockWidth k * q + ib = c - 1 :=
+    ⟨(c - 1) / blockWidth k, (c - 1) % blockWidth k,
+      Nat.div_lt_of_lt_mul hr, Nat.mod_lt _ hW, Nat.div_add_mod _ _⟩
+  have hp1 : 1 ≤ q + 1 := by omega
+  have hpM : q + 1 ≤ M + 1 := by omega
+  have hbq : blockStart k (q + 1) = 1 + q * blockWidth k := by
+    show 1 + (q + 1 - 1) * blockWidth k = 1 + q * blockWidth k
+    rw [Nat.add_sub_cancel]
+  have hdm' : q * blockWidth k + ib = c - 1 := by rw [Nat.mul_comm] at hdm; exact hdm
+  have hceq : c = blockStart k (q + 1) + ib := by rw [hbq]; omega
+  have hib3 : ib < 3 * k := by have h' := hibW; simp only [blockWidth] at h'; exact h'
+  have hjk : ib / 3 < k := Nat.div_lt_of_lt_mul hib3
+  have hibdm : 3 * (ib / 3) + ib % 3 = ib := Nat.div_add_mod _ _
+  have hc_full : c = blockStart k (q + 1) + (3 * (ib / 3) + ib % 3) := by rw [hceq, hibdm]
+  -- the head-bit/sym cell of block `q+1`, tape `ib/3`: `donePart` (if `b ≤ q+1`) or `oldPart`
+  set j : Fin k := ⟨ib / 3, hjk⟩ with hjdef
+  have hcell : (t.cells (headBitCell k (q + 1) j) ≠ Γ.start) ∧
+      (t.cells (symCell k (q + 1) j) ≠ Γ.start) ∧
+      (t.cells (symCell k (q + 1) j + 1) ≠ Γ.start) := by
+    rcases Nat.lt_or_ge (q + 1) b with hqb | hqb
+    · exact ⟨by rw [(h.oldPart (q + 1) hp1 hqb j).1]; split <;> decide,
+        by rw [(h.oldPart (q + 1) hp1 hqb j).2.1]; exact (encSymΓ_ne_start _).1,
+        by rw [(h.oldPart (q + 1) hp1 hqb j).2.2]; exact (encSymΓ_ne_start _).2⟩
+    · exact ⟨by rw [(h.donePart (q + 1) hqb hpM j).1]; split <;> decide,
+        by rw [(h.donePart (q + 1) hqb hpM j).2.1]; exact (encSymΓ_ne_start _).1,
+        by rw [(h.donePart (q + 1) hqb hpM j).2.2]; exact (encSymΓ_ne_start _).2⟩
+  have hcases : ib % 3 = 0 ∨ ib % 3 = 1 ∨ ib % 3 = 2 := by omega
+  rcases hcases with h3 | h3 | h3 <;> rw [h3] at hc_full
+  · have hcs : c = headBitCell k (q + 1) j := by simp only [headBitCell, hjdef]; omega
+    rw [hcs]; exact hcell.1
+  · have hcs : c = symCell k (q + 1) j := by simp only [symCell, hjdef]; omega
+    rw [hcs]; exact hcell.2.1
+  · have hcs : c = symCell k (q + 1) j + 1 := by simp only [symCell, hjdef]; omega
+    rw [hcs]; exact hcell.2.2
+
 /-- Entering SCATTER sweep-2: the sweep-1 output `SimInvAt (M+1)` for `scatterInterWork`
     is `Scatter2MidInv` at `b = M+2` (no blocks swept yet — `donePart` vacuous). -/
 theorem Scatter2MidInv.ofSimInv {k : ℕ} {t : Tape} {w : Fin k → Tape}
@@ -1076,6 +1130,70 @@ structure Scatter2BlockInv {k : ℕ} (t : Tape) (w : Fin k → Tape)
       t.cells (symCell k q j + 1) = (encSymΓ ((scatterInterWork (w j) (wact j)).cells q)).2
   /-- The sentinel region (block `M+2` onward) is blank. -/
   sentinel : ∀ c : ℕ, blockStart k (M + 2) ≤ c → t.cells c = Γ.blank
+
+/-- **`▷` uniquely marks cell 0 during a SCATTER sweep-2 block step.** Every cell `≥ 1` is a
+    head-bit (`{0,1}`), a code cell (`encSymΓ`, `≠ ▷`), or a sentinel blank. Same shape as
+    `Scatter2MidInv.cells_ne_start`, dispatching block `p` on `doneTape`/`oldTape` and the
+    rest on `donePart`/`oldPart`/`sentinel`. -/
+theorem Scatter2BlockInv.cells_ne_start {k : ℕ} {t : Tape} {w : Fin k → Tape}
+    {wact : Fin k → Γw × Dir3} {M p m : ℕ} (h : Scatter2BlockInv t w wact M p m)
+    (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) {c : ℕ} (hc1 : 1 ≤ c) : t.cells c ≠ Γ.start := by
+  rcases Nat.lt_or_ge c (blockStart k (M + 2)) with hclt | hcge
+  swap
+  · rw [h.sentinel c hcge]; decide
+  have hbs : blockStart k (M + 2) = 1 + (M + 1) * blockWidth k := by
+    simp only [blockStart, show M + 2 - 1 = M + 1 from rfl]
+  rw [hbs] at hclt
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · subst hk; simp only [blockWidth] at hclt; omega
+  have hW : 0 < blockWidth k := by simp only [blockWidth]; omega
+  have hr : c - 1 < blockWidth k * (M + 1) := by rw [Nat.mul_comm]; omega
+  obtain ⟨q, ib, hqM, hibW, hdm⟩ :
+      ∃ q ib, q < M + 1 ∧ ib < blockWidth k ∧ blockWidth k * q + ib = c - 1 :=
+    ⟨(c - 1) / blockWidth k, (c - 1) % blockWidth k,
+      Nat.div_lt_of_lt_mul hr, Nat.mod_lt _ hW, Nat.div_add_mod _ _⟩
+  have hq1 : 1 ≤ q + 1 := by omega
+  have hqM' : q + 1 ≤ M + 1 := by omega
+  have hbq : blockStart k (q + 1) = 1 + q * blockWidth k := by
+    show 1 + (q + 1 - 1) * blockWidth k = 1 + q * blockWidth k
+    rw [Nat.add_sub_cancel]
+  have hdm' : q * blockWidth k + ib = c - 1 := by rw [Nat.mul_comm] at hdm; exact hdm
+  have hceq : c = blockStart k (q + 1) + ib := by rw [hbq]; omega
+  have hib3 : ib < 3 * k := by have h' := hibW; simp only [blockWidth] at h'; exact h'
+  have hjk : ib / 3 < k := Nat.div_lt_of_lt_mul hib3
+  have hibdm : 3 * (ib / 3) + ib % 3 = ib := Nat.div_add_mod _ _
+  have hc_full : c = blockStart k (q + 1) + (3 * (ib / 3) + ib % 3) := by rw [hceq, hibdm]
+  set j : Fin k := ⟨ib / 3, hjk⟩ with hjdef
+  -- the three cells of block `q+1`, tape `j`: choose the relevant invariant clause
+  have hcell : (t.cells (headBitCell k (q + 1) j) ≠ Γ.start) ∧
+      (t.cells (symCell k (q + 1) j) ≠ Γ.start) ∧
+      (t.cells (symCell k (q + 1) j + 1) ≠ Γ.start) := by
+    rcases lt_trichotomy (q + 1) p with hqp | hqp | hqp
+    · -- block `q+1 < p`: still intermediate
+      exact ⟨by rw [(h.oldPart (q + 1) hq1 hqp j).1]; split <;> decide,
+        by rw [(h.oldPart (q + 1) hq1 hqp j).2.1]; exact (encSymΓ_ne_start _).1,
+        by rw [(h.oldPart (q + 1) hq1 hqp j).2.2]; exact (encSymΓ_ne_start _).2⟩
+    · -- block `q+1 = p`: split on the tape `j` (done vs old)
+      subst hqp
+      rcases Nat.lt_or_ge (j : ℕ) (k - m) with hjm | hjm
+      · exact ⟨by rw [(h.oldTape j hjm).1]; split <;> decide,
+          by rw [(h.oldTape j hjm).2.1]; exact (encSymΓ_ne_start _).1,
+          by rw [(h.oldTape j hjm).2.2]; exact (encSymΓ_ne_start _).2⟩
+      · exact ⟨by rw [(h.doneTape j hjm).1]; split <;> decide,
+          by rw [(h.doneTape j hjm).2.1]; exact (encSymΓ_ne_start _).1,
+          by rw [(h.doneTape j hjm).2.2]; exact (encSymΓ_ne_start _).2⟩
+    · -- block `p < q+1`: final
+      exact ⟨by rw [(h.donePart (q + 1) hqp hqM' j).1]; split <;> decide,
+        by rw [(h.donePart (q + 1) hqp hqM' j).2.1]; exact (encSymΓ_ne_start _).1,
+        by rw [(h.donePart (q + 1) hqp hqM' j).2.2]; exact (encSymΓ_ne_start _).2⟩
+  have hcases : ib % 3 = 0 ∨ ib % 3 = 1 ∨ ib % 3 = 2 := by omega
+  rcases hcases with h3 | h3 | h3 <;> rw [h3] at hc_full
+  · have hcs : c = headBitCell k (q + 1) j := by simp only [headBitCell, hjdef]; omega
+    rw [hcs]; exact hcell.1
+  · have hcs : c = symCell k (q + 1) j := by simp only [symCell, hjdef]; omega
+    rw [hcs]; exact hcell.2.1
+  · have hcs : c = symCell k (q + 1) j + 1 := by simp only [symCell, hjdef]; omega
+    rw [hcs]; exact hcell.2.2
 
 /-- Entering block `p` (no tapes swept): `Scatter2MidInv … (p+1)` is `Scatter2BlockInv …
     p 0` (block `p` still all intermediate). -/
@@ -3844,12 +3962,6 @@ theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p 
             rw [hLCm_at, hlcf]; exact decide_eq_false (fun h => hleft h.1),
           Function.update_eq_self]
 
-/-- **SCATTER sweep-2 one full block (`trace (3*k)`).** Sweeping all `k` tapes of block
-    `p` (leftward) advances the mid-sweep invariant `Scatter2MidInv … (p+1) → … p`: the
-    work head moves from block `p`'s top to `blockStart k p - 1` (block `p-1`'s top, or
-    cell `0` when `p = 1`), the `leftCarry` updates to the clears recorded at `p` (= the
-    incoming carry for block `p-1`), and `isLeftMover` drops the tapes deposited at `p`.
-    Wraps `scatter2_block_aux` at `m = k` between `ofMid` and `toMidPred`. -/
 theorem scatter2_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
     (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
@@ -3976,6 +4088,195 @@ theorem scatter2_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M 
           exact And.comm]
     · rw [hwh, show M + 2 - (B + 1) = M + 1 - B from by omega]
     · rw [show M + 2 - (B + 1) = M + 1 - B from by omega]; exact hmid'
+
+/-- **SCATTER sweep-2 stays in `scatter2` off `▷` (per step), with tape geometry.** One
+    sweep-2 step from a `scatter2` config whose work head is `≥ 1` (so it does NOT read
+    `▷`, given the cells below the head are non-`▷`) stays in `scatter2`. The new work
+    head is `head - 1` and only the old head cell is overwritten — every other cell is
+    preserved. This is the per-step lever for the `scatter2` sweep `¬gather` lemma. -/
+theorem scatter2_step_stays {k : ℕ} (N : NTM k) (b : Bool) (d : Scatter2Data k N.Q)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.scatter2 d)
+    (hh : 1 ≤ (c1.work 0).head)
+    (hns : (c1.work 0).cells ((c1.work 0).head) ≠ Γ.start) :
+    ∃ d', ((singleTapeSim N).trace 1 (fun _ => b) c1).state = SimQ.scatter2 d'
+      ∧ (((singleTapeSim N).trace 1 (fun _ => b) c1).work 0).head = (c1.work 0).head - 1
+      ∧ ∀ p, p ≠ (c1.work 0).head →
+          (((singleTapeSim N).trace 1 (fun _ => b) c1).work 0).cells p = (c1.work 0).cells p := by
+  have hnsr : (c1.work 0).read ≠ Γ.start := by rw [Tape.read]; exact hns
+  rw [scatter2_trace1 N d b c1 hst]
+  -- the work field is `writeAndMove (r.2.1 0).toΓ (r.2.2.2.2.1 0)`; off-`▷` the dir is `left`
+  set r := scatter2Step d c1.input.read ((c1.work 0).read) c1.output.read with hr
+  -- the move direction `r.2.2.2.2.1 0` is `left` (off `▷`)
+  have hdir : r.2.2.2.2.1 0 = Dir3.left := by
+    rw [hr]; obtain ⟨q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry⟩ := d
+    simp only [scatter2Step, if_neg hnsr]
+  have hwork : ((c1.work 0).writeAndMove (r.2.1 0).toΓ (r.2.2.2.2.1 0))
+      = ⟨(c1.work 0).head - 1, Function.update (c1.work 0).cells (c1.work 0).head (r.2.1 0).toΓ⟩ := by
+    rw [hdir]; exact work_write_left (c1.work 0) (r.2.1 0).toΓ hh
+  -- the state is `r.1`; off `▷` every branch yields `scatter2`
+  obtain ⟨d', hd'⟩ : ∃ d', r.1 = SimQ.scatter2 d' := by
+    rw [hr]; obtain ⟨q', oWoD, iD, iSym, oSym, pos, isLeftMover, leftCarry⟩ := d
+    simp only [scatter2Step, if_neg hnsr]
+    (repeat' split) <;> exact ⟨_, rfl⟩
+  refine ⟨d', hd', ?_, ?_⟩
+  · show (((c1.work (0 : Fin 1)).writeAndMove (r.2.1 0).toΓ (r.2.2.2.2.1 0))).head
+        = (c1.work 0).head - 1
+    rw [hwork]
+  · intro p hp
+    show (((c1.work (0 : Fin 1)).writeAndMove (r.2.1 0).toΓ (r.2.2.2.2.1 0))).cells p
+        = (c1.work 0).cells p
+    rw [hwork]; exact Function.update_of_ne hp _ _
+
+/-- **SCATTER sweep-2 block sweep stays in `scatter2` (per step).** Within one block of the
+    leftward sweep-2 phase (from the `Scatter2MidInv … (p+1)` entry), every micro-step
+    `s ≤ 3*k` keeps the simulator in a `scatter2` state. Proved by reaching the nearest
+    3-step (per-tape) boundary with `scatter2_block_aux` (whose output is `scatter2` with a
+    known head `≥ blockStart k p + 2 ≥ 3` and a `Scatter2BlockInv` tape, so the read is
+    `≠ ▷`) and stepping the remaining `s % 3 ≤ 2` micro-steps with `scatter2_step_stays`
+    (each read is at a cell `≥ 1`, hence non-`▷` by `Scatter2BlockInv.cells_ne_start`). -/
+theorem scatter2_block_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
+    (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (isLeftMover_in leftCarry_in : Fin k → Bool)
+    (hilm_in : ∀ j : Fin k,
+      isLeftMover_in j = decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ p + 1))
+    (hlc_in : ∀ j : Fin k,
+      leftCarry_in j = decide ((c.work j).head = p + 1 ∧ (wact j).2 = Dir3.left))
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2
+      (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover_in, leftCarry_in))
+    (hhead : (c1.work 0).head = headBitCell k p ⟨k - 1, by omega⟩ + 2)
+    (hmid : Scatter2MidInv (c1.work 0) c.work wact M (p + 1))
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∀ s, s ≤ 3 * k →
+      ∃ d, ((singleTapeSim N).trace s (fun _ => bb) c1).state = SimQ.scatter2 d := by
+  -- one step from a `scatter2` config whose head is `≥ 1` and whose `head`/`head-1` cells
+  -- are non-`▷` (the carried `Scatter2BlockInv`) stays `scatter2`, retreating the head by 1.
+  intro s hs
+  -- reach the nearest 3-step (per-tape) boundary `m = s / 3`
+  obtain ⟨wt, htr, hwh, hbi⟩ := scatter2_block_aux N bb c p M hp1 hpM hk q' wact oWoD iD iSym oSym
+    isLeftMover_in leftCarry_in hilm_in hlc_in c1 hst hhead
+    (Scatter2BlockInv.ofMid hp1 hmid) his hos (s / 3) (by omega)
+  have hsplit : s = 3 * (s / 3) + s % 3 := by omega
+  rw [hsplit, trace_const_add]
+  set c0 := (singleTapeSim N).trace (3 * (s / 3)) (fun _ => bb) c1 with hc0
+  -- the boundary config: scatter2 with datum `d0`, tape `wt`, `Scatter2BlockInv … p (s/3)`
+  obtain ⟨d0, hc0st⟩ : ∃ d, c0.state = SimQ.scatter2 d := ⟨_, by rw [htr]⟩
+  have hc0w : c0.work 0 = wt := by rw [htr]
+  have hc0head : (c0.work 0).head = blockStart k p + 3 * (k - 1) + 2 - 3 * (s / 3) := by
+    rw [hc0w]; exact hwh
+  have hc0bi : Scatter2BlockInv (c0.work 0) c.work wact M p (s / 3) := by rw [hc0w]; exact hbi
+  have hr3 : s % 3 = 0 ∨ s % 3 = 1 ∨ s % 3 = 2 := by omega
+  rcases hr3 with hr | hr | hr <;> rw [hr]
+  · exact ⟨d0, hc0st⟩
+  · -- residual 1: `s % 3 = 1 ⟹ s / 3 ≤ k - 1 ⟹ head ≥ 3`; one `scatter2` step
+    have hdm := Nat.div_add_mod s 3
+    have hHge : 3 ≤ (c0.work 0).head := by
+      rw [hc0head]; have := one_le_blockStart k p; omega
+    have hread0 : (c0.work 0).cells ((c0.work 0).head) ≠ Γ.start :=
+      hc0bi.cells_ne_start hp1 hpM (by omega)
+    obtain ⟨d', hd', _, _⟩ := scatter2_step_stays N bb d0 c0 hc0st (by omega) hread0
+    exact ⟨d', hd'⟩
+  · -- residual 2: two `scatter2` steps; the second read is the (preserved) cell `head - 1`
+    have hdm := Nat.div_add_mod s 3
+    have hHge : 3 ≤ (c0.work 0).head := by
+      rw [hc0head]; have := one_le_blockStart k p; omega
+    have hread0 : (c0.work 0).cells ((c0.work 0).head) ≠ Γ.start :=
+      hc0bi.cells_ne_start hp1 hpM (by omega)
+    have hread1 : (c0.work 0).cells ((c0.work 0).head - 1) ≠ Γ.start :=
+      hc0bi.cells_ne_start hp1 hpM (by omega)
+    rw [show (2 : ℕ) = 1 + 1 from rfl, trace_const_add]
+    obtain ⟨d', hd', hh', hcells'⟩ := scatter2_step_stays N bb d0 c0 hc0st (by omega) hread0
+    set c0' := (singleTapeSim N).trace 1 (fun _ => bb) c0 with hc0'
+    have hread' : (c0'.work 0).cells ((c0'.work 0).head) ≠ Γ.start := by
+      rw [hh', hcells' ((c0.work 0).head - 1) (by omega)]; exact hread1
+    obtain ⟨d'', hd'', _, _⟩ := scatter2_step_stays N bb d' c0' hd' (by rw [hh']; omega) hread'
+    exact ⟨d'', hd''⟩
+
+/-- **SCATTER sweep-2 — no GATHER step (per micro-step).** Over the whole `3*k*(M+1) + 1`
+    sweep-2 phase (from the same entry as `scatter2_sweep`), no intermediate state is a
+    `gather` state — the simulator stays in `scatter2` until the final `▷`-triggered turn
+    into `commit`. Companion to `scatter1_sweep_states`: it shows the constant-choice trace
+    has no choice-consuming (`gather`-on-`□`) step in this phase, the input to
+    `trace_choice_irrel` for `macroStepCorr_rev`. The hypotheses are identical to
+    `scatter2_sweep` for call-site uniformity. Decomposes as a `scatter2_sweep_aux` block
+    sweep (every `3*k`-boundary is `scatter2`) plus a `scatter2_block_states` residual. -/
+theorem scatter2_sweep_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (hk : 1 ≤ k) (q' : N.Q) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (wact : Fin k → Γw × Dir3) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+        (fun t => decide ((wact t).2 = Dir3.left)), (fun _ => false)))
+    (hhead : (c1.work 0).head = blockStart k (M + 2) - 1)
+    (hinv : SimInvAt k (c1.work 0) (fun t => scatterInterWork (c.work t) (wact t)) (M + 1))
+    (hle : ∀ j : Fin k, (c.work j).head ≤ M)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∀ i, i < 3 * k * (M + 1) + 1 →
+      ¬ ∃ d, ((singleTapeSim N).trace i (fun _ => bb) c1).state = SimQ.gather d := by
+  -- It suffices to show the state at every interior step is `scatter2`.
+  suffices H : ∀ i, i ≤ 3 * k * (M + 1) →
+      ∃ d, ((singleTapeSim N).trace i (fun _ => bb) c1).state = SimQ.scatter2 d by
+    intro i hi ⟨dg, hg⟩
+    obtain ⟨d1, h1⟩ := H i (by omega)
+    rw [h1] at hg
+    exact absurd (Sum.inr.inj hg) (by simp [reduceCtorEq])
+  -- bridge the entry carries to the `B = 0` boundary forms
+  have hilm_eq : (fun t : Fin k => decide ((wact t).2 = Dir3.left))
+      = (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2)) := by
+    funext j; rw [decide_eq_decide]
+    exact ⟨fun h => ⟨h, by have := hle j; omega⟩, fun h => h.1⟩
+  have hlc_eq : (fun _ : Fin k => false)
+      = (fun j => decide ((c.work j).head = M + 2 ∧ (wact j).2 = Dir3.left)) := by
+    funext j; symm; exact decide_eq_false (by rintro ⟨h1, _⟩; have := hle j; omega)
+  intro i hi
+  -- block index `B = i / (3*k)` and residual `r = i % (3*k)`
+  set B := i / (3 * k) with hBdef
+  have hdm : 3 * k * B + i % (3 * k) = i := by rw [hBdef]; exact Nat.div_add_mod i (3 * k)
+  have hmod : i % (3 * k) < 3 * k := Nat.mod_lt _ (by omega)
+  -- `B ≤ M+1`; at `B = M+1` we are exactly at `i = 3*k*(M+1)` (the final boundary)
+  have hBM1 : B ≤ M + 1 := by
+    rw [hBdef]
+    calc i / (3 * k) ≤ (3 * k * (M + 1)) / (3 * k) := Nat.div_le_div_right hi
+      _ = M + 1 := by rw [Nat.mul_comm]; exact Nat.mul_div_cancel _ (by omega)
+  rcases Nat.eq_or_lt_of_le hBM1 with hBeq | hBlt
+  · -- `B = M+1`: `i = 3*k*(M+1)` exactly (residual 0); the final boundary IS scatter2
+    have hi0 : i = 3 * k * (M + 1) := by
+      rw [hBeq] at hdm; omega
+    obtain ⟨wtB, hSB, _, _⟩ := scatter2_sweep_aux N bb c M hk q' wact oWoD iD iSym oSym c1
+      (by rw [hst, hilm_eq, hlc_eq]) hhead (Scatter2MidInv.ofSimInv hinv) his hos (M + 1)
+      (le_refl _)
+    exact ⟨_, by rw [hi0, hSB]⟩
+  · -- `B ≤ M`: reach the block-`(M+1-B)` entry, then run the `scatter2_block_states` residual
+    have hBM : B ≤ M := Nat.lt_succ_iff.mp hBlt
+    obtain ⟨wtB, hSB, hwhB, hmidB⟩ := scatter2_sweep_aux N bb c M hk q' wact oWoD iD iSym oSym c1
+      (by rw [hst, hilm_eq, hlc_eq]) hhead (Scatter2MidInv.ofSimInv hinv) his hos B (by omega)
+    -- block being swept is `p = M+1-B`; its `Scatter2MidInv … (p+1)` is the `B`-boundary at `M+2-B`
+    have hp1 : 1 ≤ M + 1 - B :=
+      Nat.le_sub_of_add_le (by rw [Nat.add_comm]; exact Nat.add_le_add_right hBM 1)
+    have hpM : M + 1 - B ≤ M + 1 := Nat.sub_le _ _
+    have hp1eq : (M + 1 - B) + 1 = M + 2 - B := by
+      clear_value B; omega
+    -- residual `r = i - 3*k*B ≤ 3*k`
+    have hbridge : i = 3 * k * B + (i - 3 * k * B) := by omega
+    have hres : i - 3 * k * B ≤ 3 * k := by omega
+    rw [hbridge, trace_const_add]
+    set cE := (singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1 with hcE
+    -- the block-`p` entry: scatter2 at slot 2 tape `k-1`, head `headBitCell p (k-1) + 2`,
+    -- the `B`-boundary carries are the `p`-block-states carries, `Scatter2MidInv … (p+1)`
+    have hcEst : cE.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),
+        (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - B)),
+        (fun j => decide ((c.work j).head = M + 2 - B ∧ (wact j).2 = Dir3.left))) := by rw [hSB]
+    have hcEhead : (cE.work 0).head = headBitCell k (M + 1 - B) ⟨k - 1, by omega⟩ + 2 := by
+      rw [hSB, hwhB, ← hp1eq, blockStart_succ k (M + 1 - B) hp1, headBitCell]
+      simp only [blockWidth]; omega
+    have hcEmid : Scatter2MidInv (cE.work 0) c.work wact M ((M + 1 - B) + 1) := by
+      rw [hSB, hp1eq]; exact hmidB
+    have hcEis : cE.input.read ≠ Γ.start := by rw [hSB]; exact his
+    have hcEos : cE.output.read ≠ Γ.start := by rw [hSB]; exact hos
+    exact scatter2_block_states N bb c (M + 1 - B) M hp1 hpM hk q' wact oWoD iD iSym oSym
+      (fun j => decide ((wact j).2 = Dir3.left ∧ (c.work j).head ≤ M + 2 - B))
+      (fun j => decide ((c.work j).head = M + 2 - B ∧ (wact j).2 = Dir3.left))
+      (fun j => by rw [hp1eq]) (fun j => by rw [hp1eq])
+      cE hcEst hcEhead hcEmid hcEis hcEos (i - 3 * k * B) hres
 
 /-- **SCATTER sweep-2 → COMMIT (`trace (3*k*(M+1) + 1)`).** From the sweep-1 output
     (scatter2 entry: `isLeftMover = decide(left)`, `leftCarry = 0`, head at
