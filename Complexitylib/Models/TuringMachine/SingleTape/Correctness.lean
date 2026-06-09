@@ -4492,6 +4492,258 @@ theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
         (by rw [hsent]; exact hisR) (by rw [hsent]; exact hosR),
       hsent, hir, hor, hinputEq, houtputEq]
 
+/-- **Decision-point characterization (constant-choice macro-step).** Along the
+    CONSTANT-choice trace of one macro-step (the `run → gather → rewind →
+    scatter1 → scatter2 → commit` cycle, total length `m`), a step index `i` is a
+    `trace_choice_irrel` decision point — the simulator is in a `gather` state and
+    the work head reads the `□` sentinel — **iff** `i = p0 = 1 + 3*k*M`, the single
+    GATHER-sentinel (COMPUTE) step. This is the lever that turns `trace_choice_irrel`
+    and forward `macroStepCorr` into the backward (arbitrary-choice) correspondence.
+
+    Assembled per phase: `i = 0` is `run` (not gather); the gather sweep
+    `[1, p0)` reads non-`□` (`gather_sweep_no_sentinel`); `i = p0` is the unique
+    `gather`-on-`□`; the rewind sweep keeps `rewind` (`rewind_sweep_states`); the
+    two scatter sweeps keep `scatter1`/`scatter2` (`scatter{1,2}_sweep_states`); the
+    final `commit` step is not gather. -/
+theorem macroStep_decision_point_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (b : Bool) :
+    ∀ i, i < 1 + 3 * k * M + 1 + blockStart k (M + 1)
+            + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1 →
+      ((∃ d, ((singleTapeSim N).trace i (fun _ => b) c1).state = SimQ.gather d) ∧
+        (((singleTapeSim N).trace i (fun _ => b) c1).work 0).read = Γ.blank
+       ↔ i = 1 + 3 * k * M) := by
+  -- `blockStart k (M+1) = 1 + 3*k*M = p0`
+  have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
+    simp only [blockStart, blockWidth, Nat.add_sub_cancel]; rw [Nat.mul_comm M (3 * k)]
+  obtain ⟨hstate, hheadLe, hinputEq, houtputEq, hinv, hwbeyond, hinputWf, houtputWf⟩ := hcorr
+  -- restore `hcorr` (the sub-lemmas take it / its projections)
+  have hcorr : Corr N M c1 c :=
+    ⟨hstate, hheadLe, hinputEq, houtputEq, hinv, hwbeyond, hinputWf, houtputWf⟩
+  -- the gather-sweep / sentinel input & output reads are off `▷`
+  have hisR : (c1.input.move (TM.idleDir c1.input.read)).read ≠ Γ.start := by
+    rw [hinputEq]; exact move_idle_read_ne c.input hinputWf
+  have hosR : (c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+      (TM.idleDir c1.output.read)).read ≠ Γ.start := by
+    rw [houtputEq]; exact writeMove_idle_read_ne c.output houtputWf
+  have hns1 : (c1.work 0).cells 1 ≠ Γ.start := by
+    by_cases h1 : 1 < blockStart k (M + 1)
+    · exact hinv.materialized_ne_start (le_refl 1) h1
+    · rw [hinv.sentinel 1 (by omega)]; decide
+  -- ===== Phase 0: the run step → GATHER-sweep entry config `cg = trace 1 c1` =====
+  have e1 : (singleTapeSim N).trace 1 (fun _ => b) c1 =
+      { state := SimQ.gather (c.state, (fun _ => Γ.start), c1.input.read, c1.output.read,
+          (0, 0), false, Γ.blank),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun _ => { head := 1, cells := (c1.work 0).cells },
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+    rw [run_step N c.state hne b c1 hstate]
+    refine (Cfg.mk.injEq ..).mpr ⟨rfl, rfl, ?_, rfl⟩
+    funext i; obtain rfl : i = 0 := Subsingleton.elim i 0
+    exact run_work_eq (c1.work 0) hheadLe hinv.cell0 hns1
+  -- ===== Phase 1: GATHER sweep `trace (3*k*M) cg`, landing at the sentinel-ready config =====
+  obtain ⟨rf', pending', hgather⟩ := gather_sweep_aux N b c M c.state c1.input.read c1.output.read
+    ((singleTapeSim N).trace 1 (fun _ => b) c1) false Γ.blank
+    (by rw [e1]; rfl) (by rw [e1, blockStart_one]) (by rw [e1]; exact hinv.cells_congr rfl)
+    (by rw [e1]; exact hisR) (by rw [e1]; exact hosR) M (le_refl M)
+  rw [gather_acc_eq hinv] at hgather
+  have hcgw : ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+      ((singleTapeSim N).trace 1 (fun _ => b) c1)).work 0
+      = { head := blockStart k (M + 1), cells := (c1.work 0).cells } := by
+    rw [hgather]; dsimp only; rw [e1]
+  -- the work head reads the `□` sentinel at this config
+  have hsentBlank : (((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+      ((singleTapeSim N).trace 1 (fun _ => b) c1)).work 0).read = Γ.blank := by
+    rw [hcgw]; show (c1.work 0).cells (blockStart k (M + 1)) = Γ.blank
+    exact hinv.sentinel (blockStart k (M + 1)) (le_refl _)
+  have hsentGather : ∃ d, ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+      ((singleTapeSim N).trace 1 (fun _ => b) c1)).state = SimQ.gather d := by
+    rw [hgather]; exact ⟨_, rfl⟩
+  -- input/output of the gather-sweep config (unchanged from `cg`)
+  have hcgi : ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+      ((singleTapeSim N).trace 1 (fun _ => b) c1)).input
+      = c1.input.move (TM.idleDir c1.input.read) := by rw [hgather, e1]
+  have hcgo : ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+      ((singleTapeSim N).trace 1 (fun _ => b) c1)).output
+      = c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) := by rw [hgather, e1]
+  -- ===== Phase 2: the GATHER sentinel step → REWIND entry config =====
+  have hsent : (singleTapeSim N).trace 1 (fun _ => b)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+        ((singleTapeSim N).trace 1 (fun _ => b) c1)) =
+      { state := SimQ.rewind
+          ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).1,
+           (fun i => ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.1 i,
+              (N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.1 i)),
+           ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.1,
+            (N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.2),
+           (N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.1,
+           c1.input.read, c1.output.read, (fun j => decide ((c.work j).read = Γ.start))),
+        input := c1.input.move (TM.idleDir c1.input.read),
+        work := fun _ => { head := blockStart k (M + 1) - 1, cells := (c1.work 0).cells },
+        output := c1.output.writeAndMove (TM.readBackWrite c1.output.read).toΓ
+          (TM.idleDir c1.output.read) } := by
+    rw [gather_sentinel N b c.state (fun j => (c.work j).read) c1.input.read c1.output.read
+        (⟨0, by omega⟩, 0) rf' pending' _ (by rw [hgather])
+        (by rw [hcgw]; exact hinv.sentinel (blockStart k (M + 1)) (le_refl _))]
+    refine (Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩
+    · rw [hcgi]; exact tape_idle_stay _ hisR
+    · funext i; obtain rfl : i = 0 := Subsingleton.elim i 0
+      rw [hcgw, work_write_left _ Γw.blank.toΓ (by have := one_le_blockStart k (M + 1); omega),
+        show Γw.blank.toΓ = (c1.work 0).cells (blockStart k (M + 1)) from
+          (hinv.sentinel (blockStart k (M + 1)) (le_refl _)).symm, Function.update_eq_self]
+    · rw [hcgo]; exact tape_idle_writeMove _ hosR
+  -- ===== the SCATTER-1 entry config (via `run_to_scatter1`) =====
+  obtain ⟨hr1, hsi1⟩ := run_to_scatter1 N hcorr hne b
+  set dr := N.δ b c.state c.input.read (fun j => (c.work j).read) c.output.read with hdr
+  -- ===== Phase 4: SCATTER sweep-1 → SCATTER-2 entry =====
+  obtain ⟨wfin1, hs1, hsi2, hh1⟩ := scatter1_sweep N b c M
+    dr.1 (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1
+    c.input.read c.output.read
+    ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1)
+    (by rw [hr1]; rfl) (by rw [hr1, blockStart_one]) (by rw [hr1]; exact hsi1) hk
+    (fun j hj => (N.δ_right_of_start b c.state c.input.read
+        (fun j => (c.work j).read) c.output.read).2.1 j
+      (by rw [Tape.read, hj]; exact hcorr.inv.wfStart j))
+    hcorr.wbeyond
+    (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+    (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- ===== Phase 5: SCATTER sweep-2 → COMMIT entry =====
+  obtain ⟨wfin2, hs2, hsi3, hh2⟩ := scatter2_sweep N b c M hk
+    dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
+    (fun i => (dr.2.1 i, dr.2.2.2.2.1 i))
+    ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+      ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1))
+    (by rw [hs1]) (by rw [hs1]; exact hh1) (by rw [hs1]; exact hsi2)
+    hcorr.inv.wfStart hcorr.inv.noStart hcorr.inv.heads_le
+    (by rw [hs1, hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+    (by rw [hs1, hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- abbreviations for the phase boundaries
+  set A := 1 + 3 * k * M + 1 + blockStart k (M + 1) with hA
+  set B := A + (3 * k * (M + 1) + 1) with hBdef
+  -- per-step `¬gather` for the SCATTER-1 phase (entry at `trace A c1`)
+  have hsc1 : ∀ j, j < 3 * k * (M + 1) + 1 →
+      ¬ ∃ d, ((singleTapeSim N).trace j (fun _ => b)
+        ((singleTapeSim N).trace A (fun _ => b) c1)).state = SimQ.gather d := by
+    apply scatter1_sweep_states N b c M
+      dr.1 (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1
+      c.input.read c.output.read
+      _ (by rw [hr1]; rfl) (by rw [hr1, blockStart_one]) (by rw [hr1]; exact hsi1) hk
+      (fun j hj => (N.δ_right_of_start b c.state c.input.read
+          (fun j => (c.work j).read) c.output.read).2.1 j
+        (by rw [Tape.read, hj]; exact hcorr.inv.wfStart j))
+      hcorr.wbeyond
+      (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+      (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- per-step `¬gather` for the SCATTER-2 phase (entry at `trace B c1`)
+  have hsc2 : ∀ j, j < 3 * k * (M + 1) + 1 →
+      ¬ ∃ d, ((singleTapeSim N).trace j (fun _ => b)
+        ((singleTapeSim N).trace B (fun _ => b) c1)).state = SimQ.gather d := by
+    have hBc1 : (singleTapeSim N).trace B (fun _ => b) c1
+        = (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+            ((singleTapeSim N).trace A (fun _ => b) c1) := by
+      rw [hBdef, trace_const_add]
+    rw [hBc1]
+    apply scatter2_sweep_states N b c M hk
+      dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
+      (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) _
+      (by rw [hs1]) (by rw [hs1]; exact hh1) (by rw [hs1]; exact hsi2)
+      hcorr.inv.heads_le
+      (by rw [hs1, hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+      (by rw [hs1, hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- per-step `¬gather` for the GATHER sweep (entry at `cg = trace 1 c1`)
+  have hgsweep := gather_sweep_no_sentinel N b
+    ((singleTapeSim N).trace 1 (fun _ => b) c1)
+    (by rw [e1]; exact ⟨_, rfl⟩) (by rw [e1])
+    (by rw [e1]; exact hinv.cells_congr rfl)
+    (by rw [e1]; exact hisR) (by rw [e1]; exact hosR)
+  -- per-step `rewind` state for the REWIND sweep (entry at `trace (p0+1) c1`)
+  have hrewind := rewind_sweep_states N b
+    ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).1)
+    (fun i => ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.1 i,
+       (N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.1 i))
+    ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.1,
+     (N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.2.2)
+    ((N.δ b c.state c1.input.read (fun j => (c.work j).read) c1.output.read).2.2.2.1)
+    c1.input.read c1.output.read (fun j => decide ((c.work j).read = Γ.start))
+    ((singleTapeSim N).trace 1 (fun _ => b)
+      ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+        ((singleTapeSim N).trace 1 (fun _ => b) c1)))
+    (blockStart k (M + 1) - 1)
+    (by rw [hsent]) (by rw [hsent])
+    (fun p' hp1 hp2 => by rw [hsent]; exact hinv.materialized_ne_start hp1 (by omega))
+    (by rw [hsent]; exact hisR) (by rw [hsent]; exact hosR)
+  -- the REWIND entry config `trace (p0+1) c1 = trace 1 (trace (3*k*M) (trace 1 c1))`
+  have hRewEntry : (singleTapeSim N).trace (1 + 3 * k * M + 1) (fun _ => b) c1
+      = (singleTapeSim N).trace 1 (fun _ => b)
+          ((singleTapeSim N).trace (3 * k * M) (fun _ => b)
+            ((singleTapeSim N).trace 1 (fun _ => b) c1)) := by
+    rw [show 1 + 3 * k * M + 1 = 1 + (3 * k * M + 1) from by omega, trace_const_add,
+      trace_const_add]
+  -- the SCATTER-2 entry config `trace B c1 = trace (3*k*(M+1)+1) (trace A c1)`
+  have hBc1 : (singleTapeSim N).trace B (fun _ => b) c1
+      = (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+          ((singleTapeSim N).trace A (fun _ => b) c1) := by
+    rw [hBdef, trace_const_add]
+  -- helper: off the sentinel position, no step is a `gather`-on-`□` decision point
+  have key : ∀ i, i < B + (3 * k * (M + 1) + 1) + 1 → i ≠ 1 + 3 * k * M →
+      ¬ ((∃ d, ((singleTapeSim N).trace i (fun _ => b) c1).state = SimQ.gather d) ∧
+        (((singleTapeSim N).trace i (fun _ => b) c1).work 0).read = Γ.blank) := by
+    rintro i hib hip0 ⟨⟨dg, hg⟩, hbl⟩
+    rcases Nat.lt_trichotomy i (1 + 3 * k * M) with hlt | heq | hgt
+    · -- before the sentinel: `i = 0` (run) or gather sweep (read ≠ blank)
+      rcases Nat.eq_zero_or_pos i with hi0 | hipos
+      · -- `i = 0`: state is `run`, not `gather`
+        subst hi0
+        rw [show (singleTapeSim N).trace 0 (fun _ => b) c1 = c1 from rfl] at hg
+        rw [hstate] at hg
+        exact absurd hg.symm (by simp [SimQ.run, SimQ.gather, reduceCtorEq])
+      · -- `i ∈ [1, p0)`: the GATHER sweep, where the read is non-blank
+        obtain ⟨j, rfl⟩ : ∃ j, i = 1 + j := ⟨i - 1, by omega⟩
+        have hj : j < 3 * k * M := by omega
+        rw [trace_const_add] at hbl
+        exact (hgsweep j hj).2 hbl
+    · exact hip0 heq
+    · -- after the sentinel: rewind / scatter1 / scatter2 / commit — never `gather`
+      rcases Nat.lt_or_ge i A with hiA | hiA
+      · -- REWIND sweep: `i ∈ (p0, A)`
+        obtain ⟨j, rfl⟩ : ∃ j, i = (1 + 3 * k * M + 1) + j := ⟨i - (1 + 3 * k * M + 1), by omega⟩
+        have hj : j ≤ blockStart k (M + 1) - 1 := by
+          have := one_le_blockStart k (M + 1); rw [hA] at hiA; omega
+        rw [trace_const_add, hRewEntry, hrewind j hj] at hg
+        exact absurd (Sum.inr.inj hg) (by simp [reduceCtorEq])
+      · -- SCATTER-1 / SCATTER-2 / COMMIT
+        rcases Nat.lt_or_ge i B with hiB | hiB
+        · -- SCATTER-1: `i ∈ [A, B)`
+          obtain ⟨j, rfl⟩ : ∃ j, i = A + j := ⟨i - A, by omega⟩
+          have hj : j < 3 * k * (M + 1) + 1 := by rw [hBdef] at hiB; omega
+          rw [trace_const_add] at hg
+          exact hsc1 j hj ⟨dg, hg⟩
+        · -- SCATTER-2 / COMMIT
+          rcases Nat.lt_or_ge i (B + (3 * k * (M + 1) + 1)) with hiC | hiC
+          · -- SCATTER-2: `i ∈ [B, B + (3*k*(M+1)+1))`
+            obtain ⟨j, rfl⟩ : ∃ j, i = B + j := ⟨i - B, by omega⟩
+            have hj : j < 3 * k * (M + 1) + 1 := by omega
+            rw [trace_const_add] at hg
+            exact hsc2 j hj ⟨dg, hg⟩
+          · -- COMMIT: `i = B + (3*k*(M+1)+1)`
+            have hiCommit : i = B + (3 * k * (M + 1) + 1) := by omega
+            subst hiCommit
+            rw [trace_const_add, hBc1, hs2] at hg
+            exact absurd (Sum.inr.inj hg) (by simp [reduceCtorEq])
+  intro i hi
+  by_cases hip0 : i = 1 + 3 * k * M
+  · -- the decision point: both `mp` (trivially `i = p0`) and `mpr` (state/read facts) hold
+    subst hip0
+    have hp0 : (singleTapeSim N).trace (1 + 3 * k * M) (fun _ => b) c1
+        = (singleTapeSim N).trace (3 * k * M) (fun _ => b)
+            ((singleTapeSim N).trace 1 (fun _ => b) c1) :=
+      trace_const_add (singleTapeSim N) 1 (3 * k * M) b c1
+    exact ⟨fun _ => rfl, fun _ => ⟨by rw [hp0]; exact hsentGather, by rw [hp0]; exact hsentBlank⟩⟩
+  · -- off the decision point: both sides false
+    exact ⟨fun h => absurd (key i (by omega) hip0 h) (by simp), fun h => absurd h hip0⟩
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
