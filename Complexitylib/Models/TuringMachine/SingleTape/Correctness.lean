@@ -2785,6 +2785,248 @@ theorem scatter1_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M 
         · simp only [hL, and_false, if_false]]
     · rw [hwh]
 
+/-- **One non-turnaround SCATTER sweep-1 step stays in `scatter1`.** As long as the
+    sweep is not at the turnaround trigger (`mat = true ∧ pos = (0,0)`), one step from
+    a `scatter1` config lands in `scatter1` again — `scatter1Step` only escapes to
+    `scatter2` in that one branch. The condition is on the **state data alone** (no
+    head/read needed), so it threads cleanly through a per-step induction. -/
+theorem scatter1_step_stays {k : ℕ} (N : NTM k) (b : Bool) (d : Scatter1Data k N.Q)
+    (c1 : Cfg 1 (SimQ k N.Q)) (hst : c1.state = SimQ.scatter1 d)
+    (hnt : ¬ (d.2.2.2.2.2.2.2.2.2.2 = true ∧ d.2.2.2.2.2.2.1 = (0, 0))) :
+    ∃ d', ((singleTapeSim N).trace 1 (fun _ => b) c1).state = SimQ.scatter1 d'
+      ∧ d'.2.2.2.2.2.2.1 = advanceSweep k d.2.2.2.2.2.2.1 := by
+  rw [scatter1_trace1 N d b c1 hst]
+  show ∃ d', (scatter1Step d c1.input.read ((c1.work 0).read) c1.output.read).1 = SimQ.scatter1 d'
+    ∧ d'.2.2.2.2.2.2.1 = advanceSweep k d.2.2.2.2.2.2.1
+  obtain ⟨q', wact, oWoD, iD, iSym, oSym, pos, rightCarry, isLeftMover, writeFlag, mat⟩ := d
+  simp only at hnt ⊢
+  simp only [scatter1Step]
+  by_cases hwH : (c1.work 0).read = Γ.blank
+  · rw [if_pos hwH, if_neg (by rintro ⟨hm, hp⟩; exact hnt ⟨hm, hp⟩)]
+    exact ⟨_, rfl, rfl⟩
+  · rw [if_neg hwH]
+    (repeat' split) <;> exact ⟨_, rfl, rfl⟩
+
+/-- **SCATTER block sweep stays in `scatter1` (per step).** Within one block of the
+    sweep-1 phase (`mat = false`, slot-0 block entry), every micro-step `s ≤ 3*k`
+    keeps the simulator in a `scatter1` state. Proved by reaching the nearest 3-step
+    boundary with `scatter1_block_aux` (whose output is a `scatter1`, slot-0,
+    `mat = false` config — so `¬turnaround`) and stepping the remaining `s % 3 ≤ 2`
+    micro-steps with `scatter1_step_stays` (the carried `pos`/`mat` never hit the
+    turnaround trigger). -/
+theorem scatter1_block_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+    (hb1 : 1 ≤ b) (hbM : b ≤ M)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rc_in ilm_in : Fin k → Bool)
+    (hrc_in : ∀ j : Fin k, rc_in j = decide ((c.work j).head = b - 1 ∧ (wact j).2 = Dir3.right))
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0), rc_in, ilm_in, false, false))
+    (hhead : (c1.work 0).head = blockStart k b)
+    (hmid : Scatter1MidInv (c1.work 0) c.work wact M b)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start)
+    (hk : 1 ≤ k) :
+    ∀ s, s ≤ 3 * k →
+      ∃ d, ((singleTapeSim N).trace s (fun _ => bb) c1).state = SimQ.scatter1 d := by
+  -- Generic single-step extension: from a `scatter1`, `mat = false` config, any one
+  -- step stays `scatter1` (and `mat` cannot have become `true` reading a non-blank
+  -- cell). We only need: one step from a `scatter1 d` config with `d.mat = false`
+  -- stays `scatter1` — `scatter1_step_stays` with `hnt` discharged by `mat = false`.
+  have step_from_matFalse : ∀ (cc : Cfg 1 (SimQ k N.Q)) (d : Scatter1Data k N.Q),
+      cc.state = SimQ.scatter1 d → d.2.2.2.2.2.2.2.2.2.2 = false →
+      ∃ d', ((singleTapeSim N).trace 1 (fun _ => bb) cc).state = SimQ.scatter1 d'
+        ∧ d'.2.2.2.2.2.2.1 = advanceSweep k d.2.2.2.2.2.2.1 := by
+    intro cc d hcc hmat
+    exact scatter1_step_stays N bb d cc hcc (by rw [hmat]; simp)
+  -- Generic single-step extension from any `scatter1` config whose `pos ≠ (0,0)`.
+  have step_from_posNe : ∀ (cc : Cfg 1 (SimQ k N.Q)) (d : Scatter1Data k N.Q),
+      cc.state = SimQ.scatter1 d → d.2.2.2.2.2.2.1 ≠ (0, 0) →
+      ∃ d', ((singleTapeSim N).trace 1 (fun _ => bb) cc).state = SimQ.scatter1 d'
+        ∧ d'.2.2.2.2.2.2.1 = advanceSweep k d.2.2.2.2.2.2.1 := by
+    intro cc d hcc hpos
+    exact scatter1_step_stays N bb d cc hcc (by rintro ⟨_, h⟩; exact hpos h)
+  intro s hs
+  -- reach the nearest 3-step boundary
+  obtain ⟨wt, htr, _, _⟩ := scatter1_block_aux N bb c b M hb1 hbM q' wact oWoD iD iSym oSym
+    rc_in ilm_in hrc_in c1 hst hhead (Scatter1BlockInv.ofMid hbM hmid) his hos (s / 3) (by omega)
+  -- the boundary config is scatter1 with slot `0`, `mat = false`
+  have hsplit : s = 3 * (s / 3) + s % 3 := by omega
+  rw [hsplit, trace_const_add]
+  set c0 := (singleTapeSim N).trace (3 * (s / 3)) (fun _ => bb) c1 with hc0
+  -- the boundary config's state (slot `0`, `mat = false`)
+  have hc0st : c0.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+      (⟨if s / 3 < k then s / 3 else 0, by split <;> omega⟩, 0),
+      (fun (j : Fin k) => if (j : ℕ) < s / 3 then
+          decide ((c.work j).head = b ∧ (wact j).2 = Dir3.right) else rc_in j),
+      (fun (j : Fin k) => if (j : ℕ) < s / 3 ∧ (c.work j).head = b ∧ (wact j).2 = Dir3.left then
+          true else ilm_in j),
+      false, false) := by rw [htr]
+  have hr3 : s % 3 = 0 ∨ s % 3 = 1 ∨ s % 3 = 2 := by omega
+  -- after one boundary step the pos is at slot 1; after two, slot 2 — never `(0,0)`
+  rcases hr3 with hr | hr | hr <;> rw [hr]
+  · exact ⟨_, hc0st⟩
+  · obtain ⟨d', hd', _⟩ := step_from_matFalse c0 _ hc0st rfl
+    exact ⟨d', hd'⟩
+  · -- two steps: first lands at slot 1 (`pos ≠ (0,0)`), second stays scatter1
+    rw [show (2 : ℕ) = 1 + 1 from rfl, trace_const_add]
+    obtain ⟨d', hd', hpos'⟩ := step_from_matFalse c0 _ hc0st rfl
+    obtain ⟨d'', hd'', _⟩ := step_from_posNe _ d' hd'
+      (by rw [hpos']; simp [advanceSweep])
+    exact ⟨d'', hd''⟩
+
+/-- **SCATTER materialize sweep stays in `scatter1` (per step).** During the
+    materialize phase (block `M+1`, `3*k` micro-steps), every step `s < 3*k` keeps the
+    simulator in `scatter1`. Mirrors `scatter1_block_states`: reach the 3-step boundary
+    with `scatter1_mat_aux` (slot-0, `mat = (m ≠ 0)`, so the turnaround trigger
+    `mat ∧ pos = (0,0)` needs `m = 0` — but then `mat = false`), then step the residual
+    `< 3` micro-steps (`pos ≠ (0,0)`). The trigger is only at the very end `s = 3*k`. -/
+theorem scatter1_mat_states {k : ℕ} (N : NTM k) (bb : Bool) (M : ℕ) (q' : N.Q)
+    (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (rc ilm : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1
+      (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0), rc, ilm, false, false))
+    (hhead : (c1.work 0).head = blockStart k (M + 1))
+    (hsent : ∀ cc, blockStart k (M + 1) ≤ cc → (c1.work 0).cells cc = Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) (hk : 1 ≤ k) :
+    ∀ s, s < 3 * k →
+      ∃ d, ((singleTapeSim N).trace s (fun _ => bb) c1).state = SimQ.scatter1 d := by
+  have step_stays' : ∀ (cc : Cfg 1 (SimQ k N.Q)) (d : Scatter1Data k N.Q),
+      cc.state = SimQ.scatter1 d →
+      ¬ (d.2.2.2.2.2.2.2.2.2.2 = true ∧ d.2.2.2.2.2.2.1 = (0, 0)) →
+      ∃ d', ((singleTapeSim N).trace 1 (fun _ => bb) cc).state = SimQ.scatter1 d'
+        ∧ d'.2.2.2.2.2.2.1 = advanceSweep k d.2.2.2.2.2.2.1 :=
+    fun cc d hcc hnt => scatter1_step_stays N bb d cc hcc hnt
+  intro s hs
+  obtain ⟨wt, htr, _, _, _, _⟩ := scatter1_mat_aux N bb M q' wact oWoD iD iSym oSym rc ilm
+    c1 hst hhead hsent his hos (s / 3) (by omega)
+  have hsplit : s = 3 * (s / 3) + s % 3 := by omega
+  rw [hsplit, trace_const_add]
+  set c0 := (singleTapeSim N).trace (3 * (s / 3)) (fun _ => bb) c1 with hc0
+  have hc0st : c0.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym,
+      (⟨if s / 3 < k then s / 3 else 0, by split <;> omega⟩, 0),
+      (fun (j : Fin k) => if (j : ℕ) < s / 3 then false else rc j), ilm, false,
+      if s / 3 = 0 then false else true) := by rw [htr]
+  -- the boundary is non-trigger: either `m = 0` (then `mat = false`) or `m ≠ 0` (then
+  -- `pos.1 = m ≠ 0`, so `pos ≠ (0,0)`).
+  have hnt0 : ¬ ((if s / 3 = 0 then false else true) = true ∧
+      (⟨if s / 3 < k then s / 3 else 0, by split <;> omega⟩, (0 : Fin 3)) =
+        ((0 : Fin (k + 1)), (0 : Fin 3))) := by
+    rintro ⟨hm, hp⟩
+    have hsk : s / 3 < k := by omega
+    have hval : (if s / 3 < k then s / 3 else 0) = 0 := by
+      have := congrArg (fun p => (Prod.fst p).val) hp
+      simpa using this
+    rw [if_pos hsk] at hval
+    rw [if_pos hval] at hm
+    exact absurd hm (by simp)
+  have hr3 : s % 3 = 0 ∨ s % 3 = 1 ∨ s % 3 = 2 := by omega
+  rcases hr3 with hr | hr | hr <;> rw [hr]
+  · exact ⟨_, hc0st⟩
+  · obtain ⟨d', hd', _⟩ := step_stays' c0 _ hc0st hnt0
+    exact ⟨d', hd'⟩
+  · rw [show (2 : ℕ) = 1 + 1 from rfl, trace_const_add]
+    obtain ⟨d', hd', hpos'⟩ := step_stays' c0 _ hc0st hnt0
+    obtain ⟨d'', hd'', _⟩ := step_stays' _ d' hd'
+      (by rw [hpos']; rintro ⟨_, h⟩; exact absurd h (by simp [advanceSweep]))
+    exact ⟨d'', hd''⟩
+
+theorem scatter1_sweep_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
+    (c1 : Cfg 1 (SimQ k N.Q))
+    (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+        (fun j => decide ((c.work j).read = Γ.start)), (fun _ => false), false, false))
+    (hhead : (c1.work 0).head = blockStart k 1)
+    (hinv : SimInvAt k (c1.work 0) c.work M) (hk : 1 ≤ k)
+    (hr0 : ∀ j : Fin k, (c.work j).head = 0 → (wact j).2 = Dir3.right)
+    (_hwb : ∀ (j : Fin k) (p : ℕ), M < p → (c.work j).cells p = Γ.blank)
+    (his : c1.input.read ≠ Γ.start) (hos : c1.output.read ≠ Γ.start) :
+    ∀ i, i < 3 * k * (M + 1) + 1 →
+      ¬ ∃ d, ((singleTapeSim N).trace i (fun _ => bb) c1).state = SimQ.gather d := by
+  -- It suffices to show the state at every interior step is `scatter1`.
+  suffices H : ∀ i, i ≤ 3 * k * (M + 1) →
+      ∃ d, ((singleTapeSim N).trace i (fun _ => bb) c1).state = SimQ.scatter1 d by
+    intro i hi ⟨dg, hg⟩
+    obtain ⟨d1, h1⟩ := H i (by omega)
+    rw [h1] at hg
+    exact absurd (Sum.inr.inj hg) (by simp [reduceCtorEq])
+  -- bridge: the entry carry `decide(read = ▷)` is the block-1 carry `decide(head=0 ∧ right)`
+  have hrc : (fun j => decide ((c.work j).read = Γ.start))
+      = (fun (j : Fin k) => decide ((c.work j).head = 0 ∧ (wact j).2 = Dir3.right)) := by
+    funext j
+    rw [decide_eq_decide]
+    have hreadhead : ((c.work j).read = Γ.start) ↔ ((c.work j).head = 0) := by
+      rw [Tape.read]
+      refine ⟨fun h => ?_, fun h => ?_⟩
+      · by_contra hne; exact hinv.noStart j _ (by omega) h
+      · rw [h]; exact hinv.wfStart j
+    rw [hreadhead]
+    exact ⟨fun h => ⟨h, hr0 j h⟩, fun h => h.1⟩
+  intro i hi
+  rcases Nat.lt_or_ge i (3 * k * M + 1) with hib | hib
+  · -- BLOCK-SWEEP range `i ≤ 3*k*M`
+    have hib' : i ≤ 3 * k * M := by omega
+    set B := i / (3 * k) with hBdef
+    have hdm : 3 * k * B + i % (3 * k) = i := by rw [hBdef]; exact Nat.div_add_mod i (3 * k)
+    have hge : 3 * k * B ≤ i := by omega
+    have hmod : i % (3 * k) < 3 * k := Nat.mod_lt _ (by omega)
+    have hBM : B ≤ M := by
+      by_contra hBM
+      have hMB : M + 1 ≤ B := Nat.lt_of_not_le hBM
+      have : 3 * k * (M + 1) ≤ 3 * k * B := Nat.mul_le_mul_left _ hMB
+      rw [Nat.mul_succ] at this; omega
+    -- reach the block-`B+1` entry via `scatter1_sweep_aux`
+    obtain ⟨wtB, hSB, hwhB, hmidB⟩ := scatter1_sweep_aux N bb c M q' wact oWoD iD iSym oSym
+      (fun _ => false) c1 (by rw [hst, hrc]) hhead hinv his hos B hBM
+    rcases Nat.eq_or_lt_of_le hBM with hBeq | hBlt
+    · -- `B = M`: then `i = 3*k*M` exactly; the boundary config IS scatter1
+      have hiB : i = 3 * k * B := by rw [← hBeq] at hib'; omega
+      exact ⟨_, by rw [hiB, hSB]⟩
+    · -- `B < M`: residual `s = i - 3*k*B ≤ 3*k` within block `B+1`
+      have hs : i - 3 * k * B ≤ 3 * k := by omega
+      have hB1M : B + 1 ≤ M := hBlt
+      have hbridge : i = 3 * k * B + (i - 3 * k * B) := by omega
+      rw [hbridge, trace_const_add]
+      obtain ⟨d, hd⟩ := scatter1_block_states N bb c (B + 1) M (Nat.le_add_left 1 B) hB1M
+        q' wact oWoD iD iSym oSym
+        (fun j => decide ((c.work j).head = B ∧ (wact j).2 = Dir3.right))
+        (fun j => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ B ∧ (wact j).2 = Dir3.left then
+            true else (fun _ => false) j)
+        (fun j => by simp only [Nat.add_sub_cancel])
+        ((singleTapeSim N).trace (3 * k * B) (fun _ => bb) c1) (by rw [hSB])
+        (by rw [hSB]; exact hwhB) (by rw [hSB]; exact hmidB) (by rw [hSB]; exact his)
+        (by rw [hSB]; exact hos) hk (i - 3 * k * B) hs
+      exact ⟨d, hd⟩
+  · -- MATERIALIZE range `3*k*M < i ≤ 3*k*(M+1)`
+    -- reach the materialize entry `trace (3*k*M) c1`
+    obtain ⟨wtS, hS, hwhS, hmidS⟩ := scatter1_sweep_aux N bb c M q' wact oWoD iD iSym oSym
+      (fun _ => false) c1 (by rw [hst, hrc]) hhead hinv his hos M (le_refl M)
+    set cE := (singleTapeSim N).trace (3 * k * M) (fun _ => bb) c1 with hcE
+    have hcEst : cE.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
+        (fun j => decide ((c.work j).head = M ∧ (wact j).2 = Dir3.right)),
+        (fun (j : Fin k) => if 1 ≤ (c.work j).head ∧ (c.work j).head ≤ M ∧ (wact j).2 = Dir3.left
+            then true else (fun _ => false) j), false, false) := by rw [hS]
+    have hcEhead : (cE.work 0).head = blockStart k (M + 1) := by rw [hS]; exact hwhS
+    have hcEsent : ∀ cc, blockStart k (M + 1) ≤ cc → (cE.work 0).cells cc = Γ.blank := by
+      rw [hS]; exact hmidS.sentinel
+    have hcEis : cE.input.read ≠ Γ.start := by rw [hS]; exact his
+    have hcEos : cE.output.read ≠ Γ.start := by rw [hS]; exact hos
+    -- bridge `i = 3*k*M + s`, `s = i - 3*k*M ≤ 3*k`
+    have hge : 3 * k * M ≤ i := by omega
+    have hbridge : i = 3 * k * M + (i - 3 * k * M) := by omega
+    have hs : i - 3 * k * M ≤ 3 * k := by
+      rw [Nat.mul_succ] at hi; omega
+    rw [hbridge, trace_const_add, ← hcE]
+    rcases Nat.lt_or_ge (i - 3 * k * M) (3 * k) with hslt | hsge
+    · -- interior of materialize: `scatter1_mat_states`
+      exact scatter1_mat_states N bb M q' wact oWoD iD iSym oSym _ _ cE hcEst hcEhead hcEsent
+        hcEis hcEos hk (i - 3 * k * M) hslt
+    · -- endpoint `s = 3*k` (turnaround config, still `scatter1`): use `scatter1_mat_aux` at `m=k`
+      have hseq : i - 3 * k * M = 3 * k := by omega
+      rw [hseq, show 3 * k = 3 * k from rfl]
+      obtain ⟨wt, hmt, _, _, _, _⟩ := scatter1_mat_aux N bb M q' wact oWoD iD iSym oSym _ _
+        cE hcEst hcEhead hcEsent hcEis hcEos k (le_refl k)
+      exact ⟨_, by rw [hmt]⟩
+
 /-- **SCATTER sweep-1 — target (the crux, proof in progress).** From the
     REWIND-produced `scatter1` config (cell 1, `pos (0,0)`, `rightCarry` marking
     the position-0 heads, all else empty, encoding the old `c.work` at `M`), the
