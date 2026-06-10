@@ -1,4 +1,5 @@
 import Complexitylib.SAT.Headline
+import Complexitylib.SAT.Rename
 import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Models.TuringMachine.SingleTape
 
@@ -1244,10 +1245,482 @@ theorem encode_mem_LSAT_iff (φ : CNF) : φ.encode ∈ L_SAT ↔ φ.Satisfiable 
     rw [hφ]; exact hsat
   · exact fun hsat => ⟨φ, rfl, hsat⟩
 
+/-! ### Flat variable re-indexing
+
+The `enc`-based variable indices are `Nat.pair` towers — convenient for the
+injectivity bookkeeping of the correctness proof, but a Turing machine
+computing them would need comparison-and-branch arithmetic. The *flat*
+mixed-radix scheme below needs only multiplication and addition (unary
+machine-trivial), and transports satisfiability along the injective
+re-encoding `flatToEnc` (`SAT.CNF.satisfiable_mapVar_iff`). The reduction
+emits the flat formula. -/
+
+namespace Tableau
+
+/-- Mixed-radix flat variable index: `tag` at the top, then components
+    `(a, b, c, d)` with radices `(A, B, C, D)`. -/
+def flatVar (A B C D tag a b c d : ℕ) : ℕ :=
+  (((tag * A + a) * B + b) * C + c) * D + d
+
+/-- One mixed-radix layer decodes: the remainder is the digit, the quotient
+    the rest. -/
+private theorem layer_decode {X d D : ℕ} (hd : d < D) :
+    (X * D + d) % D = d ∧ (X * D + d) / D = X := by
+  constructor
+  · rw [Nat.mul_comm X D, Nat.mul_add_mod, Nat.mod_eq_of_lt hd]
+  · rw [Nat.mul_comm X D, Nat.mul_add_div (by omega), Nat.div_eq_of_lt hd, Nat.add_zero]
+
+/-- The flat components decode by iterated division and remainder. -/
+theorem flatVar_decode {A B C D tag a b c d : ℕ}
+    (ha : a < A) (hb : b < B) (hc : c < C) (hd : d < D) :
+    flatVar A B C D tag a b c d % D = d ∧
+    flatVar A B C D tag a b c d / D % C = c ∧
+    flatVar A B C D tag a b c d / D / C % B = b ∧
+    flatVar A B C D tag a b c d / D / C / B % A = a ∧
+    flatVar A B C D tag a b c d / D / C / B / A = tag := by
+  obtain ⟨h1, h1'⟩ := layer_decode (X := (tag * A + a) * B + b) (d := c) hc
+  obtain ⟨h2, h2'⟩ := layer_decode (X := tag * A + a) (d := b) hb
+  obtain ⟨h3, h3'⟩ := layer_decode (X := tag) (d := a) ha
+  obtain ⟨h0, h0'⟩ := layer_decode (X := ((tag * A + a) * B + b) * C + c) (d := d) hd
+  exact ⟨h0, by rw [flatVar, h0', h1], by rw [flatVar, h0', h1', h2],
+    by rw [flatVar, h0', h1', h2', h3], by rw [flatVar, h0', h1', h2', h3']⟩
+
+/-- Mixed-radix re-composition is the identity (unconditionally — the
+    div/mod identity at each layer). -/
+theorem flatVar_recompose (A B C D v : ℕ) :
+    flatVar A B C D (v / D / C / B / A) (v / D / C / B % A) (v / D / C % B)
+      (v / D % C) (v % D) = v := by
+  have l1 : ∀ w m : ℕ, (w / m) * m + w % m = w := fun w m => by
+    rw [Nat.mul_comm]
+    exact Nat.div_add_mod w m
+  rw [flatVar, l1 (v / D / C / B) A, l1 (v / D / C) B, l1 (v / D) C, l1 v D]
+
+/-- **The injective re-encoding** from flat indices to the `Nat.pair`-based
+    `enc` indices: decode the mixed-radix components, re-encode per tag
+    (tag `2` — the cell variables — pairs its position and symbol, matching
+    `vCell`). -/
+def flatToEnc (A B C D : ℕ) (v : ℕ) : ℕ :=
+  if v / D / C / B / A = 2 then
+    enc 2 (v / D / C / B % A) (v / D / C % B) (Nat.pair (v / D % C) (v % D)) 0
+  else
+    enc (v / D / C / B / A) (v / D / C / B % A) (v / D / C % B) (v / D % C) (v % D)
+
+theorem flatToEnc_injective (A B C D : ℕ) :
+    Function.Injective (flatToEnc A B C D) := by
+  intro v v' h
+  simp only [flatToEnc] at h
+  split at h <;> split at h
+  · -- both tag 2
+    next ht ht' =>
+      obtain ⟨-, ha, hb, hcd, -⟩ := enc_inj h
+      obtain ⟨hc, hd⟩ := Nat.pair_eq_pair.mp hcd
+      rw [← flatVar_recompose A B C D v, ← flatVar_recompose A B C D v',
+        ht, ht', ha, hb, hc, hd]
+  · next ht ht' => exact absurd (enc_inj h).1.symm ht'
+  · next ht ht' => exact absurd (enc_inj h).1 ht
+  · next ht ht' =>
+      obtain ⟨htag, ha, hb, hc, hd⟩ := enc_inj h
+      rw [← flatVar_recompose A B C D v, ← flatVar_recompose A B C D v',
+        htag, ha, hb, hc, hd]
+
+section FlatVars
+
+-- Flat-variable moduli for a tableau with `Qc` states, `steps` time-steps,
+-- and positions `≤ P + 1` (head-move consequences reach `P + 1`).
+variable (Qc steps P : ℕ)
+
+/-- Flat tableau variables: same roles as `vState`/`vChoice`/`vCell`/`vHead`,
+    mixed-radix indices. -/
+def vStateF (t q : ℕ) : ℕ := flatVar (steps + 1) (max Qc 3) (P + 2) 4 0 t q 0 0
+@[inherit_doc vStateF]
+def vChoiceF (t : ℕ) : ℕ := flatVar (steps + 1) (max Qc 3) (P + 2) 4 1 t 0 0 0
+@[inherit_doc vStateF]
+def vCellF (t tp pos s : ℕ) : ℕ := flatVar (steps + 1) (max Qc 3) (P + 2) 4 2 t tp pos s
+@[inherit_doc vStateF]
+def vHeadF (t tp pos : ℕ) : ℕ := flatVar (steps + 1) (max Qc 3) (P + 2) 4 3 t tp pos 0
+
+/-- `flatToEnc` carries each in-range flat variable to its `enc` counterpart. -/
+theorem flatToEnc_vStateF {t q : ℕ} (ht : t ≤ steps) (hq : q < Qc) :
+    flatToEnc (steps + 1) (max Qc 3) (P + 2) 4 (vStateF Qc steps P t q) = vState t q := by
+  obtain ⟨h0, h1, h2, h3, h4⟩ := flatVar_decode (A := steps + 1) (B := max Qc 3)
+    (C := P + 2) (D := 4) (tag := 0) (a := t) (b := q) (c := 0) (d := 0)
+    (by omega) (lt_of_lt_of_le hq (le_max_left _ _)) (by omega) (by omega)
+  rw [vStateF, flatToEnc, if_neg (by rw [h4]; omega), h4, h3, h2, h1, h0, vState]
+
+@[inherit_doc flatToEnc_vStateF]
+theorem flatToEnc_vChoiceF {t : ℕ} (ht : t ≤ steps) :
+    flatToEnc (steps + 1) (max Qc 3) (P + 2) 4 (vChoiceF Qc steps P t) = vChoice t := by
+  obtain ⟨h0, h1, h2, h3, h4⟩ := flatVar_decode (A := steps + 1) (B := max Qc 3)
+    (C := P + 2) (D := 4) (tag := 1) (a := t) (b := 0) (c := 0) (d := 0)
+    (by omega) (by omega) (by omega) (by omega)
+  rw [vChoiceF, flatToEnc, if_neg (by rw [h4]; omega), h4, h3, h2, h1, h0, vChoice]
+
+@[inherit_doc flatToEnc_vStateF]
+theorem flatToEnc_vCellF {t tp pos s : ℕ} (ht : t ≤ steps) (htp : tp < 3)
+    (hpos : pos < P + 2) (hs : s < 4) :
+    flatToEnc (steps + 1) (max Qc 3) (P + 2) 4 (vCellF Qc steps P t tp pos s)
+      = vCell t tp pos s := by
+  obtain ⟨h0, h1, h2, h3, h4⟩ := flatVar_decode (A := steps + 1) (B := max Qc 3)
+    (C := P + 2) (D := 4) (tag := 2) (a := t) (b := tp) (c := pos) (d := s)
+    (by omega) (lt_of_lt_of_le htp (le_max_right _ _)) hpos hs
+  rw [vCellF, flatToEnc, if_pos h4, h3, h2, h1, h0, vCell]
+
+@[inherit_doc flatToEnc_vStateF]
+theorem flatToEnc_vHeadF {t tp pos : ℕ} (ht : t ≤ steps) (htp : tp < 3)
+    (hpos : pos < P + 2) :
+    flatToEnc (steps + 1) (max Qc 3) (P + 2) 4 (vHeadF Qc steps P t tp pos)
+      = vHead t tp pos := by
+  obtain ⟨h0, h1, h2, h3, h4⟩ := flatVar_decode (A := steps + 1) (B := max Qc 3)
+    (C := P + 2) (D := 4) (tag := 3) (a := t) (b := tp) (c := pos) (d := 0)
+    (by omega) (lt_of_lt_of_le htp (le_max_right _ _)) hpos (by omega)
+  rw [vHeadF, flatToEnc, if_neg (by rw [h4]; omega), h4, h3, h2, h1, h0, vHead]
+
+end FlatVars
+
+-- ── Renaming plumbing ──────────────────────────────────────────────────────
+
+private theorem flatMap_congr' {α β : Type _} {l : List α} {f g : α → List β}
+    (h : ∀ a ∈ l, f a = g a) : l.flatMap f = l.flatMap g := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    rw [List.flatMap_cons, List.flatMap_cons, h a List.mem_cons_self,
+      ih (fun a' ha' => h a' (List.mem_cons_of_mem _ ha'))]
+
+/-- `CNF.mapVar` distributes over `flatMap`. -/
+theorem mapVar_flatMap {α : Type _} (f : ℕ → ℕ) (l : List α) (g : α → CNF) :
+    CNF.mapVar f (l.flatMap g) = l.flatMap (fun a => CNF.mapVar f (g a)) :=
+  List.map_flatMap ..
+
+theorem mapVar_atLeastOne (f : ℕ → ℕ) (vars : List ℕ) :
+    Clause.mapVar f (atLeastOne vars) = atLeastOne (vars.map f) := by
+  simp [Clause.mapVar, atLeastOne, List.map_map, Function.comp_def, Lit.mapVar]
+
+theorem mapVar_atMostOne (f : ℕ → ℕ) (vars : List ℕ) :
+    CNF.mapVar f (atMostOne vars) = atMostOne (vars.map f) := by
+  induction vars with
+  | nil => rfl
+  | cons v vs ih =>
+    show CNF.mapVar f
+        (vs.map (fun w => ([⟨false, v⟩, ⟨false, w⟩] : Clause)) ++ atMostOne vs)
+      = (vs.map f).map (fun w => ([⟨false, f v⟩, ⟨false, w⟩] : Clause))
+          ++ atMostOne (vs.map f)
+    rw [CNF.mapVar_append, ih]
+    congr 1
+    rw [CNF.mapVar, List.map_map, List.map_map]
+    exact List.map_congr_left fun w _ => rfl
+
+theorem mapVar_exactlyOne (f : ℕ → ℕ) (vars : List ℕ) :
+    CNF.mapVar f (exactlyOne vars) = exactlyOne (vars.map f) := by
+  rw [exactlyOne, exactlyOne, ← mapVar_atLeastOne f vars, ← mapVar_atMostOne f vars]
+  rfl
+
+/-- A head move lands within one cell of where it started. -/
+theorem posMove_le_succ (pos : ℕ) (d : Dir3) : posMove pos d ≤ pos + 1 := by
+  cases d
+  · exact le_trans (Nat.sub_le pos 1) (Nat.le_succ pos)
+  · exact le_refl _
+  · exact Nat.le_succ pos
+
+-- ── The flat tableau families ──────────────────────────────────────────────
+
+/-- Flat-variable mirror of `oneHotStates`. -/
+noncomputable def oneHotStatesF (N : NTM 1) (steps P : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    exactlyOne ((List.range (Fintype.card N.Q)).map
+      (vStateF (Fintype.card N.Q) steps P t))
+
+/-- Flat-variable mirror of `oneHotCells` (at `k = 1`). -/
+def oneHotCellsF (Qc steps P : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    (List.range (1 + 2)).flatMap fun tp =>
+      (List.range (P + 1)).flatMap fun pos =>
+        exactlyOne ((List.range 4).map (vCellF Qc steps P t tp pos))
+
+/-- Flat-variable mirror of `oneHotHeads` (at `k = 1`). -/
+def oneHotHeadsF (Qc steps P : ℕ) : List Clause :=
+  (List.range (steps + 1)).flatMap fun t =>
+    (List.range (1 + 2)).flatMap fun tp =>
+      exactlyOne ((List.range (P + 1)).map (vHeadF Qc steps P t tp))
+
+/-- Flat-variable mirror of `startClauses` (at `k = 1`). -/
+noncomputable def startClausesF (N : NTM 1) (steps : ℕ) (x : List Bool) :
+    List Clause :=
+  let P := steps + x.length + 1
+  let Qc := Fintype.card N.Q
+  ([⟨true, vStateF Qc steps P 0 (stateIdx N N.qstart)⟩] : Clause) ::
+    ((List.range (1 + 2)).map (fun tp => ([⟨true, vHeadF Qc steps P 0 tp 0⟩] : Clause)) ++
+     (List.range (1 + 2)).flatMap (fun tp =>
+       (List.range (P + 1)).map (fun pos =>
+         ([⟨true, vCellF Qc steps P 0 tp pos (symIdx (initCellSym x tp pos))⟩] : Clause))))
+
+/-- Flat-variable mirror of `acceptClauses` (at `k = 1`). -/
+noncomputable def acceptClausesF (N : NTM 1) (steps P : ℕ) : List Clause :=
+  [[⟨true, vStateF (Fintype.card N.Q) steps P steps (stateIdx N N.qhalt)⟩],
+   [⟨true, vCellF (Fintype.card N.Q) steps P steps (1 + 1) 1 (symIdx Γ.one)⟩]]
+
+-- ── The flat families map onto the `enc` families ──────────────────────────
+
+section FamilyEq
+
+variable (N : NTM 1) (steps P : ℕ)
+
+/-- The re-encoding at this tableau's moduli. -/
+noncomputable def encOf : ℕ → ℕ :=
+  flatToEnc (steps + 1) (max (Fintype.card N.Q) 3) (P + 2) 4
+
+theorem encOf_injective : Function.Injective (encOf N steps P) :=
+  flatToEnc_injective ..
+
+theorem mapVar_oneHotStatesF :
+    CNF.mapVar (encOf N steps P) (oneHotStatesF N steps P) = oneHotStates N steps := by
+  rw [oneHotStatesF, oneHotStates, encOf, mapVar_flatMap]
+  refine flatMap_congr' fun t ht => ?_
+  rw [mapVar_exactlyOne, List.map_map]
+  congr 1
+  refine List.map_congr_left fun q hq => ?_
+  rw [List.mem_range] at ht hq
+  exact flatToEnc_vStateF _ _ _ (by omega) hq
+
+theorem mapVar_oneHotCellsF :
+    CNF.mapVar (encOf N steps P) (oneHotCellsF (Fintype.card N.Q) steps P)
+      = oneHotCells 1 steps P := by
+  rw [oneHotCellsF, oneHotCells, encOf, mapVar_flatMap]
+  refine flatMap_congr' fun t ht => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun tp htp => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun pos hpos => ?_
+  rw [mapVar_exactlyOne, List.map_map]
+  congr 1
+  refine List.map_congr_left fun s hs => ?_
+  rw [List.mem_range] at ht htp hpos hs
+  exact flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega)
+
+theorem mapVar_oneHotHeadsF :
+    CNF.mapVar (encOf N steps P) (oneHotHeadsF (Fintype.card N.Q) steps P)
+      = oneHotHeads 1 steps P := by
+  rw [oneHotHeadsF, oneHotHeads, encOf, mapVar_flatMap]
+  refine flatMap_congr' fun t ht => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun tp htp => ?_
+  rw [mapVar_exactlyOne, List.map_map]
+  congr 1
+  refine List.map_congr_left fun pos hpos => ?_
+  rw [List.mem_range] at ht htp hpos
+  exact flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega)
+
+theorem mapVar_acceptClausesF :
+    CNF.mapVar (encOf N steps P) (acceptClausesF N steps P) = acceptClauses N steps := by
+  rw [acceptClausesF, acceptClauses, encOf]
+  simp only [CNF.mapVar, Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+  rw [flatToEnc_vStateF _ _ _ (le_refl _) (stateIdx_lt N _),
+    flatToEnc_vCellF _ _ _ (le_refl _) (by omega) (by omega) (symIdx_lt _)]
+
+/-- Flat-variable mirror of `frameClauses` (at `k = 1`). -/
+def frameClausesF (Qc steps P : ℕ) : List Clause :=
+  (List.range steps).flatMap fun t =>
+    (List.range (1 + 2)).flatMap fun tp =>
+      (List.range (P + 1)).flatMap fun pos =>
+        (List.range 4).flatMap fun s =>
+          [([⟨true, vHeadF Qc steps P t tp pos⟩, ⟨false, vCellF Qc steps P t tp pos s⟩,
+              ⟨true, vCellF Qc steps P (t + 1) tp pos s⟩] : Clause),
+           ([⟨true, vHeadF Qc steps P t tp pos⟩, ⟨true, vCellF Qc steps P t tp pos s⟩,
+              ⟨false, vCellF Qc steps P (t + 1) tp pos s⟩] : Clause)]
+
+/-- Flat-variable mirror of `activeCond`. -/
+noncomputable def activeCondF (N : NTM 1) (steps P : ℕ) (t : ℕ) (q : N.Q)
+    (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : Clause :=
+  [⟨false, vStateF (Fintype.card N.Q) steps P t (stateIdx N q)⟩,
+   ⟨false, vHeadF (Fintype.card N.Q) steps P t 0 pi⟩,
+   ⟨false, vCellF (Fintype.card N.Q) steps P t 0 pi (symIdx si)⟩,
+   ⟨false, vHeadF (Fintype.card N.Q) steps P t 1 pw⟩,
+   ⟨false, vCellF (Fintype.card N.Q) steps P t 1 pw (symIdx sw)⟩,
+   ⟨false, vHeadF (Fintype.card N.Q) steps P t 2 po⟩,
+   ⟨false, vCellF (Fintype.card N.Q) steps P t 2 po (symIdx so)⟩,
+   ⟨!b, vChoiceF (Fintype.card N.Q) steps P t⟩]
+
+/-- Flat-variable mirror of `activeClausesAt`. -/
+noncomputable def activeClausesAtF (N : NTM 1) (steps P : ℕ) (t : ℕ) (q : N.Q)
+    (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) : List Clause :=
+  let out := N.δ b q si (fun _ => sw) so
+  let nextState := if q = N.qhalt then q else out.1
+  let wSym := if q = N.qhalt then sw else if pw = 0 then sw else (out.2.1 0).toΓ
+  let oSym := if q = N.qhalt then so else if po = 0 then so else out.2.2.1.toΓ
+  let iH := if q = N.qhalt then pi else posMove pi out.2.2.2.1
+  let wH := if q = N.qhalt then pw else posMove pw (out.2.2.2.2.1 0)
+  let oH := if q = N.qhalt then po else posMove po out.2.2.2.2.2
+  let cond : Clause := activeCondF N steps P t q pi si pw sw po so b
+  [cond ++ [⟨true, vStateF (Fintype.card N.Q) steps P (t + 1) (stateIdx N nextState)⟩],
+   cond ++ [⟨true, vCellF (Fintype.card N.Q) steps P (t + 1) 0 pi (symIdx si)⟩],
+   cond ++ [⟨true, vCellF (Fintype.card N.Q) steps P (t + 1) 1 pw (symIdx wSym)⟩],
+   cond ++ [⟨true, vCellF (Fintype.card N.Q) steps P (t + 1) 2 po (symIdx oSym)⟩],
+   cond ++ [⟨true, vHeadF (Fintype.card N.Q) steps P (t + 1) 0 iH⟩],
+   cond ++ [⟨true, vHeadF (Fintype.card N.Q) steps P (t + 1) 1 wH⟩],
+   cond ++ [⟨true, vHeadF (Fintype.card N.Q) steps P (t + 1) 2 oH⟩]]
+
+/-- Flat-variable mirror of `activeTransitionClauses`. -/
+noncomputable def activeTransitionClausesF (N : NTM 1) (steps P : ℕ) : List Clause :=
+  (List.range steps).flatMap fun t =>
+    (Finset.univ : Finset N.Q).toList.flatMap fun q =>
+      (List.range (P + 1)).flatMap fun pi =>
+        allSyms.flatMap fun si =>
+          (List.range (P + 1)).flatMap fun pw =>
+            allSyms.flatMap fun sw =>
+              (List.range (P + 1)).flatMap fun po =>
+                allSyms.flatMap fun so =>
+                  [true, false].flatMap fun b =>
+                    activeClausesAtF N steps P t q pi si pw sw po so b
+
+theorem mapVar_startClausesF (x : List Bool) :
+    CNF.mapVar (encOf N steps (steps + x.length + 1)) (startClausesF N steps x)
+      = startClauses N steps x := by
+  simp only [startClausesF, startClauses, encOf]
+  rw [CNF.mapVar_cons, CNF.mapVar_append]
+  congr 1
+  · simp only [Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+    rw [flatToEnc_vStateF _ _ _ (by omega) (stateIdx_lt N _)]
+  congr 1
+  · rw [CNF.mapVar, List.map_map]
+    refine List.map_congr_left fun tp htp => ?_
+    rw [List.mem_range] at htp
+    simp only [Function.comp_def, Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+    rw [flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega)]
+  · rw [mapVar_flatMap]
+    refine flatMap_congr' fun tp htp => ?_
+    rw [CNF.mapVar, List.map_map]
+    refine List.map_congr_left fun pos hpos => ?_
+    rw [List.mem_range] at htp hpos
+    simp only [Function.comp_def, Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+    rw [flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt _)]
+
+theorem mapVar_frameClausesF :
+    CNF.mapVar (encOf N steps P) (frameClausesF (Fintype.card N.Q) steps P)
+      = frameClauses 1 steps P := by
+  rw [frameClausesF, frameClauses, encOf, mapVar_flatMap]
+  refine flatMap_congr' fun t ht => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun tp htp => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun pos hpos => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun s hs => ?_
+  rw [List.mem_range] at ht htp hpos hs
+  simp only [CNF.mapVar, Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+  rw [flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega)]
+
+theorem mapVar_activeCondF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ)
+    (po : ℕ) (so : Γ) (b : Bool) (ht : t < steps) (hpi : pi ≤ P) (hpw : pw ≤ P)
+    (hpo : po ≤ P) :
+    Clause.mapVar (encOf N steps P) (activeCondF N steps P t q pi si pw sw po so b)
+      = activeCond N t q pi si pw sw po so b := by
+  rw [activeCondF, activeCond, encOf]
+  simp only [Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
+  rw [flatToEnc_vStateF _ _ _ (by omega) (stateIdx_lt N q),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt si),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt sw),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt so),
+    flatToEnc_vChoiceF _ _ _ (by omega)]
+
+theorem mapVar_activeClausesAtF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : ℕ)
+    (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) (ht : t < steps) (hpi : pi ≤ P)
+    (hpw : pw ≤ P) (hpo : po ≤ P) :
+    CNF.mapVar (encOf N steps P) (activeClausesAtF N steps P t q pi si pw sw po so b)
+      = activeClausesAt N t q pi si pw sw po so b := by
+  have hposM : ∀ (p : ℕ) (d : Dir3), p ≤ P →
+      (if q = N.qhalt then p else posMove p d) < P + 2 := by
+    intro p d hp
+    split
+    · omega
+    · exact Nat.lt_of_le_of_lt (posMove_le_succ p d) (by omega)
+  have hcond := mapVar_activeCondF N steps P t q pi si pw sw po so b ht hpi hpw hpo
+  have happ : ∀ (c : Clause) (l : Lit), Clause.mapVar (encOf N steps P) (c ++ [l])
+      = Clause.mapVar (encOf N steps P) c ++ [Lit.mapVar (encOf N steps P) l] :=
+    fun c l => List.map_append ..
+  simp only [activeClausesAtF, activeClausesAt, CNF.mapVar, List.map_cons, List.map_nil]
+  rw [happ, happ, happ, happ, happ, happ, happ, hcond]
+  simp only [Lit.mapVar, encOf]
+  rw [flatToEnc_vStateF _ _ _ (by omega) (stateIdx_lt N _),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt _),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt _),
+    flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt _),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (hposM _ _ hpi),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (hposM _ _ hpw),
+    flatToEnc_vHeadF _ _ _ (by omega) (by omega) (hposM _ _ hpo)]
+
+theorem mapVar_activeTransitionClausesF :
+    CNF.mapVar (encOf N steps P) (activeTransitionClausesF N steps P)
+      = activeTransitionClauses N steps P := by
+  rw [activeTransitionClausesF, activeTransitionClauses, mapVar_flatMap]
+  refine flatMap_congr' fun t ht => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun q _ => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun pi hpi => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun si _ => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun pw hpw => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun sw _ => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun po hpo => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun so _ => ?_
+  rw [mapVar_flatMap]
+  refine flatMap_congr' fun b _ => ?_
+  rw [List.mem_range] at ht hpi hpw hpo
+  exact mapVar_activeClausesAtF N steps P t q pi si pw sw po so b ht (by omega)
+    (by omega) (by omega)
+
+end FamilyEq
+
+end Tableau
+
+/-- **The flat computation-tableau formula**: `tableauCNF` with mixed-radix
+    variable indices in place of the `Nat.pair`-based ones. Satisfiability is
+    identical (`tableauCNFFlat_satisfiable_iff`); this is the formula the
+    reduction machine emits, since its indices need only multiplication and
+    addition. -/
+noncomputable def tableauCNFFlat (N : NTM 1) (steps : ℕ) (x : List Bool) : CNF :=
+  let P := steps + x.length + 1
+  Tableau.oneHotStatesF N steps P ++
+    Tableau.oneHotCellsF (Fintype.card N.Q) steps P ++
+    Tableau.oneHotHeadsF (Fintype.card N.Q) steps P ++
+    Tableau.startClausesF N steps x ++
+    Tableau.frameClausesF (Fintype.card N.Q) steps P ++
+    Tableau.activeTransitionClausesF N steps P ++
+    Tableau.acceptClausesF N steps P
+
+/-- The flat tableau is the `enc` tableau, re-indexed. -/
+theorem tableauCNFFlat_mapVar (N : NTM 1) (steps : ℕ) (x : List Bool) :
+    CNF.mapVar (Tableau.encOf N steps (steps + x.length + 1)) (tableauCNFFlat N steps x)
+      = tableauCNF N steps x := by
+  rw [tableauCNFFlat, tableauCNF]
+  simp only [CNF.mapVar_append]
+  rw [Tableau.mapVar_oneHotStatesF, Tableau.mapVar_oneHotCellsF,
+    Tableau.mapVar_oneHotHeadsF, Tableau.mapVar_startClausesF,
+    Tableau.mapVar_frameClausesF, Tableau.mapVar_activeTransitionClausesF,
+    Tableau.mapVar_acceptClausesF]
+
+/-- **Flat-tableau correctness**: satisfiability transports along the injective
+    re-indexing to the proved `tableauCNF_satisfiable_iff`. -/
+theorem tableauCNFFlat_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
+    (tableauCNFFlat N steps x).Satisfiable ↔ N.AcceptsInTime x steps := by
+  rw [← CNF.satisfiable_mapVar_iff
+      (Tableau.encOf_injective N steps (steps + x.length + 1)) (tableauCNFFlat N steps x),
+    tableauCNFFlat_mapVar]
+  exact tableauCNF_satisfiable_iff N steps x
+
 /-- The Cook–Levin reduction function: map each input to the encoding of its
-    computation-tableau formula. -/
+    (flat-variable) computation-tableau formula. -/
 noncomputable def reductionFn (N : NTM 1) (T : ℕ → ℕ) : List Bool → List Bool :=
-  fun x => (tableauCNF N (T x.length) x).encode
+  fun x => (tableauCNFFlat N (T x.length) x).encode
 
 /-- **The reduction is polynomial-time computable** — for an explicit polynomial
     time bound `n ↦ p.eval n`. The tableau has size polynomial in `p.eval |x|`
@@ -1271,7 +1744,7 @@ theorem tableauCNF_correct {L : Language} (N : NTM 1) (T : ℕ → ℕ)
     (hdec : N.DecidesInTime L T) (x : List Bool) :
     x ∈ L ↔ reductionFn N T x ∈ L_SAT := by
   unfold reductionFn
-  rw [encode_mem_LSAT_iff, tableauCNF_satisfiable_iff]
+  rw [encode_mem_LSAT_iff, tableauCNFFlat_satisfiable_iff]
   exact hdec.2 x
 
 /-- **Single-tape Cook–Levin reduction.** A single-work-tape machine deciding `L`

@@ -1,4 +1,5 @@
 import Complexitylib.SAT.Semantics
+import Complexitylib.SAT.Rename
 import Complexitylib.SAT.Encoding
 import Complexitylib.SAT.Language
 import Complexitylib.SAT.Verifier
