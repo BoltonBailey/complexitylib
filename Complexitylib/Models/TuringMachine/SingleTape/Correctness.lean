@@ -4744,6 +4744,126 @@ theorem macroStep_decision_point_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : �
   · -- off the decision point: both sides false
     exact ⟨fun h => absurd (key i (by omega) hip0 h) (by simp), fun h => absurd h hip0⟩
 
+/-- **Macro-step correspondence — explicit form.** Same content as
+    `macroStepCorr`, but with the step count `m` written out literally (the
+    macro-step length) and the choice sequence fixed to the constant `fun _ => b`.
+    `macroStepCorr` is a thin existential wrapper around this; `macroStepCorr_rev`
+    needs the explicit `m` so it can invoke `macroStep_decision_point_iff` (which
+    is stated over exactly this length) to discharge `trace_choice_irrel`. -/
+theorem macroStepCorr_explicit {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (b : Bool) :
+    Corr N (M + 1)
+        ((singleTapeSim N).trace
+          (1 + 3 * k * M + 1 + blockStart k (M + 1)
+            + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1) (fun _ => b) c1)
+        (N.trace 1 (fun _ => b) c) := by
+  obtain ⟨hr1, hsi1⟩ := run_to_scatter1 N hcorr hne b
+  set dr := N.δ b c.state c.input.read (fun j => (c.work j).read) c.output.read with hdr
+  -- Phase 4: SCATTER sweep-1
+  obtain ⟨wfin1, hs1, hsi2, hh1⟩ := scatter1_sweep N b c M
+    dr.1 (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1
+    c.input.read c.output.read
+    ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1)
+    (by rw [hr1]; rfl) (by rw [hr1, blockStart_one]) (by rw [hr1]; exact hsi1) hk
+    (fun j hj => (N.δ_right_of_start b c.state c.input.read
+        (fun j => (c.work j).read) c.output.read).2.1 j
+      (by rw [Tape.read, hj]; exact hcorr.inv.wfStart j))
+    hcorr.wbeyond
+    (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+    (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- Phase 5: SCATTER sweep-2 → COMMIT
+  obtain ⟨wfin2, hs2, hsi3, hh2⟩ := scatter2_sweep N b c M hk
+    dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
+    (fun i => (dr.2.1 i, dr.2.2.2.2.1 i))
+    ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+      ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1))
+    (by rw [hs1]) (by rw [hs1]; exact hh1) (by rw [hs1]; exact hsi2)
+    hcorr.inv.wfStart hcorr.inv.noStart hcorr.inv.heads_le
+    (by rw [hs1, hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
+    (by rw [hs1, hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
+  -- Phase 6: COMMIT step → run q'
+  have hcommit := commit_step N dr.1 dr.2.2.1 dr.2.2.2.2.2 dr.2.2.2.1 c.input.read c.output.read
+    b
+    ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+      ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+        ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1)))
+    (by rw [hs2])
+  -- `N.trace 1` in SCATTER-final form (defeq to `dr`)
+  have htr1 : N.trace 1 (fun _ => b) c =
+      { state := dr.1, input := c.input.move dr.2.2.2.1,
+        work := fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t),
+        output := c.output.writeAndMove dr.2.2.1 dr.2.2.2.2.2 } := by
+    rw [trace_one_scatterFinal N (fun _ => b) c hne]
+  rw [show 1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1
+          = 1 + 3 * k * M + 1 + blockStart k (M + 1)
+            + ((3 * k * (M + 1) + 1) + ((3 * k * (M + 1) + 1) + 1)) from by omega,
+      trace_const_add, trace_const_add, trace_const_add, hcommit, htr1]
+  -- abbreviate the COMMIT-config (input/output/work after the two scatter sweeps)
+  set cc := (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+    ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => b)
+      ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => b) c1))
+  have hci : cc.input = c.input.move (TM.idleDir c.input.read) := by rw [hs2, hs1, hr1]
+  have hco : cc.output =
+      c.output.writeAndMove (TM.readBackWrite c.output.read).toΓ (TM.idleDir c.output.read) := by
+    rw [hs2, hs1, hr1]
+  have hcw0 : cc.work 0 = wfin2 0 := by rw [hs2]
+  have hns1' : (wfin2 0).cells 1 ≠ Γ.start := by
+    by_cases h1 : 1 < blockStart k (M + 1 + 1)
+    · exact hsi3.materialized_ne_start (le_refl 1) h1
+    · rw [hsi3.sentinel 1 (by omega)]; decide
+  have hfw : (cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+      (TM.idleDir (cc.work 0).read) = { head := 1, cells := (wfin2 0).cells } := by
+    rw [hcw0, run_work_eq (wfin2 0) (by omega) hsi3.cell0 hns1']
+  refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- headLe
+    show ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+      (TM.idleDir (cc.work 0).read)).head ≤ 1
+    rw [hfw]
+  · -- inputEq
+    show cc.input.move (if c.input.read = Γ.start then TM.idleDir cc.input.read
+      else safeDir cc.input.read dr.2.2.2.1) = c.input.move dr.2.2.2.1
+    rw [hci]
+    exact commit_input_eq c.input dr.2.2.2.1 hcorr.inputWf
+      (N.δ_right_of_start b c.state c.input.read (fun j => (c.work j).read) c.output.read).1
+  · -- outputEq
+    show cc.output.writeAndMove (if c.output.read = Γ.start then
+          TM.readBackWrite cc.output.read else dr.2.2.1).toΓ
+        (if c.output.read = Γ.start then TM.idleDir cc.output.read
+         else safeDir cc.output.read dr.2.2.2.2.2)
+      = c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2
+    rw [hco]
+    exact commit_output_eq c.output dr.2.2.1 dr.2.2.2.2.2 hcorr.outputWf
+      (N.δ_right_of_start b c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2
+  · -- inv
+    show SimInvAt k ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
+      (TM.idleDir (cc.work 0).read)) (fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t)) (M + 1)
+    rw [hfw]
+    exact hsi3.cells_congr rfl
+  · -- wbeyond
+    intro j p hp
+    show (scatterFinalWork (c.work j) (dr.2.1 j, dr.2.2.2.2.1 j)).cells p = Γ.blank
+    rw [scatterFinalWork_cells,
+      scatterInterWork_cells_of_ne (c.work j) _ (by have := hcorr.inv.heads_le j; omega)]
+    exact hcorr.wbeyond j p (by omega)
+  · -- inputWf
+    intro p hp
+    show (c.input.move dr.2.2.2.1).cells p ≠ Γ.start
+    cases dr.2.2.2.1 <;> exact hcorr.inputWf p hp
+  · -- outputWf
+    intro p hp
+    show (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells p ≠ Γ.start
+    have hc : (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells
+        = (c.output.write dr.2.2.1.toΓ).cells := by cases dr.2.2.2.2.2 <;> rfl
+    rw [hc, Tape.write]
+    split
+    · exact hcorr.outputWf p hp
+    · show Function.update c.output.cells c.output.head dr.2.2.1.toΓ p ≠ Γ.start
+      rw [Function.update_apply]
+      split
+      · cases dr.2.2.1 <;> decide
+      · exact hcorr.outputWf p hp
+
 /-- **Macro-step correspondence (the core obligation).** From a corresponding,
     non-halted configuration, for any nondeterministic choice `bit`, the
     simulator runs some number `m` of steps (with a choice sequence that feeds
@@ -4760,132 +4880,26 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     ∃ (m : ℕ) (choices : Fin m → Bool),
       Corr N (M + 1) ((singleTapeSim N).trace m choices c1) (N.trace 1 bitf c)
         ∧ m ≤ macroBound k M := by
-  by_cases hk0 : 1 ≤ k
-  · -- main case `k ≥ 1`
-    obtain ⟨hr1, hsi1⟩ := run_to_scatter1 N hcorr hne (bitf 0)
-    set dr := N.δ (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read with hdr
-    -- Phase 4: SCATTER sweep-1
-    obtain ⟨wfin1, hs1, hsi2, hh1⟩ := scatter1_sweep N (bitf 0) c M
-      dr.1 (fun i => (dr.2.1 i, dr.2.2.2.2.1 i)) (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1
-      c.input.read c.output.read
-      ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1)
-      (by rw [hr1]; rfl) (by rw [hr1, blockStart_one]) (by rw [hr1]; exact hsi1) hk
-      (fun j hj => (N.δ_right_of_start (bitf 0) c.state c.input.read
-          (fun j => (c.work j).read) c.output.read).2.1 j
-        (by rw [Tape.read, hj]; exact hcorr.inv.wfStart j))
-      hcorr.wbeyond
-      (by rw [hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
-      (by rw [hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
-    -- Phase 5: SCATTER sweep-2 → COMMIT
-    obtain ⟨wfin2, hs2, hsi3, hh2⟩ := scatter2_sweep N (bitf 0) c M hk
-      dr.1 (dr.2.2.1, dr.2.2.2.2.2) dr.2.2.2.1 c.input.read c.output.read
-      (fun i => (dr.2.1 i, dr.2.2.2.2.1 i))
-      ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
-        ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1))
-      (by rw [hs1]) (by rw [hs1]; exact hh1) (by rw [hs1]; exact hsi2)
-      hcorr.inv.wfStart hcorr.inv.noStart hcorr.inv.heads_le
-      (by rw [hs1, hr1]; exact move_idle_read_ne c.input hcorr.inputWf)
-      (by rw [hs1, hr1]; exact writeMove_idle_read_ne c.output hcorr.outputWf)
-    -- Phase 6: COMMIT step → run q'
-    have hcommit := commit_step N dr.1 dr.2.2.1 dr.2.2.2.2.2 dr.2.2.2.1 c.input.read c.output.read
-      (bitf 0)
-      ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
-        ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
-          ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1)))
-      (by rw [hs2])
-    -- `N.trace 1` in SCATTER-final form (defeq to `dr`)
-    have htr1 : N.trace 1 bitf c =
-        { state := dr.1, input := c.input.move dr.2.2.2.1,
-          work := fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t),
-          output := c.output.writeAndMove dr.2.2.1 dr.2.2.2.2.2 } := by
-      rw [trace_one_scatterFinal N bitf c hne]
-    refine ⟨1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1,
-      fun _ => bitf 0, ?_, ?_⟩
-    · rw [show 1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1
-            = 1 + 3 * k * M + 1 + blockStart k (M + 1)
-              + ((3 * k * (M + 1) + 1) + ((3 * k * (M + 1) + 1) + 1)) from by omega,
-        trace_const_add, trace_const_add, trace_const_add, hcommit, htr1]
-      -- abbreviate the COMMIT-config (input/output/work after the two scatter sweeps)
-      set cc := (singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
-        ((singleTapeSim N).trace (3 * k * (M + 1) + 1) (fun _ => bitf 0)
-          ((singleTapeSim N).trace (1 + 3 * k * M + 1 + blockStart k (M + 1)) (fun _ => bitf 0) c1))
-      have hci : cc.input = c.input.move (TM.idleDir c.input.read) := by rw [hs2, hs1, hr1]
-      have hco : cc.output =
-          c.output.writeAndMove (TM.readBackWrite c.output.read).toΓ (TM.idleDir c.output.read) := by
-        rw [hs2, hs1, hr1]
-      have hcw0 : cc.work 0 = wfin2 0 := by rw [hs2]
-      have hns1' : (wfin2 0).cells 1 ≠ Γ.start := by
-        by_cases h1 : 1 < blockStart k (M + 1 + 1)
-        · exact hsi3.materialized_ne_start (le_refl 1) h1
-        · rw [hsi3.sentinel 1 (by omega)]; decide
-      have hfw : (cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
-          (TM.idleDir (cc.work 0).read) = { head := 1, cells := (wfin2 0).cells } := by
-        rw [hcw0, run_work_eq (wfin2 0) (by omega) hsi3.cell0 hns1']
-      refine ⟨rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · -- headLe
-        show ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
-          (TM.idleDir (cc.work 0).read)).head ≤ 1
-        rw [hfw]
-      · -- inputEq
-        show cc.input.move (if c.input.read = Γ.start then TM.idleDir cc.input.read
-          else safeDir cc.input.read dr.2.2.2.1) = c.input.move dr.2.2.2.1
-        rw [hci]
-        exact commit_input_eq c.input dr.2.2.2.1 hcorr.inputWf
-          (N.δ_right_of_start (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read).1
-      · -- outputEq
-        show cc.output.writeAndMove (if c.output.read = Γ.start then
-              TM.readBackWrite cc.output.read else dr.2.2.1).toΓ
-            (if c.output.read = Γ.start then TM.idleDir cc.output.read
-             else safeDir cc.output.read dr.2.2.2.2.2)
-          = c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2
-        rw [hco]
-        exact commit_output_eq c.output dr.2.2.1 dr.2.2.2.2.2 hcorr.outputWf
-          (N.δ_right_of_start (bitf 0) c.state c.input.read (fun j => (c.work j).read) c.output.read).2.2
-      · -- inv
-        show SimInvAt k ((cc.work 0).writeAndMove ((TM.readBackWrite (cc.work 0).read : Γw) : Γ)
-          (TM.idleDir (cc.work 0).read)) (fun t => scatterFinalWork (c.work t) (dr.2.1 t, dr.2.2.2.2.1 t)) (M + 1)
-        rw [hfw]
-        exact hsi3.cells_congr rfl
-      · -- wbeyond
-        intro j p hp
-        show (scatterFinalWork (c.work j) (dr.2.1 j, dr.2.2.2.2.1 j)).cells p = Γ.blank
-        rw [scatterFinalWork_cells,
-          scatterInterWork_cells_of_ne (c.work j) _ (by have := hcorr.inv.heads_le j; omega)]
-        exact hcorr.wbeyond j p (by omega)
-      · -- inputWf
-        intro p hp
-        show (c.input.move dr.2.2.2.1).cells p ≠ Γ.start
-        cases dr.2.2.2.1 <;> exact hcorr.inputWf p hp
-      · -- outputWf
-        intro p hp
-        show (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells p ≠ Γ.start
-        have hc : (c.output.writeAndMove dr.2.2.1.toΓ dr.2.2.2.2.2).cells
-            = (c.output.write dr.2.2.1.toΓ).cells := by cases dr.2.2.2.2.2 <;> rfl
-        rw [hc, Tape.write]
-        split
-        · exact hcorr.outputWf p hp
-        · show Function.update c.output.cells c.output.head dr.2.2.1.toΓ p ≠ Γ.start
-          rw [Function.update_apply]
-          split
-          · cases dr.2.2.1 <;> decide
-          · exact hcorr.outputWf p hp
-    · -- step count ≤ macroBound k M
-      have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
-        simp only [blockStart, blockWidth, Nat.add_sub_cancel]
-        rw [Nat.mul_comm M (3 * k)]
-      have h3 : 3 * k * (M + 1) = 3 * k * M + 3 * k := by rw [Nat.mul_add, Nat.mul_one]
-      have hmb : macroBound k M = 16 * k * M + 16 * k + 16 * M + 16 := by
-        unfold macroBound
-        rw [Nat.mul_add 16 k 1, Nat.mul_one, Nat.add_mul, Nat.mul_add (16 * k) M 1, Nat.mul_one,
-          Nat.mul_add 16 M 1, Nat.mul_one]
-        omega
-      have hle : 4 * (3 * k * M) ≤ 16 * k * M := by
-        calc 4 * (3 * k * M) = 4 * (3 * k) * M := by rw [← Nat.mul_assoc]
-          _ ≤ 16 * k * M := Nat.mul_le_mul (by omega) (le_refl M)
-      rw [hbs, h3, hmb]; omega
-  · -- `k = 0` excluded by the `hk` hypothesis (the single-tape encoding needs ≥ 1
-    -- work tape; 0-tape machines are padded with a dummy tape before reduction)
-    exact absurd hk hk0
+  -- `N.trace 1 bitf c` depends only on `bitf 0`, so we may use the constant choice.
+  have hbeq : N.trace 1 bitf c = N.trace 1 (fun _ => bitf 0) c := by
+    rw [trace_one_scatterFinal N bitf c hne, trace_one_scatterFinal N (fun _ => bitf 0) c hne]
+  refine ⟨1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1)
+      + (3 * k * (M + 1) + 1) + 1, fun _ => bitf 0, ?_, ?_⟩
+  · rw [hbeq]; exact macroStepCorr_explicit N hk hcorr hne (bitf 0)
+  · -- step count ≤ macroBound k M
+    have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
+      simp only [blockStart, blockWidth, Nat.add_sub_cancel]
+      rw [Nat.mul_comm M (3 * k)]
+    have h3 : 3 * k * (M + 1) = 3 * k * M + 3 * k := by rw [Nat.mul_add, Nat.mul_one]
+    have hmb : macroBound k M = 16 * k * M + 16 * k + 16 * M + 16 := by
+      unfold macroBound
+      rw [Nat.mul_add 16 k 1, Nat.mul_one, Nat.add_mul, Nat.mul_add (16 * k) M 1, Nat.mul_one,
+        Nat.mul_add 16 M 1, Nat.mul_one]
+      omega
+    have hle : 4 * (3 * k * M) ≤ 16 * k * M := by
+      calc 4 * (3 * k * M) = 4 * (3 * k) * M := by rw [← Nat.mul_assoc]
+        _ ≤ 16 * k * M := Nat.mul_le_mul (by omega) (le_refl M)
+    rw [hbs, h3, hmb]; omega
 
 /-- **Trace-level choice irrelevance.** Two choice sequences that agree at every
     step where the simulator is at a GATHER state reading the `□` sentinel (the
@@ -5025,5 +5039,210 @@ theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : �
   exact NTM.AcceptsInTime_mono (by
     have : Tn * macroBound k (0 + Tn) = Tn * macroBound k Tn := by rw [Nat.zero_add]
     omega) key
+
+/-! ### Reverse direction: arbitrary simulator choices induce an `N`-run
+
+The forward theorems (`iterCorr`, `accepts_fwd`) drive the simulator with a
+purpose-built choice stream. The surface lemmas also need the converse flow:
+an ARBITRARY simulator stream still walks the macro-step structure, because
+each macro-step consults its nondeterministic bit only at one decision point
+(`macroStep_decision_point_iff`), so `trace_choice_irrel` replaces each
+arbitrary segment with the constant-choice segment of
+`macroStepCorr_explicit`. Crucially the decision positions are closed-form
+(`decisionPos` — independent of the run), so the induced `N`-choices can be
+read off the stream up front, with no circularity. -/
+
+/-- Micro-step length of the macro-step at materialization level `M` (the
+    explicit count in `macroStepCorr_explicit`). -/
+def macroLen (k M : ℕ) : ℕ :=
+  1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1
+
+/-- Micro-step position of the start of the `t`-th macro-step (cumulative sum
+    of the preceding macro-step lengths; the materialization level after `t`
+    macro-steps is exactly `t`). -/
+def macroPos (k : ℕ) : ℕ → ℕ
+  | 0 => 0
+  | t + 1 => macroPos k t + macroLen k t
+
+/-- Position of the single decision point (the GATHER-on-`□` COMPUTE sub-step)
+    inside the `t`-th macro-step: offset `1 + 3kt` from the macro-step start. -/
+def decisionPos (k t : ℕ) : ℕ := macroPos k t + (1 + 3 * k * t)
+
+/-- The `N`-choice stream induced by a simulator choice stream: the bits the
+    simulator consults at the (closed-form) decision positions. -/
+def inducedChoices (k : ℕ) (ch : ℕ → Bool) : ℕ → Bool := fun t => ch (decisionPos k t)
+
+/-- Each macro-step's length fits in the per-macro-step budget `macroBound`. -/
+theorem macroLen_le_macroBound (k M : ℕ) : macroLen k M ≤ macroBound k M := by
+  have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
+    simp only [blockStart, blockWidth, Nat.add_sub_cancel]
+    rw [Nat.mul_comm M (3 * k)]
+  have h3 : 3 * k * (M + 1) = 3 * k * M + 3 * k := by rw [Nat.mul_add, Nat.mul_one]
+  have hmb : macroBound k M = 16 * k * M + 16 * k + 16 * M + 16 := by
+    unfold macroBound
+    rw [Nat.mul_add 16 k 1, Nat.mul_one, Nat.add_mul, Nat.mul_add (16 * k) M 1, Nat.mul_one,
+      Nat.mul_add 16 M 1, Nat.mul_one]
+    omega
+  have hle : 4 * (3 * k * M) ≤ 16 * k * M := by
+    calc 4 * (3 * k * M) = 4 * (3 * k) * M := by rw [← Nat.mul_assoc]
+      _ ≤ 16 * k * M := Nat.mul_le_mul (by omega) (le_refl M)
+  unfold macroLen
+  rw [hbs, h3, hmb]
+  omega
+
+/-- Macro-step boundaries are monotone in the step index. -/
+theorem macroPos_mono (k : ℕ) {t t' : ℕ} (h : t ≤ t') : macroPos k t ≤ macroPos k t' := by
+  induction h with
+  | refl => exact le_refl _
+  | step _ ih => exact le_trans ih (Nat.le_add_right _ _)
+
+/-- The macro-step boundary position is bounded by the cumulative budget:
+    `macroPos k t ≤ t * macroBound k t`. -/
+theorem macroPos_le_mul_macroBound (k t : ℕ) : macroPos k t ≤ t * macroBound k t := by
+  induction t with
+  | zero => simp [macroPos]
+  | succ t ih =>
+    have h1 : macroPos k t ≤ t * macroBound k (t + 1) :=
+      le_trans ih (Nat.mul_le_mul_left t (macroBound_mono (Nat.le_succ t)))
+    have h2 : macroLen k t ≤ macroBound k (t + 1) :=
+      le_trans (macroLen_le_macroBound k t) (macroBound_mono (Nat.le_succ t))
+    calc macroPos k (t + 1) = macroPos k t + macroLen k t := rfl
+      _ ≤ t * macroBound k (t + 1) + macroBound k (t + 1) := Nat.add_le_add h1 h2
+      _ = (t + 1) * macroBound k (t + 1) := (Nat.succ_mul t _).symm
+
+/-- The full reverse-simulation budget (`Tn` macro-steps plus the halt step)
+    fits under the surface bound `16(k+1)(Tn + n + 1)²` (= `singleTapeSimTime`). -/
+theorem mul_macroBound_succ_le (k Tn n : ℕ) :
+    Tn * macroBound k Tn + 1 ≤ 16 * (k + 1) * (Tn + n + 1) ^ 2 := by
+  have h1 : Tn * macroBound k Tn = 16 * (k + 1) * (Tn * (Tn + 1)) := by
+    unfold macroBound
+    rw [← Nat.mul_assoc, Nat.mul_comm Tn (16 * (k + 1)), Nat.mul_assoc]
+  have hsq : (Tn + 1) ^ 2 ≤ (Tn + n + 1) ^ 2 := Nat.pow_le_pow_left (by omega) 2
+  have hsq' : (Tn + 1) ^ 2 = Tn * (Tn + 1) + 1 * (Tn + 1) := by
+    rw [Nat.pow_succ, Nat.pow_one, Nat.add_mul]
+  have hkey : Tn * (Tn + 1) + 1 ≤ (Tn + n + 1) ^ 2 := by omega
+  have h2 : 16 * (k + 1) * (Tn * (Tn + 1) + 1) ≤ 16 * (k + 1) * (Tn + n + 1) ^ 2 :=
+    Nat.mul_le_mul_left _ hkey
+  have h3 : 16 * (k + 1) * (Tn * (Tn + 1) + 1)
+      = 16 * (k + 1) * (Tn * (Tn + 1)) + 16 * (k + 1) * 1 := Nat.mul_add _ _ _
+  omega
+
+/-- **Segment choice replacement.** Along one macro-step from a corresponding,
+    non-halted configuration, an arbitrary choice stream drives the simulator to
+    the same configuration as the constant stream feeding the arbitrary stream's
+    bit at the macro-step's single decision point (offset `1 + 3kM`). -/
+theorem macroStep_choice_replace {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+    {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
+    (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (ch : ℕ → Bool) :
+    (singleTapeSim N).trace (macroLen k M) (fun i => ch i.val) c1
+      = (singleTapeSim N).trace (macroLen k M) (fun _ => ch (1 + 3 * k * M)) c1 := by
+  refine (trace_choice_irrel N (macroLen k M) (fun _ => ch (1 + 3 * k * M)) ch c1 ?_).symm
+  intro i hi hgather hblank
+  exact congrArg ch
+    ((macroStep_decision_point_iff N hk hcorr hne (ch (1 + 3 * k * M)) i hi).mp
+      ⟨hgather, hblank⟩).symm
+
+/-- **Reverse iterated correspondence.** For an ARBITRARY simulator choice
+    stream `ch`: as long as `N`'s induced run (`inducedChoices`) has not halted,
+    the simulator's configuration at the macro-step boundary `macroPos k t`
+    corresponds to `N`'s `t`-step configuration. -/
+theorem revCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) :
+    ∀ t : ℕ,
+      (∀ s, s < t →
+        (N.trace s (fun i => inducedChoices k ch i.val) (N.initCfg x)).state ≠ N.qhalt) →
+      Corr N t
+        ((singleTapeSim N).trace (macroPos k t) (fun i => ch i.val)
+          ((singleTapeSim N).initCfg x))
+        (N.trace t (fun i => inducedChoices k ch i.val) (N.initCfg x)) := by
+  intro t
+  induction t with
+  | zero => exact fun _ => corr_init N x
+  | succ t ih =>
+    intro hrun
+    have hcorr_t := ih (fun s hs => hrun s (Nat.lt_succ_of_lt hs))
+    have hne := hrun t (Nat.lt_succ_self t)
+    -- sim side: split at `macroPos k t`, replace the segment by the constant choice
+    have hsim : (singleTapeSim N).trace (macroPos k (t + 1)) (fun i => ch i.val)
+        ((singleTapeSim N).initCfg x)
+        = (singleTapeSim N).trace (macroLen k t) (fun _ => ch (decisionPos k t))
+            ((singleTapeSim N).trace (macroPos k t) (fun i => ch i.val)
+              ((singleTapeSim N).initCfg x)) := by
+      rw [show macroPos k (t + 1) = macroPos k t + macroLen k t from rfl,
+        (singleTapeSim N).trace_add (macroPos k t) (macroLen k t) ch]
+      exact macroStep_choice_replace N hk hcorr_t hne (fun j => ch (macroPos k t + j))
+    -- `N` side: the `(t+1)`-step trace is one more step from the `t`-step trace
+    have hN : N.trace (t + 1) (fun i => inducedChoices k ch i.val) (N.initCfg x)
+        = N.trace 1 (fun _ => inducedChoices k ch t)
+            (N.trace t (fun i => inducedChoices k ch i.val) (N.initCfg x)) := by
+      have e : (fun i : Fin 1 => inducedChoices k ch (t + i.val))
+          = (fun _ => inducedChoices k ch t) := by
+        funext i
+        obtain rfl : i = 0 := Subsingleton.elim i 0
+        rfl
+      rw [N.trace_add t 1 (inducedChoices k ch), e]
+    rw [hsim, hN]
+    exact macroStepCorr_explicit N hk hcorr_t hne (inducedChoices k ch t)
+
+/-- **Reverse halting.** If the `N`-run induced by an arbitrary simulator stream
+    `ch` halts within `Tn` steps, the simulator (driven by `ch`) halts within
+    `Tn * macroBound k Tn + 1` micro-steps, with its accept bit agreeing with
+    `N`'s output bit. This is the engine behind both surface lemmas: it bounds
+    EVERY simulator path by the simulated machine's halting bound. -/
+theorem halts_rev {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) (Tn : ℕ)
+    (hhalt : (N.trace Tn (fun i => inducedChoices k ch i.val) (N.initCfg x)).state
+      = N.qhalt) :
+    ∃ m ≤ Tn * macroBound k Tn + 1,
+      (singleTapeSim N).halted
+        ((singleTapeSim N).trace m (fun i => ch i.val) ((singleTapeSim N).initCfg x)) ∧
+      (((singleTapeSim N).trace m (fun i => ch i.val)
+          ((singleTapeSim N).initCfg x)).output.cells 1 = Γ.one
+        ↔ (N.trace Tn (fun i => inducedChoices k ch i.val)
+            (N.initCfg x)).output.cells 1 = Γ.one) := by
+  classical
+  -- the first time `N`'s induced run halts
+  have hex : ∃ t, (N.trace t (fun i => inducedChoices k ch i.val) (N.initCfg x)).state
+      = N.qhalt := ⟨Tn, hhalt⟩
+  have ht0le : Nat.find hex ≤ Tn := Nat.find_min' hex hhalt
+  have hth := Nat.find_spec hex
+  have hrun : ∀ s, s < Nat.find hex →
+      (N.trace s (fun i => inducedChoices k ch i.val) (N.initCfg x)).state ≠ N.qhalt :=
+    fun s hs => Nat.find_min hex hs
+  have hcorr := revCorr N hk ch x (Nat.find hex) hrun
+  -- one halt step lands the simulator in `SimQ.halt` (choice-irrelevant: the
+  -- simulator is parked at a `run` state, never a GATHER decision point)
+  obtain ⟨hhalted, hbit⟩ := haltCorr N hcorr hth
+  have hstep : (singleTapeSim N).trace 1 (fun j : Fin 1 => ch (macroPos k (Nat.find hex) + j.val))
+      ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
+        ((singleTapeSim N).initCfg x))
+      = (singleTapeSim N).trace 1 (fun _ => false)
+          ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
+            ((singleTapeSim N).initCfg x)) := by
+    refine (trace_choice_irrel N 1 (fun _ => false)
+      (fun j => ch (macroPos k (Nat.find hex) + j)) _ ?_).symm
+    intro i hi hgather _
+    obtain rfl : i = 0 := by omega
+    obtain ⟨d, hd⟩ := hgather
+    have hd' : ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
+        ((singleTapeSim N).initCfg x)).state = SimQ.gather d := hd
+    rw [hcorr.state] at hd'
+    exact absurd hd'.symm (by simp [SimQ.run, SimQ.gather, reduceCtorEq])
+  have hsplit : (singleTapeSim N).trace (macroPos k (Nat.find hex) + 1) (fun i => ch i.val)
+      ((singleTapeSim N).initCfg x)
+      = (singleTapeSim N).trace 1 (fun _ => false)
+          ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
+            ((singleTapeSim N).initCfg x)) := by
+    rw [(singleTapeSim N).trace_add (macroPos k (Nat.find hex)) 1 ch]
+    exact hstep
+  -- `N` is frozen between `Nat.find hex` and `Tn`
+  have hfreeze : N.trace Tn (fun i => inducedChoices k ch i.val) (N.initCfg x)
+      = N.trace (Nat.find hex) (fun i => inducedChoices k ch i.val) (N.initCfg x) :=
+    N.trace_mono ht0le (fun i => rfl) hth
+  refine ⟨macroPos k (Nat.find hex) + 1, ?_, ?_, ?_⟩
+  · have h1 := macroPos_le_mul_macroBound k (Nat.find hex)
+    have h2 : Nat.find hex * macroBound k (Nat.find hex) ≤ Tn * macroBound k Tn :=
+      Nat.mul_le_mul ht0le (macroBound_mono ht0le)
+    omega
+  · rw [hsplit]; exact hhalted
+  · rw [hsplit, hfreeze]; exact hbit
 
 end NTM.SingleTape
