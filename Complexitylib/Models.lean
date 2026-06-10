@@ -13,5 +13,7 @@ import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.CounterSubroutines
+import Complexitylib.Models.TuringMachine.Registers
+import Complexitylib.Models.TuringMachine.Emit
 import Complexitylib.Models.TuringMachine.NonDetSubroutines
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
