@@ -1249,11 +1249,20 @@ theorem encode_mem_LSAT_iff (φ : CNF) : φ.encode ∈ L_SAT ↔ φ.Satisfiable 
 noncomputable def reductionFn (N : NTM 1) (T : ℕ → ℕ) : List Bool → List Bool :=
   fun x => (tableauCNF N (T x.length) x).encode
 
-/-- **The reduction is polynomial-time computable.** The tableau has size
-    polynomial in `T |x|` (hence in `|x|`), and a deterministic machine emits its
-    encoding in polynomial time. **Proof obligation (dominant cost).** -/
-theorem reductionFn_mem_FP (N : NTM 1) (T : ℕ → ℕ) (c : ℕ) (hTO : T =O (· ^ c)) :
-    reductionFn N T ∈ FP := by
+/-- **The reduction is polynomial-time computable** — for an explicit polynomial
+    time bound `n ↦ p.eval n`. The tableau has size polynomial in `p.eval |x|`
+    (hence in `|x|`), and a deterministic machine emits its encoding in
+    polynomial time. **Proof obligation (dominant cost).**
+
+    The bound must be an explicit polynomial, not an abstract `T` with a big-O
+    hypothesis: `reductionFn N T` embeds `T |x|` into the output's structure
+    (the tableau's time-layer count), so for a noncomputable `T` — which
+    `T =O (· ^ c)` does not rule out — the reduction is not computable at all.
+    Callers replace their abstract bound by a dominating polynomial via
+    `BigO.pow_polynomial_bound` and transfer the decider with
+    `DecidesInTime.mono`. -/
+theorem reductionFn_mem_FP (N : NTM 1) (p : Polynomial ℕ) :
+    reductionFn N (fun n => p.eval n) ∈ FP := by
   sorry
 
 /-- **The reduction is correct.** `x ∈ L` iff the reduction output is in `L_SAT`,
@@ -1266,11 +1275,16 @@ theorem tableauCNF_correct {L : Language} (N : NTM 1) (T : ℕ → ℕ)
   exact hdec.2 x
 
 /-- **Single-tape Cook–Levin reduction.** A single-work-tape machine deciding `L`
-    in polynomial time yields a polynomial-time many-one reduction to `L_SAT`. -/
+    in polynomial time yields a polynomial-time many-one reduction to `L_SAT`.
+    The abstract bound `T` is first replaced by a dominating explicit polynomial
+    (`BigO.pow_polynomial_bound`), since the reduction function is only
+    computable for explicit bounds; deciding transfers by monotonicity. -/
 theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → ℕ) (c : ℕ)
     (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
-    L ≤ₚ L_SAT :=
-  ⟨reductionFn N T, reductionFn_mem_FP N T c hTO, tableauCNF_correct N T hdec⟩
+    L ≤ₚ L_SAT := by
+  obtain ⟨p, hp⟩ := hTO.pow_polynomial_bound
+  exact ⟨reductionFn N (fun n => p.eval n), reductionFn_mem_FP N p,
+    tableauCNF_correct N _ (hdec.mono hp)⟩
 
 /-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
     decides `L` within a polynomial time bound, then `L` polynomial-time many-one

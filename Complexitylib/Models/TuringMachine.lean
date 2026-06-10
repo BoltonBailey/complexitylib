@@ -454,6 +454,39 @@ def DecidesInTime (tm : NTM n) (L : Language) (T : ℕ → ℕ) : Prop :=
   tm.AllPathsHaltIn T ∧
   (∀ x, x ∈ L ↔ tm.AcceptsInTime x (T x.length))
 
+/-- All-paths halting is monotone in the time bound: once halted, the extra
+    steps are no-ops. -/
+theorem AllPathsHaltIn.mono {tm : NTM n} {T T' : ℕ → ℕ} (hle : ∀ m, T m ≤ T' m)
+    (h : tm.AllPathsHaltIn T) : tm.AllPathsHaltIn T' := by
+  intro x choices'
+  have heq := tm.trace_mono (hle x.length)
+    (choices := fun i => choices' ⟨i.val, lt_of_lt_of_le i.isLt (hle x.length)⟩)
+    (choices' := choices') (c := tm.initCfg x) (fun i => rfl)
+    (h x fun i => choices' ⟨i.val, lt_of_lt_of_le i.isLt (hle x.length)⟩)
+  rw [heq]
+  exact h x _
+
+/-- With all paths halting within `T`, timed acceptance transfers DOWN from any
+    pointwise-larger bound: by `T(|x|)` every path is already frozen. -/
+theorem AcceptsInTime_of_le_of_allPathsHaltIn {tm : NTM n} {T T' : ℕ → ℕ}
+    {x : List Bool} (hle : ∀ m, T m ≤ T' m) (hN : tm.AllPathsHaltIn T)
+    (h : tm.AcceptsInTime x (T' x.length)) : tm.AcceptsInTime x (T x.length) := by
+  obtain ⟨choices', hhalt', hout'⟩ := h
+  have heq := tm.trace_mono (hle x.length)
+    (choices := fun i => choices' ⟨i.val, lt_of_lt_of_le i.isLt (hle x.length)⟩)
+    (choices' := choices') (c := tm.initCfg x) (fun i => rfl)
+    (hN x fun i => choices' ⟨i.val, lt_of_lt_of_le i.isLt (hle x.length)⟩)
+  exact ⟨_, hN x _, by rw [heq] at hout'; exact hout'⟩
+
+/-- Deciding within `T` transfers to any pointwise-larger bound `T'`: halting
+    is monotone, and acceptance transfers both ways (up by monotonicity, down
+    by the all-paths-halt freeze). -/
+theorem DecidesInTime.mono {tm : NTM n} {L : Language} {T T' : ℕ → ℕ}
+    (hle : ∀ m, T m ≤ T' m) (h : tm.DecidesInTime L T) : tm.DecidesInTime L T' :=
+  ⟨h.1.mono hle, fun x => (h.2 x).trans
+    ⟨fun ha => AcceptsInTime_mono (hle x.length) ha,
+     fun ha => AcceptsInTime_of_le_of_allPathsHaltIn hle h.1 ha⟩⟩
+
 /-- Count of accepting choice sequences of length `T`.
 
     Meaningful when the machine halts on all paths within `T` steps — use in conjunction
