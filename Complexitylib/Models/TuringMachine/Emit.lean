@@ -739,4 +739,73 @@ theorem emitUnaryTM_hoareTime (r : Fin n) (v : ℕ) (inp₀ : Tape) (work₀ : F
 
 end EmitUnary
 
+-- ════════════════════════════════════════════════════════════════════════
+-- seqTM composition glue for ghost-parametrized emit specs
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The standard emit-spec shape: ghost-fixed input and work tapes, output
+    accumulator holding `ys`. -/
+def emitPred (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool) : TapePred n :=
+  fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc ys out
+
+/-- Emit-spec states pass through combinator phase boundaries unchanged:
+    parked ghosts and the accumulator are fixed points of
+    `transitionTape` / `transitionInput`. The `h_trans` obligation of
+    `seqTM_hoareTime` for any two composed emitters. -/
+theorem emitPred_transition {inp₀ : Tape} {work₀ : Fin n → Tape}
+    (hinp₀ : Parked inp₀) (hworkAll : ∀ i, Parked (work₀ i)) (ys : List Bool) :
+    ∀ inp work out, emitPred inp₀ work₀ ys inp work out →
+      emitPred inp₀ work₀ ys (transitionInput inp)
+        (fun i => transitionTape (work i)) (transitionTape out) := by
+  rintro inp work out ⟨rfl, rfl, hout⟩
+  refine ⟨Parked.transitionInput_id hinp₀, ?_, ?_⟩
+  · funext i
+    exact Parked.transitionTape_id (hworkAll i)
+  · rw [Parked.transitionTape_id hout.parked]
+    exact hout
+
+-- ════════════════════════════════════════════════════════════════════════
+-- emitLitTM: append one encoded literal
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Append one encoded literal** with sign `s` and variable index read from
+    register `r`: the bits `[s, s] ++ (2v trues) ++ [false, true]`
+    (= `doubleBits (Lit.encodeRaw ⟨s, v⟩) ++ [false, true]`, the form literals
+    take inside `Clause.encode`). -/
+def emitLitTM (s : Bool) (r : Fin n) : TM n :=
+  seqTM (emitBitsTM [s, s]) (seqTM (emitUnaryTM r) (emitBitsTM [false, true]))
+
+/-- **`emitLitTM` Hoare specification.** Appends the encoded literal in
+    `3v + 9` steps, preserving the input and work tapes (the scanned register
+    included). The first `seqTM`-composed emitter spec; later emitters chain
+    the same way. -/
+theorem emitLitTM_hoareTime (s : Bool) (r : Fin n) (v : ℕ) (inp₀ : Tape)
+    (work₀ : Fin n → Tape) (ys : List Bool) (hinp₀ : Parked inp₀)
+    (hwork₀ : ∀ i, i ≠ r → Parked (work₀ i)) (hreg : reg v (work₀ r)) :
+    (emitLitTM s r).HoareTime
+      (emitPred inp₀ work₀ ys)
+      (emitPred inp₀ work₀
+        (ys ++ ([s, s] ++ List.replicate (2 * v) true ++ [false, true])))
+      (3 * v + 9) := by
+  have hworkAll : ∀ i, Parked (work₀ i) := by
+    intro i
+    by_cases hir : i = r
+    · subst hir; exact hreg.parked
+    · exact hwork₀ i hir
+  have h₂₃ := seqTM_hoareTime (emitUnaryTM r) (emitBitsTM [false, true])
+    (emitUnaryTM_hoareTime r v inp₀ work₀ (ys ++ [s, s]) hinp₀ hwork₀ hreg)
+    (emitPred_transition hinp₀ hworkAll _)
+    (emitBitsTM_hoareTime [false, true] inp₀ work₀
+      (ys ++ [s, s] ++ List.replicate (2 * v) true) hinp₀ hworkAll)
+  have h := seqTM_hoareTime (emitBitsTM [s, s])
+    (seqTM (emitUnaryTM r) (emitBitsTM [false, true]))
+    (emitBitsTM_hoareTime [s, s] inp₀ work₀ ys hinp₀ hworkAll)
+    (emitPred_transition hinp₀ hworkAll _)
+    h₂₃
+  refine h.consequence (fun _ _ _ hp => hp) ?_ (by simp; omega)
+  rintro inp work out ⟨rfl, rfl, hout⟩
+  refine ⟨rfl, rfl, ?_⟩
+  rwa [List.append_assoc (ys ++ [s, s]), List.append_assoc ys,
+    ← List.append_assoc [s, s]] at hout
+
 end TM

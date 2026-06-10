@@ -74,6 +74,14 @@ theorem writeAndMove_readBack (t : Tape) (hread : t.read ≠ Γ.start) (d : Dir3
   show (t.write _).move d = t.move d
   rw [write_readBack t hread]
 
+/-- Parked tapes pass through combinator phase boundaries unchanged. -/
+theorem Parked.transitionTape_id {t : Tape} (h : Parked t) : transitionTape t = t :=
+  TM.transitionTape_id h.read_ne_start
+
+/-- Parked input tapes pass through combinator phase boundaries unchanged. -/
+theorem Parked.transitionInput_id {t : Tape} (h : Parked t) : transitionInput t = t :=
+  TM.transitionInput_id h.read_ne_start
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Registers
 -- ════════════════════════════════════════════════════════════════════════
