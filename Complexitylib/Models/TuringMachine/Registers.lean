@@ -142,4 +142,63 @@ theorem reg_zero_init : reg 0 { head := 1, cells := (initTape []).cells } := by
   rw [if_neg (by omega : ¬ j = 0)]
   simp
 
+-- ════════════════════════════════════════════════════════════════════════
+-- The canonical register tape
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Canonical register cells holding `v` in unary. -/
+def regCells (v : ℕ) : ℕ → Γ := fun j =>
+  if j = 0 then Γ.start else if j ≤ v then Γ.one else Γ.blank
+
+/-- The canonical register tape holding `v`. -/
+def regT (v : ℕ) : Tape := ⟨1, regCells v⟩
+
+@[simp] theorem regT_head (v : ℕ) : (regT v).head = 1 := rfl
+
+@[simp] theorem regT_cells (v : ℕ) : (regT v).cells = regCells v := rfl
+
+@[simp] theorem regCells_zero (v : ℕ) : regCells v 0 = Γ.start := rfl
+
+theorem regCells_one {v j : ℕ} (h1 : 1 ≤ j) (h2 : j ≤ v) : regCells v j = Γ.one := by
+  rw [regCells, if_neg (by omega), if_pos h2]
+
+theorem regCells_blank {v j : ℕ} (h : v + 1 ≤ j) : regCells v j = Γ.blank := by
+  rw [regCells, if_neg (by omega), if_neg (by omega)]
+
+theorem reg_regT (v : ℕ) : reg v (regT v) :=
+  ⟨rfl, rfl, fun _ hi => by rw [regT_cells]; exact regCells_one (by omega) (by omega),
+   fun _ hj => by rw [regT_cells]; exact regCells_blank hj⟩
+
+/-- **A register's tape is canonical**: the `reg` predicate pins every cell and
+    the head, so it is an equation. -/
+theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
+  refine Tape.ext' h.head_eq ?_
+  funext j
+  rcases Nat.eq_zero_or_pos j with rfl | hj
+  · rw [h.cell0]; rfl
+  · rcases Nat.lt_or_ge v j with hlt | hge
+    · rw [h.cells_blank (by omega), regT_cells]
+      exact (regCells_blank (by omega)).symm
+    · obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
+      rw [h.cells_one (by omega), regT_cells]
+      exact (regCells_one (by omega) (by omega)).symm
+
+theorem regT_parked (v : ℕ) : Parked (regT v) := (reg_regT v).parked
+
+/-- Writing the next mark turns `regCells d` into `regCells (d + 1)`. -/
+theorem regCells_update_succ (d : ℕ) :
+    Function.update (regCells d) (d + 1) Γ.one = regCells (d + 1) := by
+  funext j
+  rw [Function.update_apply]
+  split
+  · next h =>
+    subst h
+    exact (regCells_one (by omega) (by omega)).symm
+  · next h =>
+    rcases Nat.eq_zero_or_pos j with rfl | hj
+    · rfl
+    · rcases Nat.lt_or_ge d j with hlt | hge
+      · rw [regCells_blank (by omega), regCells_blank (by omega)]
+      · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
+
 end TM
