@@ -17,5 +17,6 @@ import Complexitylib.Models.TuringMachine.Registers
 import Complexitylib.Models.TuringMachine.Emit
 import Complexitylib.Models.TuringMachine.RegisterOps
 import Complexitylib.Models.TuringMachine.ForReg
+import Complexitylib.Models.TuringMachine.Arith
 import Complexitylib.Models.TuringMachine.NonDetSubroutines
 import Complexitylib.Models.TuringMachine.Subroutines.Internal

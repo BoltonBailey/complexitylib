@@ -185,6 +185,14 @@ theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
 
 theorem regT_parked (v : ℕ) : Parked (regT v) := (reg_regT v).parked
 
+/-- Register cells with the head anywhere off `▷` form a parked tape. -/
+theorem parked_regCells {h v : ℕ} (hh : 1 ≤ h) :
+    Parked (⟨h, regCells v⟩ : Tape) := by
+  refine ⟨hh, fun j hj => ?_⟩
+  show regCells v j ≠ Γ.start
+  rw [regCells, if_neg (by omega)]
+  split <;> decide
+
 /-- Writing the next mark turns `regCells d` into `regCells (d + 1)`. -/
 theorem regCells_update_succ (d : ℕ) :
     Function.update (regCells d) (d + 1) Γ.one = regCells (d + 1) := by
