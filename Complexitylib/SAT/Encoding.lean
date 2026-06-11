@@ -172,7 +172,37 @@ theorem encode_length (φ : CNF) :
     simp only [encode_cons, List.length_append, List.length_cons, List.length_nil, ih,
                List.foldr_cons]
 
+/-- `CNF.encode` is a `++`-homomorphism — the per-family reduction emitters
+    compose by output concatenation. -/
+theorem encode_append (φ ψ : CNF) : encode (φ ++ ψ) = encode φ ++ encode ψ := by
+  induction φ with
+  | nil => rfl
+  | cons c cs ih =>
+    rw [List.cons_append, encode_cons, encode_cons, ih]
+    simp [List.append_assoc]
+
 end CNF
+
+/-- Doubling a run of `true`s doubles its length. -/
+theorem doubleBits_replicate_true (v : ℕ) :
+    doubleBits (List.replicate v true) = List.replicate (2 * v) true := by
+  induction v with
+  | zero => rfl
+  | succ v ih =>
+    rw [List.replicate_succ, doubleBits_cons, ih,
+      show 2 * (v + 1) = (2 * v + 1) + 1 from by omega,
+      List.replicate_succ, List.replicate_succ]
+
+/-- The encoded form of one literal inside a clause: doubled sign, doubled
+    unary variable index, separator — exactly the word the reduction's
+    literal emitter appends. -/
+theorem Clause.encode_cons' (ℓ : Lit) (ℓs : Clause) :
+    Clause.encode (ℓ :: ℓs)
+      = ([ℓ.sign, ℓ.sign] ++ List.replicate (2 * ℓ.var) true ++ [false, true])
+          ++ Clause.encode ℓs := by
+  rw [Clause.encode_cons, Lit.encodeRaw, Unary.encode, doubleBits_cons,
+    doubleBits_replicate_true]
+  simp [List.append_assoc]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- maxVar ≤ |encode|  (the key bound for PolyBalanced)
