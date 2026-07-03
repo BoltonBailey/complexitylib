@@ -418,7 +418,198 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
         by decide, by decide⟩,
       rfl, ⟨by rw [Function.update_self], by decide, by decide⟩, rfl, rfl,
       rfl, k0, k1, k2, k3, k4⟩
-  sorry
+  subst hwSym hoSym
+  -- Abbreviations for the emitted clause words.
+  set cond : Clause := activeCondF N steps P t q pi si pw sw po so b
+    with hcond
+  set iH : ℕ := posMoveOpt pi mvI with hiH
+  set wH : ℕ := posMoveOpt pw mvW with hwH
+  set oH : ℕ := posMoveOpt po mvO with hoH
+  have hiHle : iH ≤ P + 1 := posMoveOpt_le pi P mvI hB.hpi
+  have hwHle : wH ≤ P + 1 := posMoveOpt_le pw P mvW hB.hpw
+  have hoHle : oH ≤ P + 1 := posMoveOpt_le po P mvO hB.hpo
+  have hPM : P + 2 ≤ M := by
+    have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+    obtain ⟨_, _, hCM, _⟩ := radix_caps hA1 (by omega) (by omega)
+      (by omega) hB.hM
+    omega
+  set base₅ : Fin nT → Tape := Function.update base auxReg2 (regT iH)
+    with hbase₅
+  set base₇ : Fin nT → Tape := Function.update base auxReg2 (regT wH)
+    with hbase₇
+  set base₉ : Fin nT → Tape := Function.update base auxReg2 (regT oH)
+    with hbase₉
+  -- The emitted words.
+  set w1 : List Bool := Clause.encode (cond ++
+    [⟨true, vStateF Qc steps P (t + 1) (stateIdx N (if q = N.qhalt then q
+      else (N.δ b q si (fun _ => sw) so).1))⟩]) ++ [true, false] with hw1
+  set w2 : List Bool := Clause.encode (cond ++
+    [⟨true, vCellF Qc steps P (t + 1) 0 pi (symIdx si)⟩]) ++ [true, false]
+    with hw2
+  set w3 : List Bool := Clause.encode (cond ++
+    [⟨true, vCellF Qc steps P (t + 1) 1 pw
+      (symIdx (if q = N.qhalt then sw else if pw = 0 then sw
+        else ((N.δ b q si (fun _ => sw) so).2.1 0).toΓ))⟩]) ++ [true, false]
+    with hw3
+  set w4 : List Bool := Clause.encode (cond ++
+    [⟨true, vCellF Qc steps P (t + 1) 2 po
+      (symIdx (if q = N.qhalt then so else if po = 0 then so
+        else (N.δ b q si (fun _ => sw) so).2.2.1.toΓ))⟩]) ++ [true, false]
+    with hw4
+  set w5 : List Bool := Clause.encode (cond ++
+    [⟨true, vHeadF Qc steps P (t + 1) 0 iH⟩]) ++ [true, false] with hw5
+  set w6 : List Bool := Clause.encode (cond ++
+    [⟨true, vHeadF Qc steps P (t + 1) 1 wH⟩]) ++ [true, false] with hw6
+  set w7 : List Bool := Clause.encode (cond ++
+    [⟨true, vHeadF Qc steps P (t + 1) 2 oH⟩]) ++ [true, false] with hw7
+  -- The four leading clauses.
+  have h₁ := activeClauseTM_hoareTime N q si sw so b hQc hB hlit1 inp₀ ys
+    hinp₀
+  have h₂ := activeClauseTM_hoareTime N q si sw so b hQc hB hlit2 inp₀
+    (ys ++ w1) hinp₀
+  have h₃ := activeClauseTM_hoareTime N q si sw so b hQc hB hlit3 inp₀
+    (ys ++ w1 ++ w2) hinp₀
+  have h₄ := activeClauseTM_hoareTime N q si sw so b hQc hB hlit4 inp₀
+    (ys ++ w1 ++ w2 ++ w3) hinp₀
+  -- Stage 5: aux := iH.
+  have h₅ : (setupPosTM pos1Reg mvI).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) (ys ++ w1 ++ w2 ++ w3 ++ w4))
+      (emitPred inp₀ (scratch base₅ tmp tmp2 0) (ys ++ w1 ++ w2 ++ w3 ++ w4))
+      (2 * opBudget M + 1) := by
+    refine ((setupPosTM_hoareTime pos1Reg (by decide) mvI M pi 0
+      (by have := hB.hpi; omega) (by omega) inp₀ (scratch base tmp tmp2 0) _
+      hinp₀ (scratch_parked 0 hB.parked)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp1)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact haux2)
+      ).strengthen_post ?_)
+    rintro inp work out ⟨g1, g2, g3⟩
+    exact ⟨g1, by rw [g2, update_scratch (by decide) (by decide)], g3⟩
+  -- Stage 6: the input-head clause.
+  have h₆ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux iH)
+    (hhead 0 iH (by omega) hiHle) inp₀ (ys ++ w1 ++ w2 ++ w3 ++ w4) hinp₀
+  -- Stage 7: aux := wH.
+  have h₇ : (setupPosTM pos2Reg mvW).HoareTime
+      (emitPred inp₀ (scratch base₅ tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5))
+      (emitPred inp₀ (scratch base₇ tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5))
+      (2 * opBudget M + 1) := by
+    refine ((setupPosTM_hoareTime pos2Reg (by decide) mvW M pw iH
+      (by have := hB.hpw; omega) (by omega) inp₀ (scratch base₅ tmp tmp2 0) _
+      hinp₀ (scratch_parked 0 (hB.update_aux iH).parked)
+      (by rw [scratch_apply_ne (by decide) (by decide), hbase₅,
+        Function.update_of_ne (by decide)]; exact hB.hp2)
+      (by rw [scratch_apply_ne (by decide) (by decide), hbase₅,
+        Function.update_self])).strengthen_post ?_)
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide), hbase₅,
+      Function.update_idem]
+  -- Stage 8: the work-head clause.
+  have h₈ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux wH)
+    (hhead 1 wH (by omega) hwHle) inp₀ (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5)
+    hinp₀
+  -- Stage 9: aux := oH.
+  have h₉ : (setupPosTM pos3Reg mvO).HoareTime
+      (emitPred inp₀ (scratch base₇ tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5 ++ w6))
+      (emitPred inp₀ (scratch base₉ tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5 ++ w6))
+      (2 * opBudget M + 1) := by
+    refine ((setupPosTM_hoareTime pos3Reg (by decide) mvO M po wH
+      (by have := hB.hpo; omega) (by omega) inp₀ (scratch base₇ tmp tmp2 0) _
+      hinp₀ (scratch_parked 0 (hB.update_aux wH).parked)
+      (by rw [scratch_apply_ne (by decide) (by decide), hbase₇,
+        Function.update_of_ne (by decide)]; exact hB.hp3)
+      (by rw [scratch_apply_ne (by decide) (by decide), hbase₇,
+        Function.update_self])).strengthen_post ?_)
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide), hbase₇,
+      Function.update_idem]
+  -- Stage 10: the output-head clause.
+  have h₁₀ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux oH)
+    (hhead 2 oH (by omega) hoHle) inp₀
+    (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5 ++ w6) hinp₀
+  -- Stage 11: aux := 0.
+  have h₁₁ : (setConstTM auxReg2 0).HoareTime
+      (emitPred inp₀ (scratch base₉ tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5 ++ w6 ++ w7))
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ w1 ++ w2 ++ w3 ++ w4 ++ w5 ++ w6 ++ w7))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime auxReg2 0 oH inp₀
+      (scratch base₉ tmp tmp2 0) _ hinp₀
+      (scratch_parked 0 (hB.update_aux oH).parked)
+      (by rw [scratch_apply_ne (by decide) (by decide), hbase₉,
+        Function.update_self])).consequence (fun _ _ _ h => h) ?_
+      (setConstBudget (show (0:ℕ) ≤ M by omega) (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide), hbase₉,
+      Function.update_idem,
+      show regT 0 = base auxReg2 from haux2.symm, Function.update_eq_self]
+  -- Glue the eleven stages.
+  have c₁₀₁₁ := seqTM_hoareTime _ _ h₁₀
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux oH).parked) _)
+    h₁₁
+  have c₉ := seqTM_hoareTime _ _ h₉
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux oH).parked) _)
+    c₁₀₁₁
+  have c₈ := seqTM_hoareTime _ _ h₈
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux wH).parked) _)
+    c₉
+  have c₇ := seqTM_hoareTime _ _ h₇
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux wH).parked) _)
+    c₈
+  have c₆ := seqTM_hoareTime _ _ h₆
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux iH).parked) _)
+    c₇
+  have c₅ := seqTM_hoareTime _ _ h₅
+    (emitPred_transition hinp₀ (scratch_parked 0 (hB.update_aux iH).parked) _)
+    c₆
+  have c₄ := seqTM_hoareTime _ _ h₄
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) c₅
+  have c₃ := seqTM_hoareTime _ _ h₃
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) c₄
+  have c₂ := seqTM_hoareTime _ _ h₂
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) c₃
+  have call := seqTM_hoareTime _ _ h₁
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) c₂
+  refine call.consequence (fun _ _ _ h => h) ?_ ?_
+  · rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [show activeClausesAtF N steps P t q pi si pw sw po so b
+        = [cond ++ [⟨true, vStateF Qc steps P (t + 1)
+            (stateIdx N (if q = N.qhalt then q
+              else (N.δ b q si (fun _ => sw) so).1))⟩],
+           cond ++ [⟨true, vCellF Qc steps P (t + 1) 0 pi (symIdx si)⟩],
+           cond ++ [⟨true, vCellF Qc steps P (t + 1) 1 pw
+            (symIdx (if q = N.qhalt then sw else if pw = 0 then sw
+              else ((N.δ b q si (fun _ => sw) so).2.1 0).toΓ))⟩],
+           cond ++ [⟨true, vCellF Qc steps P (t + 1) 2 po
+            (symIdx (if q = N.qhalt then so else if po = 0 then so
+              else (N.δ b q si (fun _ => sw) so).2.2.1.toΓ))⟩],
+           cond ++ [⟨true, vHeadF Qc steps P (t + 1) 0
+            (if q = N.qhalt then pi
+              else posMove pi (N.δ b q si (fun _ => sw) so).2.2.2.1)⟩],
+           cond ++ [⟨true, vHeadF Qc steps P (t + 1) 1
+            (if q = N.qhalt then pw
+              else posMove pw ((N.δ b q si (fun _ => sw) so).2.2.2.2.1 0))⟩],
+           cond ++ [⟨true, vHeadF Qc steps P (t + 1) 2
+            (if q = N.qhalt then po
+              else posMove po (N.δ b q si (fun _ => sw) so).2.2.2.2.2)⟩]]
+      from by
+        subst hQc
+        rw [hcond]
+        rfl]
+    rw [← hmvI, ← hmvW, ← hmvO]
+    rw [hw1, hw2, hw3, hw4, hw5, hw6, hw7] at g3
+    simp only [CNF.encode_cons, CNF.encode_nil, List.append_nil,
+      List.append_assoc] at g3 ⊢
+    exact g3
+  · rw [activeLeafBudget]
+    omega
 
 end ActiveContext
 
