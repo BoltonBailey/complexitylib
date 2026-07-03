@@ -611,6 +611,340 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
   · rw [activeLeafBudget]
     omega
 
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The finite unrolls: choice bit, output symbol
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The choice-bit unroll, with the position-zero flags static. -/
+noncomputable def activeBLevelTM (q : N.Q) (si sw so : Γ)
+    (pwZero poZero : Bool) : TM nT :=
+  bigSeqTM ([true, false].map (fun b =>
+    activeLeafTM N q si sw so b
+      (if q = N.qhalt then sw else if pwZero then sw
+        else ((N.δ b q si (fun _ => sw) so).2.1 0).toΓ)
+      (if q = N.qhalt then so else if poZero then so
+        else (N.δ b q si (fun _ => sw) so).2.2.1.toΓ)
+      (if q = N.qhalt then none
+        else some (N.δ b q si (fun _ => sw) so).2.2.2.1)
+      (if q = N.qhalt then none
+        else some ((N.δ b q si (fun _ => sw) so).2.2.2.2.1 0))
+      (if q = N.qhalt then none
+        else some (N.δ b q si (fun _ => sw) so).2.2.2.2.2)))
+
+def activeBLevelBudget (M : ℕ) : ℕ := 2 * (activeLeafBudget M + 1) + 1
+
+/-- **`activeBLevelTM` Hoare specification.** -/
+theorem activeBLevelTM_hoareTime (q : N.Q) (si sw so : Γ)
+    (pwZero poZero : Bool)
+    {Qc steps P M t pi pw po : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi pw po base)
+    (haux2 : base auxReg2 = regT 0)
+    (hpwZ : pwZero = true → pw = 0) (hpwZ' : pwZero = false → pw ≠ 0)
+    (hpoZ : poZero = true → po = 0) (hpoZ' : poZero = false → po ≠ 0)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activeBLevelTM N q si sw so pwZero poZero).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ [true, false].flatMap (fun b =>
+          CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b))))
+      (activeBLevelBudget M) := by
+  have hleaf : ∀ b ∈ [true, false], ∀ ys',
+      (activeLeafTM N q si sw so b
+        (if q = N.qhalt then sw else if pwZero then sw
+          else ((N.δ b q si (fun _ => sw) so).2.1 0).toΓ)
+        (if q = N.qhalt then so else if poZero then so
+          else (N.δ b q si (fun _ => sw) so).2.2.1.toΓ)
+        (if q = N.qhalt then none
+          else some (N.δ b q si (fun _ => sw) so).2.2.2.1)
+        (if q = N.qhalt then none
+          else some ((N.δ b q si (fun _ => sw) so).2.2.2.2.1 0))
+        (if q = N.qhalt then none
+          else some (N.δ b q si (fun _ => sw) so).2.2.2.2.2)).HoareTime
+        (emitPred inp₀ (scratch base tmp tmp2 0) ys')
+        (emitPred inp₀ (scratch base tmp tmp2 0)
+          (ys' ++ CNF.encode
+            (activeClausesAtF N steps P t q pi si pw sw po so b)))
+        (activeLeafBudget M) := by
+    intro b _ ys'
+    refine activeLeafTM_hoareTime N q si sw so b _ _ _ _ _ hQc hB haux2
+      ?_ ?_ ?_ ?_ ?_ inp₀ ys' hinp₀
+    · by_cases hq : q = N.qhalt
+      · rw [if_pos hq, if_pos hq]
+      · rw [if_neg hq, if_neg hq]
+        cases hz : pwZero with
+        | true => rw [if_pos rfl, if_pos (hpwZ hz)]
+        | false => rw [if_neg (by simp), if_neg (hpwZ' hz)]
+    · by_cases hq : q = N.qhalt
+      · rw [if_pos hq, if_pos hq]
+      · rw [if_neg hq, if_neg hq]
+        cases hz : poZero with
+        | true => rw [if_pos rfl, if_pos (hpoZ hz)]
+        | false => rw [if_neg (by simp), if_neg (hpoZ' hz)]
+    · by_cases hq : q = N.qhalt
+      · rw [if_pos hq, if_pos hq]; rfl
+      · rw [if_neg hq, if_neg hq]; rfl
+    · by_cases hq : q = N.qhalt
+      · rw [if_pos hq, if_pos hq]; rfl
+      · rw [if_neg hq, if_neg hq]; rfl
+    · by_cases hq : q = N.qhalt
+      · rw [if_pos hq, if_pos hq]; rfl
+      · rw [if_neg hq, if_neg hq]; rfl
+  have h := bigSeq_emit_hoareTime
+    (fun b => activeLeafTM N q si sw so b
+      (if q = N.qhalt then sw else if pwZero then sw
+        else ((N.δ b q si (fun _ => sw) so).2.1 0).toΓ)
+      (if q = N.qhalt then so else if poZero then so
+        else (N.δ b q si (fun _ => sw) so).2.2.1.toΓ)
+      (if q = N.qhalt then none
+        else some (N.δ b q si (fun _ => sw) so).2.2.2.1)
+      (if q = N.qhalt then none
+        else some ((N.δ b q si (fun _ => sw) so).2.2.2.2.1 0))
+      (if q = N.qhalt then none
+        else some (N.δ b q si (fun _ => sw) so).2.2.2.2.2))
+    (fun b => CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b))
+    (activeLeafBudget M) inp₀ (scratch base tmp tmp2 0) hinp₀
+    (scratch_parked 0 hB.parked) [true, false] hleaf ys
+  exact h.mono_bound (by rw [activeBLevelBudget]; simp)
+
+/-- The output-symbol unroll. -/
+noncomputable def activeSoLevelTM (q : N.Q) (si sw : Γ)
+    (pwZero poZero : Bool) : TM nT :=
+  bigSeqTM (allSyms.map (fun so => activeBLevelTM N q si sw so pwZero poZero))
+
+def activeSoLevelBudget (M : ℕ) : ℕ := 4 * (activeBLevelBudget M + 1) + 1
+
+/-- **`activeSoLevelTM` Hoare specification.** -/
+theorem activeSoLevelTM_hoareTime (q : N.Q) (si sw : Γ)
+    (pwZero poZero : Bool)
+    {Qc steps P M t pi pw po : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi pw po base)
+    (haux2 : base auxReg2 = regT 0)
+    (hpwZ : pwZero = true → pw = 0) (hpwZ' : pwZero = false → pw ≠ 0)
+    (hpoZ : poZero = true → po = 0) (hpoZ' : poZero = false → po ≠ 0)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activeSoLevelTM N q si sw pwZero poZero).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+          CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b)))))
+      (activeSoLevelBudget M) := by
+  have h := bigSeq_emit_hoareTime
+    (fun so => activeBLevelTM N q si sw so pwZero poZero)
+    (fun so => [true, false].flatMap (fun b =>
+      CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b)))
+    (activeBLevelBudget M) inp₀ (scratch base tmp tmp2 0) hinp₀
+    (scratch_parked 0 hB.parked) allSyms
+    (fun so _ ys' => activeBLevelTM_hoareTime N q si sw so pwZero poZero hQc
+      hB haux2 hpwZ hpwZ' hpoZ hpoZ' inp₀ ys' hinp₀)
+    ys
+  exact h.mono_bound (by rw [activeSoLevelBudget]; simp [allSyms])
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The output-position split and sweep
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The output-position block: the `po = 0` instance, then the sweep over
+    `po = 1..P`. -/
+noncomputable def activePoSplitTM (q : N.Q) (si sw : Γ) (pwZero : Bool) :
+    TM nT :=
+  seqTM (activeSoLevelTM N q si sw pwZero true)
+    (seqTM (setConstTM pos3Reg 1)
+      (seqTM (emitLoopTM (activeSoLevelTM N q si sw pwZero false)
+          pos3Reg pos3Fuel)
+        (setConstTM pos3Reg 0)))
+
+def activePoSplitBudget (M : ℕ) : ℕ :=
+  activeSoLevelBudget M + 1
+    + (opBudget M + 1
+      + (loopBudget M (activeSoLevelBudget M) + 1 + opBudget M))
+
+/-- **`activePoSplitTM` Hoare specification** (at `po = 0` boundary
+    state). -/
+theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
+    {Qc steps P M t pi pw : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi pw 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf3 : base pos3Fuel = regT P)
+    (hpwZ : pwZero = true → pw = 0) (hpwZ' : pwZero = false → pw ≠ 0)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activePoSplitTM N q si sw pwZero).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (fun po =>
+          allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+            CNF.encode
+              (activeClausesAtF N steps P t q pi si pw sw po so b))))))
+      (activePoSplitBudget M) := by
+  have hPM : P + 2 ≤ M := by
+    have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+    obtain ⟨_, _, hCM, _⟩ := radix_caps hA1 (by omega) (by omega)
+      (by omega) hB.hM
+    omega
+  -- Part 1: po = 0.
+  have h₀ := activeSoLevelTM_hoareTime N q si sw pwZero true hQc hB haux2
+    hpwZ hpwZ' (fun _ => rfl) (fun h => absurd h (by simp)) inp₀ ys hinp₀
+  set ys₁ : List Bool := ys ++ allSyms.flatMap (fun so =>
+    [true, false].flatMap (fun b =>
+      CNF.encode (activeClausesAtF N steps P t q pi si pw sw 0 so b)))
+    with hys₁
+  -- Part 2: counter to 1.
+  have h₁ : (setConstTM pos3Reg 1).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys₁)
+      (emitPred inp₀
+        (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1)) ys₁)
+      (opBudget M) :=
+    ((setConstTM_hoareTime pos3Reg 1 0 inp₀ (scratch base tmp tmp2 0) ys₁
+      hinp₀ (scratch_parked 0 hB.parked)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp3)
+      ).consequence (fun _ _ _ h => h) (fun _ _ _ h => h)
+      (setConstBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
+  -- Part 3: the sweep over po = 1..P.
+  have hbody : ∀ j, j < P →
+      (activeSoLevelTM N q si sw pwZero false).HoareTime
+        (emitPred inp₀
+          (Function.update
+            (Function.update
+              (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1))
+              pos3Reg (regT (1 + j))) pos3Fuel ⟨j + 2, regCells P⟩)
+          (ys₁ ++ (List.range j).flatMap (fun j' =>
+            allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+              CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+                so b))))))
+        (emitPred inp₀
+          (Function.update
+            (Function.update
+              (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1))
+              pos3Reg (regT (1 + j))) pos3Fuel ⟨j + 2, regCells P⟩)
+          (ys₁ ++ (List.range (j + 1)).flatMap (fun j' =>
+            allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+              CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+                so b))))))
+        (activeSoLevelBudget M) := by
+    intro j hj
+    set base' : Fin nT → Tape :=
+      Function.update (Function.update base pos3Reg (regT (1 + j))) pos3Fuel
+        ⟨j + 2, regCells P⟩ with hbase'
+    have hstate : Function.update
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1))
+          pos3Reg (regT (1 + j))) pos3Fuel ⟨j + 2, regCells P⟩
+        = scratch base' tmp tmp2 0 := by
+      rw [Function.update_idem, update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hB' : ActiveBase Qc steps P M t pi pw (1 + j) base' :=
+      ⟨hB.hM, hB.ht, hB.hpi, hB.hpw, by omega,
+       parked_update (parked_update hB.parked (regT_parked _))
+         (parked_regCells (by omega)),
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrA,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrB,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrC,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrD,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htReg,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htPlus,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp1,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp2,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_self]⟩
+    have hso := activeSoLevelTM_hoareTime N q si sw pwZero false hQc hB'
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact haux2)
+      hpwZ hpwZ' (fun h => absurd h (by simp)) (fun _ => by omega)
+      inp₀
+      (ys₁ ++ (List.range j).flatMap (fun j' =>
+        allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+          CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+            so b)))))
+      hinp₀
+    rw [hstate]
+    refine hso.strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoopFrom_hoareTime
+    (activeSoLevelTM N q si sw pwZero false) pos3Reg pos3Fuel
+    (by decide) 1 P M (activeSoLevelBudget M) (by omega)
+    (fun j' => allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+      CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j') so b))))
+    inp₀ (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1)) ys₁
+    hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+    (by rw [Function.update_of_ne (by decide),
+      scratch_apply_ne (by decide) (by decide)]; exact hf3)
+    (by rw [Function.update_self])
+    hbody
+  -- Part 4: counter back to 0.
+  have h₃ : (setConstTM pos3Reg 0).HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1))
+          pos3Reg (regT (1 + P)))
+        (ys₁ ++ (List.range P).flatMap (fun j' =>
+          allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+            CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+              so b))))))
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys₁ ++ (List.range P).flatMap (fun j' =>
+          allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+            CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+              so b))))))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime pos3Reg 0 (1 + P) inp₀
+      (Function.update
+        (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1)) pos3Reg
+        (regT (1 + P))) _ hinp₀
+      (parked_update (parked_update (scratch_parked 0 hB.parked)
+        (regT_parked _)) (regT_parked _))
+      (by rw [Function.update_self])).consequence
+      (fun _ _ _ h => h) ?_
+      (setConstBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, Function.update_idem, Function.update_idem,
+      show regT 0 = scratch base tmp tmp2 0 pos3Reg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp3.symm,
+      Function.update_eq_self]
+  -- Glue.
+  have h₂₃ := seqTM_hoareTime _ (setConstTM pos3Reg 0)
+    (hloop.mono_bound (loop_le_loopBudget (show P ≤ M by omega)))
+    (emitPred_transition hinp₀
+      (parked_update (parked_update (scratch_parked 0 hB.parked)
+        (regT_parked _)) (regT_parked _)) _) h₃
+  have h₁₂₃ := seqTM_hoareTime (setConstTM pos3Reg 1) _ h₁
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) h₂₃
+  have hall := seqTM_hoareTime (activeSoLevelTM N q si sw pwZero true) _ h₀
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) h₁₂₃
+  refine hall.consequence (fun _ _ _ h => h) ?_
+    (by rw [activePoSplitBudget])
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, g2, ?_⟩
+  rw [List.range_succ_eq_map, List.flatMap_cons, List.flatMap_map]
+  rw [show (List.range P).flatMap (fun a => allSyms.flatMap (fun so =>
+      [true, false].flatMap (fun b =>
+        CNF.encode (activeClausesAtF N steps P t q pi si pw sw a.succ so b))))
+    = (List.range P).flatMap (fun j' => allSyms.flatMap (fun so =>
+      [true, false].flatMap (fun b =>
+        CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j')
+          so b)))) from
+    flatMap_congr fun j _ => by
+      rw [show Nat.succ j = 1 + j from by omega]]
+  rw [hys₁] at g3
+  rw [← List.append_assoc]
+  exact g3
+
 end ActiveContext
 
 end SAT
