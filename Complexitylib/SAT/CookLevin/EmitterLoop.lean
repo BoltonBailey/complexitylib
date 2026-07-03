@@ -122,6 +122,41 @@ theorem radix_caps {A B C D M : ℕ} (hA1 : 1 ≤ A) (hB1 : 1 ≤ B) (hC1 : 1 �
 def emitLoopTM (body : TM n) (ctr fuel : Fin n) : TM n :=
   forRegTM (seqTM body (incRegTM ctr)) fuel
 
+/-- Uniform budget of an emitter loop with at most `M` iterations whose body
+    runs within `inner`. -/
+def loopBudget (M inner : ℕ) : ℕ := M * (inner + 1 + opBudget M + 2) + (M + 2)
+
+theorem loopBudget_mono {M inner inner' : ℕ} (h : inner ≤ inner') :
+    loopBudget M inner ≤ loopBudget M inner' := by
+  have := Nat.mul_le_mul_left M (show inner + 1 + opBudget M + 2
+    ≤ inner' + 1 + opBudget M + 2 by omega)
+  rw [loopBudget, loopBudget]
+  omega
+
+/-- The raw loop bound rounds up to `loopBudget`. -/
+theorem loop_le_loopBudget {v M inner : ℕ} (hv : v ≤ M) :
+    v * ((inner + 1 + opBudget M) + 2) + (v + 2) ≤ loopBudget M inner := by
+  rw [loopBudget]
+  have := Nat.mul_le_mul_right ((inner + 1 + opBudget M) + 2) hv
+  omega
+
+theorem clauseBudget_mono {L L' M : ℕ} (h : L ≤ L') :
+    clauseBudget L M ≤ clauseBudget L' M := by
+  rw [clauseBudget, clauseBudget]
+  have := Nat.mul_le_mul_right (emitVarBudget M + 1) h
+  omega
+
+theorem cnfBudget_mono {K K' L L' M : ℕ} (hK : K ≤ K') (hL : L ≤ L') :
+    cnfBudget K L M ≤ cnfBudget K' L' M := by
+  rw [cnfBudget, cnfBudget]
+  calc K * (clauseBudget L M + 1) + 1
+      ≤ K' * (clauseBudget L' M + 1) + 1 := by
+        have := Nat.mul_le_mul hK
+          (show clauseBudget L M + 1 ≤ clauseBudget L' M + 1 from by
+            have := clauseBudget_mono (M := M) hL
+            omega)
+        omega
+
 /-- **`emitLoopTM` Hoare rule.** From `fuel = v` and `ctr = 0`, run the body
     at every `i < v`; the body sees `ctr = i` (fuel tape parked mid-loop),
     emits `E i`, and restores the work tapes. Afterwards `ctr = v` and the

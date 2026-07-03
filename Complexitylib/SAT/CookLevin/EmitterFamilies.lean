@@ -200,4 +200,165 @@ theorem emitAcceptTM_hoareTime (N : NTM 1) (steps P M : ℕ)
     ys hwork₀ hrA hrB hrC hrD
   exact h
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Family: oneHotStatesF
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Leaf descriptors: exactly one state at the row read from `tReg`. -/
+def oneHotStatesLeafD (Qc : ℕ) : List (List (LitDesc nT)) :=
+  exactlyOneD (fun q => ⟨true, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩)
+    (fun q => ⟨false, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩)
+    (List.range Qc)
+
+/-- **The state one-hot emitter**: loop the leaf over all rows. -/
+def emitOneHotStatesTM (Qc : ℕ) : TM nT :=
+  emitLoopTM (emitCNFTM rA rB rC rD tmp tmp2 (oneHotStatesLeafD Qc)) tReg tFuel
+
+/-- **`emitOneHotStatesTM` Hoare specification**: appends the encoded
+    state one-hot family, leaving the row counter at `steps + 1`. -/
+theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
+    (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
+    (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hrA : work₀ rA = regT (steps + 1))
+    (hrB : work₀ rB = regT (max (Fintype.card N.Q) 3))
+    (hrC : work₀ rC = regT (P + 2))
+    (hrD : work₀ rD = regT 4)
+    (htReg : work₀ tReg = regT 0)
+    (htFuel : work₀ tFuel = regT (steps + 1)) :
+    (emitOneHotStatesTM (Fintype.card N.Q)).HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+        (ys ++ CNF.encode (oneHotStatesF N steps P)))
+      (loopBudget M (cnfBudget (1 + M * M) (M + 2) M)) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  have hQcM : Fintype.card N.Q ≤ M := le_trans (le_max_left _ 3) hBM
+  have hbody : ∀ i, i < steps + 1 →
+      (emitCNFTM rA rB rC rD tmp tmp2
+        (oneHotStatesLeafD (Fintype.card N.Q))).HoareTime
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+            ⟨i + 2, regCells (steps + 1)⟩)
+          (ys ++ (List.range i).flatMap (fun t =>
+            CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
+              (vStateF (Fintype.card N.Q) steps P t))))))
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+            ⟨i + 2, regCells (steps + 1)⟩)
+          (ys ++ (List.range (i + 1)).flatMap (fun t =>
+            CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
+              (vStateF (Fintype.card N.Q) steps P t))))))
+        (cnfBudget (1 + M * M) (M + 2) M) := by
+    intro i hi
+    set base : Fin nT → Tape :=
+      Function.update (Function.update work₀ tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ with hbase
+    have hstate : Function.update
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hbaseP : ∀ j, Parked (base j) := by
+      intro j
+      by_cases hjf : j = tFuel
+      · subst hjf; rw [hbase, Function.update_self]
+        exact parked_regCells (by omega)
+      · rw [hbase, Function.update_of_ne hjf]
+        by_cases hjt : j = tReg
+        · subst hjt; rw [Function.update_self]; exact regT_parked _
+        · rw [Function.update_of_ne hjt]; exact hwork₀ j
+    have hbrA : base rA = regT (steps + 1) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hrA
+    have hbrB : base rB = regT (max (Fintype.card N.Q) 3) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hrB
+    have hbrC : base rC = regT (P + 2) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hrC
+    have hbrD : base rD = regT 4 := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hrD
+    have hbt : base tReg = regT i := by
+      rw [hbase, Function.update_of_ne (by decide), Function.update_self]
+    have hlit : ∀ (s : Bool) (q : ℕ), q < Fintype.card N.Q →
+        LitDesc.Spec base tmp tmp2 M (steps + 1) (max (Fintype.card N.Q) 3)
+          (P + 2) 4
+          ⟨s, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩
+          ⟨s, vStateF (Fintype.card N.Q) steps P i q⟩ := by
+      intro s q hq
+      obtain ⟨k0, k1, k2, k3, k4⟩ := flatCaps (tag := 0) (by omega)
+        (show i < steps + 1 by omega)
+        (lt_of_lt_of_le hq (le_max_left _ 3))
+        (show 0 < P + 2 by omega) (show (0:ℕ) < 4 by omega) hM
+      exact ⟨i, q, 0, 0, ⟨hbt, by decide, by decide⟩, rfl, rfl, rfl, rfl, rfl,
+        k0, k1, k2, k3, k4⟩
+    have hf := forall₂_exactlyOneD
+      (fun q => (⟨true, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩ : LitDesc nT))
+      (fun q => (⟨false, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩ : LitDesc nT))
+      (vStateF (Fintype.card N.Q) steps P i)
+      (qs := List.range (Fintype.card N.Q))
+      (fun q hq => hlit true q (List.mem_range.mp hq))
+      (fun q hq => hlit false q (List.mem_range.mp hq))
+    have hcnf := emitCNFTM_hoareTime rA rB rC rD tmp tmp2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)
+      hAM hBM hCM hDM inp₀ hinp₀ hf
+      (L := Fintype.card N.Q + 2)
+      (by
+        intro descs hdescs
+        rw [exactlyOneD] at hdescs
+        rcases List.mem_cons.mp hdescs with rfl | hmem
+        · rw [List.length_map, List.length_range]; omega
+        · exact le_trans (atMostOneD_length_le _ _ descs hmem) (by omega))
+      (ys ++ (List.range i).flatMap (fun t =>
+        CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
+          (vStateF (Fintype.card N.Q) steps P t)))))
+      hbaseP hbrA hbrB hbrC hbrD
+    rw [show oneHotStatesLeafD (Fintype.card N.Q)
+      = exactlyOneD
+          (fun q => (⟨true, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩ : LitDesc nT))
+          (fun q => (⟨false, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩ : LitDesc nT))
+          (List.range (Fintype.card N.Q)) from rfl, hstate]
+    refine hcnf.consequence (fun _ _ _ h => h) ?_ ?_
+    · rintro inp work out ⟨g1, g2, g3⟩
+      refine ⟨g1, g2, ?_⟩
+      rw [flatMap_range_succ, ← List.append_assoc]
+      exact g3
+    · refine cnfBudget_mono ?_ (by omega)
+      rw [exactlyOneD]
+      simp only [List.length_cons]
+      have hcard := atMostOneD_card_le
+        (fun q => (⟨false, 0, .inl tReg, .inr q, .inr 0, .inr 0⟩ : LitDesc nT))
+        (List.range (Fintype.card N.Q))
+      rw [List.length_range] at hcard
+      have hQ2 : Fintype.card N.Q * Fintype.card N.Q ≤ M * M :=
+        Nat.mul_le_mul hQcM hQcM
+      omega
+  have hloop := emitLoop_hoareTime
+    (emitCNFTM rA rB rC rD tmp tmp2 (oneHotStatesLeafD (Fintype.card N.Q)))
+    tReg tFuel (by decide) (steps + 1) M
+    (cnfBudget (1 + M * M) (M + 2) M) hAM
+    (fun t => CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
+      (vStateF (Fintype.card N.Q) steps P t))))
+    inp₀ (scratch work₀ tmp tmp2 0) ys hinp₀ (scratch_parked 0 hwork₀)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htFuel)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htReg)
+    hbody
+  refine hloop.consequence (fun _ _ _ h => h) ?_ (loop_le_loopBudget hAM)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, ?_, ?_⟩
+  · rw [g2, update_scratch (by decide) (by decide)]
+  · rw [oneHotStatesF, CNF.encode_flatMap]
+    exact g3
+
 end SAT
