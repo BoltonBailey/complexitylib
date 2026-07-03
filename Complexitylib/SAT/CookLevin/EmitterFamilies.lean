@@ -702,7 +702,7 @@ theorem emitOneHotCellsTM_hoareTime (Qc steps P M : ℕ)
 -- Family: oneHotHeadsF
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem flatMap_congr {α β : Type _} {l : List α} {f g : α → List β}
+theorem flatMap_congr {α β : Type _} {l : List α} {f g : α → List β}
     (h : ∀ a ∈ l, f a = g a) : l.flatMap f = l.flatMap g := by
   induction l with
   | nil => rfl
