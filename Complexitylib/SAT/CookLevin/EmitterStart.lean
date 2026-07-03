@@ -333,4 +333,195 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     List.append_assoc] at g3 ⊢
   exact g3
 
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The input-tape cell loop (tape 0): probe the input per position
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The probe loop body: load the positional part of the cell variable,
+    probe the input symbol index into the scratch, emit the unit clause. -/
+def startProbeBodyTM : TM nT :=
+  seqTM (loadFlatVarTM rA rB rC rD tmp tmp2 2 (.inr 0) (.inr 0)
+      (.inl pos1Reg) (.inr 0))
+    (seqTM (symProbeTM fSym pos1Reg tmp)
+      (seqTM (emitLitTM true tmp)
+        (seqTM (emitBitsTM [true, false])
+          (seqTM (setConstTM tmp 0) (setConstTM tmp2 0)))))
+
+/-- The input-tape start-cell block. -/
+def startProbePartTM : TM nT :=
+  seqTM (emitCNFTM rA rB rC rD tmp tmp2
+      [[⟨true, 2, .inr 0, .inr 0, .inr 0, .inr 3⟩]])
+    (seqTM (setConstTM pos1Reg 1)
+      (seqTM (emitLoopTM startProbeBodyTM pos1Reg pReg)
+        (setConstTM pos1Reg 0)))
+
+/-- Budget of the probe body. -/
+def startProbeBodyBudget (M : ℕ) : ℕ := loadBudget M + 4 * opBudget M + 7
+
+/-- Budget of the input-tape start block. -/
+def startProbeBudget (M : ℕ) : ℕ :=
+  cnfBudget 1 1 M + 1
+    + (opBudget M + 1
+      + (loopBudget M (startProbeBodyBudget M) + 1 + opBudget M))
+
+/-- **`startProbeBodyTM` Hoare specification** (at position `1 + j`). -/
+theorem startProbeBodyTM_hoareTime (x : List Bool) (Qc steps P M j : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (hj : j < P)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hhead : inp₀.head = 1)
+    (hwfcell : inp₀.cells 0 = Γ.start)
+    (hcells : ∀ pos, inp₀.cells pos = initCellSym x 0 pos)
+    (hV : ∀ l, Parked (V l))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVp1 : V pos1Reg = regT (1 + j)) :
+    startProbeBodyTM.HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V tmp tmp2 0)
+        (ys ++ CNF.encode
+          [([⟨true, vCellF Qc steps P 0 0 (1 + j)
+            (symIdx (initCellSym x 0 (1 + j)))⟩] : Clause)]))
+      (startProbeBodyBudget M) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  obtain ⟨k0, k1, k2, k3, k4⟩ := flatCaps (tag := 2) (by omega)
+    (show 0 < steps + 1 by omega) (show 0 < max Qc 3 by omega)
+    (show 1 + j < P + 2 by omega) (show (0:ℕ) < 4 by omega) hM
+  set Vb : ℕ :=
+    (((2 * (steps + 1) + 0) * (max Qc 3) + 0) * (P + 2) + (1 + j)) * 4 + 0
+    with hVb
+  set kj : ℕ := (fSym (inp₀.cells (1 + j))).val with hkj
+  have hkj4 : kj < 4 := (fSym (inp₀.cells (1 + j))).isLt
+  have hVbkjM : Vb + kj ≤ M := by
+    obtain ⟨_, _, _, _, k4'⟩ := flatCaps (tag := 2) (by omega)
+      (show 0 < steps + 1 by omega) (show 0 < max Qc 3 by omega)
+      (show 1 + j < P + 2 by omega) hkj4 hM
+    have hre : Vb + kj
+        = (((2 * (steps + 1) + 0) * (max Qc 3) + 0) * (P + 2) + (1 + j)) * 4
+          + kj := by
+      rw [hVb]
+      omega
+    omega
+  -- Stage 1: load the positional part.
+  have h₁ := loadFlatVarTM_hoareTime rA rB rC rD tmp tmp2 2
+    (.inr 0) (.inr 0) (.inl pos1Reg) (.inr 0)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide)
+    M (steps + 1) (max Qc 3) (P + 2) 4 0 0 (1 + j) 0 0 0
+    hAM hBM hCM hDM (by omega) (by omega) (by omega) k1 k2 k3 k4
+    inp₀ (scratch V tmp tmp2 0) ys hinp₀ (scratch_parked 0 hV)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVrA)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVrB)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVrC)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVrD)
+    rfl rfl
+    (⟨by rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1,
+      by decide, by decide⟩)
+    rfl
+    scratch_apply_tmp (scratch_apply_tmp2 (by decide))
+  rw [scratch_scratch (by decide)] at h₁
+  -- Stage 2: probe the input symbol into the scratch.
+  have h₂ : (symProbeTM fSym pos1Reg tmp).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 Vb) ys)
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys)
+      (opBudget M) :=
+    ((symProbeTM_hoareTime fSym pos1Reg tmp (by decide) (1 + j) Vb
+      inp₀ (scratch V tmp tmp2 Vb) ys hinp₀ hhead hwfcell
+      (scratch_parked Vb hV)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1)
+      scratch_apply_tmp).consequence (fun _ _ _ h => h) (fun _ _ _ h => h)
+      (probeBudget (show 1 + j ≤ M by omega) (by omega)))
+  -- Stage 3: emit the literal.
+  have h₃ : (emitLitTM true tmp).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys)
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj)))
+        (ys ++ ([true, true] ++ List.replicate (2 * (Vb + kj)) true
+          ++ [false, true])))
+      (opBudget M) :=
+    ((emitLitTM_hoareTime true tmp (Vb + kj) inp₀
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys hinp₀
+      (fun l _ => parked_update (scratch_parked Vb hV) (regT_parked _) l)
+      (by rw [Function.update_self]; exact reg_regT _)).consequence
+      (fun _ _ _ h => h) (fun _ _ _ h => h) (emitLitBudget hVbkjM))
+  -- Stage 4: the clause separator.
+  have h₄ := emitBitsTM_hoareTime (n := nT) [true, false] inp₀
+    (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj)))
+    (ys ++ ([true, true] ++ List.replicate (2 * (Vb + kj)) true
+      ++ [false, true]))
+    hinp₀ (parked_update (scratch_parked Vb hV) (regT_parked _))
+  -- Stages 5–6: reset the scratches.
+  set ys' : List Bool := ys ++ ([true, true]
+    ++ List.replicate (2 * (Vb + kj)) true ++ [false, true]) ++ [true, false]
+    with hys'
+  have h₅ : (setConstTM tmp 0).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys')
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys')
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime tmp 0 (Vb + kj) inp₀
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys'
+      hinp₀ (parked_update (scratch_parked Vb hV) (regT_parked _))
+      (by rw [Function.update_self])).consequence (fun _ _ _ h => h) ?_
+      (setConstBudget (show (0:ℕ) ≤ M by omega) hVbkjM))
+    rintro inp work out ⟨g1, g2, g3⟩
+    exact ⟨g1, by rw [g2, Function.update_idem], g3⟩
+  have h₆ : (setConstTM tmp2 0).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys')
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys')
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime tmp2 0 Vb inp₀
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys'
+      hinp₀ (parked_update (scratch_parked Vb hV) (regT_parked _))
+      (by rw [Function.update_of_ne (by decide),
+        scratch_apply_tmp2 (by decide)])).consequence
+      (fun _ _ _ h => h) ?_ (setConstBudget (show (0:ℕ) ≤ M by omega)
+        (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2]
+    simp only [scratch]
+    rw [Function.update_idem, Function.update_comm (show tmp ≠ tmp2 by decide),
+      Function.update_idem]
+  -- Glue.
+  have h₅₆ := seqTM_hoareTime (setConstTM tmp 0) (setConstTM tmp2 0) h₅
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked Vb hV) (regT_parked _)) _) h₆
+  have h₄₅₆ := seqTM_hoareTime (emitBitsTM [true, false]) _ h₄
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked Vb hV) (regT_parked _)) _) h₅₆
+  have h₃₄₅₆ := seqTM_hoareTime (emitLitTM true tmp) _ h₃
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked Vb hV) (regT_parked _)) _) h₄₅₆
+  have h₂₃₄₅₆ := seqTM_hoareTime (symProbeTM fSym pos1Reg tmp) _ h₂
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked Vb hV) (regT_parked _)) _) h₃₄₅₆
+  have hall := seqTM_hoareTime
+    (loadFlatVarTM rA rB rC rD tmp tmp2 2 (.inr 0) (.inr 0)
+      (.inl pos1Reg) (.inr 0)) _ h₁
+    (emitPred_transition hinp₀ (scratch_parked Vb hV) _) h₂₃₄₅₆
+  refine hall.consequence (fun _ _ _ h => h) ?_ ?_
+  · rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    have hclause : ([([⟨true, vCellF Qc steps P 0 0 (1 + j)
+          (symIdx (initCellSym x 0 (1 + j)))⟩] : Clause)] : CNF)
+        = [([⟨true, Vb + kj⟩] : Clause)] := by
+      rw [← hcells (1 + j)]
+      rfl
+    rw [hclause, CNF.encode_cons, Clause.encode_cons_word, Lit.word]
+    rw [hys'] at g3
+    simp only [CNF.encode_nil, Clause.encode_nil, List.append_nil,
+      List.append_assoc] at g3 ⊢
+    exact g3
+  · rw [startProbeBodyBudget]
+    simp only [List.length_cons, List.length_nil]
+    omega
+
 end SAT
