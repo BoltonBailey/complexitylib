@@ -1,5 +1,6 @@
 import Complexitylib.SAT.CookLevin
 import Complexitylib.Models.TuringMachine.MixedRadix
+import Complexitylib.Models.TuringMachine.DecReg
 
 /-!
 # The reduction emitter: clause and CNF machines

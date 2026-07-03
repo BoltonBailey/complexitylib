@@ -926,4 +926,316 @@ theorem headAtLeastTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     Clause.encode_map, ← List.append_assoc]
   exact g3
 
+/-- The pairwise at-most-one clauses: outer loop over the first position;
+    per outer step, mirror the counter past it, sweep the (offset,
+    shrinking) inner loop, and shrink the fuel. -/
+def headPairBodyTM (tp : ℕ) : TM nT :=
+  seqTM (copyIntoTM pos1Reg pos2Reg)
+    (seqTM (incRegTM pos2Reg)
+      (seqTM
+        (emitLoopTM
+          (emitClauseTM rA rB rC rD tmp tmp2
+            [headLitD false tp pos1Reg, headLitD false tp pos2Reg])
+          pos2Reg auxReg)
+        (seqTM (setConstTM pos2Reg 0) (decRegTM auxReg))))
+
+def headAtMostTM (tp : ℕ) : TM nT :=
+  seqTM (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel)
+    (setConstTM pos1Reg 0)
+
+/-- Budget of one outer step of the pairwise sweep. -/
+def pairBodyBudget (M : ℕ) : ℕ :=
+  loopBudget M (clauseBudget 2 M) + 4 * opBudget M + 4
+
+/-- The per-outer-position word of the pairwise sweep. -/
+def pairWord (Qc steps P i tp q : ℕ) : List Bool :=
+  (List.range (P - q)).flatMap (fun j =>
+    Clause.encode
+      ([⟨false, vHeadF Qc steps P i tp q⟩,
+        ⟨false, vHeadF Qc steps P i tp (q + 1 + j)⟩] : Clause)
+      ++ [true, false])
+
+/-- **`headPairBodyTM` Hoare specification** (at row `i`, outer position
+    `q`): emits the pair clauses `(q, q')` for all `q' > q`, mirrors the
+    counters home, and shrinks the fuel. -/
+theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
+    (hq : q ≤ P)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp2 : V pos2Reg = regT 0) :
+    (headPairBodyTM tp).HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
+            (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+        ys)
+      (emitPred inp₀
+        (Function.update
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
+            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+        (ys ++ pairWord Qc steps P i tp q))
+      (pairBodyBudget M) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  set B : Fin nT → Tape :=
+    Function.update
+      (Function.update (Function.update V pos1Reg (regT q)) auxReg
+        (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ with hB
+  have hstate : Function.update
+      (Function.update
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
+        (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩
+      = scratch B tmp tmp2 0 := by
+    rw [update_scratch (by decide) (by decide),
+      update_scratch (by decide) (by decide),
+      update_scratch (by decide) (by decide)]
+  have hBP : ∀ l, Parked (B l) :=
+    parked_update (parked_update (parked_update hV (regT_parked _))
+      (regT_parked _)) (parked_regCells (by omega))
+  have hBrA : B rA = regT (steps + 1) := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVrA
+  have hBrB : B rB = regT (max Qc 3) := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVrB
+  have hBrC : B rC = regT (P + 2) := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVrC
+  have hBrD : B rD = regT 4 := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVrD
+  have hBt : B tReg = regT i := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVt
+  have hBp1 : B pos1Reg = regT q := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_self]
+  have hBp2 : B pos2Reg = regT 0 := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+      Function.update_of_ne (by decide)]
+    exact hVp2
+  have hBaux : B auxReg = regT (P - q) := by
+    rw [hB, Function.update_of_ne (by decide), Function.update_self]
+  -- Stage 1: pos2 := q.
+  have h₁ : (copyIntoTM pos1Reg pos2Reg).HoareTime
+      (emitPred inp₀ (scratch B tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0)
+        ys) (opBudget M) := by
+    refine ((copyIntoTM_hoareTime pos1Reg pos2Reg (by decide) q 0 inp₀
+      (scratch B tmp tmp2 0) ys hinp₀ (fun l _ => scratch_parked 0 hBP l)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hBp1)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hBp2)
+      ).consequence (fun _ _ _ h => h) ?_
+      (copyIntoBudget (by omega) (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide)]
+  -- Stage 2: pos2 := q + 1.
+  have h₂ : (incRegTM pos2Reg).HoareTime
+      (emitPred inp₀ (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0)
+        ys)
+      (emitPred inp₀
+        (scratch (Function.update B pos2Reg (regT (q + 1))) tmp tmp2 0) ys)
+      (opBudget M) := by
+    refine ((incRegTM_hoareTime pos2Reg q inp₀
+      (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0) ys hinp₀
+      (fun l _ => scratch_parked 0 (parked_update hBP (regT_parked _)) l)
+      (by rw [scratch_apply_ne (by decide) (by decide), Function.update_self])
+      ).consequence (fun _ _ _ h => h) ?_ (incBudget (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide), Function.update_idem]
+  -- Stage 3: the inner offset sweep.
+  set B₂ : Fin nT → Tape := Function.update B pos2Reg (regT (q + 1)) with hB₂
+  have hB₂P : ∀ l, Parked (B₂ l) := parked_update hBP (regT_parked _)
+  have hinner : ∀ j, j < P - q →
+      (emitClauseTM rA rB rC rD tmp tmp2
+        [headLitD false tp pos1Reg, headLitD false tp pos2Reg]).HoareTime
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
+              (regT (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
+          (ys ++ (List.range j).flatMap (fun j' =>
+            Clause.encode
+              ([⟨false, vHeadF Qc steps P i tp q⟩,
+                ⟨false, vHeadF Qc steps P i tp (q + 1 + j')⟩] : Clause)
+              ++ [true, false])))
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
+              (regT (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
+          (ys ++ (List.range (j + 1)).flatMap (fun j' =>
+            Clause.encode
+              ([⟨false, vHeadF Qc steps P i tp q⟩,
+                ⟨false, vHeadF Qc steps P i tp (q + 1 + j')⟩] : Clause)
+              ++ [true, false])))
+        (clauseBudget 2 M) := by
+    intro j hj
+    set C : Fin nT → Tape :=
+      Function.update (Function.update B₂ pos2Reg (regT (q + 1 + j))) auxReg
+        ⟨j + 2, regCells (P - q)⟩ with hC
+    have hstate' : Function.update
+        (Function.update (scratch B₂ tmp tmp2 0) pos2Reg (regT (q + 1 + j)))
+        auxReg ⟨j + 2, regCells (P - q)⟩ = scratch C tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hCP : ∀ l, Parked (C l) :=
+      parked_update (parked_update hB₂P (regT_parked _))
+        (parked_regCells (by omega))
+    have hCt : C tReg = regT i := by
+      rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]
+      exact hBt
+    have hCp1 : C pos1Reg = regT q := by
+      rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]
+      exact hBp1
+    have hCp2 : C pos2Reg = regT (q + 1 + j) := by
+      rw [hC, Function.update_of_ne (by decide), Function.update_self]
+    have hf : List.Forall₂
+        (LitDesc.Spec C tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4)
+        [headLitD false tp pos1Reg, headLitD false tp pos2Reg]
+        ([⟨false, vHeadF Qc steps P i tp q⟩,
+          ⟨false, vHeadF Qc steps P i tp (q + 1 + j)⟩] : Clause) :=
+      .cons (headLitD_spec htp hM hi (by omega) (by decide) (by decide)
+          false hCt hCp1)
+        (.cons (headLitD_spec htp hM hi (by omega) (by decide) (by decide)
+          false hCt hCp2) .nil)
+    have hcl := emitClauseTM_hoareTime rA rB rC rD tmp tmp2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)
+      hAM hBM hCM hDM hf (L := 2) (by simp)
+      inp₀
+      (ys ++ (List.range j).flatMap (fun j' =>
+        Clause.encode
+          ([⟨false, vHeadF Qc steps P i tp q⟩,
+            ⟨false, vHeadF Qc steps P i tp (q + 1 + j')⟩] : Clause)
+          ++ [true, false]))
+      hinp₀ hCP
+      (by rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]; exact hBrA)
+      (by rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]; exact hBrB)
+      (by rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]; exact hBrC)
+      (by rw [hC, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide), hB₂,
+        Function.update_of_ne (by decide)]; exact hBrD)
+    rw [hstate']
+    refine hcl.strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoopFrom_hoareTime
+    (emitClauseTM rA rB rC rD tmp tmp2
+      [headLitD false tp pos1Reg, headLitD false tp pos2Reg])
+    pos2Reg auxReg (by decide) (q + 1) (P - q) M (clauseBudget 2 M)
+    (by omega)
+    (fun j' => Clause.encode
+      ([⟨false, vHeadF Qc steps P i tp q⟩,
+        ⟨false, vHeadF Qc steps P i tp (q + 1 + j')⟩] : Clause)
+      ++ [true, false])
+    inp₀ (scratch B₂ tmp tmp2 0) ys hinp₀ (scratch_parked 0 hB₂P)
+    (by rw [scratch_apply_ne (by decide) (by decide), hB₂,
+      Function.update_of_ne (by decide)]; exact hBaux)
+    (by rw [scratch_apply_ne (by decide) (by decide), hB₂,
+      Function.update_self])
+    hinner
+  -- Stage 4: pos2 := 0.
+  have h₄ : (setConstTM pos2Reg 0).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
+          (regT (q + 1 + (P - q))))
+        (ys ++ pairWord Qc steps P i tp q))
+      (emitPred inp₀ (scratch B tmp tmp2 0)
+        (ys ++ pairWord Qc steps P i tp q))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime pos2Reg 0 (q + 1 + (P - q)) inp₀
+      (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
+        (regT (q + 1 + (P - q))))
+      (ys ++ pairWord Qc steps P i tp q) hinp₀
+      (parked_update (scratch_parked 0 hB₂P) (regT_parked _))
+      (by rw [Function.update_self])).consequence
+      (fun _ _ _ h => h) ?_ (setConstBudget (by omega) (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, Function.update_idem, update_scratch (by decide) (by decide), hB₂,
+      Function.update_idem,
+      show regT 0 = B pos2Reg from hBp2.symm, Function.update_eq_self]
+  -- Stage 5: shrink the fuel.
+  have h₅ : (decRegTM auxReg).HoareTime
+      (emitPred inp₀ (scratch B tmp tmp2 0)
+        (ys ++ pairWord Qc steps P i tp q))
+      (emitPred inp₀
+        (Function.update
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
+            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+        (ys ++ pairWord Qc steps P i tp q))
+      (opBudget M) := by
+    refine ((decRegTM_hoareTime auxReg (P - q) inp₀ (scratch B tmp tmp2 0)
+      (ys ++ pairWord Qc steps P i tp q) hinp₀
+      (fun l _ => scratch_parked 0 hBP l)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hBaux)
+      ).consequence (fun _ _ _ h => h) ?_ (incBudget (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide), hB,
+      show P - q - 1 = P - (q + 1) from by omega]
+    rw [show Function.update
+        (Function.update
+          (Function.update (Function.update V pos1Reg (regT q)) auxReg
+            (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩) auxReg
+        (regT (P - (q + 1)))
+      = Function.update
+          (Function.update (Function.update V pos1Reg (regT q)) auxReg
+            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ from by
+      rw [Function.update_comm (show pos1Fuel ≠ auxReg by decide),
+        Function.update_idem]]
+    rw [update_scratch (by decide) (by decide),
+      update_scratch (by decide) (by decide),
+      update_scratch (by decide) (by decide)]
+  -- Glue.
+  have h₄₅ := seqTM_hoareTime (setConstTM pos2Reg 0) (decRegTM auxReg) h₄
+    (emitPred_transition hinp₀ (scratch_parked 0 hBP) _) h₅
+  have h₃₄₅ := seqTM_hoareTime
+    (emitLoopTM
+      (emitClauseTM rA rB rC rD tmp tmp2
+        [headLitD false tp pos1Reg, headLitD false tp pos2Reg])
+      pos2Reg auxReg)
+    (seqTM (setConstTM pos2Reg 0) (decRegTM auxReg))
+    ((hloop.mono_bound (loop_le_loopBudget (by omega))).strengthen_post
+      (by
+        rintro inp work out ⟨g1, g2, g3⟩
+        exact ⟨g1, g2, g3⟩))
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked 0 hB₂P) (regT_parked _)) _) h₄₅
+  have h₂₃₄₅ := seqTM_hoareTime (incRegTM pos2Reg) _ h₂
+    (emitPred_transition hinp₀ (scratch_parked 0 hB₂P) _) h₃₄₅
+  have hall := seqTM_hoareTime (copyIntoTM pos1Reg pos2Reg) _ h₁
+    (emitPred_transition hinp₀
+      (scratch_parked 0 (parked_update hBP (regT_parked _))) _) h₂₃₄₅
+  rw [hstate]
+  refine hall.consequence (fun _ _ _ h => h) (fun _ _ _ h => h) ?_
+  rw [pairBodyBudget]
+  omega
+
 end SAT
