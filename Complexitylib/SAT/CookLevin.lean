@@ -1722,22 +1722,6 @@ theorem tableauCNFFlat_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool)
 noncomputable def reductionFn (N : NTM 1) (T : ℕ → ℕ) : List Bool → List Bool :=
   fun x => (tableauCNFFlat N (T x.length) x).encode
 
-/-- **The reduction is polynomial-time computable** — for an explicit polynomial
-    time bound `n ↦ p.eval n`. The tableau has size polynomial in `p.eval |x|`
-    (hence in `|x|`), and a deterministic machine emits its encoding in
-    polynomial time. **Proof obligation (dominant cost).**
-
-    The bound must be an explicit polynomial, not an abstract `T` with a big-O
-    hypothesis: `reductionFn N T` embeds `T |x|` into the output's structure
-    (the tableau's time-layer count), so for a noncomputable `T` — which
-    `T =O (· ^ c)` does not rule out — the reduction is not computable at all.
-    Callers replace their abstract bound by a dominating polynomial via
-    `BigO.pow_polynomial_bound` and transfer the decider with
-    `DecidesInTime.mono`. -/
-theorem reductionFn_mem_FP (N : NTM 1) (p : Polynomial ℕ) :
-    reductionFn N (fun n => p.eval n) ∈ FP := by
-  sorry
-
 /-- **The reduction is correct.** `x ∈ L` iff the reduction output is in `L_SAT`,
     combining the tableau characterization with `N` deciding `L`. -/
 theorem tableauCNF_correct {L : Language} (N : NTM 1) (T : ℕ → ℕ)
@@ -1747,38 +1731,9 @@ theorem tableauCNF_correct {L : Language} (N : NTM 1) (T : ℕ → ℕ)
   rw [encode_mem_LSAT_iff, tableauCNFFlat_satisfiable_iff]
   exact hdec.2 x
 
-/-- **Single-tape Cook–Levin reduction.** A single-work-tape machine deciding `L`
-    in polynomial time yields a polynomial-time many-one reduction to `L_SAT`.
-    The abstract bound `T` is first replaced by a dominating explicit polynomial
-    (`BigO.pow_polynomial_bound`), since the reduction function is only
-    computable for explicit bounds; deciding transfers by monotonicity. -/
-theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → ℕ) (c : ℕ)
-    (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
-    L ≤ₚ L_SAT := by
-  obtain ⟨p, hp⟩ := hTO.pow_polynomial_bound
-  exact ⟨reductionFn N (fun n => p.eval n), reductionFn_mem_FP N p,
-    tableauCNF_correct N _ (hdec.mono hp)⟩
-
-/-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
-    decides `L` within a polynomial time bound, then `L` polynomial-time many-one
-    reduces to `L_SAT`. Reduces to the single-work-tape case
-    (`NTM.exists_singleTape_decider`) and then builds the tableau formula. -/
-theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ) (c : ℕ)
-    (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
-    L ≤ₚ L_SAT := by
-  obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decider hdec hTO
-  exact cookLevin_reduction_singleTape N' T' c' hdec' hTO'
-
-/-- **NP-hardness of SAT.** Every language in `NP` polynomial-time reduces to
-    `L_SAT`. -/
-theorem NPHard_L_SAT : NPHard L_SAT := by
-  intro L hL
-  obtain ⟨d, hLd⟩ := Set.mem_iUnion.mp hL
-  obtain ⟨k, N, f, hdec, hfO⟩ := hLd
-  exact cookLevin_reduction N f d hdec hfO
-
-/-- **Cook–Levin theorem: SAT is NP-complete.** -/
-theorem NPComplete_L_SAT : NPComplete L_SAT :=
-  ⟨L_SAT_mem_NP, NPHard_L_SAT⟩
+/-! The reduction machine, its polynomial running time, and the headline
+theorems `reductionFn_mem_FP`, `cookLevin_reduction`, `NPHard_L_SAT`, and
+`NPComplete_L_SAT` live in `Complexitylib.SAT.CookLevin.Assembly`, built on
+the emitter development under `Complexitylib.SAT.CookLevin/`. -/
 
 end SAT

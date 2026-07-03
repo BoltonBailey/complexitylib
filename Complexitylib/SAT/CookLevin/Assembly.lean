@@ -11,6 +11,8 @@ registers, and emit the seven encoded clause families of
 
 namespace SAT
 
+open Complexity
+
 open _root_.TM Tableau
 
 open Emit
@@ -442,7 +444,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     (emitBodyTM N).HoareTime
       (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
         (initTapes x.length steps P (Fintype.card N.Q) 0) ys)
-      (fun inp work out => inp = ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ ∧
+      (fun inp _work out => inp = ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ ∧
         outAcc (ys ++ CNF.encode (tableauCNFFlat N steps x)) out)
       (bodyBudget N M) := by
   set n : ℕ := x.length with hn
@@ -693,5 +695,381 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
   rw [hys₆, hys₅, hys₄, hys₃, hys₂, hys₁] at u2
   simp only [CNF.encode_append, List.append_assoc] at u2 ⊢
   exact u2
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The reduction machine and its running time
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **The Cook–Levin reduction machine**: bump, initialize, emit. -/
+noncomputable def emitTM (N : NTM 1) (p : Polynomial ℕ) : TM nT :=
+  seqTM bumpTM (seqTM (emitInitTM N p) (emitBodyTM N))
+
+/-- The Horner-evaluation value cap. -/
+def emitMp (p : Polynomial ℕ) (n : ℕ) : ℕ :=
+  ((polyCoeffs p).sum + 1) * (n + 1) ^ (p.natDegree + 1) + n
+
+/-- The tableau value cap. -/
+def emitM (N : NTM 1) (p : Polynomial ℕ) (n : ℕ) : ℕ :=
+  4 * (p.eval n + 1) * (max (Fintype.card N.Q) 3)
+    * (p.eval n + n + 1 + 2) * 4
+
+/-- The reduction machine's running time. -/
+def emitTime (N : NTM 1) (p : Polynomial ℕ) (n : ℕ) : ℕ :=
+  1 + 1 + (initBudget (emitMp p n) (emitM N p n) p + 1
+    + bodyBudget N (emitM N p n))
+
+set_option maxHeartbeats 1600000 in
+/-- **The reduction machine computes the reduction function.** -/
+theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
+    (emitTM N p).ComputesInTime (reductionFn N (fun n => p.eval n))
+      (emitTime N p) := by
+  intro x
+  set n : ℕ := x.length with hn
+  set steps : ℕ := p.eval n with hsteps
+  set P : ℕ := steps + n + 1 with hP
+  have hMp : ∀ k, k ≤ p.natDegree + 1 →
+      hornerFold n (List.take k (polyCoeffs p)) 0 ≤ emitMp p n := by
+    intro k _
+    refine le_trans (hornerFold_take_le n (polyCoeffs p) k) ?_
+    rw [emitMp, polyCoeffs_length]
+    omega
+  have hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4
+      ≤ emitM N p n := by
+    rw [emitM, hP, hsteps]
+  have hinit := emitInitTM_hoareTime N p x steps P (emitMp p n)
+    (emitM N p n) hsteps hP hMp (by rw [emitMp]; omega) hM []
+  have hbody := emitBodyTM_hoareTime N x steps P (emitM N p n) hP hM []
+  have hbump := bumpTM_hoareTime (n := nT) x
+  -- Adapters.
+  have htrans₁ : ∀ (inp : Tape) (work : Fin nT → Tape) (out : Tape),
+      (inp = { head := 1, cells := (initTape (x.map Γ.ofBool)).cells } ∧
+        (∀ i, reg 0 (work i)) ∧ outAcc [] out) →
+      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ (fun _ => regT 0) []
+        (transitionInput inp) (fun i => transitionTape (work i))
+        (transitionTape out) := by
+    rintro inp work out ⟨rfl, hwork, hout⟩
+    refine ⟨Parked.transitionInput_id (parked_init_input x), ?_, ?_⟩
+    · funext i
+      rw [Parked.transitionTape_id ((hwork i).parked), (hwork i).eq_regT]
+    · rw [Parked.transitionTape_id hout.parked]
+      exact hout
+  have htrans₂ : ∀ inp work out,
+      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
+        (initTapes n steps P (Fintype.card N.Q) 0) [] inp work out →
+      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
+        (initTapes n steps P (Fintype.card N.Q) 0) []
+        (transitionInput inp) (fun i => transitionTape (work i))
+        (transitionTape out) :=
+    emitPred_transition (parked_init_input x)
+      (fun _ => regT_parked _) []
+  have hchain := seqTM_hoareTime bumpTM (seqTM (emitInitTM N p) (emitBodyTM N))
+    hbump htrans₁
+    (seqTM_hoareTime (emitInitTM N p) (emitBodyTM N) hinit htrans₂ hbody)
+  obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := hchain
+    (initTape (x.map Γ.ofBool)) (fun _ => initTape []) (initTape [])
+    ⟨rfl, fun _ => rfl, rfl⟩
+  refine ⟨c', t, le_trans ht (by rw [emitTime]), hreach, hhalt, ?_⟩
+  show c'.output.hasOutput (reductionFn N (fun n => p.eval n) x)
+  have : reductionFn N (fun n => p.eval n) x
+      = CNF.encode (tableauCNFFlat N steps x) := rfl
+  rw [this]
+  exact TM.outAcc.hasOutput hpost.2
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Polynomial boundedness of the running time
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Dominated by a `Polynomial ℕ` evaluation. -/
+def PolyBnd (f : ℕ → ℕ) : Prop := ∃ q : Polynomial ℕ, ∀ n, f n ≤ q.eval n
+
+namespace PolyBnd
+
+theorem const (c : ℕ) : PolyBnd (fun _ => c) :=
+  ⟨Polynomial.C c, fun n => by simp⟩
+
+theorem id : PolyBnd (fun n => n) :=
+  ⟨Polynomial.X, fun n => by simp⟩
+
+theorem add {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
+    PolyBnd (fun n => f n + g n) := by
+  obtain ⟨q₁, h₁⟩ := hf
+  obtain ⟨q₂, h₂⟩ := hg
+  exact ⟨q₁ + q₂, fun n => by
+    rw [Polynomial.eval_add]
+    exact Nat.add_le_add (h₁ n) (h₂ n)⟩
+
+theorem mul {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
+    PolyBnd (fun n => f n * g n) := by
+  obtain ⟨q₁, h₁⟩ := hf
+  obtain ⟨q₂, h₂⟩ := hg
+  exact ⟨q₁ * q₂, fun n => by
+    rw [Polynomial.eval_mul]
+    exact Nat.mul_le_mul (h₁ n) (h₂ n)⟩
+
+theorem mono {f g : ℕ → ℕ} (hg : PolyBnd g) (h : ∀ n, f n ≤ g n) :
+    PolyBnd f := by
+  obtain ⟨q, hq⟩ := hg
+  exact ⟨q, fun n => le_trans (h n) (hq n)⟩
+
+theorem pow {f : ℕ → ℕ} (hf : PolyBnd f) (k : ℕ) :
+    PolyBnd (fun n => f n ^ k) := by
+  induction k with
+  | zero => exact ⟨1, fun _ => by simp⟩
+  | succ k ih =>
+    refine PolyBnd.mono (PolyBnd.mul ih hf) fun n => ?_
+    rw [pow_succ]
+
+theorem eval (p : Polynomial ℕ) : PolyBnd (fun n => p.eval n) :=
+  ⟨p, fun _ => le_refl _⟩
+
+end PolyBnd
+
+/-- Budget compositions preserve polynomial boundedness. -/
+theorem PolyBnd.opBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
+    PolyBnd (fun n => opBudget (f n)) := by
+  have h2 : PolyBnd (fun n => f n + 2) := hf.add (PolyBnd.const 2)
+  exact (PolyBnd.const 32).mul ((h2.mul h2).mul h2)
+
+theorem PolyBnd.layerBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
+    PolyBnd (fun n => layerBudget (f n)) :=
+  ((PolyBnd.const 4).mul hf.opBudget).add (PolyBnd.const 3)
+
+theorem PolyBnd.loadBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
+    PolyBnd (fun n => loadBudget (f n)) :=
+  (hf.opBudget.add ((PolyBnd.const 4).mul hf.layerBudget)).add
+    (PolyBnd.const 4)
+
+theorem PolyBnd.emitVarBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
+    PolyBnd (fun n => emitVarBudget (f n)) :=
+  (hf.loadBudget.add hf.opBudget).add (PolyBnd.const 1)
+
+theorem PolyBnd.clauseBudget {L : ℕ → ℕ} {f : ℕ → ℕ} (hL : PolyBnd L)
+    (hf : PolyBnd f) : PolyBnd (fun n => clauseBudget (L n) (f n)) :=
+  ((hL.mul (hf.emitVarBudget.add (PolyBnd.const 1))).add
+    ((PolyBnd.const 2).mul hf.opBudget)).add (PolyBnd.const 6)
+
+theorem PolyBnd.cnfBudget {K L f : ℕ → ℕ} (hK : PolyBnd K) (hL : PolyBnd L)
+    (hf : PolyBnd f) : PolyBnd (fun n => cnfBudget (K n) (L n) (f n)) :=
+  (hK.mul ((hL.clauseBudget hf).add (PolyBnd.const 1))).add (PolyBnd.const 1)
+
+theorem PolyBnd.loopBudget {f inner : ℕ → ℕ} (hf : PolyBnd f)
+    (hinner : PolyBnd inner) :
+    PolyBnd (fun n => loopBudget (f n) (inner n)) :=
+  (hf.mul (((hinner.add (PolyBnd.const 1)).add hf.opBudget).add
+    (PolyBnd.const 2))).add (hf.add (PolyBnd.const 2))
+
+
+/-- **The running time is polynomially bounded.** A mechanical walk over the
+    budget definitions with the `PolyBnd` closure kit. -/
+theorem emitTime_polyBnd (N : NTM 1) (p : Polynomial ℕ) :
+    PolyBnd (emitTime N p) := by
+  have hM : PolyBnd (emitM N p) := by
+    rw [show emitM N p = fun n => 4 * (p.eval n + 1)
+      * (max (Fintype.card N.Q) 3) * (p.eval n + n + 1 + 2) * 4 from rfl]
+    exact ((((PolyBnd.const 4).mul
+      ((PolyBnd.eval p).add (PolyBnd.const 1))).mul
+      (PolyBnd.const (max (Fintype.card N.Q) 3))).mul
+      ((((PolyBnd.eval p).add PolyBnd.id).add (PolyBnd.const 1)).add
+        (PolyBnd.const 2))).mul (PolyBnd.const 4)
+  have hMp : PolyBnd (emitMp p) := by
+    rw [show emitMp p = fun n => ((polyCoeffs p).sum + 1)
+      * (n + 1) ^ (p.natDegree + 1) + n from rfl]
+    exact ((PolyBnd.const ((polyCoeffs p).sum + 1)).mul
+      ((PolyBnd.id.add (PolyBnd.const 1)).pow (p.natDegree + 1))).add
+      PolyBnd.id
+  have hop : PolyBnd (fun n => opBudget (emitM N p n)) := hM.opBudget
+  have h1 : PolyBnd (fun n => cnfBudget (1 + emitM N p n * emitM N p n)
+      (emitM N p n + 2) (emitM N p n)) :=
+    PolyBnd.cnfBudget ((PolyBnd.const 1).add (hM.mul hM))
+      (hM.add (PolyBnd.const 2)) hM
+  have hstates : PolyBnd (fun n => loopBudget (emitM N p n)
+      (cnfBudget (1 + emitM N p n * emitM N p n) (emitM N p n + 2)
+        (emitM N p n))) := hM.loopBudget h1
+  have hposChunk : PolyBnd (fun n => posChunkBudget (emitM N p n)) := by
+    rw [show (fun n => posChunkBudget (emitM N p n)) = fun n =>
+      loopBudget (emitM N p n) (cnfBudget 17 6 (emitM N p n)) + 1
+        + opBudget (emitM N p n) from rfl]
+    exact ((hM.loopBudget (PolyBnd.cnfBudget (PolyBnd.const 17)
+      (PolyBnd.const 6) hM)).add (PolyBnd.const 1)).add hop
+  have hcellsBody : PolyBnd (fun n => cellsBodyBudget (emitM N p n)) :=
+    ((PolyBnd.const 3).mul hposChunk).add (PolyBnd.const 2)
+  have hcells : PolyBnd (fun n => loopBudget (emitM N p n)
+      (cellsBodyBudget (emitM N p n))) := hM.loopBudget hcellsBody
+  have hAtLeast : PolyBnd (fun n => headAtLeastBudget (emitM N p n)) := by
+    rw [show (fun n => headAtLeastBudget (emitM N p n)) = fun n =>
+      loopBudget (emitM N p n) (emitVarBudget (emitM N p n) + 1
+        + (2 * opBudget (emitM N p n) + 1)) + 1
+        + (2 + 1 + opBudget (emitM N p n)) from rfl]
+    exact ((hM.loopBudget ((hM.emitVarBudget.add (PolyBnd.const 1)).add
+      (((PolyBnd.const 2).mul hop).add (PolyBnd.const 1)))).add
+      (PolyBnd.const 1)).add (((PolyBnd.const 2).add (PolyBnd.const 1)).add
+      hop)
+  have hpairBody : PolyBnd (fun n => pairBodyBudget (emitM N p n)) := by
+    rw [show (fun n => pairBodyBudget (emitM N p n)) = fun n =>
+      loopBudget (emitM N p n) (clauseBudget 2 (emitM N p n))
+        + 4 * opBudget (emitM N p n) + 4 from rfl]
+    exact ((hM.loopBudget (PolyBnd.clauseBudget (PolyBnd.const 2) hM)).add
+      ((PolyBnd.const 4).mul hop)).add (PolyBnd.const 4)
+  have hAtMost : PolyBnd (fun n => headAtMostBudget (emitM N p n)) :=
+    ((hM.loopBudget hpairBody).add (PolyBnd.const 1)).add hop
+  have hheadLeaf : PolyBnd (fun n => headLeafBudget (emitM N p n)) :=
+    (hop.add (PolyBnd.const 1)).add ((hAtLeast.add (PolyBnd.const 1)).add
+      hAtMost)
+  have hheadsBody : PolyBnd (fun n => headsBodyBudget (emitM N p n)) :=
+    ((PolyBnd.const 3).mul hheadLeaf).add (PolyBnd.const 2)
+  have hheads : PolyBnd (fun n => loopBudget (emitM N p n)
+      (headsBodyBudget (emitM N p n))) := hM.loopBudget hheadsBody
+  have hblank : PolyBnd (fun n => startBlankBudget (emitM N p n)) := by
+    rw [show (fun n => startBlankBudget (emitM N p n)) = fun n =>
+      cnfBudget 1 1 (emitM N p n) + 1 + (opBudget (emitM N p n) + 1
+        + (loopBudget (emitM N p n) (clauseBudget 1 (emitM N p n)) + 1
+          + opBudget (emitM N p n))) from rfl]
+    exact ((PolyBnd.cnfBudget (PolyBnd.const 1) (PolyBnd.const 1) hM).add
+      (PolyBnd.const 1)).add ((hop.add (PolyBnd.const 1)).add
+      (((hM.loopBudget (PolyBnd.clauseBudget (PolyBnd.const 1) hM)).add
+        (PolyBnd.const 1)).add hop))
+  have hprobeBody : PolyBnd (fun n => startProbeBodyBudget (emitM N p n)) :=
+    (hM.loadBudget.add ((PolyBnd.const 4).mul hop)).add (PolyBnd.const 7)
+  have hprobe : PolyBnd (fun n => startProbeBudget (emitM N p n)) := by
+    rw [show (fun n => startProbeBudget (emitM N p n)) = fun n =>
+      cnfBudget 1 1 (emitM N p n) + 1 + (opBudget (emitM N p n) + 1
+        + (loopBudget (emitM N p n) (startProbeBodyBudget (emitM N p n)) + 1
+          + opBudget (emitM N p n))) from rfl]
+    exact ((PolyBnd.cnfBudget (PolyBnd.const 1) (PolyBnd.const 1) hM).add
+      (PolyBnd.const 1)).add ((hop.add (PolyBnd.const 1)).add
+      (((hM.loopBudget hprobeBody).add (PolyBnd.const 1)).add hop))
+  have hstart : PolyBnd (fun n => startBudget (emitM N p n)) := by
+    rw [show (fun n => startBudget (emitM N p n)) = fun n =>
+      cnfBudget 4 1 (emitM N p n) + 1 + (startProbeBudget (emitM N p n) + 1
+        + (startBlankBudget (emitM N p n) + 1
+          + startBlankBudget (emitM N p n))) from rfl]
+    exact ((PolyBnd.cnfBudget (PolyBnd.const 4) (PolyBnd.const 1) hM).add
+      (PolyBnd.const 1)).add ((hprobe.add (PolyBnd.const 1)).add
+      ((hblank.add (PolyBnd.const 1)).add hblank))
+  have hframeChunk : PolyBnd (fun n => framePosChunkBudget (emitM N p n)) :=
+    ((hM.loopBudget (PolyBnd.cnfBudget (PolyBnd.const 8) (PolyBnd.const 3)
+      hM)).add (PolyBnd.const 1)).add hop
+  have hframeRow : PolyBnd (fun n => frameRowBudget (emitM N p n)) :=
+    (hop.add (PolyBnd.const 1)).add (((PolyBnd.const 3).mul hframeChunk).add
+      (PolyBnd.const 2))
+  have hframe : PolyBnd (fun n => loopBudget (emitM N p n)
+      (frameRowBudget (emitM N p n))) := hM.loopBudget hframeRow
+  have hleaf : PolyBnd (fun n => activeLeafBudget (emitM N p n)) :=
+    (((PolyBnd.const 7).mul (PolyBnd.clauseBudget (PolyBnd.const 9) hM)).add
+      ((PolyBnd.const 7).mul hop)).add (PolyBnd.const 13)
+  have hbLevel : PolyBnd (fun n => activeBLevelBudget (emitM N p n)) :=
+    ((PolyBnd.const 2).mul (hleaf.add (PolyBnd.const 1))).add
+      (PolyBnd.const 1)
+  have hsoLevel : PolyBnd (fun n => activeSoLevelBudget (emitM N p n)) :=
+    ((PolyBnd.const 4).mul (hbLevel.add (PolyBnd.const 1))).add
+      (PolyBnd.const 1)
+  have hpoSplit : PolyBnd (fun n => activePoSplitBudget (emitM N p n)) :=
+    (hsoLevel.add (PolyBnd.const 1)).add ((hop.add (PolyBnd.const 1)).add
+      (((hM.loopBudget hsoLevel).add (PolyBnd.const 1)).add hop))
+  have hswLevel : PolyBnd (fun n => activeSwLevelBudget (emitM N p n)) :=
+    ((PolyBnd.const 4).mul (hpoSplit.add (PolyBnd.const 1))).add
+      (PolyBnd.const 1)
+  have hpwSplit : PolyBnd (fun n => activePwSplitBudget (emitM N p n)) :=
+    (hswLevel.add (PolyBnd.const 1)).add ((hop.add (PolyBnd.const 1)).add
+      (((hM.loopBudget hswLevel).add (PolyBnd.const 1)).add hop))
+  have hsiLevel : PolyBnd (fun n => activeSiLevelBudget (emitM N p n)) :=
+    ((PolyBnd.const 4).mul (hpwSplit.add (PolyBnd.const 1))).add
+      (PolyBnd.const 1)
+  have hpiLoop : PolyBnd (fun n => activePiLoopBudget (emitM N p n)) :=
+    ((hM.loopBudget hsiLevel).add (PolyBnd.const 1)).add hop
+  have hqLevel : PolyBnd (fun n => activeQLevelBudget N (emitM N p n)) :=
+    ((PolyBnd.const (Fintype.card N.Q)).mul (hpiLoop.add
+      (PolyBnd.const 1))).add (PolyBnd.const 1)
+  have hrow : PolyBnd (fun n => activeRowBudget N (emitM N p n)) :=
+    (hop.add (PolyBnd.const 1)).add hqLevel
+  have hactive : PolyBnd (fun n => loopBudget (emitM N p n)
+      (activeRowBudget N (emitM N p n))) := hM.loopBudget hrow
+  have haccept : PolyBnd (fun n => cnfBudget 2 1 (emitM N p n)) :=
+    PolyBnd.cnfBudget (PolyBnd.const 2) (PolyBnd.const 1) hM
+  have hbody : PolyBnd (fun n => bodyBudget N (emitM N p n)) := by
+    have t1 := (hactive.add (PolyBnd.const 1)).add haccept
+    have t2 := (hop.add (PolyBnd.const 1)).add t1
+    have t3 := (hop.add (PolyBnd.const 1)).add t2
+    have t4 := (hframe.add (PolyBnd.const 1)).add t3
+    have t5 := (hop.add (PolyBnd.const 1)).add t4
+    have t6 := (hop.add (PolyBnd.const 1)).add t5
+    have t7 := (hstart.add (PolyBnd.const 1)).add t6
+    have t8 := (hheads.add (PolyBnd.const 1)).add t7
+    have t9 := (hop.add (PolyBnd.const 1)).add t8
+    have t10 := (hcells.add (PolyBnd.const 1)).add t9
+    have t11 := (hop.add (PolyBnd.const 1)).add t10
+    have t12 := (hstates.add (PolyBnd.const 1)).add t11
+    have t13 := (hop.add (PolyBnd.const 1)).add t12
+    exact (hop.add (PolyBnd.const 1)).add t13
+  have hopMp : PolyBnd (fun n => opBudget (emitMp p n)) := hMp.opBudget
+  have hinit : PolyBnd (fun n =>
+      initBudget (emitMp p n) (emitM N p n) p) := by
+    have hpoly := ((hopMp.add (PolyBnd.const 1)).add
+      (((PolyBnd.const (p.natDegree + 1)).mul
+        (hMp.layerBudget.add (PolyBnd.const 1))).add
+        (PolyBnd.const 1))).add (PolyBnd.const 1)
+    have t1 := (hop.add (PolyBnd.const 1)).add hop
+    have t2 := (hop.add (PolyBnd.const 1)).add t1
+    have t3 := (hop.add (PolyBnd.const 1)).add t2
+    have t4 := (hop.add (PolyBnd.const 1)).add t3
+    have t5 := (hop.add (PolyBnd.const 1)).add t4
+    have t6 := (hop.add (PolyBnd.const 1)).add t5
+    have t7 := (hop.add (PolyBnd.const 1)).add t6
+    have t8 := (hop.add (PolyBnd.const 1)).add t7
+    have t9 := (hop.add (PolyBnd.const 1)).add t8
+    have t10 := (hop.add (PolyBnd.const 1)).add t9
+    have t11 := (hop.add (PolyBnd.const 1)).add t10
+    have t12 := (hop.add (PolyBnd.const 1)).add t11
+    have t13 := (hop.add (PolyBnd.const 1)).add t12
+    have t14 := (hop.add (PolyBnd.const 1)).add t13
+    exact (hop.add (PolyBnd.const 1)).add (hpoly.add t14)
+  exact ((PolyBnd.const 1).add (PolyBnd.const 1)).add
+    ((hinit.add (PolyBnd.const 1)).add hbody)
+
+/-- **The reduction is polynomial-time computable** — for an explicit
+    polynomial time bound `n ↦ p.eval n`. The tableau has size polynomial in
+    `p.eval |x|` (hence in `|x|`), and `emitTM` emits its encoding in
+    polynomial time. -/
+theorem reductionFn_mem_FP (N : NTM 1) (p : Polynomial ℕ) :
+    reductionFn N (fun n => p.eval n) ∈ FP := by
+  obtain ⟨q, hq⟩ := emitTime_polyBnd N p
+  exact ⟨q.natDegree, nT, emitTM N p, emitTime N p,
+    emitTM_computesInTime N p, Complexity.BigO.of_polynomial_bound q hq⟩
+
+/-- **Single-tape Cook–Levin reduction.** A single-work-tape machine deciding
+    `L` in polynomial time yields a polynomial-time many-one reduction to
+    `L_SAT`. The abstract bound `T` is first replaced by a dominating explicit
+    polynomial (`BigO.pow_polynomial_bound`), since the reduction function is
+    only computable for explicit bounds; deciding transfers by
+    monotonicity. -/
+theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → ℕ)
+    (c : ℕ) (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
+    L ≤ₚ L_SAT := by
+  obtain ⟨p, hp⟩ := hTO.pow_polynomial_bound
+  exact ⟨reductionFn N (fun n => p.eval n), reductionFn_mem_FP N p,
+    tableauCNF_correct N _ (hdec.mono hp)⟩
+
+/-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
+    decides `L` within a polynomial time bound, then `L` polynomial-time
+    many-one reduces to `L_SAT`. Reduces to the single-work-tape case
+    (`NTM.exists_singleTape_decider`) and then builds the tableau formula. -/
+theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ)
+    (c : ℕ) (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
+    L ≤ₚ L_SAT := by
+  obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decider hdec hTO
+  exact cookLevin_reduction_singleTape N' T' c' hdec' hTO'
+
+/-- **NP-hardness of SAT.** Every language in `NP` polynomial-time reduces to
+    `L_SAT`. -/
+theorem NPHard_L_SAT : NPHard L_SAT := by
+  intro L hL
+  obtain ⟨d, hLd⟩ := Set.mem_iUnion.mp hL
+  obtain ⟨k, N, f, hdec, hfO⟩ := hLd
+  exact cookLevin_reduction N f d hdec hfO
+
+/-- **Cook–Levin theorem: SAT is NP-complete.** -/
+theorem NPComplete_L_SAT : NPComplete L_SAT :=
+  ⟨L_SAT_mem_NP, NPHard_L_SAT⟩
 
 end SAT
