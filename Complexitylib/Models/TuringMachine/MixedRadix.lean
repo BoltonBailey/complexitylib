@@ -90,6 +90,15 @@ theorem scratch_apply_tmp2 {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : �
     (htt2 : tmp ≠ tmp2) : scratch work₀ tmp tmp2 z tmp2 = regT z := by
   rw [scratch, Function.update_of_ne (fun h => htt2 h.symm), Function.update_self]
 
+/-- Updates at other registers slide past the scratch pair. -/
+theorem update_scratch {work₀ : Fin n → Tape} {tmp tmp2 i : Fin n}
+    (hit : i ≠ tmp) (hit2 : i ≠ tmp2) (z : ℕ) (t : Tape) :
+    Function.update (scratch work₀ tmp tmp2 z) i t
+      = scratch (Function.update work₀ i t) tmp tmp2 z := by
+  simp only [scratch]
+  rw [Function.update_comm (fun h => hit h.symm),
+    Function.update_comm (fun h => hit2 h.symm)]
+
 /-- Scratching twice keeps only the second value. -/
 theorem scratch_scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n}
     (htt2 : tmp ≠ tmp2) (z z' : ℕ) :
