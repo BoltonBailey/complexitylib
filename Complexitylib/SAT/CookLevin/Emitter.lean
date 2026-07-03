@@ -28,6 +28,14 @@ theorem Clause.encode_cons_word (ℓ : Lit) (ℓs : Clause) :
     Clause.encode (ℓ :: ℓs) = ℓ.word ++ Clause.encode ℓs :=
   Clause.encode_cons' ℓ ℓs
 
+/-- A mapped clause encodes as the concatenation of its literal words. -/
+theorem Clause.encode_map {α : Type _} (g : α → Lit) (l : List α) :
+    Clause.encode (l.map g) = l.flatMap (fun a => (g a).word) := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    rw [List.map_cons, Clause.encode_cons_word, ih, List.flatMap_cons]
+
 /-- **Literal descriptor**: the machine-level recipe for one literal — a
     sign, the hardwired top digit, and the four mixed-radix digit sources. -/
 structure LitDesc (n : ℕ) where

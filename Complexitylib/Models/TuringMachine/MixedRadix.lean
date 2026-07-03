@@ -90,6 +90,14 @@ theorem scratch_apply_tmp2 {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : �
     (htt2 : tmp ≠ tmp2) : scratch work₀ tmp tmp2 z tmp2 = regT z := by
   rw [scratch, Function.update_of_ne (fun h => htt2 h.symm), Function.update_self]
 
+/-- Updating a parked family with a parked tape stays parked. -/
+theorem parked_update {W : Fin n → Tape} (hW : ∀ i, Parked (W i)) {j : Fin n}
+    {t : Tape} (ht : Parked t) : ∀ i, Parked (Function.update W j t i) := by
+  intro i
+  by_cases hij : i = j
+  · subst hij; rw [Function.update_self]; exact ht
+  · rw [Function.update_of_ne hij]; exact hW i
+
 /-- Updates at other registers slide past the scratch pair. -/
 theorem update_scratch {work₀ : Fin n → Tape} {tmp tmp2 i : Fin n}
     (hit : i ≠ tmp) (hit2 : i ≠ tmp2) (z : ℕ) (t : Tape) :

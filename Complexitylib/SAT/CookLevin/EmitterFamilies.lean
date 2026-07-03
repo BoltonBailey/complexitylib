@@ -361,4 +361,341 @@ theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
   · rw [oneHotStatesF, CNF.encode_flatMap]
     exact g3
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Family: oneHotCellsF
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Leaf descriptors: exactly one symbol per row/tape/position. -/
+def cellLeafD (tp : ℕ) : List (List (LitDesc nT)) :=
+  exactlyOneD (fun s => ⟨true, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩)
+    (fun s => ⟨false, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩)
+    (List.range 4)
+
+/-- Position sweep at one tape index: loop the leaf over positions, then
+    return the position counter to zero. -/
+def posChunkTM (tp : ℕ) : TM nT :=
+  seqTM (emitLoopTM (emitCNFTM rA rB rC rD tmp tmp2 (cellLeafD tp))
+      pos1Reg pos1Fuel)
+    (setConstTM pos1Reg 0)
+
+/-- The `oneHotCells` row body: position sweeps at the three tape indices. -/
+def cellsBodyTM : TM nT :=
+  seqTM (posChunkTM 0) (seqTM (posChunkTM 1) (posChunkTM 2))
+
+/-- **The cell one-hot emitter**: loop the row body over all rows. -/
+def emitOneHotCellsTM : TM nT := emitLoopTM cellsBodyTM tReg tFuel
+
+/-- Budget of one position sweep. -/
+def posChunkBudget (M : ℕ) : ℕ :=
+  loopBudget M (cnfBudget 17 6 M) + 1 + opBudget M
+
+/-- **`posChunkTM` Hoare specification** (at row `i`, tape index `tp`). -/
+theorem posChunkTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (hi : i ≤ steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (posChunkTM tp).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (fun pos =>
+          CNF.encode (exactlyOne ((List.range 4).map
+            (vCellF Qc steps P i tp pos))))))
+      (posChunkBudget M) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  have hPM : P + 1 ≤ M := by omega
+  have hbody : ∀ j, j < P + 1 →
+      (emitCNFTM rA rB rC rD tmp tmp2 (cellLeafD tp)).HoareTime
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            ⟨j + 2, regCells (P + 1)⟩)
+          (ys ++ (List.range j).flatMap (fun pos =>
+            CNF.encode (exactlyOne ((List.range 4).map
+              (vCellF Qc steps P i tp pos))))))
+        (emitPred inp₀
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            ⟨j + 2, regCells (P + 1)⟩)
+          (ys ++ (List.range (j + 1)).flatMap (fun pos =>
+            CNF.encode (exactlyOne ((List.range 4).map
+              (vCellF Qc steps P i tp pos))))))
+        (cnfBudget 17 6 M) := by
+    intro j hj
+    set base : Fin nT → Tape :=
+      Function.update (Function.update V pos1Reg (regT j)) pos1Fuel
+        ⟨j + 2, regCells (P + 1)⟩ with hbase
+    have hstate : Function.update
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+        ⟨j + 2, regCells (P + 1)⟩ = scratch base tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hbaseP : ∀ l, Parked (base l) :=
+      parked_update (parked_update hV (regT_parked _))
+        (parked_regCells (by omega))
+    have hbrA : base rA = regT (steps + 1) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hVrA
+    have hbrB : base rB = regT (max Qc 3) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hVrB
+    have hbrC : base rC = regT (P + 2) := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hVrC
+    have hbrD : base rD = regT 4 := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hVrD
+    have hbt : base tReg = regT i := by
+      rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]
+      exact hVt
+    have hbp : base pos1Reg = regT j := by
+      rw [hbase, Function.update_of_ne (by decide), Function.update_self]
+    have hlit : ∀ (sgn : Bool) (s : ℕ), s < 4 →
+        LitDesc.Spec base tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4
+          ⟨sgn, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩
+          ⟨sgn, vCellF Qc steps P i tp j s⟩ := by
+      intro sgn s hs
+      obtain ⟨k0, k1, k2, k3, k4⟩ := flatCaps (tag := 2) (by omega)
+        (show i < steps + 1 by omega)
+        (show tp < max Qc 3 by omega)
+        (show j < P + 2 by omega) hs hM
+      exact ⟨i, tp, j, s, ⟨hbt, by decide, by decide⟩, rfl,
+        ⟨hbp, by decide, by decide⟩, rfl, rfl, rfl, k0, k1, k2, k3, k4⟩
+    have hf := forall₂_exactlyOneD
+      (fun s => (⟨true, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩ :
+        LitDesc nT))
+      (fun s => (⟨false, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩ :
+        LitDesc nT))
+      (vCellF Qc steps P i tp j) (qs := List.range 4)
+      (fun s hs => hlit true s (List.mem_range.mp hs))
+      (fun s hs => hlit false s (List.mem_range.mp hs))
+    have hcnf := emitCNFTM_hoareTime rA rB rC rD tmp tmp2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide)
+      hAM hBM hCM hDM inp₀ hinp₀ hf
+      (L := 6)
+      (by
+        intro descs hdescs
+        rw [exactlyOneD] at hdescs
+        rcases List.mem_cons.mp hdescs with rfl | hmem
+        · rw [List.length_map, List.length_range]; omega
+        · exact le_trans (atMostOneD_length_le _ _ descs hmem) (by omega))
+      (ys ++ (List.range j).flatMap (fun pos =>
+        CNF.encode (exactlyOne ((List.range 4).map
+          (vCellF Qc steps P i tp pos)))))
+      hbaseP hbrA hbrB hbrC hbrD
+    rw [show cellLeafD tp = exactlyOneD
+        (fun s => (⟨true, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩ :
+          LitDesc nT))
+        (fun s => (⟨false, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩ :
+          LitDesc nT))
+        (List.range 4) from rfl, hstate]
+    refine hcnf.consequence (fun _ _ _ h => h) ?_ ?_
+    · rintro inp work out ⟨g1, g2, g3⟩
+      refine ⟨g1, g2, ?_⟩
+      rw [flatMap_range_succ, ← List.append_assoc]
+      exact g3
+    · refine cnfBudget_mono ?_ (by omega)
+      rw [exactlyOneD]
+      simp only [List.length_cons]
+      have hcard := atMostOneD_card_le
+        (fun s => (⟨false, 2, .inl tReg, .inr tp, .inl pos1Reg, .inr s⟩ :
+          LitDesc nT))
+        (List.range 4)
+      rw [List.length_range] at hcard
+      omega
+  have hloop := emitLoop_hoareTime
+    (emitCNFTM rA rB rC rD tmp tmp2 (cellLeafD tp)) pos1Reg pos1Fuel
+    (by decide) (P + 1) M (cnfBudget 17 6 M) hPM
+    (fun pos => CNF.encode (exactlyOne ((List.range 4).map
+      (vCellF Qc steps P i tp pos))))
+    inp₀ (scratch V tmp tmp2 0) ys hinp₀ (scratch_parked 0 hV)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVf1)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1)
+    hbody
+  set ys' : List Bool := ys ++ (List.range (P + 1)).flatMap (fun pos =>
+    CNF.encode (exactlyOne ((List.range 4).map
+      (vCellF Qc steps P i tp pos)))) with hys'
+  have hset : (setConstTM pos1Reg 0).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) ys')
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys') (opBudget M) := by
+    refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
+      (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) ys'
+      hinp₀ (parked_update (scratch_parked 0 hV) (regT_parked _))
+      (by rw [Function.update_self])).consequence
+      (fun _ _ _ h => h) ?_ (setConstBudget (by omega) hPM))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, Function.update_idem,
+      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
+      Function.update_eq_self]
+  have hseq := seqTM_hoareTime
+    (emitLoopTM (emitCNFTM rA rB rC rD tmp tmp2 (cellLeafD tp))
+      pos1Reg pos1Fuel)
+    (setConstTM pos1Reg 0)
+    (hloop.mono_bound (loop_le_loopBudget hPM))
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked 0 hV) (regT_parked _)) _)
+    hset
+  exact hseq.mono_bound (by rw [posChunkBudget])
+
+/-- Budget of the `oneHotCells` row body. -/
+def cellsBodyBudget (M : ℕ) : ℕ := 3 * posChunkBudget M + 2
+
+/-- **`cellsBodyTM` Hoare specification** (at row `i`). -/
+theorem cellsBodyTM_hoareTime (Qc steps P M i : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (hi : i ≤ steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    cellsBodyTM.HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V tmp tmp2 0)
+        (ys ++ (List.range 3).flatMap (fun tp =>
+          (List.range (P + 1)).flatMap (fun pos =>
+            CNF.encode (exactlyOne ((List.range 4).map
+              (vCellF Qc steps P i tp pos)))))))
+      (cellsBodyBudget M) := by
+  have h0 := posChunkTM_hoareTime 0 (by omega) Qc steps P M i hM hi inp₀ V ys
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1
+  have h1 := posChunkTM_hoareTime 1 (by omega) Qc steps P M i hM hi inp₀ V
+    (ys ++ (List.range (P + 1)).flatMap (fun pos =>
+      CNF.encode (exactlyOne ((List.range 4).map (vCellF Qc steps P i 0 pos)))))
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1
+  have h2 := posChunkTM_hoareTime 2 (by omega) Qc steps P M i hM hi inp₀ V
+    (ys ++ (List.range (P + 1)).flatMap (fun pos =>
+      CNF.encode (exactlyOne ((List.range 4).map (vCellF Qc steps P i 0 pos))))
+      ++ (List.range (P + 1)).flatMap (fun pos =>
+      CNF.encode (exactlyOne ((List.range 4).map (vCellF Qc steps P i 1 pos)))))
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1
+  have h12 := seqTM_hoareTime (posChunkTM 1) (posChunkTM 2) h1
+    (emitPred_transition hinp₀ (scratch_parked 0 hV) _) h2
+  have hseq := seqTM_hoareTime (posChunkTM 0)
+    (seqTM (posChunkTM 1) (posChunkTM 2)) h0
+    (emitPred_transition hinp₀ (scratch_parked 0 hV) _) h12
+  refine hseq.consequence (fun _ _ _ h => h) ?_
+    (by rw [cellsBodyBudget]; omega)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, g2, ?_⟩
+  rw [show List.range 3 = [0, 1, 2] from by decide]
+  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    ← List.append_assoc]
+  exact g3
+
+/-- **`emitOneHotCellsTM` Hoare specification**: appends the encoded cell
+    one-hot family, leaving the row counter at `steps + 1`. -/
+theorem emitOneHotCellsTM_hoareTime (Qc steps P M : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hrA : work₀ rA = regT (steps + 1))
+    (hrB : work₀ rB = regT (max Qc 3))
+    (hrC : work₀ rC = regT (P + 2))
+    (hrD : work₀ rD = regT 4)
+    (htReg : work₀ tReg = regT 0)
+    (htFuel : work₀ tFuel = regT (steps + 1))
+    (hp1 : work₀ pos1Reg = regT 0)
+    (hf1 : work₀ pos1Fuel = regT (P + 1)) :
+    emitOneHotCellsTM.HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+        (ys ++ CNF.encode (oneHotCellsF Qc steps P)))
+      (loopBudget M (cellsBodyBudget M)) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  have hbody : ∀ i, i < steps + 1 → cellsBodyTM.HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          ⟨i + 2, regCells (steps + 1)⟩)
+        (ys ++ (List.range i).flatMap (fun t =>
+          (List.range 3).flatMap (fun tp =>
+            (List.range (P + 1)).flatMap (fun pos =>
+              CNF.encode (exactlyOne ((List.range 4).map
+                (vCellF Qc steps P t tp pos))))))))
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          ⟨i + 2, regCells (steps + 1)⟩)
+        (ys ++ (List.range (i + 1)).flatMap (fun t =>
+          (List.range 3).flatMap (fun tp =>
+            (List.range (P + 1)).flatMap (fun pos =>
+              CNF.encode (exactlyOne ((List.range 4).map
+                (vCellF Qc steps P t tp pos))))))))
+      (cellsBodyBudget M) := by
+    intro i hi
+    set base : Fin nT → Tape :=
+      Function.update (Function.update work₀ tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ with hbase
+    have hstate : Function.update
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hbaseP : ∀ l, Parked (base l) :=
+      parked_update (parked_update hwork₀ (regT_parked _))
+        (parked_regCells (by omega))
+    have hbody' := cellsBodyTM_hoareTime Qc steps P M i hM (by omega) inp₀
+      base
+      (ys ++ (List.range i).flatMap (fun t =>
+        (List.range 3).flatMap (fun tp =>
+          (List.range (P + 1)).flatMap (fun pos =>
+            CNF.encode (exactlyOne ((List.range 4).map
+              (vCellF Qc steps P t tp pos)))))))
+      hinp₀ hbaseP
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrA)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrB)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrC)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrD)
+      (by rw [hbase, Function.update_of_ne (by decide), Function.update_self])
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hp1)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hf1)
+    rw [hstate]
+    refine hbody'.strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoop_hoareTime cellsBodyTM tReg tFuel (by decide)
+    (steps + 1) M (cellsBodyBudget M) hAM
+    (fun t => (List.range 3).flatMap (fun tp =>
+      (List.range (P + 1)).flatMap (fun pos =>
+        CNF.encode (exactlyOne ((List.range 4).map
+          (vCellF Qc steps P t tp pos))))))
+    inp₀ (scratch work₀ tmp tmp2 0) ys hinp₀ (scratch_parked 0 hwork₀)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htFuel)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htReg)
+    hbody
+  refine hloop.consequence (fun _ _ _ h => h) ?_ (loop_le_loopBudget hAM)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, ?_, ?_⟩
+  · rw [g2, update_scratch (by decide) (by decide)]
+  · simp only [oneHotCellsF, CNF.encode_flatMap]
+    exact g3
+
 end SAT
