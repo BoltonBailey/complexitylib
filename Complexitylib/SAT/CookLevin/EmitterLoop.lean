@@ -335,7 +335,7 @@ theorem emitLoopFrom_hoareTime (body : TM n) (ctr fuel : Fin n)
     `u i` to `u (i + 1)`-with-the-counter-still-old; the loop's own increment
     finishes the move. -/
 theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
-    (hcf : ctr ≠ fuel) (v M b_body : ℕ) (hv : v ≤ M)
+    (hcf : ctr ≠ fuel) (v M b_body : ℕ)
     (ctrVal : ℕ → ℕ) (hctrM : ∀ i, i < v → ctrVal i ≤ M)
     (E : ℕ → List Bool)
     (inp₀ : Tape) (u : ℕ → Fin n → Tape) (ys₀ : List Bool)

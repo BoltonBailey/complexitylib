@@ -1238,4 +1238,395 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
   rw [pairBodyBudget]
   omega
 
+/-- Budget of the pairwise at-most-one sweep. -/
+def headAtMostBudget (M : ℕ) : ℕ :=
+  loopBudget M (pairBodyBudget M) + 1 + opBudget M
+
+/-- **`headAtMostTM` Hoare specification** (at row `i`, tape index `tp`):
+    appends the encoded pairwise at-most-one clauses, consuming the shrink
+    fuel (`auxReg`: `P` in, `0` out). -/
+theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
+    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT P) :
+    (headAtMostTM tp).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch (Function.update V auxReg (regT 0)) tmp tmp2 0)
+        (ys ++ CNF.encode (atMostOne ((List.range (P + 1)).map
+          (vHeadF Qc steps P i tp)))))
+      (headAtMostBudget M) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  set u : ℕ → Fin nT → Tape := fun q =>
+    Function.update (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q))
+      auxReg (regT (P - q)) with hu
+  have huP : ∀ q j, Parked (u q j) := fun q =>
+    parked_update (parked_update (scratch_parked 0 hV) (regT_parked _))
+      (regT_parked _)
+  have hbody : ∀ q, q < P + 1 → (headPairBodyTM tp).HoareTime
+      (emitPred inp₀ (Function.update (u q) pos1Fuel
+        ⟨q + 2, regCells (P + 1)⟩)
+        (ys ++ (List.range q).flatMap (pairWord Qc steps P i tp)))
+      (emitPred inp₀
+        (Function.update (Function.update (u (q + 1)) pos1Reg (regT q))
+          pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+        (ys ++ (List.range (q + 1)).flatMap (pairWord Qc steps P i tp)))
+      (pairBodyBudget M) := by
+    intro q hq
+    have hpb := headPairBodyTM_hoareTime tp htp Qc steps P M i q hM hi
+      (by omega) inp₀ V (ys ++ (List.range q).flatMap (pairWord Qc steps P i tp))
+      hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp2
+    refine hpb.consequence (fun _ _ _ h => h) ?_ (le_refl _)
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, ?_⟩
+    · rw [g2, hu]
+      rw [show Function.update
+          (Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (q + 1)))
+            auxReg (regT (P - (q + 1)))) pos1Reg (regT q)
+        = Function.update
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
+            (regT (P - (q + 1))) from by
+        rw [Function.update_comm (show pos1Reg ≠ auxReg by decide),
+          Function.update_idem,
+          Function.update_comm (show auxReg ≠ pos1Reg by decide)]]
+    · rw [flatMap_range_succ, ← List.append_assoc]
+      exact g3
+  have hloop := emitLoopGen_hoareTime (headPairBodyTM tp) pos1Reg pos1Fuel
+    (by decide) (P + 1) M (pairBodyBudget M) (fun q => q)
+    (fun q hq => by show q ≤ M; omega)
+    (pairWord Qc steps P i tp) inp₀ u ys hinp₀ huP
+    (fun q => by
+      rw [hu]
+      show Function.update _ auxReg _ pos1Fuel = _
+      rw [Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+        scratch_apply_ne (by decide) (by decide)]
+      exact hVf1)
+    (fun q => by
+      rw [hu]
+      show Function.update _ auxReg _ pos1Reg = _
+      rw [Function.update_of_ne (by decide), Function.update_self])
+    hbody
+  have hset : (setConstTM pos1Reg 0).HoareTime
+      (emitPred inp₀ (u (P + 1))
+        (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
+      (emitPred inp₀ (scratch (Function.update V auxReg (regT 0)) tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀ (u (P + 1)) _ hinp₀
+      (huP (P + 1))
+      (by
+        rw [hu]
+        show Function.update _ auxReg _ pos1Reg = _
+        rw [Function.update_of_ne (by decide), Function.update_self])
+      ).consequence (fun _ _ _ h => h) ?_
+      (setConstBudget (by omega) (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, hu]
+    rw [show Function.update
+        (Function.update
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
+          auxReg (regT (P - (P + 1)))) pos1Reg (regT 0)
+      = Function.update
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)) auxReg
+          (regT 0) from by
+      rw [show P - (P + 1) = 0 from by omega,
+        Function.update_comm (show pos1Reg ≠ auxReg by decide),
+        Function.update_idem,
+        Function.update_comm (show auxReg ≠ pos1Reg by decide)]]
+    have hbase : Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)
+        = scratch V tmp tmp2 0 := by
+      rw [show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+          rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
+        Function.update_eq_self]
+    rw [hbase, update_scratch (by decide) (by decide)]
+  have hloop' : (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (u (P + 1))
+        (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
+      (loopBudget M (pairBodyBudget M)) := by
+    refine (hloop.mono_bound
+      (loop_le_loopBudget (show P + 1 ≤ M by omega))).weaken_pre ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, hu]
+    show scratch V tmp tmp2 0
+      = Function.update
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)) auxReg
+          (regT (P - 0))
+    rw [show regT (P - 0) = regT P from rfl,
+      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
+      Function.update_eq_self,
+      show regT P = scratch V tmp tmp2 0 auxReg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hVaux.symm,
+      Function.update_eq_self]
+  have hseq := seqTM_hoareTime (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel)
+    (setConstTM pos1Reg 0) hloop'
+    (emitPred_transition hinp₀ (huP (P + 1)) _) hset
+  refine hseq.consequence (fun _ _ _ h => h) ?_
+    (by rw [headAtMostBudget])
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, g2, ?_⟩
+  rw [atMostOne_map_range, CNF.encode_flatMap]
+  rw [show (List.range (P + 1)).flatMap (fun q =>
+      CNF.encode ((List.range (P + 1 - (q + 1))).map (fun j =>
+        ([⟨false, vHeadF Qc steps P i tp q⟩,
+          ⟨false, vHeadF Qc steps P i tp (q + 1 + j)⟩] : Clause))))
+    = (List.range (P + 1)).flatMap (pairWord Qc steps P i tp) from by
+    refine flatMap_congr fun q _ => ?_
+    rw [CNF.encode_map, pairWord, show P + 1 - (q + 1) = P - q from by omega]]
+  exact g3
+
+/-- One `(row, tape)` head leaf: initialize the shrink fuel, then the
+    exactly-one block. -/
+def headLeafTM (tp : ℕ) : TM nT :=
+  seqTM (copyIntoTM pReg auxReg)
+    (seqTM (headAtLeastTM tp) (headAtMostTM tp))
+
+/-- Budget of one head leaf. -/
+def headLeafBudget (M : ℕ) : ℕ :=
+  opBudget M + 1 + (headAtLeastBudget M + 1 + headAtMostBudget M)
+
+/-- **`headLeafTM` Hoare specification** (at row `i`, tape index `tp`). -/
+theorem headLeafTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
+    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT 0)
+    (hVpReg : V pReg = regT P) :
+    (headLeafTM tp).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V tmp tmp2 0)
+        (ys ++ CNF.encode (exactlyOne ((List.range (P + 1)).map
+          (vHeadF Qc steps P i tp)))))
+      (headLeafBudget M) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  set V₁ : Fin nT → Tape := Function.update V auxReg (regT P) with hV₁
+  have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (regT_parked _)
+  -- Stage 1: auxReg := P.
+  have h₁ : (copyIntoTM pReg auxReg).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
+    refine ((copyIntoTM_hoareTime pReg auxReg (by decide) P 0 inp₀
+      (scratch V tmp tmp2 0) ys hinp₀ (fun l _ => scratch_parked 0 hV l)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVpReg)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVaux)
+      ).consequence (fun _ _ _ h => h) ?_
+      (copyIntoBudget (by omega) (by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide)]
+  -- Stage 2: the at-least-one clause.
+  have h₂ := headAtLeastTM_hoareTime tp htp Qc steps P M i hM hi inp₀ V₁ ys
+    hinp₀ hV₁P
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrA)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrB)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrC)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrD)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVt)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp1)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVf1)
+  -- Stage 3: the pairwise at-most-one clauses.
+  have h₃ := headAtMostTM_hoareTime tp htp Qc steps P M i hM hi inp₀ V₁
+    (ys ++ (Clause.encode (atLeastOne ((List.range (P + 1)).map
+      (vHeadF Qc steps P i tp))) ++ [true, false]))
+    hinp₀ hV₁P
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrA)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrB)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrC)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrD)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVt)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp1)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVf1)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp2)
+    (by rw [hV₁, Function.update_self])
+  have h₂₃ := seqTM_hoareTime (headAtLeastTM tp) (headAtMostTM tp) h₂
+    (emitPred_transition hinp₀ (scratch_parked 0 hV₁P) _) h₃
+  have hseq := seqTM_hoareTime (copyIntoTM pReg auxReg)
+    (seqTM (headAtLeastTM tp) (headAtMostTM tp)) h₁
+    (emitPred_transition hinp₀ (scratch_parked 0 hV₁P) _) h₂₃
+  refine hseq.consequence (fun _ _ _ h => h) ?_ (by rw [headLeafBudget])
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, ?_, ?_⟩
+  · rw [g2, hV₁, Function.update_idem,
+      show regT 0 = V auxReg from hVaux.symm, Function.update_eq_self]
+  · rw [show exactlyOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
+      = atLeastOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
+        :: atMostOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
+      from rfl, CNF.encode_cons, ← List.append_assoc, ← List.append_assoc]
+    rwa [← List.append_assoc] at g3
+
+/-- The `oneHotHeads` row body: head leaves at the three tape indices. -/
+def headsBodyTM : TM nT :=
+  seqTM (headLeafTM 0) (seqTM (headLeafTM 1) (headLeafTM 2))
+
+/-- **The head one-hot emitter**: loop the row body over all rows. -/
+def emitOneHotHeadsTM : TM nT := emitLoopTM headsBodyTM tReg tFuel
+
+/-- Budget of the `oneHotHeads` row body. -/
+def headsBodyBudget (M : ℕ) : ℕ := 3 * headLeafBudget M + 2
+
+/-- **`headsBodyTM` Hoare specification** (at row `i`). -/
+theorem headsBodyTM_hoareTime (Qc steps P M i : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
+    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT 0)
+    (hVpReg : V pReg = regT P) :
+    headsBodyTM.HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V tmp tmp2 0)
+        (ys ++ (List.range 3).flatMap (fun tp =>
+          CNF.encode (exactlyOne ((List.range (P + 1)).map
+            (vHeadF Qc steps P i tp))))))
+      (headsBodyBudget M) := by
+  have h0 := headLeafTM_hoareTime 0 (by omega) Qc steps P M i hM hi inp₀ V ys
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1 hVp2 hVaux hVpReg
+  have h1 := headLeafTM_hoareTime 1 (by omega) Qc steps P M i hM hi inp₀ V
+    (ys ++ CNF.encode (exactlyOne ((List.range (P + 1)).map
+      (vHeadF Qc steps P i 0))))
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1 hVp2 hVaux hVpReg
+  have h2 := headLeafTM_hoareTime 2 (by omega) Qc steps P M i hM hi inp₀ V
+    (ys ++ CNF.encode (exactlyOne ((List.range (P + 1)).map
+      (vHeadF Qc steps P i 0)))
+      ++ CNF.encode (exactlyOne ((List.range (P + 1)).map
+      (vHeadF Qc steps P i 1))))
+    hinp₀ hV hVrA hVrB hVrC hVrD hVt hVp1 hVf1 hVp2 hVaux hVpReg
+  have h12 := seqTM_hoareTime (headLeafTM 1) (headLeafTM 2) h1
+    (emitPred_transition hinp₀ (scratch_parked 0 hV) _) h2
+  have hseq := seqTM_hoareTime (headLeafTM 0)
+    (seqTM (headLeafTM 1) (headLeafTM 2)) h0
+    (emitPred_transition hinp₀ (scratch_parked 0 hV) _) h12
+  refine hseq.consequence (fun _ _ _ h => h) ?_
+    (by rw [headsBodyBudget]; omega)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, g2, ?_⟩
+  rw [show List.range 3 = [0, 1, 2] from by decide]
+  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    ← List.append_assoc]
+  exact g3
+
+/-- **`emitOneHotHeadsTM` Hoare specification**: appends the encoded head
+    one-hot family, leaving the row counter at `steps + 1`. -/
+theorem emitOneHotHeadsTM_hoareTime (Qc steps P M : ℕ)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hrA : work₀ rA = regT (steps + 1))
+    (hrB : work₀ rB = regT (max Qc 3))
+    (hrC : work₀ rC = regT (P + 2))
+    (hrD : work₀ rD = regT 4)
+    (htReg : work₀ tReg = regT 0)
+    (htFuel : work₀ tFuel = regT (steps + 1))
+    (hp1 : work₀ pos1Reg = regT 0)
+    (hf1 : work₀ pos1Fuel = regT (P + 1))
+    (hp2 : work₀ pos2Reg = regT 0)
+    (haux : work₀ auxReg = regT 0)
+    (hpReg : work₀ pReg = regT P) :
+    emitOneHotHeadsTM.HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+        (ys ++ CNF.encode (oneHotHeadsF Qc steps P)))
+      (loopBudget M (headsBodyBudget M)) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  have hbody : ∀ i, i < steps + 1 → headsBodyTM.HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          ⟨i + 2, regCells (steps + 1)⟩)
+        (ys ++ (List.range i).flatMap (fun t =>
+          (List.range 3).flatMap (fun tp =>
+            CNF.encode (exactlyOne ((List.range (P + 1)).map
+              (vHeadF Qc steps P t tp)))))))
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          ⟨i + 2, regCells (steps + 1)⟩)
+        (ys ++ (List.range (i + 1)).flatMap (fun t =>
+          (List.range 3).flatMap (fun tp =>
+            CNF.encode (exactlyOne ((List.range (P + 1)).map
+              (vHeadF Qc steps P t tp)))))))
+      (headsBodyBudget M) := by
+    intro i hi
+    set base : Fin nT → Tape :=
+      Function.update (Function.update work₀ tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ with hbase
+    have hstate : Function.update
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hbaseP : ∀ l, Parked (base l) :=
+      parked_update (parked_update hwork₀ (regT_parked _))
+        (parked_regCells (by omega))
+    have hbody' := headsBodyTM_hoareTime Qc steps P M i hM (by omega) inp₀
+      base
+      (ys ++ (List.range i).flatMap (fun t =>
+        (List.range 3).flatMap (fun tp =>
+          CNF.encode (exactlyOne ((List.range (P + 1)).map
+            (vHeadF Qc steps P t tp))))))
+      hinp₀ hbaseP
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrA)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrB)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrC)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hrD)
+      (by rw [hbase, Function.update_of_ne (by decide), Function.update_self])
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hp1)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hf1)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hp2)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact haux)
+      (by rw [hbase, Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hpReg)
+    rw [hstate]
+    refine hbody'.strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoop_hoareTime headsBodyTM tReg tFuel (by decide)
+    (steps + 1) M (headsBodyBudget M) hAM
+    (fun t => (List.range 3).flatMap (fun tp =>
+      CNF.encode (exactlyOne ((List.range (P + 1)).map
+        (vHeadF Qc steps P t tp)))))
+    inp₀ (scratch work₀ tmp tmp2 0) ys hinp₀ (scratch_parked 0 hwork₀)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htFuel)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact htReg)
+    hbody
+  refine hloop.consequence (fun _ _ _ h => h) ?_ (loop_le_loopBudget hAM)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, ?_, ?_⟩
+  · rw [g2, update_scratch (by decide) (by decide)]
+  · simp only [oneHotHeadsF, CNF.encode_flatMap]
+    exact g3
+
 end SAT
