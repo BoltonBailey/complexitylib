@@ -36,6 +36,16 @@ theorem Clause.encode_map {α : Type _} (g : α → Lit) (l : List α) :
   | cons a l ih =>
     rw [List.map_cons, Clause.encode_cons_word, ih, List.flatMap_cons]
 
+/-- A mapped CNF encodes as the concatenation of its clause words. -/
+theorem CNF.encode_map {α : Type _} (g : α → Clause) (l : List α) :
+    CNF.encode (l.map g)
+      = l.flatMap (fun a => Clause.encode (g a) ++ [true, false]) := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    rw [List.map_cons, CNF.encode_cons, ih, List.flatMap_cons,
+      List.append_assoc]
+
 /-- **Literal descriptor**: the machine-level recipe for one literal — a
     sign, the hardwired top digit, and the four mixed-radix digit sources. -/
 structure LitDesc (n : ℕ) where
