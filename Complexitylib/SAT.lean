@@ -11,6 +11,7 @@ import Complexitylib.SAT.CookLevin.Emitter
 import Complexitylib.SAT.CookLevin.EmitterLoop
 import Complexitylib.SAT.CookLevin.EmitterFamilies
 import Complexitylib.SAT.CookLevin.EmitterStart
+import Complexitylib.SAT.CookLevin.EmitterActive
 
 /-!
 # SAT: Boolean satisfiability

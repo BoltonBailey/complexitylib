@@ -58,6 +58,15 @@ theorem bigSeq_emit_hoareTime {α : Type _} (F : α → TM nT)
         Nat.succ_mul ..
       omega
 
+/-- Peel the zero iteration off a range `flatMap`. -/
+theorem flatMap_range_split {γ : Type _} (n : ℕ) (G : ℕ → List γ) :
+    (List.range (n + 1)).flatMap G
+      = G 0 ++ (List.range n).flatMap (fun j => G (1 + j)) := by
+  rw [List.range_succ_eq_map, List.flatMap_cons, List.flatMap_map]
+  congr 1
+  exact flatMap_congr fun j _ => by
+    rw [show Nat.succ j = 1 + j from by omega]
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Consequence head positions
 -- ════════════════════════════════════════════════════════════════════════
@@ -944,6 +953,843 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
   rw [hys₁] at g3
   rw [← List.append_assoc]
   exact g3
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The work-symbol unroll, work-position split, input-symbol unroll
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The work-symbol unroll. -/
+noncomputable def activeSwLevelTM (q : N.Q) (si : Γ) (pwZero : Bool) :
+    TM nT :=
+  bigSeqTM (allSyms.map (fun sw => activePoSplitTM N q si sw pwZero))
+
+def activeSwLevelBudget (M : ℕ) : ℕ := 4 * (activePoSplitBudget M + 1) + 1
+
+/-- **`activeSwLevelTM` Hoare specification.** -/
+theorem activeSwLevelTM_hoareTime (q : N.Q) (si : Γ) (pwZero : Bool)
+    {Qc steps P M t pi pw : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi pw 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf3 : base pos3Fuel = regT P)
+    (hpwZ : pwZero = true → pw = 0) (hpwZ' : pwZero = false → pw ≠ 0)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activeSwLevelTM N q si pwZero).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ allSyms.flatMap (fun sw =>
+          (List.range (P + 1)).flatMap (fun po =>
+            allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+              CNF.encode
+                (activeClausesAtF N steps P t q pi si pw sw po so b)))))))
+      (activeSwLevelBudget M) := by
+  have h := bigSeq_emit_hoareTime
+    (fun sw => activePoSplitTM N q si sw pwZero)
+    (fun sw => (List.range (P + 1)).flatMap (fun po =>
+      allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+        CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b)))))
+    (activePoSplitBudget M) inp₀ (scratch base tmp tmp2 0) hinp₀
+    (scratch_parked 0 hB.parked) allSyms
+    (fun sw _ ys' => activePoSplitTM_hoareTime N q si sw pwZero hQc hB haux2
+      hf3 hpwZ hpwZ' inp₀ ys' hinp₀)
+    ys
+  exact h.mono_bound (by rw [activeSwLevelBudget]; simp [allSyms])
+
+/-- The work-position block: the `pw = 0` instance, then the sweep over
+    `pw = 1..P`. -/
+noncomputable def activePwSplitTM (q : N.Q) (si : Γ) : TM nT :=
+  seqTM (activeSwLevelTM N q si true)
+    (seqTM (setConstTM pos2Reg 1)
+      (seqTM (emitLoopTM (activeSwLevelTM N q si false) pos2Reg pos2Fuel)
+        (setConstTM pos2Reg 0)))
+
+def activePwSplitBudget (M : ℕ) : ℕ :=
+  activeSwLevelBudget M + 1
+    + (opBudget M + 1
+      + (loopBudget M (activeSwLevelBudget M) + 1 + opBudget M))
+
+/-- **`activePwSplitTM` Hoare specification** (at `pw = po = 0` boundary
+    state). -/
+theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
+    {Qc steps P M t pi : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi 0 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf2 : base pos2Fuel = regT P) (hf3 : base pos3Fuel = regT P)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activePwSplitTM N q si).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (fun pw =>
+          allSyms.flatMap (fun sw =>
+            (List.range (P + 1)).flatMap (fun po =>
+              allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                CNF.encode
+                  (activeClausesAtF N steps P t q pi si pw sw po so b))))))))
+      (activePwSplitBudget M) := by
+  have hPM : P + 2 ≤ M := by
+    have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+    obtain ⟨_, _, hCM, _⟩ := radix_caps hA1 (by omega) (by omega)
+      (by omega) hB.hM
+    omega
+  -- Part 1: pw = 0.
+  have h₀ := activeSwLevelTM_hoareTime N q si true hQc hB haux2 hf3
+    (fun _ => rfl) (fun h => absurd h (by simp)) inp₀ ys hinp₀
+  set ys₁ : List Bool := ys ++ allSyms.flatMap (fun sw =>
+    (List.range (P + 1)).flatMap (fun po =>
+      allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+        CNF.encode (activeClausesAtF N steps P t q pi si 0 sw po so b)))))
+    with hys₁
+  -- Part 2: counter to 1.
+  have h₁ : (setConstTM pos2Reg 1).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys₁)
+      (emitPred inp₀
+        (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1)) ys₁)
+      (opBudget M) :=
+    ((setConstTM_hoareTime pos2Reg 1 0 inp₀ (scratch base tmp tmp2 0) ys₁
+      hinp₀ (scratch_parked 0 hB.parked)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp2)
+      ).consequence (fun _ _ _ h => h) (fun _ _ _ h => h)
+      (setConstBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
+  -- Part 3: the sweep over pw = 1..P.
+  have hbody : ∀ j, j < P →
+      (activeSwLevelTM N q si false).HoareTime
+        (emitPred inp₀
+          (Function.update
+            (Function.update
+              (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1))
+              pos2Reg (regT (1 + j))) pos2Fuel ⟨j + 2, regCells P⟩)
+          (ys₁ ++ (List.range j).flatMap (fun j' =>
+            allSyms.flatMap (fun sw =>
+              (List.range (P + 1)).flatMap (fun po =>
+                allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                  CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+                    sw po so b))))))))
+        (emitPred inp₀
+          (Function.update
+            (Function.update
+              (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1))
+              pos2Reg (regT (1 + j))) pos2Fuel ⟨j + 2, regCells P⟩)
+          (ys₁ ++ (List.range (j + 1)).flatMap (fun j' =>
+            allSyms.flatMap (fun sw =>
+              (List.range (P + 1)).flatMap (fun po =>
+                allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                  CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+                    sw po so b))))))))
+        (activeSwLevelBudget M) := by
+    intro j hj
+    set base' : Fin nT → Tape :=
+      Function.update (Function.update base pos2Reg (regT (1 + j))) pos2Fuel
+        ⟨j + 2, regCells P⟩ with hbase'
+    have hstate : Function.update
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1))
+          pos2Reg (regT (1 + j))) pos2Fuel ⟨j + 2, regCells P⟩
+        = scratch base' tmp tmp2 0 := by
+      rw [Function.update_idem, update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hB' : ActiveBase Qc steps P M t pi (1 + j) 0 base' :=
+      ⟨hB.hM, hB.ht, hB.hpi, by omega, by omega,
+       parked_update (parked_update hB.parked (regT_parked _))
+         (parked_regCells (by omega)),
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrA,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrB,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrC,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrD,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htReg,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htPlus,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp1,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_self],
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp3⟩
+    have hsw := activeSwLevelTM_hoareTime N q si false hQc hB'
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact haux2)
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hf3)
+      (fun h => absurd h (by simp)) (fun _ => by omega)
+      inp₀
+      (ys₁ ++ (List.range j).flatMap (fun j' =>
+        allSyms.flatMap (fun sw =>
+          (List.range (P + 1)).flatMap (fun po =>
+            allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+              CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+                sw po so b)))))))
+      hinp₀
+    rw [hstate]
+    refine hsw.strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoopFrom_hoareTime (activeSwLevelTM N q si false)
+    pos2Reg pos2Fuel (by decide) 1 P M (activeSwLevelBudget M) (by omega)
+    (fun j' => allSyms.flatMap (fun sw =>
+      (List.range (P + 1)).flatMap (fun po =>
+        allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+          CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+            sw po so b))))))
+    inp₀ (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1)) ys₁
+    hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+    (by rw [Function.update_of_ne (by decide),
+      scratch_apply_ne (by decide) (by decide)]; exact hf2)
+    (by rw [Function.update_self])
+    hbody
+  -- Part 4: counter back to 0.
+  have h₃ : (setConstTM pos2Reg 0).HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1))
+          pos2Reg (regT (1 + P)))
+        (ys₁ ++ (List.range P).flatMap (fun j' =>
+          allSyms.flatMap (fun sw =>
+            (List.range (P + 1)).flatMap (fun po =>
+              allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+                  sw po so b))))))))
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys₁ ++ (List.range P).flatMap (fun j' =>
+          allSyms.flatMap (fun sw =>
+            (List.range (P + 1)).flatMap (fun po =>
+              allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
+                  sw po so b))))))))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime pos2Reg 0 (1 + P) inp₀
+      (Function.update
+        (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1)) pos2Reg
+        (regT (1 + P))) _ hinp₀
+      (parked_update (parked_update (scratch_parked 0 hB.parked)
+        (regT_parked _)) (regT_parked _))
+      (by rw [Function.update_self])).consequence
+      (fun _ _ _ h => h) ?_
+      (setConstBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, Function.update_idem, Function.update_idem,
+      show regT 0 = scratch base tmp tmp2 0 pos2Reg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp2.symm,
+      Function.update_eq_self]
+  -- Glue.
+  have h₂₃ := seqTM_hoareTime _ (setConstTM pos2Reg 0)
+    (hloop.mono_bound (loop_le_loopBudget (show P ≤ M by omega)))
+    (emitPred_transition hinp₀
+      (parked_update (parked_update (scratch_parked 0 hB.parked)
+        (regT_parked _)) (regT_parked _)) _) h₃
+  have h₁₂₃ := seqTM_hoareTime (setConstTM pos2Reg 1) _ h₁
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) h₂₃
+  have hall := seqTM_hoareTime (activeSwLevelTM N q si true) _ h₀
+    (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) h₁₂₃
+  refine hall.consequence (fun _ _ _ h => h) ?_
+    (by rw [activePwSplitBudget])
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, g2, ?_⟩
+  rw [flatMap_range_split P (fun pw => allSyms.flatMap (fun sw =>
+    (List.range (P + 1)).flatMap (fun po =>
+      allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+        CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so b))))))]
+  rw [hys₁] at g3
+  rw [← List.append_assoc]
+  exact g3
+
+/-- The input-symbol unroll. -/
+noncomputable def activeSiLevelTM (q : N.Q) : TM nT :=
+  bigSeqTM (allSyms.map (fun si => activePwSplitTM N q si))
+
+def activeSiLevelBudget (M : ℕ) : ℕ := 4 * (activePwSplitBudget M + 1) + 1
+
+/-- **`activeSiLevelTM` Hoare specification.** -/
+theorem activeSiLevelTM_hoareTime (q : N.Q)
+    {Qc steps P M t pi : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t pi 0 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf2 : base pos2Fuel = regT P) (hf3 : base pos3Fuel = regT P)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activeSiLevelTM N q).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ allSyms.flatMap (fun si =>
+          (List.range (P + 1)).flatMap (fun pw =>
+            allSyms.flatMap (fun sw =>
+              (List.range (P + 1)).flatMap (fun po =>
+                allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+                  CNF.encode
+                    (activeClausesAtF N steps P t q pi si pw sw po so
+                      b)))))))))
+      (activeSiLevelBudget M) := by
+  have h := bigSeq_emit_hoareTime
+    (fun si => activePwSplitTM N q si)
+    (fun si => (List.range (P + 1)).flatMap (fun pw =>
+      allSyms.flatMap (fun sw =>
+        (List.range (P + 1)).flatMap (fun po =>
+          allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
+            CNF.encode (activeClausesAtF N steps P t q pi si pw sw po so
+              b)))))))
+    (activePwSplitBudget M) inp₀ (scratch base tmp tmp2 0) hinp₀
+    (scratch_parked 0 hB.parked) allSyms
+    (fun si _ ys' => activePwSplitTM_hoareTime N q si hQc hB haux2 hf2 hf3
+      inp₀ ys' hinp₀)
+    ys
+  exact h.mono_bound (by rw [activeSiLevelBudget]; simp [allSyms])
+
+
+-- ════════════════════════════════════════════════════════════════════════
+-- The input-position loop, state unroll, row body, and the family
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The input-position sweep for one machine state. -/
+noncomputable def activePiLoopTM (q : N.Q) : TM nT :=
+  seqTM (emitLoopTM (activeSiLevelTM N q) pos1Reg pos1Fuel)
+    (setConstTM pos1Reg 0)
+
+def activePiLoopBudget (M : ℕ) : ℕ :=
+  loopBudget M (activeSiLevelBudget M) + 1 + opBudget M
+
+set_option maxHeartbeats 4000000 in
+/-- **`activePiLoopTM` Hoare specification** (at the row boundary state). -/
+theorem activePiLoopTM_hoareTime (q : N.Q)
+    {Qc steps P M t : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t 0 0 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf1 : base pos1Fuel = regT (P + 1))
+    (hf2 : base pos2Fuel = regT P) (hf3 : base pos3Fuel = regT P)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activePiLoopTM N q).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (fun pi =>
+          allSyms.flatMap (fun si =>
+            (List.range (P + 1)).flatMap (fun pw =>
+              allSyms.flatMap (fun sw =>
+                (List.range (P + 1)).flatMap (fun po =>
+                  allSyms.flatMap (fun so =>
+                    [true, false].flatMap (fun b =>
+                      CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                        po so b))))))))))
+      (activePiLoopBudget M) := by
+  have hPM : P + 2 ≤ M := by
+    have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+    obtain ⟨_, _, hCM, _⟩ := radix_caps hA1 (by omega) (by omega)
+      (by omega) hB.hM
+    omega
+  have hbody : ∀ i, i < P + 1 → (activeSiLevelTM N q).HoareTime
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos1Reg (regT i))
+          pos1Fuel ⟨i + 2, regCells (P + 1)⟩)
+        (ys ++ (List.range i).flatMap (fun pi =>
+          allSyms.flatMap (fun si =>
+            (List.range (P + 1)).flatMap (fun pw =>
+              allSyms.flatMap (fun sw =>
+                (List.range (P + 1)).flatMap (fun po =>
+                  allSyms.flatMap (fun so =>
+                    [true, false].flatMap (fun b =>
+                      CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                        po so b))))))))))
+      (emitPred inp₀
+        (Function.update
+          (Function.update (scratch base tmp tmp2 0) pos1Reg (regT i))
+          pos1Fuel ⟨i + 2, regCells (P + 1)⟩)
+        (ys ++ (List.range (i + 1)).flatMap (fun pi =>
+          allSyms.flatMap (fun si =>
+            (List.range (P + 1)).flatMap (fun pw =>
+              allSyms.flatMap (fun sw =>
+                (List.range (P + 1)).flatMap (fun po =>
+                  allSyms.flatMap (fun so =>
+                    [true, false].flatMap (fun b =>
+                      CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                        po so b))))))))))
+      (activeSiLevelBudget M) := by
+    intro i hi
+    set base' : Fin nT → Tape :=
+      Function.update (Function.update base pos1Reg (regT i)) pos1Fuel
+        ⟨i + 2, regCells (P + 1)⟩ with hbase'
+    have hstate : Function.update
+        (Function.update (scratch base tmp tmp2 0) pos1Reg (regT i)) pos1Fuel
+        ⟨i + 2, regCells (P + 1)⟩ = scratch base' tmp tmp2 0 := by
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hB' : ActiveBase Qc steps P M t i 0 0 base' :=
+      ⟨hB.hM, hB.ht, by omega, by omega, by omega,
+       parked_update (parked_update hB.parked (regT_parked _))
+         (parked_regCells (by omega)),
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrA,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrB,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrC,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hrD,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htReg,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.htPlus,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_self],
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp2,
+       by rw [hbase', Function.update_of_ne (by decide),
+         Function.update_of_ne (by decide)]; exact hB.hp3⟩
+    have hsi := activeSiLevelTM_hoareTime N q hQc hB'
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact haux2)
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hf2)
+      (by rw [hbase', Function.update_of_ne (by decide),
+        Function.update_of_ne (by decide)]; exact hf3)
+      inp₀
+      (ys ++ (List.range i).flatMap (fun pi =>
+        allSyms.flatMap (fun si =>
+          (List.range (P + 1)).flatMap (fun pw =>
+            allSyms.flatMap (fun sw =>
+              (List.range (P + 1)).flatMap (fun po =>
+                allSyms.flatMap (fun so =>
+                  [true, false].flatMap (fun b =>
+                    CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                      po so b)))))))))
+      hinp₀
+    rw [hstate]
+    refine hsi.consequence (fun _ _ _ h => h) ?_ (le_refl _)
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, g2, ?_⟩
+    rw [flatMap_range_succ, ← List.append_assoc]
+    exact g3
+  have hloop := emitLoop_hoareTime (activeSiLevelTM N q) pos1Reg pos1Fuel
+    (by decide) (P + 1) M (activeSiLevelBudget M) (by omega)
+    (fun pi => allSyms.flatMap (fun si =>
+      (List.range (P + 1)).flatMap (fun pw =>
+        allSyms.flatMap (fun sw =>
+          (List.range (P + 1)).flatMap (fun po =>
+            allSyms.flatMap (fun so =>
+              [true, false].flatMap (fun b =>
+                CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                  po so b))))))))
+    inp₀ (scratch base tmp tmp2 0) ys hinp₀ (scratch_parked 0 hB.parked)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hf1)
+    (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp1)
+    hbody
+  have hset : (setConstTM pos1Reg 0).HoareTime
+      (emitPred inp₀
+        (Function.update (scratch base tmp tmp2 0) pos1Reg (regT (P + 1)))
+        (ys ++ (List.range (P + 1)).flatMap (fun pi =>
+          allSyms.flatMap (fun si =>
+            (List.range (P + 1)).flatMap (fun pw =>
+              allSyms.flatMap (fun sw =>
+                (List.range (P + 1)).flatMap (fun po =>
+                  allSyms.flatMap (fun so =>
+                    [true, false].flatMap (fun b =>
+                      CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                        po so b))))))))))
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ (List.range (P + 1)).flatMap (fun pi =>
+          allSyms.flatMap (fun si =>
+            (List.range (P + 1)).flatMap (fun pw =>
+              allSyms.flatMap (fun sw =>
+                (List.range (P + 1)).flatMap (fun po =>
+                  allSyms.flatMap (fun so =>
+                    [true, false].flatMap (fun b =>
+                      CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                        po so b))))))))))
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
+      (Function.update (scratch base tmp tmp2 0) pos1Reg (regT (P + 1))) _
+      hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+      (by rw [Function.update_self])).consequence (fun _ _ _ h => h) ?_
+      (setConstBudget (show (0:ℕ) ≤ M by omega) (show P + 1 ≤ M by omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, Function.update_idem,
+      show regT 0 = scratch base tmp tmp2 0 pos1Reg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp1.symm,
+      Function.update_eq_self]
+  have hseq := seqTM_hoareTime _ (setConstTM pos1Reg 0)
+    (hloop.mono_bound (loop_le_loopBudget (show P + 1 ≤ M by omega)))
+    (emitPred_transition hinp₀
+      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) hset
+  exact hseq.mono_bound (by rw [activePiLoopBudget])
+
+/-- The machine-state unroll. -/
+noncomputable def activeQLevelTM : TM nT :=
+  bigSeqTM ((Finset.univ : Finset N.Q).toList.map (fun q =>
+    activePiLoopTM N q))
+
+def activeQLevelBudget (N : NTM 1) (M : ℕ) : ℕ :=
+  Fintype.card N.Q * (activePiLoopBudget M + 1) + 1
+
+set_option maxHeartbeats 4000000 in
+/-- **`activeQLevelTM` Hoare specification.** -/
+theorem activeQLevelTM_hoareTime
+    {Qc steps P M t : ℕ} {base : Fin nT → Tape}
+    (hQc : Qc = Fintype.card N.Q)
+    (hB : ActiveBase Qc steps P M t 0 0 0 base)
+    (haux2 : base auxReg2 = regT 0)
+    (hf1 : base pos1Fuel = regT (P + 1))
+    (hf2 : base pos2Fuel = regT P) (hf3 : base pos3Fuel = regT P)
+    (inp₀ : Tape) (ys : List Bool) (hinp₀ : Parked inp₀) :
+    (activeQLevelTM N).HoareTime
+      (emitPred inp₀ (scratch base tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch base tmp tmp2 0)
+        (ys ++ (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+          (List.range (P + 1)).flatMap (fun pi =>
+            allSyms.flatMap (fun si =>
+              (List.range (P + 1)).flatMap (fun pw =>
+                allSyms.flatMap (fun sw =>
+                  (List.range (P + 1)).flatMap (fun po =>
+                    allSyms.flatMap (fun so =>
+                      [true, false].flatMap (fun b =>
+                        CNF.encode (activeClausesAtF N steps P t q pi si pw
+                          sw po so b)))))))))))
+      (activeQLevelBudget N M) := by
+  have h := bigSeq_emit_hoareTime
+    (fun q => activePiLoopTM N q)
+    (fun q => (List.range (P + 1)).flatMap (fun pi =>
+      allSyms.flatMap (fun si =>
+        (List.range (P + 1)).flatMap (fun pw =>
+          allSyms.flatMap (fun sw =>
+            (List.range (P + 1)).flatMap (fun po =>
+              allSyms.flatMap (fun so =>
+                [true, false].flatMap (fun b =>
+                  CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                    po so b)))))))))
+    (activePiLoopBudget M) inp₀ (scratch base tmp tmp2 0) hinp₀
+    (scratch_parked 0 hB.parked) (Finset.univ : Finset N.Q).toList
+    (fun q _ ys' => activePiLoopTM_hoareTime N q hQc hB haux2 hf1 hf2 hf3
+      inp₀ ys' hinp₀)
+    ys
+  refine h.mono_bound ?_
+  have hcard : (Finset.univ : Finset N.Q).toList.length
+      = Fintype.card N.Q := by
+    rw [Finset.length_toList, Finset.card_univ]
+  rw [activeQLevelBudget, hcard]
+
+/-- The active row body: bump the successor-row register, then the state
+    unroll. -/
+noncomputable def activeRowTM : TM nT :=
+  seqTM (incRegTM tPlusReg) (activeQLevelTM N)
+
+def activeRowBudget (N : NTM 1) (M : ℕ) : ℕ :=
+  opBudget M + 1 + activeQLevelBudget N M
+
+/-- **The active-family emitter**: loop the row body over rows
+    `0..steps-1`. -/
+noncomputable def emitActiveTM : TM nT := emitLoopTM (activeRowTM N) tReg tFuel
+
+set_option maxHeartbeats 4000000 in
+/-- **`activeRowTM` Hoare specification** (at row `i < steps`; the
+    successor-row register enters at `i` and leaves at `i + 1`). -/
+theorem activeRowTM_hoareTime (Qc steps P M i : ℕ)
+    (hQc : Qc = Fintype.card N.Q)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (hi : i < steps)
+    (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
+    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
+    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
+    (hVt : V tReg = regT i) (hVtp : V tPlusReg = regT i)
+    (hVp1 : V pos1Reg = regT 0) (hVp2 : V pos2Reg = regT 0)
+    (hVp3 : V pos3Reg = regT 0) (hVaux2 : V auxReg2 = regT 0)
+    (hVf1 : V pos1Fuel = regT (P + 1))
+    (hVf2 : V pos2Fuel = regT P) (hVf3 : V pos3Fuel = regT P) :
+    (activeRowTM N).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch (Function.update V tPlusReg (regT (i + 1))) tmp tmp2 0)
+        (ys ++ (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+          (List.range (P + 1)).flatMap (fun pi =>
+            allSyms.flatMap (fun si =>
+              (List.range (P + 1)).flatMap (fun pw =>
+                allSyms.flatMap (fun sw =>
+                  (List.range (P + 1)).flatMap (fun po =>
+                    allSyms.flatMap (fun so =>
+                      [true, false].flatMap (fun b =>
+                        CNF.encode (activeClausesAtF N steps P i q pi si pw
+                          sw po so b)))))))))))
+      (activeRowBudget N M) := by
+  set V₁ : Fin nT → Tape := Function.update V tPlusReg (regT (i + 1))
+    with hV₁
+  have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (regT_parked _)
+  have hinc : (incRegTM tPlusReg).HoareTime
+      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (emitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
+    refine ((incRegTM_hoareTime tPlusReg i inp₀ (scratch V tmp tmp2 0) ys
+      hinp₀ (fun l _ => scratch_parked 0 hV l)
+      (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVtp)
+      ).consequence (fun _ _ _ h => h) ?_
+      (incBudget (by
+        have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+        obtain ⟨hAM, _, _, _⟩ := radix_caps hA1 (by omega) (by omega)
+          (by omega) hM
+        omega)))
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, update_scratch (by decide) (by decide)]
+  have hB₁ : ActiveBase Qc steps P M i 0 0 0 V₁ :=
+    ⟨hM, hi, by omega, by omega, by omega, hV₁P,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrA,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrB,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrC,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrD,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVt,
+     by rw [hV₁, Function.update_self],
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp1,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp2,
+     by rw [hV₁, Function.update_of_ne (by decide)]; exact hVp3⟩
+  have hq := activeQLevelTM_hoareTime N hQc hB₁
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVaux2)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVf1)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVf2)
+    (by rw [hV₁, Function.update_of_ne (by decide)]; exact hVf3)
+    inp₀ ys hinp₀
+  have hseq := seqTM_hoareTime (incRegTM tPlusReg) (activeQLevelTM N) hinc
+    (emitPred_transition hinp₀ (scratch_parked 0 hV₁P) _) hq
+  exact hseq.mono_bound (by rw [activeRowBudget])
+
+
+set_option maxHeartbeats 4000000 in
+/-- **`emitActiveTM` Hoare specification**: appends the encoded active
+    transition family, leaving row counter and successor-row register at
+    `steps`. -/
+theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
+    (hQc : Qc = Fintype.card N.Q)
+    (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
+    (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hrA : work₀ rA = regT (steps + 1))
+    (hrB : work₀ rB = regT (max Qc 3))
+    (hrC : work₀ rC = regT (P + 2))
+    (hrD : work₀ rD = regT 4)
+    (htReg : work₀ tReg = regT 0)
+    (htFuel : work₀ tFuel = regT steps)
+    (htp : work₀ tPlusReg = regT 0)
+    (hp1 : work₀ pos1Reg = regT 0)
+    (hp2 : work₀ pos2Reg = regT 0)
+    (hp3 : work₀ pos3Reg = regT 0)
+    (haux2 : work₀ auxReg2 = regT 0)
+    (hf1 : work₀ pos1Fuel = regT (P + 1))
+    (hf2 : work₀ pos2Fuel = regT P)
+    (hf3 : work₀ pos3Fuel = regT P) :
+    (emitActiveTM N).HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (emitPred inp₀
+        (scratch
+          (Function.update (Function.update work₀ tReg (regT steps)) tPlusReg
+            (regT steps)) tmp tmp2 0)
+        (ys ++ CNF.encode (activeTransitionClausesF N steps P)))
+      (loopBudget M (activeRowBudget N M)) := by
+  have hA1 : (1:ℕ) ≤ steps + 1 := by omega
+  obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
+    (by omega) hM
+  set u : ℕ → Fin nT → Tape := fun i =>
+    Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i))
+      tPlusReg (regT i) with hu
+  have huP : ∀ i j, Parked (u i j) := fun i =>
+    parked_update (parked_update (scratch_parked 0 hwork₀) (regT_parked _))
+      (regT_parked _)
+  have hbody : ∀ i, i < steps → (activeRowTM N).HoareTime
+      (emitPred inp₀ (Function.update (u i) tFuel ⟨i + 2, regCells steps⟩)
+        (ys ++ (List.range i).flatMap (fun t =>
+          (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+            (List.range (P + 1)).flatMap (fun pi =>
+              allSyms.flatMap (fun si =>
+                (List.range (P + 1)).flatMap (fun pw =>
+                  allSyms.flatMap (fun sw =>
+                    (List.range (P + 1)).flatMap (fun po =>
+                      allSyms.flatMap (fun so =>
+                        [true, false].flatMap (fun b =>
+                          CNF.encode (activeClausesAtF N steps P t q pi si
+                            pw sw po so b))))))))))))
+      (emitPred inp₀
+        (Function.update (Function.update (u (i + 1)) tReg (regT i)) tFuel
+          ⟨i + 2, regCells steps⟩)
+        (ys ++ (List.range (i + 1)).flatMap (fun t =>
+          (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+            (List.range (P + 1)).flatMap (fun pi =>
+              allSyms.flatMap (fun si =>
+                (List.range (P + 1)).flatMap (fun pw =>
+                  allSyms.flatMap (fun sw =>
+                    (List.range (P + 1)).flatMap (fun po =>
+                      allSyms.flatMap (fun so =>
+                        [true, false].flatMap (fun b =>
+                          CNF.encode (activeClausesAtF N steps P t q pi si
+                            pw sw po so b))))))))))))
+      (activeRowBudget N M) := by
+    intro i hi
+    set base : Fin nT → Tape :=
+      Function.update
+        (Function.update (Function.update work₀ tReg (regT i)) tPlusReg
+          (regT i)) tFuel ⟨i + 2, regCells steps⟩ with hbase
+    have hstate : Function.update (u i) tFuel ⟨i + 2, regCells steps⟩
+        = scratch base tmp tmp2 0 := by
+      rw [hu]
+      show Function.update (Function.update (Function.update
+        (scratch work₀ tmp tmp2 0) tReg (regT i)) tPlusReg (regT i)) tFuel
+        ⟨i + 2, regCells steps⟩ = _
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    have hbaseP : ∀ l, Parked (base l) :=
+      parked_update (parked_update (parked_update hwork₀ (regT_parked _))
+        (regT_parked _)) (parked_regCells (by omega))
+    have hrow := activeRowTM_hoareTime N Qc steps P M i hQc hM hi inp₀ base
+      (ys ++ (List.range i).flatMap (fun t =>
+        (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+          (List.range (P + 1)).flatMap (fun pi =>
+            allSyms.flatMap (fun si =>
+              (List.range (P + 1)).flatMap (fun pw =>
+                allSyms.flatMap (fun sw =>
+                  (List.range (P + 1)).flatMap (fun po =>
+                    allSyms.flatMap (fun so =>
+                      [true, false].flatMap (fun b =>
+                        CNF.encode (activeClausesAtF N steps P t q pi si
+                          pw sw po so b)))))))))))
+      hinp₀ hbaseP
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hrA)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hrB)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hrC)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hrD)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide), Function.update_self])
+      (by rw [hbase, Function.update_of_ne (by decide), Function.update_self])
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hp1)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hp2)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hp3)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact haux2)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hf1)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hf2)
+      (by rw [hbase, Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide),
+          Function.update_of_ne (by decide)]; exact hf3)
+    rw [hstate]
+    refine hrow.consequence (fun _ _ _ h => h) ?_ (le_refl _)
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, ?_⟩
+    · rw [g2, hu]
+      show scratch (Function.update base tPlusReg (regT (i + 1))) tmp tmp2 0
+        = Function.update (Function.update (Function.update (Function.update
+            (scratch work₀ tmp tmp2 0) tReg (regT (i + 1))) tPlusReg
+            (regT (i + 1))) tReg (regT i)) tFuel ⟨i + 2, regCells steps⟩
+      rw [hbase,
+        show Function.update (Function.update (Function.update
+          (Function.update work₀ tReg (regT i)) tPlusReg (regT i)) tFuel
+          ⟨i + 2, regCells steps⟩) tPlusReg (regT (i + 1))
+        = Function.update (Function.update (Function.update work₀ tReg
+            (regT i)) tPlusReg (regT (i + 1))) tFuel
+            ⟨i + 2, regCells steps⟩ from by
+          rw [Function.update_comm (show tFuel ≠ tPlusReg by decide),
+            Function.update_idem]]
+      rw [show Function.update (Function.update (Function.update
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT (i + 1)))
+          tPlusReg (regT (i + 1))) tReg (regT i)) tFuel
+          ⟨i + 2, regCells steps⟩
+        = Function.update (Function.update (Function.update
+            (scratch work₀ tmp tmp2 0) tReg (regT i)) tPlusReg
+            (regT (i + 1))) tFuel ⟨i + 2, regCells steps⟩ from by
+          rw [Function.update_comm (show tPlusReg ≠ tReg by decide),
+            Function.update_idem,
+            Function.update_comm (show tReg ≠ tPlusReg by decide)]]
+      rw [update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide),
+        update_scratch (by decide) (by decide)]
+    · rw [flatMap_range_succ, ← List.append_assoc]
+      exact g3
+  have hloop := emitLoopGen_hoareTime (activeRowTM N) tReg tFuel (by decide)
+    steps M (activeRowBudget N M) (fun i => i)
+    (fun i hi => by show i ≤ M; omega)
+    (fun t => (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+      (List.range (P + 1)).flatMap (fun pi =>
+        allSyms.flatMap (fun si =>
+          (List.range (P + 1)).flatMap (fun pw =>
+            allSyms.flatMap (fun sw =>
+              (List.range (P + 1)).flatMap (fun po =>
+                allSyms.flatMap (fun so =>
+                  [true, false].flatMap (fun b =>
+                    CNF.encode (activeClausesAtF N steps P t q pi si pw sw
+                      po so b))))))))))
+    inp₀ u ys hinp₀ huP
+    (fun i => by
+      rw [hu]
+      show Function.update _ tPlusReg _ tFuel = _
+      rw [Function.update_of_ne (by decide), Function.update_of_ne (by decide),
+        scratch_apply_ne (by decide) (by decide)]
+      exact htFuel)
+    (fun i => by
+      rw [hu]
+      show Function.update _ tPlusReg _ tReg = _
+      rw [Function.update_of_ne (by decide), Function.update_self])
+    hbody
+  have hpre : ∀ inp work out,
+      emitPred inp₀ (scratch work₀ tmp tmp2 0) ys inp work out →
+      emitPred inp₀ (u 0) ys inp work out := by
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, hu]
+    show scratch work₀ tmp tmp2 0
+      = Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg
+          (regT 0)) tPlusReg (regT 0)
+    rw [show regT 0 = scratch work₀ tmp tmp2 0 tReg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact htReg.symm,
+      Function.update_eq_self,
+      show scratch work₀ tmp tmp2 0 tReg = regT 0 from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact htReg]
+    rw [show regT 0 = scratch work₀ tmp tmp2 0 tPlusReg from by
+        rw [scratch_apply_ne (by decide) (by decide)]; exact htp.symm,
+      Function.update_eq_self]
+  refine (hloop.mono_bound (loop_le_loopBudget (by omega))).consequence
+    hpre ?_ (le_refl _)
+  rintro inp work out ⟨g1, g2, g3⟩
+  refine ⟨g1, ?_, ?_⟩
+  · rw [g2, hu]
+    show Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg
+        (regT steps)) tPlusReg (regT steps) = _
+    rw [update_scratch (by decide) (by decide),
+      update_scratch (by decide) (by decide)]
+  · rw [show activeTransitionClausesF N steps P
+      = (List.range steps).flatMap (fun t =>
+          (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
+            (List.range (P + 1)).flatMap (fun pi =>
+              allSyms.flatMap (fun si =>
+                (List.range (P + 1)).flatMap (fun pw =>
+                  allSyms.flatMap (fun sw =>
+                    (List.range (P + 1)).flatMap (fun po =>
+                      allSyms.flatMap (fun so =>
+                        [true, false].flatMap (fun b =>
+                          activeClausesAtF N steps P t q pi si pw sw po so
+                            b))))))))) from rfl]
+    simp only [CNF.encode_flatMap]
+    exact g3
 
 end ActiveContext
 
