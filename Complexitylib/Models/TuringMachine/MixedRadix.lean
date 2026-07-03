@@ -90,6 +90,23 @@ theorem scratch_apply_tmp2 {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : �
     (htt2 : tmp ≠ tmp2) : scratch work₀ tmp tmp2 z tmp2 = regT z := by
   rw [scratch, Function.update_of_ne (fun h => htt2 h.symm), Function.update_self]
 
+/-- Scratching twice keeps only the second value. -/
+theorem scratch_scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n}
+    (htt2 : tmp ≠ tmp2) (z z' : ℕ) :
+    scratch (scratch work₀ tmp tmp2 z) tmp tmp2 z' = scratch work₀ tmp tmp2 z' := by
+  simp only [scratch]
+  rw [Function.update_comm htt2, Function.update_idem, Function.update_idem]
+
+/-- Source specifications survive scratching (sources avoid the scratches). -/
+theorem SrcSpec.scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {s : Src n}
+    {w : ℕ} (hs : SrcSpec work₀ tmp tmp2 s w) (z : ℕ) :
+    SrcSpec (TM.scratch work₀ tmp tmp2 z) tmp tmp2 s w := by
+  cases s with
+  | inl r =>
+    obtain ⟨hr, hrt, hrt2⟩ := hs
+    exact ⟨by rw [scratch_apply_ne hrt hrt2]; exact hr, hrt, hrt2⟩
+  | inr c => exact hs
+
 /-- **`hornerStepTM` on canonical scratch states.** The composable form:
     scratches at `v` in, scratches at `v·x + w` out. -/
 theorem hornerStepTM_scratch (X tmp tmp2 : Fin n) (s : Src n)
@@ -277,5 +294,103 @@ theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
     (loadFlatVarTM rA rB rC rD tmp tmp2 tag sa sb sc sd) (emitLitTM sign tmp)
     hload (emitPred_transition hinp₀ (scratch_parked V hwork₀) ys) hemit
   exact hseq.mono_bound (by rw [emitVarBudget]; omega)
+
+/-- **`emitVarLitTM` on canonical scratch states** — the composable form used
+    by the clause emitters: scratches at any `z ≤ M` in, scratches at the
+    emitted variable out. -/
+theorem emitVarLitTM_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
+    (tag : ℕ) (sa sb sc sd : Src n)
+    (hAt : rA ≠ tmp) (hAt2 : rA ≠ tmp2) (hBt : rB ≠ tmp) (hBt2 : rB ≠ tmp2)
+    (hCt : rC ≠ tmp) (hCt2 : rC ≠ tmp2) (hDt : rD ≠ tmp) (hDt2 : rD ≠ tmp2)
+    (htt2 : tmp ≠ tmp2)
+    (M A B C D a b c d z : ℕ)
+    (hA : A ≤ M) (hB : B ≤ M) (hC : C ≤ M) (hD : D ≤ M)
+    (htag : tag ≤ M) (hz : z ≤ M)
+    (h1 : tag * A + a ≤ M)
+    (h2 : (tag * A + a) * B + b ≤ M)
+    (h3 : ((tag * A + a) * B + b) * C + c ≤ M)
+    (h4 : (((tag * A + a) * B + b) * C + c) * D + d ≤ M)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hrA : work₀ rA = regT A) (hrB : work₀ rB = regT B)
+    (hrC : work₀ rC = regT C) (hrD : work₀ rD = regT D)
+    (hsa : SrcSpec work₀ tmp tmp2 sa a) (hsb : SrcSpec work₀ tmp tmp2 sb b)
+    (hsc : SrcSpec work₀ tmp tmp2 sc c) (hsd : SrcSpec work₀ tmp tmp2 sd d) :
+    (emitVarLitTM rA rB rC rD tmp tmp2 sign tag sa sb sc sd).HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
+      (emitPred inp₀
+        (scratch work₀ tmp tmp2 ((((tag * A + a) * B + b) * C + c) * D + d))
+        (ys ++ ([sign, sign]
+          ++ List.replicate (2 * ((((tag * A + a) * B + b) * C + c) * D + d)) true
+          ++ [false, true])))
+      (emitVarBudget M) := by
+  have hraw := emitVarLitTM_hoareTime rA rB rC rD tmp tmp2 sign tag sa sb sc sd
+    hAt hAt2 hBt hBt2 hCt hCt2 hDt hDt2 htt2 M A B C D a b c d z z
+    hA hB hC hD htag hz hz h1 h2 h3 h4 inp₀ (scratch work₀ tmp tmp2 z) ys
+    hinp₀ (scratch_parked z hwork₀)
+    (by rw [scratch_apply_ne hAt hAt2]; exact hrA)
+    (by rw [scratch_apply_ne hBt hBt2]; exact hrB)
+    (by rw [scratch_apply_ne hCt hCt2]; exact hrC)
+    (by rw [scratch_apply_ne hDt hDt2]; exact hrD)
+    (hsa.scratch z) (hsb.scratch z) (hsc.scratch z) (hsd.scratch z)
+    scratch_apply_tmp (scratch_apply_tmp2 htt2)
+  refine hraw.strengthen_post ?_
+  rintro inp work out ⟨g1, g2, g3⟩
+  exact ⟨g1, by rw [g2, scratch_scratch htt2], g3⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- resetScratchTM: return the scratches to zero
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Zero both scratch registers (the fixed point of every clause emitter). -/
+def resetScratchTM (tmp tmp2 : Fin n) : TM n :=
+  seqTM (setConstTM tmp 0) (setConstTM tmp2 0)
+
+/-- **`resetScratchTM` Hoare specification**: canonical scratches at `z` to
+    canonical scratches at `0`. -/
+theorem resetScratchTM_hoareTime (tmp tmp2 : Fin n) (htt2 : tmp ≠ tmp2)
+    (M z : ℕ) (hz : z ≤ M)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i)) :
+    (resetScratchTM tmp tmp2).HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (2 * opBudget M + 1) := by
+  have h₁ : (setConstTM tmp 0).HoareTime
+      (emitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
+      (emitPred inp₀
+        (Function.update (Function.update work₀ tmp2 (regT z)) tmp (regT 0)) ys)
+      (opBudget M) := by
+    refine ((setConstTM_hoareTime tmp 0 z inp₀ (scratch work₀ tmp tmp2 z) ys
+      hinp₀ (scratch_parked z hwork₀) scratch_apply_tmp).mono_bound
+      (setConstBudget (by omega) hz)).strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2]
+    simp only [scratch]
+    rw [Function.update_idem]
+  set W : Fin n → Tape :=
+    Function.update (Function.update work₀ tmp2 (regT z)) tmp (regT 0) with hW
+  have hWP : ∀ i, Parked (W i) := by
+    intro i
+    by_cases hi : i = tmp
+    · subst hi; rw [hW, Function.update_self]; exact regT_parked _
+    · rw [hW, Function.update_of_ne hi]
+      by_cases hi2 : i = tmp2
+      · subst hi2; rw [Function.update_self]; exact regT_parked _
+      · rw [Function.update_of_ne hi2]; exact hwork₀ i
+  have h₂ : (setConstTM tmp2 0).HoareTime (emitPred inp₀ W ys)
+      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys) (opBudget M) := by
+    refine ((setConstTM_hoareTime tmp2 0 z inp₀ W ys hinp₀ hWP
+      (by rw [hW, Function.update_of_ne (fun h => htt2 h.symm),
+            Function.update_self])).mono_bound
+      (setConstBudget (by omega) hz)).strengthen_post ?_
+    rintro inp work out ⟨g1, g2, g3⟩
+    refine ⟨g1, ?_, g3⟩
+    rw [g2, hW]
+    simp only [scratch]
+    rw [Function.update_comm htt2, Function.update_idem]
+  exact (seqTM_hoareTime (setConstTM tmp 0) (setConstTM tmp2 0) h₁
+    (emitPred_transition hinp₀ hWP ys) h₂).mono_bound (by omega)
 
 end TM
