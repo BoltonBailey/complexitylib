@@ -135,6 +135,29 @@ theorem initPost_simInv (α x : List Bool)
   · rw [Tape.read, houtc, houth]
     simp [initTape]
 
+/-- The halt test's comparison decides exactly the interpreted machine's
+    halt condition, under the invariant. -/
+theorem simInv_verdict (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
+    {inp : Tape} {work : Fin 6 → Tape} {out : Tape}
+    (hinv : SimInv α mc inp work out) :
+    ∃ stSyms, (work stT).HoldsExact stSyms ∧ (∀ s ∈ stSyms, s ≠ Γw.blank) ∧
+      ((stSyms = qhaltField (groupPairs α))
+        ↔ mc.state = (decodeDesc α).toTM.qhalt) := by
+  obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
+  refine ⟨S, hhold, hnb, ?_⟩
+  rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩
+  · rw [verdict_running α hlt]
+    constructor
+    · intro hv
+      exact Fin.val_injective (by
+        show mc.state.val = min (decodeDesc α).qhalt (2 ^ (decodeDesc α).w)
+        exact hv)
+    · intro hs
+      show mc.state.val = min (decodeDesc α).qhalt (2 ^ (decodeDesc α).w)
+      rw [hs]
+      rfl
+  · exact iff_of_true rfl hq
+
 -- ════════════════════════════════════════════════════════════════════════
 -- Tape support is bounded by time
 -- ════════════════════════════════════════════════════════════════════════
