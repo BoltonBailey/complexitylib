@@ -185,3 +185,88 @@ Plus (M3b): composition with `descOfTM` and `singleTapeSim` for arbitrary
 - All per-α constants (desc length, w) are absorbed into `C(α)`;
   the hierarchy proof only needs: for FIXED α, simulation overhead is a
   constant factor + linear additive term.
+
+## Appendix: bodyTM state machine (full design)
+
+All match/apply states carry `f : Bool × Bool × Bool` — the at-zero flags
+for (vInput, vWork, vOut), i.e. "simulated head at position 0", captured by
+the peek. Sim-read of tape t = `if f_t then ▷ else live UTM read of t`
+(virtual heads are stationary throughout match, so live reads stay valid).
+
+Key implementation tricks (all verified by hand-analysis):
+
+1. **q'-field length sync**: the value's `q'` field has exactly `w` cells,
+   and `w` is not statically known. During the key compare (`cmpQ`) the
+   state head advances 1..w+1 in lockstep with desc. On key match the state
+   head sits at cell w+1 (reading `□`). To copy exactly `w` value cells to
+   scratch, move the state head LEFT in lockstep with the copy (one
+   pre-step at the `cmpS→copyQ'` transition puts it at cell w): copy while
+   the state head reads non-`▷`; when it reads `▷` (position 0) exactly `w`
+   cells are copied and the forced bounce lands the state head at cell 1 —
+   no separate rewind. Edge w = 0 works (pre-step hits `▷` immediately).
+2. **appQ' length sync**: overwriting the state tape with the new state
+   reads the OLD state cell before writing — stop when the old cell is `□`
+   (old content had exactly w cells, and the q' in scratch has exactly w
+   cells by construction). Scratch head then sits at the first action cell.
+3. **Uniform mismatch path**: every mismatch (key compare fail, early `□`
+   during value copy) goes: `skipSeg f` (desc right past next `□`) →
+   `segCheck f` (reads `□` ⇒ no-match/default path; else this cell is the
+   next segment's first cell) → `mmScr f` (blank-rewind scratch — harmless
+   when clean) → `rewindSt f` (state left to `▷`, bounce) → `cmpQ f` with
+   desc waiting at the new segment start.
+4. **Default path needs f**: `toTM` sanitizes the default action's `stay`
+   directions to `right` when a sim head reads `▷` — so the default
+   transition moves virtual heads right-if-flag. Apply these three moves on
+   one designated step (the `segCheck→default` transition). Writes are
+   `readBackWrite` on all tapes in the default case (identity; at-zero the
+   UTM reads `□` at cell 1 and writes `□` — exactly VShift.write_origin).
+5. **Default must blank the state tape first**: the qhalt field may be
+   shorter than w; stale tail cells would make the loop's halt test miss
+   forever. Blank rightward until `□`, then copy the qhalt field.
+6. **Action decoding**: value action cells are always bits (segments are
+   `□`-free), read in 5 groups of 2 with a pending-bit in the state:
+   g0 write ww on vWork (at-zero ⇒ write `□`, preserving the permanent `□`
+   at cell 1), g1 write wo on vOut (same suppression), g2 move vInput,
+   g3 move vWork, g4 move vOut (each move: at-zero ⇒ right, matching
+   sanitize; decode `00→0/left, 01→1/right, 10→□/stay, 11→□/stay` exactly
+   matching `decΓw`/`decDir`). Write-before-move per tape holds (g0<g3,
+   g1<g4). δ-totality on `□` action cells: use the same decΓw/decDir
+   conventions (unreachable under the spec pre).
+7. **Matched-segment excess tail**: never skipped explicitly — cleanup
+   rewinds desc from wherever it stands (left to `▷`, bounce).
+
+State families (× f where noted):
+- Phase 0 own-halt-check: `hc0` (skip field 1), `hc1` (lockstep compare
+  state vs field 2; both-`□` ⇒ halted), `haltRewS`, `haltRewD` → bodyDone;
+  mismatch ⇒ `preRewS`, `preRewD` → peek.
+- Phase 1: `peek1` (all three virtual heads left), `peek2` (read: flags;
+  all three right, back to positions) → `seek1 f`.
+- Phase 2: `seek1 f`, `seek2 f` (desc right past two `□`s) → `cmpQ f`.
+- Phase 3: `cmpQ f` (state/desc lockstep; state-`□` ⇒ `cmpS f 0` without
+  desc move), `cmpS f (idx : Fin 6)` (desc cell vs bit idx of
+  `Γ.encode(sim-read)` for si/sw/so), `skipSeg f`, `segCheck f`, `mmScr f`,
+  `rewindSt f`, `copyQ' f` (trick 1), `copyAct f (j : Fin 10)`.
+- Phase 4: `appRewScr f` (scratch rewind), `appQ' f` (trick 2),
+  `appAct f (g : Fin 5) (pending : Option Bool)` (trick 6) → cleanup.
+- Phase 5 default: `dfMoves` (trick 4, one step) → `dfScr` (blank-rewind
+  scratch) → `dfStRew` → `dfBlank` (blank state rightward to `□`) →
+  `dfStRew2` → `dfDescRew` → `dfSkip` (past field 1) → `dfCopy` (field 2 →
+  state) → `dfStRew3`, `dfDescRew2` → bodyDone.
+- Phase 6 cleanup: `clScr` (blank-rewind scratch) → `clSt` → `clDesc` →
+  `bodyDone` (= qhalt).
+
+Body spec (ghost style): given `SimInv`-shaped tapes for config `mc`,
+reach `bodyDone` within `(|dSyms| + 2) * (|stSyms| + 24) + 40`-ish steps
+with tapes in `SimInv` shape for `if mc halted then mc else step mc`
+(state-tape clause: `toBits w (step mc).state` in the running case; the
+qhalt field verbatim in the default case — covered by the invariant's
+disjunct since the machine is then halted).
+
+Correctness of the match loop against `TMDesc.lookup`: the desc segments
+between `□`s correspond to `parseEntries`' segment split (same `takeField`
+semantics); a UTM full-key-match on a segment ⟺ that segment parses
+(length ≥ 2w+16 up to prefix) with key (q, si, sw, so) where q is the
+state-tape number and si/sw/so the sim reads — first UTM match = first
+`find?` match (needs `toBits w`-injectivity: fields of equal width w match
+symbol-wise iff their `fromBits` agree). No-match ⟺ `find? = none` ⇒
+`defaultAct`.
