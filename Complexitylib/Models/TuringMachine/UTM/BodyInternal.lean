@@ -440,6 +440,117 @@ theorem arm_dfSkip : bodyδ dfSkip iH wH oH
     = act1 (if wH dsT = Γ.blank then dfCopy else dfSkip) iH wH oH dsT
         (readBackWrite (wH dsT)) .right := rfl
 
+theorem arm_hc1 : bodyδ hc1 iH wH oH
+    = if wH stT = Γ.blank ∧ wH dsT = Γ.blank then idle haltRewS iH wH oH
+      else if wH stT ≠ Γ.blank ∧ wH dsT ≠ Γ.blank ∧ wH stT = wH dsT then
+        act2 hc1 iH wH oH stT (readBackWrite (wH stT)) .right
+          dsT (readBackWrite (wH dsT)) .right
+      else idle preRewS iH wH oH := rfl
+
+theorem arm_peek1 : bodyδ peek1 iH wH oH
+    = act3 peek2 iH wH oH
+        vIn (readBackWrite (wH vIn)) .left
+        vWk (readBackWrite (wH vWk)) .left
+        vOut (readBackWrite (wH vOut)) .left := rfl
+
+theorem arm_peek2 : bodyδ peek2 iH wH oH
+    = act3 (seek1 (wH vIn = Γ.start, wH vWk = Γ.start, wH vOut = Γ.start)) iH wH oH
+        vIn (readBackWrite (wH vIn)) .right
+        vWk (readBackWrite (wH vWk)) .right
+        vOut (readBackWrite (wH vOut)) .right := rfl
+
+theorem arm_cmpQ : bodyδ (cmpQ f) iH wH oH
+    = if wH stT = Γ.blank then idle (cmpS f 0) iH wH oH
+      else if wH dsT ≠ Γ.blank ∧ wH stT = wH dsT then
+        act2 (cmpQ f) iH wH oH stT (readBackWrite (wH stT)) .right
+          dsT (readBackWrite (wH dsT)) .right
+      else idle (skipSeg f) iH wH oH := rfl
+
+theorem arm_cmpS (idx : Fin 6) : bodyδ (cmpS f idx) iH wH oH
+    = if wH dsT = keyCell f (wH vIn) (wH vWk) (wH vOut) idx ∧ wH dsT ≠ Γ.blank then
+        if h : idx.val < 5 then
+          act1 (cmpS f ⟨idx.val + 1, by omega⟩) iH wH oH dsT
+            (readBackWrite (wH dsT)) .right
+        else
+          act2 (copyQ' f) iH wH oH dsT (readBackWrite (wH dsT)) .right
+            stT (readBackWrite (wH stT)) .left
+      else idle (skipSeg f) iH wH oH := rfl
+
+theorem arm_copyQ' : bodyδ (copyQ' f) iH wH oH
+    = if wH stT = Γ.start then
+        act1 (copyAct f 0) iH wH oH stT (readBackWrite (wH stT)) .right
+      else if wH dsT = Γ.blank then idle (skipSeg f) iH wH oH
+      else
+        act3 (copyQ' f) iH wH oH
+          scT (readBackWrite (wH dsT)) .right
+          dsT (readBackWrite (wH dsT)) .right
+          stT (readBackWrite (wH stT)) .left := rfl
+
+theorem arm_copyAct (j : Fin 10) : bodyδ (copyAct f j) iH wH oH
+    = if wH dsT = Γ.blank then idle (skipSeg f) iH wH oH
+      else
+        act2 (if h : j.val < 9 then copyAct f ⟨j.val + 1, by omega⟩ else appRewScr f)
+          iH wH oH scT (readBackWrite (wH dsT)) .right
+          dsT (readBackWrite (wH dsT)) .right := rfl
+
+theorem arm_segCheck : bodyδ (segCheck f) iH wH oH
+    = if wH dsT = Γ.blank then
+        act3 dfScr iH wH oH
+          vIn (readBackWrite (wH vIn)) (if f.1 then .right else .stay)
+          vWk (readBackWrite (wH vWk)) (if f.2.1 then .right else .stay)
+          vOut (readBackWrite (wH vOut)) (if f.2.2 then .right else .stay)
+      else idle (mmScr f) iH wH oH := rfl
+
+theorem arm_appQ' : bodyδ (appQ' f) iH wH oH
+    = if wH stT = Γ.blank then idle (appAct f 0 none) iH wH oH
+      else
+        act2 (appQ' f) iH wH oH
+          stT (readBackWrite (wH scT)) .right
+          scT (readBackWrite (wH scT)) .right := rfl
+
+theorem arm_appAct_none (g : Fin 5) : bodyδ (appAct f g none) iH wH oH
+    = act1 (appAct f g (some (cellBit (wH scT)))) iH wH oH
+        scT (readBackWrite (wH scT)) .right := rfl
+
+theorem arm_appAct0 (b₀ : Bool) : bodyδ (appAct f 0 (some b₀)) iH wH oH
+    = act2 (appAct f 1 none) iH wH oH
+        scT (readBackWrite (wH scT)) .right
+        vWk (if f.2.1 then Γw.blank else grpΓw b₀ (cellBit (wH scT))) .stay := rfl
+
+theorem arm_appAct1 (b₀ : Bool) : bodyδ (appAct f 1 (some b₀)) iH wH oH
+    = act2 (appAct f 2 none) iH wH oH
+        scT (readBackWrite (wH scT)) .right
+        vOut (if f.2.2 then Γw.blank else grpΓw b₀ (cellBit (wH scT))) .stay := rfl
+
+theorem arm_appAct2 (b₀ : Bool) : bodyδ (appAct f 2 (some b₀)) iH wH oH
+    = act2 (appAct f 3 none) iH wH oH
+        scT (readBackWrite (wH scT)) .right
+        vIn (readBackWrite (wH vIn))
+          (if f.1 then .right else grpDir b₀ (cellBit (wH scT))) := rfl
+
+theorem arm_appAct3 (b₀ : Bool) : bodyδ (appAct f 3 (some b₀)) iH wH oH
+    = act2 (appAct f 4 none) iH wH oH
+        scT (readBackWrite (wH scT)) .right
+        vWk (readBackWrite (wH vWk))
+          (if f.2.1 then .right else grpDir b₀ (cellBit (wH scT))) := rfl
+
+theorem arm_appAct4 (b₀ : Bool) : bodyδ (appAct f 4 (some b₀)) iH wH oH
+    = act2 clScr iH wH oH
+        scT (readBackWrite (wH scT)) .right
+        vOut (readBackWrite (wH vOut))
+          (if f.2.2 then .right else grpDir b₀ (cellBit (wH scT))) := rfl
+
+theorem arm_dfBlank : bodyδ dfBlank iH wH oH
+    = if wH stT = Γ.blank then idle dfStRew2 iH wH oH
+      else act1 dfBlank iH wH oH stT Γw.blank .right := rfl
+
+theorem arm_dfCopy : bodyδ dfCopy iH wH oH
+    = if wH dsT = Γ.blank then idle dfStRew3 iH wH oH
+      else
+        act2 dfCopy iH wH oH
+          stT (readBackWrite (wH dsT)) .right
+          dsT (readBackWrite (wH dsT)) .right := rfl
+
 end Arms
 
 end TM.UTMBody
