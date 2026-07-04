@@ -32,3 +32,4 @@ import Complexitylib.Models.TuringMachine.UTM.VTape
 import Complexitylib.Models.TuringMachine.UTM.Bits
 import Complexitylib.Models.TuringMachine.UTM.Extract
 import Complexitylib.Models.TuringMachine.UTM.Body
+import Complexitylib.Models.TuringMachine.Det
