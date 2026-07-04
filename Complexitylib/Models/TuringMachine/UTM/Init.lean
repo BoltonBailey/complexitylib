@@ -1215,4 +1215,280 @@ private theorem holdsExact_shift_cells {t : Tape} {x : List Bool}
           List.getElem?_eq_none (by omega)]
         rfl
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Main theorem
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **`initTM` specification.** Started on input `pair α x` with all work
+    tapes and the output tape empty, `initTM` halts within
+    `4·|pair α x| + 4·|groupPairs α| + 24` steps having:
+
+    * left the input tape cells untouched;
+    * copied `x` onto the virtual input tape (work 0) in the +1-shift
+      representation (the `VShift` shadow of `initTape (x.map Γ.ofBool)`);
+    * translated α onto the desc tape (work 4): `groupPairs α`;
+    * copied the qstart field `(takeField (groupPairs α)).1` onto the state
+      tape (work 3);
+    * left work tapes 1, 2, 5 and the output tape blank;
+    * parked every work-tape head and the output head at cell 1. -/
+theorem initTM_hoareTime (α x : List Bool) :
+    initTM.HoareTime
+      (fun inp work out =>
+        inp = initTape ((pair α x).map Γ.ofBool) ∧
+        (∀ i : Fin 6, work i = initTape []) ∧
+        out = initTape [])
+      (fun inp work out =>
+        inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+        (work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
+          else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (work 0).head = 1 ∧
+        (work 1).HoldsExact [] ∧ (work 1).head = 1 ∧
+        (work 2).HoldsExact [] ∧ (work 2).head = 1 ∧
+        (work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (work 3).head = 1 ∧
+        (work 4).HoldsExact (groupPairs α) ∧ (work 4).head = 1 ∧
+        (work 5).HoldsExact [] ∧ (work 5).head = 1 ∧
+        out.cells = (initTape []).cells ∧ out.head = 1)
+      (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
+  intro inp work out ⟨hinp, hwork, hout⟩
+  subst hinp
+  subst hout
+  have hP : pair α x = (α.flatMap fun b => [b, b]) ++ false :: true :: x := by
+    simp [pair]
+  have hwf := initTape_wfCells (pair α x)
+  -- ── step 1: bounce all heads off ▷ ──
+  obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hwk₁, hocl₁, hoh₁⟩ :=
+    step_start
+      (c := { state := initTM.qstart
+              input := initTape ((pair α x).map Γ.ofBool)
+              work := work
+              output := initTape [] })
+      rfl rfl (fun i => by show (work i).head = 0; rw [hwork i]; rfl)
+      (fun i => by show (work i).cells 0 = Γ.start; rw [hwork i]; simp [initTape])
+      rfl (by simp [initTape])
+  have hwcells₁ : ∀ i, (c₁.work i).cells = (initTape []).cells := fun i =>
+    ((hwk₁ i).1).trans (congrArg Tape.cells (hwork i))
+  have hwhead₁ : ∀ i, (c₁.work i).head = 1 := fun i => (hwk₁ i).2
+  have hblank1 : (initTape []).cells 1 = Γ.blank := initTape_nil_cells_succ 0
+  have hwo₁ : ∀ i, (c₁.work i).read ≠ Γ.start ∧ 1 ≤ (c₁.work i).head := by
+    intro i
+    refine ⟨?_, (hwhead₁ i).ge⟩
+    rw [Tape.read, hwhead₁ i, hwcells₁ i, hblank1]
+    simp
+  have hocl₁' : c₁.output.cells = (initTape []).cells := hocl₁
+  have ho₁ : c₁.output.read ≠ Γ.start := by
+    rw [Tape.read, hoh₁, hocl₁', hblank1]
+    simp
+  have hoh₁' : 1 ≤ c₁.output.head := hoh₁.ge
+  -- ── phase 1: parse the α-region onto the desc tape ──
+  have hsfx₁ : InpSfx c₁.input 1 (pair α x) :=
+    inpSfx_of_cells_eq (inpSfx_initTape (pair α x)) hcl₁
+  have hh4₁ : (c₁.work 4).HoldsExact [] :=
+    holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 4)
+  obtain ⟨c₂, p₂, hreach₂, hst₂, hih₂, hcl₂, hsfx₂, hh4₂, hd4₂, hfr₂, hout₂⟩ :=
+    phase1_loop x α [] 1 c₁ hst₁ (le_refl 1) hih₁
+      (by rw [← hP]; exact hsfx₁) hh4₁ (by rw [hwhead₁ 4]; rfl)
+      (fun i _ => hwo₁ i) ho₁ hoh₁'
+  simp only [List.nil_append] at hh4₂ hd4₂
+  -- ── the separator ──
+  have hwAll₂ : ∀ i, (c₂.work i).read ≠ Γ.start ∧ 1 ≤ (c₂.work i).head :=
+    hw_of_frontier hh4₂ hd4₂ (fun i hi => by rw [hfr₂ i hi]; exact hwo₁ i)
+  obtain ⟨c₃, hreach₃, hst₃, hih₃, hcl₃, hsfx₃, hfr₃, h0c₃, h0h₃, hout₃⟩ :=
+    phase1_sep hst₂ hih₂ hsfx₂ hwAll₂ (by rw [hout₂]; exact ho₁)
+      (by rw [hout₂]; exact hoh₁')
+  -- ── phase 2: copy x (shifted) onto work tape 0 ──
+  have hh0₃ : (c₃.work 0).HoldsExact (Γw.blank :: []) := by
+    apply holdsExact_blank_singleton
+    apply holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil
+    rw [h0c₃, hfr₂ 0 (by decide), hwcells₁ 0]
+  have hd0₃ : (c₃.work 0).head = ([] : List Γw).length + 2 := by
+    rw [h0h₃, hfr₂ 0 (by decide), hwhead₁ 0]
+    simp
+  obtain ⟨c₄, hreach₄, hst₄, hih₄, hcl₄, hh0₄, hd0₄, hfr₄, hout₄⟩ :=
+    phase2_loop x [] (1 + 2 * α.length + 2) c₃ hst₃ hih₃ hsfx₃ hh0₃ hd0₃
+      (fun i hi => by rw [hfr₃ i hi]; exact hwAll₂ i)
+      (by rw [hout₃, hout₂]; exact ho₁) (by rw [hout₃, hout₂]; exact hoh₁')
+  simp only [List.nil_append] at hh0₄ hd0₄
+  rw [bitsToSyms_length] at hd0₄
+  have hclx₄ : c₄.input.cells = (initTape ((pair α x).map Γ.ofBool)).cells := by
+    rw [hcl₄, hcl₃, hcl₂, hcl₁]
+  have hi₄ : c₄.input.read ≠ Γ.start := by
+    rw [Tape.read, hclx₄]
+    exact hwf.2 _ (by rw [hih₄]; omega)
+  have hw4₄ : c₄.work 4 = c₂.work 4 := by
+    rw [hfr₄ 4 (by decide), hfr₃ 4 (by decide)]
+  have hh4₄ : (c₄.work 4).HoldsExact (groupPairs α) := by rw [hw4₄]; exact hh4₂
+  have hd4₄ : (c₄.work 4).head = (groupPairs α).length + 1 := by rw [hw4₄]; exact hd4₂
+  have hu₄ : ∀ i : Fin 6, i ≠ 0 → i ≠ 4 → c₄.work i = c₁.work i := by
+    intro i h0 h4
+    rw [hfr₄ i h0, hfr₃ i h0, hfr₂ i h4]
+  have h0read₄ : (c₄.work 0).read = Γ.blank := by
+    rw [Tape.read, hd0₄]
+    exact Tape.HoldsExact.cells_ge hh0₄ (by simp)
+  have hout₄' : c₄.output = c₁.output := by rw [hout₄, hout₃, hout₂]
+  have hwo₄ : ∀ i : Fin 6, i ≠ 4 → (c₄.work i).read ≠ Γ.start ∧ 1 ≤ (c₄.work i).head := by
+    intro i h4
+    by_cases h0 : i = 0
+    · subst h0
+      exact ⟨by rw [h0read₄]; simp, by rw [hd0₄]; omega⟩
+    · rw [hu₄ i h0 h4]
+      exact hwo₁ i
+  -- ── rewind the desc tape ──
+  obtain ⟨c₅, hreach₅, hst₅, hd4₅, hcl4₅, hfr₅, hin₅, hout₅⟩ :=
+    rewind_loop (idx := 4) (qloop := .rewindDesc) (qnext := .copyField)
+      (fun _ _ _ => rfl) (by decide)
+      ((groupPairs α).length + 1) c₄ hst₄ hd4₄
+      (Tape.HoldsExact.wfCells hh4₄).1
+      (fun j hj => (Tape.HoldsExact.wfCells hh4₄).2 j hj)
+      hi₄ hwo₄
+      (by rw [hout₄']; exact ho₁) (by rw [hout₄']; exact hoh₁')
+  -- ── copy the qstart field onto the state tape ──
+  have hh4₅ : (c₅.work 4).HoldsExact (groupPairs α) := holdsExact_of_cells_eq hh4₄ hcl4₅
+  have hh3₅ : (c₅.work 3).HoldsExact [] := by
+    rw [hfr₅ 3 (by decide), hu₄ 3 (by decide) (by decide)]
+    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 3)
+  have hd3₅ : (c₅.work 3).head = ([] : List Γw).length + 1 := by
+    rw [hfr₅ 3 (by decide), hu₄ 3 (by decide) (by decide), hwhead₁ 3]
+    simp
+  have hwo₅ : ∀ i : Fin 6, i ≠ 3 → i ≠ 4 →
+      (c₅.work i).read ≠ Γ.start ∧ 1 ≤ (c₅.work i).head := by
+    intro i h3 h4
+    rw [hfr₅ i h4]
+    exact hwo₄ i h4
+  obtain ⟨c₆, hreach₆, hst₆, hin₆, hcl4₆, hd4₆, hh3₆, hd3₆, hfr₆, hout₆⟩ :=
+    copyField_loop (groupPairs α) [] 0 c₅ hst₅ (by rw [hd4₅])
+      (fun j => by rw [show 0 + 1 + j = j + 1 by omega]; exact hh4₅.2 j)
+      hh3₅ hd3₅ (by rw [hin₅]; exact hi₄) hwo₅
+      (by rw [hout₅, hout₄']; exact ho₁) (by rw [hout₅, hout₄']; exact hoh₁')
+  simp only [List.nil_append] at hh3₆ hd3₆
+  -- ── rewind the desc tape again ──
+  have hh4₆ : (c₆.work 4).HoldsExact (groupPairs α) := holdsExact_of_cells_eq hh4₅ hcl4₆
+  have hd4₆' : (c₆.work 4).head = (takeField (groupPairs α)).1.length + 1 := by
+    rw [hd4₆]; omega
+  have hwo₆ : ∀ i : Fin 6, i ≠ 4 →
+      (c₆.work i).read ≠ Γ.start ∧ 1 ≤ (c₆.work i).head := by
+    intro i h4
+    by_cases h3 : i = 3
+    · subst h3
+      refine ⟨?_, by rw [hd3₆]; omega⟩
+      rw [Tape.read, hd3₆, Tape.HoldsExact.cells_ge hh3₆ (le_refl _)]
+      simp
+    · rw [hfr₆ i h3 h4]
+      exact hwo₅ i h3 h4
+  obtain ⟨c₇, hreach₇, hst₇, hd4₇, hcl4₇, hfr₇, hin₇, hout₇⟩ :=
+    rewind_loop (idx := 4) (qloop := .rewindDesc2) (qnext := .rewindState)
+      (fun _ _ _ => rfl) (by decide)
+      ((takeField (groupPairs α)).1.length + 1) c₆ hst₆ hd4₆'
+      (Tape.HoldsExact.wfCells hh4₆).1
+      (fun j hj => (Tape.HoldsExact.wfCells hh4₆).2 j hj)
+      (by rw [hin₆, hin₅]; exact hi₄) hwo₆
+      (by rw [hout₆, hout₅, hout₄']; exact ho₁)
+      (by rw [hout₆, hout₅, hout₄']; exact hoh₁')
+  -- ── rewind the state tape ──
+  have hh3₇ : (c₇.work 3).HoldsExact (takeField (groupPairs α)).1 := by
+    rw [hfr₇ 3 (by decide)]; exact hh3₆
+  have hd3₇ : (c₇.work 3).head = (takeField (groupPairs α)).1.length + 1 := by
+    rw [hfr₇ 3 (by decide)]; exact hd3₆
+  have hh4₇ : (c₇.work 4).HoldsExact (groupPairs α) := holdsExact_of_cells_eq hh4₆ hcl4₇
+  have hwo₇ : ∀ i : Fin 6, i ≠ 3 →
+      (c₇.work i).read ≠ Γ.start ∧ 1 ≤ (c₇.work i).head := by
+    intro i h3
+    by_cases h4 : i = 4
+    · subst h4
+      refine ⟨?_, by rw [hd4₇]⟩
+      rw [Tape.read, hd4₇]
+      exact (Tape.HoldsExact.wfCells hh4₇).2 1 (le_refl 1)
+    · rw [hfr₇ i h4]
+      exact hwo₆ i h4
+  obtain ⟨c₈, hreach₈, hst₈, hd3₈, hcl3₈, hfr₈, hin₈, hout₈⟩ :=
+    rewind_loop (idx := 3) (qloop := .rewindState) (qnext := .rewindV0)
+      (fun _ _ _ => rfl) (by decide)
+      ((takeField (groupPairs α)).1.length + 1) c₇ hst₇ hd3₇
+      (Tape.HoldsExact.wfCells hh3₇).1
+      (fun j hj => (Tape.HoldsExact.wfCells hh3₇).2 j hj)
+      (by rw [hin₇, hin₆, hin₅]; exact hi₄) hwo₇
+      (by rw [hout₇, hout₆, hout₅, hout₄']; exact ho₁)
+      (by rw [hout₇, hout₆, hout₅, hout₄']; exact hoh₁')
+  -- ── rewind the virtual input tape ──
+  have hw0₈ : c₈.work 0 = c₄.work 0 := by
+    rw [hfr₈ 0 (by decide), hfr₇ 0 (by decide), hfr₆ 0 (by decide) (by decide),
+      hfr₅ 0 (by decide)]
+  have hh0₈ : (c₈.work 0).HoldsExact (Γw.blank :: bitsToSyms x) := by
+    rw [hw0₈]; exact hh0₄
+  have hd0₈ : (c₈.work 0).head = x.length + 2 := by rw [hw0₈]; exact hd0₄
+  have hh3₈ : (c₈.work 3).HoldsExact (takeField (groupPairs α)).1 :=
+    holdsExact_of_cells_eq hh3₇ hcl3₈
+  have hwo₈ : ∀ i : Fin 6, i ≠ 0 →
+      (c₈.work i).read ≠ Γ.start ∧ 1 ≤ (c₈.work i).head := by
+    intro i h0
+    by_cases h3 : i = 3
+    · subst h3
+      refine ⟨?_, by rw [hd3₈]⟩
+      rw [Tape.read, hd3₈]
+      exact (Tape.HoldsExact.wfCells hh3₈).2 1 (le_refl 1)
+    · rw [hfr₈ i h3]
+      exact hwo₇ i h3
+  obtain ⟨c₉, hreach₉, hst₉, hd0₉, hcl0₉, hfr₉, hin₉, hout₉⟩ :=
+    rewind_loop (idx := 0) (qloop := .rewindV0) (qnext := .done)
+      (fun _ _ _ => rfl) (by decide)
+      (x.length + 2) c₈ hst₈ hd0₈
+      (Tape.HoldsExact.wfCells hh0₈).1
+      (fun j hj => (Tape.HoldsExact.wfCells hh0₈).2 j hj)
+      (by rw [hin₈, hin₇, hin₆, hin₅]; exact hi₄) hwo₈
+      (by rw [hout₈, hout₇, hout₆, hout₅, hout₄']; exact ho₁)
+      (by rw [hout₈, hout₇, hout₆, hout₅, hout₄']; exact hoh₁')
+  -- ── assemble ──
+  have R₂ := reachesIn_trans initTM (.step hs₁ .zero) hreach₂
+  have R₃ := reachesIn_trans initTM R₂ hreach₃
+  have R₄ := reachesIn_trans initTM R₃ hreach₄
+  have R₅ := reachesIn_trans initTM R₄ hreach₅
+  have R₆ := reachesIn_trans initTM R₅ hreach₆
+  have R₇ := reachesIn_trans initTM R₆ hreach₇
+  have R₈ := reachesIn_trans initTM R₇ hreach₈
+  have R₉ := reachesIn_trans initTM R₈ hreach₉
+  have hu₉ : ∀ i : Fin 6, i ≠ 0 → i ≠ 3 → i ≠ 4 → c₉.work i = c₁.work i := by
+    intro i h0 h3 h4
+    rw [hfr₉ i h0, hfr₈ i h3, hfr₇ i h4, hfr₆ i h3 h4, hfr₅ i h4, hu₄ i h0 h4]
+  have h0cells₉ : (c₉.work 0).cells = (c₄.work 0).cells := by
+    rw [hcl0₉, hw0₈]
+  refine ⟨c₉, _, ?_, R₉, hst₉, ?_, ?_, hd0₉, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    ?_, ?_⟩
+  · -- time bound
+    have hplen := pair_length α x
+    have hF := takeField_fst_length (groupPairs α)
+    omega
+  · -- input cells untouched
+    rw [hin₉, hin₈, hin₇, hin₆, hin₅]
+    exact hclx₄
+  · -- work 0: the VShift shadow of x
+    exact holdsExact_shift_cells (holdsExact_of_cells_eq hh0₄ h0cells₉)
+  · -- work 1
+    rw [hu₉ 1 (by decide) (by decide) (by decide)]
+    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 1)
+  · rw [hu₉ 1 (by decide) (by decide) (by decide)]
+    exact hwhead₁ 1
+  · -- work 2
+    rw [hu₉ 2 (by decide) (by decide) (by decide)]
+    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 2)
+  · rw [hu₉ 2 (by decide) (by decide) (by decide)]
+    exact hwhead₁ 2
+  · -- work 3: the qstart field
+    rw [hfr₉ 3 (by decide)]
+    exact hh3₈
+  · rw [hfr₉ 3 (by decide)]
+    exact hd3₈
+  · -- work 4: the translated description
+    rw [hfr₉ 4 (by decide), hfr₈ 4 (by decide)]
+    exact hh4₇
+  · rw [hfr₉ 4 (by decide), hfr₈ 4 (by decide)]
+    exact hd4₇
+  · -- work 5
+    rw [hu₉ 5 (by decide) (by decide) (by decide)]
+    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 5)
+  · rw [hu₉ 5 (by decide) (by decide) (by decide)]
+    exact hwhead₁ 5
+  · -- output untouched
+    rw [hout₉, hout₈, hout₇, hout₆, hout₅, hout₄']
+    exact hocl₁'
+  · rw [hout₉, hout₈, hout₇, hout₆, hout₅, hout₄']
+    exact hoh₁
+
 end TM
