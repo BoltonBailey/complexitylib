@@ -889,6 +889,210 @@ theorem defaultTail (c : Cfg 6 bodyTM.Q) (E : ℕ → Γ) (SL : List Γw)
   · rw [hin₉, hin₈, hin₇, hin₆, hin₅, hin₄, hin₃, hin₂, hin₁]
   · rw [hout₉, hout₈, hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]
 
+/-- **Apply phase** (from `appRewScr f`, scratch holding the copied value
+    `EL` = new-state field (`|SL|` cells, the old state's width) followed by
+    the ten action cells): rewind scratch, overwrite the state tape, decode
+    and act on the virtual tapes, clean up. Ends at `bodyDone` with the
+    state tape holding the value's first `|SL|` cells and the virtual tapes
+    transformed by the sanitized action. -/
+theorem applyPhase (c : Cfg 6 bodyTM.Q) {f : VFlags} {sim0 sim1 sim2 : Tape}
+    (EL SL : List Γw) (sc_p dp : ℕ)
+    (_hscp : 1 ≤ sc_p) (hdp : 1 ≤ dp)
+    (hlen : EL.length = SL.length + 10)
+    (hSL_nb : ∀ s ∈ SL, s ≠ Γw.blank)
+    (hst : c.state = appRewScr f)
+    (h0 : VShift sim0 (c.work vIn)) (h1 : VShift sim1 (c.work vWk))
+    (h2 : VShift sim2 (c.work vOut))
+    (hwf0 : sim0.WFCells) (hwf1 : sim1.WFCells) (hwf2 : sim2.WFCells)
+    (hf0 : f.1 = decide (sim0.head = 0)) (hf1 : f.2.1 = decide (sim1.head = 0))
+    (hf2 : f.2.2 = decide (sim2.head = 0))
+    (hSL_hold : (c.work stT).HoldsExact SL) (hstH : (c.work stT).head = 1)
+    (hEL_hold : (c.work scT).HoldsExact EL) (hscH : (c.work scT).head = sc_p)
+    (hdesc_wf : (c.work dsT).WFCells) (hdsH : (c.work dsT).head = dp)
+    (hin : c.input.read ≠ Γ.start) (hout : c.output.read ≠ Γ.start) :
+    ∃ c' t, t ≤ sc_p + 3 * SL.length + dp + 28 ∧
+      bodyTM.reachesIn t c c' ∧
+      c'.state = bodyDone ∧
+      (c'.work stT).HoldsExact (EL.take SL.length) ∧ (c'.work stT).head = 1 ∧
+      c'.work dsT = ⟨1, (c.work dsT).cells⟩ ∧
+      (c'.work scT).HoldsExact [] ∧ (c'.work scT).head = 1 ∧
+      VShift (sim0.move
+          (if f.1 then Dir3.right
+            else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 4)))
+              (cellBit ((c.work scT).cells (1 + SL.length + 5)))))
+        (c'.work vIn) ∧
+      VShift (sim1.writeAndMove
+          (grpΓw (cellBit ((c.work scT).cells (1 + SL.length)))
+            (cellBit ((c.work scT).cells (1 + SL.length + 1)))).toΓ
+          (if f.2.1 then Dir3.right
+            else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 6)))
+              (cellBit ((c.work scT).cells (1 + SL.length + 7)))))
+        (c'.work vWk) ∧
+      VShift (sim2.writeAndMove
+          (grpΓw (cellBit ((c.work scT).cells (1 + SL.length + 2)))
+            (cellBit ((c.work scT).cells (1 + SL.length + 3)))).toΓ
+          (if f.2.2 then Dir3.right
+            else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 8)))
+              (cellBit ((c.work scT).cells (1 + SL.length + 9)))))
+        (c'.work vOut) ∧
+      c'.input = c.input ∧ c'.output = c.output := by
+  have hE_wns := (Tape.HoldsExact.wfCells hEL_hold).2
+  have hS_wns := (Tape.HoldsExact.wfCells hSL_hold).2
+  have hW_wns := hdesc_wf.2
+  have hst_read : (c.work stT).read ≠ Γ.start := by
+    rw [Tape.read, hstH]; exact hS_wns 1 (by omega)
+  have hds_read : (c.work dsT).read ≠ Γ.start := by
+    rw [Tape.read, hdsH]; exact hW_wns dp hdp
+  have hr0 := h0.read_ne_start hwf0
+  have hr1 := h1.read_ne_start hwf1
+  have hr2 := h2.read_ne_start hwf2
+  -- appRewScr: rewind the scratch
+  obtain ⟨c₁, hr₁, hst₁, hwtSc₁, hin₁, hout₁, hoth₁⟩ :=
+    rewStep_loop (cur := appRewScr f) (next := appQ' f) (t := scT)
+      (fun hcon => nomatch hcon) (arm_appRewScr · · · f)
+      (c.work scT).cells hEL_hold.1 hE_wns sc_p c hst rfl hscH hin hout
+      (fun i hi => by
+        rcases i with ⟨iv, hv⟩
+        rcases iv with _ | _ | _ | _ | _ | _ | m
+        · exact hr0
+        · exact hr1
+        · exact hr2
+        · exact hst_read
+        · exact hds_read
+        · exact absurd rfl hi
+        · exact absurd hv (by omega))
+  -- appQ': overwrite the state tape with the new-state field
+  obtain ⟨c₂, hr₂, hst₂, hwtS₂, hwtSc₂, hin₂, hout₂, hoth₂⟩ :=
+    appQ'_loop (f := f) (c.work scT).cells hE_wns
+      SL.length (c.work stT).cells hS_wns 1 1 (by omega) (by omega)
+      (fun j hj => by
+        rw [show 1 + j = j + 1 by omega, Tape.HoldsExact.cells_lt hSL_hold hj]
+        intro hcon
+        exact hSL_nb _ (List.getElem_mem hj) (Γw.toΓ_eq_blank.mp hcon))
+      (by
+        rw [show 1 + SL.length = SL.length + 1 by omega]
+        exact Tape.HoldsExact.cells_ge hSL_hold (Nat.le_refl _))
+      c₁ hst₁
+      (by rw [hoth₁ stT (by decide)]) (by rw [hoth₁ stT (by decide), hstH])
+      (by rw [hwtSc₁]) (by rw [hwtSc₁])
+      (by rw [hin₁]; exact hin) (by rw [hout₁]; exact hout)
+      (fun i hiS hiSc => by
+        rw [hoth₁ i hiSc]
+        rcases i with ⟨iv, hv⟩
+        rcases iv with _ | _ | _ | _ | _ | _ | m
+        · exact hr0
+        · exact hr1
+        · exact hr2
+        · exact absurd rfl hiS
+        · exact hds_read
+        · exact absurd rfl hiSc
+        · exact absurd hv (by omega))
+  -- appAct: decode the five groups and act on the virtual tapes
+  obtain ⟨c₃, hr₃, hst₃, hv0₃, hv1₃, hv2₃, hstT₃, hdsT₃, hwtSc₃, hin₃, hout₃⟩ :=
+    appAct_all (c := c₂) (f := f) (E := (c.work scT).cells) (e := 1 + SL.length)
+      (by rw [hoth₂ vIn (by decide) (by decide), hoth₁ vIn (by decide)]; exact h0)
+      (by rw [hoth₂ vWk (by decide) (by decide), hoth₁ vWk (by decide)]; exact h1)
+      (by rw [hoth₂ vOut (by decide) (by decide), hoth₁ vOut (by decide)]; exact h2)
+      hwf0 hwf1 hwf2 hf0 hf1 hf2 hst₂
+      (by rw [hwtSc₂]) (by rw [hwtSc₂]) (by omega) hE_wns
+      (by rw [hwtS₂]
+          dsimp only [Tape.read]
+          rw [if_neg (by omega)]
+          exact hS_wns (1 + SL.length) (by omega))
+      (by rw [hoth₂ dsT (by decide) (by decide), hoth₁ dsT (by decide)]
+          exact hds_read)
+      (by rw [hin₂, hin₁]; exact hin) (by rw [hout₂, hout₁]; exact hout)
+  -- the overwritten state cells
+  set U : ℕ → Γ := fun j => if 1 ≤ j ∧ j < 1 + SL.length then
+      (c.work scT).cells (1 + (j - 1)) else (c.work stT).cells j with hU
+  have hU0 : U 0 = Γ.start := by
+    rw [hU]; dsimp only
+    rw [if_neg (by omega)]
+    exact hSL_hold.1
+  have hUns : ∀ j, 1 ≤ j → U j ≠ Γ.start := by
+    intro j hj
+    rw [hU]; dsimp only
+    split
+    · exact hE_wns _ (by omega)
+    · exact hS_wns j hj
+  -- WFCells of the transformed simulated tapes
+  have hwf0' : (sim0.move
+      (if f.1 then Dir3.right
+        else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 4)))
+          (cellBit ((c.work scT).cells (1 + SL.length + 5))))).WFCells :=
+    hwf0.move _
+  have hwf1' : (sim1.writeAndMove
+      (grpΓw (cellBit ((c.work scT).cells (1 + SL.length)))
+        (cellBit ((c.work scT).cells (1 + SL.length + 1)))).toΓ
+      (if f.2.1 then Dir3.right
+        else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 6)))
+          (cellBit ((c.work scT).cells (1 + SL.length + 7))))).WFCells :=
+    hwf1.writeAndMove _ _
+  have hwf2' : (sim2.writeAndMove
+      (grpΓw (cellBit ((c.work scT).cells (1 + SL.length + 2)))
+        (cellBit ((c.work scT).cells (1 + SL.length + 3)))).toΓ
+      (if f.2.2 then Dir3.right
+        else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 8)))
+          (cellBit ((c.work scT).cells (1 + SL.length + 9))))).WFCells :=
+    hwf2.writeAndMove _ _
+  -- cleanup
+  obtain ⟨c₄, hr₄, hst₄, hscHold₄, hscHead₄, hwtS₄, hwtD₄, hoth₄, hin₄, hout₄⟩ :=
+    cleanupPhase c₃ (c.work scT).cells U (c.work dsT).cells
+      (1 + SL.length + 10) (1 + SL.length) dp (by omega) hdp hst₃
+      hEL_hold.1 hE_wns
+      (fun j hj => by
+        rw [show j = (j - 1) + 1 by omega]
+        exact Tape.HoldsExact.cells_ge hEL_hold (by omega))
+      (by rw [hwtSc₃]) (by rw [hwtSc₃])
+      hU0 hUns
+      (by rw [hstT₃, hwtS₂]) (by rw [hstT₃, hwtS₂])
+      hdesc_wf.1 hW_wns
+      (by rw [hdsT₃, hoth₂ dsT (by decide) (by decide), hoth₁ dsT (by decide)])
+      (by rw [hdsT₃, hoth₂ dsT (by decide) (by decide), hoth₁ dsT (by decide), hdsH])
+      (by rw [hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₃, hout₂, hout₁]; exact hout)
+      (fun i hiS hiD hiSc => by
+        rcases i with ⟨iv, hv⟩
+        rcases iv with _ | _ | _ | _ | _ | _ | m
+        · exact hv0₃.read_ne_start hwf0'
+        · exact hv1₃.read_ne_start hwf1'
+        · exact hv2₃.read_ne_start hwf2'
+        · exact absurd rfl hiS
+        · exact absurd rfl hiD
+        · exact absurd rfl hiSc
+        · exact absurd hv (by omega))
+  refine ⟨c₄,
+    (sc_p + 1) + (SL.length + 1) + 10
+      + ((1 + SL.length + 10 + 1) + (1 + SL.length + 1) + (dp + 1)),
+    by omega,
+    reachesIn_trans _ (reachesIn_trans _ (reachesIn_trans _ hr₁ hr₂) hr₃) hr₄,
+    hst₄, ?_, ?_, hwtD₄, hscHold₄, hscHead₄, ?_, ?_, ?_,
+    by rw [hin₄, hin₃, hin₂, hin₁], by rw [hout₄, hout₃, hout₂, hout₁]⟩
+  · -- state tape holds the value's first |SL| cells
+    rw [hwtS₄]
+    refine ⟨hU0, fun i => ?_⟩
+    show U (i + 1) = _
+    rw [hU]
+    dsimp only
+    by_cases hi : i < SL.length
+    · rw [if_pos (by omega), dif_pos (by
+        rw [List.length_take]
+        omega),
+        show 1 + (i + 1 - 1) = i + 1 by omega,
+        Tape.HoldsExact.cells_lt hEL_hold (by omega)]
+      congr 1
+      exact (List.getElem_take ..).symm
+    · rw [if_neg (by omega), dif_neg (by rw [List.length_take]; omega),
+        show i + 1 = i + 1 by rfl]
+      exact Tape.HoldsExact.cells_ge hSL_hold (by omega)
+  · rw [hwtS₄]
+  · rw [hoth₄ vIn (by decide) (by decide) (by decide)]
+    exact hv0₃
+  · rw [hoth₄ vWk (by decide) (by decide) (by decide)]
+    exact hv1₃
+  · rw [hoth₄ vOut (by decide) (by decide) (by decide)]
+    exact hv2₃
+
 end HcPhase
 
 end TM.UTMBody

@@ -38,6 +38,7 @@ import Complexitylib.Models.TuringMachine.UTM.Verdict
 import Complexitylib.Models.TuringMachine.UTM.BodyMatch
 import Complexitylib.Models.TuringMachine.UTM.BodyApply
 import Complexitylib.Models.TuringMachine.UTM.DescLayout
+import Complexitylib.Models.TuringMachine.UTM.BodyLookup
 import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
