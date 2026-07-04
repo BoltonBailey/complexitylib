@@ -270,3 +270,58 @@ state-tape number and si/sw/so the sim reads — first UTM match = first
 `find?` match (needs `toBits w`-injectivity: fields of equal width w match
 symbol-wise iff their `fromBits` agree). No-match ⟺ `find? = none` ⇒
 `defaultAct`.
+
+## Appendix 2: match-loop ↔ lookup correspondence (statements to prove)
+
+Setting: desc tape holds `groupPairs α = qsF ++ □ :: qhF ++ □ :: R` where
+`R` is the entry region; `d := decodeDesc α`, `w := d.w = |qsF|`;
+state tape holds `stSyms := bitsToSyms (Nat.toBits w q)` for the current
+state `q < 2^w`; live sim reads `(si, sw, so) : Γ³`.
+
+Machine-level segment predicate (what cmpQ/cmpS/copyQ'/copyAct decide on a
+segment `seg` — the cells before the next `□`):
+```
+MachMatch seg :=
+  w + 6 ≤ seg.length ∧
+  (∀ i < w, seg[i] = stSyms[i]) ∧
+  (∀ i < 6, seg[w+i] = keyCell-cell i) ∧
+  2*w + 16 ≤ seg.length          -- value copy completes (no early □)
+```
+(The first three conjuncts are the key compare; the machine detects their
+failure OR the value-length failure and skips the segment either way.)
+
+Key bridging facts (all pure list/data, no machine reasoning):
+1. `keyCell`-cells as a list = `bitsToSyms (Γ.encode si ++ Γ.encode sw ++
+   Γ.encode so)` where si/sw/so are the SIM reads (Body.simRead of flags +
+   live cells) — by cases on the six indices.
+2. For a □-free segment: `MachMatch seg ↔ (parseEntry w seg = some e ∧
+   e.q = q ∧ e.si = si ∧ e.sw = sw ∧ e.so = so)` for the parsed `e` —
+   via prefix-slice arithmetic (parseEntry's sequential take/drop chain),
+   `toBits_fromBits`/`fromBits_toBits` for the state field, and
+   `Γ.encode`-injectivity + `decΓ_encode` for the symbol fields.
+3. Segment structure: `R` splits as `seg₀ □ seg₁ □ ... □ tail` with the
+   parse stopping at the first empty segment — `parseEntries` is literally
+   this recursion (`takeField`). The machine's skipSeg/segCheck walk is the
+   same split. Firstness: the first `i` with `MachMatch segᵢ` corresponds
+   to the first parsed entry matching the key, i.e. to
+   `d.lookup q si sw so` via `find?` — needs "parse-skipped segments can't
+   MachMatch" (they're too short: ¬(2w+16 ≤ len) contradicts MachMatch's
+   last conjunct) and "parsed but key-mismatched segments don't MachMatch"
+   (conjunct 2/3 fail via the injectivity bridges).
+4. No-match: no segment MachMatches ∧ table exhausted (empty segment hit)
+   ⟺ `find? = none` ⟺ lookup returns `d.defaultAct sw so` — the default
+   path (dfScr…) then implements exactly `toTM`'s clamped default
+   transition (see Verdict.lean for the halt-field part).
+5. On match: the copied value cells (2w+16-prefix slice positions
+   w+6..2w+16) decode exactly to `(lookup …).q'/ww/wo/di/dw/dOut` via
+   `parseEntry`'s field slices and `grpΓw = decΓw ∘ pair` /
+   `grpDir = decDir ∘ pair` bridges.
+
+Assembly note: the per-iteration body proof then chains
+hc-check (Verdict.lean) → peek (honest flags = at-origin facts) → seek
+(scanRight_loop twice, landing the desc head at |qsF| + |qhF| + 3 =
+start of R) → match-loop induction over the segment split (each round:
+cmpQ_loop + cmpS_loop + either copy path or skipSeg/segCheck/mmScr/rewindSt)
+→ apply (appRewScr/appQ'_loop/appAct) or default path → cleanup loops; the
+loop-level invariant tracks "segments consumed so far all fail MachMatch"
+and the desc-head position at the current segment start.
