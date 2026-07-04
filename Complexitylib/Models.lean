@@ -47,5 +47,7 @@ import Complexitylib.Models.TuringMachine.UTM.BodyIteration
 import Complexitylib.Models.TuringMachine.UTM.Terminated
 import Complexitylib.Models.TuringMachine.UTM.Sim
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
+import Complexitylib.Models.TuringMachine.UTM.Universal
+import Complexitylib.Models.TuringMachine.UTM.Clock
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
