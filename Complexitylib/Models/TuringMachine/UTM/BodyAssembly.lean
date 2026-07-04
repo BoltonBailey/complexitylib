@@ -388,6 +388,86 @@ theorem hcPhase_running (c : Cfg 6 bodyTM.Q)
       exact tape_mk_eq hinv.desc_head
     · rw [hoth₄ i hiD, hoth₃ i hiS, hoth₂ i hiS hiD, hoth₁ i hiD]
 
+/-- **Peek and seek phases**: from `peek1`, capture the (honest) at-origin
+    flags and walk the desc head to the start of the entry region
+    (`|F1| + |F2| + 3`), all other tapes exactly restored, within
+    `2·|groupPairs α| + 4` steps. -/
+theorem peekSeekPhase (c : Cfg 6 bodyTM.Q)
+    (hst : c.state = peek1)
+    (hinv : SimInv α mc c.input c.work c.output) :
+    ∃ c' t, t ≤ 2 * (groupPairs α).length + 4 ∧
+      bodyTM.reachesIn t c c' ∧
+      c'.state = cmpQ (decide (mc.input.head = 0), decide ((mc.work 0).head = 0),
+        decide (mc.output.head = 0)) ∧
+      (∀ i, i ≠ dsT → c'.work i = c.work i) ∧
+      c'.work dsT = ⟨(takeField (groupPairs α)).1.length
+        + (qhaltField (groupPairs α)).length + 3, (c.work dsT).cells⟩ ∧
+      c'.input = c.input ∧ c'.output = c.output := by
+  obtain ⟨S, hS_hold, hS_nb, hS_which⟩ := hinv.state_syms_ne_blank
+  have hst_read : (c.work stT).read ≠ Γ.start :=
+    SimInv.read_ne_start_of_holdsExact hS_hold (by rw [hinv.state_head])
+  have hds_read : (c.work dsT).read ≠ Γ.start :=
+    SimInv.read_ne_start_of_holdsExact hinv.desc (by rw [hinv.desc_head])
+  have hsc_read : (c.work scT).read ≠ Γ.start :=
+    SimInv.read_ne_start_of_holdsExact hinv.scratch (by rw [hinv.scratch_head])
+  have hW_wns : ∀ j, 1 ≤ j → (c.work dsT).cells j ≠ Γ.start :=
+    (Tape.HoldsExact.wfCells hinv.desc).2
+  -- peek: two steps, all tapes restored
+  obtain ⟨c₁, hr₁, hst₁, hv0₁, hv1₁, hv2₁, hstT₁, hdsT₁, hscT₁, hin₁, hout₁⟩ :=
+    peek_correct hinv.vin hinv.vwk hinv.vout hinv.wf_in hinv.wf_wk hinv.wf_out
+      hst hst_read hds_read hsc_read hinv.inp_read hinv.out_read
+  have hoth_d₁ : ∀ i, i ≠ dsT → c₁.work i = c.work i := by
+    intro i hiD
+    rcases i with ⟨iv, hv⟩
+    rcases iv with _ | _ | _ | _ | _ | _ | m
+    · exact hv0₁
+    · exact hv1₁
+    · exact hv2₁
+    · exact hstT₁
+    · exact absurd rfl hiD
+    · exact hscT₁
+    · exact absurd hv (by omega)
+  have hoth_read : ∀ i, i ≠ dsT → (c.work i).read ≠ Γ.start := by
+    intro i hiD
+    by_cases hiS : i = stT
+    · subst hiS; exact hst_read
+    · exact hinv.others_read i hiS hiD
+  -- seek1: past the first separator
+  obtain ⟨c₂, hr₂, hst₂, hwtD₂, hin₂, hout₂, hoth₂⟩ :=
+    scanRight_loop (cur := seek1 _) (next := seek2 _) (t := dsT)
+      (fun hcon => nomatch hcon) (arm_seek1 · · · _)
+      (c.work dsT).cells hW_wns
+      (takeField (groupPairs α)).1.length 1 (by omega)
+      (fun j hj => descLayout_field1 hinv.desc j hj)
+      (descLayout_sep1 hinv.desc)
+      c₁ hst₁ (by rw [hdsT₁]) (by rw [hdsT₁, hinv.desc_head])
+      (by rw [hin₁]; exact hinv.inp_read) (by rw [hout₁]; exact hinv.out_read)
+      (fun i hi => by rw [hoth_d₁ i hi]; exact hoth_read i hi)
+  -- seek2: past the second separator
+  obtain ⟨c₃, hr₃, hst₃, hwtD₃, hin₃, hout₃, hoth₃⟩ :=
+    scanRight_loop (cur := seek2 _) (next := cmpQ _) (t := dsT)
+      (fun hcon => nomatch hcon) (arm_seek2 · · · _)
+      (c.work dsT).cells hW_wns
+      (qhaltField (groupPairs α)).length
+      ((takeField (groupPairs α)).1.length + 2) (by omega)
+      (fun j hj => descLayout_field2 hinv.desc j hj)
+      (descLayout_sep2 hinv.desc)
+      c₂ hst₂ (by rw [hwtD₂]) (by rw [hwtD₂]; dsimp only; omega)
+      (by rw [hin₂, hin₁]; exact hinv.inp_read)
+      (by rw [hout₂, hout₁]; exact hinv.out_read)
+      (fun i hi => by rw [hoth₂ i hi, hoth_d₁ i hi]; exact hoth_read i hi)
+  have hF1 := takeField_fst_length_le (groupPairs α)
+  have hqh := qhaltField_length_le (groupPairs α)
+  refine ⟨c₃, 2 + ((takeField (groupPairs α)).1.length + 1)
+      + ((qhaltField (groupPairs α)).length + 1),
+    by omega,
+    reachesIn_trans _ (reachesIn_trans _ hr₁ hr₂) hr₃,
+    hst₃,
+    (fun i hi => by rw [hoth₃ i hi, hoth₂ i hi, hoth_d₁ i hi]),
+    (by rw [hwtD₃]
+        exact congrArg (fun m => (⟨m, (c.work dsT).cells⟩ : Tape)) (by omega)),
+    by rw [hin₃, hin₂, hin₁], by rw [hout₃, hout₂, hout₁]⟩
+
 end HcPhase
 
 end TM.UTMBody
