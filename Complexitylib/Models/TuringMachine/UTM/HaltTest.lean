@@ -224,14 +224,15 @@ private theorem tape_eq_of_parts {t t' : Tape} (hh : t.head = t'.head)
 -- HoldsExact + takeField: cell layout of the first two fields
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem getElem_append_cons_self {α : Type _} {l₁ l₂ : List α} {a : α} :
-    (l₁ ++ a :: l₂)[l₁.length]'(by simp) = a := by
+private theorem getElem_append_cons_self {α : Type _} {l₁ l₂ : List α} {a : α}
+    {h : l₁.length < (l₁ ++ a :: l₂).length} :
+    (l₁ ++ a :: l₂)[l₁.length]'h = a := by
   rw [List.getElem_append_right (Nat.le_refl _)]
   simp
 
 private theorem getElem_append_cons_right {α : Type _} {l₁ l₂ : List α} {a : α} {k : ℕ}
-    (hk : k < l₂.length) :
-    (l₁ ++ a :: l₂)[l₁.length + 1 + k]'(by simp; omega) = l₂[k] := by
+    (hk : k < l₂.length) {h : l₁.length + 1 + k < (l₁ ++ a :: l₂).length} :
+    (l₁ ++ a :: l₂)[l₁.length + 1 + k]'h = l₂[k] := by
   rw [List.getElem_append_right (by omega)]
   simp only [show l₁.length + 1 + k - l₁.length = k + 1 by omega,
     List.getElem_cons_succ]
@@ -248,7 +249,7 @@ private theorem two_fields_decomp (l : List Γw) :
   · rcases takeField_structure (takeField l).2 with hdec2 | ⟨h21, _⟩
     · exact Or.inl ⟨(takeField (takeField l).2).2, by rw [← hdec2]; exact hdec⟩
     · exact Or.inr (Or.inl (by rw [h21]; exact hdec))
-  · exact Or.inr (Or.inr ⟨h1, by rw [h2]⟩)
+  · exact Or.inr (Or.inr ⟨h1, by rw [h2]; rfl⟩)
 
 /-- Cell layout of a tape holding `l`, in terms of its first two fields
     `f₁ = (takeField l).1` and `f₂ = (takeField (takeField l).2).1`:
@@ -268,63 +269,646 @@ private theorem holdsExact_two_fields {t : Tape} {l : List Γw} (h : t.HoldsExac
   rcases two_fields_decomp l with ⟨tail, hdec⟩ | hdec | ⟨h1, h2⟩
   · have hlen := congrArg List.length hdec
     simp only [List.length_append, List.length_cons] at hlen
+    rw [hdec] at h
     refine ⟨fun k hk => ?_, ?_, fun k hk => ?_, ?_, by omega⟩
-    · have := h.cells_lt (i := k) (by omega)
-      rw [hdec, List.getElem_append_left hk] at this
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_lt (i := (takeField l).1.length) (by omega)
-      rw [hdec, getElem_append_cons_self] at this
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_lt (i := (takeField l).1.length + 1 + k) (by omega)
-      rw [hdec, getElem_append_cons_right (by simp only [List.length_append,
-        List.length_cons]; omega), List.getElem_append_left hk] at this
+    · have h1 := Tape.HoldsExact.cells_lt h (i := k)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      rw [List.getElem_append_left hk] at h1
+      rw [Nat.add_comm]; exact h1
+    · have h1 := Tape.HoldsExact.cells_lt h (i := (takeField l).1.length)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      rw [getElem_append_cons_self] at h1
+      rw [Nat.add_comm]; exact h1
+    · have h1 := Tape.HoldsExact.cells_lt h (i := (takeField l).1.length + 1 + k)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      have hk2 : k < ((takeField (takeField l).2).1 ++ Γw.blank :: tail).length := by
+        simp only [List.length_append, List.length_cons]; omega
+      rw [getElem_append_cons_right hk2, List.getElem_append_left hk] at h1
       rw [show (takeField l).1.length + 2 + k
         = (takeField l).1.length + 1 + k + 1 by omega]
-      exact this
-    · have := h.cells_lt
+      exact h1
+    · have h1 := Tape.HoldsExact.cells_lt h
         (i := (takeField l).1.length + 1 + (takeField (takeField l).2).1.length)
-        (by omega)
-      rw [hdec, getElem_append_cons_right (by simp only [List.length_append,
-        List.length_cons]; omega), getElem_append_cons_self] at this
+        (by simp only [List.length_append, List.length_cons]; omega)
+      have hk2 : (takeField (takeField l).2).1.length
+          < ((takeField (takeField l).2).1 ++ Γw.blank :: tail).length := by
+        simp only [List.length_append, List.length_cons]; omega
+      rw [getElem_append_cons_right hk2, getElem_append_cons_self] at h1
       rw [show (takeField l).1.length + 2 + (takeField (takeField l).2).1.length
         = (takeField l).1.length + 1 + (takeField (takeField l).2).1.length + 1
         by omega]
-      exact this
+      exact h1
   · have hlen := congrArg List.length hdec
     simp only [List.length_append, List.length_cons] at hlen
+    rw [hdec] at h
     refine ⟨fun k hk => ?_, ?_, fun k hk => ?_, ?_, by omega⟩
-    · have := h.cells_lt (i := k) (by omega)
-      rw [hdec, List.getElem_append_left hk] at this
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_lt (i := (takeField l).1.length) (by omega)
-      rw [hdec, getElem_append_cons_self] at this
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_lt (i := (takeField l).1.length + 1 + k) (by omega)
-      rw [hdec, getElem_append_cons_right (by omega)] at this
+    · have h1 := Tape.HoldsExact.cells_lt h (i := k)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      rw [List.getElem_append_left hk] at h1
+      rw [Nat.add_comm]; exact h1
+    · have h1 := Tape.HoldsExact.cells_lt h (i := (takeField l).1.length)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      rw [getElem_append_cons_self] at h1
+      rw [Nat.add_comm]; exact h1
+    · have h1 := Tape.HoldsExact.cells_lt h (i := (takeField l).1.length + 1 + k)
+        (by simp only [List.length_append, List.length_cons]; omega)
+      rw [getElem_append_cons_right hk] at h1
       rw [show (takeField l).1.length + 2 + k
         = (takeField l).1.length + 1 + k + 1 by omega]
-      exact this
-    · have := h.cells_ge
+      exact h1
+    · have h1 := Tape.HoldsExact.cells_ge h
         (i := (takeField l).1.length + 1 + (takeField (takeField l).2).1.length)
-        (by omega)
+        (by simp only [List.length_append, List.length_cons]; omega)
       rw [show (takeField l).1.length + 2 + (takeField (takeField l).2).1.length
         = (takeField l).1.length + 1 + (takeField (takeField l).2).1.length + 1
         by omega]
-      exact this
-  · have hlen : (takeField l).1.length = l.length := by rw [h1]
+      exact h1
+  · have hlenF : (takeField l).1.length = l.length := by rw [h1]
+    have hF2 : (takeField (takeField l).2).1.length = 0 := by rw [h2]; rfl
     refine ⟨fun k hk => ?_, ?_, fun k hk => by omega, ?_, by omega⟩
-    · have := h.cells_lt (i := k) (by omega)
-      rw [show l[k]'(by omega) = ((takeField l).1)[k]'hk by
-        congr 1; exact h1.symm] at this
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_ge (i := (takeField l).1.length) (by omega)
-      rw [Nat.add_comm]; exact this
-    · have := h.cells_ge
-        (i := (takeField l).1.length + 1 + (takeField (takeField l).2).1.length)
-        (by omega)
-      rw [show (takeField l).1.length + 2 + (takeField (takeField l).2).1.length
+    · rw [Nat.add_comm, List.getElem_of_eq h1 hk]
+      exact Tape.HoldsExact.cells_lt h (i := k) (by omega)
+    · rw [Nat.add_comm]
+      exact Tape.HoldsExact.cells_ge h (i := (takeField l).1.length) (by omega)
+    · rw [show (takeField l).1.length + 2 + (takeField (takeField l).2).1.length
         = (takeField l).1.length + 1 + (takeField (takeField l).2).1.length + 1
         by omega]
-      exact this
+      exact Tape.HoldsExact.cells_ge h
+        (i := (takeField l).1.length + 1 + (takeField (takeField l).2).1.length)
+        (by omega)
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase A: skip past the first desc field
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- From `.skip` with the desc head at cell `1 + k` inside (or just past)
+    the first field `f`, reach `.compare` with the desc head at cell
+    `|f| + 2` in `(|f| - k) + 1` steps. Everything except the desc head is
+    unchanged. -/
+private theorem skip_loop (f : List Γw) (hf : ∀ s ∈ f, s ≠ Γw.blank) :
+    ∀ (m k : ℕ) (c : Cfg 6 haltTestTM.Q),
+    m + k = f.length →
+    c.state = HaltTestPhase.skip →
+    (c.work 4).head = 1 + k →
+    (∀ j, (hj : j < f.length) → (c.work 4).cells (1 + j) = (f[j]).toΓ) →
+    (c.work 4).cells (1 + f.length) = Γ.blank →
+    c.input.read ≠ Γ.start →
+    c.output.read ≠ Γ.start →
+    (∀ i : Fin 6, i ≠ 4 → (c.work i).read ≠ Γ.start) →
+    ∃ c', haltTestTM.reachesIn (m + 1) c c' ∧
+      c'.state = HaltTestPhase.compare ∧
+      c'.input = c.input ∧
+      (∀ i : Fin 6, i ≠ 4 → c'.work i = c.work i) ∧
+      c'.output = c.output ∧
+      (c'.work 4).cells = (c.work 4).cells ∧
+      (c'.work 4).head = f.length + 2 := by
+  intro m
+  induction m with
+  | zero =>
+    intro k c hmk hstate hhead hcells hblank hin hout hothers
+    have hk : k = f.length := by omega
+    subst hk
+    have hread : (c.work 4).read = Γ.blank := by
+      rw [Tape.read, hhead]; exact hblank
+    have hread_ns : (c.work 4).read ≠ Γ.start := by rw [hread]; simp
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.compare ∧
+        c₁.input = c.input ∧
+        (∀ i : Fin 6, i ≠ 4 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧
+        (c₁.work 4).cells = (c.work 4).cells ∧
+        (c₁.work 4).head = (c.work 4).head + 1 := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        exact tape_idle_fix _ (hothers i hne)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inr hread_ns)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁,
+      by rw [hhead₁, hhead]; omega⟩
+  | succ m ih =>
+    intro k c hmk hstate hhead hcells hblank hin hout hothers
+    have hk : k < f.length := by omega
+    have hread : (c.work 4).read = (f[k]).toΓ := by
+      rw [Tape.read, hhead]; exact hcells k hk
+    have hread_nb : (c.work 4).read ≠ Γ.blank := by
+      rw [hread]; exact toΓ_ne_blank (hf _ (f.getElem_mem hk))
+    have hread_ns : (c.work 4).read ≠ Γ.start := by rw [hread]; exact toΓ_ne_start _
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.skip ∧
+        c₁.input = c.input ∧
+        (∀ i : Fin 6, i ≠ 4 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧
+        (c₁.work 4).cells = (c.work 4).cells ∧
+        (c₁.work 4).head = (c.work 4).head + 1 := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread_nb]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        exact tape_idle_fix _ (hothers i hne)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inr hread_ns)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
+      ih (k + 1) c₁ (by omega) hst₁
+        (by rw [hhead₁, hhead]; omega)
+        (by intro j hj; rw [hcells₁]; exact hcells j hj)
+        (by rw [hcells₁]; exact hblank)
+        (by rw [hin₁]; exact hin)
+        (by rw [hout₁]; exact hout)
+        (by intro i hne; rw [hw₁ i hne]; exact hothers i hne)
+    exact ⟨c', .step hstep' hreach, hst',
+      by rw [hin', hin₁],
+      fun i hne => by rw [hw' i hne, hw₁ i hne],
+      by rw [hout', hout₁],
+      by rw [hcells', hcells₁],
+      hhead'⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase B: lockstep compare of state tape vs desc field
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Match detection: both heads read `□` — one step to `.writeOne`, all
+    tapes unchanged. -/
+private theorem compare_match_step (c : Cfg 6 haltTestTM.Q)
+    (hstate : c.state = HaltTestPhase.compare)
+    (h3 : (c.work 3).read = Γ.blank)
+    (h4 : (c.work 4).read = Γ.blank)
+    (hin : c.input.read ≠ Γ.start)
+    (hout : c.output.read ≠ Γ.start)
+    (hoth : ∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) :
+    ∃ c₁, haltTestTM.step c = some c₁ ∧
+      c₁.state = HaltTestPhase.writeOne ∧
+      c₁.input = c.input ∧ (∀ i : Fin 6, c₁.work i = c.work i) ∧
+      c₁.output = c.output := by
+  simp only [TM.step, ↓reduceIte, hstate, haltTestTM, h3, h4, and_self]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+  · exact input_idle_fix c.input hin
+  · intro i
+    dsimp only []
+    by_cases h3i : i = 3
+    · subst h3i; exact tape_idle_fix _ (by rw [h3]; simp)
+    · by_cases h4i : i = 4
+      · subst h4i; exact tape_idle_fix _ (by rw [h4]; simp)
+      · exact tape_idle_fix _ (hoth i h3i h4i)
+  · exact tape_idle_fix c.output hout
+
+/-- Mismatch detection: the two reads differ — one step to `.writeZero`,
+    all tapes unchanged. -/
+private theorem compare_mismatch_step (c : Cfg 6 haltTestTM.Q)
+    (hstate : c.state = HaltTestPhase.compare)
+    (hneq : (c.work 3).read ≠ (c.work 4).read)
+    (h3 : (c.work 3).read ≠ Γ.start)
+    (h4 : (c.work 4).read ≠ Γ.start)
+    (hin : c.input.read ≠ Γ.start)
+    (hout : c.output.read ≠ Γ.start)
+    (hoth : ∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) :
+    ∃ c₁, haltTestTM.step c = some c₁ ∧
+      c₁.state = HaltTestPhase.writeZero ∧
+      c₁.input = c.input ∧ (∀ i : Fin 6, c₁.work i = c.work i) ∧
+      c₁.output = c.output := by
+  have hc1 : ¬((c.work 3).read = Γ.blank ∧ (c.work 4).read = Γ.blank) :=
+    fun ⟨a, b⟩ => hneq (a.trans b.symm)
+  simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hc1, hneq]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
+  · exact input_idle_fix c.input hin
+  · intro i
+    dsimp only []
+    by_cases h3i : i = 3
+    · subst h3i; exact tape_idle_fix _ h3
+    · by_cases h4i : i = 4
+      · subst h4i; exact tape_idle_fix _ h4
+      · exact tape_idle_fix _ (hoth i h3i h4i)
+  · exact tape_idle_fix c.output hout
+
+/-- Lockstep advance: equal non-blank reads — one step staying in
+    `.compare`, both heads move right, all cells and other tapes
+    unchanged. -/
+private theorem compare_advance_step (c : Cfg 6 haltTestTM.Q)
+    (hstate : c.state = HaltTestPhase.compare)
+    (heq : (c.work 3).read = (c.work 4).read)
+    (h3nb : (c.work 3).read ≠ Γ.blank)
+    (h3 : (c.work 3).read ≠ Γ.start)
+    (h4 : (c.work 4).read ≠ Γ.start)
+    (hin : c.input.read ≠ Γ.start)
+    (hout : c.output.read ≠ Γ.start)
+    (hoth : ∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) :
+    ∃ c₁, haltTestTM.step c = some c₁ ∧
+      c₁.state = HaltTestPhase.compare ∧
+      c₁.input = c.input ∧
+      (∀ i : Fin 6, i ≠ 3 → i ≠ 4 → c₁.work i = c.work i) ∧
+      c₁.output = c.output ∧
+      (c₁.work 3).cells = (c.work 3).cells ∧
+      (c₁.work 4).cells = (c.work 4).cells ∧
+      (c₁.work 3).head = (c.work 3).head + 1 ∧
+      (c₁.work 4).head = (c.work 4).head + 1 := by
+  have hc1 : ¬((c.work 3).read = Γ.blank ∧ (c.work 4).read = Γ.blank) :=
+    fun ⟨a, _⟩ => h3nb a
+  have hc2 : ((c.work 3).read = (c.work 4).read) = True := by simp [heq]
+  simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hc1, hc2]
+  refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact input_idle_fix c.input hin
+  · intro i h3i h4i
+    dsimp only []
+    rw [if_neg h3i, if_neg h4i]
+    exact tape_idle_fix _ (hoth i h3i h4i)
+  · exact tape_idle_fix c.output hout
+  · dsimp only []
+    rw [if_pos rfl]
+    exact tape_readBackWrite_preserves _ _ (Or.inr h3)
+  · dsimp only []
+    rw [if_neg (by decide : (4 : Fin 6) ≠ 3), if_pos rfl]
+    exact tape_readBackWrite_preserves _ _ (Or.inr h4)
+  · dsimp only []
+    rw [if_pos rfl]
+    simp [Tape.writeAndMove, Tape.move, tape_write_head]
+  · dsimp only []
+    rw [if_neg (by decide : (4 : Fin 6) ≠ 3), if_pos rfl]
+    simp [Tape.writeAndMove, Tape.move, tape_write_head]
+
+/-- The lockstep compare loop: with blank-free `A` under the state head
+    (blank after) and blank-free `B` under the desc head (blank after), the
+    machine reaches the verdict state for `A = B` within `|A| + 1` steps,
+    leaving all cells and all other tapes unchanged; both heads end between
+    their start and start + field length. -/
+private theorem compare_loop :
+    ∀ (A : List Γw), (∀ s ∈ A, s ≠ Γw.blank) →
+    ∀ (B : List Γw), (∀ s ∈ B, s ≠ Γw.blank) →
+    ∀ (c : Cfg 6 haltTestTM.Q) (p q : ℕ),
+    c.state = HaltTestPhase.compare →
+    (c.work 3).head = p →
+    (c.work 4).head = q →
+    (∀ j, (hj : j < A.length) → (c.work 3).cells (p + j) = (A[j]).toΓ) →
+    (c.work 3).cells (p + A.length) = Γ.blank →
+    (∀ j, (hj : j < B.length) → (c.work 4).cells (q + j) = (B[j]).toΓ) →
+    (c.work 4).cells (q + B.length) = Γ.blank →
+    c.input.read ≠ Γ.start →
+    c.output.read ≠ Γ.start →
+    (∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) →
+    ∃ c' t, t ≤ A.length + 1 ∧ haltTestTM.reachesIn t c c' ∧
+      c'.state = (if A = B then HaltTestPhase.writeOne else HaltTestPhase.writeZero) ∧
+      c'.input = c.input ∧
+      (∀ i : Fin 6, i ≠ 3 → i ≠ 4 → c'.work i = c.work i) ∧
+      c'.output = c.output ∧
+      (c'.work 3).cells = (c.work 3).cells ∧
+      (c'.work 4).cells = (c.work 4).cells ∧
+      p ≤ (c'.work 3).head ∧ (c'.work 3).head ≤ p + A.length ∧
+      q ≤ (c'.work 4).head ∧ (c'.work 4).head ≤ q + B.length := by
+  intro A
+  induction A with
+  | nil =>
+    intro _ B hB c p q hstate hh3 hh4 hc3 hb3 hc4 hb4 hin hout hoth
+    have hr3 : (c.work 3).read = Γ.blank := by
+      rw [Tape.read, hh3]; simpa using hb3
+    cases B with
+    | nil =>
+      have hr4 : (c.work 4).read = Γ.blank := by
+        rw [Tape.read, hh4]; simpa using hb4
+      obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
+        compare_match_step c hstate hr3 hr4 hin hout hoth
+      refine ⟨c₁, 1, by omega, .step hstep' .zero, by simpa using hst₁,
+        hin₁, fun i h3i h4i => hw₁ i, hout₁,
+        by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩ <;>
+          rw [hw₁] <;> omega
+    | cons b B' =>
+      have hr4 : (c.work 4).read = (b).toΓ := by
+        rw [Tape.read, hh4]; simpa using hc4 0 (by simp)
+      have hneq : (c.work 3).read ≠ (c.work 4).read := by
+        rw [hr3, hr4]
+        exact fun h => toΓ_ne_blank (hB b (by simp)) h.symm
+      obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
+        compare_mismatch_step c hstate hneq (by rw [hr3]; simp)
+          (by rw [hr4]; exact toΓ_ne_start b) hin hout hoth
+      refine ⟨c₁, 1, by omega, .step hstep' .zero, by simpa using hst₁,
+        hin₁, fun i h3i h4i => hw₁ i, hout₁,
+        by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩ <;>
+          rw [hw₁] <;> omega
+  | cons a A' ihA =>
+    intro hA B hB c p q hstate hh3 hh4 hc3 hb3 hc4 hb4 hin hout hoth
+    have hr3 : (c.work 3).read = a.toΓ := by
+      rw [Tape.read, hh3]; simpa using hc3 0 (by simp)
+    have hr3nb : (c.work 3).read ≠ Γ.blank := by
+      rw [hr3]; exact toΓ_ne_blank (hA a (by simp))
+    have hr3ns : (c.work 3).read ≠ Γ.start := by rw [hr3]; exact toΓ_ne_start a
+    cases B with
+    | nil =>
+      have hr4 : (c.work 4).read = Γ.blank := by
+        rw [Tape.read, hh4]; simpa using hb4
+      have hneq : (c.work 3).read ≠ (c.work 4).read := by
+        rw [hr3, hr4]
+        exact toΓ_ne_blank (hA a (by simp))
+      obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
+        compare_mismatch_step c hstate hneq hr3ns (by rw [hr4]; simp) hin hout hoth
+      refine ⟨c₁, 1, by omega, .step hstep' .zero, by simpa using hst₁,
+        hin₁, fun i h3i h4i => hw₁ i, hout₁,
+        by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩ <;>
+          rw [hw₁] <;> omega
+    | cons b B' =>
+      have hr4 : (c.work 4).read = b.toΓ := by
+        rw [Tape.read, hh4]; simpa using hc4 0 (by simp)
+      by_cases hab : a = b
+      · subst hab
+        have heq : (c.work 3).read = (c.work 4).read := by rw [hr3, hr4]
+        obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcl3, hcl4, hhd3, hhd4⟩ :=
+          compare_advance_step c hstate heq hr3nb hr3ns
+            (by rw [hr4]; exact toΓ_ne_start a) hin hout hoth
+        obtain ⟨c', t', ht', hreach, hst', hin', hw', hout', hcl3', hcl4',
+            hlo3, hhi3, hlo4, hhi4⟩ :=
+          ihA (fun s hs => hA s (by simp [hs]))
+            B' (fun s hs => hB s (by simp [hs]))
+            c₁ (p + 1) (q + 1) hst₁
+            (by rw [hhd3, hh3]) (by rw [hhd4, hh4])
+            (by
+              intro j hj
+              rw [hcl3, show p + 1 + j = p + (j + 1) by omega]
+              simpa using hc3 (j + 1) (by simpa using Nat.succ_lt_succ hj))
+            (by
+              rw [hcl3, show p + 1 + A'.length = p + (a :: A').length by
+                simp only [List.length_cons]; omega]
+              exact hb3)
+            (by
+              intro j hj
+              rw [hcl4, show q + 1 + j = q + (j + 1) by omega]
+              simpa using hc4 (j + 1) (by simpa using Nat.succ_lt_succ hj))
+            (by
+              rw [hcl4, show q + 1 + B'.length = q + (a :: B').length by
+                simp only [List.length_cons]; omega]
+              exact hb4)
+            (by rw [hin₁]; exact hin)
+            (by rw [hout₁]; exact hout)
+            (by intro i h3i h4i; rw [hw₁ i h3i h4i]; exact hoth i h3i h4i)
+        refine ⟨c', t' + 1, by simp; omega, .step hstep' hreach, ?_,
+          by rw [hin', hin₁],
+          fun i h3i h4i => by rw [hw' i h3i h4i, hw₁ i h3i h4i],
+          by rw [hout', hout₁],
+          by rw [hcl3', hcl3], by rw [hcl4', hcl4],
+          by omega, by simp; omega, by omega, by simp; omega⟩
+        · rw [hst']
+          simp only [List.cons.injEq, true_and]
+      · have hneq : (c.work 3).read ≠ (c.work 4).read := by
+          rw [hr3, hr4]
+          exact fun h => hab (toΓ_inj h)
+        obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
+          compare_mismatch_step c hstate hneq hr3ns
+            (by rw [hr4]; exact toΓ_ne_start b) hin hout hoth
+        refine ⟨c₁, 1, by simp, .step hstep' .zero, ?_,
+          hin₁, fun i h3i h4i => hw₁ i, hout₁,
+          by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩
+        · rw [hst₁, if_neg (by simp [hab])]
+        all_goals (rw [hw₁]; omega)
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase C: write the verdict at output cell 1
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The verdict step: from `.writeOne`/`.writeZero` (selected by `P`) with
+    the output head at cell 1, one step writes the verdict symbol at output
+    cell 1 and enters `.rewindSt`; the output head stays at 1 and every
+    other tape is unchanged. -/
+private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
+    (hstate : c.state
+      = (if P then HaltTestPhase.writeOne else HaltTestPhase.writeZero))
+    (hoh : c.output.head = 1)
+    (hout : c.output.read ≠ Γ.start)
+    (hin : c.input.read ≠ Γ.start)
+    (h3 : (c.work 3).read ≠ Γ.start)
+    (h4 : (c.work 4).read ≠ Γ.start)
+    (hoth : ∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) :
+    ∃ c₁, haltTestTM.step c = some c₁ ∧
+      c₁.state = HaltTestPhase.rewindSt ∧
+      c₁.input = c.input ∧ (∀ i : Fin 6, c₁.work i = c.work i) ∧
+      c₁.output.cells = Function.update c.output.cells 1
+        (if P then Γ.one else Γ.zero) ∧
+      c₁.output.head = 1 := by
+  have hstay : idleDir c.output.read = Dir3.stay := by simp [idleDir, hout]
+  by_cases hP : P
+  · rw [if_pos hP] at hstate
+    simp only [TM.step, ↓reduceIte, hstate, haltTestTM]
+    refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+    · exact input_idle_fix c.input hin
+    · intro i
+      dsimp only []
+      by_cases h3i : i = 3
+      · subst h3i; exact tape_idle_fix _ h3
+      · by_cases h4i : i = 4
+        · subst h4i; exact tape_idle_fix _ h4
+        · exact tape_idle_fix _ (hoth i h3i h4i)
+    · rw [if_pos hP]
+      show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).cells = _
+      rw [tape_move_cells]
+      simp only [Tape.write, hoh, ↓reduceIte, Γw.toΓ]
+    · show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).head = 1
+      rw [hstay]
+      simp [Tape.move, tape_write_head, hoh]
+  · rw [if_neg hP] at hstate
+    simp only [TM.step, ↓reduceIte, hstate, haltTestTM]
+    refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
+    · exact input_idle_fix c.input hin
+    · intro i
+      dsimp only []
+      by_cases h3i : i = 3
+      · subst h3i; exact tape_idle_fix _ h3
+      · by_cases h4i : i = 4
+        · subst h4i; exact tape_idle_fix _ h4
+        · exact tape_idle_fix _ (hoth i h3i h4i)
+    · rw [if_neg hP]
+      show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).cells = _
+      rw [tape_move_cells]
+      simp only [Tape.write, hoh, ↓reduceIte, Γw.toΓ]
+    · show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).head = 1
+      rw [hstay]
+      simp [Tape.move, tape_write_head, hoh]
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase D: rewind the state head, then the desc head
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Rewind the state head: from `.rewindSt` with the state head at `m`,
+    reach `.rewindD` with the state head at cell 1 in `m + 1` steps.
+    Everything except the state head is unchanged. -/
+private theorem rewindSt_loop :
+    ∀ (m : ℕ) (c : Cfg 6 haltTestTM.Q),
+    c.state = HaltTestPhase.rewindSt →
+    (c.work 3).head = m →
+    (c.work 3).cells 0 = Γ.start →
+    (∀ j, 1 ≤ j → (c.work 3).cells j ≠ Γ.start) →
+    c.input.read ≠ Γ.start →
+    c.output.read ≠ Γ.start →
+    (c.work 4).read ≠ Γ.start →
+    (∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) →
+    ∃ c', haltTestTM.reachesIn (m + 1) c c' ∧
+      c'.state = HaltTestPhase.rewindD ∧
+      c'.input = c.input ∧
+      (∀ i : Fin 6, i ≠ 3 → c'.work i = c.work i) ∧
+      c'.output = c.output ∧
+      (c'.work 3).cells = (c.work 3).cells ∧
+      (c'.work 3).head = 1 := by
+  intro m
+  induction m with
+  | zero =>
+    intro c hstate hhead hc0 hns hin hout h4 hoth
+    have hread : (c.work 3).read = Γ.start := by rw [Tape.read, hhead]; exact hc0
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.rewindD ∧
+        c₁.input = c.input ∧ (∀ i : Fin 6, i ≠ 3 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧ (c₁.work 3).cells = (c.work 3).cells ∧
+        (c₁.work 3).head = 1 := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        by_cases h4i : i = 4
+        · subst h4i; exact tape_idle_fix _ h4
+        · exact tape_idle_fix _ (hoth i hne h4i)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inl hhead)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩
+  | succ m ih =>
+    intro c hstate hhead hc0 hns hin hout h4 hoth
+    have hread : (c.work 3).read ≠ Γ.start := by
+      rw [Tape.read, hhead]; exact hns (m + 1) (by omega)
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.rewindSt ∧
+        c₁.input = c.input ∧ (∀ i : Fin 6, i ≠ 3 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧ (c₁.work 3).cells = (c.work 3).cells ∧
+        (c₁.work 3).head = m := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        by_cases h4i : i = 4
+        · subst h4i; exact tape_idle_fix _ h4
+        · exact tape_idle_fix _ (hoth i hne h4i)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inr hread)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
+      ih c₁ hst₁ hhead₁
+        (by rw [hcells₁]; exact hc0)
+        (by intro j hj; rw [hcells₁]; exact hns j hj)
+        (by rw [hin₁]; exact hin)
+        (by rw [hout₁]; exact hout)
+        (by rw [hw₁ 4 (by decide)]; exact h4)
+        (by intro i h3i h4i; rw [hw₁ i h3i]; exact hoth i h3i h4i)
+    exact ⟨c', .step hstep' hreach, hst',
+      by rw [hin', hin₁],
+      fun i hne => by rw [hw' i hne, hw₁ i hne],
+      by rw [hout', hout₁],
+      by rw [hcells', hcells₁],
+      hhead'⟩
+
+/-- Rewind the desc head: from `.rewindD` with the desc head at `m`, halt
+    with the desc head at cell 1 in `m + 1` steps. Everything except the
+    desc head is unchanged. -/
+private theorem rewindD_loop :
+    ∀ (m : ℕ) (c : Cfg 6 haltTestTM.Q),
+    c.state = HaltTestPhase.rewindD →
+    (c.work 4).head = m →
+    (c.work 4).cells 0 = Γ.start →
+    (∀ j, 1 ≤ j → (c.work 4).cells j ≠ Γ.start) →
+    c.input.read ≠ Γ.start →
+    c.output.read ≠ Γ.start →
+    (c.work 3).read ≠ Γ.start →
+    (∀ i : Fin 6, i ≠ 3 → i ≠ 4 → (c.work i).read ≠ Γ.start) →
+    ∃ c', haltTestTM.reachesIn (m + 1) c c' ∧
+      c'.state = HaltTestPhase.done ∧
+      c'.input = c.input ∧
+      (∀ i : Fin 6, i ≠ 4 → c'.work i = c.work i) ∧
+      c'.output = c.output ∧
+      (c'.work 4).cells = (c.work 4).cells ∧
+      (c'.work 4).head = 1 := by
+  intro m
+  induction m with
+  | zero =>
+    intro c hstate hhead hc0 hns hin hout h3 hoth
+    have hread : (c.work 4).read = Γ.start := by rw [Tape.read, hhead]; exact hc0
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.done ∧
+        c₁.input = c.input ∧ (∀ i : Fin 6, i ≠ 4 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧ (c₁.work 4).cells = (c.work 4).cells ∧
+        (c₁.work 4).head = 1 := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        by_cases h3i : i = 3
+        · subst h3i; exact tape_idle_fix _ h3
+        · exact tape_idle_fix _ (hoth i h3i hne)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inl hhead)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩
+  | succ m ih =>
+    intro c hstate hhead hc0 hns hin hout h3 hoth
+    have hread : (c.work 4).read ≠ Γ.start := by
+      rw [Tape.read, hhead]; exact hns (m + 1) (by omega)
+    have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
+        c₁.state = HaltTestPhase.rewindD ∧
+        c₁.input = c.input ∧ (∀ i : Fin 6, i ≠ 4 → c₁.work i = c.work i) ∧
+        c₁.output = c.output ∧ (c₁.work 4).cells = (c.work 4).cells ∧
+        (c₁.work 4).head = m := by
+      simp only [TM.step, ↓reduceIte, hstate, haltTestTM, hread]
+      refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+      · exact input_idle_fix c.input hin
+      · intro i hne; dsimp only []
+        rw [if_neg hne]
+        by_cases h3i : i = 3
+        · subst h3i; exact tape_idle_fix _ h3
+        · exact tape_idle_fix _ (hoth i h3i hne)
+      · exact tape_idle_fix c.output hout
+      · dsimp only []
+        rw [if_pos rfl]
+        exact tape_readBackWrite_preserves _ _ (Or.inr hread)
+      · dsimp only []
+        rw [if_pos rfl]
+        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
+    obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
+      ih c₁ hst₁ hhead₁
+        (by rw [hcells₁]; exact hc0)
+        (by intro j hj; rw [hcells₁]; exact hns j hj)
+        (by rw [hin₁]; exact hin)
+        (by rw [hout₁]; exact hout)
+        (by rw [hw₁ 3 (by decide)]; exact h3)
+        (by intro i h3i h4i; rw [hw₁ i h4i]; exact hoth i h3i h4i)
+    exact ⟨c', .step hstep' hreach, hst',
+      by rw [hin', hin₁],
+      fun i hne => by rw [hw' i hne, hw₁ i hne],
+      by rw [hout', hout₁],
+      by rw [hcells', hcells₁],
+      hhead'⟩
 
 end TM

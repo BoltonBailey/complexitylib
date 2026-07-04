@@ -405,6 +405,9 @@ private theorem inpSfx_of_cells_eq {t t' : Tape} {k : ℕ} {l : List Bool}
     (h : InpSfx t k l) (he : t'.cells = t.cells) : InpSfx t' k l := by
   intro j; rw [he]; exact h j
 
+private theorem inpSfx_congr {t : Tape} {k k' : ℕ} {l : List Bool}
+    (h : InpSfx t k l) (hk : k' = k) : InpSfx t k' l := hk ▸ h
+
 private theorem inpSfx_initTape (l : List Bool) :
     InpSfx (initTape (l.map Γ.ofBool)) 1 l := by
   intro j
@@ -654,7 +657,8 @@ private theorem rewind_loop {idx : Fin 6} {qloop qnext : InitQ}
           (c₁.work idx).head = 1 ∧ (c₁.work idx).cells = (c.work idx).cells ∧
           (∀ i, i ≠ idx → c₁.work i = c.work i) ∧
           c₁.input = c.input ∧ c₁.output = c.output := by
-      simp only [TM.step, hne', ↓reduceIte, hst, hδ, rewindStep, hread]
+      simp only [TM.step, hst, hδ, rewindStep, hread, ↓reduceIte]
+      rw [if_neg hne']
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, by simp [Tape.move, idleDir, hi],
         tape_idle_preserve _ ho hoh⟩
       · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head, hh]
@@ -674,10 +678,12 @@ private theorem rewind_loop {idx : Fin 6} {qloop qnext : InitQ}
           (c₁.work idx).head = h ∧ (c₁.work idx).cells = (c.work idx).cells ∧
           (∀ i, i ≠ idx → c₁.work i = c.work i) ∧
           c₁.input = c.input ∧ c₁.output = c.output := by
-      simp only [TM.step, hne', ↓reduceIte, hst, hδ, rewindStep, hread]
+      simp only [TM.step, hst, hδ, rewindStep, hread, ↓reduceIte]
+      rw [if_neg hne']
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, by simp [Tape.move, idleDir, hi],
         tape_idle_preserve _ ho hoh⟩
       · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head, hh]
+        omega
       · simp only [↓reduceIte]
         exact tape_readBackWrite_preserves _ _ (Or.inr hread)
       · intro i hi'
@@ -691,5 +697,479 @@ private theorem rewind_loop {idx : Fin 6} {qloop qnext : InitQ}
     exact ⟨c', .step hstep hreach, hst', hhd', by rw [hcl', hcl₁],
       fun i hi' => by rw [hfr' i hi', hfr₁ i hi'], by rw [hin', hin₁],
       by rw [hout', hout₁]⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 1 loop: parse the α-region
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- All-tape side conditions from the desc-tape frontier shape. -/
+private theorem hw_of_frontier {c : Cfg 6 initTM.Q} {acc : List Γw}
+    (hh4 : (c.work 4).HoldsExact acc) (hd4 : (c.work 4).head = acc.length + 1)
+    (hwo : ∀ i, i ≠ (4 : Fin 6) → (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head) :
+    ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+  intro i
+  by_cases h4 : i = (4 : Fin 6)
+  · subst h4
+    constructor
+    · rw [Tape.read, hd4, Tape.HoldsExact.cells_ge hh4 (le_refl acc.length)]
+      simp
+    · rw [hd4]; omega
+  · exact hwo i h4
+
+/-- **Phase-1 loop**: starting at the first cell of the remaining α-region in
+    state `readFst none`, consume all of `αs` (two input cells per α-bit),
+    emitting `groupPairs αs` onto the desc tape (work 4). Ends in a `readFst`
+    state (with a pending bit iff `|αs|` is odd) at the separator. -/
+private theorem phase1_loop (x : List Bool) :
+    ∀ (αs : List Bool) (acc : List Γw) (k : ℕ) (c : Cfg 6 initTM.Q),
+      c.state = InitQ.readFst none →
+      1 ≤ k →
+      c.input.head = k →
+      InpSfx c.input k ((αs.flatMap fun b => [b, b]) ++ false :: true :: x) →
+      (c.work 4).HoldsExact acc →
+      (c.work 4).head = acc.length + 1 →
+      (∀ i, i ≠ (4 : Fin 6) → (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head) →
+      c.output.read ≠ Γ.start → 1 ≤ c.output.head →
+      ∃ (c' : Cfg 6 initTM.Q) (p : Option Bool),
+        initTM.reachesIn (2 * αs.length) c c' ∧
+        c'.state = InitQ.readFst p ∧
+        c'.input.head = k + 2 * αs.length ∧
+        c'.input.cells = c.input.cells ∧
+        InpSfx c'.input (k + 2 * αs.length) (false :: true :: x) ∧
+        (c'.work 4).HoldsExact (acc ++ groupPairs αs) ∧
+        (c'.work 4).head = (acc ++ groupPairs αs).length + 1 ∧
+        (∀ i, i ≠ (4 : Fin 6) → c'.work i = c.work i) ∧
+        c'.output = c.output
+  | [] => by
+    intro acc k c hst hk hih hsfx hh4 hd4 hwo ho hoh
+    exact ⟨c, none, .zero, hst, by simpa using hih, rfl,
+      by simpa using hsfx, by simpa [groupPairs] using hh4,
+      by simpa [groupPairs] using hd4, fun i _ => rfl, rfl⟩
+  | [b] => by
+    intro acc k c hst hk hih hsfx hh4 hd4 hwo ho hoh
+    simp only [List.flatMap_cons, List.flatMap_nil, List.cons_append, List.nil_append,
+      List.append_nil] at hsfx
+    have hwAll := hw_of_frontier hh4 hd4 hwo
+    -- step 1: read the first copy of b
+    have hread₁ : c.input.read = Γ.ofBool b := by
+      rw [Tape.read, hih]; exact inpSfx_head hsfx
+    obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hwk₁, hout₁⟩ :=
+      step_readFst (p := none) hst hread₁ hwAll ho hoh
+    have hih₁' : c₁.input.head = k + 1 := by rw [hih₁, hih]
+    have hsfx₁ := inpSfx_of_cells_eq (inpSfx_tail hsfx) hcl₁
+    -- step 2: read the second copy of b, record it as pending
+    have hread₂ : c₁.input.read = Γ.ofBool b := by
+      rw [Tape.read, hih₁']; exact inpSfx_head hsfx₁
+    obtain ⟨c₂, hs₂, hst₂, hcl₂, hih₂, hwk₂, hout₂⟩ :=
+      step_readSnd_nopend hst₁ hread₂ (by rw [hwk₁]; exact hwAll)
+        (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+    have hgpb : groupPairs [b] = [] := rfl
+    have hwork4 : c₂.work 4 = c.work 4 := by rw [hwk₂, hwk₁]
+    refine ⟨c₂, some b, .step hs₁ (.step hs₂ .zero), hst₂, ?_, by rw [hcl₂, hcl₁],
+      ?_, ?_, ?_, fun i _ => by rw [hwk₂, hwk₁], by rw [hout₂, hout₁]⟩
+    · rw [hih₂, hih₁']
+      simp only [List.length_cons, List.length_nil]
+    · exact inpSfx_congr (inpSfx_of_cells_eq (inpSfx_tail hsfx₁) hcl₂)
+        (by simp only [List.length_cons, List.length_nil])
+    · rw [hgpb, List.append_nil, hwork4]; exact hh4
+    · rw [hgpb, List.append_nil, hwork4]; exact hd4
+  | b₀ :: b₁ :: rest => by
+    intro acc k c hst hk hih hsfx hh4 hd4 hwo ho hoh
+    simp only [List.flatMap_cons, List.cons_append, List.nil_append] at hsfx
+    have hwAll := hw_of_frontier hh4 hd4 hwo
+    -- step 1: first copy of b₀
+    have hread₁ : c.input.read = Γ.ofBool b₀ := by
+      rw [Tape.read, hih]; exact inpSfx_head hsfx
+    obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hwk₁, hout₁⟩ :=
+      step_readFst (p := none) hst hread₁ hwAll ho hoh
+    have hih₁' : c₁.input.head = k + 1 := by rw [hih₁, hih]
+    have hsfx₁ := inpSfx_of_cells_eq (inpSfx_tail hsfx) hcl₁
+    -- step 2: second copy of b₀, record as pending
+    have hread₂ : c₁.input.read = Γ.ofBool b₀ := by
+      rw [Tape.read, hih₁']; exact inpSfx_head hsfx₁
+    obtain ⟨c₂, hs₂, hst₂, hcl₂, hih₂, hwk₂, hout₂⟩ :=
+      step_readSnd_nopend hst₁ hread₂ (by rw [hwk₁]; exact hwAll)
+        (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+    have hih₂' : c₂.input.head = k + 2 := by rw [hih₂, hih₁']
+    have hsfx₂ := inpSfx_congr (inpSfx_of_cells_eq (inpSfx_tail hsfx₁) hcl₂)
+      (show k + 2 = k + 1 + 1 by omega)
+    -- step 3: first copy of b₁
+    have hread₃ : c₂.input.read = Γ.ofBool b₁ := by
+      rw [Tape.read, hih₂']; exact inpSfx_head hsfx₂
+    obtain ⟨c₃, hs₃, hst₃, hcl₃, hih₃, hwk₃, hout₃⟩ :=
+      step_readFst (p := some b₀) hst₂ hread₃ (by rw [hwk₂, hwk₁]; exact hwAll)
+        (by rw [hout₂, hout₁]; exact ho) (by rw [hout₂, hout₁]; exact hoh)
+    have hih₃' : c₃.input.head = k + 3 := by rw [hih₃, hih₂']
+    have hsfx₃ := inpSfx_congr (inpSfx_of_cells_eq (inpSfx_tail hsfx₂) hcl₃)
+      (show k + 3 = k + 2 + 1 by omega)
+    -- step 4: second copy of b₁ — emit symOfPair b₀ b₁ onto the desc tape
+    have hread₄ : c₃.input.read = Γ.ofBool b₁ := by
+      rw [Tape.read, hih₃']; exact inpSfx_head hsfx₃
+    obtain ⟨c₄, hs₄, hst₄, hcl₄, hih₄, hfr₄, hw44, hout₄⟩ :=
+      step_readSnd_emit hst₃ hread₄ (by rw [hwk₃, hwk₂, hwk₁]; exact hwAll)
+        (by rw [hout₃, hout₂, hout₁]; exact ho)
+        (by rw [hout₃, hout₂, hout₁]; exact hoh)
+    have hih₄' : c₄.input.head = k + 4 := by rw [hih₄, hih₃']
+    have hsfx₄ := inpSfx_congr (inpSfx_of_cells_eq (inpSfx_tail hsfx₃) hcl₄)
+      (show k + 4 = k + 3 + 1 by omega)
+    -- the desc tape gained one symbol
+    have hwork4₃ : c₃.work 4 = c.work 4 := by rw [hwk₃, hwk₂, hwk₁]
+    have hpush := holdsExact_push hh4 hd4 (symOfPair b₀ b₁)
+    have hh4' : (c₄.work 4).HoldsExact (acc ++ [symOfPair b₀ b₁]) := by
+      rw [hw44, hwork4₃]; exact hpush.1
+    have hd4' : (c₄.work 4).head = (acc ++ [symOfPair b₀ b₁]).length + 1 := by
+      rw [hw44, hwork4₃]; exact hpush.2
+    -- recurse on the remaining α-bits
+    obtain ⟨c', p, hreach, hst', hih', hcl', hsfx', hh4'', hd4'', hfr', hout'⟩ :=
+      phase1_loop x rest (acc ++ [symOfPair b₀ b₁]) (k + 4) c₄ hst₄ (by omega) hih₄' hsfx₄
+        hh4' hd4'
+        (fun i hi => by rw [hfr₄ i hi, hwk₃, hwk₂, hwk₁]; exact hwo i hi)
+        (by rw [hout₄, hout₃, hout₂, hout₁]; exact ho)
+        (by rw [hout₄, hout₃, hout₂, hout₁]; exact hoh)
+    have hgp : acc ++ groupPairs (b₀ :: b₁ :: rest)
+        = (acc ++ [symOfPair b₀ b₁]) ++ groupPairs rest := by
+      show acc ++ (symOfPair b₀ b₁ :: groupPairs rest) = _
+      simp
+    refine ⟨c', p, ?_, hst', ?_, by rw [hcl', hcl₄, hcl₃, hcl₂, hcl₁], ?_, ?_, ?_,
+      ?_, by rw [hout', hout₄, hout₃, hout₂, hout₁]⟩
+    · rw [show 2 * (b₀ :: b₁ :: rest).length = 2 * rest.length + 1 + 1 + 1 + 1 by
+        simp only [List.length_cons]; omega]
+      exact .step hs₁ (.step hs₂ (.step hs₃ (.step hs₄ hreach)))
+    · rw [hih']
+      simp only [List.length_cons]
+      omega
+    · exact inpSfx_congr hsfx' (by simp only [List.length_cons]; omega)
+    · rw [hgp]; exact hh4''
+    · rw [hgp]; exact hd4''
+    · intro i hi
+      rw [hfr' i hi, hfr₄ i hi, hwk₃, hwk₂, hwk₁]
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 1 → 2: the separator
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Consume the separator `01` (2 steps), entering `copyX` with work tape 0
+    advanced by one cell. A pending α-bit is dropped. -/
+private theorem phase1_sep {x : List Bool} {p : Option Bool} {k : ℕ}
+    {c : Cfg 6 initTM.Q}
+    (hst : c.state = InitQ.readFst p)
+    (hih : c.input.head = k)
+    (hsfx : InpSfx c.input k (false :: true :: x))
+    (hw : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head)
+    (ho : c.output.read ≠ Γ.start) (hoh : 1 ≤ c.output.head) :
+    ∃ c', initTM.reachesIn 2 c c' ∧
+      c'.state = InitQ.copyX ∧
+      c'.input.head = k + 2 ∧
+      c'.input.cells = c.input.cells ∧
+      InpSfx c'.input (k + 2) x ∧
+      (∀ i, i ≠ (0 : Fin 6) → c'.work i = c.work i) ∧
+      (c'.work 0).cells = (c.work 0).cells ∧
+      (c'.work 0).head = (c.work 0).head + 1 ∧
+      c'.output = c.output := by
+  -- step 1: read the 0
+  have hread₁ : c.input.read = Γ.ofBool false := by
+    rw [Tape.read, hih]; exact inpSfx_head hsfx
+  obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hwk₁, hout₁⟩ := step_readFst hst hread₁ hw ho hoh
+  have hih₁' : c₁.input.head = k + 1 := by rw [hih₁, hih]
+  have hsfx₁ := inpSfx_of_cells_eq (inpSfx_tail hsfx) hcl₁
+  -- step 2: read the 1 — the separator is complete
+  have hread₂ : c₁.input.read = Γ.one := by
+    rw [Tape.read, hih₁']; exact inpSfx_head hsfx₁
+  obtain ⟨c₂, hs₂, hst₂, hcl₂, hih₂, hfr₂, hw0c, hw0h, hout₂⟩ :=
+    step_readSnd_sep hst₁ hread₂ (by rw [hwk₁]; exact hw)
+      (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+  refine ⟨c₂, .step hs₁ (.step hs₂ .zero), hst₂, by rw [hih₂, hih₁'],
+    by rw [hcl₂, hcl₁],
+    inpSfx_congr (inpSfx_of_cells_eq (inpSfx_tail hsfx₁) hcl₂) (by omega),
+    fun i hi => by rw [hfr₂ i hi, hwk₁], by rw [hw0c, hwk₁], by rw [hw0h, hwk₁],
+    by rw [hout₂, hout₁]⟩
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 2 loop: copy x (shifted)
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Phase-2 loop**: copy the remaining bits `xs` of `x` onto work tape 0
+    (already-copied prefix `acc`, `□` shadow at cell 1), then detect the end
+    of the input (blank) and enter `rewindDesc`. -/
+private theorem phase2_loop :
+    ∀ (xs : List Bool) (acc : List Γw) (k : ℕ) (c : Cfg 6 initTM.Q),
+      c.state = InitQ.copyX →
+      c.input.head = k →
+      InpSfx c.input k xs →
+      (c.work 0).HoldsExact (Γw.blank :: acc) →
+      (c.work 0).head = acc.length + 2 →
+      (∀ i, i ≠ (0 : Fin 6) → (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head) →
+      c.output.read ≠ Γ.start → 1 ≤ c.output.head →
+      ∃ c', initTM.reachesIn (xs.length + 1) c c' ∧
+        c'.state = InitQ.rewindDesc ∧
+        c'.input.head = k + xs.length ∧
+        c'.input.cells = c.input.cells ∧
+        (c'.work 0).HoldsExact (Γw.blank :: (acc ++ bitsToSyms xs)) ∧
+        (c'.work 0).head = (acc ++ bitsToSyms xs).length + 2 ∧
+        (∀ i, i ≠ (0 : Fin 6) → c'.work i = c.work i) ∧
+        c'.output = c.output
+  | [] => by
+    intro acc k c hst hih hsfx hh0 hd0 hwo ho hoh
+    have hw0read : (c.work 0).read = Γ.blank := by
+      rw [Tape.read, hd0]
+      exact Tape.HoldsExact.cells_ge hh0 (by simp)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h0 : i = (0 : Fin 6)
+      · subst h0
+        exact ⟨by rw [hw0read]; simp, by rw [hd0]; omega⟩
+      · exact hwo i h0
+    have hread : c.input.read = Γ.blank := by
+      rw [Tape.read, hih]; exact inpSfx_nil hsfx
+    obtain ⟨c₁, hs₁, hst₁, hin₁, hwk₁, hout₁⟩ := step_copyX_blank hst hread hwAll ho hoh
+    refine ⟨c₁, .step hs₁ .zero, hst₁, by rw [hin₁, hih]; simp, by rw [hin₁],
+      ?_, ?_, fun i _ => by rw [hwk₁], by rw [hout₁]⟩
+    · rw [show acc ++ bitsToSyms [] = acc by simp [bitsToSyms], hwk₁]
+      exact hh0
+    · rw [show acc ++ bitsToSyms [] = acc by simp [bitsToSyms], hwk₁]
+      exact hd0
+  | b :: xs => by
+    intro acc k c hst hih hsfx hh0 hd0 hwo ho hoh
+    have hw0read : (c.work 0).read = Γ.blank := by
+      rw [Tape.read, hd0]
+      exact Tape.HoldsExact.cells_ge hh0 (by simp)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h0 : i = (0 : Fin 6)
+      · subst h0
+        exact ⟨by rw [hw0read]; simp, by rw [hd0]; omega⟩
+      · exact hwo i h0
+    have hread : c.input.read = Γ.ofBool b := by
+      rw [Tape.read, hih]; exact inpSfx_head hsfx
+    obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hfr₁, hw0₁, hout₁⟩ :=
+      step_copyX_bit hst hread hwAll ho hoh
+    -- work tape 0 gained one symbol
+    have hpush := holdsExact_push hh0 (by rw [hd0]; simp) (bitSym b)
+    have hh0₁ : (c₁.work 0).HoldsExact (Γw.blank :: (acc ++ [bitSym b])) := by
+      rw [hw0₁]
+      simpa using hpush.1
+    have hd0₁ : (c₁.work 0).head = (acc ++ [bitSym b]).length + 2 := by
+      rw [hw0₁]
+      have := hpush.2
+      simp only [List.cons_append, List.length_cons] at this ⊢
+      omega
+    -- recurse
+    obtain ⟨c', hreach, hst', hih', hcl', hh0', hd0', hfr', hout'⟩ :=
+      phase2_loop xs (acc ++ [bitSym b]) (k + 1) c₁ hst₁ (by rw [hih₁, hih])
+        (inpSfx_of_cells_eq (inpSfx_tail hsfx) hcl₁) hh0₁ hd0₁
+        (fun i hi => by rw [hfr₁ i hi]; exact hwo i hi)
+        (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+    have hbs : acc ++ bitsToSyms (b :: xs) = (acc ++ [bitSym b]) ++ bitsToSyms xs := by
+      simp [bitsToSyms]
+    refine ⟨c', .step hs₁ hreach, hst', ?_, by rw [hcl', hcl₁], ?_, ?_,
+      fun i hi => by rw [hfr' i hi, hfr₁ i hi], by rw [hout', hout₁]⟩
+    · rw [hih']
+      simp only [List.length_cons]
+      omega
+    · rw [hbs]; exact hh0'
+    · rw [hbs]; exact hd0'
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Phase 3 loop: copy the qstart field onto the state tape
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Field-copy loop**: with the desc tape (work 4) at position `p + 1` and
+    holding the symbol suffix `rest` from there on, copy the symbols before
+    the first blank cell — exactly `(takeField rest).1` — onto the state
+    tape (work 3), then enter `rewindDesc2`. The terminating blank cell is
+    read but not copied. -/
+private theorem copyField_loop :
+    ∀ (rest facc : List Γw) (p : ℕ) (c : Cfg 6 initTM.Q),
+      c.state = InitQ.copyField →
+      (c.work 4).head = p + 1 →
+      (∀ j : ℕ, (c.work 4).cells (p + 1 + j)
+        = if h : j < rest.length then (rest[j]).toΓ else Γ.blank) →
+      (c.work 3).HoldsExact facc →
+      (c.work 3).head = facc.length + 1 →
+      c.input.read ≠ Γ.start →
+      (∀ i, i ≠ (3 : Fin 6) → i ≠ (4 : Fin 6) →
+        (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head) →
+      c.output.read ≠ Γ.start → 1 ≤ c.output.head →
+      ∃ c', initTM.reachesIn ((takeField rest).1.length + 1) c c' ∧
+        c'.state = InitQ.rewindDesc2 ∧
+        c'.input = c.input ∧
+        (c'.work 4).cells = (c.work 4).cells ∧
+        (c'.work 4).head = p + 1 + (takeField rest).1.length ∧
+        (c'.work 3).HoldsExact (facc ++ (takeField rest).1) ∧
+        (c'.work 3).head = (facc ++ (takeField rest).1).length + 1 ∧
+        (∀ i, i ≠ (3 : Fin 6) → i ≠ (4 : Fin 6) → c'.work i = c.work i) ∧
+        c'.output = c.output
+  | [] => by
+    intro facc p c hst hhd4 hcells hh3 hd3 hi hwo ho hoh
+    have hread4 : (c.work 4).read = Γ.blank := by
+      rw [Tape.read, hhd4]
+      simpa using hcells 0
+    have hw3read : (c.work 3).read = Γ.blank := by
+      rw [Tape.read, hd3]
+      exact Tape.HoldsExact.cells_ge hh3 (le_refl _)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h3 : i = (3 : Fin 6)
+      · subst h3
+        exact ⟨by rw [hw3read]; simp, by rw [hd3]; omega⟩
+      · by_cases h4 : i = (4 : Fin 6)
+        · subst h4
+          exact ⟨by rw [hread4]; simp, by rw [hhd4]; omega⟩
+        · exact hwo i h3 h4
+    obtain ⟨c₁, hs₁, hst₁, hin₁, hwk₁, hout₁⟩ :=
+      step_copyField_blank hst hread4 hi hwAll ho hoh
+    refine ⟨c₁, .step hs₁ .zero, hst₁, hin₁, by rw [hwk₁], ?_, ?_, ?_,
+      fun i h3 h4 => by rw [hwk₁], by rw [hout₁]⟩
+    · rw [hwk₁, hhd4]
+      simp [takeField]
+    · rw [hwk₁]
+      simpa [takeField] using hh3
+    · rw [hwk₁]
+      simpa [takeField] using hd3
+  | .blank :: r => by
+    intro facc p c hst hhd4 hcells hh3 hd3 hi hwo ho hoh
+    have hread4 : (c.work 4).read = Γ.blank := by
+      rw [Tape.read, hhd4]
+      simpa using hcells 0
+    have hw3read : (c.work 3).read = Γ.blank := by
+      rw [Tape.read, hd3]
+      exact Tape.HoldsExact.cells_ge hh3 (le_refl _)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h3 : i = (3 : Fin 6)
+      · subst h3
+        exact ⟨by rw [hw3read]; simp, by rw [hd3]; omega⟩
+      · by_cases h4 : i = (4 : Fin 6)
+        · subst h4
+          exact ⟨by rw [hread4]; simp, by rw [hhd4]; omega⟩
+        · exact hwo i h3 h4
+    obtain ⟨c₁, hs₁, hst₁, hin₁, hwk₁, hout₁⟩ :=
+      step_copyField_blank hst hread4 hi hwAll ho hoh
+    refine ⟨c₁, .step hs₁ .zero, hst₁, hin₁, by rw [hwk₁], ?_, ?_, ?_,
+      fun i h3 h4 => by rw [hwk₁], by rw [hout₁]⟩
+    · rw [hwk₁, hhd4]
+      simp [takeField]
+    · rw [hwk₁]
+      simpa [takeField] using hh3
+    · rw [hwk₁]
+      simpa [takeField] using hd3
+  | .zero :: r => by
+    intro facc p c hst hhd4 hcells hh3 hd3 hi hwo ho hoh
+    have hread4 : (c.work 4).read = Γ.zero := by
+      rw [Tape.read, hhd4]
+      simpa using hcells 0
+    have hw3read : (c.work 3).read = Γ.blank := by
+      rw [Tape.read, hd3]
+      exact Tape.HoldsExact.cells_ge hh3 (le_refl _)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h3 : i = (3 : Fin 6)
+      · subst h3
+        exact ⟨by rw [hw3read]; simp, by rw [hd3]; omega⟩
+      · by_cases h4 : i = (4 : Fin 6)
+        · subst h4
+          exact ⟨by rw [hread4]; simp, by rw [hhd4]; omega⟩
+        · exact hwo i h3 h4
+    obtain ⟨c₁, hs₁, hst₁, hin₁, hfr₁, hw3₁, hw4c₁, hw4h₁, hout₁⟩ :=
+      step_copyField_bit (Or.inl rfl) hst hread4 hi hwAll ho hoh
+    have hpush := holdsExact_push hh3 hd3 Γw.zero
+    have hh3₁ : (c₁.work 3).HoldsExact (facc ++ [Γw.zero]) := by
+      rw [hw3₁]; exact hpush.1
+    have hd3₁ : (c₁.work 3).head = (facc ++ [Γw.zero]).length + 1 := by
+      rw [hw3₁]; exact hpush.2
+    have hhd4₁ : (c₁.work 4).head = p + 1 + 1 := by rw [hw4h₁, hhd4]
+    have hcells₁ : ∀ j : ℕ, (c₁.work 4).cells (p + 1 + 1 + j)
+        = if h : j < r.length then (r[j]).toΓ else Γ.blank := by
+      intro j
+      rw [hw4c₁]
+      have h := hcells (j + 1)
+      rw [show p + 1 + (j + 1) = p + 1 + 1 + j by omega] at h
+      simp only [List.length_cons] at h
+      rw [h]
+      by_cases hj : j < r.length
+      · rw [dif_pos (by omega), dif_pos hj]
+        simp
+      · rw [dif_neg (by omega), dif_neg hj]
+    obtain ⟨c', hreach, hst', hin', hw4c', hw4h', hh3', hd3', hfr', hout'⟩ :=
+      copyField_loop r (facc ++ [Γw.zero]) (p + 1) c₁ hst₁ hhd4₁ hcells₁ hh3₁ hd3₁
+        (by rw [hin₁]; exact hi)
+        (fun i h3 h4 => by rw [hfr₁ i h3 h4]; exact hwo i h3 h4)
+        (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+    have htf1 : (takeField (Γw.zero :: r)).1 = Γw.zero :: (takeField r).1 := by
+      simp [takeField]
+    have happ : facc ++ (takeField (Γw.zero :: r)).1
+        = (facc ++ [Γw.zero]) ++ (takeField r).1 := by
+      rw [htf1]; simp
+    refine ⟨c', ?_, hst', by rw [hin', hin₁], by rw [hw4c', hw4c₁], ?_, ?_, ?_, ?_,
+      by rw [hout', hout₁]⟩
+    · rw [show (takeField (Γw.zero :: r)).1.length + 1
+          = ((takeField r).1.length + 1) + 1 by rw [htf1]; simp]
+      exact .step hs₁ hreach
+    · rw [hw4h', htf1]
+      simp only [List.length_cons]
+      omega
+    · rw [happ]; exact hh3'
+    · rw [happ]; exact hd3'
+    · intro i h3 h4
+      rw [hfr' i h3 h4, hfr₁ i h3 h4]
+  | .one :: r => by
+    intro facc p c hst hhd4 hcells hh3 hd3 hi hwo ho hoh
+    have hread4 : (c.work 4).read = Γ.one := by
+      rw [Tape.read, hhd4]
+      simpa using hcells 0
+    have hw3read : (c.work 3).read = Γ.blank := by
+      rw [Tape.read, hd3]
+      exact Tape.HoldsExact.cells_ge hh3 (le_refl _)
+    have hwAll : ∀ i, (c.work i).read ≠ Γ.start ∧ 1 ≤ (c.work i).head := by
+      intro i
+      by_cases h3 : i = (3 : Fin 6)
+      · subst h3
+        exact ⟨by rw [hw3read]; simp, by rw [hd3]; omega⟩
+      · by_cases h4 : i = (4 : Fin 6)
+        · subst h4
+          exact ⟨by rw [hread4]; simp, by rw [hhd4]; omega⟩
+        · exact hwo i h3 h4
+    obtain ⟨c₁, hs₁, hst₁, hin₁, hfr₁, hw3₁, hw4c₁, hw4h₁, hout₁⟩ :=
+      step_copyField_bit (Or.inr rfl) hst hread4 hi hwAll ho hoh
+    have hpush := holdsExact_push hh3 hd3 Γw.one
+    have hh3₁ : (c₁.work 3).HoldsExact (facc ++ [Γw.one]) := by
+      rw [hw3₁]; exact hpush.1
+    have hd3₁ : (c₁.work 3).head = (facc ++ [Γw.one]).length + 1 := by
+      rw [hw3₁]; exact hpush.2
+    have hhd4₁ : (c₁.work 4).head = p + 1 + 1 := by rw [hw4h₁, hhd4]
+    have hcells₁ : ∀ j : ℕ, (c₁.work 4).cells (p + 1 + 1 + j)
+        = if h : j < r.length then (r[j]).toΓ else Γ.blank := by
+      intro j
+      rw [hw4c₁]
+      have h := hcells (j + 1)
+      rw [show p + 1 + (j + 1) = p + 1 + 1 + j by omega] at h
+      simp only [List.length_cons] at h
+      rw [h]
+      by_cases hj : j < r.length
+      · rw [dif_pos (by omega), dif_pos hj]
+        simp
+      · rw [dif_neg (by omega), dif_neg hj]
+    obtain ⟨c', hreach, hst', hin', hw4c', hw4h', hh3', hd3', hfr', hout'⟩ :=
+      copyField_loop r (facc ++ [Γw.one]) (p + 1) c₁ hst₁ hhd4₁ hcells₁ hh3₁ hd3₁
+        (by rw [hin₁]; exact hi)
+        (fun i h3 h4 => by rw [hfr₁ i h3 h4]; exact hwo i h3 h4)
+        (by rw [hout₁]; exact ho) (by rw [hout₁]; exact hoh)
+    have htf1 : (takeField (Γw.one :: r)).1 = Γw.one :: (takeField r).1 := by
+      simp [takeField]
+    have happ : facc ++ (takeField (Γw.one :: r)).1
+        = (facc ++ [Γw.one]) ++ (takeField r).1 := by
+      rw [htf1]; simp
+    refine ⟨c', ?_, hst', by rw [hin', hin₁], by rw [hw4c', hw4c₁], ?_, ?_, ?_, ?_,
+      by rw [hout', hout₁]⟩
+    · rw [show (takeField (Γw.one :: r)).1.length + 1
+          = ((takeField r).1.length + 1) + 1 by rw [htf1]; simp]
+      exact .step hs₁ hreach
+    · rw [hw4h', htf1]
+      simp only [List.length_cons]
+      omega
+    · rw [happ]; exact hh3'
+    · rw [happ]; exact hd3'
+    · intro i h3 h4
+      rw [hfr' i h3 h4, hfr₁ i h3 h4]
 
 end TM

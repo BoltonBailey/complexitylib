@@ -399,4 +399,47 @@ theorem scanRight_loop {cur next : BodyQ} {t : Fin 6}
       rw [if_neg hi]
       exact idle_tape_id (hoth i hi)
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Arm-shape instantiations (all definitional)
+-- ════════════════════════════════════════════════════════════════════════
+
+section Arms
+variable (iH : Γ) (wH : Fin 6 → Γ) (oH : Γ) (f : VFlags)
+
+theorem arm_haltRewS : bodyδ haltRewS iH wH oH = rewStep haltRewS haltRewD iH wH oH stT := rfl
+theorem arm_haltRewD : bodyδ haltRewD iH wH oH = rewStep haltRewD bodyDone iH wH oH dsT := rfl
+theorem arm_preRewS : bodyδ preRewS iH wH oH = rewStep preRewS preRewD iH wH oH stT := rfl
+theorem arm_preRewD : bodyδ preRewD iH wH oH = rewStep preRewD peek1 iH wH oH dsT := rfl
+theorem arm_rewindSt : bodyδ (rewindSt f) iH wH oH = rewStep (rewindSt f) (cmpQ f) iH wH oH stT := rfl
+theorem arm_appRewScr : bodyδ (appRewScr f) iH wH oH = rewStep (appRewScr f) (appQ' f) iH wH oH scT := rfl
+theorem arm_dfStRew : bodyδ dfStRew iH wH oH = rewStep dfStRew dfBlank iH wH oH stT := rfl
+theorem arm_dfStRew2 : bodyδ dfStRew2 iH wH oH = rewStep dfStRew2 dfDescRew iH wH oH stT := rfl
+theorem arm_dfDescRew : bodyδ dfDescRew iH wH oH = rewStep dfDescRew dfSkip iH wH oH dsT := rfl
+theorem arm_dfStRew3 : bodyδ dfStRew3 iH wH oH = rewStep dfStRew3 dfDescRew2 iH wH oH stT := rfl
+theorem arm_dfDescRew2 : bodyδ dfDescRew2 iH wH oH = rewStep dfDescRew2 bodyDone iH wH oH dsT := rfl
+theorem arm_clSt : bodyδ clSt iH wH oH = rewStep clSt clDesc iH wH oH stT := rfl
+theorem arm_clDesc : bodyδ clDesc iH wH oH = rewStep clDesc bodyDone iH wH oH dsT := rfl
+
+theorem arm_mmScr : bodyδ (mmScr f) iH wH oH = blankRewStep (mmScr f) (rewindSt f) iH wH oH scT := rfl
+theorem arm_dfScr : bodyδ dfScr iH wH oH = blankRewStep dfScr dfStRew iH wH oH scT := rfl
+theorem arm_clScr : bodyδ clScr iH wH oH = blankRewStep clScr clSt iH wH oH scT := rfl
+
+theorem arm_hc0 : bodyδ hc0 iH wH oH
+    = act1 (if wH dsT = Γ.blank then hc1 else hc0) iH wH oH dsT
+        (readBackWrite (wH dsT)) .right := rfl
+theorem arm_seek1 : bodyδ (seek1 f) iH wH oH
+    = act1 (if wH dsT = Γ.blank then seek2 f else seek1 f) iH wH oH dsT
+        (readBackWrite (wH dsT)) .right := rfl
+theorem arm_seek2 : bodyδ (seek2 f) iH wH oH
+    = act1 (if wH dsT = Γ.blank then cmpQ f else seek2 f) iH wH oH dsT
+        (readBackWrite (wH dsT)) .right := rfl
+theorem arm_skipSeg : bodyδ (skipSeg f) iH wH oH
+    = act1 (if wH dsT = Γ.blank then segCheck f else skipSeg f) iH wH oH dsT
+        (readBackWrite (wH dsT)) .right := rfl
+theorem arm_dfSkip : bodyδ dfSkip iH wH oH
+    = act1 (if wH dsT = Γ.blank then dfCopy else dfSkip) iH wH oH dsT
+        (readBackWrite (wH dsT)) .right := rfl
+
+end Arms
+
 end TM.UTMBody

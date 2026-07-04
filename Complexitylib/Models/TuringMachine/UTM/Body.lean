@@ -84,13 +84,19 @@ inductive BodyQ where
 
 open BodyQ
 
-/-- Tape indices, for readability. -/
-private def vIn : Fin 6 := 0
-private def vWk : Fin 6 := 1
-private def vOut : Fin 6 := 2
-private def stT : Fin 6 := 3
-private def dsT : Fin 6 := 4
-private def scT : Fin 6 := 5
+/-- Tape indices, for readability (0 vInput, 1 vWork, 2 vOut, 3 state,
+    4 desc, 5 scratch). -/
+def vIn : Fin 6 := 0
+/-- Work-tape index of the simulated work tape. -/
+def vWk : Fin 6 := 1
+/-- Work-tape index of the simulated output tape. -/
+def vOut : Fin 6 := 2
+/-- Work-tape index of the state tape. -/
+def stT : Fin 6 := 3
+/-- Work-tape index of the description tape. -/
+def dsT : Fin 6 := 4
+/-- Work-tape index of the scratch tape. -/
+def scT : Fin 6 := 5
 
 /-- The simulated read of a virtual tape: `▷` at the origin, else the live
     cell under the (stationary) shadow head. -/
