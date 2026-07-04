@@ -29,3 +29,6 @@ import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.UTM.Desc
 import Complexitylib.Models.TuringMachine.UTM.Interp
 import Complexitylib.Models.TuringMachine.UTM.VTape
+import Complexitylib.Models.TuringMachine.UTM.Bits
+import Complexitylib.Models.TuringMachine.UTM.Extract
+import Complexitylib.Models.TuringMachine.UTM.Body
