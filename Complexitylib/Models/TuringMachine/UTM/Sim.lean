@@ -1,0 +1,138 @@
+import Complexitylib.Models.TuringMachine.UTM.Machine
+import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
+import Complexitylib.Models.TuringMachine.UTM.Init
+
+/-!
+# Universal machine: simulation bridges
+
+Bridges between the phase machines' Hoare specifications and the body's
+standing invariant `SimInv`:
+
+* the initialization machine's postcondition realizes `SimInv` at the
+  interpreted machine's initial configuration (for **every** binary `α` —
+  the decoded start state's fixed-width encoding is exactly the first
+  description field, by the `toBits`/`fromBits` roundtrip at the field's
+  own width);
+* (the loop- and extract-side bridges and the headline simulation theorems
+  are assembled below as the remaining pieces land).
+-/
+
+namespace TM.UTMBody
+
+/-- The first description field *is* the fixed-width encoding of the
+    decoded start state — for arbitrary `α`. -/
+theorem qstartField_eq_encoding (α : List Bool) :
+    (takeField (groupPairs α)).1
+      = bitsToSyms (Nat.toBits (decodeDesc α).w
+          ((decodeDesc α).toTM.qstart.val)) := by
+  have hval : (decodeDesc α).toTM.qstart.val
+      = (decodeDesc α).qstart % 2 ^ (decodeDesc α).w := rfl
+  have hlt : (decodeDesc α).qstart < 2 ^ (decodeDesc α).w := by
+    show fieldNat (takeField (groupPairs α)).1 < _
+    calc fieldNat (takeField (groupPairs α)).1
+        < 2 ^ ((takeField (groupPairs α)).1.filterMap symBit?).length :=
+          Nat.fromBits_lt_pow_length _
+      _ ≤ 2 ^ (takeField (groupPairs α)).1.length :=
+          Nat.pow_le_pow_right (by omega) (List.length_filterMap_le ..)
+  rw [hval, Nat.mod_eq_of_lt hlt]
+  have hnb : ∀ s ∈ (takeField (groupPairs α)).1, s ≠ Γw.blank :=
+    fun s hs => takeField_fst_ne_blank _ s hs
+  have hbits := bitsToSyms_filterMap_of_ne_blank hnb
+  have hlen : ((takeField (groupPairs α)).1.filterMap symBit?).length
+      = (decodeDesc α).w := by
+    have := congrArg List.length hbits
+    rw [bitsToSyms_length] at this
+    exact this
+  conv_lhs => rw [← hbits]
+  congr 1
+  show List.filterMap symBit? (takeField (groupPairs α)).1
+      = Nat.toBits (decodeDesc α).w
+          (Nat.fromBits ((takeField (groupPairs α)).1.filterMap symBit?))
+  rw [← hlen, Nat.toBits_fromBits]
+
+/-- A cleared, started tape shadows the empty simulated tape. -/
+theorem vshift_initTape_nil {t : Tape} (h : t.HoldsExact []) (hh : t.head = 1) :
+    VShift (initTape []) t := by
+  refine ⟨?_, by rw [hh]; rfl⟩
+  funext k
+  by_cases hk0 : k = 0
+  · subst hk0
+    exact h.1
+  · by_cases hk1 : k = 1
+    · subst hk1
+      have := (Tape.HoldsExact.nil_iff.mp h).2 0
+      simpa using this
+    · have := (Tape.HoldsExact.nil_iff.mp h).2 (k - 1)
+      rw [show k - 1 + 1 = k by omega] at this
+      rw [this]
+      simp only [hk0, hk1, if_false]
+      show Γ.blank = (initTape []).cells (k - 1)
+      simp [initTape, show k - 1 ≠ 0 by omega]
+
+/-- The shifted copy of `x` (cells `▷ □ x ⋯`, head 1) shadows the
+    interpreted machine's initial input tape. -/
+theorem vshift_initTape_x {t : Tape} (x : List Bool)
+    (hc : t.cells = fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
+      else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank)
+    (hh : t.head = 1) :
+    VShift (initTape (x.map Γ.ofBool)) t := by
+  refine ⟨?_, by rw [hh]; rfl⟩
+  rw [hc]
+  funext k
+  by_cases hk0 : k = 0
+  · simp [hk0]
+  · by_cases hk1 : k = 1
+    · simp [hk1]
+    · simp only [hk0, hk1, if_false]
+      show _ = (initTape (x.map Γ.ofBool)).cells (k - 1)
+      simp only [initTape, show k - 1 ≠ 0 by omega, if_false,
+        show k - 1 - 1 = k - 2 by omega]
+
+/-- **Initialization realizes the invariant**: the tape shape guaranteed by
+    `initTM`'s postcondition is `SimInv` at the interpreted machine's
+    initial configuration. -/
+theorem initPost_simInv (α x : List Bool)
+    (inp : Tape) (work : Fin 6 → Tape) (out : Tape)
+    (hpost :
+      inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+      (work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
+        else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (work 0).head = 1 ∧
+      (work 1).HoldsExact [] ∧ (work 1).head = 1 ∧
+      (work 2).HoldsExact [] ∧ (work 2).head = 1 ∧
+      (work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (work 3).head = 1 ∧
+      (work 4).HoldsExact (groupPairs α) ∧ (work 4).head = 1 ∧
+      (work 5).HoldsExact [] ∧ (work 5).head = 1 ∧
+      out.cells = (initTape []).cells ∧ out.head = 1)
+    (hinp_head : 1 ≤ inp.head) :
+    SimInv α ((decodeDesc α).toTM.initCfg x) inp work out := by
+  obtain ⟨hinp, hw0c, hw0h, hw1, hw1h, hw2, hw2h, hw3, hw3h, hw4, hw4h,
+    hw5, hw5h, houtc, houth⟩ := hpost
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact vshift_initTape_x x hw0c hw0h
+  · exact vshift_initTape_nil hw1 hw1h
+  · exact vshift_initTape_nil hw2 hw2h
+  · exact initTape_wfCells x
+  · show (initTape ([] : List Γ)).WFCells
+    simpa using initTape_wfCells []
+  · show (initTape ([] : List Γ)).WFCells
+    simpa using initTape_wfCells []
+  · left
+    have hstate : ((decodeDesc α).toTM.initCfg x).state
+        = (decodeDesc α).toTM.qstart := rfl
+    constructor
+    · rw [hstate]
+      show (decodeDesc α).qstart % 2 ^ (decodeDesc α).w < 2 ^ (decodeDesc α).w
+      exact Nat.mod_lt _ (Nat.two_pow_pos _)
+    · rw [hstate, ← qstartField_eq_encoding]
+      exact hw3
+  · exact hw3h
+  · exact hw4
+  · exact hw4h
+  · exact hw5
+  · exact hw5h
+  · rw [Tape.read, hinp]
+    exact (initTape_wfCells (pair α x)).2 inp.head hinp_head
+  · rw [Tape.read, houtc, houth]
+    simp [initTape]
+
+end TM.UTMBody

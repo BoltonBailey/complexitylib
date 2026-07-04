@@ -43,5 +43,6 @@ import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.BodyLoop
 import Complexitylib.Models.TuringMachine.UTM.StepGlue
 import Complexitylib.Models.TuringMachine.UTM.Machine
+import Complexitylib.Models.TuringMachine.UTM.Sim
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
