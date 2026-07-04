@@ -169,7 +169,15 @@ private theorem parseEntry_eq (w : ℕ) (seg : List Γw) :
   by_cases hlen : (seg.filterMap symBit?).length < 2 * w + 16
   · rw [if_pos hlen, if_neg (by omega)]
   · rw [if_neg hlen, if_pos (by omega)]
-    sorry
+    dsimp only
+    rw [drop_add _ (rfl : w + 2 = w + 2),
+        drop_add _ (by omega : w + 2 + 2 = w + 4),
+        drop_add _ (by omega : w + 4 + 2 = w + 6),
+        drop_add _ (by omega : w + 6 + w = 2 * w + 6),
+        drop_add _ (by omega : 2 * w + 6 + 2 = 2 * w + 8),
+        drop_add _ (by omega : 2 * w + 8 + 2 = 2 * w + 10),
+        drop_add _ (by omega : 2 * w + 10 + 2 = 2 * w + 12),
+        drop_add _ (by omega : 2 * w + 12 + 2 = 2 * w + 14)]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- 3. The parse bridge

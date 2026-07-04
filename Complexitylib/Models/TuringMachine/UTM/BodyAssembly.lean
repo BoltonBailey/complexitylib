@@ -250,6 +250,144 @@ theorem hcPhase_halted (c : Cfg 6 bodyTM.Q)
       exact tape_mk_eq hinv.desc_head
     · rw [hoth₄ i hiD, hoth₃ i hiS, hoth₂ i hiS hiD, hoth₁ i hiD]
 
+/-- **Halt-check phase, running case**: when the interpreted machine is not
+    at its halt state, the body's halt check falls through to the peek
+    phase with every tape exactly restored, within
+    `5·|groupPairs α| + 7` steps. -/
+theorem hcPhase_running (c : Cfg 6 bodyTM.Q)
+    (hst : c.state = hc0)
+    (hinv : SimInv α mc c.input c.work c.output)
+    (hrun : mc.state ≠ (decodeDesc α).toTM.qhalt) :
+    ∃ c' t, t ≤ 5 * (groupPairs α).length + 7 ∧
+      bodyTM.reachesIn t c c' ∧
+      c'.state = peek1 ∧
+      c'.input = c.input ∧ (∀ i, c'.work i = c.work i) ∧
+      c'.output = c.output := by
+  -- the state clause must be the running disjunct
+  rcases hinv.state with ⟨hlt, hS_hold⟩ | ⟨hq, -⟩
+  swap
+  · exact absurd hq hrun
+  have hS_nb : ∀ s ∈ bitsToSyms (Nat.toBits (decodeDesc α).w mc.state.val),
+      s ≠ Γw.blank := fun s hs => bitsToSyms_ne_blank hs
+  -- the state encoding differs from the qhalt field
+  have hne_list : bitsToSyms (Nat.toBits (decodeDesc α).w mc.state.val)
+      ≠ qhaltField (groupPairs α) := by
+    intro hcon
+    exact hrun (Fin.val_injective ((verdict_running α hlt).mp hcon))
+  obtain ⟨n, hnA, hnB, hagree, hmm⟩ :=
+    exists_first_mismatch hS_nb
+      (fun s hs => takeField_fst_ne_blank _ s hs) hne_list
+  have hnB' : n ≤ (qhaltField (groupPairs α)).length := hnB
+  have hS_wns : ∀ j, 1 ≤ j → (c.work stT).cells j ≠ Γ.start :=
+    (Tape.HoldsExact.wfCells hS_hold).2
+  have hW_wns : ∀ j, 1 ≤ j → (c.work dsT).cells j ≠ Γ.start :=
+    (Tape.HoldsExact.wfCells hinv.desc).2
+  have hoth_d : ∀ i, i ≠ dsT → (c.work i).read ≠ Γ.start := by
+    intro i hiD
+    by_cases hiS : i = stT
+    · subst hiS
+      exact SimInv.read_ne_start_of_holdsExact hS_hold (by rw [hinv.state_head])
+    · exact hinv.others_read i hiS hiD
+  -- Phase hc0: scan past field 1
+  obtain ⟨c₁, hr₁, hst₁, hwtD₁, hin₁, hout₁, hoth₁⟩ :=
+    scanRight_loop (cur := hc0) (next := hc1) (t := dsT)
+      (fun hcon => nomatch hcon) arm_hc0
+      (c.work dsT).cells hW_wns
+      (takeField (groupPairs α)).1.length 1 (by omega)
+      (fun j hj => descLayout_field1 hinv.desc j hj)
+      (descLayout_sep1 hinv.desc)
+      c hst rfl hinv.desc_head hinv.inp_read hinv.out_read
+      (fun i hi => hoth_d i hi)
+  have hstS₁ : c₁.work stT = c.work stT := hoth₁ stT (by decide)
+  -- state and desc cell values in blank-default form
+  have hScell : ∀ j, (c.work stT).cells (1 + j)
+      = (((bitsToSyms (Nat.toBits (decodeDesc α).w mc.state.val))[j]?).getD
+          Γw.blank).toΓ := by
+    intro j
+    rw [show 1 + j = j + 1 by omega]
+    exact holdsExact_cells_getD hS_hold j
+  have hWcell : ∀ j, j ≤ (qhaltField (groupPairs α)).length →
+      (c.work dsT).cells ((takeField (groupPairs α)).1.length + 2 + j)
+        = (((qhaltField (groupPairs α))[j]?).getD Γw.blank).toΓ :=
+    fun j hj => descLayout_field2_getD hinv.desc j hj
+  -- Phase hc1: lockstep compare, first mismatch at offset n
+  obtain ⟨c₂, hr₂, hst₂, hwtS₂, hwtD₂, hin₂, hout₂, hoth₂⟩ :=
+    hc1_mismatch_loop (c.work stT).cells (c.work dsT).cells hS_wns hW_wns
+      n 1 ((takeField (groupPairs α)).1.length + 2) (by omega) (by omega)
+      (fun j hj => by
+        obtain ⟨hje, hjb⟩ := hagree j hj
+        constructor
+        · rw [hScell j, hWcell j (by omega)]
+          exact congrArg Γw.toΓ hje
+        · rw [hScell j]
+          intro hcon
+          exact hjb (Γw.toΓ_eq_blank.mp hcon))
+      (by
+        rw [hScell n, hWcell n hnB']
+        rintro ⟨h1, h2⟩
+        exact hmm ((Γw.toΓ_eq_blank.mp h1).trans (Γw.toΓ_eq_blank.mp h2).symm))
+      (by
+        rw [hScell n, hWcell n hnB']
+        rintro ⟨-, -, h3⟩
+        exact hmm (Γw.toΓ_inj h3))
+      c₁ hst₁
+      (by rw [hstS₁]) (by rw [hstS₁, hinv.state_head])
+      (by rw [hwtD₁]) (by rw [hwtD₁]; dsimp only; omega)
+      (by rw [hin₁]; exact hinv.inp_read) (by rw [hout₁]; exact hinv.out_read)
+      (fun i hiS hiD => by rw [hoth₁ i hiD]; exact hoth_d i hiD)
+  -- Phase preRewS: rewind the state head
+  obtain ⟨c₃, hr₃, hst₃, hwtS₃, hin₃, hout₃, hoth₃⟩ :=
+    rewStep_loop (cur := preRewS) (next := preRewD) (t := stT)
+      (fun hcon => nomatch hcon) arm_preRewS
+      (c.work stT).cells hS_hold.1 hS_wns
+      (1 + n) c₂ hst₂
+      (by rw [hwtS₂]) (by rw [hwtS₂])
+      (by rw [hin₂, hin₁]; exact hinv.inp_read)
+      (by rw [hout₂, hout₁]; exact hinv.out_read)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD
+          rw [hwtD₂]
+          exact hW_wns ((takeField (groupPairs α)).1.length + 2 + n) (by omega)
+        · rw [hoth₂ i hi hiD, hoth₁ i hiD]
+          exact hoth_d i hiD)
+  -- Phase preRewD: rewind the desc head
+  obtain ⟨c₄, hr₄, hst₄, hwtD₄, hin₄, hout₄, hoth₄⟩ :=
+    rewStep_loop (cur := preRewD) (next := peek1) (t := dsT)
+      (fun hcon => nomatch hcon) arm_preRewD
+      (c.work dsT).cells hinv.desc.1 hW_wns
+      ((takeField (groupPairs α)).1.length + 2 + n) c₃ hst₃
+      (by rw [hoth₃ dsT (by decide), hwtD₂])
+      (by rw [hoth₃ dsT (by decide), hwtD₂])
+      (by rw [hin₃, hin₂, hin₁]; exact hinv.inp_read)
+      (by rw [hout₃, hout₂, hout₁]; exact hinv.out_read)
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS
+          rw [hwtS₃]
+          exact hS_wns 1 (by omega)
+        · rw [hoth₃ i hiS, hoth₂ i hiS hi, hoth₁ i hi]
+          exact hoth_d i hi)
+  have hF1 := takeField_fst_length_le (groupPairs α)
+  have hqh := qhaltField_length_le (groupPairs α)
+  refine ⟨c₄,
+    ((takeField (groupPairs α)).1.length + 1) + (n + 1) + ((1 + n) + 1)
+      + (((takeField (groupPairs α)).1.length + 2 + n) + 1),
+    by omega,
+    reachesIn_trans _ (reachesIn_trans _ (reachesIn_trans _ hr₁ hr₂) hr₃) hr₄,
+    hst₄, by rw [hin₄, hin₃, hin₂, hin₁], ?_,
+    by rw [hout₄, hout₃, hout₂, hout₁]⟩
+  intro i
+  by_cases hiS : i = stT
+  · subst hiS
+    rw [hoth₄ stT (by decide), hwtS₃]
+    exact tape_mk_eq hinv.state_head
+  · by_cases hiD : i = dsT
+    · subst hiD
+      rw [hwtD₄]
+      exact tape_mk_eq hinv.desc_head
+    · rw [hoth₄ i hiD, hoth₃ i hiS, hoth₂ i hiS hiD, hoth₁ i hiD]
+
 end HcPhase
 
 end TM.UTMBody
