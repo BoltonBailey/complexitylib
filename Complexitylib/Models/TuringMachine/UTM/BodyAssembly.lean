@@ -468,6 +468,112 @@ theorem peekSeekPhase (c : Cfg 6 bodyTM.Q)
         exact congrArg (fun m => (⟨m, (c.work dsT).cells⟩ : Tape)) (by omega)),
     by rw [hin₃, hin₂, hin₁], by rw [hout₃, hout₂, hout₁]⟩
 
+/-- **Cleanup phase** (after a successful apply): blank-rewind the scratch
+    tape, then rewind the state and desc heads; ends at `bodyDone` with the
+    scratch cleared and every other tape's cells intact. -/
+theorem cleanupPhase (c : Cfg 6 bodyTM.Q) (E S W : ℕ → Γ) (p sp dp : ℕ)
+    (hsp : 1 ≤ sp) (hdp : 1 ≤ dp)
+    (hst : c.state = clScr)
+    (hE0 : E 0 = Γ.start) (hEns : ∀ j, 1 ≤ j → E j ≠ Γ.start)
+    (hEbeyond : ∀ j, p < j → E j = Γ.blank)
+    (hscC : (c.work scT).cells = E) (hscH : (c.work scT).head = p)
+    (hS0 : S 0 = Γ.start) (hSns : ∀ j, 1 ≤ j → S j ≠ Γ.start)
+    (hstC : (c.work stT).cells = S) (hstH : (c.work stT).head = sp)
+    (hW0 : W 0 = Γ.start) (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start)
+    (hdsC : (c.work dsT).cells = W) (hdsH : (c.work dsT).head = dp)
+    (hin : c.input.read ≠ Γ.start) (hout : c.output.read ≠ Γ.start)
+    (hoth : ∀ i, i ≠ stT → i ≠ dsT → i ≠ scT → (c.work i).read ≠ Γ.start) :
+    ∃ c', bodyTM.reachesIn ((p + 1) + (sp + 1) + (dp + 1)) c c' ∧
+      c'.state = bodyDone ∧
+      (c'.work scT).HoldsExact [] ∧ (c'.work scT).head = 1 ∧
+      c'.work stT = ⟨1, S⟩ ∧ c'.work dsT = ⟨1, W⟩ ∧
+      (∀ i, i ≠ stT → i ≠ dsT → i ≠ scT → c'.work i = c.work i) ∧
+      c'.input = c.input ∧ c'.output = c.output := by
+  have hst_read : (c.work stT).read ≠ Γ.start := by
+    rw [Tape.read, hstC, hstH]; exact hSns sp hsp
+  have hds_read : (c.work dsT).read ≠ Γ.start := by
+    rw [Tape.read, hdsC, hdsH]; exact hWns dp hdp
+  -- the blanked scratch cells
+  set E' : ℕ → Γ := fun j => if 1 ≤ j ∧ j ≤ p then Γ.blank else E j with hE'
+  have hE'ns : ∀ j, 1 ≤ j → E' j ≠ Γ.start := by
+    intro j hj
+    rw [hE']
+    dsimp only
+    split
+    · simp
+    · exact hEns j hj
+  -- clScr: blank-rewind the scratch
+  obtain ⟨c₁, hr₁, hst₁, hwtSc₁, hin₁, hout₁, hoth₁⟩ :=
+    blankRewStep_loop (cur := clScr) (next := clSt) (t := scT)
+      (fun hcon => nomatch hcon) arm_clScr
+      p E hE0 hEns c hst hscC hscH hin hout
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS; exact hst_read
+        · by_cases hiD : i = dsT
+          · subst hiD; exact hds_read
+          · exact hoth i hiS hiD hi)
+  -- clSt: rewind the state head
+  obtain ⟨c₂, hr₂, hst₂, hwtS₂, hin₂, hout₂, hoth₂⟩ :=
+    rewStep_loop (cur := clSt) (next := clDesc) (t := stT)
+      (fun hcon => nomatch hcon) arm_clSt
+      S hS0 hSns sp c₁ hst₁
+      (by rw [hoth₁ stT (by decide), hstC]) (by rw [hoth₁ stT (by decide), hstH])
+      (by rw [hin₁]; exact hin) (by rw [hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD
+          rw [hoth₁ dsT (by decide)]
+          exact hds_read
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hwtSc₁, Tape.read]
+            exact hE'ns 1 (by omega)
+          · rw [hoth₁ i hiSc]
+            exact hoth i hi hiD hiSc)
+  -- clDesc: rewind the desc head
+  obtain ⟨c₃, hr₃, hst₃, hwtD₃, hin₃, hout₃, hoth₃⟩ :=
+    rewStep_loop (cur := clDesc) (next := bodyDone) (t := dsT)
+      (fun hcon => nomatch hcon) arm_clDesc
+      W hW0 hWns dp c₂ hst₂
+      (by rw [hoth₂ dsT (by decide), hoth₁ dsT (by decide), hdsC])
+      (by rw [hoth₂ dsT (by decide), hoth₁ dsT (by decide), hdsH])
+      (by rw [hin₂, hin₁]; exact hin) (by rw [hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS
+          rw [hwtS₂]
+          exact hSns 1 (by omega)
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₂ scT (by decide), hwtSc₁, Tape.read]
+            exact hE'ns 1 (by omega)
+          · rw [hoth₂ i hiS, hoth₁ i hiSc]
+            exact hoth i hiS hi hiSc)
+  have hsc_final : c₃.work scT = ⟨1, E'⟩ := by
+    rw [hoth₃ scT (by decide), hoth₂ scT (by decide), hwtSc₁]
+  refine ⟨c₃, reachesIn_trans _ (reachesIn_trans _ hr₁ hr₂) hr₃, hst₃, ?_, ?_,
+    by rw [hoth₃ stT (by decide), hwtS₂], hwtD₃, ?_, ?_, ?_⟩
+  · rw [hsc_final]
+    refine Tape.HoldsExact.nil_iff.mpr ⟨?_, ?_⟩
+    · show E' 0 = Γ.start
+      rw [hE']
+      dsimp only
+      rw [if_neg (by omega)]
+      exact hE0
+    · intro i
+      show E' (i + 1) = Γ.blank
+      rw [hE']
+      dsimp only
+      split
+      · rfl
+      · exact hEbeyond (i + 1) (by omega)
+  · rw [hsc_final]
+  · intro i hiS hiD hiSc
+    rw [hoth₃ i hiD, hoth₂ i hiS, hoth₁ i hiSc]
+  · rw [hin₃, hin₂, hin₁]
+  · rw [hout₃, hout₂, hout₁]
+
 end HcPhase
 
 end TM.UTMBody

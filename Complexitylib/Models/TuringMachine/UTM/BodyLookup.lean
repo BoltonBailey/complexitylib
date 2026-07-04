@@ -80,6 +80,12 @@ private theorem drop_add {α : Type _} (l : List α) {m n k : ℕ} (h : m + n = 
     (l.drop m).drop n = l.drop k := by
   rw [List.drop_drop, h]
 
+/-- A 6-element prefix as its three 2-element groups. -/
+private theorem take_six_decomp {α : Type _} (l : List α) :
+    l.take 6 = l.take 2 ++ ((l.drop 2).take 2 ++ ((l.drop 2).drop 2).take 2) := by
+  rw [show (6 : ℕ) = 2 + 4 from rfl, List.take_add,
+      show (4 : ℕ) = 2 + 2 from rfl, List.take_add]
+
 /-- A 2-element `take`-of-`drop` slice as its two cells. -/
 private theorem drop_take_two {α : Type _} {l : List α} {i : ℕ}
     (h : i + 1 < l.length) :
@@ -192,7 +198,92 @@ theorem machMatch_iff_parse {w q : ℕ} (hq : q < 2 ^ w) (f : VFlags)
     MachMatch w (bitsToSyms (Nat.toBits w q)) (keyCells f v0 v1 v2) seg ↔
       ∃ e, parseEntry w seg = some e ∧ e.q = q ∧ e.si = simRead f.1 v0 ∧
         e.sw = simRead f.2.1 v1 ∧ e.so = simRead f.2.2 v2 := by
-  sorry
+  have hseg : bitsToSyms (seg.filterMap symBit?) = seg :=
+    bitsToSyms_filterMap_of_ne_blank hnb
+  have hlen : (seg.filterMap symBit?).length = seg.length := by
+    conv_rhs => rw [← hseg]
+    rw [bitsToSyms_length]
+  rw [MachMatch, parseEntry_eq]
+  constructor
+  · rintro ⟨h1, h2, h3⟩
+    rw [if_pos (by omega)]
+    have hkey : ((seg.filterMap symBit?).drop w).take 6
+        = (simRead f.1 v0).encode ++ (simRead f.2.1 v1).encode ++
+          (simRead f.2.2 v2).encode := by
+      apply bitsToSyms_injective
+      rw [bitsToSyms_take, bitsToSyms_drop, hseg]
+      exact h2
+    refine ⟨_, rfl, ?_, ?_, ?_, ?_⟩
+    · -- q field
+      show Nat.fromBits ((seg.filterMap symBit?).take w) = q
+      have h1' : bitsToSyms ((seg.filterMap symBit?).take w)
+          = bitsToSyms (Nat.toBits w q) := by
+        rw [bitsToSyms_take, hseg, h1]
+      rw [bitsToSyms_injective h1', Nat.fromBits_toBits hq]
+    · -- si field
+      show decΓ (((seg.filterMap symBit?).drop w).take 2) = simRead f.1 v0
+      have : ((seg.filterMap symBit?).drop w).take 2 = (simRead f.1 v0).encode := by
+        have ht : (((seg.filterMap symBit?).drop w).take 6).take 2
+            = ((seg.filterMap symBit?).drop w).take 2 := by
+          simp [List.take_take]
+        rw [← ht, hkey, List.append_assoc, List.take_left' (Γ.encode_length _)]
+      rw [this, decΓ_encode]
+    · -- sw field
+      show decΓ (((seg.filterMap symBit?).drop (w + 2)).take 2) = simRead f.2.1 v1
+      have : ((seg.filterMap symBit?).drop (w + 2)).take 2
+          = (simRead f.2.1 v1).encode := by
+        rw [← drop_add _ (rfl : w + 2 = w + 2), List.take_drop,
+            show (2 + 2 : ℕ) = 4 from rfl]
+        have ht : ((seg.filterMap symBit?).drop w).take 4
+            = (((seg.filterMap symBit?).drop w).take 6).take 4 := by
+          simp [List.take_take]
+        rw [ht, hkey, List.take_left' (by simp [Γ.encode_length]),
+            List.drop_left' (Γ.encode_length _)]
+      rw [this, decΓ_encode]
+    · -- so field
+      show decΓ (((seg.filterMap symBit?).drop (w + 4)).take 2) = simRead f.2.2 v2
+      have : ((seg.filterMap symBit?).drop (w + 4)).take 2
+          = (simRead f.2.2 v2).encode := by
+        rw [← drop_add _ (rfl : w + 4 = w + 4), List.take_drop,
+            show (4 + 2 : ℕ) = 6 from rfl, hkey,
+            List.drop_left' (by simp [Γ.encode_length])]
+      rw [this, decΓ_encode]
+  · rintro ⟨e, hpe, hq', hsi, hsw, hso⟩
+    by_cases hc : 2 * w + 16 ≤ (seg.filterMap symBit?).length
+    · rw [if_pos hc] at hpe
+      injection hpe with hpe
+      subst hpe
+      dsimp only at hq' hsi hsw hso
+      refine ⟨?_, ?_, by omega⟩
+      · -- state field
+        have hwlen : ((seg.filterMap symBit?).take w).length = w := by
+          rw [List.length_take]; omega
+        have hbits := Nat.toBits_fromBits ((seg.filterMap symBit?).take w)
+        rw [hwlen, hq'] at hbits
+        rw [hbits, bitsToSyms_take, hseg]
+      · -- key cells
+        have hsi' : ((seg.filterMap symBit?).drop w).take 2
+            = (simRead f.1 v0).encode :=
+          eq_encode_of_decΓ_eq
+            (by rw [List.length_take, List.length_drop]; omega) hsi
+        have hsw' : ((seg.filterMap symBit?).drop (w + 2)).take 2
+            = (simRead f.2.1 v1).encode :=
+          eq_encode_of_decΓ_eq
+            (by rw [List.length_take, List.length_drop]; omega) hsw
+        have hso' : ((seg.filterMap symBit?).drop (w + 4)).take 2
+            = (simRead f.2.2 v2).encode :=
+          eq_encode_of_decΓ_eq
+            (by rw [List.length_take, List.length_drop]; omega) hso
+        have hkey : ((seg.filterMap symBit?).drop w).take 6
+            = (simRead f.1 v0).encode ++ ((simRead f.2.1 v1).encode ++
+              (simRead f.2.2 v2).encode) := by
+          rw [take_six_decomp, hsi',
+              drop_add _ (rfl : w + 2 = w + 2), hsw',
+              drop_add _ (by omega : w + 2 + 2 = w + 4), hso']
+        rw [← hseg, ← bitsToSyms_drop, ← bitsToSyms_take, hkey, keyCells,
+            List.append_assoc]
+    · rw [if_neg hc] at hpe
+      exact absurd hpe (by simp)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- 4. The first-match correspondence
