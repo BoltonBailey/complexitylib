@@ -135,4 +135,100 @@ theorem initPost_simInv (α x : List Bool)
   · rw [Tape.read, houtc, houth]
     simp [initTape]
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Tape support is bounded by time
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- One tape action moves the head at most one cell. -/
+theorem writeAndMove_head_le (t : Tape) (s : Γ) (d : Dir3) :
+    (t.writeAndMove s d).head ≤ t.head + 1 := by
+  show ((t.write s).move d).head ≤ t.head + 1
+  cases d <;> (simp [Tape.move, Tape.write_head']; try omega)
+
+/-- One tape action leaves cells other than the head untouched. -/
+theorem writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {j : ℕ}
+    (hj : j ≠ t.head) : (t.writeAndMove s d).cells j = t.cells j := by
+  show ((t.write s).move d).cells j = t.cells j
+  have hw : ((t.write s)).cells j = t.cells j := by
+    unfold Tape.write
+    split
+    · rfl
+    · exact Function.update_of_ne hj ..
+  cases d <;> simpa [Tape.move] using hw
+
+/-- After `t` steps the output head has advanced at most `t` cells. -/
+theorem reachesIn_output_head_le {n : ℕ} {tm : TM n} :
+    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
+      c'.output.head ≤ c.output.head + t := by
+  intro t
+  induction t with
+  | zero =>
+    intro c c' h
+    cases h
+    omega
+  | succ t ih =>
+    intro c c' h
+    cases h with
+    | step hstep hrest =>
+      next c'' =>
+      have h1 : c''.output.head ≤ c.output.head + 1 := by
+        unfold TM.step at hstep
+        split at hstep
+        · exact absurd hstep (by simp)
+        · simp only [Option.some.injEq] at hstep
+          subst hstep
+          exact writeAndMove_head_le ..
+      have := ih hrest
+      omega
+
+/-- Cells beyond the output head's reach are never written. -/
+theorem reachesIn_output_cells_far {n : ℕ} {tm : TM n} :
+    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
+      ∀ j, c.output.head + t < j → c'.output.cells j = c.output.cells j := by
+  intro t
+  induction t with
+  | zero =>
+    intro c c' h j hj
+    cases h
+    rfl
+  | succ t ih =>
+    intro c c' h j hj
+    cases h with
+    | step hstep hrest =>
+      next c'' =>
+      have hhead : c''.output.head ≤ c.output.head + 1 := by
+        unfold TM.step at hstep
+        split at hstep
+        · exact absurd hstep (by simp)
+        · simp only [Option.some.injEq] at hstep
+          subst hstep
+          exact writeAndMove_head_le ..
+      have hcell : c''.output.cells j = c.output.cells j := by
+        unfold TM.step at hstep
+        split at hstep
+        · exact absurd hstep (by simp)
+        · simp only [Option.some.injEq] at hstep
+          subst hstep
+          exact writeAndMove_cells_ne _ _ _ (by omega)
+      rw [ih hrest j (by omega), hcell]
+
+/-- From the initial configuration, the output tape has a first blank within
+    `t + 1` cells after `t` steps. -/
+theorem reachesIn_output_first_blank {n : ℕ} {tm : TM n} {t : ℕ}
+    {x : List Bool} {c' : Cfg n tm.Q}
+    (h : tm.reachesIn t (tm.initCfg x) c') :
+    ∃ m, m ≤ t ∧ c'.output.cells (m + 2) = Γ.blank ∧
+      ∀ j, j < m → c'.output.cells (j + 2) ≠ Γ.blank := by
+  classical
+  have hblank : c'.output.cells (t + 2) = Γ.blank := by
+    rw [reachesIn_output_cells_far h (t + 2)
+      (by simp [initTape])]
+    simp [initTape]
+  by_cases hall : ∃ m, m ≤ t ∧ c'.output.cells (m + 2) = Γ.blank
+  · obtain ⟨m₀, -, -⟩ := hall
+    have hP : ∃ m, c'.output.cells (m + 2) = Γ.blank := ⟨t, hblank⟩
+    refine ⟨Nat.find hP, ?_, Nat.find_spec hP, fun j hj => Nat.find_min hP hj⟩
+    exact Nat.le_of_not_lt fun hcon => (Nat.find_min hP hcon) hblank
+  · exact absurd ⟨t, Nat.le_refl t, hblank⟩ hall
+
 end TM.UTMBody
