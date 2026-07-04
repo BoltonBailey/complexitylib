@@ -969,4 +969,322 @@ theorem copyQ'_blank_loop (f : VFlags) (S W : ℕ → Γ)
       rw [if_neg hiE, if_neg hiD, if_neg hiS]
       exact idle_tape_id (hoth i hiS hiD hiE)
 
+-- ════════════════════════════════════════════════════════════════════════
+-- 5. Value copy: copyAct — the ten action cells
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- **Action-cell copy, clean case**: from `copyAct f j` with the desc tape
+    (ghost `W`, head `b`) holding `k + 1` non-`□` cells
+    (`j.val + k = 9`, so `k + 1 = 10 - j.val`) and the scratch tape (ghost
+    `E`, frontier `e`), copy the remaining action cells to scratch cells
+    `e..e+k` and enter `appRewScr f` in `k + 1` steps, with the desc head
+    at `b + k + 1` and the scratch frontier at `e + k + 1`. Desc cells and
+    every other tape are exactly preserved. -/
+theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
+    (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start) :
+    ∀ (k : ℕ) (j : Fin 10), j.val + k = 9 →
+      ∀ (E : ℕ → Γ), (∀ i, 1 ≤ i → E i ≠ Γ.start) →
+      ∀ (b e : ℕ), 1 ≤ b → 1 ≤ e →
+      (∀ i, i ≤ k → W (b + i) ≠ Γ.blank) →
+      ∀ c : Cfg 6 bodyTM.Q,
+      c.state = copyAct f j →
+      (c.work dsT).cells = W → (c.work dsT).head = b →
+      (c.work scT).cells = E → (c.work scT).head = e →
+      c.input.read ≠ Γ.start → c.output.read ≠ Γ.start →
+      (∀ i, i ≠ dsT → i ≠ scT → (c.work i).read ≠ Γ.start) →
+      ∃ c', bodyTM.reachesIn (k + 1) c c' ∧
+        c'.state = appRewScr f ∧
+        c'.work dsT = ⟨b + k + 1, W⟩ ∧
+        c'.work scT = ⟨e + k + 1,
+          fun i => if e ≤ i ∧ i < e + k + 1 then W (b + (i - e)) else E i⟩ ∧
+        c'.input = c.input ∧ c'.output = c.output ∧
+        (∀ i, i ≠ dsT → i ≠ scT → c'.work i = c.work i) := by
+  intro k
+  induction k with
+  | zero =>
+    intro j hk E hE b e hb he hnb c hst hcW hheadW hcE hheadE hin hout hoth
+    have hreadW : (c.work dsT).read = W b := by simp [Tape.read, hheadW, hcW]
+    have hreadW' : (c.work dsT).read ≠ Γ.start := by rw [hreadW]; exact hWns b hb
+    have hreadWnb : (c.work dsT).read ≠ Γ.blank := by
+      rw [hreadW]
+      exact (show W b ≠ Γ.blank from hnb 0 (by omega))
+    have hreadE' : (c.work scT).read ≠ Γ.start := by
+      simp only [Tape.read, hheadE, hcE]; exact hE e he
+    have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
+      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+    have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
+    rw [if_neg hreadWnb, dif_neg (show ¬j.val < 9 by omega)] at harm
+    have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm)
+    refine ⟨_, .step hstep .zero, rfl, ?_, ?_,
+      idle_input_id hin, idle_tape_id hout, ?_⟩
+    · show (c.work dsT).writeAndMove _ _ = (⟨b + 0 + 1, W⟩ : Tape)
+      rw [if_neg hreadW']
+      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head']
+      exact ⟨by omega, by rw [write_readBack_cells hreadW', hcW]⟩
+    · show (c.work scT).writeAndMove _ _ = _
+      rw [if_neg hreadE']
+      show ((c.work scT).write _).move .right = _
+      have hw : (c.work scT).write (readBackWrite ((c.work dsT).read)).toΓ
+          = { c.work scT with
+              cells := Function.update (c.work scT).cells (c.work scT).head
+                (readBackWrite ((c.work dsT).read)).toΓ } := by
+        unfold Tape.write
+        rw [if_neg (by omega)]
+      rw [hw]
+      simp only [Tape.move, Tape.mk.injEq]
+      refine ⟨by omega, ?_⟩
+      show Function.update (c.work scT).cells (c.work scT).head _ = _
+      rw [hcE, hheadE, hWb]
+      funext i
+      by_cases hie : i = e
+      · subst hie
+        rw [Function.update_self, if_pos (by omega)]
+        exact congrArg W (by omega)
+      · rw [Function.update_of_ne hie, if_neg (by omega)]
+    · intro i hiD hiE
+      show (if i = scT then _ else if i = dsT then _ else _) = _
+      rw [if_neg hiE, if_neg hiD]
+      exact idle_tape_id (hoth i hiD hiE)
+  | succ k ih =>
+    intro j hk E hE b e hb he hnb c hst hcW hheadW hcE hheadE hin hout hoth
+    have hreadW : (c.work dsT).read = W b := by simp [Tape.read, hheadW, hcW]
+    have hreadW' : (c.work dsT).read ≠ Γ.start := by rw [hreadW]; exact hWns b hb
+    have hreadWnb : (c.work dsT).read ≠ Γ.blank := by
+      rw [hreadW]
+      exact (show W b ≠ Γ.blank from hnb 0 (by omega))
+    have hreadE' : (c.work scT).read ≠ Γ.start := by
+      simp only [Tape.read, hheadE, hcE]; exact hE e he
+    have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
+      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+    have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
+    rw [if_neg hreadWnb, dif_pos (show j.val < 9 by omega)] at harm
+    have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm)
+    have hEupd : ∀ i, 1 ≤ i → Function.update E e (W b) i ≠ Γ.start := by
+      intro i hi
+      by_cases hie : i = e
+      · subst hie; rw [Function.update_self]; exact hWns b hb
+      · rw [Function.update_of_ne hie]; exact hE i hi
+    obtain ⟨c', hreach, hst', hwtD', hwtE', hin', hout', hoth'⟩ :=
+      ih ⟨j.val + 1, by omega⟩ (by show j.val + 1 + k = 9; omega)
+        (Function.update E e (W b)) hEupd (b + 1) (e + 1) (by omega) (by omega)
+        (fun i hi => by
+          have h := hnb (i + 1) (by omega)
+          have e2 : b + (i + 1) = b + 1 + i := by omega
+          rw [e2] at h
+          exact h)
+        { state := copyAct f ⟨j.val + 1, by omega⟩
+          input := c.input.move (idleDir c.input.read)
+          work := fun i =>
+            if i = scT then
+              (c.work i).writeAndMove (readBackWrite ((c.work dsT).read)).toΓ
+                (if (c.work i).read = Γ.start then Dir3.right else Dir3.right)
+            else if i = dsT then
+              (c.work i).writeAndMove (readBackWrite ((c.work dsT).read)).toΓ
+                (if (c.work i).read = Γ.start then Dir3.right else Dir3.right)
+            else (c.work i).writeAndMove (readBackWrite ((c.work i).read)).toΓ
+              (idleDir ((c.work i).read))
+          output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+            (idleDir c.output.read) }
+        rfl
+        (by dsimp only
+            rw [if_neg (by decide : dsT ≠ scT), if_pos rfl,
+              tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
+        (by dsimp only
+            rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+        (by dsimp only
+            rw [if_pos rfl, if_neg hreadE']
+            show (((c.work scT).write _).move Dir3.right).cells = _
+            have hw : (c.work scT).write (readBackWrite ((c.work dsT).read)).toΓ
+                = { c.work scT with
+                    cells := Function.update (c.work scT).cells (c.work scT).head
+                      (readBackWrite ((c.work dsT).read)).toΓ } := by
+              unfold Tape.write
+              rw [if_neg (by omega)]
+            rw [hw]
+            show Function.update (c.work scT).cells (c.work scT).head _ = _
+            rw [hcE, hheadE, hWb])
+        (by dsimp only
+            rw [if_pos rfl, if_neg hreadE']
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+        (by dsimp only; rw [idle_input_id hin]; exact hin)
+        (by dsimp only; rw [idle_tape_id hout]; exact hout)
+        (fun i hiD hiE => by
+          dsimp only
+          rw [if_neg hiE, if_neg hiD, idle_tape_id (hoth i hiD hiE)]
+          exact hoth i hiD hiE)
+    refine ⟨c', .step hstep hreach, hst', ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hwtD']
+      exact congrArg (fun m => (⟨m, W⟩ : Tape)) (by omega)
+    · rw [hwtE']
+      simp only [Tape.mk.injEq]
+      refine ⟨by omega, ?_⟩
+      funext i
+      by_cases hi1 : e + 1 ≤ i ∧ i < e + 1 + k + 1
+      · rw [if_pos hi1, if_pos (by omega)]
+        exact congrArg W (by omega)
+      · rw [if_neg hi1]
+        by_cases hie : i = e
+        · subst hie
+          rw [Function.update_self, if_pos (by omega)]
+          exact congrArg W (by omega)
+        · rw [Function.update_of_ne hie, if_neg (by omega)]
+    · rw [hin']; exact idle_input_id hin
+    · rw [hout']; exact idle_tape_id hout
+    · intro i hiD hiE
+      rw [hoth' i hiD hiE]
+      show (if i = scT then _ else if i = dsT then _ else _) = _
+      rw [if_neg hiE, if_neg hiD]
+      exact idle_tape_id (hoth i hiD hiE)
+
+/-- **Action-cell copy, early-`□` case**: from `copyAct f j`, the desc tape
+    hits `□` at offset `n` (`j.val + n ≤ 9`) after `n` copied cells: the
+    machine exits to `skipSeg f` in `n + 1` steps (the `□`-exit step is an
+    idle transition) with the desc head at `b + n` (on the `□`) and scratch
+    extended by the `n` copied cells. Desc cells and every other tape are
+    exactly preserved. -/
+theorem copyAct_blank_loop (f : VFlags) (W : ℕ → Γ)
+    (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start) :
+    ∀ (n : ℕ) (j : Fin 10), j.val + n ≤ 9 →
+      ∀ (E : ℕ → Γ), (∀ i, 1 ≤ i → E i ≠ Γ.start) →
+      ∀ (b e : ℕ), 1 ≤ b → 1 ≤ e →
+      (∀ i, i < n → W (b + i) ≠ Γ.blank) → W (b + n) = Γ.blank →
+      ∀ c : Cfg 6 bodyTM.Q,
+      c.state = copyAct f j →
+      (c.work dsT).cells = W → (c.work dsT).head = b →
+      (c.work scT).cells = E → (c.work scT).head = e →
+      c.input.read ≠ Γ.start → c.output.read ≠ Γ.start →
+      (∀ i, i ≠ dsT → i ≠ scT → (c.work i).read ≠ Γ.start) →
+      ∃ c', bodyTM.reachesIn (n + 1) c c' ∧
+        c'.state = skipSeg f ∧
+        c'.work dsT = ⟨b + n, W⟩ ∧
+        c'.work scT = ⟨e + n,
+          fun i => if e ≤ i ∧ i < e + n then W (b + (i - e)) else E i⟩ ∧
+        c'.input = c.input ∧ c'.output = c.output ∧
+        (∀ i, i ≠ dsT → i ≠ scT → c'.work i = c.work i) := by
+  intro n
+  induction n with
+  | zero =>
+    intro j hn E hE b e hb he hnb hbl c hst hcW hheadW hcE hheadE hin hout hoth
+    have hreadWbl : (c.work dsT).read = Γ.blank := by
+      simp only [Tape.read, hheadW, hcW]
+      exact (show W b = Γ.blank from hbl)
+    have hreadE' : (c.work scT).read ≠ Γ.start := by
+      simp only [Tape.read, hheadE, hcE]; exact hE e he
+    have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
+    rw [if_pos hreadWbl] at harm
+    have hwk : ∀ i, (c.work i).read ≠ Γ.start := by
+      intro i
+      by_cases hiD : i = dsT
+      · subst hiD; rw [hreadWbl]; simp
+      · by_cases hiE : i = scT
+        · subst hiE; exact hreadE'
+        · exact hoth i hiD hiE
+    have hstep := step_idle (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm) hin hout hwk
+    refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl, fun _ _ _ => rfl⟩
+    · rw [← hcW, show b + 0 = (c.work dsT).head from by omega]
+    · have hEmpty : (fun i => if e ≤ i ∧ i < e + 0 then W (b + (i - e)) else E i)
+          = E := by
+        funext i; rw [if_neg (by omega)]
+      rw [hEmpty, ← hcE, show e + 0 = (c.work scT).head from by omega]
+  | succ n ih =>
+    intro j hn E hE b e hb he hnb hbl c hst hcW hheadW hcE hheadE hin hout hoth
+    have hreadW : (c.work dsT).read = W b := by simp [Tape.read, hheadW, hcW]
+    have hreadW' : (c.work dsT).read ≠ Γ.start := by rw [hreadW]; exact hWns b hb
+    have hreadWnb : (c.work dsT).read ≠ Γ.blank := by
+      rw [hreadW]
+      exact (show W b ≠ Γ.blank from hnb 0 (by omega))
+    have hreadE' : (c.work scT).read ≠ Γ.start := by
+      simp only [Tape.read, hheadE, hcE]; exact hE e he
+    have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
+      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+    have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
+    rw [if_neg hreadWnb, dif_pos (show j.val < 9 by omega)] at harm
+    have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm)
+    have hEupd : ∀ i, 1 ≤ i → Function.update E e (W b) i ≠ Γ.start := by
+      intro i hi
+      by_cases hie : i = e
+      · subst hie; rw [Function.update_self]; exact hWns b hb
+      · rw [Function.update_of_ne hie]; exact hE i hi
+    obtain ⟨c', hreach, hst', hwtD', hwtE', hin', hout', hoth'⟩ :=
+      ih ⟨j.val + 1, by omega⟩ (by show j.val + 1 + n ≤ 9; omega)
+        (Function.update E e (W b)) hEupd (b + 1) (e + 1) (by omega) (by omega)
+        (fun i hi => by
+          have h := hnb (i + 1) (by omega)
+          have e2 : b + (i + 1) = b + 1 + i := by omega
+          rw [e2] at h
+          exact h)
+        (by
+          have e2 : b + 1 + n = b + (n + 1) := by omega
+          rw [e2]
+          exact hbl)
+        { state := copyAct f ⟨j.val + 1, by omega⟩
+          input := c.input.move (idleDir c.input.read)
+          work := fun i =>
+            if i = scT then
+              (c.work i).writeAndMove (readBackWrite ((c.work dsT).read)).toΓ
+                (if (c.work i).read = Γ.start then Dir3.right else Dir3.right)
+            else if i = dsT then
+              (c.work i).writeAndMove (readBackWrite ((c.work dsT).read)).toΓ
+                (if (c.work i).read = Γ.start then Dir3.right else Dir3.right)
+            else (c.work i).writeAndMove (readBackWrite ((c.work i).read)).toΓ
+              (idleDir ((c.work i).read))
+          output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+            (idleDir c.output.read) }
+        rfl
+        (by dsimp only
+            rw [if_neg (by decide : dsT ≠ scT), if_pos rfl,
+              tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
+        (by dsimp only
+            rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+        (by dsimp only
+            rw [if_pos rfl, if_neg hreadE']
+            show (((c.work scT).write _).move Dir3.right).cells = _
+            have hw : (c.work scT).write (readBackWrite ((c.work dsT).read)).toΓ
+                = { c.work scT with
+                    cells := Function.update (c.work scT).cells (c.work scT).head
+                      (readBackWrite ((c.work dsT).read)).toΓ } := by
+              unfold Tape.write
+              rw [if_neg (by omega)]
+            rw [hw]
+            show Function.update (c.work scT).cells (c.work scT).head _ = _
+            rw [hcE, hheadE, hWb])
+        (by dsimp only
+            rw [if_pos rfl, if_neg hreadE']
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+        (by dsimp only; rw [idle_input_id hin]; exact hin)
+        (by dsimp only; rw [idle_tape_id hout]; exact hout)
+        (fun i hiD hiE => by
+          dsimp only
+          rw [if_neg hiE, if_neg hiD, idle_tape_id (hoth i hiD hiE)]
+          exact hoth i hiD hiE)
+    refine ⟨c', .step hstep hreach, hst', ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hwtD']
+      exact congrArg (fun m => (⟨m, W⟩ : Tape)) (by omega)
+    · rw [hwtE']
+      simp only [Tape.mk.injEq]
+      refine ⟨by omega, ?_⟩
+      funext i
+      by_cases hi1 : e + 1 ≤ i ∧ i < e + 1 + n
+      · rw [if_pos hi1, if_pos (by omega)]
+        exact congrArg W (by omega)
+      · rw [if_neg hi1]
+        by_cases hie : i = e
+        · subst hie
+          rw [Function.update_self, if_pos (by omega)]
+          exact congrArg W (by omega)
+        · rw [Function.update_of_ne hie, if_neg (by omega)]
+    · rw [hin']; exact idle_input_id hin
+    · rw [hout']; exact idle_tape_id hout
+    · intro i hiD hiE
+      rw [hoth' i hiD hiE]
+      show (if i = scT then _ else if i = dsT then _ else _) = _
+      rw [if_neg hiE, if_neg hiD]
+      exact idle_tape_id (hoth i hiD hiE)
+
 end TM.UTMBody
