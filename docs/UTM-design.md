@@ -18,132 +18,143 @@ binary string `α`, `utmTM` on input `pair α x` behaves like
 `(decodeDesc α).toTM` on input `x`. Well-formed descriptions round-trip
 (`decodeDesc_encodeDesc_append`), and every `TM 1` has one (`descOfTM`).
 
+## Fundamental constraint: heads cannot rest on ▷
+
+`δ_right_of_start` forces every head reading `▷` to move right on **every**
+step of **every** machine. A simulated head can legitimately sit at cell 0
+(reading `▷`) for many UTM steps, so virtual heads cannot be shadowed at the
+same position. **Resolution: the +1 shift.** Each virtual tape stores the
+simulated tape shifted one cell right:
+
+```
+VShift sim utm :=
+  utm.cells = (fun k => if k = 0 then ▷ else if k = 1 then □ else sim.cells (k-1))
+  utm.head  = sim.head + 1
+```
+
+Consequences (all exact, no corner cases):
+- UTM virtual head ≥ 1 always — stable across phase transitions (`Parked`).
+- Simulated position 0 ⟺ UTM head at cell 1 ⟺ a left-peek sees `▷` —
+  detectable in 2 steps (all three virtual tapes peek simultaneously).
+- Sanitized moves: at sim-0 the interpreted machine always moves right
+  (sanitization), which is a plain UTM right move 1→2. A left move from
+  sim-1 to sim-0 is a plain UTM left move 2→1 (cell 1 = `□` ≠ `▷`, stable).
+  Virtual heads never touch UTM cell 0.
+- Writes at sim-0 are simulated no-ops; the UTM suppresses them using the
+  at-zero booleans (in control state during the body).
+
 ## Tape layout (`utmTM : TM 6`)
 
-| # | name    | contents                                   | head between iterations |
-|---|---------|--------------------------------------------|------------------------|
-| 0 | vInput  | `▷ x □ □ ⋯` — copy of `x`                  | simulated input head   |
-| 1 | vWork   | simulated work tape                        | simulated work head    |
-| 2 | vOut    | simulated output tape                      | simulated output head  |
-| 3 | state   | `▷ q(w bit-syms) □ ⋯` — current state      | 0                      |
-| 4 | desc    | `▷ translate(α) □ ⋯` — description         | 0                      |
-| 5 | scratch | blank                                      | 0                      |
+| # | name    | contents                                    | head between iterations |
+|---|---------|---------------------------------------------|------------------------|
+| 0 | vInput  | `▷ □ x □ ⋯` — x shifted by 1                | sim input head + 1     |
+| 1 | vWork   | simulated work tape, shifted by 1           | sim work head + 1      |
+| 2 | vOut    | simulated output tape, shifted by 1         | sim output head + 1    |
+| 3 | state   | `▷ q(w bit-syms) □ ⋯` — current state       | 1                      |
+| 4 | desc    | `▷ translate(α) □ ⋯` — description          | 1                      |
+| 5 | scratch | blank                                       | 1                      |
+
+The real output tape carries the loop verdict (cell 1, `Γ.one` = halt) —
+`loopTM`/`ifTM` read their tests' verdicts there. `extractTM` overwrites it
+at the end.
 
 `translate(α)` = the `Γw`-symbol string decoded from α by 2-bit groups
-(`00→0, 01→1, 10→□, 11→□` — must match `symOfPair` in `UTM/Desc.lean`).
-Layout (from `TMDesc.syms`): `qstart-field □ qhalt-field □ entry □ ⋯ □ □`.
-Width `w` := length of the qstart field = length of the state-tape content.
+(must match `symOfPair`). Layout (`TMDesc.syms`):
+`qstart-field □ qhalt-field □ entry □ ⋯ □ □`. Width `w` := qstart-field
+length = state-tape content length.
 
-The `pair` encoding (`Classes/Pairing.lean`): `pair α x` = each bit of α
-doubled, then `[0,1]`, then `x` verbatim. So the UTM input tape holds:
-cells `2i+1, 2i+2` = `bᵢ bᵢ` (α's bits, doubled), then `0 1`, then `x`.
-One desc symbol = 2 α-bits = 4 input cells.
+`pair α x` (`Classes/Pairing.lean`): α's bits doubled, then `[0,1]`, then
+`x` verbatim — one desc symbol = 2 α-bits = 4 input cells.
 
 ## Simulation invariant
 
-For a desc `d` (with `d = decodeDesc α`) and a config
-`mc : Cfg 1 d.toTM.Q` of the interpreted machine:
+For `d = decodeDesc α` and `mc : Cfg 1 d.toTM.Q`:
 
 ```
 SimInv α x mc :=
-  vInput.cells = (initTape x.map(Γ.ofBool)).cells ∧ vInput.head = mc.input.head
-  vWork  = mc.work 0
-  vOut   = mc.output
-  state:  cells 1..w = toBits w mc.state (as bit-syms), cell w+1 = □, head 0
-  desc:   cells 1..|t| = translate(α), cell |t|+1 = □, head 0
-  scratch: all-blank, head 0
+  VShift mc.input  vInput      (mc.input.cells = initTape(x)-cells always)
+  VShift (mc.work 0) vWork
+  VShift mc.output vOut
+  state:  cells 1..w = bit-syms of toBits w mc.state, cell w+1 = □, head 1
+          — OR (mc halted ∧ cells 1.. = qhalt-field verbatim) after a
+          no-match default transition (widths may differ; test still exits)
+  desc:   cells 1..|t| = translate(α), cell |t|+1 = □, head 1
+  scratch: cells 1.. all □, head 1
+  real output: cell 1 ∈ {0,1} verdict, no stray ▷, head small/parked
 ```
 
-Note `mc.input.cells = initTape(x).cells` always (input is read-only), so
-vInput ≡ mc.input as a tape value.
+## Combinator conventions (from the API survey)
 
-State-tape content is exactly `w` bit-symbols where `w = (decodeDesc α).w`;
-state values stay `< 2^w` because transition targets are the `q'` fields
-(`toTM` reduces mod `2^w`; for in-range fields this is the identity, and the
-UTM only ever copies `w`-bit fields).
+- `loopTM tmBody tmTest`: **body runs first**, then test; test's verdict =
+  real output cell 1 (`Γ.one` ⇒ exit). Iteration cost: body + 1 + test + 1
+  + (output-head rewind p+1) + 1.
+- Phase transitions apply `transitionTape` (identity iff head ≥ 1 and read
+  ≠ ▷ — the `Parked` predicate). All six work tapes + input stay parked at
+  all phase boundaries.
+- `h_iter` obligations built from: `loopTM_body_simulation`,
+  `loopTM_body_to_test`, `loopTM_test_simulation`, `loopTM_test_to_rewind`,
+  `loopTM_rewind_loop`, `loopTM_check_halt` / `loopTM_check_continue`;
+  halt disjunct packaged as `loopTM_iteration_halt`.
+- `seqTM` composition via `seqTM_hoareTime` with `transitionTape` mid-shift.
 
 ## Phases
 
-`utmTM = seqTM initTM (seqTM (loopTM bodyTM haltTestTM) extractTM)`
-(exact nesting may adapt to the combinators' conventions).
+`utmTM = seqTM initTM (seqTM (loopTM bodyTM haltTestTM) extractTM)`.
 
 ### initTM
-One left-to-right scan of the input:
-- α-region: read input cells in pairs. `(b,b)` → one α-bit; every two α-bits
-  emit one desc symbol (via `symOfPair`) onto tape 4. `(0,1)` → separator,
-  switch to x-phase. `(1,0)` or odd/blank end → *malformed input*: go to
-  halt with output `0` (totality; the semantic theorem only covers
-  well-formed `pair α x` inputs).
-  - odd trailing α-bit (pending bit at separator) is dropped — matches
-    `groupPairs`.
-- x-region: copy each cell verbatim to tape 0 (writes bits; blank ends scan).
-Then: rewind tapes 0 and 4; copy desc field 1 (cells 1.. up to first □) onto
-tape 3 (the state tape ← qstart); rewind tapes 3, 4.
+Single left-to-right input scan: α-region (cell pairs: `(b,b)` → α-bit;
+two α-bits → one desc symbol via `symOfPair` written to tape 4; `(0,1)` →
+separator; `(1,0)`/odd end → malformed: halt with output 0); x-region
+(copy verbatim to tape 0 **starting at cell 2**). Then rewind tapes 0, 4;
+copy desc field 1 (qstart) to state tape (tape 3); rewind 3, 4; position
+all virtual heads at cell 1; write 0-verdict at output cell 1.
+Post: `SimInv α x (toTM.initCfg x)`. Time O(|pair α x| + w).
 
-Postcondition: `SimInv α x (toTM.initCfg x)` — all virtual heads at 0.
-Time: O(|input|) + O(w) ≤ O(|input| + const).
-
-### bodyTM (one simulated step)
-Precondition: `SimInv α x mc ∧ mc.state ≠ qhalt`.
-Postcondition: `SimInv α x (step mc)`.
-Sub-phases (seq-composed or one machine):
-
-1. **seek**: move desc head right past two fields (two □s) — now at start
-   of entry region.
-2. **match loop** over entries: for each segment,
-   a. lockstep-compare state tape (cells 1..) with segment prefix: advance
-      both heads; state hits □ and desc continues ⇒ need symbol compare of
-      6 more desc cells against `Γ.encode` of the three virtual reads
-      (2 cells each, vInput/vWork/vOut reads are available to δ at every
-      step — no head movement needed to "read" them);
-   b. on any mismatch: rewind state head to 0, skip desc head to next □;
-      if the cell after that □ is □ ⇒ **no-match** → go to (4);
-      else continue with next segment;
-   c. on full key match (w state syms + 6 symbol syms): **copy phase** —
-      copy the next w+10 desc cells to scratch (cells 1..w+10); if a □
-      appears early ⇒ malformed entry ⇒ erase scratch (blank it), treat as
-      mismatch (b). After w+10 cells, skip to next □ (excess ignored —
-      matches `parseEntry` prefix semantics). Go to (3).
-3. **apply**: scratch holds `q'(w) ww(2) wo(2) di(2) dw(2) dOut(2)`.
-   a. copy scratch cells 1..w onto state tape (overwrite; state had exactly
-      w cells, same width ⇒ no residue);
-   b. read the five 2-cell groups; for each, decode
-      (`00→0/left, 01→1/right, 10→□/stay, 11→□/stay` — must match
-      `decΓw`/`decDir` in Desc.lean) and act on the virtual tapes:
-      write `ww` on vWork, `wo` on vOut, then move vInput/vWork/vOut by
-      `di/dw/dOut` — **sanitized**: if the virtual head reads `▷`, move
-      right instead (matches `toTM`).
-   c. blank scratch (cells 1..w+10), rewind scratch/state/desc heads.
-4. **no-match default**: blank the state tape, copy desc field 2 (the
-   qhalt field, verbatim, any width) onto it, rewind. The next halt-test
-   compares the state tape against that same field and exits.
-   **Alignment requirement**: `toTM` must make the abstract default
-   transition also reach its halt state, *including* when the qhalt field
-   is malformed (decoded sentinel `d.qhalt = 2^w`). With the original
-   `q' % 2^w` target map the default would land on state `0` and keep
-   running — a genuine mismatch. Fix (implemented): `toTM` maps transition
-   targets via `min a.q' (2^w)` instead of `a.q' % 2^w`. In-range targets
-   (< 2^w, i.e. every table-entry field) are unaffected; the default's
-   target `d.qhalt` clamps to exactly `toTM.qhalt = min d.qhalt (2^w)` in
-   all cases, matching the UTM's behavior. The invariant's state-width
-   clause is suspended in this final halted configuration (correspondence
-   treats no-match as a direct transition-to-halt).
-5. Rewind state/desc/scratch heads to 0.
-
-Time per iteration: O(|desc| + w) — each desc cell visited O(1) times in
-the match loop (state rewinds cost ≤ w per segment, segments ≥ 1 cell;
-generous bound `C₁·(|α| + w + 10)` per iteration is fine — constants are
-absorbed per-machine).
+### bodyTM (one simulated step) — single hand-written machine
+Pre: `SimInv α x mc`. Post: `SimInv α x (if halted then mc else step mc)`.
+Sub-phases (control states thread 3 at-zero booleans after peek):
+0. **own halt check**: compare state tape vs desc field 2 (qhalt); on
+   match rewind and exit (no-op body) — handles the body-runs-first
+   convention when the machine is already halted.
+1. **peek** (2 steps): all three virtual tapes move left, read (▷ ⟺ at
+   sim-0), move back right. Records booleans (b_in, b_work, b_out).
+2. **seek**: desc head right past two □s (to entry region).
+3. **match loop** per segment: lockstep state-tape/desc compare (w cells),
+   then 6 desc cells vs `Γ.encode` of the three *live* virtual reads
+   (sim-read = at-zero ? ▷ : current cell — heads stationary during
+   match); mismatch ⇒ rewind state head, desc to next □; □□ ⇒ no-match;
+   full key match ⇒ copy next w+10 desc cells to scratch (early □ ⇒ blank
+   scratch, treat as mismatch), skip to next □, go to apply.
+4. **apply**: copy scratch 1..w → state tape; decode five 2-cell groups
+   (`00→0/left, 01→1/right, 10→□/stay, 11→□/stay` — matches
+   `decΓw`/`decDir`); write ww on vWork, wo on vOut (suppressed if the
+   tape's at-zero boolean is set); move vInput/vWork/vOut by di/dw/dOut
+   (at-zero ⇒ forced right, matching sanitization).
+5. **no-match default**: blank state tape, copy qhalt field verbatim onto
+   it (next test exits; `toTM`'s `min`-clamped target matches — see
+   alignment note below).
+6. **cleanup**: blank scratch, rewind state/desc/scratch heads to 1.
+Time per iteration ≤ C₁·(|α| + 20) (each desc cell O(1) visits + state
+rewinds ≤ w per segment ≤ segment length + const).
 
 ### haltTestTM
-Skip desc field 1 (qstart); lockstep-compare desc field 2 (qhalt) against
-state tape; match (simultaneous □) ⇒ signal HALT to the loop combinator
-(per `loopTM`'s convention). Rewind state/desc. No virtual tape changes.
+Compare state tape vs desc field 2 (skip field 1 first); write verdict to
+real output cell 1 (`Γ.one` iff match); rewind state/desc to 1.
+Correctness: state tape = toBits w q matches qhalt field iff
+q = d.qhalt < 2^w (via toBits/fromBits bijection on w-bit fields);
+malformed qhalt field (≠ w width) never matches a running state; after a
+default transition the state tape holds the field verbatim ⇒ matches ⇒
+exits. Time O(|α| + w).
 
 ### extractTM
-Copy vOut cells 1.. verbatim (bits and blanks: copy-until-□) onto the
-output tape cells 1... This preserves both `output.cells 1` (deciding) and
-`hasOutput y` (function computation). Rewind nothing (done).
+Copy vOut cells 2,3,… (i.e. sim cells 1,2,…) verbatim to real output
+cells 1,2,… up to and including the first `□`. Preserves both
+`cells 1` (deciding) and `hasOutput y` (function computation).
+
+### no-match alignment (implemented in Interp.lean)
+`toTM` maps transition targets via `min a.q' (2^w)` so the default action's
+target `d.qhalt` clamps exactly to `toTM.qhalt` even for the malformed-
+qhalt sentinel `2^w`. Table-entry targets (< 2^w) unaffected.
 
 ## Main theorems (M3)
 
@@ -174,9 +185,3 @@ Plus (M3b): composition with `descOfTM` and `singleTapeSim` for arbitrary
 - All per-α constants (desc length, w) are absorbed into `C(α)`;
   the hierarchy proof only needs: for FIXED α, simulation overhead is a
   constant factor + linear additive term.
-
-## M2 prep changes to earlier layers
-
-1. `TMDesc.toTM`: transition target `⟨min a.q' (2^w), _⟩` (was `% 2^w`) —
-   aligns the no-match default with the UTM's "copy qhalt field" behavior.
-   Fidelity proofs (`descOfTM_*`) adapt: in-range targets unaffected.
