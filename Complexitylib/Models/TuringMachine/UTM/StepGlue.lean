@@ -54,4 +54,21 @@ theorem parseEntry_q'_lt {w : ℕ} {seg : List Γw} {e : DescEntry}
     exact lt_of_lt_of_le (Nat.fromBits_lt_pow_length _)
       (Nat.pow_le_pow_right (by omega) (by rw [List.length_take]; omega))
 
+/-- Writing back the read symbol (the interpreter's default action) and
+    moving is just the move, on a well-formed tape. -/
+theorem writeAndMove_readback_eq_move {t : Tape} (hwf : t.WFCells) (d : Dir3) :
+    t.writeAndMove (TMDesc.readback t.read).toΓ d = t.move d := by
+  show (t.write _).move d = t.move d
+  congr 1
+  unfold Tape.write
+  split
+  · rfl
+  · next hne =>
+    have hr : t.read ≠ Γ.start := hwf.2 t.head (by omega)
+    have hread : (TMDesc.readback t.read).toΓ = t.read := by
+      cases h : t.read <;> simp_all [TMDesc.readback, Γw.toΓ]
+    rw [hread]
+    show ({ t with cells := Function.update t.cells t.head (t.cells t.head) } : Tape) = t
+    rw [Function.update_eq_self]
+
 end TM.UTMBody
