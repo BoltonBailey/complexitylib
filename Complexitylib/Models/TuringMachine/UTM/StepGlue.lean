@@ -71,4 +71,34 @@ theorem writeAndMove_readback_eq_move {t : Tape} (hwf : t.WFCells) (d : Dir3) :
     show ({ t with cells := Function.update t.cells t.head (t.cells t.head) } : Tape) = t
     rw [Function.update_eq_self]
 
+/-- The value slice copied to scratch, restricted to its first `w` cells,
+    is the segment's new-state field. -/
+theorem valueSlice_take (seg : List Γw) (w : ℕ) :
+    ((seg.drop (w + 6)).take (w + 10)).take w = (seg.drop (w + 6)).take w := by
+  rw [List.take_take]
+  congr 1
+  omega
+
+/-- Scratch cells holding the value slice decode, at the action offsets, to
+    the segment's action bits. -/
+theorem scratch_cellBit_eq_segBit {t : Tape} {seg : List Γw} {w k : ℕ}
+    (hk : k < 10) (hlen : 2 * w + 16 ≤ seg.length)
+    (h : t.HoldsExact ((seg.drop (w + 6)).take (w + 10))) :
+    cellBit (t.cells (1 + w + k)) = segBit seg (2 * w + 6 + k) := by
+  have hidx : w + k < ((seg.drop (w + 6)).take (w + 10)).length := by
+    rw [List.length_take, List.length_drop]
+    omega
+  have hcell : t.cells (1 + w + k)
+      = (((seg.drop (w + 6)).take (w + 10))[w + k]).toΓ := by
+    rw [show 1 + w + k = (w + k) + 1 by omega]
+    exact Tape.HoldsExact.cells_lt h hidx
+  have hseg_idx : 2 * w + 6 + k < seg.length := by omega
+  rw [hcell, segBit_eq hseg_idx]
+  have hg : (List.take (w + 10) (List.drop (w + 6) seg))[w + k]'hidx
+      = seg[2 * w + 6 + k]'hseg_idx := by
+    simp only [List.getElem_take, List.getElem_drop]
+    congr 1
+    omega
+  rw [hg]
+
 end TM.UTMBody
