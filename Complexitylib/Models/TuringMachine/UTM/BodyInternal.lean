@@ -553,4 +553,130 @@ theorem arm_dfCopy : bodyδ dfCopy iH wH oH
 
 end Arms
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Blank-rightward loop (dfBlank)
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The default path's state-tape blanking: from `dfBlank` with the state
+    head at `h ≥ 1` and the first `□` at distance `k`, blank cells
+    `h..h+k-1` and stop on the `□` (head at `h + k`, one idle transition
+    step) in `k + 1` steps. All other tapes exactly preserved. -/
+theorem dfBlank_loop :
+    ∀ (k : ℕ) (W : ℕ → Γ), (∀ j, 1 ≤ j → W j ≠ Γ.start) →
+      ∀ (h : ℕ), 1 ≤ h →
+      (∀ j, j < k → W (h + j) ≠ Γ.blank) → W (h + k) = Γ.blank →
+      ∀ c : Cfg 6 bodyTM.Q,
+      c.state = dfBlank →
+      (c.work stT).cells = W → (c.work stT).head = h →
+      c.input.read ≠ Γ.start → c.output.read ≠ Γ.start →
+      (∀ i, i ≠ stT → (c.work i).read ≠ Γ.start) →
+      ∃ c', bodyTM.reachesIn (k + 1) c c' ∧
+        c'.state = dfStRew2 ∧
+        c'.work stT = ⟨h + k, fun j => if h ≤ j ∧ j < h + k then Γ.blank else W j⟩ ∧
+        c'.input = c.input ∧ c'.output = c.output ∧
+        (∀ i, i ≠ stT → c'.work i = c.work i) := by
+  intro k
+  induction k with
+  | zero =>
+    intro W hWns h hh hnb hbl c hst hcW hhead hin hout hoth
+    have hread : (c.work stT).read = Γ.blank := by
+      simp only [Tape.read, hhead, hcW]
+      simpa using hbl
+    have harm := arm_dfBlank c.input.read (fun i => (c.work i).read) c.output.read
+    rw [if_pos hread] at harm
+    have hstep := step_mkAct (c := c)
+      (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm)
+    refine ⟨_, .step hstep .zero, rfl, ?_, idle_input_id hin, idle_tape_id hout,
+      fun i hi => idle_tape_id (hoth i hi)⟩
+    show (c.work stT).writeAndMove _ _ = _
+    rw [idle_tape_id (by rw [hread]; simp)]
+    have : (fun j => if h ≤ j ∧ j < h + 0 then Γ.blank else W j) = W := by
+      funext j
+      rw [if_neg (by omega)]
+    rw [this, ← hcW, show h + 0 = (c.work stT).head from by rw [hhead]; omega]
+  | succ k ih =>
+    intro W hWns h hh hnb hbl c hst hcW hhead hin hout hoth
+    have hread : (c.work stT).read = W h := by
+      simp [Tape.read, hhead, hcW]
+    have hreadnb : (c.work stT).read ≠ Γ.blank := by
+      rw [hread]
+      simpa using hnb 0 (by omega)
+    have harm := arm_dfBlank c.input.read (fun i => (c.work i).read) c.output.read
+    rw [if_neg hreadnb] at harm
+    have hread' : (c.work stT).read ≠ Γ.start := by
+      rw [hread]; exact hWns h hh
+    have hstep := step_act1 (c := c)
+      (by rw [hst]; exact fun hcon => nomatch hcon)
+      (by rw [hst]; exact harm)
+    -- the blanked-one-cell ghost
+    have hupdns : ∀ j, 1 ≤ j → Function.update W h Γ.blank j ≠ Γ.start := by
+      intro j hj
+      by_cases hje : j = h
+      · subst hje; rw [Function.update_self]; simp
+      · rw [Function.update_of_ne hje]; exact hWns j hj
+    obtain ⟨c', hreach, hst', hwt', hin', hout', hoth'⟩ :=
+      ih (Function.update W h Γ.blank) hupdns (h + 1) (by omega)
+        (fun j hj => by
+          rw [Function.update_of_ne (by omega)]
+          have := hnb (j + 1) (by omega)
+          simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using this)
+        (by
+          rw [Function.update_of_ne (by omega)]
+          have : h + 1 + k = h + (k + 1) := by omega
+          rw [this]; exact hbl)
+        { state := dfBlank
+          input := c.input.move (idleDir c.input.read)
+          work := fun i =>
+            if i = stT then
+              (c.work i).writeAndMove Γw.blank.toΓ
+                (if (c.work i).read = Γ.start then Dir3.right else Dir3.right)
+            else (c.work i).writeAndMove (readBackWrite ((c.work i).read)).toΓ
+              (idleDir ((c.work i).read))
+          output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+            (idleDir c.output.read) }
+        rfl
+        (by
+          dsimp only
+          rw [if_pos rfl, if_neg hread']
+          show (((c.work stT).write Γw.blank.toΓ).move Dir3.right).cells = _
+          have hw : (c.work stT).write Γw.blank.toΓ
+              = { c.work stT with
+                  cells := Function.update (c.work stT).cells (c.work stT).head Γw.blank.toΓ } := by
+            unfold Tape.write
+            rw [if_neg (by omega)]
+          rw [hw]
+          show Function.update (c.work stT).cells (c.work stT).head Γw.blank.toΓ = _
+          rw [hcW, hhead]
+          rfl)
+        (by
+          dsimp only
+          rw [if_pos rfl, if_neg hread']
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hhead])
+        (by dsimp only; rw [idle_input_id hin]; exact hin)
+        (by dsimp only; rw [idle_tape_id hout]; exact hout)
+        (fun i hi => by
+          dsimp only
+          rw [if_neg hi, idle_tape_id (hoth i hi)]
+          exact hoth i hi)
+    refine ⟨c', .step hstep hreach, hst', ?_, ?_, ?_, ?_⟩
+    · rw [hwt']
+      simp only [Tape.mk.injEq]
+      refine ⟨by omega, ?_⟩
+      funext j
+      by_cases hj1 : h + 1 ≤ j ∧ j < h + 1 + k
+      · rw [if_pos hj1, if_pos (by omega)]
+      · rw [if_neg hj1]
+        by_cases hje : j = h
+        · subst hje
+          rw [Function.update_self, if_pos (by omega)]
+        · rw [Function.update_of_ne hje, if_neg (by omega)]
+    · rw [hin']; exact idle_input_id hin
+    · rw [hout']; exact idle_tape_id hout
+    · intro i hi
+      rw [hoth' i hi]
+      show (if i = stT then _ else _) = _
+      rw [if_neg hi]
+      exact idle_tape_id (hoth i hi)
+
 end TM.UTMBody

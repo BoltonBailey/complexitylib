@@ -934,6 +934,7 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
     (inp₀ : Tape) (work₀ : Fin 6 → Tape) (out₀ : Tape)
     (hst : (work₀ 3).HoldsExact stSyms) (hsth : (work₀ 3).head = 1)
     (hd : (work₀ 4).HoldsExact dSyms) (hdh : (work₀ 4).head = 1)
+    (_hout0 : out₀.cells 0 = Γ.start)
     (houtns : ∀ j, 1 ≤ j → out₀.cells j ≠ Γ.start)
     (houth : out₀.head = 1)
     (hinp : inp₀.read ≠ Γ.start)
@@ -953,29 +954,29 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
   -- standing facts about the initial tapes
   have hst_wf := Tape.HoldsExact.wfCells hst
   have hd_wf := Tape.HoldsExact.wfCells hd
-  have h3read : (work₀ 3).read ≠ Γ.start := by
+  have h3read : (work 3).read ≠ Γ.start := by
     rw [Tape.read, hsth]; exact hst_wf.2 1 le_rfl
-  have h4read : (work₀ 4).read ≠ Γ.start := by
+  have h4read : (work 4).read ≠ Γ.start := by
     rw [Tape.read, hdh]; exact hd_wf.2 1 le_rfl
-  have hout_read : out₀.read ≠ Γ.start := by
+  have hout_read : out.read ≠ Γ.start := by
     rw [Tape.read, houth]; exact houtns 1 le_rfl
   obtain ⟨hdc1, hdb1, hdc2, hdb2, hdlen⟩ := holdsExact_two_fields hd
   -- ── Phase A: skip the first desc field ──
   obtain ⟨c₁, hr₁, hst₁, hin₁, hw₁, hout₁, hcl₁, hhd₁⟩ :=
     skip_loop (takeField dSyms).1 (takeField_fst_ne_blank dSyms)
       (takeField dSyms).1.length 0
-      { state := haltTestTM.qstart, input := inp₀, work := work₀, output := out₀ }
+      { state := haltTestTM.qstart, input := inp, work := work, output := out }
       (by omega) rfl hdh hdc1 hdb1 hinp hout_read
       (by
         intro i hne
         by_cases h3i : i = 3
         · subst h3i; exact h3read
         · exact hothers i h3i hne)
-  have hin₁' : c₁.input = inp₀ := hin₁
-  have hout₁' : c₁.output = out₀ := hout₁
-  have hw₁' : ∀ i : Fin 6, i ≠ 4 → c₁.work i = work₀ i := hw₁
-  have hcl₁' : (c₁.work 4).cells = (work₀ 4).cells := hcl₁
-  have hw₁3 : c₁.work 3 = work₀ 3 := hw₁' 3 (by decide)
+  have hin₁' : c₁.input = inp := hin₁
+  have hout₁' : c₁.output = out := hout₁
+  have hw₁' : ∀ i : Fin 6, i ≠ 4 → c₁.work i = work i := hw₁
+  have hcl₁' : (c₁.work 4).cells = (work 4).cells := hcl₁
+  have hw₁3 : c₁.work 3 = work 3 := hw₁' 3 (by decide)
   -- ── Phase B: lockstep compare ──
   obtain ⟨c₂, t₂, ht₂, hr₂, hst₂, hin₂, hw₂, hout₂, hcl₂3, hcl₂4,
       hlo₂3, hhi₂3, hlo₂4, hhi₂4⟩ :=
@@ -996,10 +997,10 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
         intro i h3i h4i
         rw [hw₁' i h4i]
         exact hothers i h3i h4i)
-  have hcl₂3' : (c₂.work 3).cells = (work₀ 3).cells := by rw [hcl₂3, hw₁3]
-  have hcl₂4' : (c₂.work 4).cells = (work₀ 4).cells := by rw [hcl₂4, hcl₁']
-  have hin₂' : c₂.input = inp₀ := by rw [hin₂, hin₁']
-  have hout₂' : c₂.output = out₀ := by rw [hout₂, hout₁']
+  have hcl₂3' : (c₂.work 3).cells = (work 3).cells := by rw [hcl₂3, hw₁3]
+  have hcl₂4' : (c₂.work 4).cells = (work 4).cells := by rw [hcl₂4, hcl₁']
+  have hin₂' : c₂.input = inp := by rw [hin₂, hin₁']
+  have hout₂' : c₂.output = out := by rw [hout₂, hout₁']
   -- ── Phase C: write the verdict ──
   obtain ⟨c₃, hstep₃, hst₃, hin₃, hw₃, hclo₃, hho₃⟩ :=
     verdict_step (stSyms = (takeField (takeField dSyms).2).1) c₂ hst₂
@@ -1012,15 +1013,15 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
         intro i h3i h4i
         rw [hw₂ i h3i h4i, hw₁' i h4i]
         exact hothers i h3i h4i)
-  have hin₃' : c₃.input = inp₀ := by rw [hin₃, hin₂']
-  have hclo₃' : c₃.output.cells = Function.update out₀.cells 1
+  have hin₃' : c₃.input = inp := by rw [hin₃, hin₂']
+  have hclo₃' : c₃.output.cells = Function.update out.cells 1
       (if stSyms = (takeField (takeField dSyms).2).1 then Γ.one else Γ.zero) := by
     rw [hclo₃, hout₂']
   have hout₃read : c₃.output.read ≠ Γ.start := by
     rw [Tape.read, hho₃, hclo₃', Function.update_self]
     split <;> simp
-  have hcl₃3 : (c₃.work 3).cells = (work₀ 3).cells := by rw [hw₃ 3, hcl₂3']
-  have hcl₃4 : (c₃.work 4).cells = (work₀ 4).cells := by rw [hw₃ 4, hcl₂4']
+  have hcl₃3 : (c₃.work 3).cells = (work 3).cells := by rw [hw₃ 3, hcl₂3']
+  have hcl₃4 : (c₃.work 4).cells = (work 4).cells := by rw [hw₃ 4, hcl₂4']
   have hhd₃3 : (c₃.work 3).head = (c₂.work 3).head := by rw [hw₃ 3]
   have hhd₃4 : (c₃.work 4).head = (c₂.work 4).head := by rw [hw₃ 4]
   -- ── Phase D1: rewind the state head ──
@@ -1035,9 +1036,9 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
         intro i h3i h4i
         rw [hw₃ i, hw₂ i h3i h4i, hw₁' i h4i]
         exact hothers i h3i h4i)
-  have hin₄' : c₄.input = inp₀ := by rw [hin₄, hin₃']
+  have hin₄' : c₄.input = inp := by rw [hin₄, hin₃']
   have hw₄4 : c₄.work 4 = c₃.work 4 := hw₄ 4 (by decide)
-  have hcl₄3 : (c₄.work 3).cells = (work₀ 3).cells := by rw [hcl₄, hcl₃3]
+  have hcl₄3 : (c₄.work 3).cells = (work 3).cells := by rw [hcl₄, hcl₃3]
   -- ── Phase D2: rewind the desc head ──
   obtain ⟨c₅, hr₅, hst₅, hin₅, hw₅, hout₅, hcl₅, hhd₅⟩ :=
     rewindD_loop (c₄.work 4).head c₄ hst₄ rfl
