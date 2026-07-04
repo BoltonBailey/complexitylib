@@ -323,7 +323,17 @@ theorem machFind_matches (w : ℕ) (stSyms keyCs : List Γw) :
   | .blank :: rest => by simp [machFind]
   | s :: rest => by
     intro seg h
-    sorry
+    by_cases hs : s = Γw.blank
+    · subst hs
+      simp [machFind] at h
+    · rw [machFind_cons_of_ne_blank hs] at h
+      by_cases hm : MachMatch w stSyms keyCs (takeField (s :: rest)).1
+      · rw [if_pos hm] at h
+        injection h with h
+        subst h
+        exact ⟨hm, takeField_fst_ne_blank _⟩
+      · rw [if_neg hm] at h
+        exact machFind_matches w stSyms keyCs (takeField (s :: rest)).2 seg h
   termination_by R => R.length
   decreasing_by
     all_goals exact Nat.lt_succ_of_le (takeField_cons_rest_length s rest)
@@ -352,7 +362,34 @@ theorem find?_parseEntries_eq_machFind (w q : ℕ) (hq : q < 2 ^ w)
   | [] => by simp [machFind, parseEntries]
   | .blank :: rest => by simp [machFind, parseEntries_blank]
   | s :: rest => by
-    sorry
+    by_cases hs : s = Γw.blank
+    · subst hs
+      simp [machFind, parseEntries_blank]
+    · rw [parseEntries_cons_of_ne_blank hs, machFind_cons_of_ne_blank hs]
+      have hnb : ∀ x ∈ (takeField (s :: rest)).1, x ≠ Γw.blank :=
+        takeField_fst_ne_blank _
+      by_cases hm : MachMatch w (bitsToSyms (Nat.toBits w q))
+        (keyCells f v0 v1 v2) (takeField (s :: rest)).1
+      · rw [if_pos hm]
+        obtain ⟨e, hpe, hq', hsi, hsw, hso⟩ :=
+          (machMatch_iff_parse hq f v0 v1 v2 hnb).mp hm
+        simp only [hpe, Option.bind_some]
+        exact List.find?_cons_of_pos
+          (by simp [keyMatch, hq', hsi, hsw, hso])
+      · rw [if_neg hm]
+        cases hpe : parseEntry w (takeField (s :: rest)).1 with
+        | none =>
+          exact find?_parseEntries_eq_machFind w q hq f v0 v1 v2
+            (takeField (s :: rest)).2
+        | some e =>
+          rw [List.find?_cons_of_neg (by
+            intro hkm
+            simp only [keyMatch, Bool.and_eq_true, beq_iff_eq] at hkm
+            obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := hkm
+            exact hm ((machMatch_iff_parse hq f v0 v1 v2 hnb).mpr
+              ⟨e, hpe, h1, h2, h3, h4⟩))]
+          exact find?_parseEntries_eq_machFind w q hq f v0 v1 v2
+            (takeField (s :: rest)).2
   termination_by R => R.length
   decreasing_by
     all_goals exact Nat.lt_succ_of_le (takeField_cons_rest_length s rest)
@@ -428,6 +465,17 @@ theorem segBit_eq {seg : List Γw} {i : ℕ} (h : i < seg.length) :
     segBit seg i = cellBit ((seg[i]'h).toΓ) := by
   rw [segBit, List.getD, List.getElem?_eq_getElem h, Option.getD_some]
 
+/-- On a `□`-free segment, bit `i` of the parse's bit string is `segBit i`. -/
+private theorem filterMap_getElem_eq_segBit {seg : List Γw}
+    (hnb : ∀ s ∈ seg, s ≠ Γw.blank) {i : ℕ}
+    (h : i < (seg.filterMap symBit?).length) :
+    (seg.filterMap symBit?)[i] = segBit seg i := by
+  have hmap := filterMap_symBit?_eq_map_cellBit hnb
+  have hi : i < seg.length := by
+    rw [hmap, List.length_map] at h
+    exact h
+  rw [segBit_eq hi, List.getElem_of_eq hmap h, List.getElem_map]
+
 /-- **The value decode bridge**: on a `□`-free segment that parses to `e`,
     the value cells decode to `e.act` exactly as the machine reads them —
     the `w`-cell state field at offset `w+6` is the bit-symbol encoding of
@@ -442,6 +490,40 @@ theorem value_slices {w : ℕ} {seg : List Γw} {e : DescEntry}
     grpDir (segBit seg (2 * w + 10)) (segBit seg (2 * w + 11)) = e.act.di ∧
     grpDir (segBit seg (2 * w + 12)) (segBit seg (2 * w + 13)) = e.act.dw ∧
     grpDir (segBit seg (2 * w + 14)) (segBit seg (2 * w + 15)) = e.act.dOut := by
-  sorry
+  have hseg : bitsToSyms (seg.filterMap symBit?) = seg :=
+    bitsToSyms_filterMap_of_ne_blank hnb
+  rw [parseEntry_eq] at hp
+  by_cases hc : 2 * w + 16 ≤ (seg.filterMap symBit?).length
+  swap
+  · rw [if_neg hc] at hp
+    exact absurd hp (by simp)
+  rw [if_pos hc] at hp
+  injection hp with hp
+  subst hp
+  have hgrp : ∀ i j : ℕ, i + 1 = j → j < (seg.filterMap symBit?).length →
+      ((seg.filterMap symBit?).drop i).take 2
+        = [segBit seg i, segBit seg j] := by
+    intro i j hij hj
+    subst hij
+    rw [drop_take_two hj, filterMap_getElem_eq_segBit hnb,
+        filterMap_getElem_eq_segBit hnb]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- the q' field
+    dsimp only
+    have hq'len : (((seg.filterMap symBit?).drop (w + 6)).take w).length = w := by
+      rw [List.length_take, List.length_drop]; omega
+    have h1 := Nat.toBits_fromBits (((seg.filterMap symBit?).drop (w + 6)).take w)
+    rw [hq'len] at h1
+    rw [h1, bitsToSyms_take, bitsToSyms_drop, hseg]
+  · dsimp only
+    rw [hgrp (2 * w + 6) (2 * w + 7) (by omega) (by omega), ← grpΓw_eq_decΓw]
+  · dsimp only
+    rw [hgrp (2 * w + 8) (2 * w + 9) (by omega) (by omega), ← grpΓw_eq_decΓw]
+  · dsimp only
+    rw [hgrp (2 * w + 10) (2 * w + 11) (by omega) (by omega), ← grpDir_eq_decDir]
+  · dsimp only
+    rw [hgrp (2 * w + 12) (2 * w + 13) (by omega) (by omega), ← grpDir_eq_decDir]
+  · dsimp only
+    rw [hgrp (2 * w + 14) (2 * w + 15) (by omega) (by omega), ← grpDir_eq_decDir]
 
 end TM.UTMBody

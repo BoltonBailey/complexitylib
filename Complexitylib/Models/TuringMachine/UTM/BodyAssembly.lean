@@ -574,6 +574,321 @@ theorem cleanupPhase (c : Cfg 6 bodyTM.Q) (E S W : ℕ → Γ) (p sp dp : ℕ)
   · rw [hin₃, hin₂, hin₁]
   · rw [hout₃, hout₂, hout₁]
 
+/-- **Default-phase tail** (from `dfScr`, after the sanitized virtual moves
+    were applied on the `segCheck` step): clear the scratch, blank the state
+    tape, copy the qhalt field onto it, rewind everything; ends at
+    `bodyDone` with the state tape holding the qhalt field — the shape of
+    the invariant's post-default disjunct. -/
+theorem defaultTail (c : Cfg 6 bodyTM.Q) (E : ℕ → Γ) (SL : List Γw)
+    (p sp dp : ℕ) (hsp : 1 ≤ sp) (hdp : 1 ≤ dp)
+    (hst : c.state = dfScr)
+    (hE0 : E 0 = Γ.start) (hEns : ∀ j, 1 ≤ j → E j ≠ Γ.start)
+    (hEbeyond : ∀ j, p < j → E j = Γ.blank)
+    (hscC : (c.work scT).cells = E) (hscH : (c.work scT).head = p)
+    (hSL_hold : (c.work stT).HoldsExact SL) (hSL_nb : ∀ s ∈ SL, s ≠ Γw.blank)
+    (hstH : (c.work stT).head = sp)
+    (hdesc : (c.work dsT).HoldsExact (groupPairs α)) (hdsH : (c.work dsT).head = dp)
+    (hin : c.input.read ≠ Γ.start) (hout : c.output.read ≠ Γ.start)
+    (hoth : ∀ i, i ≠ stT → i ≠ dsT → i ≠ scT → (c.work i).read ≠ Γ.start) :
+    ∃ c' t, t ≤ p + 2 * sp + 2 * SL.length + 2 * dp
+        + 2 * (takeField (groupPairs α)).1.length
+        + 3 * (qhaltField (groupPairs α)).length + 12 ∧
+      bodyTM.reachesIn t c c' ∧
+      c'.state = bodyDone ∧
+      (c'.work stT).HoldsExact (qhaltField (groupPairs α)) ∧
+      (c'.work stT).head = 1 ∧
+      c'.work dsT = ⟨1, (c.work dsT).cells⟩ ∧
+      (c'.work scT).HoldsExact [] ∧ (c'.work scT).head = 1 ∧
+      (∀ i, i ≠ stT → i ≠ dsT → i ≠ scT → c'.work i = c.work i) ∧
+      c'.input = c.input ∧ c'.output = c.output := by
+  have hS_wns := (Tape.HoldsExact.wfCells hSL_hold).2
+  have hW_wns := (Tape.HoldsExact.wfCells hdesc).2
+  have hst_read : (c.work stT).read ≠ Γ.start := by
+    rw [Tape.read, hstH]; exact hS_wns sp hsp
+  have hds_read : (c.work dsT).read ≠ Γ.start := by
+    rw [Tape.read, hdsH]; exact hW_wns dp hdp
+  set E' : ℕ → Γ := fun j => if 1 ≤ j ∧ j ≤ p then Γ.blank else E j with hE'
+  have hE'ns : ∀ j, 1 ≤ j → E' j ≠ Γ.start := by
+    intro j hj
+    rw [hE']; dsimp only
+    split
+    · simp
+    · exact hEns j hj
+  have hE'read1 : E' 1 ≠ Γ.start := hE'ns 1 (by omega)
+  -- dfScr: blank-rewind scratch
+  obtain ⟨c₁, hr₁, hst₁, hwtSc₁, hin₁, hout₁, hoth₁⟩ :=
+    blankRewStep_loop (cur := dfScr) (next := dfStRew) (t := scT)
+      (fun hcon => nomatch hcon) arm_dfScr
+      p E hE0 hEns c hst hscC hscH hin hout
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS; exact hst_read
+        · by_cases hiD : i = dsT
+          · subst hiD; exact hds_read
+          · exact hoth i hiS hiD hi)
+  have hscRead₁ : (c₁.work scT).read ≠ Γ.start := by
+    rw [hwtSc₁, Tape.read]; exact hE'read1
+  -- dfStRew: rewind state
+  obtain ⟨c₂, hr₂, hst₂, hwtS₂, hin₂, hout₂, hoth₂⟩ :=
+    rewStep_loop (cur := dfStRew) (next := dfBlank) (t := stT)
+      (fun hcon => nomatch hcon) arm_dfStRew
+      (c.work stT).cells hSL_hold.1 hS_wns sp c₁ hst₁
+      (by rw [hoth₁ stT (by decide)]) (by rw [hoth₁ stT (by decide), hstH])
+      (by rw [hin₁]; exact hin) (by rw [hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD; rw [hoth₁ dsT (by decide)]; exact hds_read
+        · by_cases hiSc : i = scT
+          · subst hiSc; exact hscRead₁
+          · rw [hoth₁ i hiSc]; exact hoth i hi hiD hiSc)
+  -- dfBlank: blank the state tape rightward from cell 1
+  obtain ⟨c₃, hr₃, hst₃, hwtS₃, hin₃, hout₃, hoth₃⟩ :=
+    dfBlank_loop SL.length (c.work stT).cells hS_wns 1 (by omega)
+      (fun j hj => by
+        rw [show 1 + j = j + 1 by omega, Tape.HoldsExact.cells_lt hSL_hold hj]
+        intro hcon
+        exact hSL_nb _ (List.getElem_mem hj) (Γw.toΓ_eq_blank.mp hcon))
+      (by
+        rw [show 1 + SL.length = SL.length + 1 by omega]
+        exact Tape.HoldsExact.cells_ge hSL_hold (Nat.le_refl _))
+      c₂ hst₂ (by rw [hwtS₂]) (by rw [hwtS₂])
+      (by rw [hin₂, hin₁]; exact hin) (by rw [hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD
+          rw [hoth₂ dsT (by decide), hoth₁ dsT (by decide)]
+          exact hds_read
+        · by_cases hiSc : i = scT
+          · subst hiSc; rw [hoth₂ scT (by decide)]; exact hscRead₁
+          · rw [hoth₂ i hi, hoth₁ i hiSc]; exact hoth i hi hiD hiSc)
+  -- the blanked state cells: everything at ≥ 1 is blank
+  set B : ℕ → Γ := fun j =>
+    if 1 ≤ j ∧ j < 1 + SL.length then Γ.blank else (c.work stT).cells j with hB
+  have hB0 : B 0 = Γ.start := by
+    rw [hB]; dsimp only
+    rw [if_neg (by omega)]
+    exact hSL_hold.1
+  have hBns : ∀ j, 1 ≤ j → B j ≠ Γ.start := by
+    intro j hj
+    rw [hB]; dsimp only
+    split
+    · simp
+    · exact hS_wns j hj
+  have hBblank : ∀ j, 1 ≤ j → B j = Γ.blank := by
+    intro j hj
+    rw [hB]; dsimp only
+    split
+    · rfl
+    · next hcon =>
+      rw [show j = (j - 1) + 1 by omega]
+      exact Tape.HoldsExact.cells_ge hSL_hold (by omega)
+  -- dfStRew2: rewind the state head from the blanking frontier
+  obtain ⟨c₄, hr₄, hst₄, hwtS₄, hin₄, hout₄, hoth₄⟩ :=
+    rewStep_loop (cur := dfStRew2) (next := dfDescRew) (t := stT)
+      (fun hcon => nomatch hcon) arm_dfStRew2
+      B hB0 hBns (1 + SL.length) c₃ hst₃
+      (by rw [hwtS₃]) (by rw [hwtS₃])
+      (by rw [hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₃, hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD
+          rw [hoth₃ dsT (by decide), hoth₂ dsT (by decide), hoth₁ dsT (by decide)]
+          exact hds_read
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₃ scT (by decide), hoth₂ scT (by decide)]
+            exact hscRead₁
+          · rw [hoth₃ i hi, hoth₂ i hi, hoth₁ i hiSc]
+            exact hoth i hi hiD hiSc)
+  -- dfDescRew: rewind the desc head
+  obtain ⟨c₅, hr₅, hst₅, hwtD₅, hin₅, hout₅, hoth₅⟩ :=
+    rewStep_loop (cur := dfDescRew) (next := dfSkip) (t := dsT)
+      (fun hcon => nomatch hcon) arm_dfDescRew
+      (c.work dsT).cells hdesc.1 hW_wns dp c₄ hst₄
+      (by rw [hoth₄ dsT (by decide), hoth₃ dsT (by decide),
+        hoth₂ dsT (by decide), hoth₁ dsT (by decide)])
+      (by rw [hoth₄ dsT (by decide), hoth₃ dsT (by decide),
+        hoth₂ dsT (by decide), hoth₁ dsT (by decide), hdsH])
+      (by rw [hin₄, hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₄, hout₃, hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS
+          rw [hwtS₄]
+          exact hBns 1 (by omega)
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₄ scT (by decide), hoth₃ scT (by decide),
+              hoth₂ scT (by decide)]
+            exact hscRead₁
+          · rw [hoth₄ i hiS, hoth₃ i hiS, hoth₂ i hiS, hoth₁ i hiSc]
+            exact hoth i hiS hi hiSc)
+  -- dfSkip: scan past field 1
+  obtain ⟨c₆, hr₆, hst₆, hwtD₆, hin₆, hout₆, hoth₆⟩ :=
+    scanRight_loop (cur := dfSkip) (next := dfCopy) (t := dsT)
+      (fun hcon => nomatch hcon) arm_dfSkip
+      (c.work dsT).cells hW_wns
+      (takeField (groupPairs α)).1.length 1 (by omega)
+      (fun j hj => descLayout_field1 hdesc j hj)
+      (descLayout_sep1 hdesc)
+      c₅ hst₅ (by rw [hwtD₅]) (by rw [hwtD₅])
+      (by rw [hin₅, hin₄, hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS
+          rw [hoth₅ stT (by decide), hwtS₄]
+          exact hBns 1 (by omega)
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₅ scT (by decide), hoth₄ scT (by decide),
+              hoth₃ scT (by decide), hoth₂ scT (by decide)]
+            exact hscRead₁
+          · rw [hoth₅ i hi, hoth₄ i hiS, hoth₃ i hiS, hoth₂ i hiS,
+              hoth₁ i hiSc]
+            exact hoth i hiS hi hiSc)
+  -- dfCopy: copy the qhalt field onto the (blank) state tape
+  obtain ⟨c₇, hr₇, hst₇, hwtS₇, hwtD₇, hin₇, hout₇, hoth₇⟩ :=
+    dfCopy_loop (c.work dsT).cells hW_wns
+      (qhaltField (groupPairs α)).length B hBns
+      1 ((takeField (groupPairs α)).1.length + 2) (by omega) (by omega)
+      (fun j hj => descLayout_field2 hdesc j hj)
+      (descLayout_sep2 hdesc)
+      c₆ hst₆
+      (by rw [hoth₆ stT (by decide), hoth₅ stT (by decide), hwtS₄])
+      (by rw [hoth₆ stT (by decide), hoth₅ stT (by decide), hwtS₄])
+      (by rw [hwtD₆]) (by rw [hwtD₆]; dsimp only; omega)
+      (by rw [hin₆, hin₅, hin₄, hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout)
+      (fun i hiS hiD => by
+        by_cases hiSc : i = scT
+        · subst hiSc
+          rw [hoth₆ scT (by decide), hoth₅ scT (by decide),
+            hoth₄ scT (by decide), hoth₃ scT (by decide), hoth₂ scT (by decide)]
+          exact hscRead₁
+        · rw [hoth₆ i hiD, hoth₅ i hiD, hoth₄ i hiS, hoth₃ i hiS,
+            hoth₂ i hiS, hoth₁ i hiSc]
+          exact hoth i hiS hiD hiSc)
+  -- the copied state cells hold exactly the qhalt field
+  set C : ℕ → Γ := fun j =>
+    if 1 ≤ j ∧ j < 1 + (qhaltField (groupPairs α)).length then
+      (c.work dsT).cells ((takeField (groupPairs α)).1.length + 2 + (j - 1))
+    else B j with hC
+  have hCns : ∀ j, 1 ≤ j → C j ≠ Γ.start := by
+    intro j hj
+    rw [hC]; dsimp only
+    split
+    · exact hW_wns _ (by omega)
+    · exact hBns j hj
+  have hC0 : C 0 = Γ.start := by
+    rw [hC]; dsimp only
+    rw [if_neg (by omega)]
+    exact hB0
+  -- dfStRew3: rewind the state head
+  obtain ⟨c₈, hr₈, hst₈, hwtS₈, hin₈, hout₈, hoth₈⟩ :=
+    rewStep_loop (cur := dfStRew3) (next := dfDescRew2) (t := stT)
+      (fun hcon => nomatch hcon) arm_dfStRew3
+      C hC0 hCns (1 + (qhaltField (groupPairs α)).length) c₇ hst₇
+      (by rw [hwtS₇]) (by rw [hwtS₇])
+      (by rw [hin₇, hin₆, hin₅, hin₄, hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]; exact hout)
+      (fun i hi => by
+        by_cases hiD : i = dsT
+        · subst hiD
+          rw [hwtD₇]
+          exact hW_wns ((takeField (groupPairs α)).1.length + 2
+            + (qhaltField (groupPairs α)).length) (by omega)
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₇ scT (by decide) (by decide), hoth₆ scT (by decide),
+              hoth₅ scT (by decide), hoth₄ scT (by decide),
+              hoth₃ scT (by decide), hoth₂ scT (by decide)]
+            exact hscRead₁
+          · rw [hoth₇ i hi hiD, hoth₆ i hiD, hoth₅ i hiD, hoth₄ i hi,
+              hoth₃ i hi, hoth₂ i hi, hoth₁ i hiSc]
+            exact hoth i hi hiD hiSc)
+  -- dfDescRew2: rewind the desc head, done
+  obtain ⟨c₉, hr₉, hst₉, hwtD₉, hin₉, hout₉, hoth₉⟩ :=
+    rewStep_loop (cur := dfDescRew2) (next := bodyDone) (t := dsT)
+      (fun hcon => nomatch hcon) arm_dfDescRew2
+      (c.work dsT).cells hdesc.1 hW_wns
+      ((takeField (groupPairs α)).1.length + 2
+        + (qhaltField (groupPairs α)).length) c₈ hst₈
+      (by rw [hoth₈ dsT (by decide), hwtD₇])
+      (by rw [hoth₈ dsT (by decide), hwtD₇])
+      (by rw [hin₈, hin₇, hin₆, hin₅, hin₄, hin₃, hin₂, hin₁]; exact hin)
+      (by rw [hout₈, hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]
+          exact hout)
+      (fun i hi => by
+        by_cases hiS : i = stT
+        · subst hiS
+          rw [hwtS₈]
+          exact hCns 1 (by omega)
+        · by_cases hiSc : i = scT
+          · subst hiSc
+            rw [hoth₈ scT (by decide), hoth₇ scT (by decide) (by decide),
+              hoth₆ scT (by decide), hoth₅ scT (by decide),
+              hoth₄ scT (by decide), hoth₃ scT (by decide),
+              hoth₂ scT (by decide)]
+            exact hscRead₁
+          · rw [hoth₈ i hiS, hoth₇ i hiS hi, hoth₆ i hi, hoth₅ i hi,
+              hoth₄ i hiS, hoth₃ i hiS, hoth₂ i hiS, hoth₁ i hiSc]
+            exact hoth i hiS hi hiSc)
+  refine ⟨c₉,
+    (p + 1) + (sp + 1) + (SL.length + 1) + ((1 + SL.length) + 1) + (dp + 1)
+      + ((takeField (groupPairs α)).1.length + 1)
+      + ((qhaltField (groupPairs α)).length + 1)
+      + ((1 + (qhaltField (groupPairs α)).length) + 1)
+      + (((takeField (groupPairs α)).1.length + 2
+          + (qhaltField (groupPairs α)).length) + 1),
+    by omega,
+    reachesIn_trans _ (reachesIn_trans _ (reachesIn_trans _ (reachesIn_trans _
+      (reachesIn_trans _ (reachesIn_trans _ (reachesIn_trans _
+        (reachesIn_trans _ hr₁ hr₂) hr₃) hr₄) hr₅) hr₆) hr₇) hr₈) hr₉,
+    hst₉, ?_, ?_, hwtD₉, ?_, ?_, ?_, ?_, ?_⟩
+  · -- the state tape holds exactly the qhalt field
+    rw [hoth₉ stT (by decide), hwtS₈]
+    refine ⟨hC0, fun i => ?_⟩
+    show C (i + 1) = _
+    rw [hC]
+    dsimp only
+    by_cases hi : i < (qhaltField (groupPairs α)).length
+    · rw [if_pos (by omega), dif_pos hi,
+        show (takeField (groupPairs α)).1.length + 2 + (i + 1 - 1)
+          = (takeField (groupPairs α)).1.length + 2 + i by omega]
+      exact descLayout_field2_val hdesc i hi
+    · rw [if_neg (by omega), dif_neg hi]
+      exact hBblank (i + 1) (by omega)
+  · rw [hoth₉ stT (by decide), hwtS₈]
+  · -- scratch cleared
+    rw [hoth₉ scT (by decide), hoth₈ scT (by decide),
+      hoth₇ scT (by decide) (by decide), hoth₆ scT (by decide),
+      hoth₅ scT (by decide), hoth₄ scT (by decide), hoth₃ scT (by decide),
+      hoth₂ scT (by decide), hwtSc₁]
+    refine Tape.HoldsExact.nil_iff.mpr ⟨?_, ?_⟩
+    · show E' 0 = Γ.start
+      rw [hE']
+      dsimp only
+      rw [if_neg (by omega)]
+      exact hE0
+    · intro i
+      show E' (i + 1) = Γ.blank
+      rw [hE']
+      dsimp only
+      split
+      · rfl
+      · exact hEbeyond (i + 1) (by omega)
+  · rw [hoth₉ scT (by decide), hoth₈ scT (by decide),
+      hoth₇ scT (by decide) (by decide), hoth₆ scT (by decide),
+      hoth₅ scT (by decide), hoth₄ scT (by decide), hoth₃ scT (by decide),
+      hoth₂ scT (by decide), hwtSc₁]
+  · intro i hiS hiD hiSc
+    rw [hoth₉ i hiD, hoth₈ i hiS, hoth₇ i hiS hiD, hoth₆ i hiD, hoth₅ i hiD,
+      hoth₄ i hiS, hoth₃ i hiS, hoth₂ i hiS, hoth₁ i hiSc]
+  · rw [hin₉, hin₈, hin₇, hin₆, hin₅, hin₄, hin₃, hin₂, hin₁]
+  · rw [hout₉, hout₈, hout₇, hout₆, hout₅, hout₄, hout₃, hout₂, hout₁]
+
 end HcPhase
 
 end TM.UTMBody
