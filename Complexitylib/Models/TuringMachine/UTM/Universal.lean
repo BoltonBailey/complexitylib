@@ -82,4 +82,28 @@ theorem utmTM_universal {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
   exact ⟨encodeDesc (TM.descOfTM M₁),
     fun x => utmTM_simulates_decider hterm hdec' x⟩
 
+/-- **Padded universality**: the description of a decider works under
+    arbitrary padding — every machine has descriptions of every sufficiently
+    large length, all correctly simulated. This is the form the
+    hierarchy-theorem diagonalization consumes. -/
+theorem utmTM_universal_padded {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
+    (hdec : M.DecidesInTime L T) :
+    ∃ α₀ : List Bool, ∀ junk x : List Bool,
+      ∃ c' t, t ≤ utmTime (α₀ ++ junk)
+          (NTM.singleTapeSimTime k T x.length) x.length ∧
+        utmTM.reachesIn t (utmTM.initCfg (pair (α₀ ++ junk) x)) c' ∧
+        utmTM.halted c' ∧
+        (x ∈ L → c'.output.cells 1 = Γ.one) ∧
+        (x ∉ L → c'.output.cells 1 = Γ.zero) := by
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hdec
+  have hwf := TM.descOfTM_wf M₁
+  refine ⟨encodeDesc (TM.descOfTM M₁), fun junk x => ?_⟩
+  have hterm : TerminatedRegion (encodeDesc (TM.descOfTM M₁) ++ junk) :=
+    terminatedRegion_encodeDesc hwf (descOfTM_entries_ne_nil M₁) junk
+  have hdec' : (decodeDesc (encodeDesc (TM.descOfTM M₁) ++ junk)).toTM.DecidesInTime
+      L (NTM.singleTapeSimTime k T) := by
+    rw [decodeDesc_encodeDesc_append hwf]
+    exact TM.descOfTM_decidesInTime M₁ hM₁
+  exact utmTM_simulates_decider hterm hdec' x
+
 end TM.UTMBody
