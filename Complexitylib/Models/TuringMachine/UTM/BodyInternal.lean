@@ -85,6 +85,71 @@ theorem step_act1 {c : Cfg 6 bodyTM.Q} (hne : c.state ≠ bodyDone)
   refine ⟨trivial, trivial, funext fun i => ?_, trivial⟩
   by_cases hi : i = t <;> simp [hi]
 
+/-- Closed form of a step whose arm is `act2` (two active tapes). -/
+theorem step_act2 {c : Cfg 6 bodyTM.Q} (hne : c.state ≠ bodyDone)
+    {q' : BodyQ} {t₁ t₂ : Fin 6} {w₁ w₂ : Γw} {d₁ d₂ : Dir3}
+    (h : bodyδ c.state c.input.read (fun i => (c.work i).read) c.output.read
+      = act2 q' c.input.read (fun i => (c.work i).read) c.output.read
+          t₁ w₁ d₁ t₂ w₂ d₂) :
+    bodyTM.step c = some
+      { state := q'
+        input := c.input.move (idleDir c.input.read)
+        work := fun i =>
+          if i = t₁ then
+            (c.work i).writeAndMove w₁.toΓ
+              (if (c.work i).read = Γ.start then Dir3.right else d₁)
+          else if i = t₂ then
+            (c.work i).writeAndMove w₂.toΓ
+              (if (c.work i).read = Γ.start then Dir3.right else d₂)
+          else (c.work i).writeAndMove (readBackWrite ((c.work i).read)).toΓ
+            (idleDir ((c.work i).read))
+        output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+          (idleDir c.output.read) } := by
+  rw [step_mkAct hne h]
+  refine congrArg some ?_
+  simp only [Cfg.mk.injEq]
+  refine ⟨trivial, trivial, funext fun i => ?_, trivial⟩
+  by_cases h1 : i = t₁
+  · simp [h1]
+  · by_cases h2 : i = t₂
+    · subst h2; simp [h1]
+    · simp [h1, h2]
+
+/-- Closed form of a step whose arm is `act3` (three active tapes). -/
+theorem step_act3 {c : Cfg 6 bodyTM.Q} (hne : c.state ≠ bodyDone)
+    {q' : BodyQ} {t₁ t₂ t₃ : Fin 6} {w₁ w₂ w₃ : Γw} {d₁ d₂ d₃ : Dir3}
+    (h : bodyδ c.state c.input.read (fun i => (c.work i).read) c.output.read
+      = act3 q' c.input.read (fun i => (c.work i).read) c.output.read
+          t₁ w₁ d₁ t₂ w₂ d₂ t₃ w₃ d₃) :
+    bodyTM.step c = some
+      { state := q'
+        input := c.input.move (idleDir c.input.read)
+        work := fun i =>
+          if i = t₁ then
+            (c.work i).writeAndMove w₁.toΓ
+              (if (c.work i).read = Γ.start then Dir3.right else d₁)
+          else if i = t₂ then
+            (c.work i).writeAndMove w₂.toΓ
+              (if (c.work i).read = Γ.start then Dir3.right else d₂)
+          else if i = t₃ then
+            (c.work i).writeAndMove w₃.toΓ
+              (if (c.work i).read = Γ.start then Dir3.right else d₃)
+          else (c.work i).writeAndMove (readBackWrite ((c.work i).read)).toΓ
+            (idleDir ((c.work i).read))
+        output := c.output.writeAndMove (readBackWrite c.output.read).toΓ
+          (idleDir c.output.read) } := by
+  rw [step_mkAct hne h]
+  refine congrArg some ?_
+  simp only [Cfg.mk.injEq]
+  refine ⟨trivial, trivial, funext fun i => ?_, trivial⟩
+  by_cases h1 : i = t₁
+  · simp [h1]
+  · by_cases h2 : i = t₂
+    · subst h2; simp [h1]
+    · by_cases h3 : i = t₃
+      · subst h3; simp [h1, h2]
+      · simp [h1, h2, h3]
+
 /-- **Generic rewind loop** for any pair of states whose transition is
     `rewStep cur next · t`: from state `cur` with work-tape-`t` head at `p`
     (cells `W`, well-formed), reach state `next` with head 1 in `p + 1`
