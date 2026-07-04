@@ -26,3 +26,4 @@ import Complexitylib.Models.TuringMachine.DecReg
 import Complexitylib.Models.TuringMachine.Probe
 import Complexitylib.Models.TuringMachine.NonDetSubroutines
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
+import Complexitylib.Models.TuringMachine.UTM.Desc
