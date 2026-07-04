@@ -28,3 +28,4 @@ import Complexitylib.Models.TuringMachine.NonDetSubroutines
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.UTM.Desc
 import Complexitylib.Models.TuringMachine.UTM.Interp
+import Complexitylib.Models.TuringMachine.UTM.VTape
