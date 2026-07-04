@@ -154,4 +154,91 @@ theorem descLayout_entries {t : Tape} {l : List Γw} (h : t.HoldsExact l)
       - (takeField (takeField l).2).1.length = j + 1 by omega]
   rfl
 
+/-- Field-1 cell values. -/
+theorem descLayout_field1_val {t : Tape} {l : List Γw} (h : t.HoldsExact l) :
+    ∀ j, (hj : j < (takeField l).1.length) →
+      t.cells (1 + j) = ((takeField l).1[j]).toΓ := by
+  intro j hj
+  rw [show 1 + j = j + 1 by omega, holdsExact_cells_getD h, getD_canonical]
+  unfold canonical
+  rw [List.getElem?_append_left (by omega), List.getElem?_eq_getElem hj,
+    Option.getD_some]
+
+/-- Field-2 cell values. -/
+theorem descLayout_field2_val {t : Tape} {l : List Γw} (h : t.HoldsExact l) :
+    ∀ j, (hj : j < (takeField (takeField l).2).1.length) →
+      t.cells ((takeField l).1.length + 2 + j)
+        = ((takeField (takeField l).2).1[j]).toΓ := by
+  intro j hj
+  rw [show (takeField l).1.length + 2 + j = ((takeField l).1.length + 1 + j) + 1
+      by omega,
+    holdsExact_cells_getD h, getD_canonical]
+  unfold canonical
+  rw [List.getElem?_append_right (by omega),
+    show (takeField l).1.length + 1 + j - (takeField l).1.length = j + 1 by omega]
+  rw [show ((Γw.blank :: ((takeField (takeField l).2).1 ++ Γw.blank ::
+      (takeField (takeField l).2).2))[j + 1]?)
+      = (((takeField (takeField l).2).1 ++ Γw.blank ::
+        (takeField (takeField l).2).2)[j]?) from rfl]
+  rw [List.getElem?_append_left hj, List.getElem?_eq_getElem hj, Option.getD_some]
+
+/-- Field-2 cell values, blank-default form (covers positions beyond the
+    field: the separator/beyond reads `□`). -/
+theorem descLayout_field2_getD {t : Tape} {l : List Γw} (h : t.HoldsExact l)
+    (j : ℕ) (hj : j ≤ (takeField (takeField l).2).1.length) :
+    t.cells ((takeField l).1.length + 2 + j)
+      = (((takeField (takeField l).2).1[j]?).getD Γw.blank).toΓ := by
+  rcases Nat.lt_or_ge j (takeField (takeField l).2).1.length with hlt | hge
+  · rw [descLayout_field2_val h j hlt, List.getElem?_eq_getElem hlt,
+      Option.getD_some]
+  · have hj' : j = (takeField (takeField l).2).1.length := by omega
+    subst hj'
+    rw [descLayout_sep2 h, List.getElem?_eq_none (Nat.le_refl _)]
+    rfl
+
+/-- **First mismatch extraction**: two different blank-free lists, viewed as
+    blank-padded infinite sequences, have a least disagreement index; below
+    it they agree on non-blank symbols, and at it the `hc1`-style mismatch
+    conditions hold. -/
+theorem exists_first_mismatch {A B : List Γw}
+    (hA : ∀ s ∈ A, s ≠ Γw.blank) (hB : ∀ s ∈ B, s ≠ Γw.blank)
+    (hne : A ≠ B) :
+    ∃ n, n ≤ A.length ∧ n ≤ B.length ∧
+      (∀ j, j < n → ((A[j]?).getD Γw.blank) = ((B[j]?).getD Γw.blank) ∧
+        ((A[j]?).getD Γw.blank) ≠ Γw.blank) ∧
+      ((A[n]?).getD Γw.blank) ≠ ((B[n]?).getD Γw.blank) := by
+  induction A generalizing B with
+  | nil =>
+    cases B with
+    | nil => exact absurd rfl hne
+    | cons b bs =>
+      refine ⟨0, by omega, by omega, fun j hj => by omega, ?_⟩
+      have hb : b ≠ Γw.blank := hB b (List.mem_cons_self ..)
+      simpa using fun hcon => hb hcon.symm
+  | cons a as ih =>
+    cases B with
+    | nil =>
+      refine ⟨0, by omega, by omega, fun j hj => by omega, ?_⟩
+      have ha : a ≠ Γw.blank := hA a (List.mem_cons_self ..)
+      simpa using ha
+    | cons b bs =>
+      by_cases hab : a = b
+      · subst hab
+        have hne' : as ≠ bs := fun hcon => hne (by rw [hcon])
+        obtain ⟨n, hnA, hnB, hagree, hmm⟩ :=
+          ih (fun s hs => hA s (List.mem_cons_of_mem _ hs))
+            (fun s hs => hB s (List.mem_cons_of_mem _ hs)) hne'
+        refine ⟨n + 1, by simpa using hnA, by simpa using hnB, ?_, ?_⟩
+        · intro j hj
+          cases j with
+          | zero =>
+            refine ⟨rfl, ?_⟩
+            simpa using hA a (List.mem_cons_self ..)
+          | succ j' =>
+            have := hagree j' (by omega)
+            simpa using this
+        · simpa using hmm
+      · refine ⟨0, by omega, by omega, fun j hj => by omega, ?_⟩
+        simpa using hab
+
 end TM.UTMBody
