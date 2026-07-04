@@ -697,7 +697,7 @@ private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
   have hstay : idleDir c.output.read = Dir3.stay := by simp [idleDir, hout]
   by_cases hP : P
   · rw [if_pos hP] at hstate
-    simp only [TM.step, ↓reduceIte, hstate, haltTestTM]
+    simp only [TM.step, hstate, haltTestTM]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
     · exact input_idle_fix c.input hin
     · intro i
@@ -710,12 +710,13 @@ private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
     · rw [if_pos hP]
       show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).cells = _
       rw [tape_move_cells]
-      simp only [Tape.write, hoh, ↓reduceIte, Γw.toΓ]
+      simp only [Tape.write, hoh, Γw.toΓ]
+      rw [if_neg Nat.one_ne_zero]
     · show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).head = 1
       rw [hstay]
       simp [Tape.move, tape_write_head, hoh]
   · rw [if_neg hP] at hstate
-    simp only [TM.step, ↓reduceIte, hstate, haltTestTM]
+    simp only [TM.step, hstate, haltTestTM]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
     · exact input_idle_fix c.input hin
     · intro i
@@ -728,7 +729,8 @@ private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
     · rw [if_neg hP]
       show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).cells = _
       rw [tape_move_cells]
-      simp only [Tape.write, hoh, ↓reduceIte, Γw.toΓ]
+      simp only [Tape.write, hoh, Γw.toΓ]
+      rw [if_neg Nat.one_ne_zero]
     · show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).head = 1
       rw [hstay]
       simp [Tape.move, tape_write_head, hoh]

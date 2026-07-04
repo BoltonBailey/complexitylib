@@ -53,7 +53,7 @@ private theorem dummy_writeAndMove (w : Tape)
   · -- head at cell 0: `w` *is* `initTape []`, and the action is the bounce
     have hw : w = initTape [] := by
       calc w = ⟨w.head, w.cells⟩ := rfl
-        _ = initTape [] := by rw [h0, hc]
+        _ = initTape [] := by rw [h0, hc]; rfl
     subst hw
     rfl
   · -- head at cell 1: write `□` over `□` and stay
@@ -63,6 +63,7 @@ private theorem dummy_writeAndMove (w : Tape)
     rw [Tape.write, if_neg (show ¬ w.head = 0 by omega), h1, hc]
     rw [show (readBackWrite Γ.blank).toΓ = (initTape []).cells 1 from rfl,
       Function.update_eq_self]
+    rfl
 
 -- ════════════════════════════════════════════════════════════════════════
 -- liftTM: extra never-used work tapes
@@ -155,13 +156,12 @@ private theorem liftTM_step_of_extras (tm : TM n) (m : ℕ) {c : Cfg n tm.Q}
       -- extract the explicit stepped configuration
       simp only [step, hh, ↓reduceIte, Option.some.injEq] at hstep
       subst hstep
-      have hCne : ¬ C.state = (tm.liftTM m).qhalt := fun heq => hh (hs.symm.trans heq)
       have hinner : (fun i : Fin n => (C.work (Fin.castAdd m i)).read)
           = fun i => (c.work i).read :=
-        funext fun i => by rw [hw (Fin.castAdd m i) i.isLt]
-      simp only [step, hCne, ↓reduceIte, Option.map_some]
+        funext fun i => by rw [hw (Fin.castAdd m i) i.isLt]; rfl
+      simp only [step, Option.map_some]
       dsimp only [liftTM, liftCfg]
-      rw [hs, hi, ho, hinner]
+      rw [hs, hi, ho, hinner, if_neg hh]
       refine congrArg some (Cfg.mk.injEq _ _ _ _ _ _ _ _ |>.mpr ⟨rfl, rfl, ?_, rfl⟩)
       funext i
       by_cases hik : i.val < n
@@ -411,15 +411,13 @@ private theorem retargetOutput_step_of_extras (tm : TM n) {c : Cfg n tm.Q}
       -- extract the explicit stepped configuration
       simp only [step, hh, ↓reduceIte, Option.some.injEq] at hstep
       subst hstep
-      have hCne : ¬ C.state = (tm.retargetOutput).qhalt :=
-        fun heq => hh (hs.symm.trans heq)
       have hinner : (fun i : Fin n => (C.work (Fin.castSucc i)).read)
           = fun i => (c.work i).read :=
-        funext fun i => by rw [hw (Fin.castSucc i) i.isLt]
+        funext fun i => by rw [hw (Fin.castSucc i) i.isLt]; rfl
       have hvirt : (C.work (Fin.last n)).read = c.output.read := by rw [hlast]
-      simp only [step, hCne, ↓reduceIte, Option.map_some]
+      simp only [step, Option.map_some]
       dsimp only [retargetOutput, retargetCfg]
-      rw [hs, hi, hinner, hvirt]
+      rw [hs, hi, hinner, hvirt, if_neg hh]
       refine congrArg some (Cfg.mk.injEq _ _ _ _ _ _ _ _ |>.mpr ⟨rfl, rfl, ?_, ?_⟩)
       · funext i
         by_cases hik : i.val < n

@@ -1172,4 +1172,47 @@ private theorem copyField_loop :
     · intro i h3 h4
       rw [hfr' i h3 h4, hfr₁ i h3 h4]
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Postcondition conversions
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- An all-blank tape also holds the single symbol `□` exactly. -/
+private theorem holdsExact_blank_singleton {t : Tape} (h : t.HoldsExact []) :
+    t.HoldsExact [Γw.blank] := by
+  refine ⟨h.1, fun i => ?_⟩
+  rw [Tape.HoldsExact.cells_ge h (Nat.zero_le i)]
+  by_cases hi : i < 1
+  · rw [dif_pos (show i < [Γw.blank].length by simpa using hi)]
+    obtain rfl : i = 0 := by omega
+    rfl
+  · rw [dif_neg (show ¬i < [Γw.blank].length by simpa using hi)]
+
+/-- The exact-contents view of the shifted `x` tape is the `VShift` shadow of
+    `initTape (x.map Γ.ofBool)` (see `VShift.initTape`). -/
+private theorem holdsExact_shift_cells {t : Tape} {x : List Bool}
+    (h : t.HoldsExact (Γw.blank :: bitsToSyms x)) :
+    t.cells = fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
+      else ((x.map Γ.ofBool)[k - 2]?).getD Γ.blank := by
+  funext k
+  by_cases hk0 : k = 0
+  · subst hk0
+    simpa using h.1
+  · by_cases hk1 : k = 1
+    · subst hk1
+      have := Tape.HoldsExact.cells_lt h (i := 0) (by simp)
+      simpa using this
+    · obtain ⟨m, rfl⟩ : ∃ m, k = m + 2 := ⟨k - 2, by omega⟩
+      simp only [show m + 2 ≠ 0 by omega, if_false, show m + 2 ≠ 1 by omega,
+        show m + 2 - 2 = m by omega]
+      rw [show m + 2 = m + 1 + 1 by omega, h.2 (m + 1)]
+      simp only [List.length_cons, bitsToSyms_length]
+      by_cases hm : m < x.length
+      · rw [dif_pos (by omega), List.getElem_cons_succ, List.getElem?_map,
+          List.getElem?_eq_getElem hm]
+        simp only [bitsToSyms, List.getElem_map, Option.map_some, Option.getD_some]
+        exact bitSym_toΓ _
+      · rw [dif_neg (by omega), List.getElem?_map,
+          List.getElem?_eq_none (by omega)]
+        rfl
+
 end TM
