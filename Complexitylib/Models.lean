@@ -50,5 +50,6 @@ import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Models.TuringMachine.UTM.Universal
 import Complexitylib.Models.TuringMachine.UTM.Clock
 import Complexitylib.Models.TuringMachine.UTM.ClockFrontier
+import Complexitylib.Models.TuringMachine.UTM.SimClocked
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
