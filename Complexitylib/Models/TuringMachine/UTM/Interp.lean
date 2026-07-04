@@ -36,7 +36,10 @@ def toTM (d : TMDesc) : TM 1 where
   qhalt := ⟨min d.qhalt (2 ^ d.w), Nat.lt_succ_of_le (Nat.min_le_right ..)⟩
   δ := fun q si sw so =>
     let a := d.lookup q.val si (sw 0) so
-    (⟨a.q' % 2 ^ d.w, Nat.lt_succ_of_lt (Nat.mod_lt _ (Nat.two_pow_pos _))⟩,
+    -- targets are clamped (not reduced mod 2^w) so that the default
+    -- action's target `d.qhalt` lands exactly on `qhalt` even when the
+    -- decoded halt state is the out-of-range sentinel `2^w`
+    (⟨min a.q' (2 ^ d.w), Nat.lt_succ_of_le (Nat.min_le_right ..)⟩,
      fun _ => a.ww,
      a.wo,
      if si = Γ.start then .right else a.di,
@@ -199,9 +202,10 @@ theorem descOfTM_step_comm (c : Cfg 1 M.Q) :
     simp only [Option.some.injEq, Cfg.mk.injEq]
     refine ⟨?_, ?_, ?_, ?_⟩
     · simp only [Fin.mk.injEq]
-      exact Nat.mod_eq_of_lt (by
+      exact Nat.min_eq_left (by
         rw [hwidth]
-        exact lt_of_lt_of_le (M.stateEquiv _).isLt (Nat.le_of_lt Nat.lt_two_pow_self))
+        exact Nat.le_of_lt (lt_of_lt_of_le (M.stateEquiv _).isLt
+          (Nat.le_of_lt Nat.lt_two_pow_self)))
     · by_cases hi : c.input.read = Γ.start
       · rw [if_pos hi, hro.1 hi]
       · rw [if_neg hi]
