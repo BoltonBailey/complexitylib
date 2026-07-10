@@ -43,6 +43,7 @@ import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.BodyLoop
 import Complexitylib.Models.TuringMachine.UTM.StepGlue
 import Complexitylib.Models.TuringMachine.UTM.Machine
+import Complexitylib.Models.TuringMachine.UTM.PairSelf
 import Complexitylib.Models.TuringMachine.UTM.BodyIteration
 import Complexitylib.Models.TuringMachine.UTM.Terminated
 import Complexitylib.Models.TuringMachine.UTM.Sim
