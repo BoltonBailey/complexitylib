@@ -145,7 +145,10 @@ private theorem outF_read_ne_start {out : Tape} (h : outF out) :
       and it makes the closure constructions (multiplication, hence all
       polynomials) feasible;
     * the input tape is read-only, so only its cells are pinned; its head
-      is returned to cell 1 (needed to chain clock phases sequentially);
+      **starts at cell 1** — the started form the combinator seams produce
+      (`transitionInput` forces the input head to ≥ 1 at every phase
+      boundary, so a head-0 input can never reach a mid-sequence phase) —
+      and is returned to cell 1 (needed to chain clock phases sequentially);
     * the output tape must be `▷`-clean with head parked at cell 1, and is
       returned in the same state (clock machines never write the output).
 -/
@@ -157,7 +160,8 @@ def ClockConstructible (g : ℕ → ℕ) : Prop :=
       work₀ (6 : Fin 8) = (initTape []).move Dir3.right →
       tm.HoareTime
         (fun inp work out =>
-          inp = initTape (x.map Γ.ofBool) ∧ work = work₀ ∧
+          inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+          work = work₀ ∧
           out.head = 1 ∧ out.cells 0 = Γ.start ∧
           (∀ j, 1 ≤ j → out.cells j ≠ Γ.start))
         (fun inp work out =>
@@ -263,21 +267,6 @@ private theorem clockLen_ne_halt {s : IncPhase} (h : s ≠ .done)
   rw [hst]
   show ¬ s = IncPhase.done
   exact h
-
-/-- `scan` on the input sentinel: only the input head moves (right). -/
-private theorem clockLen_step_scan_start (c : Cfg 8 clockLenTM.Q)
-    (hst : c.state = .scan) (hi : c.input.read = Γ.start)
-    (hall : ∀ i, (c.work i).read ≠ Γ.start)
-    (hout : c.output.read ≠ Γ.start) :
-    clockLenTM.step c = some
-      { state := .scan, input := c.input.move .right,
-        work := c.work, output := c.output } := by
-  rw [TM.step, if_neg (clockLen_ne_halt (by decide) hst)]
-  simp only [clockLenTM, hst, hi, ↓reduceIte]
-  refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, rfl, ?_, ?_⟩)
-  · funext i
-    exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
-  · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
 
 /-- `scan` over a bit: mark the clock, advance the input and clock heads. -/
 private theorem clockLen_step_scan_bit (c : Cfg 8 clockLenTM.Q)
@@ -558,43 +547,36 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
       rw [Function.update_self]
       rfl
 
-/-- **`clockLenTM` Hoare specification.** From the initial input tape and a
-    blank clock, write `regT (|x| + 1)` on tape 6 in `2|x| + 4` steps,
+/-- **`clockLenTM` Hoare specification.** From the started input tape (head
+    at cell 1, the form the combinator seams hand a mid-sequence phase) and
+    a blank clock, write `regT (|x| + 1)` on tape 6 in `2|x| + 3` steps,
     returning the input head to cell 1 and preserving everything else
-    exactly. -/
+    exactly. The machine's `.scan` arm dispatches on the read symbol, so
+    from the started configuration the run is exactly the bounced core: the
+    `▷`-bounce step of a head-0 start is skipped. -/
 private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
     (hoth : ∀ i : Fin 8, i ≠ 6 → (work₀ i).read ≠ Γ.start)
     (hclk : work₀ 6 = regT 0) :
     clockLenTM.HoareTime
       (fun inp work out =>
-        inp = initTape (x.map Γ.ofBool) ∧ work = work₀ ∧ outF out)
+        inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        work = work₀ ∧ outF out)
       (fun inp work out =>
         inp = ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
         work 6 = regT (x.length + 1) ∧ outF out)
-      (2 * x.length + 4) := by
-  rintro inp work out ⟨rfl, rfl, hout⟩
+      (2 * x.length + 3) := by
+  rintro inp work out ⟨hic, hih, rfl, hout⟩
+  obtain rfl : inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) :=
+    Tape.ext' hih hic
   have houtr : out.read ≠ Γ.start := outF_read_ne_start hout
-  -- step off the input sentinel
-  have hstep₁ := clockLen_step_scan_start
-    { state := clockLenTM.qstart, input := initTape (x.map Γ.ofBool),
-      work := work, output := out } rfl
-    (by show (initTape (x.map Γ.ofBool)).cells 0 = Γ.start
-        exact inpCells_zero x)
-    (fun i => by
-      by_cases hir : i = (6 : Fin 8)
-      · subst hir
-        show (work 6).read ≠ Γ.start
-        rw [hclk]
-        exact (regT_parked 0).read_ne_start
-      · exact hoth i hir)
-    houtr
-  -- the scan sweep over the bits
+  -- the scan sweep over the bits, straight from the started head
   obtain ⟨c₂, hr₂, hst₂, hic₂, hih₂, hw₂, hcl₂, hhd₂, ho₂⟩ :=
     clockLen_scan_run x x.length 0 (by omega)
-      { state := .scan, input := (initTape (x.map Γ.ofBool)).move .right,
+      { state := clockLenTM.qstart,
+        input := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩,
         work := work, output := out } rfl
-      (tape_move_cells _ _)
+      rfl
       rfl
       (fun i hi => hoth i hi)
       houtr
@@ -651,7 +633,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
       (fun j hj => by rw [hc₃cl]; exact regCells_ne_start' hj)
       hc₃hd
   refine ⟨c₄, _, ?_,
-    .step hstep₁ (reachesIn_trans _ hr₂ (.step hstep₃ hr₄)), hst₄, ?_, ?_, ?_, ?_⟩
+    reachesIn_trans _ hr₂ (.step hstep₃ hr₄), hst₄, ?_, ?_, ?_, ?_⟩
   · omega
   · exact Tape.ext' hih₄ hic₄
   · intro i hi
@@ -676,11 +658,11 @@ theorem clockConstructible_succ : ClockConstructible (fun n => n + 1) := by
   have hspec := clockLenTM_hoareTime x work₀ (fun i _ => (hpark i).2)
     (by rw [h6, initTape_move_right_eq_regT_zero])
   refine hspec.consequence ?_ ?_ ?_
-  · rintro inp work out ⟨h1, h2, h3, h4, h5⟩
-    exact ⟨h1, h2, h3, h4, h5⟩
+  · rintro inp work out ⟨h1, h2, h3, h4, h5, h6'⟩
+    exact ⟨h1, h2, h3, h4, h5, h6'⟩
   · rintro inp work out ⟨rfl, hw, h6', houtF⟩
     exact ⟨rfl, rfl, hw, h6', houtF.1, houtF.2.1, houtF.2.2⟩
-  · show 2 * x.length + 4 ≤ 2 * ((x.length + 1) + x.length + 1)
+  · show 2 * x.length + 3 ≤ 2 * ((x.length + 1) + x.length + 1)
     omega
 
 -- ════════════════════════════════════════════════════════════════════════
