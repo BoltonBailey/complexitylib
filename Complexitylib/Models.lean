@@ -53,5 +53,11 @@ import Complexitylib.Models.TuringMachine.UTM.Clock
 import Complexitylib.Models.TuringMachine.UTM.ClockFrontier
 import Complexitylib.Models.TuringMachine.UTM.SimClocked
 import Complexitylib.Models.TuringMachine.UTM.ClockConstructible
+import Complexitylib.Models.TuringMachine.UTM.SeekFrontier
+import Complexitylib.Models.TuringMachine.UTM.ClockedUtm
+import Complexitylib.Models.TuringMachine.UTM.TermCheck
+import Complexitylib.Models.TuringMachine.UTM.NegOut
+import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
+import Complexitylib.Models.TuringMachine.UTM.Diagonal
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
