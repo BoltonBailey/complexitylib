@@ -62,19 +62,6 @@ private theorem reachesIn_snoc {n : ℕ} {tm : TM n} {t : ℕ} {c c' c'' : Cfg n
   | zero => exact fun hstep => .step hstep .zero
   | step hs _ ih => exact fun hstep => .step hs (ih hstep)
 
-/-- `reachesIn` is deterministic in its endpoint. -/
-private theorem reachesIn_det' {n : ℕ} {tm : TM n} {t : ℕ} {c c₁ c₂ : Cfg n tm.Q}
-    (h₁ : tm.reachesIn t c c₁) : tm.reachesIn t c c₂ → c₁ = c₂ := by
-  induction h₁ with
-  | zero => intro h₂; cases h₂; rfl
-  | step hs₁ _ ih =>
-    intro h₂
-    cases h₂ with
-    | step hs₂ h₂' =>
-      rw [hs₁] at hs₂
-      obtain rfl := Option.some.inj hs₂
-      exact ih h₂'
-
 /-- A configuration with no step is halted. -/
 private theorem state_eq_of_step_none {n : ℕ} {tm : TM n} {c : Cfg n tm.Q}
     (h : tm.step c = none) : c.state = tm.qhalt := by
@@ -182,7 +169,7 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
     · exact transitionInput_id hin
     · exact funext fun i => transitionTape_id (hwk i)
-    · simp [Tape.writeAndMove, Tape.move, tape_write_head, hoh]
+    · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh]
     · exact tape_readBackWrite_preserves _ _ (Or.inr hread1)
   -- ── step 2: bounce off ▷ to cell 1, entering check ──
   have hread2 : c₁.output.read = Γ.start := by
@@ -198,10 +185,10 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
     · refine funext fun i => transitionTape_id ?_
       rw [hwk1]
       exact hwk i
-    · simp [Tape.writeAndMove, Tape.move, tape_write_head, hoh1]
+    · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh1]
     · show ((c₁.output.write (Γw.blank).toΓ).move Dir3.right).cells
         = c₁.output.cells
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       simp only [Tape.write, hoh1, ↓reduceIte]
   have hout_eq : c₂.output = c.output :=
     tape_eq_of_parts' (by rw [hoh2, hoh]) (by rw [hoc2, hoc1])
@@ -473,7 +460,7 @@ private theorem loop_sim_aux (α x : List Bool) (hterm : TerminatedRegion α)
     -- out of fuel: the interpreted run is complete, `mc = mcF`
     have ht'T : t' = T := by omega
     subst ht'T
-    obtain rfl : mc = mcF := reachesIn_det' hreach hrun
+    obtain rfl : mc = mcF := TM.reachesIn_right_unique hreach hrun
     obtain ⟨mc₂, work', out', t, ht, hstepd, hinv', hoc0', hons', hoh', hbranch⟩ :=
       loop_iteration α hterm mc inp work out hinv hout0 houtns houth
     rcases hstepd with hsome | ⟨-, rfl⟩
@@ -502,12 +489,12 @@ private theorem loop_sim_aux (α x : List Bool) (hterm : TerminatedRegion α)
           · exfalso
             have ht'T : t' = T := by omega
             subst ht'T
-            obtain rfl : mc = mcF := reachesIn_det' hreach hrun
+            obtain rfl : mc = mcF := TM.reachesIn_right_unique hreach hrun
             exact hne hhaltF
         have hTle : T ≤ t' + 1 := TM.reachesIn_le_halt _ hrun hreach₂ hq
         have hTeq : t' + 1 = T := by omega
         rw [hTeq] at hreach₂
-        obtain rfl : mc₂ = mcF := reachesIn_det' hreach₂ hrun
+        obtain rfl : mc₂ = mcF := TM.reachesIn_right_unique hreach₂ hrun
         exact ⟨⟨Sum.inr (Sum.inl LoopPhase.done), inp, work', out'⟩, t,
           by omega, hr, rfl, hinv', hoc0', hons', hoh', hone⟩
       · -- a halted configuration strictly before `T`: impossible

@@ -153,7 +153,7 @@ private theorem negOutTM_rewind_loop
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
-        simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcW]
+        simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
       · dsimp only []; rw [hin]; exact transitionInput_id hinp
       · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
@@ -170,7 +170,7 @@ private theorem negOutTM_rewind_loop
       simp only [TM.step, ↓reduceIte, hst, negOutTM, hread_ne]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
       · dsimp only []
-        simp only [Tape.writeAndMove, Tape.move, tape_write_head]
+        simp only [Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
       · dsimp only []
         rw [negOut_writeBack_cells _ _ hread_ne, hcW]
@@ -239,7 +239,7 @@ private theorem negOutTM_write_step
   simp only [TM.step, hst, negOutTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · dsimp only []
-    simp only [hoDir, Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    simp only [hoDir, Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
   · dsimp only []
     rw [hread]
     by_cases hone : W 1 = Γ.one

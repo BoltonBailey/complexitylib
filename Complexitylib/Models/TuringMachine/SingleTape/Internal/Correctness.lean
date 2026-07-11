@@ -26,8 +26,8 @@ variable {n : ℕ}
 
 /-- Split a trace into a first `a` steps and a remaining `b` steps, with the
     choice sequence drawn from a single `ℕ`-indexed function `f` (avoiding the
-    dependent-`Fin` reindexing pain). Generalizes `trace_succ_eq_trace_one`. -/
-theorem trace_add (tm : NTM n) (a b : ℕ) (f : ℕ → Bool) (c : Cfg n tm.Q) :
+    dependent-`Fin` reindexing pain). Generalizes `trace_succ`. -/
+theorem trace_add_fun (tm : NTM n) (a b : ℕ) (f : ℕ → Bool) (c : Cfg n tm.Q) :
     tm.trace (a + b) (fun i => f i.val) c =
       tm.trace b (fun i => f (a + i.val)) (tm.trace a (fun i => f i.val) c) := by
   induction a generalizing f c with
@@ -157,7 +157,7 @@ theorem macroBound_mono {k M M' : ℕ} (h : M ≤ M') : macroBound k M ≤ macro
 /-! ### Per-phase config transitions (building blocks for `macroStepCorr`)
 
 Each lemma reduces `trace`-of-a-phase to the explicit next configuration; the
-full macro-step composes them via `trace_add`. -/
+full macro-step composes them via `trace_add_fun`. -/
 
 /-- The **run** step (1 sim step): from a `run q` config with `q ≠ N.qhalt`, the
     simulator initialises GATHER (`acc = ▷`, reads `iSym`/`oSym`, sweep at the
@@ -370,8 +370,8 @@ private theorem commit_output_eq (t : Tape) (oW : Γw) (oD : Dir3)
 private theorem trace_three {n : ℕ} (M : NTM n) (bb : Bool) (c : Cfg n M.Q) :
     M.trace 3 (fun _ => bb) c
       = M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)) := by
-  have h1 := M.trace_add 1 2 (fun _ => bb) c
-  have h2 := M.trace_add 1 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)
+  have h1 := M.trace_add_fun 1 2 (fun _ => bb) c
+  have h2 := M.trace_add_fun 1 1 (fun _ => bb) (M.trace 1 (fun _ => bb) c)
   simp only [] at h1 h2
   rw [show (3 : ℕ) = 1 + 2 from rfl, h1, show (2 : ℕ) = 1 + 1 from rfl, h2]
 
@@ -447,7 +447,7 @@ private theorem gather_slot2 {k : ℕ} (N : NTM k) (bb : Bool)
 private theorem trace_const_add {n : ℕ} (M : NTM n) (a a' : ℕ) (bb : Bool) (c : Cfg n M.Q) :
     M.trace (a + a') (fun _ => bb) c
       = M.trace a' (fun _ => bb) (M.trace a (fun _ => bb) c) := by
-  have h := M.trace_add a a' (fun _ => bb) c
+  have h := M.trace_add_fun a a' (fun _ => bb) c
   simpa using h
 
 /-- One gather **triple** (`trace 3`): starting at slot `0` of tape `j`'s triple
@@ -4928,7 +4928,7 @@ theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
   | zero => intro choices choices' c1 _; rfl
   | succ m ih =>
     intro choices choices' c1 hyp
-    rw [(singleTapeSim N).trace_add m 1 choices c1, (singleTapeSim N).trace_add m 1 choices' c1]
+    rw [(singleTapeSim N).trace_add_fun m 1 choices c1, (singleTapeSim N).trace_add_fun m 1 choices' c1]
     have hcm : (singleTapeSim N).trace m (fun j => choices j.val) c1
         = (singleTapeSim N).trace m (fun j => choices' j.val) c1 :=
       ih choices choices' c1 (fun i hi => hyp i (Nat.lt_succ_of_lt hi))
@@ -4959,7 +4959,7 @@ theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
     simulator reaches, in some number `m` of steps (choices from a single
     `ℕ`-indexed `F`), a configuration corresponding to `N.trace t g c` (at some
     materialization level `M'`). Proved by induction on `t`, composing
-    macro-steps with `trace_add`; the halted case reuses the previous one. -/
+    macro-steps with `trace_add_fun`; the halted case reuses the previous one. -/
 theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (g : ℕ → Bool) (t : ℕ) :
@@ -4976,7 +4976,7 @@ theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     -- N's (t+1)-step trace splits as one step from c_t
     have hNsplit : N.trace (t + 1) (fun i => g i.val) c
         = N.trace 1 (fun i => g (t + i.val)) c_t := by
-      rw [hc_t]; exact N.trace_add t 1 g c
+      rw [hc_t]; exact N.trace_add_fun t 1 g c
     -- the new bound `(t+1)·macroBound k (M+(t+1))` dominates the old one
     have hgrow : t * macroBound k (M + t) ≤ (t + 1) * macroBound k (M + (t + 1)) :=
       le_trans (Nat.mul_le_mul (Nat.le_succ t) (macroBound_mono (by omega)))
@@ -4994,7 +4994,7 @@ theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
         fun j => if j < m then f j else if h : j - m < m' then choices' ⟨j - m, h⟩ else false
         with hF
       refine ⟨m + m', M' + 1, F, ?_, by omega, ?_⟩
-      · rw [hNsplit, (singleTapeSim N).trace_add m m' F c1]
+      · rw [hNsplit, (singleTapeSim N).trace_add_fun m m' F c1]
         have hpre : (fun i : Fin m => F i.val) = (fun i : Fin m => f i.val) := by
           funext i; rw [hF]; simp only []; rw [if_pos i.isLt]
         have hsuf : (fun i : Fin m' => F (m + i.val)) = choices' := by
@@ -5033,7 +5033,7 @@ theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : �
   set F' : ℕ → Bool := fun j => if j < m then F j else false with hF'
   have hcompose : (singleTapeSim N).trace (m + 1) (fun i => F' i.val) ((singleTapeSim N).initCfg x)
       = (singleTapeSim N).trace 1 (fun _ => false) sCfg := by
-    rw [(singleTapeSim N).trace_add m 1 F']
+    rw [(singleTapeSim N).trace_add_fun m 1 F']
     have e1 : (fun i : Fin m => F' i.val) = (fun i : Fin m => F i.val) := by
       funext i; rw [hF']; simp only [i.isLt, if_true]
     have e2 : (fun i : Fin 1 => F' (m + i.val)) = (fun _ => false) := by
@@ -5175,7 +5175,7 @@ theorem revCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : Li
             ((singleTapeSim N).trace (macroPos k t) (fun i => ch i.val)
               ((singleTapeSim N).initCfg x)) := by
       rw [show macroPos k (t + 1) = macroPos k t + macroLen k t from rfl,
-        (singleTapeSim N).trace_add (macroPos k t) (macroLen k t) ch]
+        (singleTapeSim N).trace_add_fun (macroPos k t) (macroLen k t) ch]
       exact macroStep_choice_replace N hk hcorr_t hne (fun j => ch (macroPos k t + j))
     -- `N` side: the `(t+1)`-step trace is one more step from the `t`-step trace
     have hN : N.trace (t + 1) (fun i => inducedChoices k ch i.val) (N.initCfg x)
@@ -5186,7 +5186,7 @@ theorem revCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : Li
         funext i
         obtain rfl : i = 0 := Subsingleton.elim i 0
         rfl
-      rw [N.trace_add t 1 (inducedChoices k ch), e]
+      rw [N.trace_add_fun t 1 (inducedChoices k ch), e]
     rw [hsim, hN]
     exact macroStepCorr_explicit N hk hcorr_t hne (inducedChoices k ch t)
 
@@ -5238,7 +5238,7 @@ theorem halts_rev {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : 
       = (singleTapeSim N).trace 1 (fun _ => false)
           ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
             ((singleTapeSim N).initCfg x)) := by
-    rw [(singleTapeSim N).trace_add (macroPos k (Nat.find hex)) 1 ch]
+    rw [(singleTapeSim N).trace_add_fun (macroPos k (Nat.find hex)) 1 ch]
     exact hstep
   -- `N` is frozen between `Nat.find hex` and `Tn`
   have hfreeze : N.trace Tn (fun i => inducedChoices k ch i.val) (N.initCfg x)

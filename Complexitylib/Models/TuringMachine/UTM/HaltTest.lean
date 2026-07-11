@@ -394,7 +394,7 @@ private theorem skip_loop (f : List Γw) (hf : ∀ s ∈ f, s ≠ Γw.blank) :
         exact tape_readBackWrite_preserves _ _ (Or.inr hread_ns)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁,
       by rw [hhead₁, hhead]; omega⟩
@@ -427,7 +427,7 @@ private theorem skip_loop (f : List Γw) (hf : ∀ s ∈ f, s ≠ Γw.blank) :
         exact tape_readBackWrite_preserves _ _ (Or.inr hread_ns)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
       ih (k + 1) c₁ (by omega) hst₁
@@ -541,10 +541,10 @@ private theorem compare_advance_step (c : Cfg 6 haltTestTM.Q)
     exact tape_readBackWrite_preserves _ _ (Or.inr h4)
   · dsimp only []
     rw [if_pos rfl]
-    simp [Tape.writeAndMove, Tape.move, tape_write_head]
+    simp [Tape.writeAndMove, Tape.move, Tape.write_head]
   · dsimp only []
     rw [if_neg (by decide : (4 : Fin 6) ≠ 3), if_pos rfl]
-    simp [Tape.writeAndMove, Tape.move, tape_write_head]
+    simp [Tape.writeAndMove, Tape.move, Tape.write_head]
 
 /-- The lockstep compare loop: with blank-free `A` under the state head
     (blank after) and blank-free `B` under the desc head (blank after), the
@@ -717,12 +717,12 @@ private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
         · exact tape_idle_fix _ (hoth i h3i h4i)
     · rw [if_pos hP]
       show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       simp only [Tape.write, hoh, Γw.toΓ]
       rw [if_neg Nat.one_ne_zero]
     · show ((c.output.write (Γw.one).toΓ).move (idleDir c.output.read)).head = 1
       rw [hstay]
-      simp [Tape.move, tape_write_head, hoh]
+      simp [Tape.move, Tape.write_head, hoh]
   · rw [if_neg hP] at hstate
     simp only [TM.step, hstate, haltTestTM]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
@@ -736,12 +736,12 @@ private theorem verdict_step (P : Prop) [Decidable P] (c : Cfg 6 haltTestTM.Q)
         · exact tape_idle_fix _ (hoth i h3i h4i)
     · rw [if_neg hP]
       show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       simp only [Tape.write, hoh, Γw.toΓ]
       rw [if_neg Nat.one_ne_zero]
     · show ((c.output.write (Γw.zero).toΓ).move (idleDir c.output.read)).head = 1
       rw [hstay]
-      simp [Tape.move, tape_write_head, hoh]
+      simp [Tape.move, Tape.write_head, hoh]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase D: rewind the state head, then the desc head
@@ -791,7 +791,7 @@ private theorem rewindSt_loop :
         exact tape_readBackWrite_preserves _ _ (Or.inl hhead)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩
   | succ m ih =>
@@ -817,7 +817,7 @@ private theorem rewindSt_loop :
         exact tape_readBackWrite_preserves _ _ (Or.inr hread)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
       ih c₁ hst₁ hhead₁
@@ -878,7 +878,7 @@ private theorem rewindD_loop :
         exact tape_readBackWrite_preserves _ _ (Or.inl hhead)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩
   | succ m ih =>
@@ -904,7 +904,7 @@ private theorem rewindD_loop :
         exact tape_readBackWrite_preserves _ _ (Or.inr hread)
       · dsimp only []
         rw [if_pos rfl]
-        simp [Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
     obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcells₁, hhead₁⟩ := hstep
     obtain ⟨c', hreach, hst', hin', hw', hout', hcells', hhead'⟩ :=
       ih c₁ hst₁ hhead₁

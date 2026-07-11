@@ -97,7 +97,7 @@ theorem TapeInvariant.writeAndMove {t : Tape} (s : Γw) (d : Dir3)
   constructor
   · -- cell 0 still = Γ.start
     have hcells : (t.writeAndMove s.toΓ d).cells 0 = t.cells 0 := by
-      simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+      simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
       by_cases hh : t.head = 0
       · simp [hh]
       · simp only [hh, ↓reduceIte]
@@ -105,7 +105,7 @@ theorem TapeInvariant.writeAndMove {t : Tape} (s : Γw) (d : Dir3)
     rw [hcells]; exact hinv.1
   · -- cells ≥ 1 still ≠ Γ.start
     intro j hj
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     by_cases hh : t.head = 0
     · simp only [hh, ↓reduceIte]; exact hinv.2 j hj
     · simp only [hh, ↓reduceIte]
@@ -131,10 +131,10 @@ theorem TapeInvariant.step_preserves {n : ℕ} (tm : TM n)
     · -- input: only moved, cells unchanged
       constructor
       · show (c.input.move _).cells 0 = _
-        rw [tape_move_cells]; exact hinp.1
+        rw [Tape.move_cells]; exact hinp.1
       · intro j hj
         show (c.input.move _).cells j ≠ _
-        rw [tape_move_cells]; exact hinp.2 j hj
+        rw [Tape.move_cells]; exact hinp.2 j hj
     · intro i
       exact TapeInvariant.writeAndMove _ _ (hwork i)
     · exact TapeInvariant.writeAndMove _ _ hout
@@ -581,9 +581,9 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
   have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
-    · simpa [tape_move_cells] using ht.1
+    · simpa [Tape.move_cells] using ht.1
     · intro j hj
-      simpa [tape_move_cells] using ht.2 j hj
+      simpa [Tape.move_cells] using ht.2 j hj
   have hcopy :
       (copyInputToWorkTM idx).HoareTime
         (fun inp work out =>
@@ -645,9 +645,9 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
   have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
-    · simpa [tape_move_cells] using ht.1
+    · simpa [Tape.move_cells] using ht.1
     · intro j hj
-      simpa [tape_move_cells] using ht.2 j hj
+      simpa [Tape.move_cells] using ht.2 j hj
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>
@@ -709,9 +709,9 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
-    · simpa [tape_move_cells] using ht.1
+    · simpa [Tape.move_cells] using ht.1
     · intro j hj
-      simpa [tape_move_cells] using ht.2 j hj
+      simpa [Tape.move_cells] using ht.2 j hj
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>

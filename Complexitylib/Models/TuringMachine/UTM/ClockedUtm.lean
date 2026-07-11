@@ -68,7 +68,7 @@ private theorem reachesIn_input_cells {n : ℕ} {tm : TM n} :
         · exact absurd hstep (by simp)
         · simp only [Option.some.injEq] at hstep
           subst hstep
-          exact tape_move_cells ..
+          exact Tape.move_cells ..
       rw [ih hrest, h1]
 
 /-- Runs preserve output-tape well-formedness: writes are `Γw` (never `▷`)

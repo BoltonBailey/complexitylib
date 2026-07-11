@@ -197,9 +197,9 @@ private theorem balancedTM_step_start
   · intro i
     simp [Tape.writeAndMove, Tape.move, Tape.write, hwh i]
   · intro i
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hwh i]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hwh i]
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hoh]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hoh]
+  · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hoh]
 
 /-- Step 2: `.initWork` → `.scanExcess0`. Work rewinds from 1 to 0. -/
 private theorem balancedTM_step_initWork
@@ -245,7 +245,7 @@ private theorem writeAndMove_preserves_nonStart (t : Tape) (s : Γw) (d : Dir3)
     (hinv : ∀ j ≥ 1, t.cells j ≠ Γ.start) :
     ∀ j ≥ 1, (t.writeAndMove (s : Γ) d).cells j ≠ Γ.start := by
   intro j hj
-  simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+  simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
   split
   · exact hinv j hj
   · by_cases hjh : j = t.head
@@ -444,13 +444,13 @@ private theorem balancedTM_step_scanExcess0_push
              if_pos hir, if_neg hir_ne_one]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).head = h + 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, inv.wh]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -462,7 +462,7 @@ private theorem balancedTM_step_scanExcess0_push
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons
@@ -482,13 +482,13 @@ private theorem balancedTM_step_scanExcess0_switch
              if_neg hir_ne_zero, if_pos hir, if_pos hwr]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).head = 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, inv.wh]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -500,7 +500,7 @@ private theorem balancedTM_step_scanExcess0_switch
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons
@@ -521,16 +521,16 @@ private theorem balancedTM_step_scanExcess0_pop
              if_neg hir_ne_zero, if_pos hir, if_neg hwr_ne]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · have hmv : moveLeftDir (c.work 0).read = Dir3.left := by
       simp [moveLeftDir, hwr_ne]
     show ((c.work 0).writeAndMove Γw.blank.toΓ (moveLeftDir (c.work 0).read)).head = h
-    simp only [Tape.writeAndMove, hmv, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, hmv, Tape.move, Tape.write_head, inv.wh]
     omega
   · show ((c.work 0).writeAndMove Γw.blank.toΓ (moveLeftDir (c.work 0).read)).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -542,7 +542,7 @@ private theorem balancedTM_step_scanExcess0_pop
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons
@@ -561,13 +561,13 @@ private theorem balancedTM_step_scanExcess1_push
              if_neg hir_ne_zero, if_pos hir]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).head = h + 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, inv.wh]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -579,7 +579,7 @@ private theorem balancedTM_step_scanExcess1_push
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons
@@ -599,13 +599,13 @@ private theorem balancedTM_step_scanExcess1_switch
              if_neg hir_ne_one, if_pos hir, if_pos hwr]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).head = 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, inv.wh]
   · show ((c.work 0).writeAndMove Γw.one.toΓ Dir3.right).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -617,7 +617,7 @@ private theorem balancedTM_step_scanExcess1_switch
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons
@@ -638,16 +638,16 @@ private theorem balancedTM_step_scanExcess1_pop
              if_neg hir_ne_one, if_pos hir, if_neg hwr_ne]
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · have hmv : moveLeftDir (c.work 0).read = Dir3.left := by
       simp [moveLeftDir, hwr_ne]
     show ((c.work 0).writeAndMove Γw.blank.toΓ _).head = h
-    simp only [Tape.writeAndMove, hmv, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, hmv, Tape.move, Tape.write_head, inv.wh]
     omega
   · show ((c.work 0).writeAndMove Γw.blank.toΓ _).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -659,7 +659,7 @@ private theorem balancedTM_step_scanExcess1_pop
     exact writeAndMove_preserves_nonStart _ _ _ inv.wns j hj
   · show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read)]
     exact inv.ons

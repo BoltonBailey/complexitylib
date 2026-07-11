@@ -254,14 +254,14 @@ private theorem inputLenRegTM_scan_run (x : List Bool) (m : ℕ) :
       exact regCells_update_succ k
     have hq₁head : (((c.work q).write Γw.one).move .right).head = (k + 1) + 1 := by
       show ((c.work q).write Γw.one).head + 1 = _
-      rw [tape_write_head, hqh]
+      rw [Tape.write_head, hqh]
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih (k + 1) (by omega)
         { state := .scan, input := c.input.move .right,
           work := Function.update c.work q (((c.work q).write Γw.one).move .right),
           output := c.output } rfl
         (by show (c.input.move .right).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head + 1 = (k + 1) + 1
             rw [hih])
@@ -307,7 +307,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
       · show c.input.head + 1 ≥ 1
         omega
       · show (c.input.move .right).cells j ≠ Γ.start
-        rw [tape_move_cells, hic]
+        rw [Tape.move_cells, hic]
         exact Tape.init_ofBool_cells_ne_start x j hj
     have hstep₂ := inputLenRegTM_step_park (q := q)
       { state := .park, input := c.input.move .right,
@@ -325,7 +325,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
       hout
     refine ⟨_, .step hstep₁ (.step hstep₂ .zero), rfl, ?_, ?_, ?_, ?_, ?_, rfl⟩
     · show (c.input.move .right).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact hic
     · show c.input.head + 1 = 1
       rw [hih]
@@ -353,7 +353,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
            work := Function.update c.work q ((c.work q).move .left),
            output := c.output } rfl
         (by show (c.input.move .left).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head - 1 = h
             rw [hih]
@@ -422,7 +422,7 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
         work := Function.update c₁.work q ((c₁.work q).move .left),
         output := c₁.output } rfl
       (by show (c₁.input.move .left).cells = _
-          rw [tape_move_cells]
+          rw [Tape.move_cells]
           exact h2)
       (by show c₁.input.head - 1 = x.length
           rw [h3]

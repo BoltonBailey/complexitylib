@@ -68,7 +68,7 @@ private theorem moveLeftDir_start : moveLeftDir Γ.start = Dir3.right := rfl
 theorem idleDir_right_of_start (h : head = Γ.start) : idleDir head = Dir3.right := by
   subst h; rfl
 
-private theorem moveLeftDir_right_of_start (h : head = Γ.start) : moveLeftDir head = Dir3.right :=
+theorem moveLeftDir_right_of_start (h : head = Γ.start) : moveLeftDir head = Dir3.right :=
   by subst h; rfl
 
 /-- Write back the same symbol read from a tape, preserving cell contents.

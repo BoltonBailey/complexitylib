@@ -418,7 +418,7 @@ theorem incRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fin 
   have hwq₂head : wq₂.head = d := by
     rw [hwq₂]
     show ((c₁.work q).write Γw.one).head - 1 = d
-    rw [tape_write_head, hhead₁]
+    rw [Tape.write_head, hhead₁]
     omega
   obtain ⟨c₃, hreach₃, hst₃, hinp₃, hwork₃, hcells₃, hhead₃, hout₃⟩ :=
     incRegTM_back_run d
@@ -745,7 +745,7 @@ private theorem clearRegTM_scan_run (d m : ℕ) :
     have hwq₁head : wq₁.head = (k + 1) + 1 := by
       rw [hwq₁]
       show ((c.work q).write Γw.blank).head + 1 = _
-      rw [tape_write_head, hhead]
+      rw [Tape.write_head, hhead]
     obtain ⟨c', hreach, hst', hinp', hwork', hcells', hhead', hout'⟩ :=
       ih (k + 1) (by omega)
         { state := .scan, input := c.input,

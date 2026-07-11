@@ -72,7 +72,7 @@ private theorem complement_rewind_step_left (tm : TM n) (c : Cfg n tm.complement
     simp only [Tape.write, Tape.read]; split
     · omega
     · simp
-  · simp only [Tape.writeAndMove, tape_move_cells]
+  · simp only [Tape.writeAndMove, Tape.move_cells]
     rw [readBackWrite_toΓ_eq hread_ne]
     simp only [Tape.write, Tape.read]; split
     · rfl
@@ -95,7 +95,7 @@ private theorem complement_rewind_step_base (tm : TM n) (c : Cfg n tm.complement
   simp only [TM.step, ↓reduceIte, hstate, complementTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
 /-- From rewind state with output head at position `h`, reach flip state
     at cell 1 with output cells preserved, in `h + 1` steps. -/
@@ -140,7 +140,7 @@ theorem complementTM_rewind_and_flip (tm : TM n)
                complementTM, hhalt]
     refine ⟨_, rfl, rfl, ?_, ?_⟩
     · dsimp only [compCfg]
-      simp only [Tape.writeAndMove, tape_move_cells]
+      simp only [Tape.writeAndMove, Tape.move_cells]
       by_cases hread : c_halt.output.read = Γ.start
       · have hh0 : c_halt.output.head = 0 := by
           have h := hread; simp only [Tape.read] at h
@@ -151,7 +151,7 @@ theorem complementTM_rewind_and_flip (tm : TM n)
         · rfl
         · exact Function.update_eq_self _ _
     · dsimp only [compCfg]
-      exact tape_head_writeAndMove_le _ _ _
+      exact Tape.head_writeAndMove_le _ _ _
   obtain ⟨c_rw, hstep1', hst_rw, hcells_rw, hhead_rw⟩ := hstep1
   -- Step 2: rewind loop (c_rw.output.head + 1 steps)
   have hcell0_rw : c_rw.output.cells 0 = Γ.start := by rw [hcells_rw]; exact hcell0

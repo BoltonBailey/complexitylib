@@ -256,7 +256,7 @@ private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
     show (c.input.move (idleDir c.input.read)).head = 1
     simp [idleDir, hiread, Tape.move, hi0]
   · -- input.cells unchanged
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   · -- (work yIdx).head = 1
     show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
           (idleDir (c.work yIdx).read)).head = 1
@@ -264,7 +264,7 @@ private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
   · -- (work yIdx).cells unchanged
     show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
           (idleDir (c.work yIdx).read)).cells = (c.work yIdx).cells
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hyi0]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hyi0]
   · -- (work pIdx).head = 1
     show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
           (idleDir (c.work pIdx).read)).head = 1
@@ -272,7 +272,7 @@ private theorem pairBuild_init_step {k : ℕ} (yIdx pIdx : Fin k)
   · -- (work pIdx).cells unchanged
     show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
           (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hpi0]
 
 /-- Variant of the init step for phase composition: input and witness tapes
     may already be positioned at their first data cells, while the pair tape
@@ -303,7 +303,7 @@ theorem pairBuild_init_step_started {k : ℕ} (yIdx pIdx : Fin k)
     simp [idleDir, hpread, Tape.writeAndMove, Tape.write, Tape.move, hpi0]
   · show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
         (idleDir (c.work pIdx).read)).cells = (c.work pIdx).cells
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hpi0]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hpi0]
 
 /-- Variant of the init step for fully-started phase composition: input,
     witness, and pair tapes may all already be positioned past `▷`. -/
@@ -381,7 +381,7 @@ private theorem pairBuild_copyX1_cont_step {k : ℕ} (yIdx pIdx : Fin k)
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
     rw [readBackWrite_toΓ_eq hread_ns]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
 /-- **copyX2 step.** In `.copyX2` (reading the same data bit), transition
@@ -407,7 +407,7 @@ private theorem pairBuild_copyX2_step {k : ℕ} (yIdx pIdx : Fin k)
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · show (c.input.move .right).head = c.input.head + 1
     simp [Tape.move]
-  · exact tape_move_cells _ _
+  · exact Tape.move_cells _ _
   · simp only [if_neg hne]
     exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
   · simp only [↓reduceIte]
@@ -415,7 +415,7 @@ private theorem pairBuild_copyX2_step {k : ℕ} (yIdx pIdx : Fin k)
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
     rw [readBackWrite_toΓ_eq hread_ns]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
 /-- **writeSep1 step.** Write `0` (the `false` bit of the separator) to
@@ -444,7 +444,7 @@ private theorem pairBuild_writeSep1_step {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, Tape.write, Tape.move,
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega]
 
 /-- **writeSep2 step.** Write `1` (the `true` bit of the separator) to
@@ -473,7 +473,7 @@ private theorem pairBuild_writeSep2_step {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, Tape.write, Tape.move,
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega]
 
 /-- **copyY halt step.** In `.copyY` with work tape `yIdx` reading blank,
@@ -530,7 +530,7 @@ private theorem pairBuild_copyY_cont_step {k : ℕ} (yIdx pIdx : Fin k)
     show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read).toΓ Dir3.right).cells
          = (c.work yIdx).cells
     rw [readBackWrite_toΓ_eq hyread_ns]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work yIdx).head ≠ 0 from by omega, Tape.read]
   · -- pIdx head advances
     simp only [↓reduceIte]
@@ -539,7 +539,7 @@ private theorem pairBuild_copyY_cont_step {k : ℕ} (yIdx pIdx : Fin k)
   · -- pIdx cells updated with yIdx.read
     simp only [↓reduceIte]
     rw [readBackWrite_toΓ_eq hyread_ns]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
 /-- **rewindP1 continue step.** pIdx reads non-▷; move pIdx left one cell;
@@ -571,7 +571,7 @@ private theorem pairBuild_rewindP1_step_cont {k : ℕ} (yIdx pIdx : Fin k)
   · -- pIdx cells unchanged (readBackWrite preserves at non-start read)
     simp only [↓reduceIte]
     rw [readBackWrite_toΓ_eq hpread_ns]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
 /-- **rewindP1 base step.** pIdx reads ▷ (head=0); transition to
@@ -601,7 +601,7 @@ private theorem pairBuild_rewindP1_step_base {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, Tape.write, Tape.move, hph0]
   · -- pIdx cells unchanged (write at head=0 is no-op)
     simp only [↓reduceIte]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hph0]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hph0]
 
 /-- **rewindP2 step.** Transition to `.done`; all tapes stable
     (head ≥ 1 and cells ≥ 1 ≠ start). -/
@@ -1171,7 +1171,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     rfl
   have hc1_ic : c1.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
     rw [hc1_input]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   have hc1_ih_ge : c1.input.head ≥ 1 := by rw [hc1_ih]
   have hc1_ic0 : c1.input.cells 0 = Γ.start := by
     rw [hc1_ic]
@@ -1186,7 +1186,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
   have hc1_yc : (c1.work yIdx).cells =
       (_root_.Complexity.Tape.init (y.map Γ.ofBool)).cells := by
     rw [hc1_yw]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   have hc1_yh_ge : (c1.work yIdx).head ≥ 1 := by rw [hc1_yh]
   have hc1_yns : ∀ j, j ≥ 1 → (c1.work yIdx).cells j ≠ Γ.start := by
     intro j hj
@@ -1197,7 +1197,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     rfl
   have hc1_pc : (c1.work pIdx).cells = (_root_.Complexity.Tape.init []).cells := by
     rw [hc1_pw]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   have hc1_ph_ge : (c1.work pIdx).head ≥ 1 := by rw [hc1_ph]
   have hc1_pc0 : (c1.work pIdx).cells 0 = Γ.start := by
     rw [hc1_pc]
@@ -2118,16 +2118,6 @@ private theorem pairBuild_writeAndMove_readBack_idle_of_ne_start (t : Tape)
   · simp [Tape.write, h0]
   · simp [Tape.write, h0, Tape.read, Function.update_eq_self]
 
-private theorem pairBuild_ntm_trace_succ_eq_trace_one (tm : NTM k) (T : ℕ)
-    (choices : Fin (T + 1) → Bool) (c : Cfg k tm.Q) :
-    tm.trace (T + 1) choices c =
-      tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩)
-        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
-  by_cases hhalt : c.state = tm.qhalt
-  · simp [NTM.trace, hhalt]
-    exact (tm.trace_halted T (fun i => choices ⟨i.val + 1, by omega⟩) hhalt).symm
-  · simp [NTM.trace, hhalt]
-
 /-- One pair-builder step preserves the output tape once the output head is
     past the start marker. -/
 theorem pairBuildTM_trace_one_preserves_output
@@ -2165,7 +2155,7 @@ theorem pairBuildTM_trace_preserves_output
   induction T generalizing c with
   | zero => rfl
   | succ T ih =>
-      rw [pairBuild_ntm_trace_succ_eq_trace_one ((pairBuildTM yIdx pIdx).toNTM) T choices c]
+      rw [NTM.trace_succ ((pairBuildTM yIdx pIdx).toNTM) T choices c]
       have hfirst := pairBuildTM_trace_one_preserves_output yIdx pIdx
         (choices ⟨0, by omega⟩) c hread
       have hread' :
@@ -2220,7 +2210,7 @@ theorem pairBuildTM_trace_preserves_other_work
   induction T generalizing c with
   | zero => rfl
   | succ T ih =>
-      rw [pairBuild_ntm_trace_succ_eq_trace_one ((pairBuildTM yIdx pIdx).toNTM) T choices c]
+      rw [NTM.trace_succ ((pairBuildTM yIdx pIdx).toNTM) T choices c]
       have hfirst := pairBuildTM_trace_one_preserves_other_work yIdx pIdx otherIdx
         (choices ⟨0, by omega⟩) c hy hp hread
       have hread' :

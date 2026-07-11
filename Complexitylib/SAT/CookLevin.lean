@@ -459,7 +459,7 @@ theorem trace_one_eq (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) :
 /-- Peel the last step: `N.trace (t+1)` is one `traceStep` from `N.trace t`. -/
 theorem trace_succ_eq (N : NTM 1) (g : ℕ → Bool) (t : ℕ) (c : Cfg 1 N.Q) :
     N.trace (t + 1) (fun i => g i.val) c = traceStep N (N.trace t (fun i => g i.val) c) (g t) := by
-  rw [N.trace_add t 1 g c]
+  rw [N.trace_add_fun t 1 g c]
   have : (fun i : Fin 1 => g (t + i.val)) = (fun _ => g t) := by
     funext i; obtain rfl : i = 0 := Subsingleton.elim i 0; simp
   rw [this, trace_one_eq]
@@ -487,29 +487,23 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
 /-! Tape `move`/`writeAndMove` cell/head behaviour, used to match `traceStep`'s
     fields against the active-transition consequence variables. -/
 
-theorem tape_move_cells (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
-  exact Tape.move_cells t d
-
 theorem tape_move_head (t : Tape) (d : Dir3) : (t.move d).head = Tableau.posMove t.head d := by
   cases d <;> rfl
 
-theorem tape_write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  exact Tape.write_head t s
-
 theorem tape_writeAndMove_head (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).head = Tableau.posMove t.head d := by
-  rw [Tape.writeAndMove, tape_move_head, tape_write_head]
+  rw [Tape.writeAndMove, tape_move_head, Tape.write_head]
 
 theorem tape_writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {pos : ℕ} (h : pos ≠ t.head) :
     (t.writeAndMove s d).cells pos = t.cells pos := by
-  rw [Tape.writeAndMove, tape_move_cells]
+  rw [Tape.writeAndMove, Tape.move_cells]
   unfold Tape.write; split_ifs with hh
   · rfl
   · exact Function.update_of_ne h s t.cells
 
 theorem tape_writeAndMove_cells_self (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).cells t.head = if t.head = 0 then t.cells t.head else s := by
-  rw [Tape.writeAndMove, tape_move_cells]
+  rw [Tape.writeAndMove, Tape.move_cells]
   unfold Tape.write; split_ifs with hh
   · rfl
   · exact Function.update_self t.head s t.cells
@@ -610,7 +604,7 @@ theorem represents_step (N : NTM 1) (α : Assignment) (steps P : ℕ)
   have hInput : ∀ pos, (traceStep N c (α.get (vChoice t))).input.cells pos = c.input.cells pos := by
     intro pos; unfold traceStep; split_ifs with hq
     · rfl
-    · rw [tape_move_cells]
+    · rw [Tape.move_cells]
   have hInputHead : (traceStep N c (α.get (vChoice t))).input.head =
       if c.state = N.qhalt then c.input.head
       else posMove c.input.head
@@ -1027,7 +1021,7 @@ theorem traceStep_input_cells (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) (pos : ℕ)
     (traceStep N c b).input.cells pos = c.input.cells pos := by
   unfold traceStep; split_ifs with hq
   · rfl
-  · rw [tape_move_cells]
+  · rw [Tape.move_cells]
 
 theorem traceStep_work_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : ℕ}
     (h : pos ≠ (c.work 0).head) : ((traceStep N c b).work 0).cells pos = (c.work 0).cells pos := by

@@ -36,18 +36,9 @@ namespace TM
 -- Shared tape lemmas (deduplicated from Internal files)
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Moving a tape preserves its cells. -/
-theorem tape_move_cells (t : Tape) (d : Dir3) :
-    (t.move d).cells = t.cells :=
-  Tape.move_cells t d
-
 /-- `readBackWrite` recovers the original symbol for non-start symbols. -/
 theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
     (readBackWrite g).toΓ = g := by cases g <;> simp_all [readBackWrite, Γw.toΓ]
-
-/-- Writing to a tape preserves the head position. -/
-theorem tape_write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  exact Tape.write_head t s
 
 /-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under
     `writeAndMove(readBackWrite(read).toΓ, idleDir(read))`. -/
@@ -69,16 +60,11 @@ theorem tape_move_idleDir_stable (t : Tape)
   have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns t.head hhead
   simp only [idleDir, hne, ↓reduceIte, Tape.move]
 
-/-- `writeAndMove` head bound: head increases by at most 1. -/
-theorem tape_head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
-    (t.writeAndMove s d).head ≤ t.head + 1 := by
-  cases d <;> simp only [Tape.writeAndMove, Tape.move, tape_write_head] <;> omega
-
 /-- Helper: readBackWrite preserves tape cells when head = 0 or read ≠ start. -/
 theorem tape_readBackWrite_preserves (t : Tape) (d : Dir3)
     (h : t.head = 0 ∨ t.read ≠ Γ.start) :
     (t.writeAndMove (readBackWrite t.read).toΓ d).cells = t.cells := by
-  simp only [Tape.writeAndMove, tape_move_cells]
+  simp only [Tape.writeAndMove, Tape.move_cells]
   rcases h with hh0 | hne
   · simp only [Tape.write, hh0, ↓reduceIte]
   · rw [readBackWrite_toΓ_eq hne]
@@ -294,7 +280,7 @@ def transitionInput (t : Tape) : Tape :=
 theorem transitionTape_cells (t : Tape)
     (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
     (transitionTape t).cells = t.cells := by
-  simp only [transitionTape, Tape.writeAndMove, tape_move_cells]
+  simp only [transitionTape, Tape.writeAndMove, Tape.move_cells]
   by_cases hh : t.head = 0
   · simp only [Tape.write, hh, ↓reduceIte]
   · have hge : t.head ≥ 1 := by omega

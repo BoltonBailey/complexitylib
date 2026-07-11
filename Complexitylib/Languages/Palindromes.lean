@@ -198,9 +198,9 @@ private theorem palindromesTM_step_start
   · intro i
     simp [Tape.writeAndMove, Tape.move, Tape.write, hwh i]
   · intro i
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write, hwh i]
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hwh i]
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hoh]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hoh]
+  · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hoh]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Small helpers
@@ -212,7 +212,7 @@ private theorem palindromes_writeAndMove_preserves_nonStart
     (hinv : ∀ j ≥ 1, t.cells j ≠ Γ.start) :
     ∀ j ≥ 1, (t.writeAndMove (s : Γ) d).cells j ≠ Γ.start := by
   intro j hj
-  simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+  simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
   split
   · exact hinv j hj
   · by_cases hjh : j = t.head
@@ -508,15 +508,15 @@ private theorem palindromesTM_step_copy_push
   refine ⟨_, rfl, rfl, ?_⟩
   refine ⟨by omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · show (c.input.move Dir3.right).cells = _
-    rw [tape_move_cells]; exact inv.ic
+    rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · -- work.head = k + 2
     show ((c.work 0).writeAndMove (readBackWrite c.input.read).toΓ Dir3.right).head = k + 1 + 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, inv.wh]
   · -- work.cells 0 = ▷
     show ((c.work 0).writeAndMove (readBackWrite c.input.read).toΓ Dir3.right).cells 0 = Γ.start
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · exact inv.wstart
     · rename_i hne
@@ -527,7 +527,7 @@ private theorem palindromesTM_step_copy_push
     intro i hi1 hik1
     show ((c.work 0).writeAndMove (readBackWrite c.input.read).toΓ Dir3.right).cells i
       = (Tape.init (x.map Γ.ofBool)).cells i
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · -- head = 0 case: vacuous since work.head = k+1 ≠ 0
       rename_i hhead
@@ -551,7 +551,7 @@ private theorem palindromesTM_step_copy_push
   · -- wblank at > k+1
     intro i hi
     show ((c.work 0).writeAndMove (readBackWrite c.input.read).toΓ Dir3.right).cells i = Γ.blank
-    simp only [Tape.writeAndMove, tape_move_cells, Tape.write]
+    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
     split
     · rename_i hhead; rw [inv.wh] at hhead; omega
     · show Function.update (c.work 0).cells (c.work 0).head _ i = Γ.blank
@@ -561,7 +561,7 @@ private theorem palindromesTM_step_copy_push
   · -- output.head = 1
     show (c.output.writeAndMove _ _).head = 1
     have hstay := inv.output_stay
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · -- output.cells 1 ≠ ▷
     show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
@@ -584,7 +584,7 @@ private theorem palindromesTM_step_copy_end
   refine ⟨by omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · -- input cells unchanged (moveLeft preserves cells)
     show (c.input.move (moveLeftDir c.input.read)).cells = _
-    rw [tape_move_cells]; exact inv.ic
+    rw [Tape.move_cells]; exact inv.ic
   · -- input head = x.length (moved from x.length+1 left by 1)
     show (c.input.move (moveLeftDir c.input.read)).head = x.length
     have hml : moveLeftDir c.input.read = Dir3.left := by
@@ -592,7 +592,7 @@ private theorem palindromesTM_step_copy_end
     simp only [hml, Tape.move, inv.ih]; omega
   · -- work head = x.length + 1 (unchanged since work idle)
     show ((c.work 0).writeAndMove _ _).head = x.length + 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, hw_stay, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hw_stay, inv.wh]
   · -- work cells 0 = ▷ (unchanged)
     show ((c.work 0).writeAndMove _ _).cells 0 = Γ.start
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwread_ne)]
@@ -609,7 +609,7 @@ private theorem palindromesTM_step_copy_end
     exact inv.wblank i hi
   · -- output head = 1
     show (c.output.writeAndMove _ _).head = 1
-    simp [Tape.writeAndMove, hstay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hstay, Tape.move, Tape.write_head, inv.oh]
   · -- output cell 1 ≠ ▷
     show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
@@ -637,11 +637,11 @@ private theorem palindromesTM_step_rewindInput_consume
   have hostay := inv.output_stay
   have hjle := inv.jle
   refine ⟨by omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move _).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move _).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move (moveLeftDir c.input.read)).head = j - 1
     simp only [hml, Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove _ _).head = x.length + 1
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, hw_stay, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hw_stay, inv.wh]
   · show ((c.work 0).writeAndMove _ _).cells 0 = Γ.start
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwread_ne)]
     exact inv.wstart
@@ -654,7 +654,7 @@ private theorem palindromesTM_step_rewindInput_consume
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwread_ne)]
     exact inv.wblank i hi
   · show (c.output.writeAndMove _ _).head = 1
-    simp [Tape.writeAndMove, hostay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hostay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
     exact inv.ons
@@ -677,11 +677,11 @@ private theorem palindromesTM_step_rewindInput_finish
     simp [moveLeftDir, hwread_ne]
   have hostay := inv.output_stay
   refine ⟨by omega, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = 0 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove _ _).head = x.length - 0
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, hwml, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hwml, inv.wh]
     omega
   · show ((c.work 0).writeAndMove _ _).cells 0 = Γ.start
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwread_ne)]
@@ -695,7 +695,7 @@ private theorem palindromesTM_step_rewindInput_finish
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwread_ne)]
     exact inv.wblank i hi
   · show (c.output.writeAndMove _ _).head = 1
-    simp [Tape.writeAndMove, hostay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hostay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
     exact inv.ons
@@ -731,11 +731,11 @@ private theorem palindromesTM_step_compare_match
   have hostay := inv.output_stay
   have hkle_succ : k + 1 ≤ x.length := by omega
   refine ⟨hkle_succ, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show ((c.work 0).writeAndMove _ _).head = x.length - (k + 1)
-    simp only [Tape.writeAndMove, Tape.move, tape_write_head, hwml, inv.wh]
+    simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hwml, inv.wh]
     omega
   · show ((c.work 0).writeAndMove _ _).cells 0 = Γ.start
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwr_ne_start)]
@@ -749,7 +749,7 @@ private theorem palindromesTM_step_compare_match
     rw [tape_readBackWrite_preserves (c.work 0) _ (Or.inr hwr_ne_start)]
     exact inv.wblank i hi
   · show (c.output.writeAndMove _ _).head = 1
-    simp [Tape.writeAndMove, hostay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hostay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
     exact inv.ons
@@ -779,12 +779,12 @@ private theorem palindromesTM_step_compare_mismatch
              if_neg hir_ne_blank, if_neg hir_ne_start, if_neg hir_ne]
   refine ⟨_, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · rfl
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = k + 1 + 1
     simp [Tape.move, inv.ih]
   · show (c.output.writeAndMove _ _).head = 1
     have hostay := inv.output_stay
-    simp [Tape.writeAndMove, hostay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hostay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
     exact inv.ons
@@ -815,12 +815,12 @@ private theorem palindromesTM_step_reject_consume
              if_neg hir_ne_blank]
   refine ⟨_, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · rfl
-  · show (c.input.move Dir3.right).cells = _; rw [tape_move_cells]; exact inv.ic
+  · show (c.input.move Dir3.right).cells = _; rw [Tape.move_cells]; exact inv.ic
   · show (c.input.move Dir3.right).head = j + 1 + 1
     simp [Tape.move, inv.ih]
   · show (c.output.writeAndMove _ _).head = 1
     have hostay := inv.output_stay
-    simp [Tape.writeAndMove, hostay, Tape.move, tape_write_head, inv.oh]
+    simp [Tape.writeAndMove, hostay, Tape.move, Tape.write_head, inv.oh]
   · show (c.output.writeAndMove _ _).cells 1 ≠ Γ.start
     rw [tape_readBackWrite_preserves c.output _ (Or.inr inv.output_read_ne_start)]
     exact inv.ons

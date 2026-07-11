@@ -459,7 +459,7 @@ private theorem termCheck_scan_run :
     · rw [List.drop_length]
       rfl
     · show (c.input.move .left).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact hic
     · show c.input.head - 1 = x.length
       rw [hih]
@@ -485,7 +485,7 @@ private theorem termCheck_scan_run :
       rw [hdrop]
       rfl
     · show ((c.input.move .right).move .left).cells = _
-      rw [tape_move_cells, tape_move_cells]
+      rw [Tape.move_cells, Tape.move_cells]
       exact hic
     · show c.input.head + 1 - 1 = x.length
       rw [hih]
@@ -513,7 +513,7 @@ private theorem termCheck_scan_run :
         (scanStep ctrl (symOfPair x[k] x[k + 1]))
         (by omega) rfl
         (by show ((c.input.move .right).move .right).cells = _
-            rw [tape_move_cells, tape_move_cells]
+            rw [Tape.move_cells, Tape.move_cells]
             exact hic)
         (by show c.input.head + 1 + 1 = k + 2 + 1
             rw [hih])
@@ -546,7 +546,7 @@ private theorem termCheck_rewind_run :
     have hstep := termCheck_step_rewind_start c v hst hrd hw hout
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl⟩
     · show (c.input.move .right).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact hic
     · show c.input.head + 1 = 1
       rw [hih]
@@ -562,7 +562,7 @@ private theorem termCheck_rewind_run :
           work := c.work, output := c.output }
         rfl
         (by show (c.input.move .left).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head - 1 = h
             rw [hih]
@@ -642,7 +642,7 @@ theorem termCheckTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape) (out₀
     show Function.update out.cells out.head _ = _
     rw [houth]
   · show (c₂.output.write _).head = 1
-    rw [tape_write_head, ho₂, ho₁', houth]
+    rw [Tape.write_head, ho₂, ho₁', houth]
 
 end TermCheck
 

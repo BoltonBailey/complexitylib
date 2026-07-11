@@ -181,7 +181,7 @@ private theorem extractTM_rewind_loop
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
-        simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcW]
+        simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
       · dsimp only []; rw [hin]; exact transitionInput_id hinp
       · dsimp only []; rw [hout']; exact transitionTape_id hout
       · intro i hne; dsimp only []
@@ -202,7 +202,7 @@ private theorem extractTM_rewind_loop
       simp only [TM.step, ↓reduceIte, hst, extractTM, hread_ne]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
       · dsimp only []
-        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head]
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
       · dsimp only []
         rw [writeBack_cells _ _ hread_ne, hcW]
@@ -246,7 +246,7 @@ private theorem extractTM_toCell2_step
   simp only [TM.step, hst, extractTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · dsimp only []
-    simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head]
+    simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head]
     omega
   · dsimp only []
     rw [writeBack_cells _ _ hread_ne, hcW]
@@ -310,7 +310,7 @@ private theorem extractTM_copy_loop
       · intro i hne; dsimp only []
         rw [hw i hne]; exact transitionTape_id (hothers i hne)
       · dsimp only []
-        simp only [Tape.writeAndMove, tape_move_cells, Tape.write, hohead]
+        simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, hohead]
         rw [if_neg (show ¬(j + 1 = 0) by omega)]
         dsimp only []
         simp [readBackWrite]
@@ -346,17 +346,17 @@ private theorem extractTM_copy_loop
       · dsimp only []
         rw [writeBack_cells _ _ hread_ne, hcW]
       · dsimp only []
-        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head]
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
       · dsimp only []; rw [hin]; exact transitionInput_id hinp
       · intro i hne; dsimp only []
         simp only [show ¬(i = 2) from hne, ↓reduceIte]
         rw [hw i hne]; exact transitionTape_id (hothers i hne)
       · dsimp only []
-        simp only [Tape.writeAndMove, Tape.move, tape_write_head]
+        simp only [Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
       · dsimp only []
-        simp only [Tape.writeAndMove, tape_move_cells, Tape.write, hohead]
+        simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, hohead]
         rw [if_neg (show ¬(j + 1 = 0) by omega)]
         dsimp only []
         rw [hread, readBackWrite_toΓ_eq (hWns (j + 2) (by omega))]

@@ -187,14 +187,6 @@ theorem bumpTM_hoareTime (x : List Bool) :
 -- emitBitsTM: append a fixed word to the output
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Writable symbol for a bit. -/
-def Γw.ofBool : Bool → Γw
-  | false => .zero
-  | true => .one
-
-@[simp] theorem Γw.ofBool_toΓ (b : Bool) : (Γw.ofBool b).toΓ = Γ.ofBool b := by
-  cases b <;> rfl
-
 /-- **Append the fixed word `w` to the output** and halt. State `k` = number of
     bits already emitted; each step writes bit `k` and moves the output head
     right; input and work tapes are parked and untouched. -/

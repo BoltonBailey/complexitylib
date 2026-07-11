@@ -37,7 +37,7 @@ namespace TM
 variable {n : ℕ}
 
 /-- A predicate on the tape configuration: input tape, work tapes, output tape. -/
-abbrev TapePred (n : ℕ) := Tape → (Fin n → Tape) → Tape → Prop
+abbrev _root_.Complexity.TapePred (n : ℕ) := Tape → (Fin n → Tape) → Tape → Prop
 
 /-- **Time-bounded Hoare triple**: for any tapes satisfying `pre`, starting
     from `qstart`, the machine halts within `bound` steps with tapes satisfying
@@ -57,15 +57,6 @@ def Hoare (tm : TM n) (pre post : TapePred n) : Prop :=
   ∀ inp work out, pre inp work out →
     ∃ c', tm.reaches { state := tm.qstart, input := inp, work := work, output := out } c' ∧
       tm.halted c' ∧ post c'.input c'.work c'.output
-
--- ════════════════════════════════════════════════════════════════════════
--- Helper: reachesIn implies reaches (re-export of TM.reaches_of_reachesIn)
--- ════════════════════════════════════════════════════════════════════════
-
-@[inherit_doc TM.reaches_of_reachesIn]
-private theorem reachesIn_toReaches {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q}
-    (h : tm.reachesIn t c c') : tm.reaches c c' :=
-  TM.reaches_of_reachesIn h
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Structural rules
@@ -113,7 +104,7 @@ theorem HoareTime.toHoare {tm : TM n}
     tm.Hoare pre post := by
   intro inp work out hpre
   obtain ⟨c', t, _, hreach, hhalt, hpost⟩ := h inp work out hpre
-  exact ⟨c', reachesIn_toReaches hreach, hhalt, hpost⟩
+  exact ⟨c', TM.reaches_of_reachesIn hreach, hhalt, hpost⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Connection to DecidesInTime
@@ -140,59 +131,8 @@ namespace NTM
 
 variable {n : ℕ}
 
-/-- A predicate on the tape configuration: input tape, work tapes, output tape. -/
-abbrev TapePred (n : ℕ) := Tape → (Fin n → Tape) → Tape → Prop
-
-private theorem input_move_head_le (t : Tape) (d : Dir3) :
-    (t.move d).head ≤ t.head + 1 := by
-  cases d
-  · simp [Tape.move]; omega
-  · simp [Tape.move]
-  · simp [Tape.move]
-
-/-- NTM traces never alter input tape cells; the input tape is read-only and
-    only its head moves. -/
-theorem trace_input_cells (tm : NTM n) (T : ℕ)
-    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
-    (tm.trace T choices c).input.cells = c.input.cells := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-      by_cases hhalt : c.state = tm.qhalt
-      · simp [NTM.trace, hhalt]
-      · simp only [NTM.trace, hhalt, if_false]
-        rw [ih]
-        cases (tm.δ (choices ⟨0, Nat.zero_lt_succ T⟩) c.state c.input.read
-          (fun i => (c.work i).read) c.output.read).2.2.2.1 <;> rfl
-
-/-- During an NTM trace, the input head increases by at most one per step. -/
-theorem trace_input_head_le (tm : NTM n) (T : ℕ)
-    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
-    (tm.trace T choices c).input.head ≤ c.input.head + T := by
-  induction T generalizing c with
-  | zero =>
-      simp [NTM.trace]
-  | succ T ih =>
-      by_cases hhalt : c.state = tm.qhalt
-      · simp [NTM.trace, hhalt]
-      · simp only [NTM.trace, hhalt, if_false]
-        let b := choices ⟨0, Nat.zero_lt_succ T⟩
-        let tr := tm.δ b c.state c.input.read (fun i => (c.work i).read) c.output.read
-        let c' : Cfg n tm.Q :=
-          { state := tr.1
-            input := c.input.move tr.2.2.2.1
-            work := fun i => (c.work i).writeAndMove (tr.2.1 i) (tr.2.2.2.2.1 i)
-            output := c.output.writeAndMove tr.2.2.1 tr.2.2.2.2.2 }
-        have hrec := ih (fun i => choices ⟨i.val + 1, by omega⟩) c'
-        have hstep : c'.input.head ≤ c.input.head + 1 := by
-          exact input_move_head_le c.input tr.2.2.2.1
-        change (tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c').input.head ≤
-          c.input.head + (T + 1)
-        calc
-          (tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c').input.head
-              ≤ c'.input.head + T := hrec
-          _ ≤ (c.input.head + 1) + T := by omega
-          _ ≤ c.input.head + (T + 1) := by omega
+@[inherit_doc Complexity.TapePred]
+abbrev TapePred (n : ℕ) := Complexity.TapePred n
 
 /-- Time-bounded Hoare triple for nondeterministic machines: every choice
     sequence of the given length reaches a halted configuration satisfying

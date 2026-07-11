@@ -70,7 +70,7 @@ private theorem scannerTM_step_scan
     simp [idleDir, hne]
   refine ⟨_, rfl, rfl, ?_, rfl, ?_, ?_⟩
   · simp [Tape.move]
-  · simp [Tape.writeAndMove, ho_move, Tape.move, tape_write_head, ho_head]
+  · simp [Tape.writeAndMove, ho_move, Tape.move, Tape.write_head, ho_head]
   · exact tape_readBackWrite_preserves c.output _ (Or.inr hne)
 
 /-- Halt step: from `.scan s` reading blank (end of input), emit

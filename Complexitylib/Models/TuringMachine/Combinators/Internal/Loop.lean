@@ -160,7 +160,7 @@ private theorem loop_rewind_step_left (tmBody tmTest : TM n)
     simp only [Tape.write, Tape.read]; split
     · omega
     · simp
-  · simp only [Tape.writeAndMove, tape_move_cells]
+  · simp only [Tape.writeAndMove, Tape.move_cells]
     rw [readBackWrite_toΓ_eq hread_ne]
     simp only [Tape.write, Tape.read]; split
     · rfl
@@ -185,7 +185,7 @@ private theorem loop_rewind_step_base (tmBody tmTest : TM n)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
 theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
     ∀ (p : ℕ) (c : Cfg n (LoopQ tmBody.Q tmTest.Q)),
@@ -220,7 +220,7 @@ theorem loopTM_check_halt (tmBody tmTest : TM n)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread]
   refine ⟨_, rfl, rfl, ?_⟩
   show (c.output.writeAndMove (readBackWrite Γ.one).toΓ (idleDir Γ.one)).cells = c.output.cells
-  simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, tape_move_cells]
+  simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, Tape.move_cells]
   simp only [Tape.write]; split
   · omega
   · dsimp only []; rw [hhead, ← hcell1]; exact Function.update_eq_self _ _
@@ -242,7 +242,7 @@ theorem loopTM_check_continue (tmBody tmTest : TM n)
     simp only [Tape.read, hhead]; exact hnostart 1 (by omega)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_⟩
-  simp only [Tape.writeAndMove, tape_move_cells]
+  simp only [Tape.writeAndMove, Tape.move_cells]
   rw [readBackWrite_toΓ_eq hread_ne_start]
   simp only [Tape.write, Tape.read]; split
   · omega

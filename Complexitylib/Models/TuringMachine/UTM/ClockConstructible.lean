@@ -362,20 +362,20 @@ private theorem clockLen_scan_run (x : List Bool) (m : ℕ) :
     have hstep := clockLen_step_scan_bit c hst hns hbl hoth hout
     have hq₁cells : (((c.work 6).write Γw.one).move .right).cells
         = regCells (k + 1) := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
       show Function.update (c.work 6).cells (c.work 6).head Γw.one.toΓ = _
       rw [hhd, hcl]
       exact regCells_update_succ k
     have hq₁head : (((c.work 6).write Γw.one).move .right).head = (k + 1) + 1 := by
       show ((c.work 6).write Γw.one).head + 1 = _
-      rw [tape_write_head, hhd]
+      rw [Tape.write_head, hhd]
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih (k + 1) (by omega)
         { state := .scan, input := c.input.move .right,
           work := Function.update c.work 6 (((c.work 6).write Γw.one).move .right),
           output := c.output } rfl
         (by show (c.input.move .right).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head + 1 = (k + 1) + 1
             rw [hih])
@@ -422,7 +422,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
         work := Function.update c.work 6 ((c.work 6).move .right),
         output := c.output } rfl
       (by show (c.input.move .right).read ≠ Γ.start
-          rw [Tape.read, tape_move_cells]
+          rw [Tape.read, Tape.move_cells]
           show c.input.cells (c.input.head + 1) ≠ Γ.start
           rw [hih, hic]
           exact Tape.init_ofBool_cells_ne_start x _ (by omega))
@@ -439,7 +439,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
       hout
     refine ⟨_, .step hstep₁ (.step hstep₂ .zero), rfl, ?_, ?_, ?_, ?_, ?_, rfl⟩
     · show (c.input.move .right).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact hic
     · show c.input.head + 1 = 1
       rw [hih]
@@ -467,7 +467,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
            work := Function.update c.work 6 ((c.work 6).move .left),
            output := c.output } rfl
         (by show (c.input.move .left).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head - 1 = h
             rw [hih]
@@ -553,7 +553,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
   have hc₃cl : (Function.update c₂.work 6
       (((c₂.work 6).write Γw.one).move .left) 6).cells
       = regCells (x.length + 1) := by
-    rw [Function.update_self, tape_move_cells, Tape.write,
+    rw [Function.update_self, Tape.move_cells, Tape.write,
       if_neg (by rw [hhd₂]; omega)]
     show Function.update (c₂.work 6).cells (c₂.work 6).head Γw.one.toΓ = _
     rw [hhd₂, hcl₂]
@@ -562,7 +562,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
       (((c₂.work 6).write Γw.one).move .left) 6).head = x.length := by
     rw [Function.update_self]
     show ((c₂.work 6).write Γw.one).head - 1 = x.length
-    rw [tape_write_head, hhd₂]
+    rw [Tape.write_head, hhd₂]
     omega
   -- the lockstep rewind
   obtain ⟨c₄, hr₄, hst₄, hic₄, hih₄, hw₄, hcl₄, hhd₄, ho₄⟩ :=
@@ -571,7 +571,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
         work := Function.update c₂.work 6 (((c₂.work 6).write Γw.one).move .left),
         output := c₂.output } rfl
       (by show (c₂.input.move .left).cells = _
-          rw [tape_move_cells]
+          rw [Tape.move_cells]
           exact hic₂)
       (by show c₂.input.head - 1 = x.length
           rw [hih₂]
@@ -902,22 +902,22 @@ private theorem moveClock_scan_run (v m : ℕ) :
     have hstep := moveClock_step_scan_one c hst hone hinp hoth hout
     have h6cl : (((c.work 6).write Γw.blank).move .right).cells
         = clearCells v (k + 1) := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd6]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd6]; omega)]
       show Function.update (c.work 6).cells (c.work 6).head Γw.blank.toΓ = _
       rw [hhd6, hcl6]
       exact clearCells_update_succ v k
     have h6hd : (((c.work 6).write Γw.blank).move .right).head = (k + 1) + 1 := by
       show ((c.work 6).write Γw.blank).head + 1 = _
-      rw [tape_write_head, hhd6]
+      rw [Tape.write_head, hhd6]
     have h5cl : (((c.work 5).write Γw.one).move .right).cells
         = regCells (k + 1) := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd5]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd5]; omega)]
       show Function.update (c.work 5).cells (c.work 5).head Γw.one.toΓ = _
       rw [hhd5, hcl5]
       exact regCells_update_succ k
     have h5hd : (((c.work 5).write Γw.one).move .right).head = (k + 1) + 1 := by
       show ((c.work 5).write Γw.one).head + 1 = _
-      rw [tape_write_head, hhd5]
+      rw [Tape.write_head, hhd5]
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7, h8⟩ :=
       ih (k + 1) (by omega)
         { state := .scan, input := c.input,
@@ -1175,12 +1175,12 @@ private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8
   · refine Tape.ext hhd5₄ ?_
     rw [hcl5₄]
     dsimp only
-    rw [Function.update_self, tape_move_cells, hcl5₂, regT_cells]
+    rw [Function.update_self, Tape.move_cells, hcl5₂, regT_cells]
   · refine Tape.ext hhd6₄ ?_
     rw [hcl6₄]
     dsimp only
     rw [Function.update_of_ne (by decide : (6 : Fin 8) ≠ 5), Function.update_self,
-      tape_move_cells, hcl6₂, clearCells_last, regT_cells]
+      Tape.move_cells, hcl6₂, clearCells_last, regT_cells]
   · rw [ho₄, ho₂]
     exact hout
 end MoveClock
@@ -1615,20 +1615,20 @@ private theorem clockMul_inScan_run (x : List Bool) (m : ℕ) :
     have hstep := clockMul_step_inScan_bit c hst hns hbl hoth hout
     have hq₁cells : (((c.work 6).write Γw.one).move .right).cells
         = regCells (d + 1) := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
       show Function.update (c.work 6).cells (c.work 6).head Γw.one.toΓ = _
       rw [hhd, hcl]
       exact regCells_update_succ d
     have hq₁head : (((c.work 6).write Γw.one).move .right).head = (d + 1) + 1 := by
       show ((c.work 6).write Γw.one).head + 1 = _
-      rw [tape_write_head, hhd]
+      rw [Tape.write_head, hhd]
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih (k + 1) (d + 1) (by omega)
         { state := .inScan, input := c.input.move .right,
           work := Function.update c.work 6 (((c.work 6).write Γw.one).move .right),
           output := c.output } rfl
         (by show (c.input.move .right).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head + 1 = (k + 1) + 1
             rw [hih])
@@ -1674,7 +1674,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     have hstep := clockMul_step_inRew_start c hst hi hall hout
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl⟩
     · show (c.input.move .right).cells = _
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact hic
     · show c.input.head + 1 = 1
       rw [hih]
@@ -1688,7 +1688,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
       ih { state := .inRew, input := c.input.move .left,
            work := c.work, output := c.output } rfl
         (by show (c.input.move .left).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic)
         (by show c.input.head - 1 = h
             rw [hih]
@@ -1737,13 +1737,13 @@ private theorem clockMul_rewC_run (h : ℕ) :
       hinp hoth hout
     have hq₁cells : ((((c.work 5).write Γw.blank)).move .left).cells
         = regCells h := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
       show Function.update (c.work 5).cells (c.work 5).head Γw.blank.toΓ = _
       rw [hhd, hcl]
       exact regCells_erase h
     have hq₁head : ((((c.work 5).write Γw.blank)).move .left).head = h := by
       show ((c.work 5).write Γw.blank).head - 1 = h
-      rw [tape_write_head, hhd]
+      rw [Tape.write_head, hhd]
       omega
     obtain ⟨c', hreach, h1, h2, h3, h4, h5⟩ :=
       ih { state := .rewC, input := c.input,
@@ -1941,14 +1941,14 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
     have hstep₃ := clockMul_step_inScan_blank c₂ hst₂ hibl₂ hoth₂ ho₂r
     have hc₃cl : (((c₂.work 6).write Γw.one).move .right).cells
         = regCells (r * (x.length + 1) + x.length + 1) := by
-      rw [tape_move_cells, Tape.write, if_neg (by rw [hhd₂]; omega)]
+      rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd₂]; omega)]
       show Function.update (c₂.work 6).cells (c₂.work 6).head Γw.one.toΓ = _
       rw [hhd₂, hcl₂]
       exact regCells_update_succ (r * (x.length + 1) + x.length)
     have hc₃hd : (((c₂.work 6).write Γw.one).move .right).head
         = r * (x.length + 1) + x.length + 1 + 1 := by
       show ((c₂.work 6).write Γw.one).head + 1 = _
-      rw [tape_write_head, hhd₂]
+      rw [Tape.write_head, hhd₂]
     -- the input rewind
     obtain ⟨c₄, hr₄, hst₄, hic₄, hih₄, hw₄, ho₄⟩ :=
       clockMul_inRew_run x x.length
@@ -1956,7 +1956,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
           work := Function.update c₂.work 6 (((c₂.work 6).write Γw.one).move .right),
           output := c₂.output } rfl
         (by show (c₂.input.move .left).cells = _
-            rw [tape_move_cells]
+            rw [Tape.move_cells]
             exact hic₂)
         (by show c₂.input.head - 1 = x.length
             rw [hih₂]
@@ -1991,7 +1991,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
             rw [Function.update_of_ne (by decide : (5 : Fin 8) ≠ 6),
               hw₂ 5 (by decide)]
             dsimp only
-            rw [Function.update_self, tape_move_cells]
+            rw [Function.update_self, Tape.move_cells]
             exact hcl5)
         (by rw [hw₄]
             dsimp only
@@ -2092,7 +2092,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
         exact hoth₁ i hi)
       ho₁r
       (by dsimp only
-          rw [Function.update_self, tape_move_cells]
+          rw [Function.update_self, Tape.move_cells]
           exact hcl5₁)
       (by dsimp only
           rw [Function.update_self]

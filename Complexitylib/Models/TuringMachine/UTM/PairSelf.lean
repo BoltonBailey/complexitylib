@@ -137,13 +137,13 @@ private theorem writeAndMove_readBack_right (t : Tape) (hread : t.read ≠ Γ.st
   constructor
   · exact tape_readBackWrite_preserves t Dir3.right (Or.inr hread)
   · show ((t.write _).move Dir3.right).head = t.head + 1
-    simp [Tape.move, tape_write_head]
+    simp [Tape.move, Tape.write_head]
 
 /-- Cell `0` of any work tape is never modified by a TM step. -/
 private theorem writeAndMove_cells_zero (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).cells 0 = t.cells 0 := by
   show ((t.write s).move d).cells 0 = t.cells 0
-  rw [tape_move_cells]
+  rw [Tape.move_cells]
   unfold Tape.write
   split
   · rfl
@@ -420,21 +420,21 @@ private theorem pairBuild_rich_hoareTime (x : List Bool) :
   have hinp_cells : c'.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
     have h : c'.input.cells = inp.cells := by
       rw [← hbridge]
-      exact NTM.trace_input_cells _ _ _ _
+      exact NTM.input_cells_trace _ _ _ _
     rw [h, hinp]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   -- input head is bounded
   have hinp_head : c'.input.head ≤ 6 * x.length + 11 := by
     have h : c'.input.head ≤ inp.head + pairBuildTime x.length x.length := by
       rw [← hbridge]
-      exact NTM.trace_input_head_le _ _ _ _
+      exact NTM.input_head_trace_le _ _ _ _
     have hh1 : inp.head = 1 := by rw [hinp]; rfl
     omega
   -- the y tape keeps its cells and its head stays right of ▷, boundedly
   have hy := pairBuild_reachesIn_ytape hreach
     (by show ∀ j, j ≥ 1 → (work 0).cells j ≠ Γ.start
         intro j hj
-        rw [hw0, tape_move_cells]
+        rw [hw0, Tape.move_cells]
         exact Tape.init_ofBool_cells_ne_start x j hj)
     (by show (work 0).head ≥ 1
         rw [hw0]; exact le_refl 1)
@@ -445,7 +445,7 @@ private theorem pairBuild_rich_hoareTime (x : List Bool) :
   · rw [hy_cells]
     show (work 0).cells = _
     rw [hw0]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   · have : (c'.work 0).head ≤ (work 0).head + t := hy_head_le
     omega
   · intro i hi0 hi7

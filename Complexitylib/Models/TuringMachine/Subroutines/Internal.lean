@@ -51,7 +51,7 @@ private theorem writeTM_rewind_step_left (sym : Γw) (c : Cfg n (writeTM sym).Q)
   · simp only [Tape.writeAndMove, Tape.move]
     rw [readBackWrite_toΓ_eq hread]
     simp only [Tape.write, Tape.read]; split <;> simp
-  · simp only [Tape.writeAndMove, tape_move_cells]
+  · simp only [Tape.writeAndMove, Tape.move_cells]
     rw [readBackWrite_toΓ_eq hread]
     simp only [Tape.write, Tape.read]; split
     · rfl
@@ -70,7 +70,7 @@ private theorem writeTM_rewind_step_base (sym : Γw) (c : Cfg n (writeTM sym).Q)
   simp only [TM.step, ↓reduceIte, hst, writeTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
 private theorem writeTM_rewind_loop (sym : Γw) :
     ∀ (h : ℕ) (c : Cfg n (writeTM sym).Q),
@@ -169,7 +169,7 @@ private theorem rewindWorkTM_rewind_step_left (idx : Fin n) (c : Cfg n (rewindWo
   · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
     rw [readBackWrite_toΓ_eq hread]
     simp only [Tape.write, Tape.read]; split <;> simp
-  · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, tape_move_cells]
+  · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, Tape.move_cells]
     rw [readBackWrite_toΓ_eq hread]
     simp only [Tape.write, Tape.read]; split
     · rfl
@@ -188,7 +188,7 @@ private theorem rewindWorkTM_rewind_step_base (idx : Fin n) (c : Cfg n (rewindWo
   simp only [TM.step, ↓reduceIte, hst, rewindWorkTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · dsimp only []; simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · dsimp only []; simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · dsimp only []; simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
 private theorem rewindWorkTM_rewind_loop (idx : Fin n) :
     ∀ (h : ℕ) (c : Cfg n (rewindWorkTM idx).Q),
@@ -274,7 +274,7 @@ private theorem rewindInputTM_rewind_step_left (c : Cfg n (rewindInputTM (n := n
   simp only [TM.step, ↓reduceIte, hst, rewindInputTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [Tape.move, moveLeftDir, hread]
-  · simp [tape_move_cells]
+  · simp [Tape.move_cells]
 
 private theorem rewindInputTM_rewind_step_base (c : Cfg n (rewindInputTM (n := n)).Q)
     (hst : c.state = RewindPhase.moveLeft) (hread : c.input.read = Γ.start)
@@ -289,7 +289,7 @@ private theorem rewindInputTM_rewind_step_base (c : Cfg n (rewindInputTM (n := n
   simp only [TM.step, ↓reduceIte, hst, rewindInputTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [Tape.move, hhead]
-  · simp [tape_move_cells]
+  · simp [Tape.move_cells]
 
 private theorem rewindInputTM_rewind_loop :
     ∀ (h : ℕ) (c : Cfg n (rewindInputTM (n := n)).Q),
@@ -328,7 +328,7 @@ private theorem rewindInputTM_moveRight_to_done
     simp only [TM.step, hstate, rewindInputTM]
     refine ⟨_, rfl, rfl, ?_, ?_⟩
     · simp [Tape.move, hiDir]
-    · simp [tape_move_cells]
+    · simp [Tape.move_cells]
   obtain ⟨c', hstep', hhalt, hhead, hcells⟩ := hstep
   exact ⟨c', .step hstep' .zero, hhalt, hhead, hcells⟩
 
@@ -434,7 +434,7 @@ theorem rewindInputTM_rich_hoareTime {n : ℕ} (B_input : ℕ)
       simp only [TM.step, ↓reduceIte, hstate, rewindInputTM, hread]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
       · simp [Tape.move, hhead]
-      · simp [tape_move_cells]
+      · simp [Tape.move_cells]
       · funext i; dsimp only []
         rw [hwork_c]
         exact tape_idle_preserve (work i) (hwork_wf i).1 (hwork_wf i).2
@@ -476,7 +476,7 @@ theorem rewindInputTM_rich_hoareTime {n : ℕ} (B_input : ℕ)
       simp only [TM.step, ↓reduceIte, hstate, rewindInputTM, hread_ne]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
       · simp [Tape.move, moveLeftDir, hread_ne, hhead]
-      · simp [tape_move_cells]
+      · simp [Tape.move_cells]
       · funext i; dsimp only []
         rw [hwork_c]
         exact tape_idle_preserve (work i) (hwork_wf i).1 (hwork_wf i).2
@@ -606,7 +606,7 @@ theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
       simp only [TM.step, ↓reduceIte, hstate, rewindWorkTM, hread]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
       · dsimp only []; simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
-      · dsimp only []; simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+      · dsimp only []; simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
       · dsimp only []; rw [hinp_c]; simp only [idleDir, hinp_ns, ↓reduceIte, Tape.move]
       · dsimp only []; rw [hout_c]; exact tape_idle_preserve out hout_ns hout_h
       · intro i hne; dsimp only []
@@ -659,7 +659,7 @@ theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
         · omega
         · simp [hhead]
       · dsimp only []
-        simp only [↓reduceIte, Tape.writeAndMove, tape_move_cells]
+        simp only [↓reduceIte, Tape.writeAndMove, Tape.move_cells]
         rw [readBackWrite_toΓ_eq hread_ne]
         simp only [Tape.write]; split
         · rfl
@@ -764,28 +764,28 @@ private theorem blankWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
                   (TM.idleDir c.output.read) }
             refine ⟨c1, ?_, rfl, ?_, ?_, ?_, ?_, ?_⟩
             · simp [TM.step, hstate, blankWorkTM, hread0, c1]
-            · simp [c1, hhead, Tape.writeAndMove, Tape.move, tape_write_head]
-            · simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcell0]
+            · simp [c1, hhead, Tape.writeAndMove, Tape.move, Tape.write_head]
+            · simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcell0]
             · intro i hi
               by_cases hik : i < k
               · have hblanki := hblank_prefix i hik
                 have hne : i + 1 ≠ k + 1 := by omega
-                simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+                simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
                 rw [Function.update_of_ne hne]
                 exact hblanki
               · have hik_eq : i = k := by omega
                 subst hik_eq
-                simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+                simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             · intro i hi hix
               have hcell := hdata i (by omega) hix
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hcell
             · intro i hi
               have hcell := hblank_tail i hi
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hcell
         | true =>
@@ -801,28 +801,28 @@ private theorem blankWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
                   (TM.idleDir c.output.read) }
             refine ⟨c1, ?_, rfl, ?_, ?_, ?_, ?_, ?_⟩
             · simp [TM.step, hstate, blankWorkTM, hread1, c1]
-            · simp [c1, hhead, Tape.writeAndMove, Tape.move, tape_write_head]
-            · simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcell0]
+            · simp [c1, hhead, Tape.writeAndMove, Tape.move, Tape.write_head]
+            · simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcell0]
             · intro i hi
               by_cases hik : i < k
               · have hblanki := hblank_prefix i hik
                 have hne : i + 1 ≠ k + 1 := by omega
-                simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+                simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
                 rw [Function.update_of_ne hne]
                 exact hblanki
               · have hik_eq : i = k := by omega
                 subst hik_eq
-                simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+                simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             · intro i hi hix
               have hcell := hdata i (by omega) hix
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hcell
             · intro i hi
               have hcell := hblank_tail i hi
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hcell
       obtain ⟨c1, hstep1, hstate1, hhead1, hcell01, hblank_prefix1,
@@ -1049,33 +1049,33 @@ theorem blankWorkTM_started_rich_hoareTime {n : ℕ}
             simpa [c1, hi, hw_c i hi] using
               tape_idle_preserve (work i) (hother_wf i hi).1 (hother_wf i hi).2
           have hhead1 : (c1.work idx).head = k + 2 := by
-            simp [c1, hhead, Tape.writeAndMove, Tape.move, tape_write_head]
+            simp [c1, hhead, Tape.writeAndMove, Tape.move, Tape.write_head]
           have hcell01 : (c1.work idx).cells 0 = Γ.start := by
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcell0]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcell0]
           have hblank_prefix1 : ∀ i, i < k + 1 → (c1.work idx).cells (i + 1) = Γ.blank := by
             intro i hi
             by_cases hik : i < k
             · have hblanki := hblank_prefix i hik
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hblanki
             · have hik_eq : i = k := by omega
               subst hik_eq
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
           have hdata1 : ∀ i, ∀ _ : k + 1 ≤ i, ∀ hi : i < x.length,
               (c1.work idx).cells (i + 1) = Γ.ofBool (x[i]'hi) := by
             intro i _ hix
             have hcell := hdata i (by omega) hix
             have hne : i + 1 ≠ k + 1 := by omega
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             rw [Function.update_of_ne hne]
             exact hcell
           have hblank_tail1 : ∀ i, x.length ≤ i → (c1.work idx).cells (i + 1) = Γ.blank := by
             intro i hi
             have hcell := hblank_tail i hi
             have hne : i + 1 ≠ k + 1 := by omega
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             rw [Function.update_of_ne hne]
             exact hcell
           have hrem1 : rem = x.length - (k + 1) := by omega
@@ -1105,33 +1105,33 @@ theorem blankWorkTM_started_rich_hoareTime {n : ℕ}
             simpa [c1, hi, hw_c i hi] using
               tape_idle_preserve (work i) (hother_wf i hi).1 (hother_wf i hi).2
           have hhead1 : (c1.work idx).head = k + 2 := by
-            simp [c1, hhead, Tape.writeAndMove, Tape.move, tape_write_head]
+            simp [c1, hhead, Tape.writeAndMove, Tape.move, Tape.write_head]
           have hcell01 : (c1.work idx).cells 0 = Γ.start := by
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcell0]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcell0]
           have hblank_prefix1 : ∀ i, i < k + 1 → (c1.work idx).cells (i + 1) = Γ.blank := by
             intro i hi
             by_cases hik : i < k
             · have hblanki := hblank_prefix i hik
               have hne : i + 1 ≠ k + 1 := by omega
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
               rw [Function.update_of_ne hne]
               exact hblanki
             · have hik_eq : i = k := by omega
               subst hik_eq
-              simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+              simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
           have hdata1 : ∀ i, ∀ _ : k + 1 ≤ i, ∀ hi : i < x.length,
               (c1.work idx).cells (i + 1) = Γ.ofBool (x[i]'hi) := by
             intro i _ hix
             have hcell := hdata i (by omega) hix
             have hne : i + 1 ≠ k + 1 := by omega
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             rw [Function.update_of_ne hne]
             exact hcell
           have hblank_tail1 : ∀ i, x.length ≤ i → (c1.work idx).cells (i + 1) = Γ.blank := by
             intro i hi
             have hcell := hblank_tail i hi
             have hne : i + 1 ≠ k + 1 := by omega
-            simp [c1, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+            simp [c1, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
             rw [Function.update_of_ne hne]
             exact hcell
           have hrem1 : rem = x.length - (k + 1) := by omega
@@ -1419,7 +1419,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
                 output := c.output.writeAndMove Γ.blank (TM.idleDir c.output.read) }
             refine ⟨c1, ?_, rfl, ?_, ?_, ?_⟩
             · simp [TM.step, hstate, copyInputToWorkTM, hread0, c1]
-            · simpa [c1, tape_move_cells] using hcells
+            · simpa [c1, Tape.move_cells] using hcells
             · simp [c1, Tape.move, hhead]
             · have hwidx :
                   c1.work idx = (c.work idx).writeAndMove Γ.zero Dir3.right := by
@@ -1439,7 +1439,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
                 output := c.output.writeAndMove Γ.blank (TM.idleDir c.output.read) }
             refine ⟨c1, ?_, rfl, ?_, ?_, ?_⟩
             · simp [TM.step, hstate, copyInputToWorkTM, hread1, c1]
-            · simpa [c1, tape_move_cells] using hcells
+            · simpa [c1, Tape.move_cells] using hcells
             · simp [c1, Tape.move, hhead]
             · have hwidx :
                   c1.work idx = (c.work idx).writeAndMove Γ.one Dir3.right := by
@@ -1591,7 +1591,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
                   (TM.tape_readBackWrite_preserves (c.work src) Dir3.right (Or.inr hsrc_ne))
               rw [hsrc_pres]
               exact hsrc_cells
-            · simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, tape_write_head]
+            · simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
             · have hdst :
                   c1.work dst = (c.work dst).writeAndMove Γ.zero Dir3.right := by
                 simp [c1]
@@ -1621,7 +1621,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
                   (TM.tape_readBackWrite_preserves (c.work src) Dir3.right (Or.inr hsrc_ne))
               rw [hsrc_pres]
               exact hsrc_cells
-            · simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, tape_write_head]
+            · simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
             · have hdst :
                   c1.work dst = (c.work dst).writeAndMove Γ.one Dir3.right := by
                 simp [c1]
@@ -1653,7 +1653,7 @@ theorem copyWorkToWorkTM_started_hoareTime {n : ℕ}
   rcases hpre with ⟨hsrc, hdst⟩
   have hsrc_cells0 : (work src).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
     rw [hsrc]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   have hsrc_head0 : (work src).head = 1 := by
     rw [hsrc]
     simp [Tape.move, _root_.Complexity.Tape.init]
@@ -1743,7 +1743,7 @@ theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
         (∀ i, i ≠ src → i ≠ dst → c'.work i = work i) by
     have hsrc_cells0 : (work src).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
       rw [hsrc]
-      exact tape_move_cells _ _
+      exact Tape.move_cells _ _
     have hsrc_head0 : (work src).head = 1 := by
       rw [hsrc]
       simp [Tape.move, _root_.Complexity.Tape.init]
@@ -1873,7 +1873,7 @@ theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
             rw [hsrc_pres]
             exact hsrc_cells
           have hsrc_head1 : (c1.work src).head = k + 2 := by
-            simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, tape_write_head]
+            simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
           have hdst_prefix1 : (c1.work dst).hasBinaryPrefix (x.take (k + 1)) := by
             have hdst :
                 c1.work dst = (c.work dst).writeAndMove Γ.zero Dir3.right := by
@@ -1929,7 +1929,7 @@ theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
             rw [hsrc_pres]
             exact hsrc_cells
           have hsrc_head1 : (c1.work src).head = k + 2 := by
-            simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, tape_write_head]
+            simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
           have hdst_prefix1 : (c1.work dst).hasBinaryPrefix (x.take (k + 1)) := by
             have hdst :
                 c1.work dst = (c.work dst).writeAndMove Γ.one Dir3.right := by

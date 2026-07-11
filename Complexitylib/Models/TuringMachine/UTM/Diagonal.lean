@@ -202,7 +202,7 @@ private theorem blankOutTM_rewind_loop
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
-        simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead, hcW]
+        simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
       · dsimp only []; rw [hin]; exact transitionInput_id hinp
       · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
@@ -219,7 +219,7 @@ private theorem blankOutTM_rewind_loop
       simp only [TM.step, ↓reduceIte, hst, blankOutTM, hread_ne]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
       · dsimp only []
-        simp only [Tape.writeAndMove, Tape.move, tape_write_head]
+        simp only [Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
       · dsimp only []
         rw [tape_readBackWrite_preserves c.output Dir3.left (Or.inr hread_ne), hcW]
@@ -275,7 +275,7 @@ private theorem blankOutTM_write_step
   simp only [TM.step, hst, blankOutTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · dsimp only []
-    simp only [hoDir, Tape.writeAndMove, Tape.move, tape_write_head, hhead]
+    simp only [hoDir, Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
   · dsimp only []
     simp [hoDir, Tape.writeAndMove, Tape.move, Tape.write, hhead, hcW]
   · dsimp only []; rw [hin]; exact transitionInput_id hinp
@@ -531,7 +531,7 @@ private theorem reachesIn_input_cells_eq {n : ℕ} {tm : TM n} :
         · exact absurd hstep (by simp)
         · simp only [Option.some.injEq] at hstep
           subst hstep
-          exact tape_move_cells ..
+          exact Tape.move_cells ..
       rw [ih hrest, h1]
 
 /-- Runs preserve output-tape well-formedness. -/
@@ -562,7 +562,7 @@ private theorem writeAndMove_tapeInvariant {t : Tape} (h : TapeInvariant t)
     (s : Γw) (d : Dir3) : TapeInvariant (t.writeAndMove s.toΓ d) := by
   obtain ⟨h0, hns⟩ := h
   have hcells : (t.writeAndMove s.toΓ d).cells = (t.write s.toΓ).cells :=
-    tape_move_cells _ _
+    Tape.move_cells _ _
   constructor
   · rw [hcells]
     unfold Tape.write
@@ -1422,17 +1422,17 @@ private theorem workX_inv (x : List Bool) : ∀ i, TapeInvariant (workX x i) := 
   · subst h7
     rw [workX_7]
     constructor
-    · rw [tape_move_cells]
+    · rw [Tape.move_cells]
       rfl
     · intro j hj
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact Tape.init_ofBool_cells_ne_start _ _ hj
   · rw [workX_ne7 x h7]
     constructor
-    · rw [tape_move_cells]
+    · rw [Tape.move_cells]
       rfl
     · intro j hj
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       exact Tape.init_nil_cells_ne_start _ hj
 
 private theorem inpX_read (x : List Bool) : (inpX x).read ≠ Γ.start := by
@@ -1524,7 +1524,7 @@ private theorem retargetPre_to_inner (x : List Bool) (V : ℕ)
     rw [hwoth 7 (by decide), workX_7]
   refine ⟨?_, ?_, ?_, ?_, ho0, hons, hoh⟩
   · show (work ⟨7, by omega⟩).cells = _
-    rw [show work ⟨7, by omega⟩ = work (7 : Fin 8) from rfl, h7, tape_move_cells]
+    rw [show work ⟨7, by omega⟩ = work (7 : Fin 8) from rfl, h7, Tape.move_cells]
   · show (work ⟨7, by omega⟩).head = 1
     rw [show work ⟨7, by omega⟩ = work (7 : Fin 8) from rfl, h7]
     rfl
@@ -1577,8 +1577,8 @@ private theorem retargetPhase_halt (x : List Bool) (hterm : TerminatedRegion x)
         Fin.ext rfl
       rw [hcast] at hb
       rw [hb]
-      exact ⟨by rw [tape_move_cells]; rfl,
-        fun j hj => by rw [tape_move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
+      exact ⟨by rw [Tape.move_cells]; rfl,
+        fun j hj => by rw [Tape.move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
   have hpre_out : ∀ inp work out, cleanUtmPre x x V inp work out →
       TapeInvariant out := by
     rintro inp work out ⟨-, -, -, -, h0, hns, -⟩
@@ -1642,8 +1642,8 @@ private theorem retargetPhase_timeout (x : List Bool) (hterm : TerminatedRegion 
         Fin.ext rfl
       rw [hcast] at hb
       rw [hb]
-      exact ⟨by rw [tape_move_cells]; rfl,
-        fun j hj => by rw [tape_move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
+      exact ⟨by rw [Tape.move_cells]; rfl,
+        fun j hj => by rw [Tape.move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
   have hpre_out : ∀ inp work out, cleanUtmPre x x V inp work out →
       TapeInvariant out := by
     rintro inp work out ⟨-, -, -, -, h0, hns, -⟩

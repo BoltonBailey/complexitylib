@@ -83,19 +83,6 @@ private theorem reachesIn_snoc {n : ℕ} {tm : TM n} {t : ℕ} {c c' c'' : Cfg n
   | zero => exact fun hstep => .step hstep .zero
   | step hs _ ih => exact fun hstep => .step hs (ih hstep)
 
-/-- `reachesIn` is deterministic in its endpoint. -/
-private theorem reachesIn_det' {n : ℕ} {tm : TM n} {t : ℕ} {c c₁ c₂ : Cfg n tm.Q}
-    (h₁ : tm.reachesIn t c c₁) : tm.reachesIn t c c₂ → c₁ = c₂ := by
-  induction h₁ with
-  | zero => intro h₂; cases h₂; rfl
-  | step hs₁ _ ih =>
-    intro h₂
-    cases h₂ with
-    | step hs₂ h₂' =>
-      rw [hs₁] at hs₂
-      obtain rfl := Option.some.inj hs₂
-      exact ih h₂'
-
 /-- A configuration with no step is halted. -/
 private theorem state_eq_of_step_none {n : ℕ} {tm : TM n} {c : Cfg n tm.Q}
     (h : tm.step c = none) : c.state = tm.qhalt := by
@@ -270,7 +257,7 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
     · exact transitionInput_id hin
     · exact funext fun i => transitionTape_id (hwk i)
-    · simp [Tape.writeAndMove, Tape.move, tape_write_head, hoh]
+    · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh]
     · exact tape_readBackWrite_preserves _ _ (Or.inr hread1)
   -- ── step 2: bounce off ▷ to cell 1, entering check ──
   have hread2 : c₁.output.read = Γ.start := by
@@ -286,10 +273,10 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
     · refine funext fun i => transitionTape_id ?_
       rw [hwk1]
       exact hwk i
-    · simp [Tape.writeAndMove, Tape.move, tape_write_head, hoh1]
+    · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh1]
     · show ((c₁.output.write (Γw.blank).toΓ).move Dir3.right).cells
         = c₁.output.cells
-      rw [tape_move_cells]
+      rw [Tape.move_cells]
       simp only [Tape.write, hoh1, ↓reduceIte]
   have hout_eq : c₂.output = c.output :=
     tape_eq_of_parts' (by rw [hoh2, hoh]) (by rw [hoc2, hoc1])
@@ -745,7 +732,7 @@ private theorem clocked_aux_halt (α x : List Bool) (hterm : TerminatedRegion α
     have hT0 : T = 0 := by rcases hpre with h | h <;> omega
     subst hT0
     obtain rfl : t' = 0 := by omega
-    have hmc : mc = mcF := reachesIn_det' hreach hrun
+    have hmc : mc = mcF := TM.reachesIn_right_unique hreach hrun
     obtain ⟨mc₂, work', out', t, ht, hstepd, hinv', hckc', hckh', hoc0', hons',
         hoh', hbranch⟩ :=
       clocked_iteration α hterm mc (V - 0) inp work out hinv hckc hckh
@@ -783,12 +770,12 @@ private theorem clocked_aux_halt (α x : List Bool) (hterm : TerminatedRegion α
           · exact hq
           · have hTeq : t' + 1 = T := by omega
             rw [hTeq] at hreach₂
-            obtain rfl : mc₂ = mcF := reachesIn_det' hreach₂ hrun
+            obtain rfl : mc₂ = mcF := TM.reachesIn_right_unique hreach₂ hrun
             exact hhaltF
         have hTle : T ≤ t' + 1 := TM.reachesIn_le_halt _ hrun hreach₂ hq
         have hTeq : t' + 1 = T := by omega
         rw [hTeq] at hreach₂
-        obtain rfl : mc₂ = mcF := reachesIn_det' hreach₂ hrun
+        obtain rfl : mc₂ = mcF := TM.reachesIn_right_unique hreach₂ hrun
         have hVeq : V - max T 1 = V - t' - 1 := by
           rw [max_eq_left (by omega : 1 ≤ T)]
           omega
@@ -824,7 +811,7 @@ private theorem clocked_aux_halt (α x : List Bool) (hterm : TerminatedRegion α
         · exfalso
           have hTeq : t' + 1 = T := by omega
           rw [hTeq] at hreach₂
-          obtain rfl : mc₂ = mcF := reachesIn_det' hreach₂ hrun
+          obtain rfl : mc₂ = mcF := TM.reachesIn_right_unique hreach₂ hrun
           exact hq2 hhaltF
       -- the clock representation at `t' + 1`
       have hsub : V - t' - 1 = V - (t' + 1) := by omega
@@ -900,7 +887,7 @@ private theorem clocked_aux_timeout (α x : List Bool) (hterm : TerminatedRegion
       have hVle : V ≤ t' + 1 := TM.reachesIn_le_halt _ hrun hreach₂ hq
       have hTeq : t' + 1 = V := by omega
       rw [hTeq] at hreach₂
-      obtain rfl : mc₂ = mcV := reachesIn_det' hreach₂ hrun
+      obtain rfl : mc₂ = mcV := TM.reachesIn_right_unique hreach₂ hrun
       exact hnh hq
     rcases hbranch with ⟨hcond, hone, hr⟩ | ⟨hncond, hr⟩
     · -- exit: forced by the exhausted clock, at exactly `V` interpreted steps
@@ -911,7 +898,7 @@ private theorem clocked_aux_timeout (α x : List Bool) (hterm : TerminatedRegion
       subst hfuel0
       have hTeq : t' + 1 = V := by omega
       rw [hTeq] at hreach₂
-      obtain rfl : mc₂ = mcV := reachesIn_det' hreach₂ hrun
+      obtain rfl : mc₂ = mcV := TM.reachesIn_right_unique hreach₂ hrun
       refine ⟨⟨Sum.inr (Sum.inl LoopPhase.done), inp, work', out'⟩, t,
         by omega, hr, rfl, hinv', hckc', ?_, hoc0', hons', hoh', hone⟩
       rw [hckh']

@@ -265,7 +265,7 @@ private theorem halts_rev_cell1 {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ �
       = (singleTapeSim N).trace 1 (fun _ => false)
           ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
             ((singleTapeSim N).initCfg x)) := by
-    rw [(singleTapeSim N).trace_add (macroPos k (Nat.find hex)) 1 ch]
+    rw [(singleTapeSim N).trace_add_fun (macroPos k (Nat.find hex)) 1 ch]
     exact hstep
   -- `N` is frozen between `Nat.find hex` and `Tn`
   have hfreeze : N.trace Tn (fun i => inducedChoices k ch i.val) (N.initCfg x)

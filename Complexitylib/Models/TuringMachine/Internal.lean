@@ -152,22 +152,6 @@ theorem TM.toNTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
       have := hno hxL
       simp_all
 
-/-- `write` does not change the head position. -/
-private lemma Tape.head_write (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  simp [Tape.write]; split <;> rfl
-
-/-- Tape head changes by at most 1 per `move` operation. -/
-private lemma Tape.head_move_le (t : Tape) (d : Dir3) :
-    (t.move d).head ≤ t.head + 1 := by
-  cases d <;> simp [Tape.move]; try omega
-
-/-- `writeAndMove` changes head by at most 1. -/
-private lemma Tape.head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
-    (t.writeAndMove s d).head ≤ t.head + 1 := by
-  unfold Tape.writeAndMove
-  have h1 := Tape.head_move_le (t.write s) d
-  rw [Tape.head_write] at h1; exact h1
-
 /-- Work tape heads grow by at most 1 per step. -/
 private lemma TM.work_head_step_bound (tm : TM n) {c c' : Cfg n tm.Q}
     (h : tm.step c = some c') (i : Fin n) :
@@ -188,6 +172,19 @@ theorem TM.work_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
   | @step c₀ c_mid _ _ hstep _ ih =>
     have := tm.work_head_step_bound hstep i
     omega
+
+/-- Deterministic runs have unique endpoints: reaching two configurations in
+    the same number of steps forces them to coincide. -/
+theorem TM.reachesIn_right_unique {tm : TM n} {t : ℕ} {c c' c'' : Cfg n tm.Q}
+    (h₁ : tm.reachesIn t c c') (h₂ : tm.reachesIn t c c'') : c' = c'' := by
+  induction h₁ with
+  | zero => cases h₂; rfl
+  | step hs₁ _ ih₁ =>
+    cases h₂ with
+    | step hs₂ h₂' =>
+      have heq : some _ = some _ := hs₁.symm.trans hs₂
+      simp only [Option.some.injEq] at heq; subst heq
+      exact ih₁ h₂'
 
 /-- Convert `reaches` to `reachesIn`. -/
 theorem TM.reaches_to_reachesIn (tm : TM n) {c c' : Cfg n tm.Q}
@@ -284,5 +281,254 @@ theorem TM.toNTM_decidesInSpace (tm : TM n) {L : Language} {f : ℕ → ℕ}
     have hreach := tm.toNTM_trace_reaches (tm.initCfg x) t'
       (fun j : Fin t' => choices ⟨j.val, by omega⟩)
     exact h.1 x _ hreach i
+
+
+namespace TM
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Tape invariant helpers
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Cell 0 stays Γ.start after write + move. -/
+private theorem tape_cell0_preserved (t : Tape) (s : Γ) (d : Dir3)
+    (h0 : t.cells 0 = Γ.start) :
+    ((t.write s).move d).cells 0 = Γ.start := by
+  rw [Tape.move_cells]; simp only [Tape.write]
+  split
+  · exact h0
+  · simp only [Function.update, dif_neg (show (0 : ℕ) ≠ t.head from fun h => by omega)]
+    exact h0
+
+/-- Cells ≥ 1 stay non-Γ.start after writing a non-Γ.start value. -/
+private theorem tape_noStart_preserved (t : Tape) (s : Γ) (d : Dir3)
+    (hs : s ≠ Γ.start) (hno : ∀ i, i ≥ 1 → t.cells i ≠ Γ.start) :
+    ∀ i, i ≥ 1 → ((t.write s).move d).cells i ≠ Γ.start := by
+  intro i hi; rw [Tape.move_cells]; simp only [Tape.write]
+  split
+  · exact hno i hi
+  · simp only [Function.update]; split
+    · next heq => subst heq; exact hs
+    · exact hno i hi
+
+/-- Output cell 0 = Γ.start is preserved by one TM step. -/
+private theorem output_cell0_step {tm : TM n} {c c' : Cfg n tm.Q}
+    (hs : tm.step c = some c') (h0 : c.output.cells 0 = Γ.start) :
+    c'.output.cells 0 = Γ.start := by
+  have hne := state_ne_qhalt_of_step hs
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
+  exact tape_cell0_preserved _ _ _ h0
+
+/-- Output cells ≥ 1 ≠ Γ.start is preserved by one TM step. -/
+private theorem output_noStart_step {tm : TM n} {c c' : Cfg n tm.Q}
+    (hs : tm.step c = some c') (hno : ∀ i, i ≥ 1 → c.output.cells i ≠ Γ.start) :
+    ∀ i, i ≥ 1 → c'.output.cells i ≠ Γ.start := by
+  have hne := state_ne_qhalt_of_step hs
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
+  exact tape_noStart_preserved _ _ _ (Γw.toΓ_ne_start _) hno
+
+theorem output_cell0_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+    (h : tm.reachesIn t c₀ c) (h0 : c₀.output.cells 0 = Γ.start) :
+    c.output.cells 0 = Γ.start := by
+  induction h with
+  | zero => exact h0
+  | step hs _ ih => exact ih (output_cell0_step hs h0)
+
+theorem output_noStart_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+    (h : tm.reachesIn t c₀ c)
+    (hno : ∀ i, i ≥ 1 → c₀.output.cells i ≠ Γ.start) :
+    ∀ i, i ≥ 1 → c.output.cells i ≠ Γ.start := by
+  induction h with
+  | zero => exact hno
+  | step hs _ ih => exact ih (output_noStart_step hs hno)
+
+theorem input_cells_of_step {tm : TM n} {c c' : Cfg n tm.Q}
+    (hs : tm.step c = some c') : c'.input.cells = c.input.cells := by
+  have hne := state_ne_qhalt_of_step hs
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
+  exact Tape.move_cells _ _
+
+theorem input_cells_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+    (h : tm.reachesIn t c₀ c) : c.input.cells = c₀.input.cells := by
+  induction h with
+  | zero => rfl
+  | step hs _ ih => rw [ih, input_cells_of_step hs]
+
+
+
+/-- After one step, each tape head increases by at most 1. -/
+private theorem step_head_bound (tm : TM n) (c c' : Cfg n tm.Q)
+    (hs : tm.step c = some c') :
+    c'.input.head ≤ c.input.head + 1 ∧
+    c'.output.head ≤ c.output.head + 1 ∧
+    ∀ i, (c'.work i).head ≤ (c.work i).head + 1 := by
+  unfold TM.step at hs
+  split at hs
+  · simp at hs
+  · simp only [Option.some.injEq] at hs
+    subst hs
+    dsimp only []
+    set δr := tm.δ c.state c.input.read (fun i => (c.work i).read) c.output.read
+    refine ⟨Tape.head_move_le _ δr.2.2.2.1, ?_, fun i => ?_⟩
+    · have hm := Tape.head_move_le (c.output.write δr.2.2.1.toΓ) δr.2.2.2.2.2
+      simp only [Tape.write_head] at hm
+      exact hm
+    · have hm := Tape.head_move_le ((c.work i).write (δr.2.1 i).toΓ) (δr.2.2.2.2.1 i)
+      simp only [Tape.write_head] at hm
+      exact hm
+
+/-- A tape head moves at most 1 cell per step. After `t` steps starting
+    from `initCfg`, the head is at position ≤ `t`. -/
+theorem head_bound_of_reachesIn (tm : TM n)
+    {t : ℕ} {c : Cfg n tm.Q}
+    (hreach : tm.reachesIn t (tm.initCfg x) c) :
+    c.input.head ≤ t ∧ c.output.head ≤ t ∧ ∀ i, (c.work i).head ≤ t := by
+  suffices gen : ∀ (t : ℕ) (c₀ c : Cfg n tm.Q), tm.reachesIn t c₀ c →
+      c.input.head ≤ c₀.input.head + t ∧
+      c.output.head ≤ c₀.output.head + t ∧
+      ∀ i, (c.work i).head ≤ (c₀.work i).head + t by
+    have h := gen t (tm.initCfg x) c hreach
+    simp [Tape.init] at h
+    exact h
+  intro t c₀ c hreach
+  induction hreach with
+  | zero => simp
+  | step hstep _ ih =>
+    obtain ⟨ih_in, ih_out, ih_work⟩ := ih
+    obtain ⟨hs_in, hs_out, hs_work⟩ := step_head_bound tm _ _ hstep
+    exact ⟨by omega, by omega, fun i => by have := hs_work i; have := ih_work i; omega⟩
+end TM
+
+namespace NTM
+
+variable {n : ℕ}
+
+/-- NTM traces never alter input tape cells; the input tape is read-only and
+    only its head moves. -/
+theorem input_cells_trace (tm : NTM n) (T : ℕ)
+    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
+    (tm.trace T choices c).input.cells = c.input.cells := by
+  induction T generalizing c with
+  | zero => rfl
+  | succ T ih =>
+      by_cases hhalt : c.state = tm.qhalt
+      · simp [NTM.trace, hhalt]
+      · simp only [NTM.trace, hhalt, if_false]
+        rw [ih]
+        cases (tm.δ (choices ⟨0, Nat.zero_lt_succ T⟩) c.state c.input.read
+          (fun i => (c.work i).read) c.output.read).2.2.2.1 <;> rfl
+
+/-- During an NTM trace, the input head increases by at most one per step. -/
+theorem input_head_trace_le (tm : NTM n) (T : ℕ)
+    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
+    (tm.trace T choices c).input.head ≤ c.input.head + T := by
+  induction T generalizing c with
+  | zero =>
+      simp [NTM.trace]
+  | succ T ih =>
+      by_cases hhalt : c.state = tm.qhalt
+      · simp [NTM.trace, hhalt]
+      · simp only [NTM.trace, hhalt, if_false]
+        let b := choices ⟨0, Nat.zero_lt_succ T⟩
+        let tr := tm.δ b c.state c.input.read (fun i => (c.work i).read) c.output.read
+        let c' : Cfg n tm.Q :=
+          { state := tr.1
+            input := c.input.move tr.2.2.2.1
+            work := fun i => (c.work i).writeAndMove (tr.2.1 i) (tr.2.2.2.2.1 i)
+            output := c.output.writeAndMove tr.2.2.1 tr.2.2.2.2.2 }
+        have hrec := ih (fun i => choices ⟨i.val + 1, by omega⟩) c'
+        have hstep : c'.input.head ≤ c.input.head + 1 := by
+          exact Tape.head_move_le c.input tr.2.2.2.1
+        change (tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c').input.head ≤
+          c.input.head + (T + 1)
+        calc
+          (tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c').input.head
+              ≤ c'.input.head + T := hrec
+          _ ≤ (c.input.head + 1) + T := by omega
+          _ ≤ c.input.head + (T + 1) := by omega
+
+/-- Split a two-step trace into two one-step traces. -/
+theorem trace_two (tm : NTM n) (choices : Fin 2 → Bool) (c : Cfg n tm.Q) :
+    tm.trace 2 choices c =
+      tm.trace 1 (fun _ => choices ⟨1, by omega⟩)
+        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
+  by_cases hhalt : c.state = tm.qhalt
+  · simp [NTM.trace, hhalt]
+  · simp [NTM.trace, hhalt]
+
+/-- Split the first step off a nonzero trace. If the machine is already
+    halted, both sides reduce to the starting configuration. -/
+theorem trace_succ (tm : NTM n) (T : ℕ)
+    (choices : Fin (T + 1) → Bool) (c : Cfg n tm.Q) :
+    tm.trace (T + 1) choices c =
+      tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩)
+        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
+  by_cases hhalt : c.state = tm.qhalt
+  · simp [NTM.trace, hhalt]
+    exact (tm.trace_halted T (fun i => choices ⟨i.val + 1, by omega⟩) hhalt).symm
+  · simp [NTM.trace, hhalt]
+
+/-- Split the first two steps off a trace. -/
+theorem trace_add_two (tm : NTM n) (T : ℕ)
+    (choices : Fin (T + 2) → Bool) (c : Cfg n tm.Q) :
+    tm.trace (T + 2) choices c =
+      tm.trace T (fun i => choices ⟨i.val + 2, by omega⟩)
+        (tm.trace 2 (fun i => choices ⟨i.val, by omega⟩) c) := by
+  change tm.trace ((T + 1) + 1) choices c = _
+  rw [trace_succ tm (T + 1) choices c]
+  rw [trace_succ tm T
+    (fun i : Fin (T + 1) => choices ⟨i.val + 1, by omega⟩)
+    (tm.trace 1 (fun x => choices ⟨0, by omega⟩) c)]
+  rw [← trace_two tm (fun i : Fin 2 => choices ⟨i.val, by omega⟩) c]
+
+/-- Reindex a trace along an equality of time bounds. -/
+theorem trace_cast (tm : NTM n) {T T' : ℕ} (h : T = T')
+    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
+    tm.trace T choices c =
+      tm.trace T' (fun i => choices (Fin.cast h.symm i)) c := by
+  cases h
+  rfl
+
+/-- Split the first `T` steps off a trace.
+
+This version uses `Fin.castLE`/`Fin.natAdd` for the prefix and suffix choice
+sequences, which keeps later proofs away from ad-hoc dependent index casts. -/
+theorem trace_add (tm : NTM n) (T U : ℕ)
+    (choices : Fin (T + U) → Bool) (c : Cfg n tm.Q) :
+    tm.trace (T + U) choices c =
+      tm.trace U (fun i => choices (Fin.natAdd T i))
+        (tm.trace T (fun i => choices (Fin.castLE (Nat.le_add_right T U) i)) c) := by
+  induction T generalizing U c with
+  | zero =>
+    have h := trace_cast tm (Nat.zero_add U) choices c
+    rw [h]
+    congr 1
+    funext i
+    apply congrArg choices
+    exact Fin.ext (by simp [Fin.natAdd])
+  | succ T ih =>
+    let choicesCast : Fin ((T + U) + 1) → Bool :=
+      fun i => choices (Fin.cast (by omega : (T + U) + 1 = (T + 1) + U) i)
+    have hcast := trace_cast tm (by omega : (T + 1) + U = (T + U) + 1) choices c
+    rw [hcast]
+    rw [trace_succ tm (T + U) choicesCast c]
+    rw [ih U (fun i : Fin (T + U) => choicesCast ⟨i.val + 1, by omega⟩)
+      (tm.trace 1 (fun _ => choicesCast ⟨0, by omega⟩) c)]
+    let prefixFinal : Fin (T + 1) → Bool :=
+      fun i => choices (Fin.castLE (Nat.le_add_right (T + 1) U) i)
+    have hprefix :
+        tm.trace (T + 1) prefixFinal c =
+          tm.trace T
+            (fun i : Fin T =>
+              choicesCast ⟨(Fin.castLE (Nat.le_add_right T U) i).val + 1, by omega⟩)
+            (tm.trace 1 (fun _ => choicesCast ⟨0, by omega⟩) c) := by
+      simpa [choicesCast, prefixFinal, Fin.castLE, Fin.cast] using
+        trace_succ tm T prefixFinal c
+    rw [← hprefix]
+    congr 1
+    funext i
+    apply congrArg choices
+    exact Fin.ext (by simp [Fin.val_natAdd]; omega)
+
+end NTM
 
 end Complexity

@@ -68,7 +68,7 @@ theorem hasUnaryPrefix_write_one_cell0 {t : Tape} {used : ℕ}
     (h : t.hasUnaryPrefix used) (h0 : t.cells 0 = Γ.start) :
     (t.writeAndMove Γ.one Dir3.right).cells 0 = Γ.start := by
   unfold Tape.writeAndMove
-  rw [TM.tape_move_cells]
+  rw [Tape.move_cells]
   unfold Tape.write
   have hhead_ne : ¬t.head = 0 := by rw [h.1]; omega
   simp only [hhead_ne, ↓reduceIte]
@@ -273,18 +273,13 @@ private def counterRewindDirs (counterIdx : Fin n) (wHeads : Fin n → Γ) :
     Fin n → Dir3 :=
   fun i => if i = counterIdx then moveLeftDir (wHeads i) else idleDir (wHeads i)
 
-private theorem moveLeftDir_right_of_start' {g : Γ} (h : g = Γ.start) :
-    moveLeftDir g = Dir3.right := by
-  subst h
-  rfl
-
 private theorem counterRewindDirs_right_of_start (counterIdx : Fin n)
     (wHeads : Fin n → Γ) :
     ∀ i, wHeads i = Γ.start → counterRewindDirs counterIdx wHeads i = Dir3.right := by
   intro i hi
   by_cases hidx : i = counterIdx
   · subst hidx
-    simp [counterRewindDirs, moveLeftDir_right_of_start' hi]
+    simp [counterRewindDirs, moveLeftDir_right_of_start hi]
   · simp [counterRewindDirs, hidx, idleDir_right_of_start hi]
 
 private theorem counterRightOfStart_idle (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
@@ -618,7 +613,7 @@ private theorem inputLengthPlusOneCounterTM_start_step
     simp [Tape.read, _root_.Complexity.Tape.init]
   simp [TM.step, inputLengthPlusOneCounterTM, hread]
   refine ⟨?_, ?_, ?_, ?_⟩
-  · rw [tape_move_cells]
+  · rw [Tape.move_cells]
   · simp [_root_.Complexity.Tape.init, Tape.move]
   · have hcounter_read : (work counterIdx).read = Γ.start := by
       rw [hcounter]
@@ -626,7 +621,7 @@ private theorem inputLengthPlusOneCounterTM_start_step
     simpa [counterPreserveWork, counterIdleDirs, hcounter, hcounter_read,
       Tape.writeAndMove, Tape.write] using
       Tape.init_nil_move_right_hasUnaryPrefix_zero
-  · simp [counterIdleDirs, hcounter, Tape.writeAndMove, tape_move_cells,
+  · simp [counterIdleDirs, hcounter, Tape.writeAndMove, Tape.move_cells,
       Tape.write, _root_.Complexity.Tape.init]
 
 private theorem inputLengthPlusOneCounterTM_scan_bit_step
@@ -657,7 +652,7 @@ private theorem inputLengthPlusOneCounterTM_scan_bit_step
     exact Γ.ofBool_ne_blank _
   simp only [TM.step, hstate, inputLengthPlusOneCounterTM, hstart, hblank]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · rw [tape_move_cells]
+  · rw [Tape.move_cells]
     exact hinput_cells
   · simp [Tape.move, hinput_head]
   · simpa [counterWriteOneWork, counterAdvanceDirs] using
@@ -752,7 +747,7 @@ private theorem inputLengthPlusOneCounterTM_rewind_step_left
     · simp [counterRewindDirs, moveLeftDir, hread, Tape.writeAndMove, Tape.move,
         Tape.write, h0]
   · simp [counterRewindDirs, moveLeftDir, hread,
-      Tape.writeAndMove, tape_move_cells]
+      Tape.writeAndMove, Tape.move_cells]
     change ((c.work counterIdx).write
         ((readBackWrite (c.work counterIdx).read).toΓ)).cells =
       (c.work counterIdx).cells
@@ -783,7 +778,7 @@ private theorem inputLengthPlusOneCounterTM_rewind_step_base
   · show c.input.move (TM.idleDir c.input.read) = c.input
     exact TM.transitionInput_id hinp
   · simp [counterAdvanceDirs, Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [counterAdvanceDirs, Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
+  · simp [counterAdvanceDirs, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
 private theorem inputLengthPlusOneCounterTM_rewind_loop (counterIdx : Fin n) :
     ∀ (h : ℕ) (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q),
@@ -919,7 +914,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
       work := work,
       output := out }
   have hcells0 : c0.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
-    simp [c0, tape_move_cells]
+    simp [c0, Tape.move_cells]
   have hhead0 : c0.input.head = 1 := by
     simp [c0, Tape.move, _root_.Complexity.Tape.init]
   have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by
@@ -1000,7 +995,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
       work := work,
       output := out }
   have hcells0 : c0.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
-    simp [c0, tape_move_cells]
+    simp [c0, Tape.move_cells]
   have hhead0 : c0.input.head = 1 := by
     simp [c0, Tape.move, _root_.Complexity.Tape.init]
   have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by

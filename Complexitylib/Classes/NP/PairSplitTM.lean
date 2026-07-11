@@ -324,7 +324,7 @@ theorem pair_get_right (x y : List Bool) (j : ℕ) (hj : j < y.length) :
 
 private theorem Tape.init_nil_move_right_cells_ne_start (j : ℕ) (hj : j ≥ 1) :
     ((_root_.Complexity.Tape.init []).move Dir3.right).cells j ≠ Γ.start := by
-  rw [tape_move_cells]
+  rw [Tape.move_cells]
   simp [_root_.Complexity.Tape.init, show j ≠ 0 by omega]
 
 private theorem Tape.init_nil_move_right_stable :
@@ -363,7 +363,7 @@ private theorem pairSplit_scanX_false_step {k : ℕ} (xIdx yIdx : Fin k)
   simp only [TM.step, hst, pairSplitCoreTM, if_pos hiread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
-  · simpa using (tape_move_cells c.input Dir3.right)
+  · simpa using (Tape.move_cells c.input Dir3.right)
   · exact tape_writeAndMove_stable (c.work xIdx) hxh hxns
   · exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
 
@@ -388,7 +388,7 @@ private theorem pairSplit_scanX_true_step {k : ℕ} (xIdx yIdx : Fin k)
   simp only [TM.step, hst, pairSplitCoreTM, if_neg hne_zero, if_pos hiread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
-  · simpa using (tape_move_cells c.input Dir3.right)
+  · simpa using (Tape.move_cells c.input Dir3.right)
   · exact tape_writeAndMove_stable (c.work xIdx) hxh hxns
   · exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
 
@@ -412,12 +412,12 @@ private theorem pairSplit_afterFalse_zero_step {k : ℕ} (xIdx yIdx : Fin k)
   simp only [TM.step, hst, pairSplitCoreTM, if_pos hiread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
-  · simpa using (tape_move_cells c.input Dir3.right)
+  · simpa using (Tape.move_cells c.input Dir3.right)
   · dsimp only []
     simp [Tape.writeAndMove, Tape.write, Tape.move,
       show (c.work xIdx).head ≠ 0 from by omega]
   · dsimp only []
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
       show (c.work xIdx).head ≠ 0 from by omega]
   · dsimp only []
     simp only [if_neg (Ne.symm hne)]
@@ -444,7 +444,7 @@ private theorem pairSplit_afterFalse_sep_step {k : ℕ} (xIdx yIdx : Fin k)
   simp only [TM.step, hst, pairSplitCoreTM, if_neg hne_zero, if_pos hiread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
-  · simpa using (tape_move_cells c.input Dir3.right)
+  · simpa using (Tape.move_cells c.input Dir3.right)
   · exact tape_writeAndMove_stable (c.work xIdx) hxh hxns
   · exact tape_writeAndMove_stable (c.work yIdx) hyh hyns
 
@@ -468,12 +468,12 @@ private theorem pairSplit_writeTrue_step {k : ℕ} (xIdx yIdx : Fin k)
   simp only [TM.step, hst, pairSplitCoreTM, if_pos hiread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
-  · simpa using (tape_move_cells c.input Dir3.right)
+  · simpa using (Tape.move_cells c.input Dir3.right)
   · dsimp only []
     simp [Tape.writeAndMove, Tape.write, Tape.move,
       show (c.work xIdx).head ≠ 0 from by omega]
   · dsimp only []
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
       show (c.work xIdx).head ≠ 0 from by omega]
   · dsimp only []
     simp only [if_neg (Ne.symm hne)]
@@ -873,7 +873,7 @@ private theorem pairSplit_copyY_cont_step {k : ℕ} (xIdx yIdx : Fin k)
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
   · simp [Tape.move]
   ·
-    simpa using (tape_move_cells c.input Dir3.right)
+    simpa using (Tape.move_cells c.input Dir3.right)
   · simp only [if_neg hne]
     exact tape_writeAndMove_stable (c.work xIdx) hxh hxns
   · have hwrite :
@@ -906,7 +906,7 @@ private theorem pairSplit_copyY_cont_step {k : ℕ} (xIdx yIdx : Fin k)
     dsimp only []
     simp only [↓reduceIte]
     rw [hwrite]
-    simp [Tape.writeAndMove, tape_move_cells, Tape.write,
+    simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
       show (c.work yIdx).head ≠ 0 from by omega, Tape.read]
 
 /-- Linear `copyY` loop. Starting in `.copyY`, if the next `m` input cells are
@@ -1065,11 +1065,11 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
     rfl
   have hyh_ge : (c.work yIdx).head ≥ 1 := by rw [hyh]
   have hyc0 : (c.work yIdx).cells 0 = Γ.start := by
-    rw [hyw, tape_move_cells]
+    rw [hyw, Tape.move_cells]
     rfl
   have hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start := by
     intro j hj
-    rw [hyw, tape_move_cells]
+    rw [hyw, Tape.move_cells]
     exact Tape.init_nil_move_right_cells_ne_start j hj
   have hdata : ∀ i, i < y.length →
       c.input.cells (c.input.head + i) ≠ Γ.blank ∧
@@ -1089,7 +1089,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
     rw [hc1_yh_val]
     have habove : 1 + y.length ≥ (c.work yIdx).head + y.length := by
       rw [hyh]
-    rw [hc1_above (1 + y.length) habove, hyw, tape_move_cells]
+    rw [hc1_above (1 + y.length) habove, hyw, Tape.move_cells]
     simp [Nat.add_comm]
   have hc1_xread : (c1.work xIdx).read = Γ.blank := by
     rw [hc1_xw]
@@ -1116,7 +1116,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
   · intro i hi
     rw [hc2_yw]
     have habove : i + 1 ≥ (c.work yIdx).head + y.length := by rw [hyh]; omega
-    rw [hc1_above (i + 1) habove, hyw, tape_move_cells]
+    rw [hc1_above (i + 1) habove, hyw, Tape.move_cells]
     exact Tape.init_nil_cells_succ i
 
 /-- Core correctness for valid started inputs. Beginning in `.scanX` with
@@ -1152,7 +1152,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     rfl
   have hc_ic : c.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells := by
     rw [hinp]
-    exact tape_move_cells _ _
+    exact Tape.move_cells _ _
   have hc_ih_ge : c.input.head ≥ 1 := by
     rw [hc_ih]
   have hc_ic0 : c.input.cells 0 = Γ.start := by
@@ -1192,7 +1192,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hxh : (c.work xIdx).head ≥ 1 := by
     rw [hxh_eq]
   have hxc0 : (c.work xIdx).cells 0 = Γ.start := by
-    rw [hxw, tape_move_cells]
+    rw [hxw, Tape.move_cells]
     rfl
   have hxns : ∀ j, j ≥ 1 → (c.work xIdx).cells j ≠ Γ.start := by
     intro j hj
@@ -1284,7 +1284,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     rw [hc2_xw, hc1_xh_val]
     have habove : 1 + x.length ≥ (c.work xIdx).head + x.length := by
       rw [hxh_eq]
-    rw [hc1_above (1 + x.length) habove, hxw, tape_move_cells]
+    rw [hc1_above (1 + x.length) habove, hxw, Tape.move_cells]
     simp [Nat.add_comm]
   have hc2_yw_init : c2.work yIdx = (_root_.Complexity.Tape.init []).move Dir3.right := by
     rw [hc2_yw, hc1_yw]
@@ -1318,7 +1318,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     have habove : i + 1 ≥ (c.work xIdx).head + x.length := by
       rw [hxh_eq]
       omega
-    rw [hc1_above (i + 1) habove, hxw, tape_move_cells]
+    rw [hc1_above (i + 1) habove, hxw, Tape.move_cells]
     exact Tape.init_nil_cells_succ i
   · rw [hc3_yh]
   · exact hc3_yc0

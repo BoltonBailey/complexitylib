@@ -474,7 +474,7 @@ private theorem tape_write_readBack_move_cells_ne_start (t : Tape) (d : Dir3)
     ∀ j, j ≥ 1 →
       (t.writeAndMove (readBackWrite t.read).toΓ d).cells j ≠ Γ.start := by
   intro j hj
-  rw [Tape.writeAndMove, tape_move_cells]
+  rw [Tape.writeAndMove, Tape.move_cells]
   by_cases hhead0 : t.head = 0
   · simp [Tape.write, hhead0]
     exact hclean j hj
@@ -545,7 +545,7 @@ theorem satVerifyPhaseTM_trace_project_prefix (M : TM k) :
           have hfull := hpair (t + 1) (by omega)
           let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
           have hsplit :=
-            NTM.trace_succ_eq_trace_one verifyNTM t choicesPrefix c
+            NTM.trace_succ verifyNTM t choicesPrefix c
           change
             let ct := verifyNTM.trace t
               (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1
@@ -553,8 +553,8 @@ theorem satVerifyPhaseTM_trace_project_prefix (M : TM k) :
               (ct.work (satPairIdx k)).read ≠ Γ.start
           rw [← hsplit]
           exact hfull
-        rw [NTM.trace_succ_eq_trace_one verifyNTM T choices c]
-        rw [NTM.trace_succ_eq_trace_one innerNTM T choices (satVerifyInnerCfg M c)]
+        rw [NTM.trace_succ verifyNTM T choices c]
+        rw [NTM.trace_succ innerNTM T choices (satVerifyInnerCfg M c)]
         have hone :=
           satVerifyPhaseTM_trace_one_project M (choices ⟨0, by omega⟩) c hhalt hpair0
         rw [ih choicesTail c1 htail]
@@ -614,7 +614,7 @@ theorem satVerifyPhaseTM_pair_cells_ne_start_trace (M : TM k) :
       let choicesTail : Fin T → Bool := fun i => choices ⟨i.val + 1, by omega⟩
       let c1 : Cfg (k + 3) M.Q :=
         verifyNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      rw [NTM.trace_succ_eq_trace_one verifyNTM T choices c]
+      rw [NTM.trace_succ verifyNTM T choices c]
       exact ih choicesTail c1
         (satVerifyPhaseTM_pair_cells_ne_start_trace_one M
           (choices ⟨0, by omega⟩) c hclean)
@@ -783,7 +783,7 @@ theorem satGuessVerify_counter_trace_prefix (M : TM k) :
       have hstate : c.state ≠ TM.LinearCounterPhase.done := by
         have h0 := hnot 0 (by omega)
         simpa [counterNTM, NTM.trace] using h0
-      rw [NTM.trace_succ_eq_trace_one (satGuessVerifyNTM M) T choices (satCounterWrap M c)]
+      rw [NTM.trace_succ (satGuessVerifyNTM M) T choices (satCounterWrap M c)]
       rw [satGuessVerify_counter_trace_one M (choices ⟨0, by omega⟩) c hstate]
       have htail : ∀ t (ht : t < T),
           (counterNTM.trace t
@@ -793,7 +793,7 @@ theorem satGuessVerify_counter_trace_prefix (M : TM k) :
         have hfull := hnot (t + 1) (by omega)
         let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
         have hsplit :=
-          NTM.trace_succ_eq_trace_one counterNTM t choicesPrefix c
+          NTM.trace_succ counterNTM t choicesPrefix c
         change (counterNTM.trace t
           (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1).state ≠
             TM.LinearCounterPhase.done
@@ -801,7 +801,7 @@ theorem satGuessVerify_counter_trace_prefix (M : TM k) :
         exact hfull
       rw [ih choicesTail c1 htail]
       have hsplitFull :=
-        NTM.trace_succ_eq_trace_one counterNTM T choices c
+        NTM.trace_succ counterNTM T choices c
       rw [hsplitFull]
 
 /-- If the counter subroutine first reaches `done` at time `T`, then the
@@ -838,7 +838,7 @@ theorem satGuessVerify_counter_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_counter_trace_prefix M T counterChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add_eq (satGuessVerifyNTM M) T 1 choices (satCounterWrap M c)
+    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satCounterWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
           (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satCounterWrap M c) =
@@ -876,7 +876,7 @@ private theorem satCounter_trace_preserves_started_blank_other_work
       have h1 : c1.work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
         exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_other_work
           (satCounterIdx k) (choices ⟨0, by omega⟩) c i hi hwork
-      rw [NTM.trace_succ_eq_trace_one counterNTM T choices c]
+      rw [NTM.trace_succ counterNTM T choices c]
       exact ih (fun j => choices ⟨j.val + 1, by omega⟩) c1 h1
 
 private theorem satCounter_trace_succ_initializes_blank_other_work
@@ -893,7 +893,7 @@ private theorem satCounter_trace_succ_initializes_blank_other_work
   have h1 : c1.work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
     exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
       (satCounterIdx k) (choices ⟨0, by omega⟩) c i hi hstate hwork
-  rw [NTM.trace_succ_eq_trace_one counterNTM T choices c]
+  rw [NTM.trace_succ counterNTM T choices c]
   exact satCounter_trace_preserves_started_blank_other_work T
     (fun j => choices ⟨j.val + 1, by omega⟩) c1 i hi h1
 
@@ -913,7 +913,7 @@ private theorem satCounter_trace_preserves_started_blank_output
       have h1 : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
         exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
           (satCounterIdx k) (choices ⟨0, by omega⟩) c houtput
-      rw [NTM.trace_succ_eq_trace_one counterNTM T choices c]
+      rw [NTM.trace_succ counterNTM T choices c]
       exact ih (fun j => choices ⟨j.val + 1, by omega⟩) c1 h1
 
 private theorem satCounter_trace_succ_initializes_blank_output
@@ -929,7 +929,7 @@ private theorem satCounter_trace_succ_initializes_blank_output
   have h1 : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
     exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_output
       (satCounterIdx k) (choices ⟨0, by omega⟩) c hstate houtput
-  rw [NTM.trace_succ_eq_trace_one counterNTM T choices c]
+  rw [NTM.trace_succ counterNTM T choices c]
   exact satCounter_trace_preserves_started_blank_output T
     (fun j => choices ⟨j.val + 1, by omega⟩) c1 h1
 
@@ -1090,28 +1090,28 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa [B, counterNTM, counterChoices, cT, choicesExit, c0, satCounterWrap,
       satGuessVerifyNTM] using hexit
-  · have hcells := NTM.trace_input_cells counterNTM t counterChoices c0
+  · have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     have hinv := TM.TapeInvariant.Tape.init_ofBool x
     have hcell0 : cT.input.cells 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells 0 := by
       simpa [cT, c0] using congrFun hcells 0
     show (satBoundaryInput cT.input).cells 0 = Γ.start
-    rw [satBoundaryInput, tape_move_cells, hcell0]
+    rw [satBoundaryInput, Tape.move_cells, hcell0]
     exact hinv.1
   · intro j hj
-    have hcells := NTM.trace_input_cells counterNTM t counterChoices c0
+    have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     have hinv := TM.TapeInvariant.Tape.init_ofBool x
     have hcell : cT.input.cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j := by
       simpa [cT, c0] using congrFun hcells j
     show (satBoundaryInput cT.input).cells j ≠ Γ.start
-    rw [satBoundaryInput, tape_move_cells, hcell]
+    rw [satBoundaryInput, Tape.move_cells, hcell]
     exact hinv.2 j hj
-  · have hcells := NTM.trace_input_cells counterNTM t counterChoices c0
+  · have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     funext j
     have hcell : cT.input.cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j := by
       simpa [cT, c0] using congrFun hcells j
     show (satBoundaryInput cT.input).cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j
-    rw [satBoundaryInput, tape_move_cells, hcell]
-  · have htrace_head := NTM.trace_input_head_le counterNTM t counterChoices c0
+    rw [satBoundaryInput, Tape.move_cells, hcell]
+  · have htrace_head := NTM.input_head_trace_le counterNTM t counterChoices c0
     have hcT_head : cT.input.head ≤ t := by
       have hc0 : c0.input.head = 0 := by simp [c0, _root_.Complexity.Tape.init]
       rw [hc0, Nat.zero_add] at htrace_head
@@ -1185,7 +1185,7 @@ theorem satGuessVerify_rewindInput_trace_prefix (M : TM k) :
       have hstate : c.state ≠ TM.RewindPhase.done := by
         have h0 := hnot 0 (by omega)
         simpa [rewindNTM, NTM.trace] using h0
-      rw [NTM.trace_succ_eq_trace_one (satGuessVerifyNTM M) T choices (satRewindInputWrap M c)]
+      rw [NTM.trace_succ (satGuessVerifyNTM M) T choices (satRewindInputWrap M c)]
       rw [satGuessVerify_rewindInput_trace_one M (choices ⟨0, by omega⟩) c hstate]
       have htail : ∀ t (ht : t < T),
           (rewindNTM.trace t
@@ -1195,7 +1195,7 @@ theorem satGuessVerify_rewindInput_trace_prefix (M : TM k) :
         have hfull := hnot (t + 1) (by omega)
         let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
         have hsplit :=
-          NTM.trace_succ_eq_trace_one rewindNTM t choicesPrefix c
+          NTM.trace_succ rewindNTM t choicesPrefix c
         change (rewindNTM.trace t
           (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1).state ≠
             TM.RewindPhase.done
@@ -1203,7 +1203,7 @@ theorem satGuessVerify_rewindInput_trace_prefix (M : TM k) :
         exact hfull
       rw [ih choicesTail c1 htail]
       have hsplitFull :=
-        NTM.trace_succ_eq_trace_one rewindNTM T choices c
+        NTM.trace_succ rewindNTM T choices c
       rw [hsplitFull]
 
 /-- If the input-rewind subroutine first reaches `done` at time `T`, then the
@@ -1240,7 +1240,7 @@ theorem satGuessVerify_rewindInput_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_rewindInput_trace_prefix M T rewindChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add_eq (satGuessVerifyNTM M) T 1 choices (satRewindInputWrap M c)
+    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satRewindInputWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
           (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satRewindInputWrap M c) =
@@ -1315,7 +1315,7 @@ theorem satGuessVerify_rewindInput_exits (M : TM k) (B : ℕ)
   · simpa [R, rewindNTM, rewindChoices, cT, choicesExit, c0] using hexit
   · have hhead : cT.input.head = 1 := by
       simpa [R, rewindNTM, rewindChoicesR, rewindChoices, cT, c0] using hpost
-    have hcells := NTM.trace_input_cells rewindNTM t rewindChoices c0
+    have hcells := NTM.input_cells_trace rewindNTM t rewindChoices c0
     have hnostart : ∀ j, j ≥ 1 → cT.input.cells j ≠ Γ.start := by
       intro j hj
       have hcell : cT.input.cells j = inp.cells j := by
@@ -1409,7 +1409,7 @@ theorem satGuessVerify_rewindInput_exits_with_frames (M : TM k) (B : ℕ)
     simpa [R, rewindNTM, rewindChoicesR, rewindChoices, cT, c0, P] using hpost
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simpa [R, rewindNTM, rewindChoices, cT, choicesExit, c0] using hexit
-  · have hcells := NTM.trace_input_cells rewindNTM t rewindChoices c0
+  · have hcells := NTM.input_cells_trace rewindNTM t rewindChoices c0
     have hnostart : ∀ j, j ≥ 1 → cT.input.cells j ≠ Γ.start := by
       intro j hj
       have hcell : cT.input.cells j = inp.cells j := by
@@ -1418,7 +1418,7 @@ theorem satGuessVerify_rewindInput_exits_with_frames (M : TM k) (B : ℕ)
       exact hpre.2.1 j hj
     rw [satBoundaryInput_stable cT.input (by rw [hrich_post.1]) hnostart]
     exact hrich_post.1
-  · have hcells := NTM.trace_input_cells rewindNTM t rewindChoices c0
+  · have hcells := NTM.input_cells_trace rewindNTM t rewindChoices c0
     have hnostart : ∀ j, j ≥ 1 → cT.input.cells j ≠ Γ.start := by
       intro j hj
       have hcell : cT.input.cells j = inp.cells j := by
@@ -1528,7 +1528,7 @@ theorem satGuessVerify_guess_trace_prefix (M : TM k) :
       have hstate : c.state ≠ NTM.GuessBoundedPhase.done := by
         have h0 := hnot 0 (by omega)
         simpa [guessNTM, NTM.trace] using h0
-      rw [NTM.trace_succ_eq_trace_one (satGuessVerifyNTM M) T choices (satGuessWrap M c)]
+      rw [NTM.trace_succ (satGuessVerifyNTM M) T choices (satGuessWrap M c)]
       rw [satGuessVerify_guess_trace_one M (choices ⟨0, by omega⟩) c hstate]
       have htail : ∀ t (ht : t < T),
           (guessNTM.trace t
@@ -1538,7 +1538,7 @@ theorem satGuessVerify_guess_trace_prefix (M : TM k) :
         have hfull := hnot (t + 1) (by omega)
         let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
         have hsplit :=
-          NTM.trace_succ_eq_trace_one guessNTM t choicesPrefix c
+          NTM.trace_succ guessNTM t choicesPrefix c
         change (guessNTM.trace t
           (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1).state ≠
             NTM.GuessBoundedPhase.done
@@ -1546,7 +1546,7 @@ theorem satGuessVerify_guess_trace_prefix (M : TM k) :
         exact hfull
       rw [ih choicesTail c1 htail]
       have hsplitFull :=
-        NTM.trace_succ_eq_trace_one guessNTM T choices c
+        NTM.trace_succ guessNTM T choices c
       rw [hsplitFull]
 
 /-- If the bounded-guess subroutine first reaches `done` at time `T`, then
@@ -1583,7 +1583,7 @@ theorem satGuessVerify_guess_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_guess_trace_prefix M T guessChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add_eq (satGuessVerifyNTM M) T 1 choices (satGuessWrap M c)
+    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satGuessWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
           (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satGuessWrap M c) =
@@ -2081,7 +2081,7 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
       unfold choices
       rw [dif_neg (by simp [Fin.natAdd]; omega)]
       exact congrArg guessChoices (Fin.ext (by simp [Fin.natAdd]))
-    rw [NTM.trace_add_eq (satGuessVerifyNTM M) (tr + 1) (tg + 1)
+    rw [NTM.trace_add (satGuessVerifyNTM M) (tr + 1) (tg + 1)
       choices (satRewindInputWrap M cRewind0)]
     rw [hprefixChoices]
     rw [hrewind'.1]
@@ -2259,7 +2259,7 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       unfold choices
       rw [dif_neg (by simp [Fin.natAdd]; omega)]
       exact congrArg tailChoices (Fin.ext (by simp [Fin.natAdd]))
-    rw [NTM.trace_add_eq (satGuessVerifyNTM M) (tc + 1) Ttail
+    rw [NTM.trace_add (satGuessVerifyNTM M) (tc + 1) Ttail
       choices ((satGuessVerifyNTM M).initCfg x)]
     rw [hprefixChoices]
     rw [hcounter'.1]
@@ -2504,7 +2504,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       change choices ⟨tc + 1 + ((tr + 1) + i.val), by omega⟩ =
         choices ⟨tc + 1 + (tr + 1) + i.val, by omega⟩
       exact congrArg choices (Fin.ext ((Nat.add_assoc (tc + 1) (tr + 1) i.val).symm))
-    rw [NTM.trace_add_eq (satGuessVerifyNTM M) (tr + 1) (tg + 1)
+    rw [NTM.trace_add (satGuessVerifyNTM M) (tr + 1) (tg + 1)
       (fun i : Fin ((tr + 1) + (tg + 1)) =>
         setupChoices (Fin.natAdd (tc + 1) i)) (satRewindInputWrap M cRewind0)]
     rw [hrewindChoices, hrewind'.1, hguessChoices]
@@ -2520,7 +2520,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right ∧
       (∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
         (_root_.Complexity.Tape.init []).move Dir3.right)
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) (tc + 1) ((tr + 1) + (tg + 1))
+  rw [NTM.trace_add (satGuessVerifyNTM M) (tc + 1) ((tr + 1) + (tg + 1))
     setupChoices ((satGuessVerifyNTM M).initCfg x)]
   rw [hcounterChoices, hcounter'.1]
   rw [htailTrace]
@@ -2577,7 +2577,7 @@ theorem satGuessVerify_pair_trace_prefix (M : TM k) :
       have hstate : c.state ≠ TM.PairBuildPhase.done := by
         have h0 := hnot 0 (by omega)
         simpa [pairNTM, NTM.trace] using h0
-      rw [NTM.trace_succ_eq_trace_one (satGuessVerifyNTM M) T choices (satPairWrap M c)]
+      rw [NTM.trace_succ (satGuessVerifyNTM M) T choices (satPairWrap M c)]
       rw [satGuessVerify_pair_trace_one M (choices ⟨0, by omega⟩) c hstate]
       have htail : ∀ t (ht : t < T),
           (pairNTM.trace t
@@ -2587,7 +2587,7 @@ theorem satGuessVerify_pair_trace_prefix (M : TM k) :
         have hfull := hnot (t + 1) (by omega)
         let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
         have hsplit :=
-          NTM.trace_succ_eq_trace_one pairNTM t choicesPrefix c
+          NTM.trace_succ pairNTM t choicesPrefix c
         change (pairNTM.trace t
           (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1).state ≠
             TM.PairBuildPhase.done
@@ -2595,7 +2595,7 @@ theorem satGuessVerify_pair_trace_prefix (M : TM k) :
         exact hfull
       rw [ih choicesTail c1 htail]
       have hsplitFull :=
-        NTM.trace_succ_eq_trace_one pairNTM T choices c
+        NTM.trace_succ pairNTM T choices c
       rw [hsplitFull]
 
 /-- If the pair-builder subroutine first reaches `done` at time `T`, then the
@@ -2632,7 +2632,7 @@ theorem satGuessVerify_pair_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_pair_trace_prefix M T pairChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add_eq (satGuessVerifyNTM M) T 1 choices (satPairWrap M c)
+    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satPairWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
           (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satPairWrap M c) =
@@ -2850,7 +2850,7 @@ theorem satGuessVerify_verify_trace_prefix (M : TM k) :
       have hstate : c.state ≠ M.qhalt := by
         have h0 := hnot 0 (by omega)
         simpa [verifyNTM, NTM.trace] using h0
-      rw [NTM.trace_succ_eq_trace_one (satGuessVerifyNTM M) T choices (satVerifyWrap M c)]
+      rw [NTM.trace_succ (satGuessVerifyNTM M) T choices (satVerifyWrap M c)]
       rw [satGuessVerify_verify_trace_one M (choices ⟨0, by omega⟩) c hstate]
       have htail : ∀ t (ht : t < T),
           (verifyNTM.trace t
@@ -2860,7 +2860,7 @@ theorem satGuessVerify_verify_trace_prefix (M : TM k) :
         have hfull := hnot (t + 1) (by omega)
         let choicesPrefix : Fin (t + 1) → Bool := fun i => choices ⟨i.val, by omega⟩
         have hsplit :=
-          NTM.trace_succ_eq_trace_one verifyNTM t choicesPrefix c
+          NTM.trace_succ verifyNTM t choicesPrefix c
         change (verifyNTM.trace t
           (fun i => choicesTail ⟨i.val, Nat.lt_trans i.isLt ht⟩) c1).state ≠
             M.qhalt
@@ -2868,7 +2868,7 @@ theorem satGuessVerify_verify_trace_prefix (M : TM k) :
         exact hfull
       rw [ih choicesTail c1 htail]
       have hsplitFull :=
-        NTM.trace_succ_eq_trace_one verifyNTM T choices c
+        NTM.trace_succ verifyNTM T choices c
       rw [hsplitFull]
 
 /-- If the verifier phase has halted by time `T`, then the composed SAT
@@ -3020,7 +3020,7 @@ theorem satGuessVerify_halts_after_verify_prefix (M : TM k)
         (satVerifyInnerCfg M c))) :
     (satGuessVerifyNTM M).halted
       ((satGuessVerifyNTM M).trace (T + V) choices c0) := by
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) T V choices c0]
+  rw [NTM.trace_add (satGuessVerifyNTM M) T V choices c0]
   rw [hprefix]
   exact satGuessVerify_verify_halts_of_inner_trace_halts_clean M V
     (fun i => choices (Fin.natAdd T i)) c hclean hinner
@@ -3043,7 +3043,7 @@ theorem satGuessVerify_accepts_after_verify_prefix (M : TM k)
         (satVerifyInnerCfg M c)).output.cells 1) = Γ.one) :
     let cFinal := (satGuessVerifyNTM M).trace (T + V) choices c0
     (satGuessVerifyNTM M).halted cFinal ∧ cFinal.output.cells 1 = Γ.one := by
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) T V choices c0]
+  rw [NTM.trace_add (satGuessVerifyNTM M) T V choices c0]
   rw [hprefix]
   exact satGuessVerify_verify_accepts_of_inner_trace_accepts_clean M V
     (fun i => choices (Fin.natAdd T i)) c hclean hinnerHalt hinnerOut
@@ -3068,7 +3068,7 @@ theorem satGuessVerify_outputs_after_verify_prefix (M : TM k)
         (satVerifyInnerCfg M c)).output.cells 1) = g) :
     let cFinal := (satGuessVerifyNTM M).trace (T + V) choices c0
     (satGuessVerifyNTM M).halted cFinal ∧ cFinal.output.cells 1 = g := by
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) T V choices c0]
+  rw [NTM.trace_add (satGuessVerifyNTM M) T V choices c0]
   rw [hprefix]
   exact satGuessVerify_verify_outputs_of_inner_trace_output_clean M V
     (fun i => choices (Fin.natAdd T i)) c hclean g hinnerHalt hinnerOut
@@ -3086,7 +3086,7 @@ theorem satGuessVerify_halts_after_prefix (M : TM k)
         ((satGuessVerifyNTM M).trace U (fun i => choices (Fin.natAdd T i)) c1)) :
     (satGuessVerifyNTM M).halted
       ((satGuessVerifyNTM M).trace (T + U) choices c0) := by
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) T U choices c0]
+  rw [NTM.trace_add (satGuessVerifyNTM M) T U choices c0]
   rw [hprefix]
   exact hsuffix
 
@@ -3105,7 +3105,7 @@ theorem satGuessVerify_accepts_after_prefix (M : TM k)
       (satGuessVerifyNTM M).halted cFinal ∧ cFinal.output.cells 1 = Γ.one) :
     let cFinal := (satGuessVerifyNTM M).trace (T + U) choices c0
     (satGuessVerifyNTM M).halted cFinal ∧ cFinal.output.cells 1 = Γ.one := by
-  rw [NTM.trace_add_eq (satGuessVerifyNTM M) T U choices c0]
+  rw [NTM.trace_add (satGuessVerifyNTM M) T U choices c0]
   rw [hprefix]
   exact hsuffix
 
@@ -4330,7 +4330,7 @@ theorem satGuessVerify_trace_decides_for_some_setup_witness_of_decidesInTime
       (satGuessVerifyNTM M).trace (Tsetup + U) shortChoices ((satGuessVerifyNTM M).initCfg x) =
         (satGuessVerifyNTM M).trace U (fun i => shortChoices (Fin.natAdd Tsetup i))
           (satPairWrap M cPair0) := by
-    rw [NTM.trace_add_eq (satGuessVerifyNTM M) Tsetup U shortChoices
+    rw [NTM.trace_add (satGuessVerifyNTM M) Tsetup U shortChoices
       ((satGuessVerifyNTM M).initCfg x)]
     rw [hprefixChoices, hsetupTrace0]
   have hshortYes :

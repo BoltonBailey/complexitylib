@@ -260,7 +260,7 @@ private theorem seekFrontier_walk_loop (V : ℕ) :
     · intro i hi
       exact Function.update_of_ne hi _ _
     · show (Function.update c.work clkT ((c.work clkT).move .left) clkT).cells = _
-      rw [Function.update_self, tape_move_cells]
+      rw [Function.update_self, Tape.move_cells]
       exact hcells
     · show (Function.update c.work clkT ((c.work clkT).move .left) clkT).head = V
       rw [Function.update_self]
@@ -279,7 +279,7 @@ private theorem seekFrontier_walk_loop (V : ℕ) :
            output := c.output }
         rfl
         (by show (Function.update c.work clkT ((c.work clkT).move .right) clkT).cells = _
-            rw [Function.update_self, tape_move_cells]
+            rw [Function.update_self, Tape.move_cells]
             exact hcells)
         (by show (Function.update c.work clkT ((c.work clkT).move .right) clkT).head = _
             rw [Function.update_self]
@@ -346,7 +346,7 @@ theorem seekFrontierTM_hoareTime (V : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → 
           output := out }
         rfl
         (by show (Function.update work clkT ((work clkT).move .right) clkT).cells = _
-            rw [Function.update_self, tape_move_cells, hclk, regT_cells])
+            rw [Function.update_self, Tape.move_cells, hclk, regT_cells])
         (by show (Function.update work clkT ((work clkT).move .right) clkT).head = _
             rw [Function.update_self]
             show (work clkT).head + 1 = V + 1 - (V - 1)

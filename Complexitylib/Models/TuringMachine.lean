@@ -102,6 +102,14 @@ theorem Γ.ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
 theorem Γ.ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
   cases b <;> decide
 
+/-- Convert a boolean to a writable symbol. -/
+def Γw.ofBool : Bool → Γw
+  | false => .zero
+  | true => .one
+
+@[simp] theorem Γw.ofBool_toΓ (b : Bool) : (Γw.ofBool b).toΓ = Γ.ofBool b := by
+  cases b <;> rfl
+
 /-- Three-way tape head direction: left, right, or stay. -/
 inductive Dir3 where
   | left | right | stay
@@ -150,6 +158,10 @@ def move (t : Tape) (d : Dir3) : Tape :=
 theorem move_cells (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
   cases d <;> rfl
 
+/-- Moving changes the head position by at most one. -/
+theorem head_move_le (t : Tape) (d : Dir3) : (t.move d).head ≤ t.head + 1 := by
+  cases d <;> (simp only [move]; omega)
+
 /-- The tape contains output `y : List Bool` starting at cell 1:
     cells 1 through |y| match `y`, and cell |y| + 1 is blank.
     Output is the binary string written on the output tape after `▷`. -/
@@ -172,6 +184,12 @@ instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput 
 /-- Write a symbol and move in one step. -/
 abbrev writeAndMove (t : Tape) (s : Γ) (d : Dir3) : Tape :=
   (t.write s).move d
+
+/-- One write-and-move step advances the head by at most one. -/
+theorem head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
+    (t.writeAndMove s d).head ≤ t.head + 1 := by
+  have h := head_move_le (t.write s) d
+  rwa [write_head] at h
 
 end Tape
 

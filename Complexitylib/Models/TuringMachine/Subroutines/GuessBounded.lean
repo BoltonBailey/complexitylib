@@ -19,18 +19,6 @@ guess phase a structural all-paths halting bound, which is essential for
 
 namespace Complexity
 
-namespace Γw
-
-/-- Writable encoding of a Boolean bit. -/
-@[simp] def ofBool : Bool → Γw
-  | false => .zero
-  | true => .one
-
-@[simp] theorem ofBool_toΓ (b : Bool) : (ofBool b).toΓ = Γ.ofBool b := by
-  cases b <;> rfl
-
-end Γw
-
 namespace Tape
 
 /-- A witness tape while it is being guessed: cells `1..|bits|` contain the
@@ -153,7 +141,7 @@ theorem hasBinaryPrefix_write_bit_cell0 {t : Tape} {bits : List Bool} (bit : Boo
     (h : t.hasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
     (t.writeAndMove (Γ.ofBool bit) Dir3.right).cells 0 = Γ.start := by
   unfold Tape.writeAndMove
-  rw [TM.tape_move_cells]
+  rw [Tape.move_cells]
   unfold Tape.write
   have hhead_ne : ¬t.head = 0 := by rw [h.1]; omega
   simp only [hhead_ne, ↓reduceIte]
@@ -194,89 +182,6 @@ end Tape
 namespace NTM
 
 variable {n : ℕ}
-
-/-- Split a two-step trace into two one-step traces. -/
-theorem trace_two_eq (tm : NTM n) (choices : Fin 2 → Bool) (c : Cfg n tm.Q) :
-    tm.trace 2 choices c =
-      tm.trace 1 (fun _ => choices ⟨1, by omega⟩)
-        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
-  by_cases hhalt : c.state = tm.qhalt
-  · simp [NTM.trace, hhalt]
-  · simp [NTM.trace, hhalt]
-
-/-- Split the first step off a nonzero trace. If the machine is already
-    halted, both sides reduce to the starting configuration. -/
-theorem trace_succ_eq_trace_one (tm : NTM n) (T : ℕ)
-    (choices : Fin (T + 1) → Bool) (c : Cfg n tm.Q) :
-    tm.trace (T + 1) choices c =
-      tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩)
-        (tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c) := by
-  by_cases hhalt : c.state = tm.qhalt
-  · simp [NTM.trace, hhalt]
-    exact (tm.trace_halted T (fun i => choices ⟨i.val + 1, by omega⟩) hhalt).symm
-  · simp [NTM.trace, hhalt]
-
-/-- Split the first two steps off a trace. -/
-theorem trace_add_two_eq (tm : NTM n) (T : ℕ)
-    (choices : Fin (T + 2) → Bool) (c : Cfg n tm.Q) :
-    tm.trace (T + 2) choices c =
-      tm.trace T (fun i => choices ⟨i.val + 2, by omega⟩)
-        (tm.trace 2 (fun i => choices ⟨i.val, by omega⟩) c) := by
-  change tm.trace ((T + 1) + 1) choices c = _
-  rw [trace_succ_eq_trace_one tm (T + 1) choices c]
-  rw [trace_succ_eq_trace_one tm T
-    (fun i : Fin (T + 1) => choices ⟨i.val + 1, by omega⟩)
-    (tm.trace 1 (fun x => choices ⟨0, by omega⟩) c)]
-  rw [← trace_two_eq tm (fun i : Fin 2 => choices ⟨i.val, by omega⟩) c]
-
-/-- Reindex a trace along an equality of time bounds. -/
-theorem trace_cast (tm : NTM n) {T T' : ℕ} (h : T = T')
-    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
-    tm.trace T choices c =
-      tm.trace T' (fun i => choices (Fin.cast h.symm i)) c := by
-  cases h
-  rfl
-
-/-- Split the first `T` steps off a trace.
-
-This version uses `Fin.castLE`/`Fin.natAdd` for the prefix and suffix choice
-sequences, which keeps later proofs away from ad-hoc dependent index casts. -/
-theorem trace_add_eq (tm : NTM n) (T U : ℕ)
-    (choices : Fin (T + U) → Bool) (c : Cfg n tm.Q) :
-    tm.trace (T + U) choices c =
-      tm.trace U (fun i => choices (Fin.natAdd T i))
-        (tm.trace T (fun i => choices (Fin.castLE (Nat.le_add_right T U) i)) c) := by
-  induction T generalizing U c with
-  | zero =>
-    have h := trace_cast tm (Nat.zero_add U) choices c
-    rw [h]
-    congr 1
-    funext i
-    apply congrArg choices
-    exact Fin.ext (by simp [Fin.natAdd])
-  | succ T ih =>
-    let choicesCast : Fin ((T + U) + 1) → Bool :=
-      fun i => choices (Fin.cast (by omega : (T + U) + 1 = (T + 1) + U) i)
-    have hcast := trace_cast tm (by omega : (T + 1) + U = (T + U) + 1) choices c
-    rw [hcast]
-    rw [trace_succ_eq_trace_one tm (T + U) choicesCast c]
-    rw [ih U (fun i : Fin (T + U) => choicesCast ⟨i.val + 1, by omega⟩)
-      (tm.trace 1 (fun _ => choicesCast ⟨0, by omega⟩) c)]
-    let prefixFinal : Fin (T + 1) → Bool :=
-      fun i => choices (Fin.castLE (Nat.le_add_right (T + 1) U) i)
-    have hprefix :
-        tm.trace (T + 1) prefixFinal c =
-          tm.trace T
-            (fun i : Fin T =>
-              choicesCast ⟨(Fin.castLE (Nat.le_add_right T U) i).val + 1, by omega⟩)
-            (tm.trace 1 (fun _ => choicesCast ⟨0, by omega⟩) c) := by
-      simpa [choicesCast, prefixFinal, Fin.castLE, Fin.cast] using
-        trace_succ_eq_trace_one tm T prefixFinal c
-    rw [← hprefix]
-    congr 1
-    funext i
-    apply congrArg choices
-    exact Fin.ext (by simp [Fin.val_natAdd]; omega)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Bounded witness guessing from a unary counter
@@ -351,11 +256,6 @@ private def rewindWitnessDirs (witnessIdx : Fin n)
     if i = witnessIdx then TM.moveLeftDir (wHeads i)
     else TM.idleDir (wHeads i)
 
-private theorem moveLeftDir_right_of_start {g : Γ} (h : g = Γ.start) :
-    TM.moveLeftDir g = Dir3.right := by
-  subst h
-  rfl
-
 private theorem rewindWitnessDirs_right_of_start (witnessIdx : Fin n)
     (wHeads : Fin n → Γ) :
     ∀ i, wHeads i = Γ.start →
@@ -363,7 +263,7 @@ private theorem rewindWitnessDirs_right_of_start (witnessIdx : Fin n)
   intro i hi
   by_cases hwi : i = witnessIdx
   · subst hwi
-    simp [rewindWitnessDirs, moveLeftDir_right_of_start hi]
+    simp [rewindWitnessDirs, TM.moveLeftDir_right_of_start hi]
   · simp [rewindWitnessDirs, hwi, TM.idleDir_right_of_start hi]
 
 private theorem rightOfStart_idle (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
@@ -487,7 +387,7 @@ theorem guessBoundedNTM_trace_preserves_input
   induction T generalizing c with
   | zero => rfl
   | succ T ih =>
-    rw [trace_succ_eq_trace_one (guessBoundedNTM witnessIdx counterIdx) T choices c]
+    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
     have hfirst := guessBoundedNTM_trace_one_preserves_input witnessIdx counterIdx
       (choices ⟨0, by omega⟩) c hread
     have hread' :
@@ -528,7 +428,7 @@ theorem guessBoundedNTM_trace_preserves_output
   induction T generalizing c with
   | zero => rfl
   | succ T ih =>
-    rw [trace_succ_eq_trace_one (guessBoundedNTM witnessIdx counterIdx) T choices c]
+    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
     have hfirst := guessBoundedNTM_trace_one_preserves_output witnessIdx counterIdx
       (choices ⟨0, by omega⟩) c hread
     have hread' :
@@ -580,7 +480,7 @@ theorem guessBoundedNTM_trace_preserves_other_work
   induction T generalizing c with
   | zero => rfl
   | succ T ih =>
-    rw [trace_succ_eq_trace_one (guessBoundedNTM witnessIdx counterIdx) T choices c]
+    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
     have hfirst := guessBoundedNTM_trace_one_preserves_other_work witnessIdx counterIdx
       otherIdx (choices ⟨0, by omega⟩) c hwitness hcounter hread
     have hread' :
@@ -910,7 +810,7 @@ theorem guessBoundedNTM_continue_write_consumes_counter
     exact guessBoundedNTM_choose_continue_preserves_counter
       witnessIdx counterIdx inp work out hcounter hlt
   change ((tm.trace 2 choices c0).work counterIdx).hasCounterRemainder (used + 1) total
-  rw [trace_two_eq tm choices c0]
+  rw [trace_two tm choices c0]
   change ((tm.trace 1 (fun _ => bit) c1).work counterIdx).hasCounterRemainder (used + 1) total
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
@@ -950,7 +850,7 @@ theorem guessBoundedNTM_continue_write_state
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter1 hlt]
     simp
   change (tm.trace 2 choices c0).state = GuessBoundedPhase.choose
-  rw [trace_two_eq tm choices c0]
+  rw [trace_two tm choices c0]
   change (tm.trace 1 (fun _ => bit) c1).state = GuessBoundedPhase.choose
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
@@ -996,7 +896,7 @@ theorem guessBoundedNTM_continue_write_extends_witness
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter1 hlt]
     simp
   change ((tm.trace 2 choices c0).work witnessIdx).hasBinaryPrefix (bits ++ [bit])
-  rw [trace_two_eq tm choices c0]
+  rw [trace_two tm choices c0]
   change ((tm.trace 1 (fun _ => bit) c1).work witnessIdx).hasBinaryPrefix (bits ++ [bit])
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
@@ -1048,7 +948,7 @@ theorem guessBoundedNTM_continue_write_preserves_witness_cell0
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter1 hlt]
     simp
   change ((tm.trace 2 choices c0).work witnessIdx).cells 0 = Γ.start
-  rw [trace_two_eq tm choices c0]
+  rw [trace_two tm choices c0]
   change ((tm.trace 1 (fun _ => bit) c1).work witnessIdx).cells 0 = Γ.start
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
@@ -1123,7 +1023,7 @@ private theorem guessBoundedNTM_rewind_step_left
     · simp [preserveWork, rewindWitnessDirs, TM.moveLeftDir, hread,
         Tape.writeAndMove, Tape.move, Tape.write, h0]
   · simp [preserveWork, rewindWitnessDirs, TM.moveLeftDir, hread,
-      Tape.writeAndMove, TM.tape_move_cells]
+      Tape.writeAndMove, Tape.move_cells]
     change ((c.work witnessIdx).write
         ((TM.readBackWrite (c.work witnessIdx).read).toΓ)).cells =
       (c.work witnessIdx).cells
@@ -1151,7 +1051,7 @@ private theorem guessBoundedNTM_rewind_step_base
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp [preserveWork, rewindWitnessDirs, TM.moveLeftDir, hread,
       Tape.writeAndMove, Tape.move, Tape.write, hhead]
-  · simp [preserveWork, rewindWitnessDirs, Tape.writeAndMove, TM.tape_move_cells,
+  · simp [preserveWork, rewindWitnessDirs, Tape.writeAndMove, Tape.move_cells,
       Tape.write, hhead]
 
 private theorem guessBoundedNTM_rewind_loop (witnessIdx counterIdx : Fin n) :
@@ -1199,7 +1099,7 @@ private theorem guessBoundedNTM_rewind_loop (witnessIdx counterIdx : Fin n) :
       exact hnostart j hj
     have htail := ih c1 hstate1 hcell01 hnostart1 hhead1'
       (fun i => choices ⟨i.val + 1, by omega⟩)
-    rw [trace_succ_eq_trace_one (guessBoundedNTM witnessIdx counterIdx) (p + 1) choices c]
+    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) (p + 1) choices c]
     rw [hstep]
     exact ⟨htail.1, htail.2.1, by rw [htail.2.2, hcells1]⟩
 
@@ -1242,7 +1142,7 @@ theorem guessBoundedNTM_choose_counter_blank_completes_witness
   let c0 : Cfg n tm.Q :=
     { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
   let c1 := tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c0
-  have hsplit := trace_succ_eq_trace_one tm (bits.length + 2) choices c0
+  have hsplit := trace_succ tm (bits.length + 2) choices c0
   have hstate1 : c1.state = GuessBoundedPhase.rewind := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_counter_blank_state witnessIdx counterIdx
@@ -1284,7 +1184,7 @@ theorem guessBoundedNTM_choose_stop_completes_witness
   let c0 : Cfg n tm.Q :=
     { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
   let c1 := tm.trace 1 (fun _ => choices ⟨0, by omega⟩) c0
-  have hsplit := trace_succ_eq_trace_one tm (bits.length + 2) choices c0
+  have hsplit := trace_succ tm (bits.length + 2) choices c0
   have hchoices_false :
       (fun _ : Fin 1 => choices 0) = (fun _ : Fin 1 => false) := by
     funext i
@@ -1447,7 +1347,7 @@ private theorem guessBoundedNTM_choose_reaches_bounded_witness_aux
         let choicesFull : Fin (ttail + 2) → Bool := fun i =>
           choices ⟨i.val, Nat.lt_of_lt_of_le i.isLt ht⟩
         have hsplit :=
-          trace_add_two_eq (guessBoundedNTM witnessIdx counterIdx) ttail choicesFull
+          trace_add_two (guessBoundedNTM witnessIdx counterIdx) ttail choicesFull
             { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
         have hfirst :
             (fun i : Fin 2 => choicesFull ⟨i.val, by omega⟩) = choicesTwo := by
@@ -1740,7 +1640,7 @@ private theorem guessBoundedNTM_choose_generates_suffix_aux
           else
             choicesTail ⟨i.val - 2, by omega⟩
         have hsplit :=
-          trace_add_two_eq (guessBoundedNTM witnessIdx counterIdx) ttail choicesFull
+          trace_add_two (guessBoundedNTM witnessIdx counterIdx) ttail choicesFull
             { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
         have hfirst :
             (fun i : Fin 2 => choicesFull ⟨i.val, by omega⟩) = choicesTwo := by

@@ -339,12 +339,12 @@ private theorem holdsExact_push {t : Tape} {l : List Γw} (h : t.HoldsExact l)
     rw [Tape.write, if_neg (by omega)]
   refine ⟨⟨?_, fun i => ?_⟩, ?_⟩
   · show (Tape.move _ .right).cells 0 = Γ.start
-    rw [tape_move_cells, hw]
+    rw [Tape.move_cells, hw]
     dsimp only
     rw [Function.update_of_ne (by omega)]
     exact h.1
   · show (Tape.move _ .right).cells (i + 1) = _
-    rw [tape_move_cells, hw]
+    rw [Tape.move_cells, hw]
     dsimp only
     by_cases hi : i = l.length
     · subst hi
@@ -357,7 +357,7 @@ private theorem holdsExact_push {t : Tape} {l : List Γw} (h : t.HoldsExact l)
       · rw [dif_pos hlt, dif_pos (by simp; omega)]
         rw [List.getElem_append_left hlt]
       · rw [dif_neg hlt, dif_neg (by simp; omega)]
-  · simp [Tape.move, tape_write_head, hh]
+  · simp [Tape.move, Tape.write_head, hh]
 
 private theorem bitSym_toΓ (b : Bool) : (bitSym b).toΓ = Γ.ofBool b := by
   cases b <;> rfl
@@ -436,13 +436,13 @@ private theorem step_start {c : Cfg 6 initTM.Q}
     rw [Tape.read, hwh i]; exact hwc i
   have hor : c.output.read = Γ.start := by rw [Tape.read, hoh]; exact hoc
   simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte]
-  refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move, idleDir, hir, hih],
+  refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move, idleDir, hir, hih],
     ?_, ?_, ?_⟩
   · intro i
     refine ⟨tape_readBackWrite_preserves _ _ (Or.inl (hwh i)), ?_⟩
-    simp [Tape.writeAndMove, Tape.move, idleDir, hwr i, tape_write_head, hwh i]
+    simp [Tape.writeAndMove, Tape.move, idleDir, hwr i, Tape.write_head, hwh i]
   · exact tape_readBackWrite_preserves _ _ (Or.inl hoh)
-  · simp [Tape.writeAndMove, Tape.move, idleDir, hor, tape_write_head, hoh]
+  · simp [Tape.writeAndMove, Tape.move, idleDir, hor, Tape.write_head, hoh]
 
 /-- The started entry step: in state `.start` with every head already parked
     at a cell ≥ 1 not reading `▷`, one step moves to `readFst none` leaving
@@ -478,7 +478,7 @@ private theorem step_readFst {c : Cfg 6 initTM.Q} {b : Bool} {p : Option Bool}
   all_goals
     simp only [Γ.ofBool] at hread
     simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte, hread]
-    refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move], ?_,
+    refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move], ?_,
       tape_idle_preserve _ ho hoh⟩
     funext i
     exact tape_idle_preserve _ (hw i).1 (hw i).2
@@ -499,7 +499,7 @@ private theorem step_readSnd_nopend {c : Cfg 6 initTM.Q} {b : Bool}
   all_goals
     simp only [Γ.ofBool] at hread
     simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte, hread]
-    refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move], ?_,
+    refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move], ?_,
       tape_idle_preserve _ ho hoh⟩
     funext i
     exact tape_idle_preserve _ (hw i).1 (hw i).2
@@ -522,7 +522,7 @@ private theorem step_readSnd_emit {c : Cfg 6 initTM.Q} {b b₁ : Bool}
   all_goals
     simp only [Γ.ofBool] at hread
     simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte, hread]
-    refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move], ?_, ?_,
+    refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move], ?_, ?_,
       tape_idle_preserve _ ho hoh⟩
     · intro i hi
       simp only [hi, ↓reduceIte]
@@ -545,14 +545,14 @@ private theorem step_readSnd_sep {c : Cfg 6 initTM.Q} {p : Option Bool}
       (c'.work 0).head = (c.work 0).head + 1 ∧
       c'.output = c.output := by
   simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte, hread]
-  refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move], ?_, ?_, ?_,
+  refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move], ?_, ?_, ?_,
     tape_idle_preserve _ ho hoh⟩
   · intro i hi
     simp only [hi, ↓reduceIte]
     exact tape_idle_preserve _ (hw i).1 (hw i).2
   · simp only [↓reduceIte]
     exact tape_readBackWrite_preserves _ _ (Or.inr (hw 0).1)
-  · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head]
+  · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head]
 
 /-- Phase 2: copy one bit of `x` onto work tape 0. -/
 private theorem step_copyX_bit {c : Cfg 6 initTM.Q} {b : Bool}
@@ -571,7 +571,7 @@ private theorem step_copyX_bit {c : Cfg 6 initTM.Q} {b : Bool}
   all_goals
     simp only [Γ.ofBool] at hread
     simp only [TM.step, hst, initTM, reduceCtorEq, ↓reduceIte, hread]
-    refine ⟨_, rfl, rfl, tape_move_cells _ _, by simp [Tape.move], ?_, ?_,
+    refine ⟨_, rfl, rfl, Tape.move_cells _ _, by simp [Tape.move], ?_, ?_,
       tape_idle_preserve _ ho hoh⟩
     · intro i hi
       simp only [hi, ↓reduceIte]
@@ -624,7 +624,7 @@ private theorem step_copyField_bit {c : Cfg 6 initTM.Q} {s : Γw}
     · simp only [show (4 : Fin 6) ≠ 3 by decide, ↓reduceIte]
       exact tape_readBackWrite_preserves _ _ (Or.inr (hw 4).1)
     · simp only [show (4 : Fin 6) ≠ 3 by decide, ↓reduceIte, Tape.writeAndMove,
-        Tape.move, tape_write_head]
+        Tape.move, Tape.write_head]
 
 /-- Phase 3: the desc tape reads `□` — the field is over (the `□` is not
     copied); start the second desc rewind. -/
@@ -683,7 +683,7 @@ private theorem rewind_loop {idx : Fin 6} {qloop qnext : InitQ}
       rw [if_neg hne']
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, by simp [Tape.move, idleDir, hi],
         tape_idle_preserve _ ho hoh⟩
-      · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head, hh]
+      · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head, hh]
       · simp only [↓reduceIte]
         exact tape_readBackWrite_preserves _ _ (Or.inl hh)
       · intro i hi'
@@ -704,7 +704,7 @@ private theorem rewind_loop {idx : Fin 6} {qloop qnext : InitQ}
       rw [if_neg hne']
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, by simp [Tape.move, idleDir, hi],
         tape_idle_preserve _ ho hoh⟩
-      · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, tape_write_head, hh]
+      · simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head, hh]
         omega
       · simp only [↓reduceIte]
         exact tape_readBackWrite_preserves _ _ (Or.inr hread)
@@ -1585,7 +1585,7 @@ theorem initTM_hoareTime_started (α x : List Bool) :
         rw [hwork i]
         refine ⟨?_, le_rfl⟩
         show ((Tape.init []).move Dir3.right).cells 1 ≠ Γ.start
-        rw [tape_move_cells, hblank1]
+        rw [Tape.move_cells, hblank1]
         simp)
       (by show out.read ≠ Γ.start
           rw [Tape.read, hoh, hoc, hblank1]
@@ -1598,7 +1598,7 @@ theorem initTM_hoareTime_started (α x : List Bool) :
   obtain ⟨c', t, hle, hreach, hhalt, hpost⟩ :=
     initTM_hoareTime_core α x hst₁
       (by rw [hin₁']; exact hic) (by rw [hin₁']; exact hih)
-      (fun i => by rw [hw₁', hwork i, tape_move_cells])
+      (fun i => by rw [hw₁', hwork i, Tape.move_cells])
       (fun i => by rw [hw₁', hwork i]; rfl)
       (by rw [hout₁']; exact hoc) (by rw [hout₁']; exact hoh)
   exact ⟨c', t + 1, by omega, .step hs₁ hreach, hhalt, hpost⟩

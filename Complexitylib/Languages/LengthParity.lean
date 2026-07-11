@@ -133,7 +133,7 @@ private theorem evenLengthTM_step_scan
       simp only [Tape.read, ho_head]; exact ho_cell1_nb
     refine ⟨_, rfl, rfl, ?_, rfl, ?_, ?_⟩
     · simp [Tape.move]
-    · simp [Tape.writeAndMove, ho_move, Tape.move, tape_write_head, ho_head]
+    · simp [Tape.writeAndMove, ho_move, Tape.move, Tape.write_head, ho_head]
     · exact tape_readBackWrite_preserves c.output _ (Or.inr hne)
 
 /-- Halt step: from `.even` on blank input, writes `Γ.one` at output cell 1
