@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.BodyIteration
-
-namespace Complexity
 
 /-!
 # `TerminatedRegion` for encoded descriptions
@@ -18,6 +21,8 @@ with the (nonempty, blank-free) symbols of the first entry — never with a
 separator `□`. Extracted tables are nonempty (`descOfTM_entries_ne_nil`),
 since every machine has at least its start state.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

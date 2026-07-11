@@ -1,6 +1,9 @@
-import Complexitylib.Models.TuringMachine.CounterSubroutines
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.Subroutines.Counter
 
 /-!
 # Nondeterministic TM subroutines
@@ -13,6 +16,8 @@ whose length is at most the number of counter marks. The counter gives the
 guess phase a structural all-paths halting bound, which is essential for
 `NTIME`.
 -/
+
+namespace Complexity
 
 namespace Γw
 

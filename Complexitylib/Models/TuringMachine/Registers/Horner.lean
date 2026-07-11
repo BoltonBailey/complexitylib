@@ -1,8 +1,11 @@
-import Complexitylib.Models.TuringMachine.EmitSeq
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.Registers.EmitSeq
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Algebra.Polynomial.Eval.Degree
-
-namespace Complexity
 
 /-!
 # Horner layers: polynomial register evaluation
@@ -30,6 +33,8 @@ are deliberately loose.
 
 - the `_hoareTime` specification of each machine
 -/
+
+namespace Complexity
 
 namespace TM
 

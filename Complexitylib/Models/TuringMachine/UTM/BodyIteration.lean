@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.BodyLoop
 import Complexitylib.Models.TuringMachine.UTM.StepGlue
-
-namespace Complexity
 
 /-!
 # Body correctness: the per-iteration theorem
@@ -24,6 +27,8 @@ The side condition `TerminatedRegion` rules out the one machine/decoder
 divergence: an entry region starting with an empty segment followed by junk
 (see `matchLoop`).
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

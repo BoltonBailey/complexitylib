@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Models.TuringMachine.UTM.Terminated
-import Complexitylib.Models.TuringMachine.Det
-
-namespace Complexity
+import Complexitylib.Models.TuringMachine.Deterministic
 
 /-!
 # The universal machine: headline theorems
@@ -21,6 +24,8 @@ namespace Complexity
   from paired inputs within `utmTime α (singleTapeSimTime k T ·) ·` — the
   quadratic factor coming solely from the single-tape reduction.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

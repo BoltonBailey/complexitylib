@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Models.TuringMachine.UTM.ClockFrontier
-
-namespace Complexity
 
 /-!
 # Universal machine: the clocked (time-bounded) simulate/halt-test loop
@@ -47,6 +50,8 @@ verdict at output cell 1 is `Γ.one`; the two exits are distinguished by
 the state tape (`SimInv` at the final interpreted configuration makes a
 subsequent halt test conclusive via `simInv_verdict`).
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

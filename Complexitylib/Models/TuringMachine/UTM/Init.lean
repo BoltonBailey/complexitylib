@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.Desc
 import Complexitylib.Models.TuringMachine.UTM.VTape
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Classes.Pairing
-
-namespace Complexity
 
 /-!
 # UTM initialization machine
@@ -27,6 +30,8 @@ The specification is `initTM_hoareTime`. Malformed inputs (a `10` cell pair
 or a blank in the middle of a 2-cell group in the α-region) make the machine
 halt immediately; the specification only covers well-formed inputs.
 -/
+
+namespace Complexity
 
 namespace TM
 

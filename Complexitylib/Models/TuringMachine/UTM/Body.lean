@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.UTM.Desc
@@ -8,8 +13,6 @@ import Mathlib.Data.Fintype.Sigma
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Fintype.Option
 import Mathlib.Data.Fintype.Sum
-
-namespace Complexity
 
 /-!
 # The universal machine's loop body
@@ -29,6 +32,8 @@ written by the halt-test machine, not the body).
 This file defines the machine only; its `HoareTime` spec and the
 correspondence with `TMDesc.toTM.step` live in `BodyInternal.lean` (M3).
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Internal
-
-namespace Complexity
 
 /-!
 # Hoare-style specifications for Turing machines
@@ -26,6 +29,8 @@ reference to the internal state types of the components.
 The precondition must imply that the starting configuration has the machine's
 `qstart` state. The postcondition holds at halting.
 -/
+
+namespace Complexity
 
 namespace TM
 

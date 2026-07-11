@@ -1,6 +1,9 @@
-import Complexitylib.Models.TuringMachine.Encoding
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.UTM.Encoding
 
 /-!
 # Fixed-width binary roundtrips
@@ -12,6 +15,8 @@ fixed-width lists. The universal machine compares state fields symbol-wise
 while the abstract table lookup compares their decoded numbers; these
 lemmas make the two agree.
 -/
+
+namespace Complexity
 
 /-- Adding multiples of `2^w` does not change the low `w` bits. -/
 theorem Nat.toBits_add_pow_mul : ∀ (w val c : ℕ),

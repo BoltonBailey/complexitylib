@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Tactic.Ring
-import Complexitylib.Models.TuringMachine.Arith
-
-namespace Complexity
+import Complexitylib.Models.TuringMachine.Registers.Arith
 
 /-!
 # Clock constructibility for the time hierarchy theorem
@@ -29,6 +32,8 @@ All machines are hand-written in the UTM house style (small inductive
 state, ghost-framed step/run lemmas as in `UTM/Clock.lean` and
 `InputLen.lean`).
 -/
+
+namespace Complexity
 
 namespace TM
 

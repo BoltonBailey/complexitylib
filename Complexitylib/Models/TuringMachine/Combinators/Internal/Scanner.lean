@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # Correctness of the generic finite-state scanner
@@ -16,6 +19,8 @@ Proofs that `TM.scannerTM` correctly implements a left-to-right fold with
 - `TM.scannerTM_decidesInTime` — bridge to `DecidesInTime` for any language
   characterized by `x ∈ L ↔ finalOutput (x.foldl scanStep s₀) = Γw.one`.
 -/
+
+namespace Complexity
 
 namespace TM
 

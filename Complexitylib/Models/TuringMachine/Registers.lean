@@ -1,6 +1,9 @@
-import Complexitylib.Models.TuringMachine.CounterSubroutines
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.Subroutines.Counter
 
 /-!
 # Unary registers
@@ -25,6 +28,8 @@ actions and stable under the combinator phase transitions.
 - `TM.reg.parked`, `TM.reg.hasUnaryCounter` — bridges
 - `TM.reg_zero_init` — a freshly bumped blank tape is `reg 0`
 -/
+
+namespace Complexity
 
 namespace TM
 

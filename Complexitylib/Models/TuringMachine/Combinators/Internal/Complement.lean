@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal
-
-namespace Complexity
 
 /-!
 # Complement TM: proof internals
@@ -9,6 +12,8 @@ namespace Complexity
 This file provides the simulation lemmas for `TM.complementTM`, showing that
 the complement machine correctly flips the output of the original TM.
 -/
+
+namespace Complexity
 
 variable {n : ℕ}
 

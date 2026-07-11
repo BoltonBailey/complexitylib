@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.BodyLookup
-
-namespace Complexity
 
 /-!
 # Body machine: the match-loop induction
@@ -36,6 +39,8 @@ regions of the form `entry □ ⋯ □ □` (head symbol is an entry bit) or `�
 (empty table), and the loop re-enters `cmpQ` only through `segCheck`,
 which has just read the next region's head symbol and found it non-`□`.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

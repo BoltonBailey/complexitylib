@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
-
-namespace Complexity
 
 /-!
 # TM State Normalization and Binary Encoding
@@ -35,6 +38,8 @@ Turing machines:
 - `allΓ` — all 4 tape symbols in canonical order
 - `allΓFuncs` — enumerate all `Fin n → Γ` functions
 -/
+
+namespace Complexity
 
 namespace TM
 

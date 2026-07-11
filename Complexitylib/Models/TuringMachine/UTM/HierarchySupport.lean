@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Asymptotics
-
-namespace Complexity
 
 /-!
 # Support lemmas for the time-hierarchy theorem
@@ -17,6 +20,8 @@ Four self-contained ingredients used by the diagonalization argument:
 * `TM.halt_or_run_dichotomy` — a deterministic machine either halts within
   a step budget `V` or is still running after exactly `V` steps.
 -/
+
+namespace Complexity
 
 open Asymptotics Filter
 

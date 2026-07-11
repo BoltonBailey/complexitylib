@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
-
-namespace Complexity
 
 /-!
 # TM Subroutines
@@ -23,6 +26,8 @@ Each subroutine has a corresponding `HoareTime` specification in
 - `TM.copyWorkToWorkTM` — copy one work tape's contents to another
 - `TM.compareWorkTapesTM` — compare two work tapes cell by cell
 -/
+
+namespace Complexity
 
 namespace TM
 

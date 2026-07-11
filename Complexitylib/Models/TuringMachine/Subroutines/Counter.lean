@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare.Defs
-
-namespace Complexity
 
 /-!
 # Counter-building TM subroutines
@@ -12,6 +15,8 @@ The SAT-specific NP construction only needs a linear witness bound:
 `assignment.length ≤ input.length + 1`. This file defines a small machine
 that writes exactly `|input| + 1` unary marks to a designated counter tape.
 -/
+
+namespace Complexity
 
 namespace Tape
 

@@ -1,6 +1,6 @@
 import Complexitylib.SAT.CookLevin
-import Complexitylib.Models.TuringMachine.MixedRadix
-import Complexitylib.Models.TuringMachine.DecReg
+import Complexitylib.Models.TuringMachine.Registers.MixedRadix
+import Complexitylib.Models.TuringMachine.Registers.DecReg
 
 namespace Complexity
 

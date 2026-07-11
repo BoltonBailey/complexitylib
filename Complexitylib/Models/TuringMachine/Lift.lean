@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
-
-namespace Complexity
 
 /-!
 # Tape-layout combinators: extra work tapes and output retargeting
@@ -32,6 +35,8 @@ the step lemma is stated for any dummy tape with `cells = Tape.init []` and
 The time bounds are preserved *exactly* (no `+ 1`): the dummy-tape bounce
 happens during the simulated machine's own first step.
 -/
+
+namespace Complexity
 
 namespace TM
 

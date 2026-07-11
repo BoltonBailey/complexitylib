@@ -1,12 +1,15 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.PairSelf
 import Complexitylib.Models.TuringMachine.UTM.TermCheck
 import Complexitylib.Models.TuringMachine.UTM.ClockedUtm
 import Complexitylib.Models.TuringMachine.UTM.NegOut
 import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 import Complexitylib.Models.TuringMachine.UTM.ClockConstructible
-import Complexitylib.Models.TuringMachine.Combinators.RetargetInternal
-
-namespace Complexity
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 
 /-!
 # The time-hierarchy diagonalizer `diagTM`
@@ -56,6 +59,8 @@ Two landed specs do not quite fit and are bridged locally:
   an output-swap simulation; every other ingredient already accepts a
   clean output tape.
 -/
+
+namespace Complexity
 
 namespace TM
 

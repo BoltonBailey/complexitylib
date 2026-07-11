@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.Interp
 import Complexitylib.Models.TuringMachine.UTM.Bits
 import Complexitylib.Models.TuringMachine.UTM.HaltTest
-
-namespace Complexity
 
 /-!
 # Halt-test verdict correspondence
@@ -19,6 +22,8 @@ halt check of the interpreted machine `(decodeDesc α).toTM`:
 * after a default transition the state tape holds the field verbatim, and
   the interpreted machine sits exactly at its (clamped) halt state.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

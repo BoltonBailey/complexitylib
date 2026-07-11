@@ -1,6 +1,9 @@
-import Complexitylib.Models.TuringMachine.MixedRadix
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.Registers.MixedRadix
 
 /-!
 # decRegTM: decrement a register
@@ -13,6 +16,8 @@ pairwise at-most-one families iterate over shrinking suffixes.
 
 Mirror of `incRegTM` (`RegisterOps.lean`) with an erase phase.
 -/
+
+namespace Complexity
 
 namespace TM
 

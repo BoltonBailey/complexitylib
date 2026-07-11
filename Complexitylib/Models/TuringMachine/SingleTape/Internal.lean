@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
-
-namespace Complexity
 
 /-!
 # Single-tape simulation — encoding internals
@@ -13,6 +16,8 @@ over the fixed alphabet `Γ = {0,1,□,▷}` needs a binary code (so that litera
 layout. Proof internals only — correctness of the full simulation is
 established downstream.
 -/
+
+namespace Complexity
 
 namespace NTM.SingleTape
 

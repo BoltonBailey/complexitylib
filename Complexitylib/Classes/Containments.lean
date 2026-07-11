@@ -4,7 +4,7 @@ import Complexitylib.Classes.Randomized
 import Complexitylib.Classes.L
 import Complexitylib.Classes.Exponential
 import Complexitylib.Models.TuringMachine.Internal
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 namespace Complexity
 

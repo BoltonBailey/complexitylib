@@ -1,7 +1,7 @@
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 namespace Complexity
 

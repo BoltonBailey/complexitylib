@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Hoare.Defs
-import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
-import Complexitylib.Models.TuringMachine.Combinators.IfInternal
-import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
-
-namespace Complexity
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Seq
+import Complexitylib.Models.TuringMachine.Combinators.Internal.If
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Loop
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 /-!
 # Hoare-style composition rules for TM combinators
@@ -25,6 +28,8 @@ All combinators apply `transitionTape` / `transitionInput` at phase boundaries.
 These are the identity on stable tapes (head ≥ 1, read ≠ ▷) — see `transitionTape_id`.
 The `AllTapesWF` invariant ensures stability is preserved across transitions.
 -/
+
+namespace Complexity
 
 namespace TM
 

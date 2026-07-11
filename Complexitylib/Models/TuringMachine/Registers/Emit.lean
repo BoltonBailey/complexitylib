@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Registers
 import Complexitylib.Models.TuringMachine.Hoare
-
-namespace Complexity
 
 /-!
 # Output-emission subroutines
@@ -33,6 +36,8 @@ This layer is the foundation for the Cook–Levin reduction emitter
 - `TM.emitBitsTM_hoareTime` — `emitBitsTM w` appends `w` in `|w|` steps,
   preserving the input and work tapes
 -/
+
+namespace Complexity
 
 namespace TM
 

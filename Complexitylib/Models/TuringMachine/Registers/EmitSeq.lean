@@ -1,6 +1,9 @@
-import Complexitylib.Models.TuringMachine.InputLen
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.Registers.InputLen
 
 /-!
 # Sequencing emitter stages
@@ -11,6 +14,8 @@ to `(W (k+1), Y (k+1))`. All the finite-tuple folds of the reduction emitter
 (literal chains, clause chains, the per-state/symbol/choice unrollings of the
 transition family) are instances of this single rule.
 -/
+
+namespace Complexity
 
 namespace TM
 

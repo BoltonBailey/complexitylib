@@ -1,6 +1,6 @@
 import Complexitylib.Classes.Pairing
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.NonDetSubroutines
+import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 
 namespace Complexity
 

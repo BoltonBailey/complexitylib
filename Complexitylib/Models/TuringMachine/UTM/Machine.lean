@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.UTM.Init
 import Complexitylib.Models.TuringMachine.UTM.Body
 import Complexitylib.Models.TuringMachine.UTM.HaltTest
 import Complexitylib.Models.TuringMachine.UTM.Extract
-
-namespace Complexity
 
 /-!
 # The universal Turing machine
@@ -24,6 +27,8 @@ Its specification is the interpreter `TMDesc.toTM` (`UTM/Interp.lean`);
 the simulation and time-bound theorems are assembled in `UTM/Sim.lean`
 from the phase Hoare triples.
 -/
+
+namespace Complexity
 
 namespace TM
 

@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Subroutines
-import Complexitylib.Models.TuringMachine.NonDetSubroutines
+import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # TM Subroutines: proof internals
@@ -25,6 +28,8 @@ Simulation lemmas and HoareTime proofs for the subroutine machines defined in
 - `copyWorkToWorkTM_started_hoareTime` — copy one started work tape to another
 - `copyWorkToWorkTM_started_rich_hoareTime` — rich/frame-preserving work-to-work copy
 -/
+
+namespace Complexity
 
 namespace TM
 

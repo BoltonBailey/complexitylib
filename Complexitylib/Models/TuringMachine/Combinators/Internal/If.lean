@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # ifTM simulation — proof internals
@@ -14,6 +17,8 @@ This file contains the simulation lemmas for `ifTM tmTest tmThen tmElse`.
 - `ifThenWrap` — embed a `tmThen` config into the `ifTM` config space
 - `ifElseWrap` — embed a `tmElse` config into the `ifTM` config space
 -/
+
+namespace Complexity
 
 variable {n : ℕ}
 

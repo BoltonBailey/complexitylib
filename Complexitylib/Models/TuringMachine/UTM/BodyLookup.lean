@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.Verdict
 import Complexitylib.Models.TuringMachine.UTM.BodyApply
-
-namespace Complexity
 
 /-!
 # Match-loop ↔ lookup correspondence (pure list level)
@@ -26,6 +29,8 @@ no machine steps (design appendix 2):
   `cellBit`/`grpΓw`/`grpDir`, the machine's decoders) to the parsed
   entry's action fields.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 

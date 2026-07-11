@@ -1,7 +1,10 @@
-import Complexitylib.Models.TuringMachine.SingleTape.Delta
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Delta
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # Single-tape simulation — correctness internals
@@ -14,6 +17,8 @@ iterating `macroStepCorr` over `N`'s computation and translating acceptance.
 
 See `docs/A4-SingleTapeSimulation.md`. Proof internals only.
 -/
+
+namespace Complexity
 
 namespace NTM
 

@@ -1,8 +1,8 @@
 import Complexitylib.SAT.Verifier
 import Complexitylib.Classes.NP.PairSplitTM
-import Complexitylib.Models.TuringMachine.CounterSubroutines
+import Complexitylib.Models.TuringMachine.Subroutines.Counter
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.RetargetInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Defs

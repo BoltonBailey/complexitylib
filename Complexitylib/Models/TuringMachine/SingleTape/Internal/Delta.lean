@@ -1,7 +1,10 @@
-import Complexitylib.Models.TuringMachine.SingleTape.Sim
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Sim
 import Complexitylib.Models.TuringMachine.Combinators
-
-namespace Complexity
 
 /-!
 # Single-tape simulation — transition function (under construction)
@@ -16,6 +19,8 @@ This file is built phase-by-phase. **GATHER** (the rightward read sweep) is
 implemented here; SCATTER/COMMIT/run wiring and the assembled machine follow.
 See `docs/A4-SingleTapeSimulation.md`.
 -/
+
+namespace Complexity
 
 namespace NTM.SingleTape
 

@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # Output negation phase: `negOutTM`
@@ -38,6 +41,8 @@ writes and `idleDir` moves); the output cells are unchanged except cell 1.
     (if out₀.cells 1 = Γ.one then Γ.zero else Γ.one)`,
   the output head parked at cell 1, and `inp = inp₀`, `work = work₀`.
 -/
+
+namespace Complexity
 
 namespace TM
 

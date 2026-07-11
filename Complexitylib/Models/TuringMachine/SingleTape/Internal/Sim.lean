@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.SingleTape.Internal
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Fintype.Sum
 import Mathlib.Data.Finite.Prod
 import Mathlib.Data.Finite.Sum
-
-namespace Complexity
 
 /-!
 # Single-tape simulation — simulator state type
@@ -19,6 +22,8 @@ function-typed phase data (`Fin k → Γ`, `Fin k → Γw × Dir3`) hits Lean's
 product/`Pi` synthesis-size limit. `Finite` is a `Prop` and composes with no
 such limit, so we route through it (`Fintype.ofFinite` / `Classical.decEq`).
 -/
+
+namespace Complexity
 
 namespace NTM.SingleTape
 

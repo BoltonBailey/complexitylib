@@ -1,8 +1,8 @@
 import Complexitylib.SAT.Language
 import Complexitylib.Classes.NP.PairBuildTM
-import Complexitylib.Models.TuringMachine.NonDetSubroutines
+import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
-import Complexitylib.Models.TuringMachine.Combinators.RetargetInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 
 namespace Complexity
 

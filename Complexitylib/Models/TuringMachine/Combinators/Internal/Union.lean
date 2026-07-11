@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-
-namespace Complexity
 
 /-!
 # unionTM simulation — proof internals
@@ -28,6 +31,8 @@ The proof proceeds in three phases:
 - `idleTape` — the steady-state of an idle tape (head at 1, cells from `Tape.init []`)
 - `phase1Cfg` — embedding of a tm₁ config into the union machine's config space
 -/
+
+namespace Complexity
 
 variable {n₁ n₂ : ℕ}
 

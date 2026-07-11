@@ -1,5 +1,5 @@
 import Complexitylib.SAT.CookLevin.EmitterFamilies
-import Complexitylib.Models.TuringMachine.Probe
+import Complexitylib.Models.TuringMachine.Registers.Probe
 
 namespace Complexity
 
