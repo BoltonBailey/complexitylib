@@ -105,7 +105,7 @@ def allIdle {σ : Type} {k : ℕ}
   (newState, fun _ => .blank, .blank, idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
 
 /-- Proof that all-idle directions satisfy `δ_right_of_start`. -/
-def rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
+theorem rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
     (iHead = Γ.start → idleDir iHead = Dir3.right) ∧
     (∀ i, wHeads i = Γ.start → idleDir (wHeads i) = Dir3.right) ∧
     (oHead = Γ.start → idleDir oHead = Dir3.right) :=

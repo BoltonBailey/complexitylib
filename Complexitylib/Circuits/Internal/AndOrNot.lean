@@ -181,7 +181,7 @@ private lemma exists_testBit_encode (N : Nat) (x : BitString N) :
       j
 
 /-- The single-output DNF circuit correctly computes `f`. -/
-def andOrNotFor_eval {N : Nat} [NeZero N] (f : BitString N → Bool) :
+theorem andOrNotFor_eval {N : Nat} [NeZero N] (f : BitString N → Bool) :
     (fun (x : BitString 1) => x 0) ∘ (andOrNotFor f).eval = f := by
   funext x
   simp only [Function.comp, Circuit.eval, AONFor_outputs, Gate.eval,
@@ -339,7 +339,7 @@ private lemma AONForM_idx_j {N M : Nat} (j : Fin M) (k : Fin (2 ^ N)) :
   AONForM_j_of_add j k _
 
 /-- The multi-output DNF circuit correctly computes `f`. -/
-def andOrNotForM_eval {N M : Nat} [NeZero N] [NeZero M]
+theorem andOrNotForM_eval {N M : Nat} [NeZero N] [NeZero M]
     (f : BitString N → BitString M) :
     (andOrNotForM f).eval = f := by
   funext x j

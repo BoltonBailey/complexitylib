@@ -47,11 +47,11 @@ noncomputable def depth (G : Digraph V) : Nat :=
 
 /-- The directed edge set of a digraph with decidable adjacency on a
 finite vertex type. -/
-def edgeFinset [Fintype V] [DecidableEq V]
+def edgeFinset [Fintype V]
     (G : Digraph V) [DecidableRel G.Adj] : Finset (V × V) :=
   Finset.univ.filter (fun p => G.Adj p.1 p.2)
 
-lemma mem_edgeFinset [Fintype V] [DecidableEq V] {G : Digraph V}
+lemma mem_edgeFinset [Fintype V] {G : Digraph V}
     [DecidableRel G.Adj] {e : V × V} : e ∈ G.edgeFinset ↔ G.Adj e.1 e.2 := by
   simp [edgeFinset]
 
@@ -86,7 +86,7 @@ longest simple directed path ending at `v`. Parameterized by edge
 count `n`, with the outer `+ 1` converting to node count; the
 single-vertex path `![v]` always witnesses `n = 0`, so the label is
 automatically at least `1`. -/
-noncomputable def canonicalLabel {V : Type*} [Fintype V]
+noncomputable def canonicalLabel {V : Type*}
     (G : Digraph V) (v : V) : Nat :=
   sSup { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v } + 1
 

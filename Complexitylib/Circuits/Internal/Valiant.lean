@@ -62,6 +62,7 @@ private lemma zero_mem_canonicalLabel_set (G : Digraph V) (v : V) :
   have hb := b.isLt
   omega
 
+omit [Fintype V] in
 /-- Every canonical label is at least `1`: immediate from the outer
 `+ 1` in the definition. -/
 lemma one_le_canonicalLabel (G : Digraph V) (v : V) :
