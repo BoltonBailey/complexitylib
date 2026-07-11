@@ -57,26 +57,112 @@ build(project): bump Mathlib to v4.30.0
 
 ## Code Style
 
-- Follow Mathlib conventions for naming: `camelCase` for definitions, `PascalCase` for types and Prop-valued definitions.
-- Use universe polymorphism where appropriate.
-- Keep `open` declarations scoped to sections or namespaces rather than at module level.
-- Use `variable` inside `section` blocks to organize implicit parameters.
-- Avoid unused variable warnings — use `_` for genuinely unused binders.
-- Prefer Mathlib's existing types and lemmas over custom ones.
+The library follows the [Mathlib style
+guide](https://leanprover-community.github.io/contribute/style.html) and
+[naming conventions](https://leanprover-community.github.io/contribute/naming.html).
+The points below summarize the rules CI enforces and the library-specific
+conventions that go beyond Mathlib's.
 
-## Building
+### File header and module docstring
+
+Every `.lean` file starts with a copyright header and a module docstring:
+
+```lean
+/-
+Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine
+
+/-!
+# One-line title of the module
+
+What the module provides, the textbook reference it follows (e.g. Arora–Barak
+§1.2), and any representation conventions a reader must know: resource
+accounting, encoding choices, malformed-input behavior.
+-/
+```
+
+Add yourself to `Authors:` when you make a substantial contribution to a file.
+
+### Namespacing
+
+- Every declaration lives under the `Complexity` root namespace. No library
+  declaration may sit at the top level: bare names like `TM` or `Language`
+  collide with Mathlib and pollute downstream scopes.
+- Namespaces are `UpperCamelCase`, matching the type they extend
+  (`Complexity.TM`, `Complexity.Circuit`). Never lowercase.
+
+### Naming
+
+- Definitions are `lowerCamelCase`; types, structures, and `Prop`-valued
+  definitions are `UpperCamelCase`. Complexity classes keep their standard
+  capitalization (`P`, `NP`, `DTIME`, `PPoly`).
+- Theorem names describe the statement, lowerCamel-izing any `Prop` or type
+  they mention: `accepts_of_acceptsInTime`, `P_subset_NP` (not `P_sub_NP`),
+  `decidesInTime_mono`. Use Mathlib's standard connectives: `_of_`, `_iff`,
+  `_left`/`_right`, `subset`, `mem`, `mono`.
+- File names are descriptive words, not abbreviations: `AndOrNot.lean`, not
+  `AON.lean`.
+
+### Layering
+
+Modules separate auditable statements from proof machinery:
+
+- **`Foo/Defs.lean`** — core definitions, minimal imports, human-auditable.
+- **`Foo/Internal.lean`** or **`Foo/Internal/`** — proof internals. Not meant
+  for human review; correctness is the type checker's job. Anything
+  single-purpose (machine plumbing, emitters, simulation invariants) belongs
+  here, filed under the theorem it serves.
+- **`Foo.lean`** — the public surface: theorem statements a reader can check
+  against the textbook, with proofs imported from Internal.
+
+Aggregation files (`Complexitylib.lean`, `Models.lean`, …) contain only
+`import` statements, and only surface modules may appear in them.
+
+### Formatting and proofs
+
+- Lines are at most 100 characters (long URLs exempt); no trailing whitespace.
+- Keep `open` declarations scoped (`open Foo in`, or inside `section`s).
+- Prefer Mathlib's existing types and lemmas over custom ones.
+- Every `set_option maxHeartbeats` (or similar escape hatch) needs an adjacent
+  comment justifying it.
+
+## Building and quality gates
 
 ```bash
 lake build --wfail
 lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
+python3 scripts/lint_style.py
+lake exe runLinter Complexitylib
+lake env lean scripts/AxiomGuard.lean
 ```
 
-Ensure all three commands build cleanly before submitting changes. The first
-checks the complete library and treats warnings (including proof placeholders)
-as failures. The latter two run executable `#guard` regression suites for the
-single-tape simulator and encoded-circuit evaluator; both are intentionally
-outside the public import graph.
+All six commands must pass before submitting changes; CI runs them on every
+push. The first checks the complete library and treats warnings (including
+proof placeholders) as failures. The next two run executable `#guard`
+regression suites for the single-tape simulator and encoded-circuit evaluator;
+both are intentionally outside the public import graph.
+
+The last three are the quality gates:
+
+- **`scripts/lint_style.py`** checks copyright headers, module docstrings,
+  line length, and whitespace. Pre-existing violations are grandfathered in
+  `scripts/style-exceptions.txt`; that baseline may only shrink. If you fix a
+  grandfathered file, delete its entries (the linter fails on stale entries).
+- **`lake exe runLinter Complexitylib`** runs the Mathlib/Batteries
+  environment linters (missing docstrings, naming, unused arguments, simp
+  hygiene, …). Grandfathered failures live in `scripts/nolints.json`, which
+  likewise only shrinks; regenerate with `lake exe runLinter --update
+  Complexitylib` only to *remove* entries you fixed.
+- **`scripts/AxiomGuard.lean`** asserts the headline theorems depend only on
+  `propext`, `Classical.choice`, and `Quot.sound`. If you rename a headline
+  theorem, update the list in the same commit.
+
+API documentation builds with doc-gen4 from the `docbuild/` subproject
+(`cd docbuild && lake build Complexitylib:docs`); CI publishes it weekly.
 
 ## Choosing a Contribution
 
