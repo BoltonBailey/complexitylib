@@ -41,35 +41,7 @@ both within `clockedUtmTime α x V` steps from the started tapes
 
 namespace Complexity
 
-namespace TM.UTMBody
-
--- ════════════════════════════════════════════════════════════════════════
--- Generic run-level tape preservation
--- ════════════════════════════════════════════════════════════════════════
-
-/-- Runs never alter the input tape's cells (the input tape is read-only). -/
-private theorem reachesIn_input_cells {n : ℕ} {tm : TM n} :
-    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
-      c'.input.cells = c.input.cells := by
-  intro t
-  induction t with
-  | zero =>
-    intro c c' h
-    cases h
-    rfl
-  | succ t ih =>
-    intro c c' h
-    cases h with
-    | step hstep hrest =>
-      next c'' =>
-      have h1 : c''.input.cells = c.input.cells := by
-        unfold TM.step at hstep
-        split at hstep
-        · exact absurd hstep (by simp)
-        · simp only [Option.some.injEq] at hstep
-          subst hstep
-          exact Tape.move_cells ..
-      rw [ih hrest, h1]
+namespace TM
 
 /-- Runs preserve output-tape well-formedness: writes are `Γw` (never `▷`)
     and cell 0 is immutable. -/
@@ -102,7 +74,7 @@ private theorem reachesIn_output_wfCells {n : ℕ} {tm : TM n} :
     shape survives any run. This is what lets branch postconditions survive
     the combinators' final `transitionTape` (which preserves cells only on
     `▷`-clean tapes). -/
-theorem _root_.Complexity.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
+theorem HoareTime.with_output_wf {n : ℕ} {tm : TM n}
     {pre post : TapePred n} {b : ℕ}
     (h : tm.HoareTime pre post b)
     (hpre : ∀ inp work out, pre inp work out →
@@ -114,6 +86,40 @@ theorem _root_.Complexity.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
   obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := h inp work out hp
   have hwf : c'.output.StartInvariant := reachesIn_output_wfCells hreach (hpre _ _ _ hp)
   exact ⟨c', t, ht, hreach, hhalt, hpost, hwf.1, hwf.2⟩
+
+end TM
+
+namespace TM.UTMBody
+
+-- ════════════════════════════════════════════════════════════════════════
+-- Generic run-level tape preservation
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- Runs never alter the input tape's cells (the input tape is read-only). -/
+private theorem reachesIn_input_cells {n : ℕ} {tm : TM n} :
+    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
+      c'.input.cells = c.input.cells := by
+  intro t
+  induction t with
+  | zero =>
+    intro c c' h
+    cases h
+    rfl
+  | succ t ih =>
+    intro c c' h
+    cases h with
+    | step hstep hrest =>
+      next c'' =>
+      have h1 : c''.input.cells = c.input.cells := by
+        unfold TM.step at hstep
+        split at hstep
+        · exact absurd hstep (by simp)
+        · simp only [Option.some.injEq] at hstep
+          subst hstep
+          exact Tape.move_cells ..
+      rw [ih hrest, h1]
+
+
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Fin-7 index bookkeeping (local copies of `SimClocked`'s private ones)

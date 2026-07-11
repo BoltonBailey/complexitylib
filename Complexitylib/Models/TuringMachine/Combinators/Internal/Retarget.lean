@@ -591,7 +591,7 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
       (fun _inp work _out =>
         (work ⟨counterIdx.val, by omega⟩).HasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
-        (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start)) 
+        (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
   have hmove_right_invariant : ∀ {t : Tape},
       Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by

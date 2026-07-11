@@ -5,3 +5,10 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Internal.Codec
 import Complexitylib.Circuits.Encoding.Internal.Semantics
+
+/-!
+# Encoded-circuit proof internals
+
+Aggregation module for the codec and semantics internals of the canonical
+fan-in-two circuit encoding.
+-/

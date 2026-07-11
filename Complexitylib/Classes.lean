@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
 import Complexitylib.Classes.Negligible
@@ -14,3 +19,11 @@ import Complexitylib.Classes.Exponential
 import Complexitylib.Classes.DTISP
 import Complexitylib.Classes.Containments
 import Complexitylib.Classes.Hierarchy
+
+/-!
+# Complexity classes
+
+Aggregation module for the class definitions and their relationships:
+time and space classes, `P`, `NP`, randomized and nonuniform classes,
+function classes, reductions, containments, and the time hierarchy.
+-/

@@ -862,7 +862,7 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 exact hw2_back⟩⟩
           · -- Second wire forward-ref after restriction (proof 3)
             exact ⟨.const (if isAnd then n1 && n2 else n1 || n2), ⟨fun x => by
-  
+
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
               have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
@@ -938,7 +938,7 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 exact hw1_back⟩⟩
           · -- proof 6: w1≠0 forward-ref, w2=0 (const case)
             exact ⟨.const (if isAnd then n1 && n2 else n1 || n2), ⟨fun x => by
-  
+
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw2_fin : (d g).2.1.2 = 0 := by ext; exact h2
               have h_w1_val : (d_r g).2.1.1.val = w1.val - 1 := by

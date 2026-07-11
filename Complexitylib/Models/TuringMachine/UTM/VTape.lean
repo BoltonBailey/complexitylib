@@ -43,6 +43,51 @@ Under this shift the one-sided tape dynamics correspond exactly:
 
 namespace Complexity
 
+-- ════════════════════════════════════════════════════════════════════════
+-- Exact tape contents
+-- ════════════════════════════════════════════════════════════════════════
+
+/-- The tape holds exactly `syms` after `▷`: cell `i+1` is `syms[i]` for
+    `i < |syms|` and `□` beyond. Used for the UTM's state, description, and
+    scratch tapes, whose contents are fully determined. -/
+def Tape.HoldsExact (t : Tape) (syms : List Γw) : Prop :=
+  t.cells 0 = Γ.start ∧
+  ∀ i : ℕ, t.cells (i + 1) = if h : i < syms.length then (syms[i]).toΓ else Γ.blank
+
+namespace Tape.HoldsExact
+
+theorem startInvariant {t : Tape} {syms : List Γw} (h : t.HoldsExact syms) : t.StartInvariant := by
+  refine ⟨h.1, fun j hj => ?_⟩
+  obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
+  rw [h.2 i]
+  split
+  · next => cases syms[i] <;> simp [Γw.toΓ]
+  · simp
+
+/-- Cells within the contents. -/
+theorem cells_lt {t : Tape} {syms : List Γw} (h : t.HoldsExact syms)
+    {i : ℕ} (hi : i < syms.length) : t.cells (i + 1) = (syms[i]).toΓ := by
+  rw [h.2 i, dif_pos hi]
+
+/-- Cells beyond the contents are blank. -/
+theorem cells_ge {t : Tape} {syms : List Γw} (h : t.HoldsExact syms)
+    {i : ℕ} (hi : syms.length ≤ i) : t.cells (i + 1) = Γ.blank := by
+  rw [h.2 i, dif_neg (by omega)]
+
+/-- The all-blank (cleared) tape characterization. -/
+theorem nil_iff {t : Tape} :
+    t.HoldsExact [] ↔ t.cells 0 = Γ.start ∧ ∀ i : ℕ, t.cells (i + 1) = Γ.blank := by
+  constructor
+  · exact fun h => ⟨h.1, fun i => cells_ge h (Nat.zero_le i)⟩
+  · exact fun ⟨h0, h1⟩ => ⟨h0, fun i => by rw [h1 i]; simp⟩
+
+/-- A freshly initialized (empty) tape holds `[]`. -/
+theorem init_nil : (Tape.init []).HoldsExact [] := by
+  refine ⟨by simp [Tape.init], fun i => ?_⟩
+  simp [Tape.init]
+
+end Tape.HoldsExact
+
 namespace TM
 
 /-- The **shift correspondence**: `utm` stores `sim` shifted one cell
@@ -174,7 +219,7 @@ theorem writeAndMove {sim utm : Tape} (h : VShift sim utm) (s : Γw) (d : Dir3)
 /-- The initial correspondence: the simulated initial tape (contents `l`)
     is shadowed by `▷ □ l ⋯` with head at cell 1. -/
 theorem init (l : List Γ) :
-    VShift (_root_.Complexity.Tape.init l)
+    VShift (Tape.init l)
       ⟨1, fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
         else ((l[k - 2]?).getD Γ.blank)⟩ := by
   refine ⟨?_, rfl⟩
@@ -183,55 +228,10 @@ theorem init (l : List Γ) :
   · simp [hk0]
   · by_cases hk1 : k = 1
     · simp [hk1]
-    · simp only [hk0, hk1, if_false, _root_.Complexity.Tape.init,
+    · simp only [hk0, hk1, if_false, Tape.init,
         show k - 1 ≠ 0 by omega, show k - 1 - 1 = k - 2 by omega]
 
 end VShift
-
--- ════════════════════════════════════════════════════════════════════════
--- Exact tape contents
--- ════════════════════════════════════════════════════════════════════════
-
-/-- The tape holds exactly `syms` after `▷`: cell `i+1` is `syms[i]` for
-    `i < |syms|` and `□` beyond. Used for the UTM's state, description, and
-    scratch tapes, whose contents are fully determined. -/
-def _root_.Complexity.Tape.HoldsExact (t : Tape) (syms : List Γw) : Prop :=
-  t.cells 0 = Γ.start ∧
-  ∀ i : ℕ, t.cells (i + 1) = if h : i < syms.length then (syms[i]).toΓ else Γ.blank
-
-namespace Tape.HoldsExact
-
-theorem startInvariant {t : Tape} {syms : List Γw} (h : t.HoldsExact syms) : t.StartInvariant := by
-  refine ⟨h.1, fun j hj => ?_⟩
-  obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
-  rw [h.2 i]
-  split
-  · next => cases syms[i] <;> simp [Γw.toΓ]
-  · simp
-
-/-- Cells within the contents. -/
-theorem cells_lt {t : Tape} {syms : List Γw} (h : t.HoldsExact syms)
-    {i : ℕ} (hi : i < syms.length) : t.cells (i + 1) = (syms[i]).toΓ := by
-  rw [h.2 i, dif_pos hi]
-
-/-- Cells beyond the contents are blank. -/
-theorem cells_ge {t : Tape} {syms : List Γw} (h : t.HoldsExact syms)
-    {i : ℕ} (hi : syms.length ≤ i) : t.cells (i + 1) = Γ.blank := by
-  rw [h.2 i, dif_neg (by omega)]
-
-/-- The all-blank (cleared) tape characterization. -/
-theorem nil_iff {t : Tape} :
-    t.HoldsExact [] ↔ t.cells 0 = Γ.start ∧ ∀ i : ℕ, t.cells (i + 1) = Γ.blank := by
-  constructor
-  · exact fun h => ⟨h.1, fun i => cells_ge h (Nat.zero_le i)⟩
-  · exact fun ⟨h0, h1⟩ => ⟨h0, fun i => by rw [h1 i]; simp⟩
-
-/-- A freshly initialized (empty) tape holds `[]`. -/
-theorem init_nil : (Tape.init []).HoldsExact [] := by
-  refine ⟨by simp [Tape.init], fun i => ?_⟩
-  simp [Tape.init]
-
-end Tape.HoldsExact
 
 end TM
 
