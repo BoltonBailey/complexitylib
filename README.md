@@ -8,6 +8,9 @@ precisely where they're used, with literature references where they help,
 and unafraid to diverge from any one text when a cleaner formalization
 exists.
 
+📖 **[Browse the API documentation](https://samuelschlesinger.github.io/complexitylib/)** —
+the full library, searchable, rebuilt and published on every merge to `dev`.
+
 ## Ethos
 
 **Statements you can audit, proofs you don't have to.** Every public theorem
@@ -64,7 +67,9 @@ lake build --wfail
 
 CI additionally runs two executable regression suites and three quality gates;
 see [CONTRIBUTING.md](CONTRIBUTING.md) for the full list and the style guide.
-API documentation builds with doc-gen4 from `docbuild/`.
+API documentation builds with doc-gen4 from `docbuild/` and publishes to
+[GitHub Pages](https://samuelschlesinger.github.io/complexitylib/) on every
+merge to `dev` (and weekly, plus on demand via the workflow).
 
 ## Contributing
 

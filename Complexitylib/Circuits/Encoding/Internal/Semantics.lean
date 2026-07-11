@@ -19,6 +19,8 @@ descriptor wires `0, ..., N + k - 1`.
 
 namespace Complexity
 
+open CircDesc
+
 namespace CircuitCode
 
 namespace RawGate
@@ -61,11 +63,11 @@ namespace RawCircuit
 private def memoArray {N s : ℕ} (d : CircDesc N s) (input : BitString N)
     (k : ℕ) (hk : k ≤ s) : Array Bool :=
   Array.ofFn fun w : Fin (N + k) =>
-    wireValD d input (Fin.castLE (Nat.add_le_add_left hk N) w)
+    wireVal d input (Fin.castLE (Nat.add_le_add_left hk N) w)
 
 private theorem memoArray_get {N s : ℕ} (d : CircDesc N s) (input : BitString N)
     {k : ℕ} (hk : k ≤ s) (w : Fin (N + s)) (hw : w.val < N + k) :
-    (memoArray d input k hk)[w.val]? = some (wireValD d input w) := by
+    (memoArray d input k hk)[w.val]? = some (wireVal d input w) := by
   simp only [memoArray, Array.size_ofFn, hw, getElem?_pos, Array.getElem_ofFn]
   congr 2
 
@@ -76,28 +78,28 @@ private theorem memoArray_zero {N s : ℕ} (d : CircDesc N s) (input : BitString
   · intro i hi₁ hi₂
     have hi : i < N := by simpa [memoArray] using hi₁
     simp only [memoArray, Array.getElem_ofFn, List.getElem_toArray, List.getElem_ofFn]
-    rw [wireValD]
+    rw [wireVal]
     simp [hi]
 
 private theorem memoArray_succ {N s : ℕ} (d : CircDesc N s) (input : BitString N)
     {k : ℕ} (hk : k < s) :
     memoArray d input (k + 1) (by omega) =
       (memoArray d input k (by omega)).push
-        (wireValD d input ⟨N + k, by omega⟩) := by
+        (wireVal d input ⟨N + k, by omega⟩) := by
   unfold memoArray
   rw [Array.ofFn_succ]
   congr 1
 
-private theorem eval_ofSlot_eq_wireValD {N s : ℕ} (d : CircDesc N s)
+private theorem eval_ofSlot_eq_wireVal {N s : ℕ} (d : CircDesc N s)
     (input : BitString N) {k : ℕ} (hk : k < s) (hordered : CircDesc.Ordered d) :
     let slot := d ⟨k, hk⟩
     (RawGate.ofSlot slot).eval
-        (wireValD d input slot.2.1.1)
-        (wireValD d input slot.2.1.2) =
-      wireValD d input ⟨N + k, by omega⟩ := by
+        (wireVal d input slot.2.1.1)
+        (wireVal d input slot.2.1.2) =
+      wireVal d input ⟨N + k, by omega⟩ := by
   dsimp only
   have hrefs := hordered ⟨k, hk⟩
-  conv_rhs => rw [wireValD]
+  conv_rhs => rw [wireVal]
   simp only [show ¬(N + k < N) by omega, dite_false, Nat.add_sub_cancel_left]
   simp only [show (⟨k, by omega⟩ : Fin s) = ⟨k, hk⟩ by rfl]
   rw [RawGate.eval_ofSlot]
@@ -122,9 +124,9 @@ private theorem evalAux?_singleton_ofSlot {N s : ℕ} (d : CircDesc N s)
   change
     some ((memoArray d input k (by omega)).push
       ((RawGate.ofSlot (d ⟨k, hk⟩)).eval
-        (wireValD d input (d ⟨k, hk⟩).2.1.1)
-        (wireValD d input (d ⟨k, hk⟩).2.1.2))) = _
-  rw [eval_ofSlot_eq_wireValD d input hk hordered]
+        (wireVal d input (d ⟨k, hk⟩).2.1.1)
+        (wireVal d input (d ⟨k, hk⟩).2.1.2))) = _
+  rw [eval_ofSlot_eq_wireVal d input hk hordered]
 
 private theorem evalAux?_append (first second : RawCircuit) (wires : Array Bool) :
     evalAux? (first ++ second) wires =
@@ -172,7 +174,7 @@ private theorem evalAux?_ofDesc_prefix {N s : ℕ} (d : CircDesc N s)
     mathematical semantics. -/
 private theorem eval?_ofDesc {N s : ℕ} (d : CircDesc N s) (hs : 0 < s)
     (hordered : CircDesc.Ordered d) (input : BitString N) :
-    (ofDesc d).eval? (List.ofFn input) = some (evalD hs d input) := by
+    (ofDesc d).eval? (List.ofFn input) = some (eval hs d input) := by
   have heval := evalAux?_ofDesc_prefix d input hordered s (Nat.le_refl s)
   have hdesc :
       (List.ofFn fun i : Fin s => RawGate.ofSlot (d (Fin.castLE (Nat.le_refl s) i))) =
@@ -189,7 +191,7 @@ private theorem eval?_ofDesc {N s : ℕ} (d : CircDesc N s) (hs : 0 < s)
   rw [show (ofDesc d).isEmpty = false by simpa using hne]
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [heval]
-  simp only [evalD]
+  simp only [eval]
   exact memoArray_get d input (Nat.le_refl s) ⟨N + s - 1, by omega⟩ (by omega)
 
 private theorem ofSlot_encodeGate {W W' : ℕ} (gate : Gate Basis.andOr2 W)
@@ -222,7 +224,7 @@ theorem eval?_ofCircuit {N G : ℕ} [NeZero N]
   rw [← ofDesc_circuitToDesc c]
   rw [show input.toList = List.ofFn input by rfl]
   rw [eval?_ofDesc (circuitToDesc c) (Nat.succ_pos G) (circuitToDesc_ordered c)]
-  have hsemantics := congrFun (circuit_eval_eq_evalD c) input
+  have hsemantics := congrFun (circuit_eval_eq_eval c) input
   exact congrArg some hsemantics.symm
 
 end RawCircuit

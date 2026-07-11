@@ -57,10 +57,10 @@ convention.
   `CNF.two_pow_le_complexity_of_xorBool`): Any DNF (resp. CNF) computing N-input XOR
   requires at least `2^{N-1}` terms (resp. clauses).
 
-* **Nondeterministic quantification** (`sizeComplexity_existQuantify_le`):
+* **Nondeterministic quantification** (`sizeComplexity_existsQuantify_le`):
   If `f` has circuit complexity `s`, then `∃ x ∈ {0,1}^k, f(x,y)` has
   circuit complexity at most `2^k · (s + 1)`.  Combined with the Shannon
-  upper bound (`sizeComplexity_existQuantify_le_min`).
+  upper bound (`sizeComplexity_existsQuantify_le_min`).
 
 * **Valiant's depth reduction** (`Valiant.depth_reduction`):
   In any digraph with `S` edges and depth at most `2^k`, for any `r ≤ k`
@@ -90,7 +90,7 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.XOR` — `Schnorr.xorBool` (N-input parity)
 * `Complexitylib.Circuits.EssentialInput` — `IsEssentialInput`, `essentialInputs`
 * `Complexitylib.Circuits.AC0` — `AC0`
-* `Complexitylib.Circuits.Nondeterminism.Defs` — `existQuantify`, `forallQuantify`
+* `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 
 Theorem modules (re-export definitions + main results):
 

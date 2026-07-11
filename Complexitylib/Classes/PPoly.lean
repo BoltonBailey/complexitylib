@@ -137,27 +137,20 @@ theorem mem_PPoly_iff {L : Language} :
     L ∈ PPoly ↔
       ∃ (F : CircuitFamily Basis.andOr2) (k : ℕ),
         F.Decides L ∧ F.size =O ((· ^ k) : ℕ → ℕ) := by
+  simp only [PPoly, SIZE, SIZEWithBasis, Set.mem_iUnion, Set.mem_setOf_eq]
   constructor
-  · rintro ⟨F, hL, hpoly⟩
-    obtain ⟨k, hk⟩ := (F.polynomialSize_iff_bigO).mp hpoly
-    exact ⟨F, k, hL, hk⟩
+  · rintro ⟨p, F, hL, hp⟩
+    exact ⟨F, p.natDegree, hL, Complexity.BigO.of_polynomial_bound p hp⟩
   · rintro ⟨F, k, hL, hk⟩
-    exact ⟨F, hL, (F.polynomialSize_iff_bigO).mpr ⟨k, hk⟩⟩
+    obtain ⟨p, hp⟩ := Complexity.BigO.pow_polynomial_bound hk
+    exact ⟨p, F, hL, hp⟩
 
 end BigO
 
-/-- Under the library's exact gate-count convention, unfolding the definitions
-    identifies `PPoly` with the union of pointwise size classes over all natural
-    polynomials. This is not the substantive advice-machine characterization of
-    `P/poly`. -/
+/-- `PPoly` is definitionally the union of the pointwise `SIZE` classes over
+    all natural-coefficient polynomials. This is not the substantive
+    advice-machine characterization of `P/poly`. -/
 theorem PPoly_eq_iUnion_SIZE :
-    PPoly = ⋃ p : Polynomial ℕ, SIZE fun n => p.eval n := by
-  ext L
-  simp only [PPoly, SIZE, SIZEWithBasis, Set.mem_setOf_eq, Set.mem_iUnion]
-  constructor
-  · rintro ⟨F, hL, p, hp⟩
-    exact ⟨p, F, hL, hp⟩
-  · rintro ⟨p, F, hL, hp⟩
-    exact ⟨F, hL, p, hp⟩
+    PPoly = ⋃ p : Polynomial ℕ, SIZE fun n => p.eval n := rfl
 
 end Complexity

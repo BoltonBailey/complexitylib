@@ -12,14 +12,11 @@ Checks every `.lean` file under `Complexitylib/` for:
                 a root namespace (e.g. `SAT.TM` vs `TM`) or a declaration made
                 outside its home namespace — fix the structure instead
 
-Violations are compared against the baseline in `scripts/style-exceptions.txt`,
-one `path : check` entry per line. A violation not in the baseline fails the
-run; a baseline entry whose violation no longer exists also fails the run (so
-the baseline only ever shrinks). Regenerate with `--update`.
+This is a hard gate: any violation fails the run. The quality refactor cleared
+every grandfathered violation, so there is no baseline to maintain.
 
 Usage:
-  python3 scripts/lint_style.py            # check
-  python3 scripts/lint_style.py --update   # rewrite the baseline
+  python3 scripts/lint_style.py
 """
 
 import re
@@ -28,7 +25,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LIBRARY = ROOT / "Complexitylib"
-BASELINE = ROOT / "scripts" / "style-exceptions.txt"
 MAX_LINE = 100
 
 COPYRIGHT_RE = re.compile(
@@ -72,39 +68,14 @@ def collect() -> set[str]:
     return found
 
 
-def read_baseline() -> set[str]:
-    if not BASELINE.exists():
-        return set()
-    entries = set()
-    for line in BASELINE.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            entries.add(line)
-    return entries
-
-
 def main() -> int:
-    found = collect()
-    if "--update" in sys.argv:
-        header = (
-            "# Style-lint baseline: pre-existing violations grandfathered during\n"
-            "# the quality refactor. This file only shrinks; regenerate with\n"
-            "#   python3 scripts/lint_style.py --update\n"
-        )
-        BASELINE.write_text(header + "\n".join(sorted(found)) + "\n", encoding="utf-8")
-        print(f"style lint: baseline updated with {len(found)} entries")
-        return 0
-
-    baseline = read_baseline()
-    new = sorted(found - baseline)
-    stale = sorted(baseline - found)
-    for entry in new:
-        print(f"style lint: new violation: {entry}")
-    for entry in stale:
-        print(f"style lint: fixed but still in baseline (remove it): {entry}")
-    if new or stale:
+    found = sorted(collect())
+    for entry in found:
+        print(f"style lint: {entry}")
+    if found:
+        print(f"style lint: FAILED ({len(found)} violation(s))")
         return 1
-    print(f"style lint: OK ({len(found)} grandfathered violations remain)")
+    print("style lint: OK (no violations)")
     return 0
 
 

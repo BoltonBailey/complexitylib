@@ -41,24 +41,30 @@ end CircDesc
 
 /-! ## Wire and Circuit Evaluation -/
 
+namespace CircDesc
+
 /-- Evaluate wire `w` in a circuit descriptor.
     Primary input wires return the corresponding input bit.
     Gate wires evaluate their gate, with forward references defaulting to `false`. -/
-def wireValD {N s : Nat} (d : CircDesc N s) (input : BitString N)
+def wireVal {N s : Nat} (d : CircDesc N s) (input : BitString N)
     (w : Fin (N + s)) : Bool :=
   if h : w.val < N then
     input ⟨w.val, h⟩
   else
     have hi : w.val - N < s := by omega
     let (isAnd, (w1, w2), (n1, n2)) := d ⟨w.val - N, hi⟩
-    let v1 := n1.xor (if w1.val < w.val then wireValD d input ⟨w1.val, by omega⟩ else false)
-    let v2 := n2.xor (if w2.val < w.val then wireValD d input ⟨w2.val, by omega⟩ else false)
+    let v1 := n1.xor (if w1.val < w.val then wireVal d input ⟨w1.val, by omega⟩ else false)
+    let v2 := n2.xor (if w2.val < w.val then wireVal d input ⟨w2.val, by omega⟩ else false)
     if isAnd then v1 && v2 else v1 || v2
 termination_by w.val
 
 /-- Evaluate a circuit descriptor: the output is the value of the last gate. -/
-def evalD {N s : Nat} (hs : 0 < s) (d : CircDesc N s) : BitString N → Bool :=
-  fun input => wireValD d input ⟨N + s - 1, by omega⟩
+def eval {N s : Nat} (hs : 0 < s) (d : CircDesc N s) : BitString N → Bool :=
+  fun input => wireVal d input ⟨N + s - 1, by omega⟩
+
+end CircDesc
+
+open CircDesc
 
 /-! ## Cardinality Lemmas -/
 
@@ -155,20 +161,20 @@ theorem arith_bound (N : Nat) (hN : 6 ≤ N) :
 theorem shannon_lower_bound (N : Nat) (hN : 6 ≤ N) :
     ∃ f : BitString N → Bool,
       ∀ (d : CircDesc N (2 ^ N / (5 * N))),
-        evalD (s_pos N hN) d ≠ f := by
+        eval (s_pos N hN) d ≠ f := by
   let s := 2 ^ N / (5 * N)
   let hs := s_pos N hN
-  -- The image of evalD has strictly fewer elements than the function space
-  have h_lt : ((Finset.univ : Finset (CircDesc N s)).image (evalD (N := N) (s := s) hs)).card
+  -- The image of eval has strictly fewer elements than the function space
+  have h_lt : ((Finset.univ : Finset (CircDesc N s)).image (eval (N := N) (s := s) hs)).card
       < (Finset.univ : Finset (BitString N → Bool)).card := by
-    calc ((Finset.univ : Finset (CircDesc N s)).image (evalD hs)).card
+    calc ((Finset.univ : Finset (CircDesc N s)).image (eval hs)).card
         ≤ (Finset.univ : Finset (CircDesc N s)).card := Finset.card_image_le
       _ = Fintype.card (CircDesc N s) := Finset.card_univ
       _ = (8 * (N + s) ^ 2) ^ s := card_circDesc N s
       _ < 2 ^ 2 ^ N := arith_bound N hN
       _ = Fintype.card (BitString N → Bool) := (card_bool_fun N).symm
       _ = (Finset.univ : Finset (BitString N → Bool)).card := (Finset.card_univ).symm
-  -- By pigeonhole, some function is not in the image of evalD
+  -- By pigeonhole, some function is not in the image of eval
   obtain ⟨f, _, hf⟩ := Finset.exists_mem_notMem_of_card_lt_card h_lt
   exact ⟨f, fun d hd => hf (Finset.mem_image.mpr ⟨d, Finset.mem_univ _, hd⟩)⟩
 

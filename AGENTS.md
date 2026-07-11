@@ -28,8 +28,10 @@ lake exe runLinter Complexitylib     # Mathlib/Batteries env linters
 lake env lean scripts/AxiomGuard.lean  # headline theorems on std axioms only
 ```
 
-Both linters ratchet against shrink-only baselines (`scripts/style-exceptions.txt`,
-`scripts/nolints.json`): never add entries, delete them when you fix files.
+Both linters are hard gates: any violation fails the run. The refactor cleared
+and removed the former shrink-only baselines, so keep the tree clean. Suppress
+a genuinely-intended env-lint with a documented inline `@[nolint …]` on the
+declaration — never a project-level baseline.
 
 ## Architecture
 

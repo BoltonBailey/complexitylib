@@ -162,14 +162,12 @@ both are intentionally outside the public import graph.
 The last three are the quality gates:
 
 - **`scripts/lint_style.py`** checks copyright headers, module docstrings,
-  line length, and whitespace. Pre-existing violations are grandfathered in
-  `scripts/style-exceptions.txt`; that baseline may only shrink. If you fix a
-  grandfathered file, delete its entries (the linter fails on stale entries).
+  line length, and whitespace. It is a hard gate: any violation fails the run.
 - **`lake exe runLinter Complexitylib`** runs the Mathlib/Batteries
   environment linters (missing docstrings, naming, unused arguments, simp
-  hygiene, …). Grandfathered failures live in `scripts/nolints.json`, which
-  likewise only shrinks; regenerate with `lake exe runLinter --update
-  Complexitylib` only to *remove* entries you fixed.
+  hygiene, …), also as a hard gate. To suppress a genuinely-intended lint, put
+  a documented inline `@[nolint …]` on the declaration — there is no
+  project-level baseline.
 - **`scripts/AxiomGuard.lean`** asserts the headline theorems depend only on
   `propext`, `Classical.choice`, and `Quot.sound`. If you rename a headline
   theorem, update the list in the same commit.

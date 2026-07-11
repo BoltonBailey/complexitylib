@@ -488,24 +488,24 @@ private def mkG (W : Nat) (op : AndOrOp) (w0 w1 : Nat) (n0 n1 : Bool)
     (`2^(qq+1) - 4`), the address minterm tree (`2^(kk+1) - 4`), the column
     library (`2^(2^kk)` OR chains of length `2^kk - 1`), the AND layer
     (`2^qq`), and the final OR chain (`2^qq - 1`). -/
-def szSections (kk qq : Nat) : Nat :=
+def totalSectionGates (kk qq : Nat) : Nat :=
   1 + (2^(qq+1) - 4) + (2^(kk+1) - 4) + 2^(2^kk) * (2^kk - 1) + 2^qq + (2^qq - 1)
 
 /-- The Shannon gate array is nonempty. -/
-lemma szSections_pos (kk qq : Nat) : 0 < szSections kk qq := by
-  unfold szSections; positivity
+lemma totalSectionGates_pos (kk qq : Nat) : 0 < totalSectionGates kk qq := by
+  unfold totalSectionGates; positivity
 
 /-! ### Section offsets (not private so they can be unfolded after `set`) -/
 
 /-- Gate-index offset of Section C (address minterm tree): after the
     constant-false gate and the data minterm tree. -/
-def oC (qq : Nat) : Nat := 1 + (2^(qq+1) - 4)
+def addrTreeOffset (qq : Nat) : Nat := 1 + (2^(qq+1) - 4)
 /-- Gate-index offset of Section D (column library): after Section C. -/
-def oD (kk qq : Nat) : Nat := oC qq + (2^(kk+1) - 4)
+def columnLibraryOffset (kk qq : Nat) : Nat := addrTreeOffset qq + (2^(kk+1) - 4)
 /-- Gate-index offset of Section E (AND layer): after the column library. -/
-def oE (kk qq : Nat) : Nat := oD kk qq + 2^(2^kk) * (2^kk - 1)
+def andLayerOffset (kk qq : Nat) : Nat := columnLibraryOffset kk qq + 2^(2^kk) * (2^kk - 1)
 /-- Gate-index offset of Section F (final OR chain): after the AND layer. -/
-def oF (kk qq : Nat) : Nat := oE kk qq + 2^qq
+def orChainOffset (kk qq : Nat) : Nat := andLayerOffset kk qq + 2^qq
 
 /-! ### Power-of-2 helpers -/
 
@@ -539,10 +539,10 @@ lemma treeLevel_lt (j n : Nat) (hj : j < 2^(n+1) - 4) (hn : 2 ≤ n) :
 /-- Index of the first minterm-tree node at level `l`: `2^(l+1) - 4`. -/
 def treeBase (l : Nat) : Nat := 2^(l+1) - 4
 /-- Position of node `j` within level `l` of a minterm tree. -/
-def treePos (j l : Nat) : Nat := j - treeBase l
+def treePosition (j l : Nat) : Nat := j - treeBase l
 /-- Index of the parent (at level `l - 1`) of the level-`l` node at
     position `m`: the parent's level position is `m % 2^l`. -/
-def treeParentIdx (l m : Nat) : Nat := treeBase (l-1) + (m % 2^l)
+def treeParentIndex (l m : Nat) : Nat := treeBase (l-1) + (m % 2^l)
 
 /-- Every node with index `≥ 4` lies at or beyond the base of its level. -/
 lemma treeBase_le_of_level (j : Nat) (hj : 4 ≤ j) :
@@ -557,10 +557,10 @@ lemma treeBase_le_of_level (j : Nat) (hj : 4 ≤ j) :
 
 /-- A minterm-tree node's parent has a strictly smaller index, so tree wiring
     is acyclic. -/
-lemma treeParentIdx_lt_j (l m j : Nat) (hl : 2 ≤ l)
-    (hm : m = treePos j l) (hbase : treeBase l ≤ j) :
-    treeParentIdx l m < j := by
-  unfold treeParentIdx treeBase treePos at *
+lemma treeParentIndex_lt_j (l m j : Nat) (hl : 2 ≤ l)
+    (hm : m = treePosition j l) (hbase : treeBase l ≤ j) :
+    treeParentIndex l m < j := by
+  unfold treeParentIndex treeBase treePosition at *
   have h4l : 4 ≤ 2^l := pow_ge_4 l hl
   have hlm1 : l - 1 + 1 = l := by omega
   have h4lm1 : 4 ≤ 2^(l-1+1) := by rw [hlm1]; exact h4l
@@ -576,8 +576,8 @@ lemma treeParentIdx_lt_j (l m j : Nat) (hl : 2 ≤ l)
   omega
 
 private lemma treeLevel_parent (l m : Nat) (hl : 2 ≤ l) :
-    treeLevel (treeParentIdx l m) = l - 1 := by
-  unfold treeLevel treeParentIdx treeBase
+    treeLevel (treeParentIndex l m) = l - 1 := by
+  unfold treeLevel treeParentIndex treeBase
   have h4l : 4 ≤ 2 ^ l := pow_ge_4 l hl
   have hmod : m % 2 ^ l < 2 ^ l := Nat.mod_lt _ (by positivity)
   have hlm1 : l - 1 + 1 = l := by omega
@@ -590,9 +590,9 @@ private lemma treeLevel_parent (l m : Nat) (hl : 2 ≤ l) :
       (show 2 ^ l + m % 2 ^ l < 2 ^ (l + 1) by have := pow_double l; omega))
   · exact Nat.le_log_of_pow_le (by omega) (by omega)
 
-private lemma treePos_parent (l m : Nat) (_hl : 2 ≤ l) :
-    treePos (treeParentIdx l m) (l - 1) = m % 2 ^ l := by
-  show treeParentIdx l m - treeBase (l - 1) = m % 2 ^ l
+private lemma treePosition_parent (l m : Nat) (_hl : 2 ≤ l) :
+    treePosition (treeParentIndex l m) (l - 1) = m % 2 ^ l := by
+  show treeParentIndex l m - treeBase (l - 1) = m % 2 ^ l
   show treeBase (l - 1) + m % 2 ^ l - treeBase (l - 1) = m % 2 ^ l
   omega
 
@@ -600,7 +600,7 @@ private lemma treePos_parent (l m : Nat) (_hl : 2 ≤ l) :
 
 /-- Encode a column function `col : Fin (2^k) → Bool` as a natural number
     whose `j`-th bit is `col j`; used to index the column pattern library. -/
-noncomputable def encodeCol (k : Nat) (col : Fin (2^k) → Bool) : Nat :=
+noncomputable def encodeColumn (k : Nat) (col : Fin (2^k) → Bool) : Nat :=
   Finset.sum (Finset.univ : Finset (Fin (2^k)))
     fun j => if col j then 2^j.val else 0
 
@@ -616,9 +616,9 @@ private lemma sum_pow_two_lt (n : Nat) :
       _ = 2 ^ (n + 1) := by ring
 
 /-- Column encodings are indices into the library of `2^(2^k)` patterns. -/
-theorem encodeCol_lt (k : Nat) (col : Fin (2^k) → Bool) :
-    encodeCol k col < 2^(2^k) := by
-  unfold encodeCol
+theorem encodeColumn_lt (k : Nat) (col : Fin (2^k) → Bool) :
+    encodeColumn k col < 2^(2^k) := by
+  unfold encodeColumn
   calc Finset.sum Finset.univ (fun j : Fin (2^k) => if col j then 2 ^ j.val else 0)
       ≤ Finset.sum Finset.univ (fun j : Fin (2^k) => 2 ^ j.val) := by
         apply Finset.sum_le_sum; intro j _; split_ifs <;> simp
@@ -631,36 +631,36 @@ theorem encodeCol_lt (k : Nat) (col : Fin (2^k) → Bool) :
 -- `k` and data width `q` to `N`; it is threaded by every caller but not
 -- needed in the body, which is polymorphic in `k`, `q`.
 @[nolint unusedArguments]
-noncomputable def colFun (N : Nat) (f : BitString N → Bool)
+noncomputable def columnFunction (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (_hkq : k + q = N) (y : Fin (2^q)) : Fin (2^k) → Bool :=
   fun a => f (fun idx =>
     if _ : idx.val < k then Nat.testBit a.val idx.val
     else Nat.testBit y.val (idx.val - k))
 
 /-- Pattern-library index of the column of `f` at data row `y`:
-    `encodeCol` applied to `colFun`. -/
-noncomputable def colPatIdx (N : Nat) (f : BitString N → Bool)
+    `encodeColumn` applied to `columnFunction`. -/
+noncomputable def columnPatternIndex (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (hkq : k + q = N) (y : Fin (2^q)) : Nat :=
-  encodeCol k (colFun N f k q hkq y)
+  encodeColumn k (columnFunction N f k q hkq y)
 
 /-- Column pattern indices are bounded by the library size `2^(2^k)`. -/
-theorem colPatIdx_lt (N : Nat) (f : BitString N → Bool)
+theorem columnPatternIndex_lt (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (hkq : k + q = N) (y : Fin (2^q)) :
-    colPatIdx N f k q hkq y < 2^(2^k) :=
-  encodeCol_lt k (colFun N f k q hkq y)
+    columnPatternIndex N f k q hkq y < 2^(2^k) :=
+  encodeColumn_lt k (columnFunction N f k q hkq y)
 
 /-! ### Shannon gate array -/
 
 private noncomputable def shannonGateArray (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) :
-    (i : Fin (szSections (addrBits N) (dataBits N))) →
-    { g : Gate Basis.andOr2 (N + szSections (addrBits N) (dataBits N)) //
+    (i : Fin (totalSectionGates (addrBits N) (dataBits N))) →
+    { g : Gate Basis.andOr2 (N + totalSectionGates (addrBits N) (dataBits N)) //
       ∀ j : Fin g.fanIn, (g.inputs j).val < N + i.val } := by
   -- Abbreviations: we use `let` not `set` to keep definitions transparent
   let k := addrBits N
   let q := dataBits N
-  let W := N + szSections k q
-  let G := szSections k q
+  let W := N + totalSectionGates k q
+  let G := totalSectionGates k q
   have hkq : k + q = N := by show addrBits N + dataBits N = N; have := addr_data_sum N hN; omega
   have hk3 : 3 ≤ k := addrBits_ge_three N hN
   have hq2 : 2 ≤ q := dataBits_ge_two N hN
@@ -670,110 +670,113 @@ private noncomputable def shannonGateArray (N : Nat) [NeZero N]
   have h4k1 : 4 ≤ 2^(k+1) := pow_ge_4 (k+1) (by omega)
   have h2q1 : 2^(q+1) = 2 * 2^q := pow_double q
   have h2k1 : 2^(k+1) = 2 * 2^k := pow_double k
-  have hW_pos : 0 < W := by show 0 < N + szSections k q; unfold szSections; positivity
-  have hG_eq : G = oF k q + (2^q - 1) := by
-    show szSections k q = oF k q + (2^q - 1)
-    unfold szSections oF oE oD oC; omega
+  have hW_pos : 0 < W := by show 0 < N + totalSectionGates k q; unfold totalSectionGates; positivity
+  have hG_eq : G = orChainOffset k q + (2^q - 1) := by
+    show totalSectionGates k q = orChainOffset k q + (2^q - 1)
+    unfold totalSectionGates orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega
   intro i
   -- ──── Section A: constFalse (gate 0) ────
   if hiA : i.val = 0 then
     exact mkG W .and 0 0 false true (by omega) (by omega) (N + i.val) (by omega) (by omega)
   -- ──── Section B: data minterm tree ────
-  else if hiB : i.val < oC q then
+  else if hiB : i.val < addrTreeOffset q then
     let j := i.val - 1
-    have hjB : j < 2^(q+1) - 4 := by unfold oC at hiB; omega
+    have hjB : j < 2^(q+1) - 4 := by unfold addrTreeOffset at hiB; omega
     if hjL1 : j < 4 then
       -- Level 1: AND(input[k], input[k+1])
       exact mkG W .and k (k+1) (!Nat.testBit j 0) (!Nat.testBit j 1)
         (by omega) (by omega) (N + i.val) (by omega) (by omega)
     else
       let l := treeLevel j
-      let m := treePos j l
+      let m := treePosition j l
       have hl2 : 2 ≤ l := treeLevel_ge_two j (by omega)
       have hlq : l < q := treeLevel_lt j q hjB hq2
-      -- Parent wire: N + 1 + treeParentIdx l m (gate in data tree)
-      let pw := N + 1 + treeParentIdx l m
+      -- Parent wire: N + 1 + treeParentIndex l m (gate in data tree)
+      let pw := N + 1 + treeParentIndex l m
       let vw := k + l
       have hbase : treeBase l ≤ j := treeBase_le_of_level j (by omega)
-      have hpi_lt : treeParentIdx l m < j := treeParentIdx_lt_j l m j hl2 rfl hbase
+      have hpi_lt : treeParentIndex l m < j := treeParentIndex_lt_j l m j hl2 rfl hbase
       have hpw_b : pw < N + i.val := by
-        show N + 1 + treeParentIdx l m < N + i.val; omega
+        show N + 1 + treeParentIndex l m < N + i.val; omega
       have hvw_b : vw < N + i.val := by show k + l < N + i.val; omega
-      -- For W bounds, chain: treeParentIdx < j = i.val - 1 < i.val < G → in W
-      have hi_lt : i.val < szSections k q := i.isLt
+      -- For W bounds, chain: treeParentIndex < j = i.val - 1 < i.val < G → in W
+      have hi_lt : i.val < totalSectionGates k q := i.isLt
       have hpw_W : pw < W := by
-        show N + 1 + treeParentIdx l m < N + szSections k q; omega
-      have hvw_W : vw < W := by show k + l < N + szSections k q; omega
+        show N + 1 + treeParentIndex l m < N + totalSectionGates k q; omega
+      have hvw_W : vw < W := by show k + l < N + totalSectionGates k q; omega
       exact mkG W .and pw vw false (!Nat.testBit m l) hpw_W hvw_W (N + i.val) hpw_b hvw_b
   -- ──── Section C: address minterm tree ────
-  else if hiC : i.val < oD k q then
-    let j := i.val - oC q
-    have hi_lt : i.val < szSections k q := i.isLt
+  else if hiC : i.val < columnLibraryOffset k q then
+    let j := i.val - addrTreeOffset q
+    have hi_lt : i.val < totalSectionGates k q := i.isLt
     have hjC : j < 2^(k+1) - 4 := by
-      show i.val - oC q < 2^(k+1) - 4
-      have : i.val < oC q + (2^(k+1) - 4) := by unfold oD at hiC; exact hiC
-      unfold oC at this ⊢; omega
+      show i.val - addrTreeOffset q < 2^(k+1) - 4
+      have : i.val < addrTreeOffset q + (2^(k+1) - 4) := by
+        unfold columnLibraryOffset at hiC; exact hiC
+      unfold addrTreeOffset at this ⊢; omega
     if hjL1 : j < 4 then
       exact mkG W .and 0 1 (!Nat.testBit j 0) (!Nat.testBit j 1)
         (by omega) (by omega) (N + i.val) (by omega) (by omega)
     else
       let l := treeLevel j
-      let m := treePos j l
+      let m := treePosition j l
       have hl2 : 2 ≤ l := treeLevel_ge_two j (by omega)
       have hlk : l < k := treeLevel_lt j k hjC (by omega)
-      let pw := N + oC q + treeParentIdx l m
+      let pw := N + addrTreeOffset q + treeParentIndex l m
       let vw := l
       have hbase : treeBase l ≤ j := treeBase_le_of_level j (by omega)
-      have hpi_lt : treeParentIdx l m < j := treeParentIdx_lt_j l m j hl2 rfl hbase
-      -- j < 2^(k+1) - 4, and oC q + (2^(k+1) - 4) ≤ G
-      have hj_lt_G : oC q + j < G := by
-        show oC q + j < szSections k q
-        unfold szSections oC; omega
+      have hpi_lt : treeParentIndex l m < j := treeParentIndex_lt_j l m j hl2 rfl hbase
+      -- j < 2^(k+1) - 4, and addrTreeOffset q + (2^(k+1) - 4) ≤ G
+      have hj_lt_G : addrTreeOffset q + j < G := by
+        show addrTreeOffset q + j < totalSectionGates k q
+        unfold totalSectionGates addrTreeOffset; omega
       have hpw_b : pw < N + i.val := by
-        show N + oC q + treeParentIdx l m < N + i.val; omega
+        show N + addrTreeOffset q + treeParentIndex l m < N + i.val; omega
       have hvw_b : vw < N + i.val := by show l < N + i.val; omega
       have hpw_W : pw < W := by
-        show N + oC q + treeParentIdx l m < N + szSections k q; omega
-      have hvw_W : vw < W := by show l < N + szSections k q; omega
+        show N + addrTreeOffset q + treeParentIndex l m < N + totalSectionGates k q; omega
+      have hvw_W : vw < W := by show l < N + totalSectionGates k q; omega
       exact mkG W .and pw vw false (!Nat.testBit m l) hpw_W hvw_W (N + i.val) hpw_b hvw_b
   -- ──── Section D: column library ────
-  else if hiD : i.val < oE k q then
+  else if hiD : i.val < andLayerOffset k q then
     -- Block p, position r. Block size = 2^k - 1.
     -- Linear OR chain: gate 0 ORs select(0) with select(1),
     -- gate r≥1 ORs prev with select(r+1).
     -- select(a) = addrMinterm_a if testBit(p, a) else constFalse
-    let j := i.val - oD k q
+    let j := i.val - columnLibraryOffset k q
     have hjD : j < 2^(2^k) * (2^k - 1) := by
-      show i.val - oD k q < 2^(2^k) * (2^k - 1)
-      have : i.val < oD k q + 2^(2^k) * (2^k - 1) := by unfold oE at hiD; exact hiD
+      show i.val - columnLibraryOffset k q < 2^(2^k) * (2^k - 1)
+      have : i.val < columnLibraryOffset k q + 2^(2^k) * (2^k - 1) := by
+        unfold andLayerOffset at hiD; exact hiD
       omega
     let blkSz := 2^k - 1
     have hblk_pos : 0 < blkSz := by omega
     let p := j / blkSz
     let r := j % blkSz
     have hr_lt : r < blkSz := Nat.mod_lt j hblk_pos
-    -- Address minterm wire for index a: N + oC q + (2^k - 4) + a
-    let amw (a : Nat) : Nat := N + oC q + (2^k - 4) + a
+    -- Address minterm wire for index a: N + addrTreeOffset q + (2^k - 4) + a
+    let amw (a : Nat) : Nat := N + addrTreeOffset q + (2^k - 4) + a
     let cfw : Nat := N  -- constFalse wire
     -- Simplify: r + 1 regardless of r = 0 check
     let selIdx (pos : Nat) : Nat :=
       if Nat.testBit p pos then amw pos else cfw
-    let w0 : Nat := if r = 0 then selIdx 0 else N + oD k q + p * blkSz + (r - 1)
+    let w0 : Nat := if r = 0 then selIdx 0 else N + columnLibraryOffset k q + p * blkSz + (r - 1)
     let w1 : Nat := selIdx (r + 1)
     -- Bound proofs: all referenced wires are before the current gate
     -- Address minterms are in section C (before D)
     -- constFalse is gate 0 (before everything)
     -- previous gate in same block is at index < i
     have hamw_lt (a : Nat) (ha : a < 2^k) : amw a < N + i.val := by
-      show N + oC q + (2^k - 4) + a < N + i.val
-      have : oC q + (2^k - 4) + a < oD k q := by unfold oD oC; omega
+      show N + addrTreeOffset q + (2^k - 4) + a < N + i.val
+      have : addrTreeOffset q + (2^k - 4) + a < columnLibraryOffset k q := by
+        unfold columnLibraryOffset addrTreeOffset; omega
       omega
-    have hi_lt : i.val < szSections k q := i.isLt
+    have hi_lt : i.val < totalSectionGates k q := i.isLt
     have hamw_W (a : Nat) (ha : a < 2^k) : amw a < W := by
-      show N + oC q + (2^k - 4) + a < N + szSections k q
-      unfold szSections oC; omega
+      show N + addrTreeOffset q + (2^k - 4) + a < N + totalSectionGates k q
+      unfold totalSectionGates addrTreeOffset; omega
     have hcfw_lt : cfw < N + i.val := by show N < N + i.val; omega
-    have hcfw_W : cfw < W := by show N < N + szSections k q; omega
+    have hcfw_W : cfw < W := by show N < N + totalSectionGates k q; omega
     -- selIdx bound helper
     have hsel_lt (pos : Nat) (hpos : pos < 2^k) : selIdx pos < N + i.val := by
       show (if Nat.testBit p pos then amw pos else cfw) < N + i.val
@@ -785,46 +788,47 @@ private noncomputable def shannonGateArray (N : Nat) [NeZero N]
       split_ifs
       · exact hamw_W pos hpos
       · exact hcfw_W
-    have hi_eq : oD k q + j = i.val := by omega
+    have hi_eq : columnLibraryOffset k q + j = i.val := by omega
     have hpbr_j : blkSz * p + r = j := by
       show blkSz * (j / blkSz) + j % blkSz = j; exact Nat.div_add_mod j blkSz
-    have hpbr : oD k q + p * blkSz + r = i.val := by nlinarith [mul_comm blkSz p]
+    have hpbr : columnLibraryOffset k q + p * blkSz + r = i.val := by nlinarith [mul_comm blkSz p]
     have hw0_lt : w0 < W := by
-      show (if r = 0 then selIdx 0 else N + oD k q + p * blkSz + (r - 1)) < W
+      show (if r = 0 then selIdx 0 else N + columnLibraryOffset k q + p * blkSz + (r - 1)) < W
       split_ifs with hr0
       · exact hsel_W 0 (by omega)
       · have hi_lt := i.isLt; omega
     have hw1_lt : w1 < W := hsel_W (r + 1) (by omega)
     have hb0 : w0 < N + i.val := by
-      show (if r = 0 then selIdx 0 else N + oD k q + p * blkSz + (r - 1)) < N + i.val
+      show (if r = 0 then selIdx 0 else N + columnLibraryOffset k q + p * blkSz + (r - 1))
+        < N + i.val
       split_ifs with hr0
       · exact hsel_lt 0 (by omega)
       · omega
     have hb1 : w1 < N + i.val := hsel_lt (r + 1) (by omega)
     exact mkG W .or w0 w1 false false hw0_lt hw1_lt (N + i.val) hb0 hb1
   -- ──── Section E: AND layer ────
-  else if hiE : i.val < oF k q then
-    let y := i.val - oE k q
+  else if hiE : i.val < orChainOffset k q then
+    let y := i.val - andLayerOffset k q
     have hy : y < 2^q := by
-      show i.val - oE k q < 2^q
-      have : i.val < oE k q + 2^q := by unfold oF at hiE; exact hiE
+      show i.val - andLayerOffset k q < 2^q
+      have : i.val < andLayerOffset k q + 2^q := by unfold orChainOffset at hiE; exact hiE
       omega
     -- Data minterm: N + 1 + (2^q - 4) + y
     let dmw := N + 1 + (2^q - 4) + y
     -- Column library output for row y
-    let p := colPatIdx N f k q hkq ⟨y, hy⟩
-    have hp : p < 2^(2^k) := colPatIdx_lt N f k q hkq ⟨y, hy⟩
-    let cw := N + oD k q + p * (2^k - 1) + (2^k - 2)
+    let p := columnPatternIndex N f k q hkq ⟨y, hy⟩
+    have hp : p < 2^(2^k) := columnPatternIndex_lt N f k q hkq ⟨y, hy⟩
+    let cw := N + columnLibraryOffset k q + p * (2^k - 1) + (2^k - 2)
     -- dmw is in section B, which is before section E (where i lives)
-    have hdmw_in_B : 1 + (2^q - 4) + y < oC q := by unfold oC; omega
+    have hdmw_in_B : 1 + (2^q - 4) + y < addrTreeOffset q := by unfold addrTreeOffset; omega
     have hdmw_b : dmw < N + i.val := by
       show N + 1 + (2^q - 4) + y < N + i.val
-      have : oC q ≤ oD k q := by unfold oD; omega
-      have : oD k q ≤ oE k q := by unfold oE; omega
+      have : addrTreeOffset q ≤ columnLibraryOffset k q := by unfold columnLibraryOffset; omega
+      have : columnLibraryOffset k q ≤ andLayerOffset k q := by unfold andLayerOffset; omega
       omega
     have hdmw_W : dmw < W := by
-      show N + 1 + (2^q - 4) + y < N + szSections k q
-      unfold szSections at *; omega
+      show N + 1 + (2^q - 4) + y < N + totalSectionGates k q
+      unfold totalSectionGates at *; omega
     -- cw is the last gate of column block p (in section D, before section E)
     have hcw_in_D : p * (2^k - 1) + (2^k - 2) < 2^(2^k) * (2^k - 1) := by
       have hmul : (p + 1) * (2^k - 1) ≤ 2^(2^k) * (2^k - 1) :=
@@ -832,55 +836,59 @@ private noncomputable def shannonGateArray (N : Nat) [NeZero N]
       have hexp : p * (2^k - 1) + (2^k - 1) = (p + 1) * (2^k - 1) := by ring
       omega
     have hcw_b : cw < N + i.val := by
-      show N + oD k q + p * (2^k - 1) + (2^k - 2) < N + i.val
-      have hoE_le : oE k q ≤ i.val := by omega
-      -- oE k q = oD k q + 2^(2^k) * (2^k - 1), and our wire < oE, so < i.val
-      have : oD k q + p * (2^k - 1) + (2^k - 2) < oE k q := by
-        unfold oE; omega
+      show N + columnLibraryOffset k q + p * (2^k - 1) + (2^k - 2) < N + i.val
+      have hoE_le : andLayerOffset k q ≤ i.val := by omega
+      -- andLayerOffset k q = columnLibraryOffset k q + 2^(2^k) * (2^k - 1), and our
+      -- wire < andLayerOffset, so < i.val
+      have : columnLibraryOffset k q + p * (2^k - 1) + (2^k - 2) < andLayerOffset k q := by
+        unfold andLayerOffset; omega
       omega
     have hcw_W : cw < W := by
-      show N + oD k q + p * (2^k - 1) + (2^k - 2) < N + szSections k q
+      show N + columnLibraryOffset k q + p * (2^k - 1) + (2^k - 2) < N + totalSectionGates k q
       have hi_lt := i.isLt; omega
     exact mkG W .and dmw cw false false hdmw_W hcw_W (N + i.val) hdmw_b hcw_b
   -- ──── Section F: OR chain ────
   else
-    let r := i.val - oF k q
-    have hiF : oF k q ≤ i.val := by omega
+    let r := i.val - orChainOffset k q
+    have hiF : orChainOffset k q ≤ i.val := by omega
     have hr : r < 2^q - 1 := by
-      show i.val - oF k q < 2^q - 1
-      have : i.val < oF k q + (2^q - 1) := by rw [← hG_eq]; exact i.isLt
+      show i.val - orChainOffset k q < 2^q - 1
+      have : i.val < orChainOffset k q + (2^q - 1) := by rw [← hG_eq]; exact i.isLt
       omega
-    let w0 : Nat := if r = 0 then N + oE k q else N + oF k q + (r - 1)
-    let w1 : Nat := N + oE k q + (r + 1)
-    -- oE < oF ≤ i.val, and oE + (r+1) < oE + 2^q = oF ≤ i.val
-    have hoEF : oE k q < oF k q := by unfold oF; omega
-    have hsz_eq : szSections k q = oF k q + (2^q - 1) := hG_eq
+    let w0 : Nat := if r = 0 then N + andLayerOffset k q else N + orChainOffset k q + (r - 1)
+    let w1 : Nat := N + andLayerOffset k q + (r + 1)
+    -- andLayerOffset < orChainOffset ≤ i.val, and andLayerOffset + (r+1) <
+    -- andLayerOffset + 2^q = orChainOffset ≤ i.val
+    have hoEF : andLayerOffset k q < orChainOffset k q := by unfold orChainOffset; omega
+    have hsz_eq : totalSectionGates k q = orChainOffset k q + (2^q - 1) := hG_eq
     have hw0_lt : w0 < W := by
-      show (if r = 0 then N + oE k q else N + oF k q + (r - 1)) < N + szSections k q
+      show (if r = 0 then N + andLayerOffset k q else N + orChainOffset k q + (r - 1))
+        < N + totalSectionGates k q
       split_ifs
       · omega
       · omega
     have hw1_lt : w1 < W := by
-      show N + oE k q + (r + 1) < N + szSections k q
-      unfold oF at hsz_eq; omega
+      show N + andLayerOffset k q + (r + 1) < N + totalSectionGates k q
+      unfold orChainOffset at hsz_eq; omega
     have hb0 : w0 < N + i.val := by
-      show (if r = 0 then N + oE k q else N + oF k q + (r - 1)) < N + i.val
+      show (if r = 0 then N + andLayerOffset k q else N + orChainOffset k q + (r - 1)) < N + i.val
       split_ifs with hr0
       · omega
       · omega
     have hb1 : w1 < N + i.val := by
-      show N + oE k q + (r + 1) < N + i.val
-      unfold oF at hiF; omega
+      show N + andLayerOffset k q + (r + 1) < N + i.val
+      unfold orChainOffset at hiF; omega
     exact mkG W .or w0 w1 false false hw0_lt hw1_lt (N + i.val) hb0 hb1
 
 private noncomputable def shannonCircuit (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) :
-    Circuit Basis.andOr2 N 1 (szSections (addrBits N) (dataBits N)) where
+    Circuit Basis.andOr2 N 1 (totalSectionGates (addrBits N) (dataBits N)) where
   gates i := (shannonGateArray N f hN i).val
   outputs _ :=
-    let lastWire := N + szSections (addrBits N) (dataBits N) - 1
+    let lastWire := N + totalSectionGates (addrBits N) (dataBits N) - 1
     { op := .or, fanIn := 2, arityOk := rfl,
-      inputs := fun _ => ⟨lastWire, by have := szSections_pos (addrBits N) (dataBits N); omega⟩,
+      inputs := fun _ => ⟨lastWire,
+        by have := totalSectionGates_pos (addrBits N) (dataBits N); omega⟩,
       negated := fun _ => false }
   acyclic i k := (shannonGateArray N f hN i).property k
 
@@ -972,15 +980,15 @@ private theorem testBit_sum_cond_pow_fin (k : Nat) (b : BitString k) (i : Nat) (
         rw [hlast_eq] at hbn
         exact (Bool.eq_false_iff.mpr hbn).symm
 
-/-! #### colFun reconstruction lemma -/
+/-! #### columnFunction reconstruction lemma -/
 
 /-- Shift the data bits of x to form a q-bit function. -/
 private def shiftedBits (N k q : Nat) (hkq : k + q = N) (x : BitString N) :
     BitString q :=
   fun j => x ⟨k + j.val, by have := j.isLt; omega⟩
 
-/-- colFun at the actual bit-vector address/data values equals f(x). -/
-private theorem colFun_at_actual_bits (N : Nat) [NeZero N]
+/-- columnFunction at the actual bit-vector address/data values equals f(x). -/
+private theorem columnFunction_at_actual_bits (N : Nat) [NeZero N]
     (f : BitString N → Bool) (x : BitString N)
     (k q : Nat) (hkq : k + q = N) :
     let addr : BitString k := fun j => x ⟨j.val, by have := j.isLt; omega⟩
@@ -989,11 +997,11 @@ private theorem colFun_at_actual_bits (N : Nat) [NeZero N]
       (fun j => if addr j then 2^j.val else 0)
     let dSum := Finset.sum (Finset.univ : Finset (Fin q))
       (fun j => if data j then 2^j.val else 0)
-    colFun N f k q hkq
+    columnFunction N f k q hkq
       ⟨dSum, sum_cond_pow_fin_lt q data⟩
       ⟨aSum, sum_cond_pow_fin_lt k addr⟩ = f x := by
   simp only
-  unfold colFun shiftedBits
+  unfold columnFunction shiftedBits
   dsimp only
   congr 1
   funext ⟨idx, hidx⟩
@@ -1016,13 +1024,13 @@ private theorem addrDataSum (N : Nat) (hN : 16 ≤ N) :
 /-! ##### Connecting the last wire to the OR chain -/
 
 private theorem lastWire_is_orChain_last (N : Nat) (hN : 16 ≤ N) :
-    N + szSections (addrBits N) (dataBits N) - 1 =
-    N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) := by
+    N + totalSectionGates (addrBits N) (dataBits N) - 1 =
+    N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) := by
   have hq2 : 2 ≤ dataBits N := dataBits_ge_two N hN
   have h4q : 4 ≤ 2 ^ dataBits N := pow_ge_4 (dataBits N) hq2
-  show N + szSections (addrBits N) (dataBits N) - 1 =
-    N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2)
-  unfold szSections oF oE oD oC; omega
+  show N + totalSectionGates (addrBits N) (dataBits N) - 1 =
+    N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2)
+  unfold totalSectionGates orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega
 
 /-! ##### Semantic decomposition of the circuit -/
 
@@ -1039,7 +1047,7 @@ private noncomputable def andLayerSem (N : Nat)
   let addr : BitString k := fun j => x ⟨j.val, by have := j.isLt; omega⟩
   let aVal := Finset.sum (Finset.univ : Finset (Fin k))
     (fun j => if addr j then 2^j.val else 0)
-  (y == dVal) && colFun N f k q hkq ⟨y, hy⟩
+  (y == dVal) && columnFunction N f k q hkq ⟨y, hy⟩
     ⟨aVal, sum_cond_pow_fin_lt k addr⟩
 
 /-- Foldl of OR over a list where all elements are false gives false. -/
@@ -1093,13 +1101,13 @@ private theorem andLayerSem_ne (N : Nat) [NeZero N]
   unfold andLayerSem dataSum at *
   simp only [beq_eq_false_iff_ne.mpr hne, Bool.false_and]
 
-/-- andLayerSem at dataSum gives colFun at actual bits. -/
+/-- andLayerSem at dataSum gives columnFunction at actual bits. -/
 private theorem andLayerSem_eq (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N) :
     andLayerSem N f hN x (dataSum N hN x) (dataSum_lt N hN x) = f x := by
   unfold andLayerSem dataSum
   simp only [beq_self_eq_true, Bool.true_and]
-  exact colFun_at_actual_bits N f x (addrBits N) (dataBits N) (addrDataSum N hN)
+  exact columnFunction_at_actual_bits N f x (addrBits N) (dataBits N) (addrDataSum N hN)
 
 private theorem or_andLayerSem_eq_f (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N) :
@@ -1122,11 +1130,11 @@ private theorem or_andLayerSem_eq_f (N : Nat) [NeZero N]
     semantic values for y = 0, ..., r+1.
 
     The proof requires tracing wireValue through the gate array, showing:
-    - The gate at index oF(k,q) + r is in Section F
+    - The gate at index orChainOffset(k,q) + r is in Section F
     - Section F gates are OR gates with inputs pointing to:
-      * For r=0: AND gates at oE+0 and oE+1
-      * For r>0: previous OR-chain gate and AND gate at oE+(r+1)
-    - Each AND gate at oE+y evaluates to andLayerSem (by wireValue_andLayer_sem)
+      * For r=0: AND gates at andLayerOffset+0 and andLayerOffset+1
+      * For r>0: previous OR-chain gate and AND gate at andLayerOffset+(r+1)
+    - Each AND gate at andLayerOffset+y evaluates to andLayerSem (by wireValue_andLayer_sem)
     - The OR of the accumulated value and the new AND output gives
       the extended foldl
 
@@ -1138,7 +1146,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N)
     (y : Nat) (hy : y < 2 ^ dataBits N)
     (hyW : N + 1 + (2 ^ dataBits N - 4) + y <
-          N + szSections (addrBits N) (dataBits N)) :
+          N + totalSectionGates (addrBits N) (dataBits N)) :
     (shannonCircuit N f hN).wireValue x
       ⟨N + 1 + (2 ^ dataBits N - 4) + y, hyW⟩ =
     (y == Finset.sum Finset.univ (fun j : Fin (dataBits N) =>
@@ -1150,12 +1158,12 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
   have hkq := addrDataSum N hN
   have h2q1 : 2 ^ (dataBits N + 1) = 2 * 2 ^ dataBits N := pow_double (dataBits N)
   have hsB : ∀ (j : Nat) (hj : j < 2 ^ (dataBits N + 1) - 4)
-      (hjW : N + 1 + j < N + szSections (addrBits N) (dataBits N)),
+      (hjW : N + 1 + j < N + totalSectionGates (addrBits N) (dataBits N)),
       (shannonCircuit N f hN).wireValue x ⟨N + 1 + j, hjW⟩ =
       decide (∀ i : Fin (treeLevel j + 1),
         x ⟨addrBits N + i.val, by
             have := i.isLt; have := treeLevel_lt j (dataBits N) hj hq2; omega⟩ =
-          Nat.testBit (treePos j (treeLevel j)) i.val) := by
+          Nat.testBit (treePosition j (treeLevel j)) i.val) := by
     intro j
     exact Nat.strongRecOn j fun j ih => by
       intro hj hjW
@@ -1166,7 +1174,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
       unfold shannonGateArray
       simp only [show N + 1 + j - N = 1 + j from by omega]
       rw [dif_neg (by omega : ¬(1 + j = 0))]
-      rw [dif_pos (by unfold oC; omega : 1 + j < oC (dataBits N))]
+      rw [dif_pos (by unfold addrTreeOffset; omega : 1 + j < addrTreeOffset (dataBits N))]
       simp only [show 1 + j - 1 = j from by omega]
       by_cases hjL1 : j < 4
       ·
@@ -1186,7 +1194,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
             · exact Nat.lt_succ_iff.mp (Nat.log_lt_of_lt_pow (by omega) (by omega))
             · exact Nat.le_log_of_pow_le (by omega) (by omega)
           omega
-        have htp : treePos j 1 = j := by unfold treePos treeBase; omega
+        have htp : treePosition j 1 = j := by unfold treePosition treeBase; omega
         simp only [htl, htp, Nat.testBit_zero]
         have hlq : treeLevel j < dataBits N := treeLevel_lt j (dataBits N) (by omega) hq2
         have hfin_bound : ∀ (i : Fin (treeLevel j + 1)), addrBits N + i.val < N := by
@@ -1217,26 +1225,26 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
         have hl2 : 2 ≤ treeLevel j := treeLevel_ge_two j (by omega)
         have hlq : treeLevel j < dataBits N := treeLevel_lt j (dataBits N) hj hq2
         have hbase : treeBase (treeLevel j) ≤ j := treeBase_le_of_level j (by omega)
-        have hpi_lt : treeParentIdx (treeLevel j) (treePos j (treeLevel j)) < j :=
-          treeParentIdx_lt_j _ _ j hl2 rfl hbase
+        have hpi_lt : treeParentIndex (treeLevel j) (treePosition j (treeLevel j)) < j :=
+          treeParentIndex_lt_j _ _ j hl2 rfl hbase
         rw [Circuit.wireValue_of_lt _ _ _ (show (⟨addrBits N + treeLevel j, _⟩ : Fin _).val < N
           from by show addrBits N + treeLevel j < N; omega)]
-        have hpar := ih (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
+        have hpar := ih (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))
           hpi_lt (by omega) (by omega)
-        have htlp := treeLevel_parent (treeLevel j) (treePos j (treeLevel j)) hl2
-        have htlp1 : treeLevel (treeParentIdx (treeLevel j) (treePos j (treeLevel j))) + 1 =
+        have htlp := treeLevel_parent (treeLevel j) (treePosition j (treeLevel j)) hl2
+        have htlp1 : treeLevel (treeParentIndex (treeLevel j) (treePosition j (treeLevel j))) + 1 =
           treeLevel j := by omega
-        have htpp : treePos (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
-          (treeLevel (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))) =
-          treePos j (treeLevel j) % 2 ^ treeLevel j := by
-          rw [htlp]; exact treePos_parent (treeLevel j) (treePos j (treeLevel j)) hl2
+        have htpp : treePosition (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))
+          (treeLevel (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))) =
+          treePosition j (treeLevel j) % 2 ^ treeLevel j := by
+          rw [htlp]; exact treePosition_parent (treeLevel j) (treePosition j (treeLevel j)) hl2
         change ((false ^^ (shannonCircuit N f hN).wireValue x
-            ⟨N + 1 + treeParentIdx (treeLevel j) (treePos j (treeLevel j)), by omega⟩) &&
-          (!(treePos j (treeLevel j)).testBit (treeLevel j) ^^
+            ⟨N + 1 + treeParentIndex (treeLevel j) (treePosition j (treeLevel j)), by omega⟩) &&
+          (!(treePosition j (treeLevel j)).testBit (treeLevel j) ^^
             x ⟨addrBits N + treeLevel j, by omega⟩)) =
           decide (∀ (i : Fin (treeLevel j + 1)),
             x ⟨addrBits N + i.val, by have := i.isLt; omega⟩ =
-            (treePos j (treeLevel j)).testBit i.val)
+            (treePosition j (treeLevel j)).testBit i.val)
         rw [Bool.false_xor, hpar]
         rw [Bool.eq_iff_iff, Bool.and_eq_true]
         constructor
@@ -1275,11 +1283,11 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
       · exact Nat.lt_succ_iff.mp (Nat.log_lt_of_lt_pow (by omega) (by omega))
       · exact Nat.le_log_of_pow_le (by omega) (by omega)
     omega
-  have htp_leaf : treePos (2 ^ dataBits N - 4 + y) (dataBits N - 1) = y := by
-    unfold treePos treeBase
+  have htp_leaf : treePosition (2 ^ dataBits N - 4 + y) (dataBits N - 1) = y := by
+    unfold treePosition treeBase
     have : dataBits N - 1 + 1 = dataBits N := by omega
     rw [this]; omega
-  conv_lhs => rw [show treePos (2 ^ dataBits N - 4 + y)
+  conv_lhs => rw [show treePosition (2 ^ dataBits N - 4 + y)
       (treeLevel (2 ^ dataBits N - 4 + y)) = y from by rw [htl_leaf]; exact htp_leaf]
   have hFin_eq : treeLevel (2 ^ dataBits N - 4 + y) + 1 = dataBits N := by
     rw [htl_leaf]; omega
@@ -1311,15 +1319,15 @@ set_option maxHeartbeats 12800000 in
 private theorem wireValue_colOutput (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N)
     (y : Nat) (hy : y < 2 ^ dataBits N)
-    (hyW : N + oD (addrBits N) (dataBits N) +
-      colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
+    (hyW : N + columnLibraryOffset (addrBits N) (dataBits N) +
+      columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
         (2 ^ addrBits N - 1) + (2 ^ addrBits N - 2) <
-      N + szSections (addrBits N) (dataBits N)) :
+      N + totalSectionGates (addrBits N) (dataBits N)) :
     (shannonCircuit N f hN).wireValue x
-      ⟨N + oD (addrBits N) (dataBits N) +
-        colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
+      ⟨N + columnLibraryOffset (addrBits N) (dataBits N) +
+        columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
           (2 ^ addrBits N - 1) + (2 ^ addrBits N - 2), hyW⟩ =
-    colFun N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩
+    columnFunction N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩
       ⟨Finset.sum Finset.univ (fun j : Fin (addrBits N) =>
         if (x ⟨j.val, by have := j.isLt; have := addr_le_N N hN; omega⟩) = true
         then 2 ^ j.val else 0),
@@ -1331,37 +1339,38 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
   have hkq := addrDataSum N hN
   set k := addrBits N
   set q := dataBits N
-  set p := colPatIdx N f k q hkq ⟨y, hy⟩
+  set p := columnPatternIndex N f k q hkq ⟨y, hy⟩
   set addr : BitString k := fun j => x ⟨j.val, by have := j.isLt; omega⟩
   set aSum := Finset.sum Finset.univ (fun j : Fin k => if addr j then 2 ^ j.val else 0)
-  have hp_lt : p < 2 ^ (2 ^ k) := colPatIdx_lt N f k q hkq ⟨y, hy⟩
+  have hp_lt : p < 2 ^ (2 ^ k) := columnPatternIndex_lt N f k q hkq ⟨y, hy⟩
   have haSum_lt : aSum < 2 ^ k := sum_cond_pow_fin_lt k addr
   have hblk : 0 < 2 ^ k - 1 := by omega
   have addrLeaf : ∀ (a : Nat) (ha : a < 2 ^ k)
-      (haW : N + oC q + (2 ^ k - 4) + a < N + szSections k q),
+      (haW : N + addrTreeOffset q + (2 ^ k - 4) + a < N + totalSectionGates k q),
       (shannonCircuit N f hN).wireValue x
-        ⟨N + oC q + (2 ^ k - 4) + a, haW⟩ = decide (a = aSum) := by
+        ⟨N + addrTreeOffset q + (2 ^ k - 4) + a, haW⟩ = decide (a = aSum) := by
     intro a ha haW
     have hsC : ∀ (j : Nat) (hj : j < 2 ^ (k + 1) - 4)
-        (hjW : N + oC q + j < N + szSections k q),
-        (shannonCircuit N f hN).wireValue x ⟨N + oC q + j, hjW⟩ =
+        (hjW : N + addrTreeOffset q + j < N + totalSectionGates k q),
+        (shannonCircuit N f hN).wireValue x ⟨N + addrTreeOffset q + j, hjW⟩ =
         decide (∀ i : Fin (treeLevel j + 1),
           x ⟨i.val, by have := i.isLt; have := treeLevel_lt j k hj (by omega); omega⟩ =
-          Nat.testBit (treePos j (treeLevel j)) i.val) := by
+          Nat.testBit (treePosition j (treeLevel j)) i.val) := by
       intro j
       exact Nat.strongRecOn j fun j ih => by
         intro hj hjW
         -- unfolds shannonGateArray's 6-way case split per tree level; genuine elaboration cost
         set_option maxHeartbeats 3200000 in
-        rw [Circuit.wireValue_of_not_lt _ _ _ (by show ¬(N + oC q + j < N); omega)]
+        rw [Circuit.wireValue_of_not_lt _ _ _ (by show ¬(N + addrTreeOffset q + j < N); omega)]
         change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
         unfold shannonGateArray
-        simp only [show N + oC q + j - N = oC q + j from by omega]
-        rw [dif_neg (by unfold oC; omega : ¬(oC q + j = 0))]
-        rw [dif_neg (by unfold oC; omega : ¬(oC q + j < oC q))]
-        rw [dif_pos (by unfold oD oC; omega : oC q + j < oD k q)]
-        simp_rw [show oC q + j - oC (dataBits N) = j from by
-          show oC q + j - oC q = j; omega]
+        simp only [show N + addrTreeOffset q + j - N = addrTreeOffset q + j from by omega]
+        rw [dif_neg (by unfold addrTreeOffset; omega : ¬(addrTreeOffset q + j = 0))]
+        rw [dif_neg (by unfold addrTreeOffset; omega : ¬(addrTreeOffset q + j < addrTreeOffset q))]
+        rw [dif_pos (by unfold columnLibraryOffset addrTreeOffset; omega :
+          addrTreeOffset q + j < columnLibraryOffset k q)]
+        simp_rw [show addrTreeOffset q + j - addrTreeOffset (dataBits N) = j from by
+          show addrTreeOffset q + j - addrTreeOffset q = j; omega]
         by_cases hjL1 : j < 4
         · rw [dif_pos hjL1]
           simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
@@ -1378,7 +1387,7 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
               (Nat.lt_succ_iff.mp (Nat.log_lt_of_lt_pow (by omega) (by omega)))
               (Nat.le_log_of_pow_le (by omega) (by omega))
             omega
-          have htp : treePos j 1 = j := by unfold treePos treeBase; omega
+          have htp : treePosition j 1 = j := by unfold treePosition treeBase; omega
           have hN2 : ∀ i : Nat, i < 2 → i < N := fun i hi => by linarith [hkq, hk3]
           have hcast : (∀ i : Fin (treeLevel j + 1),
               x ⟨i.val, by have := i.isLt; have := treeLevel_lt j k hj (by omega); omega⟩ =
@@ -1386,8 +1395,9 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
               (∀ i : Fin 2, x ⟨i.val, hN2 i.val i.isLt⟩ = j.testBit i.val) := by
             constructor
             · intro h i; exact Eq.mpr (by congr 1) (h ⟨i.val, by rw [htl]; exact i.isLt⟩)
-            · intro h ⟨i, hi⟩; exact Eq.mpr (by congr 1) (h ⟨i, by rw [htl] at hi; exact hi⟩)
-          conv_rhs => rw [show treePos j (treeLevel j) = j from by rw [htl]; exact htp]
+            · intro h ⟨i, hi⟩; exact Eq.mpr (by congr 1)
+                (h ⟨i, by rw [htl] at hi; exact hi⟩)
+          conv_rhs => rw [show treePosition j (treeLevel j) = j from by rw [htl]; exact htp]
           rw [decide_eq_decide.mpr hcast] <;> [skip; exact inferInstance]
           simp only [Fin.forall_fin_two, Fin.val_zero, Fin.val_one, Nat.testBit_zero]
           cases x ⟨0, hN2 0 (by omega)⟩ <;> cases x ⟨1, hN2 1 (by omega)⟩ <;>
@@ -1400,28 +1410,30 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
           have hl2 : 2 ≤ treeLevel j := treeLevel_ge_two j (by omega)
           have hlk : treeLevel j < k := treeLevel_lt j k hj (by omega)
           have hbase : treeBase (treeLevel j) ≤ j := treeBase_le_of_level j (by omega)
-          have hpi_lt : treeParentIdx (treeLevel j) (treePos j (treeLevel j)) < j :=
-            treeParentIdx_lt_j _ _ j hl2 rfl hbase
+          have hpi_lt : treeParentIndex (treeLevel j) (treePosition j (treeLevel j)) < j :=
+            treeParentIndex_lt_j _ _ j hl2 rfl hbase
           simp only [Bool.false_xor]
           rw [Circuit.wireValue_of_lt _ _ _ (show (⟨treeLevel j, _⟩ : Fin _).val < N from by
             show treeLevel j < N; linarith [hkq, hlk])]
-          have hpar := ih (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
+          have hpar := ih (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))
             hpi_lt (by omega) (by omega)
-          have htlp := treeLevel_parent (treeLevel j) (treePos j (treeLevel j)) hl2
-          have htlp1 : treeLevel (treeParentIdx (treeLevel j) (treePos j (treeLevel j))) + 1 =
+          have htlp := treeLevel_parent (treeLevel j) (treePosition j (treeLevel j)) hl2
+          have htlp1 :
+            treeLevel (treeParentIndex (treeLevel j) (treePosition j (treeLevel j))) + 1 =
             treeLevel j := by omega
-          have htpp : treePos (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
-            (treeLevel (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))) =
-            treePos j (treeLevel j) % 2 ^ treeLevel j := by
-            rw [htlp]; exact treePos_parent (treeLevel j) (treePos j (treeLevel j)) hl2
+          have htpp : treePosition (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))
+            (treeLevel (treeParentIndex (treeLevel j) (treePosition j (treeLevel j)))) =
+            treePosition j (treeLevel j) % 2 ^ treeLevel j := by
+            rw [htlp]; exact treePosition_parent (treeLevel j) (treePosition j (treeLevel j)) hl2
           change ((shannonCircuit N f hN).wireValue x
-              ⟨N + oC (dataBits N) + treeParentIdx (treeLevel j) (treePos j (treeLevel j)),
+              ⟨N + addrTreeOffset (dataBits N) +
+                treeParentIndex (treeLevel j) (treePosition j (treeLevel j)),
                 by linarith [hpi_lt]⟩ &&
-            (!(treePos j (treeLevel j)).testBit (treeLevel j) ^^
+            (!(treePosition j (treeLevel j)).testBit (treeLevel j) ^^
               x ⟨treeLevel j, by linarith [hkq, hlk]⟩)) =
             decide (∀ (i : Fin (treeLevel j + 1)),
               x ⟨i.val, by have := i.isLt; linarith [hkq, hlk]⟩ =
-              (treePos j (treeLevel j)).testBit i.val)
+              (treePosition j (treeLevel j)).testBit i.val)
           rw [hpar]
           rw [Bool.eq_iff_iff, Bool.and_eq_true]
           constructor
@@ -1450,15 +1462,16 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
             · exact (show ∀ (a b : Bool), a = b → (!b ^^ a) = true from by decide) _ _
                 (Eq.mpr (by congr 1) (h ⟨treeLevel j, by omega⟩))
     specialize hsC (2 ^ k - 4 + a) (by omega) (by omega)
-    simp only [show N + oC q + (2 ^ k - 4 + a) = N + oC q + (2 ^ k - 4) + a from by omega] at hsC
+    simp only [show N + addrTreeOffset q + (2 ^ k - 4 + a) =
+        N + addrTreeOffset q + (2 ^ k - 4) + a from by omega] at hsC
     rw [hsC]
-    conv_lhs => rw [show treePos (2 ^ k - 4 + a)
+    conv_lhs => rw [show treePosition (2 ^ k - 4 + a)
         (treeLevel (2 ^ k - 4 + a)) = a from by
       rw [show treeLevel (2 ^ k - 4 + a) = k - 1 from by
         unfold treeLevel; have : Nat.log 2 (2 ^ k - 4 + a + 4) = k := le_antisymm
           (Nat.lt_succ_iff.mp (Nat.log_lt_of_lt_pow (by omega) (by omega)))
           (Nat.le_log_of_pow_le (by omega) (by omega)); omega]
-      unfold treePos treeBase; rw [show k - 1 + 1 = k from by omega]; omega]
+      unfold treePosition treeBase; rw [show k - 1 + 1 = k from by omega]; omega]
     have hFin_eq : treeLevel (2 ^ k - 4 + a) + 1 = k := by
       have : treeLevel (2 ^ k - 4 + a) = k - 1 := by
         unfold treeLevel; have : Nat.log 2 (2 ^ k - 4 + a + 4) = k := le_antisymm
@@ -1474,12 +1487,13 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       by_cases hi : i < k
       · rw [testBit_sum_cond_pow_fin k addr i hi]
         exact Eq.mpr (by congr 1) (h ⟨i, by omega⟩).symm
-      · rw [Nat.testBit_lt_two_pow (lt_of_lt_of_le ha (Nat.pow_le_pow_right (by omega) (by omega))),
+      · rw [Nat.testBit_lt_two_pow
+            (lt_of_lt_of_le ha (Nat.pow_le_pow_right (by omega) (by omega))),
             Nat.testBit_lt_two_pow (lt_of_lt_of_le haSum_lt
               (Nat.pow_le_pow_right (by omega) (by omega)))]
     · intro h; subst h; intro i
       rw [testBit_sum_cond_pow_fin k addr i.val (by omega)]
-  have constFalse_wire : ∀ (hW : N < N + szSections k q),
+  have constFalse_wire : ∀ (hW : N < N + totalSectionGates k q),
       (shannonCircuit N f hN).wireValue x ⟨N, hW⟩ = false := by
     intro hW
     have h0N : (0 : Nat) < N := by linarith [hkq, hk3]
@@ -1500,46 +1514,49 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
     rw [Circuit.wireValue_of_lt _ _ _ (show (⟨0, _⟩ : Fin _).val < N from h0N)]
     cases x ⟨0, h0N⟩ <;> rfl
   have colChain : ∀ (r : Nat) (hr : r < 2 ^ k - 1)
-      (hrW : N + oD k q + p * (2 ^ k - 1) + r < N + szSections k q),
+      (hrW : N + columnLibraryOffset k q + p * (2 ^ k - 1) + r < N + totalSectionGates k q),
       (shannonCircuit N f hN).wireValue x
-        ⟨N + oD k q + p * (2 ^ k - 1) + r, hrW⟩ =
+        ⟨N + columnLibraryOffset k q + p * (2 ^ k - 1) + r, hrW⟩ =
       (List.range (r + 2)).foldl
         (fun acc a => acc || (Nat.testBit p a && decide (a = aSum))) false := by
     intro r hr hrW
-    have hsz_eq : szSections k q = szSections (addrBits N) (dataBits N) := rfl
-    have hoC_eq : oC q = oC (dataBits N) := rfl
-    have hW_bound : N + oC q + (2 ^ k - 4) + (2 ^ k) ≤ N + szSections k q := by
-      have : oD k q ≤ szSections k q := by
-        show oD (addrBits N) (dataBits N) ≤ szSections (addrBits N) (dataBits N)
-        unfold szSections oD oC; omega
-      have : oC q + (2 ^ k - 4) + 2 ^ k ≤ oD k q := by
-        show oC (dataBits N) + (2 ^ (addrBits N) - 4) + 2 ^ (addrBits N) ≤
-          oD (addrBits N) (dataBits N)
-        unfold oD oC
+    have hsz_eq : totalSectionGates k q = totalSectionGates (addrBits N) (dataBits N) := rfl
+    have hoC_eq : addrTreeOffset q = addrTreeOffset (dataBits N) := rfl
+    have hW_bound : N + addrTreeOffset q + (2 ^ k - 4) + (2 ^ k) ≤ N + totalSectionGates k q := by
+      have : columnLibraryOffset k q ≤ totalSectionGates k q := by
+        show columnLibraryOffset (addrBits N) (dataBits N) ≤
+          totalSectionGates (addrBits N) (dataBits N)
+        unfold totalSectionGates columnLibraryOffset addrTreeOffset; omega
+      have : addrTreeOffset q + (2 ^ k - 4) + 2 ^ k ≤ columnLibraryOffset k q := by
+        show addrTreeOffset (dataBits N) + (2 ^ (addrBits N) - 4) + 2 ^ (addrBits N) ≤
+          columnLibraryOffset (addrBits N) (dataBits N)
+        unfold columnLibraryOffset addrTreeOffset
         have : 2 ^ (addrBits N + 1) - 4 = (2 ^ addrBits N - 4) + 2 ^ addrBits N := by
           have := pow_double (addrBits N)
           have := pow_ge_4 (addrBits N) (show 2 ≤ addrBits N from by omega)
           omega
         linarith
       omega
-    have hoE_lt : oD k q + p * (2 ^ k - 1) + (2 ^ k - 1) ≤ oE k q := by
-      show oD (addrBits N) (dataBits N) +
-        colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
+    have hoE_lt :
+        columnLibraryOffset k q + p * (2 ^ k - 1) + (2 ^ k - 1) ≤ andLayerOffset k q := by
+      show columnLibraryOffset (addrBits N) (dataBits N) +
+        columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ *
           (2 ^ (addrBits N) - 1) + (2 ^ (addrBits N) - 1) ≤
-        oE (addrBits N) (dataBits N)
-      unfold oE oD
+        andLayerOffset (addrBits N) (dataBits N)
+      unfold andLayerOffset columnLibraryOffset
       have := Nat.mul_le_mul_right (2 ^ (addrBits N) - 1)
-        (show colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩ + 1 ≤
+        (show columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN) ⟨y, hy⟩
+          + 1 ≤
           2 ^ (2 ^ addrBits N) from by exact hp_lt)
       nlinarith
     have hsel_bound (pos : Nat) (hpos : pos < 2 ^ k) :
-        N + oC q + (2 ^ k - 4) + pos < N + szSections k q :=
-      lt_of_lt_of_le (show N + oC q + (2 ^ k - 4) + pos <
-        N + oC q + (2 ^ k - 4) + 2 ^ k from by omega) hW_bound
+        N + addrTreeOffset q + (2 ^ k - 4) + pos < N + totalSectionGates k q :=
+      lt_of_lt_of_le (show N + addrTreeOffset q + (2 ^ k - 4) + pos <
+        N + addrTreeOffset q + (2 ^ k - 4) + 2 ^ k from by omega) hW_bound
     have selWire (pos : Nat) (hpos : pos < 2 ^ k) :
         (if Nat.testBit p pos then
           (shannonCircuit N f hN).wireValue x
-            ⟨N + oC q + (2 ^ k - 4) + pos, hsel_bound pos hpos⟩
+            ⟨N + addrTreeOffset q + (2 ^ k - 4) + pos, hsel_bound pos hpos⟩
          else
           (shannonCircuit N f hN).wireValue x ⟨N, by linarith [hsel_bound pos hpos]⟩) =
         (Nat.testBit p pos && decide (pos = aSum)) := by
@@ -1550,25 +1567,27 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
         simp [htb]
     induction r with
     | zero =>
-      have h_ne0 : oD k q + p * (2 ^ k - 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) +
-          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+      have h_ne0 : columnLibraryOffset k q + p * (2 ^ k - 1) ≠ 0 := by
+        show columnLibraryOffset (addrBits N) (dataBits N) +
+          columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN)
             ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) ≠ 0
-        unfold oD oC; omega
-      have h_ge_oC : ¬(oD k q + p * (2 ^ k - 1) < oC q) := by
+        unfold columnLibraryOffset addrTreeOffset; omega
+      have h_ge_oC : ¬(columnLibraryOffset k q + p * (2 ^ k - 1) < addrTreeOffset q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
-        unfold oD oC; omega
-      have h_ge_oD : ¬(oD k q + p * (2 ^ k - 1) < oD k q) := by omega
-      have h_lt_oE : oD k q + p * (2 ^ k - 1) < oE k q := by linarith [hoE_lt]
+        unfold columnLibraryOffset addrTreeOffset; omega
+      have h_ge_oD : ¬(columnLibraryOffset k q + p * (2 ^ k - 1) < columnLibraryOffset k q) := by
+        omega
+      have h_lt_oE : columnLibraryOffset k q + p * (2 ^ k - 1) < andLayerOffset k q := by
+        linarith [hoE_lt]
       rw [Circuit.wireValue_of_not_lt _ _ _ (by
-        show ¬(N + oD k q + p * (2 ^ k - 1) + 0 < N); omega)]
+        show ¬(N + columnLibraryOffset k q + p * (2 ^ k - 1) + 0 < N); omega)]
       change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
       unfold shannonGateArray
-      simp only [show N + oD k q + p * (2 ^ k - 1) + 0 - N =
-        oD k q + p * (2 ^ k - 1) from by omega]
+      simp only [show N + columnLibraryOffset k q + p * (2 ^ k - 1) + 0 - N =
+        columnLibraryOffset k q + p * (2 ^ k - 1) from by omega]
       rw [dif_neg h_ne0, dif_neg h_ge_oC, dif_neg h_ge_oD, dif_pos h_lt_oE]
       simp only [show addrBits N = k from rfl, show dataBits N = q from rfl]
-      simp only [show oD k q + p * (2 ^ k - 1) - oD k q =
+      simp only [show columnLibraryOffset k q + p * (2 ^ k - 1) - columnLibraryOffset k q =
         p * (2 ^ k - 1) from by omega]
       simp_rw [show p * (2 ^ k - 1) % (2 ^ k - 1) = 0 from by
         rw [Nat.mul_comm]; exact Nat.mul_mod_right _ _]
@@ -1588,25 +1607,31 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       · simp only [htb, Bool.true_and]; exact addrLeaf _ (by omega) _
       · simp only [Bool.eq_false_iff.mpr htb, Bool.false_and]; exact constFalse_wire _
     | succ r' ih =>
-      have h_ne0' : oD k q + p * (2 ^ k - 1) + (r' + 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) +
-          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+      have h_ne0' : columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) ≠ 0 := by
+        show columnLibraryOffset (addrBits N) (dataBits N) +
+          columnPatternIndex N f (addrBits N) (dataBits N) (addrDataSum N hN)
             ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) + (r' + 1) ≠ 0
-        unfold oD oC; omega
-      have h_ge_oC' : ¬(oD k q + p * (2 ^ k - 1) + (r' + 1) < oC q) := by
+        unfold columnLibraryOffset addrTreeOffset; omega
+      have h_ge_oC' :
+          ¬(columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) < addrTreeOffset q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
-        unfold oD oC; omega
-      have h_ge_oD' : ¬(oD k q + p * (2 ^ k - 1) + (r' + 1) < oD k q) := by omega
-      have h_lt_oE' : oD k q + p * (2 ^ k - 1) + (r' + 1) < oE k q := by linarith [hoE_lt]
+        unfold columnLibraryOffset addrTreeOffset; omega
+      have h_ge_oD' :
+          ¬(columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) < columnLibraryOffset k q) := by
+        omega
+      have h_lt_oE' :
+          columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) < andLayerOffset k q := by
+        linarith [hoE_lt]
       rw [Circuit.wireValue_of_not_lt _ _ _ (by
-        show ¬(N + oD k q + p * (2 ^ k - 1) + (r' + 1) < N); omega)]
+        show ¬(N + columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) < N); omega)]
       change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
       unfold shannonGateArray
-      simp only [show N + oD k q + p * (2 ^ k - 1) + (r' + 1) - N =
-        oD k q + p * (2 ^ k - 1) + (r' + 1) from by omega]
+      simp only [show N + columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) - N =
+        columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) from by omega]
       rw [dif_neg h_ne0', dif_neg h_ge_oC', dif_neg h_ge_oD', dif_pos h_lt_oE']
       simp only [show addrBits N = k from rfl, show dataBits N = q from rfl]
-      simp_rw [show (oD k q + p * (2 ^ k - 1) + (r' + 1) - oD k q) =
+      simp_rw [show
+        (columnLibraryOffset k q + p * (2 ^ k - 1) + (r' + 1) - columnLibraryOffset k q) =
         p * (2 ^ k - 1) + (r' + 1) from by omega]
       simp only [show (p * (2 ^ k - 1) + (r' + 1)) / (2 ^ k - 1) = p from
         Nat.div_eq_of_lt_le (by omega)
@@ -1629,16 +1654,16 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
         · simp only [htb2, Bool.true_and]; exact addrLeaf _ (by omega) _
         · simp only [Bool.eq_false_iff.mpr htb2, Bool.false_and]; exact constFalse_wire _
   change (shannonCircuit N f hN).wireValue x
-    ⟨N + oD k q + p * (2 ^ k - 1) + (2 ^ k - 2), by omega⟩ = _
+    ⟨N + columnLibraryOffset k q + p * (2 ^ k - 1) + (2 ^ k - 2), by omega⟩ = _
   rw [colChain (2 ^ k - 2) (by omega) (by omega)]
   rw [show (2 ^ k - 2) + 2 = 2 ^ k from by omega]
   have hfold := foldl_or_unique_true aSum haSum_lt
     (P := fun a => Nat.testBit p a && decide (a = aSum))
     (fun a _ hne => by simp [show ¬(a = aSum) from hne])
   rw [hfold]; simp
-  change (colPatIdx N f k q hkq ⟨y, hy⟩).testBit aSum = _
-  unfold colPatIdx
-  rw [encodeCol]
+  change (columnPatternIndex N f k q hkq ⟨y, hy⟩).testBit aSum = _
+  unfold columnPatternIndex
+  rw [encodeColumn]
   rw [testBit_sum_cond_pow_fin (2 ^ k) _ aSum haSum_lt]
 
 /-! ### OR chain induction
@@ -1649,83 +1674,95 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
 private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N)
     (r : Nat) (hr : r < 2 ^ dataBits N - 1)
-    (hW : N + oF (addrBits N) (dataBits N) + r <
-          N + szSections (addrBits N) (dataBits N)) :
+    (hW : N + orChainOffset (addrBits N) (dataBits N) + r <
+          N + totalSectionGates (addrBits N) (dataBits N)) :
     (shannonCircuit N f hN).wireValue x
-      ⟨N + oF (addrBits N) (dataBits N) + r, hW⟩ =
+      ⟨N + orChainOffset (addrBits N) (dataBits N) + r, hW⟩ =
     (List.range (r + 2)).foldl
       (fun acc y => acc || if h : y < 2 ^ dataBits N
         then andLayerSem N f hN x y h else false) false := by
   have andLayer_sem : ∀ (y : Nat) (hy : y < 2 ^ dataBits N)
-      (hyW : N + oE (addrBits N) (dataBits N) + y <
-            N + szSections (addrBits N) (dataBits N)),
+      (hyW : N + andLayerOffset (addrBits N) (dataBits N) + y <
+            N + totalSectionGates (addrBits N) (dataBits N)),
       (shannonCircuit N f hN).wireValue x
-        ⟨N + oE (addrBits N) (dataBits N) + y, hyW⟩ =
+        ⟨N + andLayerOffset (addrBits N) (dataBits N) + y, hyW⟩ =
       andLayerSem N f hN x y hy := by
     intro y hy hyW
     -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
     rw [Circuit.wireValue_of_not_lt _ _ _ (by
-      show ¬(N + oE (addrBits N) (dataBits N) + y < N); omega)]
+      show ¬(N + andLayerOffset (addrBits N) (dataBits N) + y < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
-    simp only [show N + oE (addrBits N) (dataBits N) + y - N =
-      oE (addrBits N) (dataBits N) + y from by omega]
-    rw [dif_neg (by unfold oE oD oC; have := pow_ge_4 (dataBits N) (dataBits_ge_two N hN); omega :
-      ¬(oE (addrBits N) (dataBits N) + y = 0))]
-    rw [dif_neg (by unfold oE oD oC; omega :
-      ¬(oE (addrBits N) (dataBits N) + y < oC (dataBits N)))]
-    rw [dif_neg (by unfold oE oD; omega :
-      ¬(oE (addrBits N) (dataBits N) + y < oD (addrBits N) (dataBits N)))]
-    rw [dif_neg (by unfold oE; omega :
-      ¬(oE (addrBits N) (dataBits N) + y < oE (addrBits N) (dataBits N)))]
-    rw [dif_pos (by unfold oF; omega :
-      oE (addrBits N) (dataBits N) + y < oF (addrBits N) (dataBits N))]
+    simp only [show N + andLayerOffset (addrBits N) (dataBits N) + y - N =
+      andLayerOffset (addrBits N) (dataBits N) + y from by omega]
+    rw [dif_neg (by
+      unfold andLayerOffset columnLibraryOffset
+        addrTreeOffset; have := pow_ge_4 (dataBits N) (dataBits_ge_two N hN); omega :
+      ¬(andLayerOffset (addrBits N) (dataBits N) + y = 0))]
+    rw [dif_neg (by unfold andLayerOffset columnLibraryOffset addrTreeOffset; omega :
+      ¬(andLayerOffset (addrBits N) (dataBits N) + y < addrTreeOffset (dataBits N)))]
+    rw [dif_neg (by unfold andLayerOffset columnLibraryOffset; omega :
+      ¬(andLayerOffset (addrBits N) (dataBits N) + y <
+        columnLibraryOffset (addrBits N) (dataBits N)))]
+    rw [dif_neg (by unfold andLayerOffset; omega :
+      ¬(andLayerOffset (addrBits N) (dataBits N) + y < andLayerOffset (addrBits N) (dataBits N)))]
+    rw [dif_pos (by unfold orChainOffset; omega :
+      andLayerOffset (addrBits N) (dataBits N) + y < orChainOffset (addrBits N) (dataBits N))]
     simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and, ite_self, Bool.false_xor]
     simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
       show ¬((1 : Nat) = 0) from by omega,
-      show oE (addrBits N) (dataBits N) + y - oE (addrBits N) (dataBits N) = y from by omega]
+      show andLayerOffset (addrBits N) (dataBits N) + y -
+        andLayerOffset (addrBits N) (dataBits N) = y from by omega]
     unfold andLayerSem
     congr 1
     · exact wireValue_dataLeaf N f hN x y hy _
     · exact wireValue_colOutput N f hN x y hy _
-  have hoEF : oE (addrBits N) (dataBits N) + 2 ^ dataBits N =
-      oF (addrBits N) (dataBits N) := by unfold oF; ring
-  have hoFsz : oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 1) =
-      szSections (addrBits N) (dataBits N) := by unfold szSections oF oE oD oC; omega
+  have hoEF : andLayerOffset (addrBits N) (dataBits N) + 2 ^ dataBits N =
+      orChainOffset (addrBits N) (dataBits N) := by unfold orChainOffset; ring
+  have hoFsz : orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 1) =
+      totalSectionGates (addrBits N) (dataBits N) := by
+        unfold totalSectionGates orChainOffset andLayerOffset columnLibraryOffset
+          addrTreeOffset; omega
   have hq2 := dataBits_ge_two N hN
   have h4q := pow_ge_4 (dataBits N) hq2
   induction r with
   | zero =>
     -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
-    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬((⟨N + oF (addrBits N) (dataBits N) + 0, hW⟩ :
-        Fin _).val < N) from by show ¬(N + oF (addrBits N) (dataBits N) + 0 < N); omega)]
+    rw [Circuit.wireValue_of_not_lt _ _ _
+      (show ¬((⟨N + orChainOffset (addrBits N) (dataBits N) + 0, hW⟩ :
+        Fin _).val < N)
+          from by show ¬(N + orChainOffset (addrBits N) (dataBits N) + 0 < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
-    simp only [show N + oF (addrBits N) (dataBits N) + 0 - N =
-      oF (addrBits N) (dataBits N) + 0 from by omega]
-    rw [dif_neg (by unfold oF oE oD oC; omega : ¬(oF (addrBits N) (dataBits N) + 0 = 0))]
-    rw [dif_neg (by unfold oF oE oD oC; omega :
-      ¬(oF (addrBits N) (dataBits N) + 0 < oC (dataBits N)))]
-    rw [dif_neg (by unfold oF oE oD; omega :
-      ¬(oF (addrBits N) (dataBits N) + 0 < oD (addrBits N) (dataBits N)))]
-    rw [dif_neg (by unfold oF oE; omega :
-      ¬(oF (addrBits N) (dataBits N) + 0 < oE (addrBits N) (dataBits N)))]
+    simp only [show N + orChainOffset (addrBits N) (dataBits N) + 0 - N =
+      orChainOffset (addrBits N) (dataBits N) + 0 from by omega]
+    rw [dif_neg (by
+      unfold orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + 0 = 0))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + 0 < addrTreeOffset (dataBits N)))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset columnLibraryOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + 0 <
+        columnLibraryOffset (addrBits N) (dataBits N)))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + 0 < andLayerOffset (addrBits N) (dataBits N)))]
     rw [dif_neg (by omega :
-      ¬(oF (addrBits N) (dataBits N) + 0 < oF (addrBits N) (dataBits N)))]
+      ¬(orChainOffset (addrBits N) (dataBits N) + 0 < orChainOffset (addrBits N) (dataBits N)))]
     simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or, ite_self, Bool.false_xor]
-    simp only [show oF (addrBits N) (dataBits N) + 0 - oF (addrBits N) (dataBits N) = 0
+    simp only [show orChainOffset (addrBits N) (dataBits N) + 0 -
+      orChainOffset (addrBits N) (dataBits N) = 0
       from by omega, ite_true,
       Fin.val_last, Fin.val_castSucc, ite_false,
       show ¬((1 : Nat) = 0) from by omega,
       show (0 : Nat) + 1 = 1 from by omega]
     show ((shannonCircuit N f hN).wireValue x
-        ⟨N + oE (addrBits N) (dataBits N) + 0, by linarith⟩ ||
+        ⟨N + andLayerOffset (addrBits N) (dataBits N) + 0, by linarith⟩ ||
       (shannonCircuit N f hN).wireValue x
-        ⟨N + oE (addrBits N) (dataBits N) + 1, by linarith⟩) =
+        ⟨N + andLayerOffset (addrBits N) (dataBits N) + 1, by linarith⟩) =
       List.foldl (fun acc y => acc || if h : y < 2 ^ dataBits N
         then andLayerSem N f hN x y h else false) false (List.range (0 + 2))
     rw [andLayer_sem 0 (by omega) (by linarith),
@@ -1738,38 +1775,43 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
     -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
     rw [Circuit.wireValue_of_not_lt _ _ _
-      (show ¬((⟨N + oF (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
-        Fin _).val < N) from by show ¬(N + oF (addrBits N) (dataBits N) + (r' + 1) < N); omega)]
+      (show ¬((⟨N + orChainOffset (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
+        Fin _).val < N)
+          from by show ¬(N + orChainOffset (addrBits N) (dataBits N) + (r' + 1) < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
-    simp only [show N + oF (addrBits N) (dataBits N) + (r' + 1) - N =
-      oF (addrBits N) (dataBits N) + (r' + 1) from by omega]
-    rw [dif_neg (by unfold oF oE oD oC; omega :
-      ¬(oF (addrBits N) (dataBits N) + (r' + 1) = 0))]
-    rw [dif_neg (by unfold oF oE oD oC; omega :
-      ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oC (dataBits N)))]
-    rw [dif_neg (by unfold oF oE oD; omega :
-      ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oD (addrBits N) (dataBits N)))]
-    rw [dif_neg (by unfold oF oE; omega :
-      ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oE (addrBits N) (dataBits N)))]
+    simp only [show N + orChainOffset (addrBits N) (dataBits N) + (r' + 1) - N =
+      orChainOffset (addrBits N) (dataBits N) + (r' + 1) from by omega]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + (r' + 1) = 0))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + (r' + 1) < addrTreeOffset (dataBits N)))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset columnLibraryOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + (r' + 1) <
+        columnLibraryOffset (addrBits N) (dataBits N)))]
+    rw [dif_neg (by unfold orChainOffset andLayerOffset; omega :
+      ¬(orChainOffset (addrBits N) (dataBits N) + (r' + 1) <
+        andLayerOffset (addrBits N) (dataBits N)))]
     rw [dif_neg (by omega :
-      ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oF (addrBits N) (dataBits N)))]
+      ¬(orChainOffset (addrBits N) (dataBits N) + (r' + 1) <
+        orChainOffset (addrBits N) (dataBits N)))]
     simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or, ite_self, Bool.false_xor]
-    simp only [show oF (addrBits N) (dataBits N) + (r' + 1) -
-      oF (addrBits N) (dataBits N) = r' + 1 from by omega,
+    simp only [show orChainOffset (addrBits N) (dataBits N) + (r' + 1) -
+      orChainOffset (addrBits N) (dataBits N) = r' + 1 from by omega,
       show r' + 1 ≠ 0 from by omega, ite_false,
       show r' + 1 - 1 = r' from by omega]
     have hr' : r' < 2 ^ dataBits N - 1 := by omega
-    have hW' : N + oF (addrBits N) (dataBits N) + r' <
-        N + szSections (addrBits N) (dataBits N) := by linarith
+    have hW' : N + orChainOffset (addrBits N) (dataBits N) + r' <
+        N + totalSectionGates (addrBits N) (dataBits N) := by linarith
     simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
       show ¬((1 : Nat) = 0) from by omega]
     have hih := ih hr' hW'
     simp only [show r' + 1 + 1 = r' + 2 from by omega]
-    show ((shannonCircuit N f hN).wireValue x ⟨N + oF (addrBits N) (dataBits N) + r', hW'⟩ ||
+    show ((shannonCircuit N f hN).wireValue x
+          ⟨N + orChainOffset (addrBits N) (dataBits N) + r', hW'⟩ ||
          (shannonCircuit N f hN).wireValue x
-           ⟨N + oE (addrBits N) (dataBits N) + (r' + 2), by linarith⟩) =
+           ⟨N + andLayerOffset (addrBits N) (dataBits N) + (r' + 2), by linarith⟩) =
         List.foldl (fun acc y => acc || if h : y < 2 ^ dataBits N
           then andLayerSem N f hN x y h else false) false (List.range (r' + 1 + 2))
     rw [hih, andLayer_sem (r' + 2) (by omega) (by linarith)]
@@ -1790,10 +1832,10 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
 
 private theorem lastOrChain_eq_f (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N)
-    (hW : N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
-          N + szSections (addrBits N) (dataBits N)) :
+    (hW : N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
+          N + totalSectionGates (addrBits N) (dataBits N)) :
     (shannonCircuit N f hN).wireValue x
-      ⟨N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2), hW⟩ = f x := by
+      ⟨N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2), hW⟩ = f x := by
   have hq2 : 2 ≤ dataBits N := dataBits_ge_two N hN
   have h4q : 4 ≤ 2 ^ dataBits N := pow_ge_4 (dataBits N) hq2
   -- Step 1: OR chain at last position = foldl of AND semantic values
@@ -1810,27 +1852,27 @@ private theorem lastOrChain_eq_f (N : Nat) [NeZero N]
 /-- The last wire of the Shannon circuit evaluates to f x.
 
 The correctness argument proceeds in two steps:
-1. The last wire index = oF(k,q) + (2^q - 2)  (lastWire_is_orChain_last)
+1. The last wire index = orChainOffset(k,q) + (2^q - 2)  (lastWire_is_orChain_last)
 2. That wire evaluates to f(x)  (lastOrChain_eq_f) -/
 private theorem shannon_lastWire_correct (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N) :
     (shannonCircuit N f hN).wireValue x
-      ⟨N + szSections (addrBits N) (dataBits N) - 1,
-       by have := szSections_pos (addrBits N) (dataBits N); omega⟩ = f x := by
-  -- Step 1: rewrite last wire index as oF k q + (2^q - 2)
+      ⟨N + totalSectionGates (addrBits N) (dataBits N) - 1,
+       by have := totalSectionGates_pos (addrBits N) (dataBits N); omega⟩ = f x := by
+  -- Step 1: rewrite last wire index as orChainOffset k q + (2^q - 2)
   have hlast := lastWire_is_orChain_last N hN
   have hq2 : 2 ≤ dataBits N := dataBits_ge_two N hN
   have h4q : 4 ≤ 2 ^ dataBits N := pow_ge_4 (dataBits N) hq2
-  have hW_or : N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
-    N + szSections (addrBits N) (dataBits N) := by
-    show N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
-      N + szSections (addrBits N) (dataBits N)
-    unfold szSections oF oE oD oC; omega
+  have hW_or : N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
+    N + totalSectionGates (addrBits N) (dataBits N) := by
+    show N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2) <
+      N + totalSectionGates (addrBits N) (dataBits N)
+    unfold totalSectionGates orChainOffset andLayerOffset columnLibraryOffset addrTreeOffset; omega
   have hfin_eq :
-    (⟨N + szSections (addrBits N) (dataBits N) - 1,
-      by have := szSections_pos (addrBits N) (dataBits N); omega⟩ :
-      Fin (N + szSections (addrBits N) (dataBits N))) =
-    ⟨N + oF (addrBits N) (dataBits N) + (2 ^ dataBits N - 2), hW_or⟩ := by
+    (⟨N + totalSectionGates (addrBits N) (dataBits N) - 1,
+      by have := totalSectionGates_pos (addrBits N) (dataBits N); omega⟩ :
+      Fin (N + totalSectionGates (addrBits N) (dataBits N))) =
+    ⟨N + orChainOffset (addrBits N) (dataBits N) + (2 ^ dataBits N - 2), hW_or⟩ := by
     ext; exact hlast
   rw [hfin_eq]
   -- Step 2: that wire = f(x)
@@ -1845,10 +1887,10 @@ private theorem shannonCircuit_correct (N : Nat) [NeZero N]
   simp only [Bool.false_xor, Bool.or_self]
   exact shannon_lastWire_correct N f hN x
 
-private theorem szSections_le_bound (N : Nat) (_hN : 16 ≤ N) :
-    szSections (addrBits N) (dataBits N) + 1 ≤
+private theorem totalSectionGates_le_bound (N : Nat) (_hN : 16 ≤ N) :
+    totalSectionGates (addrBits N) (dataBits N) + 1 ≤
       4 * 2 ^ dataBits N + 2 * 2 ^ addrBits N + 2 ^ (2 ^ addrBits N + addrBits N) := by
-  unfold szSections
+  unfold totalSectionGates
   have hq1 : 1 ≤ 2 ^ dataBits N := Nat.one_le_two_pow
   have hk1 : 1 ≤ 2 ^ addrBits N := Nat.one_le_two_pow
   rw [show dataBits N + 1 = (dataBits N).succ from rfl, Nat.pow_succ]
@@ -1869,10 +1911,10 @@ theorem shannon_assembly (N : Nat) [NeZero N] (hN : 16 ≤ N)
       (fun x => (c.eval x) 0) = f ∧
       G + 1 ≤ 4 * 2 ^ dataBits N + 2 * 2 ^ addrBits N +
           2 ^ (2 ^ addrBits N + addrBits N) := by
-  exact ⟨szSections (addrBits N) (dataBits N),
+  exact ⟨totalSectionGates (addrBits N) (dataBits N),
     shannonCircuit N f hN,
     funext (shannonCircuit_correct N f hN),
-    szSections_le_bound N hN⟩
+    totalSectionGates_le_bound N hN⟩
 
 /-! ## Main Theorem -/
 

@@ -13,13 +13,13 @@ Upper bounds on the circuit complexity of existentially quantified
 Boolean functions.
 
 Given `f : BitString (k + m) → Bool`, the existential quantification
-`existQuantify f : BitString m → Bool` is defined by
+`existsQuantify f : BitString m → Bool` is defined by
 `g(y) = ∃ x ∈ {0,1}^k, f(x ++ y)`.  This models a nondeterministic
 circuit that guesses the first `k` input bits.
 
 ## Definitions (from `Complexitylib.Circuits.Nondeterminism.Defs`)
 
-* `existQuantify` — existential quantification over first `k` inputs
+* `existsQuantify` — existential quantification over first `k` inputs
 * `forallQuantify` — universal quantification over first `k` inputs
 * `restrictFirst` — fix the first input to a constant
 
@@ -31,16 +31,16 @@ circuit that guesses the first `k` input bits.
 * `sizeComplexity_or_le` — the OR of two functions has complexity at most
   the sum of their complexities plus one.
 
-* `sizeComplexity_existQuantify_le` — **naive upper bound**:
-  `sizeComplexity(existQuantify f) ≤ 2^k · (sizeComplexity(f) + 1)`.
-  Proof by induction on `k` using `existQuantify_succ`, restriction,
+* `sizeComplexity_existsQuantify_le` — **naive upper bound**:
+  `sizeComplexity(existsQuantify f) ≤ 2^k · (sizeComplexity(f) + 1)`.
+  Proof by induction on `k` using `existsQuantify_succ`, restriction,
   and OR combination.
 
-* `sizeComplexity_existQuantify_le_shannon` — **Shannon upper bound**:
-  `sizeComplexity(existQuantify f) ≤ 18 · 2^m / m` for `m ≥ 16`.
+* `sizeComplexity_existsQuantify_le_shannon` — **Shannon upper bound**:
+  `sizeComplexity(existsQuantify f) ≤ 18 · 2^m / m` for `m ≥ 16`.
   Independent of `f`'s complexity (the quantified function has only `m` inputs).
 
-* `sizeComplexity_existQuantify_le_min` — the minimum of the two bounds above
+* `sizeComplexity_existsQuantify_le_min` — the minimum of the two bounds above
   (for `m ≥ 16`).
 
 The naive bound is tighter when `k` is small and `f` has low complexity;
@@ -125,37 +125,37 @@ private theorem cast_fun_fin_apply {n n' : Nat}
 /-- **Naive upper bound for existential quantification.**
 
     If `f : BitString (k + m) → Bool` has fan-in-2 AND/OR circuit complexity
-    `s`, then `existQuantify f : BitString m → Bool` has circuit complexity
+    `s`, then `existsQuantify f : BitString m → Bool` has circuit complexity
     at most `2^k · (s + 1)`.
 
     **Proof.**  By induction on `k`.  We prove the tighter statement
     `sizeComplexity + 1 ≤ 2^k · (s + 1)`, which absorbs the OR-gate
     overhead at each step.
 
-    * **Base case** (`k = 0`):  `existQuantify` is the identity (up to a
+    * **Base case** (`k = 0`):  `existsQuantify` is the identity (up to a
       transport along `0 + m = m`), so complexity is preserved.
 
-    * **Inductive step** (`k → k + 1`):  `existQuantify (k+1) f` factors
-      as `(existQuantify k (f|₀)) OR (existQuantify k (f|₁))` via
-      `existQuantify_succ`.  Restriction preserves complexity; the OR adds
+    * **Inductive step** (`k → k + 1`):  `existsQuantify (k+1) f` factors
+      as `(existsQuantify k (f|₀)) OR (existsQuantify k (f|₁))` via
+      `existsQuantify_succ`.  Restriction preserves complexity; the OR adds
       one gate; and the inductive hypothesis bounds each branch by
       `2^k · (s + 1) − 1`.  After the "+1 trick":
       `(size₁ + size₂ + 1) + 1 = (size₁ + 1) + (size₂ + 1) ≤ 2^(k+1) · (s + 1)`. -/
-theorem sizeComplexity_existQuantify_le [CompleteBasis Basis.andOr2]
+theorem sizeComplexity_existsQuantify_le [CompleteBasis Basis.andOr2]
     (f : BitString (k + m) → Bool) [NeZero m] :
-    Circuit.sizeComplexity Basis.andOr2 (existQuantify f) ≤
+    Circuit.sizeComplexity Basis.andOr2 (existsQuantify f) ≤
       2 ^ k * (Circuit.sizeComplexity Basis.andOr2 f + 1) := by
-  suffices h : Circuit.sizeComplexity Basis.andOr2 (existQuantify f) + 1 ≤
+  suffices h : Circuit.sizeComplexity Basis.andOr2 (existsQuantify f) + 1 ≤
       2 ^ k * (Circuit.sizeComplexity Basis.andOr2 f + 1) by omega
   induction k with
   | zero =>
     simp only [Nat.pow_zero, Nat.one_mul]
-    suffices hle : Circuit.sizeComplexity Basis.andOr2 (existQuantify (k := 0) f) ≤
+    suffices hle : Circuit.sizeComplexity Basis.andOr2 (existsQuantify (k := 0) f) ≤
         Circuit.sizeComplexity Basis.andOr2 f by omega
-    suffices heq : existQuantify (k := 0) f = (Nat.zero_add m) ▸ f by
+    suffices heq : existsQuantify (k := 0) f = (Nat.zero_add m) ▸ f by
       rw [heq, sizeComplexity_cast]
     funext y
-    unfold existQuantify
+    unfold existsQuantify
     simp [Unique.exists_iff]
     rw [cast_fun_apply]
     congr 1
@@ -163,13 +163,13 @@ theorem sizeComplexity_existQuantify_le [CompleteBasis Basis.andOr2]
     simp [Fin.append, Fin.addCases]
     rw [cast_fun_fin_apply]
   | succ k ih =>
-    have hfun : existQuantify (k := k + 1) f = fun y =>
-        (existQuantify (k := k) (restrictFirst f false) y ||
-         existQuantify (k := k) (restrictFirst f true) y) :=
-      funext (existQuantify_succ f)
+    have hfun : existsQuantify (k := k + 1) f = fun y =>
+        (existsQuantify (k := k) (restrictFirst f false) y ||
+         existsQuantify (k := k) (restrictFirst f true) y) :=
+      funext (existsQuantify_succ f)
     rw [hfun]
-    set g₁ := existQuantify (k := k) (restrictFirst f false)
-    set g₂ := existQuantify (k := k) (restrictFirst f true)
+    set g₁ := existsQuantify (k := k) (restrictFirst f false)
+    set g₂ := existsQuantify (k := k) (restrictFirst f true)
     set s := Circuit.sizeComplexity Basis.andOr2 f
     have hor := sizeComplexity_or_le g₁ g₂
     have h₁ : Circuit.sizeComplexity Basis.andOr2 g₁ + 1 ≤ 2 ^ k * (s + 1) :=
@@ -189,26 +189,26 @@ theorem sizeComplexity_existQuantify_le [CompleteBasis Basis.andOr2]
 
 /-- **Shannon upper bound for existential quantification.**
 
-    The quantified function `existQuantify f : BitString m → Bool` is just
+    The quantified function `existsQuantify f : BitString m → Bool` is just
     an `m`-input Boolean function, so the Shannon upper bound applies
     (for `m ≥ 16`) regardless of `f`'s complexity.  Even if `f` has
     exponential circuit complexity,
-    `existQuantify f` has complexity at most `O(2^m / m)`, which decreases
+    `existsQuantify f` has complexity at most `O(2^m / m)`, which decreases
     exponentially as more variables are quantified away. -/
-theorem sizeComplexity_existQuantify_le_shannon [CompleteBasis Basis.andOr2]
+theorem sizeComplexity_existsQuantify_le_shannon [CompleteBasis Basis.andOr2]
     (f : BitString (k + m) → Bool) [NeZero m] (hm : 16 ≤ m) :
-    Circuit.sizeComplexity Basis.andOr2 (existQuantify f) ≤ 18 * 2 ^ m / m :=
-  shannon_upper_bound m hm (existQuantify f)
+    Circuit.sizeComplexity Basis.andOr2 (existsQuantify f) ≤ 18 * 2 ^ m / m :=
+  shannon_upper_bound m hm (existsQuantify f)
 
 /-- **Combined upper bound**: the minimum of the naive and Shannon bounds.
 
     When `sizeComplexity(f) ≈ 2^(k+m)/2`, the Shannon bound
     `18 · 2^m / m` is exponentially better than the naive
     `2^k · (s + 1)`, especially for large `k`. -/
-theorem sizeComplexity_existQuantify_le_min [CompleteBasis Basis.andOr2]
+theorem sizeComplexity_existsQuantify_le_min [CompleteBasis Basis.andOr2]
     (f : BitString (k + m) → Bool) [NeZero m] (hm : 16 ≤ m) :
-    Circuit.sizeComplexity Basis.andOr2 (existQuantify f) ≤
+    Circuit.sizeComplexity Basis.andOr2 (existsQuantify f) ≤
       min (2 ^ k * (Circuit.sizeComplexity Basis.andOr2 f + 1)) (18 * 2 ^ m / m) :=
-  le_min (sizeComplexity_existQuantify_le f) (sizeComplexity_existQuantify_le_shannon f hm)
+  le_min (sizeComplexity_existsQuantify_le f) (sizeComplexity_existsQuantify_le_shannon f hm)
 
 end Complexity

@@ -21,15 +21,15 @@ guesses the first `k` input bits.
 
 ## Main definitions
 
-* `existQuantify` — existential quantification over first `k` inputs
+* `existsQuantify` — existential quantification over first `k` inputs
 * `forallQuantify` — universal quantification over first `k` inputs
 
 ## Main results
 
-* `existQuantify_eq_true` — iff characterization via existential
+* `existsQuantify_eq_true` — iff characterization via existential
 * `forallQuantify_eq_true` — iff characterization via universal
-* `forallQuantify_eq_not_existQuantify_not` — De Morgan duality
-* `existQuantify_mono` — monotonicity under pointwise implication
+* `forallQuantify_eq_not_existsQuantify_not` — De Morgan duality
+* `existsQuantify_mono` — monotonicity under pointwise implication
 -/
 
 namespace Complexity
@@ -41,19 +41,19 @@ variable {k m : Nat}
     `g(y) = true` iff `∃ x : BitString k, f(x ++ y) = true`.
 
     This models a nondeterministic circuit that guesses the first `k` inputs. -/
-def existQuantify (f : BitString (k + m) → Bool) : BitString m → Bool :=
+def existsQuantify (f : BitString (k + m) → Bool) : BitString m → Bool :=
   fun y => decide (∃ x : BitString k, f (Fin.append x y) = true)
 
 /-- Universal quantification over the first `k` inputs of a Boolean function. -/
 def forallQuantify (f : BitString (k + m) → Bool) : BitString m → Bool :=
   fun y => decide (∀ x : BitString k, f (Fin.append x y) = true)
 
-/-- Characterization: `existQuantify f y = true` iff some assignment `x` to the
+/-- Characterization: `existsQuantify f y = true` iff some assignment `x` to the
     first `k` inputs makes `f (x ++ y) = true`. -/
 @[simp]
-theorem existQuantify_eq_true {f : BitString (k + m) → Bool} {y : BitString m} :
-    existQuantify f y = true ↔ ∃ x : BitString k, f (Fin.append x y) = true := by
-  simp [existQuantify]
+theorem existsQuantify_eq_true {f : BitString (k + m) → Bool} {y : BitString m} :
+    existsQuantify f y = true ↔ ∃ x : BitString k, f (Fin.append x y) = true := by
+  simp [existsQuantify]
 
 /-- Characterization: `forallQuantify f y = true` iff every assignment `x` to the
     first `k` inputs makes `f (x ++ y) = true`. -/
@@ -64,28 +64,28 @@ theorem forallQuantify_eq_true {f : BitString (k + m) → Bool} {y : BitString m
 
 /-- De Morgan duality: universal quantification equals negated existential
     of negation. -/
-theorem forallQuantify_eq_not_existQuantify_not
+theorem forallQuantify_eq_not_existsQuantify_not
     (f : BitString (k + m) → Bool) (y : BitString m) :
-    forallQuantify f y = !(existQuantify (fun z => !(f z)) y) := by
-  unfold forallQuantify existQuantify
+    forallQuantify f y = !(existsQuantify (fun z => !(f z)) y) := by
+  unfold forallQuantify existsQuantify
   cases h : decide (∀ x : BitString k, f (Fin.append x y) = true) <;>
     simp_all [decide_eq_false_iff_not, not_forall]
 
 /-- De Morgan duality: existential quantification equals negated universal
     of negation. -/
-theorem existQuantify_eq_not_forallQuantify_not
+theorem existsQuantify_eq_not_forallQuantify_not
     (f : BitString (k + m) → Bool) (y : BitString m) :
-    existQuantify f y = !(forallQuantify (fun z => !(f z)) y) := by
-  unfold existQuantify forallQuantify
+    existsQuantify f y = !(forallQuantify (fun z => !(f z)) y) := by
+  unfold existsQuantify forallQuantify
   cases h : decide (∃ x : BitString k, f (Fin.append x y) = true) <;>
     simp_all [decide_eq_false_iff_not, not_exists]
 
 /-- Monotonicity: if `f` implies `g` pointwise, existential quantification
     preserves this. -/
-theorem existQuantify_mono {f g : BitString (k + m) → Bool}
+theorem existsQuantify_mono {f g : BitString (k + m) → Bool}
     (h : ∀ z, f z = true → g z = true) {y : BitString m} :
-    existQuantify f y = true → existQuantify g y = true := by
-  simp only [existQuantify_eq_true]
+    existsQuantify f y = true → existsQuantify g y = true := by
+  simp only [existsQuantify_eq_true]
   rintro ⟨x, hx⟩
   exact ⟨x, h _ hx⟩
 
@@ -99,15 +99,15 @@ theorem forallQuantify_mono {f g : BitString (k + m) → Bool}
 
 /-- Constant true: existential quantification is always true. -/
 @[simp]
-theorem existQuantify_const_true :
-    existQuantify (k := k) (m := m) (fun _ => true) = fun _ => true := by
-  funext y; simp [existQuantify]
+theorem existsQuantify_const_true :
+    existsQuantify (k := k) (m := m) (fun _ => true) = fun _ => true := by
+  funext y; simp [existsQuantify]
 
 /-- Constant false: existential quantification is always false. -/
 @[simp]
-theorem existQuantify_const_false :
-    existQuantify (k := k) (m := m) (fun _ => false) = fun _ => false := by
-  funext y; simp [existQuantify]
+theorem existsQuantify_const_false :
+    existsQuantify (k := k) (m := m) (fun _ => false) = fun _ => false := by
+  funext y; simp [existsQuantify]
 
 /-- Constant true: universal quantification is always true. -/
 @[simp]
@@ -131,13 +131,13 @@ def restrictFirst (f : BitString ((k + 1) + m) → Bool) (b : Bool) :
     over `k` variables for each value of the first variable.
 
     `(∃ a ∈ {0,1}^{k+1}, f(a,y)) ↔ (∃ x ∈ {0,1}^k, f(0∷x,y)) ∨ (∃ x ∈ {0,1}^k, f(1∷x,y))` -/
-theorem existQuantify_succ (f : BitString ((k + 1) + m) → Bool) (y : BitString m) :
-    existQuantify (k := k + 1) f y =
-    ((existQuantify (k := k) (restrictFirst f false) y) ||
-     (existQuantify (k := k) (restrictFirst f true) y)) := by
+theorem existsQuantify_succ (f : BitString ((k + 1) + m) → Bool) (y : BitString m) :
+    existsQuantify (k := k + 1) f y =
+    ((existsQuantify (k := k) (restrictFirst f false) y) ||
+     (existsQuantify (k := k) (restrictFirst f true) y)) := by
   have bool_eq : ∀ (a b : Bool), a = b ↔ (a = true ↔ b = true) := by decide
   rw [bool_eq]
-  simp only [existQuantify_eq_true, Bool.or_eq_true, restrictFirst]
+  simp only [existsQuantify_eq_true, Bool.or_eq_true, restrictFirst]
   constructor
   · rintro ⟨a, ha⟩
     by_cases hb : a ⟨0, by omega⟩ = true

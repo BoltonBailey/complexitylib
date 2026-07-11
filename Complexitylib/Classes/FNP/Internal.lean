@@ -10,8 +10,8 @@ import Mathlib.Analysis.Asymptotics.Defs
 /-!
 # FNP and TFNP — Internal proofs
 
-Helper lemmas for `tagRelation` used by the surface-layer theorem
-`tagRelation_mem_TFNP_of_NP_coNP_witnesses`.
+Helper lemmas for `OrRelation` used by the surface-layer theorem
+`orRelation_mem_TFNP_of_NP_coNP_witnesses`.
 -/
 
 namespace Complexity
@@ -19,27 +19,27 @@ namespace Complexity
 open Complexity Asymptotics Filter
 
 /-- The combined relation is polynomially balanced when both components are. -/
-theorem polyBalanced_tagRelation {R₁ R₂ : List Bool → List Bool → Prop}
+theorem polyBalanced_orRelation {R₁ R₂ : List Bool → List Bool → Prop}
     (h₁ : PolyBalanced R₁) (h₂ : PolyBalanced R₂) :
-    PolyBalanced (tagRelation R₁ R₂) := by
+    PolyBalanced (OrRelation R₁ R₂) := by
   obtain ⟨p₁, hb₁⟩ := h₁
   obtain ⟨p₂, hb₂⟩ := h₂
   refine ⟨p₁ + p₂, ?_⟩
   intro x y hR
-  simp only [tagRelation] at hR
+  simp only [OrRelation] at hR
   cases hR with
   | inl h => have := hb₁ x y h; simp [Polynomial.eval_add]; omega
   | inr h => have := hb₂ x y h; simp [Polynomial.eval_add]; omega
 
 /-- If both pair languages are in P, so is the pair language of the combined
-    relation. Since `tagRelation R₁ R₂ = R₁ ∨ R₂`, the pair language is
+    relation. Since `OrRelation R₁ R₂ = R₁ ∨ R₂`, the pair language is
     `pairLang R₁ ∪ pairLang R₂`, and P is closed under union. -/
-theorem pairLang_tagRelation_mem_P {R₁ R₂ : List Bool → List Bool → Prop}
+theorem pairLang_orRelation_mem_P {R₁ R₂ : List Bool → List Bool → Prop}
     (h₁ : pairLang R₁ ∈ P) (h₂ : pairLang R₂ ∈ P) :
-    pairLang (tagRelation R₁ R₂) ∈ P := by
-  -- pairLang (tagRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂
-  have heq : pairLang (tagRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂ := by
-    ext z; simp only [pairLang, tagRelation, Set.mem_setOf_eq, Set.mem_union]; aesop
+    pairLang (OrRelation R₁ R₂) ∈ P := by
+  -- pairLang (OrRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂
+  have heq : pairLang (OrRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂ := by
+    ext z; simp only [pairLang, OrRelation, Set.mem_setOf_eq, Set.mem_union]; aesop
   rw [heq]
   -- Extract polynomial degrees from P = ⋃ k, DTIME(· ^ k)
   obtain ⟨d₁, hd₁⟩ := Set.mem_iUnion.mp h₁
@@ -60,9 +60,9 @@ theorem pairLang_tagRelation_mem_P {R₁ R₂ : List Bool → List Bool → Prop
   exact_mod_cast this
 
 /-- The tagged relation is in FNP when both components are. -/
-theorem tagRelation_mem_FNP {R₁ R₂ : List Bool → List Bool → Prop}
+theorem orRelation_mem_FNP {R₁ R₂ : List Bool → List Bool → Prop}
     (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP) :
-    tagRelation R₁ R₂ ∈ FNP :=
-  ⟨polyBalanced_tagRelation hR₁.1 hR₂.1, pairLang_tagRelation_mem_P hR₁.2 hR₂.2⟩
+    OrRelation R₁ R₂ ∈ FNP :=
+  ⟨polyBalanced_orRelation hR₁.1 hR₂.1, pairLang_orRelation_mem_P hR₁.2 hR₂.2⟩
 
 end Complexity

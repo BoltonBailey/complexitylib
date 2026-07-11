@@ -10,7 +10,7 @@ import Complexitylib.Classes.P
 # FNP and TFNP — Definitions
 
 Core definitions for the function/search complexity classes **FNP** and **TFNP**,
-and the `tagRelation` combinator used to construct TFNP problems from
+and the `OrRelation` combinator used to construct TFNP problems from
 NP ∩ coNP witness pairs.
 -/
 
@@ -31,7 +31,7 @@ def TFNP : Set (List Bool → List Bool → Prop) :=
 /-- Combine two witness relations by disjunction. Used to construct TFNP
     problems from NP ∩ coNP witness pairs: the combined relation accepts any
     witness valid for either component. -/
-def tagRelation (R₁ R₂ : List Bool → List Bool → Prop) :
+def OrRelation (R₁ R₂ : List Bool → List Bool → Prop) :
     List Bool → List Bool → Prop :=
   fun x y => R₁ x y ∨ R₂ x y
 

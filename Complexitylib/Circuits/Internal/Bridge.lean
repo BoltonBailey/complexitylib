@@ -18,6 +18,8 @@ The public theorems `shannon_lower_bound_circuit` and
 
 namespace Complexity
 
+open CircDesc
+
 /-! ## Padding -/
 
 /-- Pad a descriptor to a larger size by appending copy gates.
@@ -34,18 +36,18 @@ def padDesc {N s : Nat} (d : CircDesc N s) (s' : Nat) (hs : 0 < s) (h : s ≤ s'
     -- Copy gate: OR(last_original_output, last_original_output)
     (false, (⟨N + s - 1, by omega⟩, ⟨N + s - 1, by omega⟩), (false, false))
 
--- Helper: wireValD agrees on original wires
-private theorem wireValD_padDesc_lt {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
+-- Helper: wireVal agrees on original wires
+private theorem wireVal_padDesc_lt {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
     (h : s ≤ s') (x : BitString N) (w : Fin (N + s')) (hw : w.val < N + s) :
-    wireValD (padDesc d s' hs h) x w =
-      wireValD d x ⟨w.val, hw⟩ := by
+    wireVal (padDesc d s' hs h) x w =
+      wireVal d x ⟨w.val, hw⟩ := by
   by_cases hwN : w.val < N
-  · simp [wireValD, hwN]
+  · simp [wireVal, hwN]
   · push Not at hwN
     have hi : w.val - N < s := by omega
-    conv_lhs => unfold wireValD
+    conv_lhs => unfold wireVal
     simp only [show ¬(w.val < N) from by omega, dite_false]
-    conv_rhs => unfold wireValD
+    conv_rhs => unfold wireVal
     simp only [show ¬(w.val < N) from by omega, dite_false]
     -- Both sides look up the gate at index w.val - N
     simp only [padDesc, show (w.val - N) < s from hi, dite_true]
@@ -53,16 +55,16 @@ private theorem wireValD_padDesc_lt {N s s' : Nat} (d : CircDesc N s) (hs : 0 < 
     have hw2 : (d ⟨↑w - N, hi⟩).2.1.2.val < N + s := (d ⟨↑w - N, hi⟩).2.1.2.isLt
     congr 1 <;> (congr 1 <;> (first | rfl | (congr 1; split_ifs with hlt <;> (
       first
-      | exact wireValD_padDesc_lt d hs h x _ (by first | exact hw1 | exact hw2)
+      | exact wireVal_padDesc_lt d hs h x _ (by first | exact hw1 | exact hw2)
       | rfl))))
   termination_by w.val
 
 -- Helper: padded wire values equal the last original output
-private theorem wireValD_padDesc_ge {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
+private theorem wireVal_padDesc_ge {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
     (h : s ≤ s') (x : BitString N) (w : Fin (N + s')) (hw : N + s ≤ w.val) :
-    wireValD (padDesc d s' hs h) x w =
-      wireValD d x ⟨N + s - 1, by omega⟩ := by
-  conv_lhs => unfold wireValD
+    wireVal (padDesc d s' hs h) x w =
+      wireVal d x ⟨N + s - 1, by omega⟩ := by
+  conv_lhs => unfold wireVal
   simp only [show ¬(w.val < N) from by omega, dite_false]
   -- The gate at index w.val - N ≥ s, so padDesc gives the copy gate
   simp only [padDesc, show ¬(w.val - N < s) from by omega, dite_false]
@@ -70,24 +72,24 @@ private theorem wireValD_padDesc_ge {N s s' : Nat} (d : CircDesc N s) (hs : 0 < 
   simp only [Bool.false_xor, Bool.or_self]
   -- The wire N+s-1 < w, so the guard passes
   simp only [show (N + s - 1 : Nat) < w.val from by omega, ↓reduceIte]
-  -- Now we need wireValD (padDesc ...) x ⟨N+s-1, _⟩ = wireValD d x ⟨N+s-1, _⟩
+  -- Now we need wireVal (padDesc ...) x ⟨N+s-1, _⟩ = wireVal d x ⟨N+s-1, _⟩
   have hlt : N + s - 1 < N + s := by omega
-  exact wireValD_padDesc_lt d hs h x ⟨N + s - 1, by omega⟩ hlt
+  exact wireVal_padDesc_lt d hs h x ⟨N + s - 1, by omega⟩ hlt
 
 /-- Padding preserves evaluation. -/
-theorem evalD_padDesc {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
+theorem eval_padDesc {N s s' : Nat} (d : CircDesc N s) (hs : 0 < s)
     (h : s ≤ s') (hs' : 0 < s') :
-    evalD hs' (padDesc d s' hs h) = evalD hs d := by
+    eval hs' (padDesc d s' hs h) = eval hs d := by
   funext x
-  simp only [evalD]
+  simp only [eval]
   by_cases hsle : N + s ≤ N + s' - 1
   · -- s < s': the last wire is in the padded region
-    rw [wireValD_padDesc_ge d hs h x ⟨N + s' - 1, by omega⟩ (by omega)]
+    rw [wireVal_padDesc_ge d hs h x ⟨N + s' - 1, by omega⟩ (by omega)]
   · -- s = s': both point to the same wire
     push Not at hsle
     have : s = s' := by omega
     subst this
-    exact wireValD_padDesc_lt d hs h x ⟨N + s - 1, by omega⟩ (by omega)
+    exact wireVal_padDesc_lt d hs h x ⟨N + s - 1, by omega⟩ (by omega)
 
 /-! ## Main Theorems -/
 
@@ -105,9 +107,9 @@ theorem shannon_lower_bound_circuit (N : Nat) [NeZero N] (hN : 6 ≤ N) :
     have hG1 : 0 < G + 1 := Nat.succ_pos G
     let d := circuitToDesc c
     let d' := padDesc d (2 ^ N / (5 * N)) hG1 hsize
-    have h1 : evalD hspos d' = evalD hG1 d := evalD_padDesc d hG1 hsize hspos
-    have h2 : (fun x => (c.eval x) 0) = evalD hG1 d := circuit_eval_eq_evalD c
-    have h3 : evalD hspos d' = f := by rw [h1, ← h2, habs]
+    have h1 : eval hspos d' = eval hG1 d := eval_padDesc d hG1 hsize hspos
+    have h2 : (fun x => (c.eval x) 0) = eval hG1 d := circuit_eval_eq_eval c
+    have h3 : eval hspos d' = f := by rw [h1, ← h2, habs]
     exact hf d' h3⟩
 
 /-- **Schnorr's lower bound for circuits**: any fan-in-2 AND/OR circuit
@@ -118,8 +120,8 @@ theorem schnorr_lower_bound_circuit (N G : Nat) [NeZero N]
     (heval : ∀ x, (c.eval x) 0 = comp.xor (Schnorr.xorBool N x))
     (hN : 1 ≤ N) : G + 2 ≥ 2 * N := by
   have hG1 : 0 < G + 1 := Nat.succ_pos G
-  have h := circuit_eval_eq_evalD c
-  have heval' : ∀ x, evalD hG1 (circuitToDesc c) x = comp.xor (Schnorr.xorBool N x) :=
+  have h := circuit_eval_eq_eval c
+  have heval' : ∀ x, eval hG1 (circuitToDesc c) x = comp.xor (Schnorr.xorBool N x) :=
     fun x => (congr_fun h x).symm ▸ heval x
   exact Schnorr.xor_lower_bound_2 N (G + 1) hG1 (circuitToDesc c) comp heval' hN
 
