@@ -70,7 +70,8 @@ structure Gate (B : Basis) (W : Nat) where
   fanIn : Nat
   arityOk : (B.arity op).satisfiedBy fanIn
   inputs : Fin fanIn → Fin W
-  /-- Per-input negation flag. Negations are free in circuit complexity. -/
+  /-- Per-input negation flag. Negations are free under this library's size
+      convention. -/
   negated : Fin fanIn → Bool
 
 /-- Evaluate a gate given a wire-value assignment. -/
@@ -173,7 +174,12 @@ def depth (c : Circuit B N M G) : Nat :=
 def eval (c : Circuit B N M G) (input : BitString N) : BitString M :=
   fun j => (c.outputs j).eval (c.wireValue input)
 
-/-- The size of a circuit is its total number of gates (internal + output). -/
+/-- The library's circuit size: internal gates plus output gates.
+
+Primary input vertices are not counted, and the negation flags on gate inputs
+have zero cost. Some texts instead count input vertices and explicit NOT gates;
+those conventions agree only up to additive/linear overhead, not on exact size
+bounds. -/
 def size (_ : Circuit B N M G) : Nat := G + M
 
 end Circuit
