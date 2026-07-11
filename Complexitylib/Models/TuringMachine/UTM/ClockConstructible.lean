@@ -38,16 +38,16 @@ namespace TM
 
 /-- The canonical parked blank tape (`liftTM`'s pinned extra tape) is the
     zero register. -/
-theorem initTape_move_right_eq_regT_zero :
-    (initTape []).move Dir3.right = regT 0 := by
-  refine Tape.ext' rfl ?_
-  show (initTape []).cells = regCells 0
+theorem Tape.init_move_right_eq_regT_zero :
+    (Tape.init []).move Dir3.right = regT 0 := by
+  refine Tape.ext rfl ?_
+  show (Tape.init []).cells = regCells 0
   funext j
   rcases Nat.eq_zero_or_pos j with rfl | hj
   · rfl
-  · show (initTape []).cells j = regCells 0 j
+  · show (Tape.init []).cells j = regCells 0 j
     rw [regCells_blank (by omega)]
-    simp only [initTape]
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ j = 0)]
     simp
 
@@ -82,7 +82,7 @@ private theorem outF_read_ne_start {out : Tape} (h : outF out) :
     * tapes 0–4 and 7 may hold **arbitrary parked content** (head ≥ 1,
       reading a non-`▷` symbol) and must be preserved **exactly**;
     * tape 6 (the clock) starts as the canonical parked blank tape
-      `(initTape []).move Dir3.right` (the tape the `liftTM` combinators
+      `(Tape.init []).move Dir3.right` (the tape the `liftTM` combinators
       pin blank extras to; it equals `regT 0`) and ends as `regT (g |x|)`;
     * tape 5 is a **designated scratch tape**: it must also start blank,
       and it is restored blank — this is exactly the `work i = work₀ i`
@@ -103,16 +103,16 @@ def ClockConstructible (g : ℕ → ℕ) : Prop :=
   ∃ (tm : TM 8) (C : ℕ),
     ∀ (x : List Bool) (work₀ : Fin 8 → Tape),
       (∀ i, 1 ≤ (work₀ i).head ∧ (work₀ i).read ≠ Γ.start) →
-      work₀ (5 : Fin 8) = (initTape []).move Dir3.right →
-      work₀ (6 : Fin 8) = (initTape []).move Dir3.right →
+      work₀ (5 : Fin 8) = (Tape.init []).move Dir3.right →
+      work₀ (6 : Fin 8) = (Tape.init []).move Dir3.right →
       tm.HoareTime
         (fun inp work out =>
-          inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+          inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
           work = work₀ ∧
           out.head = 1 ∧ out.cells 0 = Γ.start ∧
           (∀ j, 1 ≤ j → out.cells j ≠ Γ.start))
         (fun inp work out =>
-          inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+          inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
           (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
           work (6 : Fin 8) = regT (g x.length) ∧
           out.head = 1 ∧ out.cells 0 = Γ.start ∧
@@ -328,13 +328,13 @@ private theorem clockLen_scan_run (x : List Bool) (m : ℕ) :
     ∀ (k : ℕ), x.length = k + m →
       ∀ (c : Cfg 8 clockLenTM.Q),
       c.state = .scan →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
       (∀ i, i ≠ (6 : Fin 8) → (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       (c.work 6).cells = regCells k → (c.work 6).head = k + 1 →
       ∃ c', clockLenTM.reachesIn m c c' ∧
         c'.state = .scan ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = x.length + 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → c'.work i = c.work i) ∧
         (c'.work 6).cells = regCells x.length ∧
@@ -349,7 +349,7 @@ private theorem clockLen_scan_run (x : List Bool) (m : ℕ) :
     intro k hk c hst hic hih hoth hout hcl hhd
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_lt x k (by omega)
+      exact Tape.init_ofBool_cells_lt x k (by omega)
     have hns : c.input.read ≠ Γ.start := by
       rw [hread]; exact Γ.ofBool_ne_start _
     have hbl : c.input.read ≠ Γ.blank := by
@@ -395,7 +395,7 @@ private theorem clockLen_scan_run (x : List Bool) (m : ℕ) :
 private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
     ∀ (c : Cfg 8 clockLenTM.Q),
       c.state = .back →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = h →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = h →
       (∀ i, i ≠ (6 : Fin 8) → (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       (c.work 6).cells 0 = Γ.start →
@@ -403,7 +403,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
       (c.work 6).head = h →
       ∃ c', clockLenTM.reachesIn (h + 2) c c' ∧
         c'.state = .done ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → c'.work i = c.work i) ∧
         (c'.work 6).cells = (c.work 6).cells ∧ (c'.work 6).head = 1 ∧
         c'.output = c.output := by
@@ -420,7 +420,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
           rw [Tape.read, tape_move_cells]
           show c.input.cells (c.input.head + 1) ≠ Γ.start
           rw [hih, hic]
-          exact initTape_ofBool_cells_ne_start x _ (by omega))
+          exact Tape.init_ofBool_cells_ne_start x _ (by omega))
       (fun i => by
         by_cases hir : i = (6 : Fin 8)
         · subst hir
@@ -455,7 +455,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
       exact hcr (h + 1) (by omega)
     have hins : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ne_start x _ (by omega)
+      exact Tape.init_ofBool_cells_ne_start x _ (by omega)
     have hstep₁ := clockLen_step_back_left c hst hclk hins hoth hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih { state := .back, input := c.input.move .left,
@@ -506,22 +506,22 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
     (hclk : work₀ 6 = regT 0) :
     clockLenTM.HoareTime
       (fun inp work out =>
-        inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         work = work₀ ∧ outF out)
       (fun inp work out =>
-        inp = ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ ∧
+        inp = ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
         work 6 = regT (x.length + 1) ∧ outF out)
       (2 * x.length + 3) := by
   rintro inp work out ⟨hic, hih, rfl, hout⟩
-  obtain rfl : inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) :=
-    Tape.ext' hih hic
+  obtain rfl : inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) :=
+    Tape.ext hih hic
   have houtr : out.read ≠ Γ.start := outF_read_ne_start hout
   -- the scan sweep over the bits, straight from the started head
   obtain ⟨c₂, hr₂, hst₂, hic₂, hih₂, hw₂, hcl₂, hhd₂, ho₂⟩ :=
     clockLen_scan_run x x.length 0 (by omega)
       { state := clockLenTM.qstart,
-        input := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩,
+        input := ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩,
         work := work, output := out } rfl
       rfl
       rfl
@@ -539,7 +539,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
   have ho₂r : c₂.output.read ≠ Γ.start := by rw [ho₂]; exact houtr
   have hibl₂ : c₂.input.read = Γ.blank := by
     rw [Tape.read, hih₂, hic₂]
-    exact initTape_ofBool_cells_ge x x.length le_rfl
+    exact Tape.init_ofBool_cells_ge x x.length le_rfl
   have hclk₂ : (c₂.work 6).read ≠ Γ.start := by
     rw [Tape.read, hhd₂, hcl₂, regCells_blank le_rfl]
     decide
@@ -582,13 +582,13 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
   refine ⟨c₄, _, ?_,
     reachesIn_trans _ hr₂ (.step hstep₃ hr₄), hst₄, ?_, ?_, ?_, ?_⟩
   · omega
-  · exact Tape.ext' hih₄ hic₄
+  · exact Tape.ext hih₄ hic₄
   · intro i hi
     rw [hw₄ i hi]
     show Function.update c₂.work 6 _ i = work i
     rw [Function.update_of_ne hi]
     exact hw₂ i hi
-  · refine Tape.ext' hhd₄ ?_
+  · refine Tape.ext hhd₄ ?_
     rw [hcl₄, hc₃cl]
     rfl
   · rw [ho₄, ho₂]
@@ -603,7 +603,7 @@ theorem clockConstructible_succ : ClockConstructible (fun n => n + 1) := by
   refine ⟨clockLenTM, 2, ?_⟩
   intro x work₀ hpark _ h6
   have hspec := clockLenTM_hoareTime x work₀ (fun i _ => (hpark i).2)
-    (by rw [h6, initTape_move_right_eq_regT_zero])
+    (by rw [h6, Tape.init_move_right_eq_regT_zero])
   refine hspec.consequence ?_ ?_ ?_
   · rintro inp work out ⟨h1, h2, h3, h4, h5, h6'⟩
     exact ⟨h1, h2, h3, h4, h5, h6'⟩
@@ -1167,11 +1167,11 @@ private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8
     dsimp only
     rw [Function.update_of_ne hi5, Function.update_of_ne hi6]
     exact hw₂ i hi5 hi6
-  · refine Tape.ext' hhd5₄ ?_
+  · refine Tape.ext hhd5₄ ?_
     rw [hcl5₄]
     dsimp only
     rw [Function.update_self, tape_move_cells, hcl5₂, regT_cells]
-  · refine Tape.ext' hhd6₄ ?_
+  · refine Tape.ext hhd6₄ ?_
     rw [hcl6₄]
     dsimp only
     rw [Function.update_of_ne (by decide : (6 : Fin 8) ≠ 5), Function.update_self,
@@ -1582,13 +1582,13 @@ private theorem clockMul_inScan_run (x : List Bool) (m : ℕ) :
     ∀ (k d : ℕ), x.length = k + m →
       ∀ (c : Cfg 8 clockMulTM.Q),
       c.state = .inScan →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
       (∀ i, i ≠ (6 : Fin 8) → (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       (c.work 6).cells = regCells d → (c.work 6).head = d + 1 →
       ∃ c', clockMulTM.reachesIn m c c' ∧
         c'.state = .inScan ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = x.length + 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → c'.work i = c.work i) ∧
         (c'.work 6).cells = regCells (d + m) ∧ (c'.work 6).head = (d + m) + 1 ∧
@@ -1602,7 +1602,7 @@ private theorem clockMul_inScan_run (x : List Bool) (m : ℕ) :
     intro k d hk c hst hic hih hoth hout hcl hhd
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_lt x k (by omega)
+      exact Tape.init_ofBool_cells_lt x k (by omega)
     have hns : c.input.read ≠ Γ.start := by
       rw [hread]; exact Γ.ofBool_ne_start _
     have hbl : c.input.read ≠ Γ.blank := by
@@ -1653,19 +1653,19 @@ private theorem clockMul_inScan_run (x : List Bool) (m : ℕ) :
 private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     ∀ (c : Cfg 8 clockMulTM.Q),
       c.state = .inRew →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = h →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = h →
       (∀ i, (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       ∃ c', clockMulTM.reachesIn (h + 1) c c' ∧
         c'.state = .drive ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
         c'.work = c.work ∧ c'.output = c.output := by
   induction h with
   | zero =>
     intro c hst hic hih hall hout
     have hi : c.input.read = Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_cells_zero _
+      exact Tape.init_cells_zero _
     have hstep := clockMul_step_inRew_start c hst hi hall hout
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl⟩
     · show (c.input.move .right).cells = _
@@ -1677,7 +1677,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     intro c hst hic hih hall hout
     have hns : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ne_start x _ (by omega)
+      exact Tape.init_ofBool_cells_ne_start x _ (by omega)
     have hstep := clockMul_step_inRew_left c hst hns hall hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5⟩ :=
       ih { state := .inRew, input := c.input.move .left,
@@ -1718,7 +1718,7 @@ private theorem clockMul_rewC_run (h : ℕ) :
       rw [Function.update_of_ne hi]
     · dsimp only
       rw [Function.update_self]
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · show (c.work 5).head + 1 = 1
         rw [hhd]
       · show (c.work 5).cells = _
@@ -1851,7 +1851,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
     ∀ (r : ℕ), v = r + m →
       ∀ (c : Cfg 8 clockMulTM.Q),
       c.state = .drive →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = 1 →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = 1 →
       (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       (c.work 5).cells = regCells v → (c.work 5).head = r + 1 →
@@ -1859,7 +1859,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
       (c.work 6).head = r * (x.length + 1) + 1 →
       ∃ c' t, t ≤ m * (2 * x.length + 3) ∧ clockMulTM.reachesIn t c c' ∧
         c'.state = .drive ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → c'.work i = c.work i) ∧
         (c'.work 5).cells = regCells v ∧ (c'.work 5).head = v + 1 ∧
         (c'.work 6).cells = regCells (v * (x.length + 1)) ∧
@@ -1879,7 +1879,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
       exact regCells_one (by omega) (by omega)
     have hinpr : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ne_start x 1 le_rfl
+      exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
     have h6blank : (c.work 6).read = Γ.blank := by
       rw [Tape.read, hhd6, hcl6]
       exact regCells_blank le_rfl
@@ -1932,7 +1932,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
     have ho₂r : c₂.output.read ≠ Γ.start := by rw [ho₂]; exact hout
     have hibl₂ : c₂.input.read = Γ.blank := by
       rw [Tape.read, hih₂, hic₂]
-      exact initTape_ofBool_cells_ge x x.length le_rfl
+      exact Tape.init_ofBool_cells_ge x x.length le_rfl
     have hstep₃ := clockMul_step_inScan_blank c₂ hst₂ hibl₂ hoth₂ ho₂r
     have hc₃cl : (((c₂.work 6).write Γw.one).move .right).cells
         = regCells (r * (x.length + 1) + x.length + 1) := by
@@ -2027,10 +2027,10 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
     (h5 : work₀ 5 = regT v) (h6 : work₀ 6 = regT 0) :
     clockMulTM.HoareTime
       (fun inp work out =>
-        inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) ∧
+        inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         work = work₀ ∧ outF out)
       (fun inp work out =>
-        inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) ∧
+        inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → work i = work₀ i) ∧
         work 5 = regT 0 ∧ work 6 = regT (v * (x.length + 1)) ∧ outF out)
       (v * (2 * x.length + 3) + v * (x.length + 1) + v + 5) := by
@@ -2040,7 +2040,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
   obtain ⟨c₁, t₁, ht₁, hr₁, hst₁, hic₁, hih₁, hw₁, hcl5₁, hhd5₁, hcl6₁, hhd6₁, ho₁⟩ :=
     clockMul_drive_run x v v 0 (by omega)
       { state := clockMulTM.qstart,
-        input := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩,
+        input := ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩,
         work := work, output := out } rfl rfl rfl
       (fun i hi5 hi6 => hoth i hi5 hi6)
       houtr
@@ -2059,7 +2059,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
   -- exit the loop at the scratch's first blank
   have hinp₁r : c₁.input.read ≠ Γ.start := by
     rw [Tape.read, hih₁, hic₁]
-    exact initTape_ofBool_cells_ne_start x 1 le_rfl
+    exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
   have ho₁r : c₁.output.read ≠ Γ.start := by rw [ho₁]; exact houtr
   have h5bl₁ : (c₁.work 5).read = Γ.blank := by
     rw [Tape.read, hhd5₁, hcl5₁]
@@ -2123,7 +2123,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
   · have h1 : v * (x.length + 1) + 1 + 2 = v * (x.length + 1) + 3 := by omega
     omega
   · rw [hin₄, hin₃]
-    refine Tape.ext' hih₁ hic₁
+    refine Tape.ext hih₁ hic₁
   · intro i hi5 hi6
     rw [hw₄ i hi6, hw₃ i hi5]
     dsimp only
@@ -2131,7 +2131,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
     exact hw₁ i hi5 hi6
   · rw [hw₄ 5 (by decide)]
     exact h5₃
-  · refine Tape.ext' hhd₄ ?_
+  · refine Tape.ext hhd₄ ?_
     rw [hcl₄, hw₃6, hcl6₁, regT_cells]
   · rw [ho₄, ho₃, ho₁]
     exact hout
@@ -2153,10 +2153,10 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
   refine ⟨seqTM tm (seqTM moveClockTM clockMulTM), C + 20, ?_⟩
   intro x work₀ hpark h5 h6
   have hb5 : work₀ (5 : Fin 8) = regT 0 := by
-    rw [h5, initTape_move_right_eq_regT_zero]
-  have hinpX : ((⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape)).read ≠ Γ.start := by
-    show (initTape (x.map Γ.ofBool)).cells 1 ≠ Γ.start
-    exact initTape_ofBool_cells_ne_start x 1 le_rfl
+    rw [h5, Tape.init_move_right_eq_regT_zero]
+  have hinpX : ((⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape)).read ≠ Γ.start := by
+    show (Tape.init (x.map Γ.ofBool)).cells 1 ≠ Γ.start
+    exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
   -- phase 1: the g-clock
   have h₁ := hspec x work₀ hpark h5 h6
   -- ghost frames after phases 1 and 2
@@ -2202,14 +2202,14 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
       · exact hW₂oth i hi5 hi6
   -- phases 2 and 3
   have h₂ := moveClockTM_hoareTime (g x.length)
-    (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) W₁ hinpX hW₁oth hW₁5 hW₁6
+    (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) W₁ hinpX hW₁oth hW₁5 hW₁6
   have h₃ := clockMulTM_hoareTime (g x.length) x W₂ hW₂oth hW₂5 hW₂6
   -- phase 2 → phase 3 transition
   have htrans₂₃ : ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
-      (inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) ∧
+      (inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → work i = W₁ i) ∧
         work 5 = regT (g x.length) ∧ work 6 = regT 0 ∧ outF out) →
-      (transitionInput inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) ∧
+      (transitionInput inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (fun i => transitionTape (work i)) = W₂ ∧ outF (transitionTape out)) := by
     rintro inp work out ⟨rfl, hw, hw5, hw6, hout⟩
     have hweq : work = W₂ := by
@@ -2231,16 +2231,16 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
   have hseq₂₃ := seqTM_hoareTime moveClockTM clockMulTM h₂ htrans₂₃ h₃
   -- phase 1 → phase 2 transition
   have htrans₁₂ : ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
-      (inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+      (inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
         work (6 : Fin 8) = regT (g x.length) ∧
         out.head = 1 ∧ out.cells 0 = Γ.start ∧
         (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) →
-      (transitionInput inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) ∧
+      (transitionInput inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (fun i => transitionTape (work i)) = W₁ ∧ outF (transitionTape out)) := by
     rintro inp work out ⟨hic, hih, hw, hw6, ho1, ho2, ho3⟩
-    have hinp_eq : inp = (⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape) :=
-      Tape.ext' hih hic
+    have hinp_eq : inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) :=
+      Tape.ext hih hic
     subst hinp_eq
     have hweq : work = W₁ := by
       funext i
@@ -2263,7 +2263,7 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
     intro i hi6
     by_cases hi5 : i = (5 : Fin 8)
     · subst hi5
-      rw [hw5, ← initTape_move_right_eq_regT_zero, ← h5]
+      rw [hw5, ← Tape.init_move_right_eq_regT_zero, ← h5]
     · rw [hw i hi5 hi6, hW₂, Function.update_of_ne hi6, Function.update_of_ne hi5,
         hW₁, Function.update_of_ne hi6]
   · show C * (g x.length + x.length + 1) + 1 +

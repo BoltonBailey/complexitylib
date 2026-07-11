@@ -56,7 +56,7 @@ theorem qstartField_eq_encoding (α : List Bool) :
 
 /-- A cleared, started tape shadows the empty simulated tape. -/
 theorem vshift_initTape_nil {t : Tape} (h : t.HoldsExact []) (hh : t.head = 1) :
-    VShift (initTape []) t := by
+    VShift (Tape.init []) t := by
   refine ⟨?_, by rw [hh]; rfl⟩
   funext k
   by_cases hk0 : k = 0
@@ -70,8 +70,8 @@ theorem vshift_initTape_nil {t : Tape} (h : t.HoldsExact []) (hh : t.head = 1) :
       rw [show k - 1 + 1 = k by omega] at this
       rw [this]
       simp only [hk0, hk1, if_false]
-      show Γ.blank = (initTape []).cells (k - 1)
-      simp [initTape, show k - 1 ≠ 0 by omega]
+      show Γ.blank = (Tape.init []).cells (k - 1)
+      simp [Tape.init, show k - 1 ≠ 0 by omega]
 
 /-- The shifted copy of `x` (cells `▷ □ x ⋯`, head 1) shadows the
     interpreted machine's initial input tape. -/
@@ -79,7 +79,7 @@ theorem vshift_initTape_x {t : Tape} (x : List Bool)
     (hc : t.cells = fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
       else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank)
     (hh : t.head = 1) :
-    VShift (initTape (x.map Γ.ofBool)) t := by
+    VShift (Tape.init (x.map Γ.ofBool)) t := by
   refine ⟨?_, by rw [hh]; rfl⟩
   rw [hc]
   funext k
@@ -88,8 +88,8 @@ theorem vshift_initTape_x {t : Tape} (x : List Bool)
   · by_cases hk1 : k = 1
     · simp [hk1]
     · simp only [hk0, hk1, if_false]
-      show _ = (initTape (x.map Γ.ofBool)).cells (k - 1)
-      simp only [initTape, show k - 1 ≠ 0 by omega, if_false,
+      show _ = (Tape.init (x.map Γ.ofBool)).cells (k - 1)
+      simp only [Tape.init, show k - 1 ≠ 0 by omega, if_false,
         show k - 1 - 1 = k - 2 by omega]
 
 /-- **Initialization realizes the invariant**: the tape shape guaranteed by
@@ -98,7 +98,7 @@ theorem vshift_initTape_x {t : Tape} (x : List Bool)
 theorem initPost_simInv (α x : List Bool)
     (inp : Tape) (work : Fin 6 → Tape) (out : Tape)
     (hpost :
-      inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+      inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
       (work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
         else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (work 0).head = 1 ∧
       (work 1).HoldsExact [] ∧ (work 1).head = 1 ∧
@@ -106,7 +106,7 @@ theorem initPost_simInv (α x : List Bool)
       (work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (work 3).head = 1 ∧
       (work 4).HoldsExact (groupPairs α) ∧ (work 4).head = 1 ∧
       (work 5).HoldsExact [] ∧ (work 5).head = 1 ∧
-      out.cells = (initTape []).cells ∧ out.head = 1)
+      out.cells = (Tape.init []).cells ∧ out.head = 1)
     (hinp_head : 1 ≤ inp.head) :
     SimInv α ((decodeDesc α).toTM.initCfg x) inp work out := by
   obtain ⟨hinp, hw0c, hw0h, hw1, hw1h, hw2, hw2h, hw3, hw3h, hw4, hw4h,
@@ -115,11 +115,11 @@ theorem initPost_simInv (α x : List Bool)
   · exact vshift_initTape_x x hw0c hw0h
   · exact vshift_initTape_nil hw1 hw1h
   · exact vshift_initTape_nil hw2 hw2h
-  · exact initTape_wfCells x
-  · show (initTape ([] : List Γ)).WFCells
-    simpa using initTape_wfCells []
-  · show (initTape ([] : List Γ)).WFCells
-    simpa using initTape_wfCells []
+  · exact Tape.init_wfCells x
+  · show (Tape.init ([] : List Γ)).WFCells
+    simpa using Tape.init_wfCells []
+  · show (Tape.init ([] : List Γ)).WFCells
+    simpa using Tape.init_wfCells []
   · left
     have hstate : ((decodeDesc α).toTM.initCfg x).state
         = (decodeDesc α).toTM.qstart := rfl
@@ -135,9 +135,9 @@ theorem initPost_simInv (α x : List Bool)
   · exact hw5
   · exact hw5h
   · rw [Tape.read, hinp]
-    exact (initTape_wfCells (pair α x)).2 inp.head hinp_head
+    exact (Tape.init_wfCells (pair α x)).2 inp.head hinp_head
   · rw [Tape.read, houtc, houth]
-    simp [initTape]
+    simp [Tape.init]
 
 /-- The halt test's comparison decides exactly the interpreted machine's
     halt condition, under the invariant. -/
@@ -249,8 +249,8 @@ theorem reachesIn_output_first_blank {n : ℕ} {tm : TM n} {t : ℕ}
   classical
   have hblank : c'.output.cells (t + 2) = Γ.blank := by
     rw [reachesIn_output_cells_far h (t + 2)
-      (by simp [initTape])]
-    simp [initTape]
+      (by simp [Tape.init])]
+    simp [Tape.init]
   by_cases hall : ∃ m, m ≤ t ∧ c'.output.cells (m + 2) = Γ.blank
   · obtain ⟨m₀, -, -⟩ := hall
     have hP : ∃ m, c'.output.cells (m + 2) = Γ.blank := ⟨t, hblank⟩

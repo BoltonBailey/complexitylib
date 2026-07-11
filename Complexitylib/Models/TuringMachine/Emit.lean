@@ -78,10 +78,10 @@ theorem hasOutput {ys : List Bool} {out : Tape} (h : outAcc ys out) :
 end outAcc
 
 /-- The empty accumulator: a blank output tape with the head bumped to cell 1. -/
-theorem outAcc_nil_init : outAcc [] { head := 1, cells := (initTape []).cells } := by
-  refine ⟨rfl, by simp [initTape], fun i hi => absurd hi (by simp), fun j hj => ?_⟩
-  show (initTape []).cells j = Γ.blank
-  simp only [initTape]
+theorem outAcc_nil_init : outAcc [] { head := 1, cells := (Tape.init []).cells } := by
+  refine ⟨rfl, by simp [Tape.init], fun i hi => absurd hi (by simp), fun j hj => ?_⟩
+  show (Tape.init []).cells j = Γ.blank
+  simp only [Tape.init]
   rw [if_neg (by omega : ¬ j = 0)]
   simp
 
@@ -148,10 +148,10 @@ def bumpTM : TM n where
 
 /-- The input tape of the initial configuration, bumped to cell 1, is parked. -/
 theorem parked_init_input (x : List Bool) :
-    Parked { head := 1, cells := (initTape (x.map Γ.ofBool)).cells } := by
+    Parked { head := 1, cells := (Tape.init (x.map Γ.ofBool)).cells } := by
   refine ⟨le_refl 1, fun j hj => ?_⟩
-  show (initTape (x.map Γ.ofBool)).cells j ≠ Γ.start
-  simp only [initTape]
+  show (Tape.init (x.map Γ.ofBool)).cells j ≠ Γ.start
+  simp only [Tape.init]
   rw [if_neg (by omega : ¬ j = 0)]
   cases h : (x.map Γ.ofBool)[j - 1]? with
   | none => decide
@@ -165,16 +165,16 @@ theorem parked_init_input (x : List Bool) :
 theorem bumpTM_hoareTime (x : List Bool) :
     (bumpTM (n := n)).HoareTime
       (fun inp work out =>
-        inp = initTape (x.map Γ.ofBool) ∧ (∀ i, work i = initTape []) ∧
-        out = initTape [])
+        inp = Tape.init (x.map Γ.ofBool) ∧ (∀ i, work i = Tape.init []) ∧
+        out = Tape.init [])
       (fun inp work out =>
-        inp = { head := 1, cells := (initTape (x.map Γ.ofBool)).cells } ∧
+        inp = { head := 1, cells := (Tape.init (x.map Γ.ofBool)).cells } ∧
         (∀ i, reg 0 (work i)) ∧ outAcc [] out)
       1 := by
   rintro inp work out ⟨rfl, hwork, rfl⟩
-  obtain rfl : work = fun _ => initTape [] := funext hwork
-  refine ⟨⟨BumpPhase.done, ⟨1, (initTape (x.map Γ.ofBool)).cells⟩,
-      fun _ => ⟨1, (initTape []).cells⟩, ⟨1, (initTape []).cells⟩⟩, 1, le_refl 1,
+  obtain rfl : work = fun _ => Tape.init [] := funext hwork
+  refine ⟨⟨BumpPhase.done, ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩,
+      fun _ => ⟨1, (Tape.init []).cells⟩, ⟨1, (Tape.init []).cells⟩⟩, 1, le_refl 1,
     .step ?_ .zero, rfl, rfl, fun _ => reg_zero_init, outAcc_nil_init⟩
   rfl
 
@@ -729,7 +729,7 @@ theorem emitUnaryTM_hoareTime (r : Fin n) (v : ℕ) (inp₀ : Tape) (work₀ : F
   · funext i
     by_cases hir : i = r
     · subst hir
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · rw [hhead₃, hreg.head_eq]
       · rw [hcells₃, hupd_cells₂]
     · rw [hwork₃ i hir]

@@ -65,7 +65,7 @@ def check_file(path: Path) -> set[str]:
 def collect() -> set[str]:
     """Return all current violations as `path : check` strings."""
     found = set()
-    for path in sorted(LIBRARY.rglob("*.lean")):
+    for path in sorted(LIBRARY.rglob("*.lean")) + [ROOT / "Complexitylib.lean"]:
         rel = path.relative_to(ROOT)
         for check in check_file(path):
             found.add(f"{rel} : {check}")

@@ -202,23 +202,23 @@ structure SimInvAt (k : ℕ) (t : Tape) (w : Fin k → Tape) (M : ℕ) : Prop wh
   /-- Everything from block `M+1` onward is blank — the `□` sentinel region. -/
   sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
 
-/-- **Base case.** The initial single tape `initTape []` encodes the initial
+/-- **Base case.** The initial single tape `Tape.init []` encodes the initial
     `k`-tape configuration (all heads at 0, all blank), materialized to `M = 0`
     (empty used region — the sentinel `□` starts right at cell 1). -/
 theorem simInvAt_init (k : ℕ) :
-    SimInvAt k (initTape []) (fun _ => initTape []) 0 where
-  cell0 := by simp [initTape]
-  wfStart := fun _ => by simp [initTape]
+    SimInvAt k (Tape.init []) (fun _ => Tape.init []) 0 where
+  cell0 := by simp [Tape.init]
+  wfStart := fun _ => by simp [Tape.init]
   noStart := fun _ p hp => by
-    simp only [initTape]
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ p = 0)]
     simp
-  heads_le := fun _ => by simp [initTape]
+  heads_le := fun _ => by simp [Tape.init]
   headBit := fun p hp1 hp0 _ => by omega
   sym := fun p hp1 hp0 _ => by omega
   sentinel := fun c hc => by
     rw [blockStart_one] at hc
-    simp only [initTape]
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ c = 0)]
     simp
 

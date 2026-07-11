@@ -1,7 +1,6 @@
 # Style-lint baseline: pre-existing violations grandfathered during
 # the quality refactor. This file only shrinks; regenerate with
 #   python3 scripts/lint_style.py --update
-Complexitylib/Asymptotics.lean : copyright
 Complexitylib/Circuits.lean : copyright
 Complexitylib/Circuits/AC0/Defs.lean : copyright
 Complexitylib/Circuits/AON.lean : copyright
@@ -89,9 +88,6 @@ Complexitylib/Languages/Palindromes.lean : copyright
 Complexitylib/Languages/Trivial.lean : copyright
 Complexitylib/Languages/ZeroPrefix.lean : copyright
 Complexitylib/Mathlib/Digraph.lean : copyright
-Complexitylib/Models.lean : copyright
-Complexitylib/Models.lean : moduleDoc
-Complexitylib/Models/TuringMachine.lean : copyright
 Complexitylib/Models/TuringMachine/Arith.lean : copyright
 Complexitylib/Models/TuringMachine/Combinators.lean : copyright
 Complexitylib/Models/TuringMachine/Combinators/ComplementInternal.lean : copyright
@@ -122,7 +118,6 @@ Complexitylib/Models/TuringMachine/Hoare.lean : lineLength
 Complexitylib/Models/TuringMachine/Hoare/Defs.lean : copyright
 Complexitylib/Models/TuringMachine/Horner.lean : copyright
 Complexitylib/Models/TuringMachine/InputLen.lean : copyright
-Complexitylib/Models/TuringMachine/Internal.lean : copyright
 Complexitylib/Models/TuringMachine/Internal.lean : lineLength
 Complexitylib/Models/TuringMachine/Lift.lean : copyright
 Complexitylib/Models/TuringMachine/MixedRadix.lean : copyright

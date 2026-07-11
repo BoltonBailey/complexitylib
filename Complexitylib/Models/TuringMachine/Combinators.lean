@@ -916,7 +916,7 @@ def scannerTM {S : Type} [DecidableEq S] [Fintype S]
     - Work tape `k`: plays the role of `M`'s input tape (read-only, no
       writes except a no-op `readBackWrite` that preserves cells).
 
-    When work tape `k` is initialized with `initTape (z.map Γ.ofBool)`, the
+    When work tape `k` is initialized with `Tape.init (z.map Γ.ofBool)`, the
     machine simulates `M` on input `z`.
 
     Used in `witnessLang` NTM constructions where the verifier DTM's

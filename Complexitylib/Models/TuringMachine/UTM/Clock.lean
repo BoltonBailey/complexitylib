@@ -21,7 +21,7 @@ not `bodyTM` phase states, so they sit beside `liftTM` rather than in
      symbol) — needed to run lifted 6-tape UTM phases while tape 6 holds
      the clock.
    - `liftTM_hoareTime` is the special case where the extras hold the
-     canonical parked blank tape `(initTape []).move Dir3.right` (the
+     canonical parked blank tape `(Tape.init []).move Dir3.right` (the
      tape `liftCfg` pins them to).
 
    The key observation: `liftTM`'s extra-tape action is
@@ -87,7 +87,7 @@ variable {n : ℕ}
 /-- Embed a configuration of `tm : TM n` into one of `tm.liftTM m` with the
     extra work tapes pinned to the fixed tapes `extras`. Generalizes
     `liftCfg`, which is the special case
-    `extras = fun _ => (initTape []).move Dir3.right`. -/
+    `extras = fun _ => (Tape.init []).move Dir3.right`. -/
 def liftCfgWith (tm : TM n) (m : ℕ) (extras : Fin m → Tape) (c : Cfg n tm.Q) :
     Cfg (n + m) tm.Q where
   state := c.state
@@ -227,17 +227,17 @@ theorem liftTM_hoareTime_frame {n m : ℕ} (tm : TM n) {pre post : TapePred n}
 
 /-- **`liftTM` preserves Hoare specs** (blank extras). Special case of
     `liftTM_hoareTime_frame`: the extra tapes start and end as the
-    canonical parked blank tape `(initTape []).move Dir3.right`. -/
+    canonical parked blank tape `(Tape.init []).move Dir3.right`. -/
 theorem liftTM_hoareTime {n m : ℕ} (tm : TM n) {pre post : TapePred n} {b : ℕ}
     (h : tm.HoareTime pre post b) :
     (tm.liftTM m).HoareTime
       (fun inp work out => pre inp (fun i => work (Fin.castAdd m i)) out ∧
-        ∀ j : Fin m, work (Fin.natAdd n j) = (initTape []).move Dir3.right)
+        ∀ j : Fin m, work (Fin.natAdd n j) = (Tape.init []).move Dir3.right)
       (fun inp work out => post inp (fun i => work (Fin.castAdd m i)) out ∧
-        ∀ j : Fin m, work (Fin.natAdd n j) = (initTape []).move Dir3.right)
+        ∀ j : Fin m, work (Fin.natAdd n j) = (Tape.init []).move Dir3.right)
       b := by
-  have hblank : ((initTape []).move Dir3.right).read ≠ Γ.start := by decide
-  exact liftTM_hoareTime_frame tm (fun _ => (initTape []).move Dir3.right)
+  have hblank : ((Tape.init []).move Dir3.right).read ≠ Γ.start := by decide
+  exact liftTM_hoareTime_frame tm (fun _ => (Tape.init []).move Dir3.right)
     (fun _ => ⟨Nat.le_refl 1, hblank⟩) h
 
 -- ════════════════════════════════════════════════════════════════════════

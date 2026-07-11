@@ -189,7 +189,7 @@ theorem stateIdx_inj {k : ℕ} (N : NTM k) : Function.Injective (stateIdx N) := 
 
 /-- The symbol at position `pos` of tape `tp` in the start configuration on input
     `x`: cell `0` is always `▷`; tape `0` (the input) carries `x` at cells `1…|x|`;
-    every other cell is blank. Mirrors `initTape` applied to each tape. -/
+    every other cell is blank. Mirrors `Tape.init` applied to each tape. -/
 def initCellSym (x : List Bool) (tp pos : ℕ) : Γ :=
   if pos = 0 then Γ.start
   else if tp = 0 then ((x.map Γ.ofBool)[pos - 1]?).getD Γ.blank
@@ -473,11 +473,11 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
   rw [startClauses_sat] at hstart
   obtain ⟨hstate, hheads, hcells⟩ := hstart
   have hci : ∀ pos, (N.initCfg x).input.cells pos = initCellSym x 0 pos := by
-    intro pos; simp [initTape, initCellSym]
+    intro pos; simp [Tape.init, initCellSym]
   have hcw : ∀ pos, ((N.initCfg x).work 0).cells pos = initCellSym x 1 pos := by
-    intro pos; simp [initTape, initCellSym]
+    intro pos; simp [Tape.init, initCellSym]
   have hco : ∀ pos, (N.initCfg x).output.cells pos = initCellSym x 2 pos := by
-    intro pos; simp [initTape, initCellSym]
+    intro pos; simp [Tape.init, initCellSym]
   refine ⟨hstate, fun pos hpos => ?_, fun pos hpos => ?_, fun pos hpos => ?_,
     hheads 0 (by norm_num), hheads 1 (by norm_num), hheads 2 (by norm_num)⟩
   · rw [hci]; exact hcells 0 (by norm_num) pos hpos
@@ -690,7 +690,7 @@ theorem trace_heads_le (N : NTM 1) (g : ℕ → Bool) (x : List Bool) (t : ℕ) 
     ((N.trace t (fun i => g i.val) (N.initCfg x)).work 0).head ≤ t ∧
     (N.trace t (fun i => g i.val) (N.initCfg x)).output.head ≤ t := by
   induction t with
-  | zero => refine ⟨?_, ?_, ?_⟩ <;> simp [NTM.trace, NTM.initCfg, Cfg.init, initTape]
+  | zero => refine ⟨?_, ?_, ?_⟩ <;> simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init]
   | succ t ih =>
     obtain ⟨ihi, ihw, iho⟩ := ih
     rw [trace_succ_eq]
@@ -997,16 +997,16 @@ theorem fassign_oneHotHeads (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (step
 theorem fheadPos_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp : ℕ) :
     fheadPos N x g 0 tp = 0 := by
   unfold fheadPos fcfg
-  split_ifs <;> simp [NTM.trace, NTM.initCfg, Cfg.init, initTape]
+  split_ifs <;> simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init]
 
 open Tableau in
 theorem fcellSym_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp pos : ℕ) :
     fcellSym N x g 0 tp pos = initCellSym x tp pos := by
   unfold fcellSym fcfg
   split_ifs with h0 h1
-  · subst h0; simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym]
-  · subst h1; simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym]
-  · simp [NTM.trace, NTM.initCfg, Cfg.init, initTape, initCellSym, h0]
+  · subst h0; simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init, initCellSym]
+  · subst h1; simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init, initCellSym]
+  · simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init, initCellSym, h0]
 
 open Tableau in
 theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)

@@ -43,16 +43,16 @@ namespace TM
 
 variable {n : ℕ}
 
-/-- `initTape []` is the canonical output-tape initial value: cell 0 is `▷`,
+/-- `Tape.init []` is the canonical output-tape initial value: cell 0 is `▷`,
     every other cell is `□`, and the head is at position 0. This is exactly
     the well-formedness precondition of `writeTM_hoareTime` with `B = 0`. -/
-theorem initTape_nil_wf :
-    (initTape []).cells 0 = Γ.start ∧
-    (∀ j, j ≥ 1 → (initTape []).cells j ≠ Γ.start) ∧
-    (initTape []).head ≤ 0 := by
+theorem Tape.init_nil_wf :
+    (Tape.init []).cells 0 = Γ.start ∧
+    (∀ j, j ≥ 1 → (Tape.init []).cells j ≠ Γ.start) ∧
+    (Tape.init []).head ≤ 0 := by
   refine ⟨rfl, fun j hj => ?_, le_refl _⟩
   have hj' : j ≠ 0 := by omega
-  simp [initTape, hj']
+  simp [Tape.init, hj']
 
 /-- **`writeTM` halts on every input in 3 steps with `sym` on output cell 1.**
 
@@ -65,8 +65,8 @@ theorem writeTM_decidesInTime_const (sym : Γw) (x : List Bool) :
       c'.output.cells 1 = sym.toΓ := by
   obtain ⟨c', t, hle, hreach, hhalt, hpost⟩ :=
     writeTM_hoareTime (n := n) sym 0
-      (initTape (x.map Γ.ofBool)) (fun _ => initTape []) (initTape [])
-      initTape_nil_wf
+      (Tape.init (x.map Γ.ofBool)) (fun _ => Tape.init []) (Tape.init [])
+      Tape.init_nil_wf
   exact ⟨c', t, by omega, hreach, hhalt, hpost⟩
 
 end TM

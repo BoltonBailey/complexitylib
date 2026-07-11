@@ -123,7 +123,7 @@ theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (T 
     exact ⟨fun i => SingleTape.inducedChoices k ch i.val, hhaltN, hbit.mp hout⟩
   · -- forward flow: simulate the accepting `N`-run, then pad the time bound
     intro h
-    exact NTM.AcceptsInTime_mono
+    exact NTM.AcceptsInTime.mono
       (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
       (SingleTape.accepts_fwd N hk x (T x.length) h)
 

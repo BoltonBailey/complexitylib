@@ -490,7 +490,7 @@ private theorem loop_sim_aux (α x : List Bool) (hterm : TerminatedRegion α)
           _ ≤ (fuel + 1 + 1) * utmStepTime α := Nat.mul_le_mul_right _ (by omega)
       rcases hstepd with hsome | ⟨hnone, rfl⟩
       · have hreach₂ := reachesIn_snoc hreach hsome
-        have hne : mc.state ≠ (decodeDesc α).toTM.qhalt := ne_qhalt_of_step hsome
+        have hne : mc.state ≠ (decodeDesc α).toTM.qhalt := state_ne_qhalt_of_step hsome
         have hlt : t' < T := by
           rcases Nat.lt_or_ge t' T with h | h
           · exact h
@@ -598,8 +598,8 @@ private theorem output_first_blank_shift {n : ℕ} {tm : TM n} {T : ℕ}
   classical
   have hblank : c'.output.cells (T + 1) = Γ.blank := by
     rw [reachesIn_output_cells_far h (T + 1) (by show (0 : ℕ) + T < T + 1; omega)]
-    show (initTape []).cells (T + 1) = Γ.blank
-    simp [initTape]
+    show (Tape.init []).cells (T + 1) = Γ.blank
+    simp [Tape.init]
   have hP : ∃ m, c'.output.cells (m + 1) = Γ.blank := ⟨T, hblank⟩
   refine ⟨Nat.find hP, ?_, Nat.find_spec hP, fun j hj => Nat.find_min hP hj⟩
   exact Nat.le_of_not_lt fun hcon => (Nat.find_min hP hcon) hblank
@@ -685,9 +685,9 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
     (hhalt : (decodeDesc α).toTM.halted mcF) :
     utmTM.HoareTime
       (fun inp work out =>
-        inp = initTape ((pair α x).map Γ.ofBool) ∧
-        (∀ i : Fin 6, work i = initTape []) ∧
-        out = initTape [])
+        inp = Tape.init ((pair α x).map Γ.ofBool) ∧
+        (∀ i : Fin 6, work i = Tape.init []) ∧
+        out = Tape.init [])
       (fun _ _ out => ∃ m, m ≤ T ∧
         mcF.output.cells (m + 1) = Γ.blank ∧
         (∀ j, j < m → mcF.output.cells (j + 1) ≠ Γ.blank) ∧
@@ -720,10 +720,10 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
     SimInv.read_ne_start_of_holdsExact hw5 hw5h.ge
   have hrout : out.read ≠ Γ.start := by
     rw [Tape.read, houth, houtc]
-    simp [initTape]
+    simp [Tape.init]
   have hinp0 : inp.cells 0 = Γ.start := by
     rw [hinp]
-    simp [initTape]
+    simp [Tape.init]
   have hwtr : (fun i => transitionTape (work i)) = work := by
     funext i
     refine transitionTape_id ?_
@@ -744,10 +744,10 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
      houtc, houth⟩
     (transitionInput_head_ge inp hinp0), ?_, ?_, houth⟩
   · rw [houtc]
-    simp [initTape]
+    simp [Tape.init]
   · intro j hj
     rw [houtc]
-    simp [initTape, show j ≠ 0 by omega]
+    simp [Tape.init, show j ≠ 0 by omega]
 
 end TM.UTMBody
 

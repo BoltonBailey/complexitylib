@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Internal
 import Complexitylib.Models.TuringMachine.Pad
@@ -61,3 +66,11 @@ import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 import Complexitylib.Models.TuringMachine.UTM.Diagonal
 import Complexitylib.Models.TuringMachine.Det
 import Complexitylib.Models.TuringMachine.Lift
+
+/-!
+# Computation models
+
+Aggregation module for the machine models: the core Turing-machine
+semantics, tape/machine plumbing, combinators, the single-tape simulation,
+and the universal machine.
+-/

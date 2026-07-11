@@ -212,12 +212,12 @@ private theorem inputLenRegTM_scan_run (x : List Bool) (m : ℕ) :
     ∀ (k : ℕ), x.length = k + m →
       ∀ (c : Cfg n (inputLenRegTM (n := n) q).Q),
       c.state = .scan →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
       (∀ i, i ≠ q → Parked (c.work i)) → Parked c.output →
       (c.work q).cells = regCells k → (c.work q).head = k + 1 →
       ∃ c', (inputLenRegTM (n := n) q).reachesIn m c c' ∧
         c'.state = .scan ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = x.length + 1 ∧
         (∀ i, i ≠ q → c'.work i = c.work i) ∧
         (c'.work q).cells = regCells x.length ∧
@@ -232,7 +232,7 @@ private theorem inputLenRegTM_scan_run (x : List Bool) (m : ℕ) :
     intro k hk c hst hic hih hwork hout hqc hqh
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_lt x k (by omega)
+      exact Tape.init_ofBool_cells_lt x k (by omega)
     have hbl : c.input.read ≠ Γ.blank := by
       rw [hread]
       exact Γ.ofBool_ne_blank _
@@ -281,14 +281,14 @@ private theorem inputLenRegTM_scan_run (x : List Bool) (m : ℕ) :
 private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
     ∀ (c : Cfg n (inputLenRegTM (n := n) q).Q),
       c.state = .back →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = h →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = h →
       (∀ i, i ≠ q → Parked (c.work i)) → Parked c.output →
       (c.work q).cells 0 = Γ.start →
       (∀ j, 1 ≤ j → (c.work q).cells j ≠ Γ.start) →
       (c.work q).head = h →
       ∃ c', (inputLenRegTM (n := n) q).reachesIn (h + 2) c c' ∧
         c'.state = .done ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ c'.input.head = 1 ∧
         (∀ i, i ≠ q → c'.work i = c.work i) ∧
         (c'.work q).cells = (c.work q).cells ∧ (c'.work q).head = 1 ∧
         c'.output = c.output := by
@@ -303,7 +303,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
         omega
       · show (c.input.move .right).cells j ≠ Γ.start
         rw [tape_move_cells, hic]
-        exact initTape_ofBool_cells_ne_start x j hj
+        exact Tape.init_ofBool_cells_ne_start x j hj
     have hstep₂ := inputLenRegTM_step_park (q := q)
       { state := .park, input := c.input.move .right,
         work := Function.update c.work q ((c.work q).move .right),
@@ -341,7 +341,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
       exact hcr (h + 1) (by omega)
     have hins : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ne_start x _ (by omega)
+      exact Tape.init_ofBool_cells_ne_start x _ (by omega)
     have hstep₁ := inputLenRegTM_step_back_left c hst hqns hins hwork hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih { state := .back, input := c.input.move .left,
@@ -386,14 +386,14 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
     (work₀ : Fin n → Tape) (ys : List Bool)
     (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i)) (hq : work₀ q = regT 0) :
     (inputLenRegTM (n := n) q).HoareTime
-      (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ work₀ ys)
-      (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
+      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ work₀ ys)
+      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
         (Function.update work₀ q (regT x.length)) ys)
       (2 * x.length + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, h1, h2, h3, h4, h5, h6, h7⟩ :=
     inputLenRegTM_scan_run x x.length 0 (by omega)
-      { state := .scan, input := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩,
+      { state := .scan, input := ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩,
         work := work, output := out } rfl rfl rfl
       hwork₀ hout.parked
       (by show (work q).cells = regCells 0; rw [hq, regT_cells])
@@ -404,7 +404,7 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
   have houtP₁ : Parked c₁.output := by rw [h7]; exact hout.parked
   have hibl : c₁.input.read = Γ.blank := by
     rw [Tape.read, h3, h2]
-    exact initTape_ofBool_cells_ge x x.length (le_refl _)
+    exact Tape.init_ofBool_cells_ge x x.length (le_refl _)
   have hqns₁ : (c₁.work q).read ≠ Γ.start := by
     rw [Tape.read, h6, h5]
     show regCells x.length (x.length + 1) ≠ Γ.start
@@ -447,14 +447,14 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
           omega)
   refine ⟨c₃, x.length + ((x.length + 2) + 1), by omega,
     reachesIn_trans _ hreach₁ (.step hstep₂ hreach₃), g1, ?_, ?_, ?_⟩
-  · refine Tape.ext' ?_ ?_
+  · refine Tape.ext ?_ ?_
     · rw [g3]
     · rw [g2]
   · funext i
     by_cases hir : i = q
     · subst hir
       rw [Function.update_self]
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · rw [g6]
         rfl
       · rw [g5]

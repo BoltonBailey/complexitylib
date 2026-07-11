@@ -406,7 +406,7 @@ private theorem inpSfx_congr {t : Tape} {k k' : ℕ} {l : List Bool}
     (h : InpSfx t k l) (hk : k' = k) : InpSfx t k' l := hk ▸ h
 
 private theorem inpSfx_initTape (l : List Bool) :
-    InpSfx (initTape (l.map Γ.ofBool)) 1 l := by
+    InpSfx (Tape.init (l.map Γ.ofBool)) 1 l := by
   intro j
   show (if 1 + j = 0 then Γ.start else ((l.map Γ.ofBool)[1 + j - 1]?).getD Γ.blank) = _
   rw [if_neg (by omega), show 1 + j - 1 = j by omega, List.getElem?_map]
@@ -1205,7 +1205,7 @@ private theorem holdsExact_blank_singleton {t : Tape} (h : t.HoldsExact []) :
   · rw [dif_neg (show ¬i < [Γw.blank].length by simpa using hi)]
 
 /-- The exact-contents view of the shifted `x` tape is the `VShift` shadow of
-    `initTape (x.map Γ.ofBool)` (see `VShift.initTape`). -/
+    `Tape.init (x.map Γ.ofBool)` (see `VShift.init`). -/
 private theorem holdsExact_shift_cells {t : Tape} {x : List Bool}
     (h : t.HoldsExact (Γw.blank :: bitsToSyms x)) :
     t.cells = fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
@@ -1238,7 +1238,7 @@ private theorem holdsExact_shift_cells {t : Tape} {x : List Bool}
 
 /-- **Bounced core of `initTM`.** From a configuration in state
     `readFst none` with the input head at cell 1 over the cells of
-    `initTape ((pair α x).map Γ.ofBool)`, all six work-tape heads at cell 1
+    `Tape.init ((pair α x).map Γ.ofBool)`, all six work-tape heads at cell 1
     over blank cells, and the output head at cell 1 over blank cells, the
     machine halts within `4·|pair α x| + 4·|groupPairs α| + 23` steps in the
     `initTM` postcondition. Both `initTM_hoareTime` (one bouncing step from
@@ -1246,16 +1246,16 @@ private theorem holdsExact_shift_cells {t : Tape} {x : List Bool}
     tapes) land in this configuration after their first step. -/
 private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     (hst₁ : c₁.state = InitQ.readFst none)
-    (hcl₁ : c₁.input.cells = (initTape ((pair α x).map Γ.ofBool)).cells)
+    (hcl₁ : c₁.input.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells)
     (hih₁ : c₁.input.head = 1)
-    (hwcells₁ : ∀ i, (c₁.work i).cells = (initTape []).cells)
+    (hwcells₁ : ∀ i, (c₁.work i).cells = (Tape.init []).cells)
     (hwhead₁ : ∀ i, (c₁.work i).head = 1)
-    (hocl₁' : c₁.output.cells = (initTape []).cells)
+    (hocl₁' : c₁.output.cells = (Tape.init []).cells)
     (hoh₁ : c₁.output.head = 1) :
     ∃ (c' : Cfg 6 initTM.Q) (t : ℕ),
       t ≤ 4 * (pair α x).length + 4 * (groupPairs α).length + 23 ∧
       initTM.reachesIn t c₁ c' ∧ initTM.halted c' ∧
-      c'.input.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
       (c'.work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
         else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (c'.work 0).head = 1 ∧
       (c'.work 1).HoldsExact [] ∧ (c'.work 1).head = 1 ∧
@@ -1263,11 +1263,11 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
       (c'.work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (c'.work 3).head = 1 ∧
       (c'.work 4).HoldsExact (groupPairs α) ∧ (c'.work 4).head = 1 ∧
       (c'.work 5).HoldsExact [] ∧ (c'.work 5).head = 1 ∧
-      c'.output.cells = (initTape []).cells ∧ c'.output.head = 1 := by
+      c'.output.cells = (Tape.init []).cells ∧ c'.output.head = 1 := by
   have hP : pair α x = (α.flatMap fun b => [b, b]) ++ false :: true :: x := by
     simp [pair]
-  have hwf := initTape_wfCells (pair α x)
-  have hblank1 : (initTape []).cells 1 = Γ.blank := initTape_nil_cells_succ 0
+  have hwf := Tape.init_wfCells (pair α x)
+  have hblank1 : (Tape.init []).cells 1 = Γ.blank := Tape.init_nil_cells_succ 0
   have hwo₁ : ∀ i, (c₁.work i).read ≠ Γ.start ∧ 1 ≤ (c₁.work i).head := by
     intro i
     refine ⟨?_, (hwhead₁ i).ge⟩
@@ -1281,7 +1281,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
   have hsfx₁ : InpSfx c₁.input 1 (pair α x) :=
     inpSfx_of_cells_eq (inpSfx_initTape (pair α x)) hcl₁
   have hh4₁ : (c₁.work 4).HoldsExact [] :=
-    holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 4)
+    holdsExact_of_cells_eq Tape.HoldsExact.init_nil (hwcells₁ 4)
   obtain ⟨c₂, p₂, hreach₂, hst₂, hih₂, hcl₂, hsfx₂, hh4₂, hd4₂, hfr₂, hout₂⟩ :=
     phase1_loop x α [] 1 c₁ hst₁ (le_refl 1) hih₁
       (by rw [← hP]; exact hsfx₁) hh4₁ (by rw [hwhead₁ 4]; rfl)
@@ -1296,7 +1296,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
   -- ── phase 2: copy x (shifted) onto work tape 0 ──
   have hh0₃ : (c₃.work 0).HoldsExact (Γw.blank :: []) := by
     apply holdsExact_blank_singleton
-    apply holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil
+    apply holdsExact_of_cells_eq Tape.HoldsExact.init_nil
     rw [h0c₃, hfr₂ 0 (by decide), hwcells₁ 0]
   have hd0₃ : (c₃.work 0).head = ([] : List Γw).length + 2 := by
     rw [h0h₃, hfr₂ 0 (by decide), hwhead₁ 0]
@@ -1307,7 +1307,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
       (by rw [hout₃, hout₂]; exact ho₁) (by rw [hout₃, hout₂]; exact hoh₁')
   simp only [List.nil_append] at hh0₄ hd0₄
   rw [bitsToSyms_length] at hd0₄
-  have hclx₄ : c₄.input.cells = (initTape ((pair α x).map Γ.ofBool)).cells := by
+  have hclx₄ : c₄.input.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells := by
     rw [hcl₄, hcl₃, hcl₂, hcl₁]
   have hi₄ : c₄.input.read ≠ Γ.start := by
     rw [Tape.read, hclx₄]
@@ -1343,7 +1343,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
   have hh4₅ : (c₅.work 4).HoldsExact (groupPairs α) := holdsExact_of_cells_eq hh4₄ hcl4₅
   have hh3₅ : (c₅.work 3).HoldsExact [] := by
     rw [hfr₅ 3 (by decide), hu₄ 3 (by decide) (by decide)]
-    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 3)
+    exact holdsExact_of_cells_eq Tape.HoldsExact.init_nil (hwcells₁ 3)
   have hd3₅ : (c₅.work 3).head = ([] : List Γw).length + 1 := by
     rw [hfr₅ 3 (by decide), hu₄ 3 (by decide) (by decide), hwhead₁ 3]
     simp
@@ -1461,12 +1461,12 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     exact holdsExact_shift_cells (holdsExact_of_cells_eq hh0₄ h0cells₉)
   · -- work 1
     rw [hu₉ 1 (by decide) (by decide) (by decide)]
-    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 1)
+    exact holdsExact_of_cells_eq Tape.HoldsExact.init_nil (hwcells₁ 1)
   · rw [hu₉ 1 (by decide) (by decide) (by decide)]
     exact hwhead₁ 1
   · -- work 2
     rw [hu₉ 2 (by decide) (by decide) (by decide)]
-    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 2)
+    exact holdsExact_of_cells_eq Tape.HoldsExact.init_nil (hwcells₁ 2)
   · rw [hu₉ 2 (by decide) (by decide) (by decide)]
     exact hwhead₁ 2
   · -- work 3: the qstart field
@@ -1481,7 +1481,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     exact hd4₇
   · -- work 5
     rw [hu₉ 5 (by decide) (by decide) (by decide)]
-    exact holdsExact_of_cells_eq Tape.HoldsExact.initTape_nil (hwcells₁ 5)
+    exact holdsExact_of_cells_eq Tape.HoldsExact.init_nil (hwcells₁ 5)
   · rw [hu₉ 5 (by decide) (by decide) (by decide)]
     exact hwhead₁ 5
   · -- output untouched
@@ -1496,7 +1496,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
 
     * left the input tape cells untouched;
     * copied `x` onto the virtual input tape (work 0) in the +1-shift
-      representation (the `VShift` shadow of `initTape (x.map Γ.ofBool)`);
+      representation (the `VShift` shadow of `Tape.init (x.map Γ.ofBool)`);
     * translated α onto the desc tape (work 4): `groupPairs α`;
     * copied the qstart field `(takeField (groupPairs α)).1` onto the state
       tape (work 3);
@@ -1505,11 +1505,11 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
 theorem initTM_hoareTime (α x : List Bool) :
     initTM.HoareTime
       (fun inp work out =>
-        inp = initTape ((pair α x).map Γ.ofBool) ∧
-        (∀ i : Fin 6, work i = initTape []) ∧
-        out = initTape [])
+        inp = Tape.init ((pair α x).map Γ.ofBool) ∧
+        (∀ i : Fin 6, work i = Tape.init []) ∧
+        out = Tape.init [])
       (fun inp work out =>
-        inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+        inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
         (work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
           else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (work 0).head = 1 ∧
         (work 1).HoldsExact [] ∧ (work 1).head = 1 ∧
@@ -1517,7 +1517,7 @@ theorem initTM_hoareTime (α x : List Bool) :
         (work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (work 3).head = 1 ∧
         (work 4).HoldsExact (groupPairs α) ∧ (work 4).head = 1 ∧
         (work 5).HoldsExact [] ∧ (work 5).head = 1 ∧
-        out.cells = (initTape []).cells ∧ out.head = 1)
+        out.cells = (Tape.init []).cells ∧ out.head = 1)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
   intro inp work out ⟨hinp, hwork, hout⟩
   subst hinp
@@ -1526,13 +1526,13 @@ theorem initTM_hoareTime (α x : List Bool) :
   obtain ⟨c₁, hs₁, hst₁, hcl₁, hih₁, hwk₁, hocl₁, hoh₁⟩ :=
     step_start
       (c := { state := initTM.qstart
-              input := initTape ((pair α x).map Γ.ofBool)
+              input := Tape.init ((pair α x).map Γ.ofBool)
               work := work
-              output := initTape [] })
-      rfl rfl (by simp [initTape])
+              output := Tape.init [] })
+      rfl rfl (by simp [Tape.init])
       (fun i => by show (work i).head = 0; rw [hwork i]; rfl)
-      (fun i => by show (work i).cells 0 = Γ.start; rw [hwork i]; simp [initTape])
-      rfl (by simp [initTape])
+      (fun i => by show (work i).cells 0 = Γ.start; rw [hwork i]; simp [Tape.init])
+      rfl (by simp [Tape.init])
   -- ── the bounced core ──
   obtain ⟨c', t, hle, hreach, hhalt, hpost⟩ :=
     initTM_hoareTime_core α x hst₁ hcl₁ hih₁
@@ -1543,18 +1543,18 @@ theorem initTM_hoareTime (α x : List Bool) :
 /-- **`initTM` specification, started form.** Identical postcondition and
     time bound to `initTM_hoareTime`, but the tapes arrive already bounced
     off `▷`: the input head is parked at cell 1 over the same cells, every
-    work tape is `(initTape []).move Dir3.right` (blank cells, head 1), and
+    work tape is `(Tape.init []).move Dir3.right` (blank cells, head 1), and
     the output tape is blank with head 1. This is the form in which a lifted
     `initTM` receives its tapes when it runs mid-sequence rather than as the
     first phase of a machine. -/
 theorem initTM_hoareTime_started (α x : List Bool) :
     initTM.HoareTime
       (fun inp work out =>
-        inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
-        (∀ i : Fin 6, work i = (initTape []).move Dir3.right) ∧
-        out.cells = (initTape []).cells ∧ out.head = 1)
+        inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        (∀ i : Fin 6, work i = (Tape.init []).move Dir3.right) ∧
+        out.cells = (Tape.init []).cells ∧ out.head = 1)
       (fun inp work out =>
-        inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+        inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
         (work 0).cells = (fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
           else (((x.map Γ.ofBool))[k - 2]?).getD Γ.blank) ∧ (work 0).head = 1 ∧
         (work 1).HoldsExact [] ∧ (work 1).head = 1 ∧
@@ -1562,11 +1562,11 @@ theorem initTM_hoareTime_started (α x : List Bool) :
         (work 3).HoldsExact (takeField (groupPairs α)).1 ∧ (work 3).head = 1 ∧
         (work 4).HoldsExact (groupPairs α) ∧ (work 4).head = 1 ∧
         (work 5).HoldsExact [] ∧ (work 5).head = 1 ∧
-        out.cells = (initTape []).cells ∧ out.head = 1)
+        out.cells = (Tape.init []).cells ∧ out.head = 1)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
   intro inp work out ⟨hic, hih, hwork, hoc, hoh⟩
-  have hwf := initTape_wfCells (pair α x)
-  have hblank1 : (initTape []).cells 1 = Γ.blank := initTape_nil_cells_succ 0
+  have hwf := Tape.init_wfCells (pair α x)
+  have hblank1 : (Tape.init []).cells 1 = Γ.blank := Tape.init_nil_cells_succ 0
   -- ── step 1: an idle step — every head already sits at cell 1 ──
   obtain ⟨c₁, hs₁, hst₁, hin₁, hw₁, hout₁⟩ :=
     step_start_started
@@ -1579,7 +1579,7 @@ theorem initTM_hoareTime_started (α x : List Bool) :
         show (work i).read ≠ Γ.start ∧ 1 ≤ (work i).head
         rw [hwork i]
         refine ⟨?_, le_rfl⟩
-        show ((initTape []).move Dir3.right).cells 1 ≠ Γ.start
+        show ((Tape.init []).move Dir3.right).cells 1 ≠ Γ.start
         rw [tape_move_cells, hblank1]
         simp)
       (by show out.read ≠ Γ.start

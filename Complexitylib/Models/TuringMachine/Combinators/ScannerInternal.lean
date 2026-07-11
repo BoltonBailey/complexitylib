@@ -102,7 +102,7 @@ private theorem scannerTM_scan
     (x : List Bool) (m k : ℕ) (hlen : x.length = k + m) (s : S)
     (c : Cfg 0 (scannerTM s₀ scanStep finalOutput).Q)
     (hst : c.state = ScannerPhase.scan s)
-    (hic : c.input.cells = (initTape (x.map Γ.ofBool)).cells)
+    (hic : c.input.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hih : c.input.head = k + 1)
     (hoh : c.output.head = 1)
     (hoc : c.output.cells 1 ≠ Γ.start) :
@@ -115,8 +115,8 @@ private theorem scannerTM_scan
     have hk : k = x.length := by omega
     have hi_blank : c.input.read = Γ.blank := by
       simp only [Tape.read, hih, hic]
-      show (initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.blank
-      simp [initTape, hk]
+      show (Tape.init (x.map Γ.ofBool)).cells (k + 1) = Γ.blank
+      simp [Tape.init, hk]
     obtain ⟨c', hstep, hhalt, hout⟩ :=
       scannerTM_step_halt s₀ scanStep finalOutput c s hst hi_blank hoh hoc
     refine ⟨c', .step hstep .zero, hhalt, ?_⟩
@@ -130,8 +130,8 @@ private theorem scannerTM_scan
     -- The symbol under the input head is `Γ.ofBool x[k]`.
     have hi_read : c.input.read = Γ.ofBool (x[k]'hk_lt) := by
       simp only [Tape.read, hih, hic]
-      show (initTape (x.map Γ.ofBool)).cells (k + 1) = _
-      simp only [initTape, show k + 1 ≠ 0 from by omega, ↓reduceIte,
+      show (Tape.init (x.map Γ.ofBool)).cells (k + 1) = _
+      simp only [Tape.init, show k + 1 ≠ 0 from by omega, ↓reduceIte,
         Nat.add_sub_cancel, List.getElem?_eq_getElem hkmap, Option.getD_some,
         List.getElem_map]
     have hi_nb : c.input.read ≠ Γ.blank := by
@@ -145,7 +145,7 @@ private theorem scannerTM_scan
     rw [hbit] at hst₁
     -- Apply IH at k + 1 with state `scanStep s x[k]`.
     have hlen' : x.length = (k + 1) + m := by omega
-    have hic₁' : c₁.input.cells = (initTape (x.map Γ.ofBool)).cells := by
+    have hic₁' : c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells := by
       rw [hic₁]; exact hic
     have hih₁' : c₁.input.head = (k + 1) + 1 := by
       rw [hih₁, hih]
@@ -179,10 +179,10 @@ theorem scannerTM_reachesIn
     scannerTM_step_start s₀ scanStep finalOutput
       ((scannerTM s₀ scanStep finalOutput).initCfg x) rfl rfl rfl
   -- Apply scan lemma from k = 0 with m = |x|.
-  have hic1' : c₁.input.cells = (initTape (x.map Γ.ofBool)).cells := hic1
+  have hic1' : c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells := hic1
   have hih1' : c₁.input.head = 0 + 1 := by simpa using hih1
   have hoc1' : c₁.output.cells 1 ≠ Γ.start := by
-    rw [hoc1]; simp [initTape]
+    rw [hoc1]; simp [Tape.init]
   obtain ⟨c', hreach, hhalt, hout⟩ :=
     scannerTM_scan s₀ scanStep finalOutput x x.length 0 (by omega) s₀ c₁
       hst1 hic1' hih1' hoh1 hoc1'

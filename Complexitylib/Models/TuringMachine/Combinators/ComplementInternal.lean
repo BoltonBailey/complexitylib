@@ -35,7 +35,7 @@ theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : T
 private theorem complementTM_step_sim (tm : TM n) {c c' : Cfg n tm.Q}
     (hstep : tm.step c = some c') :
     tm.complementTM.step (compCfg tm c) = some (compCfg tm c') := by
-  have hne := ne_qhalt_of_step hstep
+  have hne := state_ne_qhalt_of_step hstep
   simp only [TM.step, complementTM, compCfg] at hstep ⊢
   have hne2 : (Sum.inl c.state : ComplementQ tm.Q) ≠ Sum.inr .done := nofun
   simp only [hne, hne2, ↓reduceIte, Option.some.injEq] at hstep ⊢
@@ -189,9 +189,9 @@ theorem complementTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
   have hsim := complementTM_simulation tm hreach
   rw [compCfg_initCfg] at hsim
   have ⟨_, hout_head, _⟩ := head_bound_of_reachesIn tm hreach
-  have hcell0 := output_cell0_of_reachesIn hreach (by simp [initTape])
+  have hcell0 := output_cell0_of_reachesIn hreach (by simp [Tape.init])
   have hnostart := output_noStart_of_reachesIn hreach (by
-    intro i hi; simp [initTape]; omega)
+    intro i hi; simp [Tape.init]; omega)
   obtain ⟨c_done, t_rw, hreach_rw, hhalt_done, hflip, hle_rw⟩ :=
     complementTM_rewind_and_flip tm c' hhalt hcell0 hnostart
   have htotal := reachesIn_trans tm.complementTM hsim hreach_rw

@@ -57,10 +57,10 @@ def firstCell : List Bool → Γ
 
 /-- `firstCell x` reads cell 1 of the initial input tape. -/
 theorem firstCell_eq_initTape_cells_one (x : List Bool) :
-    firstCell x = (initTape (x.map Γ.ofBool)).cells 1 := by
+    firstCell x = (Tape.init (x.map Γ.ofBool)).cells 1 := by
   cases x with
-  | nil => simp [firstCell, initTape]
-  | cons b xs => simp [firstCell, initTape]
+  | nil => simp [firstCell, Tape.init]
+  | cons b xs => simp [firstCell, Tape.init]
 
 namespace TM
 
@@ -173,8 +173,8 @@ theorem decideFirstCellTM_reachesIn (yesOn : Γ → Bool) (x : List Bool) :
     exact (firstCell_eq_initTape_cells_one x).symm
   have ho1_read_ne : c₁.output.read ≠ Γ.start := by
     simp only [Tape.read, ho1h, ho1c]
-    show (initTape []).cells 1 ≠ Γ.start
-    simp [initTape]
+    show (Tape.init []).cells 1 ≠ Γ.start
+    simp [Tape.init]
   obtain ⟨c₂, hstep2, hhalt, hout⟩ :=
     decideFirstCellTM_step_decide (n := n) yesOn c₁ hst1 ho1h ho1_read_ne
   refine ⟨c₂, .step hstep1 (.step hstep2 .zero), hhalt, ?_⟩

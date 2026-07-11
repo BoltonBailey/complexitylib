@@ -35,11 +35,11 @@ def initVals (n steps P Qc tf : ℕ) : Fin nT → ℕ := fun i =>
   else 0
 
 /-- The corresponding tape file. -/
-def initTapes (n steps P Qc tf : ℕ) : Fin nT → Tape :=
+def Tape.inits (n steps P Qc tf : ℕ) : Fin nT → Tape :=
   fun i => regT (initVals n steps P Qc tf i)
 
-theorem initTapes_parked (n steps P Qc tf : ℕ) :
-    ∀ i, Parked (initTapes n steps P Qc tf i) :=
+theorem Tape.inits_parked (n steps P Qc tf : ℕ) :
+    ∀ i, Parked (Tape.inits n steps P Qc tf i) :=
   fun _ => regT_parked _
 
 /-- **The register initialization chain**: input length, time polynomial,
@@ -88,11 +88,11 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
     (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
     (ys : List Bool) :
     (emitInitTM N p).HoareTime
-      (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ (fun _ => regT 0) ys)
-      (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
-        (initTapes x.length steps P (Fintype.card N.Q) 0) ys)
+      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ (fun _ => regT 0) ys)
+      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
+        (Tape.inits x.length steps P (Fintype.card N.Q) 0) ys)
       (initBudget Mp M p) := by
-  set inp₁ : Tape := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ with hinp₁
+  set inp₁ : Tape := ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ with hinp₁
   have hinp₀ : Parked inp₁ := parked_init_input x
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
@@ -331,7 +331,7 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (copyIntoBudget (by omega) (by omega)))
   -- The final file is the initialized one.
   have hfinal : Function.update W₁₆ pos3Fuel (regT P)
-      = initTapes x.length steps P (Fintype.card N.Q) 0 := by
+      = Tape.inits x.length steps P (Fintype.card N.Q) 0 := by
     rw [hW₁₆, hW₁₅, hW₁₄, hW₁₃, hW₁₂, hW₁₁, hW₁₀, hW₉, hW₈, hW₇, hW₆, hW₅,
       hW₄, hW₃, hW₂, hW₁]
     funext i
@@ -380,9 +380,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
 -- The family chain
 -- ════════════════════════════════════════════════════════════════════════
 
-theorem initTapes_update_tFuel (n steps P Qc tf tf' : ℕ) :
-    Function.update (initTapes n steps P Qc tf) tFuel (regT tf')
-      = initTapes n steps P Qc tf' := by
+theorem Tape.inits_update_tFuel (n steps P Qc tf tf' : ℕ) :
+    Function.update (Tape.inits n steps P Qc tf) tFuel (regT tf')
+      = Tape.inits n steps P Qc tf' := by
   funext i
   by_cases hi : i = tFuel
   · subst hi
@@ -394,8 +394,8 @@ theorem initTapes_update_tFuel (n steps P Qc tf tf' : ℕ) :
     rw [initVals, initVals, if_neg hi, if_neg hi]
 
 theorem scratch_initTapes (n steps P Qc tf : ℕ) :
-    scratch (initTapes n steps P Qc tf) tmp tmp2 0
-      = initTapes n steps P Qc tf := by
+    scratch (Tape.inits n steps P Qc tf) tmp tmp2 0
+      = Tape.inits n steps P Qc tf := by
   funext i
   by_cases h1 : i = tmp
   · subst h1
@@ -444,20 +444,20 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
     (ys : List Bool) :
     (emitBodyTM N).HoareTime
-      (emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
-        (initTapes x.length steps P (Fintype.card N.Q) 0) ys)
-      (fun inp _work out => inp = ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ ∧
+      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
+        (Tape.inits x.length steps P (Fintype.card N.Q) 0) ys)
+      (fun inp _work out => inp = ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ ∧
         outAcc (ys ++ CNF.encode (tableauCNFFlat N steps x)) out)
       (bodyBudget N M) := by
   set n : ℕ := x.length with hn
   set Qc : ℕ := Fintype.card N.Q with hQc
-  set inp₁ : Tape := ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ with hinp₁
+  set inp₁ : Tape := ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ with hinp₁
   have hinp₀ : Parked inp₁ := parked_init_input x
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
   have hstepsM : steps ≤ M := by omega
-  set W : ℕ → Fin nT → Tape := fun tf => initTapes n steps P Qc tf with hW
+  set W : ℕ → Fin nT → Tape := fun tf => Tape.inits n steps P Qc tf with hW
   have hWP : ∀ tf i, Parked (W tf i) := fun tf i => regT_parked _
   have hSW : ∀ tf, scratch (W tf) tmp tmp2 0 = W tf := fun tf =>
     scratch_initTapes ..
@@ -468,7 +468,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (W 0) ys hinp₀ (fun i _ => hWP 0 i) rfl rfl).consequence
       (fun _ _ _ h => h) ?_ (copyIntoBudget hstepsM (by omega)))
     rintro inp work out ⟨u1, u2, u3⟩
-    exact ⟨u1, by rw [u2, hW, initTapes_update_tFuel], u3⟩
+    exact ⟨u1, by rw [u2, hW, Tape.inits_update_tFuel], u3⟩
   -- g1b: tFuel := steps + 1.
   have g1b : (incRegTM tFuel : TM nT).HoareTime
       (emitPred inp₁ (W steps) ys) (emitPred inp₁ (W (steps + 1)) ys)
@@ -477,7 +477,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (fun i _ => hWP steps i) rfl).consequence
       (fun _ _ _ h => h) ?_ (incBudget hstepsM))
     rintro inp work out ⟨u1, u2, u3⟩
-    exact ⟨u1, by rw [u2, hW, initTapes_update_tFuel], u3⟩
+    exact ⟨u1, by rw [u2, hW, Tape.inits_update_tFuel], u3⟩
   -- f1: the state one-hots.
   have f1 := emitOneHotStatesTM_hoareTime N steps P M hM inp₁ (W (steps + 1))
     ys hinp₀ (hWP _) rfl rfl rfl rfl rfl rfl
@@ -533,8 +533,8 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
   have f4 := emitStartTM_hoareTime N x steps P M hP hM inp₁ V3 ys₃ hinp₀ rfl
     (by rw [hinp₁]; rfl)
     (fun pos => by
-      show (initTape (x.map Γ.ofBool)).cells pos = initCellSym x 0 pos
-      rw [initTape, initCellSym]
+      show (Tape.init (x.map Γ.ofBool)).cells pos = initCellSym x 0 pos
+      rw [Tape.init, initCellSym]
       simp)
     hV3P
     (by rw [hV3, Function.update_of_ne (by decide)]; rfl)
@@ -573,7 +573,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
     rw [u2, update_scratch (by decide) (by decide), hW,
-      initTapes_update_tFuel]
+      Tape.inits_update_tFuel]
   -- f5: the frame clauses.
   have f5 := emitFrameTM_hoareTime Qc steps P M hM inp₁ (W steps) ys₄ hinp₀
     (hWP _) rfl rfl rfl rfl rfl rfl rfl rfl rfl
@@ -745,9 +745,9 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
   have hbump := bumpTM_hoareTime (n := nT) x
   -- Adapters.
   have htrans₁ : ∀ (inp : Tape) (work : Fin nT → Tape) (out : Tape),
-      (inp = { head := 1, cells := (initTape (x.map Γ.ofBool)).cells } ∧
+      (inp = { head := 1, cells := (Tape.init (x.map Γ.ofBool)).cells } ∧
         (∀ i, reg 0 (work i)) ∧ outAcc [] out) →
-      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩ (fun _ => regT 0) []
+      emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ (fun _ => regT 0) []
         (transitionInput inp) (fun i => transitionTape (work i))
         (transitionTape out) := by
     rintro inp work out ⟨rfl, hwork, hout⟩
@@ -757,10 +757,10 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
     · rw [Parked.transitionTape_id hout.parked]
       exact hout
   have htrans₂ : ∀ inp work out,
-      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
-        (initTapes n steps P (Fintype.card N.Q) 0) [] inp work out →
-      emitPred ⟨1, (initTape (x.map Γ.ofBool)).cells⟩
-        (initTapes n steps P (Fintype.card N.Q) 0) []
+      emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
+        (Tape.inits n steps P (Fintype.card N.Q) 0) [] inp work out →
+      emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
+        (Tape.inits n steps P (Fintype.card N.Q) 0) []
         (transitionInput inp) (fun i => transitionTape (work i))
         (transitionTape out) :=
     emitPred_transition (parked_init_input x)
@@ -769,7 +769,7 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
     hbump htrans₁
     (seqTM_hoareTime (emitInitTM N p) (emitBodyTM N) hinit htrans₂ hbody)
   obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := hchain
-    (initTape (x.map Γ.ofBool)) (fun _ => initTape []) (initTape [])
+    (Tape.init (x.map Γ.ofBool)) (fun _ => Tape.init []) (Tape.init [])
     ⟨rfl, fun _ => rfl, rfl⟩
   refine ⟨c', t, le_trans ht (by rw [emitTime]), hreach, hhalt, ?_⟩
   show c'.output.hasOutput (reductionFn N (fun n => p.eval n) x)

@@ -265,8 +265,8 @@ private theorem output_first_blank_shift' {n : ℕ} {tm : TM n} {T : ℕ}
   classical
   have hblank : c'.output.cells (T + 1) = Γ.blank := by
     rw [reachesIn_output_cells_far h (T + 1) (by show (0 : ℕ) + T < T + 1; omega)]
-    show (initTape []).cells (T + 1) = Γ.blank
-    simp [initTape]
+    show (Tape.init []).cells (T + 1) = Γ.blank
+    simp [Tape.init]
   have hP : ∃ m, c'.output.cells (m + 1) = Γ.blank := ⟨T, hblank⟩
   refine ⟨Nat.find hP, ?_, Nat.find_spec hP, fun j hj => Nat.find_min hP hj⟩
   exact Nat.le_of_not_lt fun hcon => (Nat.find_min hP hcon) hblank
@@ -293,10 +293,10 @@ def clockedUtmTM : TM 7 :=
     output tape blank and parked. -/
 def clockedUtmPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
-    (∀ i : Fin 6, work (Fin.castAdd 1 i) = (initTape []).move Dir3.right) ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+    (∀ i : Fin 6, work (Fin.castAdd 1 i) = (Tape.init []).move Dir3.right) ∧
     work clkT = regT V ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- The clocked universal machine's time bound, covering both the
     halt-within-budget and timeout cases: initialization, the frontier
@@ -326,35 +326,35 @@ private def body6Shape (α x : List Bool) (w : Fin 6 → Tape) : Prop :=
     output, and the untouched register-parked clock. -/
 private def initPost7 (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
-    out.cells = (initTape []).cells ∧ out.head = 1 ∧
+    out.cells = (Tape.init []).cells ∧ out.head = 1 ∧
     work clkT = regT V
 
 /-- Entry of the frontier-seek phase (`initPost7` after the seam, with the
     input head bounced off `▷`). -/
 private def seekPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
     work clkT = regT V ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- Exit of the frontier-seek phase: the clock head has walked to the
     frontier `max V 1`. -/
 private def seekPost (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
     (work clkT).cells = regCells V ∧ (work clkT).head = max V 1 ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- Entry of the clocked loop: `SimInv` at the interpreted machine's
     initial configuration, the frontier-parked clock at `V`, and a
     `▷`-clean parked output tape. -/
 private def loopPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α ((decodeDesc α).toTM.initCfg x) inp
       (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells V ∧ (work clkT).head = max V 1 ∧
@@ -367,7 +367,7 @@ private def loopPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
 private def loopExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
     (v : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α mc inp (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells v ∧ (work clkT).head = max v 1 ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
@@ -378,7 +378,7 @@ private def loopExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
 private def testExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
     (v : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α mc inp (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells v ∧ (work clkT).head = max v 1 ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
@@ -454,10 +454,10 @@ private theorem initSeam (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hshape, hoc, hoh, hclk⟩
   have hinp0 : inp.cells 0 = Γ.start := by
     rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   have hout_read : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
     refine transitionTape_id ?_
@@ -482,12 +482,12 @@ private theorem seekPhase (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hclk, hoc, hoh⟩
   have hinp : inp.read ≠ Γ.start := by
     rw [Tape.read, hic]
-    exact (initTape_wfCells (pair α x)).2 inp.head hih
+    exact (Tape.init_wfCells (pair α x)).2 inp.head hih
   have hothers : ∀ i : Fin 7, i ≠ clkT → (work i).read ≠ Γ.start := fun i hi =>
     body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
   have hout : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   obtain ⟨c', t, ht, hr, hh, hin', hwoth, hckc, hckh, hout'⟩ :=
     seekFrontierTM_hoareTime V inp work out hclk hinp hothers hout
       inp work out ⟨rfl, rfl, rfl⟩
@@ -516,10 +516,10 @@ private theorem seekSeam (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hckc, hckh, hoc, hoh⟩
   have hinp0 : inp.cells 0 = Γ.start := by
     rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   have hout_read : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
     refine transitionTape_id ?_
@@ -538,10 +538,10 @@ private theorem seekSeam (α x : List Bool) (V : ℕ) :
        hw2, hw2h, hw3, hw3h, hw4, hw4h, hw5, hw5h, hoc, hoh⟩
       (transitionInput_head_ge inp hinp0)
   · rw [hoc]
-    simp [initTape]
+    simp [Tape.init]
   · intro j hj
     rw [hoc]
-    simp [initTape, show j ≠ 0 by omega]
+    simp [Tape.init, show j ≠ 0 by omega]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 3: the clocked loop (both exit cases)
@@ -683,10 +683,10 @@ private theorem testExit_allWF (α x : List Bool)
   rintro inp work out ⟨hic, hsi, hckc, hckh, h0, hns, -, -⟩
   refine ⟨?_, ?_, ?_, ?_, h0, hns⟩
   · rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   · intro j hj
     rw [hic]
-    exact (initTape_wfCells (pair α x)).2 j hj
+    exact (Tape.init_wfCells (pair α x)).2 j hj
   · intro i
     by_cases hi : i = clkT
     · subst hi

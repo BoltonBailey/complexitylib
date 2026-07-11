@@ -13,7 +13,7 @@ The DTM `pairBuildTM k yIdx pIdx` assumes:
   cells 1..|x|, blanks beyond),
 - `y` lives on **work tape `yIdx`** (same layout: head 0 on ▷, `y` in
   cells 1..|y|, blanks beyond),
-- **work tape `pIdx`** is the empty `initTape []`.
+- **work tape `pIdx`** is the empty `Tape.init []`.
 
 After running, work tape `pIdx` carries `pair x y` — the doubled-bits
 encoding of `x` followed by the `[false, true]` separator followed by
@@ -1114,7 +1114,7 @@ private theorem pair_getElem_y (x y : List Bool) (j : ℕ) (hj : j < y.length) :
     _ = y[j]'hj := by congr 1; rw [hprefix_len]; omega
 
 -- ════════════════════════════════════════════════════════════════════════
--- initTape helpers
+-- Tape.init helpers
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- A tape with head at cell 1, a start marker at cell 0, binary contents
@@ -1126,7 +1126,7 @@ theorem tape_eq_initTape_move_right_of_binary {t : Tape} {bits : List Bool}
     (hbits : ∀ i : ℕ, (h : i < bits.length) →
       t.cells (i + 1) = Γ.ofBool (bits[i]'h))
     (htail : ∀ i : ℕ, bits.length ≤ i → t.cells (i + 1) = Γ.blank) :
-    t = (_root_.Complexity.initTape (bits.map Γ.ofBool)).move Dir3.right := by
+    t = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
   cases t with
   | mk head cells =>
     simp only at hhead h0 hbits htail
@@ -1136,14 +1136,14 @@ theorem tape_eq_initTape_move_right_of_binary {t : Tape} {bits : List Bool}
     funext j
     by_cases hj0 : j = 0
     · subst hj0
-      simp [_root_.Complexity.initTape, h0]
+      simp [_root_.Complexity.Tape.init, h0]
     · let i := j - 1
       have hj : j = i + 1 := by omega
       rw [hj]
       by_cases hi : i < bits.length
-      · rw [hbits i hi, initTape_ofBool_cells_lt bits i hi]
+      · rw [hbits i hi, Tape.init_ofBool_cells_lt bits i hi]
       · have hge : bits.length ≤ i := by omega
-        rw [htail i hge, initTape_ofBool_cells_ge bits i hge]
+        rw [htail i hge, Tape.init_ofBool_cells_ge bits i hge]
 
 /-- Core correctness for the post-init state of `pairBuildTM`. This is the
     phase-composition entry point: all tracked tapes are already positioned at
@@ -1154,9 +1154,9 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     (x y : List Bool)
     (c1 : Cfg k (pairBuildTM yIdx pIdx).Q)
     (hc1_state : c1.state = .copyX1)
-    (hc1_input : c1.input = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right)
-    (hc1_yw : c1.work yIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right)
-    (hc1_pw : c1.work pIdx = (_root_.Complexity.initTape []).move Dir3.right) :
+    (hc1_input : c1.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right)
+    (hc1_yw : c1.work yIdx = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right)
+    (hc1_pw : c1.work pIdx = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c9 t, t ≤ 4 * x.length + 2 * y.length + 9 ∧
       (pairBuildTM yIdx pIdx).reachesIn t c1 c9 ∧
       (pairBuildTM yIdx pIdx).halted c9 ∧
@@ -1169,7 +1169,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
   have hc1_ih : c1.input.head = 1 := by
     rw [hc1_input]
     rfl
-  have hc1_ic : c1.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells := by
+  have hc1_ic : c1.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
     rw [hc1_input]
     exact tape_move_cells _ _
   have hc1_ih_ge : c1.input.head ≥ 1 := by rw [hc1_ih]
@@ -1179,23 +1179,23 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
   have hc1_ins : ∀ j, j ≥ 1 → c1.input.cells j ≠ Γ.start := by
     intro j hj
     rw [hc1_ic]
-    exact initTape_ofBool_cells_ne_start x j hj
+    exact Tape.init_ofBool_cells_ne_start x j hj
   have hc1_yh : (c1.work yIdx).head = 1 := by
     rw [hc1_yw]
     rfl
   have hc1_yc : (c1.work yIdx).cells =
-      (_root_.Complexity.initTape (y.map Γ.ofBool)).cells := by
+      (_root_.Complexity.Tape.init (y.map Γ.ofBool)).cells := by
     rw [hc1_yw]
     exact tape_move_cells _ _
   have hc1_yh_ge : (c1.work yIdx).head ≥ 1 := by rw [hc1_yh]
   have hc1_yns : ∀ j, j ≥ 1 → (c1.work yIdx).cells j ≠ Γ.start := by
     intro j hj
     rw [hc1_yc]
-    exact initTape_ofBool_cells_ne_start y j hj
+    exact Tape.init_ofBool_cells_ne_start y j hj
   have hc1_ph : (c1.work pIdx).head = 1 := by
     rw [hc1_pw]
     rfl
-  have hc1_pc : (c1.work pIdx).cells = (_root_.Complexity.initTape []).cells := by
+  have hc1_pc : (c1.work pIdx).cells = (_root_.Complexity.Tape.init []).cells := by
     rw [hc1_pw]
     exact tape_move_cells _ _
   have hc1_ph_ge : (c1.work pIdx).head ≥ 1 := by rw [hc1_ph]
@@ -1205,7 +1205,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
   have hc1_pns : ∀ j, j ≥ 1 → (c1.work pIdx).cells j ≠ Γ.start := by
     intro j hj
     rw [hc1_pc]
-    show (_root_.Complexity.initTape []).cells j ≠ Γ.start
+    show (_root_.Complexity.Tape.init []).cells j ≠ Γ.start
     show (if j = 0 then Γ.start else ([][j - 1]?).getD Γ.blank) ≠ Γ.start
     rw [if_neg (by omega)]
     simp
@@ -1215,9 +1215,9 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     intro i hi
     rw [hc1_ic, hc1_ih]
     have heq :
-        (_root_.Complexity.initTape (x.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (x[i]'hi) := by
+        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (x[i]'hi) := by
       rw [show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt x i hi
+      exact Tape.init_ofBool_cells_lt x i hi
     refine ⟨?_, ?_⟩
     · rw [heq]; exact Γ.ofBool_ne_blank _
     · rw [heq]; exact Γ.ofBool_ne_start _
@@ -1227,9 +1227,9 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     intro i hi
     rw [hc1_yc, hc1_yh]
     have heq :
-        (_root_.Complexity.initTape (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
+        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       rw [show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt y i hi
+      exact Tape.init_ofBool_cells_lt y i hi
     refine ⟨?_, ?_⟩
     · rw [heq]; exact Γ.ofBool_ne_blank _
     · rw [heq]; exact Γ.ofBool_ne_start _
@@ -1252,7 +1252,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     show c2.input.cells c2.input.head = Γ.blank
     rw [hc2_ic, hc1_ic, hc2_ih_val]
     rw [show 1 + x.length = x.length + 1 from by omega]
-    exact initTape_ofBool_cells_ge x x.length (le_refl _)
+    exact Tape.init_ofBool_cells_ge x x.length (le_refl _)
   obtain ⟨c3, hstep3, hc3_state, hc3_inp, hc3_yw, hc3_pw⟩ :=
     pairBuild_copyX1_halt_step yIdx pIdx c2 hc2_state hc2_iread
       hc2_ih_ge hc2_yh_ge hc2_ph_ge hc2_ins hc2_yns hc2_pns
@@ -1335,7 +1335,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
   have hc5_yh_val : (c5.work yIdx).head = 1 := by
     rw [hc5_yw, hc4_yw, hc3_yw, hc2_yw, hc1_yh]
   have hc5_yw_cells_eq : (c5.work yIdx).cells =
-      (_root_.Complexity.initTape (y.map Γ.ofBool)).cells := by
+      (_root_.Complexity.Tape.init (y.map Γ.ofBool)).cells := by
     rw [hc5_yw_cells, hc4_yw_cells, hc3_yw_cells, hc2_yw, hc1_yc]
   have hc5_yw_data : ∀ i, i < y.length →
       (c5.work yIdx).cells ((c5.work yIdx).head + i) ≠ Γ.blank ∧
@@ -1343,9 +1343,9 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     intro i hi
     rw [hc5_yw_cells_eq, hc5_yh_val]
     have heq :
-        (_root_.Complexity.initTape (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
+        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       rw [show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt y i hi
+      exact Tape.init_ofBool_cells_lt y i hi
     exact ⟨by rw [heq]; exact Γ.ofBool_ne_blank _,
            by rw [heq]; exact Γ.ofBool_ne_start _⟩
   have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
@@ -1374,7 +1374,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
     show (c6.work yIdx).cells (c6.work yIdx).head = Γ.blank
     rw [hc6_yc_eq, hc5_yw_cells_eq, hc6_yh_val]
     rw [show 1 + y.length = y.length + 1 from by omega]
-    exact initTape_ofBool_cells_ge y y.length (le_refl _)
+    exact Tape.init_ofBool_cells_ge y y.length (le_refl _)
   obtain ⟨c7, hstep7, hc7_state, hc7_inp, hc7_yw, hc7_pw⟩ :=
     pairBuild_copyY_halt_step yIdx pIdx c6 hc6_state hc6_yread
       hc6_ih_ge hc6_yh_ge hc6_ph_ge hc6_ins hc6_yns hc6_pns
@@ -1471,13 +1471,13 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
         rw [← hheq, heven]
         rw [hc1_ic, hc1_ih]
         rw [show 1 + (i / 2) = (i / 2) + 1 from by omega]
-        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+        exact Tape.init_ofBool_cells_lt x (i / 2) hidiv
       · have hheq : (c1.work pIdx).head + 2 * (i / 2) + 1 = i + 1 := by
           rw [hc1_ph]; omega
         rw [← hheq, hodd]
         rw [hc1_ic, hc1_ih]
         rw [show 1 + (i / 2) = (i / 2) + 1 from by omega]
-        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+        exact Tape.init_ofBool_cells_lt x (i / 2) hidiv
     · push Not at hx
       by_cases hx2 : i = 2 * x.length
       · subst hx2
@@ -1515,7 +1515,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
           rw [hc6_data j hj_lt]
           rw [hc5_yw_cells_eq, hc5_yh_val]
           rw [show 1 + j = j + 1 from by omega]
-          exact initTape_ofBool_cells_lt y j hj_lt
+          exact Tape.init_ofBool_cells_lt y j hj_lt
   · intro i hi_tail
     rw [pair_length] at hi_tail
     rw [hc9_pc_via_c6]
@@ -1529,7 +1529,7 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
       rw [hc1_ph]; omega
     rw [hc2_above _ hi_c2]
     rw [hc1_pc]
-    exact initTape_nil_cells_succ i
+    exact Tape.init_nil_cells_succ i
 
 /-- **`pairBuildTM` correctness.** Given `x` on the input tape and `y` on
     work tape `yIdx` (with `yIdx ≠ pIdx`), `pairBuildTM yIdx pIdx` halts
@@ -1541,9 +1541,9 @@ theorem pairBuildTM_hoareTime
     (x y : List Bool) :
     (pairBuildTM yIdx pIdx).HoareTime
       (fun inp work _ =>
-        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
-        work yIdx = _root_.Complexity.initTape (y.map Γ.ofBool) ∧
-        work pIdx = _root_.Complexity.initTape [])
+        inp = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
+        work yIdx = _root_.Complexity.Tape.init (y.map Γ.ofBool) ∧
+        work pIdx = _root_.Complexity.Tape.init [])
       (fun _ work _ =>
         (work pIdx).head = 1 ∧
         (work pIdx).cells 0 = Γ.start ∧
@@ -1563,14 +1563,14 @@ theorem pairBuildTM_hoareTime
     show inp.cells 0 = _; rw [hinp]; rfl
   have hc0_input_ns : ∀ j, j ≥ 1 → c0.input.cells j ≠ Γ.start := by
     intro j hj; show inp.cells j ≠ _; rw [hinp]
-    exact initTape_ofBool_cells_ne_start x j hj
+    exact Tape.init_ofBool_cells_ne_start x j hj
   have hc0_yw_head : (c0.work yIdx).head = 0 := by
     show (work yIdx).head = 0; rw [hyw]; rfl
   have hc0_yw_cell0 : (c0.work yIdx).cells 0 = Γ.start := by
     show (work yIdx).cells 0 = _; rw [hyw]; rfl
   have hc0_yw_ns : ∀ j, j ≥ 1 → (c0.work yIdx).cells j ≠ Γ.start := by
     intro j hj; show (work yIdx).cells j ≠ _; rw [hyw]
-    exact initTape_ofBool_cells_ne_start y j hj
+    exact Tape.init_ofBool_cells_ne_start y j hj
   have hc0_pw_head : (c0.work pIdx).head = 0 := by
     show (work pIdx).head = 0; rw [hpw]; rfl
   have hc0_pw_cell0 : (c0.work pIdx).cells 0 = Γ.start := by
@@ -1615,7 +1615,7 @@ theorem pairBuildTM_hoareTime
     have heq : c0.input.cells (1 + i) = Γ.ofBool (x[i]'hi) := by
       show inp.cells _ = _
       rw [hinp, show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt x i hi
+      exact Tape.init_ofBool_cells_lt x i hi
     refine ⟨?_, ?_⟩
     · rw [heq]; exact Γ.ofBool_ne_blank _
     · rw [heq]; exact Γ.ofBool_ne_start _
@@ -1629,7 +1629,7 @@ theorem pairBuildTM_hoareTime
     have heq : (c0.work yIdx).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       show (work yIdx).cells _ = _
       rw [hyw, show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt y i hi
+      exact Tape.init_ofBool_cells_lt y i hi
     refine ⟨?_, ?_⟩
     · rw [heq]; exact Γ.ofBool_ne_blank _
     · rw [heq]; exact Γ.ofBool_ne_start _
@@ -1658,7 +1658,7 @@ theorem pairBuildTM_hoareTime
     rw [hc2_ic, hc1_ic, hc2_ih_val]
     show inp.cells _ = _
     rw [hinp, show 1 + x.length = x.length + 1 from by omega]
-    exact initTape_ofBool_cells_ge x x.length (le_refl _)
+    exact Tape.init_ofBool_cells_ge x x.length (le_refl _)
   -- ═══════════════════════════════════════════════════════════════════
   -- Phase 3: copyX1 halt (1 step) -- all tapes stable
   -- ═══════════════════════════════════════════════════════════════════
@@ -1763,7 +1763,7 @@ theorem pairBuildTM_hoareTime
     show (work yIdx).cells (1 + i) ≠ Γ.blank ∧ (work yIdx).cells (1 + i) ≠ Γ.start
     have heq : (work yIdx).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       rw [hyw, show 1 + i = i + 1 from by omega]
-      exact initTape_ofBool_cells_lt y i hi
+      exact Tape.init_ofBool_cells_lt y i hi
     exact ⟨by rw [heq]; exact Γ.ofBool_ne_blank _,
            by rw [heq]; exact Γ.ofBool_ne_start _⟩
   have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
@@ -1797,7 +1797,7 @@ theorem pairBuildTM_hoareTime
     rw [hc6_yc_eq, hc5_yw_cells_eq, hc6_yh_val]
     show (work yIdx).cells _ = _
     rw [hyw, show 1 + y.length = y.length + 1 from by omega]
-    exact initTape_ofBool_cells_ge y y.length (le_refl _)
+    exact Tape.init_ofBool_cells_ge y y.length (le_refl _)
   -- ═══════════════════════════════════════════════════════════════════
   -- Phase 7: copyY halt (1 step) — all tapes stable.
   -- ═══════════════════════════════════════════════════════════════════
@@ -1926,7 +1926,7 @@ theorem pairBuildTM_hoareTime
         show c0.input.cells (1 + (i / 2)) = Γ.ofBool (x[i / 2]'hidiv)
         show inp.cells _ = _
         rw [hinp, show 1 + (i / 2) = (i / 2) + 1 from by omega]
-        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+        exact Tape.init_ofBool_cells_lt x (i / 2) hidiv
       · -- i = 2*(i/2) + 1: cell at i+1 = c1.pIdx.head + 2*(i/2) + 1 + 1.
         -- c1.pIdx.head + 2*(i/2) + 1 = 1 + 2*(i/2) + 1 = i + 1.
         have hheq : (c1.work pIdx).head + 2 * (i / 2) + 1 = i + 1 := by rw [hc1_ph]; omega
@@ -1935,7 +1935,7 @@ theorem pairBuildTM_hoareTime
         show c0.input.cells (1 + (i / 2)) = Γ.ofBool (x[i / 2]'hidiv)
         show inp.cells _ = _
         rw [hinp, show 1 + (i / 2) = (i / 2) + 1 from by omega]
-        exact initTape_ofBool_cells_lt x (i / 2) hidiv
+        exact Tape.init_ofBool_cells_lt x (i / 2) hidiv
     · -- i ≥ 2|x|. Two subcases: i = 2|x|, i = 2|x|+1, or i ≥ 2|x|+2.
       push Not at hx
       by_cases hx2 : i = 2 * x.length
@@ -1984,7 +1984,7 @@ theorem pairBuildTM_hoareTime
           rw [hc5_yw_cells_eq, hc5_yh_val]
           show (work yIdx).cells (1 + j) = Γ.ofBool (y[j]'hj_lt)
           rw [hyw, show 1 + j = j + 1 from by omega]
-          exact initTape_ofBool_cells_lt y j hj_lt
+          exact Tape.init_ofBool_cells_lt y j hj_lt
   · -- (work pIdx).cells are blank after the encoded pair.
     intro i hi_tail
     rw [pair_length] at hi_tail
@@ -2002,7 +2002,7 @@ theorem pairBuildTM_hoareTime
     have hi_c2 : i + 1 ≥ (c1.work pIdx).head + 2 * x.length := by
       rw [hc1_ph]; omega
     rw [hc2_above _ hi_c2]
-    -- c1.cells = c0.cells. Initial tape is initTape [], cells at j ≥ 1 = blank.
+    -- c1.cells = c0.cells. Initial tape is Tape.init [], cells at j ≥ 1 = blank.
     rw [hc1_pc, hc0_pw_cells]
     rw [if_neg (by omega : i + 1 ≠ 0)]
 
@@ -2013,11 +2013,11 @@ theorem pairBuildTM_hoareTime_initTape_move_right
     (x y : List Bool) :
     (pairBuildTM yIdx pIdx).HoareTime
       (fun inp work _ =>
-        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
-        work yIdx = _root_.Complexity.initTape (y.map Γ.ofBool) ∧
-        work pIdx = _root_.Complexity.initTape [])
+        inp = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
+        work yIdx = _root_.Complexity.Tape.init (y.map Γ.ofBool) ∧
+        work pIdx = _root_.Complexity.Tape.init [])
       (fun _ work _ =>
-        work pIdx = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+        work pIdx = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
       (pairBuildTime x.length y.length) := by
   exact (pairBuildTM_hoareTime yIdx pIdx hne x y).strengthen_post
     (fun _ work _ hpost => by
@@ -2033,11 +2033,11 @@ theorem pairBuildTM_hoareTime_all_started_initTape_move_right
     (x y : List Bool) :
     (pairBuildTM yIdx pIdx).HoareTime
       (fun inp work _ =>
-        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work yIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right ∧
-        work pIdx = (_root_.Complexity.initTape []).move Dir3.right)
+        inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work yIdx = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        work pIdx = (_root_.Complexity.Tape.init []).move Dir3.right)
       (fun _ work _ =>
-        work pIdx = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+        work pIdx = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
       (pairBuildTime x.length y.length) := by
   intro inp work out ⟨hinp, hyw, hpw⟩
   let c0 : Cfg k (pairBuildTM yIdx pIdx).Q :=
@@ -2046,33 +2046,33 @@ theorem pairBuildTM_hoareTime_all_started_initTape_move_right
   have hinp_read : c0.input.read ≠ Γ.start := by
     show inp.read ≠ Γ.start
     rw [hinp]
-    show ((_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
     simp only [Tape.read, Tape.move]
-    exact initTape_ofBool_cells_ne_start x 1 (by omega)
+    exact Tape.init_ofBool_cells_ne_start x 1 (by omega)
   have hy_read : (c0.work yIdx).read ≠ Γ.start := by
     show (work yIdx).read ≠ Γ.start
     rw [hyw]
-    show ((_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
     simp only [Tape.read, Tape.move]
-    exact initTape_ofBool_cells_ne_start y 1 (by omega)
+    exact Tape.init_ofBool_cells_ne_start y 1 (by omega)
   have hp_read : (c0.work pIdx).read ≠ Γ.start := by
     show (work pIdx).read ≠ Γ.start
     rw [hpw]
-    show ((_root_.Complexity.initTape []).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init []).move Dir3.right).read ≠ Γ.start
     simp only [Tape.read, Tape.move]
-    show (_root_.Complexity.initTape []).cells 1 ≠ Γ.start
-    simp [_root_.Complexity.initTape]
+    show (_root_.Complexity.Tape.init []).cells 1 ≠ Γ.start
+    simp [_root_.Complexity.Tape.init]
   obtain ⟨c1, hstep_init, hc1_state, hc1_inp, hc1_yw, hc1_pw⟩ :=
     pairBuild_init_step_all_started yIdx pIdx c0 hc0_state hinp_read hy_read hp_read
   have hc1_input : c1.input =
-      (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right := by
+      (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right := by
     rw [hc1_inp]
     exact hinp
   have hc1_y : c1.work yIdx =
-      (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right := by
+      (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := by
     rw [hc1_yw]
     exact hyw
-  have hc1_p : c1.work pIdx = (_root_.Complexity.initTape []).move Dir3.right := by
+  have hc1_p : c1.work pIdx = (_root_.Complexity.Tape.init []).move Dir3.right := by
     rw [hc1_pw]
     exact hpw
   obtain ⟨c9, t, ht, hreach_core, hhalt, hpost⟩ :=
@@ -2092,11 +2092,11 @@ theorem pairBuildTM_toNTM_hoareTime_all_started_initTape_move_right
     (x y : List Bool) :
     ((pairBuildTM yIdx pIdx).toNTM).HoareTime
       (fun inp work _ =>
-        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work yIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right ∧
-        work pIdx = (_root_.Complexity.initTape []).move Dir3.right)
+        inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work yIdx = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        work pIdx = (_root_.Complexity.Tape.init []).move Dir3.right)
       (fun _ work _ =>
-        work pIdx = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
+        work pIdx = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
       (pairBuildTime x.length y.length) :=
   (pairBuildTM_hoareTime_all_started_initTape_move_right yIdx pIdx hne x y).toNTM
 
@@ -2239,9 +2239,9 @@ theorem pairBuildTM_hoareTime_hasOutput
     (x y : List Bool) :
     (pairBuildTM yIdx pIdx).HoareTime
       (fun inp work _ =>
-        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
-        work yIdx = _root_.Complexity.initTape (y.map Γ.ofBool) ∧
-        work pIdx = _root_.Complexity.initTape [])
+        inp = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
+        work yIdx = _root_.Complexity.Tape.init (y.map Γ.ofBool) ∧
+        work pIdx = _root_.Complexity.Tape.init [])
       (fun _ work _ =>
         (work pIdx).head = 1 ∧ (work pIdx).hasOutput (pair x y))
       (pairBuildTime x.length y.length) := by

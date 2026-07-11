@@ -1032,14 +1032,14 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
     omega
   · show c₉.input = inp
     rw [hinp₉, hinp₇, hinp₆, hinp₅]
-    refine Tape.ext' ?_ ?_
+    refine Tape.ext ?_ ?_
     · rw [hihead₄, hhead]
     · rw [hicells₄, hc₃icells]
   · funext i
     by_cases hiq : i = q
     · subst hiq
       rw [Function.update_self]
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · rw [hhead₉, regT_head]
       · rw [hcells₉, hc₈qcells, regT_cells]
     · rw [Function.update_of_ne hiq, hwork₉ i hiq]
@@ -1047,7 +1047,7 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
       rw [Function.update_of_ne hiq, hwork₇ i hiq, hwork₆ i hiq]
       by_cases hir : i = r
       · subst hir
-        refine Tape.ext' ?_ ?_
+        refine Tape.ext ?_ ?_
         · rw [hhead₅, hr, regT_head]
         · rw [hcells₅, hc₄r, hr, regT_cells]
       · rw [hwork₅ i hir, hwork₄]

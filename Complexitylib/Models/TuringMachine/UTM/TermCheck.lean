@@ -436,11 +436,11 @@ private theorem termCheck_scan_run :
     ∀ (m k : ℕ) (x : List Bool) (c : Cfg 8 termCheckTM.Q) (ctrl : TermCtrl),
       x.length = k + m →
       c.state = .readFst ctrl →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = k + 1 →
       (∀ i, (c.work i).read ≠ Γ.start) → c.output.read ≠ Γ.start →
       ∃ c', termCheckTM.reachesIn (m + 1) c c' ∧
         c'.state = .rewind (ctrlVerdict ((groupPairs (x.drop k)).foldl scanStep ctrl)) ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = x.length ∧
         c'.work = c.work ∧ c'.output = c.output
   | 0, k, x, c, ctrl => by
@@ -448,7 +448,7 @@ private theorem termCheck_scan_run :
     obtain rfl : k = x.length := by omega
     have hbl : c.input.read = Γ.blank := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ge x x.length (le_refl _)
+      exact Tape.init_ofBool_cells_ge x x.length (le_refl _)
     have hstep := termCheck_step_readFst_blank c ctrl hst hbl hw hout
     refine ⟨_, .step hstep .zero, ?_, ?_, ?_, rfl, rfl⟩
     · rw [List.drop_length]
@@ -464,12 +464,12 @@ private theorem termCheck_scan_run :
     have hkx : k < x.length := by omega
     have hread : c.input.read = Γ.ofBool x[k] := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_lt x k hkx
+      exact Tape.init_ofBool_cells_lt x k hkx
     have hstep₁ := termCheck_step_readFst_bit c ctrl x[k] hst hread hw hout
     have hbl : (c.input.move .right).read = Γ.blank := by
       show c.input.cells (c.input.head + 1) = Γ.blank
       rw [hih, hic]
-      exact initTape_ofBool_cells_ge x (k + 1) (by omega)
+      exact Tape.init_ofBool_cells_ge x (k + 1) (by omega)
     have hstep₂ := termCheck_step_readSnd_blank
       { state := .readSnd ctrl x[k], input := c.input.move .right,
         work := c.work, output := c.output } ctrl x[k] rfl hbl hw hout
@@ -491,12 +491,12 @@ private theorem termCheck_scan_run :
     have hk1 : k + 1 < x.length := by omega
     have hread₀ : c.input.read = Γ.ofBool x[k] := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_lt x k hk0
+      exact Tape.init_ofBool_cells_lt x k hk0
     have hstep₁ := termCheck_step_readFst_bit c ctrl x[k] hst hread₀ hw hout
     have hread₁ : (c.input.move .right).read = Γ.ofBool x[k + 1] := by
       show c.input.cells (c.input.head + 1) = _
       rw [hih, hic]
-      exact initTape_ofBool_cells_lt x (k + 1) hk1
+      exact Tape.init_ofBool_cells_lt x (k + 1) hk1
     have hstep₂ := termCheck_step_readSnd_bit
       { state := .readSnd ctrl x[k], input := c.input.move .right,
         work := c.work, output := c.output } ctrl x[k] x[k + 1] rfl hread₁ hw hout
@@ -526,18 +526,18 @@ private theorem termCheck_scan_run :
 private theorem termCheck_rewind_run :
     ∀ (h : ℕ) (x : List Bool) (v : Bool) (c : Cfg 8 termCheckTM.Q),
       c.state = .rewind v →
-      c.input.cells = (initTape (x.map Γ.ofBool)).cells → c.input.head = h →
+      c.input.cells = (Tape.init (x.map Γ.ofBool)).cells → c.input.head = h →
       (∀ i, (c.work i).read ≠ Γ.start) → c.output.read ≠ Γ.start →
       ∃ c', termCheckTM.reachesIn (h + 1) c c' ∧
         c'.state = .emit v ∧
-        c'.input.cells = (initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = 1 ∧
         c'.work = c.work ∧ c'.output = c.output
   | 0, x, v, c => by
     intro hst hic hih hw hout
     have hrd : c.input.read = Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_cells_zero _
+      exact Tape.init_cells_zero _
     have hstep := termCheck_step_rewind_start c v hst hrd hw hout
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl⟩
     · show (c.input.move .right).cells = _
@@ -549,7 +549,7 @@ private theorem termCheck_rewind_run :
     intro hst hic hih hw hout
     have hrd : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact initTape_ofBool_cells_ne_start x _ (by omega)
+      exact Tape.init_ofBool_cells_ne_start x _ (by omega)
     have hstep := termCheck_step_rewind_left c v hst hrd hw hout
     obtain ⟨c', hreach, hst', hic', hih', hw', ho'⟩ :=
       termCheck_rewind_run h x v
@@ -582,10 +582,10 @@ theorem termCheckTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape) (out₀
     (houth : out₀.head = 1) :
     termCheckTM.HoareTime
       (fun inp work out =>
-        inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         work = work₀ ∧ out = out₀)
       (fun inp work out =>
-        inp.cells = (initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         work = work₀ ∧
         out.cells = Function.update out₀.cells 1
           (if terminatedRegionB x then Γ.one else Γ.zero) ∧
@@ -620,7 +620,7 @@ theorem termCheckTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape) (out₀
     exact ho₁r
   have hinp₂ : c₂.input.read ≠ Γ.start := by
     rw [Tape.read, hih₂, hic₂]
-    exact initTape_ofBool_cells_ne_start x 1 le_rfl
+    exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
   -- the verdict write
   have hstep₃ := termCheck_step_emit c₂ _ hst₂ hinp₂ hw₂r ho₂r
   have hv : ctrlVerdict ((groupPairs (x.drop 0)).foldl scanStep .seek1)

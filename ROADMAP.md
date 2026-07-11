@@ -96,7 +96,7 @@ from stable public modules so later work does not duplicate local lemmas.
 **Prerequisites.** None beyond the existing library.
 
 **Current progress.** The core model now exposes alphabet separation facts,
-`Tape.ext'`, initialized/started-tape cell and read lemmas, `Tape.move_cells`,
+`Tape.ext`, initialized/started-tape cell and read lemmas, `Tape.move_cells`,
 `Tape.write_head`, canonical register-cell facts, and DTM time-bound
 monotonicity. Several large consumers have been migrated away from private
 copies; endpoint/run lemmas and a few older local tape helpers remain.
@@ -104,7 +104,7 @@ copies; endpoint/run lemmas and a few older local tape helpers remain.
 **Staged milestones.**
 
 - [ ] Add a canonical extensionality and simplification API for `Tape`, `Cfg`,
-  `initTape`, `Γ.ofBool`, `TM.reachesIn`, and `NTM.trace`.
+  `Tape.init`, `Γ.ofBool`, `TM.reachesIn`, and `NTM.trace`.
 - [ ] Consolidate repeated endpoint-determinism, run-concatenation, halting, and
   time-bound monotonicity lemmas.
 - [ ] Give all major constructions a named concrete time/space bound and a

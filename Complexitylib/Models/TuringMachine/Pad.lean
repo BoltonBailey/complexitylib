@@ -37,14 +37,14 @@ def pad0 (N : NTM 0) : NTM 1 where
 /-- One dummy-tape action keeps the cells at their initial value and the head
     at cell 0 or 1: at cell 0 the write is a structural no-op and the head
     steps right; at cell 1 it writes `□` over `□` and stays. -/
-private theorem pad0_dummy_step (w : Tape) (hc : w.cells = (initTape []).cells)
+private theorem pad0_dummy_step (w : Tape) (hc : w.cells = (Tape.init []).cells)
     (hh : w.head ≤ 1) :
     (w.writeAndMove (Γw.blank : Γ)
         (if w.read = Γ.start then Dir3.right else Dir3.stay)).cells
-        = (initTape []).cells
+        = (Tape.init []).cells
       ∧ (w.writeAndMove (Γw.blank : Γ)
           (if w.read = Γ.start then Dir3.right else Dir3.stay)).head ≤ 1 := by
-  have hread : w.read = (initTape []).cells w.head := by rw [Tape.read, hc]
+  have hread : w.read = (Tape.init []).cells w.head := by rw [Tape.read, hc]
   rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hh with h0 | h1
   · -- head at cell 0: reading `▷`, write is a no-op, move right to cell 1
     have hr : w.read = Γ.start := by rw [hread, h0]; rfl
@@ -58,7 +58,7 @@ private theorem pad0_dummy_step (w : Tape) (hc : w.cells = (initTape []).cells)
     show ((w.write _).move .stay).cells = _ ∧ ((w.write _).move .stay).head ≤ 1
     rw [Tape.move, Tape.write, if_neg (by rw [h1]; decide : ¬ w.head = 0)]
     constructor
-    · show Function.update w.cells w.head (Γw.blank : Γ) = (initTape []).cells
+    · show Function.update w.cells w.head (Γw.blank : Γ) = (Tape.init []).cells
       have hv : (Γw.blank : Γ) = w.cells w.head := by
         rw [Tape.read] at hr; rw [hr]; rfl
       rw [hv, Function.update_eq_self, hc]
@@ -82,7 +82,7 @@ private theorem pad0_δ_apply (N : NTM 0) (b : Bool) (q : N.Q) (si : Γ)
 theorem pad0_trace (N : NTM 0) :
     ∀ (T : ℕ) (choices : Fin T → Bool) (c : Cfg 0 N.Q) (c1 : Cfg 1 N.Q),
       c1.state = c.state → c1.input = c.input → c1.output = c.output →
-      (c1.work 0).cells = (initTape []).cells → (c1.work 0).head ≤ 1 →
+      (c1.work 0).cells = (Tape.init []).cells → (c1.work 0).head ≤ 1 →
       ((pad0 N).trace T choices c1).state = (N.trace T choices c).state
         ∧ ((pad0 N).trace T choices c1).input = (N.trace T choices c).input
         ∧ ((pad0 N).trace T choices c1).output = (N.trace T choices c).output := by

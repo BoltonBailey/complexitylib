@@ -58,7 +58,7 @@ theorem loopTM_body_step (tmBody tmTest : TM n) {c c' : Cfg n tmBody.Q}
     (hstep : tmBody.step c = some c') :
     (loopTM tmBody tmTest).step (loopBodyWrap tmBody tmTest c) =
       some (loopBodyWrap tmBody tmTest c') := by
-  have hne : c.state ≠ tmBody.qhalt := ne_qhalt_of_step hstep
+  have hne : c.state ≠ tmBody.qhalt := state_ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (loopBodyWrap tmBody tmTest c).state =
@@ -102,7 +102,7 @@ theorem loopTM_test_step (tmBody tmTest : TM n) {c c' : Cfg n tmTest.Q}
     (hstep : tmTest.step c = some c') :
     (loopTM tmBody tmTest).step (loopTestWrap tmBody tmTest c) =
       some (loopTestWrap tmBody tmTest c') := by
-  have hne : c.state ≠ tmTest.qhalt := ne_qhalt_of_step hstep
+  have hne : c.state ≠ tmTest.qhalt := state_ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (loopTestWrap tmBody tmTest c).state =

@@ -61,7 +61,7 @@ theorem write_readBack (t : Tape) (hread : t.read ≠ Γ.start) :
   rw [Tape.write]
   split
   · rfl
-  · refine Tape.ext' rfl ?_
+  · refine Tape.ext rfl ?_
     show Function.update t.cells t.head (readBackWrite t.read).toΓ = t.cells
     rw [readBackWrite_toΓ_eq hread, Tape.read, Function.update_eq_self]
 
@@ -132,10 +132,10 @@ theorem read_eq {v : ℕ} {t : Tape} (h : reg v t) :
 end reg
 
 /-- A blank tape with the head bumped to cell 1 is the zero register. -/
-theorem reg_zero_init : reg 0 { head := 1, cells := (initTape []).cells } := by
-  refine ⟨rfl, by simp [initTape], fun _ hi => by omega, fun j hj => ?_⟩
-  show (initTape []).cells j = Γ.blank
-  simp only [initTape]
+theorem reg_zero_init : reg 0 { head := 1, cells := (Tape.init []).cells } := by
+  refine ⟨rfl, by simp [Tape.init], fun _ hi => by omega, fun j hj => ?_⟩
+  show (Tape.init []).cells j = Γ.blank
+  simp only [Tape.init]
   rw [if_neg (by omega : ¬ j = 0)]
   simp
 
@@ -175,7 +175,7 @@ theorem reg_regT (v : ℕ) : reg v (regT v) :=
 /-- **A register's tape is canonical**: the `reg` predicate pins every cell and
     the head, so it is an equation. -/
 theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
-  refine Tape.ext' h.head_eq ?_
+  refine Tape.ext h.head_eq ?_
   funext j
   rcases Nat.eq_zero_or_pos j with rfl | hj
   · rw [h.cell0]; rfl

@@ -78,21 +78,21 @@ theorem corr_init {k : ℕ} (N : NTM k) (x : List Bool) :
   outputEq := rfl
   inv := simInvAt_init k
   wbeyond := fun _ p hp => by
-    show (initTape []).cells p = Γ.blank
-    simp only [initTape]
+    show (Tape.init []).cells p = Γ.blank
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ p = 0)]
     simp
   inputWf := fun p hp => by
-    show (initTape (x.map Γ.ofBool)).cells p ≠ Γ.start
-    simp only [initTape, if_neg (show ¬ p = 0 by omega)]
+    show (Tape.init (x.map Γ.ofBool)).cells p ≠ Γ.start
+    simp only [Tape.init, if_neg (show ¬ p = 0 by omega)]
     cases h : (List.map Γ.ofBool x)[p - 1]? with
     | none => decide
     | some g =>
       obtain ⟨b, _, rfl⟩ := List.mem_map.mp (List.mem_of_getElem? h)
       cases b <;> decide
   outputWf := fun p hp => by
-    show (initTape []).cells p ≠ Γ.start
-    simp only [initTape]
+    show (Tape.init []).cells p ≠ Γ.start
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ p = 0)]
     simp
 
@@ -5011,7 +5011,7 @@ theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
 /-- **Forward acceptance.** If `N` accepts `x` within `Tn` steps, then
     `singleTapeSim N` accepts `x` within `Tn · macroBound k Tn + 1` steps:
     simulate `N`'s accepting run (`iterCorr`), then one `haltCorr` step lands in
-    a halted accepting simulator config; pad via `AcceptsInTime_mono`. -/
+    a halted accepting simulator config; pad via `AcceptsInTime.mono`. -/
 theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : ℕ)
     (h : N.AcceptsInTime x Tn) :
     (singleTapeSim N).AcceptsInTime x (Tn * macroBound k Tn + 1) := by
@@ -5038,7 +5038,7 @@ theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : �
     refine ⟨fun i => F' i.val, ?_, ?_⟩
     · rw [hcompose]; exact hhalted
     · rw [hcompose]; exact hbit.mpr hacc
-  exact NTM.AcceptsInTime_mono (by
+  exact NTM.AcceptsInTime.mono (by
     have : Tn * macroBound k (0 + Tn) = Tn * macroBound k Tn := by rw [Nat.zero_add]
     omega) key
 

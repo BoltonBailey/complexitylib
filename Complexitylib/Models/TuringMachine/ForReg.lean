@@ -397,7 +397,7 @@ private theorem forRegTM_loop_run (inp₀ : Tape) (w : ℕ → Fin n → Tape)
       by_cases hjr : j = r
       · subst hjr
         rw [Function.update_self]
-        refine Tape.ext' ?_ ?_
+        refine Tape.ext ?_ ?_
         · rw [hhead']
           rfl
         · rw [hcells']

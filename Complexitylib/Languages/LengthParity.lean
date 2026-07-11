@@ -185,7 +185,7 @@ private theorem evenLengthTM_scan (x : List Bool) (m k : ℕ)
     (hlen : x.length = k + m)
     (c : Cfg n (evenLengthTM (n := n)).Q)
     (hst : c.state = if k % 2 = 0 then LengthParityPhase.even else LengthParityPhase.odd)
-    (hic : c.input.cells = (initTape (x.map Γ.ofBool)).cells)
+    (hic : c.input.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hih : c.input.head = k + 1)
     (hoh : c.output.head = 1)
     (hoc : c.output.cells 1 ≠ Γ.start) :
@@ -198,8 +198,8 @@ private theorem evenLengthTM_scan (x : List Bool) (m k : ℕ)
     have hk : k = x.length := by omega
     have hi_blank : c.input.read = Γ.blank := by
       simp only [Tape.read, hih, hic]
-      show (initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.blank
-      simp [initTape, hk]
+      show (Tape.init (x.map Γ.ofBool)).cells (k + 1) = Γ.blank
+      simp [Tape.init, hk]
     by_cases hpar : k % 2 = 0
     · have hst_even : c.state = LengthParityPhase.even := by rw [hst, if_pos hpar]
       obtain ⟨c', hstep, hhalt, hout⟩ :=
@@ -220,9 +220,9 @@ private theorem evenLengthTM_scan (x : List Bool) (m k : ℕ)
     have hmap_len : (x.map Γ.ofBool).length = x.length := by simp
     have hi_nb : c.input.read ≠ Γ.blank := by
       simp only [Tape.read, hih, hic]
-      show (initTape (x.map Γ.ofBool)).cells (k + 1) ≠ _
+      show (Tape.init (x.map Γ.ofBool)).cells (k + 1) ≠ _
       have hkmap : k < (x.map Γ.ofBool).length := by rw [hmap_len]; exact hk_lt
-      simp only [initTape, show k + 1 ≠ 0 from by omega, ↓reduceIte,
+      simp only [Tape.init, show k + 1 ≠ 0 from by omega, ↓reduceIte,
         Nat.add_sub_cancel, List.getElem?_eq_getElem hkmap, Option.getD_some,
         List.getElem_map]
       cases x[k]'hk_lt <;> simp [Γ.ofBool]
@@ -237,7 +237,7 @@ private theorem evenLengthTM_scan (x : List Bool) (m k : ℕ)
           if (k + 1) % 2 = 0 then LengthParityPhase.even else LengthParityPhase.odd := by
         have h1 : (k + 1) % 2 ≠ 0 := by omega
         rw [hst₁, if_pos rfl]; simp [h1]
-      have hic₁' : c₁.input.cells = (initTape (x.map Γ.ofBool)).cells := by rw [hic₁, hic]
+      have hic₁' : c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells := by rw [hic₁, hic]
       have hih₁' : c₁.input.head = (k + 1) + 1 := by rw [hih₁, hih]
       have hoc₁' : c₁.output.cells 1 ≠ Γ.start := by rw [hoc₁]; exact hoc
       obtain ⟨c', hreach', hhalt', hout'⟩ :=
@@ -252,7 +252,7 @@ private theorem evenLengthTM_scan (x : List Bool) (m k : ℕ)
         have h1 : (k + 1) % 2 = 0 := by omega
         rw [hst₁, if_neg (by decide : LengthParityPhase.odd ≠ LengthParityPhase.even)]
         simp [h1]
-      have hic₁' : c₁.input.cells = (initTape (x.map Γ.ofBool)).cells := by rw [hic₁, hic]
+      have hic₁' : c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells := by rw [hic₁, hic]
       have hih₁' : c₁.input.head = (k + 1) + 1 := by rw [hih₁, hih]
       have hoc₁' : c₁.output.cells 1 ≠ Γ.start := by rw [hoc₁]; exact hoc
       obtain ⟨c', hreach', hhalt', hout'⟩ :=
@@ -277,10 +277,10 @@ theorem evenLengthTM_reachesIn (x : List Bool) :
   have hst1' : c₁.state =
       if (0 : ℕ) % 2 = 0 then LengthParityPhase.even else LengthParityPhase.odd := by
     simpa using hst1
-  have hic1' : c₁.input.cells = (initTape (x.map Γ.ofBool)).cells := hic1
+  have hic1' : c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells := hic1
   have hih1' : c₁.input.head = 0 + 1 := by simpa using hih1
   have hoc1' : c₁.output.cells 1 ≠ Γ.start := by
-    rw [hoc1]; simp [initTape]
+    rw [hoc1]; simp [Tape.init]
   obtain ⟨c', hreach, hhalt, hout⟩ :=
     evenLengthTM_scan x x.length 0 (by omega) c₁ hst1' hic1' hih1' hoh1 hoc1'
   refine ⟨c', ?_, hhalt, hout⟩

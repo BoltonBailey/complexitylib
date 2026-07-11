@@ -44,7 +44,7 @@ private theorem qstart_ne_qhalt_of_decidesInTime {tm : TM n₁}
   obtain ⟨rfl, _⟩ := this
   -- output cell 1 of initCfg is blank
   have hblank : (tm.initCfg []).output.cells 1 = Γ.blank := by
-    simp [initTape]
+    simp [Tape.init]
   -- But DecidesInTime requires it to be either one or zero
   by_cases hx : ([] : List Bool) ∈ L
   · have := hmem hx; rw [hblank] at this; exact absurd this (by decide)
@@ -85,9 +85,9 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ accepted: output cell 1 = Γ.one
     have hcell := hmem₁ hx₁
     -- Derive output tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
+    have hcell0_out := output_cell0_of_reachesIn hreach₁ (Tape.init_cells_zero _)
     have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_cells_ne_start i hi)
+      (fun i hi => Tape.init_nil_cells_ne_start i hi)
     -- Transition: rewind fake output, check, write Γ.one to real output, halt
     obtain ⟨t_tr, c_final, htrans, hhalt_f, hout_f, htr_bound⟩ :=
       transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
@@ -100,9 +100,9 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ rejected: output cell 1 = Γ.zero
     have hcell := hnmem₁ hx₁
     -- Derive output tape and input tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
+    have hcell0_out := output_cell0_of_reachesIn hreach₁ (Tape.init_cells_zero _)
     have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_cells_ne_start i hi)
+      (fun i hi => Tape.init_nil_cells_ne_start i hi)
     have hinput_cells := input_cells_of_reachesIn hreach₁
     -- Transition: full transition to Phase 2
     obtain ⟨t_tr, c_mid, htrans, hmid_state, hmid_input, hmid_work, hmid_output, htr_bound⟩ :=

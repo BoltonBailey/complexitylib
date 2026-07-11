@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Mathlib.Data.Finset.Lattice.Fold
-
-namespace Complexity
 
 /-!
 # TM–NTM embedding: proof internals
@@ -9,6 +12,8 @@ namespace Complexity
 Helper lemmas for `TM.toNTM_accepts_iff`, showing that the DTM step function
 and the NTM trace on `toNTM` compute the same thing.
 -/
+
+namespace Complexity
 
 variable {n : ℕ}
 
@@ -27,7 +32,7 @@ private lemma TM.reaches_toNTM_trace (tm : TM n) {a c' : Cfg n tm.Q}
   | @head a₀ b₀ hstep _ ih =>
     obtain ⟨T, hT⟩ := ih
     have hne : a₀.state ≠ tm.qhalt := by
-      rw [TM.stepRel] at hstep; exact ne_qhalt_of_step hstep
+      rw [TM.stepRel] at hstep; exact state_ne_qhalt_of_step hstep
     refine ⟨T + 1, fun ch => ?_⟩
     rw [tm.toNTM_trace_step T ch hne]
     have : (tm.step a₀).get (by simp [TM.step, hne]) = b₀ := by
@@ -69,7 +74,7 @@ private lemma TM.toNTM_reachesIn_trace (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
   induction h with
   | zero => rfl
   | @step c₀ c_mid _ _ hstep _ ih =>
-    have hne := ne_qhalt_of_step hstep
+    have hne := state_ne_qhalt_of_step hstep
     rw [tm.toNTM_trace_step _ ch hne]
     have : (tm.step c₀).get (by simp [TM.step, hne]) = c_mid := by
       simp [TM.step, hne] at hstep ⊢; exact hstep
@@ -220,7 +225,7 @@ theorem TM.reachesIn_le_halt (tm : TM n) {c c' c_halt : Cfg n tm.Q}
 /-- Initial work tape heads are all at position 0. -/
 lemma TM.initCfg_work_head_zero (tm : TM n) (x : List Bool) (i : Fin n) :
     ((tm.initCfg x).work i).head = 0 := by
-  simp [initTape]
+  simp [Tape.init]
 
 /-- If a DTM is a transducer, so is its NTM embedding. -/
 theorem TM.toNTM_isTransducer (tm : TM n) (h : tm.IsTransducer) : tm.toNTM.IsTransducer := by

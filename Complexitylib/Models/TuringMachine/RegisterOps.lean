@@ -443,7 +443,7 @@ theorem incRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fin 
     by_cases hir : i = q
     · subst hir
       rw [Function.update_self]
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · rw [hhead₃]
         rfl
       · rw [hcells₃]
@@ -892,7 +892,7 @@ theorem clearRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fi
     by_cases hir : i = q
     · subst hir
       rw [Function.update_self]
-      refine Tape.ext' ?_ ?_
+      refine Tape.ext ?_ ?_
       · rw [hhead₃]
         rfl
       · rw [hcells₃]

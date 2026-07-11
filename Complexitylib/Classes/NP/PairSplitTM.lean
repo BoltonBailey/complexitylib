@@ -322,20 +322,20 @@ theorem pair_get_right (x y : List Bool) (j : ℕ) (hj : j < y.length) :
 -- Small tape helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem initTape_nil_move_right_cells_ne_start (j : ℕ) (hj : j ≥ 1) :
-    ((_root_.Complexity.initTape []).move Dir3.right).cells j ≠ Γ.start := by
+private theorem Tape.init_nil_move_right_cells_ne_start (j : ℕ) (hj : j ≥ 1) :
+    ((_root_.Complexity.Tape.init []).move Dir3.right).cells j ≠ Γ.start := by
   rw [tape_move_cells]
-  simp [_root_.Complexity.initTape, show j ≠ 0 by omega]
+  simp [_root_.Complexity.Tape.init, show j ≠ 0 by omega]
 
-private theorem initTape_nil_move_right_stable :
-    ((_root_.Complexity.initTape []).move Dir3.right).writeAndMove
-      (readBackWrite (((_root_.Complexity.initTape []).move Dir3.right).read)).toΓ
-      (idleDir (((_root_.Complexity.initTape []).move Dir3.right).read)) =
-    ((_root_.Complexity.initTape []).move Dir3.right) := by
+private theorem Tape.init_nil_move_right_stable :
+    ((_root_.Complexity.Tape.init []).move Dir3.right).writeAndMove
+      (readBackWrite (((_root_.Complexity.Tape.init []).move Dir3.right).read)).toΓ
+      (idleDir (((_root_.Complexity.Tape.init []).move Dir3.right).read)) =
+    ((_root_.Complexity.Tape.init []).move Dir3.right) := by
   apply tape_writeAndMove_stable
   · simp [Tape.move]
   · intro j hj
-    exact initTape_nil_move_right_cells_ne_start j hj
+    exact Tape.init_nil_move_right_cells_ne_start j hj
 
 -- ════════════════════════════════════════════════════════════════════════
 -- `copyY` phase: step lemmas
@@ -1048,7 +1048,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
     (hxh : (c.work xIdx).head ≥ 1)
     (hxns : ∀ j, j ≥ 1 → (c.work xIdx).cells j ≠ Γ.start)
     (hxread : (c.work xIdx).read = Γ.blank)
-    (hyw : c.work yIdx = (_root_.Complexity.initTape []).move Dir3.right) :
+    (hyw : c.work yIdx = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c',
       (pairSplitCoreTM xIdx yIdx).reachesIn (y.length + 1) c c' ∧
       (pairSplitCoreTM xIdx yIdx).halted c' ∧
@@ -1070,7 +1070,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
   have hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start := by
     intro j hj
     rw [hyw, tape_move_cells]
-    exact initTape_nil_move_right_cells_ne_start j hj
+    exact Tape.init_nil_move_right_cells_ne_start j hj
   have hdata : ∀ i, i < y.length →
       c.input.cells (c.input.head + i) ≠ Γ.blank ∧
       c.input.cells (c.input.head + i) ≠ Γ.start := by
@@ -1117,7 +1117,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
     rw [hc2_yw]
     have habove : i + 1 ≥ (c.work yIdx).head + y.length := by rw [hyh]; omega
     rw [hc1_above (i + 1) habove, hyw, tape_move_cells]
-    exact initTape_nil_cells_succ i
+    exact Tape.init_nil_cells_succ i
 
 /-- Core correctness for valid started inputs. Beginning in `.scanX` with
 `pair x y` on the input tape and empty started work tapes, `pairSplitCoreTM`
@@ -1129,14 +1129,14 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     (x y : List Bool)
     (c : Cfg k (pairSplitCoreTM xIdx yIdx).Q)
     (hst : c.state = .scanX)
-    (hinp : c.input = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
-    (hxw : c.work xIdx = (_root_.Complexity.initTape []).move Dir3.right)
-    (hyw : c.work yIdx = (_root_.Complexity.initTape []).move Dir3.right) :
+    (hinp : c.input = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
+    (hxw : c.work xIdx = (_root_.Complexity.Tape.init []).move Dir3.right)
+    (hyw : c.work yIdx = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c',
       (pairSplitCoreTM xIdx yIdx).reachesIn (2 * x.length + y.length + 3) c c' ∧
       (pairSplitCoreTM xIdx yIdx).halted c' ∧
       c'.input.head = (pair x y).length + 1 ∧
-      c'.input.cells = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells ∧
+      c'.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells ∧
       (c'.work xIdx).head = 1 + x.length ∧
       (c'.work xIdx).cells 0 = Γ.start ∧
       (∀ i, (h : i < x.length) →
@@ -1150,7 +1150,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hc_ih : c.input.head = 1 := by
     rw [hinp]
     rfl
-  have hc_ic : c.input.cells = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells := by
+  have hc_ic : c.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells := by
     rw [hinp]
     exact tape_move_cells _ _
   have hc_ih_ge : c.input.head ≥ 1 := by
@@ -1161,7 +1161,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hc_ins : ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start := by
     intro j hj
     rw [hc_ic]
-    exact initTape_ofBool_cells_ne_start (pair x y) j hj
+    exact Tape.init_ofBool_cells_ne_start (pair x y) j hj
   have hc_hbits : ∀ i, (h : i < x.length) →
       c.input.cells (c.input.head + 2 * i) = Γ.ofBool (x[i]'h) ∧
       c.input.cells (c.input.head + (2 * i + 1)) = Γ.ofBool (x[i]'h) := by
@@ -1171,19 +1171,19 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
           (pair x y)[2 * i]'(by rw [pair_length]; omega) = x[i]'hi :=
         pair_get_left_first x y i hi
       have hcell :
-          (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells (2 * i + 1) =
+          (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells (2 * i + 1) =
             Γ.ofBool ((pair x y)[2 * i]'(by rw [pair_length]; omega)) :=
-        initTape_ofBool_cells_lt (pair x y) (2 * i) (by rw [pair_length]; omega)
+        Tape.init_ofBool_cells_lt (pair x y) (2 * i) (by rw [pair_length]; omega)
       rw [show c.input.head + 2 * i = 2 * i + 1 by rw [hc_ih]; omega, hc_ic]
       simpa [hpair] using hcell
     · have hpair :
           (pair x y)[2 * i + 1]'(by rw [pair_length]; omega) = x[i]'hi :=
         pair_get_left_second x y i hi
       have hcell :
-          (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells (2 * i + 2) =
+          (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells (2 * i + 2) =
             Γ.ofBool ((pair x y)[2 * i + 1]'(by rw [pair_length]; omega)) := by
         simpa using
-          initTape_ofBool_cells_lt (pair x y) (2 * i + 1) (by rw [pair_length]; omega)
+          Tape.init_ofBool_cells_lt (pair x y) (2 * i + 1) (by rw [pair_length]; omega)
       rw [show c.input.head + (2 * i + 1) = 2 * i + 2 by rw [hc_ih]; omega, hc_ic]
       simpa [hpair] using hcell
   have hxh_eq : (c.work xIdx).head = 1 := by
@@ -1197,7 +1197,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hxns : ∀ j, j ≥ 1 → (c.work xIdx).cells j ≠ Γ.start := by
     intro j hj
     rw [hxw]
-    exact initTape_nil_move_right_cells_ne_start j hj
+    exact Tape.init_nil_move_right_cells_ne_start j hj
   have hyh_eq : (c.work yIdx).head = 1 := by
     rw [hyw]
     rfl
@@ -1206,31 +1206,31 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hyns : ∀ j, j ≥ 1 → (c.work yIdx).cells j ≠ Γ.start := by
     intro j hj
     rw [hyw]
-    exact initTape_nil_move_right_cells_ne_start j hj
+    exact Tape.init_nil_move_right_cells_ne_start j hj
   obtain ⟨c1, hreach_x, hc1_state, hc1_ih, hc1_ic, hc1_xh, hc1_xc0, hc1_xns,
           hc1_below, hc1_above, hc1_data, hc1_yw⟩ :=
     pairSplit_scanX_loop xIdx yIdx hne x c hst hc_ih_ge hc_ic0 hc_ins hc_hbits
       hxh hxc0 hxns hyh hyns
   have hc1_ih_val : c1.input.head = 1 + 2 * x.length := by
     rw [hc1_ih, hc_ih]
-  have hc1_icells : c1.input.cells = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells := by
+  have hc1_icells : c1.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells := by
     rw [hc1_ic, hc_ic]
   have hc1_read0 : c1.input.read = Γ.zero := by
     show c1.input.cells c1.input.head = Γ.zero
     rw [hc1_icells, hc1_ih_val]
     have hcell :
-        (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells (2 * x.length + 1) =
+        (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells (2 * x.length + 1) =
           Γ.ofBool ((pair x y)[2 * x.length]'(by rw [pair_length]; omega)) :=
-      initTape_ofBool_cells_lt (pair x y) (2 * x.length) (by rw [pair_length]; omega)
+      Tape.init_ofBool_cells_lt (pair x y) (2 * x.length) (by rw [pair_length]; omega)
     rw [pair_get_sep_zero x y] at hcell
     simpa [Γ.ofBool, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
   have hc1_next1 : c1.input.cells (c1.input.head + 1) = Γ.one := by
     rw [hc1_icells, hc1_ih_val]
     have hcell :
-        (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells (2 * x.length + 2) =
+        (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells (2 * x.length + 2) =
           Γ.ofBool ((pair x y)[2 * x.length + 1]'(by rw [pair_length]; omega)) := by
       simpa using
-        initTape_ofBool_cells_lt (pair x y) (2 * x.length + 1) (by rw [pair_length]; omega)
+        Tape.init_ofBool_cells_lt (pair x y) (2 * x.length + 1) (by rw [pair_length]; omega)
     rw [pair_get_sep_one x y] at hcell
     have hpos : 1 + 2 * x.length + 1 = 2 * x.length + 2 := by omega
     rw [hpos]
@@ -1243,12 +1243,12 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
       (by
         intro j hj
         rw [hc1_yw, hyw]
-        exact initTape_nil_move_right_cells_ne_start j hj)
+        exact Tape.init_nil_move_right_cells_ne_start j hj)
   have hreach_sep_total : (pairSplitCoreTM xIdx yIdx).reachesIn (2 * x.length + 2) c c2 := by
     simpa using reachesIn_trans _ hreach_x hreach_sep
   have hc2_ih_val : c2.input.head = 1 + 2 * x.length + 2 := by
     rw [hc2_ih, hc1_ih_val]
-  have hc2_icells : c2.input.cells = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells := by
+  have hc2_icells : c2.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells := by
     rw [hc2_ic, hc1_icells]
   have hc2_ih_ge : c2.input.head ≥ 1 := by
     rw [hc2_ih_val]
@@ -1259,19 +1259,19 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
   have hc2_ins : ∀ j, j ≥ 1 → c2.input.cells j ≠ Γ.start := by
     intro j hj
     rw [hc2_icells]
-    exact initTape_ofBool_cells_ne_start (pair x y) j hj
+    exact Tape.init_ofBool_cells_ne_start (pair x y) j hj
   have hc2_ybits : ∀ i, (h : i < y.length) →
       c2.input.cells (c2.input.head + i) = Γ.ofBool (y[i]'h) := by
     intro i hi
     rw [hc2_icells, hc2_ih_val]
     have hcell :=
-      initTape_ofBool_cells_lt (pair x y) (2 * x.length + 2 + i) (by rw [pair_length]; omega)
+      Tape.init_ofBool_cells_lt (pair x y) (2 * x.length + 2 + i) (by rw [pair_length]; omega)
     rw [pair_get_right x y i hi] at hcell
     simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
   have hc2_blank : c2.input.cells (c2.input.head + y.length) = Γ.blank := by
     rw [hc2_icells, hc2_ih_val]
     simpa [pair_length, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
-      initTape_ofBool_cells_ge (pair x y) ((pair x y).length) (le_rfl)
+      Tape.init_ofBool_cells_ge (pair x y) ((pair x y).length) (le_rfl)
   have hc2_xh_ge : (c2.work xIdx).head ≥ 1 := by
     rw [hc2_xw, hc1_xh_val]
     omega
@@ -1286,7 +1286,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
       rw [hxh_eq]
     rw [hc1_above (1 + x.length) habove, hxw, tape_move_cells]
     simp [Nat.add_comm]
-  have hc2_yw_init : c2.work yIdx = (_root_.Complexity.initTape []).move Dir3.right := by
+  have hc2_yw_init : c2.work yIdx = (_root_.Complexity.Tape.init []).move Dir3.right := by
     rw [hc2_yw, hc1_yw]
     exact hyw
   obtain ⟨c3, hreach_y, hhalt, hc3_ih, hc3_ic, hc3_xw, hc3_yh, hc3_yc0, hc3_ydata, hc3_ytail⟩ :=
@@ -1319,7 +1319,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
       rw [hxh_eq]
       omega
     rw [hc1_above (i + 1) habove, hxw, tape_move_cells]
-    exact initTape_nil_cells_succ i
+    exact Tape.init_nil_cells_succ i
   · rw [hc3_yh]
   · exact hc3_yc0
   · exact hc3_ydata
@@ -1358,14 +1358,14 @@ theorem pairSplitCoreTM_from_init_initTape_move_right
     (x y : List Bool)
     (c : Cfg k (pairSplitCoreTM xIdx yIdx).Q)
     (hst : c.state = .init)
-    (hinp : c.input = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right)
-    (hxw : c.work xIdx = (_root_.Complexity.initTape []).move Dir3.right)
-    (hyw : c.work yIdx = (_root_.Complexity.initTape []).move Dir3.right) :
+    (hinp : c.input = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
+    (hxw : c.work xIdx = (_root_.Complexity.Tape.init []).move Dir3.right)
+    (hyw : c.work yIdx = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c',
       (pairSplitCoreTM xIdx yIdx).reachesIn (pairSplitCoreTime x.length y.length) c c' ∧
       (pairSplitCoreTM xIdx yIdx).halted c' ∧
       c'.input.head = (pair x y).length + 1 ∧
-      c'.input.cells = (_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).cells ∧
+      c'.input.cells = (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).cells ∧
       (c'.work xIdx).head = 1 + x.length ∧
       (c'.work xIdx).cells 0 = Γ.start ∧
       (∀ i, (h : i < x.length) →
@@ -1378,16 +1378,16 @@ theorem pairSplitCoreTM_from_init_initTape_move_right
       (∀ i, y.length ≤ i → (c'.work yIdx).cells (i + 1) = Γ.blank) := by
   have hinp_read : c.input.read ≠ Γ.start := by
     rw [hinp]
-    show ((_root_.Complexity.initTape ((pair x y).map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right).read ≠ Γ.start
     simp [Tape.read, Tape.move]
-    exact initTape_ofBool_cells_ne_start (pair x y) 1 (by omega)
+    exact Tape.init_ofBool_cells_ne_start (pair x y) 1 (by omega)
   have hx_read : (c.work xIdx).read ≠ Γ.start := by
     rw [hxw]
-    show ((_root_.Complexity.initTape []).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init []).move Dir3.right).read ≠ Γ.start
     simp [Tape.read, Tape.move]
   have hy_read : (c.work yIdx).read ≠ Γ.start := by
     rw [hyw]
-    show ((_root_.Complexity.initTape []).move Dir3.right).read ≠ Γ.start
+    show ((_root_.Complexity.Tape.init []).move Dir3.right).read ≠ Γ.start
     simp [Tape.read, Tape.move]
   obtain ⟨c1, hstep_init, hc1_state, hc1_inp, hc1_xw, hc1_yw⟩ :=
     pairSplit_init_step_all_started xIdx yIdx c hst hinp_read hx_read hy_read

@@ -118,9 +118,9 @@ theorem HoareTime.toHoare {tm : TM n}
 theorem hoareTime_of_decidesInTime {tm : TM n} {L : Language} {T : ℕ → ℕ}
     (h : tm.DecidesInTime L T) (x : List Bool) :
     tm.HoareTime
-      (fun inp work out => inp = initTape (x.map Γ.ofBool) ∧
-                           (work = fun _ => initTape []) ∧
-                           out = initTape [])
+      (fun inp work out => inp = Tape.init (x.map Γ.ofBool) ∧
+                           (work = fun _ => Tape.init []) ∧
+                           out = Tape.init [])
       (fun _ _ out => (x ∈ L → out.cells 1 = Γ.one) ∧
                       (x ∉ L → out.cells 1 = Γ.zero))
       (T x.length) := by

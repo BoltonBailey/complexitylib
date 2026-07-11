@@ -1,14 +1,20 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Logic.Relation
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Rat.Defs
 
-namespace Complexity
-
 /-!
-# Turing Machines (Arora-Barak style)
+# Turing machines
 
-This file defines deterministic and nondeterministic Turing machines following
-Arora and Barak's *Computational Complexity: A Modern Approach*.
+This file defines the library's base model of computation: multi-tape
+deterministic and nondeterministic Turing machines over a fixed four-symbol
+alphabet, with named input/work/output tapes. The model's shape follows
+Arora–Barak (*Computational Complexity: A Modern Approach*, Definitions
+1.1–1.4 and 2.1), with the conventions below enforced structurally.
 
 ## Main definitions
 
@@ -34,19 +40,21 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 ## Design notes
 
 - **One-sided tapes**: `Tape` uses `head : ℕ` and `cells : ℕ → Γ`. Cell 0 is leftmost;
-  moving left at position 0 is a no-op (`Nat` subtraction saturates), matching AB exactly.
+  moving left at position 0 is a no-op (`Nat` subtraction saturates).
 - **Immutable cell 0**: `Tape.write` is a no-op when the head is at position 0, ensuring
   `▷` at cell 0 is permanent. Combined with `Γw` (which excludes `▷`), this guarantees `▷`
   appears only at cell 0 on every tape.
 - **Read vs write alphabet**: The transition function reads `Γ = {0, 1, □, ▷}` but writes
-  `Γw = {0, 1, □}`, structurally enforcing AB's rule that `δ` never writes `▷`.
-- **Finite state**: `Q` carries `[Fintype Q]`, matching AB's requirement that Q is finite.
-- **Output**: Read from cell 1 of the output tape (first cell after `▷`), matching AB's
-  definition of machine output as the string written after `▷`.
+  `Γw = {0, 1, □}`, so `δ` structurally cannot write `▷`.
+- **Finite state**: `Q` carries `[Fintype Q]`; the state space is finite.
+- **Output**: Read from cell 1 of the output tape (first cell after `▷`); machine output
+  is the binary string written after `▷`.
 - **Named tapes**: `Cfg` has `input`, `work`, `output` fields rather than `Fin k → Tape`,
   making the read-only/read-write distinction structural.
 - **NTM execution**: Defined via `trace` (a fixed choice sequence), not a relational step.
 -/
+
+namespace Complexity
 
 /-- The tape alphabet Γ = {0, 1, □, ▷}. -/
 inductive Γ where
@@ -107,20 +115,14 @@ instance : Fintype Dir3 where
     contains `▷`. The head cannot move left of cell 0 (moving left at position 0
     is a no-op via `Nat` subtraction). Writing at cell 0 is a no-op,
     preserving `▷`. -/
+@[ext]
 structure Tape where
+  /-- The head position; cell 0 is the leftmost cell. -/
   head : ℕ
+  /-- The tape contents, one symbol per cell. -/
   cells : ℕ → Γ
 
 namespace Tape
-
-/-- Tapes are equal when their head positions and cell functions agree. -/
-theorem ext' {a b : Tape} (hhead : a.head = b.head) (hcells : a.cells = b.cells) :
-    a = b := by
-  cases a
-  cases b
-  cases hhead
-  cases hcells
-  rfl
 
 /-- Read the symbol under the head. -/
 def read (t : Tape) : Γ := t.cells t.head
@@ -175,92 +177,92 @@ end Tape
 
 /-- Initialize a tape: `▷` at cell 0, `contents` at cells 1, 2, ..., `□` elsewhere.
     Head starts at position 0 (on `▷`). -/
-def initTape (contents : List Γ) : Tape where
+def Tape.init (contents : List Γ) : Tape where
   head := 0
   cells := fun i =>
     if i = 0 then Γ.start
     else (contents[i - 1]?).getD Γ.blank
 
 /-- An initialized tape starts with its head on the left-end marker. -/
-@[simp] theorem initTape_head (contents : List Γ) :
-    (initTape contents).head = 0 := rfl
+@[simp] theorem Tape.init_head (contents : List Γ) :
+    (Tape.init contents).head = 0 := rfl
 
 /-- Cell zero of an initialized tape is the left-end marker. -/
-@[simp] theorem initTape_cells_zero (contents : List Γ) :
-    (initTape contents).cells 0 = Γ.start := by
-  simp [initTape]
+@[simp] theorem Tape.init_cells_zero (contents : List Γ) :
+    (Tape.init contents).cells 0 = Γ.start := by
+  simp [Tape.init]
 
 /-- Cell `i + 1` of an initialized tape contains item `i`, or blank when `i`
     lies beyond the initialized contents. -/
-theorem initTape_cells_succ (contents : List Γ) (i : ℕ) :
-    (initTape contents).cells (i + 1) = (contents[i]?).getD Γ.blank := by
-  simp [initTape]
+theorem Tape.init_cells_succ (contents : List Γ) (i : ℕ) :
+    (Tape.init contents).cells (i + 1) = (contents[i]?).getD Γ.blank := by
+  simp [Tape.init]
 
 /-- Cells beyond the initialized contents are blank. -/
-theorem initTape_cells_ge (contents : List Γ) (i : ℕ)
+theorem Tape.init_cells_ge (contents : List Γ) (i : ℕ)
     (h : contents.length ≤ i) :
-    (initTape contents).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ, List.getElem?_eq_none h]
+    (Tape.init contents).cells (i + 1) = Γ.blank := by
+  rw [Tape.init_cells_succ, List.getElem?_eq_none h]
   rfl
 
 /-- Every positive-indexed cell of the empty initialized tape is blank. -/
-@[simp] theorem initTape_nil_cells_succ (i : ℕ) :
-    (initTape []).cells (i + 1) = Γ.blank := by
-  exact initTape_cells_ge [] i (by simp)
+@[simp] theorem Tape.init_nil_cells_succ (i : ℕ) :
+    (Tape.init []).cells (i + 1) = Γ.blank := by
+  exact Tape.init_cells_ge [] i (by simp)
 
 /-- No positive-indexed cell of the empty initialized tape is a start marker. -/
-theorem initTape_nil_cells_ne_start (j : ℕ) (hj : 1 ≤ j) :
-    (initTape []).cells j ≠ Γ.start := by
+theorem Tape.init_nil_cells_ne_start (j : ℕ) (hj : 1 ≤ j) :
+    (Tape.init []).cells j ≠ Γ.start := by
   obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
-  rw [initTape_nil_cells_succ]
+  rw [Tape.init_nil_cells_succ]
   decide
 
 /-- Within the initialized Boolean contents, cell `i + 1` stores bit `i`. -/
-theorem initTape_ofBool_cells_lt (contents : List Bool) (i : ℕ)
+theorem Tape.init_ofBool_cells_lt (contents : List Bool) (i : ℕ)
     (h : i < contents.length) :
-    (initTape (contents.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (contents[i]'h) := by
-  rw [initTape_cells_succ]
+    (Tape.init (contents.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (contents[i]'h) := by
+  rw [Tape.init_cells_succ]
   have hmap : i < (contents.map Γ.ofBool).length := by simpa using h
   rw [List.getElem?_eq_getElem hmap]
   simp
 
 /-- Beyond the initialized Boolean contents, cell `i + 1` is blank. -/
-theorem initTape_ofBool_cells_ge (contents : List Bool) (i : ℕ)
+theorem Tape.init_ofBool_cells_ge (contents : List Bool) (i : ℕ)
     (h : contents.length ≤ i) :
-    (initTape (contents.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  exact initTape_cells_ge (contents.map Γ.ofBool) i (by simpa using h)
+    (Tape.init (contents.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
+  exact Tape.init_cells_ge (contents.map Γ.ofBool) i (by simpa using h)
 
 /-- No positive-indexed cell of a Boolean-initialized tape contains the
     left-end marker. -/
-theorem initTape_ofBool_cells_ne_start (contents : List Bool) (j : ℕ) (hj : 1 ≤ j) :
-    (initTape (contents.map Γ.ofBool)).cells j ≠ Γ.start := by
+theorem Tape.init_ofBool_cells_ne_start (contents : List Bool) (j : ℕ) (hj : 1 ≤ j) :
+    (Tape.init (contents.map Γ.ofBool)).cells j ≠ Γ.start := by
   obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
   by_cases hi : i < contents.length
-  · rw [initTape_ofBool_cells_lt contents i hi]
+  · rw [Tape.init_ofBool_cells_lt contents i hi]
     exact Γ.ofBool_ne_start _
-  · rw [initTape_ofBool_cells_ge contents i (Nat.le_of_not_gt hi)]
+  · rw [Tape.init_ofBool_cells_ge contents i (Nat.le_of_not_gt hi)]
     decide
 
 /-- Moving an empty initialized tape to cell one reads blank. -/
-@[simp] theorem initTape_nil_move_right_read :
-    ((initTape []).move Dir3.right).read = Γ.blank := by
+@[simp] theorem Tape.init_nil_move_right_read :
+    ((Tape.init []).move Dir3.right).read = Γ.blank := by
   simp [Tape.read, Tape.move]
 
 /-- A Boolean-initialized tape moved to its first data cell never reads the
     left-end marker. -/
-theorem initTape_ofBool_move_right_read_ne_start (contents : List Bool) :
-    ((initTape (contents.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
+theorem Tape.init_ofBool_move_right_read_ne_start (contents : List Bool) :
+    ((Tape.init (contents.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
   simp only [Tape.read, Tape.move]
-  exact initTape_ofBool_cells_ne_start contents 1 (by omega)
+  exact Tape.init_ofBool_cells_ne_start contents 1 (by omega)
 
 /-- Moving the head does not introduce a left-end marker in the positive cells
     of a Boolean-initialized tape. -/
-theorem initTape_ofBool_move_right_cells_ne_start (contents : List Bool) :
+theorem Tape.init_ofBool_move_right_cells_ne_start (contents : List Bool) :
     ∀ j, 1 ≤ j →
-      ((initTape (contents.map Γ.ofBool)).move Dir3.right).cells j ≠ Γ.start := by
+      ((Tape.init (contents.map Γ.ofBool)).move Dir3.right).cells j ≠ Γ.start := by
   intro j hj
   rw [Tape.move_cells]
-  exact initTape_ofBool_cells_ne_start contents j hj
+  exact Tape.init_ofBool_cells_ne_start contents j hj
 
 /-- A language is a set of binary strings. -/
 abbrev Language := Set (List Bool)
@@ -268,9 +270,13 @@ abbrev Language := Set (List Bool)
 /-- A configuration of a Turing machine with `n` work tapes:
     a read-only input tape, `n` read-write work tapes, and a read-write output tape. -/
 structure Cfg (n : ℕ) (Q : Type) where
+  /-- The current machine state. -/
   state : Q
+  /-- The read-only input tape. -/
   input : Tape
+  /-- The `n` read-write work tapes. -/
   work : Fin n → Tape
+  /-- The read-write output tape. -/
   output : Tape
 
 namespace Cfg
@@ -278,12 +284,12 @@ namespace Cfg
 /-- Initial configuration for any TM: input on the input tape, all tapes start with `▷`. -/
 abbrev init (qstart : Q) (x : List Bool) : Cfg n Q :=
   { state := qstart
-    input := initTape (x.map Γ.ofBool)
-    work := fun _ => initTape []
-    output := initTape [] }
+    input := Tape.init (x.map Γ.ofBool)
+    work := fun _ => Tape.init []
+    output := Tape.init [] }
 
 /-- A configuration is halted when its state equals the halt state. -/
-abbrev isHalted [DecidableEq Q] (qhalt : Q) (c : Cfg n Q) : Prop :=
+abbrev isHalted (qhalt : Q) (c : Cfg n Q) : Prop :=
   c.state = qhalt
 
 end Cfg
@@ -294,13 +300,21 @@ end Cfg
     output tape. The transition function reads `Γ` from all tape heads but writes only
     `Γw` (excluding `▷`) to work and output tapes. `Q` is finite. -/
 structure TM (n : ℕ) where
+  /-- The (finite) type of machine states. -/
   Q : Type
   [decEq : DecidableEq Q]
   [finQ : Fintype Q]
+  /-- The designated start state. -/
   qstart : Q
+  /-- The designated halt state. -/
   qhalt : Q
+  /-- The transition function: from the current state and the symbols under
+      the input, work, and output heads, produce the next state, the symbols
+      to write on the work and output tapes, and a direction for every head. -/
   δ : Q → Γ → (Fin n → Γ) → Γ →
       Q × (Fin n → Γw) × Γw × Dir3 × (Fin n → Dir3) × Dir3
+  /-- Reading the left-end marker forces that head to move right, so no head
+      ever falls off the left edge. -/
   δ_right_of_start : ∀ (q : Q) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ),
     let (_, _, _, inDir, workDirs, outDir) := δ q iHead wHeads oHead
     (iHead = Γ.start → inDir = Dir3.right) ∧
@@ -314,13 +328,20 @@ attribute [instance] TM.decEq TM.finQ
     The same structure is used for probabilistic TMs — only the acceptance
     criterion differs (existential for NTM, counting for PTM). `Q` is finite. -/
 structure NTM (n : ℕ) where
+  /-- The (finite) type of machine states. -/
   Q : Type
   [decEq : DecidableEq Q]
   [finQ : Fintype Q]
+  /-- The designated start state. -/
   qstart : Q
+  /-- The designated halt state. -/
   qhalt : Q
+  /-- The two transition functions, selected by the `Bool` choice bit; each
+      has the same shape as the deterministic `TM.δ`. -/
   δ : Bool → Q → Γ → (Fin n → Γ) → Γ →
       Q × (Fin n → Γw) × Γw × Dir3 × (Fin n → Dir3) × Dir3
+  /-- Reading the left-end marker forces that head to move right, on both
+      branches. -/
   δ_right_of_start : ∀ (b : Bool) (q : Q) (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ),
     let (_, _, _, inDir, workDirs, outDir) := δ b q iHead wHeads oHead
     (iHead = Γ.start → inDir = Dir3.right) ∧
@@ -354,7 +375,7 @@ abbrev halted (tm : TM n) (c : Cfg n tm.Q) : Prop :=
   Cfg.isHalted tm.qhalt c
 
 /-- If `step` returns `some`, the machine was not halted. -/
-theorem ne_qhalt_of_step {tm : TM n} {c c' : Cfg n tm.Q}
+theorem state_ne_qhalt_of_step {tm : TM n} {c c' : Cfg n tm.Q}
     (h : tm.step c = some c') : c.state ≠ tm.qhalt :=
   fun heq => by simp [step, heq] at h
 
@@ -448,13 +469,13 @@ theorem reaches_of_reachesIn {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q}
   | step hs _ ih => exact Relation.ReflTransGen.head hs ih
 
 /-- `AcceptsInTime` implies `Accepts` — forget the time bound. -/
-theorem Accepts_of_AcceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
+theorem accepts_of_acceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
     (h : tm.AcceptsInTime x T) : tm.Accepts x := by
   obtain ⟨c', t, _, hreach, hhalt, hcell⟩ := h
   exact ⟨c', reaches_of_reachesIn hreach, hhalt, hcell⟩
 
 /-- DTM acceptance is monotone in the time bound. -/
-theorem AcceptsInTime_mono {tm : TM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
+theorem AcceptsInTime.mono {tm : TM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
     (h : tm.AcceptsInTime x T) : tm.AcceptsInTime x T' := by
   obtain ⟨c', t, ht, hreach, hhalt, hout⟩ := h
   exact ⟨c', t, ht.trans hle, hreach, hhalt, hout⟩
@@ -530,12 +551,12 @@ def AcceptsInTime (tm : NTM n) (x : List Bool) (T : ℕ) : Prop :=
     tm.halted c' ∧ c'.output.cells 1 = Γ.one
 
 /-- `AcceptsInTime` implies `Accepts` — package the time bound existentially. -/
-theorem Accepts_of_AcceptsInTime {tm : NTM n} {x : List Bool} {T : ℕ}
+theorem accepts_of_acceptsInTime {tm : NTM n} {x : List Bool} {T : ℕ}
     (h : tm.AcceptsInTime x T) : tm.Accepts x :=
   ⟨T, h⟩
 
 /-- `Accepts` is exactly `∃ T, AcceptsInTime x T`. -/
-theorem Accepts_iff_exists_AcceptsInTime {tm : NTM n} {x : List Bool} :
+theorem accepts_iff_exists_acceptsInTime {tm : NTM n} {x : List Bool} :
     tm.Accepts x ↔ ∃ T, tm.AcceptsInTime x T := Iff.rfl
 
 /-- Running the NTM trace for more steps preserves the final configuration:
@@ -565,7 +586,7 @@ theorem trace_mono (tm : NTM n) {T T' : ℕ} (hle : T ≤ T')
 
 /-- NTM acceptance is monotone in the time bound: `AcceptsInTime x T` implies
     `AcceptsInTime x T'` for any `T' ≥ T`. Extra steps are no-ops once halted. -/
-theorem AcceptsInTime_mono {tm : NTM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
+theorem AcceptsInTime.mono {tm : NTM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
     (h : tm.AcceptsInTime x T) : tm.AcceptsInTime x T' := by
   obtain ⟨choices, hhalt, hout⟩ := h
   let choices' : Fin T' → Bool := fun i =>
@@ -602,7 +623,7 @@ theorem AllPathsHaltIn.mono {tm : NTM n} {T T' : ℕ → ℕ} (hle : ∀ m, T m 
 
 /-- With all paths halting within `T`, timed acceptance transfers DOWN from any
     pointwise-larger bound: by `T(|x|)` every path is already frozen. -/
-theorem AcceptsInTime_of_le_of_allPathsHaltIn {tm : NTM n} {T T' : ℕ → ℕ}
+theorem acceptsInTime_of_le_of_allPathsHaltIn {tm : NTM n} {T T' : ℕ → ℕ}
     {x : List Bool} (hle : ∀ m, T m ≤ T' m) (hN : tm.AllPathsHaltIn T)
     (h : tm.AcceptsInTime x (T' x.length)) : tm.AcceptsInTime x (T x.length) := by
   obtain ⟨choices', hhalt', hout'⟩ := h
@@ -618,8 +639,8 @@ theorem AcceptsInTime_of_le_of_allPathsHaltIn {tm : NTM n} {T T' : ℕ → ℕ}
 theorem DecidesInTime.mono {tm : NTM n} {L : Language} {T T' : ℕ → ℕ}
     (hle : ∀ m, T m ≤ T' m) (h : tm.DecidesInTime L T) : tm.DecidesInTime L T' :=
   ⟨h.1.mono hle, fun x => (h.2 x).trans
-    ⟨fun ha => AcceptsInTime_mono (hle x.length) ha,
-     fun ha => AcceptsInTime_of_le_of_allPathsHaltIn hle h.1 ha⟩⟩
+    ⟨fun ha => AcceptsInTime.mono (hle x.length) ha,
+     fun ha => acceptsInTime_of_le_of_allPathsHaltIn hle h.1 ha⟩⟩
 
 /-- Count of accepting choice sequences of length `T`.
 

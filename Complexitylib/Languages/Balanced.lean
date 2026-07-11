@@ -291,7 +291,7 @@ def balancedExpected : BalancedPhase → ℕ → List Bool → Γw
     position `k + 1`, the work head equals the stack height `h`, and the
     output tape is pristine at head position `1`. -/
 structure BalancedScanInv (c : Cfg 1 balancedTM.Q) (x : List Bool) (k h : ℕ) : Prop where
-  ic : c.input.cells = (initTape (x.map Γ.ofBool)).cells
+  ic : c.input.cells = (Tape.init (x.map Γ.ofBool)).cells
   ih : c.input.head = k + 1
   wh : (c.work 0).head = h
   wstart : (c.work 0).cells 0 = Γ.start
@@ -302,12 +302,12 @@ structure BalancedScanInv (c : Cfg 1 balancedTM.Q) (x : List Bool) (k h : ℕ) :
 namespace BalancedScanInv
 variable {c : Cfg 1 balancedTM.Q} {x : List Bool} {k h : ℕ}
 
-/-- `initTape` at a position ≥ 1 is never `Γ.start`. -/
-private theorem initTape_ns (l : List Γ)
+/-- `Tape.init` at a position ≥ 1 is never `Γ.start`. -/
+private theorem Tape.init_ns (l : List Γ)
     (hl : ∀ b ∈ l, b ≠ Γ.start) (j : ℕ) (hj : j ≥ 1) :
-    (initTape l).cells j ≠ Γ.start := by
+    (Tape.init l).cells j ≠ Γ.start := by
   have hj' : j ≠ 0 := by omega
-  simp only [initTape, hj', ↓reduceIte]
+  simp only [Tape.init, hj', ↓reduceIte]
   rcases hget : l[j - 1]? with _ | v
   · simp
   · have hmem := List.mem_of_getElem? hget
@@ -326,24 +326,24 @@ private theorem read_bit (inv : BalancedScanInv c x k h) (hk : k < x.length) :
     c.input.read = Γ.ofBool (x[k]'hk) := by
   have hmap_len : (x.map Γ.ofBool).length = x.length := by simp
   simp only [Tape.read, inv.ih, inv.ic]
-  show (initTape (x.map Γ.ofBool)).cells (k + 1) = _
+  show (Tape.init (x.map Γ.ofBool)).cells (k + 1) = _
   have hkmap : k < (x.map Γ.ofBool).length := by rw [hmap_len]; exact hk
-  simp only [initTape, show k + 1 ≠ 0 from by omega, ↓reduceIte,
+  simp only [Tape.init, show k + 1 ≠ 0 from by omega, ↓reduceIte,
     Nat.add_sub_cancel, List.getElem?_eq_getElem hkmap, Option.getD_some,
     List.getElem_map]
 
 /-- Input reads blank when `k = x.length`. -/
 private theorem read_blank (inv : BalancedScanInv c x x.length h) : c.input.read = Γ.blank := by
   simp only [Tape.read, inv.ih, inv.ic]
-  show (initTape (x.map Γ.ofBool)).cells (x.length + 1) = Γ.blank
-  simp [initTape]
+  show (Tape.init (x.map Γ.ofBool)).cells (x.length + 1) = Γ.blank
+  simp [Tape.init]
 
 /-- Input cells are never ▷ at positions ≥ 1. -/
 private theorem input_ns (inv : BalancedScanInv c x k h) :
     ∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start := by
   intro j hj
   rw [inv.ic]
-  exact initTape_ns _ (map_ofBool_ns x) j hj
+  exact Tape.init_ns _ (map_ofBool_ns x) j hj
 
 /-- Work reads ▷ iff the work head is at 0. -/
 private theorem work_read_start_iff (inv : BalancedScanInv c x k h) :
@@ -783,21 +783,21 @@ theorem balancedTM_reachesIn (x : List Bool) :
   -- Step 2: .initWork → .scanExcess0
   have hi_nb : c₁.input.cells 1 ≠ Γ.start := by
     rw [hic1]
-    show (initTape (x.map Γ.ofBool)).cells 1 ≠ Γ.start
-    exact BalancedScanInv.initTape_ns _ (BalancedScanInv.map_ofBool_ns x) 1 (by omega)
+    show (Tape.init (x.map Γ.ofBool)).cells 1 ≠ Γ.start
+    exact BalancedScanInv.Tape.init_ns _ (BalancedScanInv.map_ofBool_ns x) 1 (by omega)
   have hw_nb : ∀ i, (c₁.work i).cells 1 ≠ Γ.start := by
     intro i
     rw [hwc1 i]
-    have : (balancedTM.initCfg x).work i = initTape [] := by rfl
+    have : (balancedTM.initCfg x).work i = Tape.init [] := by rfl
     rw [this]
-    show (initTape []).cells 1 ≠ Γ.start
-    simp [initTape]
+    show (Tape.init []).cells 1 ≠ Γ.start
+    simp [Tape.init]
   have ho_nb : c₁.output.cells 1 ≠ Γ.start := by
     rw [hoc1]
-    have : (balancedTM.initCfg x).output = initTape [] := by rfl
+    have : (balancedTM.initCfg x).output = Tape.init [] := by rfl
     rw [this]
-    show (initTape []).cells 1 ≠ Γ.start
-    simp [initTape]
+    show (Tape.init []).cells 1 ≠ Γ.start
+    simp [Tape.init]
   obtain ⟨c₂, hstep2, hst2, hih2, hic2, hwh2, hwc2, hoh2, hoc2⟩ :=
     balancedTM_step_initWork c₁ hst1 hih1 hi_nb hwh1 hw_nb hoh1 ho_nb
   have hinv : BalancedScanInv c₂ x 0 0 := by
@@ -806,17 +806,17 @@ theorem balancedTM_reachesIn (x : List Bool) :
     · simp [hih2]
     · exact hwh2 0
     · rw [hwc2 0, hwc1 0]
-      have : (balancedTM.initCfg x).work 0 = initTape [] := by rfl
+      have : (balancedTM.initCfg x).work 0 = Tape.init [] := by rfl
       rw [this]
-      show (initTape []).cells 0 = Γ.start
-      simp [initTape]
+      show (Tape.init []).cells 0 = Γ.start
+      simp [Tape.init]
     · intro j hj
       rw [hwc2 0, hwc1 0]
-      have : (balancedTM.initCfg x).work 0 = initTape [] := by rfl
+      have : (balancedTM.initCfg x).work 0 = Tape.init [] := by rfl
       rw [this]
-      show (initTape []).cells j ≠ Γ.start
+      show (Tape.init []).cells j ≠ Γ.start
       have hj' : j ≠ 0 := by omega
-      simp [initTape, hj']
+      simp [Tape.init, hj']
     · exact hoh2
     · rw [hoc2]; exact ho_nb
   obtain ⟨c', hreach, hhalt, hout⟩ :=

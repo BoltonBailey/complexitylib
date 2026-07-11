@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Analysis.Asymptotics.Defs
 import Mathlib.Analysis.Asymptotics.Lemmas
 import Mathlib.Algebra.Polynomial.Eval.Defs
@@ -56,6 +61,7 @@ namespace Complexity
 def BigO (f g : ℕ → ℕ) : Prop :=
   (fun n => (f n : ℝ)) =O[atTop] (fun n => (g n : ℝ))
 
+@[inherit_doc BigO]
 scoped infixl:50 " =O " => BigO
 
 /-- `f` grows strictly slower than `g` asymptotically: `f(n) = o(g(n))` as `n → ∞`.
@@ -65,6 +71,7 @@ scoped infixl:50 " =O " => BigO
 def LittleO (f g : ℕ → ℕ) : Prop :=
   (fun n => (f n : ℝ)) =o[atTop] (fun n => (g n : ℝ))
 
+@[inherit_doc LittleO]
 scoped infixl:50 " =o " => LittleO
 
 -- ════════════════════════════════════════════════════════════════════════

@@ -509,7 +509,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
         show Function.update c₂.work i ((c₂.work i).move .right) i
           = Function.update work i (regT (0 - 1)) i
         rw [Function.update_self, Function.update_self]
-        refine Tape.ext' ?_ ?_
+        refine Tape.ext ?_ ?_
         · show (c₂.work i).head + 1 = 1
           rw [hc₂head]
         · show (c₂.work i).cells = regCells (0 - 1)
@@ -575,7 +575,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
       by_cases hir : i = q
       · subst hir
         rw [Function.update_self]
-        refine Tape.ext' ?_ ?_
+        refine Tape.ext ?_ ?_
         · rw [hhead₄]
           rfl
         · rw [hcells₄, hc₃cells]

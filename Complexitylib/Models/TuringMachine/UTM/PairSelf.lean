@@ -11,9 +11,9 @@ Starting from the fresh initial configuration on input `x`, it builds the
 self-pair `pair x x` onto work tape `7` and leaves every other tape clean:
 
 - input tape: cells unchanged, head parked at cell `1`;
-- work tapes `≠ 7`: exactly the started blank tape `(initTape []).move right`;
+- work tapes `≠ 7`: exactly the started blank tape `(Tape.init []).move right`;
 - work tape `7`: exactly the started pair tape
-  `(initTape ((pair x x).map Γ.ofBool)).move right`;
+  `(Tape.init ((pair x x).map Γ.ofBool)).move right`;
 - output tape: blank cells, head parked at cell `1`.
 
 Tape layout of `D`: tapes `0`–`5` are the UTM's six tapes, `6` is the clock,
@@ -68,27 +68,27 @@ def pairSelfTime (n : ℕ) : ℕ :=
 
 /-- The started blank tape reads `□`. -/
 private theorem blankStarted_read :
-    ((_root_.Complexity.initTape []).move Dir3.right).read = Γ.blank := by
-  exact initTape_nil_move_right_read
+    ((_root_.Complexity.Tape.init []).move Dir3.right).read = Γ.blank := by
+  exact Tape.init_nil_move_right_read
 
 /-- A started `ofBool` data tape never reads `▷`. -/
 private theorem started_read_ne_start (l : List Bool) :
-    ((_root_.Complexity.initTape (l.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
-  exact initTape_ofBool_move_right_read_ne_start l
+    ((_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
+  exact Tape.init_ofBool_move_right_read_ne_start l
 
 /-- The started blank tape never reads `▷`. -/
 private theorem blankStarted_read_ne_start :
-    ((_root_.Complexity.initTape []).move Dir3.right).read ≠ Γ.start := by
+    ((_root_.Complexity.Tape.init []).move Dir3.right).read ≠ Γ.start := by
   rw [blankStarted_read]; decide
 
-/-- A tape whose cells agree with an `initTape` of `ofBool` data and whose
+/-- A tape whose cells agree with an `Tape.init` of `ofBool` data and whose
     head is right of `▷` never reads `▷`. -/
 private theorem read_ne_start_of_cells_initTape {t : Tape} {x : List Bool}
-    (hc : t.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells) (hh : t.head ≥ 1) :
+    (hc : t.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells) (hh : t.head ≥ 1) :
     t.read ≠ Γ.start := by
   show t.cells t.head ≠ Γ.start
   rw [hc]
-  exact initTape_ofBool_cells_ne_start x _ hh
+  exact Tape.init_ofBool_cells_ne_start x _ hh
 
 /-- Binary-prefix cell clauses rule out `▷` right of the marker. -/
 private theorem cells_ne_start_of_bits {t : Tape} {x : List Bool}
@@ -155,7 +155,7 @@ private theorem reachesIn_work_cells_zero {m : ℕ} {tm : TM m} :
     intro i
     rename_i c₀ c₁ _ _ _
     have h1 : (c₁.work i).cells 0 = (c₀.work i).cells 0 := by
-      have hq := ne_qhalt_of_step hstep
+      have hq := state_ne_qhalt_of_step hstep
       simp only [TM.step, hq, ↓reduceIte, Option.some.injEq] at hstep
       subst hstep
       exact writeAndMove_cells_zero ..
@@ -170,14 +170,14 @@ private theorem reachesIn_work_cells_zero {m : ℕ} {tm : TM m} :
 private theorem copy_fresh_step (x : List Bool) :
     (copyInputToWorkTM (0 : Fin 8)).step
       { state := CopyPhase.copying,
-        input := _root_.Complexity.initTape (x.map Γ.ofBool),
-        work := fun _ => _root_.Complexity.initTape [],
-        output := _root_.Complexity.initTape [] } =
+        input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
+        work := fun _ => _root_.Complexity.Tape.init [],
+        output := _root_.Complexity.Tape.init [] } =
     some { state := CopyPhase.copying,
-           input := (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right,
-           work := fun _ => (_root_.Complexity.initTape []).move Dir3.right,
-           output := (_root_.Complexity.initTape []).move Dir3.right } := by
-  simp [TM.step, copyInputToWorkTM, Tape.read, _root_.Complexity.initTape, Tape.writeAndMove,
+           input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+           work := fun _ => (_root_.Complexity.Tape.init []).move Dir3.right,
+           output := (_root_.Complexity.Tape.init []).move Dir3.right } := by
+  simp [TM.step, copyInputToWorkTM, Tape.read, _root_.Complexity.Tape.init, Tape.writeAndMove,
         Tape.write, idleDir]
 
 /-- Any `copyInputToWorkTM 0` step preserves a non-target work tape that
@@ -186,7 +186,7 @@ private theorem copy_step_frame_work {c c' : Cfg 8 (copyInputToWorkTM (0 : Fin 8
     (hstep : (copyInputToWorkTM (0 : Fin 8)).step c = some c')
     (i : Fin 8) (hi : i ≠ 0) (hread : (c.work i).read = Γ.blank) :
     c'.work i = c.work i := by
-  have hq := ne_qhalt_of_step hstep
+  have hq := state_ne_qhalt_of_step hstep
   simp only [TM.step, hq, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   dsimp only []
@@ -205,7 +205,7 @@ private theorem copy_step_frame_out {c c' : Cfg 8 (copyInputToWorkTM (0 : Fin 8)
     (hstep : (copyInputToWorkTM (0 : Fin 8)).step c = some c')
     (hread : c.output.read = Γ.blank) :
     c'.output = c.output := by
-  have hq := ne_qhalt_of_step hstep
+  have hq := state_ne_qhalt_of_step hstep
   simp only [TM.step, hq, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   dsimp only []
@@ -244,31 +244,31 @@ private theorem copy_reachesIn_frame_out
 private theorem copyInput_fresh_hoareTime (x : List Bool) :
     (copyInputToWorkTM (0 : Fin 8)).HoareTime
       (fun inp work out =>
-        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
-        (∀ i : Fin 8, work i = _root_.Complexity.initTape []) ∧
-        out = _root_.Complexity.initTape [])
+        inp = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
+        (∀ i : Fin 8, work i = _root_.Complexity.Tape.init []) ∧
+        out = _root_.Complexity.Tape.init [])
       (fun inp work out =>
-        inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
+        inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
         (work 0).cells 0 = Γ.start ∧
         (work 0).hasBinaryPrefix x ∧
-        (∀ i : Fin 8, i ≠ 0 → work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-        out = (_root_.Complexity.initTape []).move Dir3.right)
+        (∀ i : Fin 8, i ≠ 0 → work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (x.length + 2) := by
   intro inp work out ⟨hinp, hwork, hout⟩
-  have hwork' : work = fun _ => _root_.Complexity.initTape [] := funext hwork
+  have hwork' : work = fun _ => _root_.Complexity.Tape.init [] := funext hwork
   subst hinp hout hwork'
   obtain ⟨c₂, t, ht, hreach, hhalt, hcells, hhead, hprefix⟩ :=
     copyInputToWorkTM_started_hoareTime (0 : Fin 8) x
-      ((_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right)
-      (fun _ => (_root_.Complexity.initTape []).move Dir3.right)
-      ((_root_.Complexity.initTape []).move Dir3.right)
-      ⟨rfl, Tape.initTape_nil_move_right_hasBinaryPrefix_nil⟩
+      ((_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right)
+      (fun _ => (_root_.Complexity.Tape.init []).move Dir3.right)
+      ((_root_.Complexity.Tape.init []).move Dir3.right)
+      ⟨rfl, Tape.init_nil_move_right_hasBinaryPrefix_nil⟩
   have hreach' : (copyInputToWorkTM (0 : Fin 8)).reachesIn (t + 1)
       { state := CopyPhase.copying,
-        input := _root_.Complexity.initTape (x.map Γ.ofBool),
-        work := fun _ => _root_.Complexity.initTape [],
-        output := _root_.Complexity.initTape [] } c₂ :=
+        input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
+        work := fun _ => _root_.Complexity.Tape.init [],
+        output := _root_.Complexity.Tape.init [] } c₂ :=
     .step (copy_fresh_step x) hreach
   refine ⟨c₂, t + 1, by omega, hreach', hhalt, hcells, hhead, ?_, hprefix, ?_, ?_⟩
   · rw [reachesIn_work_cells_zero hreach 0]
@@ -290,7 +290,7 @@ private theorem pairBuild_step_ytape
     (c'.work 0).cells = (c.work 0).cells ∧
     ((c'.work 0).head = (c.work 0).head ∨
      (c'.work 0).head = (c.work 0).head + 1) := by
-  have hq := ne_qhalt_of_step hstep
+  have hq := state_ne_qhalt_of_step hstep
   simp only [TM.step, hq, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   dsimp only []
@@ -364,21 +364,21 @@ private theorem pairBuild_reachesIn_ytape
 private theorem pairBuild_rich_hoareTime (x : List Bool) :
     (pairBuildTM (0 : Fin 8) (7 : Fin 8)).HoareTime
       (fun inp work out =>
-        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work 0 = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work 7 = (_root_.Complexity.initTape []).move Dir3.right ∧
+        inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work 7 = (_root_.Complexity.Tape.init []).move Dir3.right ∧
         (∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-          work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-        out = (_root_.Complexity.initTape []).move Dir3.right)
+          work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (fun inp work out =>
-        inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
+        inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head ≤ 6 * x.length + 11 ∧
-        (work 0).cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
+        (work 0).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
         (work 0).head ≥ 1 ∧ (work 0).head ≤ 6 * x.length + 11 ∧
-        work 7 = (_root_.Complexity.initTape ((pair x x).map Γ.ofBool)).move Dir3.right ∧
+        work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
         (∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-          work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-        out = (_root_.Complexity.initTape []).move Dir3.right)
+          work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (6 * x.length + 10) := by
   intro inp work out ⟨hinp, hw0, hw7, hother, hout⟩
   obtain ⟨c', t, ht, hreach, hhalt, hpair⟩ :=
@@ -412,7 +412,7 @@ private theorem pairBuild_rich_hoareTime (x : List Bool) :
     rw [hbridge] at h
     exact h
   -- input cells are preserved
-  have hinp_cells : c'.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells := by
+  have hinp_cells : c'.input.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells := by
     have h : c'.input.cells = inp.cells := by
       rw [← hbridge]
       exact NTM.trace_input_cells _ _ _ _
@@ -430,7 +430,7 @@ private theorem pairBuild_rich_hoareTime (x : List Bool) :
     (by show ∀ j, j ≥ 1 → (work 0).cells j ≠ Γ.start
         intro j hj
         rw [hw0, tape_move_cells]
-        exact initTape_ofBool_cells_ne_start x j hj)
+        exact Tape.init_ofBool_cells_ne_start x j hj)
     (by show (work 0).head ≥ 1
         rw [hw0]; exact le_refl 1)
   obtain ⟨hy_cells, hy_head1, hy_head_le⟩ := hy
@@ -459,24 +459,24 @@ private theorem pairBuild_rich_hoareTime (x : List Bool) :
 theorem pairSelfTM_hoareTime (x : List Bool) :
     pairSelfTM.HoareTime
       (fun inp work out =>
-        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
-        (∀ i : Fin 8, work i = _root_.Complexity.initTape []) ∧
-        out = _root_.Complexity.initTape [])
+        inp = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
+        (∀ i : Fin 8, work i = _root_.Complexity.Tape.init []) ∧
+        out = _root_.Complexity.Tape.init [])
       (fun inp work out =>
-        inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+        inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         (∀ i : Fin 8, i ≠ 7 →
-          work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-        work 7 = (_root_.Complexity.initTape ((pair x x).map Γ.ofBool)).move Dir3.right ∧
-        out.cells = (_root_.Complexity.initTape []).cells ∧ out.head = 1)
+          work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
+        out.cells = (_root_.Complexity.Tape.init []).cells ∧ out.head = 1)
       (pairSelfTime x.length) := by
   -- Phase 7: clear work tape 0 (holding x) back to the started blank tape.
   have h7 := clearWorkTM_started_rich_hoareTime (0 : Fin 8) x
     (P := fun inp work out =>
-      inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
-      work 7 = (_root_.Complexity.initTape ((pair x x).map Γ.ofBool)).move Dir3.right ∧
+      inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+      work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
       (∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-        work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-      out = (_root_.Complexity.initTape []).move Dir3.right)
+        work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+      out = (_root_.Complexity.Tape.init []).move Dir3.right)
     (by
       intro inp work out inp' work' out' hP _hclear hinp hout' hother
       obtain ⟨p1, p2, p3, p4, p5⟩ := hP
@@ -486,17 +486,17 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
   -- Phase 6: rewind work tape 0 to cell 1.
   have h6 := rewindWorkTM_rich_hoareTime (0 : Fin 8) (6 * x.length + 13)
     (P := fun inp work out =>
-      inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
-      (work 0).cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
-      work 7 = (_root_.Complexity.initTape ((pair x x).map Γ.ofBool)).move Dir3.right ∧
+      inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+      (work 0).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+      work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
       (∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-        work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-      out = (_root_.Complexity.initTape []).move Dir3.right)
+        work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+      out = (_root_.Complexity.Tape.init []).move Dir3.right)
     (by
       intro inp work out inp' work' out' hP hcells _hhead hother hinp houtc houth
       obtain ⟨p1, p2, p3, p4, p5, p6⟩ := hP
       subst hinp
-      have hout_eq : out' = out := Tape.ext' houth houtc
+      have hout_eq : out' = out := Tape.ext houth houtc
       subst hout_eq
       exact ⟨p1, p2, by rw [hcells]; exact p3,
         by rw [hother 7 (by decide)]; exact p4,
@@ -524,7 +524,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         exact transitionTape_id blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [htw0]
-        exact Tape.ext' (by rw [hw0h]; rfl) hw0c
+        exact Tape.ext (by rw [hw0h]; rfl) hw0c
       · rw [hti]; exact hi_ne
       · rw [hto, hout]; exact blankStarted_read_ne_start
       · rw [hto, hout]; exact le_refl 1
@@ -543,13 +543,13 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
   -- Phase 5: rewind the input head to cell 1.
   have h5 := rewindInputTM_rich_hoareTime (n := 8) (6 * x.length + 12)
     (P := fun inp work out =>
-      inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
-      (work 0).cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
+      inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+      (work 0).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       (work 0).head ≥ 1 ∧ (work 0).head ≤ 6 * x.length + 12 ∧
-      work 7 = (_root_.Complexity.initTape ((pair x x).map Γ.ofBool)).move Dir3.right ∧
+      work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
       (∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-        work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-      out = (_root_.Complexity.initTape []).move Dir3.right)
+        work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+      out = (_root_.Complexity.Tape.init []).move Dir3.right)
     (by
       intro inp work out inp' work' out' hP hcells _hhead hwork hout'
       obtain ⟨p1, p2, p3, p4, p5, p6, p7⟩ := hP
@@ -580,7 +580,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       · rw [htw0, hw0c]; rfl
       · intro j hj
         rw [htw0, hw0c]
-        exact initTape_ofBool_cells_ne_start x j hj
+        exact Tape.init_ofBool_cells_ne_start x j hj
       · rw [htw0]; omega
       · rw [hti]; exact hi_ne
       · rw [hto, hout]; exact blankStarted_read_ne_start
@@ -622,7 +622,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       · rw [transitionInput_cells, hic]; rfl
       · intro j hj
         rw [transitionInput_cells, hic]
-        exact initTape_ofBool_cells_ne_start x j hj
+        exact Tape.init_ofBool_cells_ne_start x j hj
       · have := transitionInput_head_le inp
         omega
       · rw [hto, hout]; exact blankStarted_read_ne_start
@@ -649,11 +649,11 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
   -- Phase 3: rewind the input head to cell 1 before the pair build.
   have h3 := rewindInputTM_rich_hoareTime (n := 8) (x.length + 1)
     (P := fun inp work out =>
-      inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
-      work 0 = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+      inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+      work 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       (∀ i : Fin 8, i ≠ 0 →
-        work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-      out = (_root_.Complexity.initTape []).move Dir3.right)
+        work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+      out = (_root_.Complexity.Tape.init []).move Dir3.right)
     (by
       intro inp work out inp' work' out' hP hcells _hhead hwork hout'
       obtain ⟨p1, p2, p3, p4⟩ := hP
@@ -678,7 +678,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         rw [hout]; exact transitionTape_id blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · rw [hti]
-        exact Tape.ext' (by rw [hih]; rfl) hic
+        exact Tape.ext (by rw [hih]; rfl) hic
       · rw [htw0]; exact hw0
       · rw [htwi 7 (by decide)]; exact hwother 7 (by decide)
       · intro i hi0 hi7
@@ -688,20 +688,20 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
   -- Phase 2: rewind work tape 0 after the copy.
   have h2 := rewindWorkTM_rich_hoareTime (0 : Fin 8) (x.length + 1)
     (P := fun inp work out =>
-      inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
+      inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       inp.head = x.length + 1 ∧
       (work 0).cells 0 = Γ.start ∧
       (∀ i, (h : i < x.length) →
         (work 0).cells (i + 1) = Γ.ofBool (x[i]'h)) ∧
       (∀ i, x.length ≤ i → (work 0).cells (i + 1) = Γ.blank) ∧
       (∀ i : Fin 8, i ≠ 0 →
-        work i = (_root_.Complexity.initTape []).move Dir3.right) ∧
-      out = (_root_.Complexity.initTape []).move Dir3.right)
+        work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+      out = (_root_.Complexity.Tape.init []).move Dir3.right)
     (by
       intro inp work out inp' work' out' hP hcells _hhead hother hinp houtc houth
       obtain ⟨p1, p2, p3, p4, p5, p6, p7⟩ := hP
       subst hinp
-      have hout_eq : out' = out := Tape.ext' houth houtc
+      have hout_eq : out' = out := Tape.ext houth houtc
       subst hout_eq
       exact ⟨p1, p2, by rw [hcells]; exact p3,
         fun i hlt => by rw [hcells]; exact p4 i hlt,
@@ -726,13 +726,13 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         exact transitionTape_id blankStarted_read_ne_start
       have hto : transitionTape out = out := by
         rw [hout]; exact transitionTape_id blankStarted_read_ne_start
-      have hw0xs : work 0 = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right :=
+      have hw0xs : work 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right :=
         Tape.hasBinaryString_eq_initTape_move_right ⟨hw0h, hbits, htail⟩ hw0c0
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [hti, hic]; rfl
       · intro j hj
         rw [hti, hic]
-        exact initTape_ofBool_cells_ne_start x j hj
+        exact Tape.init_ofBool_cells_ne_start x j hj
       · rw [hti]; omega
       · rw [hto, hout]; exact blankStarted_read_ne_start
       · rw [hto, hout]; exact le_refl 1

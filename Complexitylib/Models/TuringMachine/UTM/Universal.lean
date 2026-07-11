@@ -45,8 +45,8 @@ theorem utmTM_simulates_decider {α : List Bool} (hterm : TerminatedRegion α)
   obtain ⟨mcF, t₀, ht₀, hrun, hhalt, hmem, hnmem⟩ := hdec x
   have hht := utmTM_hoareTime α x hterm t₀ mcF hrun hhalt
   obtain ⟨c', t, ht, hreach, hhalt', hpost⟩ :=
-    hht (initTape ((pair α x).map Γ.ofBool)) (fun _ => initTape [])
-      (initTape []) ⟨rfl, fun _ => rfl, rfl⟩
+    hht (Tape.init ((pair α x).map Γ.ofBool)) (fun _ => Tape.init [])
+      (Tape.init []) ⟨rfl, fun _ => rfl, rfl⟩
   obtain ⟨m, hm, -, -, hagree⟩ := hpost
   have hcell1 : c'.output.cells 1 = mcF.output.cells 1 := hagree 0 (by omega)
   refine ⟨c', t, ?_, hreach, hhalt', fun hx => by rw [hcell1]; exact hmem hx,

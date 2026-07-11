@@ -77,7 +77,7 @@ theorem ifTM_test_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmTest.Q}
     (hstep : tmTest.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifTestWrap tmTest tmThen tmElse c) =
       some (ifTestWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmTest.qhalt := ne_qhalt_of_step hstep
+  have hne : c.state ≠ tmTest.qhalt := state_ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifTestWrap tmTest tmThen tmElse c).state =
@@ -103,7 +103,7 @@ theorem ifTM_then_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmThen.Q}
     (hstep : tmThen.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifThenWrap tmTest tmThen tmElse c) =
       some (ifThenWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmThen.qhalt := ne_qhalt_of_step hstep
+  have hne : c.state ≠ tmThen.qhalt := state_ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifThenWrap tmTest tmThen tmElse c).state =
@@ -129,7 +129,7 @@ theorem ifTM_else_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmElse.Q}
     (hstep : tmElse.step c = some c') :
     (ifTM tmTest tmThen tmElse).step (ifElseWrap tmTest tmThen tmElse c) =
       some (ifElseWrap tmTest tmThen tmElse c') := by
-  have hne : c.state ≠ tmElse.qhalt := ne_qhalt_of_step hstep
+  have hne : c.state ≠ tmElse.qhalt := state_ne_qhalt_of_step hstep
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hstep
   subst hstep
   show (if (ifElseWrap tmTest tmThen tmElse c).state =
@@ -236,7 +236,7 @@ private theorem if_rewind_step_left_full (tmTest tmThen tmElse : TM n)
     · rfl
     · exact Function.update_eq_self _ _
   · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
+  · funext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 private theorem if_rewind_step_base_full (tmTest tmThen tmElse : TM n)
     (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
@@ -260,7 +260,7 @@ private theorem if_rewind_step_base_full (tmTest tmThen tmElse : TM n)
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
   · simp [Tape.writeAndMove, tape_move_cells, Tape.write, hhead]
   · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
+  · funext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 /-- Extended rewind loop: also tracks that input and work tapes are preserved
     when they satisfy the stability condition (head ≥ 1, cells ≥ 1 ≠ start). -/
@@ -316,7 +316,7 @@ theorem ifTM_check_step_then_full (tmTest tmThen tmElse : TM n)
   · simp only [readBackWrite, Γw.toΓ, idleDir, Tape.writeAndMove, Tape.move, Tape.write]
     split <;> simp_all
   · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
+  · funext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 /-- Check step to else-branch, tracking all tapes. -/
 theorem ifTM_check_step_else_full (tmTest tmThen tmElse : TM n)
@@ -345,7 +345,7 @@ theorem ifTM_check_step_else_full (tmTest tmThen tmElse : TM n)
       (idleDir c.output.read)).head = 1
     rw [hstable, hhead]
   · exact tape_move_idleDir_stable _ h_ih h_ins
-  · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
+  · funext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 end TM
 

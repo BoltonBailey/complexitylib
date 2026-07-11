@@ -35,7 +35,7 @@ Under this shift the one-sided tape dynamics correspond exactly:
 
 - `VShift.read_eq` / `VShift.read_blank` — reads under the shift
 - `VShift.writeAndMove` — one full simulated tape action corresponds
-- `VShift.initTape` — the initial correspondence
+- `VShift.init` — the initial correspondence
 -/
 
 namespace TM
@@ -72,17 +72,19 @@ theorem _root_.Complexity.Tape.WFCells.move {t : Tape} (h : t.WFCells) (d : Dir3
     (t.move d).WFCells := by
   cases d <;> exact h
 
-theorem _root_.Complexity.Tape.WFCells.writeAndMove {t : Tape} (h : t.WFCells) (s : Γw) (d : Dir3) :
+theorem _root_.Complexity.Tape.WFCells.writeAndMove {t : Tape} (h : t.WFCells)
+    (s : Γw) (d : Dir3) :
     (t.writeAndMove s.toΓ d).WFCells :=
   (h.write s).move d
 
 /-- The initial tape is well-formed: `▷` at cell 0 only (contents drawn
     from `Γ.ofBool` and blanks). -/
-theorem initTape_wfCells (x : List Bool) : (initTape (x.map Γ.ofBool)).WFCells := by
+theorem _root_.Complexity.Tape.init_wfCells (x : List Bool) :
+    (Tape.init (x.map Γ.ofBool)).WFCells := by
   constructor
-  · simp [initTape]
+  · simp [Tape.init]
   · intro j hj
-    simp only [initTape, show j ≠ 0 by omega, if_false]
+    simp only [Tape.init, show j ≠ 0 by omega, if_false]
     cases hx : (x.map Γ.ofBool)[j - 1]? with
     | none => simp
     | some g =>
@@ -217,8 +219,8 @@ theorem writeAndMove {sim utm : Tape} (h : VShift sim utm) (s : Γw) (d : Dir3)
 
 /-- The initial correspondence: the simulated initial tape (contents `l`)
     is shadowed by `▷ □ l ⋯` with head at cell 1. -/
-theorem initTape (l : List Γ) :
-    VShift (_root_.Complexity.initTape l)
+theorem init (l : List Γ) :
+    VShift (_root_.Complexity.Tape.init l)
       ⟨1, fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
         else ((l[k - 2]?).getD Γ.blank)⟩ := by
   refine ⟨?_, rfl⟩
@@ -227,7 +229,7 @@ theorem initTape (l : List Γ) :
   · simp [hk0]
   · by_cases hk1 : k = 1
     · simp [hk1]
-    · simp only [hk0, hk1, if_false, _root_.Complexity.initTape,
+    · simp only [hk0, hk1, if_false, _root_.Complexity.Tape.init,
         show k - 1 ≠ 0 by omega, show k - 1 - 1 = k - 2 by omega]
 
 end VShift
@@ -271,9 +273,9 @@ theorem nil_iff {t : Tape} :
   · exact fun ⟨h0, h1⟩ => ⟨h0, fun i => by rw [h1 i]; simp⟩
 
 /-- A freshly initialized (empty) tape holds `[]`. -/
-theorem initTape_nil : (initTape []).HoldsExact [] := by
-  refine ⟨by simp [initTape], fun i => ?_⟩
-  simp [initTape]
+theorem init_nil : (Tape.init []).HoldsExact [] := by
+  refine ⟨by simp [Tape.init], fun i => ?_⟩
+  simp [Tape.init]
 
 end Tape.HoldsExact
 
