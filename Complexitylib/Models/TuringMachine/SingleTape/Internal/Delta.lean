@@ -7,16 +7,23 @@ import Complexitylib.Models.TuringMachine.SingleTape.Internal.Sim
 import Complexitylib.Models.TuringMachine.Combinators
 
 /-!
-# Single-tape simulation — transition function (under construction)
+# Single-tape simulation — transition function
 
-The phase transition functions assembled into `singleTapeSim`'s `δ'`. Each
-phase function has the full `δ`-output signature
+The phase transition functions assembled into the single-tape simulator's `δ`.
+Each phase function has the full `δ`-output signature
 `SimQ k Q × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3`
 (next state, single work write, output write, input dir, single work dir, output
 dir — there is no input write, the input tape being read-only).
 
-This file is built phase-by-phase. **GATHER** (the rightward read sweep) is
-implemented here; SCATTER/COMMIT/run wiring and the assembled machine follow.
+All six phases are implemented — `runStep`, `gatherStep`, `rewindStep`,
+`scatter1Step`, `scatter2Step`, `commitStep` — and dispatched by `simDelta`,
+which drives the macro-step cycle `run → gather → rewind → scatter1 → scatter2
+→ commit → run`. Each phase comes with its `▷`-safety lemma
+(`*_right_of_start`), and `NTM.singleTapeSim` packages `simDelta` into the
+1-work-tape machine simulating a `k`-work-tape NTM. The file also proves the
+structural lemmas used by the simulation proof: choice irrelevance off the `□`
+sentinel, phase-membership of each step's successor state, and the
+backward-chaining characterizations of `gather` and `run` predecessors.
 See `docs/A4-SingleTapeSimulation.md`.
 -/
 
@@ -78,8 +85,11 @@ theorem rewindStep_right_of_start {k : ℕ} {Q : Type} (d : RewindData k Q)
     identity, so it never changes the simulated behaviour. -/
 def safeDir (head : Γ) (d : Dir3) : Dir3 := if head = Γ.start then Dir3.right else d
 
+/-- `safeDir` on a head reading `▷` is `right`, whatever the requested direction. -/
 @[simp] theorem safeDir_start (d : Dir3) : safeDir Γ.start d = Dir3.right := rfl
 
+/-- Hypothesis-form of `safeDir_start`: if the head symbol equals `▷` then
+    `safeDir` clamps the direction to `right`. -/
 theorem safeDir_right_of_start {head : Γ} {d : Dir3} (h : head = Γ.start) :
     safeDir head d = Dir3.right := by subst h; rfl
 
@@ -211,7 +221,8 @@ def scatter1Step {k : ℕ} {Q : Type} (d : Scatter1Data k Q) (iHead wH oHead : �
       if mat = true ∧ pos = (0, 0) then
         -- new block complete: turn around into sweep 2, starting at the last cell
         -- of the last materialized block (tape k-1, slot 2), since sweep 2 sweeps left
-        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover, fun _ => false),
+        (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2), isLeftMover,
+            fun _ => false),
           Γw.blank)
       else
         -- materialize this cell of the new block (head-bit per `rightCarry`, symbol `□`)
@@ -281,7 +292,8 @@ def scatter2Step {k : ℕ} {Q : Type} (d : Scatter2Data k Q) (iHead wH oHead : �
             Function.update leftCarry ⟨t, h⟩ true), Γw.zero)
         else if leftCarry ⟨t, h⟩ = true then
           (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos,
-            Function.update isLeftMover ⟨t, h⟩ false, Function.update leftCarry ⟨t, h⟩ false), Γw.one)
+            Function.update isLeftMover ⟨t, h⟩ false, Function.update leftCarry ⟨t, h⟩ false),
+            Γw.one)
         else
           (SimQ.scatter2 (q', oWoD, iD, iSym, oSym, retreatSweep k pos, isLeftMover, leftCarry),
             TM.readBackWrite wH)

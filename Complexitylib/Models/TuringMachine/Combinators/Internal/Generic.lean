@@ -16,10 +16,21 @@ and `ComplementInternal`.
 
 - `reachesIn_map` — generic simulation lifting: if a state embedding
   commutes with `step`, then `reachesIn` lifts through the embedding
-- `exists_reachesIn_of_rewindStep_output` — generic output-tape rewind: any TM where stepping
-  from a "rewind state" moves the output head left (preserving cells), and
-  at cell 0 moves right to cell 1 entering a "target state"
-- `exists_reachesIn_of_rewindStep_frame` — same as above, also tracking input/work tapes
+- `exists_reachesIn_of_rewindStep_tape` — generic rewind loop for an
+  arbitrary tape accessor: stepping from a "rewind state" moves the head
+  left (preserving cells) until cell 0, then enters a "target state" at
+  head 1
+- `exists_reachesIn_of_rewindStep_output` — the same rewind loop
+  specialized to the output tape
+- `exists_reachesIn_of_rewindStep_frame` — the output-tape rewind loop,
+  additionally proving the input and work tapes are unchanged
+- `transitionTape` / `transitionInput` — the standard tape operations
+  applied at combinator phase boundaries, with cell-preservation and
+  head-bound lemmas (`transitionTape_cells`, `transitionInput_cells`,
+  `one_le_head_transitionTape`, `transitionInput_head_ge`,
+  `head_transitionTape_le`)
+- `transitionTape_eq_self` / `transitionInput_eq_self` — frame rules:
+  both operations are no-ops on tapes reading a non-▷ symbol
 
 ## Shared tape stability lemmas
 

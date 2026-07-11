@@ -216,6 +216,9 @@ private theorem phase1_init_step (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List B
     simp only [unionPhase1Cfg]
     simp [Tape.init, Tape.write, Tape.read, idleDir, Tape.move, unionIdleTape]
 
+/-- **Phase 1 simulation**: if `tm₁` reaches `c₁` from `initCfg x` in `t₁ ≥ 1`
+    steps, the union machine reaches the embedded config `unionPhase1Cfg c₁`
+    from its own `initCfg x` in the same number of steps. -/
 theorem unionTM_phase1_simulation (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List Bool)
     {t₁ : ℕ} {c₁ : Cfg n₁ tm₁.Q}
     (hreach : tm₁.reachesIn t₁ (tm₁.initCfg x) c₁)
@@ -466,14 +469,6 @@ private theorem write_readBack_cells_eq (t : Tape) (hne : t.read ≠ Γ.start) :
 -- ════════════════════════════════════════════════════════════════════════
 -- Transition phase: accept path (x ∈ L₁)
 -- ════════════════════════════════════════════════════════════════════════
-
-/-- unionIdleTape invariant: cells 0 = start. -/
-private theorem idleTape_cells_0 : unionIdleTape.cells 0 = Γ.start := by
-  simp [unionIdleTape, Tape.init]
-
-/-- unionIdleTape invariant: cells ≥ 1 ≠ start. -/
-private theorem idleTape_noStart (i : ℕ) (hi : i ≥ 1) : unionIdleTape.cells i ≠ Γ.start := by
-  simp [unionIdleTape, Tape.init, show i ≠ 0 from by omega]
 
 /-- unionPhase1Cfg output is unionIdleTape. -/
 private theorem phase1Cfg_output (tm₁ : TM n₁) (tm₂ : TM n₂) (c : Cfg n₁ tm₁.Q) :

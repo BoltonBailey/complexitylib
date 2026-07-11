@@ -44,6 +44,7 @@ namespace TM
 def Parked (t : Tape) : Prop :=
   1 ≤ t.head ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
 
+/-- A parked tape never reads the start symbol `▷`. -/
 theorem Parked.read_ne_start {t : Tape} (h : Parked t) : t.read ≠ Γ.start :=
   h.2 t.head h.1
 
@@ -98,13 +99,17 @@ def reg (v : ℕ) (t : Tape) : Prop :=
 
 namespace reg
 
+/-- A register tape's head is parked at cell 1. -/
 theorem head_eq {v : ℕ} {t : Tape} (h : reg v t) : t.head = 1 := h.1
 
+/-- A register tape's cell 0 holds the sentinel `▷`. -/
 theorem cell0 {v : ℕ} {t : Tape} (h : reg v t) : t.cells 0 = Γ.start := h.2.1
 
+/-- Cells `1..v` of a register holding `v` contain `1`. -/
 theorem cells_one {v : ℕ} {t : Tape} (h : reg v t) {i : ℕ} (hi : i < v) :
     t.cells (i + 1) = Γ.one := h.2.2.1 i hi
 
+/-- Cells beyond position `v` of a register holding `v` are blank. -/
 theorem cells_blank {v : ℕ} {t : Tape} (h : reg v t) {j : ℕ} (hj : v + 1 ≤ j) :
     t.cells j = Γ.blank := h.2.2.2 j hj
 
@@ -155,15 +160,20 @@ def regCells (v : ℕ) : ℕ → Γ := fun j =>
 /-- The canonical register tape holding `v`. -/
 def regTape (v : ℕ) : Tape := ⟨1, regCells v⟩
 
+/-- The canonical register tape's head sits at cell 1. -/
 @[simp] theorem regT_head (v : ℕ) : (regTape v).head = 1 := rfl
 
+/-- The canonical register tape's cells are `regCells v`. -/
 @[simp] theorem regT_cells (v : ℕ) : (regTape v).cells = regCells v := rfl
 
+/-- Cell 0 of the canonical register cells is the sentinel `▷`. -/
 @[simp] theorem regCells_zero (v : ℕ) : regCells v 0 = Γ.start := rfl
 
+/-- Cells `1..v` of the canonical register cells for `v` hold `1`. -/
 theorem regCells_one {v j : ℕ} (h1 : 1 ≤ j) (h2 : j ≤ v) : regCells v j = Γ.one := by
   rw [regCells, if_neg (by omega), if_pos h2]
 
+/-- Cells beyond position `v` of the canonical register cells for `v` are blank. -/
 theorem regCells_blank {v j : ℕ} (h : v + 1 ≤ j) : regCells v j = Γ.blank := by
   rw [regCells, if_neg (by omega), if_neg (by omega)]
 
@@ -173,6 +183,7 @@ theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
   rw [regCells, if_neg (by omega)]
   split <;> decide
 
+/-- The canonical register tape `regTape v` satisfies `reg v`. -/
 theorem reg_regT (v : ℕ) : reg v (regTape v) :=
   ⟨rfl, rfl, fun _ hi => by rw [regT_cells]; exact regCells_one (by omega) (by omega),
    fun _ hj => by rw [regT_cells]; exact regCells_blank hj⟩
@@ -191,6 +202,7 @@ theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regTape v := by
       rw [h.cells_one (by omega), regT_cells]
       exact (regCells_one (by omega) (by omega)).symm
 
+/-- The canonical register tape is parked. -/
 theorem parked_regTape (v : ℕ) : Parked (regTape v) := (reg_regT v).parked
 
 /-- Register cells with the head anywhere off `▷` form a parked tape. -/

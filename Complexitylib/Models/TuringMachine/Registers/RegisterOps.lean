@@ -61,10 +61,14 @@ theorem skipTM_hoareTime (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List B
 -- incRegTM: append one mark to a register
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State set shared by `incRegTM` and `clearRegTM`: `scan` sweeps right over
+    the marks, `back` rewinds to the sentinel, `park` steps onto cell 1, and
+    `done` halts. -/
 inductive IncPhase where
   | scan | back | park | done
   deriving DecidableEq
 
+/-- `IncPhase` is finite (it has exactly four states). -/
 instance : Fintype IncPhase where
   elems := {.scan, .back, .park, .done}
   complete := fun x => by cases x <;> simp
@@ -475,6 +479,7 @@ def clearRegCells (d k : ℕ) : ℕ → Γ := fun j =>
   else if j ≤ d then Γ.one
   else Γ.blank
 
+/-- Before any blanking (`k = 0`), a mid-clear register is exactly `regCells d`. -/
 theorem clearCells_zero (d : ℕ) : clearRegCells d 0 = regCells d := by
   funext j
   simp only [clearRegCells, regCells]
@@ -483,6 +488,7 @@ theorem clearCells_zero (d : ℕ) : clearRegCells d 0 = regCells d := by
   · rw [if_neg (show ¬ j = 0 from by omega), if_neg (show ¬ j ≤ 0 from by omega),
       if_neg (show ¬ j = 0 from by omega)]
 
+/-- After blanking all `d` marks (`k = d`), a mid-clear register is `regCells 0`. -/
 theorem clearCells_last (d : ℕ) : clearRegCells d d = regCells 0 := by
   funext j
   simp only [clearRegCells, regCells]
@@ -494,6 +500,7 @@ theorem clearCells_last (d : ℕ) : clearRegCells d d = regCells 0 := by
     · rw [if_pos hd]
     · rw [if_neg hd, if_neg hd]
 
+/-- No mid-clear cell at position `j ≥ 1` is the `▷` sentinel. -/
 theorem clearCells_ne_start {d k j : ℕ} (hj : 1 ≤ j) :
     clearRegCells d k j ≠ Γ.start := by
   simp only [clearRegCells]
@@ -502,6 +509,8 @@ theorem clearCells_ne_start {d k j : ℕ} (hj : 1 ≤ j) :
   · decide
   · split <;> decide
 
+/-- Blanking cell `k + 1` of `clearRegCells d k` advances the sweep to
+    `clearRegCells d (k + 1)`. -/
 theorem clearCells_update_succ (d k : ℕ) :
     Function.update (clearRegCells d k) (k + 1) Γ.blank = clearRegCells d (k + 1) := by
   funext j

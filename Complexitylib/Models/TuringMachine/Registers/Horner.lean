@@ -50,6 +50,7 @@ variable {n : ℕ}
     × (per-mark sweep length). -/
 def opBudget (M : ℕ) : ℕ := 32 * ((M + 2) * (M + 2) * (M + 2))
 
+/-- Anything at most quadratic in `M + 2` (with constant `6`) fits in `opBudget M`. -/
 theorem le_opBudget_of_le {a M : ℕ} (h : a ≤ 6 * (M + 2) * (M + 2)) :
     a ≤ opBudget M := by
   refine le_trans h ?_
@@ -359,8 +360,10 @@ def hornerFold (x : ℕ) : List ℕ → ℕ → ℕ
   | [], a => a
   | c :: cs, a => hornerFold x cs (a * x + c)
 
+/-- `hornerFold` over the empty coefficient list returns the accumulator. -/
 @[simp] theorem hornerFold_nil (x a : ℕ) : hornerFold x [] a = a := rfl
 
+/-- Unfolding lemma: one Horner layer replaces the accumulator `a` by `a * x + c`. -/
 theorem hornerFold_cons (x c a : ℕ) (cs : List ℕ) :
     hornerFold x (c :: cs) a = hornerFold x cs (a * x + c) := rfl
 
@@ -525,9 +528,11 @@ theorem hornerLayersTM_hoareTime (X tmp tmp2 : Fin n)
 def polyCoeffs (p : Polynomial ℕ) : List ℕ :=
   ((List.range (p.natDegree + 1)).map p.coeff).reverse
 
+/-- The coefficient list of a polynomial is never empty (it has `natDegree + 1` entries). -/
 theorem polyCoeffs_ne_nil (p : Polynomial ℕ) : polyCoeffs p ≠ [] := by
   simp [polyCoeffs]
 
+/-- `polyCoeffs p` has exactly `p.natDegree + 1` entries. -/
 @[simp] theorem polyCoeffs_length (p : Polynomial ℕ) :
     (polyCoeffs p).length = p.natDegree + 1 := by
   simp [polyCoeffs]

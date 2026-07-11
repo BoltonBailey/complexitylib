@@ -20,37 +20,6 @@ variable {n₁ n₂ : ℕ}
 namespace TM
 
 -- ════════════════════════════════════════════════════════════════════════
--- Auxiliary lemma: DecidesInTime implies qstart ≠ qhalt
--- ════════════════════════════════════════════════════════════════════════
-
-/-- A TM that decides a language must have distinct start and halt states.
-    If `qstart = qhalt`, the machine halts at step 0 with output `□`,
-    which equals neither `Γ.one` nor `Γ.zero`. -/
-private theorem qstart_ne_qhalt_of_decidesInTime {tm : TM n₁}
-    {L : Language} {f : ℕ → ℕ} (h : tm.DecidesInTime L f) :
-    tm.qstart ≠ tm.qhalt := by
-  intro heq
-  -- Pick any input, e.g., []
-  obtain ⟨c', t, _, hreach, hhalt, hmem, hnmem⟩ := h []
-  -- Since qstart = qhalt, initCfg is halted, so reachesIn can only give t=0, c'=initCfg
-  have hhalted_init : (tm.initCfg []).state = tm.qhalt := by
-    simp [heq]
-  -- step returns none for halted configs, so reachesIn must be zero
-  have : c' = tm.initCfg [] ∧ t = 0 := by
-    cases hreach with
-    | zero => exact ⟨rfl, rfl⟩
-    | step hstep _ =>
-      simp [step, heq] at hstep
-  obtain ⟨rfl, _⟩ := this
-  -- output cell 1 of initCfg is blank
-  have hblank : (tm.initCfg []).output.cells 1 = Γ.blank := by
-    simp [Tape.init]
-  -- But DecidesInTime requires it to be either one or zero
-  by_cases hx : ([] : List Bool) ∈ L
-  · have := hmem hx; rw [hblank] at this; exact absurd this (by decide)
-  · have := hnmem hx; rw [hblank] at this; exact absurd this (by decide)
-
--- ════════════════════════════════════════════════════════════════════════
 -- Core simulation theorem
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -62,8 +31,8 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
     {L₁ L₂ : Language} {f₁ f₂ : ℕ → ℕ}
     (h₁ : tm₁.DecidesInTime L₁ f₁) (h₂ : tm₂.DecidesInTime L₂ f₂) :
     (unionTM tm₁ tm₂).DecidesInTime (L₁ ∪ L₂) (fun n => 10 * f₁ n + f₂ n) := by
-  have hne₁ := qstart_ne_qhalt_of_decidesInTime h₁
-  have hne₂ := qstart_ne_qhalt_of_decidesInTime h₂
+  have hne₁ := qstart_ne_qhalt_of_decidesInTime _ h₁
+  have hne₂ := qstart_ne_qhalt_of_decidesInTime _ h₂
   intro x
   obtain ⟨c₁, t₁, ht₁, hreach₁, hhalt₁, hmem₁, hnmem₁⟩ := h₁ x
   obtain ⟨c₂, t₂, ht₂, hreach₂, hhalt₂, hmem₂, hnmem₂⟩ := h₂ x

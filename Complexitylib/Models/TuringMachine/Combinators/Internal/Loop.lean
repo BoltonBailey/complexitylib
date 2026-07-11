@@ -59,6 +59,8 @@ private theorem loopQ_test_ne_halt {QBody QTest : Type} {q : QTest} :
 -- Body phase: loopTM simulates tmBody (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- A non-halting `tmBody` step is simulated by one `loopTM` step on
+body-wrapped configurations. -/
 theorem loopTM_body_step (tmBody tmTest : TM n) {c c' : Cfg n tmBody.Q}
     (hstep : tmBody.step c = some c') :
     (loopTM tmBody tmTest).step (loopBodyWrap tmBody tmTest c) =
@@ -70,6 +72,8 @@ theorem loopTM_body_step (tmBody tmTest : TM n) {c c' : Cfg n tmBody.Q}
            (loopTM tmBody tmTest).qhalt then none else some _) = some _
   simp only [loopBodyWrap, loopTM, if_neg loopQ_body_ne_halt, if_neg hne]
 
+/-- A `t`-step run of `tmBody` lifts to a `t`-step run of `loopTM` between the
+body-wrapped configurations. -/
 theorem loopTM_body_simulation (tmBody tmTest : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmBody.Q}
     (hreach : tmBody.reachesIn t c_start c_end) :
@@ -82,6 +86,9 @@ theorem loopTM_body_simulation (tmBody tmTest : TM n) {t : ℕ}
 -- Body → test transition
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- When `tmBody` has halted, one `loopTM` step moves from the body-wrapped
+configuration to `tmTest`'s start state, applying the shared tape transition to
+every tape. -/
 theorem loopTM_body_to_test (tmBody tmTest : TM n) {c : Cfg n tmBody.Q}
     (hhalt : c.state = tmBody.qhalt) :
     (loopTM tmBody tmTest).step (loopBodyWrap tmBody tmTest c) =
@@ -99,10 +106,8 @@ theorem loopTM_body_to_test (tmBody tmTest : TM n) {c : Cfg n tmBody.Q}
 -- Test phase: loopTM simulates tmTest (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem sum_inr_inr_ne_of_ne {α β γ : Type} {a b : γ} (h : a ≠ b) :
-    (Sum.inr (Sum.inr a) : α ⊕ β ⊕ γ) ≠ Sum.inr (Sum.inr b) :=
-  fun heq => h (Sum.inr.inj (Sum.inr.inj heq))
-
+/-- A non-halting `tmTest` step is simulated by one `loopTM` step on
+test-wrapped configurations. -/
 theorem loopTM_test_step (tmBody tmTest : TM n) {c c' : Cfg n tmTest.Q}
     (hstep : tmTest.step c = some c') :
     (loopTM tmBody tmTest).step (loopTestWrap tmBody tmTest c) =
@@ -114,6 +119,8 @@ theorem loopTM_test_step (tmBody tmTest : TM n) {c c' : Cfg n tmTest.Q}
            (loopTM tmBody tmTest).qhalt then none else some _) = some _
   simp only [loopTestWrap, loopTM, if_neg loopQ_test_ne_halt, if_neg hne]
 
+/-- A `t`-step run of `tmTest` lifts to a `t`-step run of `loopTM` between the
+test-wrapped configurations. -/
 theorem loopTM_test_simulation (tmBody tmTest : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmTest.Q}
     (hreach : tmTest.reachesIn t c_start c_end) :
@@ -126,6 +133,9 @@ theorem loopTM_test_simulation (tmBody tmTest : TM n) {t : ℕ}
 -- Test → rewind transition
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- When `tmTest` has halted, one `loopTM` step moves from the test-wrapped
+configuration to the `rewindOut` phase, applying the shared tape transition to
+every tape. -/
 theorem loopTM_test_to_rewind (tmBody tmTest : TM n) {c : Cfg n tmTest.Q}
     (hhalt : c.state = tmTest.qhalt) :
     (loopTM tmBody tmTest).step (loopTestWrap tmBody tmTest c) =
@@ -187,6 +197,9 @@ private theorem loop_rewind_step_base (tmBody tmTest : TM n)
   · simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
   · simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
+/-- From the `rewindOut` phase with the output head at position `p`, `loopTM`
+reaches the `check` phase in `p + 1` steps with the output head at cell 1 and
+the output cells unchanged. -/
 theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
     ∀ (p : ℕ) (c : Cfg n (LoopQ tmBody.Q tmTest.Q)),
     c.state = Sum.inr (Sum.inl LoopPhase.rewindOut) →
@@ -206,6 +219,8 @@ theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
 -- Check step: halt (output = 1) or continue (output ≠ 1)
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- In the `check` phase, if output cell 1 holds `1` then one `loopTM` step
+enters the `done` phase, leaving the output cells unchanged. -/
 theorem loopTM_check_halt (tmBody tmTest : TM n)
     (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
     (hstate : c.state = Sum.inr (Sum.inl LoopPhase.check))
@@ -225,6 +240,9 @@ theorem loopTM_check_halt (tmBody tmTest : TM n)
   · omega
   · dsimp only []; rw [hhead, ← hcell1]; exact Function.update_eq_self _ _
 
+/-- In the `check` phase, if output cell 1 does not hold `1` then one `loopTM`
+step restarts `tmBody` (state `Sum.inl tmBody.qstart`), leaving the output
+cells unchanged. -/
 theorem loopTM_check_continue (tmBody tmTest : TM n)
     (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
     (hstate : c.state = Sum.inr (Sum.inl LoopPhase.check))
@@ -252,6 +270,7 @@ theorem loopTM_check_continue (tmBody tmTest : TM n)
 -- Halting
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- A `loopTM` configuration in the `done` phase is halted. -/
 theorem loopTM_halted_done (tmBody tmTest : TM n)
     (c : Cfg n (LoopQ tmBody.Q tmTest.Q))
     (h : c.state = Sum.inr (Sum.inl LoopPhase.done)) :
@@ -261,6 +280,11 @@ theorem loopTM_halted_done (tmBody tmTest : TM n)
 -- One full iteration ending in halt
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- One full `loopTM` iteration ending in halt: if `tmBody` halts in `t_body`
+steps, `tmTest` then halts in `t_test` steps, and the resulting output tape
+(head at `p`, cell 1 = `1`, `▷` only at cell 0) passes the check, then `loopTM`
+halts from the body-wrapped start in `t_body + 1 + t_test + 1 + (p + 1) + 1`
+steps with output cell 1 equal to `1`. -/
 theorem loopTM_iteration_halt (tmBody tmTest : TM n)
     {t_body : ℕ} {c_body_start c_body_end : Cfg n tmBody.Q}
     (hreach_body : tmBody.reachesIn t_body c_body_start c_body_end)

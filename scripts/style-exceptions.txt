@@ -88,17 +88,12 @@ Complexitylib/Languages/Palindromes.lean : copyright
 Complexitylib/Languages/Trivial.lean : copyright
 Complexitylib/Languages/ZeroPrefix.lean : copyright
 Complexitylib/Mathlib/Digraph.lean : copyright
-Complexitylib/Models/TuringMachine/Combinators/Internal.lean : moduleDoc
-Complexitylib/Models/TuringMachine/Combinators/Internal/Retarget.lean : lineLength
 Complexitylib/Models/TuringMachine/Combinators/Internal/Retarget.lean : trailingWs
 Complexitylib/Models/TuringMachine/Combinators/Internal/Union.lean : lineLength
 Complexitylib/Models/TuringMachine/Hoare.lean : lineLength
 Complexitylib/Models/TuringMachine/Internal.lean : lineLength
 Complexitylib/Models/TuringMachine/SingleTape/Internal/Correctness.lean : lineLength
-Complexitylib/Models/TuringMachine/SingleTape/Internal/Delta.lean : lineLength
 Complexitylib/Models/TuringMachine/SingleTape/Validation.lean : lineLength
-Complexitylib/Models/TuringMachine/Subroutines.lean : lineLength
-Complexitylib/Models/TuringMachine/Subroutines/Internal.lean : lineLength
 Complexitylib/Models/TuringMachine/UTM/BodyInternal.lean : lineLength
 Complexitylib/Models/TuringMachine/UTM/ClockedUtm.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/PairSelf.lean : rootEscape

@@ -40,10 +40,12 @@ def hasBinaryString (t : Tape) (bits : List Bool) : Prop :=
 def hasBoundedBinaryString (t : Tape) (B : ℕ) : Prop :=
   ∃ bits : List Bool, bits.length ≤ B ∧ t.hasBinaryString bits
 
+/-- A completed witness tape encodes exactly `bits` as its output string. -/
 theorem hasOutput_of_hasBinaryString {t : Tape} {bits : List Bool}
     (h : t.hasBinaryString bits) : t.hasOutput bits :=
   ⟨h.2.1, h.2.2 bits.length le_rfl⟩
 
+/-- A completed witness tape never contains `▷` after the left-end marker. -/
 theorem cells_ne_start_of_hasBinaryString {t : Tape} {bits : List Bool}
     (h : t.hasBinaryString bits) :
     ∀ j, j ≥ 1 → t.cells j ≠ Γ.start := by
@@ -91,6 +93,8 @@ theorem exists_eq_init_move_right_of_hasBoundedBinaryString {t : Tape} {B : ℕ}
   obtain ⟨bits, hlen, hbits⟩ := h
   exact ⟨bits, hlen, eq_init_move_right_of_hasBinaryString hbits h0⟩
 
+/-- A freshly initialized empty tape, moved right past `▷`, is an empty
+    binary prefix. -/
 theorem init_nil_move_right_hasBinaryPrefix_nil :
     ((Tape.init []).move Dir3.right).hasBinaryPrefix [] := by
   simp [hasBinaryPrefix, Tape.init, Tape.move]
@@ -200,6 +204,7 @@ inductive GuessBoundedPhase where
   | done
   deriving DecidableEq
 
+/-- `GuessBoundedPhase` has exactly the four listed control states. -/
 instance : Fintype GuessBoundedPhase where
   elems := {.choose, .write, .rewind, .done}
   complete := fun x => by cases x <;> simp
@@ -357,6 +362,8 @@ def guessBoundedNTM (witnessIdx counterIdx : Fin n) : NTM n where
 -- Trace preservation for tapes not actively modified by the guess phase
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- One step of `guessBoundedNTM` leaves the input tape unchanged, provided
+    the input head is not on the `▷` marker. -/
 theorem guessBoundedNTM_trace_one_input_eq
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
@@ -378,6 +385,8 @@ theorem guessBoundedNTM_trace_one_input_eq
         simp [NTM.trace, guessBoundedNTM, hstate, hwit, hread, TM.idleDir, Tape.move]
     · exact (hhalt hstate).elim
 
+/-- Any run of `guessBoundedNTM` leaves the input tape unchanged, provided
+    the input head is not on the `▷` marker. -/
 theorem guessBoundedNTM_trace_preserves_input
     (witnessIdx counterIdx : Fin n) (T : ℕ)
     (choices : Fin T → Bool)
@@ -399,6 +408,8 @@ theorem guessBoundedNTM_trace_preserves_input
       ((guessBoundedNTM witnessIdx counterIdx).trace 1
         (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
 
+/-- One step of `guessBoundedNTM` leaves the output tape unchanged, provided
+    the output head is not on the `▷` marker. -/
 theorem guessBoundedNTM_trace_one_output_eq
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
@@ -419,6 +430,8 @@ theorem guessBoundedNTM_trace_one_output_eq
         simpa [NTM.trace, guessBoundedNTM, hstate, hwit] using hpres
     · exact (hhalt hstate).elim
 
+/-- Any run of `guessBoundedNTM` leaves the output tape unchanged, provided
+    the output head is not on the `▷` marker. -/
 theorem guessBoundedNTM_trace_preserves_output
     (witnessIdx counterIdx : Fin n) (T : ℕ)
     (choices : Fin T → Bool)
@@ -440,6 +453,8 @@ theorem guessBoundedNTM_trace_preserves_output
       ((guessBoundedNTM witnessIdx counterIdx).trace 1
         (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
 
+/-- One step of `guessBoundedNTM` leaves any work tape other than the witness
+    and counter tapes unchanged, provided its head is not on `▷`. -/
 theorem guessBoundedNTM_trace_one_preserves_other_work
     (witnessIdx counterIdx otherIdx : Fin n) (choice : Bool)
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
@@ -468,6 +483,8 @@ theorem guessBoundedNTM_trace_one_preserves_other_work
           rewindWitnessDirs, hwitness] using hpres
     · exact (hhalt hstate).elim
 
+/-- Any run of `guessBoundedNTM` leaves any work tape other than the witness
+    and counter tapes unchanged, provided its head is not on `▷`. -/
 theorem guessBoundedNTM_trace_preserves_other_work
     (witnessIdx counterIdx otherIdx : Fin n) (T : ℕ)
     (choices : Fin T → Bool)
@@ -496,6 +513,8 @@ theorem guessBoundedNTM_trace_preserves_other_work
 -- One-step transition API
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- In the `choose` state with a blank counter, one step moves to `rewind`
+    regardless of the nondeterministic choice. -/
 theorem guessBoundedNTM_choose_counter_blank_state
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -505,6 +524,8 @@ theorem guessBoundedNTM_choose_counter_blank_state
       GuessBoundedPhase.rewind := by
   simp [NTM.trace, guessBoundedNTM, hcounter]
 
+/-- In the `choose` state with a non-blank counter, choosing `false` stops the
+    guess phase by moving to `rewind`. -/
 theorem guessBoundedNTM_choose_stop_state
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -514,6 +535,8 @@ theorem guessBoundedNTM_choose_stop_state
       GuessBoundedPhase.rewind := by
   simp [NTM.trace, guessBoundedNTM, hcounter]
 
+/-- In the `choose` state with a non-blank counter, choosing `true` continues
+    the guess phase by moving to `write`. -/
 theorem guessBoundedNTM_choose_continue_state
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -713,6 +736,8 @@ theorem guessBoundedNTM_choose_counter_blank_preserves_witness_cell0
   rw [hpreserve]
   exact hcell0
 
+/-- In the `write` state with a blank counter, one step moves to `rewind`
+    without writing a bit. -/
 theorem guessBoundedNTM_write_counter_blank_state
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -722,6 +747,8 @@ theorem guessBoundedNTM_write_counter_blank_state
       GuessBoundedPhase.rewind := by
   simp [NTM.trace, guessBoundedNTM, hcounter]
 
+/-- In the `write` state with a non-blank counter, one step writes a bit and
+    returns to the `choose` state. -/
 theorem guessBoundedNTM_write_consume_state
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -987,6 +1014,8 @@ theorem guessBoundedNTM_continue_write_invariants
   · exact guessBoundedNTM_continue_write_preserves_witness_cell0 witnessIdx counterIdx
       bit inp work out hwitness hcell0 hcounter hlt
 
+/-- In the `rewind` state with the witness head on `▷`, one step halts by
+    moving to `done`. -/
 theorem guessBoundedNTM_rewind_at_start_state
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -996,6 +1025,8 @@ theorem guessBoundedNTM_rewind_at_start_state
       GuessBoundedPhase.done := by
   simp [NTM.trace, guessBoundedNTM, hwitness]
 
+/-- In the `rewind` state with the witness head not on `▷`, one step stays in
+    the `rewind` state. -/
 theorem guessBoundedNTM_rewind_left_state
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -1103,6 +1134,9 @@ private theorem guessBoundedNTM_rewind_loop (witnessIdx counterIdx : Fin n) :
     rw [hstep]
     exact ⟨htail.1, htail.2.1, by rw [htail.2.2, hcells1]⟩
 
+/-- From the `rewind` state with a binary prefix on the witness tape, the
+    machine halts within `bits.length + 2` steps with a completed witness
+    string and the left-end marker intact. -/
 theorem guessBoundedNTM_rewind_completes_witness
     (witnessIdx counterIdx : Fin n)
     (bits : List Bool)

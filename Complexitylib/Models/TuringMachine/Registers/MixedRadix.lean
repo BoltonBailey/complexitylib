@@ -73,6 +73,7 @@ theorem hornerStepTM_hoareTime {X tmp tmp2 : Fin n} (s : Src n)
 def scratch (work₀ : Fin n → Tape) (tmp tmp2 : Fin n) (z : ℕ) : Fin n → Tape :=
   Function.update (Function.update work₀ tmp2 (regTape z)) tmp (regTape z)
 
+/-- A scratch state built from a parked register family is parked on every tape. -/
 theorem scratch_parked {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} (z : ℕ)
     (hwork₀ : ∀ i, Parked (work₀ i)) : ∀ i, Parked (scratch work₀ tmp tmp2 z i) := by
   intro i
@@ -84,15 +85,18 @@ theorem scratch_parked {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} (z : ℕ)
     · subst hi2; rw [Function.update_self]; exact parked_regTape _
     · rw [Function.update_of_ne hi2]; exact hwork₀ i
 
+/-- `scratch` leaves every register other than the two scratches unchanged. -/
 theorem scratch_apply_ne {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : ℕ}
     {i : Fin n} (hit : i ≠ tmp) (hit2 : i ≠ tmp2) :
     scratch work₀ tmp tmp2 z i = work₀ i := by
   rw [scratch, Function.update_of_ne hit, Function.update_of_ne hit2]
 
+/-- In the scratch state at `z`, the register `tmp` holds `z`. -/
 theorem scratch_apply_tmp {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : ℕ} :
     scratch work₀ tmp tmp2 z tmp = regTape z := by
   rw [scratch, Function.update_self]
 
+/-- In the scratch state at `z`, the register `tmp2` holds `z` (when the scratches differ). -/
 theorem scratch_apply_tmp2 {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : ℕ}
     (htt2 : tmp ≠ tmp2) : scratch work₀ tmp tmp2 z tmp2 = regTape z := by
   rw [scratch, Function.update_of_ne (fun h => htt2 h.symm), Function.update_self]

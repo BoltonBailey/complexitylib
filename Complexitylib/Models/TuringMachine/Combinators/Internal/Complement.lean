@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.Internal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+import Complexitylib.Models.TuringMachine.Internal
 
 /-!
 # Complement TM: proof internals
@@ -23,12 +24,18 @@ namespace TM
 -- Configuration embedding
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Embed a configuration of `tm` into `tm.complementTM` by tagging the state
+    with `Sum.inl` and keeping all tapes unchanged. -/
 def complementCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg n (tm.complementTM.Q) :=
   { state := Sum.inl c.state, input := c.input, work := c.work, output := c.output }
 
+/-- Embedding the initial configuration of `tm` on input `x` yields the initial
+    configuration of `tm.complementTM` on `x`. -/
 theorem compCfg_initCfg (tm : TM n) (x : List Bool) :
     complementCfg tm (tm.initCfg x) = tm.complementTM.initCfg x := rfl
 
+/-- The embedding sends configurations in `tm`'s start state to configurations in
+    `tm.complementTM`'s start state, preserving all tapes. -/
 theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : Tape) :
     complementCfg tm ⟨tm.qstart, inp, work, out⟩ =
       ⟨tm.complementTM.qstart, inp, work, out⟩ := rfl
@@ -46,6 +53,8 @@ private theorem complementTM_step_sim (tm : TM n) {c c' : Cfg n tm.Q}
   simp only [hne, hne2, ↓reduceIte, Option.some.injEq] at hstep ⊢
   rw [← hstep]
 
+/-- `tm.complementTM` simulates `tm` step-for-step on embedded configurations: a
+    `t`-step run of `tm` lifts to a `t`-step run of the complement machine. -/
 theorem complementTM_simulation (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
     (hreach : tm.reachesIn t c c') :
     tm.complementTM.reachesIn t (complementCfg tm c) (complementCfg tm c') :=

@@ -16,6 +16,18 @@ closure properties of complexity classes.
 
 - `TM.unionTM` — Given `tm₁ : TM n₁` deciding `L₁` and `tm₂ : TM n₂` deciding `L₂`,
   construct a `TM (n₁ + 1 + n₂)` that decides `L₁ ∪ L₂`.
+- `TM.complementTM` — Given a TM deciding `L`, construct a TM (with the same
+  number of work tapes) deciding `Lᶜ` by flipping the output bit.
+- `TM.seqTM` — Sequential composition: run `tm₁` to completion, then `tm₂`
+  on the same tapes.
+- `TM.ifTM` — Conditional branching: run a test machine, then branch to a
+  "then" or "else" machine based on its output.
+- `TM.loopTM` — Loop combinator: repeatedly run a body machine then a test
+  machine, halting when the test outputs `Γ.one`.
+- `TM.scannerTM` — Generic finite-state scanner: fold a finite-state
+  transition function over the input bits and emit a final symbol.
+- `TM.retargetInput` — Given `M : TM k`, construct a `TM (k + 1)` that runs
+  `M` but reads its "input" from work tape `k` instead of the input tape.
 
 ## Design
 
@@ -62,12 +74,17 @@ def idleDir (head : Γ) : Dir3 :=
 def moveLeftDir (head : Γ) : Dir3 :=
   if head = Γ.start then .right else .left
 
+/-- `idleDir` moves right when reading the start symbol `▷`. -/
 theorem idleDir_start : idleDir Γ.start = Dir3.right := rfl
 private theorem moveLeftDir_start : moveLeftDir Γ.start = Dir3.right := rfl
 
+/-- If the head reads `▷`, then `idleDir` moves right — the shape of the
+    `δ_right_of_start` obligation for idle tapes. -/
 theorem idleDir_right_of_start (h : head = Γ.start) : idleDir head = Dir3.right := by
   subst h; rfl
 
+/-- If the head reads `▷`, then `moveLeftDir` moves right — the shape of the
+    `δ_right_of_start` obligation for tapes being rewound. -/
 theorem moveLeftDir_right_of_start (h : head = Γ.start) : moveLeftDir head = Dir3.right :=
   by subst h; rfl
 

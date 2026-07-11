@@ -23,10 +23,13 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Control states of `decRegTM`: `scan` right over the marks, `erase` the
+    last one, move `back` to the sentinel, `park` on cell 1, then `done`. -/
 inductive DecPhase where
   | scan | erase | back | park | done
   deriving DecidableEq
 
+/-- `DecPhase` is a finite type, as required by the `TM` structure. -/
 instance : Fintype DecPhase where
   elems := {.scan, .erase, .back, .park, .done}
   complete := fun x => by cases x <;> simp

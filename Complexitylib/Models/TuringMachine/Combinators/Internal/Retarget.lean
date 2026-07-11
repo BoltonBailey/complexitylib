@@ -30,6 +30,28 @@ that `retargetInput M` on a configuration where work tape `k` holds the
   reaches a halting configuration within `T(|z|)` steps with the correct
   output.
 
+## The `startedCfg` family
+
+For phase-composed machines, the interesting entry point is not `initCfg`
+but the configuration reached after `M`'s forced first move off the `▷`
+cells. `startedCfg M z hne` names that configuration (well-defined once
+`qstart ≠ qhalt`, which `qstart_ne_qhalt_of_decidesInTime` guarantees for
+any deciding machine), and the `startedCfg_*` lemmas pin down each field:
+state, work, and output are input-independent, while every tape sits one
+cell right of `▷`. `retargetInput_decidesVirtual_started` restates the
+user-facing simulation from this post-start configuration.
+
+## Hoare liftings
+
+- `retargetInput_hoareTime` — a `HoareTime` triple for `M` lifts to a
+  triple for `retargetInput M` in which the precondition reads `M`'s input
+  off work tape `k` and the postcondition existentially recovers `M`'s
+  final tapes.
+- `retargetInput_copyInputToWorkTM_started_hoareTime`,
+  `retargetInput_inputLengthPlusOneCounterTM_started_hoareTime`,
+  `retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime`
+  — virtual-input instantiations of the corresponding subroutine triples.
+
 ## The structural invariant
 
 Because `retargetInput M` writes back the read symbol on work tape `k`
@@ -69,20 +91,29 @@ def retargetWrap (M : TM k) (realInput : Tape) (c : Cfg k M.Q) :
     else c.input
   output := c.output
 
+/-- The state of a wrapped configuration is the state of the wrapped `M`-configuration. -/
 @[simp] theorem retargetWrap_state (M : TM k) (realInput : Tape) (c : Cfg k M.Q) :
     (retargetWrap M realInput c).state = c.state := rfl
 
+/-- The output tape of a wrapped configuration is the output tape of the
+    wrapped `M`-configuration. -/
 @[simp] theorem retargetWrap_output (M : TM k) (realInput : Tape) (c : Cfg k M.Q) :
     (retargetWrap M realInput c).output = c.output := rfl
 
+/-- The (ignored) real input tape of a wrapped configuration is exactly the
+    supplied `realInput`. -/
 @[simp] theorem retargetWrap_input (M : TM k) (realInput : Tape) (c : Cfg k M.Q) :
     (retargetWrap M realInput c).input = realInput := rfl
 
+/-- For an index `i < k`, work tape `i` of a wrapped configuration is work
+    tape `i` of the wrapped `M`-configuration. -/
 theorem retargetWrap_work_lt (M : TM k) (realInput : Tape) (c : Cfg k M.Q)
     (i : Fin (k + 1)) (h : i.val < k) :
     (retargetWrap M realInput c).work i = c.work ⟨i.val, h⟩ := by
   simp [retargetWrap, h]
 
+/-- The last work tape (index `k`) of a wrapped configuration holds the
+    wrapped `M`-configuration's input tape — the virtual input. -/
 theorem retargetWrap_work_last (M : TM k) (realInput : Tape) (c : Cfg k M.Q) :
     (retargetWrap M realInput c).work ⟨k, by omega⟩ = c.input := by
   simp [retargetWrap]
@@ -147,7 +178,8 @@ theorem retargetInput_step_commute (M : TM k) {c c' : Cfg k M.Q}
   funext i
   by_cases hik : i.val < k
   · -- i.val < k: matches M's work tape i.
-    -- LHS: ((retargetWrap...).work i).writeAndMove (M.workWrites ⟨i.val, _⟩).toΓ (M.workDirs ⟨i.val, _⟩)
+    -- LHS: ((retargetWrap...).work i).writeAndMove (M.workWrites ⟨i.val, _⟩).toΓ
+    --   (M.workDirs ⟨i.val, _⟩)
     -- RHS: (retargetWrap... c').work i where c'.work ⟨i.val, _⟩ is the updated tape.
     rw [retargetWrap_work_lt _ _ _ _ hik]
     show (_ : Tape).writeAndMove _ _ = (if h : i.val < k then _ else _)
@@ -210,6 +242,8 @@ def retargetInitCfg (M : TM k) (z : List Bool) (realInput : Tape) :
     else Tape.init (z.map Γ.ofBool)
   output := Tape.init []
 
+/-- `retargetInitCfg M z realInput` is exactly the `retargetWrap` of `M`'s
+    ordinary initial configuration on input `z`. -/
 theorem retargetInitCfg_eq_retargetWrap (M : TM k) (z : List Bool) (realInput : Tape) :
     retargetInitCfg M z realInput = retargetWrap M realInput (M.initCfg z) := by
   simp only [retargetInitCfg, retargetWrap]
@@ -260,7 +294,8 @@ theorem qstart_ne_qhalt_of_decidesInTime (M : TM k) {L : Language} {T : ℕ → 
   have hinit_halt : M.halted (M.initCfg []) := by
     simpa [TM.halted, Cfg.isHalted, Cfg.init] using hstart
   have ht0 : t = 0 := by
-    have hle := M.reachesIn_le_halt hreach (TM.reachesIn.zero : M.reachesIn 0 (M.initCfg []) (M.initCfg []))
+    have hle := M.reachesIn_le_halt hreach
+      (TM.reachesIn.zero : M.reachesIn 0 (M.initCfg []) (M.initCfg []))
       hinit_halt
     omega
   subst ht0
@@ -385,21 +420,24 @@ theorem retargetInput_decidesVirtual_started (M : TM k) {L : Language} {T : ℕ 
   subst hstarted
   have hinp : Tape.StartInvariant (startedCfg M z hne).input := by
     have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
-    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) :=
+      fun _ => Tape.StartInvariant.init_nil
     have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨hinp', _, _⟩ :=
       Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hinp'
   have hwork : ∀ i, Tape.StartInvariant ((startedCfg M z hne).work i) := by
     have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
-    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) :=
+      fun _ => Tape.StartInvariant.init_nil
     have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨_, hwork', _⟩ :=
       Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hwork'
   have hout : Tape.StartInvariant (startedCfg M z hne).output := by
     have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
-    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) :=
+      fun _ => Tape.StartInvariant.init_nil
     have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨_, _, hout'⟩ :=
       Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
@@ -490,7 +528,8 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
         (work ⟨idx.val, by omega⟩).hasBinaryPrefix x)
       (x.length + 1) := by
-  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape},
+      Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -554,7 +593,8 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start)) 
       (inputLengthPlusOneCounterTime x.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape},
+      Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -618,7 +658,8 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape},
+      Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1

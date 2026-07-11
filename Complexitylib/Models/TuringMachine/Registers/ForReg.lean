@@ -29,10 +29,13 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Driver phases of `forRegTM`: `test` reads the fuel register's cell (mark = iterate,
+    blank = exit), `rewind` returns the register head to cell 1, `done` is the halt state. -/
 inductive ForPhase where
   | test | rewind | done
   deriving DecidableEq
 
+/-- `ForPhase` is a finite type (it has exactly three constructors). -/
 instance : Fintype ForPhase where
   elems := {.test, .rewind, .done}
   complete := fun x => by cases x <;> simp

@@ -12,21 +12,29 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 /-!
 # TM Subroutines: proof internals
 
-Simulation lemmas and HoareTime proofs for the subroutine machines defined in
-`Complexitylib.Models.TuringMachine.Subroutines`.
+Simulation lemmas and `HoareTime` proofs for the rewind, blank, clear, and
+copy subroutine machines defined in
+`Complexitylib.Models.TuringMachine.Subroutines`. Each subroutine gets a
+basic Hoare-style spec, and where needed a rich "frame" variant that threads
+an arbitrary predicate `P` on the untouched tapes through the run.
 
 ## Main results
 
 - `writeTM_hoareTime` — writes `sym.toΓ` to output cell 1
 - `rewindWorkTM_hoareTime` — rewinds work tape `idx` to cell 1
+- `rewindWorkTM_hoareTime_frame` — work-tape rewind preserving a predicate P
 - `rewindInputTM_hoareTime` — rewinds the input tape to cell 1
-- `rewindInputTM_hoareTime_frame` — rewind input preserving arbitrary predicate P
+- `rewindInputTM_hoareTime_frame` — input rewind preserving a predicate P
 - `rewindInputTM_toNTM_hoareTime` — NTM-lifted input rewind spec
 - `rewindInputTM_toNTM_hoareTime_frame` — NTM-lifted rich input rewind spec
-- `rewindWorkTM_hoareTime_frame` — rewind preserving arbitrary predicate P
 - `blankWorkTM_started_hoareTime` — blank a started work tape in linear time
+- `blankWorkTM_hoareTime_frame_of_binaryString` — frame-preserving blank
+- `clearWorkTM_hoareTime_frame_of_binaryString` — blank then rewind to the
+  started empty tape, preserving the frame
+- `copyInputToWorkTM_started_hoareTime` — copy the Boolean input to a work tape
 - `copyWorkToWorkTM_started_hoareTime` — copy one started work tape to another
-- `copyWorkToWorkTM_hoareTime_frame_of_binaryString` — rich/frame-preserving work-to-work copy
+- `copyWorkToWorkTM_hoareTime_frame_of_binaryString` — frame-preserving
+  work-to-work copy
 -/
 
 namespace Complexity
@@ -1211,7 +1219,8 @@ theorem clearWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
           BlankFrame inp work out)
         (x.length + 1 + 2) := by
     refine rewindWorkTM_hoareTime_frame idx (x.length + 1) ?_
-    intro inp0 work0 out0 inp' work' out' hblankframe hcells _hhead hwork_eq hinp' hout_cells hout_head
+    intro inp0 work0 out0 inp' work' out' hblankframe hcells _hhead hwork_eq hinp'
+      hout_cells hout_head
     rcases hblankframe with ⟨hframe, hcell0, hblank⟩
     rcases hframe with ⟨hinp0, hout0, hwork0⟩
     have hout_eq0 : out' = out0 := by

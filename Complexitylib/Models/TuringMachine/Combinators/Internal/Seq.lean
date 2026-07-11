@@ -50,9 +50,6 @@ def phase2Wrap (tm₁ : TM n) (tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
 -- Phase 1: seqTM simulates tm₁ (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem sum_inl_ne_inr {α β : Type} {a : α} {b : β} :
-    (Sum.inl a : α ⊕ β) ≠ Sum.inr b := nofun
-
 /-- One step of `tm₁` corresponds to one step of `seqTM` during Phase 1. -/
 theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
     (hstep : tm₁.step c₁ = some c₁') :
@@ -62,7 +59,7 @@ theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
   subst hstep
   show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
         else some _) = some _
-  simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, if_neg hne]
+  simp only [phase1Wrap, seqTM, if_neg Sum.inl_ne_inr, if_neg hne]
 
 /-- Multi-step Phase 1 simulation. -/
 theorem seqTM_reachesIn_phase1Wrap (tm₁ tm₂ : TM n) {t : ℕ}
@@ -88,15 +85,12 @@ theorem seqTM_transition_step (tm₁ tm₂ : TM n) {c₁ : Cfg n tm₁.Q}
           output := transitionTape c₁.output }) := by
   show (if (phase1Wrap tm₁ tm₂ c₁).state = (seqTM tm₁ tm₂).qhalt then none
         else some _) = some _
-  simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, hhalt, ↓reduceIte]
+  simp only [phase1Wrap, seqTM, if_neg Sum.inl_ne_inr, hhalt, ↓reduceIte]
   congr 1
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 2: seqTM simulates tm₂ (via generic simulation lifting)
 -- ════════════════════════════════════════════════════════════════════════
-
-private theorem sum_inr_ne_of_ne {α β : Type} {a b : β} (h : a ≠ b) :
-    (Sum.inr a : α ⊕ β) ≠ Sum.inr b := fun heq => h (Sum.inr.inj heq)
 
 /-- One step of `tm₂` corresponds to one step of `seqTM` during Phase 2. -/
 theorem seqTM_phase2_step (tm₁ tm₂ : TM n) {c₂ c₂' : Cfg n tm₂.Q}
@@ -107,7 +101,7 @@ theorem seqTM_phase2_step (tm₁ tm₂ : TM n) {c₂ c₂' : Cfg n tm₂.Q}
   subst hstep
   show (if (phase2Wrap tm₁ tm₂ c₂).state = (seqTM tm₁ tm₂).qhalt then none
         else some _) = some _
-  simp only [phase2Wrap, seqTM, if_neg (sum_inr_ne_of_ne hne), if_neg hne]
+  simp only [phase2Wrap, seqTM, if_neg (Sum.inr_injective.ne hne), if_neg hne]
 
 /-- Multi-step Phase 2 simulation. -/
 theorem seqTM_reachesIn_phase2Wrap (tm₁ tm₂ : TM n) {t : ℕ}
@@ -149,10 +143,14 @@ theorem seqTM_reachesIn_of_reachesIn (tm₁ tm₂ : TM n)
 -- Halting and output in Phase 2
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- A Phase-2 wrapped configuration is halted in `seqTM` iff the underlying `tm₂`
+    configuration is halted. -/
 theorem phase2Wrap_halted_iff (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     (seqTM tm₁ tm₂).halted (phase2Wrap tm₁ tm₂ c₂) ↔ tm₂.halted c₂ := by
   simp [phase2Wrap, seqTM, halted, Cfg.isHalted]
 
+/-- Wrapping a `tm₂` configuration into the `seqTM` config space leaves the output
+    tape unchanged. -/
 theorem phase2Wrap_output (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     (phase2Wrap tm₁ tm₂ c₂).output = c₂.output := rfl
 

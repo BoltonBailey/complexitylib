@@ -150,6 +150,7 @@ theorem halted_of_corr {k : ℕ} (N : NTM k) {M : ℕ}
     steps. The `16·(k+1)` constant matches `singleTapeSimTime`. -/
 def macroBound (k M : ℕ) : ℕ := 16 * (k + 1) * (M + 1)
 
+/-- `macroBound k` is monotone in the materialization level `M`. -/
 theorem macroBound_mono {k M M' : ℕ} (h : M ≤ M') : macroBound k M ≤ macroBound k M' := by
   unfold macroBound
   exact Nat.mul_le_mul_left _ (by omega)
@@ -507,7 +508,7 @@ theorem gather_triple {k : ℕ} (N : NTM k) (bb : Bool)
     The `rf`/`pending` leftovers from the last triple are existential — the next
     block's slot-`0`/`1` steps overwrite them. Proved by induction on `m`, each
     step one `gather_triple` with the cell facts from `SimInvAt`. -/
-theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+private theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
     (hb1 : 1 ≤ b) (hbM : b ≤ M) (q : N.Q) (iSym oSym : Γ) (acc₀ : Fin k → Γ)
     (c1 : Cfg 1 (SimQ k N.Q)) (rf₀ : Bool) (pending₀ : Γ)
     (hst : c1.state = SimQ.gather (q, acc₀, iSym, oSym, (⟨0, by omega⟩, 0), rf₀, pending₀))
@@ -598,7 +599,7 @@ theorem gather_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M 
     whose head sits in blocks `[1, B]` (and `▷` otherwise). Proved by induction on
     `B`, each step one `gather_block_aux` at block `B+1`. At `B = M` (with
     `heads_le`) every head is covered, so `acc` is exactly the per-tape reads. -/
-theorem gather_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+private theorem gather_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
     (q : N.Q) (iSym oSym : Γ) (c1 : Cfg 1 (SimQ k N.Q)) (rf₀ : Bool) (pending₀ : Γ)
     (hst : c1.state =
       SimQ.gather (q, (fun _ => Γ.start), iSym, oSym, (⟨0, by omega⟩, 0), rf₀, pending₀))
@@ -1494,24 +1495,6 @@ theorem scatter1_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
           (by simp only [symCell]; omega)]
     exact hbm.sentinel c hc
 
-/-- **SCATTER sweep-1 design plan.** The sweep starts (from REWIND) at cell 1,
-    `pos (0,0)`, `rightCarry = initRC` (= heads that were at position 0, forced
-    right), all other flags empty. It sweeps right over the `M` old blocks then
-    materializes block `M+1`, in `3*k*(M+1) + 1` steps, ending in SCATTER sweep-2.
-
-    The correctness invariant (mid-sweep, head at block `b`): cells of blocks
-    `< b` hold the **intermediate** encoding (`scatterInterWork`), cells of blocks
-    `≥ b` (in the old region) still hold the **old** encoding (`SimInvAt M`), and
-    `rightCarry t` flags a head that moved right out of block `b-1` and is pending
-    deposit at block `b`. Suggested decomposition mirrors GATHER:
-    `triple → block (incoming rc → outgoing rc) → sweep over M blocks → materialize
-    block M+1 → turnaround`. The post-sweep tape is `SimInvAt (M+1)` for
-    `fun t => scatterInterWork (c.work t) (wact t)`, with `isLeftMover t = decide
-    ((wact t).2 = .left)`; SCATTER sweep-2 then finishes the left-movers to reach
-    `SimInvAt (M+1)` for `c'`. (Proof: the research-grade core, in progress.) -/
-theorem scatter1_sweep_PLAN : True := trivial
-
-
 /-- One **scatter sweep-1** step (`trace 1`): from a `scatter1 d` config, the
     result is the configuration built from `scatter1Step`'s output. Basis of the
     SCATTER sweep-1 correctness (the phase that writes `N`'s new configuration and
@@ -1708,7 +1691,7 @@ theorem scatter1_mat_triple {k : ℕ} (N : NTM k) (bb : Bool) (q' : N.Q)
     (`one` iff the incoming `rc`) and `□` symbols, the rest are still blank, the
     carries `[0,m)` are cleared, and `mat` is set (once any cell is materialized).
     Cells below block `M+1` (blocks `[1,M]`, cell 0) are untouched. -/
-theorem scatter1_mat_aux {k : ℕ} (N : NTM k) (bb : Bool) (M : ℕ) (q' : N.Q)
+private theorem scatter1_mat_aux {k : ℕ} (N : NTM k) (bb : Bool) (M : ℕ) (q' : N.Q)
     (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (rc ilm : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
     (hst : c1.state = SimQ.scatter1
@@ -2609,7 +2592,7 @@ theorem scatter1_tape_head_right {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.
     first `m` tapes, `ilm` the left-movers. Proved by induction on `m`, each step
     one of the five per-tape block-step lemmas selected by the old head-bit and
     `rc`. -/
-theorem scatter1_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
+private theorem scatter1_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b M : ℕ)
     (hb1 : 1 ≤ b) (hbM : b ≤ M)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (rc_in ilm_in : Fin k → Bool)
@@ -2845,7 +2828,7 @@ theorem scatter1_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (b
     `0`, the carry records the right-movers whose head is at `B`, `ilm` records the
     left-movers in blocks `[1, B]`, and the tape is `Scatter1MidInv … (B+1)`. Proved
     by induction on `B`, each step one `scatter1_block_step` at block `B+1`. -/
-theorem scatter1_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+private theorem scatter1_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (ilm_in : Fin k → Bool) (c1 : Cfg 1 (SimQ k N.Q))
     (hst : c1.state = SimQ.scatter1 (q', wact, oWoD, iD, iSym, oSym, (⟨0, by omega⟩, 0),
@@ -3055,6 +3038,9 @@ theorem scatter1_mat_states {k : ℕ} (N : NTM k) (bb : Bool) (M : ℕ) (q' : N.
       (by rw [hpos']; rintro ⟨_, h⟩; exact absurd h (by simp [advanceSweep]))
     exact ⟨d'', hd''⟩
 
+/-- **SCATTER sweep-1 state discipline.** Throughout the entire sweep-1 phase
+    (all `i < 3*k*(M+1) + 1` steps from its start), the simulator's state is never
+    a `gather` state. Used to rule out spurious decision points inside the sweep. -/
 theorem scatter1_sweep_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (c1 : Cfg 1 (SimQ k N.Q))
@@ -3746,7 +3732,7 @@ theorem scatter2_tape_deposit {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) 
     `p-1`) and `isLeftMover` (cleared on deposit). Dispatches `scatter2_tape_clear/
     deposit/keep` per tape from the pinned-down inputs `isLeftMover_in`/`leftCarry_in`.
     Mirrors `scatter1_block_aux` with `k-1-j < m` (descending) as the "processed" test. -/
-theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
+private theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
     (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (isLeftMover_in leftCarry_in : Fin k → Bool)
@@ -3969,6 +3955,10 @@ theorem scatter2_block_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p 
             rw [hLCm_at, hlcf]; exact decide_eq_false (fun h => hleft h.1),
           Function.update_eq_self]
 
+/-- **SCATTER sweep-2 single block (`trace (3*k)`).** Processing one full block `p`
+    (leftward) from the block-`(p+1)` boundary: after `3*k` steps the head sits at
+    `blockStart k p - 1`, the `isLeftMover`/`leftCarry` flags are updated to their
+    boundary-`p` forms, and the tape satisfies `Scatter2MidInv … p`. -/
 theorem scatter2_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p M : ℕ)
     (hp1 : 1 ≤ p) (hpM : p ≤ M + 1) (hk : 1 ≤ k)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
@@ -4018,7 +4008,8 @@ theorem scatter2_block_step {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (p
     the sweep is back at tape `k-1` slot `2`, the carry/`isLeftMover` track the
     boundary-`(M+2-B)` forms, and the tape is `Scatter2MidInv … (M+2-B)`. Proved by
     induction on `B`, each step one `scatter2_block_step` at block `M+1-B`. -/
-theorem scatter2_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ) (hk : 1 ≤ k)
+private theorem scatter2_sweep_aux {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
+    (hk : 1 ≤ k)
     (q' : N.Q) (wact : Fin k → Γw × Dir3) (oWoD : Γw × Dir3) (iD : Dir3) (iSym oSym : Γ)
     (c1 : Cfg 1 (SimQ k N.Q))
     (hst : c1.state = SimQ.scatter2 (q', oWoD, iD, iSym, oSym, (⟨k - 1, by omega⟩, 2),

@@ -37,6 +37,8 @@ variable {n : ℕ}
 -- writeTM: write a symbol to output cell 1 and halt
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State space of `writeTM`: rewind the output head to `▷`, step right to
+cell 1, write the symbol, then halt. -/
 inductive WritePhase where
   | rewind | goRight | write | done
   deriving DecidableEq
@@ -83,13 +85,18 @@ def writeTM (sym : Γw) : TM n where
              idleDir_right_of_start⟩
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
+/-- `writeTM` specialized to write `Γw.one` to output cell 1 (accept). -/
 abbrev writeOneTM : TM n := writeTM .one
+
+/-- `writeTM` specialized to write `Γw.zero` to output cell 1 (reject). -/
 abbrev writeZeroTM : TM n := writeTM .zero
 
 -- ════════════════════════════════════════════════════════════════════════
 -- rewindWorkTM: rewind a work tape to cell 1
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State space of `rewindWorkTM`/`rewindInputTM`: move the head left until it
+reads `▷`, then move right once to land on cell 1 and halt. -/
 inductive RewindPhase where
   | moveLeft | moveRight | done
   deriving DecidableEq
@@ -187,6 +194,8 @@ def rewindInputTM : TM n where
 -- scanRightTM: scan a work tape right until blank
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State space of `scanRightTM`/`blankWorkTM`: scan right until reading
+`Γ.blank`, then halt. -/
 inductive ScanPhase where
   | scanning | done
   deriving DecidableEq
@@ -272,6 +281,8 @@ def clearWorkTM (idx : Fin n) : TM n :=
 -- copyInputToWorkTM: copy input tape to a work tape
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State space of `copyInputToWorkTM`/`copyWorkToWorkTM`: copy symbols
+rightward until the source reads `Γ.blank`, then halt. -/
 inductive CopyPhase where
   | copying | done
   deriving DecidableEq
@@ -335,7 +346,8 @@ def copyWorkToWorkTM (src dst : Fin n) : TM n where
         (.copying,
          fun i => if i = dst then w else readBackWrite (wHeads i),
          readBackWrite oHead, idleDir iHead,
-         fun i => if i = dst then Dir3.right else if i = src then Dir3.right else idleDir (wHeads i),
+         fun i => if i = dst then Dir3.right
+                  else if i = src then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
     | .done => allIdle .done iHead wHeads oHead
   δ_right_of_start := by
@@ -358,6 +370,8 @@ def copyWorkToWorkTM (src dst : Fin n) : TM n where
 -- compareWorkTapesTM: compare two work tapes cell by cell
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- State space of `compareWorkTapesTM`: compare cells while both tapes agree,
+ending in `matchDone` (equal) or `mismatch` (unequal) before halting. -/
 inductive ComparePhase where
   | comparing | mismatch | matchDone | done
   deriving DecidableEq

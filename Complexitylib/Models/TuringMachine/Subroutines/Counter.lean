@@ -28,6 +28,8 @@ def hasUnaryPrefix (t : Tape) (used : ℕ) : Prop :=
   (∀ i, i < used → t.cells (i + 1) = Γ.one) ∧
   (∀ i, used ≤ i → t.cells (i + 1) = Γ.blank)
 
+/-- An empty tape moved one cell right has the empty unary prefix: the head is
+    at cell 1 and every cell after `▷` is blank. -/
 theorem init_nil_move_right_hasUnaryPrefix_zero :
     ((Tape.init []).move Dir3.right).hasUnaryPrefix 0 := by
   simp [hasUnaryPrefix, Tape.init, Tape.move]
@@ -112,10 +114,12 @@ theorem hasUnaryCounter_of_hasUnaryPrefix {t t' : Tape} {B : ℕ}
   · rw [hcells]
     exact hprefix.2.2 B le_rfl
 
+/-- A tape holding a zero-length unary counter reads blank at its head. -/
 theorem hasUnaryCounter_read_zero {t : Tape}
     (h : t.hasUnaryCounter 0) : t.read = Γ.blank := by
   simp [Tape.read, h.1, h.2.2]
 
+/-- A tape holding a positive-length unary counter reads `1` at its head. -/
 theorem hasUnaryCounter_read_pos {t : Tape} {B : ℕ}
     (h : t.hasUnaryCounter B) (hB : 0 < B) : t.read = Γ.one := by
   have hcell := h.2.1 0 hB
@@ -131,6 +135,8 @@ def hasCounterRemainder (t : Tape) (used total : ℕ) : Prop :=
   (∀ i, used ≤ i → i < total → t.cells (i + 1) = Γ.one) ∧
   t.cells (total + 1) = Γ.blank
 
+/-- A fresh unary counter is exactly a counter remainder with zero marks
+    consumed. -/
 theorem hasUnaryCounter_iff_remainder_zero {t : Tape} {B : ℕ} :
     t.hasUnaryCounter B ↔ t.hasCounterRemainder 0 B := by
   constructor
@@ -143,10 +149,12 @@ theorem hasUnaryCounter_iff_remainder_zero {t : Tape} {B : ℕ} :
   · intro h
     exact ⟨h.2.1, fun i hi => h.2.2.2.1 i (by omega) hi, h.2.2.2.2⟩
 
+/-- Once all counter marks are consumed, the head reads blank. -/
 theorem hasCounterRemainder_read_blank_of_done {t : Tape} {B : ℕ}
     (h : t.hasCounterRemainder B B) : t.read = Γ.blank := by
   simp [Tape.read, h.2.1, h.2.2.2.2]
 
+/-- While counter marks remain unconsumed, the head reads `1`. -/
 theorem hasCounterRemainder_read_one_of_remaining {t : Tape} {used total : ℕ}
     (h : t.hasCounterRemainder used total) (hlt : used < total) :
     t.read = Γ.one := by
@@ -238,6 +246,8 @@ inductive LinearCounterPhase where
   | done
   deriving DecidableEq
 
+/-- `LinearCounterPhase` has exactly the three states `scan`, `rewind`,
+    `done`. -/
 instance : Fintype LinearCounterPhase where
   elems := {.scan, .rewind, .done}
   complete := fun x => by cases x <;> simp
@@ -376,6 +386,8 @@ def inputLengthPlusOneCounterTM (counterIdx : Fin n) : TM n where
 -- One-step transition API
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- In the `scan` phase, reading `▷` on the input keeps the machine in
+    `scan`. -/
 theorem inputLengthPlusOneCounterTM_scan_start_state
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hinp : inp.read = Γ.start) :
@@ -399,6 +411,8 @@ theorem inputLengthPlusOneCounterTM_scan_start_initializes_counter
   simpa [Tape.writeAndMove, Tape.write] using
     Tape.init_nil_move_right_hasUnaryPrefix_zero
 
+/-- In the `scan` phase, reading blank on the input moves the machine to the
+    `rewind` phase. -/
 theorem inputLengthPlusOneCounterTM_scan_blank_state
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hinp : inp.read = Γ.blank) :
@@ -408,6 +422,8 @@ theorem inputLengthPlusOneCounterTM_scan_blank_state
       LinearCounterPhase.rewind := by
   simp [TM.step, inputLengthPlusOneCounterTM, hinp]
 
+/-- In the `scan` phase, reading an input bit (neither `▷` nor blank) keeps
+    the machine in `scan`. -/
 theorem inputLengthPlusOneCounterTM_scan_bit_state
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hstart : inp.read ≠ Γ.start) (hblank : inp.read ≠ Γ.blank) :
@@ -446,6 +462,8 @@ theorem inputLengthPlusOneCounterTM_scan_blank_extends_counter
   simp [TM.step, inputLengthPlusOneCounterTM, hinp,
     counterWriteOneWork, counterAdvanceDirs, Tape.hasUnaryPrefix_write_one hprefix]
 
+/-- In the `rewind` phase, reading `▷` on the counter tape moves the machine
+    to `done`. -/
 theorem inputLengthPlusOneCounterTM_rewind_start_state
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hcounter : (work counterIdx).read = Γ.start) :
@@ -455,6 +473,8 @@ theorem inputLengthPlusOneCounterTM_rewind_start_state
       LinearCounterPhase.done := by
   simp [TM.step, inputLengthPlusOneCounterTM, hcounter]
 
+/-- In the `rewind` phase, a counter-tape read other than `▷` keeps the
+    machine in `rewind`. -/
 theorem inputLengthPlusOneCounterTM_rewind_left_state
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hcounter : (work counterIdx).read ≠ Γ.start) :
@@ -464,6 +484,8 @@ theorem inputLengthPlusOneCounterTM_rewind_left_state
       LinearCounterPhase.rewind := by
   simp [TM.step, inputLengthPlusOneCounterTM, hcounter]
 
+/-- One NTM trace step of the lifted counter machine leaves a non-counter work
+    tape unchanged when that tape is the started blank tape. -/
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_other_work
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
@@ -497,6 +519,9 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_othe
             Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, Tape.init]
       · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hwork]
 
+/-- One NTM trace step of the lifted counter machine (in a non-halted state)
+    moves a fresh blank non-counter work tape past its `▷` marker, turning it
+    into the started blank tape. -/
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
@@ -531,6 +556,8 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
             Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, Tape.init]
       · exact (hstate rfl).elim
 
+/-- One NTM trace step of the lifted counter machine leaves a started blank
+    output tape unchanged. -/
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
@@ -561,6 +588,9 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_outp
             readBackWrite, idleDir, Tape.init]
       · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, houtput]
 
+/-- One NTM trace step of the lifted counter machine (in a non-halted state)
+    moves a fresh blank output tape past its `▷` marker, turning it into the
+    started blank tape. -/
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_output
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)

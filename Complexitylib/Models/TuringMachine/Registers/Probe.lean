@@ -24,12 +24,17 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Control states of `symProbeTM`: walk out to the probed cell (`pre`, `walk`),
+    rewind the input and register `r` carrying the read digit `k` (`backI k`,
+    `backR k`), scan to the end of `q` and append `k` marks (`scanQ k`), then
+    rewind `q` and park (`backQ`, `park`, `done`). -/
 inductive ProbePhase where
   | pre | walk
   | backI (k : Fin 4) | backR (k : Fin 4) | scanQ (k : Fin 4)
   | backQ | park | done
   deriving DecidableEq
 
+/-- `ProbePhase` is a finite type (17 states), as required for TM state sets. -/
 instance : Fintype ProbePhase where
   elems := {.pre, .walk,
     .backI 0, .backI 1, .backI 2, .backI 3,

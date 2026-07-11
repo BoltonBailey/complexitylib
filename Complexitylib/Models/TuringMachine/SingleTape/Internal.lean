@@ -118,6 +118,7 @@ def blockWidth (k : ℕ) : ℕ := 3 * k
 /-- First cell of the block for super-position `p ≥ 1`. -/
 def blockStart (k p : ℕ) : ℕ := 1 + (p - 1) * blockWidth k
 
+/-- The first super-position's block starts at cell 1, directly after the `▷`. -/
 @[simp] theorem blockStart_one (k : ℕ) : blockStart k 1 = 1 := by
   simp [blockStart]
 

@@ -27,7 +27,10 @@ This layer is the foundation for the Cook–Levin reduction emitter
 ## Main definitions
 
 - `TM.outAcc` — the output-accumulator predicate
+- `TM.bumpTM` — entry adapter: bump every head from `▷` to cell 1
 - `TM.emitBitsTM` — append a fixed word to the output
+- `TM.emitUnaryTM` — append a register's value as a doubled-unary run
+- `TM.emitLitTM` — append one encoded literal (sign bits, unary body, terminator)
 
 ## Main results
 
@@ -58,6 +61,7 @@ def outAcc (ys : List Bool) (out : Tape) : Prop :=
 
 namespace outAcc
 
+/-- The accumulator head sits just past the `|ys|` stored bits, at cell `|ys| + 1`. -/
 theorem head_eq {ys : List Bool} {out : Tape} (h : outAcc ys out) :
     out.head = ys.length + 1 := h.1
 
@@ -130,10 +134,13 @@ theorem outAcc_append_bit {ys : List Bool} {out : Tape} (h : outAcc ys out) (b :
 -- bumpTM: the entry adapter
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- The two states of `bumpTM`: `go` (initial, about to bump every head right)
+    and `done` (halted). -/
 inductive BumpPhase where
   | go | done
   deriving DecidableEq
 
+/-- `BumpPhase` is a finite type, as required for TM state spaces. -/
 instance : Fintype BumpPhase where
   elems := {.go, .done}
   complete := fun x => by cases x <;> simp
@@ -284,10 +291,14 @@ theorem emitBitsTM_hoareTime (w : List Bool) (inp₀ : Tape) (work₀ : Fin n �
 -- emitUnaryTM: append a register's value as a doubled-unary run
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- The states of `emitUnaryTM`: `emitA`/`emitB` alternate to emit two trues per
+    register mark, `back` rewinds the register head to `▷`, `park` steps it to
+    cell 1, and `done` halts. -/
 inductive EmitUnaryPhase where
   | emitA | emitB | back | park | done
   deriving DecidableEq
 
+/-- `EmitUnaryPhase` is a finite type, as required for TM state spaces. -/
 instance : Fintype EmitUnaryPhase where
   elems := {.emitA, .emitB, .back, .park, .done}
   complete := fun x => by cases x <;> simp
