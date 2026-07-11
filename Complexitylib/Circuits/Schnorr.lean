@@ -11,7 +11,7 @@ The proof proceeds by induction on `N`. At each step:
 2. **Eliminate** two gates that become redundant after restriction.
 3. Apply the inductive hypothesis to the smaller circuit.
 
-## Definitions (from `Circ.XOR`)
+## Definitions (from `Complexitylib.Circuits.XOR`)
 
 * `Schnorr.xorBool N x` — the N-input XOR (parity) function
 

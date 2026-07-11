@@ -10,8 +10,9 @@ This file defines an executable verifier for `pairLang R_SAT`:
 3. check the witness length bound `|α| ≤ |z| + 1`,
 4. evaluate the decoded formula under `α`.
 
-The deterministic TM proving `pairLang R_SAT ∈ P` will target the Boolean
-function `verifyPair`.
+The deterministic implementation `verifyPairTM` in `SAT/VerifierTM.lean`
+computes this specification and proves `pairLang R_SAT ∈ P`; this file is
+the small executable/semantic audit surface for that machine proof.
 -/
 
 namespace SAT

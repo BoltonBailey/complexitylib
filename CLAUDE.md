@@ -4,13 +4,21 @@
 
 A Lean 4 library formalizing computational complexity theory, built on Mathlib. The definitions follow Arora and Barak's *Computational Complexity: A Modern Approach*, using a concrete 4-symbol alphabet and separate deterministic/nondeterministic machine types. NTMs and PTMs share the same structure (two transition functions); they differ only in acceptance semantics (existential vs counting).
 
+For project direction and dependency-ordered contribution tracks, read
+`ROADMAP.md` before beginning a large feature. Prefer landing one reusable
+definition or intermediate theorem layer at a time.
+
 ## Build
 
 ```bash
-lake build
+lake build --wfail
+lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
+lake build --wfail Complexitylib.Circuits.Encoding.Validation
 ```
 
-Always verify the build passes with **no errors and no warnings** before considering a change complete.
+Always verify all three commands pass before considering a change complete.
+The latter two run executable regression guards that are intentionally kept
+out of the public import graph.
 
 ## Architecture
 
@@ -141,7 +149,7 @@ See CONTRIBUTING.md. Use `<type>(<scope>): <summary>` format with imperative moo
 
 ## Dependencies
 
-- **Lean**: `leanprover/lean4:v4.28.0` (see `lean-toolchain`)
-- **Mathlib**: `v4.28.0` (see `lakefile.toml`)
+- **Lean**: `leanprover/lean4:v4.30.0` (see `lean-toolchain`)
+- **Mathlib**: `v4.30.0` (see `lakefile.toml`)
 
 When updating either, both must be updated in lockstep.

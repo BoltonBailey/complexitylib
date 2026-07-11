@@ -13,8 +13,10 @@ standing invariant `SimInv`:
   the decoded start state's fixed-width encoding is exactly the first
   description field, by the `toBits`/`fromBits` roundtrip at the field's
   own width);
-* (the loop- and extract-side bridges and the headline simulation theorems
-  are assembled below as the remaining pieces land).
+* verdict and output-growth facts used by the loop and extraction proofs.
+
+The completed loop simulation and headline universal-machine theorems are in
+`UTM/SimLoop.lean` and `UTM/Universal.lean`.
 -/
 
 namespace TM.UTMBody

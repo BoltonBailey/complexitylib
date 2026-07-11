@@ -8,8 +8,8 @@ set_option maxHeartbeats 400000
 
 This internal module proves Schnorr's lower bound via the CircDesc model.
 The public definitions (`Schnorr.xorBool`, `Schnorr.xorBool_flip`,
-`Schnorr.xorBool_essential`) are in `Circ.XOR`. The public theorem
-`schnorr_lower_bound_circuit` is accessible through `Circ.Schnorr`.
+`Schnorr.xorBool_essential`) are in `Complexitylib.Circuits.XOR`. The public theorem
+`schnorr_lower_bound_circuit` is accessible through `Complexitylib.Circuits.Schnorr`.
 -/
 
 namespace Schnorr

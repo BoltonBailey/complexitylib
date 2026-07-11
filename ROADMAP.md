@@ -1,0 +1,785 @@
+# Complexitylib roadmap
+
+This roadmap is a contribution guide for extending Complexitylib from its current
+machine- and circuit-level foundations into a broad, reusable formalization of
+computational complexity theory. It is intentionally ambitious, but it is not a
+list of promises. Each headline theorem is decomposed into intermediate artifacts
+that are independently useful and small enough to review.
+
+The ordering below is dependency-driven. A later track may be explored early, but
+its final class-level theorem should normally wait for the shared encodings,
+resource accounting, and finite-probability infrastructure on which it depends.
+
+## Current baseline
+
+The library already contains substantial foundations:
+
+- A concrete Arora--Barak-style model of deterministic, nondeterministic, and
+  probabilistic Turing machines over a fixed four-symbol alphabet, with explicit
+  time and space predicates.
+- Reusable machine combinators, Hoare-style specifications, unary registers,
+  emitters, counters, pairing machines, multi-tape-to-single-tape simulation, and
+  a universal-machine development.
+- Definitions of major classes including `DTIME`, `NTIME`, `DSPACE`, `NSPACE`,
+  `P`, `PPoly`, `NP`, `BPP`, `RP`, `ZPP`, `PP`, `PSPACE`, `EXP`, `NEXP`, `SC`,
+  `FNP`, and `TFNP`, together with selected containments and closure results.
+- A deterministic time-hierarchy theorem in a concrete, clock-constructible
+  formulation.
+- A bit-level SAT encoding, polynomial-time verifier, computation tableaux, and a
+  full Cook--Levin reduction culminating in SAT NP-completeness.
+- A typed Boolean-circuit model with size and depth, AND/OR bases, CNF and DNF,
+  Shannon bounds, essential-input and gate-elimination lower bounds, Schnorr's XOR
+  lower bound, nondeterministic quantification bounds, and a Valiant-style depth
+  reduction theorem.
+- A growing collection of concrete languages that exercise the machine API and
+  witness nontrivial class membership.
+
+This baseline is not yet a single unified theory. In particular, machine
+encodings, circuit families, uniformity, advice, oracle access, interactive
+protocols, and cryptographic security need common interfaces before their
+headline equivalences can be stated cleanly.
+
+## Guiding principles
+
+1. **State the exact theorem variant.** Resource conventions, uniformity notions,
+   error constants, zero-length inputs, promise behavior, and encoding choices
+   belong in theorem statements or immediately adjacent documentation.
+2. **Separate definitions, proof machinery, and surface theorems.** Definitions
+   and public theorem statements should remain short enough to audit; large
+   simulations and arithmetic proofs belong in `Internal` modules.
+3. **Prefer reusable bridges over isolated headline proofs.** A verified circuit
+   evaluator, transcript encoding, or finite counting lemma is more valuable than
+   a one-off proof that bypasses the shared API.
+4. **Account for resources compositionally.** Every construction should expose a
+   concrete bound first and an asymptotic corollary second.
+5. **Use finite counting before importing heavier probability machinery.** The
+   current PTM semantics already counts functions `Fin T -> Bool`; exact finite
+   arguments are often easier to compute with and audit.
+6. **Preserve executable witnesses where practical.** Machines, circuits,
+   reductions, encoders, and protocol verifiers should be definitions, not merely
+   existential objects.
+7. **Keep textbook abstractions honest about representations.** Complexity is
+   measured on encodings. Parsing, malformed inputs, output length, and conversion
+   between `List Bool` and `Fin n -> Bool` must be explicit.
+8. **Land small steps.** A contribution should ideally add one definition, one
+   structural lemma family, or one theorem layer and leave the repository building
+   without errors or warnings.
+
+## Dependency overview
+
+```text
+core API and encodings
+  +-- deterministic/probabilistic finite counting
+  +-- machine and circuit evaluators
+  |     +-- nonuniform TM/circuit bridge + advice
+  |     |     +-- BPP subset P/poly
+  |     +-- uniform circuits <-> TMs
+  |     |     +-- NC/AC uniformity
+  |     |           +-- Barrington and bounded-depth lower bounds
+  |     +-- canonical complete problems and reductions
+  +-- protocol/transcript infrastructure
+  |     +-- interactive-proof classes
+  |           +-- sum-check and IP = PSPACE
+  +-- oracle machines and security games
+        +-- relativized worlds
+        +-- pseudorandom functions
+              +-- natural-proofs barrier
+```
+
+## Near-term tracks
+
+### N0. Core API consolidation and proof ergonomics
+
+**Goal.** Make foundational tape, run, encoding, and asymptotic facts available
+from stable public modules so later work does not duplicate local lemmas.
+
+**Prerequisites.** None beyond the existing library.
+
+**Current progress.** The core model now exposes alphabet separation facts,
+`Tape.ext'`, initialized/started-tape cell and read lemmas, `Tape.move_cells`,
+`Tape.write_head`, canonical register-cell facts, and DTM time-bound
+monotonicity. Several large consumers have been migrated away from private
+copies; endpoint/run lemmas and a few older local tape helpers remain.
+
+**Staged milestones.**
+
+- [ ] Add a canonical extensionality and simplification API for `Tape`, `Cfg`,
+  `initTape`, `Γ.ofBool`, `TM.reachesIn`, and `NTM.trace`.
+- [ ] Consolidate repeated endpoint-determinism, run-concatenation, halting, and
+  time-bound monotonicity lemmas.
+- [ ] Give all major constructions a named concrete time/space bound and a
+  separate `BigO` theorem.
+- [ ] Audit aggregation modules so public imports do not need to name proof-only
+  implementation files.
+- [ ] Add lightweight regression examples for core simplification behavior.
+
+**Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
+explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
+marking full transition definitions as simp lemmas. Moving a theorem must preserve
+its public name or provide a compatibility alias.
+
+**Small entry tasks.**
+
+- [x] Centralize tape extensionality, write-head/move-cell projections,
+  initialized Boolean/blank tape facts, and canonical register-cell lemmas.
+- [S] Add the remaining narrowly oriented projections for `write`, `move`, and
+  `writeAndMove` as concrete consumers demonstrate the need.
+- [S] Migrate the remaining older modules to the shared initialized-tape and
+  Boolean-symbol lemmas, deleting their local wrappers where this stays clear.
+- [S] Add `TM.reachesIn_snoc`, endpoint uniqueness, and
+  `TM.step_eq_none_iff_halted`.
+- [S] Refresh module documentation that still describes completed proofs as
+  skeletons.
+
+### N1. Canonical bit-string, finite-function, and encoding bridges
+
+**Goal.** Establish one shared representation layer between languages
+(`List Bool`), fixed-length circuit inputs (`Fin n -> Bool`), natural-number
+indices, and serialized objects.
+
+**Prerequisites.** N0 is helpful but not required.
+
+**Current progress.** Fixed-length Boolean strings now have a canonical
+`List Bool` bridge. Fan-in-two AND/OR circuits also have a canonical proof-free
+codec with exact decoding, explicit malformed-input rejection, a polynomial
+bit-length bound, and a tagged family wrapper covering the empty input. The
+remaining milestones below concern reusable codec abstractions and encodings for
+other object types.
+
+**Staged milestones.**
+
+- [x] Define lossless conversions between lists of known length and
+  `BitString n`, with round-trip, length, map, append, and indexing lemmas.
+- [x] Give fan-in-two AND/OR circuits a canonical proof-free encoding with an
+  exact partial decoder and a concrete polynomial bit-length bound.
+- [x] Separate encoded circuit validity from evaluation, with explicit rejection
+  of truncation, trailing data, bad tags, and non-topological references.
+- [ ] Define a reusable `Encodable`-style interface specialized to binary strings:
+  encoder, partial decoder, round-trip theorem, and size bound.
+- [ ] Give canonical encodings to finite functions, machine states,
+  configurations, and bounded transcripts.
+- [ ] Add pairing and tagged-sum codecs compatible with the existing pairing
+  language and polynomial-time machines.
+
+**Formalization hazards.** Dependent equality between `Fin n -> Bool` values and
+lists with proof-carrying lengths can dominate proofs. Keep conversions
+computational, isolate casts behind named lemmas, and avoid making proof fields
+part of extensional encodings. Size bounds must count bits rather than rely only on
+injectivity.
+
+**Small entry tasks.**
+
+- [S] Add analogous `List.ofFn` bridge lemmas for a non-Boolean alphabet when a
+  second consumer demonstrates the need for a generic API.
+- [S] Add a codec for `Fin n` with an explicit `Nat.log2`-style length bound.
+- [M] Encode/decode the four tape symbols and three directions, including malformed
+  bit patterns.
+- [M] Define a generic length-bounded codec combinator for lists.
+
+### N2. Finite counting and error amplification toolkit
+
+**Goal.** Build exact lemmas for random bit strings, bad-event counts, independent
+blocks, majority, and union bounds. This is the common prerequisite for BPP,
+interactive proofs, and cryptographic games.
+
+**Prerequisites.** Existing `NTM.acceptCount`, `acceptProb`, and rational
+probability definitions; N1 for encoded experiments.
+
+**Staged milestones.**
+
+- [ ] Develop cardinality lemmas for `Fin T -> Bool`, restriction to prefixes,
+  concatenation into blocks, and permutations of random bits.
+- [ ] Define finite event probability once and relate it to `Finset.card` and the
+  existing rational PTM probabilities.
+- [ ] Prove union, complement, conditioning-by-partition, and product lemmas.
+- [ ] Formalize binomial coefficients and majority failure counts in the exact
+  finite sample space used by machines.
+- [ ] Prove a concrete amplification theorem from error `1/3` to `2^-k` (or another
+  explicit exponentially small bound) with a fully specified repetition count.
+- [ ] Lift the combinatorial theorem to a reusable PTM repetition construction.
+
+**Formalization hazards.** Independence should not be smuggled in through an
+informal product argument: the bijection between one long choice string and blocks
+must be explicit. Rational inequalities involving powers and floors can be harder
+than the counting argument. A crude but sufficient exponential bound is preferable
+to formalizing an optimal Chernoff constant first.
+
+**Small entry tasks.**
+
+- [S] Prove `Fintype.card (Fin T -> Bool) = 2^T` in the form needed by
+  `acceptProb`.
+- [S] Define block projection and concatenation maps and prove they are inverse.
+- [M] Prove the finite union bound for a list of predicates by card counting.
+- [M] Implement a majority function on `Fin k -> Bool` and prove its complement
+  symmetry.
+
+### N3. Canonical complete problems and reduction infrastructure
+
+**Goal.** Turn Cook--Levin into a reusable ecosystem of complete problems rather
+than a single endpoint.
+
+**Prerequisites.** Existing SAT semantics, encodings, verifier, and polynomial
+many-one reduction.
+
+**Staged milestones.**
+
+- [ ] Prove transitivity, identity, composition-time, and class-closure lemmas for
+  polynomial reductions in their most reusable forms.
+- [ ] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
+  Tseitin transformation.
+- [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and
+  INDEPENDENT-SET with explicit codecs.
+- [ ] Add TQBF/QBF syntax and semantics as the canonical PSPACE problem.
+- [ ] Prove one PSPACE-completeness route only after the space-simulation API is
+  stable.
+
+**Formalization hazards.** Textbook reductions often silently assume random-access
+arrays, fresh-variable generation, or unary/binary number encodings. The reduction
+machine must produce the exact language encoding, and output length bounds must be
+proved before polynomial-time membership.
+
+**Small entry tasks.**
+
+- [S] Add reduction identity and transitivity lemmas with concrete composed time
+  bounds.
+- [S] Define 3CNF syntax as either a refinement or a predicate on the existing CNF.
+- [M] Implement clause padding and prove equisatisfiability.
+- [M] Add graph adjacency-matrix encoding with decode/encode and size lemmas.
+
+## Mid-term tracks
+
+### M1. Circuit families, uniformity, and the TM--circuit bridge
+
+**Goal.** Connect the existing finite circuit model to language classes and prove
+machine/circuit characterizations with explicit uniformity.
+
+**Prerequisites.** The N1 list/`BitString` bridge, the existing typed
+`Circuit.eval` semantics, and stable machine composition/time accounting from
+N0. The proof-free circuit codec and polynomial-time DTM evaluator are M1
+deliverables, not prerequisites.
+
+**Current progress.** `BitString` now has a canonical `List.ofFn` serialization
+with round trips. `CircuitFamily` handles positive lengths with ordinary typed
+circuits and records the empty-input answer explicitly. The library also has
+total family size/depth functions, pointwise bounds, a concrete polynomial-size
+predicate, `SIZE`, and the nonuniform class `PPoly`, together with its big-O
+power characterization. Fan-in-two circuits now have a canonical proof-free
+terminated-unary encoding, exact decoder, topological validator, array-backed
+iterative evaluator, semantic equivalence with `Circuit.eval`, and a concrete
+polynomial bit-length bound.
+
+**Settled conventions.**
+
+- A circuit family has one Boolean output, a typed circuit `C_n` at each positive
+  length, and an explicit bit at length zero.
+- Size and depth have total pointwise bound predicates; polynomial size has both
+  a concrete natural-polynomial definition and a `BigO` power characterization.
+- `PPoly` is the nonuniform polynomial-size circuit class over `Basis.andOr2`.
+  Its asymptotic meaning matches the literature, while exact `SIZE(s)` uses the
+  library convention that excludes input vertices and makes negation flags free.
+
+**Remaining convention.** **P-uniformity** will mean that a deterministic
+polynomial-time generator maps unary `1^n` to a tagged family encoding: the tag
+distinguishes the length-zero output bit from a positive-arity circuit code. This
+is the accessible first theorem variant.
+
+- Later, direct-connection or DLOGTIME uniformity for `NC`/`AC`. It should not be
+  conflated with P-uniformity.
+
+The existing `Circuit` type assumes nonzero input and output arities. The family
+API resolves this deliberately: positive lengths use typed circuits, while the
+unique empty input has an explicit `emptyOutput` bit. That convention must be
+preserved by serialized encodings and uniform generators.
+
+**Staged milestones.**
+
+- [x] Define circuit-family semantics for `Language`, including conversion between
+  lists of length `n` and `BitString n`.
+- [x] Encode positive-arity circuits, reject malformed or non-topological codes,
+  evaluate them iteratively, and prove agreement with typed circuit semantics
+  plus a concrete encoding-length bound.
+- [x] Add the tagged family wrapper and prove functional correctness at every
+  length, including the explicit empty-input answer.
+- [ ] Build a DTM that validates and evaluates a tagged family code paired with
+  its input in polynomial time, including the explicit length-zero case.
+- [ ] Prove the easy direction: a P-uniform polynomial-size family yields a
+  polynomial-time DTM decider.
+- [ ] Build a functional computation-tableau/unrolling construction from a
+  time-bounded DTM to a bounded-fan-in circuit computing its output bit.
+- [ ] Prove semantic correctness and a concrete polynomial size bound for the
+  nonuniform unrolling construction.
+- [ ] Define advice TMs and prove equivalence between polynomial advice and
+  nonuniform polynomial-size circuits. This can proceed before the uniform
+  emitter and unblocks M2.
+- [ ] Implement the circuit emitter in `FP`, then prove `P` equals P-uniform
+  polynomial-size circuit families.
+- [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
+- [ ] Introduce `DEPTH`, `NC^i`, and `AC^i` after uniformity and zero-length
+  conventions have been propagated through the existing `InAC0` definition.
+
+**Formalization hazards.**
+
+- A Cook--Levin CNF expressing an accepting computation is not yet a circuit that
+  computes the unique output of a deterministic run; the functional construction
+  needs its own correctness theorem.
+- The circuit generator's input length is `log n` if `n` is binary. Standard
+  P-uniformity usually measures generator time polynomial in `n`, so encode `1^n`
+  or state the convention explicitly.
+- Circuit evaluation time depends on encoding validity, gate order, and fan-in.
+- The evaluator consumes one machine input, so use the existing `pair code x`
+  representation and account for its exact length rather than treating code and
+  data as two implicit inputs.
+- The current recursive typed evaluator can recompute shared subcircuits
+  exponentially. Runtime theorems must use a validated topological encoding and
+  a memoized/streaming evaluator instead of assuming `Circuit.eval` is linear.
+- Dependent gate indices and proof-carrying acyclicity should not leak into every
+  simulation lemma.
+- Arora--Barak count input vertices and explicit NOT gates, unlike the library's
+  exact size convention. Prove additive/linear simulations before transporting
+  exact `SIZE` bounds or claiming basis invariance; polynomial-size `PPoly` is
+  insensitive to those overheads.
+
+**Small entry tasks.**
+
+- [S] Package a well-formed raw circuit as a typed `Circuit` if a later proof
+  needs the reverse bridge; the executable evaluator itself does not require it.
+- [M] Implement a DTM realizing the topological memoized evaluator for serialized
+  circuits and prove a polynomial running-time bound.
+- [M] Define polynomial advice and basic monotonicity/containment lemmas.
+- [L] Compile one fixed deterministic transition layer into a Boolean circuit as a
+  local precursor to full unrolling.
+
+### M2. BPP is contained in P/poly
+
+**Goal.** Prove the classical nonuniform derandomization theorem
+`BPP subset P/poly` using amplification and the probabilistic method.
+
+**Prerequisites.** N2 amplification, M1 nonuniform circuit/advice equivalence, and
+the PTM all-paths-halting discipline already present in the library.
+
+**Target theorem variant.** Start with the library's concrete `BPP` definition and
+the circuit-family definition of `P/poly`. The proof should not claim a uniform
+derandomization. The fixed advice/random tape may depend on the input length but
+not on the individual input.
+
+**Staged milestones.**
+
+- [ ] Normalize a BPP witness to explicit completeness at least `2/3` and
+  soundness at most `1/3`, if the existing definition permits other constants.
+- [ ] Construct repeated independent runs and majority output with error below
+  `2^-(n+1)` on each input of length `n`.
+- [ ] Prove by a union bound over all `2^n` inputs that some single random string is
+  correct for every input of that length.
+- [ ] Hardwire that string into the deterministic simulation/circuit for length
+  `n`.
+- [ ] Prove the resulting family has polynomial size and concludes
+  `BPP subset P/poly`.
+- [ ] Derive the advice-TM formulation as a corollary, or conversely use it as the
+  main proof if the advice bridge is cleaner.
+
+**Formalization hazards.** The amplified machine consumes a length-dependent
+number of random bits, and early halting must not change the block layout. A strict
+inequality below `1/2^n` is needed to conclude that the number of bad seeds is less
+than the total number of seeds. Majority ties require an odd repetition count.
+Hardwiring must preserve the exact acceptance bit, not merely the existence of an
+accepting NTM path.
+
+**Small entry tasks.**
+
+- [S] Define the bad-seed set for a fixed input and rewrite its cardinality in terms
+  of `acceptCount`.
+- [S] Enumerate all `BitString n` inputs and prove its cardinality is `2^n`.
+- [M] Prove the “expected bad inputs below one implies a perfect seed exists”
+  counting lemma independently of machines.
+- [M] Define a PTM repetition wrapper with an explicit choice-block schedule.
+- [M] Add a circuit/advice hardwiring operation and prove evaluation correctness.
+
+### M3. Small-depth circuits and Barrington's theorem
+
+**Goal.** Develop robust `NC^1` infrastructure and prove Barrington's width-5
+branching-program characterization.
+
+**Prerequisites.** M1 circuit families and depth, finite group/permutation support
+from Mathlib, and basic formula/circuit compilation.
+
+**Target theorem variants.** The first technically clean result should be the
+finite theorem:
+
+> A fan-in-two Boolean formula of depth `d` can be computed by a width-5
+> permutation branching program of length at most `4^d`.
+
+From this, depth `O(log n)` gives polynomial length. A full class equality also
+needs the converse simulation of constant-width polynomial-length branching
+programs by log-depth circuits and a clearly stated uniformity convention.
+
+**Staged milestones.**
+
+- [ ] Define Boolean formulas with literals, depth, evaluation, and compilation
+  from a selected circuit output by recursively unfolding its DAG.
+- [ ] Define width-`w` permutation branching programs: instructions selected by
+  one input bit, ordered product semantics, length, and acceptance convention.
+- [ ] Specialize to permutations of `Fin 5` and prove the explicit conjugation and
+  commutator identities used by Barrington's induction.
+- [ ] Compile literals and negation, then the AND/OR induction, tracking target
+  cycles and the `4^d` length bound.
+- [ ] State and prove the finite Barrington theorem.
+- [ ] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
+  of constant-size permutation transition matrices/functions.
+- [ ] Add a uniform version only after instruction-generation uniformity is
+  formalized.
+
+**Formalization hazards.** Permutation multiplication order differs between texts
+and libraries; fix it with executable examples before proving the induction.
+Barrington's theorem is not true for arbitrary width-5 monoid programs without the
+specific non-solvable group construction. The formula-to-program theorem and the
+class-level circuit theorem are distinct, and sharing in a circuit must be handled
+without an unjustified formula-size claim.
+
+**Small entry tasks.**
+
+- [S] Define branching-program evaluation and prove append/product semantics.
+- [S] Encode a program instruction and prove evaluation is invariant under a
+  semantics-preserving rename of input variables.
+- [M] Search for and verify concrete `S_5` permutations with the required
+  commutator identity, initially by `native_decide` if appropriate.
+- [M] Implement literal and NOT programs with exact length bounds.
+- [M] Prove balanced product evaluation has logarithmic circuit depth for fixed
+  width.
+
+### M4. Space complexity, alternation, and QBF
+
+**Goal.** Supply the space and alternation results needed by oracle and interactive
+proof tracks.
+
+**Prerequisites.** N1 encodings, existing work-tape space semantics, and N3 QBF
+syntax.
+
+**Staged milestones.**
+
+- [ ] Prove closure and normal-form lemmas for deterministic and nondeterministic
+  space, including configuration counting.
+- [ ] Formalize Savitch's theorem with an explicit recursive reachability machine:
+  `NSPACE(S) subset DSPACE(S^2)` under suitable constructibility and lower-bound
+  hypotheses.
+- [ ] Derive `NPSPACE = PSPACE` in the library's polynomial-union convention.
+- [ ] Define alternating machines or an equivalent bounded game semantics.
+- [ ] Prove polynomial-time alternation equals PSPACE, or first prove a bounded
+  configuration-game characterization.
+- [ ] Prove TQBF is PSPACE-complete.
+- [ ] Add deterministic and nondeterministic space hierarchy theorems with exact
+  constructibility assumptions.
+
+**Formalization hazards.** Space bounds do not automatically bound time unless
+configurations are finite and repetitions are removed. The library's output tape
+is excluded from space, so transducer restrictions matter. Savitch's recursion
+needs careful termination and an encoded midpoint enumeration whose own workspace
+is accounted for.
+
+**Small entry tasks.**
+
+- [S] Define bounded configurations and prove they form a finite type after tapes
+  are truncated to the relevant cells.
+- [M] Bound the number of bounded configurations in terms of state count, tape
+  count, and space.
+- [M] Define QBF evaluation and prove elementary substitution lemmas.
+- [M] Implement the recursive reachability predicate before implementing its TM.
+
+### M5. Interactive-proof foundations
+
+**Goal.** Define interactive protocols in a way that supports both finite
+information-theoretic soundness proofs and polynomial-time complexity classes.
+
+**Prerequisites.** N1 transcript codecs, N2 finite probability, and eventually M4
+for the `IP = PSPACE` endpoint.
+
+**Definitions to settle first.**
+
+- A fixed-round protocol with bounded prover/verifier messages.
+- An unbounded prover strategy as a function of the visible transcript.
+- A verifier with private random bits and explicit work/time bounds.
+- Completeness and soundness quantified over inputs and prover strategies.
+- Public-coin protocols as a separate restriction, not the default semantics.
+
+Start with fixed finite alphabets and rational probabilities. Only then package
+families of protocols with polynomial bounds into `IP`, `AM`, and related classes.
+
+**Staged milestones.**
+
+- [ ] Define transcripts, legal interaction, deterministic prover strategies, and
+  verifier acceptance counts.
+- [ ] Prove strategy extensionality: only responses on reachable transcripts
+  affect acceptance.
+- [ ] Define completeness/soundness and prove monotonicity in thresholds.
+- [ ] Formalize sequential repetition and one soundness-amplification theorem.
+- [ ] Define polynomially bounded protocol families and `IP`.
+- [ ] Prove elementary containments such as `NP subset IP` and
+  `IP subset EXP` before attempting the sharp upper bound.
+
+**Formalization hazards.** A prover is adaptive, so it cannot be represented by a
+single witness string without encoding a potentially exponential strategy tree.
+The verifier's private coins must not be exposed in the prover's transcript.
+Message-length bounds are essential to keep the strategy space finite for counting
+and exhaustive-search upper bounds.
+
+**Small entry tasks.**
+
+- [S] Define alternating transcript extension and prove prefix/round-index lemmas.
+- [S] Define acceptance probability for a fixed prover and verifier random tape.
+- [M] Embed an NP verifier as a one-message interactive protocol.
+- [M] Prove that deterministic prover strategies suffice for maximizing acceptance
+  in the finite classical model.
+
+## Long-term tracks
+
+### L1. Sum-check and `IP = PSPACE`
+
+**Goal.** Formalize the algebraic core of interactive proofs and the theorem
+`IP = PSPACE` in a clearly delimited classical, private-coin model.
+
+**Prerequisites.** M4 TQBF/PSPACE infrastructure, M5 interactive protocols, N2
+soundness amplification, and substantial finite-field polynomial support.
+
+**Staged milestones.**
+
+- [ ] Develop the required finite-field and low-degree polynomial evaluation API,
+  including an appropriate Schwartz--Zippel theorem.
+- [ ] State and prove sum-check completeness and soundness for a fixed number of
+  variables and explicit individual-degree bounds.
+- [ ] Arithmetize Boolean formulas over a finite field.
+- [ ] Formalize the degree-reduction step needed during quantified-formula
+  evaluation; naive recursive arithmetization has degree blow-up.
+- [ ] Build the interactive protocol for TQBF and prove polynomial verifier time,
+  polynomial communication, perfect/high completeness, and bounded soundness.
+- [ ] Conclude `PSPACE subset IP` from TQBF completeness.
+- [ ] Prove `IP subset PSPACE` by evaluating the finite game/acceptance recursion in
+  polynomial space.
+
+**Formalization hazards.** “Arithmetize QBF and apply sum-check” omits the central
+degree-control argument. Field size must dominate all relevant degree and
+soundness parameters and must itself admit a polynomial-size encoding. Mathlib's
+polynomial representation may not align directly with an executable verifier, so
+an evaluation-oriented layer may be needed. The theorem's completeness and
+soundness constants should be explicit before class-level amplification.
+
+**Small entry tasks.**
+
+- [S] Prove Boolean multilinear-extension identities for one variable.
+- [M] Prove a univariate root-count probability bound over a finite field.
+- [M] Define the sum-check verifier state and prove round-by-round invariant
+  preservation.
+- [L] Formalize sum-check soundness independently of TQBF.
+
+### L2. Oracle machines and relativization
+
+**Goal.** Make relativized complexity a mathematical part of the library and
+formalize oracle worlds showing why relativizing techniques cannot settle `P` vs
+`NP`.
+
+**Prerequisites.** N1 codecs, M4 space/configuration machinery, universal-machine
+enumeration, and hierarchy-style diagonalization.
+
+**Target theorem variants.** The meaningful formal endpoints are oracle existence
+theorems, for example:
+
+- there exists an oracle `A` with `P^A = NP^A`;
+- there exists an oracle `B` with `P^B != NP^B`.
+
+The informal assertion “a proof technique relativizes” is meta-mathematical and
+should not be encoded as a theorem without first defining a proof system or a
+precise closure property of arguments.
+
+**Staged milestones.**
+
+- [ ] Define oracle TMs with a query mechanism, query-cost convention, and
+  deterministic/nondeterministic execution semantics.
+- [ ] Define relativized time/space classes and lift basic simulations and
+  containments that genuinely relativize.
+- [ ] Build clocked enumerations of oracle machines suitable for diagonalization.
+- [ ] Construct a separating oracle using a unary language whose membership asks
+  whether some string of a chosen length belongs to the oracle.
+- [ ] Construct an equality oracle, likely via a PSPACE-complete oracle together
+  with the necessary closure theorem showing both relativized classes collapse to
+  PSPACE.
+- [ ] State the Baker--Gill--Solovay-style barrier corollary only after both worlds
+  are formalized.
+
+**Formalization hazards.** Query length and query-tape space must be charged
+consistently. Oracle constructions are stagewise and self-referential: later
+stages must not alter answers used to diagonalize earlier machines. An oracle for
+a complete class does not yield a collapse without proving the relevant oracle
+closure and simulation results.
+
+**Small entry tasks.**
+
+- [S] Define a single oracle-query step and prove deterministic execution remains
+  functional.
+- [M] Embed ordinary machines as oracle machines that never query.
+- [M] Define the standard existential unary oracle language and prove it belongs to
+  `NP^A` for every oracle `A`.
+- [L] Adapt the existing diagonal-machine infrastructure to clocked oracle DTMs.
+
+### L3. Natural proofs and pseudorandomness barriers
+
+**Goal.** Formalize a precise Razborov--Rudich-style implication connecting useful
+large constructive properties to distinguishers against pseudorandom function
+families.
+
+**Prerequisites.** M1 circuit families and `P/poly`, N2 finite probability, a
+cryptographic game/security layer, and explicit truth-table encodings.
+
+**Definitions to settle first.**
+
+- A property of `n`-input Boolean functions, represented by their `2^n`-bit truth
+  tables.
+- Largeness as an explicit density lower bound among all Boolean functions.
+- Constructivity measured in the truth-table length `N = 2^n`, not accidentally in
+  `n`.
+- Usefulness against a specified circuit-size family and quantifier convention
+  (“for all sufficiently large lengths” versus infinitely many lengths).
+- Pseudorandom function security against a specified nonuniform circuit class,
+  query model, advantage, and parameterization.
+
+**Staged milestones.**
+
+- [ ] Define natural properties and prove basic monotonicity/transport lemmas.
+- [ ] Formalize oracle distinguishers that receive a truth table, then relate them
+  to the intended PRF game.
+- [ ] Prove the finite core: a large property excluding all functions in a PRF
+  range yields a distinguisher with explicit advantage.
+- [ ] Add constructive evaluation and circuit-size bounds to obtain a parameterized
+  conditional barrier theorem.
+- [ ] State a classical corollary under a clearly named strong PRF assumption. Do
+  not present the PRF assumption as a proved fact.
+
+**Formalization hazards.** There are several inequivalent “natural proof”
+definitions in the literature. The strength of the PRF assumption must match the
+constructivity and usefulness parameters exactly. A truth-table algorithm running
+in `poly(2^n)` is exponential in `n` but is still the standard constructive scale.
+Uniform algorithms, nonuniform circuits, oracle access, and sampling access should
+not be silently interchanged.
+
+**Small entry tasks.**
+
+- [S] Define truth tables and prove there are `2^(2^n)` Boolean functions on `n`
+  bits.
+- [S] Define property density as an exact rational and prove complement/union
+  identities.
+- [M] Define usefulness against `SIZE(s)` at one length.
+- [M] Prove the abstract range-vs-uniform-distribution distinguisher lemma with no
+  circuit assumptions.
+- [L] Define a nonuniform PRF security game compatible with the existing
+  negligible-function API.
+
+### L4. Further circuit lower bounds and structural complexity
+
+**Goal.** Extend the current Shannon, gate-elimination, Schnorr, and Valiant results
+toward the major unconditional circuit lower-bound toolkit.
+
+**Prerequisites.** M1 family classes, N2 counting, and track-specific combinatorics.
+
+**Candidate milestones, roughly increasing in difficulty.**
+
+- [ ] Formula-size measures and balancing; prove a Spira-style balancing theorem.
+- [ ] Decision trees, restrictions, and switching operations with semantic
+  preservation.
+- [ ] Håstad-style switching lemma and parity not in nonuniform `AC^0`.
+- [ ] Monotone circuits and an accessible monotone lower bound before attempting
+  clique.
+- [ ] Threshold circuits and majority gates, initially for upper-bound
+  constructions.
+- [ ] Karchmer--Wigderson communication relations and formula-depth equivalence.
+- [ ] Pseudorandom restrictions/generators only after the probabilistic and
+  cryptographic infrastructure is mature.
+
+**Formalization hazards.** Switching lemmas are probability-heavy and indexing
+conventions vary. Asymptotic class separations require converting finite lower
+bounds into statements about families. Monotone lower bounds do not transfer to
+general circuits. Valiant's depth-reduction lemma is not by itself a general
+circuit lower bound.
+
+**Small entry tasks.**
+
+- [S] Define restriction composition and prove evaluation commutes with applying a
+  restriction.
+- [S] Define formula size/leaves separately from DAG circuit size.
+- [M] Prove decision-tree evaluation and depth lemmas.
+- [M] Formalize random restrictions as a finite sample space.
+
+### L5. Counting, polynomial hierarchy, and proof complexity
+
+**Goal.** Add the structural classes and complete problems that connect circuits,
+randomness, interaction, and lower bounds.
+
+**Prerequisites.** M1 circuits, M4 alternation/QBF, N3 reductions, and N2 counting.
+
+**Staged directions.**
+
+- [ ] Define the polynomial hierarchy both by alternating quantifiers and oracle
+  levels, then prove equivalence at fixed levels.
+- [ ] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
+  counts.
+- [ ] Prove elementary closure properties and relate PP to GapP sign.
+- [ ] Formalize `PH subset P^#P`/Toda-style results only after polynomial
+  interpolation and modular counting are available.
+- [ ] Define propositional proof systems, proof length, and Cook--Reckhow
+  polynomial verification.
+- [ ] Connect resolution proofs to CNF and establish basic width/size facts before
+  attempting lower bounds.
+
+**Formalization hazards.** Counting paths depends on a clock and on a canonical
+number of nondeterministic choices; early halting must be padded consistently.
+Oracle characterizations of PH depend on the exact query model. Proof-complexity
+lower bounds need a clean distinction between semantic unsatisfiability and the
+syntactic derivation system.
+
+**Small entry tasks.**
+
+- [S] Define a clocked accepting-path count and prove invariance after halted-path
+  padding.
+- [M] Define `#P` functions using the existing NTM path semantics.
+- [M] Define quantified Boolean formulas with a bounded alternation counter.
+- [M] Define resolution clauses and verify soundness of one resolution step.
+
+## Cross-cutting project ideas
+
+These projects can proceed alongside the dependency-ordered tracks when they reuse
+stable interfaces rather than introduce competing ones.
+
+- **Concrete algorithms and languages:** regular languages, graph reachability,
+  arithmetic languages, and bounded automata simulations provide excellent tests
+  for class definitions and machine combinators.
+- **Constructibility library:** close standard facts for polynomial, exponential,
+  logarithmic, and composed time/space bounds.
+- **Machine-model robustness:** multi-track tapes, RAM-like models, Boolean
+  programs, and register machines should be related by explicit simulations rather
+  than added as disconnected class definitions.
+- **Communication complexity:** deterministic and randomized protocols, rectangle
+  bounds, and discrepancy would support Karchmer--Wigderson and circuit lower
+  bounds.
+- **Cryptographic foundations:** ensembles, indistinguishability, one-way
+  functions, hard-core predicates, PRGs, and PRFs can build on `Negligible` and the
+  finite probability toolkit.
+- **PCP and hardness of approximation:** this is a very long-term direction. Begin
+  with constraint systems, gap-preserving reductions, and verifier randomness/query
+  accounting; do not start from the PCP theorem statement.
+- **Parameterized and fine-grained complexity:** reductions with explicit
+  parameter maps and exact running times fit the library well once encoding costs
+  are standardized.
+
+## How to choose a contribution
+
+1. Pick the earliest track containing the concept you need.
+2. Check whether its prerequisites already have stable public definitions.
+3. Prefer one unchecked “small entry task” or one milestone sub-lemma.
+4. Write the intended public theorem statement before building proof internals.
+5. Record the concrete resource bound, representation convention, and malformed
+   input behavior in the module documentation.
+6. Add the module to the appropriate import surface only when its API is ready.
+7. Run `lake build --wfail` and the standalone single-tape validation target;
+   require no errors or warnings.
+
+For large theorem projects, a good first pull request contains definitions,
+executable examples, and structural lemmas only. A second establishes the finite or
+fixed-parameter theorem. The final pull request should lift that result to the
+asymptotic complexity-class statement. This sequencing keeps ambitious work
+reviewable and makes partial progress useful to the rest of the library.

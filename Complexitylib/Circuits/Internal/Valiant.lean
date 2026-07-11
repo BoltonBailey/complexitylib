@@ -12,9 +12,9 @@ import Mathlib.Tactic.Ring
 /-! # Internal helpers for Valiant's Depth Reduction Lemma
 
 Proof machinery supporting `Valiant.depth_reduction`. The public
-statement and high-level wrapper live in `Circ.Valiant`; the basic
+statement and high-level wrapper live in `Complexitylib.Circuits.Valiant`; the basic
 digraph definitions used below — `IsDirectedPath`, `IsSimplePath`,
-`depth`, `edgeFinset`, `deleteEdges` — live in `Circ.Digraph.Defs`.
+`depth`, `edgeFinset`, `deleteEdges` — live in `Complexitylib.Circuits.Digraph.Defs`.
 This file defines the canonical labeling and collects the canonical
 labeling argument, the edge partition by first-differing bit, the
 averaging step, and the relabeling-after-removal bound.

@@ -15,7 +15,7 @@ This internal module contains the proof infrastructure for CNF/DNF:
   terms. Key lemmas include `term_mentions_all`, `full_term_unique`, and
   `card_true_of_flip_sensitive`.
 
-The public interface re-exports the main theorems from `Circ.NF`.
+The public interface re-exports the main theorems from `Complexitylib.Circuits.NF`.
 -/
 
 /-! ## Helper lemmas for toCircuit correctness -/

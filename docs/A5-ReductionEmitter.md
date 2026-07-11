@@ -1,5 +1,11 @@
 # A5 — Cook–Levin Reduction Emitter Design Doc
 
+> **Completed — historical design document.** The emitter, its polynomial
+> running-time proof, `reductionFn_mem_FP`, and the final Cook–Levin theorem
+> are now proved under `Complexitylib/SAT/CookLevin/`, with final assembly in
+> `Assembly.lean`. The status and “last `sorry`” target below are preserved as
+> planning history, not as a description of the current library.
+
 **Status:** design + foundation phase.
 **Branch:** `feat/np-completeness`
 **Target:** the library's last `sorry`:

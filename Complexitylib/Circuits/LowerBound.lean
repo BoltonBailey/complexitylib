@@ -11,7 +11,7 @@ input cannot influence the circuit's output. By contrapositive, every
 essential variable must be "covered" by at least one gate. Since each gate
 reads at most `k` inputs, the circuit needs at least `⌈n'/k⌉` gates.
 
-## Definitions (from `Circ.EssentialInput`)
+## Definitions (from `Complexitylib.Circuits.EssentialInput`)
 
 * `IsEssentialInput f i` — function `f` depends on input variable `i`
   (flipping bit `i` can change some output)

@@ -31,7 +31,8 @@ infrastructure used by the polynomial-time verifier.
   `L_SAT_iff_witness` / `R_SAT_polyBalanced`.
 - `Verifier` — executable decoding and checking for `pair(z, α)`.
 - `VerifierTM` — deterministic TM components for the machine-level verifier.
-- `GuessVerify` — the SAT-specialized composed NTM skeleton for
-  counter setup, bounded guessing, pair construction, and verifier
-  simulation.
+- `GuessVerify` — the proved SAT-specialized NTM composition for counter
+  setup, bounded guessing, pair construction, and verifier simulation.
+- `Headline` / `CookLevin.Assembly` — `SAT ∈ NP` and the final
+  NP-completeness theorem.
 -/

@@ -1,5 +1,13 @@
 # A3 — Guess-and-Verify NTM Design Doc
 
+> **Partially completed — historical design document.** The SAT-specialized
+> deterministic verifier, composed guess-and-verify machine, polynomial-time
+> analysis, and headline theorem `SAT.L_SAT_mem_NP` are now proved in
+> `Complexitylib/SAT/VerifierTM.lean`, `Complexitylib/SAT/GuessVerify.lean`, and
+> `Complexitylib/SAT/Headline.lean`. The generic
+> `NP.WitnessNTMConstruction` stated below remains open. Other status and
+> remaining-work notes describe the project when this design was written.
+
 **Status:** SAT-specialized composed machine, full setup/pair/verify
 correctness spine, uniform `DecidesInTime` theorem for `L_SAT`,
 polynomial runtime wrapper, direct conditional theorem

@@ -24,26 +24,28 @@ Each commit message should follow this structure:
 
 The scope should identify the area of the library affected, typically a module path:
 
-- `Possible` — the `Possible` typeclass and instances
 - `TuringMachine` — multi-tape Turing machine definitions
+- `SAT` — verifier, tableau, and reduction developments
+- `Circuits` — Boolean circuit definitions and lower bounds
+- `Classes` — complexity classes and containments
 - `Models` — the models aggregation layer
 - `project` — project-level configuration
 
 ### Examples
 
 ```
-feat(TuringMachine): add multi-tape monadic Turing machine
+feat(TuringMachine): add timed reachability endpoint lemma
 
-Define MultiTapeTM parameterized over a monad M with Possible typeclass,
-along with step relation, reachability, and output predicates.
-```
-
-```
-refactor(Possible): add universe polymorphism to Possible class
+Expose a reusable endpoint-uniqueness theorem for deterministic bounded runs
+and replace private copies in the universal-machine proofs.
 ```
 
 ```
-build(project): bump Mathlib to v4.28.0
+refactor(SAT): centralize initialized-tape helpers
+```
+
+```
+build(project): bump Mathlib to v4.30.0
 ```
 
 ### Guidelines
@@ -65,7 +67,26 @@ build(project): bump Mathlib to v4.28.0
 ## Building
 
 ```bash
-lake build
+lake build --wfail
+lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
+lake build --wfail Complexitylib.Circuits.Encoding.Validation
 ```
 
-Ensure the project builds cleanly with no warnings before submitting changes.
+Ensure all three commands build cleanly before submitting changes. The first
+checks the complete library and treats warnings (including proof placeholders)
+as failures. The latter two run executable `#guard` regression suites for the
+single-tape simulator and encoded-circuit evaluator; both are intentionally
+outside the public import graph.
+
+## Choosing a Contribution
+
+See [ROADMAP.md](ROADMAP.md) for dependency-ordered research programs and
+smaller entry tasks. A contribution does not need to prove a headline theorem:
+well-placed definitions, reusable finite-combinatorics lemmas, API cleanup,
+executable examples, and documented intermediate results are all valuable when
+they make a later milestone easier to state and prove.
+
+Before starting a larger track, identify the public theorem statement, the
+minimal prerequisite API, and a sequence of independently buildable,
+`sorry`-free steps. Keep definitions and public statements auditable; isolate
+long implementation proofs in `Internal` modules where appropriate.

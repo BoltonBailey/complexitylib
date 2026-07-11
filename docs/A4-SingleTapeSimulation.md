@@ -1,5 +1,13 @@
 # A4 — Multi-Tape → Single-Tape Simulation Design Doc
 
+> **Completed — historical design document.** The construction and both
+> behavioral theorems described here are now proved in
+> `Complexitylib/Models/TuringMachine/SingleTape/Delta.lean` and
+> `Complexitylib/Models/TuringMachine/SingleTape.lean`, with proof machinery
+> under `SingleTape/`. The status, target, and `sorry` snippets below record
+> the state of the project when this design was written; they are not current
+> proof holes.
+
 **Status:** design phase. Scaffold in `Models/TuringMachine/SingleTape.lean`
 composes (surface theorems real; 3 construction leaves `sorry`). This doc
 pins down the construction so the ~1000-line implementation is not wasted.
