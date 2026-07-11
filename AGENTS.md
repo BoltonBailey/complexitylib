@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Lean 4 library formalizing computational complexity theory, built on Mathlib. The definitions follow Arora and Barak's *Computational Complexity: A Modern Approach*, using a concrete 4-symbol alphabet and separate deterministic/nondeterministic machine types. NTMs and PTMs share the same structure (two transition functions); they differ only in acceptance semantics (existential vs counting).
+A Lean 4 library formalizing computational complexity theory, built on Mathlib. The machine model is shaped by Arora and Barak's *Computational Complexity: A Modern Approach* — a concrete 4-symbol alphabet and separate deterministic/nondeterministic machine types — but the library sets its own conventions and diverges from any one text where a cleaner formalization exists. NTMs and PTMs share the same structure (two transition functions); they differ only in acceptance semantics (existential vs counting).
 
 For project direction and dependency-ordered contribution tracks, read
 `ROADMAP.md` before beginning a large feature. Prefer landing one reusable
@@ -51,14 +51,14 @@ The codebase uses three layers to separate concerns:
 1. **Definitions layer** (`Foo/Defs.lean`) — Core types, structures, and
    definitions. Imported by both Internal and surface layers. Minimal
    imports. Human-auditable: a reader should be able to verify that these
-   definitions faithfully capture the textbook concepts.
+   definitions faithfully capture the intended concepts.
 2. **Internal layer** (`Foo/Internal.lean` or `Foo/Internal/`) — Proof
    internals, helper lemmas, and auxiliary constructions. Imports `Foo/Defs`
    (not `Foo.lean`). Not meant for human review — correctness is
    established by the type checker.
 3. **Surface layer** (`Foo.lean`) — Public theorem statements with proofs
    supplied by importing from Internal. Also human-auditable: a reader
-   should be able to verify that the theorem types match the textbook
+   should be able to verify that the theorem types mean what they claim
    without understanding proof internals.
 
 Import graph (no cycles):

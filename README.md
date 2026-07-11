@@ -1,13 +1,17 @@
 # Complexitylib
 
 A Lean 4 formalization of computational complexity theory, built on
-[Mathlib](https://github.com/leanprover-community/mathlib4) and following
-Arora and Barak's *Computational Complexity: A Modern Approach*.
+[Mathlib](https://github.com/leanprover-community/mathlib4). The machine
+model takes its shape from Arora and Barak's *Computational Complexity: A
+Modern Approach*, but the library sets its own conventions — stated
+precisely where they're used, with literature references where they help,
+and unafraid to diverge from any one text when a cleaner formalization
+exists.
 
 ## Ethos
 
 **Statements you can audit, proofs you don't have to.** Every public theorem
-is stated so a reader can check it against the textbook — concrete machine
+is stated so a reader can check it means what it claims — concrete machine
 model, explicit resource bounds, honest encodings — while the proof machinery
 lives out of sight in `Internal` modules whose correctness is the type
 checker's job, not yours.

@@ -78,9 +78,11 @@ import Complexitylib.Models.TuringMachine
 /-!
 # One-line title of the module
 
-What the module provides, the textbook reference it follows (e.g. Arora–Barak
-§1.2), and any representation conventions a reader must know: resource
-accounting, encoding choices, malformed-input behavior.
+What the module provides and any conventions a reader must know: resource
+accounting, encoding choices, malformed-input behavior. State conventions on
+the library's own terms; add a literature reference (Arora–Barak or
+otherwise) where it genuinely helps, and note deliberate divergences from
+the cited text.
 -/
 ```
 
@@ -126,8 +128,8 @@ Modules separate auditable statements from proof machinery:
   for human review; correctness is the type checker's job. Anything
   single-purpose (machine plumbing, emitters, simulation invariants) belongs
   here, filed under the theorem it serves.
-- **`Foo.lean`** — the public surface: theorem statements a reader can check
-  against the textbook, with proofs imported from Internal.
+- **`Foo.lean`** — the public surface: theorem statements a reader can audit
+  on their own terms, with proofs imported from Internal.
 
 Aggregation files (`Complexitylib.lean`, `Models.lean`, …) contain only
 `import` statements, and only surface modules may appear in them.
