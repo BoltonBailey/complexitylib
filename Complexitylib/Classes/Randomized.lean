@@ -80,12 +80,12 @@ def RP : Set Language :=
 /-- **coRP** is the class of languages whose complements are in RP.
     Equivalently: yes-instances always accepted (probability 1), no-instances
     accepted with probability ≤ 1/2. -/
-def CoRP : Set Language := complClass RP
+def coRP : Set Language := complClass RP
 
 /-- **ZPP** (zero-error probabilistic polynomial time) is RP ∩ coRP. A language
     is in ZPP iff it has a PTM with zero-error expected polynomial running
     time. -/
-def ZPP : Set Language := RP ∩ CoRP
+def ZPP : Set Language := RP ∩ coRP
 
 /-- `PPTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`
     with unbounded error: `x ∈ L` iff the PTM accepts with probability

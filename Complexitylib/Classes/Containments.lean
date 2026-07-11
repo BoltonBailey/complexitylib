@@ -228,7 +228,7 @@ theorem L_subset_NL : L ⊆ NL := by
 theorem ZPP_subset_RP : ZPP ⊆ RP := Set.inter_subset_left
 
 /-- **ZPP ⊆ coRP**. -/
-theorem ZPP_subset_coRP : ZPP ⊆ CoRP := Set.inter_subset_right
+theorem ZPP_subset_coRP : ZPP ⊆ coRP := Set.inter_subset_right
 
 /-- **DTIME ⊆ NSPACE** (composition of `DTIME ⊆ DSPACE` and `DSPACE ⊆ NSPACE`). -/
 theorem DTIME_subset_NSPACE (T : ℕ → ℕ) : DTIME T ⊆ NSPACE T :=

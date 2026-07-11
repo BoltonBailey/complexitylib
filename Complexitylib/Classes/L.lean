@@ -40,7 +40,7 @@ def NL : Set Language :=
 
 /-- **coNL** is the class of languages whose complements are in NL.
     By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
-def CoNL : Set Language := complClass NL
+def coNL : Set Language := complClass NL
 
 /-- **FL** is the class of functions computable by a deterministic log-space
     transducer: a DTM with `O(log n)` work tape space whose output tape head
