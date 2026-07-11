@@ -529,6 +529,73 @@ and exhaustive-search upper bounds.
 - [M] Prove that deterministic prover strategies suffice for maximizing acceptance
   in the finite classical model.
 
+### M6. Random access machines and machine-model robustness
+
+**Goal.** Relate the Turing-machine model to a Random Access Machine (RAM) — a
+register machine with indirect addressing — so that the polynomial-time and
+polynomial-space classes are provably model-independent, and so later
+algorithm-design work has an honest cost model closer to real computation.
+
+**Prerequisites.** The core Turing-machine model and its time/space predicates,
+N0 run/time-accounting lemmas, and the multi-tape → single-tape simulation.
+
+**Current progress.** The model is defined in
+`Complexitylib.Models.RandomAccessMachine`: an instruction set with immediate,
+`add`/`sub`/`mul`, indirect `load`/`store`, and jumps; an executable step and
+fuel-bounded run; a **logarithmic-cost** time measure charging each instruction
+the bit-length of the numbers it manipulates; a matching space measure; and the
+classes `RAM.DTIME`, `RAM.DSPACE` over the shared `Language` interface. The
+operational metatheory (run/cost additivity, stationarity after halt, monotonic
+cost, step count `≤` log time, finite register support) is proved. The **cost
+convention is justified by a theorem**, `RAM.logGap_squaring`: the squaring
+program family runs in unit time `k + 1` but logarithmic time at least `2 ^ k`,
+so a unit-cost measure would make the RAM super-polynomially stronger than a
+Turing machine. This settles the model, its resource conventions, and its
+soundness; the simulations below are the remaining work.
+
+**Settled conventions.**
+
+- Register file `ℕ → ℕ`, with input length in `R₀` and bits in `R₁ … Rₙ`, and
+  the decision verdict read back from `R₀`.
+- Time is logarithmic cost, never unit cost; the `+ 1` base cost makes every
+  step cost `≥ 1`. Direct register indices are program constants and not charged;
+  runtime (indirect) addresses are charged their bit-length.
+- Space is the peak, over the run, of the bit-length needed to name and store
+  every nonzero register; finiteness of register support keeps it well defined.
+
+**Staged milestones.**
+
+- [x] Define the instruction set, executable semantics, and logarithmic time
+  and space measures with explicit input/output conventions.
+- [x] Prove the run/cost algebra, halting stationarity, and finite support.
+- [x] Prove the unit-vs-logarithmic gap theorem justifying logarithmic cost.
+- [x] Define `RAM.DTIME`/`RAM.DSPACE` and prove monotonicity in the bound.
+- [ ] Simulate a `T(n)`-time multi-tape Turing machine by a RAM in logarithmic
+  time `O(T(n) · log T(n))`, giving `DTIME(T) ⊆ RAM.DTIME(T · log T)` and
+  `P ⊆ RAM-P`.
+- [ ] Simulate a `T(n)`-time logarithmic-cost RAM by a multi-tape Turing machine
+  in time `O(T(n)²)`, giving `RAM.DTIME(T) ⊆ DTIME(T²)` and `RAM-P ⊆ P`.
+- [ ] Conclude `RAM-P = P` and, with the space simulations, `RAM-PSPACE = PSPACE`.
+- [ ] Add register-machine and Boolean-program variants and relate them by
+  explicit simulations rather than as disconnected class definitions.
+
+**Formalization hazards.** Textbook RAM simulations quietly assume unit cost;
+the logarithmic cost of every register access must be charged and bounded before
+a polynomial-time claim. The RAM → TM direction must store the register file on a
+tape as address/value pairs and pay for search; the number of registers touched
+and their bit-lengths are bounded by the log-time budget, and this bound must be
+proved, not assumed. Output-length and address-length accounting must be explicit
+so that the simulation's own workspace is charged.
+
+**Small entry tasks.**
+
+- [S] Add a `sub`/`mul` smart-constructor library and basic register-transfer
+  Hoare lemmas for common gadgets (copy, conditional set, counter).
+- [M] Encode a Turing-machine configuration in RAM registers with a decode
+  function and prove one TM step is simulated by a fixed RAM program block.
+- [M] Encode a RAM configuration on a Turing tape with size accounting and prove
+  one RAM step is simulated within a polynomial number of TM steps.
+
 ## Long-term tracks
 
 ### L1. Sum-check and `IP = PSPACE`

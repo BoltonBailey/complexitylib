@@ -18,15 +18,17 @@ import Complexitylib.Models.TuringMachine.UTM.ClockConstructible
 import Complexitylib.Models.TuringMachine.UTM.ClockedUtm
 import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 import Complexitylib.Models.TuringMachine.UTM.Diagonal
+import Complexitylib.Models.RandomAccessMachine
 
 /-!
 # Computation models
 
 Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, Hoare-style
-specifications, reusable subroutines, determinism results, and the
-universal machine. Proof-internal modules (`…/Internal/…`, register
-machinery, emitter plumbing) are deliberately not imported here — they
-stay in the build through the surface modules and theorem files that
-need them.
+specifications, reusable subroutines, determinism results, the
+universal machine, and the logarithmic-cost random access machine
+(`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
+(`…/Internal/…`, register machinery, emitter plumbing) are deliberately
+not imported here — they stay in the build through the surface modules and
+theorem files that need them.
 -/
