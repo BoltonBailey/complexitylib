@@ -14,3 +14,4 @@ import Complexitylib.Classes.L
 import Complexitylib.Classes.Exponential
 import Complexitylib.Classes.DTISP
 import Complexitylib.Classes.Containments
+import Complexitylib.Classes.Hierarchy
