@@ -2223,7 +2223,7 @@ theorem pairBuildTM_trace_preserves_other_work
           (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
 
 /-- A compact corollary of `pairBuildTM_hoareTime`: the pair tape satisfies
-    the standard `Tape.hasOutput` predicate for `pair x y`. -/
+    the standard `Tape.HasOutput` predicate for `pair x y`. -/
 theorem pairBuildTM_hoareTime_hasOutput
     {k : ℕ} (yIdx pIdx : Fin k) (hne : yIdx ≠ pIdx)
     (x y : List Bool) :
@@ -2233,7 +2233,7 @@ theorem pairBuildTM_hoareTime_hasOutput
         work yIdx = _root_.Complexity.Tape.init (y.map Γ.ofBool) ∧
         work pIdx = _root_.Complexity.Tape.init [])
       (fun _ work _ =>
-        (work pIdx).head = 1 ∧ (work pIdx).hasOutput (pair x y))
+        (work pIdx).head = 1 ∧ (work pIdx).HasOutput (pair x y))
       (pairBuildTime x.length y.length) := by
   exact (pairBuildTM_hoareTime yIdx pIdx hne x y).strengthen_post
     (fun _ work _ hpost => by

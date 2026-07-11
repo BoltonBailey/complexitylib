@@ -526,7 +526,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
           = Function.update work q (regTape (0 - 1)) i
         rw [Function.update_of_ne hir, Function.update_of_ne hir]
         exact hc₂work i hir
-    · show outAcc ys c₂.output
+    · show OutAcc ys c₂.output
       rw [show c₂.output = out from hout₁]
       exact hout
   · -- Positive register: erase the last mark, rewind.
@@ -595,7 +595,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
         rw [Function.update_of_ne hir]
         exact hc₂work i hir
     · rw [hout₄]
-      show outAcc ys c₂.output
+      show OutAcc ys c₂.output
       rw [show c₂.output = out from hout₁]
       exact hout
 

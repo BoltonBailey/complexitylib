@@ -14,19 +14,19 @@ arithmetic in the Cook–Levin reduction emitter (`docs/A5-ReductionEmitter.md`)
 is over registers — the CNF encoding is unary, so no binary arithmetic is
 ever needed.
 
-`reg` strengthens `Tape.hasUnaryCounter` with the cell-0 sentinel and
+`IsReg` strengthens `Tape.HasUnaryCounter` with the cell-0 sentinel and
 all-blanks-beyond, making registers literally preserved by parked no-op
 actions and stable under the combinator phase transitions.
 
 ## Main definitions
 
 - `TM.Parked` — a tape whose head is off `▷` and which has no spurious `▷`s
-- `TM.reg` — the register predicate
+- `TM.IsReg` — the register predicate
 
 ## Main results
 
-- `TM.reg.parked`, `TM.reg.hasUnaryCounter` — bridges
-- `TM.reg_zero_init_bumped` — a freshly bumped blank tape is `reg 0`
+- `TM.IsReg.parked`, `TM.IsReg.hasUnaryCounter` — bridges
+- `TM.reg_zero_init_bumped` — a freshly bumped blank tape is `IsReg 0`
 -/
 
 namespace Complexity
@@ -91,30 +91,30 @@ theorem Parked.transitionInput_eq_self {t : Tape} (h : Parked t) : transitionInp
 
 /-- **Register.** The tape holds `v` in unary: `▷` at cell 0, `1` at cells
     `1..v`, blank everywhere beyond, head parked at cell 1. -/
-def reg (v : ℕ) (t : Tape) : Prop :=
+def IsReg (v : ℕ) (t : Tape) : Prop :=
   t.head = 1 ∧
   t.cells 0 = Γ.start ∧
   (∀ i, i < v → t.cells (i + 1) = Γ.one) ∧
   (∀ j, v + 1 ≤ j → t.cells j = Γ.blank)
 
-namespace reg
+namespace IsReg
 
 /-- A register tape's head is parked at cell 1. -/
-theorem head_eq {v : ℕ} {t : Tape} (h : reg v t) : t.head = 1 := h.1
+theorem head_eq {v : ℕ} {t : Tape} (h : IsReg v t) : t.head = 1 := h.1
 
 /-- A register tape's cell 0 holds the sentinel `▷`. -/
-theorem cell0 {v : ℕ} {t : Tape} (h : reg v t) : t.cells 0 = Γ.start := h.2.1
+theorem cell0 {v : ℕ} {t : Tape} (h : IsReg v t) : t.cells 0 = Γ.start := h.2.1
 
 /-- Cells `1..v` of a register holding `v` contain `1`. -/
-theorem cells_one {v : ℕ} {t : Tape} (h : reg v t) {i : ℕ} (hi : i < v) :
+theorem cells_one {v : ℕ} {t : Tape} (h : IsReg v t) {i : ℕ} (hi : i < v) :
     t.cells (i + 1) = Γ.one := h.2.2.1 i hi
 
 /-- Cells beyond position `v` of a register holding `v` are blank. -/
-theorem cells_blank {v : ℕ} {t : Tape} (h : reg v t) {j : ℕ} (hj : v + 1 ≤ j) :
+theorem cells_blank {v : ℕ} {t : Tape} (h : IsReg v t) {j : ℕ} (hj : v + 1 ≤ j) :
     t.cells j = Γ.blank := h.2.2.2 j hj
 
 /-- Register cells off the sentinel are `1` or blank — never `▷`. -/
-theorem cells_ne_start {v : ℕ} {t : Tape} (h : reg v t) {j : ℕ} (hj : 1 ≤ j) :
+theorem cells_ne_start {v : ℕ} {t : Tape} (h : IsReg v t) {j : ℕ} (hj : 1 ≤ j) :
     t.cells j ≠ Γ.start := by
   rcases Nat.lt_or_ge j (v + 1) with hlt | hge
   · obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
@@ -122,27 +122,27 @@ theorem cells_ne_start {v : ℕ} {t : Tape} (h : reg v t) {j : ℕ} (hj : 1 ≤ 
   · rw [h.cells_blank hge]; decide
 
 /-- A register tape is parked. -/
-theorem parked {v : ℕ} {t : Tape} (h : reg v t) : Parked t :=
+theorem parked {v : ℕ} {t : Tape} (h : IsReg v t) : Parked t :=
   ⟨by rw [h.head_eq], fun _ hj => h.cells_ne_start hj⟩
 
 /-- A register is a unary counter (the weaker shape used by the counter
     subroutines). -/
-theorem hasUnaryCounter {v : ℕ} {t : Tape} (h : reg v t) :
-    t.hasUnaryCounter v :=
+theorem hasUnaryCounter {v : ℕ} {t : Tape} (h : IsReg v t) :
+    t.HasUnaryCounter v :=
   ⟨h.head_eq, fun _ hi => h.cells_one hi, h.cells_blank (le_refl _)⟩
 
 /-- The register's read: `1` when nonempty, blank when zero. -/
-theorem read_eq {v : ℕ} {t : Tape} (h : reg v t) :
+theorem read_eq {v : ℕ} {t : Tape} (h : IsReg v t) :
     t.read = if v = 0 then Γ.blank else Γ.one := by
   rw [Tape.read, h.head_eq]
   rcases Nat.eq_zero_or_pos v with rfl | hv
   · rw [if_pos rfl]; exact h.cells_blank (le_refl _)
   · rw [if_neg (by omega)]; exact h.cells_one hv
 
-end reg
+end IsReg
 
 /-- A blank tape with the head bumped to cell 1 is the zero register. -/
-theorem reg_zero_init_bumped : reg 0 { head := 1, cells := (Tape.init []).cells } := by
+theorem reg_zero_init_bumped : IsReg 0 { head := 1, cells := (Tape.init []).cells } := by
   refine ⟨rfl, by simp [Tape.init], fun _ hi => by omega, fun j hj => ?_⟩
   show (Tape.init []).cells j = Γ.blank
   simp only [Tape.init]
@@ -183,14 +183,14 @@ theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
   rw [regCells, if_neg (by omega)]
   split <;> decide
 
-/-- The canonical register tape `regTape v` satisfies `reg v`. -/
-theorem reg_regT (v : ℕ) : reg v (regTape v) :=
+/-- The canonical register tape `regTape v` satisfies `IsReg v`. -/
+theorem reg_regT (v : ℕ) : IsReg v (regTape v) :=
   ⟨rfl, rfl, fun _ hi => by rw [regT_cells]; exact regCells_one (by omega) (by omega),
    fun _ hj => by rw [regT_cells]; exact regCells_blank hj⟩
 
-/-- **A register's tape is canonical**: the `reg` predicate pins every cell and
+/-- **A register's tape is canonical**: the `IsReg` predicate pins every cell and
     the head, so it is an equation. -/
-theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regTape v := by
+theorem IsReg.eq_regT {v : ℕ} {t : Tape} (h : IsReg v t) : t = regTape v := by
   refine Tape.ext h.head_eq ?_
   funext j
   rcases Nat.eq_zero_or_pos j with rfl | hj

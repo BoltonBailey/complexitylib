@@ -49,7 +49,7 @@ The union machine has three phases:
 
 ### State space
 
-`Q₁ ⊕ Mid ⊕ Q₂` where `Mid` encodes the four transition states
+`Q₁ ⊕ UnionPhase ⊕ Q₂` where `UnionPhase` encodes the four transition states
 between Phase 1 and Phase 2.
 -/
 
@@ -116,19 +116,19 @@ def rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Intermediate states between Phase 1 and Phase 2 of the union machine. -/
-inductive Mid where
+inductive UnionPhase where
   | rewindOut    -- rewind fake output (work tape n₁) to cell 0
   | checkResult  -- at fake output cell 1: read and decide accept/continue
   | rewindIn     -- rewind input tape to cell 0
   | setup2       -- move Phase-2 tapes from cell 1 to cell 0
   deriving DecidableEq
 
-instance : Fintype Mid where
+instance : Fintype UnionPhase where
   elems := {.rewindOut, .checkResult, .rewindIn, .setup2}
   complete := fun x => by cases x <;> simp
 
 /-- The state type for the union TM. -/
-abbrev UnionQ (Q₁ Q₂ : Type) := Q₁ ⊕ Mid ⊕ Q₂
+abbrev UnionQ (Q₁ Q₂ : Type) := Q₁ ⊕ UnionPhase ⊕ Q₂
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Index helpers for the n₁ + 1 + n₂ work tapes

@@ -24,30 +24,30 @@ namespace Tape
 /-- A witness tape while it is being guessed: cells `1..|bits|` contain the
     guessed bits, the head is at the next cell, and the remaining tail is
     blank. -/
-def hasBinaryPrefix (t : Tape) (bits : List Bool) : Prop :=
+def HasBinaryPrefix (t : Tape) (bits : List Bool) : Prop :=
   t.head = bits.length + 1 ∧
   (∀ i, (h : i < bits.length) → t.cells (i + 1) = Γ.ofBool (bits[i]'h)) ∧
   (∀ i, bits.length ≤ i → t.cells (i + 1) = Γ.blank)
 
 /-- A completed witness tape: the guessed bits are present and the head has
     been rewound to cell 1. -/
-def hasBinaryString (t : Tape) (bits : List Bool) : Prop :=
+def HasBinaryString (t : Tape) (bits : List Bool) : Prop :=
   t.head = 1 ∧
   (∀ i, (h : i < bits.length) → t.cells (i + 1) = Γ.ofBool (bits[i]'h)) ∧
   (∀ i, bits.length ≤ i → t.cells (i + 1) = Γ.blank)
 
 /-- A completed witness tape whose encoded string has length at most `B`. -/
-def hasBoundedBinaryString (t : Tape) (B : ℕ) : Prop :=
-  ∃ bits : List Bool, bits.length ≤ B ∧ t.hasBinaryString bits
+def HasBoundedBinaryString (t : Tape) (B : ℕ) : Prop :=
+  ∃ bits : List Bool, bits.length ≤ B ∧ t.HasBinaryString bits
 
 /-- A completed witness tape encodes exactly `bits` as its output string. -/
 theorem hasOutput_of_hasBinaryString {t : Tape} {bits : List Bool}
-    (h : t.hasBinaryString bits) : t.hasOutput bits :=
+    (h : t.HasBinaryString bits) : t.HasOutput bits :=
   ⟨h.2.1, h.2.2 bits.length le_rfl⟩
 
 /-- A completed witness tape never contains `▷` after the left-end marker. -/
 theorem cells_ne_start_of_hasBinaryString {t : Tape} {bits : List Bool}
-    (h : t.hasBinaryString bits) :
+    (h : t.HasBinaryString bits) :
     ∀ j, j ≥ 1 → t.cells j ≠ Γ.start := by
   intro j hj
   let i := j - 1
@@ -62,11 +62,11 @@ theorem cells_ne_start_of_hasBinaryString {t : Tape} {bits : List Bool}
 /-- A completed binary witness tape with the left marker at cell `0` is
     exactly the standard initialized tape for those bits, moved to cell `1`. -/
 theorem eq_init_move_right_of_hasBinaryString {t : Tape} {bits : List Bool}
-    (h : t.hasBinaryString bits) (h0 : t.cells 0 = Γ.start) :
+    (h : t.HasBinaryString bits) (h0 : t.cells 0 = Γ.start) :
     t = (Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
   cases t with
   | mk head cells =>
-    simp only [hasBinaryString] at h
+    simp only [HasBinaryString] at h
     rcases h with ⟨hhead, hbits, htail⟩
     simp only at h0 hbits htail
     subst head
@@ -87,7 +87,7 @@ theorem eq_init_move_right_of_hasBinaryString {t : Tape} {bits : List Bool}
 /-- Bounded completed witness tapes expose exact initialized tape shape for
     some string whose length satisfies the same bound. -/
 theorem exists_eq_init_move_right_of_hasBoundedBinaryString {t : Tape} {B : ℕ}
-    (h : t.hasBoundedBinaryString B) (h0 : t.cells 0 = Γ.start) :
+    (h : t.HasBoundedBinaryString B) (h0 : t.cells 0 = Γ.start) :
     ∃ bits : List Bool, bits.length ≤ B ∧
       t = (Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
   obtain ⟨bits, hlen, hbits⟩ := h
@@ -96,13 +96,13 @@ theorem exists_eq_init_move_right_of_hasBoundedBinaryString {t : Tape} {B : ℕ}
 /-- A freshly initialized empty tape, moved right past `▷`, is an empty
     binary prefix. -/
 theorem init_nil_move_right_hasBinaryPrefix_nil :
-    ((Tape.init []).move Dir3.right).hasBinaryPrefix [] := by
-  simp [hasBinaryPrefix, Tape.init, Tape.move]
+    ((Tape.init []).move Dir3.right).HasBinaryPrefix [] := by
+  simp [HasBinaryPrefix, Tape.init, Tape.move]
 
 /-- Writing the next guessed bit extends a binary prefix by one cell. -/
 theorem hasBinaryPrefix_write_bit {t : Tape} {bits : List Bool} (bit : Bool)
-    (h : t.hasBinaryPrefix bits) :
-    (t.writeAndMove (Γ.ofBool bit) Dir3.right).hasBinaryPrefix (bits ++ [bit]) := by
+    (h : t.HasBinaryPrefix bits) :
+    (t.writeAndMove (Γ.ofBool bit) Dir3.right).HasBinaryPrefix (bits ++ [bit]) := by
   refine ⟨?_, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.write, Tape.move, h.1]
   · intro i hi
@@ -142,7 +142,7 @@ theorem hasBinaryPrefix_write_bit {t : Tape} {bits : List Bool} (bit : Bool)
 
 /-- Writing the next guessed bit preserves the left-end marker cell. -/
 theorem hasBinaryPrefix_write_bit_cell0 {t : Tape} {bits : List Bool} (bit : Bool)
-    (h : t.hasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
+    (h : t.HasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
     (t.writeAndMove (Γ.ofBool bit) Dir3.right).cells 0 = Γ.start := by
   unfold Tape.writeAndMove
   rw [Tape.move_cells]
@@ -155,7 +155,7 @@ theorem hasBinaryPrefix_write_bit_cell0 {t : Tape} {bits : List Bool} (bit : Boo
 
 /-- A binary prefix never contains `▷` after the left-end marker. -/
 theorem cells_ne_start_of_hasBinaryPrefix {t : Tape} {bits : List Bool}
-    (h : t.hasBinaryPrefix bits) :
+    (h : t.HasBinaryPrefix bits) :
     ∀ j, j ≥ 1 → t.cells j ≠ Γ.start := by
   intro j hj
   let i := j - 1
@@ -169,10 +169,10 @@ theorem cells_ne_start_of_hasBinaryPrefix {t : Tape} {bits : List Bool}
 
 /-- Rewinding a binary prefix to cell 1 yields a completed witness string. -/
 theorem hasBinaryString_of_hasBinaryPrefix {t t' : Tape} {bits : List Bool}
-    (hprefix : t.hasBinaryPrefix bits)
+    (hprefix : t.HasBinaryPrefix bits)
     (hhead : t'.head = 1)
     (hcells : t'.cells = t.cells) :
-    t'.hasBinaryString bits := by
+    t'.HasBinaryString bits := by
   refine ⟨hhead, ?_, ?_⟩
   · intro i hi
     rw [hcells]
@@ -552,11 +552,11 @@ theorem guessBoundedNTM_choose_continue_preserves_counter
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used total : ℕ}
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => true)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      counterIdx).hasCounterRemainder used total := by
+      counterIdx).HasCounterRemainder used total := by
   have hread_one := Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt
   have hread : (work counterIdx).read ≠ Γ.blank := by
     rw [hread_one]
@@ -570,7 +570,7 @@ theorem guessBoundedNTM_choose_continue_preserves_counter
   simp [NTM.trace, guessBoundedNTM, hread, idleWorkDirs, preserveWork]
   change (((work counterIdx).writeAndMove
       (TM.readBackWrite (work counterIdx).read).toΓ
-      (TM.idleDir (work counterIdx).read)).hasCounterRemainder used total)
+      (TM.idleDir (work counterIdx).read)).HasCounterRemainder used total)
   rw [hpreserve]
   exact hcounter
 
@@ -580,12 +580,12 @@ theorem guessBoundedNTM_choose_continue_preserves_witness
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool} {used total : ℕ}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => true)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      witnessIdx).hasBinaryPrefix bits := by
+      witnessIdx).HasBinaryPrefix bits := by
   have hread_one := Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt
   have hread : (work counterIdx).read ≠ Γ.blank := by
     rw [hread_one]
@@ -600,7 +600,7 @@ theorem guessBoundedNTM_choose_continue_preserves_witness
   simp [NTM.trace, guessBoundedNTM, hread, idleWorkDirs, preserveWork]
   change (((work witnessIdx).writeAndMove
       (TM.readBackWrite (work witnessIdx).read).toΓ
-      (TM.idleDir (work witnessIdx).read)).hasBinaryPrefix bits)
+      (TM.idleDir (work witnessIdx).read)).HasBinaryPrefix bits)
   rw [hpreserve]
   exact hwitness
 
@@ -609,9 +609,9 @@ theorem guessBoundedNTM_choose_continue_preserves_witness_cell0
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool} {used total : ℕ}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => true)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
@@ -640,11 +640,11 @@ theorem guessBoundedNTM_choose_stop_preserves_witness
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcounter : (work counterIdx).read ≠ Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => false)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      witnessIdx).hasBinaryPrefix bits := by
+      witnessIdx).HasBinaryPrefix bits := by
   have hwit_read_ne : (work witnessIdx).read ≠ Γ.start := by
     have hnostart := Tape.cells_ne_start_of_hasBinaryPrefix hwitness
     exact hnostart (work witnessIdx).head (by rw [hwitness.1]; omega)
@@ -655,7 +655,7 @@ theorem guessBoundedNTM_choose_stop_preserves_witness
   simp [NTM.trace, guessBoundedNTM, hcounter, idleWorkDirs, preserveWork]
   change (((work witnessIdx).writeAndMove
       (TM.readBackWrite (work witnessIdx).read).toΓ
-      (TM.idleDir (work witnessIdx).read)).hasBinaryPrefix bits)
+      (TM.idleDir (work witnessIdx).read)).HasBinaryPrefix bits)
   rw [hpreserve]
   exact hwitness
 
@@ -665,7 +665,7 @@ theorem guessBoundedNTM_choose_stop_preserves_witness_cell0
     (witnessIdx counterIdx : Fin n)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
     (hcounter : (work counterIdx).read ≠ Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => false)
@@ -691,11 +691,11 @@ theorem guessBoundedNTM_choose_counter_blank_preserves_witness
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcounter : (work counterIdx).read = Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => choice)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      witnessIdx).hasBinaryPrefix bits := by
+      witnessIdx).HasBinaryPrefix bits := by
   have hwit_read_ne : (work witnessIdx).read ≠ Γ.start := by
     have hnostart := Tape.cells_ne_start_of_hasBinaryPrefix hwitness
     exact hnostart (work witnessIdx).head (by rw [hwitness.1]; omega)
@@ -706,7 +706,7 @@ theorem guessBoundedNTM_choose_counter_blank_preserves_witness
   simp [NTM.trace, guessBoundedNTM, hcounter, idleWorkDirs, preserveWork]
   change (((work witnessIdx).writeAndMove
       (TM.readBackWrite (work witnessIdx).read).toΓ
-      (TM.idleDir (work witnessIdx).read)).hasBinaryPrefix bits)
+      (TM.idleDir (work witnessIdx).read)).HasBinaryPrefix bits)
   rw [hpreserve]
   exact hwitness
 
@@ -716,7 +716,7 @@ theorem guessBoundedNTM_choose_counter_blank_preserves_witness_cell0
     (witnessIdx counterIdx : Fin n) (choice : Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
     (hcounter : (work counterIdx).read = Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => choice)
@@ -764,11 +764,11 @@ theorem guessBoundedNTM_write_consumes_counter
     (witnessIdx counterIdx : Fin n) (hne : witnessIdx ≠ counterIdx)
     (choice : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used total : ℕ}
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => choice)
       { state := GuessBoundedPhase.write, input := inp, work := work, output := out }).work
-      counterIdx).hasCounterRemainder (used + 1) total := by
+      counterIdx).HasCounterRemainder (used + 1) total := by
   have hread : (work counterIdx).read ≠ Γ.blank := by
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt]
     simp
@@ -781,13 +781,13 @@ theorem guessBoundedNTM_hasBinaryPrefix_append_of_write
     (witnessIdx counterIdx : Fin n)
     (choice : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcounter : (work counterIdx).read ≠ Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => choice)
       { state := GuessBoundedPhase.write, input := inp, work := work, output := out }).work
-      witnessIdx).hasBinaryPrefix (bits ++ [choice]) := by
+      witnessIdx).HasBinaryPrefix (bits ++ [choice]) := by
   simp [NTM.trace, guessBoundedNTM, hcounter, guessWriteWork, guessWriteDirs]
-  change ((work witnessIdx).writeAndMove (Γw.ofBool choice).toΓ Dir3.right).hasBinaryPrefix
+  change ((work witnessIdx).writeAndMove (Γw.ofBool choice).toΓ Dir3.right).HasBinaryPrefix
     (bits ++ [choice])
   rw [Γw.ofBool_toΓ]
   exact Tape.hasBinaryPrefix_write_bit choice hwitness
@@ -798,7 +798,7 @@ theorem guessBoundedNTM_write_preserves_witness_cell0
     (witnessIdx counterIdx : Fin n)
     (choice : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
     (hcounter : (work counterIdx).read ≠ Γ.blank) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 1 (fun _ => choice)
@@ -816,12 +816,12 @@ theorem guessBoundedNTM_continue_write_consumes_counter
     (witnessIdx counterIdx : Fin n) (hne : witnessIdx ≠ counterIdx)
     (bit : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used total : ℕ}
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 2
       (fun i => if i.val = 0 then true else bit)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      counterIdx).hasCounterRemainder (used + 1) total := by
+      counterIdx).HasCounterRemainder (used + 1) total := by
   let tm := guessBoundedNTM witnessIdx counterIdx
   let c0 : Cfg n tm.Q :=
     { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
@@ -832,18 +832,18 @@ theorem guessBoundedNTM_continue_write_consumes_counter
     apply guessBoundedNTM_choose_continue_state
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt]
     simp
-  have hcounter1 : (c1.work counterIdx).hasCounterRemainder used total := by
+  have hcounter1 : (c1.work counterIdx).HasCounterRemainder used total := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_continue_preserves_counter
       witnessIdx counterIdx inp work out hcounter hlt
-  change ((tm.trace 2 choices c0).work counterIdx).hasCounterRemainder (used + 1) total
+  change ((tm.trace 2 choices c0).work counterIdx).HasCounterRemainder (used + 1) total
   rw [trace_two tm choices c0]
-  change ((tm.trace 1 (fun _ => bit) c1).work counterIdx).hasCounterRemainder (used + 1) total
+  change ((tm.trace 1 (fun _ => bit) c1).work counterIdx).HasCounterRemainder (used + 1) total
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
     rw [hcfg] at hstate1 hcounter1
     change state1 = GuessBoundedPhase.write at hstate1
-    change (work1 counterIdx).hasCounterRemainder used total at hcounter1
+    change (work1 counterIdx).HasCounterRemainder used total at hcounter1
     subst state1
     exact guessBoundedNTM_write_consumes_counter witnessIdx counterIdx hne bit
       inp1 work1 out1 hcounter1 hlt
@@ -853,7 +853,7 @@ theorem guessBoundedNTM_continue_write_state
     (witnessIdx counterIdx : Fin n)
     (bit : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used total : ℕ}
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     ((guessBoundedNTM witnessIdx counterIdx).trace 2
       (fun i => if i.val = 0 then true else bit)
@@ -869,7 +869,7 @@ theorem guessBoundedNTM_continue_write_state
     apply guessBoundedNTM_choose_continue_state
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt]
     simp
-  have hcounter1 : (c1.work counterIdx).hasCounterRemainder used total := by
+  have hcounter1 : (c1.work counterIdx).HasCounterRemainder used total := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_continue_preserves_counter
       witnessIdx counterIdx inp work out hcounter hlt
@@ -894,13 +894,13 @@ theorem guessBoundedNTM_continue_write_extends_witness
     (witnessIdx counterIdx : Fin n)
     (bit : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool} {used total : ℕ}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 2
       (fun i => if i.val = 0 then true else bit)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }).work
-      witnessIdx).hasBinaryPrefix (bits ++ [bit]) := by
+      witnessIdx).HasBinaryPrefix (bits ++ [bit]) := by
   let tm := guessBoundedNTM witnessIdx counterIdx
   let c0 : Cfg n tm.Q :=
     { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
@@ -911,25 +911,25 @@ theorem guessBoundedNTM_continue_write_extends_witness
     apply guessBoundedNTM_choose_continue_state
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt]
     simp
-  have hwitness1 : (c1.work witnessIdx).hasBinaryPrefix bits := by
+  have hwitness1 : (c1.work witnessIdx).HasBinaryPrefix bits := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_continue_preserves_witness
       witnessIdx counterIdx inp work out hwitness hcounter hlt
   have hcounter1_read : (c1.work counterIdx).read ≠ Γ.blank := by
-    have hcounter1 : (c1.work counterIdx).hasCounterRemainder used total := by
+    have hcounter1 : (c1.work counterIdx).HasCounterRemainder used total := by
       dsimp [c1, c0, tm]
       exact guessBoundedNTM_choose_continue_preserves_counter
         witnessIdx counterIdx inp work out hcounter hlt
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter1 hlt]
     simp
-  change ((tm.trace 2 choices c0).work witnessIdx).hasBinaryPrefix (bits ++ [bit])
+  change ((tm.trace 2 choices c0).work witnessIdx).HasBinaryPrefix (bits ++ [bit])
   rw [trace_two tm choices c0]
-  change ((tm.trace 1 (fun _ => bit) c1).work witnessIdx).hasBinaryPrefix (bits ++ [bit])
+  change ((tm.trace 1 (fun _ => bit) c1).work witnessIdx).HasBinaryPrefix (bits ++ [bit])
   cases hcfg : c1 with
   | mk state1 inp1 work1 out1 =>
     rw [hcfg] at hstate1 hwitness1 hcounter1_read
     change state1 = GuessBoundedPhase.write at hstate1
-    change (work1 witnessIdx).hasBinaryPrefix bits at hwitness1
+    change (work1 witnessIdx).HasBinaryPrefix bits at hwitness1
     change (work1 counterIdx).read ≠ Γ.blank at hcounter1_read
     subst state1
     exact guessBoundedNTM_hasBinaryPrefix_append_of_write witnessIdx counterIdx bit
@@ -941,9 +941,9 @@ theorem guessBoundedNTM_continue_write_preserves_witness_cell0
     (witnessIdx counterIdx : Fin n)
     (bit : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool} {used total : ℕ}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     (((guessBoundedNTM witnessIdx counterIdx).trace 2
       (fun i => if i.val = 0 then true else bit)
@@ -959,7 +959,7 @@ theorem guessBoundedNTM_continue_write_preserves_witness_cell0
     apply guessBoundedNTM_choose_continue_state
     rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hlt]
     simp
-  have hwitness1 : (c1.work witnessIdx).hasBinaryPrefix bits := by
+  have hwitness1 : (c1.work witnessIdx).HasBinaryPrefix bits := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_continue_preserves_witness
       witnessIdx counterIdx inp work out hwitness hcounter hlt
@@ -968,7 +968,7 @@ theorem guessBoundedNTM_continue_write_preserves_witness_cell0
     exact guessBoundedNTM_choose_continue_preserves_witness_cell0
       witnessIdx counterIdx inp work out hwitness hcell0 hcounter hlt
   have hcounter1_read : (c1.work counterIdx).read ≠ Γ.blank := by
-    have hcounter1 : (c1.work counterIdx).hasCounterRemainder used total := by
+    have hcounter1 : (c1.work counterIdx).HasCounterRemainder used total := by
       dsimp [c1, c0, tm]
       exact guessBoundedNTM_choose_continue_preserves_counter
         witnessIdx counterIdx inp work out hcounter hlt
@@ -981,7 +981,7 @@ theorem guessBoundedNTM_continue_write_preserves_witness_cell0
   | mk state1 inp1 work1 out1 =>
     rw [hcfg] at hstate1 hwitness1 hcell01 hcounter1_read
     change state1 = GuessBoundedPhase.write at hstate1
-    change (work1 witnessIdx).hasBinaryPrefix bits at hwitness1
+    change (work1 witnessIdx).HasBinaryPrefix bits at hwitness1
     change (work1 witnessIdx).cells 0 = Γ.start at hcell01
     change (work1 counterIdx).read ≠ Γ.blank at hcounter1_read
     subst state1
@@ -993,16 +993,16 @@ theorem guessBoundedNTM_continue_write_invariants
     (witnessIdx counterIdx : Fin n) (hne : witnessIdx ≠ counterIdx)
     (bit : Bool) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {bits : List Bool} {used total : ℕ}
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (work counterIdx).hasCounterRemainder used total)
+    (hcounter : (work counterIdx).HasCounterRemainder used total)
     (hlt : used < total) :
     let c' := (guessBoundedNTM witnessIdx counterIdx).trace 2
       (fun i => if i.val = 0 then true else bit)
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
     c'.state = GuessBoundedPhase.choose ∧
-    (c'.work counterIdx).hasCounterRemainder (used + 1) total ∧
-    (c'.work witnessIdx).hasBinaryPrefix (bits ++ [bit]) ∧
+    (c'.work counterIdx).HasCounterRemainder (used + 1) total ∧
+    (c'.work witnessIdx).HasBinaryPrefix (bits ++ [bit]) ∧
     (c'.work witnessIdx).cells 0 = Γ.start := by
   refine ⟨?_, ?_, ?_, ?_⟩
   · exact guessBoundedNTM_continue_write_state witnessIdx counterIdx bit
@@ -1142,12 +1142,12 @@ theorem guessBoundedNTM_rewind_completes_witness
     (bits : List Bool)
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hstate : c.state = GuessBoundedPhase.rewind)
-    (hwitness : (c.work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (c.work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (c.work witnessIdx).cells 0 = Γ.start)
     (choices : Fin (bits.length + 2) → Bool) :
     let c' := (guessBoundedNTM witnessIdx counterIdx).trace (bits.length + 2) choices c
     (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
-    (c'.work witnessIdx).hasBinaryString bits ∧
+    (c'.work witnessIdx).HasBinaryString bits ∧
     (c'.work witnessIdx).cells 0 = Γ.start := by
   have hnostart : ∀ j, j ≥ 1 → (c.work witnessIdx).cells j ≠ Γ.start :=
     Tape.cells_ne_start_of_hasBinaryPrefix hwitness
@@ -1163,14 +1163,14 @@ theorem guessBoundedNTM_choose_counter_blank_completes_witness
     (witnessIdx counterIdx : Fin n)
     (bits : List Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
     (hcounter : (work counterIdx).read = Γ.blank)
     (choices : Fin (bits.length + 3) → Bool) :
     let c' := (guessBoundedNTM witnessIdx counterIdx).trace (bits.length + 3) choices
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
     (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
-    (c'.work witnessIdx).hasBinaryString bits ∧
+    (c'.work witnessIdx).HasBinaryString bits ∧
     (c'.work witnessIdx).cells 0 = Γ.start := by
   let tm := guessBoundedNTM witnessIdx counterIdx
   let c0 : Cfg n tm.Q :=
@@ -1181,7 +1181,7 @@ theorem guessBoundedNTM_choose_counter_blank_completes_witness
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_counter_blank_state witnessIdx counterIdx
       (choices ⟨0, by omega⟩) inp work out hcounter
-  have hwitness1 : (c1.work witnessIdx).hasBinaryPrefix bits := by
+  have hwitness1 : (c1.work witnessIdx).HasBinaryPrefix bits := by
     dsimp [c1, c0, tm]
     exact guessBoundedNTM_choose_counter_blank_preserves_witness witnessIdx counterIdx
       (choices ⟨0, by omega⟩) inp work out hwitness hcounter
@@ -1193,7 +1193,7 @@ theorem guessBoundedNTM_choose_counter_blank_completes_witness
     guessBoundedNTM_rewind_completes_witness witnessIdx counterIdx bits c1
       hstate1 hwitness1 hcell01 (fun i => choices ⟨i.val + 1, by omega⟩)
   change tm.halted (tm.trace (bits.length + 3) choices c0) ∧
-    ((tm.trace (bits.length + 3) choices c0).work witnessIdx).hasBinaryString bits ∧
+    ((tm.trace (bits.length + 3) choices c0).work witnessIdx).HasBinaryString bits ∧
     ((tm.trace (bits.length + 3) choices c0).work witnessIdx).cells 0 = Γ.start
   rw [hsplit]
   exact hrewind
@@ -1204,7 +1204,7 @@ theorem guessBoundedNTM_hasBinaryString_of_choose_stop
     (witnessIdx counterIdx : Fin n)
     (bits : List Bool)
     (inp : Tape) (work : Fin n → Tape) (out : Tape)
-    (hwitness : (work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (work witnessIdx).cells 0 = Γ.start)
     (hcounter : (work counterIdx).read ≠ Γ.blank)
     (choices : Fin (bits.length + 3) → Bool)
@@ -1212,7 +1212,7 @@ theorem guessBoundedNTM_hasBinaryString_of_choose_stop
     let c' := (guessBoundedNTM witnessIdx counterIdx).trace (bits.length + 3) choices
       { state := GuessBoundedPhase.choose, input := inp, work := work, output := out }
     (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
-    (c'.work witnessIdx).hasBinaryString bits ∧
+    (c'.work witnessIdx).HasBinaryString bits ∧
     (c'.work witnessIdx).cells 0 = Γ.start := by
   let tm := guessBoundedNTM witnessIdx counterIdx
   let c0 : Cfg n tm.Q :=
@@ -1227,7 +1227,7 @@ theorem guessBoundedNTM_hasBinaryString_of_choose_stop
     dsimp [c1, c0, tm]
     rw [hchoices_false]
     exact guessBoundedNTM_choose_stop_state witnessIdx counterIdx inp work out hcounter
-  have hwitness1 : (c1.work witnessIdx).hasBinaryPrefix bits := by
+  have hwitness1 : (c1.work witnessIdx).HasBinaryPrefix bits := by
     dsimp [c1, c0, tm]
     rw [hchoices_false]
     exact guessBoundedNTM_choose_stop_preserves_witness witnessIdx counterIdx
@@ -1241,7 +1241,7 @@ theorem guessBoundedNTM_hasBinaryString_of_choose_stop
     guessBoundedNTM_rewind_completes_witness witnessIdx counterIdx bits c1
       hstate1 hwitness1 hcell01 (fun i => choices ⟨i.val + 1, by omega⟩)
   change tm.halted (tm.trace (bits.length + 3) choices c0) ∧
-    ((tm.trace (bits.length + 3) choices c0).work witnessIdx).hasBinaryString bits ∧
+    ((tm.trace (bits.length + 3) choices c0).work witnessIdx).HasBinaryString bits ∧
     ((tm.trace (bits.length + 3) choices c0).work witnessIdx).cells 0 = Γ.start
   rw [hsplit]
   exact hrewind
@@ -1260,9 +1260,9 @@ private theorem guessBoundedNTM_choose_reaches_bounded_witness_aux
       (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q),
       c.state = GuessBoundedPhase.choose →
       used + remaining = total →
-      (c.work witnessIdx).hasBinaryPrefix bits →
+      (c.work witnessIdx).HasBinaryPrefix bits →
       (c.work witnessIdx).cells 0 = Γ.start →
-      (c.work counterIdx).hasCounterRemainder used total →
+      (c.work counterIdx).HasCounterRemainder used total →
       ∀ choices : Fin (guessBoundedTime remaining bits.length) → Bool,
         ∃ t, ∃ ht : t ≤ guessBoundedTime remaining bits.length,
           let c' := (guessBoundedNTM witnessIdx counterIdx).trace t
@@ -1270,7 +1270,7 @@ private theorem guessBoundedNTM_choose_reaches_bounded_witness_aux
           (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
                       ∃ finalBits : List Bool,
                         finalBits.length ≤ bits.length + remaining ∧
-                        (c'.work witnessIdx).hasBinaryString finalBits ∧
+                        (c'.work witnessIdx).HasBinaryString finalBits ∧
                         (c'.work witnessIdx).cells 0 = Γ.start := by
   intro remaining
   induction remaining with
@@ -1281,7 +1281,7 @@ private theorem guessBoundedNTM_choose_reaches_bounded_witness_aux
       change state = GuessBoundedPhase.choose at hstate
       subst state
       have hused_total : used = total := by omega
-      have hcounter_done : (work counterIdx).hasCounterRemainder total total := by
+      have hcounter_done : (work counterIdx).HasCounterRemainder total total := by
         simpa [hused_total] using hcounter
       have hcounter_read : (work counterIdx).read = Γ.blank :=
         Tape.hasCounterRemainder_read_blank_of_done hcounter_done
@@ -1359,8 +1359,8 @@ private theorem guessBoundedNTM_choose_reaches_bounded_witness_aux
             inp work out hwitness hcell0 hcounter hlt
         have hinv :
             c2.state = GuessBoundedPhase.choose ∧
-            (c2.work counterIdx).hasCounterRemainder (used + 1) total ∧
-            (c2.work witnessIdx).hasBinaryPrefix (bits ++ [bit]) ∧
+            (c2.work counterIdx).HasCounterRemainder (used + 1) total ∧
+            (c2.work witnessIdx).HasBinaryPrefix (bits ++ [bit]) ∧
             (c2.work witnessIdx).cells 0 = Γ.start := by
           simpa [c2, choicesTwo, hchoicesTwo] using hinvCanonical
         have hremaining_tail : used + 1 + remaining = total := by omega
@@ -1409,19 +1409,19 @@ theorem guessBoundedNTM_halted_hasBoundedBinaryString_of_choose
     (B : ℕ) (bits : List Bool)
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hstate : c.state = GuessBoundedPhase.choose)
-    (hwitness : (c.work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (c.work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (c.work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (c.work counterIdx).hasUnaryCounter B)
+    (hcounter : (c.work counterIdx).HasUnaryCounter B)
     (choices : Fin (guessBoundedTime B bits.length) → Bool) :
     let c' := (guessBoundedNTM witnessIdx counterIdx).trace
       (guessBoundedTime B bits.length) choices c
     (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
     ∃ finalBits : List Bool,
       finalBits.length ≤ bits.length + B ∧
-      (c'.work witnessIdx).hasBinaryString finalBits ∧
+      (c'.work witnessIdx).HasBinaryString finalBits ∧
       (c'.work witnessIdx).cells 0 = Γ.start := by
   let tm := guessBoundedNTM witnessIdx counterIdx
-  have hcounter_rem : (c.work counterIdx).hasCounterRemainder 0 B := by
+  have hcounter_rem : (c.work counterIdx).HasCounterRemainder 0 B := by
     exact Tape.hasUnaryCounter_iff_remainder_zero.mp hcounter
   obtain ⟨t, ht, hshort⟩ :=
     guessBoundedNTM_choose_reaches_bounded_witness_aux witnessIdx counterIdx hne
@@ -1433,7 +1433,7 @@ theorem guessBoundedNTM_halted_hasBoundedBinaryString_of_choose
   change tm.halted (tm.trace (guessBoundedTime B bits.length) choices c) ∧
     ∃ finalBits : List Bool,
       finalBits.length ≤ bits.length + B ∧
-      ((tm.trace (guessBoundedTime B bits.length) choices c).work witnessIdx).hasBinaryString
+      ((tm.trace (guessBoundedTime B bits.length) choices c).work witnessIdx).HasBinaryString
         finalBits ∧
       ((tm.trace (guessBoundedTime B bits.length) choices c).work witnessIdx).cells 0 =
         Γ.start
@@ -1447,11 +1447,11 @@ theorem guessBoundedNTM_hoareTime
     (B : ℕ) :
     (guessBoundedNTM witnessIdx counterIdx).HoareTime
       (fun _ work _ =>
-        (work witnessIdx).hasBinaryPrefix [] ∧
+        (work witnessIdx).HasBinaryPrefix [] ∧
         (work witnessIdx).cells 0 = Γ.start ∧
-        (work counterIdx).hasUnaryCounter B)
+        (work counterIdx).HasUnaryCounter B)
       (fun _ work _ =>
-        (work witnessIdx).hasBoundedBinaryString B)
+        (work witnessIdx).HasBoundedBinaryString B)
       (guessBoundedTime B 0) := by
   intro inp work out hpre choices
   let tm := guessBoundedNTM witnessIdx counterIdx
@@ -1461,7 +1461,7 @@ theorem guessBoundedNTM_hoareTime
     guessBoundedNTM_halted_hasBoundedBinaryString_of_choose
       witnessIdx counterIdx hne B [] c0 rfl hpre.1 hpre.2.1 hpre.2.2 choices
   change tm.halted (tm.trace (guessBoundedTime B 0) choices c0) ∧
-    ((tm.trace (guessBoundedTime B 0) choices c0).work witnessIdx).hasBoundedBinaryString B
+    ((tm.trace (guessBoundedTime B 0) choices c0).work witnessIdx).HasBoundedBinaryString B
   refine ⟨hguess.1, ?_⟩
   obtain ⟨finalBits, hlen, hwitness, _hcell0⟩ := hguess.2
   exact ⟨finalBits, by simpa using hlen, hwitness⟩
@@ -1473,11 +1473,11 @@ theorem guessBoundedNTM_hoareTime_with_cell0
     (B : ℕ) :
     (guessBoundedNTM witnessIdx counterIdx).HoareTime
       (fun _ work _ =>
-        (work witnessIdx).hasBinaryPrefix [] ∧
+        (work witnessIdx).HasBinaryPrefix [] ∧
         (work witnessIdx).cells 0 = Γ.start ∧
-        (work counterIdx).hasUnaryCounter B)
+        (work counterIdx).HasUnaryCounter B)
       (fun _ work _ =>
-        (work witnessIdx).hasBoundedBinaryString B ∧
+        (work witnessIdx).HasBoundedBinaryString B ∧
         (work witnessIdx).cells 0 = Γ.start)
       (guessBoundedTime B 0) := by
   intro inp work out hpre choices
@@ -1488,7 +1488,7 @@ theorem guessBoundedNTM_hoareTime_with_cell0
     guessBoundedNTM_halted_hasBoundedBinaryString_of_choose
       witnessIdx counterIdx hne B [] c0 rfl hpre.1 hpre.2.1 hpre.2.2 choices
   change tm.halted (tm.trace (guessBoundedTime B 0) choices c0) ∧
-    (((tm.trace (guessBoundedTime B 0) choices c0).work witnessIdx).hasBoundedBinaryString B ∧
+    (((tm.trace (guessBoundedTime B 0) choices c0).work witnessIdx).HasBoundedBinaryString B ∧
       ((tm.trace (guessBoundedTime B 0) choices c0).work witnessIdx).cells 0 = Γ.start)
   refine ⟨hguess.1, ?_⟩
   obtain ⟨finalBits, hlen, hwitness, hcell0_final⟩ := hguess.2
@@ -1501,9 +1501,9 @@ theorem guessBoundedNTM_hoareTime_initTape_move_right
     (B : ℕ) :
     (guessBoundedNTM witnessIdx counterIdx).HoareTime
       (fun _ work _ =>
-        (work witnessIdx).hasBinaryPrefix [] ∧
+        (work witnessIdx).HasBinaryPrefix [] ∧
         (work witnessIdx).cells 0 = Γ.start ∧
-        (work counterIdx).hasUnaryCounter B)
+        (work counterIdx).HasUnaryCounter B)
       (fun _ work _ =>
         ∃ bits : List Bool, bits.length ≤ B ∧
           work witnessIdx = (Tape.init (bits.map Γ.ofBool)).move Dir3.right)
@@ -1528,9 +1528,9 @@ theorem guessBoundedNTM_hoareTime_init_move_right_frame
         inp = input0 ∧
         out = output0 ∧
         (∀ i, i ≠ witnessIdx → i ≠ counterIdx → work i = frame i) ∧
-        (work witnessIdx).hasBinaryPrefix [] ∧
+        (work witnessIdx).HasBinaryPrefix [] ∧
         (work witnessIdx).cells 0 = Γ.start ∧
-        (work counterIdx).hasUnaryCounter B)
+        (work counterIdx).HasUnaryCounter B)
       (fun inp work out =>
         inp = input0 ∧
         out = output0 ∧
@@ -1587,14 +1587,14 @@ private theorem guessBoundedNTM_choose_generates_suffix_aux
       suffix.length ≤ remaining →
       c.state = GuessBoundedPhase.choose →
       used + remaining = total →
-      (c.work witnessIdx).hasBinaryPrefix bits →
+      (c.work witnessIdx).HasBinaryPrefix bits →
       (c.work witnessIdx).cells 0 = Γ.start →
-      (c.work counterIdx).hasCounterRemainder used total →
+      (c.work counterIdx).HasCounterRemainder used total →
       ∃ t, t ≤ guessBoundedTime remaining bits.length ∧
         ∃ choices : Fin t → Bool,
           let c' := (guessBoundedNTM witnessIdx counterIdx).trace t choices c
           (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
-          (c'.work witnessIdx).hasBinaryString (bits ++ suffix) ∧
+          (c'.work witnessIdx).HasBinaryString (bits ++ suffix) ∧
           (c'.work witnessIdx).cells 0 = Γ.start := by
   intro suffix
   induction suffix with
@@ -1605,7 +1605,7 @@ private theorem guessBoundedNTM_choose_generates_suffix_aux
       change state = GuessBoundedPhase.choose at hstate
       subst state
       by_cases hdone : used = total
-      · have hcounter_done : (work counterIdx).hasCounterRemainder total total := by
+      · have hcounter_done : (work counterIdx).HasCounterRemainder total total := by
           simpa [hdone] using hcounter
         have hcounter_read : (work counterIdx).read = Γ.blank :=
           Tape.hasCounterRemainder_read_blank_of_done hcounter_done
@@ -1653,8 +1653,8 @@ private theorem guessBoundedNTM_choose_generates_suffix_aux
             inp work out hwitness hcell0 hcounter hlt
         have hinv :
             c2.state = GuessBoundedPhase.choose ∧
-            (c2.work counterIdx).hasCounterRemainder (used + 1) total ∧
-            (c2.work witnessIdx).hasBinaryPrefix (bits ++ [bit]) ∧
+            (c2.work counterIdx).HasCounterRemainder (used + 1) total ∧
+            (c2.work witnessIdx).HasBinaryPrefix (bits ++ [bit]) ∧
             (c2.work witnessIdx).cells 0 = Γ.start := by
           simpa [c2, choicesTwo] using hinvCanonical
         have htail_len : rest.length ≤ remaining := by
@@ -1703,17 +1703,17 @@ theorem guessBoundedNTM_choose_generates_witness
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hlen : suffix.length ≤ B)
     (hstate : c.state = GuessBoundedPhase.choose)
-    (hwitness : (c.work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (c.work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (c.work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (c.work counterIdx).hasUnaryCounter B) :
+    (hcounter : (c.work counterIdx).HasUnaryCounter B) :
     ∃ choices : Fin (guessBoundedTime B bits.length) → Bool,
       let c' := (guessBoundedNTM witnessIdx counterIdx).trace
         (guessBoundedTime B bits.length) choices c
       (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
-      (c'.work witnessIdx).hasBinaryString (bits ++ suffix) ∧
+      (c'.work witnessIdx).HasBinaryString (bits ++ suffix) ∧
       (c'.work witnessIdx).cells 0 = Γ.start := by
   let tm := guessBoundedNTM witnessIdx counterIdx
-  have hcounter_rem : (c.work counterIdx).hasCounterRemainder 0 B :=
+  have hcounter_rem : (c.work counterIdx).HasCounterRemainder 0 B :=
     Tape.hasUnaryCounter_iff_remainder_zero.mp hcounter
   obtain ⟨t, ht, choicesShort, hshort⟩ :=
     guessBoundedNTM_choose_generates_suffix_aux witnessIdx counterIdx hne
@@ -1724,7 +1724,7 @@ theorem guessBoundedNTM_choose_generates_witness
     (c := c) (fun i => by simp [choicesFull, i.isLt]) hshort.1
   refine ⟨choicesFull, ?_⟩
   change tm.halted (tm.trace (guessBoundedTime B bits.length) choicesFull c) ∧
-    ((tm.trace (guessBoundedTime B bits.length) choicesFull c).work witnessIdx).hasBinaryString
+    ((tm.trace (guessBoundedTime B bits.length) choicesFull c).work witnessIdx).HasBinaryString
       (bits ++ suffix) ∧
     ((tm.trace (guessBoundedTime B bits.length) choicesFull c).work witnessIdx).cells 0 =
       Γ.start
@@ -1739,9 +1739,9 @@ theorem guessBoundedNTM_choose_generates_witness_initTape_move_right
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hlen : suffix.length ≤ B)
     (hstate : c.state = GuessBoundedPhase.choose)
-    (hwitness : (c.work witnessIdx).hasBinaryPrefix bits)
+    (hwitness : (c.work witnessIdx).HasBinaryPrefix bits)
     (hcell0 : (c.work witnessIdx).cells 0 = Γ.start)
-    (hcounter : (c.work counterIdx).hasUnaryCounter B) :
+    (hcounter : (c.work counterIdx).HasUnaryCounter B) :
     ∃ choices : Fin (guessBoundedTime B bits.length) → Bool,
       let c' := (guessBoundedNTM witnessIdx counterIdx).trace
         (guessBoundedTime B bits.length) choices c

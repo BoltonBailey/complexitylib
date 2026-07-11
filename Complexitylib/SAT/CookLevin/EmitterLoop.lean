@@ -189,11 +189,11 @@ theorem emitLoop_hoareTime (body : TM n) (ctr fuel : Fin n) (hcf : ctr ≠ fuel)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update W ctr (regTape i)) fuel
           ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range i).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range i).flatMap E) out)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update W ctr (regTape (i + 1))) fuel
           ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=
@@ -277,11 +277,11 @@ theorem emitLoopFrom_hoareTime (body : TM n) (ctr fuel : Fin n)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update W ctr (regTape (s + i))) fuel
           ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range i).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range i).flatMap E) out)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update W ctr (regTape (s + (i + 1))))
           fuel ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=
@@ -360,10 +360,10 @@ theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
   have hbodyseq : ∀ i, i < v → (seqTM body (incRegTM ctr)).HoareTime
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (u i) fuel ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range i).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range i).flatMap E) out)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (u (i + 1)) fuel ⟨i + 2, regCells v⟩ ∧
-        outAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
+        OutAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=

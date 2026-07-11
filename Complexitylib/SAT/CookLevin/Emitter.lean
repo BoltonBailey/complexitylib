@@ -54,10 +54,10 @@ theorem CNF.encode_map {α : Type _} (g : α → Clause) (l : List α) :
 structure LitDesc (n : ℕ) where
   sign : Bool
   tag : ℕ
-  sa : Src n
-  sb : Src n
-  sc : Src n
-  sd : Src n
+  sa : DigitSrc n
+  sb : DigitSrc n
+  sc : DigitSrc n
+  sd : DigitSrc n
 
 variable {n : ℕ}
 
@@ -72,8 +72,8 @@ def LitDesc.tm (rA rB rC rD tmp tmp2 : Fin n) (desc : LitDesc n) : TM n :=
 def LitDesc.Spec (work₀ : Fin n → Tape) (tmp tmp2 : Fin n) (M A B C D : ℕ)
     (desc : LitDesc n) (ℓ : Lit) : Prop :=
   ∃ a b c d : ℕ,
-    SrcSpec work₀ tmp tmp2 desc.sa a ∧ SrcSpec work₀ tmp tmp2 desc.sb b ∧
-    SrcSpec work₀ tmp tmp2 desc.sc c ∧ SrcSpec work₀ tmp tmp2 desc.sd d ∧
+    DigitSrcSpec work₀ tmp tmp2 desc.sa a ∧ DigitSrcSpec work₀ tmp tmp2 desc.sb b ∧
+    DigitSrcSpec work₀ tmp tmp2 desc.sc c ∧ DigitSrcSpec work₀ tmp tmp2 desc.sd d ∧
     ℓ.sign = desc.sign ∧
     ℓ.var = (((desc.tag * A + a) * B + b) * C + c) * D + d ∧
     desc.tag ≤ M ∧ desc.tag * A + a ≤ M ∧ (desc.tag * A + a) * B + b ≤ M ∧

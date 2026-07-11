@@ -1039,7 +1039,7 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
         (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cT.input).head ≤
         TM.inputLengthPlusOneCounterTime x.length + 1 ∧
-      (satBoundaryWork cT.work (satCounterIdx k)).hasUnaryCounter (x.length + 1) ∧
+      (satBoundaryWork cT.work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (∀ i, i ≠ satCounterIdx k →
         satBoundaryWork cT.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
@@ -1122,7 +1122,7 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
       omega
     exact le_trans hmove (by omega)
   · have hcounter_post :
-        (cT.work (satCounterIdx k)).hasUnaryCounter (x.length + 1) := by
+        (cT.work (satCounterIdx k)).HasUnaryCounter (x.length + 1) := by
       simpa [B, counterNTM, counterChoicesB, counterChoices, cT, c0] using hpost
     have hread_counter : (cT.work (satCounterIdx k)).read ≠ Γ.start := by
       have hcell := hcounter_post.2.1 0 (by omega : 0 < x.length + 1)
@@ -1608,9 +1608,9 @@ theorem satGuessVerify_guess_trace_exit (M : TM k) (T : ℕ)
     pair building within the guess bound plus the one boundary step. -/
 theorem satGuessVerify_guess_exits (M : TM k) (B : ℕ)
     (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
-    (hpre : (work (satWitnessIdx k)).hasBinaryPrefix [] ∧
+    (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (work (satCounterIdx k)).hasUnaryCounter B)
+      (work (satCounterIdx k)).HasUnaryCounter B)
     (choices : Fin (NTM.guessBoundedTime B 0 + 1) → Bool) :
     ∃ t, ∃ _ht : t ≤ NTM.guessBoundedTime B 0,
       let guessNTM := NTM.guessBoundedNTM (satWitnessIdx k) (satCounterIdx k)
@@ -1663,7 +1663,7 @@ theorem satGuessVerify_guess_exits (M : TM k) (B : ℕ)
   refine ⟨?_, ?_⟩
   · simpa [G, guessNTM, guessChoices, cT, choicesExit, c0] using hexit
   · have hguess_post :
-        (cT.work (satWitnessIdx k)).hasBoundedBinaryString B ∧
+        (cT.work (satWitnessIdx k)).HasBoundedBinaryString B ∧
           (cT.work (satWitnessIdx k)).cells 0 = Γ.start := by
       simpa [G, guessNTM, guessChoicesG, guessChoices, cT, c0] using hpost
     obtain ⟨bits, hlen, hbits⟩ := hguess_post.1
@@ -1678,9 +1678,9 @@ theorem satGuessVerify_guess_exits (M : TM k) (B : ℕ)
     tape, output, and verifier work tapes are preserved through the boundary. -/
 theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
     (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
-    (hpre : (work (satWitnessIdx k)).hasBinaryPrefix [] ∧
+    (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (work (satCounterIdx k)).hasUnaryCounter B ∧
+      (work (satCounterIdx k)).HasUnaryCounter B ∧
       work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
     (hinp : inp.head ≥ 1 ∧ ∀ j, j ≥ 1 → inp.cells j ≠ Γ.start)
     (hout : out.read ≠ Γ.start)
@@ -1796,9 +1796,9 @@ theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
 theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
     (y : List Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
     (hlen : y.length ≤ B)
-    (hpre : (work (satWitnessIdx k)).hasBinaryPrefix [] ∧
+    (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (work (satCounterIdx k)).hasUnaryCounter B ∧
+      (work (satCounterIdx k)).HasUnaryCounter B ∧
       work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ t, ∃ _ : t ≤ NTM.guessBoundedTime B 0,
       ∃ choices : Fin (t + 1) → Bool,
@@ -1925,9 +1925,9 @@ theorem satGuessVerify_guess_generates_with_input_pair_frame (M : TM k) (B : ℕ
     (x y : List Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
     (hlen : y.length ≤ B)
     (hinput : inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right)
-    (hpre : (work (satWitnessIdx k)).hasBinaryPrefix [] ∧
+    (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (work (satCounterIdx k)).hasUnaryCounter B ∧
+      (work (satCounterIdx k)).HasUnaryCounter B ∧
       work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ t, ∃ _ : t ≤ NTM.guessBoundedTime B 0,
       ∃ choices : Fin (t + 1) → Bool,
@@ -1993,9 +1993,9 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
     (hout : out.read ≠ Γ.start ∧ out.head ≥ 1)
     (hwork : ∀ i, (work i).read ≠ Γ.start ∧ (work i).head ≥ 1)
     (hlen : y.length ≤ x.length + 1)
-    (hguessPre : (work (satWitnessIdx k)).hasBinaryPrefix [] ∧
+    (hguessPre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (work (satCounterIdx k)).hasUnaryCounter (x.length + 1) ∧
+      (work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ T, ∃ choices : Fin T → Bool,
       ∃ cPair : Cfg (k + 3) TM.PairBuildPhase,
@@ -2036,9 +2036,9 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
       satBoundaryOutput cR.output = out := by
     simpa [rewindNTM, rewindChoices, cRewind0, cR] using hrewind
   have hguessPre' :
-      ((satBoundaryWork cR.work) (satWitnessIdx k)).hasBinaryPrefix [] ∧
+      ((satBoundaryWork cR.work) (satWitnessIdx k)).HasBinaryPrefix [] ∧
       ((satBoundaryWork cR.work) (satWitnessIdx k)).cells 0 = Γ.start ∧
-      ((satBoundaryWork cR.work) (satCounterIdx k)).hasUnaryCounter (x.length + 1) ∧
+      ((satBoundaryWork cR.work) (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (satBoundaryWork cR.work) (satPairIdx k) =
         (_root_.Complexity.Tape.init []).move Dir3.right := by
     rw [hrewind'.2.2.1]
@@ -2173,7 +2173,7 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       (satBoundaryInput cC.input).cells =
         (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cC.input).head ≤ C + 1 ∧
-      (satBoundaryWork cC.work (satCounterIdx k)).hasUnaryCounter (x.length + 1) ∧
+      (satBoundaryWork cC.work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (∀ i, i ≠ satCounterIdx k →
         satBoundaryWork cC.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
       satBoundaryWork cC.work (satWitnessIdx k) =
@@ -2194,7 +2194,7 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       inpR.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells :=
     hcounter'.2.2.2.1
   have hcounterUnary :
-      (workR (satCounterIdx k)).hasUnaryCounter (x.length + 1) :=
+      (workR (satCounterIdx k)).HasUnaryCounter (x.length + 1) :=
     hcounter'.2.2.2.2.2.1
   have hothers :
       ∀ i, i ≠ satCounterIdx k →
@@ -2224,9 +2224,9 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       rw [hblank]
       constructor <;> simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
   have hguessPreR :
-      (workR (satWitnessIdx k)).hasBinaryPrefix [] ∧
+      (workR (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (workR (satWitnessIdx k)).cells 0 = Γ.start ∧
-      (workR (satCounterIdx k)).hasUnaryCounter (x.length + 1) ∧
+      (workR (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       workR (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := by
     refine ⟨?_, ?_, hcounterUnary, hpairBlank⟩
     · rw [hwitnessBlank]
@@ -2322,7 +2322,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       (satBoundaryInput cC.input).cells =
         (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cC.input).head ≤ C + 1 ∧
-      (satBoundaryWork cC.work (satCounterIdx k)).hasUnaryCounter B ∧
+      (satBoundaryWork cC.work (satCounterIdx k)).HasUnaryCounter B ∧
       (∀ i, i ≠ satCounterIdx k →
         satBoundaryWork cC.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
       satBoundaryWork cC.work (satWitnessIdx k) =
@@ -2343,7 +2343,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       inpR.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells :=
     hcounter'.2.2.2.1
   have hcounterUnary :
-      (workR (satCounterIdx k)).hasUnaryCounter B :=
+      (workR (satCounterIdx k)).HasUnaryCounter B :=
     hcounter'.2.2.2.2.2.1
   have hothers :
       ∀ i, i ≠ satCounterIdx k →
@@ -2400,9 +2400,9 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       satBoundaryOutput cR.output = outR := by
     simpa [rewindNTM, rewindChoices, cRewind0, cR] using hrewind
   have hguessPre :
-      ((satBoundaryWork cR.work) (satWitnessIdx k)).hasBinaryPrefix [] ∧
+      ((satBoundaryWork cR.work) (satWitnessIdx k)).HasBinaryPrefix [] ∧
       ((satBoundaryWork cR.work) (satWitnessIdx k)).cells 0 = Γ.start ∧
-      ((satBoundaryWork cR.work) (satCounterIdx k)).hasUnaryCounter B ∧
+      ((satBoundaryWork cR.work) (satCounterIdx k)).HasUnaryCounter B ∧
       (satBoundaryWork cR.work) (satPairIdx k) =
         (_root_.Complexity.Tape.init []).move Dir3.right := by
     rw [hrewind'.2.2.1]

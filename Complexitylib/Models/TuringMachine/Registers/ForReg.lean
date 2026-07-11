@@ -335,21 +335,21 @@ private theorem forRegTM_loop_run (inp₀ : Tape) (w : ℕ → Fin n → Tape)
     (hwP : ∀ i j, j ≠ r → Parked (w i j))
     (hbody : ∀ i, i < v → body.HoareTime
         (fun inp work out => inp = inp₀ ∧
-          work = Function.update (w i) r ⟨i + 2, regCells v⟩ ∧ outAcc (ys i) out)
+          work = Function.update (w i) r ⟨i + 2, regCells v⟩ ∧ OutAcc (ys i) out)
         (fun inp work out => inp = inp₀ ∧
           work = Function.update (w (i + 1)) r ⟨i + 2, regCells v⟩ ∧
-          outAcc (ys (i + 1)) out)
+          OutAcc (ys (i + 1)) out)
         b_iter) :
     ∀ (m i : ℕ), v = i + m →
       ∀ c : Cfg n (forRegTM body r).Q,
       c.state = .inl .test → c.input = inp₀ →
       c.work = Function.update (w i) r ⟨i + 1, regCells v⟩ →
-      outAcc (ys i) c.output →
+      OutAcc (ys i) c.output →
       ∃ c' t, t ≤ m * (b_iter + 2) + (v + 2) ∧
         (forRegTM body r).reachesIn t c c' ∧
         c'.state = .inl .done ∧ c'.input = inp₀ ∧
         c'.work = Function.update (w v) r (regTape v) ∧
-        outAcc (ys v) c'.output := by
+        OutAcc (ys v) c'.output := by
   intro m
   induction m with
   | zero =>
@@ -488,10 +488,10 @@ theorem forRegTM_hoareTime (body : TM n) (r : Fin n) (v : ℕ) (inp₀ : Tape)
     (hwP : ∀ i j, j ≠ r → Parked (w i j))
     (hbody : ∀ i, i < v → body.HoareTime
         (fun inp work out => inp = inp₀ ∧
-          work = Function.update (w i) r ⟨i + 2, regCells v⟩ ∧ outAcc (ys i) out)
+          work = Function.update (w i) r ⟨i + 2, regCells v⟩ ∧ OutAcc (ys i) out)
         (fun inp work out => inp = inp₀ ∧
           work = Function.update (w (i + 1)) r ⟨i + 2, regCells v⟩ ∧
-          outAcc (ys (i + 1)) out)
+          OutAcc (ys (i + 1)) out)
         b_iter) :
     (forRegTM body r).HoareTime
       (EmitPred inp₀ (w 0) (ys 0))

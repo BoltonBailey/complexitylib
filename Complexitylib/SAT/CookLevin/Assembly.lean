@@ -447,7 +447,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (EmitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
         (Tape.inits x.length steps P (Fintype.card N.Q) 0) ys)
       (fun inp _work out => inp = ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ ∧
-        outAcc (ys ++ CNF.encode (tableauCNFFlat N steps x)) out)
+        OutAcc (ys ++ CNF.encode (tableauCNFFlat N steps x)) out)
       (bodyBudget N M) := by
   set n : ℕ := x.length with hn
   set Qc : ℕ := Fintype.card N.Q with hQc
@@ -653,7 +653,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
   have c7 : (emitAcceptTM N).HoareTime
       (EmitPred inp₁ (scratch V5 tmp tmp2 0) ys₆)
       (fun inp work out => inp = inp₁ ∧
-        outAcc (ys₆ ++ CNF.encode (acceptClausesF N steps P)) out)
+        OutAcc (ys₆ ++ CNF.encode (acceptClausesF N steps P)) out)
       (cnfBudget 2 1 M) :=
     f7.strengthen_post (fun inp work out h => ⟨h.1, h.2.2⟩)
   have c6 := seqTM_hoareTime _ _ f6
@@ -746,7 +746,7 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
   -- Adapters.
   have htrans₁ : ∀ (inp : Tape) (work : Fin nT → Tape) (out : Tape),
       (inp = { head := 1, cells := (Tape.init (x.map Γ.ofBool)).cells } ∧
-        (∀ i, reg 0 (work i)) ∧ outAcc [] out) →
+        (∀ i, IsReg 0 (work i)) ∧ OutAcc [] out) →
       EmitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ (fun _ => regTape 0) []
         (transitionInput inp) (fun i => transitionTape (work i))
         (transitionTape out) := by
@@ -772,11 +772,11 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
     (Tape.init (x.map Γ.ofBool)) (fun _ => Tape.init []) (Tape.init [])
     ⟨rfl, fun _ => rfl, rfl⟩
   refine ⟨c', t, le_trans ht (by rw [emitTime]), hreach, hhalt, ?_⟩
-  show c'.output.hasOutput (reductionFn N (fun n => p.eval n) x)
+  show c'.output.HasOutput (reductionFn N (fun n => p.eval n) x)
   have : reductionFn N (fun n => p.eval n) x
       = CNF.encode (tableauCNFFlat N steps x) := rfl
   rw [this]
-  exact TM.outAcc.hasOutput hpost.2
+  exact TM.OutAcc.hasOutput hpost.2
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Polynomial boundedness of the running time

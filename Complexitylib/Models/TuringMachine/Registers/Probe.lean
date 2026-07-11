@@ -1063,9 +1063,9 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
       · rw [hwork₅ i hir, hwork₄]
         show c₂.work i = work i
         exact hwork₂ i hir
-  · show outAcc ys c₉.output
+  · show OutAcc ys c₉.output
     rw [hout₉, hout₇, hout₆, hout₅, hout₄]
-    show outAcc ys c₂.output
+    show OutAcc ys c₂.output
     rw [hout₂]
     exact hout
 

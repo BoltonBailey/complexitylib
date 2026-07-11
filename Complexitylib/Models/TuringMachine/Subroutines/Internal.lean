@@ -1322,7 +1322,7 @@ theorem clearWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
     rcases hpost with ⟨hhead, hblankframe⟩
     rcases hblankframe with ⟨hframe, hcell0, hblank⟩
     rcases hframe with ⟨hinp', hout', hwork'⟩
-    have hbits : (work' idx).hasBinaryString [] := by
+    have hbits : (work' idx).HasBinaryString [] := by
       refine ⟨hhead, ?_, ?_⟩
       · intro i hi
         exact (Nat.not_lt_zero i hi).elim
@@ -1343,14 +1343,14 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
       c.state = CopyPhase.copying →
       c.input.cells = (Tape.init (x.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
-      (c.work idx).hasBinaryPrefix (x.take k) →
+      (c.work idx).HasBinaryPrefix (x.take k) →
       k ≤ x.length →
       ∃ c',
         (copyInputToWorkTM idx).reachesIn (rem + 1) c c' ∧
         (copyInputToWorkTM idx).halted c' ∧
         c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = x.length + 1 ∧
-        (c'.work idx).hasBinaryPrefix x := by
+        (c'.work idx).HasBinaryPrefix x := by
   intro rem
   induction rem with
   | zero =>
@@ -1360,7 +1360,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
       subst hk_eq
       have hread : c.input.read = Γ.blank := by
         simp [Tape.read, hhead, hcells, Tape.init_ofBool_cells_ge x x.length le_rfl]
-      have hprefix_full : (c.work idx).hasBinaryPrefix x := by
+      have hprefix_full : (c.work idx).HasBinaryPrefix x := by
         simpa using hprefix
       have hwork_blank : (c.work idx).read = Γ.blank := by
         have hblank := hprefix_full.2.2 x.length le_rfl
@@ -1371,7 +1371,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
             (copyInputToWorkTM idx).halted c1 ∧
             c1.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
             c1.input.head = x.length + 1 ∧
-            (c1.work idx).hasBinaryPrefix x := by
+            (c1.work idx).HasBinaryPrefix x := by
         let c1 : Cfg n (copyInputToWorkTM idx).Q :=
           { state := CopyPhase.done
             input := c.input.move (TM.idleDir c.input.read)
@@ -1403,7 +1403,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
       have hread : c.input.read = Γ.ofBool (x[k]'hk_lt) := by
         simp [Tape.read, hhead, hcells, Tape.init_ofBool_cells_lt x k hk_lt]
       have hprefix_next :
-          ((c.work idx).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).hasBinaryPrefix
+          ((c.work idx).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).HasBinaryPrefix
             (x.take (k + 1)) := by
         have hwrite := Tape.hasBinaryPrefix_write_bit (x[k]'hk_lt) hprefix
         simpa [List.take_concat_get' x k hk_lt] using hwrite
@@ -1413,7 +1413,7 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
             c1.state = CopyPhase.copying ∧
             c1.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
             c1.input.head = k + 2 ∧
-            (c1.work idx).hasBinaryPrefix (x.take (k + 1)) := by
+            (c1.work idx).HasBinaryPrefix (x.take (k + 1)) := by
         cases hbit : x[k]'hk_lt with
         | false =>
             have hread0 : c.input.read = Γ.zero := by
@@ -1469,11 +1469,11 @@ theorem copyInputToWorkTM_started_hoareTime {n : ℕ} (idx : Fin n) (x : List Bo
     (copyInputToWorkTM idx).HoareTime
       (fun inp work _out =>
         inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-        (work idx).hasBinaryPrefix [])
+        (work idx).HasBinaryPrefix [])
       (fun inp work _out =>
         inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
-        (work idx).hasBinaryPrefix x)
+        (work idx).HasBinaryPrefix x)
       (x.length + 1) := by
   intro inp work out hpre
   rcases hpre with ⟨hinp, hprefix⟩
@@ -1499,14 +1499,14 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
       c.state = CopyPhase.copying →
       (c.work src).cells = (Tape.init (x.map Γ.ofBool)).cells →
       (c.work src).head = k + 1 →
-      (c.work dst).hasBinaryPrefix (x.take k) →
+      (c.work dst).HasBinaryPrefix (x.take k) →
       k ≤ x.length →
       ∃ c',
         (copyWorkToWorkTM src dst).reachesIn (rem + 1) c c' ∧
         (copyWorkToWorkTM src dst).halted c' ∧
         (c'.work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (c'.work src).head = x.length + 1 ∧
-        (c'.work dst).hasBinaryPrefix x := by
+        (c'.work dst).HasBinaryPrefix x := by
   intro rem
   induction rem with
   | zero =>
@@ -1516,7 +1516,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
       subst hk_eq
       have hsrc_read : (c.work src).read = Γ.blank := by
         simp [Tape.read, hsrc_head, hsrc_cells, Tape.init_ofBool_cells_ge x x.length le_rfl]
-      have hprefix_full : (c.work dst).hasBinaryPrefix x := by
+      have hprefix_full : (c.work dst).HasBinaryPrefix x := by
         simpa using hprefix
       have hdst_read : (c.work dst).read = Γ.blank := by
         have hblank := hprefix_full.2.2 x.length le_rfl
@@ -1527,7 +1527,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
             (copyWorkToWorkTM src dst).halted c1 ∧
             (c1.work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
             (c1.work src).head = x.length + 1 ∧
-            (c1.work dst).hasBinaryPrefix x := by
+            (c1.work dst).HasBinaryPrefix x := by
         let c1 : Cfg n (copyWorkToWorkTM src dst).Q :=
           { state := CopyPhase.done
             input := c.input.move (TM.idleDir c.input.read)
@@ -1564,7 +1564,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
       have hsrc_read : (c.work src).read = Γ.ofBool (x[k]'hk_lt) := by
         simp [Tape.read, hsrc_head, hsrc_cells, Tape.init_ofBool_cells_lt x k hk_lt]
       have hprefix_next :
-          ((c.work dst).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).hasBinaryPrefix
+          ((c.work dst).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).HasBinaryPrefix
             (x.take (k + 1)) := by
         have hwrite := Tape.hasBinaryPrefix_write_bit (x[k]'hk_lt) hprefix
         simpa [List.take_concat_get' x k hk_lt] using hwrite
@@ -1574,7 +1574,7 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
             c1.state = CopyPhase.copying ∧
             (c1.work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
             (c1.work src).head = k + 2 ∧
-            (c1.work dst).hasBinaryPrefix (x.take (k + 1)) := by
+            (c1.work dst).HasBinaryPrefix (x.take (k + 1)) := by
         cases hbit : x[k]'hk_lt with
         | false =>
             have hread0 : (c.work src).read = Γ.zero := by
@@ -1652,11 +1652,11 @@ theorem copyWorkToWorkTM_started_hoareTime {n : ℕ}
     (copyWorkToWorkTM src dst).HoareTime
       (fun _inp work _out =>
         work src = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-        (work dst).hasBinaryPrefix [])
+        (work dst).HasBinaryPrefix [])
       (fun _inp work _out =>
         (work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work src).head = x.length + 1 ∧
-        (work dst).hasBinaryPrefix x)
+        (work dst).HasBinaryPrefix x)
       (x.length + 1) := by
   intro inp work out hpre
   rcases hpre with ⟨hsrc, hdst⟩
@@ -1694,7 +1694,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
       P inp work out →
       (work' src).cells = (Tape.init (x.map Γ.ofBool)).cells →
       (work' src).head = x.length + 1 →
-      (work' dst).hasBinaryPrefix x →
+      (work' dst).HasBinaryPrefix x →
       (work' dst).cells 0 = Γ.start →
       inp' = inp →
       out' = out →
@@ -1711,7 +1711,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
       (fun inp work out =>
         (work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work src).head = x.length + 1 ∧
-        (work dst).hasBinaryPrefix x ∧
+        (work dst).HasBinaryPrefix x ∧
         (work dst).cells 0 = Γ.start ∧
         P inp work out)
       (x.length + 1) := by
@@ -1734,7 +1734,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
       c.state = CopyPhase.copying →
       (c.work src).cells = (Tape.init (x.map Γ.ofBool)).cells →
       (c.work src).head = k + 1 →
-      (c.work dst).hasBinaryPrefix (x.take k) →
+      (c.work dst).HasBinaryPrefix (x.take k) →
       (c.work dst).cells 0 = Γ.start →
       k ≤ x.length →
       c.input = inp →
@@ -1745,7 +1745,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
         (copyWorkToWorkTM src dst).halted c' ∧
         (c'.work src).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (c'.work src).head = x.length + 1 ∧
-        (c'.work dst).hasBinaryPrefix x ∧
+        (c'.work dst).HasBinaryPrefix x ∧
         (c'.work dst).cells 0 = Γ.start ∧
         c'.input = inp ∧
         c'.output = out ∧
@@ -1756,7 +1756,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
     have hsrc_head0 : (work src).head = 1 := by
       rw [hsrc]
       simp [Tape.move, Tape.init]
-    have hdst_prefix0 : (work dst).hasBinaryPrefix [] := by
+    have hdst_prefix0 : (work dst).HasBinaryPrefix [] := by
       rw [hdst]
       exact Tape.init_nil_move_right_hasBinaryPrefix_nil
     have hdst_cell00 : (work dst).cells 0 = Γ.start := by
@@ -1789,7 +1789,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
       subst hk_eq
       have hsrc_read : (c.work src).read = Γ.blank := by
         simp [Tape.read, hsrc_head, hsrc_cells, Tape.init_ofBool_cells_ge x x.length le_rfl]
-      have hprefix_full : (c.work dst).hasBinaryPrefix x := by
+      have hprefix_full : (c.work dst).HasBinaryPrefix x := by
         simpa using hprefix
       have hdst_read : (c.work dst).read = Γ.blank := by
         have hblank := hprefix_full.2.2 x.length le_rfl
@@ -1842,7 +1842,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
       have hsrc_read : (c.work src).read = Γ.ofBool (x[k]'hk_lt) := by
         simp [Tape.read, hsrc_head, hsrc_cells, Tape.init_ofBool_cells_lt x k hk_lt]
       have hprefix_next :
-          ((c.work dst).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).hasBinaryPrefix
+          ((c.work dst).writeAndMove (Γ.ofBool (x[k]'hk_lt)) Dir3.right).HasBinaryPrefix
             (x.take (k + 1)) := by
         have hwrite := Tape.hasBinaryPrefix_write_bit (x[k]'hk_lt) hprefix
         simpa [List.take_concat_get' x k hk_lt] using hwrite
@@ -1883,7 +1883,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
             exact hsrc_cells
           have hsrc_head1 : (c1.work src).head = k + 2 := by
             simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
-          have hdst_prefix1 : (c1.work dst).hasBinaryPrefix (x.take (k + 1)) := by
+          have hdst_prefix1 : (c1.work dst).HasBinaryPrefix (x.take (k + 1)) := by
             have hdst :
                 c1.work dst = (c.work dst).writeAndMove Γ.zero Dir3.right := by
               simp [c1]
@@ -1939,7 +1939,7 @@ theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
             exact hsrc_cells
           have hsrc_head1 : (c1.work src).head = k + 2 := by
             simp [c1, hsrc_head, hne, Tape.writeAndMove, Tape.move, Tape.write_head]
-          have hdst_prefix1 : (c1.work dst).hasBinaryPrefix (x.take (k + 1)) := by
+          have hdst_prefix1 : (c1.work dst).HasBinaryPrefix (x.take (k + 1)) := by
             have hdst :
                 c1.work dst = (c.work dst).writeAndMove Γ.one Dir3.right := by
               simp [c1]

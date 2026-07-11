@@ -491,7 +491,7 @@ theorem retargetOutput_computesInTime (tm : TM n) {f : List Bool → List Bool}
     ∃ (c' : Cfg (n + 1) tm.Q) (t : ℕ), t ≤ T x.length ∧
       (tm.retargetOutput).reachesIn t ((tm.retargetOutput).initCfg x) c' ∧
       (tm.retargetOutput).halted c' ∧
-      (c'.work (Fin.last n)).hasOutput (f x) := by
+      (c'.work (Fin.last n)).HasOutput (f x) := by
   obtain ⟨c₀, t, ht, hreach, hhalt, hout⟩ := h x
   obtain ⟨C', hR, hstate, hwork⟩ := retargetOutput_reachesIn_init tm x hreach
   refine ⟨C', t, ht, hR, ?_, ?_⟩

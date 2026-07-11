@@ -29,28 +29,28 @@ variable {n : ℕ}
 
 /-- A digit source for the mixed-radix loader: a register index or a
     hardwired constant. -/
-abbrev Src (n : ℕ) := Fin n ⊕ ℕ
+abbrev DigitSrc (n : ℕ) := Fin n ⊕ ℕ
 
 /-- The source `s` supplies the value `w`: either a register (disjoint from
     the scratches) currently holding `w`, or the constant `w` itself. -/
-def SrcSpec (work₀ : Fin n → Tape) (tmp tmp2 : Fin n) : Src n → ℕ → Prop
+def DigitSrcSpec (work₀ : Fin n → Tape) (tmp tmp2 : Fin n) : DigitSrc n → ℕ → Prop
   | .inl r, w => work₀ r = regTape w ∧ r ≠ tmp ∧ r ≠ tmp2
   | .inr c, w => c = w
 
 /-- One mixed-radix step: `tmp := tmp · X + (digit from s)`. -/
-def hornerStepTM (X tmp tmp2 : Fin n) : Src n → TM n
+def hornerStepTM (X tmp tmp2 : Fin n) : DigitSrc n → TM n
   | .inl r => hornerLayerRegTM X r tmp tmp2
   | .inr c => hornerLayerConstTM X tmp tmp2 c
 
 /-- **`hornerStepTM` Hoare specification** (raw form, arbitrary scratch
     values). -/
-theorem hornerStepTM_hoareTime {X tmp tmp2 : Fin n} (s : Src n)
+theorem hornerStepTM_hoareTime {X tmp tmp2 : Fin n} (s : DigitSrc n)
     (hXt : X ≠ tmp) (hXt2 : X ≠ tmp2) (htt2 : tmp ≠ tmp2)
     (M x v w u : ℕ) (hx : x ≤ M) (hv : v ≤ M) (hu : u ≤ M)
     (hres : v * x + w ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hX : work₀ X = regTape x) (hs : SrcSpec work₀ tmp tmp2 s w)
+    (hX : work₀ X = regTape x) (hs : DigitSrcSpec work₀ tmp tmp2 s w)
     (ht : work₀ tmp = regTape v) (ht2 : work₀ tmp2 = regTape u) :
     (hornerStepTM X tmp tmp2 s).HoareTime
       (EmitPred inp₀ work₀ ys)
@@ -126,9 +126,9 @@ theorem scratch_idem {work₀ : Fin n → Tape} {tmp tmp2 : Fin n}
   rw [Function.update_comm htt2, Function.update_idem, Function.update_idem]
 
 /-- Source specifications survive scratching (sources avoid the scratches). -/
-theorem SrcSpec.scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {s : Src n}
-    {w : ℕ} (hs : SrcSpec work₀ tmp tmp2 s w) (z : ℕ) :
-    SrcSpec (TM.scratch work₀ tmp tmp2 z) tmp tmp2 s w := by
+theorem DigitSrcSpec.scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {s : DigitSrc n}
+    {w : ℕ} (hs : DigitSrcSpec work₀ tmp tmp2 s w) (z : ℕ) :
+    DigitSrcSpec (TM.scratch work₀ tmp tmp2 z) tmp tmp2 s w := by
   cases s with
   | inl r =>
     obtain ⟨hr, hrt, hrt2⟩ := hs
@@ -137,17 +137,17 @@ theorem SrcSpec.scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {s : Src n
 
 /-- **`hornerStepTM` on canonical scratch states.** The composable form:
     scratches at `v` in, scratches at `v·x + w` out. -/
-theorem hornerStepTM_hoareTime_scratch (X tmp tmp2 : Fin n) (s : Src n)
+theorem hornerStepTM_hoareTime_scratch (X tmp tmp2 : Fin n) (s : DigitSrc n)
     (hXt : X ≠ tmp) (hXt2 : X ≠ tmp2) (htt2 : tmp ≠ tmp2)
     (M x v w : ℕ) (hx : x ≤ M) (hv : v ≤ M) (hres : v * x + w ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hX : work₀ X = regTape x) (hs : SrcSpec work₀ tmp tmp2 s w) :
+    (hX : work₀ X = regTape x) (hs : DigitSrcSpec work₀ tmp tmp2 s w) :
     (hornerStepTM X tmp tmp2 s).HoareTime
       (EmitPred inp₀ (scratch work₀ tmp tmp2 v) ys)
       (EmitPred inp₀ (scratch work₀ tmp tmp2 (v * x + w)) ys)
       (layerBudget M) := by
-  have hs' : SrcSpec (scratch work₀ tmp tmp2 v) tmp tmp2 s w := by
+  have hs' : DigitSrcSpec (scratch work₀ tmp tmp2 v) tmp tmp2 s w := by
     cases s with
     | inl r =>
       obtain ⟨hr, hrt, hrt2⟩ := hs
@@ -172,7 +172,7 @@ theorem hornerStepTM_hoareTime_scratch (X tmp tmp2 : Fin n) (s : Src n)
     `tmp` (and `tmp2`), with radices read from registers `rA rB rC rD` and
     digits from the sources `sa sb sc sd`. -/
 def loadFlatVarTM (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
-    (sa sb sc sd : Src n) : TM n :=
+    (sa sb sc sd : DigitSrc n) : TM n :=
   seqTM (setConstTM tmp tag)
     (seqTM (hornerStepTM rA tmp tmp2 sa)
       (seqTM (hornerStepTM rB tmp tmp2 sb)
@@ -185,7 +185,7 @@ def loadBudget (M : ℕ) : ℕ := opBudget M + 4 * layerBudget M + 4
     all intermediate numeral values capped by `M`; ends on the canonical
     scratch state at the full numeral. -/
 theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
-    (sa sb sc sd : Src n)
+    (sa sb sc sd : DigitSrc n)
     (hAt : rA ≠ tmp) (hAt2 : rA ≠ tmp2) (hBt : rB ≠ tmp) (hBt2 : rB ≠ tmp2)
     (hCt : rC ≠ tmp) (hCt2 : rC ≠ tmp2) (hDt : rD ≠ tmp) (hDt2 : rD ≠ tmp2)
     (htt2 : tmp ≠ tmp2)
@@ -200,8 +200,8 @@ theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
     (hrA : work₀ rA = regTape A) (hrB : work₀ rB = regTape B)
     (hrC : work₀ rC = regTape C) (hrD : work₀ rD = regTape D)
-    (hsa : SrcSpec work₀ tmp tmp2 sa a) (hsb : SrcSpec work₀ tmp tmp2 sb b)
-    (hsc : SrcSpec work₀ tmp tmp2 sc c) (hsd : SrcSpec work₀ tmp tmp2 sd d)
+    (hsa : DigitSrcSpec work₀ tmp tmp2 sa a) (hsb : DigitSrcSpec work₀ tmp tmp2 sb b)
+    (hsc : DigitSrcSpec work₀ tmp tmp2 sc c) (hsd : DigitSrcSpec work₀ tmp tmp2 sd d)
     (ht : work₀ tmp = regTape v) (ht2 : work₀ tmp2 = regTape u) :
     (loadFlatVarTM rA rB rC rD tmp tmp2 tag sa sb sc sd).HoareTime
       (EmitPred inp₀ work₀ ys)
@@ -220,7 +220,7 @@ theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
     · subst hi; rw [hW0, Function.update_self]; exact parked_regTape _
     · rw [hW0, Function.update_of_ne hi]; exact hwork₀ i
   -- Stage 1 (raw form: pre is W0, not a canonical scratch pair).
-  have hsa' : SrcSpec W0 tmp tmp2 sa a := by
+  have hsa' : DigitSrcSpec W0 tmp tmp2 sa a := by
     cases sa with
     | inl r =>
       obtain ⟨hr, hrt, hrt2⟩ := hsa
@@ -265,7 +265,7 @@ theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
 /-- **Emit one literal**: load the mixed-radix variable index into `tmp`,
     then append the encoded literal with sign `sign` to the output. -/
 def emitVarLitTM (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool) (tag : ℕ)
-    (sa sb sc sd : Src n) : TM n :=
+    (sa sb sc sd : DigitSrc n) : TM n :=
   seqTM (loadFlatVarTM rA rB rC rD tmp tmp2 tag sa sb sc sd)
     (emitLitTM sign tmp)
 
@@ -277,7 +277,7 @@ def emitVarBudget (M : ℕ) : ℕ := loadBudget M + opBudget M + 1
     variable index `var`, leaving the scratches at `var` and everything else
     untouched. -/
 theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
-    (tag : ℕ) (sa sb sc sd : Src n)
+    (tag : ℕ) (sa sb sc sd : DigitSrc n)
     (hAt : rA ≠ tmp) (hAt2 : rA ≠ tmp2) (hBt : rB ≠ tmp) (hBt2 : rB ≠ tmp2)
     (hCt : rC ≠ tmp) (hCt2 : rC ≠ tmp2) (hDt : rD ≠ tmp) (hDt2 : rD ≠ tmp2)
     (htt2 : tmp ≠ tmp2)
@@ -292,8 +292,8 @@ theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
     (hrA : work₀ rA = regTape A) (hrB : work₀ rB = regTape B)
     (hrC : work₀ rC = regTape C) (hrD : work₀ rD = regTape D)
-    (hsa : SrcSpec work₀ tmp tmp2 sa a) (hsb : SrcSpec work₀ tmp tmp2 sb b)
-    (hsc : SrcSpec work₀ tmp tmp2 sc c) (hsd : SrcSpec work₀ tmp tmp2 sd d)
+    (hsa : DigitSrcSpec work₀ tmp tmp2 sa a) (hsb : DigitSrcSpec work₀ tmp tmp2 sb b)
+    (hsc : DigitSrcSpec work₀ tmp tmp2 sc c) (hsd : DigitSrcSpec work₀ tmp tmp2 sd d)
     (ht : work₀ tmp = regTape v) (ht2 : work₀ tmp2 = regTape u) :
     (emitVarLitTM rA rB rC rD tmp tmp2 sign tag sa sb sc sd).HoareTime
       (EmitPred inp₀ work₀ ys)
@@ -327,7 +327,7 @@ theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
     by the clause emitters: scratches at any `z ≤ M` in, scratches at the
     emitted variable out. -/
 theorem emitVarLitTM_hoareTime_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
-    (tag : ℕ) (sa sb sc sd : Src n)
+    (tag : ℕ) (sa sb sc sd : DigitSrc n)
     (hAt : rA ≠ tmp) (hAt2 : rA ≠ tmp2) (hBt : rB ≠ tmp) (hBt2 : rB ≠ tmp2)
     (hCt : rC ≠ tmp) (hCt2 : rC ≠ tmp2) (hDt : rD ≠ tmp) (hDt2 : rD ≠ tmp2)
     (htt2 : tmp ≠ tmp2)
@@ -342,8 +342,8 @@ theorem emitVarLitTM_hoareTime_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bo
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
     (hrA : work₀ rA = regTape A) (hrB : work₀ rB = regTape B)
     (hrC : work₀ rC = regTape C) (hrD : work₀ rD = regTape D)
-    (hsa : SrcSpec work₀ tmp tmp2 sa a) (hsb : SrcSpec work₀ tmp tmp2 sb b)
-    (hsc : SrcSpec work₀ tmp tmp2 sc c) (hsd : SrcSpec work₀ tmp tmp2 sd d) :
+    (hsa : DigitSrcSpec work₀ tmp tmp2 sa a) (hsb : DigitSrcSpec work₀ tmp tmp2 sb b)
+    (hsc : DigitSrcSpec work₀ tmp tmp2 sc c) (hsd : DigitSrcSpec work₀ tmp tmp2 sd d) :
     (emitVarLitTM rA rB rC rD tmp tmp2 sign tag sa sb sc sd).HoareTime
       (EmitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
       (EmitPred inp₀

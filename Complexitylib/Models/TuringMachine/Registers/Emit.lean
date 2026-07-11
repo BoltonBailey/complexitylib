@@ -12,21 +12,21 @@ import Complexitylib.Models.TuringMachine.Hoare
 
 Building blocks for machines that *compute string functions* (`ComputesInTime`):
 the output tape is treated as an append-only accumulator, written left to
-right. The central predicate `outAcc ys out` says the output tape holds
+right. The central predicate `OutAcc ys out` says the output tape holds
 exactly the bits `ys` (after the `▷` at cell 0) with the head parked on the
 first blank, ready to append; emitters have Hoare specs of the shape
 
-    {outAcc ys ∧ …} emit {outAcc (ys ++ w) ∧ …}
+    {OutAcc ys ∧ …} emit {OutAcc (ys ++ w) ∧ …}
 
 which compose by `seqTM` along `List.append` associativity. The final bridge
-to `ComputesInTime` is `outAcc.hasOutput`.
+to `ComputesInTime` is `OutAcc.hasOutput`.
 
 This layer is the foundation for the Cook–Levin reduction emitter
 (`docs/A5-ReductionEmitter.md`).
 
 ## Main definitions
 
-- `TM.outAcc` — the output-accumulator predicate
+- `TM.OutAcc` — the output-accumulator predicate
 - `TM.bumpTM` — entry adapter: bump every head from `▷` to cell 1
 - `TM.emitBitsTM` — append a fixed word to the output
 - `TM.emitUnaryTM` — append a register's value as a doubled-unary run
@@ -34,7 +34,7 @@ This layer is the foundation for the Cook–Levin reduction emitter
 
 ## Main results
 
-- `TM.outAcc.hasOutput` — accumulated output is `hasOutput`
+- `TM.OutAcc.hasOutput` — accumulated output is `HasOutput`
 - `TM.outAcc_append_bit` — one `writeAndMove _ .right` extends the accumulator
 - `TM.emitBitsTM_hoareTime` — `emitBitsTM w` appends `w` in `|w|` steps,
   preserving the input and work tapes
@@ -53,25 +53,25 @@ variable {n : ℕ}
 /-- **Output accumulator.** The output tape holds exactly the bits `ys`
     (cells `1..|ys|`, after the `▷` at cell 0), all cells beyond are blank,
     and the head is parked on the first blank — ready to append. -/
-def outAcc (ys : List Bool) (out : Tape) : Prop :=
+def OutAcc (ys : List Bool) (out : Tape) : Prop :=
   out.head = ys.length + 1 ∧
   out.cells 0 = Γ.start ∧
   (∀ i, (h : i < ys.length) → out.cells (i + 1) = Γ.ofBool ys[i]) ∧
   (∀ j, ys.length + 1 ≤ j → out.cells j = Γ.blank)
 
-namespace outAcc
+namespace OutAcc
 
 /-- The accumulator head sits just past the `|ys|` stored bits, at cell `|ys| + 1`. -/
-theorem head_eq {ys : List Bool} {out : Tape} (h : outAcc ys out) :
+theorem head_eq {ys : List Bool} {out : Tape} (h : OutAcc ys out) :
     out.head = ys.length + 1 := h.1
 
 /-- The accumulator reads the first blank. -/
-theorem read_blank {ys : List Bool} {out : Tape} (h : outAcc ys out) :
+theorem read_blank {ys : List Bool} {out : Tape} (h : OutAcc ys out) :
     out.read = Γ.blank := by
   rw [Tape.read, h.1]; exact h.2.2.2 _ (le_refl _)
 
 /-- An accumulator tape is parked (bits and blanks are never `▷`). -/
-theorem parked {ys : List Bool} {out : Tape} (h : outAcc ys out) : Parked out := by
+theorem parked {ys : List Bool} {out : Tape} (h : OutAcc ys out) : Parked out := by
   refine ⟨by rw [h.1]; omega, fun j hj => ?_⟩
   rcases Nat.lt_or_ge j (ys.length + 1) with hlt | hge
   · obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
@@ -79,15 +79,15 @@ theorem parked {ys : List Bool} {out : Tape} (h : outAcc ys out) : Parked out :=
     cases ys[i] <;> decide
   · rw [h.2.2.2 j hge]; decide
 
-/-- The bridge to `ComputesInTime`: an accumulated output `hasOutput` its bits. -/
-theorem hasOutput {ys : List Bool} {out : Tape} (h : outAcc ys out) :
-    out.hasOutput ys :=
+/-- The bridge to `ComputesInTime`: an accumulated output `HasOutput` its bits. -/
+theorem hasOutput {ys : List Bool} {out : Tape} (h : OutAcc ys out) :
+    out.HasOutput ys :=
   ⟨fun i hi => h.2.2.1 i hi, h.2.2.2 _ (le_refl _)⟩
 
-end outAcc
+end OutAcc
 
 /-- The empty accumulator: a blank output tape with the head bumped to cell 1. -/
-theorem outAcc_nil_init : outAcc [] { head := 1, cells := (Tape.init []).cells } := by
+theorem outAcc_nil_init : OutAcc [] { head := 1, cells := (Tape.init []).cells } := by
   refine ⟨rfl, by simp [Tape.init], fun i hi => absurd hi (by simp), fun j hj => ?_⟩
   show (Tape.init []).cells j = Γ.blank
   simp only [Tape.init]
@@ -96,8 +96,8 @@ theorem outAcc_nil_init : outAcc [] { head := 1, cells := (Tape.init []).cells }
 
 /-- **Appending one bit.** Writing `Γ.ofBool b` at the accumulator head and
     moving right extends the accumulator by `b`. -/
-theorem outAcc_append_bit {ys : List Bool} {out : Tape} (h : outAcc ys out) (b : Bool) :
-    outAcc (ys ++ [b]) (out.writeAndMove (Γ.ofBool b) .right) := by
+theorem outAcc_append_bit {ys : List Bool} {out : Tape} (h : OutAcc ys out) (b : Bool) :
+    OutAcc (ys ++ [b]) (out.writeAndMove (Γ.ofBool b) .right) := by
   obtain ⟨hhead, hc0, hbits, hblank⟩ := h
   have hne : ¬ out.head = 0 := by omega
   have hcells : (out.writeAndMove (Γ.ofBool b) .right).cells
@@ -181,7 +181,7 @@ theorem bumpTM_hoareTime (x : List Bool) :
         out = Tape.init [])
       (fun inp work out =>
         inp = { head := 1, cells := (Tape.init (x.map Γ.ofBool)).cells } ∧
-        (∀ i, reg 0 (work i)) ∧ outAcc [] out)
+        (∀ i, IsReg 0 (work i)) ∧ OutAcc [] out)
       1 := by
   rintro inp work out ⟨rfl, hwork, rfl⟩
   obtain rfl : work = fun _ => Tape.init [] := funext hwork
@@ -242,10 +242,10 @@ private theorem emitBitsTM_run (w : List Bool) (m : ℕ) :
     ∀ (k : ℕ) (hk : w.length = k + m),
       ∀ (c : Cfg n (emitBitsTM (n := n) w).Q) (ys : List Bool),
       c.state = ⟨k, by omega⟩ → Parked c.input → (∀ i, Parked (c.work i)) →
-      outAcc ys c.output →
+      OutAcc ys c.output →
       ∃ c', (emitBitsTM (n := n) w).reachesIn m c c' ∧
         c'.state = ⟨w.length, by omega⟩ ∧ c'.input = c.input ∧ c'.work = c.work ∧
-        outAcc (ys ++ w.drop k) c'.output := by
+        OutAcc (ys ++ w.drop k) c'.output := by
   induction m with
   | zero =>
     intro k hk c ys hst hinp hwork hout
@@ -274,8 +274,8 @@ private theorem emitBitsTM_run (w : List Bool) (m : ℕ) :
 theorem emitBitsTM_hoareTime (w : List Bool) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (ys : List Bool) (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i)) :
     (emitBitsTM (n := n) w).HoareTime
-      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc ys out)
-      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc (ys ++ w) out)
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ OutAcc ys out)
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ OutAcc (ys ++ w) out)
       w.length := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c', hreach, hst', hinp', hwork', hout'⟩ :=
@@ -536,13 +536,13 @@ private theorem emitUnaryTM_emit_run (v m : ℕ) :
       (∀ i, i < v → (c.work r).cells (i + 1) = Γ.one) →
       (∀ j, v + 1 ≤ j → (c.work r).cells j = Γ.blank) →
       (c.work r).head = k + 1 →
-      outAcc ys c.output →
+      OutAcc ys c.output →
       ∃ c', (emitUnaryTM (n := n) r).reachesIn (2 * m) c c' ∧
         c'.state = .emitA ∧ c'.input = c.input ∧
         (∀ i, i ≠ r → c'.work i = c.work i) ∧
         (c'.work r).cells = (c.work r).cells ∧
         (c'.work r).head = v + 1 ∧
-        outAcc (ys ++ List.replicate (2 * m) true) c'.output := by
+        OutAcc (ys ++ List.replicate (2 * m) true) c'.output := by
   induction m with
   | zero =>
     intro k hk c ys hst hinp hwork _ _ hhead hout
@@ -608,7 +608,7 @@ private theorem emitUnaryTM_back_run (h : ℕ) :
       (c.work r).cells 0 = Γ.start →
       (∀ j, 1 ≤ j → (c.work r).cells j ≠ Γ.start) →
       (c.work r).head = h →
-      outAcc ys c.output →
+      OutAcc ys c.output →
       ∃ c', (emitUnaryTM (n := n) r).reachesIn (h + 2) c c' ∧
         c'.state = .done ∧ c'.input = c.input ∧
         (∀ i, i ≠ r → c'.work i = c.work i) ∧
@@ -687,11 +687,11 @@ private theorem emitUnaryTM_back_run (h : ℕ) :
     included. -/
 theorem emitUnaryTM_hoareTime (r : Fin n) (v : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (ys : List Bool) (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, i ≠ r → Parked (work₀ i))
-    (hreg : reg v (work₀ r)) :
+    (hreg : IsReg v (work₀ r)) :
     (emitUnaryTM (n := n) r).HoareTime
-      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc ys out)
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ OutAcc ys out)
       (fun inp work out => inp = inp₀ ∧ work = work₀ ∧
-        outAcc (ys ++ List.replicate (2 * v) true) out)
+        OutAcc (ys ++ List.replicate (2 * v) true) out)
       (3 * v + 3) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, hst₁, hinp₁, hwork₁, hcells₁, hhead₁, hout₁⟩ :=
@@ -756,7 +756,7 @@ end EmitUnary
 /-- The standard emit-spec shape: ghost-fixed input and work tapes, output
     accumulator holding `ys`. -/
 def EmitPred (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool) : TapePred n :=
-  fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc ys out
+  fun inp work out => inp = inp₀ ∧ work = work₀ ∧ OutAcc ys out
 
 /-- Emit-spec states pass through combinator phase boundaries unchanged:
     parked ghosts and the accumulator are fixed points of
@@ -791,7 +791,7 @@ def emitLitTM (s : Bool) (r : Fin n) : TM n :=
     the same way. -/
 theorem emitLitTM_hoareTime (s : Bool) (r : Fin n) (v : ℕ) (inp₀ : Tape)
     (work₀ : Fin n → Tape) (ys : List Bool) (hinp₀ : Parked inp₀)
-    (hwork₀ : ∀ i, i ≠ r → Parked (work₀ i)) (hreg : reg v (work₀ r)) :
+    (hwork₀ : ∀ i, i ≠ r → Parked (work₀ i)) (hreg : IsReg v (work₀ r)) :
     (emitLitTM s r).HoareTime
       (EmitPred inp₀ work₀ ys)
       (EmitPred inp₀ work₀

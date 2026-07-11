@@ -526,7 +526,7 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
       (fun _inp work _out =>
         (work ⟨k, by omega⟩).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
-        (work ⟨idx.val, by omega⟩).hasBinaryPrefix x)
+        (work ⟨idx.val, by omega⟩).HasBinaryPrefix x)
       (x.length + 1) := by
   have hmove_right_invariant : ∀ {t : Tape},
       Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
@@ -545,7 +545,7 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
         (fun inp work _out =>
           inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
-          (work idx).hasBinaryPrefix x)
+          (work idx).HasBinaryPrefix x)
         (x.length + 1) :=
     (copyInputToWorkTM_started_hoareTime idx x).weaken_pre (by
       intro inp work out hpre
@@ -589,7 +589,7 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
         Tape.StartInvariant out ∧
         (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
-        (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
+        (work ⟨counterIdx.val, by omega⟩).HasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start)) 
       (inputLengthPlusOneCounterTime x.length) := by
@@ -608,7 +608,7 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
           Tape.StartInvariant _out ∧
           (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work i)))
         (fun _inp work _out =>
-          (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+          (work counterIdx).HasUnaryCounter (x.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
         (inputLengthPlusOneCounterTime x.length) :=
@@ -654,7 +654,7 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
       (fun _inp work _out =>
         (work ⟨k, by omega⟩).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
-        (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
+        (work ⟨counterIdx.val, by omega⟩).HasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
@@ -675,7 +675,7 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
         (fun inp work _out =>
           inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
-          (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+          (work counterIdx).HasUnaryCounter (x.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
         (inputLengthPlusOneCounterTime x.length) :=

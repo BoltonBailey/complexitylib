@@ -27,7 +27,7 @@ Arora–Barak (*Computational Complexity: A Modern Approach*, Definitions
 - `NTM` — a nondeterministic TM with two transition functions (AB Definition 2.1)
 - `TM.stepRel`, `TM.reaches`, `TM.reachesIn` — deterministic step relation and reachability
 - `NTM.trace` — execute an NTM for a fixed choice sequence (canonical NTM execution)
-- `Tape.hasOutput` — predicate: tape contains a given binary string as output
+- `Tape.HasOutput` — predicate: tape contains a given binary string as output
 - `TM.ComputesInTime` — computing a function in bounded time (AB Definition 1.4)
 - `TM.Computes` — computing a function (existential over time bound)
 - `TM.Accepts`, `TM.AcceptsInTime` — deterministic acceptance
@@ -165,17 +165,17 @@ theorem head_move_le (t : Tape) (d : Dir3) : (t.move d).head ≤ t.head + 1 := b
 /-- The tape contains output `y : List Bool` starting at cell 1:
     cells 1 through |y| match `y`, and cell |y| + 1 is blank.
     Output is the binary string written on the output tape after `▷`. -/
-def hasOutput (t : Tape) (y : List Bool) : Prop :=
+def HasOutput (t : Tape) (y : List Bool) : Prop :=
   (∀ (i : ℕ) (h : i < y.length),
     t.cells (i + 1) = Γ.ofBool (y[i]'h)) ∧
   t.cells (y.length + 1) = Γ.blank
 
-/-- `hasOutput` depends only on the tape cells, not the head position. -/
+/-- `HasOutput` depends only on the tape cells, not the head position. -/
 theorem hasOutput_congr {t₁ t₂ : Tape} (h : t₁.cells = t₂.cells) (y : List Bool) :
-    t₁.hasOutput y ↔ t₂.hasOutput y := by
-  simp only [hasOutput, h]
+    t₁.HasOutput y ↔ t₂.HasOutput y := by
+  simp only [HasOutput, h]
 
-instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput y) :=
+instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.HasOutput y) :=
   if h : (∀ i : Fin y.length, t.cells (i.val + 1) = Γ.ofBool (y[i.val]'i.isLt)) ∧
          t.cells (y.length + 1) = Γ.blank
   then isTrue ⟨fun i hi => h.1 ⟨i, hi⟩, h.2⟩
@@ -496,7 +496,7 @@ def DecidesInTime (tm : TM n) (L : Language) (T : ℕ → ℕ) : Prop :=
     written on the output tape. -/
 def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) : Prop :=
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
-    c'.output.hasOutput (f x)
+    c'.output.HasOutput (f x)
 
 /-- DTM computes function `f` (existential version of `ComputesInTime`). -/
 def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
@@ -532,7 +532,7 @@ def IsTransducer (tm : TM n) : Prop :=
 /-- DTM computes function `f` using at most `S(|x|)` space on work tapes. -/
 def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
   (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
-  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.hasOutput (f x)
+  ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.HasOutput (f x)
 
 /-- Transitivity: if `c₁` reaches `c₂` in `t₁` steps and `c₂` reaches `c₃`
     in `t₂` steps, then `c₁` reaches `c₃` in `t₁ + t₂` steps. -/
@@ -743,14 +743,14 @@ noncomputable def acceptProb (tm : NTM n) (x : List Bool) (T : ℕ) : ℚ :=
   (tm.acceptCount x T : ℚ) / (2 ^ T : ℚ)
 
 /-- Count of choice sequences of length `T` on which the machine halts with
-    output `y` (using `Tape.hasOutput`).
+    output `y` (using `Tape.HasOutput`).
 
     Meaningful when the machine halts on all paths within `T` steps. -/
 noncomputable def outputCount (tm : NTM n) (x : List Bool) (T : ℕ)
     (y : List Bool) : ℕ :=
   (Finset.univ.filter fun (choices : Fin T → Bool) =>
     let c' := tm.trace T choices (tm.initCfg x)
-    c'.state = tm.qhalt ∧ c'.output.hasOutput y).card
+    c'.state = tm.qhalt ∧ c'.output.HasOutput y).card
 
 /-- Probability that the machine outputs `y` on input `x` =
     |output-matching paths| / 2^T.

@@ -23,7 +23,7 @@ namespace Tape
 /-- A counter tape while it is being built: cells `1..used` contain unary
     marks, the head is at cell `used + 1`, and the tail from that cell onward
     is blank. -/
-def hasUnaryPrefix (t : Tape) (used : ℕ) : Prop :=
+def HasUnaryPrefix (t : Tape) (used : ℕ) : Prop :=
   t.head = used + 1 ∧
   (∀ i, i < used → t.cells (i + 1) = Γ.one) ∧
   (∀ i, used ≤ i → t.cells (i + 1) = Γ.blank)
@@ -31,14 +31,14 @@ def hasUnaryPrefix (t : Tape) (used : ℕ) : Prop :=
 /-- An empty tape moved one cell right has the empty unary prefix: the head is
     at cell 1 and every cell after `▷` is blank. -/
 theorem init_nil_move_right_hasUnaryPrefix_zero :
-    ((Tape.init []).move Dir3.right).hasUnaryPrefix 0 := by
-  simp [hasUnaryPrefix, Tape.init, Tape.move]
+    ((Tape.init []).move Dir3.right).HasUnaryPrefix 0 := by
+  simp [HasUnaryPrefix, Tape.init, Tape.move]
 
 /-- Writing one mark at the current head and moving right extends a unary
     prefix by one cell. -/
 theorem hasUnaryPrefix_write_one {t : Tape} {used : ℕ}
-    (h : t.hasUnaryPrefix used) :
-    (t.writeAndMove Γ.one Dir3.right).hasUnaryPrefix (used + 1) := by
+    (h : t.HasUnaryPrefix used) :
+    (t.writeAndMove Γ.one Dir3.right).HasUnaryPrefix (used + 1) := by
   refine ⟨?_, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.write, Tape.move, h.1]
   · intro i hi
@@ -67,7 +67,7 @@ theorem hasUnaryPrefix_write_one {t : Tape} {used : ℕ}
 
 /-- Writing the next unary mark preserves the left-end marker cell. -/
 theorem hasUnaryPrefix_write_one_cell0 {t : Tape} {used : ℕ}
-    (h : t.hasUnaryPrefix used) (h0 : t.cells 0 = Γ.start) :
+    (h : t.HasUnaryPrefix used) (h0 : t.cells 0 = Γ.start) :
     (t.writeAndMove Γ.one Dir3.right).cells 0 = Γ.start := by
   unfold Tape.writeAndMove
   rw [Tape.move_cells]
@@ -80,7 +80,7 @@ theorem hasUnaryPrefix_write_one_cell0 {t : Tape} {used : ℕ}
 
 /-- A unary prefix never contains `▷` after the left-end marker. -/
 theorem hasUnaryPrefix_cells_ne_start {t : Tape} {used : ℕ}
-    (h : t.hasUnaryPrefix used) :
+    (h : t.HasUnaryPrefix used) :
     ∀ j, j ≥ 1 → t.cells j ≠ Γ.start := by
   intro j hj
   let i := j - 1
@@ -94,19 +94,19 @@ theorem hasUnaryPrefix_cells_ne_start {t : Tape} {used : ℕ}
 
 /-- A unary counter tape positioned at its first data cell.
 
-`hasUnaryCounter t B` means cells `1..B` contain `1`, cell `B+1` is blank,
+`HasUnaryCounter t B` means cells `1..B` contain `1`, cell `B+1` is blank,
 and the head is at cell `1`. -/
-def hasUnaryCounter (t : Tape) (B : ℕ) : Prop :=
+def HasUnaryCounter (t : Tape) (B : ℕ) : Prop :=
   t.head = 1 ∧
   (∀ i, i < B → t.cells (i + 1) = Γ.one) ∧
   t.cells (B + 1) = Γ.blank
 
 /-- Rewinding a built unary prefix to cell 1 yields the public counter shape. -/
 theorem hasUnaryCounter_of_hasUnaryPrefix {t t' : Tape} {B : ℕ}
-    (hprefix : t.hasUnaryPrefix B)
+    (hprefix : t.HasUnaryPrefix B)
     (hhead : t'.head = 1)
     (hcells : t'.cells = t.cells) :
-    t'.hasUnaryCounter B := by
+    t'.HasUnaryCounter B := by
   refine ⟨hhead, ?_, ?_⟩
   · intro i hi
     rw [hcells]
@@ -116,19 +116,19 @@ theorem hasUnaryCounter_of_hasUnaryPrefix {t t' : Tape} {B : ℕ}
 
 /-- A tape holding a zero-length unary counter reads blank at its head. -/
 theorem hasUnaryCounter_read_zero {t : Tape}
-    (h : t.hasUnaryCounter 0) : t.read = Γ.blank := by
+    (h : t.HasUnaryCounter 0) : t.read = Γ.blank := by
   simp [Tape.read, h.1, h.2.2]
 
 /-- A tape holding a positive-length unary counter reads `1` at its head. -/
 theorem hasUnaryCounter_read_pos {t : Tape} {B : ℕ}
-    (h : t.hasUnaryCounter B) (hB : 0 < B) : t.read = Γ.one := by
+    (h : t.HasUnaryCounter B) (hB : 0 < B) : t.read = Γ.one := by
   have hcell := h.2.1 0 hB
   simp [Tape.read, h.1, hcell]
 
 /-- Counter shape after `used` marks have already been consumed. The head is
 at the next unconsumed counter cell, previous cells are blanked, remaining
 marks are `1`, and the first cell after the total bound is blank. -/
-def hasCounterRemainder (t : Tape) (used total : ℕ) : Prop :=
+def HasCounterRemainder (t : Tape) (used total : ℕ) : Prop :=
   used ≤ total ∧
   t.head = used + 1 ∧
   (∀ i, i < used → t.cells (i + 1) = Γ.blank) ∧
@@ -138,7 +138,7 @@ def hasCounterRemainder (t : Tape) (used total : ℕ) : Prop :=
 /-- A fresh unary counter is exactly a counter remainder with zero marks
     consumed. -/
 theorem hasUnaryCounter_iff_remainder_zero {t : Tape} {B : ℕ} :
-    t.hasUnaryCounter B ↔ t.hasCounterRemainder 0 B := by
+    t.HasUnaryCounter B ↔ t.HasCounterRemainder 0 B := by
   constructor
   · intro h
     refine ⟨Nat.zero_le B, h.1, ?_, ?_, h.2.2⟩
@@ -151,12 +151,12 @@ theorem hasUnaryCounter_iff_remainder_zero {t : Tape} {B : ℕ} :
 
 /-- Once all counter marks are consumed, the head reads blank. -/
 theorem hasCounterRemainder_read_blank_of_done {t : Tape} {B : ℕ}
-    (h : t.hasCounterRemainder B B) : t.read = Γ.blank := by
+    (h : t.HasCounterRemainder B B) : t.read = Γ.blank := by
   simp [Tape.read, h.2.1, h.2.2.2.2]
 
 /-- While counter marks remain unconsumed, the head reads `1`. -/
 theorem hasCounterRemainder_read_one_of_remaining {t : Tape} {used total : ℕ}
-    (h : t.hasCounterRemainder used total) (hlt : used < total) :
+    (h : t.HasCounterRemainder used total) (hlt : used < total) :
     t.read = Γ.one := by
   have hcell := h.2.2.2.1 used (le_rfl) hlt
   simp [Tape.read, h.2.1, hcell]
@@ -164,8 +164,8 @@ theorem hasCounterRemainder_read_one_of_remaining {t : Tape} {used total : ℕ}
 /-- Blanking the current counter mark and moving right advances the unary
     counter remainder by one. -/
 theorem hasCounterRemainder_consume {t : Tape} {used total : ℕ}
-    (h : t.hasCounterRemainder used total) (hlt : used < total) :
-    (t.writeAndMove Γ.blank Dir3.right).hasCounterRemainder (used + 1) total := by
+    (h : t.HasCounterRemainder used total) (hlt : used < total) :
+    (t.writeAndMove Γ.blank Dir3.right).HasCounterRemainder (used + 1) total := by
   refine ⟨by omega, ?_, ?_, ?_, ?_⟩
   · simp [Tape.writeAndMove, Tape.write, Tape.move, h.2.1]
   · intro i hi
@@ -405,7 +405,7 @@ theorem inputLengthPlusOneCounterTM_scan_start_initializes_counter
     (hcounter : work counterIdx = Tape.init []) :
     ((((inputLengthPlusOneCounterTM counterIdx).step
       { state := LinearCounterPhase.scan, input := inp, work := work, output := out }).get
-        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).hasUnaryPrefix 0 := by
+        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).HasUnaryPrefix 0 := by
   simp [TM.step, inputLengthPlusOneCounterTM, hinp, counterPreserveWork,
     counterIdleDirs, hcounter]
   simpa [Tape.writeAndMove, Tape.write] using
@@ -438,11 +438,11 @@ theorem inputLengthPlusOneCounterTM_scan_bit_state
 theorem inputLengthPlusOneCounterTM_scan_bit_extends_counter
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used : ℕ}
-    (hprefix : (work counterIdx).hasUnaryPrefix used)
+    (hprefix : (work counterIdx).HasUnaryPrefix used)
     (hstart : inp.read ≠ Γ.start) (hblank : inp.read ≠ Γ.blank) :
     ((((inputLengthPlusOneCounterTM counterIdx).step
       { state := LinearCounterPhase.scan, input := inp, work := work, output := out }).get
-        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).hasUnaryPrefix
+        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).HasUnaryPrefix
       (used + 1) := by
   simp [TM.step, inputLengthPlusOneCounterTM, hstart, hblank,
     counterWriteOneWork, counterAdvanceDirs, Tape.hasUnaryPrefix_write_one hprefix]
@@ -452,11 +452,11 @@ theorem inputLengthPlusOneCounterTM_scan_bit_extends_counter
 theorem inputLengthPlusOneCounterTM_scan_blank_extends_counter
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     {used : ℕ}
-    (hprefix : (work counterIdx).hasUnaryPrefix used)
+    (hprefix : (work counterIdx).HasUnaryPrefix used)
     (hinp : inp.read = Γ.blank) :
     ((((inputLengthPlusOneCounterTM counterIdx).step
       { state := LinearCounterPhase.scan, input := inp, work := work, output := out }).get
-        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).hasUnaryPrefix
+        (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).HasUnaryPrefix
       (used + 1) := by
   have hstart : inp.read ≠ Γ.start := by rw [hinp]; simp
   simp [TM.step, inputLengthPlusOneCounterTM, hinp,
@@ -637,7 +637,7 @@ private theorem inputLengthPlusOneCounterTM_start_step
       c₁.state = LinearCounterPhase.scan ∧
       c₁.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
       c₁.input.head = 1 ∧
-      (c₁.work counterIdx).hasUnaryPrefix 0 ∧
+      (c₁.work counterIdx).HasUnaryPrefix 0 ∧
       (c₁.work counterIdx).cells 0 = Γ.start := by
   have hread : (Tape.init (x.map Γ.ofBool)).read = Γ.start := by
     simp [Tape.read, Tape.init]
@@ -661,14 +661,14 @@ private theorem inputLengthPlusOneCounterTM_scan_bit_step
     (hstate : c.state = LinearCounterPhase.scan)
     (hinput_cells : c.input.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
-    (hprefix : (c.work counterIdx).hasUnaryPrefix k)
+    (hprefix : (c.work counterIdx).HasUnaryPrefix k)
     (hcell0 : (c.work counterIdx).cells 0 = Γ.start) :
     ∃ c',
       (inputLengthPlusOneCounterTM counterIdx).step c = some c' ∧
       c'.state = LinearCounterPhase.scan ∧
       c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
-      (c'.work counterIdx).hasUnaryPrefix (k + 1) ∧
+      (c'.work counterIdx).HasUnaryPrefix (k + 1) ∧
       (c'.work counterIdx).cells 0 = Γ.start := by
   have hread : c.input.read = Γ.ofBool (x[k]'hk) := by
     show c.input.cells c.input.head = _
@@ -697,14 +697,14 @@ private theorem inputLengthPlusOneCounterTM_scan_bits_loop
       c.state = LinearCounterPhase.scan →
       c.input.cells = (Tape.init (x.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
-      (c.work counterIdx).hasUnaryPrefix k →
+      (c.work counterIdx).HasUnaryPrefix k →
       (c.work counterIdx).cells 0 = Γ.start →
       ∃ c',
         (inputLengthPlusOneCounterTM counterIdx).reachesIn m c c' ∧
         c'.state = LinearCounterPhase.scan ∧
         c'.input.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
-        (c'.work counterIdx).hasUnaryPrefix (k + m) ∧
+        (c'.work counterIdx).HasUnaryPrefix (k + m) ∧
         (c'.work counterIdx).cells 0 = Γ.start := by
   intro m
   induction m with
@@ -734,13 +734,13 @@ private theorem inputLengthPlusOneCounterTM_scan_blank_step
     (hstate : c.state = LinearCounterPhase.scan)
     (hinput_cells : c.input.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = x.length + 1)
-    (hprefix : (c.work counterIdx).hasUnaryPrefix x.length)
+    (hprefix : (c.work counterIdx).HasUnaryPrefix x.length)
     (hcell0 : (c.work counterIdx).cells 0 = Γ.start) :
     ∃ c',
       (inputLengthPlusOneCounterTM counterIdx).step c = some c' ∧
       c'.state = LinearCounterPhase.rewind ∧
       c'.input = c.input ∧
-      (c'.work counterIdx).hasUnaryPrefix (x.length + 1) ∧
+      (c'.work counterIdx).HasUnaryPrefix (x.length + 1) ∧
       (c'.work counterIdx).cells 0 = Γ.start := by
   have hread : c.input.read = Γ.blank := by
     show c.input.cells c.input.head = _
@@ -864,7 +864,7 @@ theorem inputLengthPlusOneCounterTM_hoareTime
         inp = Tape.init (x.map Γ.ofBool) ∧
         work counterIdx = Tape.init [])
       (fun _ work _ =>
-        (work counterIdx).hasUnaryCounter (x.length + 1))
+        (work counterIdx).HasUnaryCounter (x.length + 1))
       (inputLengthPlusOneCounterTime x.length) := by
   intro inp work out ⟨hinput, hcounter⟩
   subst inp
@@ -881,7 +881,7 @@ theorem inputLengthPlusOneCounterTM_hoareTime
   have hhead2' : c2.input.head = x.length + 1 := by
     rw [hhead2]
     omega
-  have hprefix2' : (c2.work counterIdx).hasUnaryPrefix x.length := by
+  have hprefix2' : (c2.work counterIdx).HasUnaryPrefix x.length := by
     simpa using hprefix2
   obtain ⟨c3, hstep_blank, hstate3, hinput3, hprefix3, hcell03⟩ :=
     inputLengthPlusOneCounterTM_scan_blank_step counterIdx x c2
@@ -899,7 +899,7 @@ theorem inputLengthPlusOneCounterTM_hoareTime
   obtain ⟨c4, hreach_rewind, hhalt4, hinput4, hhead4, hcells4⟩ :=
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
-  have hpost : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
+  have hpost : (c4.work counterIdx).HasUnaryCounter (x.length + 1) :=
     Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hreach_start : (inputLengthPlusOneCounterTM counterIdx).reachesIn 1 c0 c1 := by
     exact .step hstep_start .zero
@@ -931,7 +931,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
         inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
         work counterIdx = (Tape.init []).move Dir3.right)
       (fun _ work _ =>
-        (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+        (work counterIdx).HasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
@@ -947,7 +947,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
     simp [c0, Tape.move_cells]
   have hhead0 : c0.input.head = 1 := by
     simp [c0, Tape.move, Tape.init]
-  have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by
+  have hprefix0 : (c0.work counterIdx).HasUnaryPrefix 0 := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
     exact Tape.init_nil_move_right_hasUnaryPrefix_zero
   have hcell00 : (c0.work counterIdx).cells 0 = Γ.start := by
@@ -959,7 +959,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
   have hhead2' : c2.input.head = x.length + 1 := by
     rw [hhead2]
     omega
-  have hprefix2' : (c2.work counterIdx).hasUnaryPrefix x.length := by
+  have hprefix2' : (c2.work counterIdx).HasUnaryPrefix x.length := by
     simpa using hprefix2
   obtain ⟨c3, hstep_blank, hstate3, hinput3, hprefix3, hcell03⟩ :=
     inputLengthPlusOneCounterTM_scan_blank_step counterIdx x c2
@@ -977,7 +977,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
   obtain ⟨c4, hreach_rewind, hhalt4, hinput4, hhead4, hcells4⟩ :=
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
-  have hcounter4 : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
+  have hcounter4 : (c4.work counterIdx).HasUnaryCounter (x.length + 1) :=
     Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hcell04 : (c4.work counterIdx).cells 0 = Γ.start := by
     rw [hcells4]
@@ -1012,7 +1012,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
       (fun inp work _ =>
         inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
-        (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+        (work counterIdx).HasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
@@ -1028,7 +1028,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     simp [c0, Tape.move_cells]
   have hhead0 : c0.input.head = 1 := by
     simp [c0, Tape.move, Tape.init]
-  have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by
+  have hprefix0 : (c0.work counterIdx).HasUnaryPrefix 0 := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
     exact Tape.init_nil_move_right_hasUnaryPrefix_zero
   have hcell00 : (c0.work counterIdx).cells 0 = Γ.start := by
@@ -1040,7 +1040,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   have hhead2' : c2.input.head = x.length + 1 := by
     rw [hhead2]
     omega
-  have hprefix2' : (c2.work counterIdx).hasUnaryPrefix x.length := by
+  have hprefix2' : (c2.work counterIdx).HasUnaryPrefix x.length := by
     simpa using hprefix2
   obtain ⟨c3, hstep_blank, hstate3, hinput3, hprefix3, hcell03⟩ :=
     inputLengthPlusOneCounterTM_scan_blank_step counterIdx x c2
@@ -1058,7 +1058,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   obtain ⟨c4, hreach_rewind, hhalt4, hinput4, hhead4, hcells4⟩ :=
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
-  have hcounter4 : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
+  have hcounter4 : (c4.work counterIdx).HasUnaryCounter (x.length + 1) :=
     Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hcell04 : (c4.work counterIdx).cells 0 = Γ.start := by
     rw [hcells4]
@@ -1233,7 +1233,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_preserves_work_hoareTime
         inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
         work passiveIdx = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-        (work counterIdx).hasUnaryCounter (x.length + 1) ∧
+        (work counterIdx).HasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start) ∧
         out = (Tape.init []).move Dir3.right)
@@ -1263,7 +1263,7 @@ theorem inputLengthPlusOneCounterTM_toNTM_hoareTime
         inp = Tape.init (x.map Γ.ofBool) ∧
         work counterIdx = Tape.init [])
       (fun _ work _ =>
-        (work counterIdx).hasUnaryCounter (x.length + 1))
+        (work counterIdx).HasUnaryCounter (x.length + 1))
       (inputLengthPlusOneCounterTime x.length) :=
   (inputLengthPlusOneCounterTM_hoareTime counterIdx x).toNTM
 

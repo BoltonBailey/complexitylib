@@ -39,10 +39,10 @@ theorem addIntoTM_hoareTime (src dst : Fin n) (hne : src ≠ dst) (a b : ℕ)
   have hbody : ∀ i, i < a → (incRegTM dst).HoareTime
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update work₀ dst (regTape (b + i))) src
-          ⟨i + 2, regCells a⟩ ∧ outAcc ys out)
+          ⟨i + 2, regCells a⟩ ∧ OutAcc ys out)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update work₀ dst (regTape (b + (i + 1)))) src
-          ⟨i + 2, regCells a⟩ ∧ outAcc ys out)
+          ⟨i + 2, regCells a⟩ ∧ OutAcc ys out)
       (2 * (b + a) + 4) := by
     intro i hi
     have hspec := incRegTM_hoareTime dst (b + i) inp₀
@@ -159,10 +159,10 @@ theorem mulAddIntoTM_hoareTime (src₁ src₂ dst : Fin n)
   have hbody : ∀ i, i < a → (addIntoTM src₂ dst).HoareTime
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update work₀ dst (regTape (d + i * b))) src₁
-          ⟨i + 2, regCells a⟩ ∧ outAcc ys out)
+          ⟨i + 2, regCells a⟩ ∧ OutAcc ys out)
       (fun inp work out => inp = inp₀ ∧
         work = Function.update (Function.update work₀ dst (regTape (d + (i + 1) * b)))
-          src₁ ⟨i + 2, regCells a⟩ ∧ outAcc ys out)
+          src₁ ⟨i + 2, regCells a⟩ ∧ OutAcc ys out)
       (mulAddBound a b d) := by
     intro i hi
     have hspec := addIntoTM_hoareTime src₂ dst h2d b (d + i * b) inp₀

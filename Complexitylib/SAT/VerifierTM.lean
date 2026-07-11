@@ -26,7 +26,7 @@ namespace TM
 -- ════════════════════════════════════════════════════════════════════════
 
 private theorem hasBinaryPrefix_cells_eq_initTape_cells {t : Tape} {bits : List Bool}
-    (hprefix : t.hasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
+    (hprefix : t.HasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
     t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells := by
   funext j
   cases j with
@@ -42,7 +42,7 @@ private theorem eq_initTape_move_right_of_cells_head_one {t : Tape} (bits : List
     (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells)
     (hhead : t.head = 1) :
     t = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
-  have hbits : t.hasBinaryString bits := by
+  have hbits : t.HasBinaryString bits := by
     refine ⟨hhead, ?_, ?_⟩
     · intro i hi
       rw [hcells]
@@ -152,7 +152,7 @@ private theorem started_blank_output_read_ne_start :
   decide
 
 private theorem unaryCounter_read_ne_start {t : Tape} {B : ℕ}
-    (h : t.hasUnaryCounter B) : t.read ≠ Γ.start := by
+    (h : t.HasUnaryCounter B) : t.read ≠ Γ.start := by
   by_cases hB : B = 0
   · subst hB
     rw [Tape.hasUnaryCounter_read_zero h]
@@ -288,7 +288,7 @@ private theorem satLengthCheck_init_step (α : List Bool) (B : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
     (hstate : c.state = .init)
     (hinput : c.input = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right)
-    (hcounter : (c.work ⟨0, by omega⟩).hasUnaryCounter B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasUnaryCounter B)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       c'.state = .scan ∧
@@ -318,13 +318,13 @@ private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
-    (hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder k B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder k B)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       c'.state = .scan ∧
       c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
-      (c'.work ⟨0, by omega⟩).hasCounterRemainder (k + 1) B ∧
+      (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + 1) B ∧
       c'.output = c.output := by
   have hread_input : c.input.read = Γ.ofBool (α[k]'hk) := by
     show c.input.cells c.input.head = _
@@ -352,7 +352,7 @@ private theorem satLengthCheck_scan_accept_step (α : List Bool) (B : ℕ)
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = α.length + 1)
-    (_hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder α.length B)
+    (_hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder α.length B)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       satLengthCheckTM.halted c' ∧
@@ -380,7 +380,7 @@ private theorem satLengthCheck_scan_reject_step (α : List Bool) (B : ℕ)
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = B + 1)
-    (hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder B B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder B B)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       satLengthCheckTM.halted c' ∧
@@ -418,14 +418,14 @@ private theorem satLengthCheck_scan_prefix_loop (α : List Bool) (B : ℕ) :
       c.state = .scan →
       c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
-      (c.work ⟨0, by omega⟩).hasCounterRemainder k B →
+      (c.work ⟨0, by omega⟩).HasCounterRemainder k B →
       c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
       ∃ c',
         satLengthCheckTM.reachesIn m c c' ∧
         c'.state = .scan ∧
         c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
-        (c'.work ⟨0, by omega⟩).hasCounterRemainder (k + m) B ∧
+        (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + m) B ∧
         c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
   intro m
   induction m with
@@ -466,7 +466,7 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
     satLengthCheckTM.HoareTime
       (fun inp work out =>
         inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (fun inp _work out =>
         inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
@@ -492,7 +492,7 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
   have hhead1 : c1.input.head = 1 := by
     rw [hinput1]
     exact hhead0
-  have hcounter1 : (c1.work ⟨0, by omega⟩).hasCounterRemainder 0 B := by
+  have hcounter1 : (c1.work ⟨0, by omega⟩).HasCounterRemainder 0 B := by
     rw [hwork1]
     exact (Tape.hasUnaryCounter_iff_remainder_zero).mp hcounter
   have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
@@ -540,7 +540,7 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
     (_root_.Complexity.TM.retargetInput satLengthCheckTM).HoareTime
       (fun _inp work out =>
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
@@ -559,7 +559,7 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
       satLengthCheckTM.HoareTime
         (fun inp work out =>
           inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-          (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+          (work ⟨0, by omega⟩).HasUnaryCounter B ∧
           (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
           out = (_root_.Complexity.Tape.init []).move Dir3.right)
@@ -620,7 +620,7 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
         (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
         (work ⟨2, by omega⟩).head = z.length + 1 ∧
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter (z.length + 1) ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter (z.length + 1) ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
@@ -645,7 +645,7 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
           inp.cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
           inp.head = z.length + 1 ∧
           work passiveIdx = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-          (work counterIdx).hasUnaryCounter (z.length + 1) ∧
+          (work counterIdx).HasUnaryCounter (z.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start) ∧
           out = (_root_.Complexity.Tape.init []).move Dir3.right)
@@ -687,7 +687,7 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
           (vin.cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
             vin.head = z.length + 1 ∧
             innerWork passiveIdx = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-            (innerWork counterIdx).hasUnaryCounter (z.length + 1) ∧
+            (innerWork counterIdx).HasUnaryCounter (z.length + 1) ∧
             (innerWork counterIdx).cells 0 = Γ.start ∧
             (∀ j, j ≥ 1 → (innerWork counterIdx).cells j ≠ Γ.start) ∧
             out = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
@@ -723,7 +723,7 @@ theorem satCounter3TM_started_stableInput_hoareTime (z α : List Bool) :
         (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
         (work ⟨2, by omega⟩).head = z.length + 1 ∧
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter (z.length + 1) ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter (z.length + 1) ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
@@ -848,7 +848,7 @@ private theorem satLengthCheckPassive_init_step (α β : List Bool) (B : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
     (hstate : c.state = .init)
     (hinput : c.input = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right)
-    (hcounter : (c.work ⟨0, by omega⟩).hasUnaryCounter B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasUnaryCounter B)
     (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
@@ -885,14 +885,14 @@ private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B 
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
-    (hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder k B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder k B)
     (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
       c'.state = .scan ∧
       c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
-      (c'.work ⟨0, by omega⟩).hasCounterRemainder (k + 1) B ∧
+      (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + 1) B ∧
       c'.work ⟨1, by omega⟩ = c.work ⟨1, by omega⟩ ∧
       c'.output = c.output := by
   have hread_input : c.input.read = Γ.ofBool (α[k]'hk) := by
@@ -926,7 +926,7 @@ private theorem satLengthCheckPassive_scan_accept_step (α β : List Bool) (B : 
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = α.length + 1)
-    (_hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder α.length B)
+    (_hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder α.length B)
     (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
@@ -961,7 +961,7 @@ private theorem satLengthCheckPassive_scan_reject_step (α β : List Bool) (B : 
     (hstate : c.state = .scan)
     (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = B + 1)
-    (hcounter : (c.work ⟨0, by omega⟩).hasCounterRemainder B B)
+    (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder B B)
     (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
     (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
@@ -1002,7 +1002,7 @@ private theorem satLengthCheckPassive_scan_prefix_loop (α β : List Bool) (B : 
       c.state = .scan →
       c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
-      (c.work ⟨0, by omega⟩).hasCounterRemainder k B →
+      (c.work ⟨0, by omega⟩).HasCounterRemainder k B →
       c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right →
       c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
       ∃ c',
@@ -1010,7 +1010,7 @@ private theorem satLengthCheckPassive_scan_prefix_loop (α β : List Bool) (B : 
         c'.state = .scan ∧
         c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
-        (c'.work ⟨0, by omega⟩).hasCounterRemainder (k + m) B ∧
+        (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + m) B ∧
         c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
   intro m
@@ -1051,7 +1051,7 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
     satLengthCheckPassiveTM.HoareTime
       (fun inp work out =>
         inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (fun inp work out =>
@@ -1079,7 +1079,7 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
   have hhead1 : c1.input.head = 1 := by
     rw [hinput1]
     exact hhead0
-  have hcounter1 : (c1.work ⟨0, by omega⟩).hasCounterRemainder 0 B := by
+  have hcounter1 : (c1.work ⟨0, by omega⟩).HasCounterRemainder 0 B := by
     rw [hwork01]
     exact (Tape.hasUnaryCounter_iff_remainder_zero).mp hcounter
   have hpassive1 : c1.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right := by
@@ -1132,7 +1132,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
     satLengthCheck3TM.HoareTime
       (fun _inp work out =>
         (work ⟨2, by omega⟩) = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
@@ -1153,7 +1153,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
       satLengthCheckPassiveTM.HoareTime
         (fun inp work out =>
           inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-          (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+          (work ⟨0, by omega⟩).HasUnaryCounter B ∧
           work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
           (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
@@ -1199,7 +1199,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
   have hret' : satLengthCheck3TM.HoareTime
       (fun _inp work out =>
         (work ⟨2, by omega⟩) = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨0, by omega⟩).hasUnaryCounter B ∧
+        (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
@@ -2946,7 +2946,7 @@ private theorem verifyPairTM_init_steps (w : List Bool) :
       c'.input = (_root_.Complexity.Tape.init (w.map Γ.ofBool)).move Dir3.right ∧
       c'.work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
       c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-      (c'.work ⟨2, by omega⟩).hasUnaryPrefix 1 ∧
+      (c'.work ⟨2, by omega⟩).HasUnaryPrefix 1 ∧
       (c'.work ⟨2, by omega⟩).cells 0 = Γ.start ∧
       c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
   let c₁ : Cfg 3 verifyPairTM.Q :=
@@ -4228,7 +4228,7 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
   -- Phase 0: init (2 steps → .splitScan)
   obtain ⟨c1, hr1, hs1, hi1, hw01, hw11, hu2, hc2start, ho1⟩ :=
     verifyPairTM_init_steps (pair z α)
-  -- Unpack the counter's `hasUnaryPrefix 1`
+  -- Unpack the counter's `HasUnaryPrefix 1`
   obtain ⟨hu2h, hu2one, hu2blank⟩ := hu2
   -- input/work/output stability facts for c1
   have hi1_head : c1.input.head = 1 := by rw [hi1]; simp [Tape.move, _root_.Complexity.Tape.init]

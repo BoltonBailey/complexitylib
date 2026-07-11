@@ -256,7 +256,7 @@ private theorem copyInput_fresh_hoareTime (x : List Bool) :
         inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
         (work 0).cells 0 = Γ.start ∧
-        (work 0).hasBinaryPrefix x ∧
+        (work 0).HasBinaryPrefix x ∧
         (∀ i : Fin 8, i ≠ 0 → work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
         out = (_root_.Complexity.Tape.init []).move Dir3.right)
       (x.length + 2) := by

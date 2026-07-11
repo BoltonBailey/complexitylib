@@ -244,15 +244,15 @@ private theorem idle_move_preserves_head (t : Tape)
   rw [idleDir_stay_of_ge_one t hhead hno]; rfl
 
 -- ════════════════════════════════════════════════════════════════════════
--- Union TM delta helpers for Mid states
+-- Union TM delta helpers for UnionPhase states
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Delta computation for rewindOut when fake output is not at start. -/
 private theorem unionTM_delta_rewindOut_nostart (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : wHeads fakeOutIdx ≠ Γ.start) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.rewindOut)) iHead wHeads oHead =
-    ( Sum.inr (Sum.inl Mid.rewindOut),
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.rewindOut)) iHead wHeads oHead =
+    ( Sum.inr (Sum.inl UnionPhase.rewindOut),
       fun i => if i.val = n₁ then readBackWrite (wHeads fakeOutIdx) else .blank,
       .blank, idleDir iHead,
       fun i => if i.val = n₁ then Dir3.left else idleDir (wHeads i),
@@ -263,8 +263,8 @@ private theorem unionTM_delta_rewindOut_nostart (tm₁ : TM n₁) (tm₂ : TM n�
 private theorem unionTM_delta_rewindOut_start (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : wHeads fakeOutIdx = Γ.start) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.rewindOut)) iHead wHeads oHead =
-    ( Sum.inr (Sum.inl Mid.checkResult),
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.rewindOut)) iHead wHeads oHead =
+    ( Sum.inr (Sum.inl UnionPhase.checkResult),
       fun _ => .blank, .blank, idleDir iHead,
       fun i => if i.val = n₁ then Dir3.right else idleDir (wHeads i),
       idleDir oHead ) := by
@@ -274,7 +274,7 @@ private theorem unionTM_delta_rewindOut_start (tm₁ : TM n₁) (tm₂ : TM n₂
 private theorem unionTM_delta_checkResult_one (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : wHeads fakeOutIdx = Γ.one) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.checkResult)) iHead wHeads oHead =
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.checkResult)) iHead wHeads oHead =
     ( Sum.inr (Sum.inr tm₂.qhalt),
       fun _ => .blank, .one, idleDir iHead,
       fun i => idleDir (wHeads i),
@@ -285,16 +285,16 @@ private theorem unionTM_delta_checkResult_one (tm₁ : TM n₁) (tm₂ : TM n₂
 private theorem unionTM_delta_checkResult_notone (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : wHeads fakeOutIdx ≠ Γ.one) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.checkResult)) iHead wHeads oHead =
-    allIdle (Sum.inr (Sum.inl Mid.rewindIn)) iHead wHeads oHead := by
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.checkResult)) iHead wHeads oHead =
+    allIdle (Sum.inr (Sum.inl UnionPhase.rewindIn)) iHead wHeads oHead := by
   unfold unionTM; simp only [if_neg hread]
 
 /-- Delta computation for rewindIn when input is not at start. -/
 private theorem unionTM_delta_rewindIn_nostart (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : iHead ≠ Γ.start) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.rewindIn)) iHead wHeads oHead =
-    ( Sum.inr (Sum.inl Mid.rewindIn),
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.rewindIn)) iHead wHeads oHead =
+    ( Sum.inr (Sum.inl UnionPhase.rewindIn),
       fun _ => .blank, .blank, Dir3.left,
       fun i => idleDir (wHeads i),
       idleDir oHead ) := by
@@ -304,8 +304,8 @@ private theorem unionTM_delta_rewindIn_nostart (tm₁ : TM n₁) (tm₂ : TM n�
 private theorem unionTM_delta_rewindIn_start (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ)
     (hread : iHead = Γ.start) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.rewindIn)) iHead wHeads oHead =
-    ( Sum.inr (Sum.inl Mid.setup2),
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.rewindIn)) iHead wHeads oHead =
+    ( Sum.inr (Sum.inl UnionPhase.setup2),
       fun _ => .blank, .blank, Dir3.right,
       fun i => idleDir (wHeads i),
       idleDir oHead ) := by
@@ -314,7 +314,7 @@ private theorem unionTM_delta_rewindIn_start (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Delta computation for setup2. -/
 private theorem unionTM_delta_setup2 (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ) :
-    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl Mid.setup2)) iHead wHeads oHead =
+    (unionTM tm₁ tm₂).δ (Sum.inr (Sum.inl UnionPhase.setup2)) iHead wHeads oHead =
     ( Sum.inr (Sum.inr tm₂.qstart),
       fun _ => .blank, .blank, moveLeftDir iHead,
       fun i => if i.val ≤ n₁ then idleDir (wHeads i) else moveLeftDir (wHeads i),
@@ -325,7 +325,7 @@ private theorem unionTM_delta_setup2 (tm₁ : TM n₁) (tm₂ : TM n₂)
 private theorem unionTM_delta_inl_qhalt (tm₁ : TM n₁) (tm₂ : TM n₂)
     (iHead : Γ) (wHeads : Fin (n₁ + 1 + n₂) → Γ) (oHead : Γ) :
     (unionTM tm₁ tm₂).δ (Sum.inl tm₁.qhalt) iHead wHeads oHead =
-    ( Sum.inr (Sum.inl Mid.rewindOut),
+    ( Sum.inr (Sum.inl UnionPhase.rewindOut),
       fun i => if i.val = n₁ then readBackWrite (wHeads fakeOutIdx) else .blank,
       .blank,
       idleDir iHead,
@@ -337,8 +337,8 @@ private theorem unionTM_delta_inl_qhalt (tm₁ : TM n₁) (tm₂ : TM n₂)
 -- One-step lemmas for union TM
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- The union machine is not halted in any Mid state. -/
-private theorem unionTM_mid_not_halted (tm₁ : TM n₁) (tm₂ : TM n₂) (m : Mid)
+/-- The union machine is not halted in any UnionPhase state. -/
+private theorem unionTM_mid_not_halted (tm₁ : TM n₁) (tm₂ : TM n₂) (m : UnionPhase)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
     (hstate : c.state = Sum.inr (Sum.inl m)) :
     c.state ≠ (unionTM tm₁ tm₂).qhalt := by
@@ -354,10 +354,10 @@ private theorem unionTM_inl_not_halted (tm₁ : TM n₁) (tm₂ : TM n₂) (q : 
 /-- Step the union machine from a rewindOut state with non-start fake output read. -/
 private theorem step_rewindOut_nostart_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.rewindOut))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.rewindOut))
     (hread : (c.work fakeOutIdx).read ≠ Γ.start) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindOut),
         input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write
           ((if i.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
@@ -368,10 +368,10 @@ private theorem step_rewindOut_nostart_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from a rewindOut state when fake output reads start. -/
 private theorem step_rewindOut_start_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.rewindOut))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.rewindOut))
     (hread : (c.work fakeOutIdx).read = Γ.start) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.checkResult),
+      { state := Sum.inr (Sum.inl UnionPhase.checkResult),
         input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move
           (if i.val = n₁ then Dir3.right else idleDir (c.work i).read),
@@ -381,7 +381,7 @@ private theorem step_rewindOut_start_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from checkResult with Γ.one → halted. -/
 private theorem step_checkResult_one_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.checkResult))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.checkResult))
     (hread : (c.work fakeOutIdx).read = Γ.one) :
     (unionTM tm₁ tm₂).step c = some
       { state := Sum.inr (Sum.inr tm₂.qhalt),
@@ -393,10 +393,10 @@ private theorem step_checkResult_one_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from checkResult when not Γ.one → rewindIn (allIdle). -/
 private theorem step_checkResult_notone_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.checkResult))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.checkResult))
     (hread : (c.work fakeOutIdx).read ≠ Γ.one) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.rewindIn),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindIn),
         input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c.work i).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) } := by
@@ -405,10 +405,10 @@ private theorem step_checkResult_notone_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from rewindIn with non-start input. -/
 private theorem step_rewindIn_nostart_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.rewindIn))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.rewindIn))
     (hread : c.input.read ≠ Γ.start) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.rewindIn),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindIn),
         input := c.input.move Dir3.left,
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c.work i).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) } := by
@@ -417,10 +417,10 @@ private theorem step_rewindIn_nostart_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from rewindIn when input reads start. -/
 private theorem step_rewindIn_start_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.rewindIn))
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.rewindIn))
     (hread : c.input.read = Γ.start) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.setup2),
+      { state := Sum.inr (Sum.inl UnionPhase.setup2),
         input := c.input.move Dir3.right,
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c.work i).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) } := by
@@ -429,7 +429,7 @@ private theorem step_rewindIn_start_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
 /-- Step the union machine from setup2. -/
 private theorem step_setup2_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
-    (hstate : c.state = Sum.inr (Sum.inl Mid.setup2)) :
+    (hstate : c.state = Sum.inr (Sum.inl UnionPhase.setup2)) :
     (unionTM tm₁ tm₂).step c = some
       { state := Sum.inr (Sum.inr tm₂.qstart),
         input := c.input.move (moveLeftDir c.input.read),
@@ -443,7 +443,7 @@ private theorem step_inl_qhalt_cfg (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
     (hstate : c.state = Sum.inl tm₁.qhalt) :
     (unionTM tm₁ tm₂).step c = some
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindOut),
         input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write
           ((if i.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
@@ -484,7 +484,7 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
     (c₁ : Cfg n₁ tm₁.Q) (hhalt : tm₁.halted c₁)
     (hnostart_out : ∀ i, i ≥ 1 → c₁.output.cells i ≠ Γ.start) :
     ∃ c', (unionTM tm₁ tm₂).step (unionPhase1Cfg tm₁ tm₂ c₁) = some c' ∧
-      c'.state = Sum.inr (Sum.inl Mid.rewindOut) ∧
+      c'.state = Sum.inr (Sum.inl UnionPhase.rewindOut) ∧
       (c'.work fakeOutIdx).cells = c₁.output.cells ∧
       c'.output = (unionIdleTape.write Γw.blank.toΓ).move (idleDir unionIdleTape.read) := by
   have hstate : (unionPhase1Cfg tm₁ tm₂ c₁).state = Sum.inl tm₁.qhalt := by
@@ -492,7 +492,7 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
   have hstep := step_inl_qhalt_cfg tm₁ tm₂ hstate
   -- The result config
   set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-    { state := Sum.inr (Sum.inl Mid.rewindOut),
+    { state := Sum.inr (Sum.inl UnionPhase.rewindOut),
       input := (unionPhase1Cfg tm₁ tm₂ c₁).input.move (idleDir (unionPhase1Cfg tm₁ tm₂ c₁).input.read),
       work := fun i => (((unionPhase1Cfg tm₁ tm₂ c₁).work i).write
         ((if i.val = n₁ then readBackWrite ((unionPhase1Cfg tm₁ tm₂ c₁).work fakeOutIdx).read else .blank) : Γw).toΓ).move
@@ -521,13 +521,13 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
     input head preservation and work tape idleness for tapes > n₁. -/
 private theorem rewind_fakeOut_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
     ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindOut) →
+    c.state = Sum.inr (Sum.inl UnionPhase.rewindOut) →
     c.output = unionIdleTape →
     (c.work fakeOutIdx).head = h →
     (c.work fakeOutIdx).cells 0 = Γ.start →
     (∀ i, i ≥ 1 → (c.work fakeOutIdx).cells i ≠ Γ.start) →
     ∃ c', (unionTM tm₁ tm₂).reachesIn h c c' ∧
-      c'.state = Sum.inr (Sum.inl Mid.rewindOut) ∧
+      c'.state = Sum.inr (Sum.inl UnionPhase.rewindOut) ∧
       (c'.work fakeOutIdx).head = 0 ∧
       (c'.work fakeOutIdx).cells = (c.work fakeOutIdx).cells ∧
       c'.output = unionIdleTape ∧
@@ -545,7 +545,7 @@ private theorem rewind_fakeOut_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
       rw [Tape.read]; exact hnostart _ (by omega)
     have hstep := step_rewindOut_nostart_cfg tm₁ tm₂ hst hread_ne
     set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindOut),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindOut),
         input := c.input.move (idleDir c.input.read),
         work := fun i => ((c.work i).write
           ((if i.val = n₁ then readBackWrite (c.work fakeOutIdx).read else .blank) : Γw).toΓ).move
@@ -628,7 +628,7 @@ theorem unionTM_transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
     rw [Tape.read, hhead_at0, hcells_at0, hcells_rw]; exact hcell0
   have hstep3 := step_rewindOut_start_cfg tm₁ tm₂ hst_at0 hread_start
   set c_cr : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-    { state := Sum.inr (Sum.inl Mid.checkResult),
+    { state := Sum.inr (Sum.inl UnionPhase.checkResult),
       input := c_at0.input.move (idleDir c_at0.input.read),
       work := fun i => ((c_at0.work i).write (Γw.blank : Γw).toΓ).move
         (if i.val = n₁ then Dir3.right else idleDir (c_at0.work i).read),
@@ -650,7 +650,7 @@ theorem unionTM_transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
     show (c_at0.output.write Γw.blank.toΓ).move (idleDir c_at0.output.read) = unionIdleTape
     rw [hout_at0]; exact idleTape_step_idle
   -- Step 4: checkResult with Γ.one → halt (1 step)
-  have hst_cr : c_cr.state = Sum.inr (Sum.inl Mid.checkResult) := rfl
+  have hst_cr : c_cr.state = Sum.inr (Sum.inl UnionPhase.checkResult) := rfl
   have hstep4 := step_checkResult_one_cfg tm₁ tm₂ hst_cr hcr_read
   set c_final : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inr tm₂.qhalt),
@@ -682,13 +682,13 @@ theorem unionTM_transition_accept (tm₁ : TM n₁) (tm₂ : TM n₂)
     preserving output = unionIdleTape. -/
 private theorem rewind_input_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
     ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindIn) →
+    c.state = Sum.inr (Sum.inl UnionPhase.rewindIn) →
     c.input.head = h →
     (∀ i, i ≥ 1 → c.input.cells i ≠ Γ.start) →
     c.input.cells 0 = Γ.start →
     c.output = unionIdleTape →
     ∃ c', (unionTM tm₁ tm₂).reachesIn h c c' ∧
-      c'.state = Sum.inr (Sum.inl Mid.rewindIn) ∧
+      c'.state = Sum.inr (Sum.inl UnionPhase.rewindIn) ∧
       c'.input.head = 0 ∧
       c'.input.cells = c.input.cells ∧
       c'.output = unionIdleTape := by
@@ -703,12 +703,12 @@ private theorem rewind_input_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
       rw [Tape.read]; exact hnostart _ (by omega)
     have hstep := step_rewindIn_nostart_cfg tm₁ tm₂ hst hread_ne
     set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindIn),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindIn),
         input := c.input.move Dir3.left,
         work := fun i => ((c.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c.work i).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
       with hc'_def
-    have hst' : c'.state = Sum.inr (Sum.inl Mid.rewindIn) := rfl
+    have hst' : c'.state = Sum.inr (Sum.inl UnionPhase.rewindIn) := rfl
     have hhead' : c'.input.head = n := by
       show (c.input.move Dir3.left).head = n; simp [Tape.move, hhead]
     have hcells' : c'.input.cells = c.input.cells := Tape.move_cells _ _
@@ -753,9 +753,9 @@ private theorem phase2_work_step_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
     {c c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)}
     (hs : (unionTM tm₁ tm₂).step c = some c')
     (hstate : (∃ q, c.state = Sum.inl q) ∨
-              c.state = Sum.inr (Sum.inl Mid.rewindOut) ∨
-              c.state = Sum.inr (Sum.inl Mid.checkResult) ∨
-              c.state = Sum.inr (Sum.inl Mid.rewindIn))
+              c.state = Sum.inr (Sum.inl UnionPhase.rewindOut) ∨
+              c.state = Sum.inr (Sum.inl UnionPhase.checkResult) ∨
+              c.state = Sum.inr (Sum.inl UnionPhase.rewindIn))
     {i : Fin (n₁ + 1 + n₂)} (hi : i.val > n₁) :
     c'.work i = ((c.work i).write Γw.blank.toΓ).move (idleDir (c.work i).read) := by
   have hne : c.state ≠ (unionTM tm₁ tm₂).qhalt := by
@@ -787,7 +787,7 @@ private theorem phase2_work_step_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
 private theorem rewind_input_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
     {i : Fin (n₁ + 1 + n₂)} (_hi : i.val > n₁) :
     ∀ (h : ℕ) (c : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q)),
-    c.state = Sum.inr (Sum.inl Mid.rewindIn) →
+    c.state = Sum.inr (Sum.inl UnionPhase.rewindIn) →
     c.input.head = h →
     (∀ j, j ≥ 1 → c.input.cells j ≠ Γ.start) →
     c.input.cells 0 = Γ.start →
@@ -804,7 +804,7 @@ private theorem rewind_input_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
       rw [Tape.read]; exact hnostart _ (by omega)
     have hstep := step_rewindIn_nostart_cfg tm₁ tm₂ hst hread_ne
     set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-      { state := Sum.inr (Sum.inl Mid.rewindIn),
+      { state := Sum.inr (Sum.inl UnionPhase.rewindIn),
         input := c.input.move Dir3.left,
         work := fun j => ((c.work j).write (Γw.blank : Γw).toΓ).move (idleDir (c.work j).read),
         output := (c.output.write Γw.blank.toΓ).move (idleDir c.output.read) }
@@ -866,7 +866,7 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
     rw [Tape.read, hhead_at0, hcells_at0, hcells_rw]; exact hcell0_out
   have hstep3 := step_rewindOut_start_cfg tm₁ tm₂ hst_at0 hread_start
   set c_cr : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-    { state := Sum.inr (Sum.inl Mid.checkResult),
+    { state := Sum.inr (Sum.inl UnionPhase.checkResult),
       input := c_at0.input.move (idleDir c_at0.input.read),
       work := fun i => ((c_at0.work i).write (Γw.blank : Γw).toΓ).move
         (if i.val = n₁ then Dir3.right else idleDir (c_at0.work i).read),
@@ -887,7 +887,7 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
   -- Step 4: checkResult ≠ Γ.one → rewindIn (1 step)
   have hstep4 := step_checkResult_notone_cfg tm₁ tm₂ rfl hcr_read_ne_one
   set c_ri : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-    { state := Sum.inr (Sum.inl Mid.rewindIn),
+    { state := Sum.inr (Sum.inl UnionPhase.rewindIn),
       input := c_cr.input.move (idleDir c_cr.input.read),
       work := fun i => ((c_cr.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c_cr.work i).read),
       output := (c_cr.output.write Γw.blank.toΓ).move (idleDir c_cr.output.read) }
@@ -952,13 +952,13 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
     rw [Tape.read, hhead_ri0, hcells_ri0, hin_cells_chain]; simp [Tape.init]
   have hstep6 := step_rewindIn_start_cfg tm₁ tm₂ hst_ri0 hread_start_ri
   set c_s2 : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
-    { state := Sum.inr (Sum.inl Mid.setup2),
+    { state := Sum.inr (Sum.inl UnionPhase.setup2),
       input := c_ri0.input.move Dir3.right,
       work := fun i => ((c_ri0.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c_ri0.work i).read),
       output := (c_ri0.output.write Γw.blank.toΓ).move (idleDir c_ri0.output.read) }
     with hc_s2_def
   -- Step 7: setup2 → Phase 2 start (1 step)
-  have hstep7 := step_setup2_cfg tm₁ tm₂ (show c_s2.state = Sum.inr (Sum.inl Mid.setup2) from rfl)
+  have hstep7 := step_setup2_cfg tm₁ tm₂ (show c_s2.state = Sum.inr (Sum.inl UnionPhase.setup2) from rfl)
   set c_mid : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inr tm₂.qstart),
       input := c_s2.input.move (moveLeftDir c_s2.input.read),
