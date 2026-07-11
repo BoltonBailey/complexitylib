@@ -17,6 +17,8 @@ this bridge do not also acquire the lower-bound and padding machinery from
 
 namespace Complexity
 
+open CircDesc
+
 /-! ## Encoding -/
 
 /-- Encode a `Basis.andOr2` gate as a `GateSlot`. -/
@@ -70,17 +72,17 @@ private theorem gate_eval_eq_slot {W W' : Nat} (g : Gate Basis.andOr2 W) (hW : W
   cases op <;> simp [Gate.eval, Basis.andOr2, encodeGate, AndOrOp.eval,
     Fin.foldl_succ_last, Fin.foldl_zero, hwv]
 
-/-- Wire values agree between `Circuit.wireValue` and `wireValD` for wires
+/-- Wire values agree between `Circuit.wireValue` and `wireVal` for wires
     in the range `0..N+G-1`. -/
-theorem wireValue_eq_wireValD {N G : Nat} [NeZero N]
+theorem wireValue_eq_wireVal {N G : Nat} [NeZero N]
     (c : Circuit Basis.andOr2 N 1 G)
     (input : BitString N) (w : Fin (N + G)) :
     c.wireValue input w =
-      wireValD (circuitToDesc c) input ⟨w.val, by omega⟩ := by
+      wireVal (circuitToDesc c) input ⟨w.val, by omega⟩ := by
   by_cases hwN : w.val < N
   · -- Primary input wire
     rw [Circuit.wireValue_of_lt _ _ _ hwN]
-    conv_rhs => unfold wireValD
+    conv_rhs => unfold wireVal
     simp [hwN]
   · -- Gate wire
     push Not at hwN
@@ -98,12 +100,12 @@ theorem wireValue_eq_wireValD {N G : Nat} [NeZero N]
     -- set gate — rewrites h2, hacyc0, hacyc1 and the goal
     set gate := c.gates ⟨w.val - N, hG⟩ with gate_def
     -- IH for the two input wires
-    have ih0 := wireValue_eq_wireValD c input
+    have ih0 := wireValue_eq_wireVal c input
       ⟨(gate.inputs ⟨0, by omega⟩).val, by omega⟩
-    have ih1 := wireValue_eq_wireValD c input
+    have ih1 := wireValue_eq_wireVal c input
       ⟨(gate.inputs ⟨1, by omega⟩).val, by omega⟩
-    -- Unfold wireValD one step
-    conv_rhs => unfold wireValD
+    -- Unfold wireVal one step
+    conv_rhs => unfold wireVal
     simp only [show ¬((⟨w.val, (by omega : w.val < N + (G + 1))⟩ : Fin (N + (G + 1))).val < N)
       from by simp; omega, dite_false]
     -- circuitToDesc lookup
@@ -115,7 +117,7 @@ theorem wireValue_eq_wireValD {N G : Nat} [NeZero N]
     simp_rw [hgate]
     -- Guards pass by acyclicity
     simp only [hacyc0, hacyc1, ↓reduceIte]
-    -- Rewrite wireValD back to wireValue using IH
+    -- Rewrite wireVal back to wireValue using IH
     rw [← ih0, ← ih1]
     -- The RHS has (c.gates ⟨↑w-N,⋯⟩).negated with an opaque Fin proof.
     -- Prove .negated equality using a helper that transports across the gate equality.
@@ -143,14 +145,14 @@ theorem wireValue_eq_wireValD {N G : Nat} [NeZero N]
   termination_by w.val
 
 /-- Circuit evaluation agrees with descriptor evaluation. -/
-theorem circuit_eval_eq_evalD {N G : Nat} [NeZero N]
+theorem circuit_eval_eq_eval {N G : Nat} [NeZero N]
     (c : Circuit Basis.andOr2 N 1 G) :
-    (fun x => (c.eval x) 0) = evalD (Nat.succ_pos G) (circuitToDesc c) := by
+    (fun x => (c.eval x) 0) = eval (Nat.succ_pos G) (circuitToDesc c) := by
   funext x
-  simp only [Circuit.eval, evalD]
+  simp only [Circuit.eval, eval]
   rw [gate_eval_eq_slot (c.outputs 0) (by omega : N + G ≤ N + (G + 1))
-    (c.wireValue x) _ (fun w => wireValue_eq_wireValD c x w)]
-  conv_rhs => unfold wireValD
+    (c.wireValue x) _ (fun w => wireValue_eq_wireVal c x w)]
+  conv_rhs => unfold wireVal
   simp only []
   simp only [circuitToDesc, show ¬((⟨N + G.succ - 1 - N, (by omega : N + G.succ - 1 - N < G + 1)⟩ :
     Fin (G + 1)).val < G) from by simp, dite_false]
