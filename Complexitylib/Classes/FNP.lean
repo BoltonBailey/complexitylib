@@ -26,13 +26,13 @@ namespace Complexity
     (`NP = {L | ∃ R ∈ FNP, ∀ x, x ∈ L ↔ ∃ y, R x y}`),
     this establishes that every language in NP ∩ coNP gives rise to a TFNP
     search problem. -/
-theorem tagRelation_mem_TFNP_of_NP_coNP_witnesses
+theorem orRelation_mem_TFNP_of_NP_coNP_witnesses
     {R₁ R₂ : List Bool → List Bool → Prop} {L : Language}
     (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP)
     (h_mem : ∀ x, x ∈ L ↔ ∃ y, R₁ x y)
     (h_nmem : ∀ x, x ∉ L ↔ ∃ y, R₂ x y) :
-    tagRelation R₁ R₂ ∈ TFNP := by
-  refine ⟨tagRelation_mem_FNP hR₁ hR₂, ?_⟩
+    OrRelation R₁ R₂ ∈ TFNP := by
+  refine ⟨orRelation_mem_FNP hR₁ hR₂, ?_⟩
   intro x
   by_cases hx : x ∈ L
   · obtain ⟨w, hw⟩ := (h_mem x).mp hx
