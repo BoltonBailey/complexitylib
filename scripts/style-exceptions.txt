@@ -1,5 +1,0 @@
-# Style-lint baseline: pre-existing violations grandfathered during
-# the quality refactor. This file only shrinks; regenerate with
-#   python3 scripts/lint_style.py --update
-#
-# The baseline is now EMPTY: no grandfathered style violations remain.
