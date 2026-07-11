@@ -59,11 +59,17 @@ namespace Complexity
     work and output tapes, and directions for the input, work, and output
     heads (matching the component order of `TM.δ`). -/
 structure DescAct where
+  /-- The next state (as a number below `2^w`). -/
   q'   : ℕ
+  /-- The symbol written to the work tape. -/
   ww   : Γw
+  /-- The symbol written to the output tape. -/
   wo   : Γw
+  /-- The input-head direction. -/
   di   : Dir3
+  /-- The work-head direction. -/
   dw   : Dir3
+  /-- The output-head direction. -/
   dOut : Dir3
   deriving DecidableEq
 
@@ -71,10 +77,15 @@ structure DescAct where
     (state and the three symbols under the input/work/output heads) together
     with the action to take. -/
 structure DescEntry where
+  /-- The state this row fires in. -/
   q   : ℕ
+  /-- The symbol under the input head. -/
   si  : Γ
+  /-- The symbol under the work head. -/
   sw  : Γ
+  /-- The symbol under the output head. -/
   so  : Γ
+  /-- The action to take when the key matches. -/
   act : DescAct
   deriving DecidableEq
 
@@ -82,9 +93,13 @@ structure DescEntry where
     `w` (states are numbers below `2^w`), start and halt states, and a
     transition table with first-match-wins semantics (`TMDesc.lookup`). -/
 structure TMDesc where
+  /-- The state bit-width: states are numbers below `2^w`. -/
   w       : ℕ
+  /-- The start state. -/
   qstart  : ℕ
+  /-- The halt state. -/
   qhalt   : ℕ
+  /-- The transition table, first match wins. -/
   entries : List DescEntry
   deriving DecidableEq
 
