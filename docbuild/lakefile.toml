@@ -1,0 +1,21 @@
+# Documentation-build subproject, following the layout recommended by doc-gen4.
+# Build API docs with:
+#
+#   cd docbuild
+#   lake build Complexitylib:docs
+#
+# Output lands in docbuild/.lake/build/doc. Kept separate from the root
+# package so the doc-gen4 dependency never affects library builds.
+name = "docbuild"
+version = "0.1.0"
+reservoir = false
+packagesDir = "../.lake/packages"
+
+[[require]]
+name = "complexitylib"
+path = ".."
+
+[[require]]
+scope = "leanprover"
+name = "doc-gen4"
+rev = "v4.30.0"
