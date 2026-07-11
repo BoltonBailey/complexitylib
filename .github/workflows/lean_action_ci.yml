@@ -11,6 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - name: Style lint (headers, module docs, line length)
+        run: python3 scripts/lint_style.py
       - name: Build library with warnings as errors
         uses: leanprover/lean-action@v1
         with:
@@ -21,3 +23,7 @@ jobs:
         run: lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
       - name: Run encoded-circuit regression guards
         run: lake build --wfail Complexitylib.Circuits.Encoding.Validation
+      - name: Run environment linters
+        run: lake exe runLinter Complexitylib
+      - name: Axiom guard for headline theorems
+        run: lake env lean scripts/AxiomGuard.lean

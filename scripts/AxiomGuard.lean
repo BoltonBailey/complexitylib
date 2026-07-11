@@ -1,0 +1,58 @@
+/-
+Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib
+
+/-!
+# Axiom guard
+
+Asserts that the library's headline theorems depend only on the three standard
+axioms (`propext`, `Classical.choice`, `Quot.sound`) — no `sorry`, no custom
+axioms. Run with:
+
+```bash
+lake env lean scripts/AxiomGuard.lean
+```
+
+CI runs this on every push. When a headline theorem is renamed, update
+`headlineTheorems` in the same commit.
+-/
+
+open Lean
+
+/-- The axioms a headline theorem is allowed to depend on. -/
+def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+
+/-- The library's headline theorems, fully qualified. -/
+def headlineTheorems : List Name := [
+  -- Cook–Levin / NP-completeness
+  `SAT.NPComplete_L_SAT,
+  `SAT.L_SAT_mem_NP,
+  `SAT.pairLang_R_SAT_mem_P,
+  -- Universal machine
+  `TM.UTMBody.utmTM_universal,
+  `TM.UTMBody.utmTM_universal_padded,
+  -- Time hierarchy
+  `time_hierarchy_weak,
+  `time_hierarchy_weak_ssubset,
+  `DTIME_pow_ssubset,
+  -- Structural containments
+  `P_sub_NP,
+  `P_sub_PSPACE,
+  `RP_sub_NP,
+  `BPP_sub_PP
+]
+
+open Elab Command in
+run_cmd do
+  let env ← getEnv
+  for thm in headlineTheorems do
+    unless env.contains thm do
+      throwError "axiom guard: unknown declaration `{thm}` — was it renamed?"
+    let axs ← liftCoreM (collectAxioms thm)
+    for ax in axs do
+      unless allowedAxioms.contains ax do
+        throwError "axiom guard: `{thm}` depends on disallowed axiom `{ax}`"
+  logInfo s!"axiom guard: {headlineTheorems.length} headline theorems use only standard axioms"
