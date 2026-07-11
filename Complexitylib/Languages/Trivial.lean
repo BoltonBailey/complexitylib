@@ -106,27 +106,27 @@ theorem univ_mem_P : Language.univ ∈ P :=
   Set.mem_iUnion.mpr ⟨0, DTIME_mono (BigO.const_le_pow 3 0) univ_in_DTIME⟩
 
 /-- **`∅ ∈ NP`.** -/
-theorem empty_mem_NP : Language.empty ∈ NP := P_sub_NP empty_mem_P
+theorem empty_mem_NP : Language.empty ∈ NP := P_subset_NP empty_mem_P
 
 /-- **`Set.univ ∈ NP`.** -/
-theorem univ_mem_NP : Language.univ ∈ NP := P_sub_NP univ_mem_P
+theorem univ_mem_NP : Language.univ ∈ NP := P_subset_NP univ_mem_P
 
 /-- **`∅ ∈ BPP`.** -/
-theorem empty_mem_BPP : Language.empty ∈ BPP := P_sub_BPP empty_mem_P
+theorem empty_mem_BPP : Language.empty ∈ BPP := P_subset_BPP empty_mem_P
 
 /-- **`Set.univ ∈ BPP`.** -/
-theorem univ_mem_BPP : Language.univ ∈ BPP := P_sub_BPP univ_mem_P
+theorem univ_mem_BPP : Language.univ ∈ BPP := P_subset_BPP univ_mem_P
 
 /-- **`∅ ∈ PSPACE`.** -/
-theorem empty_mem_PSPACE : Language.empty ∈ PSPACE := P_sub_PSPACE empty_mem_P
+theorem empty_mem_PSPACE : Language.empty ∈ PSPACE := P_subset_PSPACE empty_mem_P
 
 /-- **`Set.univ ∈ PSPACE`.** -/
-theorem univ_mem_PSPACE : Language.univ ∈ PSPACE := P_sub_PSPACE univ_mem_P
+theorem univ_mem_PSPACE : Language.univ ∈ PSPACE := P_subset_PSPACE univ_mem_P
 
 /-- **`∅ ∈ EXP`.** -/
-theorem empty_mem_EXP : Language.empty ∈ EXP := P_sub_EXP empty_mem_P
+theorem empty_mem_EXP : Language.empty ∈ EXP := P_subset_EXP empty_mem_P
 
 /-- **`Set.univ ∈ EXP`.** -/
-theorem univ_mem_EXP : Language.univ ∈ EXP := P_sub_EXP univ_mem_P
+theorem univ_mem_EXP : Language.univ ∈ EXP := P_subset_EXP univ_mem_P
 
 end Complexity

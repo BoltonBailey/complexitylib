@@ -39,10 +39,10 @@ def headlineTheorems : List Name := [
   `Complexity.time_hierarchy_weak_ssubset,
   `Complexity.DTIME_pow_ssubset,
   -- Structural containments
-  `Complexity.P_sub_NP,
-  `Complexity.P_sub_PSPACE,
-  `Complexity.RP_sub_NP,
-  `Complexity.BPP_sub_PP
+  `Complexity.P_subset_NP,
+  `Complexity.P_subset_PSPACE,
+  `Complexity.RP_subset_NP,
+  `Complexity.BPP_subset_PP
 ]
 
 open Elab Command in
