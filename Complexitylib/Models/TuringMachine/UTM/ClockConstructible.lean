@@ -323,7 +323,7 @@ private theorem clockLen_step_park (c : Cfg 8 clockLenTM.Q)
   rw [TM.step, if_neg (clockLen_ne_halt (by decide) hst)]
   simp only [clockLenTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
@@ -736,7 +736,7 @@ private theorem moveClock_step_scan_one (c : Cfg 8 moveClockTM.Q)
   rw [TM.step, if_neg (moveClock_ne_halt (by decide) hst)]
   simp only [moveClockTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir6 : i = (6 : Fin 8)
     · subst hir6
@@ -768,7 +768,7 @@ private theorem moveClock_step_scan_turn (c : Cfg 8 moveClockTM.Q)
   rw [TM.step, if_neg (moveClock_ne_halt (by decide) hst)]
   simp only [moveClockTM, hst, hbl, h5ns, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir6 : i = (6 : Fin 8)
     · subst hir6
@@ -802,7 +802,7 @@ private theorem moveClock_step_back_left (c : Cfg 8 moveClockTM.Q)
   rw [TM.step, if_neg (moveClock_ne_halt (by decide) hst)]
   simp only [moveClockTM, hst, h6ns, h5ns, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir6 : i = (6 : Fin 8)
     · subst hir6
@@ -836,7 +836,7 @@ private theorem moveClock_step_back_start (c : Cfg 8 moveClockTM.Q)
   rw [TM.step, if_neg (moveClock_ne_halt (by decide) hst)]
   simp only [moveClockTM, hst, hs, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir6 : i = (6 : Fin 8)
     · subst hir6
@@ -868,7 +868,7 @@ private theorem moveClock_step_park (c : Cfg 8 moveClockTM.Q)
   rw [TM.step, if_neg (moveClock_ne_halt (by decide) hst)]
   simp only [moveClockTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
@@ -882,12 +882,12 @@ private theorem moveClock_scan_run (v m : ℕ) :
       (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → (c.work i).read ≠ Γ.start) →
       c.output.read ≠ Γ.start →
       (c.work 5).cells = regCells k → (c.work 5).head = k + 1 →
-      (c.work 6).cells = clearCells v k → (c.work 6).head = k + 1 →
+      (c.work 6).cells = clearRegCells v k → (c.work 6).head = k + 1 →
       ∃ c', moveClockTM.reachesIn m c c' ∧
         c'.state = .scan ∧ c'.input = c.input ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → c'.work i = c.work i) ∧
         (c'.work 5).cells = regCells v ∧ (c'.work 5).head = v + 1 ∧
-        (c'.work 6).cells = clearCells v v ∧ (c'.work 6).head = v + 1 ∧
+        (c'.work 6).cells = clearRegCells v v ∧ (c'.work 6).head = v + 1 ∧
         c'.output = c.output := by
   induction m with
   | zero =>
@@ -897,11 +897,11 @@ private theorem moveClock_scan_run (v m : ℕ) :
   | succ m ih =>
     intro k hk c hst hinp hoth hout hcl5 hhd5 hcl6 hhd6
     have hone : (c.work 6).read = Γ.one := by
-      rw [Tape.read, hhd6, hcl6, clearCells, if_neg (by omega), if_neg (by omega),
+      rw [Tape.read, hhd6, hcl6, clearRegCells, if_neg (by omega), if_neg (by omega),
         if_pos (by omega)]
     have hstep := moveClock_step_scan_one c hst hone hinp hoth hout
     have h6cl : (((c.work 6).write Γw.blank).move .right).cells
-        = clearCells v (k + 1) := by
+        = clearRegCells v (k + 1) := by
       rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd6]; omega)]
       show Function.update (c.work 6).cells (c.work 6).head Γw.blank.toΓ = _
       rw [hhd6, hcl6]
@@ -1098,7 +1098,7 @@ private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8
       (by show (work 5).head = 0 + 1
           rw [h5]
           rfl)
-      (by show (work 6).cells = clearCells v 0
+      (by show (work 6).cells = clearRegCells v 0
           rw [h6, regT_cells, clearCells_zero])
       (by show (work 6).head = 0 + 1
           rw [h6]
@@ -1364,7 +1364,7 @@ private theorem clockMul_step_drive_one (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (5 : Fin 8)
     · subst hir
@@ -1387,7 +1387,7 @@ private theorem clockMul_step_drive_blank (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, hbl, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (5 : Fin 8)
     · subst hir
@@ -1483,7 +1483,7 @@ private theorem clockMul_step_rewC_left (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, h5ns, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (5 : Fin 8)
     · subst hir
@@ -1506,7 +1506,7 @@ private theorem clockMul_step_rewC_start (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, hs, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (5 : Fin 8)
     · subst hir
@@ -1531,7 +1531,7 @@ private theorem clockMul_step_rew6_left (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, h6ns, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (6 : Fin 8)
     · subst hir
@@ -1554,7 +1554,7 @@ private theorem clockMul_step_rew6_start (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst, hs, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = (6 : Fin 8)
     · subst hir
@@ -1576,7 +1576,7 @@ private theorem clockMul_step_park (c : Cfg 8 clockMulTM.Q)
   rw [TM.step, if_neg (clockMul_ne_halt (by decide) hst)]
   simp only [clockMulTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
@@ -1740,7 +1740,7 @@ private theorem clockMul_rewC_run (h : ℕ) :
       rw [Tape.move_cells, Tape.write, if_neg (by rw [hhd]; omega)]
       show Function.update (c.work 5).cells (c.work 5).head Γw.blank.toΓ = _
       rw [hhd, hcl]
-      exact regCells_erase h
+      exact regCells_update_blank_succ h
     have hq₁head : ((((c.work 5).write Γw.blank)).move .left).head = h := by
       show ((c.work 5).write Γw.blank).head - 1 = h
       rw [Tape.write_head, hhd]
@@ -2111,7 +2111,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
         by_cases hir : i = (5 : Fin 8)
         · subst hir
           rw [h5₃]
-          exact (regT_parked 0).read_ne_start
+          exact (parked_regTape 0).read_ne_start
         · rw [hw₃ i hir]
           dsimp only
           rw [Function.update_of_ne hir]
@@ -2182,7 +2182,7 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
     by_cases hi6 : i = (6 : Fin 8)
     · subst hi6
       rw [hW₁6]
-      exact (regT_parked _).read_ne_start
+      exact (parked_regTape _).read_ne_start
     · rw [hW₁, Function.update_of_ne hi6]
       exact (hpark i).2
   have hW₂5 : W₂ 5 = regT (g x.length) := by
@@ -2199,11 +2199,11 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
     by_cases hi5 : i = (5 : Fin 8)
     · subst hi5
       rw [hW₂5]
-      exact (regT_parked _).read_ne_start
+      exact (parked_regTape _).read_ne_start
     · by_cases hi6 : i = (6 : Fin 8)
       · subst hi6
         rw [hW₂6]
-        exact (regT_parked _).read_ne_start
+        exact (parked_regTape _).read_ne_start
       · exact hW₂oth i hi5 hi6
   -- phases 2 and 3
   have h₂ := moveClockTM_hoareTime (g x.length)
@@ -2228,10 +2228,10 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
         · rw [hw i hi5 hi6, hW₂, Function.update_of_ne hi6,
             Function.update_of_ne hi5]
     subst hweq
-    refine ⟨transitionInput_id hinpX, ?_, ?_⟩
+    refine ⟨transitionInput_eq_self hinpX, ?_, ?_⟩
     · funext i
-      exact transitionTape_id (hW₂all i)
-    · rw [transitionTape_id (outF_read_ne_start hout)]
+      exact transitionTape_eq_self (hW₂all i)
+    · rw [transitionTape_eq_self (outF_read_ne_start hout)]
       exact hout
   have hseq₂₃ := seqTM_hoareTime moveClockTM clockMulTM h₂ htrans₂₃ h₃
   -- phase 1 → phase 2 transition
@@ -2255,10 +2255,10 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
       · rw [hw i hi6, hW₁, Function.update_of_ne hi6]
     subst hweq
     have houtF : outF out := ⟨ho1, ho2, ho3⟩
-    refine ⟨transitionInput_id hinpX, ?_, ?_⟩
+    refine ⟨transitionInput_eq_self hinpX, ?_, ?_⟩
     · funext i
-      exact transitionTape_id (hW₁all i)
-    · rw [transitionTape_id (outF_read_ne_start houtF)]
+      exact transitionTape_eq_self (hW₁all i)
+    · rw [transitionTape_eq_self (outF_read_ne_start houtF)]
       exact houtF
   have hseq := seqTM_hoareTime tm (seqTM moveClockTM clockMulTM) h₁ htrans₁₂ hseq₂₃
   -- massage into the ClockConstructible shape

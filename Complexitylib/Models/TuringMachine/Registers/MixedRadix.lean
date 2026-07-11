@@ -78,10 +78,10 @@ theorem scratch_parked {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} (z : ℕ)
   intro i
   rw [scratch]
   by_cases hi : i = tmp
-  · subst hi; rw [Function.update_self]; exact regT_parked _
+  · subst hi; rw [Function.update_self]; exact parked_regTape _
   · rw [Function.update_of_ne hi]
     by_cases hi2 : i = tmp2
-    · subst hi2; rw [Function.update_self]; exact regT_parked _
+    · subst hi2; rw [Function.update_self]; exact parked_regTape _
     · rw [Function.update_of_ne hi2]; exact hwork₀ i
 
 theorem scratch_apply_ne {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {z : ℕ}
@@ -106,7 +106,7 @@ theorem parked_update {W : Fin n → Tape} (hW : ∀ i, Parked (W i)) {j : Fin n
   · rw [Function.update_of_ne hij]; exact hW i
 
 /-- Updates at other registers slide past the scratch pair. -/
-theorem update_scratch {work₀ : Fin n → Tape} {tmp tmp2 i : Fin n}
+theorem scratch_update_comm {work₀ : Fin n → Tape} {tmp tmp2 i : Fin n}
     (hit : i ≠ tmp) (hit2 : i ≠ tmp2) (z : ℕ) (t : Tape) :
     Function.update (scratch work₀ tmp tmp2 z) i t
       = scratch (Function.update work₀ i t) tmp tmp2 z := by
@@ -115,7 +115,7 @@ theorem update_scratch {work₀ : Fin n → Tape} {tmp tmp2 i : Fin n}
     Function.update_comm (fun h => hit2 h.symm)]
 
 /-- Scratching twice keeps only the second value. -/
-theorem scratch_scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n}
+theorem scratch_idem {work₀ : Fin n → Tape} {tmp tmp2 : Fin n}
     (htt2 : tmp ≠ tmp2) (z z' : ℕ) :
     scratch (scratch work₀ tmp tmp2 z) tmp tmp2 z' = scratch work₀ tmp tmp2 z' := by
   simp only [scratch]
@@ -133,7 +133,7 @@ theorem SrcSpec.scratch {work₀ : Fin n → Tape} {tmp tmp2 : Fin n} {s : Src n
 
 /-- **`hornerStepTM` on canonical scratch states.** The composable form:
     scratches at `v` in, scratches at `v·x + w` out. -/
-theorem hornerStepTM_scratch (X tmp tmp2 : Fin n) (s : Src n)
+theorem hornerStepTM_hoareTime_scratch (X tmp tmp2 : Fin n) (s : Src n)
     (hXt : X ≠ tmp) (hXt2 : X ≠ tmp2) (htt2 : tmp ≠ tmp2)
     (M x v w : ℕ) (hx : x ≤ M) (hv : v ≤ M) (hres : v * x + w ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
@@ -208,12 +208,12 @@ theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
   have h₀ : (setConstTM tmp tag).HoareTime (emitPred inp₀ work₀ ys)
       (emitPred inp₀ (Function.update work₀ tmp (regT tag)) ys) (opBudget M) :=
     (setConstTM_hoareTime tmp tag v inp₀ work₀ ys hinp₀ hwork₀ ht).mono_bound
-      (setConstBudget htag hv)
+      (setConstTM_le_opBudget htag hv)
   set W0 : Fin n → Tape := Function.update work₀ tmp (regT tag) with hW0
   have hW0P : ∀ i, Parked (W0 i) := by
     intro i
     by_cases hi : i = tmp
-    · subst hi; rw [hW0, Function.update_self]; exact regT_parked _
+    · subst hi; rw [hW0, Function.update_self]; exact parked_regTape _
     · rw [hW0, Function.update_of_ne hi]; exact hwork₀ i
   -- Stage 1 (raw form: pre is W0, not a canonical scratch pair).
   have hsa' : SrcSpec W0 tmp tmp2 sa a := by
@@ -235,11 +235,11 @@ theorem loadFlatVarTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (tag : ℕ)
     refine ⟨g1, ?_, g3⟩
     rw [g2, hW0, scratch, Function.update_comm htt2, Function.update_idem]
   -- Stages 2–4 (canonical form).
-  have h₂ := hornerStepTM_scratch rB tmp tmp2 sb hBt hBt2 htt2 M B
+  have h₂ := hornerStepTM_hoareTime_scratch rB tmp tmp2 sb hBt hBt2 htt2 M B
     (tag * A + a) b hB h1 h2 inp₀ work₀ ys hinp₀ hwork₀ hrB hsb
-  have h₃ := hornerStepTM_scratch rC tmp tmp2 sc hCt hCt2 htt2 M C
+  have h₃ := hornerStepTM_hoareTime_scratch rC tmp tmp2 sc hCt hCt2 htt2 M C
     ((tag * A + a) * B + b) c hC h2 h3 inp₀ work₀ ys hinp₀ hwork₀ hrC hsc
-  have h₄ := hornerStepTM_scratch rD tmp tmp2 sd hDt hDt2 htt2 M D
+  have h₄ := hornerStepTM_hoareTime_scratch rD tmp tmp2 sd hDt hDt2 htt2 M D
     (((tag * A + a) * B + b) * C + c) d hD h3 h4 inp₀ work₀ ys hinp₀ hwork₀
     hrD hsd
   -- Glue.
@@ -311,7 +311,7 @@ theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
       (opBudget M) := by
     refine (emitLitTM_hoareTime sign tmp V inp₀ (scratch work₀ tmp tmp2 V) ys
       hinp₀ (fun i _ => scratch_parked V hwork₀ i) ?_).mono_bound
-      (emitLitBudget h4)
+      (emitLitTM_le_opBudget h4)
     rw [scratch_apply_tmp]
     exact reg_regT V
   have hseq := seqTM_hoareTime
@@ -322,7 +322,7 @@ theorem emitVarLitTM_hoareTime (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
 /-- **`emitVarLitTM` on canonical scratch states** — the composable form used
     by the clause emitters: scratches at any `z ≤ M` in, scratches at the
     emitted variable out. -/
-theorem emitVarLitTM_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
+theorem emitVarLitTM_hoareTime_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
     (tag : ℕ) (sa sb sc sd : Src n)
     (hAt : rA ≠ tmp) (hAt2 : rA ≠ tmp2) (hBt : rB ≠ tmp) (hBt2 : rB ≠ tmp2)
     (hCt : rC ≠ tmp) (hCt2 : rC ≠ tmp2) (hDt : rD ≠ tmp) (hDt2 : rD ≠ tmp2)
@@ -360,7 +360,7 @@ theorem emitVarLitTM_scratch (rA rB rC rD tmp tmp2 : Fin n) (sign : Bool)
     scratch_apply_tmp (scratch_apply_tmp2 htt2)
   refine hraw.strengthen_post ?_
   rintro inp work out ⟨g1, g2, g3⟩
-  exact ⟨g1, by rw [g2, scratch_scratch htt2], g3⟩
+  exact ⟨g1, by rw [g2, scratch_idem htt2], g3⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- resetScratchTM: return the scratches to zero
@@ -387,7 +387,7 @@ theorem resetScratchTM_hoareTime (tmp tmp2 : Fin n) (htt2 : tmp ≠ tmp2)
       (opBudget M) := by
     refine ((setConstTM_hoareTime tmp 0 z inp₀ (scratch work₀ tmp tmp2 z) ys
       hinp₀ (scratch_parked z hwork₀) scratch_apply_tmp).mono_bound
-      (setConstBudget (by omega) hz)).strengthen_post ?_
+      (setConstTM_le_opBudget (by omega) hz)).strengthen_post ?_
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2]
@@ -398,17 +398,17 @@ theorem resetScratchTM_hoareTime (tmp tmp2 : Fin n) (htt2 : tmp ≠ tmp2)
   have hWP : ∀ i, Parked (W i) := by
     intro i
     by_cases hi : i = tmp
-    · subst hi; rw [hW, Function.update_self]; exact regT_parked _
+    · subst hi; rw [hW, Function.update_self]; exact parked_regTape _
     · rw [hW, Function.update_of_ne hi]
       by_cases hi2 : i = tmp2
-      · subst hi2; rw [Function.update_self]; exact regT_parked _
+      · subst hi2; rw [Function.update_self]; exact parked_regTape _
       · rw [Function.update_of_ne hi2]; exact hwork₀ i
   have h₂ : (setConstTM tmp2 0).HoareTime (emitPred inp₀ W ys)
       (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys) (opBudget M) := by
     refine ((setConstTM_hoareTime tmp2 0 z inp₀ W ys hinp₀ hWP
       (by rw [hW, Function.update_of_ne (fun h => htt2 h.symm),
             Function.update_self])).mono_bound
-      (setConstBudget (by omega) hz)).strengthen_post ?_
+      (setConstTM_le_opBudget (by omega) hz)).strengthen_post ?_
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, hW]

@@ -322,7 +322,7 @@ private theorem tape_idle_preserve (t : Tape) (hns : t.read ≠ Γ.start)
   split
   · omega
   · simp only [Tape.read] at hns ⊢
-    rw [readBackWrite_toΓ_eq hns, Function.update_eq_self]
+    rw [toΓ_readBackWrite_of_ne_start hns, Function.update_eq_self]
 
 /-- `HoldsExact` depends only on the cells. -/
 private theorem holdsExact_of_cells_eq {t t' : Tape} {l : List Γw}

@@ -20,13 +20,13 @@ Simulation lemmas and HoareTime proofs for the subroutine machines defined in
 - `writeTM_hoareTime` — writes `sym.toΓ` to output cell 1
 - `rewindWorkTM_hoareTime` — rewinds work tape `idx` to cell 1
 - `rewindInputTM_hoareTime` — rewinds the input tape to cell 1
-- `rewindInputTM_rich_hoareTime` — rewind input preserving arbitrary predicate P
+- `rewindInputTM_hoareTime_frame` — rewind input preserving arbitrary predicate P
 - `rewindInputTM_toNTM_hoareTime` — NTM-lifted input rewind spec
-- `rewindInputTM_rich_toNTM_hoareTime` — NTM-lifted rich input rewind spec
-- `rewindWorkTM_rich_hoareTime` — rewind preserving arbitrary predicate P
+- `rewindInputTM_toNTM_hoareTime_frame` — NTM-lifted rich input rewind spec
+- `rewindWorkTM_hoareTime_frame` — rewind preserving arbitrary predicate P
 - `blankWorkTM_started_hoareTime` — blank a started work tape in linear time
 - `copyWorkToWorkTM_started_hoareTime` — copy one started work tape to another
-- `copyWorkToWorkTM_started_rich_hoareTime` — rich/frame-preserving work-to-work copy
+- `copyWorkToWorkTM_hoareTime_frame_of_binaryString` — rich/frame-preserving work-to-work copy
 -/
 
 namespace Complexity
@@ -49,10 +49,10 @@ private theorem writeTM_rewind_step_left (sym : Γw) (c : Cfg n (writeTM sym).Q)
   simp only [TM.step, ↓reduceIte, hst, writeTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread]
+    rw [toΓ_readBackWrite_of_ne_start hread]
     simp only [Tape.write, Tape.read]; split <;> simp
   · simp only [Tape.writeAndMove, Tape.move_cells]
-    rw [readBackWrite_toΓ_eq hread]
+    rw [toΓ_readBackWrite_of_ne_start hread]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -83,7 +83,7 @@ private theorem writeTM_rewind_loop (sym : Γw) :
       c'.state = WritePhase.goRight ∧
       c'.output.head = 1 ∧
       c'.output.cells = c.output.cells :=
-  generic_rewind_loop (writeTM sym)
+  exists_reachesIn_of_rewindStep_output (writeTM sym)
     (fun c hst hread hc0 hns => writeTM_rewind_step_left sym c hst hread hc0 hns)
     (fun c hst hread hc0 hns => writeTM_rewind_step_base sym c hst hread hc0 hns)
 
@@ -167,10 +167,10 @@ private theorem rewindWorkTM_rewind_step_left (idx : Fin n) (c : Cfg n (rewindWo
   simp only [TM.step, ↓reduceIte, hst, rewindWorkTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread]
+    rw [toΓ_readBackWrite_of_ne_start hread]
     simp only [Tape.write, Tape.read]; split <;> simp
   · dsimp only []; simp only [↓reduceIte, Tape.writeAndMove, Tape.move_cells]
-    rw [readBackWrite_toΓ_eq hread]
+    rw [toΓ_readBackWrite_of_ne_start hread]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -201,7 +201,7 @@ private theorem rewindWorkTM_rewind_loop (idx : Fin n) :
       c'.state = RewindPhase.moveRight ∧
       (c'.work idx).head = 1 ∧
       (c'.work idx).cells = (c.work idx).cells :=
-  generic_rewind_loop_tape (rewindWorkTM idx) (fun c => c.work idx)
+  exists_reachesIn_of_rewindStep_tape (rewindWorkTM idx) (fun c => c.work idx)
     (fun c hst hread hc0 hns => rewindWorkTM_rewind_step_left idx c hst hread hc0 hns)
     (fun c hst hread hc0 hns => rewindWorkTM_rewind_step_base idx c hst hread hc0 hns)
 
@@ -302,7 +302,7 @@ private theorem rewindInputTM_rewind_loop :
       c'.state = RewindPhase.moveRight ∧
       c'.input.head = 1 ∧
       c'.input.cells = c.input.cells :=
-  generic_rewind_loop_tape (rewindInputTM (n := n)) (fun c => c.input)
+  exists_reachesIn_of_rewindStep_tape (rewindInputTM (n := n)) (fun c => c.input)
     (fun c hst hread hc0 hns => rewindInputTM_rewind_step_left c hst hread hc0 hns)
     (fun c hst hread hc0 hns => rewindInputTM_rewind_step_base c hst hread hc0 hns)
 
@@ -369,7 +369,7 @@ theorem rewindInputTM_hoareTime (B : ℕ) :
     through the rewind, provided P is stable when the input cells are unchanged
     and the input head is reset to 1. Work and output tapes are preserved
     exactly under the usual non-start-under-head side conditions. -/
-theorem rewindInputTM_rich_hoareTime {n : ℕ} (B_input : ℕ)
+theorem rewindInputTM_hoareTime_frame {n : ℕ} (B_input : ℕ)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
       (inp' : Tape) (work' : Fin n → Tape) (out' : Tape),
@@ -399,7 +399,7 @@ theorem rewindInputTM_rich_hoareTime {n : ℕ} (B_input : ℕ)
     split
     · omega
     · simp only [Tape.read] at hns ⊢
-      rw [readBackWrite_toΓ_eq hns, Function.update_eq_self]
+      rw [toΓ_readBackWrite_of_ne_start hns, Function.update_eq_self]
   have input_idle_preserve : ∀ (t : Tape), t.read ≠ Γ.start →
       t.move (idleDir t.read) = t := by
     intro t hns
@@ -500,8 +500,8 @@ theorem rewindInputTM_toNTM_hoareTime (B : ℕ) :
       (B + 2) :=
   (rewindInputTM_hoareTime (n := n) B).toNTM
 
-/-- Nondeterministic form of `rewindInputTM_rich_hoareTime`. -/
-theorem rewindInputTM_rich_toNTM_hoareTime {n : ℕ} (B_input : ℕ)
+/-- Nondeterministic form of `rewindInputTM_hoareTime_frame`. -/
+theorem rewindInputTM_toNTM_hoareTime_frame {n : ℕ} (B_input : ℕ)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
       (inp' : Tape) (work' : Fin n → Tape) (out' : Tape),
@@ -523,7 +523,7 @@ theorem rewindInputTM_rich_toNTM_hoareTime {n : ℕ} (B_input : ℕ)
         inp.head = 1 ∧
         P inp work out)
       (B_input + 2) :=
-  (rewindInputTM_rich_hoareTime (n := n) B_input hP_preserved).toNTM
+  (rewindInputTM_hoareTime_frame (n := n) B_input hP_preserved).toNTM
 
 -- ════════════════════════════════════════════════════════════════════════
 -- rewindWorkTM: rich HoareTime preserving arbitrary data
@@ -538,7 +538,7 @@ theorem rewindInputTM_rich_toNTM_hoareTime {n : ℕ} (B_input : ℕ)
     - target tape cells unchanged, head set to 1
     - all other work tapes unchanged
     - input and output unchanged -/
-theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
+theorem rewindWorkTM_hoareTime_frame {n : ℕ} (idx : Fin n) (B_tape : ℕ)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
       (inp' : Tape) (work' : Fin n → Tape) (out' : Tape),
@@ -572,7 +572,7 @@ theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
     split
     · omega
     · simp only [Tape.read] at hns ⊢
-      rw [readBackWrite_toΓ_eq hns, Function.update_eq_self]
+      rw [toΓ_readBackWrite_of_ne_start hns, Function.update_eq_self]
   -- Rich rewind loop: tracks ALL tapes, not just work tape idx
   suffices h_loop : ∀ (h : ℕ) (c : Cfg n (rewindWorkTM idx).Q),
       c.state = RewindPhase.moveLeft →
@@ -654,13 +654,13 @@ theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
       · dsimp only []
         simp only [↓reduceIte, Tape.writeAndMove, Tape.move]
-        rw [readBackWrite_toΓ_eq hread_ne]
+        rw [toΓ_readBackWrite_of_ne_start hread_ne]
         simp only [Tape.write]; split
         · omega
         · simp [hhead]
       · dsimp only []
         simp only [↓reduceIte, Tape.writeAndMove, Tape.move_cells]
-        rw [readBackWrite_toΓ_eq hread_ne]
+        rw [toΓ_readBackWrite_of_ne_start hread_ne]
         simp only [Tape.write]; split
         · rfl
         · exact Function.update_eq_self _ _
@@ -722,7 +722,7 @@ private theorem blankWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
         have hkeep : c1.work idx = c.work idx := by
           have hread_ne : (c.work idx).read ≠ Γ.start := by simp [hread]
           simpa [c1, hread, TM.transitionTape] using
-            (TM.transitionTape_id (t := c.work idx) hread_ne)
+            (TM.transitionTape_eq_self (t := c.work idx) hread_ne)
         refine ⟨c1, ?_, rfl, ?_, ?_, ?_⟩
         · simp [TM.step, hstate, blankWorkTM, hread, c1, allIdle]
         · rw [hkeep, hhead]
@@ -878,7 +878,7 @@ theorem blankWorkTM_started_hoareTime {n : ℕ}
 preserving arbitrary frame data on the input tape, output tape, and all other
 work tapes. This is the form needed to recycle a staged work tape inside a
 larger verifier pipeline. -/
-theorem blankWorkTM_started_rich_hoareTime {n : ℕ}
+theorem blankWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
     (idx : Fin n) (x : List Bool)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -912,7 +912,7 @@ theorem blankWorkTM_started_rich_hoareTime {n : ℕ}
     split
     · omega
     · simp only [Tape.read] at hns ⊢
-      rw [readBackWrite_toΓ_eq hns, Function.update_eq_self]
+      rw [toΓ_readBackWrite_of_ne_start hns, Function.update_eq_self]
   have input_idle_preserve : ∀ (t : Tape), t.read ≠ Γ.start →
       t.move (idleDir t.read) = t := by
     intro t hns
@@ -1144,7 +1144,7 @@ theorem blankWorkTM_started_rich_hoareTime {n : ℕ}
 rewind it to the standard started blank tape while preserving the external
 frame. The user predicate only needs to be stable once the target tape has
 reached the final started blank configuration. -/
-theorem clearWorkTM_started_rich_hoareTime {n : ℕ}
+theorem clearWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
     (idx : Fin n) (x : List Bool)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -1190,7 +1190,7 @@ theorem clearWorkTM_started_rich_hoareTime {n : ℕ}
           (∀ j, (work idx).cells (j + 1) = Γ.blank) ∧
           FrameEq inp work out)
         (x.length + 1) := by
-    refine blankWorkTM_started_rich_hoareTime idx x ?_
+    refine blankWorkTM_hoareTime_frame_of_binaryString idx x ?_
     intro inp0 work0 out0 inp' work' out' hframe _hhead _hcell0 _hblank hinp' hout' hwork'
     rcases hframe with ⟨hinp0, hout0, hwork0⟩
     exact ⟨by rw [hinp', hinp0], by rw [hout', hout0], by
@@ -1210,7 +1210,7 @@ theorem clearWorkTM_started_rich_hoareTime {n : ℕ}
           (work idx).head = 1 ∧
           BlankFrame inp work out)
         (x.length + 1 + 2) := by
-    refine rewindWorkTM_rich_hoareTime idx (x.length + 1) ?_
+    refine rewindWorkTM_hoareTime_frame idx (x.length + 1) ?_
     intro inp0 work0 out0 inp' work' out' hblankframe hcells _hhead hwork_eq hinp' hout_cells hout_head
     rcases hblankframe with ⟨hframe, hcell0, hblank⟩
     rcases hframe with ⟨hinp0, hout0, hwork0⟩
@@ -1250,17 +1250,17 @@ theorem clearWorkTM_started_rich_hoareTime {n : ℕ}
           rw [Tape.read, hhead1, hblank1 x.length]
           decide
         have htarget_tr : TM.transitionTape (work1 idx) = work1 idx :=
-          TM.transitionTape_id htarget_read_ne
+          TM.transitionTape_eq_self htarget_read_ne
         have hinput_tr : TM.transitionInput inp1 = inp1 := by
           rw [hinp1]
-          exact TM.transitionInput_id hinp_ns
+          exact TM.transitionInput_eq_self hinp_ns
         have hout_tr : TM.transitionTape out1 = out1 := by
           rw [hout1]
-          exact TM.transitionTape_id hout_ns
+          exact TM.transitionTape_eq_self hout_ns
         have hwork_tr : ∀ i, i ≠ idx → TM.transitionTape (work1 i) = work1 i := by
           intro i hi
           rw [hwork1 i hi]
-          exact TM.transitionTape_id (hother_wf i hi).1
+          exact TM.transitionTape_eq_self (hother_wf i hi).1
         refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · change (TM.transitionTape (work1 idx)).cells 0 = Γ.start
           rw [htarget_tr]
@@ -1320,7 +1320,7 @@ theorem clearWorkTM_started_rich_hoareTime {n : ℕ}
       · intro i _
         exact hblank i
     have hclear : work' idx = (_root_.Complexity.Tape.init []).move Dir3.right :=
-      Tape.hasBinaryString_eq_initTape_move_right hbits hcell0
+      Tape.eq_init_move_right_of_hasBinaryString hbits hcell0
     exact show work' idx = (_root_.Complexity.Tape.init []).move Dir3.right ∧ P inp' work' out' from
       ⟨hclear, hP_preserved inp work out inp' work' out' hP hclear hinp' hout' hwork'⟩)
   exact hclear inp work out ⟨hwork, hinp_ns, hout_ns, hout_h, hother_wf, ⟨rfl, rfl, fun _ _ => rfl⟩⟩
@@ -1532,13 +1532,13 @@ private theorem copyWorkToWorkTM_loop {n : ℕ}
             rw [hsrc_read]
             decide
           simpa [c1, hsrc_read, TM.transitionTape] using
-            (TM.transitionTape_id (t := c.work src) hsrc_ne)
+            (TM.transitionTape_eq_self (t := c.work src) hsrc_ne)
         have hdst_keep : c1.work dst = c.work dst := by
           have hdst_ne : (c.work dst).read ≠ Γ.start := by
             rw [hdst_read]
             decide
           simpa [c1, hdst_read, TM.transitionTape] using
-            (TM.transitionTape_id (t := c.work dst) hdst_ne)
+            (TM.transitionTape_eq_self (t := c.work dst) hdst_ne)
         refine ⟨c1, ?_, rfl, ?_, ?_, ?_⟩
         · simp [TM.step, hstate, copyWorkToWorkTM, hsrc_read, c1, allIdle]
         · rw [hsrc_keep]
@@ -1677,7 +1677,7 @@ input tape, output tape, and all unrelated work tapes. The source cells are
 preserved while its head advances to the first blank after the copied string,
 and the destination accumulates the copied prefix without losing its left-end
 marker. -/
-theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
+theorem copyWorkToWorkTM_hoareTime_frame_of_binaryString {n : ℕ}
     (src dst : Fin n) (hne : src ≠ dst) (x : List Bool)
     {P : Tape → (Fin n → Tape) → Tape → Prop}
     (hP_preserved : ∀ (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -1715,7 +1715,7 @@ theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
     split
     · omega
     · simp only [Tape.read] at hns ⊢
-      rw [readBackWrite_toΓ_eq hns, Function.update_eq_self]
+      rw [toΓ_readBackWrite_of_ne_start hns, Function.update_eq_self]
   have input_idle_preserve : ∀ (t : Tape), t.read ≠ Γ.start →
       t.move (idleDir t.read) = t := by
     intro t hns
@@ -1808,13 +1808,13 @@ theorem copyWorkToWorkTM_started_rich_hoareTime {n : ℕ}
           rw [hsrc_read]
           decide
         simpa [c1, hsrc_read, TM.transitionTape] using
-          (TM.transitionTape_id (t := c.work src) hsrc_ne)
+          (TM.transitionTape_eq_self (t := c.work src) hsrc_ne)
       have hdst_keep : c1.work dst = c.work dst := by
         have hdst_ne : (c.work dst).read ≠ Γ.start := by
           rw [hdst_read]
           decide
         simpa [c1, hdst_read, TM.transitionTape] using
-          (TM.transitionTape_id (t := c.work dst) hdst_ne)
+          (TM.transitionTape_eq_self (t := c.work dst) hdst_ne)
       refine ⟨c1, .step hstep1 .zero, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [hsrc_keep]
         exact hsrc_cells

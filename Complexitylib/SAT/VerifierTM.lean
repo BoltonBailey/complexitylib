@@ -53,7 +53,7 @@ private theorem eq_initTape_move_right_of_cells_head_one {t : Tape} (bits : List
   have h0 : t.cells 0 = Γ.start := by
     rw [hcells]
     simp [_root_.Complexity.Tape.init]
-  exact Tape.hasBinaryString_eq_initTape_move_right hbits h0
+  exact Tape.eq_init_move_right_of_hasBinaryString hbits h0
 
 private theorem cells_eq_initTape_ofBool_cell0 {t : Tape} (bits : List Bool)
     (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells) :
@@ -305,11 +305,11 @@ private theorem satLengthCheck_init_step (α : List Bool) (B : ℕ)
   simp only [TM.step, hstate, satLengthCheckTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · change _root_.Complexity.TM.transitionInput c.input = c.input
-    exact _root_.Complexity.TM.transitionInput_id hinp
+    exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · change _root_.Complexity.TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hwork
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork
   · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_id hout'
+    exact _root_.Complexity.TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
@@ -345,7 +345,7 @@ private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
   · simp [Tape.move, hinput_head]
   · simpa using Tape.hasCounterRemainder_consume hcounter hkB
   · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_id hout'
+    exact _root_.Complexity.TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheck_scan_accept_step (α : List Bool) (B : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
@@ -870,13 +870,13 @@ private theorem satLengthCheckPassive_init_step (α β : List Bool) (B : ℕ)
   simp only [TM.step, hstate, satLengthCheckPassiveTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · change _root_.Complexity.TM.transitionInput c.input = c.input
-    exact _root_.Complexity.TM.transitionInput_id hinp
+    exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · change _root_.Complexity.TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hwork0
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork0
   · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hwork1
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork1
   · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_id hout'
+    exact _root_.Complexity.TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B k : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
@@ -917,9 +917,9 @@ private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B 
   · simp [Tape.move, hinput_head]
   · simpa using Tape.hasCounterRemainder_consume hcounter hkB
   · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hpassive_read
+    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
   · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_id hout'
+    exact _root_.Complexity.TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheckPassive_scan_accept_step (α β : List Bool) (B : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
@@ -949,7 +949,7 @@ private theorem satLengthCheckPassive_scan_accept_step (α β : List Bool) (B : 
   · rw [Tape.move_cells]
     exact hinput_cells
   · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hpassive_read
+    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
   · have ho_head : c.output.head = 1 := by
       rw [hout]
       simp [Tape.move, _root_.Complexity.Tape.init]
@@ -989,7 +989,7 @@ private theorem satLengthCheckPassive_scan_reject_step (α β : List Bool) (B : 
   · rw [Tape.move_cells]
     exact hinput_cells
   · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_id hpassive_read
+    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
   · have ho_head : c.output.head = 1 := by
       rw [hout]
       simp [Tape.move, _root_.Complexity.Tape.init]
@@ -1479,8 +1479,8 @@ private theorem satEval_readFirst_bit_step (mode : SatEvalMode) (b : Bool)
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_id hwork
-  · exact _root_.Complexity.TM.transitionTape_id hout_read
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork
+  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
 
 private theorem satEval_readFirst_blank_step (mode : SatEvalMode)
     (c : Cfg 1 satEvalOnInputTM.Q)
@@ -1506,13 +1506,13 @@ private theorem satEval_readFirst_blank_step (mode : SatEvalMode)
   refine ⟨c', ?_, rfl, ?_, ?_, ?_⟩
   · simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread]
   · have hinp : c.input.read ≠ Γ.start := by rw [hread]; simp
-    exact _root_.Complexity.TM.transitionInput_id hinp
+    exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · funext i
     have hi0 : i = ⟨0, by omega⟩ := by
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_id hwork
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork
   · have ho_head : c.output.head = 1 := by
       rw [hout]
       simp [Tape.move, _root_.Complexity.Tape.init]
@@ -1581,13 +1581,13 @@ private theorem satEval_readSecond_blank_step (mode : SatEvalMode) (first : Bool
       simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, satEvalReject,
         hstate, hread, readBit?]
   · have hinp : c.input.read ≠ Γ.start := by rw [hread]; simp
-    exact _root_.Complexity.TM.transitionInput_id hinp
+    exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · funext i
     have hi0 : i = ⟨0, by omega⟩ := by
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_id hwork
+    exact _root_.Complexity.TM.transitionTape_eq_self hwork
   · have ho_head : c.output.head = 1 := by
       rw [hout]
       simp [Tape.move, _root_.Complexity.Tape.init]
@@ -1622,10 +1622,10 @@ private theorem satEval_rewindAlpha_left_step (mode : SatEvalMode)
       simpa using hread
     simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread0]
     rfl
-  · exact _root_.Complexity.TM.transitionInput_id hinp
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · simp [c', Tape.writeAndMove, Tape.move, Tape.write_head]
   · exact _root_.Complexity.TM.tape_readBackWrite_preserves _ _ (Or.inr hread)
-  · exact _root_.Complexity.TM.transitionTape_id hout_read
+  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
 
 private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
     (c : Cfg 1 satEvalOnInputTM.Q)
@@ -1660,12 +1660,12 @@ private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
       simpa using hread
     simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread0]
     rfl
-  · exact _root_.Complexity.TM.transitionInput_id hinp
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp
   · have hhead00 : (c.work (0 : Fin 1)).head = 0 := by
       simpa using hhead0
     simp [c', Tape.writeAndMove, Tape.move, Tape.write_head, hhead00]
   · exact _root_.Complexity.TM.tape_readBackWrite_preserves _ _ (Or.inl hhead0)
-  · exact _root_.Complexity.TM.transitionTape_id hout_read
+  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
 
 private theorem satEval_rewindAlpha_loop (mode : SatEvalMode) :
     ∀ (p : ℕ) (c : Cfg 1 satEvalOnInputTM.Q),
@@ -1779,7 +1779,7 @@ private theorem satEval_work_stay_id {t : Tape}
     (hread : t.read ≠ Γ.start) :
     t.writeAndMove (_root_.Complexity.TM.readBackWrite t.read).toΓ Dir3.stay = t := by
   simpa [_root_.Complexity.TM.transitionTape, _root_.Complexity.TM.idleDir, hread] using
-    (_root_.Complexity.TM.transitionTape_id hread)
+    (_root_.Complexity.TM.transitionTape_eq_self hread)
 
 private theorem satEval_work_cells_preserved_readBack {t : Tape} (d : Dir3)
     (hread : t.read ≠ Γ.start) :
@@ -2914,7 +2914,7 @@ private theorem writeBack_self (t : Tape) (h : ∀ j, j ≥ 1 → t.cells j ≠ 
   by_cases hh : t.head = 0
   · simp [Tape.write, hh]
   · have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact h t.head (by omega)
-    rw [_root_.Complexity.TM.readBackWrite_toΓ_eq hne]
+    rw [_root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hne]
     simp [Tape.write, hh, Tape.read, Function.update_eq_self]
 
 /-- Hence a write-back-and-move on such a tape is just a move (read-only behavior). -/
@@ -3631,13 +3631,13 @@ private theorem verifyPairSplit_rewindCounter_left_step
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
   · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.readBackWrite_toΓ_eq hread]
+    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindCounterForAlpha` base step: with the counter head at the left
@@ -3683,7 +3683,7 @@ private theorem verifyPairSplit_rewindCounter_base_step
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindFormula` left step: move the formula tape left, preserving the rest. -/
@@ -3720,13 +3720,13 @@ private theorem verifyPairSplit_rewindFormula_left_step
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
   · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.readBackWrite_toΓ_eq hread]
+    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindFormula` base step: move right into `.rewindAssignment`. -/
@@ -3771,7 +3771,7 @@ private theorem verifyPairSplit_rewindFormula_base_step
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindAssignment` left step: move the assignment tape left. -/
@@ -3808,13 +3808,13 @@ private theorem verifyPairSplit_rewindAssignment_left_step
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
   · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.readBackWrite_toΓ_eq hread]
+    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindAssignment` base step: move right into the evaluator's first read. -/
@@ -3860,7 +3860,7 @@ private theorem verifyPairSplit_rewindAssignment_base_step
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.copyAlpha` bit step: with an assignment bit under the input head and a
@@ -3948,7 +3948,7 @@ private theorem verifyPairSplit_copyAlpha_blank_step
     simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hib,
       verifyPairPreserveWork]
   refine ⟨c', hstep, rfl, ?_, ?_, ?_⟩
-  · exact _root_.Complexity.TM.transitionInput_id hinp_read
+  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
   · funext i
     exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
   · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons

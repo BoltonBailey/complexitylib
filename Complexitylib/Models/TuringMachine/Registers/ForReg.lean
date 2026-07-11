@@ -434,7 +434,7 @@ private theorem forRegTM_loop_run (inp₀ : Tape) (w : ℕ → Fin n → Tape)
     obtain ⟨cb, tb, htb, hbreach, hbhalt, hbinp, hbwork, hbout⟩ :=
       hbody i (by omega) inp₀ (Function.update (w i) r ⟨i + 2, regCells v⟩) c.output
         ⟨rfl, rfl, hout⟩
-    have hlift := simulation_reachesIn (wrapCfg body r)
+    have hlift := reachesIn_map (wrapCfg body r)
       (fun a b h => forRegTM_lift_step a b h) hbreach
     have hbworkP : ∀ j, Parked (cb.work j) := by
       intro j

@@ -180,7 +180,7 @@ theorem bumpTM_hoareTime (x : List Bool) :
   obtain rfl : work = fun _ => Tape.init [] := funext hwork
   refine ⟨⟨BumpPhase.done, ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩,
       fun _ => ⟨1, (Tape.init []).cells⟩, ⟨1, (Tape.init []).cells⟩⟩, 1, le_refl 1,
-    .step ?_ .zero, rfl, rfl, fun _ => reg_zero_init, outAcc_nil_init⟩
+    .step ?_ .zero, rfl, rfl, fun _ => reg_zero_init_bumped, outAcc_nil_init⟩
   rfl
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -757,10 +757,10 @@ theorem emitPred_transition {inp₀ : Tape} {work₀ : Fin n → Tape}
       emitPred inp₀ work₀ ys (transitionInput inp)
         (fun i => transitionTape (work i)) (transitionTape out) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
-  refine ⟨Parked.transitionInput_id hinp₀, ?_, ?_⟩
+  refine ⟨Parked.transitionInput_eq_self hinp₀, ?_, ?_⟩
   · funext i
-    exact Parked.transitionTape_id (hworkAll i)
-  · rw [Parked.transitionTape_id hout.parked]
+    exact Parked.transitionTape_eq_self (hworkAll i)
+  · rw [Parked.transitionTape_eq_self hout.parked]
     exact hout
 
 -- ════════════════════════════════════════════════════════════════════════

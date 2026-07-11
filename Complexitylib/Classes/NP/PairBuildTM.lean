@@ -294,10 +294,10 @@ theorem pairBuild_init_step_started {k : ℕ} (yIdx pIdx : Fin k)
   simp only [TM.step, hst, pairBuildTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · show c.input.move (idleDir c.input.read) = c.input
-    exact transitionInput_id hinp
+    exact transitionInput_eq_self hinp
   · show (c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
         (idleDir (c.work yIdx).read) = c.work yIdx
-    exact transitionTape_id hy
+    exact transitionTape_eq_self hy
   · show ((c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
         (idleDir (c.work pIdx).read)).head = 1
     simp [idleDir, hpread, Tape.writeAndMove, Tape.write, Tape.move, hpi0]
@@ -321,13 +321,13 @@ theorem pairBuild_init_step_all_started {k : ℕ} (yIdx pIdx : Fin k)
   simp only [TM.step, hst, pairBuildTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · show c.input.move (idleDir c.input.read) = c.input
-    exact transitionInput_id hinp
+    exact transitionInput_eq_self hinp
   · show (c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
         (idleDir (c.work yIdx).read) = c.work yIdx
-    exact transitionTape_id hy
+    exact transitionTape_eq_self hy
   · show (c.work pIdx).writeAndMove (readBackWrite (c.work pIdx).read)
         (idleDir (c.work pIdx).read) = c.work pIdx
-    exact transitionTape_id hp
+    exact transitionTape_eq_self hp
 
 /-- **copyX1 halt step.** In `.copyX1` reading blank on input, transition
     to `.writeSep1`. All three tracked tapes unchanged (they're past ▷ so
@@ -380,7 +380,7 @@ private theorem pairBuild_copyX1_cont_step {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, Tape.write, Tape.move,
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
-    rw [readBackWrite_toΓ_eq hread_ns]
+    rw [toΓ_readBackWrite_of_ne_start hread_ns]
     simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
@@ -414,7 +414,7 @@ private theorem pairBuild_copyX2_step {k : ℕ} (yIdx pIdx : Fin k)
     simp [Tape.writeAndMove, Tape.write, Tape.move,
           show (c.work pIdx).head ≠ 0 from by omega]
   · simp only [↓reduceIte]
-    rw [readBackWrite_toΓ_eq hread_ns]
+    rw [toΓ_readBackWrite_of_ne_start hread_ns]
     simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
@@ -529,7 +529,7 @@ private theorem pairBuild_copyY_cont_step {k : ℕ} (yIdx pIdx : Fin k)
     simp only [if_neg hne]
     show ((c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read).toΓ Dir3.right).cells
          = (c.work yIdx).cells
-    rw [readBackWrite_toΓ_eq hyread_ns]
+    rw [toΓ_readBackWrite_of_ne_start hyread_ns]
     simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work yIdx).head ≠ 0 from by omega, Tape.read]
   · -- pIdx head advances
@@ -538,7 +538,7 @@ private theorem pairBuild_copyY_cont_step {k : ℕ} (yIdx pIdx : Fin k)
           show (c.work pIdx).head ≠ 0 from by omega]
   · -- pIdx cells updated with yIdx.read
     simp only [↓reduceIte]
-    rw [readBackWrite_toΓ_eq hyread_ns]
+    rw [toΓ_readBackWrite_of_ne_start hyread_ns]
     simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 
@@ -570,7 +570,7 @@ private theorem pairBuild_rewindP1_step_cont {k : ℕ} (yIdx pIdx : Fin k)
           show (c.work pIdx).head ≠ 0 from by omega]
   · -- pIdx cells unchanged (readBackWrite preserves at non-start read)
     simp only [↓reduceIte]
-    rw [readBackWrite_toΓ_eq hpread_ns]
+    rw [toΓ_readBackWrite_of_ne_start hpread_ns]
     simp [Tape.writeAndMove, Tape.move_cells, Tape.write,
           show (c.work pIdx).head ≠ 0 from by omega, Tape.read]
 

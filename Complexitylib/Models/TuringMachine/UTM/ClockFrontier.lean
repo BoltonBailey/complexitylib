@@ -137,7 +137,7 @@ private theorem decFrontier_step_dec_one (c : Cfg 7 decFrontierTM.Q)
   rw [TM.step, if_neg (decFrontier_ne_halt (by decide) hst)]
   simp only [decFrontierTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -158,7 +158,7 @@ private theorem decFrontier_step_dec_blank (c : Cfg 7 decFrontierTM.Q)
   rw [TM.step, if_neg (decFrontier_ne_halt (by decide) hst)]
   simp only [decFrontierTM, hst, hblank, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -178,7 +178,7 @@ private theorem decFrontier_step_settle_stay (c : Cfg 7 decFrontierTM.Q)
   rw [TM.step, if_neg (decFrontier_ne_halt (by decide) hst)]
   simp only [decFrontierTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
@@ -200,7 +200,7 @@ private theorem decFrontier_step_settle_start (c : Cfg 7 decFrontierTM.Q)
   rw [TM.step, if_neg (decFrontier_ne_halt (by decide) hst)]
   simp only [decFrontierTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -388,7 +388,7 @@ private theorem orZero_step (c : Cfg 7 orZeroTM.Q)
   rw [TM.step, if_neg (orZero_ne_halt hst)]
   simp only [orZeroTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · show c.output.writeAndMove _ (idleDir c.output.read) = _

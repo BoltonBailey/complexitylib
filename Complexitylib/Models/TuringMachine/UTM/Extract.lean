@@ -182,11 +182,11 @@ private theorem extractTM_rewind_loop
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hout']; exact transitionTape_id hout
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hout']; exact transitionTape_eq_self hout
       · intro i hne; dsimp only []
         simp only [show ¬(i = 2) from hne, ↓reduceIte]
-        rw [hw i hne]; exact transitionTape_id (hothers i hne)
+        rw [hw i hne]; exact transitionTape_eq_self (hothers i hne)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hout1, hw1⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst1, hh1, hc1, hin1, hout1, hw1⟩
   | succ h ih =>
@@ -206,11 +206,11 @@ private theorem extractTM_rewind_loop
         omega
       · dsimp only []
         rw [writeBack_cells _ _ hread_ne, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hout']; exact transitionTape_id hout
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hout']; exact transitionTape_eq_self hout
       · intro i hne; dsimp only []
         simp only [show ¬(i = 2) from hne, ↓reduceIte]
-        rw [hw i hne]; exact transitionTape_id (hothers i hne)
+        rw [hw i hne]; exact transitionTape_eq_self (hothers i hne)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hout1, hw1⟩ := hstep
     obtain ⟨c', hreach, hst', hh', hc', hin', hout'', hw'⟩ :=
       ih c₁ hst1 hc1 hh1 hin1 hout1 hw1
@@ -250,11 +250,11 @@ private theorem extractTM_toCell2_step
     omega
   · dsimp only []
     rw [writeBack_cells _ _ hread_ne, hcW]
-  · dsimp only []; rw [hin]; exact transitionInput_id hinp
-  · dsimp only []; rw [hout']; exact transitionTape_id hout
+  · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+  · dsimp only []; rw [hout']; exact transitionTape_eq_self hout
   · intro i hne; dsimp only []
     simp only [show ¬(i = 2) from hne, ↓reduceIte]
-    rw [hw i hne]; exact transitionTape_id (hothers i hne)
+    rw [hw i hne]; exact transitionTape_eq_self (hothers i hne)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase C: copy loop
@@ -306,9 +306,9 @@ private theorem extractTM_copy_loop
       refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
       · dsimp only []
         rw [writeBack_cells _ _ hread_ne, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
       · intro i hne; dsimp only []
-        rw [hw i hne]; exact transitionTape_id (hothers i hne)
+        rw [hw i hne]; exact transitionTape_eq_self (hothers i hne)
       · dsimp only []
         simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, hohead]
         rw [if_neg (show ¬(j + 1 = 0) by omega)]
@@ -348,10 +348,10 @@ private theorem extractTM_copy_loop
       · dsimp only []
         simp only [↓reduceIte, Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
       · intro i hne; dsimp only []
         simp only [show ¬(i = 2) from hne, ↓reduceIte]
-        rw [hw i hne]; exact transitionTape_id (hothers i hne)
+        rw [hw i hne]; exact transitionTape_eq_self (hothers i hne)
       · dsimp only []
         simp only [Tape.writeAndMove, Tape.move, Tape.write_head]
         omega
@@ -359,7 +359,7 @@ private theorem extractTM_copy_loop
         simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, hohead]
         rw [if_neg (show ¬(j + 1 = 0) by omega)]
         dsimp only []
-        rw [hread, readBackWrite_toΓ_eq (hWns (j + 2) (by omega))]
+        rw [hread, toΓ_readBackWrite_of_ne_start (hWns (j + 2) (by omega))]
     obtain ⟨c₁, hstep', hst1, hc1, hh1, hin1, hw1, hoh1, hoc1⟩ := hstep
     obtain ⟨c', hreach, hhalt, hc', hin', hw', hoc'⟩ :=
       ih (j + 1) c₁ (by omega) (by omega) hst1 hc1 hh1 hin1 hw1 hoh1

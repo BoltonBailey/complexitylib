@@ -113,7 +113,7 @@ def keyCells (f : VFlags) (v0 v1 v2 : Γ) : List Γw :=
 
 @[simp] theorem keyCells_length (f : VFlags) (v0 v1 v2 : Γ) :
     (keyCells f v0 v1 v2).length = 6 := by
-  simp [keyCells, Γ.encode_length]
+  simp [keyCells, Γ.length_encode]
 
 /-- `keyCells` read as `Γ` cells is exactly `keyCell 0 .. keyCell 5`. -/
 theorem keyCells_map_toΓ (f : VFlags) (v0 v1 v2 : Γ) :
@@ -233,7 +233,7 @@ theorem machMatch_iff_parse {w q : ℕ} (hq : q < 2 ^ w) (f : VFlags)
         have ht : (((seg.filterMap symBit?).drop w).take 6).take 2
             = ((seg.filterMap symBit?).drop w).take 2 := by
           simp [List.take_take]
-        rw [← ht, hkey, List.append_assoc, List.take_left' (Γ.encode_length _)]
+        rw [← ht, hkey, List.append_assoc, List.take_left' (Γ.length_encode _)]
       rw [this, decΓ_encode]
     · -- sw field
       show decΓ (((seg.filterMap symBit?).drop (w + 2)).take 2) = simRead f.2.1 v1
@@ -244,8 +244,8 @@ theorem machMatch_iff_parse {w q : ℕ} (hq : q < 2 ^ w) (f : VFlags)
         have ht : ((seg.filterMap symBit?).drop w).take 4
             = (((seg.filterMap symBit?).drop w).take 6).take 4 := by
           simp [List.take_take]
-        rw [ht, hkey, List.take_left' (by simp [Γ.encode_length]),
-            List.drop_left' (Γ.encode_length _)]
+        rw [ht, hkey, List.take_left' (by simp [Γ.length_encode]),
+            List.drop_left' (Γ.length_encode _)]
       rw [this, decΓ_encode]
     · -- so field
       show decΓ (((seg.filterMap symBit?).drop (w + 4)).take 2) = simRead f.2.2 v2
@@ -253,7 +253,7 @@ theorem machMatch_iff_parse {w q : ℕ} (hq : q < 2 ^ w) (f : VFlags)
           = (simRead f.2.2 v2).encode := by
         rw [← drop_add _ (rfl : w + 4 = w + 4), List.take_drop,
             show (4 + 2 : ℕ) = 6 from rfl, hkey,
-            List.drop_left' (by simp [Γ.encode_length])]
+            List.drop_left' (by simp [Γ.length_encode])]
       rw [this, decΓ_encode]
   · rintro ⟨e, hpe, hq', hsi, hsw, hso⟩
     by_cases hc : 2 * w + 16 ≤ (seg.filterMap symBit?).length

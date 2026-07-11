@@ -383,10 +383,10 @@ theorem satVerifyInnerCfg_eq_startedCfg (M : TM k) (z : List Bool)
       · funext i
         rw [hwork i]
         simpa [TM.startedCfg, TM.step, hne, Tape.read, _root_.Complexity.Tape.init] using
-          (TM.startedCfg_work_eq_init M z hne i).symm
+          (TM.startedCfg_work_eq_init_move_right M z hne i).symm
       · rw [hout]
         simpa [TM.startedCfg, TM.step, hne, Tape.read, _root_.Complexity.Tape.init] using
-          (TM.startedCfg_output_eq_init M z hne).symm
+          (TM.startedCfg_output_eq_init_move_right M z hne).symm
 
 /-- A verifier that decides a language also halts from its post-start
     configuration. This is the verifier suffix shape used by the composed SAT
@@ -465,7 +465,7 @@ private theorem satTape_writeBack_eq_move (t : Tape) (d : Dir3)
     · simp [hhead]
     · split
       · rfl
-      · rw [readBackWrite_toΓ_eq hread]
+      · rw [toΓ_readBackWrite_of_ne_start hread]
         simp [Tape.read, Function.update_eq_self]
   rw [hwrite]
 
@@ -1372,7 +1372,7 @@ theorem satGuessVerify_rewindInput_exits_with_frames (M : TM k) (B : ℕ)
     intro _ work0 out0 _ work' out' hP _ _ hwork' hout'
     exact ⟨hwork'.trans hP.1, hout'.trans hP.2⟩
   have hrewind :=
-    TM.rewindInputTM_rich_toNTM_hoareTime (n := k + 3) B
+    TM.rewindInputTM_toNTM_hoareTime_frame (n := k + 3) B
       (P := P) hP_preserved
   have hpre_rich :
       inp.cells 0 = Γ.start ∧
@@ -1668,10 +1668,10 @@ theorem satGuessVerify_guess_exits (M : TM k) (B : ℕ)
       simpa [G, guessNTM, guessChoicesG, guessChoices, cT, c0] using hpost
     obtain ⟨bits, hlen, hbits⟩ := hguess_post.1
     have hread : (cT.work (satWitnessIdx k)).read ≠ Γ.start := by
-      have hnostart := Tape.hasBinaryString_cells_ne_start hbits
+      have hnostart := Tape.cells_ne_start_of_hasBinaryString hbits
       simpa [Tape.read, hbits.1] using hnostart 1 (by omega)
     rw [satBoundaryWork_stable_of_read_ne_start cT.work (satWitnessIdx k) hread]
-    exact Tape.hasBoundedBinaryString_eq_initTape_move_right hguess_post.1 hguess_post.2
+    exact Tape.exists_eq_init_move_right_of_hasBoundedBinaryString hguess_post.1 hguess_post.2
 
 /-- Arbitrary-choice guess exit with the frame facts needed by pair building:
     the produced witness is bounded by the counter, while the real input, pair

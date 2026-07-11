@@ -94,7 +94,7 @@ theorem time_hierarchy_weak {f g : ℕ → ℕ}
   intro hL
   -- Step 1: a hypothetical O(f) decider, reduced to a single tape.
   obtain ⟨k, M, f₀, hM, hf₀⟩ := hL
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hM
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hM
   have hwf := TM.descOfTM_wf M₁
   -- Step 3: constants — f₀ ≤ c·f eventually, and the scaled square ≤ g.
   obtain ⟨c, N₀, hc⟩ := Complexity.BigO.exists_nat_bound hf₀

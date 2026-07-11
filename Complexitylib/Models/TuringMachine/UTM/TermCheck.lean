@@ -419,7 +419,7 @@ private theorem termCheck_step_emit (c : Cfg 8 termCheckTM.Q) (v : Bool)
   rw [TM.step, if_neg (termCheck_ne_halt hst nofun)]
   simp only [termCheckTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hw i)
   · have hdir : idleDir c.output.read = Dir3.stay := by

@@ -65,12 +65,12 @@ theorem seqTM_phase1_step (tm₁ tm₂ : TM n) {c₁ c₁' : Cfg n tm₁.Q}
   simp only [phase1Wrap, seqTM, if_neg sum_inl_ne_inr, if_neg hne]
 
 /-- Multi-step Phase 1 simulation. -/
-theorem seqTM_phase1_simulation (tm₁ tm₂ : TM n) {t : ℕ}
+theorem seqTM_reachesIn_phase1Wrap (tm₁ tm₂ : TM n) {t : ℕ}
     {c₁_start c₁_end : Cfg n tm₁.Q}
     (hreach : tm₁.reachesIn t c₁_start c₁_end) :
     (seqTM tm₁ tm₂).reachesIn t
       (phase1Wrap tm₁ tm₂ c₁_start) (phase1Wrap tm₁ tm₂ c₁_end) :=
-  simulation_reachesIn (tm' := seqTM tm₁ tm₂) (phase1Wrap tm₁ tm₂)
+  reachesIn_map (tm' := seqTM tm₁ tm₂) (phase1Wrap tm₁ tm₂)
     (fun _ _ => seqTM_phase1_step tm₁ tm₂) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -110,12 +110,12 @@ theorem seqTM_phase2_step (tm₁ tm₂ : TM n) {c₂ c₂' : Cfg n tm₂.Q}
   simp only [phase2Wrap, seqTM, if_neg (sum_inr_ne_of_ne hne), if_neg hne]
 
 /-- Multi-step Phase 2 simulation. -/
-theorem seqTM_phase2_simulation (tm₁ tm₂ : TM n) {t : ℕ}
+theorem seqTM_reachesIn_phase2Wrap (tm₁ tm₂ : TM n) {t : ℕ}
     {c₂_start c₂_end : Cfg n tm₂.Q}
     (hreach : tm₂.reachesIn t c₂_start c₂_end) :
     (seqTM tm₁ tm₂).reachesIn t
       (phase2Wrap tm₁ tm₂ c₂_start) (phase2Wrap tm₁ tm₂ c₂_end) :=
-  simulation_reachesIn (tm' := seqTM tm₁ tm₂) (phase2Wrap tm₁ tm₂)
+  reachesIn_map (tm' := seqTM tm₁ tm₂) (phase2Wrap tm₁ tm₂)
     (fun _ _ => seqTM_phase2_step tm₁ tm₂) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -123,7 +123,7 @@ theorem seqTM_phase2_simulation (tm₁ tm₂ : TM n) {t : ℕ}
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Full `seqTM` simulation combining all three phases. -/
-theorem seqTM_full_simulation (tm₁ tm₂ : TM n)
+theorem seqTM_reachesIn_of_reachesIn (tm₁ tm₂ : TM n)
     {t₁ : ℕ} {c₁_start c₁_end : Cfg n tm₁.Q}
     (hreach₁ : tm₁.reachesIn t₁ c₁_start c₁_end)
     (hhalt₁ : c₁_end.state = tm₁.qhalt)
@@ -137,9 +137,9 @@ theorem seqTM_full_simulation (tm₁ tm₂ : TM n)
     (seqTM tm₁ tm₂).reachesIn (t₁ + 1 + t₂)
       (phase1Wrap tm₁ tm₂ c₁_start)
       (phase2Wrap tm₁ tm₂ c₂_end) := by
-  have hp1 := seqTM_phase1_simulation tm₁ tm₂ hreach₁
+  have hp1 := seqTM_reachesIn_phase1Wrap tm₁ tm₂ hreach₁
   have htrans := seqTM_transition_step tm₁ tm₂ hhalt₁
-  have hp2 := seqTM_phase2_simulation tm₁ tm₂ hreach₂
+  have hp2 := seqTM_reachesIn_phase2Wrap tm₁ tm₂ hreach₂
   have h_tr : (seqTM tm₁ tm₂).reachesIn 1
       (phase1Wrap tm₁ tm₂ c₁_end) (phase2Wrap tm₁ tm₂ _) :=
     .step htrans .zero
@@ -149,7 +149,7 @@ theorem seqTM_full_simulation (tm₁ tm₂ : TM n)
 -- Halting and output in Phase 2
 -- ════════════════════════════════════════════════════════════════════════
 
-theorem phase2Wrap_halted (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
+theorem phase2Wrap_halted_iff (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     (seqTM tm₁ tm₂).halted (phase2Wrap tm₁ tm₂ c₂) ↔ tm₂.halted c₂ := by
   simp [phase2Wrap, seqTM, halted, Cfg.isHalted]
 

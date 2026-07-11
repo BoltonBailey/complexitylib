@@ -54,13 +54,13 @@ noncomputable def stateEquiv (tm : TM n) : tm.Q ≃ Fin (Fintype.card tm.Q) :=
   @Fintype.equivFin tm.Q tm.finQ
 
 /-- The canonical equivalence cast to `Fin k` given `k = Fintype.card Q`. -/
-noncomputable def stateEquivK (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ) :
+noncomputable def stateEquivOfCardEq (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ) :
     tm.Q ≃ Fin k :=
   hk ▸ tm.stateEquiv
 
-/-- `stateEquivK` agrees with `stateEquiv` on values. -/
-theorem stateEquivK_val (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ)
-    (q : tm.Q) : (tm.stateEquivK hk q).val = (tm.stateEquiv q).val := by
+/-- `stateEquivOfCardEq` agrees with `stateEquiv` on values. -/
+theorem stateEquivOfCardEq_val (tm : TM n) (hk : k = @Fintype.card tm.Q tm.finQ)
+    (q : tm.Q) : (tm.stateEquivOfCardEq hk q).val = (tm.stateEquiv q).val := by
   subst hk; rfl
 
 /-- Normalize a TM's state type to `Fin (Fintype.card Q)` via the canonical
@@ -166,9 +166,9 @@ def Dir3.encode : Dir3 → List Bool
   | .right => [false, true]
   | .stay  => [true, false]
 
-theorem Γ.encode_length (g : Γ) : g.encode.length = 2 := by cases g <;> rfl
-theorem Γw.encode_length (g : Γw) : g.encode.length = 2 := by cases g <;> rfl
-theorem Dir3.encode_length (d : Dir3) : d.encode.length = 2 := by cases d <;> rfl
+theorem Γ.length_encode (g : Γ) : g.encode.length = 2 := by cases g <;> rfl
+theorem Γw.length_encode (g : Γw) : g.encode.length = 2 := by cases g <;> rfl
+theorem Dir3.length_encode (d : Dir3) : d.encode.length = 2 := by cases d <;> rfl
 
 /-- Roundtrip: decode ∘ encode = some. -/
 theorem Γ.decode_encode (g : Γ) : Γ.decode (Γ.encode g) = some g := by
@@ -228,15 +228,15 @@ theorem Nat.fromBits_toBits {w val : ℕ} (hv : val < 2 ^ w) :
 def allΓ : List Γ := [.zero, .one, .blank, .start]
 
 /-- Every tape symbol appears in `allΓ`. -/
-theorem allΓ_complete (g : Γ) : g ∈ allΓ := by
+theorem mem_allΓ (g : Γ) : g ∈ allΓ := by
   cases g <;> simp [allΓ]
 
 /-- `allΓ` contains no duplicates. -/
-theorem allΓ_nodup : allΓ.Nodup := by
+theorem nodup_allΓ : allΓ.Nodup := by
   simp [allΓ, List.Nodup]
 
 /-- `allΓ` has exactly 4 elements (one per `Γ` constructor). -/
-theorem allΓ_length : allΓ.length = 4 := rfl
+theorem length_allΓ : allΓ.length = 4 := rfl
 
 /-- Enumerate all functions `Fin n → Γ` in canonical (lexicographic) order. -/
 def allΓFuncs : (n : ℕ) → List (Fin n → Γ)
@@ -247,14 +247,14 @@ def allΓFuncs : (n : ℕ) → List (Fin n → Γ)
           if h : i.val < n then f ⟨i.val, h⟩ else g
 
 /-- Every function `Fin n → Γ` appears in `allΓFuncs n`. -/
-theorem allΓFuncs_complete : ∀ (n : ℕ) (f : Fin n → Γ), f ∈ allΓFuncs n
+theorem mem_allΓFuncs : ∀ (n : ℕ) (f : Fin n → Γ), f ∈ allΓFuncs n
   | 0, f => by
     simp only [allΓFuncs, List.mem_singleton]
     funext i; exact i.elim0
   | n + 1, f => by
     simp only [allΓFuncs, List.mem_flatMap, List.mem_map]
-    refine ⟨fun i => f ⟨i.val, by omega⟩, allΓFuncs_complete n _,
-            f ⟨n, Nat.lt_succ_self _⟩, allΓ_complete _, ?_⟩
+    refine ⟨fun i => f ⟨i.val, by omega⟩, mem_allΓFuncs n _,
+            f ⟨n, Nat.lt_succ_self _⟩, mem_allΓ _, ?_⟩
     funext i
     by_cases hi : i.val < n
     · simp [hi]

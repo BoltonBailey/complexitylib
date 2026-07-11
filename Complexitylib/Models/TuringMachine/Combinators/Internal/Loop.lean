@@ -75,7 +75,7 @@ theorem loopTM_body_simulation (tmBody tmTest : TM n) {t : ℕ}
     (hreach : tmBody.reachesIn t c_start c_end) :
     (loopTM tmBody tmTest).reachesIn t
       (loopBodyWrap tmBody tmTest c_start) (loopBodyWrap tmBody tmTest c_end) :=
-  simulation_reachesIn (tm' := loopTM tmBody tmTest) (loopBodyWrap tmBody tmTest)
+  reachesIn_map (tm' := loopTM tmBody tmTest) (loopBodyWrap tmBody tmTest)
     (fun _ _ => loopTM_body_step tmBody tmTest) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -119,7 +119,7 @@ theorem loopTM_test_simulation (tmBody tmTest : TM n) {t : ℕ}
     (hreach : tmTest.reachesIn t c_start c_end) :
     (loopTM tmBody tmTest).reachesIn t
       (loopTestWrap tmBody tmTest c_start) (loopTestWrap tmBody tmTest c_end) :=
-  simulation_reachesIn (tm' := loopTM tmBody tmTest) (loopTestWrap tmBody tmTest)
+  reachesIn_map (tm' := loopTM tmBody tmTest) (loopTestWrap tmBody tmTest)
     (fun _ _ => loopTM_test_step tmBody tmTest) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -156,12 +156,12 @@ private theorem loop_rewind_step_left (tmBody tmTest : TM n)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · omega
     · simp
   · simp only [Tape.writeAndMove, Tape.move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -198,7 +198,7 @@ theorem loopTM_rewind_loop (tmBody tmTest : TM n) :
       c_check.state = Sum.inr (Sum.inl LoopPhase.check) ∧
       c_check.output.head = 1 ∧
       c_check.output.cells = c.output.cells :=
-  generic_rewind_loop (loopTM tmBody tmTest)
+  exists_reachesIn_of_rewindStep_output (loopTM tmBody tmTest)
     (fun c hst hread hc0 hns => loop_rewind_step_left tmBody tmTest c hst hread hc0 hns)
     (fun c hst hread hc0 hns => loop_rewind_step_base tmBody tmTest c hst hread hc0 hns)
 
@@ -243,7 +243,7 @@ theorem loopTM_check_continue (tmBody tmTest : TM n)
   simp only [TM.step, ↓reduceIte, hstate, loopTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_⟩
   simp only [Tape.writeAndMove, Tape.move_cells]
-  rw [readBackWrite_toΓ_eq hread_ne_start]
+  rw [toΓ_readBackWrite_of_ne_start hread_ne_start]
   simp only [Tape.write, Tape.read]; split
   · omega
   · rw [hhead]; exact Function.update_eq_self _ _

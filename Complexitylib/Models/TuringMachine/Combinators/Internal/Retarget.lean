@@ -24,8 +24,8 @@ that `retargetInput M` on a configuration where work tape `k` holds the
 - `retargetInput_step_commute` — one step of `M` corresponds to one step
   of `retargetInput M` under the wrap (assuming a structural invariant on
   `c.input`: cells ≥ 1 are never `Γ.start`).
-- `retargetInput_reachesIn_simulate` — multi-step simulation lifting.
-- `retargetInput_decidesVirtual` — user-facing: if `M` decides `L` in
+- `retargetInput_reachesIn_of_reachesIn` — multi-step simulation lifting.
+- `retargetInput_reachesIn_halted_of_decidesInTime` — user-facing: if `M` decides `L` in
   time `T`, then `retargetInput M` started with `z` on work tape `k`
   reaches a halting configuration within `T(|z|)` steps with the correct
   output.
@@ -191,7 +191,7 @@ private theorem tape_writeBack_eq_move (t : Tape) (d : Dir3)
     · simp [hh]
     · split
       · rfl
-      · rw [readBackWrite_toΓ_eq hne]
+      · rw [toΓ_readBackWrite_of_ne_start hne]
         simp [Tape.read, Function.update_eq_self]
   rw [hwrite]
 
@@ -264,7 +264,7 @@ theorem retargetInput_step_commute (M : TM k) {c c' : Cfg k M.Q}
 /-- Multi-step version: if `M` reaches `c'` in `t` steps, then
     `retargetInput M` reaches *some* config (differing from `retargetWrap`
     only in the real-input tape drift) in the same `t` steps. -/
-theorem retargetInput_reachesIn_simulate (M : TM k)
+theorem retargetInput_reachesIn_of_reachesIn (M : TM k)
     {c c' : Cfg k M.Q} {t : ℕ} (hreach : M.reachesIn t c c')
     (hinp : TapeInvariant c.input) (hwork : ∀ i, TapeInvariant (c.work i))
     (hout : TapeInvariant c.output) (realInput : Tape) :
@@ -298,7 +298,7 @@ def retargetInitCfg (M : TM k) (z : List Bool) (realInput : Tape) :
     else _root_.Complexity.Tape.init (z.map Γ.ofBool)
   output := _root_.Complexity.Tape.init []
 
-theorem retargetInitCfg_eq_wrap (M : TM k) (z : List Bool) (realInput : Tape) :
+theorem retargetInitCfg_eq_retargetWrap (M : TM k) (z : List Bool) (realInput : Tape) :
     retargetInitCfg M z realInput = retargetWrap M realInput (M.initCfg z) := by
   simp only [retargetInitCfg, retargetWrap]
   refine Cfg.mk.injEq _ _ _ _ _ _ _ _ |>.mpr ⟨rfl, rfl, ?_, rfl⟩
@@ -311,7 +311,7 @@ theorem retargetInitCfg_eq_wrap (M : TM k) (z : List Bool) (realInput : Tape) :
     `retargetInput M` started with `z` on work tape `k` reaches a halted
     configuration within `T(|z|)` steps whose output cell 1 indicates
     membership of `z` in `L`. -/
-theorem retargetInput_decidesVirtual (M : TM k) {L : Language} {T : ℕ → ℕ}
+theorem retargetInput_reachesIn_halted_of_decidesInTime (M : TM k) {L : Language} {T : ℕ → ℕ}
     (hM : M.DecidesInTime L T) (z : List Bool) (realInput : Tape) :
     ∃ c' t, t ≤ T z.length ∧
       (retargetInput M).reachesIn t (retargetInitCfg M z realInput) c' ∧
@@ -326,9 +326,9 @@ theorem retargetInput_decidesVirtual (M : TM k) {L : Language} {T : ℕ → ℕ}
   have hout : TapeInvariant (M.initCfg z).output := by
     exact TapeInvariant.Tape.init_nil
   obtain ⟨finalReal, hreachSim⟩ :=
-    retargetInput_reachesIn_simulate M hreach hinp hwork hout realInput
+    retargetInput_reachesIn_of_reachesIn M hreach hinp hwork hout realInput
   refine ⟨retargetWrap M finalReal c_M, t, ht, ?_, ?_, ?_, ?_⟩
-  · rw [retargetInitCfg_eq_wrap]; exact hreachSim
+  · rw [retargetInitCfg_eq_retargetWrap]; exact hreachSim
   · show (retargetWrap M finalReal c_M).state = (retargetInput M).qhalt
     show c_M.state = M.qhalt
     exact hhalt
@@ -412,7 +412,7 @@ theorem startedCfg_input_eq (M : TM k) (z : List Bool)
 
 /-- Each verifier work tape immediately after the forced first move off `▷`
     is a blank initialized tape moved right to cell 1. -/
-theorem startedCfg_work_eq_init (M : TM k) (z : List Bool)
+theorem startedCfg_work_eq_init_move_right (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) (i : Fin k) :
     (startedCfg M z hne).work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
   have hworkDir :
@@ -426,7 +426,7 @@ theorem startedCfg_work_eq_init (M : TM k) (z : List Bool)
 
 /-- The verifier output tape immediately after the forced first move off `▷`
     is a blank initialized tape moved right to cell 1. -/
-theorem startedCfg_output_eq_init (M : TM k) (z : List Bool)
+theorem startedCfg_output_eq_init_move_right (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) :
     (startedCfg M z hne).output = (_root_.Complexity.Tape.init []).move Dir3.right := by
   have houtDir :
@@ -493,7 +493,7 @@ theorem retargetInput_decidesVirtual_started (M : TM k) {L : Language} {T : ℕ 
       TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hout'
   obtain ⟨finalReal, hreachSim⟩ :=
-    retargetInput_reachesIn_simulate M hrest hinp hwork hout realInput
+    retargetInput_reachesIn_of_reachesIn M hrest hinp hwork hout realInput
   refine ⟨retargetWrap M finalReal c_M, t', by omega, hreachSim, ?_, ?_, ?_⟩
   · show (retargetWrap M finalReal c_M).state = (retargetInput M).qhalt
     show c_M.state = M.qhalt
@@ -533,7 +533,7 @@ theorem retargetInput_hoareTime (M : TM k)
   have hwork : ∀ i, TapeInvariant (innerWork i) := hpre_work vin innerWork out hpreM
   have hout : TapeInvariant out := hpre_out vin innerWork out hpreM
   obtain ⟨finalReal, hreachSim⟩ :=
-    retargetInput_reachesIn_simulate M hreach hinp hwork hout realInput
+    retargetInput_reachesIn_of_reachesIn M hreach hinp hwork hout realInput
   let c0 : Cfg k M.Q :=
     { state := M.qstart, input := vin, work := innerWork, output := out }
   have hworkField : (retargetWrap M realInput c0).work = work := by

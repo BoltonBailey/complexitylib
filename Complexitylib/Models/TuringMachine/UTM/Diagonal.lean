@@ -203,8 +203,8 @@ private theorem blankOutTM_rewind_loop
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst1, hh1, hc1, hin1, hw1⟩
   | succ h ih =>
@@ -223,8 +223,8 @@ private theorem blankOutTM_rewind_loop
         omega
       · dsimp only []
         rw [tape_readBackWrite_preserves c.output Dir3.left (Or.inr hread_ne), hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
     obtain ⟨c', hreach, hst', hh', hc', hin', hw'⟩ := ih c₁ hst1 hc1 hh1 hin1 hw1
     exact ⟨c', .step hstep' hreach, hst', hh', hc', hin', hw'⟩
@@ -248,9 +248,9 @@ private theorem blankOutTM_goRight_step
     exact hWns 1 le_rfl
   simp only [TM.step, hst, blankOutTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-  · dsimp only []; exact transitionTape_id hread_ne
-  · dsimp only []; rw [hin]; exact transitionInput_id hinp
-  · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+  · dsimp only []; exact transitionTape_eq_self hread_ne
+  · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+  · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
 
 /-- Write step of `blankOutTM`: blank cell 1 and halt. -/
 private theorem blankOutTM_write_step
@@ -278,8 +278,8 @@ private theorem blankOutTM_write_step
     simp only [hoDir, Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
   · dsimp only []
     simp [hoDir, Tape.writeAndMove, Tape.move, Tape.write, hhead, hcW]
-  · dsimp only []; rw [hin]; exact transitionInput_id hinp
-  · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+  · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+  · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
 
 /-- **`blankOutTM` specification** (ghost form, exact frames). Starting from
     pinned tapes `inp₀`/`work₀`/`out₀` with a well-formed output tape (cell 0
@@ -882,13 +882,13 @@ private theorem initSeamD (α x : List Bool) (V : ℕ) :
     exact hons 1 le_rfl
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       rw [hclk]
       exact regT_read_ne_start' V
     · exact body6ShapeD_reads hshape ⟨i.val, val_lt_of_ne_clkT hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   exact ⟨by rw [transitionInput_cells]; exact hic,
     transitionInput_head_ge inp hinp0, hshape, hclk, ho0, hons, hoh⟩
@@ -939,12 +939,12 @@ private theorem seekSeamD (α x : List Bool) (V : ℕ) :
     exact hons 1 le_rfl
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       exact clk_read_ne_start hckc hckh
     · exact body6ShapeD_reads hshape ⟨i.val, val_lt_of_ne_clkT hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   obtain ⟨hw0c, hw0h, hw1, hw1h, hw2, hw2h, hw3, hw3h, hw4, hw4h, hw5, hw5h⟩ :=
     hshape
@@ -994,10 +994,10 @@ private theorem loopSeamD (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
       loopExitD α x mc v (transitionInput inp)
         (fun i => transitionTape (work i)) (transitionTape out) := by
   rintro inp work out ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads hsi hckc hckh i)
-  have h3 : transitionTape out = out := transitionTape_id hsi.out_read
+    funext fun i => transitionTape_eq_self (work7_reads hsi hckc hckh i)
+  have h3 : transitionTape out = out := transitionTape_eq_self hsi.out_read
   rw [h1, h2, h3]
   exact ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
 
@@ -1103,9 +1103,9 @@ private theorem testExit_to_branchD (α x : List Bool)
       branchPreD α mc v (transitionInput inp)
         (fun i => transitionTape (work i)) ⟨1, out.cells⟩ := by
   rintro inp work out ⟨-, hsi, hckc, hckh, h0, hns, -, -⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads hsi hckc hckh i)
+    funext fun i => transitionTape_eq_self (work7_reads hsi hckc hckh i)
   rw [h1, h2]
   have hread : (⟨1, out.cells⟩ : Tape).read ≠ Γ.start := by
     show out.cells 1 ≠ Γ.start
@@ -1735,11 +1735,11 @@ private theorem seamA12 (x : List Bool) :
     rw [hoc, outVX_collapse]
     rfl
   subst hout_eq
-  have hti : transitionInput (inpX x) = inpX x := transitionInput_id (inpX_read x)
+  have hti : transitionInput (inpX x) = inpX x := transitionInput_eq_self (inpX_read x)
   have htw : (fun i => transitionTape (workX x i)) = workX x :=
-    funext fun i => transitionTape_id (workX_park x i).2
+    funext fun i => transitionTape_eq_self (workX_park x i).2
   have hto : transitionTape blankT = blankT :=
-    transitionTape_id (show blankT.read ≠ Γ.start from
+    transitionTape_eq_self (show blankT.read ≠ Γ.start from
       Tape.init_nil_cells_ne_start 1 le_rfl)
   rw [hti, htw, hto]
   exact ⟨rfl, rfl, rfl, rfl, rfl, fun j hj => Tape.init_nil_cells_ne_start j hj⟩
@@ -1758,17 +1758,17 @@ private theorem seamA23 (x : List Bool) (V : ℕ) :
   have hinp_read : inp.read ≠ Γ.start := by
     rw [Tape.read, hih, hic]
     exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
-  have hti : transitionInput inp = inp := transitionInput_id hinp_read
+  have hti : transitionInput inp = inp := transitionInput_eq_self hinp_read
   have htw : (fun i => transitionTape (work i)) = work := by
     funext i
     by_cases hi : i = 6
     · subst hi
       rw [hw6]
-      exact transitionTape_id (regT_read_ne_start' V)
+      exact transitionTape_eq_self (regT_read_ne_start' V)
     · rw [hwoth i hi]
-      exact transitionTape_id (workX_park x i).2
+      exact transitionTape_eq_self (workX_park x i).2
   have hto : transitionTape out = out :=
-    transitionTape_id (by rw [Tape.read, hoh]; exact hons 1 le_rfl)
+    transitionTape_eq_self (by rw [Tape.read, hoh]; exact hons 1 le_rfl)
   rw [hti, htw, hto]
   exact ⟨Tape.ext hih hic, hwoth, hw6, ho0, hons, hoh⟩
 
@@ -1788,12 +1788,12 @@ private theorem seamA34 (x : List Bool) (V : ℕ) (s : Γ) :
        (transitionTape out).cells 1 = s) := by
   rintro inp work out ⟨rfl, hwinv, hs, ho0, hons, hoB⟩
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-  · rw [transitionInput_id (inpX_read x)]
+  · rw [transitionInput_eq_self (inpX_read x)]
     exact inpX_read x
   · intro i
     have h0 := (hwinv i).1
     have hns := (hwinv i).2
-    have hh := transitionTape_head_ge (work i) h0
+    have hh := one_le_head_transitionTape (work i) h0
     have hcells := transitionTape_cells (work i) hns
     refine ⟨hh, ?_⟩
     rw [Tape.read, hcells]
@@ -1803,7 +1803,7 @@ private theorem seamA34 (x : List Bool) (V : ℕ) (s : Γ) :
   · intro j hj
     rw [transitionTape_cells out hons]
     exact hons j hj
-  · exact transitionTape_head_bound ho0 hoB
+  · exact head_transitionTape_le ho0 hoB
   · rw [transitionTape_cells out hons]
     exact hs
 
@@ -1895,20 +1895,20 @@ private theorem frontSeam (x : List Bool) :
   have hinp_read : inp.read ≠ Γ.start := by
     rw [Tape.read, hih, hic]
     exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
-  have hti : transitionInput inp = inp := transitionInput_id hinp_read
+  have hti : transitionInput inp = inp := transitionInput_eq_self hinp_read
   have hout_eq : out = blankT := Tape.ext hoh hoc
   subst hout_eq
   have hto : transitionTape blankT = blankT :=
-    transitionTape_id (show blankT.read ≠ Γ.start from
+    transitionTape_eq_self (show blankT.read ≠ Γ.start from
       Tape.init_nil_cells_ne_start 1 le_rfl)
   refine ⟨by rw [hti]; exact hic, by rw [hti]; exact hih, ?_, hto⟩
   funext i
   by_cases hi : i = 7
   · subst hi
     rw [hw7, workX_7]
-    exact transitionTape_id (started_read_ne_start _)
+    exact transitionTape_eq_self (started_read_ne_start _)
   · rw [hwoth i hi, workX_ne7 x hi]
-    exact transitionTape_id blankStarted_read_ne_start
+    exact transitionTape_eq_self blankStarted_read_ne_start
 
 /-- The termCheck postcondition is well-formed on every tape. -/
 private theorem termPost_wf (x : List Bool) :
@@ -1958,10 +1958,10 @@ private theorem toThen_good (x : List Bool) (hb : terminatedRegionB x = true) :
     rw [Tape.read, hih, hic]
     exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
   refine ⟨?_, ?_, ?_⟩
-  · rw [transitionInput_id hinp_read]
+  · rw [transitionInput_eq_self hinp_read]
     exact Tape.ext hih hic
   · funext i
-    exact transitionTape_id (workX_park x i).2
+    exact transitionTape_eq_self (workX_park x i).2
   · refine Tape.ext rfl ?_
     show out.cells = outVX.cells
     rw [hoc, hb, if_pos rfl]

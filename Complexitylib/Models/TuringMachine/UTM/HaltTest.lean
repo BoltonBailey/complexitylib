@@ -205,7 +205,7 @@ def haltTestTM : TM 6 where
     head position. -/
 private theorem tape_idle_fix (t : Tape) (hne : t.read ≠ Γ.start) :
     t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
-  rw [readBackWrite_toΓ_eq hne]
+  rw [toΓ_readBackWrite_of_ne_start hne]
   show (t.write t.read).move (idleDir t.read) = t
   simp only [idleDir, hne, ↓reduceIte]
   show (t.write (t.cells t.head)).move .stay = t

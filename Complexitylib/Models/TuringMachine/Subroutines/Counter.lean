@@ -100,7 +100,7 @@ def hasUnaryCounter (t : Tape) (B : ℕ) : Prop :=
   t.cells (B + 1) = Γ.blank
 
 /-- Rewinding a built unary prefix to cell 1 yields the public counter shape. -/
-theorem hasUnaryPrefix_to_hasUnaryCounter {t t' : Tape} {B : ℕ}
+theorem hasUnaryCounter_of_hasUnaryPrefix {t t' : Tape} {B : ℕ}
     (hprefix : t.hasUnaryPrefix B)
     (hhead : t'.head = 1)
     (hcells : t'.cells = t.cells) :
@@ -740,7 +740,7 @@ private theorem inputLengthPlusOneCounterTM_rewind_step_left
   simp only [TM.step, hstate, inputLengthPlusOneCounterTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · show c.input.move (TM.idleDir c.input.read) = c.input
-    exact TM.transitionInput_id hinp
+    exact TM.transitionInput_eq_self hinp
   · by_cases h0 : (c.work counterIdx).head = 0
     · simp [counterRewindDirs, moveLeftDir, hread, Tape.writeAndMove, Tape.move,
         Tape.write, h0]
@@ -751,7 +751,7 @@ private theorem inputLengthPlusOneCounterTM_rewind_step_left
     change ((c.work counterIdx).write
         ((readBackWrite (c.work counterIdx).read).toΓ)).cells =
       (c.work counterIdx).cells
-    rw [readBackWrite_toΓ_eq hread]
+    rw [toΓ_readBackWrite_of_ne_start hread]
     simp only [Tape.write, Tape.read]
     split
     · rfl
@@ -776,7 +776,7 @@ private theorem inputLengthPlusOneCounterTM_rewind_step_base
   simp only [TM.step, hstate, inputLengthPlusOneCounterTM, hread]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · show c.input.move (TM.idleDir c.input.read) = c.input
-    exact TM.transitionInput_id hinp
+    exact TM.transitionInput_eq_self hinp
   · simp [counterAdvanceDirs, Tape.writeAndMove, Tape.move, Tape.write, hhead]
   · simp [counterAdvanceDirs, Tape.writeAndMove, Tape.move_cells, Tape.write, hhead]
 
@@ -870,7 +870,7 @@ theorem inputLengthPlusOneCounterTM_hoareTime
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
   have hpost : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
-    Tape.hasUnaryPrefix_to_hasUnaryCounter hprefix3 hhead4 hcells4
+    Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hreach_start : (inputLengthPlusOneCounterTM counterIdx).reachesIn 1 c0 c1 := by
     exact .step hstep_start .zero
   have hreach_02 : (inputLengthPlusOneCounterTM counterIdx).reachesIn
@@ -948,7 +948,7 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
   have hcounter4 : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
-    Tape.hasUnaryPrefix_to_hasUnaryCounter hprefix3 hhead4 hcells4
+    Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hcell04 : (c4.work counterIdx).cells 0 = Γ.start := by
     rw [hcells4]
     exact hcell03
@@ -1029,7 +1029,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     inputLengthPlusOneCounterTM_rewind_loop counterIdx (x.length + 2) c3
       hstate3 hinp3 hcell03 hnostart3 hhead3
   have hcounter4 : (c4.work counterIdx).hasUnaryCounter (x.length + 1) :=
-    Tape.hasUnaryPrefix_to_hasUnaryCounter hprefix3 hhead4 hcells4
+    Tape.hasUnaryCounter_of_hasUnaryPrefix hprefix3 hhead4 hcells4
   have hcell04 : (c4.work counterIdx).cells 0 = Γ.start := by
     rw [hcells4]
     exact hcell03

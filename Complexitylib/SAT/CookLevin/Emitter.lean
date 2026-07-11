@@ -110,7 +110,7 @@ theorem LitDesc.Spec.emit
       (emitVarBudget M) := by
   obtain ⟨a, b, c, d, hsa, hsb, hsc, hsd, hsign, hvar, htag, h1, h2, h3, h4⟩ :=
     hspec
-  have h := emitVarLitTM_scratch rA rB rC rD tmp tmp2 desc.sign desc.tag
+  have h := emitVarLitTM_hoareTime_scratch rA rB rC rD tmp tmp2 desc.sign desc.tag
     desc.sa desc.sb desc.sc desc.sd hAt hAt2 hBt hBt2 hCt hCt2 hDt hDt2 htt2
     M A B C D a b c d z hA hB hC hD htag hz h1 h2 h3
     (by rw [← hvar]; exact h4)

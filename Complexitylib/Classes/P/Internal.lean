@@ -77,20 +77,20 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
     · cases hreach₂; exact absurd hhalt₂ hne₂
     · omega
   -- Head bounds: tape heads are ≤ t₁ after Phase 1
-  have hbounds := head_bound_of_reachesIn tm₁ hreach₁
+  have hbounds := head_le_of_reachesIn tm₁ hreach₁
   -- Phase 1: union machine simulates tm₁ for t₁ steps
-  have hphase1 := phase1_simulation tm₁ tm₂ x hreach₁ ht₁_pos
+  have hphase1 := unionTM_phase1_simulation tm₁ tm₂ x hreach₁ ht₁_pos
   -- Case split on whether tm₁ accepted
   by_cases hx₁ : x ∈ L₁
   · -- tm₁ accepted: output cell 1 = Γ.one
     have hcell := hmem₁ hx₁
     -- Derive output tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (Tape.init_cells_zero _)
-    have hnostart_out := output_noStart_of_reachesIn hreach₁
+    have hcell0_out := output_cells_zero_eq_start_of_reachesIn hreach₁ (Tape.init_cells_zero _)
+    have hnostart_out := output_cells_ne_start_of_reachesIn hreach₁
       (fun i hi => Tape.init_nil_cells_ne_start i hi)
     -- Transition: rewind fake output, check, write Γ.one to real output, halt
     obtain ⟨t_tr, c_final, htrans, hhalt_f, hout_f, htr_bound⟩ :=
-      transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
+      unionTM_transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
     -- Combine Phase 1 + transition
     have hoh := hbounds.2.1  -- c₁.output.head ≤ t₁
     refine ⟨c_final, t₁ + t_tr, ?_, reachesIn_trans _ hphase1 htrans, hhalt_f, ?_, ?_⟩
@@ -100,16 +100,16 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ rejected: output cell 1 = Γ.zero
     have hcell := hnmem₁ hx₁
     -- Derive output tape and input tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (Tape.init_cells_zero _)
-    have hnostart_out := output_noStart_of_reachesIn hreach₁
+    have hcell0_out := output_cells_zero_eq_start_of_reachesIn hreach₁ (Tape.init_cells_zero _)
+    have hnostart_out := output_cells_ne_start_of_reachesIn hreach₁
       (fun i hi => Tape.init_nil_cells_ne_start i hi)
-    have hinput_cells := input_cells_of_reachesIn hreach₁
+    have hinput_cells := input_cells_eq_of_reachesIn hreach₁
     -- Transition: full transition to Phase 2
     obtain ⟨t_tr, c_mid, htrans, hmid_state, hmid_input, hmid_work, hmid_output, htr_bound⟩ :=
-      transition_reject tm₁ tm₂ x hhalt₁ hcell hcell0_out hnostart_out hinput_cells
+      unionTM_transition_reject tm₁ tm₂ x hhalt₁ hcell hcell0_out hnostart_out hinput_cells
     -- Phase 2: union machine simulates tm₂ for t₂ steps
     obtain ⟨c_end, hphase2, hend_state, hend_output⟩ :=
-      phase2_simulation tm₁ tm₂ x hreach₂ hmid_state hmid_input hmid_work hmid_output
+      unionTM_phase2_simulation tm₁ tm₂ x hreach₂ hmid_state hmid_input hmid_work hmid_output
     -- Combine Phase 1 + transition + Phase 2
     have hfull := reachesIn_trans _ (reachesIn_trans _ hphase1 htrans) hphase2
     -- The final config is halted

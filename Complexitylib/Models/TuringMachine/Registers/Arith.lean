@@ -57,7 +57,7 @@ theorem addIntoTM_hoareTime (src dst : Fin n) (hne : src ≠ dst) (a b : ℕ)
           by_cases hjd : j = dst
           · subst hjd
             rw [Function.update_self]
-            exact regT_parked _
+            exact parked_regTape _
           · rw [Function.update_of_ne hjd]
             exact hwork₀ j hjs)
       (by
@@ -85,7 +85,7 @@ theorem addIntoTM_hoareTime (src dst : Fin n) (hne : src ≠ dst) (a b : ℕ)
       by_cases hjd : j = dst
       · subst hjd
         rw [Function.update_self]
-        exact regT_parked _
+        exact parked_regTape _
       · rw [Function.update_of_ne hjd]
         exact hwork₀ j hj)
     hbody
@@ -112,23 +112,23 @@ theorem copyIntoTM_hoareTime (src dst : Fin n) (hne : src ≠ dst) (a b : ℕ)
   have hclear := clearRegTM_hoareTime dst b inp₀ work₀ ys hinp₀
     (fun i hi => by
       by_cases his : i = src
-      · subst his; rw [hsrc]; exact regT_parked _
+      · subst his; rw [hsrc]; exact parked_regTape _
       · exact hwork₀ i (fun h => his h)) hdst
   have hadd := addIntoTM_hoareTime src dst hne a 0 inp₀
     (Function.update work₀ dst (regT 0)) ys hinp₀
     (fun i hi => by
       by_cases hid : i = dst
-      · subst hid; rw [Function.update_self]; exact regT_parked _
+      · subst hid; rw [Function.update_self]; exact parked_regTape _
       · rw [Function.update_of_ne hid]; exact hwork₀ i hi)
     (by rw [Function.update_of_ne hne]; exact hsrc)
     (by rw [Function.update_self])
   have hmidP : ∀ i, Parked (Function.update work₀ dst (regT 0) i) := by
     intro i
     by_cases hid : i = dst
-    · subst hid; rw [Function.update_self]; exact regT_parked _
+    · subst hid; rw [Function.update_self]; exact parked_regTape _
     · rw [Function.update_of_ne hid]
       by_cases his : i = src
-      · subst his; rw [hsrc]; exact regT_parked _
+      · subst his; rw [hsrc]; exact parked_regTape _
       · exact hwork₀ i his
   have hseq := seqTM_hoareTime (clearRegTM dst) (addIntoTM src dst) hclear
     (emitPred_transition hinp₀ hmidP ys) hadd
@@ -177,7 +177,7 @@ theorem mulAddIntoTM_hoareTime (src₁ src₂ dst : Fin n)
           by_cases hjd : j = dst
           · subst hjd
             rw [Function.update_self]
-            exact regT_parked _
+            exact parked_regTape _
           · rw [Function.update_of_ne hjd]
             exact hwork₀ j hj1)
       (by
@@ -215,7 +215,7 @@ theorem mulAddIntoTM_hoareTime (src₁ src₂ dst : Fin n)
       by_cases hjd : j = dst
       · subst hjd
         rw [Function.update_self]
-        exact regT_parked _
+        exact parked_regTape _
       · rw [Function.update_of_ne hjd]
         exact hwork₀ j hj)
     hbody
@@ -238,7 +238,7 @@ def iterTM (m : TM n) : ℕ → TM n
   | c + 1 => seqTM m (iterTM m c)
 
 /-- **Iterated increment**: add the constant `c` to register `q`. -/
-theorem iterInc_hoareTime (q : Fin n) (c : ℕ) :
+theorem iterTM_incRegTM_hoareTime (q : Fin n) (c : ℕ) :
     ∀ (d : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool),
     Parked inp₀ → (∀ i, Parked (work₀ i)) → work₀ q = regT d →
     (iterTM (incRegTM q) c).HoareTime
@@ -261,7 +261,7 @@ theorem iterInc_hoareTime (q : Fin n) (c : ℕ) :
     have hmidP : ∀ i, Parked (Function.update work₀ q (regT (d + 1)) i) := by
       intro i
       by_cases hiq : i = q
-      · subst hiq; rw [Function.update_self]; exact regT_parked _
+      · subst hiq; rw [Function.update_self]; exact parked_regTape _
       · rw [Function.update_of_ne hiq]; exact hwork₀ i
     have hrest := ih (d + 1) inp₀ (Function.update work₀ q (regT (d + 1))) ys
       hinp₀ hmidP (by rw [Function.update_self])

@@ -255,8 +255,8 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
         c₁.output.head = 0 ∧ c₁.output.cells = c.output.cells := by
     simp only [TM.step, ↓reduceIte, hstate, loopTM, hread1]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-    · exact transitionInput_id hin
-    · exact funext fun i => transitionTape_id (hwk i)
+    · exact transitionInput_eq_self hin
+    · exact funext fun i => transitionTape_eq_self (hwk i)
     · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh]
     · exact tape_readBackWrite_preserves _ _ (Or.inr hread1)
   -- ── step 2: bounce off ▷ to cell 1, entering check ──
@@ -269,8 +269,8 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
         c₂.output.head = 1 ∧ c₂.output.cells = c₁.output.cells := by
     simp only [TM.step, ↓reduceIte, hst1, loopTM, hread2]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-    · exact transitionInput_id (by rw [hin1]; exact hin)
-    · refine funext fun i => transitionTape_id ?_
+    · exact transitionInput_eq_self (by rw [hin1]; exact hin)
+    · refine funext fun i => transitionTape_eq_self ?_
       rw [hwk1]
       exact hwk i
     · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh1]
@@ -290,12 +290,12 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
           c₃.input = c₂.input ∧ c₃.work = c₂.work ∧ c₃.output = c₂.output := by
       simp only [TM.step, ↓reduceIte, hst2, loopTM, hread3]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-      · exact transitionInput_id (by rw [hin2, hin1]; exact hin)
-      · refine funext fun i => transitionTape_id ?_
+      · exact transitionInput_eq_self (by rw [hin2, hin1]; exact hin)
+      · refine funext fun i => transitionTape_eq_self ?_
         rw [hwk2, hwk1]
         exact hwk i
       · rw [← hread3]
-        exact transitionTape_id (by rw [hread3]; simp)
+        exact transitionTape_eq_self (by rw [hread3]; simp)
     refine ⟨c₃, .step hs1 (.step hs2 (.step hs3 .zero)), ?_, ?_, ?_, ?_⟩
     · rw [hst3, if_pos hone]
     · rw [hin3, hin2, hin1]
@@ -311,11 +311,11 @@ private theorem clocked_rewind_check {n : ℕ} (tmBody tmTest : TM n)
           c₃.input = c₂.input ∧ c₃.work = c₂.work ∧ c₃.output = c₂.output := by
       simp only [TM.step, ↓reduceIte, hst2, loopTM, hread3]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-      · exact transitionInput_id (by rw [hin2, hin1]; exact hin)
-      · refine funext fun i => transitionTape_id ?_
+      · exact transitionInput_eq_self (by rw [hin2, hin1]; exact hin)
+      · refine funext fun i => transitionTape_eq_self ?_
         rw [hwk2, hwk1]
         exact hwk i
-      · exact transitionTape_id hread3s
+      · exact transitionTape_eq_self hread3s
     refine ⟨c₃, .step hs1 (.step hs2 (.step hs3 .zero)), ?_, ?_, ?_, ?_⟩
     · rw [hst3, if_neg hone]
     · rw [hin3, hin2, hin1]
@@ -389,10 +389,10 @@ private theorem clockedBody_hoareTime (α : List Bool) (hterm : TerminatedRegion
       rwa [natAdd_eq_clkT] at h
     have hckc : (w clkT).cells = regCells v := by rw [hwclk]; exact hclk
     have hckh : (w clkT).head = max v 1 := by rw [hwclk]; exact hclkh
-    have h1 : transitionInput i = i := transitionInput_id hsi.inp_read
+    have h1 : transitionInput i = i := transitionInput_eq_self hsi.inp_read
     have h2 : (fun k => transitionTape (w k)) = w :=
-      funext fun k => transitionTape_id (work7_reads hsi hckc hckh k)
-    have h3 : transitionTape o = o := transitionTape_id hsi.out_read
+      funext fun k => transitionTape_eq_self (work7_reads hsi hckc hckh k)
+    have h3 : transitionTape o = o := transitionTape_eq_self hsi.out_read
     rw [h1, h2, h3]
     exact ⟨rfl, rfl, hsi, hckc, hckh⟩
   · -- the decrement phase, pointwise from `decFrontierTM_hoareTime`
@@ -506,10 +506,10 @@ private theorem clockedTest_hoareTime (α : List Bool)
         exact hons j hj
   · -- ── halt-test post → or-zero pre, through the (identity) transition ──
     rintro i w o ⟨rfl, hsi, hckc, hckh, hoc0, hons, hoh, hoc1⟩
-    have h1 : transitionInput i = i := transitionInput_id hsi.inp_read
+    have h1 : transitionInput i = i := transitionInput_eq_self hsi.inp_read
     have h2 : (fun k => transitionTape (w k)) = w :=
-      funext fun k => transitionTape_id (work7_reads hsi hckc hckh k)
-    have h3 : transitionTape o = o := transitionTape_id hsi.out_read
+      funext fun k => transitionTape_eq_self (work7_reads hsi hckc hckh k)
+    have h3 : transitionTape o = o := transitionTape_eq_self hsi.out_read
     rw [h1, h2, h3]
     exact ⟨rfl, hsi, hckc, hckh, hoc0, hons, hoh, hoc1⟩
   · -- ── the combined-verdict step, pointwise from `orZeroTM_hoareTime` ──
@@ -616,12 +616,12 @@ private theorem clocked_iteration (α : List Bool) (hterm : TerminatedRegion α)
       = ⟨clockedTest.qstart, inp, cb.work, out⟩ := by
     have h1 : transitionInput cb.input = inp := by
       rw [hb_in]
-      exact transitionInput_id hinv.inp_read
+      exact transitionInput_eq_self hinv.inp_read
     have h2 : (fun i => transitionTape (cb.work i)) = cb.work :=
-      funext fun i => transitionTape_id (work7_reads hb_si' hb_ckc hb_ckh i)
+      funext fun i => transitionTape_eq_self (work7_reads hb_si' hb_ckc hb_ckh i)
     have h3 : transitionTape cb.output = out := by
       rw [hb_out]
-      exact transitionTape_id hinv.out_read
+      exact transitionTape_eq_self hinv.out_read
     rw [h1, h2, h3]
   have hbt := loopTM_body_to_test clockedBody clockedTest
     (show cb.state = clockedBody.qhalt from hb_halt)
@@ -647,10 +647,10 @@ private theorem clocked_iteration (α : List Bool) (hterm : TerminatedRegion α)
       = ⟨Sum.inr (Sum.inl LoopPhase.rewindOut), inp, ct.work, ct.output⟩ := by
     have h1 : transitionInput ct.input = inp := by
       rw [ht_in]
-      exact transitionInput_id hinv.inp_read
+      exact transitionInput_eq_self hinv.inp_read
     have h2 : (fun i => transitionTape (ct.work i)) = ct.work :=
-      funext fun i => transitionTape_id (work7_reads ht_si ht_ckc ht_ckh i)
-    have h3 : transitionTape ct.output = ct.output := transitionTape_id ht_or
+      funext fun i => transitionTape_eq_self (work7_reads ht_si ht_ckc ht_ckh i)
+    have h3 : transitionTape ct.output = ct.output := transitionTape_eq_self ht_or
     rw [h1, h2, h3]
   have htr := (loopTM_test_to_rewind clockedBody clockedTest
     (show ct.state = clockedTest.qhalt from ht_halt)).trans (congrArg some hcfg₂)

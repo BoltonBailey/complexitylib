@@ -326,14 +326,14 @@ private theorem output_noStart_step {tm : TM n} {c c' : Cfg n tm.Q}
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
   exact tape_noStart_preserved _ _ _ (Γw.toΓ_ne_start _) hno
 
-theorem output_cell0_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+theorem output_cells_zero_eq_start_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
     (h : tm.reachesIn t c₀ c) (h0 : c₀.output.cells 0 = Γ.start) :
     c.output.cells 0 = Γ.start := by
   induction h with
   | zero => exact h0
   | step hs _ ih => exact ih (output_cell0_step hs h0)
 
-theorem output_noStart_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+theorem output_cells_ne_start_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
     (h : tm.reachesIn t c₀ c)
     (hno : ∀ i, i ≥ 1 → c₀.output.cells i ≠ Γ.start) :
     ∀ i, i ≥ 1 → c.output.cells i ≠ Γ.start := by
@@ -341,17 +341,17 @@ theorem output_noStart_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
   | zero => exact hno
   | step hs _ ih => exact ih (output_noStart_step hs hno)
 
-theorem input_cells_of_step {tm : TM n} {c c' : Cfg n tm.Q}
+theorem input_cells_eq_of_step {tm : TM n} {c c' : Cfg n tm.Q}
     (hs : tm.step c = some c') : c'.input.cells = c.input.cells := by
   have hne := state_ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
   exact Tape.move_cells _ _
 
-theorem input_cells_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
+theorem input_cells_eq_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
     (h : tm.reachesIn t c₀ c) : c.input.cells = c₀.input.cells := by
   induction h with
   | zero => rfl
-  | step hs _ ih => rw [ih, input_cells_of_step hs]
+  | step hs _ ih => rw [ih, input_cells_eq_of_step hs]
 
 
 
@@ -378,7 +378,7 @@ private theorem step_head_bound (tm : TM n) (c c' : Cfg n tm.Q)
 
 /-- A tape head moves at most 1 cell per step. After `t` steps starting
     from `initCfg`, the head is at position ≤ `t`. -/
-theorem head_bound_of_reachesIn (tm : TM n)
+theorem head_le_of_reachesIn (tm : TM n)
     {t : ℕ} {c : Cfg n tm.Q}
     (hreach : tm.reachesIn t (tm.initCfg x) c) :
     c.input.head ≤ t ∧ c.output.head ≤ t ∧ ∀ i, (c.work i).head ≤ t := by

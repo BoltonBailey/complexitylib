@@ -15,7 +15,7 @@ then parks at cell 1, writing `□` over the `□` already there, so the dummy
 tape's cells never change.
 
 This closes the `k = 0` case of the single-tape reduction
-(`NTM.exists_singleTape_decider`): the simulation machinery requires at least
+(`NTM.exists_singleTape_decidesInTime`): the simulation machinery requires at least
 one work tape, while a padded machine *is* already single-work-tape.
 -/
 

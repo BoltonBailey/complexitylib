@@ -167,8 +167,8 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
         c₁.output.head = 0 ∧ c₁.output.cells = c.output.cells := by
     simp only [TM.step, ↓reduceIte, hstate, loopTM, hread1]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-    · exact transitionInput_id hin
-    · exact funext fun i => transitionTape_id (hwk i)
+    · exact transitionInput_eq_self hin
+    · exact funext fun i => transitionTape_eq_self (hwk i)
     · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh]
     · exact tape_readBackWrite_preserves _ _ (Or.inr hread1)
   -- ── step 2: bounce off ▷ to cell 1, entering check ──
@@ -181,8 +181,8 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
         c₂.output.head = 1 ∧ c₂.output.cells = c₁.output.cells := by
     simp only [TM.step, ↓reduceIte, hst1, loopTM, hread2]
     refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-    · exact transitionInput_id (by rw [hin1]; exact hin)
-    · refine funext fun i => transitionTape_id ?_
+    · exact transitionInput_eq_self (by rw [hin1]; exact hin)
+    · refine funext fun i => transitionTape_eq_self ?_
       rw [hwk1]
       exact hwk i
     · simp [Tape.writeAndMove, Tape.move, Tape.write_head, hoh1]
@@ -202,12 +202,12 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
           c₃.input = c₂.input ∧ c₃.work = c₂.work ∧ c₃.output = c₂.output := by
       simp only [TM.step, ↓reduceIte, hst2, loopTM, hread3]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-      · exact transitionInput_id (by rw [hin2, hin1]; exact hin)
-      · refine funext fun i => transitionTape_id ?_
+      · exact transitionInput_eq_self (by rw [hin2, hin1]; exact hin)
+      · refine funext fun i => transitionTape_eq_self ?_
         rw [hwk2, hwk1]
         exact hwk i
       · rw [← hread3]
-        exact transitionTape_id (by rw [hread3]; simp)
+        exact transitionTape_eq_self (by rw [hread3]; simp)
     refine ⟨c₃, .step hs1 (.step hs2 (.step hs3 .zero)), ?_, ?_, ?_, ?_⟩
     · rw [hst3, if_pos hone]
     · rw [hin3, hin2, hin1]
@@ -223,11 +223,11 @@ private theorem loopTM_rewind_check {n : ℕ} (tmBody tmTest : TM n)
           c₃.input = c₂.input ∧ c₃.work = c₂.work ∧ c₃.output = c₂.output := by
       simp only [TM.step, ↓reduceIte, hst2, loopTM, hread3]
       refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-      · exact transitionInput_id (by rw [hin2, hin1]; exact hin)
-      · refine funext fun i => transitionTape_id ?_
+      · exact transitionInput_eq_self (by rw [hin2, hin1]; exact hin)
+      · refine funext fun i => transitionTape_eq_self ?_
         rw [hwk2, hwk1]
         exact hwk i
-      · exact transitionTape_id hread3s
+      · exact transitionTape_eq_self hread3s
     refine ⟨c₃, .step hs1 (.step hs2 (.step hs3 .zero)), ?_, ?_, ?_, ?_⟩
     · rw [hst3, if_neg hone]
     · rw [hin3, hin2, hin1]
@@ -360,12 +360,12 @@ private theorem loop_iteration (α : List Bool) (hterm : TerminatedRegion α)
       = ⟨haltTestTM.qstart, inp, cb.work, out⟩ := by
     have h1 : transitionInput cb.input = inp := by
       rw [hin_body]
-      exact transitionInput_id hinp_read
+      exact transitionInput_eq_self hinp_read
     have h2 : (fun i => transitionTape (cb.work i)) = cb.work :=
-      funext fun i => transitionTape_id (hwreads₂ i)
+      funext fun i => transitionTape_eq_self (hwreads₂ i)
     have h3 : transitionTape cb.output = out := by
       rw [hout_body]
-      exact transitionTape_id hout_read
+      exact transitionTape_eq_self hout_read
     rw [h1, h2, h3]
   have hbt := loopTM_body_to_test bodyTM haltTestTM
     (show cb.state = bodyTM.qhalt from hst_body)
@@ -383,13 +383,13 @@ private theorem loop_iteration (α : List Bool) (hterm : TerminatedRegion α)
       = ⟨Sum.inr (Sum.inl LoopPhase.rewindOut), inp, cb.work, ct.output⟩ := by
     have h1 : transitionInput ct.input = inp := by
       rw [htin]
-      exact transitionInput_id hinp_read
+      exact transitionInput_eq_self hinp_read
     have h2 : (fun i => transitionTape (ct.work i)) = cb.work := by
       funext i
       rw [htwork]
-      exact transitionTape_id (hwreads₂ i)
+      exact transitionTape_eq_self (hwreads₂ i)
     have h3 : transitionTape ct.output = ct.output :=
-      transitionTape_id hctout_read
+      transitionTape_eq_self hctout_read
     rw [h1, h2, h3]
   have htr := (loopTM_test_to_rewind bodyTM haltTestTM
     (show ct.state = haltTestTM.qhalt from hthalt)).trans (congrArg some hcfg₂)
@@ -627,10 +627,10 @@ theorem utm_loop_extract_hoareTime (α x : List Bool) (hterm : TerminatedRegion 
     (utm_loop_hoareTime α x hterm T mcF hrun hhalt) ?_ ?_
   · -- the loop's postcondition is parked, so the transition is an identity
     rintro inp work out ⟨hinv, hout0, houtns, houth, hone⟩
-    have h1 : transitionInput inp = inp := transitionInput_id hinv.inp_read
+    have h1 : transitionInput inp = inp := transitionInput_eq_self hinv.inp_read
     have h2 : (fun i => transitionTape (work i)) = work :=
-      funext fun i => transitionTape_id (simInv_work_reads α hinv i)
-    have h3 : transitionTape out = out := transitionTape_id hinv.out_read
+      funext fun i => transitionTape_eq_self (simInv_work_reads α hinv i)
+    have h3 : transitionTape out = out := transitionTape_eq_self hinv.out_read
     rw [h1, h2, h3]
     exact ⟨hinv, hout0, houtns, houth, hone⟩
   · -- the extraction phase, through the virtual-output shift
@@ -718,7 +718,7 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
     simp [Tape.init]
   have hwtr : (fun i => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     rcases i with ⟨iv, hv⟩
     rcases iv with _ | _ | _ | _ | _ | _ | n
     · exact hr0
@@ -728,7 +728,7 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
     · exact hr4
     · exact hr5
     · exact absurd hv (by omega)
-  have hotr : transitionTape out = out := transitionTape_id hrout
+  have hotr : transitionTape out = out := transitionTape_eq_self hrout
   rw [hwtr, hotr]
   refine ⟨initPost_simInv α x (transitionInput inp) work out
     ⟨by rw [transitionInput_cells]; exact hinp,

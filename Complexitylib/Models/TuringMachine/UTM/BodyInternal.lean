@@ -59,12 +59,12 @@ theorem step_mkAct {c : Cfg 6 bodyTM.Q} (hne : c.state ≠ bodyDone)
     a non-`▷` symbol (its action is precisely `transitionTape`). -/
 theorem idle_tape_id {t : Tape} (h : t.read ≠ Γ.start) :
     t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t :=
-  transitionTape_id h
+  transitionTape_eq_self h
 
 /-- The idled real input tape is exactly preserved when reading non-`▷`. -/
 theorem idle_input_id {t : Tape} (h : t.read ≠ Γ.start) :
     t.move (idleDir t.read) = t :=
-  transitionInput_id h
+  transitionInput_eq_self h
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Generic rewind loop
@@ -820,7 +820,7 @@ theorem dfCopy_loop (W : ℕ → Γ) (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start
       (by rw [hst]; exact fun hcon => nomatch hcon)
       (by rw [hst]; exact harm)
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadd', hreadd]
+      rw [toΓ_readBackWrite_of_ne_start hreadd', hreadd]
     have hVupd : ∀ j, 1 ≤ j → Function.update V a (W b) j ≠ Γ.start := by
       intro j hj
       by_cases hje : j = a

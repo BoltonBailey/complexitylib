@@ -43,7 +43,7 @@ private theorem writeAndMove_readBack_move (t : Tape)
     t.writeAndMove (readBackWrite t.read) d = t.move d := by
   show (t.write (readBackWrite t.read).toΓ).move d = t.move d
   congr 1
-  rw [readBackWrite_toΓ_eq hread, Tape.write]
+  rw [toΓ_readBackWrite_of_ne_start hread, Tape.write]
   split
   · rfl
   · simp only [Tape.read, Function.update_eq_self]
@@ -146,7 +146,7 @@ private theorem seekFrontier_step_first_blank (c : Cfg 7 seekFrontierTM.Q)
   rw [TM.step, if_neg (seekFrontier_ne_halt (by decide) hst)]
   simp only [seekFrontierTM, hst, hblank, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -167,7 +167,7 @@ private theorem seekFrontier_step_first_one (c : Cfg 7 seekFrontierTM.Q)
   rw [TM.step, if_neg (seekFrontier_ne_halt (by decide) hst)]
   simp only [seekFrontierTM, hst, hone, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -190,7 +190,7 @@ private theorem seekFrontier_step_walk_one (c : Cfg 7 seekFrontierTM.Q)
   rw [TM.step, if_neg (seekFrontier_ne_halt (by decide) hst)]
   simp only [seekFrontierTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -214,7 +214,7 @@ private theorem seekFrontier_step_walk_blank (c : Cfg 7 seekFrontierTM.Q)
   rw [TM.step, if_neg (seekFrontier_ne_halt (by decide) hst)]
   simp only [seekFrontierTM, hst, hblank, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir

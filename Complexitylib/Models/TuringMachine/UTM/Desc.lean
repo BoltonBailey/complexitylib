@@ -159,7 +159,7 @@ def syms (w : ℕ) (e : DescEntry) : List Γw :=
   bitsToSyms e.act.dw.encode ++ bitsToSyms e.act.dOut.encode
 
 theorem syms_length (w : ℕ) (e : DescEntry) : (e.syms w).length = 2 * w + 16 := by
-  simp [syms, Nat.toBits_length, Γ.encode_length, Γw.encode_length, Dir3.encode_length]
+  simp [syms, Nat.toBits_length, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
   omega
 
 theorem syms_ne_blank {w : ℕ} {e : DescEntry} {s : Γw} (h : s ∈ e.syms w) :
@@ -225,7 +225,7 @@ theorem groupPairs_append_of_even : ∀ {a : List Bool}, a.length % 2 = 0 →
 theorem flatMap_encode_length_even (l : List Γw) : (l.flatMap Γw.encode).length % 2 = 0 := by
   induction l with
   | nil => rfl
-  | cons s rest ih => simp [Γw.encode_length]
+  | cons s rest ih => simp [Γw.length_encode]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Decoding: Γw symbols → description
@@ -390,18 +390,18 @@ theorem parseEntry_syms {w : ℕ} {e : DescEntry}
   have hq'_len : (Nat.toBits w e.act.q').length = w := Nat.toBits_length ..
   simp only [parseEntry, hbits]
   rw [if_neg (by
-    simp [Nat.toBits_length, Γ.encode_length, Γw.encode_length, Dir3.encode_length]
+    simp [Nat.toBits_length, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
     omega)]
   rw [List.take_left' hq_len, List.drop_left' hq_len,
-      List.take_left' (Γ.encode_length e.si), List.drop_left' (Γ.encode_length e.si),
-      List.take_left' (Γ.encode_length e.sw), List.drop_left' (Γ.encode_length e.sw),
-      List.take_left' (Γ.encode_length e.so), List.drop_left' (Γ.encode_length e.so),
+      List.take_left' (Γ.length_encode e.si), List.drop_left' (Γ.length_encode e.si),
+      List.take_left' (Γ.length_encode e.sw), List.drop_left' (Γ.length_encode e.sw),
+      List.take_left' (Γ.length_encode e.so), List.drop_left' (Γ.length_encode e.so),
       List.take_left' hq'_len, List.drop_left' hq'_len,
-      List.take_left' (Γw.encode_length e.act.ww), List.drop_left' (Γw.encode_length e.act.ww),
-      List.take_left' (Γw.encode_length e.act.wo), List.drop_left' (Γw.encode_length e.act.wo),
-      List.take_left' (Dir3.encode_length e.act.di), List.drop_left' (Dir3.encode_length e.act.di),
-      List.take_left' (Dir3.encode_length e.act.dw), List.drop_left' (Dir3.encode_length e.act.dw),
-      List.take_of_length_le (Nat.le_of_eq (Dir3.encode_length e.act.dOut))]
+      List.take_left' (Γw.length_encode e.act.ww), List.drop_left' (Γw.length_encode e.act.ww),
+      List.take_left' (Γw.length_encode e.act.wo), List.drop_left' (Γw.length_encode e.act.wo),
+      List.take_left' (Dir3.length_encode e.act.di), List.drop_left' (Dir3.length_encode e.act.di),
+      List.take_left' (Dir3.length_encode e.act.dw), List.drop_left' (Dir3.length_encode e.act.dw),
+      List.take_of_length_le (Nat.le_of_eq (Dir3.length_encode e.act.dOut))]
   simp [Nat.fromBits_toBits hq, Nat.fromBits_toBits hq']
 
 /-- A leading separator (empty segment) terminates the table parse. -/

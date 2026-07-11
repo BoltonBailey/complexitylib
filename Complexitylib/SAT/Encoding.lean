@@ -60,7 +60,7 @@ namespace Unary
 /-- Unary encoding of `n`: `n` consecutive `true` bits. `encode 0 = []`. -/
 def encode (n : Nat) : List Bool := List.replicate n true
 
-@[simp] theorem encode_length (n : Nat) : (encode n).length = n := by
+@[simp] theorem length_encode (n : Nat) : (encode n).length = n := by
   simp [encode]
 
 @[simp] theorem encode_zero : encode 0 = [] := rfl
@@ -143,7 +143,7 @@ theorem encode_cons (ℓ : Lit) (ℓs : Clause) :
 
 /-- Length bound on the encoded clause: each literal contributes at most
     `2 * |encodeRaw| + 2` bits (doubling + separator). -/
-theorem encode_length (c : Clause) :
+theorem length_encode (c : Clause) :
     c.encode.length = c.foldr (fun ℓ acc => 2 * ℓ.encodeRaw.length + 2 + acc) 0 := by
   induction c with
   | nil => rfl
@@ -166,7 +166,7 @@ theorem encode_cons (c : Clause) (cs : CNF) :
     encode (c :: cs) = c.encode ++ [true, false] ++ encode cs := rfl
 
 /-- Length bound: each clause contributes `|c.encode| + 2` bits to the CNF. -/
-theorem encode_length (φ : CNF) :
+theorem length_encode (φ : CNF) :
     φ.encode.length = φ.foldr (fun c acc => c.encode.length + 2 + acc) 0 := by
   induction φ with
   | nil => rfl

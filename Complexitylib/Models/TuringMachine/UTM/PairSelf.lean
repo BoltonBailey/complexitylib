@@ -475,7 +475,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         out.cells = (_root_.Complexity.Tape.init []).cells ∧ out.head = 1)
       (pairSelfTime x.length) := by
   -- Phase 7: clear work tape 0 (holding x) back to the started blank tape.
-  have h7 := clearWorkTM_started_rich_hoareTime (0 : Fin 8) x
+  have h7 := clearWorkTM_hoareTime_frame_of_binaryString (0 : Fin 8) x
     (P := fun inp work out =>
       inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
       work 7 = (_root_.Complexity.Tape.init ((pair x x).map Γ.ofBool)).move Dir3.right ∧
@@ -489,7 +489,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       exact ⟨p1, p2, by rw [hother 7 (by decide)]; exact p3,
         fun i hi0 hi7 => by rw [hother i hi0]; exact p4 i hi0 hi7, p5⟩)
   -- Phase 6: rewind work tape 0 to cell 1.
-  have h6 := rewindWorkTM_rich_hoareTime (0 : Fin 8) (6 * x.length + 13)
+  have h6 := rewindWorkTM_hoareTime_frame (0 : Fin 8) (6 * x.length + 13)
     (P := fun inp work out =>
       inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
       (work 0).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
@@ -517,16 +517,16 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hw0c (by omega)
       have hw7_ne : (work 7).read ≠ Γ.start := by
         rw [hw7]; exact started_read_ne_start _
-      have hti : transitionInput inp = inp := transitionInput_id hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
-      have htw7 : transitionTape (work 7) = work 7 := transitionTape_id hw7_ne
+      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
+      have htw7 : transitionTape (work 7) = work 7 := transitionTape_eq_self hw7_ne
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       have htwo : ∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
           transitionTape (work i) = work i := by
         intro i hi0 hi7
         rw [hother i hi0 hi7]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [htw0]
         exact Tape.ext (by rw [hw0h]; rfl) hw0c
@@ -546,7 +546,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
           by rw [hto]; exact hout⟩)
     h7
   -- Phase 5: rewind the input head to cell 1.
-  have h5 := rewindInputTM_rich_hoareTime (n := 8) (6 * x.length + 12)
+  have h5 := rewindInputTM_hoareTime_frame (n := 8) (6 * x.length + 12)
     (P := fun inp work out =>
       inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       (work 0).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
@@ -571,16 +571,16 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hw0c hw0h1
       have hw7_ne : (work 7).read ≠ Γ.start := by
         rw [hw7]; exact started_read_ne_start _
-      have hti : transitionInput inp = inp := transitionInput_id hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
-      have htw7 : transitionTape (work 7) = work 7 := transitionTape_id hw7_ne
+      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
+      have htw7 : transitionTape (work 7) = work 7 := transitionTape_eq_self hw7_ne
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       have htwo : ∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
           transitionTape (work i) = work i := by
         intro i hi0 hi7
         rw [hother i hi0 hi7]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [htw0, hw0c]; rfl
       · intro j hj
@@ -614,15 +614,15 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hw0c hw0h1
       have hw7_ne : (work 7).read ≠ Γ.start := by
         rw [hw7]; exact started_read_ne_start _
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
-      have htw7 : transitionTape (work 7) = work 7 := transitionTape_id hw7_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
+      have htw7 : transitionTape (work 7) = work 7 := transitionTape_eq_self hw7_ne
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       have htwo : ∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
           transitionTape (work i) = work i := by
         intro i hi0 hi7
         rw [hother i hi0 hi7]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [transitionInput_cells, hic]; rfl
       · intro j hj
@@ -652,7 +652,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
           by rw [hto]; exact hout⟩)
     h567
   -- Phase 3: rewind the input head to cell 1 before the pair build.
-  have h3 := rewindInputTM_rich_hoareTime (n := 8) (x.length + 1)
+  have h3 := rewindInputTM_hoareTime_frame (n := 8) (x.length + 1)
     (P := fun inp work out =>
       inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       work 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
@@ -673,14 +673,14 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hic (by omega)
       have hw0_ne : (work 0).read ≠ Γ.start := by
         rw [hw0]; exact started_read_ne_start x
-      have hti : transitionInput inp = inp := transitionInput_id hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
+      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
       have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
         intro i hi
         rw [hwother i hi]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · rw [hti]
         exact Tape.ext (by rw [hih]; rfl) hic
@@ -691,7 +691,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       · rw [hto]; exact hout)
     h4567
   -- Phase 2: rewind work tape 0 after the copy.
-  have h2 := rewindWorkTM_rich_hoareTime (0 : Fin 8) (x.length + 1)
+  have h2 := rewindWorkTM_hoareTime_frame (0 : Fin 8) (x.length + 1)
     (P := fun inp work out =>
       inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
       inp.head = x.length + 1 ∧
@@ -723,16 +723,16 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         exact hw0ns _ (by omega)
       have hi_ne : inp.read ≠ Γ.start :=
         read_ne_start_of_cells_initTape hic (by omega)
-      have hti : transitionInput inp = inp := transitionInput_id hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
+      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
       have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
         intro i hi
         rw [hwother i hi]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       have hw0xs : work 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right :=
-        Tape.hasBinaryString_eq_initTape_move_right ⟨hw0h, hbits, htail⟩ hw0c0
+        Tape.eq_init_move_right_of_hasBinaryString ⟨hw0h, hbits, htail⟩ hw0c0
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [hti, hic]; rfl
       · intro j hj
@@ -766,15 +766,15 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         show (work 0).cells (work 0).head ≠ Γ.start
         rw [hw0pre.1, hw0pre.2.2 x.length le_rfl]
         decide
-      have hw0ns := Tape.hasBinaryPrefix_cells_ne_start hw0pre
-      have hti : transitionInput inp = inp := transitionInput_id hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_id hw0_ne
+      have hw0ns := Tape.cells_ne_start_of_hasBinaryPrefix hw0pre
+      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
+      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
       have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
         intro i hi
         rw [hwother i hi]
-        exact transitionTape_id blankStarted_read_ne_start
+        exact transitionTape_eq_self blankStarted_read_ne_start
       have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_id blankStarted_read_ne_start
+        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [htw0]; exact hw0c0
       · intro j hj

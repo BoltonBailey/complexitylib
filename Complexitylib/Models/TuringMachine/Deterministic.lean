@@ -25,7 +25,7 @@ deterministic machines:
   `NTM.singleTapeSim_deterministic` — the embedding, the padding, and the
   single-tape simulator all preserve determinism (the simulator consults its
   choice bit only to feed it to `N.δ`).
-* `TM.exists_singleTape_toTM` — the headline: every language decidable by a
+* `TM.exists_singleTape_decidesInTime` — the headline: every language decidable by a
   `k`-work-tape DTM in time `T` is decidable by a single-work-tape DTM within
   `singleTapeSimTime k T = fun n => 16 * (k + 1) * (T n + n + 1) ^ 2`.
 -/
@@ -67,7 +67,7 @@ private theorem Deterministic.trace_step {N : NTM n} (hdet : N.Deterministic)
 
 /-- For a deterministic NTM, the trace is independent of the choice sequence
     (mirror of `TM.toNTM_trace_choice_irrel`). -/
-theorem Deterministic.trace_choice_irrel {N : NTM n} (hdet : N.Deterministic)
+theorem Deterministic.trace_congr_choices {N : NTM n} (hdet : N.Deterministic)
     (T : ℕ) (c : Cfg n N.Q) (ch₁ ch₂ : Fin T → Bool) :
     N.trace T ch₁ c = N.trace T ch₂ c := by
   induction T generalizing c with
@@ -113,7 +113,7 @@ theorem toTM_decidesInTime {N : NTM n} (hdet : N.Deterministic) {L : Language}
     hdet.toTM_reachesIn_trace (T x.length) (fun _ => false) (N.initCfg x)
   refine ⟨_, t, hle, hreach, h.1 x _, fun hx => ?_, fun hx => hrej x hx _⟩
   obtain ⟨ch, _, hout⟩ := (h.2 x).mp hx
-  rw [hdet.trace_choice_irrel (T x.length) (N.initCfg x) _ ch]
+  rw [hdet.trace_congr_choices (T x.length) (N.initCfg x) _ ch]
   exact hout
 
 end NTM
@@ -202,7 +202,7 @@ private theorem writeAndMove_readBack_cell1 (t : Tape) (d : Dir3)
 
 /-- Halt-step correspondence, cells version: when `N` has halted, the
     simulator's one halt step lands with output cell 1 exactly equal to `N`'s
-    (via `Corr.outputEq`; strengthens `haltCorr`'s accept-bit `↔`). -/
+    (via `Corr.outputEq`; strengthens `halted_of_corr`'s accept-bit `↔`). -/
 private theorem haltCorr_cell1 {k : ℕ} (N : NTM k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hh : c.state = N.qhalt) :
@@ -217,7 +217,7 @@ private theorem haltCorr_cell1 {k : ℕ} (N : NTM k) {M : ℕ}
   rw [hout, writeAndMove_readBack_cell1 _ _
     (hcorr.outputEq ▸ hcorr.outputWf 1 le_rfl), hcorr.outputEq]
 
-/-- Reverse halting, cells version (mirrors `halts_rev`, strengthening the
+/-- Reverse halting, cells version (mirrors `halted_singleTapeSim_of_trace_qhalt`, strengthening the
     accept-bit `↔` to equality of output cell 1 via `Corr.outputEq`): if the
     `N`-run induced by an arbitrary simulator stream halts within `Tn` steps,
     the simulator halts within the budget with the same output cell 1. -/
@@ -241,9 +241,9 @@ private theorem halts_rev_cell1 {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ �
   have hrun : ∀ s, s < Nat.find hex →
       (N.trace s (fun i => inducedChoices k ch i.val) (N.initCfg x)).state ≠ N.qhalt :=
     fun s hs => Nat.find_min hex hs
-  have hcorr := revCorr N hk ch x (Nat.find hex) hrun
+  have hcorr := corr_trace_macroPos N hk ch x (Nat.find hex) hrun
   -- one halt step lands the simulator in `SimQ.halt`, output cell preserved
-  have hhalted := (haltCorr N hcorr hth).1
+  have hhalted := (halted_of_corr N hcorr hth).1
   have hcell := haltCorr_cell1 N hcorr hth
   have hstep : (singleTapeSim N).trace 1 (fun j : Fin 1 => ch (macroPos k (Nat.find hex) + j.val))
       ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
@@ -251,7 +251,7 @@ private theorem halts_rev_cell1 {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ �
       = (singleTapeSim N).trace 1 (fun _ => false)
           ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
             ((singleTapeSim N).initCfg x)) := by
-    refine (trace_choice_irrel N 1 (fun _ => false)
+    refine (trace_congr_choices N 1 (fun _ => false)
       (fun j => ch (macroPos k (Nat.find hex) + j)) _ ?_).symm
     intro i hi hgather _
     obtain rfl : i = 0 := by omega
@@ -323,7 +323,7 @@ private theorem le_singleTapeSimTime (k : ℕ) (T : ℕ → ℕ) (m : ℕ) :
     `singleTapeSimTime k T = fun n => 16 * (k + 1) * (T n + n + 1) ^ 2`.
     Chain: embed (`toNTM`), simulate (`singleTapeSim`, or `pad0` for `k = 0`),
     convert back (`toTM`) via determinism. -/
-theorem TM.exists_singleTape_toTM {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
+theorem TM.exists_singleTape_decidesInTime {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
     (h : M.DecidesInTime L T) :
     ∃ M₁ : TM 1, M₁.DecidesInTime L (NTM.singleTapeSimTime k T) := by
   have hN : M.toNTM.DecidesInTime L T := M.toNTM_decidesInTime h
@@ -336,7 +336,7 @@ theorem TM.exists_singleTape_toTM {k : ℕ} (M : TM k) {L : Language} {T : ℕ �
           (NTM.pad0_decidesInTime hN) (NTM.pad0_rejectsWithZero hrej))⟩
   · exact ⟨(NTM.singleTapeSim M.toNTM).toTM,
       NTM.toTM_decidesInTime (NTM.singleTapeSim_deterministic hdet)
-        (NTM.singleTapeSim_decides M.toNTM hk hN)
+        (NTM.singleTapeSim_decidesInTime M.toNTM hk hN)
         (NTM.singleTapeSim_rejectsWithZero hk hN.1 hrej)⟩
 
 end Complexity

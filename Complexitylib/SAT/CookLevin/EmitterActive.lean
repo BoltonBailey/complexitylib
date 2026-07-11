@@ -116,9 +116,9 @@ theorem setupPosTM_hoareTime (p : Fin nT) (hp : p ≠ auxReg2)
       (opBudget M) :=
     (copyIntoTM_hoareTime p auxReg2 hp v a inp₀ work₀ ys hinp₀
       (fun i _ => hwork₀ i) hpv haux).mono_bound
-      (copyIntoBudget (by omega) ha)
+      (copyIntoTM_le_opBudget (by omega) ha)
   have hmidP : ∀ i, Parked (Function.update work₀ auxReg2 (regT v) i) :=
-    parked_update hwork₀ (regT_parked _)
+    parked_update hwork₀ (parked_regTape _)
   cases mv with
   | none => exact hcopy.mono_bound (by omega)
   | some d =>
@@ -134,7 +134,7 @@ theorem setupPosTM_hoareTime (p : Fin nT) (hp : p ≠ auxReg2)
           (Function.update work₀ auxReg2 (regT v)) ys hinp₀
           (fun i _ => hmidP i)
           (by rw [Function.update_self])).consequence
-          (fun _ _ _ h => h) ?_ (incBudget (by omega)))
+          (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget (by omega)))
         rintro inp work out ⟨g1, g2, g3⟩
         exact ⟨g1, by rw [g2, Function.update_idem], g3⟩
       exact (seqTM_hoareTime (copyIntoTM p auxReg2) (decRegTM auxReg2) hcopy
@@ -149,7 +149,7 @@ theorem setupPosTM_hoareTime (p : Fin nT) (hp : p ≠ auxReg2)
           (Function.update work₀ auxReg2 (regT v)) ys hinp₀
           (fun i _ => hmidP i)
           (by rw [Function.update_self])).consequence
-          (fun _ _ _ h => h) ?_ (incBudget (by omega)))
+          (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget (by omega)))
         rintro inp work out ⟨g1, g2, g3⟩
         exact ⟨g1, by rw [g2, Function.update_idem], g3⟩
       exact (seqTM_hoareTime (copyIntoTM p auxReg2) (incRegTM auxReg2) hcopy
@@ -202,7 +202,7 @@ theorem ActiveBase.update_aux {Qc steps P M t pi pw po : ℕ}
     ActiveBase Qc steps P M t pi pw po
       (Function.update base auxReg2 (regT z)) :=
   ⟨hB.hM, hB.ht, hB.hpi, hB.hpw, hB.hpo,
-   parked_update hB.parked (regT_parked _),
+   parked_update hB.parked (parked_regTape _),
    by rw [Function.update_of_ne (by decide)]; exact hB.hrA,
    by rw [Function.update_of_ne (by decide)]; exact hB.hrB,
    by rw [Function.update_of_ne (by decide)]; exact hB.hrC,
@@ -494,7 +494,7 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact haux2)
       ).strengthen_post ?_)
     rintro inp work out ⟨g1, g2, g3⟩
-    exact ⟨g1, by rw [g2, update_scratch (by decide) (by decide)], g3⟩
+    exact ⟨g1, by rw [g2, scratch_update_comm (by decide) (by decide)], g3⟩
   -- Stage 6: the input-head clause.
   have h₆ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux iH)
     (hhead 0 iH (by omega) hiHle) inp₀ (ys ++ w1 ++ w2 ++ w3 ++ w4) hinp₀
@@ -514,7 +514,7 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
         Function.update_self])).strengthen_post ?_)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
-    rw [g2, update_scratch (by decide) (by decide), hbase₅,
+    rw [g2, scratch_update_comm (by decide) (by decide), hbase₅,
       Function.update_idem]
   -- Stage 8: the work-head clause.
   have h₈ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux wH)
@@ -536,7 +536,7 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
         Function.update_self])).strengthen_post ?_)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
-    rw [g2, update_scratch (by decide) (by decide), hbase₇,
+    rw [g2, scratch_update_comm (by decide) (by decide), hbase₇,
       Function.update_idem]
   -- Stage 10: the output-head clause.
   have h₁₀ := activeClauseTM_hoareTime N q si sw so b hQc (hB.update_aux oH)
@@ -554,10 +554,10 @@ theorem activeLeafTM_hoareTime (q : N.Q) (si sw so : Γ) (b : Bool)
       (scratch_parked 0 (hB.update_aux oH).parked)
       (by rw [scratch_apply_ne (by decide) (by decide), hbase₉,
         Function.update_self])).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) (by omega)))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) (by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
-    rw [g2, update_scratch (by decide) (by decide), hbase₉,
+    rw [g2, scratch_update_comm (by decide) (by decide), hbase₉,
       Function.update_idem,
       show regT 0 = base auxReg2 from haux2.symm, Function.update_eq_self]
   -- Glue the eleven stages.
@@ -813,7 +813,7 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
       hinp₀ (scratch_parked 0 hB.parked)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp3)
       ).consequence (fun _ _ _ h => h) (fun _ _ _ h => h)
-      (setConstBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
+      (setConstTM_le_opBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
   -- Part 3: the sweep over po = 1..P.
   have hbody : ∀ j, j < P →
       (activeSoLevelTM N q si sw pwZero false).HoareTime
@@ -845,11 +845,11 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
           (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1))
           pos3Reg (regT (1 + j))) pos3Fuel ⟨j + 2, regCells P⟩
         = scratch base' tmp tmp2 0 := by
-      rw [Function.update_idem, update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide)]
+      rw [Function.update_idem, scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide)]
     have hB' : ActiveBase Qc steps P M t pi pw (1 + j) base' :=
       ⟨hB.hM, hB.ht, hB.hpi, hB.hpw, by omega,
-       parked_update (parked_update hB.parked (regT_parked _))
+       parked_update (parked_update hB.parked (parked_regTape _))
          (parked_regCells (by omega)),
        by rw [hbase', Function.update_of_ne (by decide),
          Function.update_of_ne (by decide)]; exact hB.hrA,
@@ -891,7 +891,7 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
     (fun j' => allSyms.flatMap (fun so => [true, false].flatMap (fun b =>
       CNF.encode (activeClausesAtF N steps P t q pi si pw sw (1 + j') so b))))
     inp₀ (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1)) ys₁
-    hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+    hinp₀ (parked_update (scratch_parked 0 hB.parked) (parked_regTape _))
     (by rw [Function.update_of_ne (by decide),
       scratch_apply_ne (by decide) (by decide)]; exact hf3)
     (by rw [Function.update_self])
@@ -917,10 +917,10 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
         (Function.update (scratch base tmp tmp2 0) pos3Reg (regT 1)) pos3Reg
         (regT (1 + P))) _ hinp₀
       (parked_update (parked_update (scratch_parked 0 hB.parked)
-        (regT_parked _)) (regT_parked _))
+        (parked_regTape _)) (parked_regTape _))
       (by rw [Function.update_self])).consequence
       (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem, Function.update_idem,
@@ -932,10 +932,10 @@ theorem activePoSplitTM_hoareTime (q : N.Q) (si sw : Γ) (pwZero : Bool)
     (hloop.mono_bound (loop_le_loopBudget (show P ≤ M by omega)))
     (emitPred_transition hinp₀
       (parked_update (parked_update (scratch_parked 0 hB.parked)
-        (regT_parked _)) (regT_parked _)) _) h₃
+        (parked_regTape _)) (parked_regTape _)) _) h₃
   have h₁₂₃ := seqTM_hoareTime (setConstTM pos3Reg 1) _ h₁
     (emitPred_transition hinp₀
-      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) h₂₃
+      (parked_update (scratch_parked 0 hB.parked) (parked_regTape _)) _) h₂₃
   have hall := seqTM_hoareTime (activeSoLevelTM N q si sw pwZero true) _ h₀
     (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) h₁₂₃
   refine hall.consequence (fun _ _ _ h => h) ?_
@@ -1053,7 +1053,7 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
       hinp₀ (scratch_parked 0 hB.parked)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact hB.hp2)
       ).consequence (fun _ _ _ h => h) (fun _ _ _ h => h)
-      (setConstBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
+      (setConstTM_le_opBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
   -- Part 3: the sweep over pw = 1..P.
   have hbody : ∀ j, j < P →
       (activeSwLevelTM N q si false).HoareTime
@@ -1089,11 +1089,11 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
           (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1))
           pos2Reg (regT (1 + j))) pos2Fuel ⟨j + 2, regCells P⟩
         = scratch base' tmp tmp2 0 := by
-      rw [Function.update_idem, update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide)]
+      rw [Function.update_idem, scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide)]
     have hB' : ActiveBase Qc steps P M t pi (1 + j) 0 base' :=
       ⟨hB.hM, hB.ht, hB.hpi, by omega, by omega,
-       parked_update (parked_update hB.parked (regT_parked _))
+       parked_update (parked_update hB.parked (parked_regTape _))
          (parked_regCells (by omega)),
        by rw [hbase', Function.update_of_ne (by decide),
          Function.update_of_ne (by decide)]; exact hB.hrA,
@@ -1141,7 +1141,7 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
           CNF.encode (activeClausesAtF N steps P t q pi si (1 + j')
             sw po so b))))))
     inp₀ (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1)) ys₁
-    hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+    hinp₀ (parked_update (scratch_parked 0 hB.parked) (parked_regTape _))
     (by rw [Function.update_of_ne (by decide),
       scratch_apply_ne (by decide) (by decide)]; exact hf2)
     (by rw [Function.update_self])
@@ -1171,10 +1171,10 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
         (Function.update (scratch base tmp tmp2 0) pos2Reg (regT 1)) pos2Reg
         (regT (1 + P))) _ hinp₀
       (parked_update (parked_update (scratch_parked 0 hB.parked)
-        (regT_parked _)) (regT_parked _))
+        (parked_regTape _)) (parked_regTape _))
       (by rw [Function.update_self])).consequence
       (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) (show 1 + P ≤ M by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem, Function.update_idem,
@@ -1186,10 +1186,10 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
     (hloop.mono_bound (loop_le_loopBudget (show P ≤ M by omega)))
     (emitPred_transition hinp₀
       (parked_update (parked_update (scratch_parked 0 hB.parked)
-        (regT_parked _)) (regT_parked _)) _) h₃
+        (parked_regTape _)) (parked_regTape _)) _) h₃
   have h₁₂₃ := seqTM_hoareTime (setConstTM pos2Reg 1) _ h₁
     (emitPred_transition hinp₀
-      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) h₂₃
+      (parked_update (scratch_parked 0 hB.parked) (parked_regTape _)) _) h₂₃
   have hall := seqTM_hoareTime (activeSwLevelTM N q si true) _ h₀
     (emitPred_transition hinp₀ (scratch_parked 0 hB.parked) _) h₁₂₃
   refine hall.consequence (fun _ _ _ h => h) ?_
@@ -1321,11 +1321,11 @@ theorem activePiLoopTM_hoareTime (q : N.Q)
     have hstate : Function.update
         (Function.update (scratch base tmp tmp2 0) pos1Reg (regT i)) pos1Fuel
         ⟨i + 2, regCells (P + 1)⟩ = scratch base' tmp tmp2 0 := by
-      rw [update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide)]
+      rw [scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide)]
     have hB' : ActiveBase Qc steps P M t i 0 0 base' :=
       ⟨hB.hM, hB.ht, by omega, by omega, by omega,
-       parked_update (parked_update hB.parked (regT_parked _))
+       parked_update (parked_update hB.parked (parked_regTape _))
          (parked_regCells (by omega)),
        by rw [hbase', Function.update_of_ne (by decide),
          Function.update_of_ne (by decide)]; exact hB.hrA,
@@ -1408,9 +1408,9 @@ theorem activePiLoopTM_hoareTime (q : N.Q)
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
       (Function.update (scratch base tmp tmp2 0) pos1Reg (regT (P + 1))) _
-      hinp₀ (parked_update (scratch_parked 0 hB.parked) (regT_parked _))
+      hinp₀ (parked_update (scratch_parked 0 hB.parked) (parked_regTape _))
       (by rw [Function.update_self])).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) (show P + 1 ≤ M by omega)))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) (show P + 1 ≤ M by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem,
@@ -1420,7 +1420,7 @@ theorem activePiLoopTM_hoareTime (q : N.Q)
   have hseq := seqTM_hoareTime _ (setConstTM pos1Reg 0)
     (hloop.mono_bound (loop_le_loopBudget (show P + 1 ≤ M by omega)))
     (emitPred_transition hinp₀
-      (parked_update (scratch_parked 0 hB.parked) (regT_parked _)) _) hset
+      (parked_update (scratch_parked 0 hB.parked) (parked_regTape _)) _) hset
   exact hseq.mono_bound (by rw [activePiLoopBudget])
 
 /-- The machine-state unroll. -/
@@ -1522,7 +1522,7 @@ theorem activeRowTM_hoareTime (Qc steps P M i : ℕ)
       (activeRowBudget N M) := by
   set V₁ : Fin nT → Tape := Function.update V tPlusReg (regT (i + 1))
     with hV₁
-  have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (regT_parked _)
+  have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (parked_regTape _)
   have hinc : (incRegTM tPlusReg).HoareTime
       (emitPred inp₀ (scratch V tmp tmp2 0) ys)
       (emitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
@@ -1530,14 +1530,14 @@ theorem activeRowTM_hoareTime (Qc steps P M i : ℕ)
       hinp₀ (fun l _ => scratch_parked 0 hV l)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVtp)
       ).consequence (fun _ _ _ h => h) ?_
-      (incBudget (by
+      (incRegTM_le_opBudget (by
         have hA1 : (1:ℕ) ≤ steps + 1 := by omega
         obtain ⟨hAM, _, _, _⟩ := radix_caps hA1 (by omega) (by omega)
           (by omega) hM
         omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
-    rw [g2, update_scratch (by decide) (by decide)]
+    rw [g2, scratch_update_comm (by decide) (by decide)]
   have hB₁ : ActiveBase Qc steps P M i 0 0 0 V₁ :=
     ⟨hM, hi, by omega, by omega, by omega, hV₁P,
      by rw [hV₁, Function.update_of_ne (by decide)]; exact hVrA,
@@ -1598,8 +1598,8 @@ theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
     Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i))
       tPlusReg (regT i) with hu
   have huP : ∀ i j, Parked (u i j) := fun i =>
-    parked_update (parked_update (scratch_parked 0 hwork₀) (regT_parked _))
-      (regT_parked _)
+    parked_update (parked_update (scratch_parked 0 hwork₀) (parked_regTape _))
+      (parked_regTape _)
   have hbody : ∀ i, i < steps → (activeRowTM N).HoareTime
       (emitPred inp₀ (Function.update (u i) tFuel ⟨i + 2, regCells steps⟩)
         (ys ++ (List.range i).flatMap (fun t =>
@@ -1639,12 +1639,12 @@ theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
       show Function.update (Function.update (Function.update
         (scratch work₀ tmp tmp2 0) tReg (regT i)) tPlusReg (regT i)) tFuel
         ⟨i + 2, regCells steps⟩ = _
-      rw [update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide)]
+      rw [scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide)]
     have hbaseP : ∀ l, Parked (base l) :=
-      parked_update (parked_update (parked_update hwork₀ (regT_parked _))
-        (regT_parked _)) (parked_regCells (by omega))
+      parked_update (parked_update (parked_update hwork₀ (parked_regTape _))
+        (parked_regTape _)) (parked_regCells (by omega))
     have hrow := activeRowTM_hoareTime N Qc steps P M i hQc hM hi inp₀ base
       (ys ++ (List.range i).flatMap (fun t =>
         (Finset.univ : Finset N.Q).toList.flatMap (fun q =>
@@ -1722,9 +1722,9 @@ theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
           rw [Function.update_comm (show tPlusReg ≠ tReg by decide),
             Function.update_idem,
             Function.update_comm (show tReg ≠ tPlusReg by decide)]]
-      rw [update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide),
-        update_scratch (by decide) (by decide)]
+      rw [scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide),
+        scratch_update_comm (by decide) (by decide)]
     · rw [flatMap_range_succ, ← List.append_assoc]
       exact g3
   have hloop := emitLoopGen_hoareTime (activeRowTM N) tReg tFuel (by decide)
@@ -1776,8 +1776,8 @@ theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
   · rw [g2, hu]
     show Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg
         (regT steps)) tPlusReg (regT steps) = _
-    rw [update_scratch (by decide) (by decide),
-      update_scratch (by decide) (by decide)]
+    rw [scratch_update_comm (by decide) (by decide),
+      scratch_update_comm (by decide) (by decide)]
   · rw [show activeTransitionClausesF N steps P
       = (List.range steps).flatMap (fun t =>
           (Finset.univ : Finset N.Q).toList.flatMap (fun q =>

@@ -11,9 +11,9 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 The config-level correspondence `Corr` between a `singleTapeSim N` configuration
 and an `N` configuration at a macro-step boundary, and the **macro-step
-correspondence** `macroStepCorr` (one `N`-step ↦ several simulator steps,
+correspondence** `corr_macroStep` (one `N`-step ↦ several simulator steps,
 preserving `Corr`). The behavioural lemmas (`SingleTape.lean`) follow by
-iterating `macroStepCorr` over `N`'s computation and translating acceptance.
+iterating `corr_macroStep` over `N`'s computation and translating acceptance.
 
 See `docs/A4-SingleTapeSimulation.md`. Proof internals only.
 -/
@@ -127,7 +127,7 @@ theorem accept_bit_preserved (t : Tape) (d : Dir3) :
 
 /-- **Halt correspondence.** When `N` has halted, the simulator (parked at
     `run N.qhalt`) takes one step to `SimQ.halt`, preserving the accept bit. -/
-theorem haltCorr {k : ℕ} (N : NTM k) {M : ℕ}
+theorem halted_of_corr {k : ℕ} (N : NTM k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hh : c.state = N.qhalt) :
     (singleTapeSim N).halted ((singleTapeSim N).trace 1 (fun _ => false) c1) ∧
@@ -154,7 +154,7 @@ theorem macroBound_mono {k M M' : ℕ} (h : M ≤ M') : macroBound k M ≤ macro
   unfold macroBound
   exact Nat.mul_le_mul_left _ (by omega)
 
-/-! ### Per-phase config transitions (building blocks for `macroStepCorr`)
+/-! ### Per-phase config transitions (building blocks for `corr_macroStep`)
 
 Each lemma reduces `trace`-of-a-phase to the explicit next configuration; the
 full macro-step composes them via `trace_add_fun`. -/
@@ -216,7 +216,7 @@ theorem gather_trace1 {k : ℕ} (N : NTM k) (d : GatherData k N.Q) (b : Bool)
     cell just advances the head by one, leaving contents intact. -/
 private theorem work_gather_step (t : Tape) (h : t.read ≠ Γ.start) :
     t.writeAndMove (TM.readBackWrite t.read).toΓ Dir3.right = { t with head := t.head + 1 } := by
-  rw [TM.readBackWrite_toΓ_eq h]
+  rw [TM.toΓ_readBackWrite_of_ne_start h]
   show (t.write t.read).move Dir3.right = { t with head := t.head + 1 }
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
@@ -248,7 +248,7 @@ private theorem work_write_eq (t : Tape) (s : Γ) (h : t.read = s) :
     cell just retreats the head by one, leaving contents intact. -/
 private theorem work_rewind_step (t : Tape) (h : t.read ≠ Γ.start) :
     t.writeAndMove (TM.readBackWrite t.read).toΓ Dir3.left = { t with head := t.head - 1 } := by
-  rw [TM.readBackWrite_toΓ_eq h]
+  rw [TM.toΓ_readBackWrite_of_ne_start h]
   show (t.write t.read).move Dir3.left = { t with head := t.head - 1 }
   unfold Tape.write Tape.read
   split <;> simp [Tape.move, Function.update_eq_self]
@@ -268,7 +268,7 @@ private theorem tape_idle_stay (t : Tape) (h : t.read ≠ Γ.start) :
 /-- A `readBackWrite`+idle step on a tape reading a non-`▷` cell is a no-op. -/
 private theorem tape_idle_writeMove (t : Tape) (h : t.read ≠ Γ.start) :
     t.writeAndMove (TM.readBackWrite t.read).toΓ (TM.idleDir t.read) = t := by
-  rw [TM.readBackWrite_toΓ_eq h]
+  rw [TM.toΓ_readBackWrite_of_ne_start h]
   simp only [TM.idleDir, h, ↓reduceIte]
   show (t.write t.read).move Dir3.stay = t
   unfold Tape.write Tape.read
@@ -687,9 +687,9 @@ theorem gather_sweep_step1 {k : ℕ} (N : NTM k) (bb : Bool) (d : GatherData k N
         work := fun _ => { (c.work 0) with head := (c.work 0).head + 1 },
         output := c.output } := by
   obtain ⟨d', hd'⟩ :=
-    gatherStep_stays_gather N bb d c.input.read ((c.work 0).read) c.output.read hb
+    gatherStep_fst_eq_gather_of_ne_blank N bb d c.input.read ((c.work 0).read) c.output.read hb
   obtain ⟨hw, ho_w, hi_d, hw_d, ho_d⟩ :=
-    gatherStep_components N bb d c.input.read ((c.work 0).read) c.output.read hb
+    gatherStep_snd_eq_of_ne_blank N bb d c.input.read ((c.work 0).read) c.output.read hb
   refine ⟨d', ?_⟩
   rw [gather_trace1 N d bb c hst]
   simp only []
@@ -763,7 +763,7 @@ theorem gather_sweep_no_sentinel {k : ℕ} (N : NTM k) (bb : Bool) {M : ℕ} {w 
 /-- The sweep accumulator at `B = M` is exactly the per-tape reads: a head in
     `[1, M]` had its symbol recorded; a head at `0` reads `▷`, which is also the
     `▷` default the sweep leaves. Uses `heads_le` (every head `≤ M`) and
-    `head0_read` (a head at `0` reads `▷`). -/
+    `read_eq_start_of_head_eq_zero` (a head at `0` reads `▷`). -/
 theorem gather_acc_eq {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
     (hinv : SimInvAt k t w M) :
     (fun j => if 1 ≤ (w j).head ∧ (w j).head ≤ M then (w j).read else Γ.start)
@@ -771,7 +771,7 @@ theorem gather_acc_eq {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
   funext j
   by_cases h1 : 1 ≤ (w j).head
   · rw [if_pos ⟨h1, hinv.heads_le j⟩]
-  · rw [if_neg (fun h => h1 h.1), hinv.head0_read j (by omega)]
+  · rw [if_neg (fun h => h1 h.1), hinv.read_eq_start_of_head_eq_zero j (by omega)]
 
 /-- One **rewind** step (`trace 1`): from a `rewind d` config, the result is the
     configuration built from `rewindStep`'s output. Basis of the rewind sweep. -/
@@ -1246,7 +1246,7 @@ theorem scatter2_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
     rw [hpres 0 (by simp only [headBitCell]; have := one_le_blockStart k p; omega)]; exact hbm.cell0
   donePart := fun q hpq hqM j => by
     have key : blockStart k p + 3 * (k - 1 - m) < blockStart k q := by
-      have hA := headBitCell_add_three_le k p ⟨k - 1 - m, by omega⟩ hp1
+      have hA := headBitCell_add_three_le_blockStart_succ k p ⟨k - 1 - m, by omega⟩ hp1
       have hB := blockStart_le k (show p + 1 ≤ q by omega)
       simp only [headBitCell] at hA; omega
     rw [hpres (headBitCell k q j) (by simp only [headBitCell]; have := j.isLt; omega),
@@ -1438,7 +1438,7 @@ theorem scatter1_blockinv_step {k : ℕ} {t t' : Tape} {w : Fin k → Tape}
     exact hbm.cell0
   donePart := fun p hp1 hpb j => by
     have key : blockStart k p + 3 * (j : ℕ) + 2 < blockStart k b + 3 * m := by
-      have hA := headBitCell_add_three_le k p j hp1
+      have hA := headBitCell_add_three_le_blockStart_succ k p j hp1
       have hB := blockStart_le k (show p + 1 ≤ b by omega)
       simp only [headBitCell] at hA; omega
     rw [hpres (headBitCell k p j) (by simp only [headBitCell]; omega)
@@ -3288,7 +3288,7 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
       rw [congrFun hfc (headBitCell k p j)]
       rcases Nat.lt_or_ge p (M + 1) with hlt | hge
       · rw [hbelow _ (by
-          have := headBitCell_add_three_le k p j hp1
+          have := headBitCell_add_three_le_blockStart_succ k p j hp1
           have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
           simp only [headBitCell] at *; omega)]
         exact (hmidS.donePart p hp1 hlt j).1
@@ -3299,11 +3299,11 @@ theorem scatter1_sweep {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : �
       rw [congrFun hfc (symCell k p j), congrFun hfc (symCell k p j + 1)]
       rcases Nat.lt_or_ge p (M + 1) with hlt | hge
       · rw [hbelow _ (by
-            have := headBitCell_add_three_le k p j hp1
+            have := headBitCell_add_three_le_blockStart_succ k p j hp1
             have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
             simp only [headBitCell, symCell] at *; omega),
           hbelow _ (by
-            have := headBitCell_add_three_le k p j hp1
+            have := headBitCell_add_three_le_blockStart_succ k p j hp1
             have := blockStart_le k (show p + 1 ≤ M + 1 by omega)
             simp only [headBitCell, symCell] at *; omega)]
         exact hmidS.donePart p hp1 hlt j |>.2
@@ -4205,7 +4205,7 @@ theorem scatter2_block_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) 
     `gather` state — the simulator stays in `scatter2` until the final `▷`-triggered turn
     into `commit`. Companion to `scatter1_sweep_states`: it shows the constant-choice trace
     has no choice-consuming (`gather`-on-`□`) step in this phase, the input to
-    `trace_choice_irrel` for `macroStepCorr_rev`. The hypotheses are identical to
+    `trace_congr_choices` for `macroStepCorr_rev`. The hypotheses are identical to
     `scatter2_sweep` for call-site uniformity. Decomposes as a `scatter2_sweep_aux` block
     sweep (every `3*k`-boundary is `scatter2`) plus a `scatter2_block_states` residual. -/
 theorem scatter2_sweep_states {k : ℕ} (N : NTM k) (bb : Bool) (c : Cfg k N.Q) (M : ℕ)
@@ -4502,10 +4502,10 @@ theorem run_to_scatter1 {k : ℕ} (N : NTM k) {M : ℕ}
 /-- **Decision-point characterization (constant-choice macro-step).** Along the
     CONSTANT-choice trace of one macro-step (the `run → gather → rewind →
     scatter1 → scatter2 → commit` cycle, total length `m`), a step index `i` is a
-    `trace_choice_irrel` decision point — the simulator is in a `gather` state and
+    `trace_congr_choices` decision point — the simulator is in a `gather` state and
     the work head reads the `□` sentinel — **iff** `i = p0 = 1 + 3*k*M`, the single
-    GATHER-sentinel (COMPUTE) step. This is the lever that turns `trace_choice_irrel`
-    and forward `macroStepCorr` into the backward (arbitrary-choice) correspondence.
+    GATHER-sentinel (COMPUTE) step. This is the lever that turns `trace_congr_choices`
+    and forward `corr_macroStep` into the backward (arbitrary-choice) correspondence.
 
     Assembled per phase: `i = 0` is `run` (not gather); the gather sweep
     `[1, p0)` reads non-`□` (`gather_sweep_no_sentinel`); `i = p0` is the unique
@@ -4752,12 +4752,12 @@ theorem macroStep_decision_point_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : �
     exact ⟨fun h => absurd (key i (by omega) hip0 h) (by simp), fun h => absurd h hip0⟩
 
 /-- **Macro-step correspondence — explicit form.** Same content as
-    `macroStepCorr`, but with the step count `m` written out literally (the
+    `corr_macroStep`, but with the step count `m` written out literally (the
     macro-step length) and the choice sequence fixed to the constant `fun _ => b`.
-    `macroStepCorr` is a thin existential wrapper around this; `macroStepCorr_rev`
+    `corr_macroStep` is a thin existential wrapper around this; `macroStepCorr_rev`
     needs the explicit `m` so it can invoke `macroStep_decision_point_iff` (which
-    is stated over exactly this length) to discharge `trace_choice_irrel`. -/
-theorem macroStepCorr_explicit {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+    is stated over exactly this length) to discharge `trace_congr_choices`. -/
+theorem corr_macroStep_explicit {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (b : Bool) :
     Corr N (M + 1)
@@ -4881,7 +4881,7 @@ theorem macroStepCorr_explicit {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     This is the heart of the behavioural correctness proof: it is established by
     tracing the phase machine `run → gather → rewind → scatter1 → scatter2 →
     commit` and showing each phase preserves/advances `SimInvAt`. -/
-theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+theorem corr_macroStep {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (bitf : Fin 1 → Bool) :
     ∃ (m : ℕ) (choices : Fin m → Bool),
@@ -4892,7 +4892,7 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     rw [trace_one_scatterFinal N bitf c hne, trace_one_scatterFinal N (fun _ => bitf 0) c hne]
   refine ⟨1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1)
       + (3 * k * (M + 1) + 1) + 1, fun _ => bitf 0, ?_, ?_⟩
-  · rw [hbeq]; exact macroStepCorr_explicit N hk hcorr hne (bitf 0)
+  · rw [hbeq]; exact corr_macroStep_explicit N hk hcorr hne (bitf 0)
   · -- step count ≤ macroBound k M
     have hbs : blockStart k (M + 1) = 1 + 3 * k * M := by
       simp only [blockStart, blockWidth, Nat.add_sub_cancel]
@@ -4912,10 +4912,10 @@ theorem macroStepCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     step where the simulator is at a GATHER state reading the `□` sentinel (the
     only step consulting the nondeterministic bit — the COMPUTE sub-step) drive
     the simulator to the same configuration. Proved by induction on the step
-    count, using `simDelta_choice_irrel` at each step: where the configuration is
+    count, using `simDelta_eq_of_forall_ne_blank` at each step: where the configuration is
     not a `□`-reading GATHER step the choice is irrelevant, and where it is the
     hypothesis forces the two sequences to agree. -/
-theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
+theorem trace_congr_choices {k : ℕ} (N : NTM k) :
     ∀ (m : ℕ) (choices choices' : ℕ → Bool) (c1 : Cfg 1 (SimQ k N.Q)),
     (∀ i, i < m →
        (∃ d, ((singleTapeSim N).trace i (fun j => choices j.val) c1).state = SimQ.gather d) →
@@ -4944,7 +4944,7 @@ theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
         by_cases hgather : (∃ d, cm0.state = SimQ.gather d) ∧ (cm0.work 0).read = Γ.blank
         · obtain ⟨hd, hb⟩ := hgather
           rw [hyp m (Nat.lt_succ_self m) hd hb]
-        · apply simDelta_choice_irrel
+        · apply simDelta_eq_of_forall_ne_blank
           intro d hd_eq hbad
           exact hgather ⟨⟨d, hd_eq⟩, hbad⟩
       simp only [NTM.trace, if_neg hcmhalt, Nat.add_zero]
@@ -4960,7 +4960,7 @@ theorem trace_choice_irrel {k : ℕ} (N : NTM k) :
     `ℕ`-indexed `F`), a configuration corresponding to `N.trace t g c` (at some
     materialization level `M'`). Proved by induction on `t`, composing
     macro-steps with `trace_add_fun`; the halted case reuses the previous one. -/
-theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
+theorem corr_iterate {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     {c1 : Cfg 1 (SimQ k N.Q)} {c : Cfg k N.Q}
     (hcorr : Corr N M c1 c) (g : ℕ → Bool) (t : ℕ) :
     ∃ (m M' : ℕ) (F : ℕ → Bool),
@@ -4988,7 +4988,7 @@ theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
       exact hcorr_t
     · -- N steps: apply the macro-step correspondence and concatenate choices
       obtain ⟨m', choices', hstep, hbound'⟩ :=
-        macroStepCorr N hk hcorr_t hh (fun i => g (t + i.val))
+        corr_macroStep N hk hcorr_t hh (fun i => g (t + i.val))
       -- concatenate `f` (first m steps) and `choices'` (next m') into one `F`
       set F : ℕ → Bool :=
         fun j => if j < m then f j else if h : j - m < m' then choices' ⟨j - m, h⟩ else false
@@ -5015,19 +5015,19 @@ theorem iterCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
 
 /-- **Forward acceptance.** If `N` accepts `x` within `Tn` steps, then
     `singleTapeSim N` accepts `x` within `Tn · macroBound k Tn + 1` steps:
-    simulate `N`'s accepting run (`iterCorr`), then one `haltCorr` step lands in
+    simulate `N`'s accepting run (`corr_iterate`), then one `halted_of_corr` step lands in
     a halted accepting simulator config; pad via `AcceptsInTime.mono`. -/
-theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : ℕ)
+theorem acceptsInTime_singleTapeSim_of_acceptsInTime {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : ℕ)
     (h : N.AcceptsInTime x Tn) :
     (singleTapeSim N).AcceptsInTime x (Tn * macroBound k Tn + 1) := by
   obtain ⟨chN, hhalt, hacc⟩ := h
   set g : ℕ → Bool := fun i => if hi : i < Tn then chN ⟨i, hi⟩ else false with hg
-  obtain ⟨m, M', F, hcorr, _hM', hm⟩ := iterCorr N hk (corr_init N x) g Tn
+  obtain ⟨m, M', F, hcorr, _hM', hm⟩ := corr_iterate N hk (corr_init N x) g Tn
   have hgN : (fun i : Fin Tn => g i.val) = chN := by
     funext i; rw [hg]; simp only []; rw [dif_pos i.isLt]
   rw [hgN] at hcorr
   -- one halt step lands in a halted, accepting simulator config
-  obtain ⟨hhalted, hbit⟩ := haltCorr N hcorr hhalt
+  obtain ⟨hhalted, hbit⟩ := halted_of_corr N hcorr hhalt
   -- the accepting config is reached after `m + 1` sim steps
   set sCfg := (singleTapeSim N).trace m (fun i => F i.val) ((singleTapeSim N).initCfg x) with hsCfg
   set F' : ℕ → Bool := fun j => if j < m then F j else false with hF'
@@ -5049,18 +5049,18 @@ theorem accepts_fwd {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (x : List Bool) (Tn : �
 
 /-! ### Reverse direction: arbitrary simulator choices induce an `N`-run
 
-The forward theorems (`iterCorr`, `accepts_fwd`) drive the simulator with a
+The forward theorems (`corr_iterate`, `acceptsInTime_singleTapeSim_of_acceptsInTime`) drive the simulator with a
 purpose-built choice stream. The surface lemmas also need the converse flow:
 an ARBITRARY simulator stream still walks the macro-step structure, because
 each macro-step consults its nondeterministic bit only at one decision point
-(`macroStep_decision_point_iff`), so `trace_choice_irrel` replaces each
+(`macroStep_decision_point_iff`), so `trace_congr_choices` replaces each
 arbitrary segment with the constant-choice segment of
-`macroStepCorr_explicit`. Crucially the decision positions are closed-form
+`corr_macroStep_explicit`. Crucially the decision positions are closed-form
 (`decisionPos` — independent of the run), so the induced `N`-choices can be
 read off the stream up front, with no circularity. -/
 
 /-- Micro-step length of the macro-step at materialization level `M` (the
-    explicit count in `macroStepCorr_explicit`). -/
+    explicit count in `corr_macroStep_explicit`). -/
 def macroLen (k M : ℕ) : ℕ :=
   1 + 3 * k * M + 1 + blockStart k (M + 1) + (3 * k * (M + 1) + 1) + (3 * k * (M + 1) + 1) + 1
 
@@ -5143,7 +5143,7 @@ theorem macroStep_choice_replace {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     (hcorr : Corr N M c1 c) (hne : c.state ≠ N.qhalt) (ch : ℕ → Bool) :
     (singleTapeSim N).trace (macroLen k M) (fun i => ch i.val) c1
       = (singleTapeSim N).trace (macroLen k M) (fun _ => ch (1 + 3 * k * M)) c1 := by
-  refine (trace_choice_irrel N (macroLen k M) (fun _ => ch (1 + 3 * k * M)) ch c1 ?_).symm
+  refine (trace_congr_choices N (macroLen k M) (fun _ => ch (1 + 3 * k * M)) ch c1 ?_).symm
   intro i hi hgather hblank
   exact congrArg ch
     ((macroStep_decision_point_iff N hk hcorr hne (ch (1 + 3 * k * M)) i hi).mp
@@ -5153,7 +5153,7 @@ theorem macroStep_choice_replace {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {M : ℕ}
     stream `ch`: as long as `N`'s induced run (`inducedChoices`) has not halted,
     the simulator's configuration at the macro-step boundary `macroPos k t`
     corresponds to `N`'s `t`-step configuration. -/
-theorem revCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) :
+theorem corr_trace_macroPos {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) :
     ∀ t : ℕ,
       (∀ s, s < t →
         (N.trace s (fun i => inducedChoices k ch i.val) (N.initCfg x)).state ≠ N.qhalt) →
@@ -5188,14 +5188,14 @@ theorem revCorr {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : Li
         rfl
       rw [N.trace_add_fun t 1 (inducedChoices k ch), e]
     rw [hsim, hN]
-    exact macroStepCorr_explicit N hk hcorr_t hne (inducedChoices k ch t)
+    exact corr_macroStep_explicit N hk hcorr_t hne (inducedChoices k ch t)
 
 /-- **Reverse halting.** If the `N`-run induced by an arbitrary simulator stream
     `ch` halts within `Tn` steps, the simulator (driven by `ch`) halts within
     `Tn * macroBound k Tn + 1` micro-steps, with its accept bit agreeing with
     `N`'s output bit. This is the engine behind both surface lemmas: it bounds
     EVERY simulator path by the simulated machine's halting bound. -/
-theorem halts_rev {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) (Tn : ℕ)
+theorem halted_singleTapeSim_of_trace_qhalt {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : List Bool) (Tn : ℕ)
     (hhalt : (N.trace Tn (fun i => inducedChoices k ch i.val) (N.initCfg x)).state
       = N.qhalt) :
     ∃ m ≤ Tn * macroBound k Tn + 1,
@@ -5214,17 +5214,17 @@ theorem halts_rev {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : 
   have hrun : ∀ s, s < Nat.find hex →
       (N.trace s (fun i => inducedChoices k ch i.val) (N.initCfg x)).state ≠ N.qhalt :=
     fun s hs => Nat.find_min hex hs
-  have hcorr := revCorr N hk ch x (Nat.find hex) hrun
+  have hcorr := corr_trace_macroPos N hk ch x (Nat.find hex) hrun
   -- one halt step lands the simulator in `SimQ.halt` (choice-irrelevant: the
   -- simulator is parked at a `run` state, never a GATHER decision point)
-  obtain ⟨hhalted, hbit⟩ := haltCorr N hcorr hth
+  obtain ⟨hhalted, hbit⟩ := halted_of_corr N hcorr hth
   have hstep : (singleTapeSim N).trace 1 (fun j : Fin 1 => ch (macroPos k (Nat.find hex) + j.val))
       ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
         ((singleTapeSim N).initCfg x))
       = (singleTapeSim N).trace 1 (fun _ => false)
           ((singleTapeSim N).trace (macroPos k (Nat.find hex)) (fun i => ch i.val)
             ((singleTapeSim N).initCfg x)) := by
-    refine (trace_choice_irrel N 1 (fun _ => false)
+    refine (trace_congr_choices N 1 (fun _ => false)
       (fun j => ch (macroPos k (Nat.find hex) + j)) _ ?_).symm
     intro i hi hgather _
     obtain rfl : i = 0 := by omega

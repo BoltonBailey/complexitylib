@@ -55,7 +55,7 @@ private theorem write_readBack_id {t : Tape} (h : t.head = 0 ∨ t.read ≠ Γ.s
     t.write (readBackWrite t.read).toΓ = t := by
   rcases h with h0 | hne
   · unfold Tape.write; rw [if_pos h0]
-  · rw [readBackWrite_toΓ_eq hne]
+  · rw [toΓ_readBackWrite_of_ne_start hne]
     unfold Tape.write
     by_cases h0 : t.head = 0
     · rw [if_pos h0]
@@ -409,7 +409,7 @@ theorem appQ'_loop {f : VFlags} (E : ℕ → Γ) (hEns : ∀ j, 1 ≤ j → E j 
       (by rw [hst]; exact fun hcon => nomatch hcon)
       (by rw [hst]; exact harm)
     have hEe : (readBackWrite ((c.work scT).read)).toΓ = E e := by
-      rw [readBackWrite_toΓ_eq hreadsc', hreadsc]
+      rw [toΓ_readBackWrite_of_ne_start hreadsc', hreadsc]
     have hSupd : ∀ j, 1 ≤ j → Function.update S a (E e) j ≠ Γ.start := by
       intro j hj
       by_cases hje : j = a

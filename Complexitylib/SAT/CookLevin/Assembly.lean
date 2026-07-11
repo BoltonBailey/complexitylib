@@ -40,7 +40,7 @@ def Tape.inits (n steps P Qc tf : ℕ) : Fin nT → Tape :=
 
 theorem Tape.inits_parked (n steps P Qc tf : ℕ) :
     ∀ i, Parked (Tape.inits n steps P Qc tf i) :=
-  fun _ => regT_parked _
+  fun _ => parked_regTape _
 
 /-- **The register initialization chain**: input length, time polynomial,
     tableau width, radices, and position fuels. -/
@@ -112,12 +112,12 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
         (regT x.length)) ys)
       (opBudget M) :=
     (inputLenRegTM_hoareTime nReg x (fun _ => regT 0) ys
-      (fun _ _ => regT_parked 0) rfl).mono_bound
+      (fun _ _ => parked_regTape 0) rfl).mono_bound
       (le_opBudget_of_le (by nlinarith))
   set W₁ : Fin nT → Tape :=
     Function.update (fun _ => regT 0) nReg (regT x.length) with hW₁
   have hW₁P : ∀ i, Parked (W₁ i) :=
-    parked_update (fun _ => regT_parked 0) (regT_parked _)
+    parked_update (fun _ => parked_regTape 0) (parked_regTape _)
   -- Stage 2: stepsReg := p.eval |x|.
   have h₂ := polyEvalTM_hoareTime nReg stepsReg tmp2 (by decide) (by decide)
     (by decide) p Mp x.length 0 0 hnMp (by omega) (by omega) hMp inp₁ W₁ ys
@@ -130,16 +130,16 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
     Function.update (Function.update W₁ tmp2 (regT steps)) stepsReg
       (regT steps) with hW₂
   have hW₂P : ∀ i, Parked (W₂ i) :=
-    parked_update (parked_update hW₁P (regT_parked _)) (regT_parked _)
+    parked_update (parked_update hW₁P (parked_regTape _)) (parked_regTape _)
   -- Stage 3: tmp2 := 0.
   have h₃ : (setConstTM tmp2 0 : TM nT).HoareTime
       (emitPred inp₁ W₂ ys)
       (emitPred inp₁ (Function.update W₂ tmp2 (regT 0)) ys) (opBudget M) := by
     refine ((setConstTM_hoareTime tmp2 0 steps inp₁ W₂ ys hinp₀ hW₂P
       (by show W₂ tmp2 = regT steps; rw [hW₂, hW₁]; rfl)).mono_bound
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hstepsM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hstepsM))
   set W₃ : Fin nT → Tape := Function.update W₂ tmp2 (regT 0) with hW₃
-  have hW₃P : ∀ i, Parked (W₃ i) := parked_update hW₂P (regT_parked _)
+  have hW₃P : ∀ i, Parked (W₃ i) := parked_update hW₂P (parked_regTape _)
   -- Stage 4: pReg += steps.
   have h₄ : (addIntoTM stepsReg pReg : TM nT).HoareTime
       (emitPred inp₁ W₃ ys)
@@ -149,11 +149,11 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       hinp₀ (fun i _ => hW₃P i)
       (by show W₃ stepsReg = regT steps; rw [hW₃, hW₂, hW₁]; rfl)
       (by show W₃ pReg = regT 0; rw [hW₃, hW₂, hW₁]; rfl)).consequence
-      (fun _ _ _ h => h) ?_ (addIntoBudget hstepsM (by omega)))
+      (fun _ _ _ h => h) ?_ (addIntoTM_le_opBudget hstepsM (by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     exact ⟨g1, by rw [g2, Nat.zero_add], g3⟩
   set W₄ : Fin nT → Tape := Function.update W₃ pReg (regT steps) with hW₄
-  have hW₄P : ∀ i, Parked (W₄ i) := parked_update hW₃P (regT_parked _)
+  have hW₄P : ∀ i, Parked (W₄ i) := parked_update hW₃P (parked_regTape _)
   -- Stage 5: pReg += |x|.
   have h₅ : (addIntoTM nReg pReg : TM nT).HoareTime
       (emitPred inp₁ W₄ ys)
@@ -163,10 +163,10 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       hinp₀ (fun i _ => hW₄P i)
       (by show W₄ nReg = regT x.length; rw [hW₄, hW₃, hW₂, hW₁]; rfl)
       (by show W₄ pReg = regT steps; rw [hW₄]; rfl)).mono_bound
-      (addIntoBudget hnM (by omega)))
+      (addIntoTM_le_opBudget hnM (by omega)))
   set W₅ : Fin nT → Tape :=
     Function.update W₄ pReg (regT (steps + x.length)) with hW₅
-  have hW₅P : ∀ i, Parked (W₅ i) := parked_update hW₄P (regT_parked _)
+  have hW₅P : ∀ i, Parked (W₅ i) := parked_update hW₄P (parked_regTape _)
   -- Stage 6: pReg += 1 (pReg = P).
   have h₆ : (incRegTM pReg : TM nT).HoareTime
       (emitPred inp₁ W₅ ys)
@@ -175,11 +175,11 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
     refine ((incRegTM_hoareTime pReg (steps + x.length) inp₁ W₅ ys hinp₀
       (fun i _ => hW₅P i)
       (by show W₅ pReg = regT (steps + x.length); rw [hW₅]; rfl)).consequence
-      (fun _ _ _ h => h) ?_ (incBudget (by omega)))
+      (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget (by omega)))
     rintro inp work out ⟨g1, g2, g3⟩
     exact ⟨g1, by rw [g2, show steps + x.length + 1 = P from hP.symm], g3⟩
   set W₆ : Fin nT → Tape := Function.update W₅ pReg (regT P) with hW₆
-  have hW₆P : ∀ i, Parked (W₆ i) := parked_update hW₅P (regT_parked _)
+  have hW₆P : ∀ i, Parked (W₆ i) := parked_update hW₅P (parked_regTape _)
   -- Stage 7: rA := steps.
   have h₇ : (copyIntoTM stepsReg rA : TM nT).HoareTime
       (emitPred inp₁ W₆ ys)
@@ -191,9 +191,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
           rfl)
       (by show W₆ rA = regT 0; rw [hW₆, hW₅, hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (copyIntoBudget hstepsM (by omega)))
+      (copyIntoTM_le_opBudget hstepsM (by omega)))
   set W₇ : Fin nT → Tape := Function.update W₆ rA (regT steps) with hW₇
-  have hW₇P : ∀ i, Parked (W₇ i) := parked_update hW₆P (regT_parked _)
+  have hW₇P : ∀ i, Parked (W₇ i) := parked_update hW₆P (parked_regTape _)
   -- Stage 8: rA += 1.
   have h₈ : (incRegTM rA : TM nT).HoareTime
       (emitPred inp₁ W₇ ys)
@@ -201,9 +201,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (opBudget M) :=
     ((incRegTM_hoareTime rA steps inp₁ W₇ ys hinp₀ (fun i _ => hW₇P i)
       (by show W₇ rA = regT steps; rw [hW₇]; rfl)).mono_bound
-      (incBudget hstepsM))
+      (incRegTM_le_opBudget hstepsM))
   set W₈ : Fin nT → Tape := Function.update W₇ rA (regT (steps + 1)) with hW₈
-  have hW₈P : ∀ i, Parked (W₈ i) := parked_update hW₇P (regT_parked _)
+  have hW₈P : ∀ i, Parked (W₈ i) := parked_update hW₇P (parked_regTape _)
   -- Stage 9: rB := max Qc 3.
   have h₉ : (setConstTM rB (max (Fintype.card N.Q) 3) : TM nT).HoareTime
       (emitPred inp₁ W₈ ys)
@@ -214,10 +214,10 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       hW₈P
       (by show W₈ rB = regT 0; rw [hW₈, hW₇, hW₆, hW₅, hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (setConstBudget hBM (by omega)))
+      (setConstTM_le_opBudget hBM (by omega)))
   set W₉ : Fin nT → Tape :=
     Function.update W₈ rB (regT (max (Fintype.card N.Q) 3)) with hW₉
-  have hW₉P : ∀ i, Parked (W₉ i) := parked_update hW₈P (regT_parked _)
+  have hW₉P : ∀ i, Parked (W₉ i) := parked_update hW₈P (parked_regTape _)
   -- Stage 10: rC := P.
   have h₁₀ : (copyIntoTM pReg rC : TM nT).HoareTime
       (emitPred inp₁ W₉ ys)
@@ -229,9 +229,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (by show W₉ rC = regT 0
           rw [hW₉, hW₈, hW₇, hW₆, hW₅, hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (copyIntoBudget (by omega) (by omega)))
+      (copyIntoTM_le_opBudget (by omega) (by omega)))
   set W₁₀ : Fin nT → Tape := Function.update W₉ rC (regT P) with hW₁₀
-  have hW₁₀P : ∀ i, Parked (W₁₀ i) := parked_update hW₉P (regT_parked _)
+  have hW₁₀P : ∀ i, Parked (W₁₀ i) := parked_update hW₉P (parked_regTape _)
   -- Stage 11: rC += 1.
   have h₁₁ : (incRegTM rC : TM nT).HoareTime
       (emitPred inp₁ W₁₀ ys)
@@ -239,9 +239,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (opBudget M) :=
     ((incRegTM_hoareTime rC P inp₁ W₁₀ ys hinp₀ (fun i _ => hW₁₀P i)
       (by show W₁₀ rC = regT P; rw [hW₁₀]; rfl)).mono_bound
-      (incBudget (by omega)))
+      (incRegTM_le_opBudget (by omega)))
   set W₁₁ : Fin nT → Tape := Function.update W₁₀ rC (regT (P + 1)) with hW₁₁
-  have hW₁₁P : ∀ i, Parked (W₁₁ i) := parked_update hW₁₀P (regT_parked _)
+  have hW₁₁P : ∀ i, Parked (W₁₁ i) := parked_update hW₁₀P (parked_regTape _)
   -- Stage 12: rC += 1 (rC = P + 2).
   have h₁₂ : (incRegTM rC : TM nT).HoareTime
       (emitPred inp₁ W₁₁ ys)
@@ -250,11 +250,11 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
     refine ((incRegTM_hoareTime rC (P + 1) inp₁ W₁₁ ys hinp₀
       (fun i _ => hW₁₁P i)
       (by show W₁₁ rC = regT (P + 1); rw [hW₁₁]; rfl)).consequence
-      (fun _ _ _ h => h) ?_ (incBudget hPMle))
+      (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget hPMle))
     rintro inp work out ⟨g1, g2, g3⟩
     exact ⟨g1, by rw [g2, Function.update_idem], g3⟩
   set W₁₂ : Fin nT → Tape := Function.update W₁₁ rC (regT (P + 2)) with hW₁₂
-  have hW₁₂P : ∀ i, Parked (W₁₂ i) := parked_update hW₁₁P (regT_parked _)
+  have hW₁₂P : ∀ i, Parked (W₁₂ i) := parked_update hW₁₁P (parked_regTape _)
   -- Stage 13: rD := 4.
   have h₁₃ : (setConstTM rD 4 : TM nT).HoareTime
       (emitPred inp₁ W₁₂ ys)
@@ -264,9 +264,9 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (by show W₁₂ rD = regT 0
           rw [hW₁₂, hW₁₁, hW₁₀, hW₉, hW₈, hW₇, hW₆, hW₅, hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (setConstBudget hDM (by omega)))
+      (setConstTM_le_opBudget hDM (by omega)))
   set W₁₃ : Fin nT → Tape := Function.update W₁₂ rD (regT 4) with hW₁₃
-  have hW₁₃P : ∀ i, Parked (W₁₃ i) := parked_update hW₁₂P (regT_parked _)
+  have hW₁₃P : ∀ i, Parked (W₁₃ i) := parked_update hW₁₂P (parked_regTape _)
   -- Stage 14: pos1Fuel := P.
   have h₁₄ : (copyIntoTM pReg pos1Fuel : TM nT).HoareTime
       (emitPred inp₁ W₁₃ ys)
@@ -281,10 +281,10 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
           rw [hW₁₃, hW₁₂, hW₁₁, hW₁₀, hW₉, hW₈, hW₇, hW₆, hW₅, hW₄, hW₃,
             hW₂, hW₁]
           rfl)).mono_bound
-      (copyIntoBudget (by omega) (by omega)))
+      (copyIntoTM_le_opBudget (by omega) (by omega)))
   set W₁₄ : Fin nT → Tape :=
     Function.update W₁₃ pos1Fuel (regT P) with hW₁₄
-  have hW₁₄P : ∀ i, Parked (W₁₄ i) := parked_update hW₁₃P (regT_parked _)
+  have hW₁₄P : ∀ i, Parked (W₁₄ i) := parked_update hW₁₃P (parked_regTape _)
   -- Stage 15: pos1Fuel += 1.
   have h₁₅ : (incRegTM pos1Fuel : TM nT).HoareTime
       (emitPred inp₁ W₁₄ ys)
@@ -292,10 +292,10 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
       (opBudget M) :=
     ((incRegTM_hoareTime pos1Fuel P inp₁ W₁₄ ys hinp₀ (fun i _ => hW₁₄P i)
       (by show W₁₄ pos1Fuel = regT P; rw [hW₁₄]; rfl)).mono_bound
-      (incBudget (by omega)))
+      (incRegTM_le_opBudget (by omega)))
   set W₁₅ : Fin nT → Tape :=
     Function.update W₁₄ pos1Fuel (regT (P + 1)) with hW₁₅
-  have hW₁₅P : ∀ i, Parked (W₁₅ i) := parked_update hW₁₄P (regT_parked _)
+  have hW₁₅P : ∀ i, Parked (W₁₅ i) := parked_update hW₁₄P (parked_regTape _)
   -- Stage 16: pos2Fuel := P.
   have h₁₆ : (copyIntoTM pReg pos2Fuel : TM nT).HoareTime
       (emitPred inp₁ W₁₅ ys)
@@ -310,10 +310,10 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
           rw [hW₁₅, hW₁₄, hW₁₃, hW₁₂, hW₁₁, hW₁₀, hW₉, hW₈, hW₇, hW₆, hW₅,
             hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (copyIntoBudget (by omega) (by omega)))
+      (copyIntoTM_le_opBudget (by omega) (by omega)))
   set W₁₆ : Fin nT → Tape :=
     Function.update W₁₅ pos2Fuel (regT P) with hW₁₆
-  have hW₁₆P : ∀ i, Parked (W₁₆ i) := parked_update hW₁₅P (regT_parked _)
+  have hW₁₆P : ∀ i, Parked (W₁₆ i) := parked_update hW₁₅P (parked_regTape _)
   -- Stage 17: pos3Fuel := P.
   have h₁₇ : (copyIntoTM pReg pos3Fuel : TM nT).HoareTime
       (emitPred inp₁ W₁₆ ys)
@@ -328,7 +328,7 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
           rw [hW₁₆, hW₁₅, hW₁₄, hW₁₃, hW₁₂, hW₁₁, hW₁₀, hW₉, hW₈, hW₇, hW₆,
             hW₅, hW₄, hW₃, hW₂, hW₁]
           rfl)).mono_bound
-      (copyIntoBudget (by omega) (by omega)))
+      (copyIntoTM_le_opBudget (by omega) (by omega)))
   -- The final file is the initialized one.
   have hfinal : Function.update W₁₆ pos3Fuel (regT P)
       = Tape.inits x.length steps P (Fintype.card N.Q) 0 := by
@@ -369,7 +369,7 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
     (emitPred_transition hinp₀ hW₃P _) c₄
   have c₂ := seqTM_hoareTime _ _ h₂
     (emitPred_transition hinp₀
-      (parked_update (parked_update hW₁P (regT_parked _)) (regT_parked _)) _)
+      (parked_update (parked_update hW₁P (parked_regTape _)) (parked_regTape _)) _)
     c₃
   have c₁ := seqTM_hoareTime _ _ h₁
     (emitPred_transition hinp₀ hW₁P _) c₂
@@ -458,7 +458,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     (by omega) hM
   have hstepsM : steps ≤ M := by omega
   set W : ℕ → Fin nT → Tape := fun tf => Tape.inits n steps P Qc tf with hW
-  have hWP : ∀ tf i, Parked (W tf i) := fun tf i => regT_parked _
+  have hWP : ∀ tf i, Parked (W tf i) := fun tf i => parked_regTape _
   have hSW : ∀ tf, scratch (W tf) tmp tmp2 0 = W tf := fun tf =>
     scratch_initTapes ..
   -- g1a: tFuel := steps.
@@ -466,7 +466,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (emitPred inp₁ (W 0) ys) (emitPred inp₁ (W steps) ys) (opBudget M) := by
     refine ((copyIntoTM_hoareTime stepsReg tFuel (by decide) steps 0 inp₁
       (W 0) ys hinp₀ (fun i _ => hWP 0 i) rfl rfl).consequence
-      (fun _ _ _ h => h) ?_ (copyIntoBudget hstepsM (by omega)))
+      (fun _ _ _ h => h) ?_ (copyIntoTM_le_opBudget hstepsM (by omega)))
     rintro inp work out ⟨u1, u2, u3⟩
     exact ⟨u1, by rw [u2, hW, Tape.inits_update_tFuel], u3⟩
   -- g1b: tFuel := steps + 1.
@@ -475,7 +475,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (opBudget M) := by
     refine ((incRegTM_hoareTime tFuel steps inp₁ (W steps) ys hinp₀
       (fun i _ => hWP steps i) rfl).consequence
-      (fun _ _ _ h => h) ?_ (incBudget hstepsM))
+      (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget hstepsM))
     rintro inp work out ⟨u1, u2, u3⟩
     exact ⟨u1, by rw [u2, hW, Tape.inits_update_tFuel], u3⟩
   -- f1: the state one-hots.
@@ -492,13 +492,13 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     refine ((setConstTM_hoareTime tReg 0 (steps + 1) inp₁
       (scratch (Function.update (W (steps + 1)) tReg (regT (steps + 1)))
         tmp tmp2 0) ys₁ hinp₀
-      (scratch_parked 0 (parked_update (hWP _) (regT_parked _)))
+      (scratch_parked 0 (parked_update (hWP _) (parked_regTape _)))
       (by rw [scratch_apply_ne (by decide) (by decide), Function.update_self])
       ).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hAM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hAM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), Function.update_idem,
+    rw [u2, scratch_update_comm (by decide) (by decide), Function.update_idem,
       show regT 0 = W (steps + 1) tReg from rfl, Function.update_eq_self]
   -- f2: the cell one-hots.
   have f2 := emitOneHotCellsTM_hoareTime Qc steps P M hM inp₁ (W (steps + 1))
@@ -514,13 +514,13 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     refine ((setConstTM_hoareTime tReg 0 (steps + 1) inp₁
       (scratch (Function.update (W (steps + 1)) tReg (regT (steps + 1)))
         tmp tmp2 0) ys₂ hinp₀
-      (scratch_parked 0 (parked_update (hWP _) (regT_parked _)))
+      (scratch_parked 0 (parked_update (hWP _) (parked_regTape _)))
       (by rw [scratch_apply_ne (by decide) (by decide), Function.update_self])
       ).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hAM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hAM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), Function.update_idem,
+    rw [u2, scratch_update_comm (by decide) (by decide), Function.update_idem,
       show regT 0 = W (steps + 1) tReg from rfl, Function.update_eq_self]
   -- f3: the head one-hots.
   have f3 := emitOneHotHeadsTM_hoareTime Qc steps P M hM inp₁ (W (steps + 1))
@@ -529,7 +529,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
   -- f4: the start clauses (at the row-counter-dirty state).
   set V3 : Fin nT → Tape :=
     Function.update (W (steps + 1)) tReg (regT (steps + 1)) with hV3
-  have hV3P : ∀ i, Parked (V3 i) := parked_update (hWP _) (regT_parked _)
+  have hV3P : ∀ i, Parked (V3 i) := parked_update (hWP _) (parked_regTape _)
   have f4 := emitStartTM_hoareTime N x steps P M hP hM inp₁ V3 ys₃ hinp₀ rfl
     (by rw [hinp₁]; rfl)
     (fun pos => by
@@ -553,10 +553,10 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (scratch V3 tmp tmp2 0) ys₄ hinp₀ (scratch_parked 0 hV3P)
       (by rw [scratch_apply_ne (by decide) (by decide), hV3,
         Function.update_self])).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hAM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hAM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), hV3,
+    rw [u2, scratch_update_comm (by decide) (by decide), hV3,
       Function.update_idem,
       show regT 0 = W (steps + 1) tReg from rfl, Function.update_eq_self]
   -- g4b: tFuel := steps.
@@ -569,10 +569,10 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (fun i _ => scratch_parked 0 (hWP _) i)
       (by rw [scratch_apply_ne (by decide) (by decide)]; rfl)
       (by rw [scratch_apply_ne (by decide) (by decide)]; rfl)).consequence
-      (fun _ _ _ h => h) ?_ (copyIntoBudget hstepsM hAM))
+      (fun _ _ _ h => h) ?_ (copyIntoTM_le_opBudget hstepsM hAM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), hW,
+    rw [u2, scratch_update_comm (by decide) (by decide), hW,
       Tape.inits_update_tFuel]
   -- f5: the frame clauses.
   have f5 := emitFrameTM_hoareTime Qc steps P M hM inp₁ (W steps) ys₄ hinp₀
@@ -583,7 +583,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     Function.update (Function.update (W steps) tReg (regT steps)) tPlusReg
       (regT steps) with hV5
   have hV5P : ∀ i, Parked (V5 i) :=
-    parked_update (parked_update (hWP _) (regT_parked _)) (regT_parked _)
+    parked_update (parked_update (hWP _) (parked_regTape _)) (parked_regTape _)
   have g5a : (setConstTM tReg 0 : TM nT).HoareTime
       (emitPred inp₁ (scratch V5 tmp tmp2 0) ys₅)
       (emitPred inp₁
@@ -595,10 +595,10 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (by rw [scratch_apply_ne (by decide) (by decide), hV5,
         Function.update_of_ne (by decide), Function.update_self])
       ).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hstepsM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hstepsM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), hV5]
+    rw [u2, scratch_update_comm (by decide) (by decide), hV5]
     rw [show Function.update
         (Function.update (Function.update (W steps) tReg (regT steps))
           tPlusReg (regT steps)) tReg (regT 0)
@@ -620,13 +620,13 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
       (opBudget M) := by
     refine ((setConstTM_hoareTime tPlusReg 0 steps inp₁
       (scratch (Function.update (W steps) tPlusReg (regT steps)) tmp tmp2 0)
-      ys₅ hinp₀ (scratch_parked 0 (parked_update (hWP _) (regT_parked _)))
+      ys₅ hinp₀ (scratch_parked 0 (parked_update (hWP _) (parked_regTape _)))
       (by rw [scratch_apply_ne (by decide) (by decide), Function.update_self])
       ).consequence (fun _ _ _ h => h) ?_
-      (setConstBudget (show (0:ℕ) ≤ M by omega) hstepsM))
+      (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hstepsM))
     rintro inp work out ⟨u1, u2, u3⟩
     refine ⟨u1, ?_, u3⟩
-    rw [u2, update_scratch (by decide) (by decide), Function.update_idem,
+    rw [u2, scratch_update_comm (by decide) (by decide), Function.update_idem,
       show regT 0 = W steps tPlusReg from rfl, Function.update_eq_self]
   -- f6: the active transitions.
   have f6 := emitActiveTM_hoareTime N Qc steps P M hQc hM inp₁ (W steps) ys₅
@@ -662,7 +662,7 @@ theorem emitBodyTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     (emitPred_transition hinp₀ (scratch_parked 0 (hWP _)) _) c6
   have c5a := seqTM_hoareTime _ _ g5a
     (emitPred_transition hinp₀
-      (scratch_parked 0 (parked_update (hWP _) (regT_parked _))) _) c5b
+      (scratch_parked 0 (parked_update (hWP _) (parked_regTape _))) _) c5b
   have c5 := seqTM_hoareTime _ _ f5
     (emitPred_transition hinp₀ (scratch_parked 0 hV5P) _) c5a
   have c4b := seqTM_hoareTime _ _ g4b
@@ -751,10 +751,10 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
         (transitionInput inp) (fun i => transitionTape (work i))
         (transitionTape out) := by
     rintro inp work out ⟨rfl, hwork, hout⟩
-    refine ⟨Parked.transitionInput_id (parked_init_input x), ?_, ?_⟩
+    refine ⟨Parked.transitionInput_eq_self (parked_init_input x), ?_, ?_⟩
     · funext i
-      rw [Parked.transitionTape_id ((hwork i).parked), (hwork i).eq_regT]
-    · rw [Parked.transitionTape_id hout.parked]
+      rw [Parked.transitionTape_eq_self ((hwork i).parked), (hwork i).eq_regT]
+    · rw [Parked.transitionTape_eq_self hout.parked]
       exact hout
   have htrans₂ : ∀ inp work out,
       emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
@@ -764,7 +764,7 @@ theorem emitTM_computesInTime (N : NTM 1) (p : Polynomial ℕ) :
         (transitionInput inp) (fun i => transitionTape (work i))
         (transitionTape out) :=
     emitPred_transition (parked_init_input x)
-      (fun _ => regT_parked _) []
+      (fun _ => parked_regTape _) []
   have hchain := seqTM_hoareTime bumpTM (seqTM (emitInitTM N p) (emitBodyTM N))
     hbump htrans₁
     (seqTM_hoareTime (emitInitTM N p) (emitBodyTM N) hinit htrans₂ hbody)
@@ -1055,11 +1055,11 @@ theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → �
 /-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
     decides `L` within a polynomial time bound, then `L` polynomial-time
     many-one reduces to `L_SAT`. Reduces to the single-work-tape case
-    (`NTM.exists_singleTape_decider`) and then builds the tableau formula. -/
+    (`NTM.exists_singleTape_decidesInTime`) and then builds the tableau formula. -/
 theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ)
     (c : ℕ) (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
     L ≤ₚ L_SAT := by
-  obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decider hdec hTO
+  obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decidesInTime hdec hTO
   exact cookLevin_reduction_singleTape N' T' c' hdec' hTO'
 
 /-- **NP-hardness of SAT.** Every language in `NP` polynomial-time reduces to

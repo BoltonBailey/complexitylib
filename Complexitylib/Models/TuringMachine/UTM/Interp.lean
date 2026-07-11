@@ -137,8 +137,8 @@ theorem descOfTM_lookup (q : Fin (Fintype.card M.Q)) (si sw so : Γ) :
     (M.descOfTM).lookup q.val si sw so = M.descAct q si sw so := by
   have hmem : M.descEntry q si sw so ∈ (M.descOfTM).entries := by
     simp only [descOfTM, List.mem_flatMap, List.mem_map]
-    exact ⟨q, List.mem_finRange q, si, allΓ_complete si, sw, allΓ_complete sw,
-      ⟨so, allΓ_complete so, rfl⟩⟩
+    exact ⟨q, List.mem_finRange q, si, mem_allΓ si, sw, mem_allΓ sw,
+      ⟨so, mem_allΓ so, rfl⟩⟩
   have hkey : (fun e : DescEntry =>
       e.q == q.val && e.si == si && e.sw == sw && e.so == so)
         (M.descEntry q si sw so) = true := by

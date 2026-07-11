@@ -1341,13 +1341,13 @@ theorem pairSplit_init_step_all_started {k : ℕ} (xIdx yIdx : Fin k)
       c'.work yIdx = c.work yIdx := by
   simp only [TM.step, hst, pairSplitCoreTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · show (c.work xIdx).writeAndMove (readBackWrite (c.work xIdx).read)
         (idleDir (c.work xIdx).read) = c.work xIdx
-    exact transitionTape_id hx
+    exact transitionTape_eq_self hx
   · show (c.work yIdx).writeAndMove (readBackWrite (c.work yIdx).read)
         (idleDir (c.work yIdx).read) = c.work yIdx
-    exact transitionTape_id hy
+    exact transitionTape_eq_self hy
 
 /-- Starting from `.init` with `pair x y` already on a started input tape and
 empty started work tapes, `pairSplitCoreTM` halts within `pairSplitCoreTime`,

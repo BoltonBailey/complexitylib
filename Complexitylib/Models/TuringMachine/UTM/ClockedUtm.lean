@@ -465,13 +465,13 @@ private theorem initSeam (α x : List Bool) (V : ℕ) :
     simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       rw [hclk]
       exact regT_read_ne_start V
     · exact body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   exact ⟨by rw [transitionInput_cells]; exact hic,
     transitionInput_head_ge inp hinp0, hshape, hclk, hoc, hoh⟩
@@ -527,12 +527,12 @@ private theorem seekSeam (α x : List Bool) (V : ℕ) :
     simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       exact clk_read_ne_start' hckc hckh
     · exact body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   obtain ⟨hw0c, hw0h, hw1, hw1h, hw2, hw2h, hw3, hw3h, hw4, hw4h, hw5, hw5h⟩ :=
     hshape
@@ -595,10 +595,10 @@ private theorem loopSeam (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
       loopExit α x mc v (transitionInput inp)
         (fun i => transitionTape (work i)) (transitionTape out) := by
   rintro inp work out ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads' hsi hckc hckh i)
-  have h3 : transitionTape out = out := transitionTape_id hsi.out_read
+    funext fun i => transitionTape_eq_self (work7_reads' hsi hckc hckh i)
+  have h3 : transitionTape out = out := transitionTape_eq_self hsi.out_read
   rw [h1, h2, h3]
   exact ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
 
@@ -722,9 +722,9 @@ private theorem testExit_to_branch (α x : List Bool)
       branchPre α mc v (transitionInput inp)
         (fun i => transitionTape (work i)) ⟨1, out.cells⟩ := by
   rintro inp work out ⟨-, hsi, hckc, hckh, h0, hns, -, -⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads' hsi hckc hckh i)
+    funext fun i => transitionTape_eq_self (work7_reads' hsi hckc hckh i)
   rw [h1, h2]
   have hread : (⟨1, out.cells⟩ : Tape).read ≠ Γ.start := by
     show out.cells 1 ≠ Γ.start

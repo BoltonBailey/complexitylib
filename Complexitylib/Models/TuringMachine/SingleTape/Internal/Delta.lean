@@ -381,7 +381,7 @@ theorem simDelta_right_of_start {k : ℕ} (N : NTM k) (b : Bool) (q : SimQ k N.Q
 /-- **Choice irrelevance — GATHER step.** Off the `□` sentinel, the GATHER step
     does not consult the nondeterministic bit `b` (only the sentinel step fires
     `N.δ b`), so it produces the same output under any choice. -/
-theorem gatherStep_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (d : GatherData k N.Q)
+theorem gatherStep_eq_of_ne_blank {k : ℕ} (N : NTM k) (b b' : Bool) (d : GatherData k N.Q)
     (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
     gatherStep N b d iHead wH oHead = gatherStep N b' d iHead wH oHead := by
   simp only [gatherStep, if_neg h]
@@ -390,7 +390,7 @@ theorem gatherStep_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (d : GatherD
     on the `□` sentinel, the GATHER step's next state is again a GATHER state (the
     sweep only leaves GATHER to enter REWIND when it reads `□`). The inductive
     building block for characterizing the sweep's per-step states. -/
-theorem gatherStep_stays_gather {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
+theorem gatherStep_fst_eq_gather_of_ne_blank {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
     (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
     ∃ d', (gatherStep N b d iHead wH oHead).1 = SimQ.gather d' := by
   simp only [gatherStep, if_neg h]
@@ -402,7 +402,7 @@ theorem gatherStep_stays_gather {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData
     sweep sub-branches (head-bit / sym-hi / sym-lo) agree on everything but the
     next state: the work head reads-back-writes `wH` and moves right, input/output
     stay idle. Lets the per-step sweep lemma treat one gather step uniformly. -/
-theorem gatherStep_components {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
+theorem gatherStep_snd_eq_of_ne_blank {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k N.Q)
     (iHead wH oHead : Γ) (h : wH ≠ Γ.blank) :
     (gatherStep N b d iHead wH oHead).2.1 = (fun _ => TM.readBackWrite wH) ∧
     (gatherStep N b d iHead wH oHead).2.2.1 = TM.readBackWrite oHead ∧
@@ -419,7 +419,7 @@ theorem gatherStep_components {k : ℕ} (N : NTM k) (b : Bool) (d : GatherData k
     and `gather → gather` (continuing it); every back-phase step
     (`rewind`/`scatter1`/`scatter2`/`commit`) and `halt` produces a non-GATHER
     state. The backward-chaining tool for locating the sweep within a macro-step. -/
-theorem simDelta_gather_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
+theorem eq_run_or_gather_of_simDelta_eq_gather {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
     (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) (d' : GatherData k N.Q)
     (h : (simDelta N b state iHead wHead oHead).1 = SimQ.gather d') :
     (∃ q, state = SimQ.run q) ∨ (∃ d, state = SimQ.gather d) := by
@@ -441,9 +441,9 @@ theorem simDelta_gather_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.
 /-- **A `run` configuration arises only from `commit`.** The only transition
     producing a `run` state is `commit → run` (closing a macro-step); `run` itself
     steps to `gather`/`halt`, and every other phase step stays within its own
-    cluster. Companion to `simDelta_gather_pred`; together they fix the phase
+    cluster. Companion to `eq_run_or_gather_of_simDelta_eq_gather`; together they fix the phase
     order `… → scatter2 → commit → run → gather → …` of the simulation. -/
-theorem simDelta_run_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
+theorem eq_commit_of_simDelta_eq_run {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
     (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ) (q' : N.Q)
     (h : (simDelta N b state iHead wHead oHead).1 = SimQ.run q') :
     ∃ d, state = SimQ.commit d := by
@@ -468,7 +468,7 @@ theorem simDelta_run_pred {k : ℕ} (N : NTM k) (b : Bool) (state : SimQ k N.Q)
 /-- **SCATTER-1 lands in `scatter1` or `scatter2`.** One sweep-1 step either
     continues the rightward materialization (`scatter1`) or, on completing the new
     block, turns around into sweep-2 (`scatter2`) — never any other phase. -/
-theorem scatter1Step_scatter1_or_scatter2 {k : ℕ} {Q : Type} (d : Scatter1Data k Q)
+theorem scatter1Step_fst_eq_scatter1_or_scatter2 {k : ℕ} {Q : Type} (d : Scatter1Data k Q)
     (iHead wH oHead : Γ) :
     (∃ d', (scatter1Step d iHead wH oHead).1 = SimQ.scatter1 d') ∨
     (∃ d', (scatter1Step d iHead wH oHead).1 = SimQ.scatter2 d') := by
@@ -478,7 +478,7 @@ theorem scatter1Step_scatter1_or_scatter2 {k : ℕ} {Q : Type} (d : Scatter1Data
 /-- **SCATTER-2 lands in `scatter2` or `commit`.** One sweep-2 step either
     continues the leftward deposit (`scatter2`) or, on reaching `▷`, enters
     `commit` — never any other phase. -/
-theorem scatter2Step_scatter2_or_commit {k : ℕ} {Q : Type} (d : Scatter2Data k Q)
+theorem scatter2Step_fst_eq_scatter2_or_commit {k : ℕ} {Q : Type} (d : Scatter2Data k Q)
     (iHead wH oHead : Γ) :
     (∃ d', (scatter2Step d iHead wH oHead).1 = SimQ.scatter2 d') ∨
     (∃ d', (scatter2Step d iHead wH oHead).1 = SimQ.commit d') := by
@@ -489,7 +489,7 @@ theorem scatter2Step_scatter2_or_commit {k : ℕ} {Q : Type} (d : Scatter2Data k
     transition consults the nondeterministic bit only at a GATHER step reading the
     `□` sentinel (the COMPUTE sub-step firing `N.δ b`); every other configuration
     steps identically under any choice. -/
-theorem simDelta_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (state : SimQ k N.Q)
+theorem simDelta_eq_of_forall_ne_blank {k : ℕ} (N : NTM k) (b b' : Bool) (state : SimQ k N.Q)
     (iHead : Γ) (wHead : Fin 1 → Γ) (oHead : Γ)
     (h : ∀ d, state = SimQ.gather d → wHead 0 ≠ Γ.blank) :
     simDelta N b state iHead wHead oHead = simDelta N b' state iHead wHead oHead := by
@@ -498,7 +498,7 @@ theorem simDelta_choice_irrel {k : ℕ} (N : NTM k) (b b' : Bool) (state : SimQ 
   · show simDelta N b (SimQ.gather d) iHead wHead oHead
       = simDelta N b' (SimQ.gather d) iHead wHead oHead
     simp only [simDelta]
-    exact gatherStep_choice_irrel N b b' d iHead (wHead 0) oHead (h d rfl)
+    exact gatherStep_eq_of_ne_blank N b b' d iHead (wHead 0) oHead (h d rfl)
   · rfl
   · rfl
   · rfl

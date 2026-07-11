@@ -29,7 +29,7 @@ not `bodyTM` phase states, so they sit beside `liftTM` rather than in
 
    The key observation: `liftTM`'s extra-tape action is
    `readBackWrite`/`idleDir` — exactly `transitionTape`, which is the
-   identity on any tape reading a non-`▷` symbol (`transitionTape_id`).
+   identity on any tape reading a non-`▷` symbol (`transitionTape_eq_self`).
    So the extras are preserved exactly at every step, for *any* parked
    content, not just the blank tape hard-wired into `liftCfg`. Since
    `Lift.lean`'s step commutation is specialized to blank extras (and its
@@ -56,10 +56,10 @@ namespace TM
 -- Cross-arity simulation lifting
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Cross-arity generalization of `simulation_reachesIn`: the simulating
+/-- Cross-arity generalization of `reachesIn_map`: the simulating
     machine may have a different number of work tapes. If `wrap` commutes
     with `step`, then `reachesIn` lifts through the embedding. -/
-theorem simulation_reachesIn' {n n' : ℕ} {tm : TM n} {tm' : TM n'}
+theorem reachesIn_map' {n n' : ℕ} {tm : TM n} {tm' : TM n'}
     (wrap : Cfg n tm.Q → Cfg n' tm'.Q)
     (h_step : ∀ c c' : Cfg n tm.Q, tm.step c = some c' →
       tm'.step (wrap c) = some (wrap c'))
@@ -162,7 +162,7 @@ private theorem liftTM_step_of_parked (tm : TM n) (m : ℕ) {extras : Fin m → 
       · rw [hw i hik, dif_pos hik, dif_pos hik, dif_pos hik]
       · have hge := Nat.le_of_not_lt hik
         rw [dif_neg hik, dif_neg hik, dif_neg hik, hd i hge]
-        exact transitionTape_id (hex _)
+        exact transitionTape_eq_self (hex _)
 
 /-- **Step commutation** on embedded configurations with arbitrary parked
     extras: `tm.liftTM m` steps exactly as `tm` does through `liftCfgWith`. -/
@@ -215,7 +215,7 @@ theorem liftTM_hoareTime_frame {n m : ℕ} (tm : TM n) {pre post : TapePred n}
         have := Nat.le_of_not_lt hik; omega))
   refine ⟨liftCfgWith tm m extras c', t, ht, ?_, ?_, ?_, ?_⟩
   · rw [hstart]
-    exact simulation_reachesIn' (tm' := tm.liftTM m) (liftCfgWith tm m extras)
+    exact reachesIn_map' (tm' := tm.liftTM m) (liftCfgWith tm m extras)
       (fun a a' ha => by rw [liftTM_step_liftCfgWith tm m hex', ha]; rfl) hreach
   · exact hhalt
   · have hwl : (fun i => (liftCfgWith tm m extras c').work (Fin.castAdd m i))
@@ -414,7 +414,7 @@ private theorem decClock_step_scan_one (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -437,7 +437,7 @@ private theorem decClock_step_scan_blank (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hblank, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -461,7 +461,7 @@ private theorem decClock_step_erase_one (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hone, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -487,7 +487,7 @@ private theorem decClock_step_erase_start (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hs, reduceCtorEq, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -512,7 +512,7 @@ private theorem decClock_step_back_left (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hns, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -538,7 +538,7 @@ private theorem decClock_step_back_start (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst, hs, ↓reduceIte]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     by_cases hir : i = clkT
     · subst hir
@@ -562,7 +562,7 @@ private theorem decClock_step_park (c : Cfg 7 decClockTM.Q)
   rw [TM.step, if_neg (decClock_ne_halt (by decide) hst)]
   simp only [decClockTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · exact Tape.writeAndMove_readBack_idle_of_ne_start _ hout
@@ -835,7 +835,7 @@ theorem decClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → Tape
       rw [Tape.write, if_neg (by rw [hc₂head]; omega)]
       show Function.update (c₂.work clkT).cells (c₂.work clkT).head Γw.blank.toΓ = _
       rw [hc₂cells, hc₂head]
-      exact regCells_erase e
+      exact regCells_update_blank_succ e
     have hc₃head : (c₃.work clkT).head = e := by
       show (Function.update c₂.work clkT
         (((c₂.work clkT).write Γw.blank).move .left) clkT).head = e
@@ -925,7 +925,7 @@ private theorem zeroTest_step (c : Cfg 7 zeroTestTM.Q)
   rw [TM.step, if_neg (zeroTest_ne_halt hst)]
   simp only [zeroTestTM, hst]
   refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
-  · exact transitionInput_id hinp
+  · exact transitionInput_eq_self hinp
   · funext i
     exact Tape.writeAndMove_readBack_idle_of_ne_start _ (hall i)
   · show c.output.writeAndMove _ (idleDir c.output.read) = _

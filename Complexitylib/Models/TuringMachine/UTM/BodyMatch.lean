@@ -711,7 +711,7 @@ theorem copyQ'_copy_loop (f : VFlags) (S W : ℕ → Γ)
     have hreadE' : (c.work scT).read ≠ Γ.start := by
       simp only [Tape.read, hheadE, hcE]; exact hE e he
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+      rw [toΓ_readBackWrite_of_ne_start hreadW', hreadW]
     have harm := arm_copyQ' c.input.read (fun i => (c.work i).read) c.output.read f
     rw [if_neg hreadS', if_neg hreadWnb] at harm
     have hstep := step_act3 (by rw [hst]; exact fun hcon => nomatch hcon)
@@ -877,7 +877,7 @@ theorem copyQ'_blank_loop (f : VFlags) (S W : ℕ → Γ)
     have hreadE' : (c.work scT).read ≠ Γ.start := by
       simp only [Tape.read, hheadE, hcE]; exact hE e he
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+      rw [toΓ_readBackWrite_of_ne_start hreadW', hreadW]
     have harm := arm_copyQ' c.input.read (fun i => (c.work i).read) c.output.read f
     rw [if_neg hreadS', if_neg hreadWnb] at harm
     have hstep := step_act3 (by rw [hst]; exact fun hcon => nomatch hcon)
@@ -1018,7 +1018,7 @@ theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
     have hreadE' : (c.work scT).read ≠ Γ.start := by
       simp only [Tape.read, hheadE, hcE]; exact hE e he
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+      rw [toΓ_readBackWrite_of_ne_start hreadW', hreadW]
     have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
     rw [if_neg hreadWnb, dif_neg (show ¬j.val < 9 by omega)] at harm
     have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)
@@ -1063,7 +1063,7 @@ theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
     have hreadE' : (c.work scT).read ≠ Γ.start := by
       simp only [Tape.read, hheadE, hcE]; exact hE e he
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+      rw [toΓ_readBackWrite_of_ne_start hreadW', hreadW]
     have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
     rw [if_neg hreadWnb, dif_pos (show j.val < 9 by omega)] at harm
     have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)
@@ -1207,7 +1207,7 @@ theorem copyAct_blank_loop (f : VFlags) (W : ℕ → Γ)
     have hreadE' : (c.work scT).read ≠ Γ.start := by
       simp only [Tape.read, hheadE, hcE]; exact hE e he
     have hWb : (readBackWrite ((c.work dsT).read)).toΓ = W b := by
-      rw [readBackWrite_toΓ_eq hreadW', hreadW]
+      rw [toΓ_readBackWrite_of_ne_start hreadW', hreadW]
     have harm := arm_copyAct c.input.read (fun i => (c.work i).read) c.output.read f j
     rw [if_neg hreadWnb, dif_pos (show j.val < 9 by omega)] at harm
     have hstep := step_act2 (by rw [hst]; exact fun hcon => nomatch hcon)

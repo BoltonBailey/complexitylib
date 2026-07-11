@@ -78,7 +78,7 @@ theorem utmTM_universal {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
         utmTM.halted c' ∧
         (x ∈ L → c'.output.cells 1 = Γ.one) ∧
         (x ∉ L → c'.output.cells 1 = Γ.zero) := by
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hdec
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hdec
   have hwf := TM.descOfTM_wf M₁
   have hterm : TerminatedRegion (encodeDesc (TM.descOfTM M₁)) :=
     terminatedRegion_encodeDesc_plain hwf (descOfTM_entries_ne_nil M₁)
@@ -102,7 +102,7 @@ theorem utmTM_universal_padded {k : ℕ} (M : TM k) {L : Language} {T : ℕ → 
         utmTM.halted c' ∧
         (x ∈ L → c'.output.cells 1 = Γ.one) ∧
         (x ∉ L → c'.output.cells 1 = Γ.zero) := by
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hdec
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hdec
   have hwf := TM.descOfTM_wf M₁
   refine ⟨encodeDesc (TM.descOfTM M₁), fun junk x => ?_⟩
   have hterm : TerminatedRegion (encodeDesc (TM.descOfTM M₁) ++ junk) :=

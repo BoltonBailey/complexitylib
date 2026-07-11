@@ -154,8 +154,8 @@ private theorem negOutTM_rewind_loop
         simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
       · dsimp only []
         simp [Tape.writeAndMove, Tape.move_cells, Tape.write, hhead, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
     exact ⟨c₁, .step hstep' .zero, hst1, hh1, hc1, hin1, hw1⟩
   | succ h ih =>
@@ -174,8 +174,8 @@ private theorem negOutTM_rewind_loop
         omega
       · dsimp only []
         rw [negOut_writeBack_cells _ _ hread_ne, hcW]
-      · dsimp only []; rw [hin]; exact transitionInput_id hinp
-      · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+      · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+      · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
     obtain ⟨c₁, hstep', hst1, hh1, hc1, hin1, hw1⟩ := hstep
     obtain ⟨c', hreach, hst', hh', hc', hin', hw'⟩ := ih c₁ hst1 hc1 hh1 hin1 hw1
     exact ⟨c', .step hstep' hreach, hst', hh', hc', hin', hw'⟩
@@ -204,9 +204,9 @@ private theorem negOutTM_goRight_step
     exact hWns 1 le_rfl
   simp only [TM.step, hst, negOutTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-  · dsimp only []; exact transitionTape_id hread_ne
-  · dsimp only []; rw [hin]; exact transitionInput_id hinp
-  · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+  · dsimp only []; exact transitionTape_eq_self hread_ne
+  · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+  · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase C: the negating write step
@@ -246,8 +246,8 @@ private theorem negOutTM_write_step
     · simp [idleDir, Tape.writeAndMove, Tape.move, Tape.write, hhead, hcW, hone]
     · simp [idleDir, Tape.writeAndMove, Tape.move, Tape.write, hhead, hcW, hone,
             hWns 1 le_rfl]
-  · dsimp only []; rw [hin]; exact transitionInput_id hinp
-  · dsimp only []; rw [hwk]; funext i; exact transitionTape_id (hw i)
+  · dsimp only []; rw [hin]; exact transitionInput_eq_self hinp
+  · dsimp only []; rw [hwk]; funext i; exact transitionTape_eq_self (hw i)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Main HoareTime theorem

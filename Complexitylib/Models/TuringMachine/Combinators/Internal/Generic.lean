@@ -14,12 +14,12 @@ and `ComplementInternal`.
 
 ## Main results
 
-- `simulation_reachesIn` — generic simulation lifting: if a state embedding
+- `reachesIn_map` — generic simulation lifting: if a state embedding
   commutes with `step`, then `reachesIn` lifts through the embedding
-- `generic_rewind_loop` — generic output-tape rewind: any TM where stepping
+- `exists_reachesIn_of_rewindStep_output` — generic output-tape rewind: any TM where stepping
   from a "rewind state" moves the output head left (preserving cells), and
   at cell 0 moves right to cell 1 entering a "target state"
-- `generic_rewind_loop_full` — same as above, also tracking input/work tapes
+- `exists_reachesIn_of_rewindStep_frame` — same as above, also tracking input/work tapes
 
 ## Shared tape stability lemmas
 
@@ -37,7 +37,7 @@ namespace TM
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- `readBackWrite` recovers the original symbol for non-start symbols. -/
-theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
+theorem toΓ_readBackWrite_of_ne_start {g : Γ} (h : g ≠ Γ.start) :
     (readBackWrite g).toΓ = g := by cases g <;> simp_all [readBackWrite, Γw.toΓ]
 
 /-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under
@@ -46,7 +46,7 @@ theorem tape_writeAndMove_stable (t : Tape)
     (hhead : t.head ≥ 1) (hns : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
     t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
   have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact hns t.head hhead
-  rw [readBackWrite_toΓ_eq hne]
+  rw [toΓ_readBackWrite_of_ne_start hne]
   show (t.write t.read).move (idleDir t.read) = t
   simp only [idleDir, hne, ↓reduceIte]
   show (t.write (t.cells t.head)).move .stay = t
@@ -67,7 +67,7 @@ theorem tape_readBackWrite_preserves (t : Tape) (d : Dir3)
   simp only [Tape.writeAndMove, Tape.move_cells]
   rcases h with hh0 | hne
   · simp only [Tape.write, hh0, ↓reduceIte]
-  · rw [readBackWrite_toΓ_eq hne]
+  · rw [toΓ_readBackWrite_of_ne_start hne]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -78,7 +78,7 @@ theorem tape_readBackWrite_preserves (t : Tape) (d : Dir3)
 
 /-- If `wrap` commutes with `step` (i.e., one step of `tm` corresponds to
     one step of `tm'` through the embedding), then `reachesIn` lifts. -/
-theorem simulation_reachesIn {tm tm' : TM n}
+theorem reachesIn_map {tm tm' : TM n}
     (wrap : Cfg n tm.Q → Cfg n tm'.Q)
     (h_step : ∀ c c' : Cfg n tm.Q, tm.step c = some c' →
       tm'.step (wrap c) = some (wrap c'))
@@ -105,7 +105,7 @@ theorem simulation_reachesIn {tm tm' : TM n}
     The `tape` parameter selects which tape to track (output, work, etc.).
     This captures the common rewind pattern used in `complementTM`, `ifTM`,
     `loopTM`, `writeTM`, and `rewindWorkTM`. -/
-theorem generic_rewind_loop_tape (tm : TM n) (tape : Cfg n tm.Q → Tape)
+theorem exists_reachesIn_of_rewindStep_tape (tm : TM n) (tape : Cfg n tm.Q → Tape)
     {rewindState targetState : tm.Q}
     (h_step_left : ∀ c : Cfg n tm.Q,
       c.state = rewindState →
@@ -153,8 +153,8 @@ theorem generic_rewind_loop_tape (tm : TM n) (tape : Cfg n tm.Q → Tape)
       (by intro j hj; rw [hcells]; exact hnostart j hj) hh'
     exact ⟨c_target, .step hstep hreach, hst_t, hh_t, by rw [hcells_t, hcells]⟩
 
-/-- Specialization of `generic_rewind_loop_tape` for the output tape. -/
-theorem generic_rewind_loop (tm : TM n)
+/-- Specialization of `exists_reachesIn_of_rewindStep_tape` for the output tape. -/
+theorem exists_reachesIn_of_rewindStep_output (tm : TM n)
     {rewindState targetState : tm.Q}
     (h_step_left : ∀ c : Cfg n tm.Q,
       c.state = rewindState →
@@ -184,15 +184,15 @@ theorem generic_rewind_loop (tm : TM n)
       c_target.state = targetState ∧
       c_target.output.head = 1 ∧
       c_target.output.cells = c.output.cells :=
-  generic_rewind_loop_tape tm (fun c => c.output) h_step_left h_step_base
+  exists_reachesIn_of_rewindStep_tape tm (fun c => c.output) h_step_left h_step_base
 
 /-- **Generic rewind loop (full tape tracking)**.
 
-    Same as `generic_rewind_loop`, but the step hypotheses also guarantee
+    Same as `exists_reachesIn_of_rewindStep_output`, but the step hypotheses also guarantee
     that input and work tapes are preserved (given stability conditions:
     head ≥ 1 and cells ≥ 1 ≠ start). The conclusion additionally proves
     `c_target.input = c.input` and `c_target.work = c.work`. -/
-theorem generic_rewind_loop_full (tm : TM n)
+theorem exists_reachesIn_of_rewindStep_frame (tm : TM n)
     {rewindState targetState : tm.Q}
     (h_step_left : ∀ c : Cfg n tm.Q,
       c.state = rewindState →
@@ -284,7 +284,7 @@ theorem transitionTape_cells (t : Tape)
   by_cases hh : t.head = 0
   · simp only [Tape.write, hh, ↓reduceIte]
   · have hge : t.head ≥ 1 := by omega
-    rw [readBackWrite_toΓ_eq (by simp only [Tape.read]; exact hns t.head hge)]
+    rw [toΓ_readBackWrite_of_ne_start (by simp only [Tape.read]; exact hns t.head hge)]
     simp only [Tape.write, hh, ↓reduceIte, Tape.read, Function.update_eq_self]
 
 /-- `transitionInput` preserves cells (always, since input has no write). -/
@@ -293,7 +293,7 @@ theorem transitionInput_cells (t : Tape) :
   simp [transitionInput, Tape.move]; split <;> rfl
 
 /-- After `transitionTape`, head ≥ 1 when cell 0 = start. -/
-theorem transitionTape_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
+theorem one_le_head_transitionTape (t : Tape) (h0 : t.cells 0 = Γ.start) :
     (transitionTape t).head ≥ 1 := by
   unfold transitionTape Tape.writeAndMove
   by_cases hh : t.head = 0
@@ -315,7 +315,7 @@ theorem transitionInput_head_ge (t : Tape) (h0 : t.cells 0 = Γ.start) :
     | left => exfalso; revert hdir; simp only [idleDir]; split <;> simp
 
 /-- Bound on `transitionTape` output head: ≤ original head + 1. -/
-theorem transitionTape_head_bound {t : Tape} {p_bound : ℕ}
+theorem head_transitionTape_le {t : Tape} {p_bound : ℕ}
     (hcell0 : t.cells 0 = Γ.start) (hhead : t.head ≤ p_bound) :
     (transitionTape t).head ≤ p_bound + 1 := by
   unfold transitionTape Tape.writeAndMove
@@ -334,10 +334,10 @@ theorem transitionTape_head_bound {t : Tape} {p_bound : ℕ}
     non-▷ symbol. This is the key lemma for threading invariants through
     `seqTM` / `loopTM` / `ifTM` composition: tapes that are "stable"
     (head not at cell 0) pass through phase transitions unchanged. -/
-theorem transitionTape_id {t : Tape} (hread : t.read ≠ Γ.start) :
+theorem transitionTape_eq_self {t : Tape} (hread : t.read ≠ Γ.start) :
     transitionTape t = t := by
   unfold transitionTape Tape.writeAndMove
-  rw [readBackWrite_toΓ_eq hread]
+  rw [toΓ_readBackWrite_of_ne_start hread]
   simp only [idleDir, hread, ↓reduceIte, Tape.move, Tape.write]
   split
   · rfl
@@ -345,7 +345,7 @@ theorem transitionTape_id {t : Tape} (hread : t.read ≠ Γ.start) :
 
 /-- **Frame rule**: `transitionInput` is the identity when the tape reads a
     non-▷ symbol. -/
-theorem transitionInput_id {t : Tape} (hread : t.read ≠ Γ.start) :
+theorem transitionInput_eq_self {t : Tape} (hread : t.read ≠ Γ.start) :
     transitionInput t = t := by
   simp only [transitionInput, idleDir, hread, ↓reduceIte, Tape.move]
 

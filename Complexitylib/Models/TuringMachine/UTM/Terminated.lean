@@ -79,8 +79,8 @@ theorem descOfTM_entries_ne_nil (M : TM 1) : (TM.descOfTM M).entries ≠ [] := b
   have hpos : 0 < Fintype.card M.Q := Fintype.card_pos_iff.mpr ⟨M.qstart⟩
   have hmem : M.descEntry ⟨0, hpos⟩ Γ.zero Γ.zero Γ.zero ∈ (M.descOfTM).entries := by
     simp only [TM.descOfTM, List.mem_flatMap, List.mem_map]
-    exact ⟨⟨0, hpos⟩, List.mem_finRange _, Γ.zero, allΓ_complete _, Γ.zero,
-      allΓ_complete _, ⟨Γ.zero, allΓ_complete _, rfl⟩⟩
+    exact ⟨⟨0, hpos⟩, List.mem_finRange _, Γ.zero, mem_allΓ _, Γ.zero,
+      mem_allΓ _, ⟨Γ.zero, mem_allΓ _, rfl⟩⟩
   exact List.ne_nil_of_mem hmem
 
 end TM.UTMBody

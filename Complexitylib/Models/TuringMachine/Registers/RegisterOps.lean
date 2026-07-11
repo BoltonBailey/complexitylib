@@ -469,23 +469,23 @@ end IncReg
 
 /-- Cells of a register holding `d` mid-clear: positions `1..k` blanked,
     `k+1..d` still marked. -/
-def clearCells (d k : ℕ) : ℕ → Γ := fun j =>
+def clearRegCells (d k : ℕ) : ℕ → Γ := fun j =>
   if j = 0 then Γ.start
   else if j ≤ k then Γ.blank
   else if j ≤ d then Γ.one
   else Γ.blank
 
-theorem clearCells_zero (d : ℕ) : clearCells d 0 = regCells d := by
+theorem clearCells_zero (d : ℕ) : clearRegCells d 0 = regCells d := by
   funext j
-  simp only [clearCells, regCells]
+  simp only [clearRegCells, regCells]
   rcases Nat.eq_zero_or_pos j with rfl | hj
   · rfl
   · rw [if_neg (show ¬ j = 0 from by omega), if_neg (show ¬ j ≤ 0 from by omega),
       if_neg (show ¬ j = 0 from by omega)]
 
-theorem clearCells_last (d : ℕ) : clearCells d d = regCells 0 := by
+theorem clearCells_last (d : ℕ) : clearRegCells d d = regCells 0 := by
   funext j
-  simp only [clearCells, regCells]
+  simp only [clearRegCells, regCells]
   rcases Nat.eq_zero_or_pos j with rfl | hj
   · rfl
   · rw [if_neg (show ¬ j = 0 from by omega), if_neg (show ¬ j = 0 from by omega),
@@ -495,25 +495,25 @@ theorem clearCells_last (d : ℕ) : clearCells d d = regCells 0 := by
     · rw [if_neg hd, if_neg hd]
 
 theorem clearCells_ne_start {d k j : ℕ} (hj : 1 ≤ j) :
-    clearCells d k j ≠ Γ.start := by
-  simp only [clearCells]
+    clearRegCells d k j ≠ Γ.start := by
+  simp only [clearRegCells]
   rw [if_neg (show ¬ j = 0 from by omega)]
   split
   · decide
   · split <;> decide
 
 theorem clearCells_update_succ (d k : ℕ) :
-    Function.update (clearCells d k) (k + 1) Γ.blank = clearCells d (k + 1) := by
+    Function.update (clearRegCells d k) (k + 1) Γ.blank = clearRegCells d (k + 1) := by
   funext j
   rw [Function.update_apply]
   by_cases hj : j = k + 1
   · subst hj
     rw [if_pos rfl]
-    show Γ.blank = clearCells d (k + 1) (k + 1)
-    simp only [clearCells]
+    show Γ.blank = clearRegCells d (k + 1) (k + 1)
+    simp only [clearRegCells]
     rw [if_neg (show ¬ k + 1 = 0 from by omega), if_pos (le_refl (k + 1))]
   · rw [if_neg hj]
-    simp only [clearCells]
+    simp only [clearRegCells]
     rcases Nat.eq_zero_or_pos j with rfl | hj1
     · rfl
     · rcases Nat.lt_or_ge j (k + 1) with hlt | hge
@@ -710,18 +710,18 @@ private theorem clearRegTM_step_park (c : Cfg n (clearRegTM (n := n) q).Q)
     exact (hwork i).writeAndMove_readBack_idle
   · exact hout.writeAndMove_readBack_idle
 
-/-- The clearing sweep: from `scan` at head `k + 1` over `clearCells d k`,
+/-- The clearing sweep: from `scan` at head `k + 1` over `clearRegCells d k`,
     blank the remaining `d - k` marks. -/
 private theorem clearRegTM_scan_run (d m : ℕ) :
     ∀ (k : ℕ), d = k + m →
       ∀ (c : Cfg n (clearRegTM (n := n) q).Q),
       c.state = .scan → Parked c.input → (∀ i, i ≠ q → Parked (c.work i)) →
       Parked c.output →
-      (c.work q).cells = clearCells d k → (c.work q).head = k + 1 →
+      (c.work q).cells = clearRegCells d k → (c.work q).head = k + 1 →
       ∃ c', (clearRegTM (n := n) q).reachesIn m c c' ∧
         c'.state = .scan ∧ c'.input = c.input ∧
         (∀ i, i ≠ q → c'.work i = c.work i) ∧
-        (c'.work q).cells = clearCells d d ∧ (c'.work q).head = d + 1 ∧
+        (c'.work q).cells = clearRegCells d d ∧ (c'.work q).head = d + 1 ∧
         c'.output = c.output := by
   induction m with
   | zero =>
@@ -731,11 +731,11 @@ private theorem clearRegTM_scan_run (d m : ℕ) :
   | succ m ih =>
     intro k hk c hst hinp hwork hout hcells hhead
     have hone : (c.work q).read = Γ.one := by
-      rw [Tape.read, hhead, hcells, clearCells, if_neg (by omega), if_neg (by omega),
+      rw [Tape.read, hhead, hcells, clearRegCells, if_neg (by omega), if_neg (by omega),
         if_pos (by omega)]
     have hstep := clearRegTM_step_scan_one c hst hone hinp hwork hout
     set wq₁ : Tape := ((c.work q).write Γw.blank).move .right with hwq₁
-    have hwq₁cells : wq₁.cells = clearCells d (k + 1) := by
+    have hwq₁cells : wq₁.cells = clearRegCells d (k + 1) := by
       rw [hwq₁]
       show ((c.work q).write Γw.blank).cells = _
       rw [Tape.write, if_neg (by rw [hhead]; omega)]
@@ -856,7 +856,7 @@ theorem clearRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fi
     clearRegTM_scan_run d d 0 (by omega)
       { state := .scan, input := inp, work := work, output := out } rfl
       hinp₀ hwork₀ hout.parked
-      (by show (work q).cells = clearCells d 0; rw [hq, regT_cells, clearCells_zero])
+      (by show (work q).cells = clearRegCells d 0; rw [hq, regT_cells, clearCells_zero])
       (by show (work q).head = 0 + 1; rw [hq, regT_head])
   have hinpP₁ : Parked c₁.input := by rw [hinp₁]; exact hinp₀
   have hworkP₁ : ∀ i, i ≠ q → Parked (c₁.work i) := fun i hi => by

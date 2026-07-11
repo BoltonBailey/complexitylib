@@ -546,7 +546,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
       rw [Tape.write, if_neg (by rw [hc₂head]; omega)]
       show Function.update (c₂.work q).cells (c₂.work q).head Γw.blank.toΓ = _
       rw [hc₂cells, hc₂head]
-      exact regCells_erase e
+      exact regCells_update_blank_succ e
     have hc₃head : (c₃.work q).head = e := by
       show (Function.update c₂.work q
         (((c₂.work q).write Γw.blank).move .left) q).head = e

@@ -540,7 +540,7 @@ private theorem palindromesTM_step_copy_push
               (readBackWrite c.input.read).toΓ i
           = (Tape.init (x.map Γ.ofBool)).cells i
         rw [inv.wh, ← hik, Function.update_self]
-        rw [readBackWrite_toΓ_eq hir_ne_start, hib, hik, Tape.init_read_bit x k hk]
+        rw [toΓ_readBackWrite_of_ne_start hir_ne_start, hib, hik, Tape.init_read_bit x k hk]
       · -- Old cell, unchanged
         show Function.update (c.work 0).cells (c.work 0).head _ i
           = (Tape.init (x.map Γ.ofBool)).cells i

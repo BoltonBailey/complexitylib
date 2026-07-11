@@ -90,13 +90,13 @@ theorem ifTM_test_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmTest.Q}
   simp only [ifTestWrap, ifTM, if_neg ifQ_test_ne_halt, if_neg hne]
 
 /-- Multi-step test phase simulation. -/
-theorem ifTM_test_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
+theorem ifTM_reachesIn_ifTestWrap (tmTest tmThen tmElse : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmTest.Q}
     (hreach : tmTest.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifTestWrap tmTest tmThen tmElse c_start)
       (ifTestWrap tmTest tmThen tmElse c_end) :=
-  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifTestWrap tmTest tmThen tmElse)
+  reachesIn_map (tm' := ifTM tmTest tmThen tmElse) (ifTestWrap tmTest tmThen tmElse)
     (fun _ _ => ifTM_test_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -116,13 +116,13 @@ theorem ifTM_then_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmThen.Q}
   simp only [ifThenWrap, ifTM, if_neg ifQ_then_ne_halt, if_neg hne]
 
 /-- Multi-step then-branch simulation. -/
-theorem ifTM_then_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
+theorem ifTM_reachesIn_ifThenWrap (tmTest tmThen tmElse : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmThen.Q}
     (hreach : tmThen.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifThenWrap tmTest tmThen tmElse c_start)
       (ifThenWrap tmTest tmThen tmElse c_end) :=
-  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifThenWrap tmTest tmThen tmElse)
+  reachesIn_map (tm' := ifTM tmTest tmThen tmElse) (ifThenWrap tmTest tmThen tmElse)
     (fun _ _ => ifTM_then_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -142,13 +142,13 @@ theorem ifTM_else_step (tmTest tmThen tmElse : TM n) {c c' : Cfg n tmElse.Q}
   simp only [ifElseWrap, ifTM, if_neg ifQ_else_ne_halt, if_neg hne]
 
 /-- Multi-step else-branch simulation. -/
-theorem ifTM_else_simulation (tmTest tmThen tmElse : TM n) {t : ℕ}
+theorem ifTM_reachesIn_ifElseWrap (tmTest tmThen tmElse : TM n) {t : ℕ}
     {c_start c_end : Cfg n tmElse.Q}
     (hreach : tmElse.reachesIn t c_start c_end) :
     (ifTM tmTest tmThen tmElse).reachesIn t
       (ifElseWrap tmTest tmThen tmElse c_start)
       (ifElseWrap tmTest tmThen tmElse c_end) :=
-  simulation_reachesIn (tm' := ifTM tmTest tmThen tmElse) (ifElseWrap tmTest tmThen tmElse)
+  reachesIn_map (tm' := ifTM tmTest tmThen tmElse) (ifElseWrap tmTest tmThen tmElse)
     (fun _ _ => ifTM_else_step tmTest tmThen tmElse) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -202,11 +202,11 @@ theorem ifTM_test_to_rewind (tmTest tmThen tmElse : TM n) {c : Cfg n tmTest.Q}
 -- Halting
 -- ════════════════════════════════════════════════════════════════════════
 
-theorem ifTM_done_is_halted (tmTest tmThen tmElse : TM n) :
+theorem ifTM_qhalt_eq_done (tmTest tmThen tmElse : TM n) :
     (ifTM tmTest tmThen tmElse).qhalt = Sum.inr (Sum.inl IfPhase.done) := rfl
 
 /-- The `done` state is halted in `ifTM`. -/
-theorem ifTM_halted_done (tmTest tmThen tmElse : TM n)
+theorem ifTM_halted_of_state_eq_done (tmTest tmThen tmElse : TM n)
     (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q))
     (h : c.state = Sum.inr (Sum.inl IfPhase.done)) :
     (ifTM tmTest tmThen tmElse).halted c := h
@@ -231,12 +231,12 @@ private theorem if_rewind_step_left_full (tmTest tmThen tmElse : TM n)
   simp only [TM.step, ↓reduceIte, hstate, ifTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · omega
     · simp
   · simp only [Tape.writeAndMove, Tape.move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -269,7 +269,7 @@ private theorem if_rewind_step_base_full (tmTest tmThen tmElse : TM n)
 
 /-- Extended rewind loop: also tracks that input and work tapes are preserved
     when they satisfy the stability condition (head ≥ 1, cells ≥ 1 ≠ start). -/
-theorem ifTM_rewind_loop_full (tmTest tmThen tmElse : TM n) :
+theorem ifTM_rewindOut_reachesIn_check (tmTest tmThen tmElse : TM n) :
     ∀ (p : ℕ) (c : Cfg n (IfQ tmTest.Q tmThen.Q tmElse.Q)),
     c.state = Sum.inr (Sum.inl IfPhase.rewindOut) →
     c.output.cells 0 = Γ.start →
@@ -285,7 +285,7 @@ theorem ifTM_rewind_loop_full (tmTest tmThen tmElse : TM n) :
       c_check.output.cells = c.output.cells ∧
       c_check.input = c.input ∧
       c_check.work = c.work :=
-  generic_rewind_loop_full (ifTM tmTest tmThen tmElse)
+  exists_reachesIn_of_rewindStep_frame (ifTM tmTest tmThen tmElse)
     (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>
       if_rewind_step_left_full tmTest tmThen tmElse c hst hread hc0 hns h_ih h_ins h_wh h_wns)
     (fun c hst hread hc0 hns h_ih h_ins h_wh h_wns =>

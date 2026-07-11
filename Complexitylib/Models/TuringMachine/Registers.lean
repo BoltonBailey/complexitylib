@@ -26,7 +26,7 @@ actions and stable under the combinator phase transitions.
 ## Main results
 
 - `TM.reg.parked`, `TM.reg.hasUnaryCounter` — bridges
-- `TM.reg_zero_init` — a freshly bumped blank tape is `reg 0`
+- `TM.reg_zero_init_bumped` — a freshly bumped blank tape is `reg 0`
 -/
 
 namespace Complexity
@@ -68,7 +68,7 @@ theorem write_readBack (t : Tape) (hread : t.read ≠ Γ.start) :
   · rfl
   · refine Tape.ext rfl ?_
     show Function.update t.cells t.head (readBackWrite t.read).toΓ = t.cells
-    rw [readBackWrite_toΓ_eq hread, Tape.read, Function.update_eq_self]
+    rw [toΓ_readBackWrite_of_ne_start hread, Tape.read, Function.update_eq_self]
 
 /-- Writing back the read symbol and moving is just the move. -/
 theorem writeAndMove_readBack (t : Tape) (hread : t.read ≠ Γ.start) (d : Dir3) :
@@ -77,12 +77,12 @@ theorem writeAndMove_readBack (t : Tape) (hread : t.read ≠ Γ.start) (d : Dir3
   rw [write_readBack t hread]
 
 /-- Parked tapes pass through combinator phase boundaries unchanged. -/
-theorem Parked.transitionTape_id {t : Tape} (h : Parked t) : transitionTape t = t :=
-  TM.transitionTape_id h.read_ne_start
+theorem Parked.transitionTape_eq_self {t : Tape} (h : Parked t) : transitionTape t = t :=
+  TM.transitionTape_eq_self h.read_ne_start
 
 /-- Parked input tapes pass through combinator phase boundaries unchanged. -/
-theorem Parked.transitionInput_id {t : Tape} (h : Parked t) : transitionInput t = t :=
-  TM.transitionInput_id h.read_ne_start
+theorem Parked.transitionInput_eq_self {t : Tape} (h : Parked t) : transitionInput t = t :=
+  TM.transitionInput_eq_self h.read_ne_start
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Registers
@@ -137,7 +137,7 @@ theorem read_eq {v : ℕ} {t : Tape} (h : reg v t) :
 end reg
 
 /-- A blank tape with the head bumped to cell 1 is the zero register. -/
-theorem reg_zero_init : reg 0 { head := 1, cells := (Tape.init []).cells } := by
+theorem reg_zero_init_bumped : reg 0 { head := 1, cells := (Tape.init []).cells } := by
   refine ⟨rfl, by simp [Tape.init], fun _ hi => by omega, fun j hj => ?_⟩
   show (Tape.init []).cells j = Γ.blank
   simp only [Tape.init]
@@ -191,7 +191,7 @@ theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
       rw [h.cells_one (by omega), regT_cells]
       exact (regCells_one (by omega) (by omega)).symm
 
-theorem regT_parked (v : ℕ) : Parked (regT v) := (reg_regT v).parked
+theorem parked_regTape (v : ℕ) : Parked (regT v) := (reg_regT v).parked
 
 /-- Register cells with the head anywhere off `▷` form a parked tape. -/
 theorem parked_regCells {h v : ℕ} (hh : 1 ≤ h) :
@@ -215,7 +215,7 @@ theorem regCells_update_succ (d : ℕ) :
       · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
 
 /-- Erasing the final mark turns `regCells (d + 1)` into `regCells d`. -/
-theorem regCells_erase (d : ℕ) :
+theorem regCells_update_blank_succ (d : ℕ) :
     Function.update (regCells (d + 1)) (d + 1) Γ.blank = regCells d := by
   funext j
   rw [Function.update_apply]

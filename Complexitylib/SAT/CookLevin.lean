@@ -19,7 +19,7 @@ Membership `L_SAT ∈ NP` is supplied by `SAT/Headline.lean`.
 NPComplete_L_SAT                       (= ⟨L_SAT_mem_NP, NPHard_L_SAT⟩)
 └ NPHard_L_SAT                         (unpack any L ∈ NP → its NTM)
   └ cookLevin_reduction               (multi-tape → single-tape, then ↓)
-    ├ NTM.exists_singleTape_decider   (SingleTape.lean)
+    ├ NTM.exists_singleTape_decidesInTime   (SingleTape.lean)
     └ cookLevin_reduction_singleTape
         ├ reductionFn                 (def: x ↦ (tableauCNFFlat …).encode)
         ├ reductionFn_mem_FP          ✓ poly-time emitter TM

@@ -23,14 +23,14 @@ namespace TM
 -- Configuration embedding
 -- ════════════════════════════════════════════════════════════════════════
 
-def compCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg n (tm.complementTM.Q) :=
+def complementCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg n (tm.complementTM.Q) :=
   { state := Sum.inl c.state, input := c.input, work := c.work, output := c.output }
 
 theorem compCfg_initCfg (tm : TM n) (x : List Bool) :
-    compCfg tm (tm.initCfg x) = tm.complementTM.initCfg x := rfl
+    complementCfg tm (tm.initCfg x) = tm.complementTM.initCfg x := rfl
 
 theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : Tape) :
-    compCfg tm ⟨tm.qstart, inp, work, out⟩ =
+    complementCfg tm ⟨tm.qstart, inp, work, out⟩ =
       ⟨tm.complementTM.qstart, inp, work, out⟩ := rfl
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -39,17 +39,17 @@ theorem compCfg_qstart (tm : TM n) (inp : Tape) (work : Fin n → Tape) (out : T
 
 private theorem complementTM_step_sim (tm : TM n) {c c' : Cfg n tm.Q}
     (hstep : tm.step c = some c') :
-    tm.complementTM.step (compCfg tm c) = some (compCfg tm c') := by
+    tm.complementTM.step (complementCfg tm c) = some (complementCfg tm c') := by
   have hne := state_ne_qhalt_of_step hstep
-  simp only [TM.step, complementTM, compCfg] at hstep ⊢
+  simp only [TM.step, complementTM, complementCfg] at hstep ⊢
   have hne2 : (Sum.inl c.state : ComplementQ tm.Q) ≠ Sum.inr .done := nofun
   simp only [hne, hne2, ↓reduceIte, Option.some.injEq] at hstep ⊢
   rw [← hstep]
 
 theorem complementTM_simulation (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
     (hreach : tm.reachesIn t c c') :
-    tm.complementTM.reachesIn t (compCfg tm c) (compCfg tm c') :=
-  simulation_reachesIn (tm' := tm.complementTM) (compCfg tm)
+    tm.complementTM.reachesIn t (complementCfg tm c) (complementCfg tm c') :=
+  reachesIn_map (tm' := tm.complementTM) (complementCfg tm)
     (fun _ _ => complementTM_step_sim tm) hreach
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -68,12 +68,12 @@ private theorem complement_rewind_step_left (tm : TM n) (c : Cfg n tm.complement
   simp only [TM.step, ↓reduceIte, hstate, complementTM, hread_ne]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · simp only [Tape.writeAndMove, Tape.move]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · omega
     · simp
   · simp only [Tape.writeAndMove, Tape.move_cells]
-    rw [readBackWrite_toΓ_eq hread_ne]
+    rw [toΓ_readBackWrite_of_ne_start hread_ne]
     simp only [Tape.write, Tape.read]; split
     · rfl
     · exact Function.update_eq_self _ _
@@ -110,7 +110,7 @@ private theorem rewind_loop (tm : TM n) :
       c_flip.state = Sum.inr ComplementPhase.flip ∧
       c_flip.output.head = 1 ∧
       c_flip.output.cells = c.output.cells :=
-  generic_rewind_loop tm.complementTM
+  exists_reachesIn_of_rewindStep_output tm.complementTM
     (fun c hst hread hc0 hns => complement_rewind_step_left tm c hst hread hc0 hns)
     (fun c hst hread hc0 hns => complement_rewind_step_base tm c hst hread hc0 hns)
 
@@ -118,7 +118,7 @@ private theorem rewind_loop (tm : TM n) :
 -- Combined: halt → rewind → flip → done
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- From halted compCfg, reach done state with flipped output.
+/-- From halted complementCfg, reach done state with flipped output.
     Takes ≤ `output.head + 4` steps. -/
 theorem complementTM_rewind_and_flip (tm : TM n)
     (c_halt : Cfg n tm.Q)
@@ -126,31 +126,31 @@ theorem complementTM_rewind_and_flip (tm : TM n)
     (hcell0 : c_halt.output.cells 0 = Γ.start)
     (hnostart : ∀ j, j ≥ 1 → c_halt.output.cells j ≠ Γ.start) :
     ∃ c_done t_rw,
-      tm.complementTM.reachesIn t_rw (compCfg tm c_halt) c_done ∧
+      tm.complementTM.reachesIn t_rw (complementCfg tm c_halt) c_done ∧
       tm.complementTM.halted c_done ∧
       c_done.output.cells 1 = (flipBit (c_halt.output.cells 1)).toΓ ∧
       t_rw ≤ c_halt.output.head + 4 := by
   -- Step 1: halt → rewind (1 step)
-  have hne : (compCfg tm c_halt).state ≠ Sum.inr ComplementPhase.done := nofun
-  have hstep1 : ∃ c_rw, tm.complementTM.step (compCfg tm c_halt) = some c_rw ∧
+  have hne : (complementCfg tm c_halt).state ≠ Sum.inr ComplementPhase.done := nofun
+  have hstep1 : ∃ c_rw, tm.complementTM.step (complementCfg tm c_halt) = some c_rw ∧
       c_rw.state = Sum.inr ComplementPhase.rewind ∧
       c_rw.output.cells = c_halt.output.cells ∧
       c_rw.output.head ≤ c_halt.output.head + 1 := by
-    simp only [TM.step, ↓reduceIte, show (compCfg tm c_halt).state = Sum.inl c_halt.state from rfl,
+    simp only [TM.step, ↓reduceIte, show (complementCfg tm c_halt).state = Sum.inl c_halt.state from rfl,
                complementTM, hhalt]
     refine ⟨_, rfl, rfl, ?_, ?_⟩
-    · dsimp only [compCfg]
+    · dsimp only [complementCfg]
       simp only [Tape.writeAndMove, Tape.move_cells]
       by_cases hread : c_halt.output.read = Γ.start
       · have hh0 : c_halt.output.head = 0 := by
           have h := hread; simp only [Tape.read] at h
           by_contra hne; exact hnostart _ (by omega) h
         simp [Tape.write, hh0]
-      · rw [readBackWrite_toΓ_eq hread]
+      · rw [toΓ_readBackWrite_of_ne_start hread]
         simp only [Tape.write]; split
         · rfl
         · exact Function.update_eq_self _ _
-    · dsimp only [compCfg]
+    · dsimp only [complementCfg]
       exact Tape.head_writeAndMove_le _ _ _
   obtain ⟨c_rw, hstep1', hst_rw, hcells_rw, hhead_rw⟩ := hstep1
   -- Step 2: rewind loop (c_rw.output.head + 1 steps)
@@ -193,9 +193,9 @@ theorem complementTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
   obtain ⟨c', t, hle, hreach, hhalt, hyes, hno⟩ := hdec x
   have hsim := complementTM_simulation tm hreach
   rw [compCfg_initCfg] at hsim
-  have ⟨_, hout_head, _⟩ := head_bound_of_reachesIn tm hreach
-  have hcell0 := output_cell0_of_reachesIn hreach (by simp [Tape.init])
-  have hnostart := output_noStart_of_reachesIn hreach (by
+  have ⟨_, hout_head, _⟩ := head_le_of_reachesIn tm hreach
+  have hcell0 := output_cells_zero_eq_start_of_reachesIn hreach (by simp [Tape.init])
+  have hnostart := output_cells_ne_start_of_reachesIn hreach (by
     intro i hi; simp [Tape.init]; omega)
   obtain ⟨c_done, t_rw, hreach_rw, hhalt_done, hflip, hle_rw⟩ :=
     complementTM_rewind_and_flip tm c' hhalt hcell0 hnostart
