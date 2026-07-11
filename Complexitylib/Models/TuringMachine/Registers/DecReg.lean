@@ -9,8 +9,8 @@ import Complexitylib.Models.TuringMachine.Registers.MixedRadix
 # decRegTM: decrement a register
 
 `decRegTM q` erases the last mark of the unary register `q`: scan right
-over the marks, erase the final one, rewind. From `regT d` to
-`regT (d - 1)` (truncated: the zero register is left unchanged) in
+over the marks, erase the final one, rewind. From `regTape d` to
+`regTape (d - 1)` (truncated: the zero register is left unchanged) in
 `2d + 4` steps. The missing primitive for descending loop fuels — the
 pairwise at-most-one families iterate over shrinking suffixes.
 
@@ -32,7 +32,7 @@ instance : Fintype DecPhase where
   complete := fun x => by cases x <;> simp
 
 /-- **Decrement register `q`**: scan right over the marks, erase the last
-    one, rewind to cell 1. From `regT d` to `regT (d - 1)` in `2d + 4`
+    one, rewind to cell 1. From `regTape d` to `regTape (d - 1)` in `2d + 4`
     steps; every other tape untouched. The zero register is unchanged. -/
 def decRegTM (q : Fin n) : TM n where
   Q := DecPhase
@@ -421,15 +421,15 @@ private theorem decRegTM_back_run (h : ℕ) :
       rw [Function.update_of_ne hi]
     · rw [hcells', hupd]
 
-/-- **`decRegTM` Hoare specification.** From `regT d` in register `q`, reach
-    `regT (d - 1)` in `2d + 4` steps (`regT 0` is left unchanged); the input,
+/-- **`decRegTM` Hoare specification.** From `regTape d` in register `q`, reach
+    `regTape (d - 1)` in `2d + 4` steps (`regTape 0` is left unchanged); the input,
     output, and every other work tape are untouched. -/
 theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
     (work₀ : Fin n → Tape) (ys : List Bool) (hinp₀ : Parked inp₀)
-    (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i)) (hq : work₀ q = regT d) :
+    (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i)) (hq : work₀ q = regTape d) :
     (decRegTM (n := n) q).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ (Function.update work₀ q (regT (d - 1))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ (Function.update work₀ q (regTape (d - 1))) ys)
       (2 * d + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, hst₁, hinp₁, hwork₁, hcells₁, hhead₁, hout₁⟩ :=
@@ -512,7 +512,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
       by_cases hir : i = q
       · subst hir
         show Function.update c₂.work i ((c₂.work i).move .right) i
-          = Function.update work i (regT (0 - 1)) i
+          = Function.update work i (regTape (0 - 1)) i
         rw [Function.update_self, Function.update_self]
         refine Tape.ext ?_ ?_
         · show (c₂.work i).head + 1 = 1
@@ -520,7 +520,7 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
         · show (c₂.work i).cells = regCells (0 - 1)
           rw [hc₂cells]
       · show Function.update c₂.work q ((c₂.work q).move .right) i
-          = Function.update work q (regT (0 - 1)) i
+          = Function.update work q (regTape (0 - 1)) i
         rw [Function.update_of_ne hir, Function.update_of_ne hir]
         exact hc₂work i hir
     · show outAcc ys c₂.output

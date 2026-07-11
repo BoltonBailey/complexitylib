@@ -345,7 +345,7 @@ private theorem forRegTM_loop_run (inp₀ : Tape) (w : ℕ → Fin n → Tape)
       ∃ c' t, t ≤ m * (b_iter + 2) + (v + 2) ∧
         (forRegTM body r).reachesIn t c c' ∧
         c'.state = .inl .done ∧ c'.input = inp₀ ∧
-        c'.work = Function.update (w v) r (regT v) ∧
+        c'.work = Function.update (w v) r (regTape v) ∧
         outAcc (ys v) c'.output := by
   intro m
   induction m with
@@ -481,7 +481,7 @@ private theorem forRegTM_loop_run (inp₀ : Tape) (w : ℕ → Fin n → Tape)
 theorem forRegTM_hoareTime (body : TM n) (r : Fin n) (v : ℕ) (inp₀ : Tape)
     (w : ℕ → Fin n → Tape) (ys : ℕ → List Bool) (b_iter : ℕ)
     (hinp₀ : Parked inp₀)
-    (hwreg : ∀ i, w i r = regT v)
+    (hwreg : ∀ i, w i r = regTape v)
     (hwP : ∀ i j, j ≠ r → Parked (w i j))
     (hbody : ∀ i, i < v → body.HoareTime
         (fun inp work out => inp = inp₀ ∧
@@ -491,8 +491,8 @@ theorem forRegTM_hoareTime (body : TM n) (r : Fin n) (v : ℕ) (inp₀ : Tape)
           outAcc (ys (i + 1)) out)
         b_iter) :
     (forRegTM body r).HoareTime
-      (emitPred inp₀ (w 0) (ys 0))
-      (emitPred inp₀ (w v) (ys v))
+      (EmitPred inp₀ (w 0) (ys 0))
+      (EmitPred inp₀ (w v) (ys v))
       (v * (b_iter + 2) + (v + 2)) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c', t, ht, hreach, hst', hinp', hwork', hout'⟩ :=
@@ -505,7 +505,7 @@ theorem forRegTM_hoareTime (body : TM n) (r : Fin n) (v : ℕ) (inp₀ : Tape)
           Function.update_eq_self])
       hout
   refine ⟨c', t, ht, hreach, hst', hinp', ?_, hout'⟩
-  rw [hwork', show regT v = w v r from (hwreg v).symm, Function.update_eq_self]
+  rw [hwork', show regTape v = w v r from (hwreg v).symm, Function.update_eq_self]
 
 end ForReg
 

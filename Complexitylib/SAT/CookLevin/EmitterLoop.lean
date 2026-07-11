@@ -168,36 +168,36 @@ theorem emitLoop_hoareTime (body : TM n) (ctr fuel : Fin n) (hcf : ctr ≠ fuel)
     (E : ℕ → List Bool)
     (inp₀ : Tape) (W : Fin n → Tape) (ys₀ : List Bool)
     (hinp₀ : Parked inp₀) (hW : ∀ i, Parked (W i))
-    (hfuel : W fuel = regT v) (hctr : W ctr = regT 0)
+    (hfuel : W fuel = regTape v) (hctr : W ctr = regTape 0)
     (hbody : ∀ i, i < v → body.HoareTime
-      (emitPred inp₀
-        (Function.update (Function.update W ctr (regT i)) fuel
+      (EmitPred inp₀
+        (Function.update (Function.update W ctr (regTape i)) fuel
           ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range i).flatMap E))
-      (emitPred inp₀
-        (Function.update (Function.update W ctr (regT i)) fuel
+      (EmitPred inp₀
+        (Function.update (Function.update W ctr (regTape i)) fuel
           ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range (i + 1)).flatMap E))
       b_body) :
     (emitLoopTM body ctr fuel).HoareTime
-      (emitPred inp₀ W ys₀)
-      (emitPred inp₀ (Function.update W ctr (regT v))
+      (EmitPred inp₀ W ys₀)
+      (EmitPred inp₀ (Function.update W ctr (regTape v))
         (ys₀ ++ (List.range v).flatMap E))
       (v * ((b_body + 1 + opBudget M) + 2) + (v + 2)) := by
   have hfc : fuel ≠ ctr := fun h => hcf h.symm
   have hbodyseq : ∀ i, i < v → (seqTM body (incRegTM ctr)).HoareTime
       (fun inp work out => inp = inp₀ ∧
-        work = Function.update (Function.update W ctr (regT i)) fuel
+        work = Function.update (Function.update W ctr (regTape i)) fuel
           ⟨i + 2, regCells v⟩ ∧
         outAcc (ys₀ ++ (List.range i).flatMap E) out)
       (fun inp work out => inp = inp₀ ∧
-        work = Function.update (Function.update W ctr (regT (i + 1))) fuel
+        work = Function.update (Function.update W ctr (regTape (i + 1))) fuel
           ⟨i + 2, regCells v⟩ ∧
         outAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=
-      Function.update (Function.update W ctr (regT i)) fuel
+      Function.update (Function.update W ctr (regTape i)) fuel
         ⟨i + 2, regCells v⟩ with hSi
     have hSiP : ∀ j, Parked (Si j) := by
       intro j
@@ -210,9 +210,9 @@ theorem emitLoop_hoareTime (body : TM n) (ctr fuel : Fin n) (hcf : ctr ≠ fuel)
         · subst hjc; rw [Function.update_self]; exact parked_regTape _
         · rw [Function.update_of_ne hjc]; exact hW j
     have hinc : (incRegTM ctr).HoareTime
-        (emitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
-        (emitPred inp₀
-          (Function.update (Function.update W ctr (regT (i + 1))) fuel
+        (EmitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
+        (EmitPred inp₀
+          (Function.update (Function.update W ctr (regTape (i + 1))) fuel
             ⟨i + 2, regCells v⟩)
           (ys₀ ++ (List.range (i + 1)).flatMap E))
         (opBudget M) := by
@@ -226,15 +226,15 @@ theorem emitLoop_hoareTime (body : TM n) (ctr fuel : Fin n) (hcf : ctr ≠ fuel)
     exact seqTM_hoareTime body (incRegTM ctr) (hbody i hi)
       (emitPred_transition hinp₀ hSiP _) hinc
   have hrule := forRegTM_hoareTime (seqTM body (incRegTM ctr)) fuel v inp₀
-    (fun i => Function.update W ctr (regT i))
+    (fun i => Function.update W ctr (regTape i))
     (fun i => ys₀ ++ (List.range i).flatMap E)
     (b_body + 1 + opBudget M) hinp₀
     (fun i => by
-      show Function.update W ctr (regT i) fuel = regT v
+      show Function.update W ctr (regTape i) fuel = regTape v
       rw [Function.update_of_ne hfc]
       exact hfuel)
     (fun i j hj => by
-      show Parked (Function.update W ctr (regT i) j)
+      show Parked (Function.update W ctr (regTape i) j)
       by_cases hjc : j = ctr
       · subst hjc; rw [Function.update_self]; exact parked_regTape _
       · rw [Function.update_of_ne hjc]; exact hW j)
@@ -243,8 +243,8 @@ theorem emitLoop_hoareTime (body : TM n) (ctr fuel : Fin n) (hcf : ctr ≠ fuel)
   rintro inp work out ⟨g1, g2, g3⟩
   refine ⟨g1, ?_, ?_⟩
   · rw [g2]
-    show W = Function.update W ctr (regT 0)
-    rw [show regT 0 = W ctr from hctr.symm, Function.update_eq_self]
+    show W = Function.update W ctr (regTape 0)
+    rw [show regTape 0 = W ctr from hctr.symm, Function.update_eq_self]
   · simpa using g3
 
 /-- **`emitLoopTM` Hoare rule, offset form**: the counter starts at `s` and
@@ -256,44 +256,44 @@ theorem emitLoopFrom_hoareTime (body : TM n) (ctr fuel : Fin n)
     (E : ℕ → List Bool)
     (inp₀ : Tape) (W : Fin n → Tape) (ys₀ : List Bool)
     (hinp₀ : Parked inp₀) (hW : ∀ i, Parked (W i))
-    (hfuel : W fuel = regT v) (hctr : W ctr = regT s)
+    (hfuel : W fuel = regTape v) (hctr : W ctr = regTape s)
     (hbody : ∀ i, i < v → body.HoareTime
-      (emitPred inp₀
-        (Function.update (Function.update W ctr (regT (s + i))) fuel
+      (EmitPred inp₀
+        (Function.update (Function.update W ctr (regTape (s + i))) fuel
           ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range i).flatMap E))
-      (emitPred inp₀
-        (Function.update (Function.update W ctr (regT (s + i))) fuel
+      (EmitPred inp₀
+        (Function.update (Function.update W ctr (regTape (s + i))) fuel
           ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range (i + 1)).flatMap E))
       b_body) :
     (emitLoopTM body ctr fuel).HoareTime
-      (emitPred inp₀ W ys₀)
-      (emitPred inp₀ (Function.update W ctr (regT (s + v)))
+      (EmitPred inp₀ W ys₀)
+      (EmitPred inp₀ (Function.update W ctr (regTape (s + v)))
         (ys₀ ++ (List.range v).flatMap E))
       (v * ((b_body + 1 + opBudget M) + 2) + (v + 2)) := by
   have hfc : fuel ≠ ctr := fun h => hcf h.symm
   have hbodyseq : ∀ i, i < v → (seqTM body (incRegTM ctr)).HoareTime
       (fun inp work out => inp = inp₀ ∧
-        work = Function.update (Function.update W ctr (regT (s + i))) fuel
+        work = Function.update (Function.update W ctr (regTape (s + i))) fuel
           ⟨i + 2, regCells v⟩ ∧
         outAcc (ys₀ ++ (List.range i).flatMap E) out)
       (fun inp work out => inp = inp₀ ∧
-        work = Function.update (Function.update W ctr (regT (s + (i + 1))))
+        work = Function.update (Function.update W ctr (regTape (s + (i + 1))))
           fuel ⟨i + 2, regCells v⟩ ∧
         outAcc (ys₀ ++ (List.range (i + 1)).flatMap E) out)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=
-      Function.update (Function.update W ctr (regT (s + i))) fuel
+      Function.update (Function.update W ctr (regTape (s + i))) fuel
         ⟨i + 2, regCells v⟩ with hSi
     have hSiP : ∀ j, Parked (Si j) :=
       parked_update (parked_update hW (parked_regTape _))
         (parked_regCells (by omega))
     have hinc : (incRegTM ctr).HoareTime
-        (emitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
-        (emitPred inp₀
-          (Function.update (Function.update W ctr (regT (s + (i + 1)))) fuel
+        (EmitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
+        (EmitPred inp₀
+          (Function.update (Function.update W ctr (regTape (s + (i + 1)))) fuel
             ⟨i + 2, regCells v⟩)
           (ys₀ ++ (List.range (i + 1)).flatMap E))
         (opBudget M) := by
@@ -308,15 +308,15 @@ theorem emitLoopFrom_hoareTime (body : TM n) (ctr fuel : Fin n)
     exact seqTM_hoareTime body (incRegTM ctr) (hbody i hi)
       (emitPred_transition hinp₀ hSiP _) hinc
   have hrule := forRegTM_hoareTime (seqTM body (incRegTM ctr)) fuel v inp₀
-    (fun i => Function.update W ctr (regT (s + i)))
+    (fun i => Function.update W ctr (regTape (s + i)))
     (fun i => ys₀ ++ (List.range i).flatMap E)
     (b_body + 1 + opBudget M) hinp₀
     (fun i => by
-      show Function.update W ctr (regT (s + i)) fuel = regT v
+      show Function.update W ctr (regTape (s + i)) fuel = regTape v
       rw [Function.update_of_ne hfc]
       exact hfuel)
     (fun i j hj => by
-      show Parked (Function.update W ctr (regT (s + i)) j)
+      show Parked (Function.update W ctr (regTape (s + i)) j)
       by_cases hjc : j = ctr
       · subst hjc; rw [Function.update_self]; exact parked_regTape _
       · rw [Function.update_of_ne hjc]; exact hW j)
@@ -325,8 +325,8 @@ theorem emitLoopFrom_hoareTime (body : TM n) (ctr fuel : Fin n)
   rintro inp work out ⟨g1, g2, g3⟩
   refine ⟨g1, ?_, ?_⟩
   · rw [g2]
-    show W = Function.update W ctr (regT (s + 0))
-    rw [show regT (s + 0) = W ctr from by rw [Nat.add_zero]; exact hctr.symm,
+    show W = Function.update W ctr (regTape (s + 0))
+    rw [show regTape (s + 0) = W ctr from by rw [Nat.add_zero]; exact hctr.symm,
       Function.update_eq_self]
   · simpa using g3
 
@@ -342,19 +342,19 @@ theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
     (E : ℕ → List Bool)
     (inp₀ : Tape) (u : ℕ → Fin n → Tape) (ys₀ : List Bool)
     (hinp₀ : Parked inp₀) (hu : ∀ i j, Parked (u i j))
-    (hufuel : ∀ i, u i fuel = regT v)
-    (huctr : ∀ i, u (i + 1) ctr = regT (ctrVal i + 1))
+    (hufuel : ∀ i, u i fuel = regTape v)
+    (huctr : ∀ i, u (i + 1) ctr = regTape (ctrVal i + 1))
     (hbody : ∀ i, i < v → body.HoareTime
-      (emitPred inp₀ (Function.update (u i) fuel ⟨i + 2, regCells v⟩)
+      (EmitPred inp₀ (Function.update (u i) fuel ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range i).flatMap E))
-      (emitPred inp₀
-        (Function.update (Function.update (u (i + 1)) ctr (regT (ctrVal i)))
+      (EmitPred inp₀
+        (Function.update (Function.update (u (i + 1)) ctr (regTape (ctrVal i)))
           fuel ⟨i + 2, regCells v⟩)
         (ys₀ ++ (List.range (i + 1)).flatMap E))
       b_body) :
     (emitLoopTM body ctr fuel).HoareTime
-      (emitPred inp₀ (u 0) ys₀)
-      (emitPred inp₀ (u v) (ys₀ ++ (List.range v).flatMap E))
+      (EmitPred inp₀ (u 0) ys₀)
+      (EmitPred inp₀ (u v) (ys₀ ++ (List.range v).flatMap E))
       (v * ((b_body + 1 + opBudget M) + 2) + (v + 2)) := by
   have hfc : fuel ≠ ctr := fun h => hcf h.symm
   have hbodyseq : ∀ i, i < v → (seqTM body (incRegTM ctr)).HoareTime
@@ -367,14 +367,14 @@ theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
       (b_body + 1 + opBudget M) := by
     intro i hi
     set Si : Fin n → Tape :=
-      Function.update (Function.update (u (i + 1)) ctr (regT (ctrVal i))) fuel
+      Function.update (Function.update (u (i + 1)) ctr (regTape (ctrVal i))) fuel
         ⟨i + 2, regCells v⟩ with hSi
     have hSiP : ∀ j, Parked (Si j) :=
       parked_update (parked_update (hu (i + 1)) (parked_regTape _))
         (parked_regCells (by omega))
     have hinc : (incRegTM ctr).HoareTime
-        (emitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
-        (emitPred inp₀ (Function.update (u (i + 1)) fuel ⟨i + 2, regCells v⟩)
+        (EmitPred inp₀ Si (ys₀ ++ (List.range (i + 1)).flatMap E))
+        (EmitPred inp₀ (Function.update (u (i + 1)) fuel ⟨i + 2, regCells v⟩)
           (ys₀ ++ (List.range (i + 1)).flatMap E))
         (opBudget M) := by
       refine ((incRegTM_hoareTime ctr (ctrVal i) inp₀ Si _ hinp₀
@@ -384,7 +384,7 @@ theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
       rintro inp work out ⟨g1, g2, g3⟩
       refine ⟨g1, ?_, g3⟩
       rw [g2, hSi, Function.update_comm hfc, Function.update_idem,
-        show regT (ctrVal i + 1) = u (i + 1) ctr from (huctr i).symm,
+        show regTape (ctrVal i + 1) = u (i + 1) ctr from (huctr i).symm,
         Function.update_eq_self]
     exact seqTM_hoareTime body (incRegTM ctr) (hbody i hi)
       (emitPred_transition hinp₀ hSiP _) hinc

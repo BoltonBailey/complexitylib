@@ -44,13 +44,13 @@ theorem emitStartConstTM_hoareTime (N : NTM 1) (steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max (Fintype.card N.Q) 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max (Fintype.card N.Q) 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4) :
     (emitStartConstTM N).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0)
         (ys ++ CNF.encode
           [[⟨true, vStateF (Fintype.card N.Q) steps P 0 (stateIdx N N.qstart)⟩],
            [⟨true, vHeadF (Fintype.card N.Q) steps P 0 0 0⟩],
@@ -134,12 +134,12 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVp1 : V pos1Reg = regT 0) (hVpReg : V pReg = regT P) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVp1 : V pos1Reg = regTape 0) (hVpReg : V pReg = regTape P) :
     (startBlankPartTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode ((List.range (P + 1)).map (fun pos =>
           ([⟨true, vCellF Qc steps P 0 tp pos
             (symIdx (initCellSym x tp pos))⟩] : Clause)))))
@@ -168,8 +168,8 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
   -- Stage 1: the position-0 clause.
   have h₀ : (emitCNFTM rA rB rC rD tmp tmp2
       [[⟨true, 2, .inr 0, .inr tp, .inr 0, .inr 3⟩]]).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode [([⟨true, vCellF Qc steps P 0 tp 0 3⟩] : Clause)]))
       (cnfBudget 1 1 M) := by
     have hf : List.Forall₂
@@ -193,9 +193,9 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     ys ++ CNF.encode [([⟨true, vCellF Qc steps P 0 tp 0 3⟩] : Clause)]
     with hys₁
   have h₁ : (setConstTM pos1Reg 1).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys₁)
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) ys₁)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys₁)
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) ys₁)
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 1 0 inp₀ (scratch V tmp tmp2 0) ys₁
       hinp₀ (scratch_parked 0 hV)
@@ -205,38 +205,38 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
   -- Stage 3: the blank clauses at positions 1..P.
   have hbody : ∀ j, j < P →
       (emitClauseTM rA rB rC rD tmp tmp2 [startCellD tp 2]).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
             (Function.update
-              (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1))
-              pos1Reg (regT (1 + j))) pReg ⟨j + 2, regCells P⟩)
+              (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1))
+              pos1Reg (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩)
           (ys₁ ++ (List.range j).flatMap (fun j' =>
             Clause.encode ([⟨true, vCellF Qc steps P 0 tp (1 + j') 2⟩] : Clause)
               ++ [true, false])))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
             (Function.update
-              (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1))
-              pos1Reg (regT (1 + j))) pReg ⟨j + 2, regCells P⟩)
+              (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1))
+              pos1Reg (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩)
           (ys₁ ++ (List.range (j + 1)).flatMap (fun j' =>
             Clause.encode ([⟨true, vCellF Qc steps P 0 tp (1 + j') 2⟩] : Clause)
               ++ [true, false])))
         (clauseBudget 1 M) := by
     intro j hj
     set base : Fin nT → Tape :=
-      Function.update (Function.update V pos1Reg (regT (1 + j))) pReg
+      Function.update (Function.update V pos1Reg (regTape (1 + j))) pReg
         ⟨j + 2, regCells P⟩ with hbase
     have hstate : Function.update
         (Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-          (regT (1 + j))) pReg ⟨j + 2, regCells P⟩
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+          (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩
         = scratch base tmp tmp2 0 := by
       rw [Function.update_idem, scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
     have hbaseP : ∀ l, Parked (base l) :=
       parked_update (parked_update hV (parked_regTape _))
         (parked_regCells (by omega))
-    have hbp : base pos1Reg = regT (1 + j) := by
+    have hbp : base pos1Reg = regTape (1 + j) := by
       rw [hbase, Function.update_of_ne (by decide), Function.update_self]
     have hf : List.Forall₂
         (LitDesc.Spec base tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4)
@@ -277,7 +277,7 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     (by decide) 1 P M (clauseBudget 1 M) (by omega)
     (fun j' => Clause.encode
       ([⟨true, vCellF Qc steps P 0 tp (1 + j') 2⟩] : Clause) ++ [true, false])
-    inp₀ (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) ys₁ hinp₀
+    inp₀ (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) ys₁ hinp₀
     (parked_update (scratch_parked 0 hV) (parked_regTape _))
     (by rw [Function.update_of_ne (by decide),
       scratch_apply_ne (by decide) (by decide)]; exact hVpReg)
@@ -285,22 +285,22 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     hbody
   -- Stage 4: position counter back to 0.
   have h₃ : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-          (regT (1 + P)))
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+          (regTape (1 + P)))
         (ys₁ ++ (List.range P).flatMap (fun j' =>
           Clause.encode ([⟨true, vCellF Qc steps P 0 tp (1 + j') 2⟩] : Clause)
             ++ [true, false])))
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys₁ ++ (List.range P).flatMap (fun j' =>
           Clause.encode ([⟨true, vCellF Qc steps P 0 tp (1 + j') 2⟩] : Clause)
             ++ [true, false])))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (1 + P) inp₀
       (Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-        (regT (1 + P))) _ hinp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+        (regTape (1 + P))) _ hinp₀
       (parked_update (parked_update (scratch_parked 0 hV) (parked_regTape _))
         (parked_regTape _))
       (by rw [Function.update_self])).consequence
@@ -309,7 +309,7 @@ theorem startBlankPartTM_hoareTime (tp : ℕ) (htp1 : 1 ≤ tp) (htp : tp < 3)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem, Function.update_idem,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self]
   -- Glue.
@@ -376,12 +376,12 @@ theorem startProbeBodyTM_hoareTime (x : List Bool) (Qc steps P M j : ℕ)
     (hwfcell : inp₀.cells 0 = Γ.start)
     (hcells : ∀ pos, inp₀.cells pos = initCellSym x 0 pos)
     (hV : ∀ l, Parked (V l))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVp1 : V pos1Reg = regT (1 + j)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVp1 : V pos1Reg = regTape (1 + j)) :
     startProbeBodyTM.HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode
           [([⟨true, vCellF Qc steps P 0 0 (1 + j)
             (symIdx (initCellSym x 0 (1 + j)))⟩] : Clause)]))
@@ -427,9 +427,9 @@ theorem startProbeBodyTM_hoareTime (x : List Bool) (Qc steps P M j : ℕ)
   rw [scratch_idem (by decide)] at h₁
   -- Stage 2: probe the input symbol into the scratch.
   have h₂ : (symProbeTM fSym pos1Reg tmp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 Vb) ys)
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 Vb) ys)
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj))) ys)
       (opBudget M) :=
     ((symProbeTM_hoareTime fSym pos1Reg tmp (by decide) (1 + j) Vb
       inp₀ (scratch V tmp tmp2 Vb) ys hinp₀ hhead hwfcell
@@ -439,21 +439,21 @@ theorem startProbeBodyTM_hoareTime (x : List Bool) (Qc steps P M j : ℕ)
       (probeBudget (show 1 + j ≤ M by omega) (by omega)))
   -- Stage 3: emit the literal.
   have h₃ : (emitLitTM true tmp).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys)
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj)))
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj))) ys)
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj)))
         (ys ++ ([true, true] ++ List.replicate (2 * (Vb + kj)) true
           ++ [false, true])))
       (opBudget M) :=
     ((emitLitTM_hoareTime true tmp (Vb + kj) inp₀
-      (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys hinp₀
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj))) ys hinp₀
       (fun l _ => parked_update (scratch_parked Vb hV) (parked_regTape _) l)
       (by rw [Function.update_self]; exact reg_regT _)).consequence
       (fun _ _ _ h => h) (fun _ _ _ h => h) (emitLitTM_le_opBudget hVbkjM))
   -- Stage 4: the clause separator.
   have h₄ := emitBitsTM_hoareTime (n := nT) [true, false] inp₀
-    (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj)))
+    (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj)))
     (ys ++ ([true, true] ++ List.replicate (2 * (Vb + kj)) true
       ++ [false, true]))
     hinp₀ (parked_update (scratch_parked Vb hV) (parked_regTape _))
@@ -462,25 +462,25 @@ theorem startProbeBodyTM_hoareTime (x : List Bool) (Qc steps P M j : ℕ)
     ++ List.replicate (2 * (Vb + kj)) true ++ [false, true]) ++ [true, false]
     with hys'
   have h₅ : (setConstTM tmp 0).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys')
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys')
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj))) ys')
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape 0)) ys')
       (opBudget M) := by
     refine ((setConstTM_hoareTime tmp 0 (Vb + kj) inp₀
-      (Function.update (scratch V tmp tmp2 Vb) tmp (regT (Vb + kj))) ys'
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regTape (Vb + kj))) ys'
       hinp₀ (parked_update (scratch_parked Vb hV) (parked_regTape _))
       (by rw [Function.update_self])).consequence (fun _ _ _ h => h) ?_
       (setConstTM_le_opBudget (show (0:ℕ) ≤ M by omega) hVbkjM))
     rintro inp work out ⟨g1, g2, g3⟩
     exact ⟨g1, by rw [g2, Function.update_idem], g3⟩
   have h₆ : (setConstTM tmp2 0).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys')
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys')
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 Vb) tmp (regTape 0)) ys')
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys')
       (opBudget M) := by
     refine ((setConstTM_hoareTime tmp2 0 Vb inp₀
-      (Function.update (scratch V tmp tmp2 Vb) tmp (regT 0)) ys'
+      (Function.update (scratch V tmp tmp2 Vb) tmp (regTape 0)) ys'
       hinp₀ (parked_update (scratch_parked Vb hV) (parked_regTape _))
       (by rw [Function.update_of_ne (by decide),
         scratch_apply_tmp2 (by decide)])).consequence
@@ -535,12 +535,12 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
     (hwfcell : inp₀.cells 0 = Γ.start)
     (hcells : ∀ pos, inp₀.cells pos = initCellSym x 0 pos)
     (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVp1 : V pos1Reg = regT 0) (hVpReg : V pReg = regT P) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVp1 : V pos1Reg = regTape 0) (hVpReg : V pReg = regTape P) :
     startProbePartTM.HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode ((List.range (P + 1)).map (fun pos =>
           ([⟨true, vCellF Qc steps P 0 0 pos
             (symIdx (initCellSym x 0 pos))⟩] : Clause)))))
@@ -561,8 +561,8 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
   -- Stage 1: the position-0 clause.
   have h₀ : (emitCNFTM rA rB rC rD tmp tmp2
       [[⟨true, 2, .inr 0, .inr 0, .inr 0, .inr 3⟩]]).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode [([⟨true, vCellF Qc steps P 0 0 0 3⟩] : Clause)]))
       (cnfBudget 1 1 M) := by
     have hf : List.Forall₂
@@ -586,9 +586,9 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
     with hys₁
   -- Stage 2: position counter to 1.
   have h₁ : (setConstTM pos1Reg 1).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys₁)
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) ys₁)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys₁)
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) ys₁)
       (opBudget M) :=
     ((setConstTM_hoareTime pos1Reg 1 0 inp₀ (scratch V tmp tmp2 0) ys₁
       hinp₀ (scratch_parked 0 hV)
@@ -597,31 +597,31 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
       (setConstTM_le_opBudget (show (1:ℕ) ≤ M by omega) (show (0:ℕ) ≤ M by omega)))
   -- Stage 3: the probe loop over positions 1..P.
   have hbody : ∀ j, j < P → startProbeBodyTM.HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1))
-            pos1Reg (regT (1 + j))) pReg ⟨j + 2, regCells P⟩)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1))
+            pos1Reg (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩)
         (ys₁ ++ (List.range j).flatMap (fun j' =>
           CNF.encode [([⟨true, vCellF Qc steps P 0 0 (1 + j')
             (symIdx (initCellSym x 0 (1 + j')))⟩] : Clause)])))
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1))
-            pos1Reg (regT (1 + j))) pReg ⟨j + 2, regCells P⟩)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1))
+            pos1Reg (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩)
         (ys₁ ++ (List.range (j + 1)).flatMap (fun j' =>
           CNF.encode [([⟨true, vCellF Qc steps P 0 0 (1 + j')
             (symIdx (initCellSym x 0 (1 + j')))⟩] : Clause)])))
       (startProbeBodyBudget M) := by
     intro j hj
     set base : Fin nT → Tape :=
-      Function.update (Function.update V pos1Reg (regT (1 + j))) pReg
+      Function.update (Function.update V pos1Reg (regTape (1 + j))) pReg
         ⟨j + 2, regCells P⟩ with hbase
     have hstate : Function.update
         (Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-          (regT (1 + j))) pReg ⟨j + 2, regCells P⟩
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+          (regTape (1 + j))) pReg ⟨j + 2, regCells P⟩
         = scratch base tmp tmp2 0 := by
       rw [Function.update_idem, scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
@@ -652,7 +652,7 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
     (by decide) 1 P M (startProbeBodyBudget M) (by omega)
     (fun j' => CNF.encode [([⟨true, vCellF Qc steps P 0 0 (1 + j')
       (symIdx (initCellSym x 0 (1 + j')))⟩] : Clause)])
-    inp₀ (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) ys₁ hinp₀
+    inp₀ (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) ys₁ hinp₀
     (parked_update (scratch_parked 0 hV) (parked_regTape _))
     (by rw [Function.update_of_ne (by decide),
       scratch_apply_ne (by decide) (by decide)]; exact hVpReg)
@@ -660,22 +660,22 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
     hbody
   -- Stage 4: position counter back to 0.
   have h₃ : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-          (regT (1 + P)))
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+          (regTape (1 + P)))
         (ys₁ ++ (List.range P).flatMap (fun j' =>
           CNF.encode [([⟨true, vCellF Qc steps P 0 0 (1 + j')
             (symIdx (initCellSym x 0 (1 + j')))⟩] : Clause)])))
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys₁ ++ (List.range P).flatMap (fun j' =>
           CNF.encode [([⟨true, vCellF Qc steps P 0 0 (1 + j')
             (symIdx (initCellSym x 0 (1 + j')))⟩] : Clause)])))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (1 + P) inp₀
       (Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 1)) pos1Reg
-        (regT (1 + P))) _ hinp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 1)) pos1Reg
+        (regTape (1 + P))) _ hinp₀
       (parked_update (parked_update (scratch_parked 0 hV) (parked_regTape _))
         (parked_regTape _))
       (by rw [Function.update_self])).consequence
@@ -684,7 +684,7 @@ theorem startProbePartTM_hoareTime (x : List Bool) (Qc steps P M : ℕ)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem, Function.update_idem,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self]
   -- Glue.
@@ -746,15 +746,15 @@ theorem emitStartTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
     (hwfcell : inp₀.cells 0 = Γ.start)
     (hcells : ∀ pos, inp₀.cells pos = initCellSym x 0 pos)
     (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max (Fintype.card N.Q) 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (hp1 : work₀ pos1Reg = regT 0)
-    (hpReg : work₀ pReg = regT P) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max (Fintype.card N.Q) 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (hp1 : work₀ pos1Reg = regTape 0)
+    (hpReg : work₀ pReg = regTape P) :
     (emitStartTM N).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0)
         (ys ++ CNF.encode (startClausesF N steps x)))
       (startBudget M) := by
   have h₀ := emitStartConstTM_hoareTime N steps P M hM inp₀ work₀ ys hinp₀

@@ -11,7 +11,7 @@ import Complexitylib.Models.TuringMachine.Registers.Arith
 
 `TM.ClockConstructible g` is the constructibility hypothesis used by the
 proved time hierarchy theorem in `Complexitylib.Classes.Hierarchy`: an
-8-tape machine can write the unary clock `regT (g n)` on work tape 6 in time
+8-tape machine can write the unary clock `regTape (g n)` on work tape 6 in time
 `O(g n + n)`, ghost-preserving the rest of the diagonalizer's tape layout.
 
 Contents:
@@ -44,7 +44,7 @@ namespace TM
 /-- The canonical parked blank tape (`liftTM`'s pinned extra tape) is the
     zero register. -/
 theorem Tape.init_move_right_eq_regT_zero :
-    (Tape.init []).move Dir3.right = regT 0 := by
+    (Tape.init []).move Dir3.right = regTape 0 := by
   refine Tape.ext rfl ?_
   show (Tape.init []).cells = regCells 0
   funext j
@@ -75,7 +75,7 @@ private theorem outF_read_ne_start {out : Tape} (h : outF out) :
 /-- **Clock constructibility** — the hypothesis of the time hierarchy
     theorem. `g` is clock-constructible if some 8-tape machine, started on
     input `x` in the diagonalizer's tape layout, writes the unary register
-    `regT (g |x|)` on work tape 6 within `C * (g |x| + |x| + 1)` steps,
+    `regTape (g |x|)` on work tape 6 within `C * (g |x| + |x| + 1)` steps,
     disturbing nothing else.
 
     The definition is deliberately **layout-pinned** rather than maximally
@@ -88,7 +88,7 @@ private theorem outF_read_ne_start {out : Tape} (h : outF out) :
       reading a non-`▷` symbol) and must be preserved **exactly**;
     * tape 6 (the clock) starts as the canonical parked blank tape
       `(Tape.init []).move Dir3.right` (the tape the `liftTM` combinators
-      pin blank extras to; it equals `regT 0`) and ends as `regT (g |x|)`;
+      pin blank extras to; it equals `regTape 0`) and ends as `regTape (g |x|)`;
     * tape 5 is a **designated scratch tape**: it must also start blank,
       and it is restored blank — this is exactly the `work i = work₀ i`
       clause at `i = 5`, since `work₀ 5` is pinned blank. `D` runs
@@ -119,7 +119,7 @@ def ClockConstructible (g : ℕ → ℕ) : Prop :=
         (fun inp work out =>
           inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
           (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-          work (6 : Fin 8) = regT (g x.length) ∧
+          work (6 : Fin 8) = regTape (g x.length) ∧
           out.head = 1 ∧ out.cells 0 = Γ.start ∧
           (∀ j, 1 ≤ j → out.cells j ≠ Γ.start))
         (C * (g x.length + x.length + 1))
@@ -501,14 +501,14 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
 
 /-- **`clockLenTM` Hoare specification.** From the started input tape (head
     at cell 1, the form the combinator seams hand a mid-sequence phase) and
-    a blank clock, write `regT (|x| + 1)` on tape 6 in `2|x| + 3` steps,
+    a blank clock, write `regTape (|x| + 1)` on tape 6 in `2|x| + 3` steps,
     returning the input head to cell 1 and preserving everything else
     exactly. The machine's `.scan` arm dispatches on the read symbol, so
     from the started configuration the run is exactly the bounced core: the
     `▷`-bounce step of a head-0 start is skipped. -/
 private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
     (hoth : ∀ i : Fin 8, i ≠ 6 → (work₀ i).read ≠ Γ.start)
-    (hclk : work₀ 6 = regT 0) :
+    (hclk : work₀ 6 = regTape 0) :
     clockLenTM.HoareTime
       (fun inp work out =>
         inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
@@ -516,7 +516,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
       (fun inp work out =>
         inp = ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-        work 6 = regT (x.length + 1) ∧ outF out)
+        work 6 = regTape (x.length + 1) ∧ outF out)
       (2 * x.length + 3) := by
   rintro inp work out ⟨hic, hih, rfl, hout⟩
   obtain rfl : inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) :=
@@ -623,8 +623,8 @@ theorem clockConstructible_succ : ClockConstructible (fun n => n + 1) := by
 
 /-- **Move the clock register to the scratch tape**: sweep right over tape
     6's marks, blanking each while writing a mark on tape 5 in lockstep,
-    then rewind both heads to cell 1. From `(regT 0, regT v)` on tapes
-    `(5, 6)` to `(regT v, regT 0)`; every other tape idles throughout. -/
+    then rewind both heads to cell 1. From `(regTape 0, regTape v)` on tapes
+    `(5, 6)` to `(regTape v, regTape 0)`; every other tape idles throughout. -/
 def moveClockTM : TM 8 where
   Q := IncPhase
   qstart := .scan
@@ -1073,18 +1073,18 @@ private theorem moveClock_back_run (h : ℕ) :
       rw [Function.update_of_ne (by decide : (6 : Fin 8) ≠ 5), Function.update_self]
       rfl
 
-/-- **`moveClockTM` Hoare specification.** From `(regT 0, regT v)` on tapes
-    `(5, 6)`, reach `(regT v, regT 0)` in `2v + 4` steps; the input, the
+/-- **`moveClockTM` Hoare specification.** From `(regTape 0, regTape v)` on tapes
+    `(5, 6)`, reach `(regTape v, regTape 0)` in `2v + 4` steps; the input, the
     output, and every other work tape are preserved exactly. -/
 private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8 → Tape)
     (hinp : inp₀.read ≠ Γ.start)
     (hoth : ∀ i : Fin 8, i ≠ 5 → i ≠ 6 → (work₀ i).read ≠ Γ.start)
-    (h5 : work₀ 5 = regT 0) (h6 : work₀ 6 = regT v) :
+    (h5 : work₀ 5 = regTape 0) (h6 : work₀ 6 = regTape v) :
     moveClockTM.HoareTime
       (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outF out)
       (fun inp work out => inp = inp₀ ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-        work 5 = regT v ∧ work 6 = regT 0 ∧ outF out)
+        work 5 = regTape v ∧ work 6 = regTape 0 ∧ outF out)
       (2 * v + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   have houtr : out.read ≠ Γ.start := outF_read_ne_start hout
@@ -1198,7 +1198,7 @@ instance : Fintype MulPhase where
   elems := {.drive, .inScan, .inRew, .rewC, .rew6, .park, .done}
   complete := fun x => by cases x <;> simp
 
-/-- **Multiply the moved clock by `|x| + 1`**: with `regT v` on the scratch
+/-- **Multiply the moved clock by `|x| + 1`**: with `regTape v` on the scratch
     tape 5 and an empty clock tape 6 (head at its frontier, cell 1), run one
     round per scratch mark (`drive` consumes it): each round scans the input
     left to right appending one clock mark per bit plus one at the first
@@ -1206,7 +1206,7 @@ instance : Fintype MulPhase where
     clock head never leaves its frontier, so each round costs `2|x| + 3`
     steps. After the last round the scratch is blanked while rewinding
     (`rewC`), the clock rewinds to cell 1 (`rew6`), and the machine parks:
-    tape 5 is `regT 0` and tape 6 is `regT (v * (|x| + 1))`. -/
+    tape 5 is `regTape 0` and tape 6 is `regTape (v * (|x| + 1))`. -/
 def clockMulTM : TM 8 where
   Q := MulPhase
   qstart := .drive
@@ -1697,7 +1697,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     exact ⟨c', .step hstep hreach, h1, h2, h3, h4, h5⟩
 
 /-- The cleanup rewind of the scratch tape: blank every mark on the way
-    down, ending in `regT 0`. -/
+    down, ending in `regTape 0`. -/
 private theorem clockMul_rewC_run (h : ℕ) :
     ∀ (c : Cfg 8 clockMulTM.Q),
       c.state = .rewC →
@@ -1708,7 +1708,7 @@ private theorem clockMul_rewC_run (h : ℕ) :
       ∃ c', clockMulTM.reachesIn (h + 1) c c' ∧
         c'.state = .rew6 ∧ c'.input = c.input ∧
         (∀ i, i ≠ (5 : Fin 8) → c'.work i = c.work i) ∧
-        c'.work 5 = regT 0 ∧
+        c'.work 5 = regTape 0 ∧
         c'.output = c.output := by
   induction h with
   | zero =>
@@ -2022,14 +2022,14 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
       rw [Function.update_of_ne hi5]
     · rw [g9, ho₄, ho₂]
 
-/-- **`clockMulTM` Hoare specification.** From `regT v` on the scratch tape
-    and `regT 0` on the clock tape, with the input head parked at cell 1,
-    reach `regT 0` on the scratch and `regT (v * (|x| + 1))` on the clock;
+/-- **`clockMulTM` Hoare specification.** From `regTape v` on the scratch tape
+    and `regTape 0` on the clock tape, with the input head parked at cell 1,
+    reach `regTape 0` on the scratch and `regTape (v * (|x| + 1))` on the clock;
     the input tape, the output tape, and every other work tape are preserved
     exactly. -/
 private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 → Tape)
     (hoth : ∀ i : Fin 8, i ≠ 5 → i ≠ 6 → (work₀ i).read ≠ Γ.start)
-    (h5 : work₀ 5 = regT v) (h6 : work₀ 6 = regT 0) :
+    (h5 : work₀ 5 = regTape v) (h6 : work₀ 6 = regTape 0) :
     clockMulTM.HoareTime
       (fun inp work out =>
         inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
@@ -2037,7 +2037,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
       (fun inp work out =>
         inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-        work 5 = regT 0 ∧ work 6 = regT (v * (x.length + 1)) ∧ outF out)
+        work 5 = regTape 0 ∧ work 6 = regTape (v * (x.length + 1)) ∧ outF out)
       (v * (2 * x.length + 3) + v * (x.length + 1) + v + 5) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   have houtr : out.read ≠ Γ.start := outF_read_ne_start hout
@@ -2150,14 +2150,14 @@ end ClockMul
 /-- **Closure under multiplication by `n + 1`.** Run the `g`-clock, move
     its register to the scratch tape (`moveClockTM`), then append it to the
     clock tape's frontier once per input position (`clockMulTM`), producing
-    `regT (g n * (n + 1))` in time `O(g n * (n + 1) + n)`. This is where
+    `regTape (g n * (n + 1))` in time `O(g n * (n + 1) + n)`. This is where
     the designated scratch tape 5 earns its keep. -/
 theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g) :
     ClockConstructible (fun n => g n * (n + 1)) := by
   obtain ⟨tm, C, hspec⟩ := h
   refine ⟨seqTM tm (seqTM moveClockTM clockMulTM), C + 20, ?_⟩
   intro x work₀ hpark h5 h6
-  have hb5 : work₀ (5 : Fin 8) = regT 0 := by
+  have hb5 : work₀ (5 : Fin 8) = regTape 0 := by
     rw [h5, Tape.init_move_right_eq_regT_zero]
   have hinpX : ((⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape)).read ≠ Γ.start := by
     show (Tape.init (x.map Γ.ofBool)).cells 1 ≠ Γ.start
@@ -2165,13 +2165,13 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
   -- phase 1: the g-clock
   have h₁ := hspec x work₀ hpark h5 h6
   -- ghost frames after phases 1 and 2
-  set W₁ : Fin 8 → Tape := Function.update work₀ 6 (regT (g x.length)) with hW₁
+  set W₁ : Fin 8 → Tape := Function.update work₀ 6 (regTape (g x.length)) with hW₁
   set W₂ : Fin 8 → Tape :=
-    Function.update (Function.update W₁ 5 (regT (g x.length))) 6 (regT 0) with hW₂
-  have hW₁5 : W₁ 5 = regT 0 := by
+    Function.update (Function.update W₁ 5 (regTape (g x.length))) 6 (regTape 0) with hW₂
+  have hW₁5 : W₁ 5 = regTape 0 := by
     rw [hW₁, Function.update_of_ne (by decide : (5 : Fin 8) ≠ 6)]
     exact hb5
-  have hW₁6 : W₁ 6 = regT (g x.length) := by
+  have hW₁6 : W₁ 6 = regTape (g x.length) := by
     rw [hW₁, Function.update_self]
   have hW₁oth : ∀ i : Fin 8, i ≠ 5 → i ≠ 6 → (W₁ i).read ≠ Γ.start := by
     intro i hi5 hi6
@@ -2185,10 +2185,10 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
       exact (parked_regTape _).read_ne_start
     · rw [hW₁, Function.update_of_ne hi6]
       exact (hpark i).2
-  have hW₂5 : W₂ 5 = regT (g x.length) := by
+  have hW₂5 : W₂ 5 = regTape (g x.length) := by
     rw [hW₂, Function.update_of_ne (by decide : (5 : Fin 8) ≠ 6),
       Function.update_self]
-  have hW₂6 : W₂ 6 = regT 0 := by
+  have hW₂6 : W₂ 6 = regTape 0 := by
     rw [hW₂, Function.update_self]
   have hW₂oth : ∀ i : Fin 8, i ≠ 5 → i ≠ 6 → (W₂ i).read ≠ Γ.start := by
     intro i hi5 hi6
@@ -2213,7 +2213,7 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
   have htrans₂₃ : ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
       (inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (∀ i, i ≠ (5 : Fin 8) → i ≠ (6 : Fin 8) → work i = W₁ i) ∧
-        work 5 = regT (g x.length) ∧ work 6 = regT 0 ∧ outF out) →
+        work 5 = regTape (g x.length) ∧ work 6 = regTape 0 ∧ outF out) →
       (transitionInput inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧
         (fun i => transitionTape (work i)) = W₂ ∧ outF (transitionTape out)) := by
     rintro inp work out ⟨rfl, hw, hw5, hw6, hout⟩
@@ -2238,7 +2238,7 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
   have htrans₁₂ : ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
       (inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-        work (6 : Fin 8) = regT (g x.length) ∧
+        work (6 : Fin 8) = regTape (g x.length) ∧
         out.head = 1 ∧ out.cells 0 = Γ.start ∧
         (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) →
       (transitionInput inp = (⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ : Tape) ∧

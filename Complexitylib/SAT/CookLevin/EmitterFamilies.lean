@@ -156,14 +156,14 @@ theorem emitAcceptTM_hoareTime (N : NTM 1) (steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max (Fintype.card N.Q) 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (hsteps : work₀ stepsReg = regT steps) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max (Fintype.card N.Q) 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (hsteps : work₀ stepsReg = regTape steps) :
     (emitAcceptTM N).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0)
         (ys ++ CNF.encode (acceptClausesF N steps P)))
       (cnfBudget 2 1 M) := by
   have hA1 : 1 ≤ steps + 1 := by omega
@@ -222,16 +222,16 @@ theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max (Fintype.card N.Q) 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max (Fintype.card N.Q) 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (htReg : work₀ tReg = regT 0)
-    (htFuel : work₀ tFuel = regT (steps + 1)) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max (Fintype.card N.Q) 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (htReg : work₀ tReg = regTape 0)
+    (htFuel : work₀ tFuel = regTape (steps + 1)) :
     (emitOneHotStatesTM (Fintype.card N.Q)).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀
-        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update work₀ tReg (regTape (steps + 1))) tmp tmp2 0)
         (ys ++ CNF.encode (oneHotStatesF N steps P)))
       (loopBudget M (cnfBudget (1 + M * M) (M + 2) M)) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
@@ -241,16 +241,16 @@ theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
   have hbody : ∀ i, i < steps + 1 →
       (emitCNFTM rA rB rC rD tmp tmp2
         (oneHotStatesLeafD (Fintype.card N.Q))).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+            (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
             ⟨i + 2, regCells (steps + 1)⟩)
           (ys ++ (List.range i).flatMap (fun t =>
             CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
               (vStateF (Fintype.card N.Q) steps P t))))))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+            (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
             ⟨i + 2, regCells (steps + 1)⟩)
           (ys ++ (List.range (i + 1)).flatMap (fun t =>
             CNF.encode (exactlyOne ((List.range (Fintype.card N.Q)).map
@@ -258,10 +258,10 @@ theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
         (cnfBudget (1 + M * M) (M + 2) M) := by
     intro i hi
     set base : Fin nT → Tape :=
-      Function.update (Function.update work₀ tReg (regT i)) tFuel
+      Function.update (Function.update work₀ tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
@@ -274,23 +274,23 @@ theorem emitOneHotStatesTM_hoareTime (N : NTM 1) (steps P M : ℕ)
         by_cases hjt : j = tReg
         · subst hjt; rw [Function.update_self]; exact parked_regTape _
         · rw [Function.update_of_ne hjt]; exact hwork₀ j
-    have hbrA : base rA = regT (steps + 1) := by
+    have hbrA : base rA = regTape (steps + 1) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hrA
-    have hbrB : base rB = regT (max (Fintype.card N.Q) 3) := by
+    have hbrB : base rB = regTape (max (Fintype.card N.Q) 3) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hrB
-    have hbrC : base rC = regT (P + 2) := by
+    have hbrC : base rC = regTape (P + 2) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hrC
-    have hbrD : base rD = regT 4 := by
+    have hbrD : base rD = regTape 4 := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hrD
-    have hbt : base tReg = regT i := by
+    have hbt : base tReg = regTape i := by
       rw [hbase, Function.update_of_ne (by decide), Function.update_self]
     have hlit : ∀ (s : Bool) (q : ℕ), q < Fintype.card N.Q →
         LitDesc.Spec base tmp tmp2 M (steps + 1) (max (Fintype.card N.Q) 3)
@@ -397,13 +397,13 @@ theorem posChunkTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1)) :
     (posChunkTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (List.range (P + 1)).flatMap (fun pos =>
           CNF.encode (exactlyOne ((List.range 4).map
             (vCellF Qc steps P i tp pos))))))
@@ -414,16 +414,16 @@ theorem posChunkTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
   have hPM : P + 1 ≤ M := by omega
   have hbody : ∀ j, j < P + 1 →
       (emitCNFTM rA rB rC rD tmp tmp2 (cellLeafD tp)).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range j).flatMap (fun pos =>
             CNF.encode (exactlyOne ((List.range 4).map
               (vCellF Qc steps P i tp pos))))))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range (j + 1)).flatMap (fun pos =>
             CNF.encode (exactlyOne ((List.range 4).map
@@ -431,37 +431,37 @@ theorem posChunkTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
         (cnfBudget 17 6 M) := by
     intro j hj
     set base : Fin nT → Tape :=
-      Function.update (Function.update V pos1Reg (regT j)) pos1Fuel
+      Function.update (Function.update V pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
     have hbaseP : ∀ l, Parked (base l) :=
       parked_update (parked_update hV (parked_regTape _))
         (parked_regCells (by omega))
-    have hbrA : base rA = regT (steps + 1) := by
+    have hbrA : base rA = regTape (steps + 1) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVrA
-    have hbrB : base rB = regT (max Qc 3) := by
+    have hbrB : base rB = regTape (max Qc 3) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVrB
-    have hbrC : base rC = regT (P + 2) := by
+    have hbrC : base rC = regTape (P + 2) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVrC
-    have hbrD : base rD = regT 4 := by
+    have hbrD : base rD = regTape 4 := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVrD
-    have hbt : base tReg = regT i := by
+    have hbt : base tReg = regTape i := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVt
-    have hbp : base pos1Reg = regT j := by
+    have hbp : base pos1Reg = regTape j := by
       rw [hbase, Function.update_of_ne (by decide), Function.update_self]
     have hlit : ∀ (sgn : Bool) (s : ℕ), s < 4 →
         LitDesc.Spec base tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4
@@ -530,18 +530,18 @@ theorem posChunkTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     CNF.encode (exactlyOne ((List.range 4).map
       (vCellF Qc steps P i tp pos)))) with hys'
   have hset : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) ys')
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys') (opBudget M) := by
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1))) ys')
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys') (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
-      (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) ys'
+      (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1))) ys'
       hinp₀ (parked_update (scratch_parked 0 hV) (parked_regTape _))
       (by rw [Function.update_self])).consequence
       (fun _ _ _ h => h) ?_ (setConstTM_le_opBudget (by omega) hPM))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self]
   have hseq := seqTM_hoareTime
@@ -563,13 +563,13 @@ theorem cellsBodyTM_hoareTime (Qc steps P M i : ℕ)
     (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1)) :
     cellsBodyTM.HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (List.range 3).flatMap (fun tp =>
           (List.range (P + 1)).flatMap (fun pos =>
             CNF.encode (exactlyOne ((List.range 4).map
@@ -607,36 +607,36 @@ theorem emitOneHotCellsTM_hoareTime (Qc steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max Qc 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (htReg : work₀ tReg = regT 0)
-    (htFuel : work₀ tFuel = regT (steps + 1))
-    (hp1 : work₀ pos1Reg = regT 0)
-    (hf1 : work₀ pos1Fuel = regT (P + 1)) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max Qc 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (htReg : work₀ tReg = regTape 0)
+    (htFuel : work₀ tFuel = regTape (steps + 1))
+    (hp1 : work₀ pos1Reg = regTape 0)
+    (hf1 : work₀ pos1Fuel = regTape (P + 1)) :
     emitOneHotCellsTM.HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀
-        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update work₀ tReg (regTape (steps + 1))) tmp tmp2 0)
         (ys ++ CNF.encode (oneHotCellsF Qc steps P)))
       (loopBudget M (cellsBodyBudget M)) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
   have hbody : ∀ i, i < steps + 1 → cellsBodyTM.HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
           ⟨i + 2, regCells (steps + 1)⟩)
         (ys ++ (List.range i).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
             (List.range (P + 1)).flatMap (fun pos =>
               CNF.encode (exactlyOne ((List.range 4).map
                 (vCellF Qc steps P t tp pos))))))))
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
           ⟨i + 2, regCells (steps + 1)⟩)
         (ys ++ (List.range (i + 1)).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
@@ -646,10 +646,10 @@ theorem emitOneHotCellsTM_hoareTime (Qc steps P M : ℕ)
       (cellsBodyBudget M) := by
     intro i hi
     set base : Fin nT → Tape :=
-      Function.update (Function.update work₀ tReg (regT i)) tFuel
+      Function.update (Function.update work₀ tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
@@ -771,7 +771,7 @@ theorem headLitD_spec {tp : ℕ} (htp : tp < 3) {Qc steps P M i pos : ℕ}
     (hi : i ≤ steps) (hpos : pos ≤ P)
     {posSrc : Fin nT} (hst : posSrc ≠ tmp) (hst2 : posSrc ≠ tmp2)
     {base : Fin nT → Tape} (sgn : Bool)
-    (hbt : base tReg = regT i) (hbp : base posSrc = regT pos) :
+    (hbt : base tReg = regTape i) (hbp : base posSrc = regTape pos) :
     LitDesc.Spec base tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4
       (headLitD sgn tp posSrc) ⟨sgn, vHeadF Qc steps P i tp pos⟩ := by
   obtain ⟨k0, k1, k2, k3, k4⟩ := flatCaps (tag := 3) (by omega)
@@ -786,13 +786,13 @@ theorem headAtLeastTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1)) :
     (headAtLeastTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (Clause.encode (atLeastOne ((List.range (P + 1)).map
           (vHeadF Qc steps P i tp))) ++ [true, false])))
       (headAtLeastBudget M) := by
@@ -803,36 +803,36 @@ theorem headAtLeastTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
   have hbody : ∀ j, j < P + 1 →
       (seqTM ((headLitD true tp pos1Reg).tm rA rB rC rD tmp tmp2)
         (resetScratchTM tmp tmp2)).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range j).flatMap (fun pos =>
             (⟨true, vHeadF Qc steps P i tp pos⟩ : Lit).word)))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range (j + 1)).flatMap (fun pos =>
             (⟨true, vHeadF Qc steps P i tp pos⟩ : Lit).word)))
         (emitVarBudget M + 1 + (2 * opBudget M + 1)) := by
     intro j hj
     set base : Fin nT → Tape :=
-      Function.update (Function.update V pos1Reg (regT j)) pos1Fuel
+      Function.update (Function.update V pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
     have hbaseP : ∀ l, Parked (base l) :=
       parked_update (parked_update hV (parked_regTape _))
         (parked_regCells (by omega))
-    have hbt : base tReg = regT i := by
+    have hbt : base tReg = regTape i := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVt
-    have hbp : base pos1Reg = regT j := by
+    have hbp : base pos1Reg = regTape j := by
       rw [hbase, Function.update_of_ne (by decide), Function.update_self]
     have hlit := (headLitD_spec htp hM hi (show j ≤ P by omega)
       (by decide) (by decide) true hbt hbp).emit rA rB rC rD tmp tmp2
@@ -883,22 +883,22 @@ theorem headAtLeastTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
   set ys' : List Bool := ys ++ (List.range (P + 1)).flatMap (fun pos =>
     (⟨true, vHeadF Qc steps P i tp pos⟩ : Lit).word) with hys'
   have hsep : (emitBitsTM [true, false] : TM nT).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) ys')
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1))) ys')
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1)))
         (ys' ++ [true, false]))
       2 :=
     emitBitsTM_hoareTime [true, false] inp₀ _ ys' hinp₀
       (parked_update (scratch_parked 0 hV) (parked_regTape _))
   have hset : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1)))
         (ys' ++ [true, false]))
-      (emitPred inp₀ (scratch V tmp tmp2 0) (ys' ++ [true, false]))
+      (EmitPred inp₀ (scratch V tmp tmp2 0) (ys' ++ [true, false]))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
-      (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
+      (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1)))
       (ys' ++ [true, false]) hinp₀
       (parked_update (scratch_parked 0 hV) (parked_regTape _))
       (by rw [Function.update_self])).consequence
@@ -906,7 +906,7 @@ theorem headAtLeastTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self]
   have htail := seqTM_hoareTime (emitBitsTM [true, false])
@@ -965,22 +965,22 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     (hq : q ≤ P)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp2 : V pos2Reg = regT 0) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp2 : V pos2Reg = regTape 0) :
     (headPairBodyTM tp).HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
-            (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q)) auxReg
+            (regTape (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
         ys)
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
-            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q)) auxReg
+            (regTape (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
         (ys ++ pairWord Qc steps P i tp q))
       (pairBodyBudget M) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
@@ -988,12 +988,12 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     (by omega) hM
   set B : Fin nT → Tape :=
     Function.update
-      (Function.update (Function.update V pos1Reg (regT q)) auxReg
-        (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ with hB
+      (Function.update (Function.update V pos1Reg (regTape q)) auxReg
+        (regTape (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ with hB
   have hstate : Function.update
       (Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
-        (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q)) auxReg
+        (regTape (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩
       = scratch B tmp tmp2 0 := by
     rw [scratch_update_comm (by decide) (by decide),
       scratch_update_comm (by decide) (by decide),
@@ -1001,39 +1001,39 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
   have hBP : ∀ l, Parked (B l) :=
     parked_update (parked_update (parked_update hV (parked_regTape _))
       (parked_regTape _)) (parked_regCells (by omega))
-  have hBrA : B rA = regT (steps + 1) := by
+  have hBrA : B rA = regTape (steps + 1) := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVrA
-  have hBrB : B rB = regT (max Qc 3) := by
+  have hBrB : B rB = regTape (max Qc 3) := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVrB
-  have hBrC : B rC = regT (P + 2) := by
+  have hBrC : B rC = regTape (P + 2) := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVrC
-  have hBrD : B rD = regT 4 := by
+  have hBrD : B rD = regTape 4 := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVrD
-  have hBt : B tReg = regT i := by
+  have hBt : B tReg = regTape i := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVt
-  have hBp1 : B pos1Reg = regT q := by
+  have hBp1 : B pos1Reg = regTape q := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_self]
-  have hBp2 : B pos2Reg = regT 0 := by
+  have hBp2 : B pos2Reg = regTape 0 := by
     rw [hB, Function.update_of_ne (by decide), Function.update_of_ne (by decide),
       Function.update_of_ne (by decide)]
     exact hVp2
-  have hBaux : B auxReg = regT (P - q) := by
+  have hBaux : B auxReg = regTape (P - q) := by
     rw [hB, Function.update_of_ne (by decide), Function.update_self]
   -- Stage 1: pos2 := q.
   have h₁ : (copyIntoTM pos1Reg pos2Reg).HoareTime
-      (emitPred inp₀ (scratch B tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0)
+      (EmitPred inp₀ (scratch B tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch (Function.update B pos2Reg (regTape q)) tmp tmp2 0)
         ys) (opBudget M) := by
     refine ((copyIntoTM_hoareTime pos1Reg pos2Reg (by decide) q 0 inp₀
       (scratch B tmp tmp2 0) ys hinp₀ (fun l _ => scratch_parked 0 hBP l)
@@ -1046,13 +1046,13 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     rw [g2, scratch_update_comm (by decide) (by decide)]
   -- Stage 2: pos2 := q + 1.
   have h₂ : (incRegTM pos2Reg).HoareTime
-      (emitPred inp₀ (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0)
+      (EmitPred inp₀ (scratch (Function.update B pos2Reg (regTape q)) tmp tmp2 0)
         ys)
-      (emitPred inp₀
-        (scratch (Function.update B pos2Reg (regT (q + 1))) tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update B pos2Reg (regTape (q + 1))) tmp tmp2 0) ys)
       (opBudget M) := by
     refine ((incRegTM_hoareTime pos2Reg q inp₀
-      (scratch (Function.update B pos2Reg (regT q)) tmp tmp2 0) ys hinp₀
+      (scratch (Function.update B pos2Reg (regTape q)) tmp tmp2 0) ys hinp₀
       (fun l _ => scratch_parked 0 (parked_update hBP (parked_regTape _)) l)
       (by rw [scratch_apply_ne (by decide) (by decide), Function.update_self])
       ).consequence (fun _ _ _ h => h) ?_ (incRegTM_le_opBudget (by omega)))
@@ -1060,24 +1060,24 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     refine ⟨g1, ?_, g3⟩
     rw [g2, scratch_update_comm (by decide) (by decide), Function.update_idem]
   -- Stage 3: the inner offset sweep.
-  set B₂ : Fin nT → Tape := Function.update B pos2Reg (regT (q + 1)) with hB₂
+  set B₂ : Fin nT → Tape := Function.update B pos2Reg (regTape (q + 1)) with hB₂
   have hB₂P : ∀ l, Parked (B₂ l) := parked_update hBP (parked_regTape _)
   have hinner : ∀ j, j < P - q →
       (emitClauseTM rA rB rC rD tmp tmp2
         [headLitD false tp pos1Reg, headLitD false tp pos2Reg]).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
             (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
-              (regT (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
+              (regTape (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
           (ys ++ (List.range j).flatMap (fun j' =>
             Clause.encode
               ([⟨false, vHeadF Qc steps P i tp q⟩,
                 ⟨false, vHeadF Qc steps P i tp (q + 1 + j')⟩] : Clause)
               ++ [true, false])))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
             (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
-              (regT (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
+              (regTape (q + 1 + j))) auxReg ⟨j + 2, regCells (P - q)⟩)
           (ys ++ (List.range (j + 1)).flatMap (fun j' =>
             Clause.encode
               ([⟨false, vHeadF Qc steps P i tp q⟩,
@@ -1086,27 +1086,27 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
         (clauseBudget 2 M) := by
     intro j hj
     set C : Fin nT → Tape :=
-      Function.update (Function.update B₂ pos2Reg (regT (q + 1 + j))) auxReg
+      Function.update (Function.update B₂ pos2Reg (regTape (q + 1 + j))) auxReg
         ⟨j + 2, regCells (P - q)⟩ with hC
     have hstate' : Function.update
-        (Function.update (scratch B₂ tmp tmp2 0) pos2Reg (regT (q + 1 + j)))
+        (Function.update (scratch B₂ tmp tmp2 0) pos2Reg (regTape (q + 1 + j)))
         auxReg ⟨j + 2, regCells (P - q)⟩ = scratch C tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
     have hCP : ∀ l, Parked (C l) :=
       parked_update (parked_update hB₂P (parked_regTape _))
         (parked_regCells (by omega))
-    have hCt : C tReg = regT i := by
+    have hCt : C tReg = regTape i := by
       rw [hC, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide), hB₂,
         Function.update_of_ne (by decide)]
       exact hBt
-    have hCp1 : C pos1Reg = regT q := by
+    have hCp1 : C pos1Reg = regTape q := by
       rw [hC, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide), hB₂,
         Function.update_of_ne (by decide)]
       exact hBp1
-    have hCp2 : C pos2Reg = regT (q + 1 + j) := by
+    have hCp2 : C pos2Reg = regTape (q + 1 + j) := by
       rw [hC, Function.update_of_ne (by decide), Function.update_self]
     have hf : List.Forall₂
         (LitDesc.Spec C tmp tmp2 M (steps + 1) (max Qc 3) (P + 2) 4)
@@ -1163,16 +1163,16 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     hinner
   -- Stage 4: pos2 := 0.
   have h₄ : (setConstTM pos2Reg 0).HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
-          (regT (q + 1 + (P - q))))
+          (regTape (q + 1 + (P - q))))
         (ys ++ pairWord Qc steps P i tp q))
-      (emitPred inp₀ (scratch B tmp tmp2 0)
+      (EmitPred inp₀ (scratch B tmp tmp2 0)
         (ys ++ pairWord Qc steps P i tp q))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos2Reg 0 (q + 1 + (P - q)) inp₀
       (Function.update (scratch B₂ tmp tmp2 0) pos2Reg
-        (regT (q + 1 + (P - q))))
+        (regTape (q + 1 + (P - q))))
       (ys ++ pairWord Qc steps P i tp q) hinp₀
       (parked_update (scratch_parked 0 hB₂P) (parked_regTape _))
       (by rw [Function.update_self])).consequence
@@ -1181,16 +1181,16 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem, scratch_update_comm (by decide) (by decide), hB₂,
       Function.update_idem,
-      show regT 0 = B pos2Reg from hBp2.symm, Function.update_eq_self]
+      show regTape 0 = B pos2Reg from hBp2.symm, Function.update_eq_self]
   -- Stage 5: shrink the fuel.
   have h₅ : (decRegTM auxReg).HoareTime
-      (emitPred inp₀ (scratch B tmp tmp2 0)
+      (EmitPred inp₀ (scratch B tmp tmp2 0)
         (ys ++ pairWord Qc steps P i tp q))
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
-            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q)) auxReg
+            (regTape (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
         (ys ++ pairWord Qc steps P i tp q))
       (opBudget M) := by
     refine ((decRegTM_hoareTime auxReg (P - q) inp₀ (scratch B tmp tmp2 0)
@@ -1204,12 +1204,12 @@ theorem headPairBodyTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i q : �
       show P - q - 1 = P - (q + 1) from by omega]
     rw [show Function.update
         (Function.update
-          (Function.update (Function.update V pos1Reg (regT q)) auxReg
-            (regT (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩) auxReg
-        (regT (P - (q + 1)))
+          (Function.update (Function.update V pos1Reg (regTape q)) auxReg
+            (regTape (P - q))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩) auxReg
+        (regTape (P - (q + 1)))
       = Function.update
-          (Function.update (Function.update V pos1Reg (regT q)) auxReg
-            (regT (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ from by
+          (Function.update (Function.update V pos1Reg (regTape q)) auxReg
+            (regTape (P - (q + 1)))) pos1Fuel ⟨q + 2, regCells (P + 1)⟩ from by
       rw [Function.update_comm (show pos1Fuel ≠ auxReg by decide),
         Function.update_idem]]
     rw [scratch_update_comm (by decide) (by decide),
@@ -1251,15 +1251,15 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
-    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT P) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1))
+    (hVp2 : V pos2Reg = regTape 0) (hVaux : V auxReg = regTape P) :
     (headAtMostTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀
-        (scratch (Function.update V auxReg (regT 0)) tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update V auxReg (regTape 0)) tmp tmp2 0)
         (ys ++ CNF.encode (atMostOne ((List.range (P + 1)).map
           (vHeadF Qc steps P i tp)))))
       (headAtMostBudget M) := by
@@ -1267,17 +1267,17 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
   set u : ℕ → Fin nT → Tape := fun q =>
-    Function.update (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q))
-      auxReg (regT (P - q)) with hu
+    Function.update (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q))
+      auxReg (regTape (P - q)) with hu
   have huP : ∀ q j, Parked (u q j) := fun q =>
     parked_update (parked_update (scratch_parked 0 hV) (parked_regTape _))
       (parked_regTape _)
   have hbody : ∀ q, q < P + 1 → (headPairBodyTM tp).HoareTime
-      (emitPred inp₀ (Function.update (u q) pos1Fuel
+      (EmitPred inp₀ (Function.update (u q) pos1Fuel
         ⟨q + 2, regCells (P + 1)⟩)
         (ys ++ (List.range q).flatMap (pairWord Qc steps P i tp)))
-      (emitPred inp₀
-        (Function.update (Function.update (u (q + 1)) pos1Reg (regT q))
+      (EmitPred inp₀
+        (Function.update (Function.update (u (q + 1)) pos1Reg (regTape q))
           pos1Fuel ⟨q + 2, regCells (P + 1)⟩)
         (ys ++ (List.range (q + 1)).flatMap (pairWord Qc steps P i tp)))
       (pairBodyBudget M) := by
@@ -1291,11 +1291,11 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     · rw [g2, hu]
       rw [show Function.update
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (q + 1)))
-            auxReg (regT (P - (q + 1)))) pos1Reg (regT q)
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (q + 1)))
+            auxReg (regTape (P - (q + 1)))) pos1Reg (regTape q)
         = Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT q)) auxReg
-            (regT (P - (q + 1))) from by
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape q)) auxReg
+            (regTape (P - (q + 1))) from by
         rw [Function.update_comm (show pos1Reg ≠ auxReg by decide),
           Function.update_idem,
           Function.update_comm (show auxReg ≠ pos1Reg by decide)]]
@@ -1317,9 +1317,9 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
       rw [Function.update_of_ne (by decide), Function.update_self])
     hbody
   have hset : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀ (u (P + 1))
+      (EmitPred inp₀ (u (P + 1))
         (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
-      (emitPred inp₀ (scratch (Function.update V auxReg (regT 0)) tmp tmp2 0)
+      (EmitPred inp₀ (scratch (Function.update V auxReg (regTape 0)) tmp tmp2 0)
         (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀ (u (P + 1)) _ hinp₀
@@ -1335,24 +1335,24 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     rw [g2, hu]
     rw [show Function.update
         (Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
-          auxReg (regT (P - (P + 1)))) pos1Reg (regT 0)
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1)))
+          auxReg (regTape (P - (P + 1)))) pos1Reg (regTape 0)
       = Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)) auxReg
-          (regT 0) from by
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 0)) auxReg
+          (regTape 0) from by
       rw [show P - (P + 1) = 0 from by omega,
         Function.update_comm (show pos1Reg ≠ auxReg by decide),
         Function.update_idem,
         Function.update_comm (show auxReg ≠ pos1Reg by decide)]]
-    have hbase : Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)
+    have hbase : Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 0)
         = scratch V tmp tmp2 0 := by
-      rw [show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      rw [show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
           rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
         Function.update_eq_self]
     rw [hbase, scratch_update_comm (by decide) (by decide)]
   have hloop' : (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (u (P + 1))
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (u (P + 1))
         (ys ++ (List.range (P + 1)).flatMap (pairWord Qc steps P i tp)))
       (loopBudget M (pairBodyBudget M)) := by
     refine (hloop.mono_bound
@@ -1362,13 +1362,13 @@ theorem headAtMostTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     rw [g2, hu]
     show scratch V tmp tmp2 0
       = Function.update
-          (Function.update (scratch V tmp tmp2 0) pos1Reg (regT 0)) auxReg
-          (regT (P - 0))
-    rw [show regT (P - 0) = regT P from rfl,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+          (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape 0)) auxReg
+          (regTape (P - 0))
+    rw [show regTape (P - 0) = regTape P from rfl,
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self,
-      show regT P = scratch V tmp tmp2 0 auxReg from by
+      show regTape P = scratch V tmp tmp2 0 auxReg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVaux.symm,
       Function.update_eq_self]
   have hseq := seqTM_hoareTime (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel)
@@ -1403,27 +1403,27 @@ theorem headLeafTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
-    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT 0)
-    (hVpReg : V pReg = regT P) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1))
+    (hVp2 : V pos2Reg = regTape 0) (hVaux : V auxReg = regTape 0)
+    (hVpReg : V pReg = regTape P) :
     (headLeafTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ CNF.encode (exactlyOne ((List.range (P + 1)).map
           (vHeadF Qc steps P i tp)))))
       (headLeafBudget M) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
-  set V₁ : Fin nT → Tape := Function.update V auxReg (regT P) with hV₁
+  set V₁ : Fin nT → Tape := Function.update V auxReg (regTape P) with hV₁
   have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (parked_regTape _)
   -- Stage 1: auxReg := P.
   have h₁ : (copyIntoTM pReg auxReg).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
     refine ((copyIntoTM_hoareTime pReg auxReg (by decide) P 0 inp₀
       (scratch V tmp tmp2 0) ys hinp₀ (fun l _ => scratch_parked 0 hV l)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVpReg)
@@ -1466,7 +1466,7 @@ theorem headLeafTM_hoareTime (tp : ℕ) (htp : tp < 3) (Qc steps P M i : ℕ)
   rintro inp work out ⟨g1, g2, g3⟩
   refine ⟨g1, ?_, ?_⟩
   · rw [g2, hV₁, Function.update_idem,
-      show regT 0 = V auxReg from hVaux.symm, Function.update_eq_self]
+      show regTape 0 = V auxReg from hVaux.symm, Function.update_eq_self]
   · rw [show exactlyOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
       = atLeastOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
         :: atMostOne ((List.range (P + 1)).map (vHeadF Qc steps P i tp))
@@ -1488,15 +1488,15 @@ theorem headsBodyTM_hoareTime (Qc steps P M i : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M) (hi : i ≤ steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1))
-    (hVp2 : V pos2Reg = regT 0) (hVaux : V auxReg = regT 0)
-    (hVpReg : V pReg = regT P) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1))
+    (hVp2 : V pos2Reg = regTape 0) (hVaux : V auxReg = regTape 0)
+    (hVpReg : V pReg = regTape P) :
     headsBodyTM.HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (List.range 3).flatMap (fun tp =>
           CNF.encode (exactlyOne ((List.range (P + 1)).map
             (vHeadF Qc steps P i tp))))))
@@ -1533,38 +1533,38 @@ theorem emitOneHotHeadsTM_hoareTime (Qc steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max Qc 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (htReg : work₀ tReg = regT 0)
-    (htFuel : work₀ tFuel = regT (steps + 1))
-    (hp1 : work₀ pos1Reg = regT 0)
-    (hf1 : work₀ pos1Fuel = regT (P + 1))
-    (hp2 : work₀ pos2Reg = regT 0)
-    (haux : work₀ auxReg = regT 0)
-    (hpReg : work₀ pReg = regT P) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max Qc 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (htReg : work₀ tReg = regTape 0)
+    (htFuel : work₀ tFuel = regTape (steps + 1))
+    (hp1 : work₀ pos1Reg = regTape 0)
+    (hf1 : work₀ pos1Fuel = regTape (P + 1))
+    (hp2 : work₀ pos2Reg = regTape 0)
+    (haux : work₀ auxReg = regTape 0)
+    (hpReg : work₀ pReg = regTape P) :
     emitOneHotHeadsTM.HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀
-        (scratch (Function.update work₀ tReg (regT (steps + 1))) tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update work₀ tReg (regTape (steps + 1))) tmp tmp2 0)
         (ys ++ CNF.encode (oneHotHeadsF Qc steps P)))
       (loopBudget M (headsBodyBudget M)) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
   have hbody : ∀ i, i < steps + 1 → headsBodyTM.HoareTime
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
           ⟨i + 2, regCells (steps + 1)⟩)
         (ys ++ (List.range i).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
             CNF.encode (exactlyOne ((List.range (P + 1)).map
               (vHeadF Qc steps P t tp)))))))
-      (emitPred inp₀
+      (EmitPred inp₀
         (Function.update
-          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
           ⟨i + 2, regCells (steps + 1)⟩)
         (ys ++ (List.range (i + 1)).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
@@ -1573,10 +1573,10 @@ theorem emitOneHotHeadsTM_hoareTime (Qc steps P M : ℕ)
       (headsBodyBudget M) := by
     intro i hi
     set base : Fin nT → Tape :=
-      Function.update (Function.update work₀ tReg (regT i)) tFuel
+      Function.update (Function.update work₀ tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i)) tFuel
+        (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i)) tFuel
         ⟨i + 2, regCells (steps + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
@@ -1699,13 +1699,13 @@ theorem framePosChunkTM_hoareTime (tp : ℕ) (htp : tp < 3)
     (hi : i < steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i) (hVtp : V tPlusReg = regT (i + 1))
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i) (hVtp : V tPlusReg = regTape (i + 1))
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1)) :
     (framePosChunkTM tp).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (List.range (P + 1)).flatMap (fun pos =>
           CNF.encode (frameLeafF Qc steps P i tp pos))))
       (framePosChunkBudget M) := by
@@ -1715,40 +1715,40 @@ theorem framePosChunkTM_hoareTime (tp : ℕ) (htp : tp < 3)
   have hPM : P + 1 ≤ M := by omega
   have hbody : ∀ j, j < P + 1 →
       (emitCNFTM rA rB rC rD tmp tmp2 (frameLeafD tp)).HoareTime
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range j).flatMap (fun pos =>
             CNF.encode (frameLeafF Qc steps P i tp pos))))
-        (emitPred inp₀
+        (EmitPred inp₀
           (Function.update
-            (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+            (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
             ⟨j + 2, regCells (P + 1)⟩)
           (ys ++ (List.range (j + 1)).flatMap (fun pos =>
             CNF.encode (frameLeafF Qc steps P i tp pos))))
         (cnfBudget 8 3 M) := by
     intro j hj
     set base : Fin nT → Tape :=
-      Function.update (Function.update V pos1Reg (regT j)) pos1Fuel
+      Function.update (Function.update V pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ with hbase
     have hstate : Function.update
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT j)) pos1Fuel
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape j)) pos1Fuel
         ⟨j + 2, regCells (P + 1)⟩ = scratch base tmp tmp2 0 := by
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide)]
     have hbaseP : ∀ l, Parked (base l) :=
       parked_update (parked_update hV (parked_regTape _))
         (parked_regCells (by omega))
-    have hbt : base tReg = regT i := by
+    have hbt : base tReg = regTape i := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVt
-    have hbtp : base tPlusReg = regT (i + 1) := by
+    have hbtp : base tPlusReg = regTape (i + 1) := by
       rw [hbase, Function.update_of_ne (by decide),
         Function.update_of_ne (by decide)]
       exact hVtp
-    have hbp : base pos1Reg = regT j := by
+    have hbp : base pos1Reg = regTape j := by
       rw [hbase, Function.update_of_ne (by decide), Function.update_self]
     have hheadlit : LitDesc.Spec base tmp tmp2 M (steps + 1) (max Qc 3)
         (P + 2) 4 ⟨true, 3, .inl tReg, .inr tp, .inl pos1Reg, .inr 0⟩
@@ -1831,23 +1831,23 @@ theorem framePosChunkTM_hoareTime (tp : ℕ) (htp : tp < 3)
     (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1)
     hbody
   have hset : (setConstTM pos1Reg 0).HoareTime
-      (emitPred inp₀
-        (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1)))
+      (EmitPred inp₀
+        (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1)))
         (ys ++ (List.range (P + 1)).flatMap (fun pos =>
           CNF.encode (frameLeafF Qc steps P i tp pos))))
-      (emitPred inp₀ (scratch V tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0)
         (ys ++ (List.range (P + 1)).flatMap (fun pos =>
           CNF.encode (frameLeafF Qc steps P i tp pos))))
       (opBudget M) := by
     refine ((setConstTM_hoareTime pos1Reg 0 (P + 1) inp₀
-      (Function.update (scratch V tmp tmp2 0) pos1Reg (regT (P + 1))) _
+      (Function.update (scratch V tmp tmp2 0) pos1Reg (regTape (P + 1))) _
       hinp₀ (parked_update (scratch_parked 0 hV) (parked_regTape _))
       (by rw [Function.update_self])).consequence
       (fun _ _ _ h => h) ?_ (setConstTM_le_opBudget (by omega) hPM))
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, Function.update_idem,
-      show regT 0 = scratch V tmp tmp2 0 pos1Reg from by
+      show regTape 0 = scratch V tmp tmp2 0 pos1Reg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact hVp1.symm,
       Function.update_eq_self]
   have hseq := seqTM_hoareTime
@@ -1867,14 +1867,14 @@ theorem frameRowTM_hoareTime (Qc steps P M i : ℕ)
     (hi : i < steps)
     (inp₀ : Tape) (V : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hV : ∀ j, Parked (V j))
-    (hVrA : V rA = regT (steps + 1)) (hVrB : V rB = regT (max Qc 3))
-    (hVrC : V rC = regT (P + 2)) (hVrD : V rD = regT 4)
-    (hVt : V tReg = regT i) (hVtp : V tPlusReg = regT i)
-    (hVp1 : V pos1Reg = regT 0) (hVf1 : V pos1Fuel = regT (P + 1)) :
+    (hVrA : V rA = regTape (steps + 1)) (hVrB : V rB = regTape (max Qc 3))
+    (hVrC : V rC = regTape (P + 2)) (hVrD : V rD = regTape 4)
+    (hVt : V tReg = regTape i) (hVtp : V tPlusReg = regTape i)
+    (hVp1 : V pos1Reg = regTape 0) (hVf1 : V pos1Fuel = regTape (P + 1)) :
     frameRowTM.HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀
-        (scratch (Function.update V tPlusReg (regT (i + 1))) tmp tmp2 0)
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀
+        (scratch (Function.update V tPlusReg (regTape (i + 1))) tmp tmp2 0)
         (ys ++ (List.range 3).flatMap (fun tp =>
           (List.range (P + 1)).flatMap (fun pos =>
             CNF.encode (frameLeafF Qc steps P i tp pos)))))
@@ -1882,11 +1882,11 @@ theorem frameRowTM_hoareTime (Qc steps P M i : ℕ)
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
-  set V₁ : Fin nT → Tape := Function.update V tPlusReg (regT (i + 1)) with hV₁
+  set V₁ : Fin nT → Tape := Function.update V tPlusReg (regTape (i + 1)) with hV₁
   have hV₁P : ∀ j, Parked (V₁ j) := parked_update hV (parked_regTape _)
   have hinc : (incRegTM tPlusReg).HoareTime
-      (emitPred inp₀ (scratch V tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
+      (EmitPred inp₀ (scratch V tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch V₁ tmp tmp2 0) ys) (opBudget M) := by
     refine ((incRegTM_hoareTime tPlusReg i inp₀ (scratch V tmp tmp2 0) ys
       hinp₀ (fun l _ => scratch_parked 0 hV l)
       (by rw [scratch_apply_ne (by decide) (by decide)]; exact hVtp)
@@ -1894,10 +1894,10 @@ theorem frameRowTM_hoareTime (Qc steps P M i : ℕ)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, scratch_update_comm (by decide) (by decide)]
-  have hV₁facts : V₁ rA = regT (steps + 1) ∧ V₁ rB = regT (max Qc 3)
-      ∧ V₁ rC = regT (P + 2) ∧ V₁ rD = regT 4 ∧ V₁ tReg = regT i
-      ∧ V₁ tPlusReg = regT (i + 1) ∧ V₁ pos1Reg = regT 0
-      ∧ V₁ pos1Fuel = regT (P + 1) := by
+  have hV₁facts : V₁ rA = regTape (steps + 1) ∧ V₁ rB = regTape (max Qc 3)
+      ∧ V₁ rC = regTape (P + 2) ∧ V₁ rD = regTape 4 ∧ V₁ tReg = regTape i
+      ∧ V₁ tPlusReg = regTape (i + 1) ∧ V₁ pos1Reg = regTape 0
+      ∧ V₁ pos1Fuel = regTape (P + 1) := by
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
       rw [hV₁] <;>
       first
@@ -1938,40 +1938,40 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
     (hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M)
     (inp₀ : Tape) (work₀ : Fin nT → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT (steps + 1))
-    (hrB : work₀ rB = regT (max Qc 3))
-    (hrC : work₀ rC = regT (P + 2))
-    (hrD : work₀ rD = regT 4)
-    (htReg : work₀ tReg = regT 0)
-    (htFuel : work₀ tFuel = regT steps)
-    (htp : work₀ tPlusReg = regT 0)
-    (hp1 : work₀ pos1Reg = regT 0)
-    (hf1 : work₀ pos1Fuel = regT (P + 1)) :
+    (hrA : work₀ rA = regTape (steps + 1))
+    (hrB : work₀ rB = regTape (max Qc 3))
+    (hrC : work₀ rC = regTape (P + 2))
+    (hrD : work₀ rD = regTape 4)
+    (htReg : work₀ tReg = regTape 0)
+    (htFuel : work₀ tFuel = regTape steps)
+    (htp : work₀ tPlusReg = regTape 0)
+    (hp1 : work₀ pos1Reg = regTape 0)
+    (hf1 : work₀ pos1Fuel = regTape (P + 1)) :
     emitFrameTM.HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀
         (scratch
-          (Function.update (Function.update work₀ tReg (regT steps)) tPlusReg
-            (regT steps)) tmp tmp2 0)
+          (Function.update (Function.update work₀ tReg (regTape steps)) tPlusReg
+            (regTape steps)) tmp tmp2 0)
         (ys ++ CNF.encode (frameClausesF Qc steps P)))
       (loopBudget M (frameRowBudget M)) := by
   have hA1 : (1:ℕ) ≤ steps + 1 := by omega
   obtain ⟨hAM, hBM, hCM, hDM⟩ := radix_caps hA1 (by omega) (by omega)
     (by omega) hM
   set u : ℕ → Fin nT → Tape := fun i =>
-    Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg (regT i))
-      tPlusReg (regT i) with hu
+    Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape i))
+      tPlusReg (regTape i) with hu
   have huP : ∀ i j, Parked (u i j) := fun i =>
     parked_update (parked_update (scratch_parked 0 hwork₀) (parked_regTape _))
       (parked_regTape _)
   have hbody : ∀ i, i < steps → frameRowTM.HoareTime
-      (emitPred inp₀ (Function.update (u i) tFuel ⟨i + 2, regCells steps⟩)
+      (EmitPred inp₀ (Function.update (u i) tFuel ⟨i + 2, regCells steps⟩)
         (ys ++ (List.range i).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
             (List.range (P + 1)).flatMap (fun pos =>
               CNF.encode (frameLeafF Qc steps P t tp pos))))))
-      (emitPred inp₀
-        (Function.update (Function.update (u (i + 1)) tReg (regT i)) tFuel
+      (EmitPred inp₀
+        (Function.update (Function.update (u (i + 1)) tReg (regTape i)) tFuel
           ⟨i + 2, regCells steps⟩)
         (ys ++ (List.range (i + 1)).flatMap (fun t =>
           (List.range 3).flatMap (fun tp =>
@@ -1981,13 +1981,13 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
     intro i hi
     set base : Fin nT → Tape :=
       Function.update
-        (Function.update (Function.update work₀ tReg (regT i)) tPlusReg
-          (regT i)) tFuel ⟨i + 2, regCells steps⟩ with hbase
+        (Function.update (Function.update work₀ tReg (regTape i)) tPlusReg
+          (regTape i)) tFuel ⟨i + 2, regCells steps⟩ with hbase
     have hstate : Function.update (u i) tFuel ⟨i + 2, regCells steps⟩
         = scratch base tmp tmp2 0 := by
       rw [hu]
       show Function.update (Function.update (Function.update
-        (scratch work₀ tmp tmp2 0) tReg (regT i)) tPlusReg (regT i)) tFuel
+        (scratch work₀ tmp tmp2 0) tReg (regTape i)) tPlusReg (regTape i)) tFuel
         ⟨i + 2, regCells steps⟩ = _
       rw [scratch_update_comm (by decide) (by decide),
         scratch_update_comm (by decide) (by decide),
@@ -2027,26 +2027,26 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, ?_⟩
     · rw [g2, hu]
-      show scratch (Function.update base tPlusReg (regT (i + 1))) tmp tmp2 0
+      show scratch (Function.update base tPlusReg (regTape (i + 1))) tmp tmp2 0
         = Function.update (Function.update (Function.update (Function.update
-            (scratch work₀ tmp tmp2 0) tReg (regT (i + 1))) tPlusReg
-            (regT (i + 1))) tReg (regT i)) tFuel ⟨i + 2, regCells steps⟩
+            (scratch work₀ tmp tmp2 0) tReg (regTape (i + 1))) tPlusReg
+            (regTape (i + 1))) tReg (regTape i)) tFuel ⟨i + 2, regCells steps⟩
       rw [hbase,
         show Function.update (Function.update (Function.update
-          (Function.update work₀ tReg (regT i)) tPlusReg (regT i)) tFuel
-          ⟨i + 2, regCells steps⟩) tPlusReg (regT (i + 1))
+          (Function.update work₀ tReg (regTape i)) tPlusReg (regTape i)) tFuel
+          ⟨i + 2, regCells steps⟩) tPlusReg (regTape (i + 1))
         = Function.update (Function.update (Function.update work₀ tReg
-            (regT i)) tPlusReg (regT (i + 1))) tFuel
+            (regTape i)) tPlusReg (regTape (i + 1))) tFuel
             ⟨i + 2, regCells steps⟩ from by
           rw [Function.update_comm (show tFuel ≠ tPlusReg by decide),
             Function.update_idem]]
       rw [show Function.update (Function.update (Function.update
-          (Function.update (scratch work₀ tmp tmp2 0) tReg (regT (i + 1)))
-          tPlusReg (regT (i + 1))) tReg (regT i)) tFuel
+          (Function.update (scratch work₀ tmp tmp2 0) tReg (regTape (i + 1)))
+          tPlusReg (regTape (i + 1))) tReg (regTape i)) tFuel
           ⟨i + 2, regCells steps⟩
         = Function.update (Function.update (Function.update
-            (scratch work₀ tmp tmp2 0) tReg (regT i)) tPlusReg
-            (regT (i + 1))) tFuel ⟨i + 2, regCells steps⟩ from by
+            (scratch work₀ tmp tmp2 0) tReg (regTape i)) tPlusReg
+            (regTape (i + 1))) tFuel ⟨i + 2, regCells steps⟩ from by
           rw [Function.update_comm (show tPlusReg ≠ tReg by decide),
             Function.update_idem,
             Function.update_comm (show tReg ≠ tPlusReg by decide)]]
@@ -2073,20 +2073,20 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
       rw [Function.update_of_ne (by decide), Function.update_self])
     hbody
   have hpre : ∀ inp work out,
-      emitPred inp₀ (scratch work₀ tmp tmp2 0) ys inp work out →
-      emitPred inp₀ (u 0) ys inp work out := by
+      EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys inp work out →
+      EmitPred inp₀ (u 0) ys inp work out := by
     rintro inp work out ⟨g1, g2, g3⟩
     refine ⟨g1, ?_, g3⟩
     rw [g2, hu]
     show scratch work₀ tmp tmp2 0
       = Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg
-          (regT 0)) tPlusReg (regT 0)
-    rw [show regT 0 = scratch work₀ tmp tmp2 0 tReg from by
+          (regTape 0)) tPlusReg (regTape 0)
+    rw [show regTape 0 = scratch work₀ tmp tmp2 0 tReg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact htReg.symm,
       Function.update_eq_self,
-      show scratch work₀ tmp tmp2 0 tReg = regT 0 from by
+      show scratch work₀ tmp tmp2 0 tReg = regTape 0 from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact htReg]
-    rw [show regT 0 = scratch work₀ tmp tmp2 0 tPlusReg from by
+    rw [show regTape 0 = scratch work₀ tmp tmp2 0 tPlusReg from by
         rw [scratch_apply_ne (by decide) (by decide)]; exact htp.symm,
       Function.update_eq_self]
   refine (hloop.mono_bound (loop_le_loopBudget (by omega))).consequence
@@ -2095,7 +2095,7 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
   refine ⟨g1, ?_, ?_⟩
   · rw [g2, hu]
     show Function.update (Function.update (scratch work₀ tmp tmp2 0) tReg
-        (regT steps)) tPlusReg (regT steps) = _
+        (regTape steps)) tPlusReg (regTape steps) = _
     rw [scratch_update_comm (by decide) (by decide),
       scratch_update_comm (by decide) (by decide)]
   · rw [show frameClausesF Qc steps P

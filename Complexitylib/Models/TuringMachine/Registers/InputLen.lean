@@ -10,7 +10,7 @@ import Complexitylib.Models.TuringMachine.Registers.Arith
 
 `inputLenRegTM q` scans the input tape in lockstep with register `q`, writing
 one mark per input bit, then rewinds both heads to cell 1: from the bumped
-initial configuration it puts `regT |x|` in register `q`, restoring the input
+initial configuration it puts `regTape |x|` in register `q`, restoring the input
 tape exactly. This is the reduction emitter's only input-reading machine
 besides the start-clause emitter, and the last hand-rolled machine of the
 campaign (`docs/A5-ReductionEmitter.md`).
@@ -386,14 +386,14 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
       rfl
 
 /-- **`inputLenRegTM` Hoare specification.** From the bumped initial input and
-    `regT 0` in `q`, reach `regT |x|` in `q`, restoring the input exactly. -/
+    `regTape 0` in `q`, reach `regTape |x|` in `q`, restoring the input exactly. -/
 theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
     (work₀ : Fin n → Tape) (ys : List Bool)
-    (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i)) (hq : work₀ q = regT 0) :
+    (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i)) (hq : work₀ q = regTape 0) :
     (inputLenRegTM (n := n) q).HoareTime
-      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ work₀ ys)
-      (emitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
-        (Function.update work₀ q (regT x.length)) ys)
+      (EmitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩ work₀ ys)
+      (EmitPred ⟨1, (Tape.init (x.map Γ.ofBool)).cells⟩
+        (Function.update work₀ q (regTape x.length)) ys)
       (2 * x.length + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, h1, h2, h3, h4, h5, h6, h7⟩ :=

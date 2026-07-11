@@ -294,13 +294,13 @@ def clockedUtmTM : TM 7 :=
 /-- The clocked universal machine's precondition, in started form (the
     machine runs under `retargetInput` mid-sequence): input `pair α x` with
     the head parked at cell 1, the six UTM tapes blank and parked, the
-    clock tape holding the canonical unary register `regT V`, and the
+    clock tape holding the canonical unary register `regTape V`, and the
     output tape blank and parked. -/
 def clockedUtmPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
     inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
     (∀ i : Fin 6, work (Fin.castAdd 1 i) = (Tape.init []).move Dir3.right) ∧
-    work clkT = regT V ∧
+    work clkT = regTape V ∧
     out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- The clocked universal machine's time bound, covering both the
@@ -334,7 +334,7 @@ private def initPost7 (α x : List Bool) (V : ℕ) : TapePred 7 :=
     inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
     out.cells = (Tape.init []).cells ∧ out.head = 1 ∧
-    work clkT = regT V
+    work clkT = regTape V
 
 /-- Entry of the frontier-seek phase (`initPost7` after the seam, with the
     input head bounced off `▷`). -/
@@ -342,7 +342,7 @@ private def seekPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
     inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
-    work clkT = regT V ∧
+    work clkT = regTape V ∧
     out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- Exit of the frontier-seek phase: the clock head has walked to the
@@ -423,7 +423,7 @@ private theorem body6Shape_reads {α x : List Bool} {w : Fin 6 → Tape}
   · exact absurd hv (by omega)
 
 /-- The canonical register tape is parked at cell 1. -/
-private theorem regT_read_ne_start (V : ℕ) : (regT V).read ≠ Γ.start := by
+private theorem regT_read_ne_start (V : ℕ) : (regTape V).read ≠ Γ.start := by
   show regCells V 1 ≠ Γ.start
   exact regCells_ne_start le_rfl
 
@@ -432,13 +432,13 @@ private theorem regT_read_ne_start (V : ℕ) : (regT V).read ≠ Γ.start := by
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- The lifted init phase: `initTM_hoareTime_started` through the frame
-    rule, the clock tape pinned at `regT V`. -/
+    rule, the clock tape pinned at `regTape V`. -/
 private theorem initPhase (α x : List Bool) (V : ℕ) :
     (initTM.liftTM 1).HoareTime (clockedUtmPre α x V) (initPost7 α x V)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
-  have hex : ∀ j : Fin 1, 1 ≤ (regT V).head ∧ (regT V).read ≠ Γ.start :=
+  have hex : ∀ j : Fin 1, 1 ≤ (regTape V).head ∧ (regTape V).read ≠ Γ.start :=
     fun _ => ⟨le_rfl, regT_read_ne_start V⟩
-  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regT V) hex
+  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regTape V) hex
     (initTM_hoareTime_started α x)).consequence ?_ ?_ le_rfl
   · rintro inp work out ⟨hic, hih, hw, hclk, hoc, hoh⟩
     exact ⟨⟨hic, hih, hw, hoc, hoh⟩,

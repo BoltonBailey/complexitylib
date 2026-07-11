@@ -11,7 +11,7 @@ import Complexitylib.Models.TuringMachine.Registers.MixedRadix
 `symProbeTM f r q` walks the input head to the cell indexed by register
 `r` (lockstep over `r`'s marks), reads the symbol `s` there, adds
 `(f s).val ≤ 3` marks to register `q`, and restores everything: the input
-head returns to cell 1, `r` is untouched, `q` becomes `regT (d + (f s))`.
+head returns to cell 1, `r` is untouched, `q` becomes `regTape (d + (f s))`.
 
 This is the reduction emitter's only input-reading machine: the start
 clauses of the tableau pin the input cells, so their symbol digits are
@@ -856,11 +856,11 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
     (hinp₀ : Parked inp₀) (hhead : inp₀.head = 1)
     (hwf : inp₀.cells 0 = Γ.start)
     (hwork₀ : ∀ i, Parked (work₀ i))
-    (hr : work₀ r = regT pos) (hq : work₀ q = regT d) :
+    (hr : work₀ r = regTape pos) (hq : work₀ q = regTape d) :
     (symProbeTM f r q).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀
-        (Function.update work₀ q (regT (d + (f (inp₀.cells pos)).val))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀
+        (Function.update work₀ q (regTape (d + (f (inp₀.cells pos)).val))) ys)
       (3 * pos + 2 * d + 20) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   have hWF : WFCells inp := ⟨hwf, hinp₀.2⟩

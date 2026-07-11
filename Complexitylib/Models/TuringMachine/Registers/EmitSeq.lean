@@ -9,7 +9,7 @@ import Complexitylib.Models.TuringMachine.Registers.InputLen
 # Sequencing emitter stages
 
 `bigSeqTM` folds a list of machines with `seqTM`, and `bigSeqTM_hoareTime`
-chains their `emitPred` specs: stage `k` carries the ghost state `(W k, Y k)`
+chains their `EmitPred` specs: stage `k` carries the ghost state `(W k, Y k)`
 to `(W (k+1), Y (k+1))`. All the finite-tuple folds of the reduction emitter
 (literal chains, clause chains, the per-state/symbol/choice unrollings of the
 transition family) are instances of this single rule.
@@ -26,7 +26,7 @@ def bigSeqTM : List (TM n) → TM n
   | [] => skipTM
   | m :: ms => seqTM m (bigSeqTM ms)
 
-/-- **Indexed chain rule.** Machine `ms[k]` carries the `emitPred` state from
+/-- **Indexed chain rule.** Machine `ms[k]` carries the `EmitPred` state from
     stage `k` to stage `k + 1`; the fold carries stage `0` to stage
     `ms.length`, in `|ms| · (b + 1) + 1` steps. -/
 theorem bigSeqTM_hoareTime (ms : List (TM n)) (inp₀ : Tape)
@@ -34,10 +34,10 @@ theorem bigSeqTM_hoareTime (ms : List (TM n)) (inp₀ : Tape)
     (hinp₀ : Parked inp₀)
     (hWP : ∀ k j, Parked (W k j))
     (hms : ∀ k, (hk : k < ms.length) → ms[k].HoareTime
-        (emitPred inp₀ (W k) (Y k)) (emitPred inp₀ (W (k + 1)) (Y (k + 1))) b) :
+        (EmitPred inp₀ (W k) (Y k)) (EmitPred inp₀ (W (k + 1)) (Y (k + 1))) b) :
     (bigSeqTM ms).HoareTime
-      (emitPred inp₀ (W 0) (Y 0))
-      (emitPred inp₀ (W ms.length) (Y ms.length))
+      (EmitPred inp₀ (W 0) (Y 0))
+      (EmitPred inp₀ (W ms.length) (Y ms.length))
       (ms.length * (b + 1) + 1) := by
   induction ms generalizing W Y with
   | nil =>
@@ -52,7 +52,7 @@ theorem bigSeqTM_hoareTime (ms : List (TM n)) (inp₀ : Tape)
     have hseq := seqTM_hoareTime m (bigSeqTM ms) hhead
       (emitPred_transition hinp₀ (hWP 1) (Y 1)) hrest
     refine hseq.consequence (fun _ _ _ h => h) (fun _ _ _ h => ?_) ?_
-    · show emitPred inp₀ (W (m :: ms).length) (Y (m :: ms).length) _ _ _
+    · show EmitPred inp₀ (W (m :: ms).length) (Y (m :: ms).length) _ _ _
       rw [List.length_cons]
       exact h
     · rw [List.length_cons]

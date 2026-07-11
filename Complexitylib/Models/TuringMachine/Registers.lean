@@ -153,11 +153,11 @@ def regCells (v : ℕ) : ℕ → Γ := fun j =>
   if j = 0 then Γ.start else if j ≤ v then Γ.one else Γ.blank
 
 /-- The canonical register tape holding `v`. -/
-def regT (v : ℕ) : Tape := ⟨1, regCells v⟩
+def regTape (v : ℕ) : Tape := ⟨1, regCells v⟩
 
-@[simp] theorem regT_head (v : ℕ) : (regT v).head = 1 := rfl
+@[simp] theorem regT_head (v : ℕ) : (regTape v).head = 1 := rfl
 
-@[simp] theorem regT_cells (v : ℕ) : (regT v).cells = regCells v := rfl
+@[simp] theorem regT_cells (v : ℕ) : (regTape v).cells = regCells v := rfl
 
 @[simp] theorem regCells_zero (v : ℕ) : regCells v 0 = Γ.start := rfl
 
@@ -173,13 +173,13 @@ theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
   rw [regCells, if_neg (by omega)]
   split <;> decide
 
-theorem reg_regT (v : ℕ) : reg v (regT v) :=
+theorem reg_regT (v : ℕ) : reg v (regTape v) :=
   ⟨rfl, rfl, fun _ hi => by rw [regT_cells]; exact regCells_one (by omega) (by omega),
    fun _ hj => by rw [regT_cells]; exact regCells_blank hj⟩
 
 /-- **A register's tape is canonical**: the `reg` predicate pins every cell and
     the head, so it is an equation. -/
-theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
+theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regTape v := by
   refine Tape.ext h.head_eq ?_
   funext j
   rcases Nat.eq_zero_or_pos j with rfl | hj
@@ -191,7 +191,7 @@ theorem reg.eq_regT {v : ℕ} {t : Tape} (h : reg v t) : t = regT v := by
       rw [h.cells_one (by omega), regT_cells]
       exact (regCells_one (by omega) (by omega)).symm
 
-theorem parked_regTape (v : ℕ) : Parked (regT v) := (reg_regT v).parked
+theorem parked_regTape (v : ℕ) : Parked (regTape v) := (reg_regT v).parked
 
 /-- Register cells with the head anywhere off `▷` form a parked tape. -/
 theorem parked_regCells {h v : ℕ} (hh : 1 ≤ h) :

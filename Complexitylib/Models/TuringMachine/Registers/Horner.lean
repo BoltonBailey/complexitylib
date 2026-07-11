@@ -136,19 +136,19 @@ def setConstTM (q : Fin n) (c : ℕ) : TM n :=
 theorem setConstTM_hoareTime (q : Fin n) (c d : ℕ) (inp₀ : Tape)
     (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hq : work₀ q = regT d) :
+    (hq : work₀ q = regTape d) :
     (setConstTM q c).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ (Function.update work₀ q (regT c)) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ (Function.update work₀ q (regTape c)) ys)
       ((2 * d + 4) + 1 + (c * (2 * c + 5) + 1)) := by
   have hclear := clearRegTM_hoareTime q d inp₀ work₀ ys hinp₀
     (fun i _ => hwork₀ i) hq
-  have hmidP : ∀ i, Parked (Function.update work₀ q (regT 0) i) := by
+  have hmidP : ∀ i, Parked (Function.update work₀ q (regTape 0) i) := by
     intro i
     by_cases hiq : i = q
     · subst hiq; rw [Function.update_self]; exact parked_regTape _
     · rw [Function.update_of_ne hiq]; exact hwork₀ i
-  have hiter := iterTM_incRegTM_hoareTime q c 0 inp₀ (Function.update work₀ q (regT 0))
+  have hiter := iterTM_incRegTM_hoareTime q c 0 inp₀ (Function.update work₀ q (regTape 0))
     ys hinp₀ hmidP (by rw [Function.update_self])
   have hseq := seqTM_hoareTime (clearRegTM q) (iterTM (incRegTM q) c) hclear
     (emitPred_transition hinp₀ hmidP ys) hiter
@@ -194,17 +194,17 @@ theorem hornerLayerRegTM_hoareTime
     (hres : v * x + w ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hX : work₀ X = regT x) (hc : work₀ comp = regT w)
-    (ht : work₀ tmp = regT v) (ht2 : work₀ tmp2 = regT u) :
+    (hX : work₀ X = regTape x) (hc : work₀ comp = regTape w)
+    (ht : work₀ tmp = regTape v) (ht2 : work₀ tmp2 = regTape u) :
     (hornerLayerRegTM X comp tmp tmp2).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀
-        (Function.update (Function.update work₀ tmp2 (regT (v * x + w))) tmp
-          (regT (v * x + w))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀
+        (Function.update (Function.update work₀ tmp2 (regTape (v * x + w))) tmp
+          (regTape (v * x + w))) ys)
       (layerBudget M) := by
-  set A : Fin n → Tape := Function.update work₀ tmp2 (regT 0) with hA
-  set B : Fin n → Tape := Function.update work₀ tmp2 (regT (v * x)) with hB
-  set C : Fin n → Tape := Function.update work₀ tmp2 (regT (v * x + w)) with hC
+  set A : Fin n → Tape := Function.update work₀ tmp2 (regTape 0) with hA
+  set B : Fin n → Tape := Function.update work₀ tmp2 (regTape (v * x)) with hB
+  set C : Fin n → Tape := Function.update work₀ tmp2 (regTape (v * x + w)) with hC
   have hAP : ∀ i, Parked (A i) := by
     intro i
     by_cases hi : i = tmp2
@@ -221,13 +221,13 @@ theorem hornerLayerRegTM_hoareTime
     · subst hi; rw [hC, Function.update_self]; exact parked_regTape _
     · rw [hC, Function.update_of_ne hi]; exact hwork₀ i
   -- Stage 1: clear tmp2.
-  have h₁ : (clearRegTM tmp2).HoareTime (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ A ys) (opBudget M) :=
+  have h₁ : (clearRegTM tmp2).HoareTime (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ A ys) (opBudget M) :=
     (clearRegTM_hoareTime tmp2 u inp₀ work₀ ys hinp₀
       (fun i _ => hwork₀ i) ht2).mono_bound (clearRegTM_le_opBudget hu)
   -- Stage 2: tmp2 += tmp · X.
-  have h₂ : (mulAddIntoTM tmp X tmp2).HoareTime (emitPred inp₀ A ys)
-      (emitPred inp₀ B ys) (opBudget M) := by
+  have h₂ : (mulAddIntoTM tmp X tmp2).HoareTime (EmitPred inp₀ A ys)
+      (EmitPred inp₀ B ys) (opBudget M) := by
     refine (mulAddIntoTM_hoareTime tmp X tmp2 (fun h => hXt h.symm) htt2 hXt2
       v x 0 inp₀ A ys hinp₀ (fun i _ => hAP i)
       (by rw [hA, Function.update_of_ne htt2]; exact ht)
@@ -238,8 +238,8 @@ theorem hornerLayerRegTM_hoareTime
     refine ⟨g1, ?_, g3⟩
     rw [g2, hA, Function.update_idem, Nat.zero_add, hB]
   -- Stage 3: tmp2 += comp.
-  have h₃ : (addIntoTM comp tmp2).HoareTime (emitPred inp₀ B ys)
-      (emitPred inp₀ C ys) (opBudget M) := by
+  have h₃ : (addIntoTM comp tmp2).HoareTime (EmitPred inp₀ B ys)
+      (EmitPred inp₀ C ys) (opBudget M) := by
     refine (addIntoTM_hoareTime comp tmp2 hct2 w (v * x) inp₀ B ys hinp₀
       (fun i _ => hBP i)
       (by rw [hB, Function.update_of_ne hct2]; exact hc)
@@ -249,8 +249,8 @@ theorem hornerLayerRegTM_hoareTime
     refine ⟨g1, ?_, g3⟩
     rw [g2, hB, Function.update_idem, hC]
   -- Stage 4: tmp := tmp2.
-  have h₄ : (copyIntoTM tmp2 tmp).HoareTime (emitPred inp₀ C ys)
-      (emitPred inp₀ (Function.update C tmp (regT (v * x + w))) ys)
+  have h₄ : (copyIntoTM tmp2 tmp).HoareTime (EmitPred inp₀ C ys)
+      (EmitPred inp₀ (Function.update C tmp (regTape (v * x + w))) ys)
       (opBudget M) := by
     refine (copyIntoTM_hoareTime tmp2 tmp (fun h => htt2 h.symm) (v * x + w) v
       inp₀ C ys hinp₀ (fun i _ => hCP i)
@@ -276,17 +276,17 @@ theorem hornerLayerConstTM_hoareTime
     (hres : v * x + c ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hX : work₀ X = regT x)
-    (ht : work₀ tmp = regT v) (ht2 : work₀ tmp2 = regT u) :
+    (hX : work₀ X = regTape x)
+    (ht : work₀ tmp = regTape v) (ht2 : work₀ tmp2 = regTape u) :
     (hornerLayerConstTM X tmp tmp2 c).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀
-        (Function.update (Function.update work₀ tmp2 (regT (v * x + c))) tmp
-          (regT (v * x + c))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀
+        (Function.update (Function.update work₀ tmp2 (regTape (v * x + c))) tmp
+          (regTape (v * x + c))) ys)
       (layerBudget M) := by
-  set A : Fin n → Tape := Function.update work₀ tmp2 (regT 0) with hA
-  set B : Fin n → Tape := Function.update work₀ tmp2 (regT (v * x)) with hB
-  set C : Fin n → Tape := Function.update work₀ tmp2 (regT (v * x + c)) with hC
+  set A : Fin n → Tape := Function.update work₀ tmp2 (regTape 0) with hA
+  set B : Fin n → Tape := Function.update work₀ tmp2 (regTape (v * x)) with hB
+  set C : Fin n → Tape := Function.update work₀ tmp2 (regTape (v * x + c)) with hC
   have hAP : ∀ i, Parked (A i) := by
     intro i
     by_cases hi : i = tmp2
@@ -303,13 +303,13 @@ theorem hornerLayerConstTM_hoareTime
     · subst hi; rw [hC, Function.update_self]; exact parked_regTape _
     · rw [hC, Function.update_of_ne hi]; exact hwork₀ i
   -- Stage 1: clear tmp2.
-  have h₁ : (clearRegTM tmp2).HoareTime (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ A ys) (opBudget M) :=
+  have h₁ : (clearRegTM tmp2).HoareTime (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ A ys) (opBudget M) :=
     (clearRegTM_hoareTime tmp2 u inp₀ work₀ ys hinp₀
       (fun i _ => hwork₀ i) ht2).mono_bound (clearRegTM_le_opBudget hu)
   -- Stage 2: tmp2 += tmp · X.
-  have h₂ : (mulAddIntoTM tmp X tmp2).HoareTime (emitPred inp₀ A ys)
-      (emitPred inp₀ B ys) (opBudget M) := by
+  have h₂ : (mulAddIntoTM tmp X tmp2).HoareTime (EmitPred inp₀ A ys)
+      (EmitPred inp₀ B ys) (opBudget M) := by
     refine (mulAddIntoTM_hoareTime tmp X tmp2 (fun h => hXt h.symm) htt2 hXt2
       v x 0 inp₀ A ys hinp₀ (fun i _ => hAP i)
       (by rw [hA, Function.update_of_ne htt2]; exact ht)
@@ -320,8 +320,8 @@ theorem hornerLayerConstTM_hoareTime
     refine ⟨g1, ?_, g3⟩
     rw [g2, hA, Function.update_idem, Nat.zero_add, hB]
   -- Stage 3: tmp2 += c.
-  have h₃ : (iterTM (incRegTM tmp2) c).HoareTime (emitPred inp₀ B ys)
-      (emitPred inp₀ C ys) (opBudget M) := by
+  have h₃ : (iterTM (incRegTM tmp2) c).HoareTime (EmitPred inp₀ B ys)
+      (EmitPred inp₀ C ys) (opBudget M) := by
     refine (iterTM_incRegTM_hoareTime tmp2 c (v * x) inp₀ B ys hinp₀ hBP
       (by rw [hB, Function.update_self])).consequence
       (fun _ _ _ h => h) ?_ (iterTM_incRegTM_le_opBudget hres)
@@ -329,8 +329,8 @@ theorem hornerLayerConstTM_hoareTime
     refine ⟨g1, ?_, g3⟩
     rw [g2, hB, Function.update_idem, hC]
   -- Stage 4: tmp := tmp2.
-  have h₄ : (copyIntoTM tmp2 tmp).HoareTime (emitPred inp₀ C ys)
-      (emitPred inp₀ (Function.update C tmp (regT (v * x + c))) ys)
+  have h₄ : (copyIntoTM tmp2 tmp).HoareTime (EmitPred inp₀ C ys)
+      (EmitPred inp₀ (Function.update C tmp (regTape (v * x + c))) ys)
       (opBudget M) := by
     refine (copyIntoTM_hoareTime tmp2 tmp (fun h => htt2 h.symm) (v * x + c) v
       inp₀ C ys hinp₀ (fun i _ => hCP i)
@@ -431,13 +431,13 @@ theorem hornerLayersTM_hoareTime (X tmp tmp2 : Fin n)
     (∀ k, k ≤ (c :: cs).length → hornerFold x (List.take k (c :: cs)) v ≤ M) →
     u ≤ M →
     (∀ i, Parked (work₀ i)) →
-    work₀ X = regT x → work₀ tmp = regT v → work₀ tmp2 = regT u →
+    work₀ X = regTape x → work₀ tmp = regTape v → work₀ tmp2 = regTape u →
     (hornerLayersTM X tmp tmp2 (c :: cs)).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀
         (Function.update (Function.update work₀ tmp2
-          (regT (hornerFold x (c :: cs) v))) tmp
-          (regT (hornerFold x (c :: cs) v))) ys)
+          (regTape (hornerFold x (c :: cs) v))) tmp
+          (regTape (hornerFold x (c :: cs) v))) ys)
       ((c :: cs).length * (layerBudget M + 1) + 1) := by
   intro c cs
   induction cs generalizing c with
@@ -452,8 +452,8 @@ theorem hornerLayersTM_hoareTime (X tmp tmp2 : Fin n)
     have hlayer := hornerLayerConstTM_hoareTime hXt hXt2 htt2 M x v c u
       hx hv hu hres inp₀ work₀ ys hinp₀ hwork₀ hX ht ht2
     set P : Fin n → Tape :=
-      Function.update (Function.update work₀ tmp2 (regT (v * x + c))) tmp
-        (regT (v * x + c)) with hP
+      Function.update (Function.update work₀ tmp2 (regTape (v * x + c))) tmp
+        (regTape (v * x + c)) with hP
     have hPP : ∀ i, Parked (P i) := by
       intro i
       by_cases hi : i = tmp
@@ -481,8 +481,8 @@ theorem hornerLayersTM_hoareTime (X tmp tmp2 : Fin n)
     have hlayer := hornerLayerConstTM_hoareTime hXt hXt2 htt2 M x v c u
       hx hv hu hv₁ inp₀ work₀ ys hinp₀ hwork₀ hX ht ht2
     set P : Fin n → Tape :=
-      Function.update (Function.update work₀ tmp2 (regT (v * x + c))) tmp
-        (regT (v * x + c)) with hP
+      Function.update (Function.update work₀ tmp2 (regTape (v * x + c))) tmp
+        (regTape (v * x + c)) with hP
     have hPP : ∀ i, Parked (P i) := by
       intro i
       by_cases hi : i = tmp
@@ -553,17 +553,17 @@ theorem polyEvalTM_hoareTime (X tmp tmp2 : Fin n)
       hornerFold x (List.take k (polyCoeffs p)) 0 ≤ M)
     (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hX : work₀ X = regT x) (ht : work₀ tmp = regT v)
-    (ht2 : work₀ tmp2 = regT u) :
+    (hX : work₀ X = regTape x) (ht : work₀ tmp = regTape v)
+    (ht2 : work₀ tmp2 = regTape u) :
     (polyEvalTM X tmp tmp2 p).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀
-        (Function.update (Function.update work₀ tmp2 (regT (p.eval x))) tmp
-          (regT (p.eval x))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀
+        (Function.update (Function.update work₀ tmp2 (regTape (p.eval x))) tmp
+          (regTape (p.eval x))) ys)
       (opBudget M + 1 + ((p.natDegree + 1) * (layerBudget M + 1) + 1)) := by
   have hset := (setConstTM_hoareTime tmp 0 v inp₀ work₀ ys hinp₀ hwork₀
     ht).mono_bound (setConstTM_le_opBudget (by omega) hv)
-  set A : Fin n → Tape := Function.update work₀ tmp (regT 0) with hA
+  set A : Fin n → Tape := Function.update work₀ tmp (regTape 0) with hA
   have hAP : ∀ i, Parked (A i) := by
     intro i
     by_cases hi : i = tmp

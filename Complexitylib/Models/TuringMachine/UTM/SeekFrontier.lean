@@ -9,7 +9,7 @@ import Complexitylib.Models.TuringMachine.UTM.Clock
 # Frontier-seeking clock machine for the time-bounded universal machine
 
 Clock initialization delivers the canonical register tape
-`regT V = ⟨1, regCells V⟩` on the clock tape (`clkT` = work tape 6 of a
+`regTape V = ⟨1, regCells V⟩` on the clock tape (`clkT` = work tape 6 of a
 `TM 7`): head parked at cell 1. The clocked universal loop
 (`clocked_loop_simulates` in `SimClocked.lean`) instead wants the
 **frontier-parked** form of `ClockFrontier.lean`: cells `regCells V`, head
@@ -19,7 +19,7 @@ halts immediately at cell 1 when the clock is zero (frontier read `□`).
 
 Spec: `seekFrontierTM_hoareTime` (ghost-initial-tapes style), `V + 3`
 steps, every other tape exactly preserved. Behavior from head 1 on
-`regT V`:
+`regTape V`:
 
 - `V = 0`: cell 1 reads `□`, halt in 1 step, head stays at `1 = max 0 1`.
 - `V ≥ 1`: cell 1 reads `1`, step right into `walk`; walk right while
@@ -62,7 +62,7 @@ instance : Fintype SeekFrontierPhase where
   complete := fun x => by cases x <;> simp
 
 /-- **Frontier seek**: with the clock head at cell 1 of the canonical
-    register tape `regT V`, reading `□` (`V = 0`) halts immediately;
+    register tape `regTape V`, reading `□` (`V = 0`) halts immediately;
     reading any mark (`V ≥ 1`) steps right into `walk`, which walks right
     over the `1` marks and, on the first `□` (cell `V + 1`), steps left
     onto the frontier mark at cell `V` and halts. All other tapes idle
@@ -299,7 +299,7 @@ private theorem seekFrontier_walk_loop (V : ℕ) :
 
 /-- **`seekFrontierTM` specification** (ghost-initial-tapes style).
     Starting from `qstart` with the clock tape (`clkT` = work tape 6)
-    holding the canonical register tape `regT V` (cells `regCells V`, head
+    holding the canonical register tape `regTape V` (cells `regCells V`, head
     at cell 1), and every other tape parked on a non-`▷` symbol,
     `seekFrontierTM` halts within `V + 3` steps having walked the clock
     head to the frontier (`max V 1`) with the cells untouched; the input
@@ -307,7 +307,7 @@ private theorem seekFrontier_walk_loop (V : ℕ) :
     **exactly**. -/
 theorem seekFrontierTM_hoareTime (V : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → Tape)
     (out₀ : Tape)
-    (hclk : work₀ clkT = regT V)
+    (hclk : work₀ clkT = regTape V)
     (hinp : inp₀.read ≠ Γ.start)
     (hothers : ∀ i, i ≠ clkT → (work₀ i).read ≠ Γ.start)
     (hout : out₀.read ≠ Γ.start) :

@@ -21,7 +21,7 @@ theorem. On input `x` it:
 2. decides `TerminatedRegion x` by a single input scan (`termCheckTM`);
    malformed inputs are routed to a fixed `0` output (`writeTM Γw.zero`);
 3. for well-formed inputs: blanks the verdict cell (`blankOutTM`), builds
-   the unary clock `regT (g |x|)` on work tape 6 (the abstract
+   the unary clock `regTape (g |x|)` on work tape 6 (the abstract
    clock-constructibility witness `clk`), runs the clocked universal
    machine on the self-pair (`retargetInput clockedUtmTM`), and finally
    **negates** output cell 1 (`negOutTM`) — accepting exactly when the
@@ -71,7 +71,7 @@ open UTMBody
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- The body of `ClockConstructible`, with the machine and constant
-    exposed: `tm` writes the unary clock `regT (g |x|)` on work tape 6
+    exposed: `tm` writes the unary clock `regTape (g |x|)` on work tape 6
     within `C * (g |x| + |x| + 1)` steps, framing the rest of the
     diagonalizer's tape layout. See `ClockConstructible` for the design
     discussion. -/
@@ -89,7 +89,7 @@ def ClockWitness (tm : TM 8) (C : ℕ) (g : ℕ → ℕ) : Prop :=
       (fun inp work out =>
         inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
         (∀ i, i ≠ (6 : Fin 8) → work i = work₀ i) ∧
-        work (6 : Fin 8) = regT (g x.length) ∧
+        work (6 : Fin 8) = regTape (g x.length) ∧
         out.head = 1 ∧ out.cells 0 = Γ.start ∧
         (∀ j, 1 ≤ j → out.cells j ≠ Γ.start))
       (C * (g x.length + x.length + 1))
@@ -635,7 +635,7 @@ private theorem clk_read_ne_start {t : Tape} {v : ℕ}
   rw [Tape.read, hh, hc]
   exact regCells_ne_start (le_max_right v 1)
 
-private theorem regT_read_ne_start' (V : ℕ) : (regT V).read ≠ Γ.start := by
+private theorem regT_read_ne_start' (V : ℕ) : (regTape V).read ≠ Γ.start := by
   show regCells V 1 ≠ Γ.start
   exact regCells_ne_start le_rfl
 
@@ -759,7 +759,7 @@ private def cleanUtmPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
     inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
     (∀ i : Fin 6, work (Fin.castAdd 1 i) = (Tape.init []).move Dir3.right) ∧
-    work clkT = regT V ∧
+    work clkT = regTape V ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
     out.head = 1
 
@@ -779,13 +779,13 @@ private def initPost7D (α x : List Bool) (V : ℕ) : TapePred 7 :=
     body6ShapeD α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
     out.head = 1 ∧
-    work clkT = regT V
+    work clkT = regTape V
 
 private def seekPreD (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
     inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6ShapeD α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
-    work clkT = regT V ∧
+    work clkT = regTape V ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
     out.head = 1
 
@@ -855,9 +855,9 @@ private theorem body6ShapeD_reads {α x : List Bool} {w : Fin 6 → Tape}
 private theorem initPhaseD (α x : List Bool) (V : ℕ) :
     (initTM.liftTM 1).HoareTime (cleanUtmPre α x V) (initPost7D α x V)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
-  have hex : ∀ j : Fin 1, 1 ≤ (regT V).head ∧ (regT V).read ≠ Γ.start :=
+  have hex : ∀ j : Fin 1, 1 ≤ (regTape V).head ∧ (regTape V).read ≠ Γ.start :=
     fun _ => ⟨le_rfl, regT_read_ne_start' V⟩
-  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regT V) hex
+  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regTape V) hex
     (initTM_hoareTime_clean α x)).consequence ?_ ?_ le_rfl
   · rintro inp work out ⟨hic, hih, hw, hclk, ho0, hons, hoh⟩
     exact ⟨⟨hic, hih, hw, ho0, hons, hoh⟩,
@@ -1279,7 +1279,7 @@ end CleanUtm
 
 /-- **The time-hierarchy diagonalizer.** Build `pair x x` on tape 7; check
     `TerminatedRegion x` (malformed inputs output `0`); otherwise blank the
-    verdict cell, build the clock `regT (g |x|)` on tape 6 (`clk`), run the
+    verdict cell, build the clock `regTape (g |x|)` on tape 6 (`clk`), run the
     clocked universal machine on the self-pair, and negate output cell 1. -/
 def diagTM (clk : TM 8) : TM 8 :=
   seqTM pairSelfTM
@@ -1439,7 +1439,7 @@ private theorem inpX_read (x : List Bool) : (inpX x).read ≠ Γ.start := by
   show (Tape.init (x.map Γ.ofBool)).cells 1 ≠ Γ.start
   exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
 
-private theorem regT_inv (V : ℕ) : TapeInvariant (regT V) :=
+private theorem regT_inv (V : ℕ) : TapeInvariant (regTape V) :=
   ⟨rfl, fun _ hj => regCells_ne_start hj⟩
 
 private theorem outVX_cells0 : outVX.cells 0 = Γ.start := by
@@ -1501,12 +1501,12 @@ private theorem retargetInput_run_input {k : ℕ} {M : TM k} :
     rw [ih (by rw [h1]; exact hr), h1]
 
 /-- The tape shape entering the retargeted clocked UTM: frozen input,
-    clock `regT V` on tape 6, `pairSelfTM`'s layout elsewhere, clean
+    clock `regTape V` on tape 6, `pairSelfTM`'s layout elsewhere, clean
     output. -/
 private def retargetPre (x : List Bool) (V : ℕ) : TapePred 8 :=
   fun inp work out =>
     inp = inpX x ∧
-    (∀ i : Fin 8, i ≠ 6 → work i = workX x i) ∧ work 6 = regT V ∧
+    (∀ i : Fin 8, i ≠ 6 → work i = workX x i) ∧ work 6 = regTape V ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
     out.head = 1
 
@@ -1514,7 +1514,7 @@ private def retargetPre (x : List Bool) (V : ℕ) : TapePred 8 :=
     precondition. -/
 private theorem retargetPre_to_inner (x : List Bool) (V : ℕ)
     {work : Fin 8 → Tape} {out : Tape}
-    (hwoth : ∀ i : Fin 8, i ≠ 6 → work i = workX x i) (hw6 : work 6 = regT V)
+    (hwoth : ∀ i : Fin 8, i ≠ 6 → work i = workX x i) (hw6 : work 6 = regTape V)
     (ho0 : out.cells 0 = Γ.start) (hons : ∀ j, 1 ≤ j → out.cells j ≠ Γ.start)
     (hoh : out.head = 1) :
     cleanUtmPre x x V (work ⟨7, by omega⟩)
@@ -1540,7 +1540,7 @@ private theorem retargetPre_to_inner (x : List Bool) (V : ℕ)
       show i.val ≠ 7
       omega
     rw [hwoth _ hne6, workX_ne7 x hne7]
-  · show work ⟨(clkT).val, by omega⟩ = regT V
+  · show work ⟨(clkT).val, by omega⟩ = regTape V
     exact hw6
 
 /-- The retargeted clocked-UTM phase, halting case: output cell 1 ends up
@@ -1749,7 +1749,7 @@ private theorem seamA23 (x : List Bool) (V : ℕ) :
     ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
       (inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧ inp.head = 1 ∧
        (∀ i, i ≠ (6 : Fin 8) → work i = workX x i) ∧
-       work (6 : Fin 8) = regT V ∧
+       work (6 : Fin 8) = regTape V ∧
        out.head = 1 ∧ out.cells 0 = Γ.start ∧
        (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) →
       retargetPre x V (transitionInput inp)

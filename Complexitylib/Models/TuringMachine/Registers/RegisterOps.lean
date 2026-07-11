@@ -15,8 +15,8 @@ identity), `incRegTM` (append one mark to a register), and `clearRegTM`
 polynomial evaluation) composes from these via the `forRegTM` loop
 combinator.
 
-Specs are in the ghost-parametrized `emitPred` style: registers are the
-canonical tapes `regT v`, and posts are `Function.update` equations.
+Specs are in the ghost-parametrized `EmitPred` style: registers are the
+canonical tapes `regTape v`, and posts are `Function.update` equations.
 -/
 
 namespace Complexity
@@ -44,7 +44,7 @@ def skipTM : TM n where
 theorem skipTM_hoareTime (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i)) :
     (skipTM (n := n)).HoareTime
-      (emitPred inp₀ work₀ ys) (emitPred inp₀ work₀ ys) 1 := by
+      (EmitPred inp₀ work₀ ys) (EmitPred inp₀ work₀ ys) 1 := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   have hstep : (skipTM (n := n)).step
       { state := .go, input := inp, work := work, output := out } = some
@@ -70,7 +70,7 @@ instance : Fintype IncPhase where
   complete := fun x => by cases x <;> simp
 
 /-- **Increment register `q`**: scan right over the marks, write a mark on the
-    first blank, rewind to cell 1. From `regT d` to `regT (d + 1)` in
+    first blank, rewind to cell 1. From `regTape d` to `regTape (d + 1)` in
     `2d + 4` steps; every other tape untouched. -/
 def incRegTM (q : Fin n) : TM n where
   Q := IncPhase
@@ -381,15 +381,15 @@ private theorem incRegTM_back_run (h : ℕ) :
       rw [Function.update_of_ne hi]
     · rw [hcells', hupd]
 
-/-- **`incRegTM` Hoare specification.** From `regT d` in register `q`, reach
-    `regT (d + 1)` in `2d + 4` steps; the input, output, and every other work
+/-- **`incRegTM` Hoare specification.** From `regTape d` in register `q`, reach
+    `regTape (d + 1)` in `2d + 4` steps; the input, output, and every other work
     tape are untouched. -/
 theorem incRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (ys : List Bool) (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i))
-    (hq : work₀ q = regT d) :
+    (hq : work₀ q = regTape d) :
     (incRegTM (n := n) q).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ (Function.update work₀ q (regT (d + 1))) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ (Function.update work₀ q (regTape (d + 1))) ys)
       (2 * d + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, hst₁, hinp₁, hwork₁, hcells₁, hhead₁, hout₁⟩ :=
@@ -523,7 +523,7 @@ theorem clearCells_update_succ (d k : ℕ) :
           if_neg (show ¬ j ≤ k from by omega), if_neg (show ¬ j ≤ k + 1 from by omega)]
 
 /-- **Clear register `q`**: sweep right blanking the marks, rewind to cell 1.
-    From `regT d` to `regT 0` in `2d + 4` steps; every other tape untouched. -/
+    From `regTape d` to `regTape 0` in `2d + 4` steps; every other tape untouched. -/
 def clearRegTM (q : Fin n) : TM n where
   Q := IncPhase
   qstart := .scan
@@ -842,14 +842,14 @@ private theorem clearRegTM_back_run (h : ℕ) :
       rw [Function.update_of_ne hi]
     · rw [hcells', hupd]
 
-/-- **`clearRegTM` Hoare specification.** From `regT d` in register `q`, reach
-    `regT 0` in `2d + 4` steps; everything else untouched. -/
+/-- **`clearRegTM` Hoare specification.** From `regTape d` in register `q`, reach
+    `regTape 0` in `2d + 4` steps; everything else untouched. -/
 theorem clearRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (ys : List Bool) (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, i ≠ q → Parked (work₀ i))
-    (hq : work₀ q = regT d) :
+    (hq : work₀ q = regTape d) :
     (clearRegTM (n := n) q).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ (Function.update work₀ q (regT 0)) ys)
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ (Function.update work₀ q (regTape 0)) ys)
       (2 * d + 4) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   obtain ⟨c₁, hreach₁, hst₁, hinp₁, hwork₁, hcells₁, hhead₁, hout₁⟩ :=

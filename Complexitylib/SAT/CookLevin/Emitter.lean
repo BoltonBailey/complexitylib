@@ -102,11 +102,11 @@ theorem LitDesc.Spec.emit
     (z : ℕ) (hz : z ≤ M)
     (inp₀ : Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT A) (hrB : work₀ rB = regT B)
-    (hrC : work₀ rC = regT C) (hrD : work₀ rD = regT D) :
+    (hrA : work₀ rA = regTape A) (hrB : work₀ rB = regTape B)
+    (hrC : work₀ rC = regTape C) (hrD : work₀ rD = regTape D) :
     (desc.tm rA rB rC rD tmp tmp2).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 ℓ.var) (ys ++ ℓ.word))
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 ℓ.var) (ys ++ ℓ.word))
       (emitVarBudget M) := by
   obtain ⟨a, b, c, d, hsa, hsb, hsc, hsd, hsign, hvar, htag, h1, h2, h3, h4⟩ :=
     hspec
@@ -133,11 +133,11 @@ theorem emitLits_hoareTime
     ∀ (z : ℕ), z ≤ M →
     ∀ (ys : List Bool),
     (∀ i, Parked (work₀ i)) →
-    work₀ rA = regT A → work₀ rB = regT B →
-    work₀ rC = regT C → work₀ rD = regT D →
+    work₀ rA = regTape A → work₀ rB = regTape B →
+    work₀ rC = regTape C → work₀ rD = regTape D →
     (bigSeqTM (descs.map (LitDesc.tm rA rB rC rD tmp tmp2))).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
-      (emitPred inp₀
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 z) ys)
+      (EmitPred inp₀
         (scratch work₀ tmp tmp2 (cl.foldl (fun _ ℓ => ℓ.var) z))
         (ys ++ Clause.encode cl))
       (descs.length * (emitVarBudget M + 1) + 1) := by
@@ -210,11 +210,11 @@ theorem emitClauseTM_hoareTime
     {L : ℕ} (hL : descs.length ≤ L)
     (inp₀ : Tape) (ys : List Bool)
     (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
-    (hrA : work₀ rA = regT A) (hrB : work₀ rB = regT B)
-    (hrC : work₀ rC = regT C) (hrD : work₀ rD = regT D) :
+    (hrA : work₀ rA = regTape A) (hrB : work₀ rB = regTape B)
+    (hrC : work₀ rC = regTape C) (hrD : work₀ rD = regTape D) :
     (emitClauseTM rA rB rC rD tmp tmp2 descs).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0)
         (ys ++ (Clause.encode cl ++ [true, false])))
       (clauseBudget L M) := by
   have hlits := emitLits_hoareTime rA rB rC rD tmp tmp2 hAt hAt2 hBt hBt2
@@ -223,8 +223,8 @@ theorem emitClauseTM_hoareTime
   set zend : ℕ := cl.foldl (fun _ ℓ => ℓ.var) 0 with hzend
   have hzendM : zend ≤ M := foldl_var_le hf 0 (by omega)
   have hsep : (emitBitsTM [true, false] : TM n).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 zend) (ys ++ Clause.encode cl))
-      (emitPred inp₀ (scratch work₀ tmp tmp2 zend)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 zend) (ys ++ Clause.encode cl))
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 zend)
         (ys ++ Clause.encode cl ++ [true, false]))
       2 :=
     emitBitsTM_hoareTime [true, false] inp₀ (scratch work₀ tmp tmp2 zend)
@@ -273,11 +273,11 @@ theorem emitCNFTM_hoareTime
     ∀ {L : ℕ}, (∀ descs ∈ clss, descs.length ≤ L) →
     ∀ (ys : List Bool),
     (∀ i, Parked (work₀ i)) →
-    work₀ rA = regT A → work₀ rB = regT B →
-    work₀ rC = regT C → work₀ rD = regT D →
+    work₀ rA = regTape A → work₀ rB = regTape B →
+    work₀ rC = regTape C → work₀ rD = regTape D →
     (emitCNFTM rA rB rC rD tmp tmp2 clss).HoareTime
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
-      (emitPred inp₀ (scratch work₀ tmp tmp2 0) (ys ++ CNF.encode φ))
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) ys)
+      (EmitPred inp₀ (scratch work₀ tmp tmp2 0) (ys ++ CNF.encode φ))
       (cnfBudget clss.length L M) := by
   intro clss φ work₀ hf
   induction hf with

@@ -744,7 +744,7 @@ end EmitUnary
 
 /-- The standard emit-spec shape: ghost-fixed input and work tapes, output
     accumulator holding `ys`. -/
-def emitPred (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool) : TapePred n :=
+def EmitPred (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool) : TapePred n :=
   fun inp work out => inp = inp₀ ∧ work = work₀ ∧ outAcc ys out
 
 /-- Emit-spec states pass through combinator phase boundaries unchanged:
@@ -753,8 +753,8 @@ def emitPred (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List Bool) : TapeP
     `seqTM_hoareTime` for any two composed emitters. -/
 theorem emitPred_transition {inp₀ : Tape} {work₀ : Fin n → Tape}
     (hinp₀ : Parked inp₀) (hworkAll : ∀ i, Parked (work₀ i)) (ys : List Bool) :
-    ∀ inp work out, emitPred inp₀ work₀ ys inp work out →
-      emitPred inp₀ work₀ ys (transitionInput inp)
+    ∀ inp work out, EmitPred inp₀ work₀ ys inp work out →
+      EmitPred inp₀ work₀ ys (transitionInput inp)
         (fun i => transitionTape (work i)) (transitionTape out) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
   refine ⟨Parked.transitionInput_eq_self hinp₀, ?_, ?_⟩
@@ -782,8 +782,8 @@ theorem emitLitTM_hoareTime (s : Bool) (r : Fin n) (v : ℕ) (inp₀ : Tape)
     (work₀ : Fin n → Tape) (ys : List Bool) (hinp₀ : Parked inp₀)
     (hwork₀ : ∀ i, i ≠ r → Parked (work₀ i)) (hreg : reg v (work₀ r)) :
     (emitLitTM s r).HoareTime
-      (emitPred inp₀ work₀ ys)
-      (emitPred inp₀ work₀
+      (EmitPred inp₀ work₀ ys)
+      (EmitPred inp₀ work₀
         (ys ++ ([s, s] ++ List.replicate (2 * v) true ++ [false, true])))
       (3 * v + 9) := by
   have hworkAll : ∀ i, Parked (work₀ i) := by
