@@ -1,8 +1,13 @@
 name: API Documentation
 
 # Building doc-gen4 documentation also generates pages for Mathlib, which is
-# slow, so this runs on demand and weekly rather than per push.
+# slow. It runs on every push to the default branch (dev) so the published API
+# docs track the code, plus weekly and on demand. The `pages` concurrency
+# group below cancels a superseded in-progress run, so rapid merges don't pile
+# up.
 on:
+  push:
+    branches: [dev]
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
