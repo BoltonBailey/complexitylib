@@ -1,9 +1,12 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
 import Mathlib.Data.ZMod.Basic
-
-namespace Complexity
 
 /-!
 # `lengthDivBy k`: length-divisibility language family
@@ -24,6 +27,8 @@ This generalizes `evenLength` (which is `lengthDivBy 2`).
 - `lengthDivBy_in_DTIME` — `lengthDivBy k ∈ DTIME(n + 2)`.
 - `lengthDivBy_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 

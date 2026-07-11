@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
-
-namespace Complexity
 
 /-!
 # Languages determined by the parity of the input length
@@ -25,6 +28,8 @@ the input.
 - `evenLength_mem_P`, `oddLength_mem_P` — derived via `DTIME_mono` / `P_compl`.
 - `oddLength_eq_compl_evenLength` — explicit Boolean identity.
 -/
+
+namespace Complexity
 
 open Complexity
 

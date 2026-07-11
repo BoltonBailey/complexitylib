@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
-
-namespace Complexity
 
 /-!
 # Languages determined by the first input cell
@@ -37,6 +40,8 @@ languages.
 - `firstBitZero_union_firstBitOne_eq_nonempty` — explicit Boolean identity
   used to present `nonempty` as a union.
 -/
+
+namespace Complexity
 
 open Complexity
 

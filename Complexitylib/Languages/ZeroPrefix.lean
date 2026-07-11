@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
-
-namespace Complexity
 
 /-!
 # `{0ⁿ 1ᵐ : n ≥ m}`: a push-down language with inequality counter
@@ -29,6 +32,8 @@ via the permanently-`▷` cell 0.
 - `zeroPrefixTM_reachesIn` — halts in `|x| + 3` steps on every input.
 - `zeroPrefix_in_DTIME`, `zeroPrefix_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 

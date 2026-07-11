@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
-
-namespace Complexity
 
 /-!
 # `containsZero` and `containsOne`: "contains-a-bit" languages
@@ -21,6 +24,8 @@ The strings containing at least one `0`-bit (resp. `1`-bit). Decided by a
 - `containsZero_in_DTIME`, `containsOne_in_DTIME` — both in `DTIME(n + 2)`.
 - `containsZero_mem_P`, `containsOne_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 

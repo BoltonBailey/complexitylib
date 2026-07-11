@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
-
-namespace Complexity
 
 /-!
 # `{x : #false x = #true x}`: equal-count / "balanced" language
@@ -31,6 +34,8 @@ Emptiness (`h = 0`) is detected structurally by the work head reading
 - `TM.balancedTM_reachesIn` — halts in `|x| + 3` steps on every input.
 - `balanced_in_DTIME`, `balanced_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 
