@@ -1,24 +1,29 @@
-import Complexitylib.Circuits.NF.Defs
-import Complexitylib.Circuits.AON.Defs
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.NormalForm.Defs
+import Complexitylib.Circuits.AndOrNot.Defs
 import Mathlib.Data.Fintype.BigOperators
-
-namespace Complexity
 
 /-! # Internal: Normal Form Proof Machinery
 
 This internal module contains the proof infrastructure for CNF/DNF:
 
 * **Circuit embedding**: `CNF.toCircuit` and `DNF.toCircuit` embed normal form
-  formulas as 2-level circuits over `Basis.unboundedAON`, together with
+  formulas as 2-level circuits over `Basis.unboundedAndOr`, together with
   correctness (`eval_toCircuit`) and size (`size_toCircuit`) proofs.
 
-* **Lower bound machinery**: `DNF.flip_complexity_lb` shows that any DNF
+* **Lower bound machinery**: `DNF.two_pow_le_complexity_of_flipSensitive` shows that any DNF
   computing a flip-sensitive function on `N` variables needs at least `2^{N-1}`
-  terms. Key lemmas include `term_mentions_all`, `full_term_unique`, and
+  terms. Key lemmas include `term_mentions_all`, `eq_of_eval_of_mentions_all`, and
   `card_true_of_flip_sensitive`.
 
-The public interface re-exports the main theorems from `Complexitylib.Circuits.NF`.
+The public interface re-exports the main theorems from `Complexitylib.Circuits.NormalForm`.
 -/
+
+namespace Complexity
 
 /-! ## Helper lemmas for toCircuit correctness -/
 
@@ -86,13 +91,13 @@ private lemma foldl_band_eq_list_all {α : Type} (l : List α) (p : α → Bool)
 
 namespace CNF
 
-/-- Embed a CNF formula as a 2-level AND-of-ORs circuit over `Basis.unboundedAON`.
+/-- Embed a CNF formula as a 2-level AND-of-ORs circuit over `Basis.unboundedAndOr`.
 
 The circuit has `φ.complexity` internal OR gates (one per clause) and a single
 output AND gate. Each OR gate reads only primary input wires, with the `negated`
 flag encoding literal polarity. The circuit size is `φ.complexity + 1`. -/
 def toCircuit {N : Nat} [NeZero N] (φ : CNF N) :
-    Circuit Basis.unboundedAON N 1 φ.complexity where
+    Circuit Basis.unboundedAndOr N 1 φ.complexity where
   gates i :=
     let clause := φ.clauses.get ⟨i.val, i.isLt⟩
     { op := .or
@@ -116,16 +121,16 @@ private lemma wireValue_gate [NeZero N] (φ : CNF N) (x : BitString N) (i : Fin 
     φ.toCircuit.wireValue x ⟨N + i.val, by omega⟩ =
       (φ.clauses.get ⟨i.val, i.isLt⟩).any (fun l => l.eval x) := by
   have hge : ¬ ((⟨N + ↑i, (by omega)⟩ : Fin (N + φ.complexity)).val < N) := by simp
-  rw [Circuit.wireValue_ge _ x _ hge]
+  rw [Circuit.wireValue_of_not_lt _ x _ hge]
   -- Normalize gate index
   have hgi : φ.toCircuit.gates ⟨(⟨N + ↑i, (by omega)⟩ : Fin (N + φ.complexity)).val - N,
     (by omega)⟩ = φ.toCircuit.gates i := by congr 1; ext; simp
   rw [hgi]
   -- Unfold gate definition
-  simp only [toCircuit, Gate.eval, Basis.unboundedAON, AONOp.eval]
+  simp only [toCircuit, Gate.eval, Basis.unboundedAndOr, AndOrOp.eval]
   -- Handle wireValue for primary inputs + xor-negation inside foldl
   conv_lhs => arg 2; ext acc j; arg 2; arg 2
-              rw [Circuit.wireValue_lt _ _ _
+              rw [Circuit.wireValue_of_lt _ _ _
                 ((φ.clauses.get ⟨↑i, i.isLt⟩).get j).var.isLt]
   conv_lhs => arg 2; ext acc j; arg 2
               rw [xor_neg_polarity_eq_eval]
@@ -135,8 +140,8 @@ private lemma wireValue_gate [NeZero N] (φ : CNF N) (x : BitString N) (i : Fin 
 theorem eval_toCircuit [NeZero N] (φ : CNF N) :
     (fun x => (φ.toCircuit.eval x) 0) = φ.eval := by
   funext x
-  simp only [Circuit.eval, eval, toCircuit, Gate.eval, Basis.unboundedAON, Bool.false_xor,
-    AONOp.eval]
+  simp only [Circuit.eval, eval, toCircuit, Gate.eval, Basis.unboundedAndOr, Bool.false_xor,
+    AndOrOp.eval]
   -- Convert struct-literal wireValue back to φ.toCircuit form for wireValue_gate
   change Fin.foldl φ.complexity
     (fun acc j => acc && φ.toCircuit.wireValue x ⟨N + j.val, by omega⟩) true =
@@ -154,13 +159,13 @@ end CNF
 
 namespace DNF
 
-/-- Embed a DNF formula as a 2-level OR-of-ANDs circuit over `Basis.unboundedAON`.
+/-- Embed a DNF formula as a 2-level OR-of-ANDs circuit over `Basis.unboundedAndOr`.
 
 The circuit has `φ.complexity` internal AND gates (one per term) and a single
 output OR gate. Each AND gate reads only primary input wires, with the `negated`
 flag encoding literal polarity. The circuit size is `φ.complexity + 1`. -/
 def toCircuit {N : Nat} [NeZero N] (φ : DNF N) :
-    Circuit Basis.unboundedAON N 1 φ.complexity where
+    Circuit Basis.unboundedAndOr N 1 φ.complexity where
   gates i :=
     let term := φ.terms.get ⟨i.val, i.isLt⟩
     { op := .and
@@ -184,16 +189,16 @@ private lemma wireValue_gate [NeZero N] (φ : DNF N) (x : BitString N) (i : Fin 
     φ.toCircuit.wireValue x ⟨N + i.val, by omega⟩ =
       (φ.terms.get ⟨i.val, i.isLt⟩).all (fun l => l.eval x) := by
   have hge : ¬ ((⟨N + ↑i, (by omega)⟩ : Fin (N + φ.complexity)).val < N) := by simp
-  rw [Circuit.wireValue_ge _ x _ hge]
+  rw [Circuit.wireValue_of_not_lt _ x _ hge]
   -- Normalize gate index
   have hgi : φ.toCircuit.gates ⟨(⟨N + ↑i, (by omega)⟩ : Fin (N + φ.complexity)).val - N,
     (by omega)⟩ = φ.toCircuit.gates i := by congr 1; ext; simp
   rw [hgi]
   -- Unfold gate definition
-  simp only [toCircuit, Gate.eval, Basis.unboundedAON, AONOp.eval]
+  simp only [toCircuit, Gate.eval, Basis.unboundedAndOr, AndOrOp.eval]
   -- Handle wireValue for primary inputs + xor-negation inside foldl
   conv_lhs => arg 2; ext acc j; arg 2; arg 2
-              rw [Circuit.wireValue_lt _ _ _
+              rw [Circuit.wireValue_of_lt _ _ _
                 ((φ.terms.get ⟨↑i, i.isLt⟩).get j).var.isLt]
   conv_lhs => arg 2; ext acc j; arg 2
               rw [xor_neg_polarity_eq_eval]
@@ -203,8 +208,8 @@ private lemma wireValue_gate [NeZero N] (φ : DNF N) (x : BitString N) (i : Fin 
 theorem eval_toCircuit [NeZero N] (φ : DNF N) :
     (fun x => (φ.toCircuit.eval x) 0) = φ.eval := by
   funext x
-  simp only [Circuit.eval, eval, toCircuit, Gate.eval, Basis.unboundedAON, Bool.false_xor,
-    AONOp.eval]
+  simp only [Circuit.eval, eval, toCircuit, Gate.eval, Basis.unboundedAndOr, Bool.false_xor,
+    AndOrOp.eval]
   -- Convert struct-literal wireValue back to φ.toCircuit form for wireValue_gate
   change Fin.foldl φ.complexity
     (fun acc j => acc || φ.toCircuit.wireValue x ⟨N + j.val, by omega⟩) false =
@@ -269,7 +274,7 @@ theorem DNF.term_mentions_all (φ : DNF N)
   simp at this
 
 /-- If a term mentions all N variables, it is satisfied by at most one assignment. -/
-theorem full_term_unique {term : List (Literal N)}
+theorem eq_of_eval_of_mentions_all {term : List (Literal N)}
     (hfull : ∀ i : Fin N, ∃ l ∈ term, l.var = i)
     {x y : BitString N}
     (hx : term.all (fun l => l.eval x) = true)
@@ -336,7 +341,7 @@ theorem card_true_of_flip_sensitive {N : Nat} (hN : 1 ≤ N)
 
 /-- If `φ : DNF N` computes a flip-sensitive function with `N ≥ 1`,
 then `2^{N-1} ≤ φ.complexity`. -/
-theorem DNF.flip_complexity_lb (φ : DNF N) (hN : 1 ≤ N)
+theorem DNF.two_pow_le_complexity_of_flipSensitive (φ : DNF N) (hN : 1 ≤ N)
     (f : BitString N → Bool)
     (hcomp : ∀ x, φ.eval x = f x)
     (hflip : ∀ x (i : Fin N), f (Function.update x i (!x i)) = !f x) :
@@ -357,7 +362,7 @@ theorem DNF.flip_complexity_lb (φ : DNF N) (hN : 1 ≤ N)
       x₁ = x₂ := by
     intro term hterm x₁ x₂ h₁ h₂
     have hfull := DNF.term_mentions_all φ f hcomp hflip term hterm x₁ h₁
-    exact full_term_unique hfull h₁ h₂
+    exact eq_of_eval_of_mentions_all hfull h₁ h₂
   -- Count: |true-set| ≤ |terms| by injection via findIdx
   -- Reformulate as card ≤ card
   rw [show φ.complexity = (Finset.range φ.complexity).card from

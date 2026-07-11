@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Combinatorics.Digraph.Basic
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Nat.Lattice
@@ -23,22 +28,22 @@ namespace Digraph
 
 variable {V : Type*}
 
-/-- `G.IsDirectedPath p` says that `p : Fin m → V` is a directed walk
+/-- `G.IsDirectedWalk p` says that `p : Fin m → V` is a directed walk
 in the digraph `G`: consecutive vertices are joined by an edge. -/
-def IsDirectedPath (G : Digraph V) {m : Nat} (p : Fin m → V) : Prop :=
+def IsDirectedWalk (G : Digraph V) {m : Nat} (p : Fin m → V) : Prop :=
   ∀ i : Fin m, ∀ h : i.val + 1 < m, G.Adj (p i) (p ⟨i.val + 1, h⟩)
 
-/-- `G.IsSimplePath p` says that `p : Fin m → V` is a *simple* directed
+/-- `G.IsPath p` says that `p : Fin m → V` is a *simple* directed
 path: an injective directed walk. -/
-def IsSimplePath (G : Digraph V) {m : Nat} (p : Fin m → V) : Prop :=
-  G.IsDirectedPath p ∧ Function.Injective p
+def IsPath (G : Digraph V) {m : Nat} (p : Fin m → V) : Prop :=
+  G.IsDirectedWalk p ∧ Function.Injective p
 
 /-- The **depth** of a digraph is the length — number of nodes — of a
 longest directed walk in it. Walks are not required to be injective,
 so cyclic graphs have `depth = 0` by the `Nat.sSup` convention on
 unbounded sets. -/
 noncomputable def depth (G : Digraph V) : Nat :=
-  sSup { m | ∃ p : Fin m → V, G.IsDirectedPath p }
+  sSup { m | ∃ p : Fin m → V, G.IsDirectedWalk p }
 
 /-- The directed edge set of a digraph with decidable adjacency on a
 finite vertex type. -/
@@ -63,11 +68,11 @@ instance [DecidableEq V] (G : Digraph V) [DecidableRel G.Adj]
 bounded. For finite vertex types this is equivalent to having no
 directed cycles. -/
 def IsAcyclic (G : Digraph V) : Prop :=
-  BddAbove { m | ∃ p : Fin m → V, G.IsDirectedPath p }
+  BddAbove { m | ∃ p : Fin m → V, G.IsDirectedWalk p }
 
 /-- The directed-walk set of `G.deleteEdges ∅` agrees with that of `G`,
 so the two graphs have the same depth. -/
-lemma deleteEdges_empty_depth (G : Digraph V) :
+lemma depth_deleteEdges_empty (G : Digraph V) :
     (G.deleteEdges ∅).depth = G.depth := by
   unfold Digraph.depth
   congr 1
@@ -75,5 +80,14 @@ lemma deleteEdges_empty_depth (G : Digraph V) :
   refine ⟨fun ⟨p, hp⟩ => ⟨p, fun i h => (hp i h).1⟩, fun ⟨p, hp⟩ => ⟨p, ?_⟩⟩
   intro i h
   exact ⟨hp i h, Finset.notMem_empty _⟩
+
+/-- The **canonical labeling** of `G`: the length — node count — of a
+longest simple directed path ending at `v`. Parameterized by edge
+count `n`, with the outer `+ 1` converting to node count; the
+single-vertex path `![v]` always witnesses `n = 0`, so the label is
+automatically at least `1`. -/
+noncomputable def canonicalLabel {V : Type*} [Fintype V]
+    (G : Digraph V) (v : V) : Nat :=
+  sSup { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v } + 1
 
 end Digraph

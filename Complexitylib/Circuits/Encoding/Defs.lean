@@ -1,6 +1,9 @@
-import Complexitylib.Circuits.AON.Defs
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.AndOrNot.Defs
 
 /-!
 # Machine-facing encoding of fan-in-two AND/OR circuits
@@ -23,7 +26,9 @@ format polynomially long in the input arity and number of gates; a binary
 format can be added later without changing the raw circuit semantics.
 -/
 
-namespace AONCircuitCode
+namespace Complexity
+
+namespace CircuitCode
 
 /-- A proof-free fan-in-two AND/OR gate.
 
@@ -31,10 +36,15 @@ namespace AONCircuitCode
 before the AND/OR operation, matching `Gate.negated` in the typed circuit
 model. -/
 structure RawGate where
-  op : AONOp
+  /-- Whether the gate computes AND or OR of its (possibly negated) inputs. -/
+  op : AndOrOp
+  /-- Absolute wire index of the first input. -/
   input₀ : ℕ
+  /-- Absolute wire index of the second input. -/
   input₁ : ℕ
+  /-- Whether the first input value is negated before applying `op`. -/
   negated₀ : Bool
+  /-- Whether the second input value is negated before applying `op`. -/
   negated₁ : Bool
   deriving DecidableEq, Repr
 
@@ -143,7 +153,7 @@ def opBit (g : RawGate) : Bool :=
   | .or => false
 
 /-- Decode the operation bit used by `opBit`. -/
-def opOfBit : Bool → AONOp
+def opOfBit : Bool → AndOrOp
   | true => .and
   | false => .or
 
@@ -201,7 +211,7 @@ end RawCircuit
 
 /-- Translate a typed fan-in-two gate to the proof-free wire format. -/
 def RawGate.ofGate {W : ℕ} (g : Gate Basis.andOr2 W) : RawGate := by
-  have hfan : g.fanIn = 2 := andOr2_fanIn g
+  have hfan : g.fanIn = 2 := fanIn_andOr2 g
   exact
     { op := g.op
       input₀ := (g.inputs ⟨0, by omega⟩).val
@@ -231,6 +241,6 @@ def evalCode (N : ℕ) (code input : List Bool) : Option Bool := do
   else
     none
 
-end AONCircuitCode
+end CircuitCode
 
 end Complexity

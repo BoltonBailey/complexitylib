@@ -1,8 +1,11 @@
-import Complexitylib.Circuits.NF.Defs
-import Complexitylib.Circuits.Internal.NF
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.NormalForm.Defs
+import Complexitylib.Circuits.Internal.NormalForm
 import Complexitylib.Circuits.XOR
-
-namespace Complexity
 
 /-! # Normal Forms: CNF/DNF Lower Bound for XOR
 
@@ -14,7 +17,7 @@ satisfying term mention all N variables, making the terms injective on the
 `2^{N-1}`-element true-set.  The CNF case reduces to the DNF case via
 De Morgan duality (`CNF.neg`).
 
-## Definitions (from `Complexitylib.Circuits.NF.Defs`)
+## Definitions (from `Complexitylib.Circuits.NormalForm.Defs`)
 
 * `Literal` — a Boolean variable with a polarity flag
 * `CNF` — conjunction of clauses (disjunctions of literals)
@@ -24,24 +27,26 @@ De Morgan duality (`CNF.neg`).
 
 ## Main results
 
-* `DNF.xorBool_complexity_lb` — any DNF computing XOR has `≥ 2^{N-1}` terms
-* `CNF.xorBool_complexity_lb` — any CNF computing XOR has `≥ 2^{N-1}` clauses
+* `DNF.two_pow_le_complexity_of_xorBool` — any DNF computing XOR has `≥ 2^{N-1}` terms
+* `CNF.two_pow_le_complexity_of_xorBool` — any CNF computing XOR has `≥ 2^{N-1}` clauses
 -/
 
+namespace Complexity
+
 /-- Any DNF computing N-variable XOR requires at least `2^{N-1}` terms. -/
-theorem DNF.xorBool_complexity_lb (φ : DNF N) (hN : 1 ≤ N)
+theorem DNF.two_pow_le_complexity_of_xorBool (φ : DNF N) (hN : 1 ≤ N)
     (hcomp : ∀ x, φ.eval x = Schnorr.xorBool N x) :
     2 ^ (N - 1) ≤ φ.complexity := by
-  exact φ.flip_complexity_lb hN (Schnorr.xorBool N) hcomp
+  exact φ.two_pow_le_complexity_of_flipSensitive hN (Schnorr.xorBool N) hcomp
     (fun x i => Schnorr.xorBool_flip N x i)
 
 /-- Any CNF computing N-variable XOR requires at least `2^{N-1}` clauses. -/
-theorem CNF.xorBool_complexity_lb (φ : CNF N) (hN : 1 ≤ N)
+theorem CNF.two_pow_le_complexity_of_xorBool (φ : CNF N) (hN : 1 ≤ N)
     (hcomp : ∀ x, φ.eval x = Schnorr.xorBool N x) :
     2 ^ (N - 1) ≤ φ.complexity := by
   -- φ.neg is a DNF computing ¬xorBool, which is also flip-sensitive
-  rw [← CNF.neg_complexity]
-  apply DNF.flip_complexity_lb φ.neg hN (fun x => !(Schnorr.xorBool N x))
+  rw [← CNF.complexity_neg]
+  apply DNF.two_pow_le_complexity_of_flipSensitive φ.neg hN (fun x => !(Schnorr.xorBool N x))
   · intro x; rw [CNF.eval_neg, hcomp]
   · intro x i
     rw [Schnorr.xorBool_flip, Bool.not_not]

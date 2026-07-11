@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.XOR
 import Complexitylib.Circuits.Internal.Bridge
-
-namespace Complexity
 
 /-! # Schnorr's Lower Bound for XOR Circuits
 
@@ -19,7 +22,8 @@ The proof proceeds by induction on `N`. At each step:
 
 ## Main results
 
-The main theorem is `schnorr_lower_bound_circuit`:
+The main theorem is `schnorr_lower_bound_circuit` (proved in
+`Complexitylib.Circuits.Internal.Bridge` and made available here by import):
 
     theorem schnorr_lower_bound_circuit (N G : Nat) [NeZero N]
         (c : Circuit Basis.andOr2 N 1 G) (comp : Bool)
@@ -33,16 +37,18 @@ equivalently `G + 1 ≥ 2N − 1` total gates (since `Circuit.size = G + 1`
 for single-output circuits).
 
 When `Basis.andOr2` is known to be complete, this yields a
-`size_complexity` bound via `schnorr_size_complexity`.
+`sizeComplexity` bound via `sizeComplexity_xorBool_ge`.
 -/
 
-/-- **Schnorr lower bound in terms of `size_complexity`**: the fan-in-2
+namespace Complexity
+
+/-- **Schnorr lower bound in terms of `sizeComplexity`**: the fan-in-2
     AND/OR circuit complexity of N-input XOR is at least `2N − 1`. -/
-theorem schnorr_size_complexity (N : Nat) [NeZero N] (hN : 1 ≤ N)
+theorem sizeComplexity_xorBool_ge (N : Nat) [NeZero N] (hN : 1 ≤ N)
     [CompleteBasis Basis.andOr2] :
-    Circuit.size_complexity Basis.andOr2 (Schnorr.xorBool N) ≥ 2 * N - 1 := by
+    Circuit.sizeComplexity Basis.andOr2 (Schnorr.xorBool N) ≥ 2 * N - 1 := by
   by_contra hlt; push Not at hlt
-  obtain ⟨G, c, hs, hc⟩ := Circuit.size_complexity_witness (B := Basis.andOr2)
+  obtain ⟨G, c, hs, hc⟩ := Circuit.sizeComplexity_witness (B := Basis.andOr2)
     (Schnorr.xorBool N)
   have heval : ∀ x, (c.eval x) 0 = false.xor (Schnorr.xorBool N x) := by
     intro x; simp [congr_fun hc x]

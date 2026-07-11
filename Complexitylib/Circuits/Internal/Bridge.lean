@@ -1,7 +1,10 @@
-import Complexitylib.Circuits.Internal.CircuitToDesc
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.Internal.CircuitToDescriptor
 import Complexitylib.Circuits.Internal.Schnorr
-
-namespace Complexity
 
 /-! # Internal: Bridge from CircDesc to Circuit Model
 
@@ -12,6 +15,8 @@ The public theorems `shannon_lower_bound_circuit` and
 `schnorr_lower_bound_circuit` are accessible through
 `Complexitylib.Circuits.Shannon` and `Complexitylib.Circuits.Schnorr` respectively.
 -/
+
+namespace Complexity
 
 /-! ## Padding -/
 

@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Encoding
 import Complexitylib.Circuits.Family
-
-namespace Complexity
 
 /-!
 # Encodings of whole circuit families
@@ -11,6 +14,8 @@ codec. A leading tag distinguishes the explicit empty-input answer from an
 ordinary encoded circuit.
 -/
 
+namespace Complexity
+
 namespace CircuitFamily
 
 /-- Encode the member of an AND/OR circuit family at input length `n`.
@@ -19,18 +24,20 @@ The zero-length member is the tag `false` followed by its explicit answer.
 Positive lengths use the tag `true` followed by the ordinary circuit code. -/
 def encodeAt (F : CircuitFamily Basis.andOr2) : (n : ℕ) → List Bool
   | 0 => [false, F.emptyOutput]
-  | n + 1 => true :: AONCircuitCode.encodeCircuit (F.circuit (n + 1))
+  | n + 1 => true :: CircuitCode.encodeCircuit (F.circuit (n + 1))
 
+/-- The length-zero member encodes as the `false` tag followed by the explicit answer bit. -/
 @[simp] theorem encodeAt_zero (F : CircuitFamily Basis.andOr2) :
     F.encodeAt 0 = [false, F.emptyOutput] := rfl
 
+/-- A positive-length member encodes as the `true` tag followed by its circuit's code. -/
 @[simp] theorem encodeAt_succ (F : CircuitFamily Basis.andOr2) (n : ℕ) :
     F.encodeAt (n + 1) =
-      true :: AONCircuitCode.encodeCircuit (F.circuit (n + 1)) := rfl
+      true :: CircuitCode.encodeCircuit (F.circuit (n + 1)) := rfl
 
 end CircuitFamily
 
-namespace AONCircuitCode
+namespace CircuitCode
 
 /-- Evaluate a tagged family code on a variable-length input.
 
@@ -98,9 +105,12 @@ theorem evalFamilyCode_isSome_iff_of_ne_nil (code input : List Bool)
   simpa [BitString.toList, CircuitFamily.evalList] using
     evalFamilyCode_encodeAt F input.get
 
+/-- The length-zero tagged code has exactly two bits: the tag and the answer. -/
 @[simp] theorem encodeAt_zero_length (F : CircuitFamily Basis.andOr2) :
     (F.encodeAt 0).length = 2 := rfl
 
+/-- A positive-length tagged code is one bit (the tag) longer than the underlying
+    circuit code. -/
 @[simp] theorem encodeAt_succ_length (F : CircuitFamily Basis.andOr2) (n : ℕ) :
     (F.encodeAt (n + 1)).length =
       (encodeCircuit (F.circuit (n + 1))).length + 1 := by
@@ -116,6 +126,6 @@ theorem encodeAt_succ_length_le (F : CircuitFamily Basis.andOr2) (n : ℕ) :
   rw [F.size_succ]
   omega
 
-end AONCircuitCode
+end CircuitCode
 
 end Complexity

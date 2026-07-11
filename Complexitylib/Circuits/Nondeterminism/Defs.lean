@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Basic
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Fintype.BigOperators
-
-namespace Complexity
 
 /-! # Nondeterministic Quantification of Boolean Functions
 
@@ -29,6 +32,8 @@ guesses the first `k` input bits.
 * `existQuantify_mono` — monotonicity under pointwise implication
 -/
 
+namespace Complexity
+
 variable {k m : Nat}
 
 /-- Existential quantification over the first `k` inputs of a Boolean function.
@@ -43,11 +48,15 @@ def existQuantify (f : BitString (k + m) → Bool) : BitString m → Bool :=
 def forallQuantify (f : BitString (k + m) → Bool) : BitString m → Bool :=
   fun y => decide (∀ x : BitString k, f (Fin.append x y) = true)
 
+/-- Characterization: `existQuantify f y = true` iff some assignment `x` to the
+    first `k` inputs makes `f (x ++ y) = true`. -/
 @[simp]
 theorem existQuantify_eq_true {f : BitString (k + m) → Bool} {y : BitString m} :
     existQuantify f y = true ↔ ∃ x : BitString k, f (Fin.append x y) = true := by
   simp [existQuantify]
 
+/-- Characterization: `forallQuantify f y = true` iff every assignment `x` to the
+    first `k` inputs makes `f (x ++ y) = true`. -/
 @[simp]
 theorem forallQuantify_eq_true {f : BitString (k + m) → Bool} {y : BitString m} :
     forallQuantify f y = true ↔ ∀ x : BitString k, f (Fin.append x y) = true := by

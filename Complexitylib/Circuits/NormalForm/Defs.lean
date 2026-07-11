@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Basic
-
-namespace Complexity
 
 /-! # Normal Forms — Core Definitions
 
@@ -16,13 +19,23 @@ complexity measures, and De Morgan negation duality.
 * `CNF.complexity` — the number of clauses in a CNF formula
 * `DNF.complexity` — the number of terms in a DNF formula
 * `CNF.neg` / `DNF.neg` — De Morgan negation (CNF ↔ DNF)
+
+## Relation to `Complexity.SAT`
+
+`Complexity.Literal`, `Complexity.CNF`, and `Complexity.DNF` are deliberately distinct from
+`Complexity.SAT.Lit` and `Complexity.SAT.CNF`. The types here are `Fin`-indexed over a fixed
+variable count `N` and are used for circuit lower bounds, whereas the `SAT` versions are
+`Nat`-indexed and serve as the language encoding for SAT.
 -/
+
+namespace Complexity
 
 /-- A literal: a Boolean variable (by index) together with a polarity flag.
 
 `polarity = true` represents the positive literal xᵢ;
 `polarity = false` represents the negative literal ¬xᵢ. -/
 structure Literal (N : Nat) where
+  /-- The index of the Boolean variable this literal refers to. -/
   var : Fin N
   /-- `true` = positive literal (xᵢ); `false` = negative literal (¬xᵢ). -/
   polarity : Bool
@@ -52,7 +65,6 @@ A CNF is a conjunction of clauses, where each clause is a disjunction of literal
 structure CNF (N : Nat) where
   /-- The clauses of the formula. Each clause is a list of literals. -/
   clauses : List (List (Literal N))
-  deriving Repr
 
 namespace CNF
 
@@ -76,7 +88,6 @@ A DNF is a disjunction of terms, where each term is a conjunction of literals.
 structure DNF (N : Nat) where
   /-- The terms of the formula. Each term is a list of literals. -/
   terms : List (List (Literal N))
-  deriving Repr
 
 namespace DNF
 
@@ -115,7 +126,7 @@ theorem DNF.eval_neg (φ : DNF N) (x : BitString N) :
     List.not_all_eq_any_not, List.not_any_eq_all_not, Literal.eval_neg]
 
 /-- Negating a CNF preserves complexity. -/
-theorem CNF.neg_complexity (φ : CNF N) : φ.neg.complexity = φ.complexity := by
+theorem CNF.complexity_neg (φ : CNF N) : φ.neg.complexity = φ.complexity := by
   simp [CNF.neg, DNF.complexity, CNF.complexity, List.length_map]
 
 end Complexity

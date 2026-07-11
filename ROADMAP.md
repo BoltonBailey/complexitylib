@@ -315,7 +315,7 @@ preserved by serialized encodings and uniform generators.
   polynomial-size circuit families.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
 - [ ] Introduce `DEPTH`, `NC^i`, and `AC^i` after uniformity and zero-length
-  conventions have been propagated through the existing `InAC0` definition.
+  conventions have been propagated through the existing `AC0` definition.
 
 **Formalization hazards.**
 

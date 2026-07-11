@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Encoding.Family
-
-namespace Complexity
 
 /-!
 # Encoded-circuit evaluator — executable validation
@@ -13,7 +16,9 @@ This module is not part of the public import graph. Build it explicitly with
 `lake build --wfail Complexitylib.Circuits.Encoding.Validation`.
 -/
 
-namespace AONCircuitCode.Validation
+namespace Complexity
+
+namespace CircuitCode.Validation
 
 /-- A two-input AND circuit with no negated edges. -/
 def andCircuit : RawCircuit :=
@@ -72,6 +77,6 @@ def sharedCircuit : RawCircuit :=
 #guard evalFamilyCode (true :: andCircuit.encode) [true, false] = some false
 #guard evalFamilyCode (false :: andCircuit.encode) [true, false] = none
 
-end AONCircuitCode.Validation
+end CircuitCode.Validation
 
 end Complexity

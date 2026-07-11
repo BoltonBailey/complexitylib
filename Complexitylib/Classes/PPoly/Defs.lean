@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Family.Defs
-import Complexitylib.Circuits.AON.Defs
+import Complexitylib.Circuits.AndOrNot.Defs
 import Complexitylib.Models.TuringMachine
 
 /-!

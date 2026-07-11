@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Encoding.Defs
-
-namespace Complexity
 
 /-!
 # Correctness of the machine-facing circuit codec
@@ -11,10 +14,13 @@ invariants.  Semantic agreement with typed circuit evaluation is deliberately
 kept in a separate proof layer.
 -/
 
-namespace AONCircuitCode
+namespace Complexity
+
+namespace CircuitCode
 
 namespace NatCode
 
+/-- The unary encoding of `n` uses exactly `n + 1` bits (`n` trues and a false). -/
 @[simp] theorem length_encode (n : ℕ) : (encode n).length = n + 1 := by
   simp [encode]
 
@@ -74,14 +80,18 @@ end NatCode
 
 namespace RawGate
 
+/-- The Boolean well-formedness check agrees with the `WellFormedAt` predicate. -/
 @[simp] theorem isWellFormedAt_eq_true (gate : RawGate) (available : ℕ) :
     gate.isWellFormedAt available = true ↔ gate.WellFormedAt available := by
   simp [isWellFormedAt]
 
+/-- Decoding a gate's operation bit recovers its operation. -/
 @[simp] theorem opOfBit_opBit (g : RawGate) : opOfBit g.opBit = g.op := by
   cases g with
   | mk op input₀ input₁ negated₀ negated₁ => cases op <;> rfl
 
+/-- A gate encoding uses five header/delimiter bits plus one bit per unary
+    input reference. -/
 @[simp] theorem length_encode (g : RawGate) :
     g.encode.length = 5 + g.input₀ + g.input₁ := by
   simp [encode, NatCode.length_encode]
@@ -134,6 +144,7 @@ end RawGate
 
 namespace RawCircuit
 
+/-- The Boolean well-formedness check agrees with the `WellFormed` predicate. -/
 @[simp] theorem isWellFormed_eq_true (circuit : RawCircuit) (N : ℕ) :
     circuit.isWellFormed N = true ↔ circuit.WellFormed N := by
   simp [isWellFormed]
@@ -164,6 +175,8 @@ theorem decode?_encode_append_eq_none (c : RawCircuit) {suffix : List Bool}
     (h : suffix ≠ []) : decode? (c.encode ++ suffix) = none := by
   simp [decode?, h]
 
+/-- A circuit encoding consists of the unary gate count followed by the
+    concatenated gate encodings. -/
 @[simp] theorem length_encode (c : RawCircuit) :
     c.encode.length = c.length + 1 + (c.map fun gate => gate.encode.length).sum := by
   simp [encode, NatCode.length_encode, List.length_flatMap]
@@ -371,12 +384,12 @@ namespace RawGate
 
 /-- The first raw reference is the first typed input wire. -/
 @[simp] theorem ofGate_input₀ {W : ℕ} (gate : Gate Basis.andOr2 W) :
-    (RawGate.ofGate gate).input₀ = (gate.inputs ⟨0, by rw [andOr2_fanIn gate]; omega⟩).val := by
+    (RawGate.ofGate gate).input₀ = (gate.inputs ⟨0, by rw [fanIn_andOr2 gate]; omega⟩).val := by
   simp [RawGate.ofGate]
 
 /-- The second raw reference is the second typed input wire. -/
 @[simp] theorem ofGate_input₁ {W : ℕ} (gate : Gate Basis.andOr2 W) :
-    (RawGate.ofGate gate).input₁ = (gate.inputs ⟨1, by rw [andOr2_fanIn gate]; omega⟩).val := by
+    (RawGate.ofGate gate).input₁ = (gate.inputs ⟨1, by rw [fanIn_andOr2 gate]; omega⟩).val := by
   simp [RawGate.ofGate]
 
 /-- Erasing a typed gate's proofs never introduces an out-of-range reference. -/
@@ -410,10 +423,10 @@ theorem ofCircuit_topologicallyWellFormed {N G : ℕ} [NeZero N]
     constructor
     · rw [RawGate.ofGate_input₀]
       exact c.acyclic ⟨i.val, hi⟩
-        ⟨0, by rw [andOr2_fanIn (c.gates ⟨i.val, hi⟩)]; omega⟩
+        ⟨0, by rw [fanIn_andOr2 (c.gates ⟨i.val, hi⟩)]; omega⟩
     · rw [RawGate.ofGate_input₁]
       exact c.acyclic ⟨i.val, hi⟩
-        ⟨1, by rw [andOr2_fanIn (c.gates ⟨i.val, hi⟩)]; omega⟩
+        ⟨1, by rw [fanIn_andOr2 (c.gates ⟨i.val, hi⟩)]; omega⟩
   · have hieq : i.val = G := by
       have := i.isLt
       simp only [length_ofCircuit] at this
@@ -513,6 +526,6 @@ theorem encodeCircuit_length_le_size_internal {N G : ℕ} [NeZero N]
         rw [Nat.mul_add]
       omega
 
-end AONCircuitCode
+end CircuitCode
 
 end Complexity

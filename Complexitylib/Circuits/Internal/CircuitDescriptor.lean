@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Tactic
 import Complexitylib.Circuits.Basic
-
-namespace Complexity
 
 /-! # Internal: Circuit Descriptors and Shannon Counting Bound
 
@@ -11,6 +14,8 @@ arguments, and proves the Shannon lower bound for this model. The public
 theorem `shannon_lower_bound_circuit` (which speaks in terms of `Circuit`)
 is in `Complexitylib.Circuits.Internal.Bridge`.
 -/
+
+namespace Complexity
 
 /-! ## Gate and Circuit Descriptors -/
 
@@ -57,13 +62,18 @@ def evalD {N s : Nat} (hs : 0 < s) (d : CircDesc N s) : BitString N → Bool :=
 
 /-! ## Cardinality Lemmas -/
 
+/-- There are exactly `8 * W²` gate slots over `W` wires: a choice of gate type
+    (AND/OR), two input wires, and two negation flags. -/
 theorem card_gateSlot (W : Nat) : Fintype.card (GateSlot W) = 8 * W ^ 2 := by
   simp [GateSlot, Fintype.card_prod, Fintype.card_bool, Fintype.card_fin]; ring
 
+/-- There are exactly `(8 * (N + s)²)^s` circuit descriptors with `N` inputs and
+    `s` gates: each of the `s` gates independently picks a slot over `N + s` wires. -/
 theorem card_circDesc (N s : Nat) :
     Fintype.card (CircDesc N s) = (8 * (N + s) ^ 2) ^ s := by
   simp only [CircDesc, Fintype.card_fun, Fintype.card_fin]; rw [card_gateSlot]
 
+/-- There are exactly `2^(2^N)` Boolean functions on `N` input bits. -/
 theorem card_bool_fun (N : Nat) :
     Fintype.card (BitString N → Bool) = 2 ^ 2 ^ N := by
   simp [BitString]

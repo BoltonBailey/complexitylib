@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.Encoding.Internal.Codec
-import Complexitylib.Circuits.Internal.CircuitToDesc
-
-namespace Complexity
+import Complexitylib.Circuits.Internal.CircuitToDescriptor
 
 /-!
 # Internal: semantics of encoded fan-in-two circuits
@@ -14,7 +17,9 @@ ordered gates have run, the evaluator's array contains exactly the values of
 descriptor wires `0, ..., N + k - 1`.
 -/
 
-namespace AONCircuitCode
+namespace Complexity
+
+namespace CircuitCode
 
 namespace RawGate
 
@@ -239,6 +244,6 @@ theorem evalCode_encodeCircuit_of_length_internal {N G : ℕ} [NeZero N]
       some ((c.eval (BitString.ofList input hinput)) 0) := by
   simpa using evalCode_encodeCircuit_internal c (BitString.ofList input hinput)
 
-end AONCircuitCode
+end CircuitCode
 
 end Complexity

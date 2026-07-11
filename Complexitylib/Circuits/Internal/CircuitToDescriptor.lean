@@ -1,21 +1,27 @@
-import Complexitylib.Circuits.AON.Defs
-import Complexitylib.Circuits.Internal.CircDesc
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.AndOrNot.Defs
+import Complexitylib.Circuits.Internal.CircuitDescriptor
 
 /-! # Internal: Typed Circuits as Circuit Descriptors
 
 This internal module connects the typed `Circuit` model over `Basis.andOr2`
-to the fixed-size `CircDesc` counting model. It contains only the encoding and
-its semantic-correctness proof, so clients that need this bridge do not also
-acquire the lower-bound and padding machinery from `Internal.Bridge`.
+to the fixed-size `CircDesc` counting model. It contains only the encoding,
+its orderedness proof, and its semantic-correctness proof, so clients that need
+this bridge do not also acquire the lower-bound and padding machinery from
+`Internal.Bridge`.
 -/
+
+namespace Complexity
 
 /-! ## Encoding -/
 
 /-- Encode a `Basis.andOr2` gate as a `GateSlot`. -/
 def encodeGate {W W' : Nat} (g : Gate Basis.andOr2 W) (hW : W ≤ W') : GateSlot W' :=
-  have h2 := andOr2_fanIn g
+  have h2 := fanIn_andOr2 g
   (match g.op with | .and => true | .or => false,
    (⟨(g.inputs ⟨0, by omega⟩).val, by omega⟩,
     ⟨(g.inputs ⟨1, by omega⟩).val, by omega⟩),
@@ -37,12 +43,12 @@ theorem circuitToDesc_ordered {N G : Nat} [NeZero N]
   intro i
   simp only [circuitToDesc]
   split_ifs with hi
-  · have h2 := andOr2_fanIn (c.gates ⟨i.val, hi⟩)
+  · have h2 := fanIn_andOr2 (c.gates ⟨i.val, hi⟩)
     simp only [encodeGate, Fin.val_mk]
     constructor
     · exact c.acyclic ⟨i.val, hi⟩ ⟨0, by omega⟩
     · exact c.acyclic ⟨i.val, hi⟩ ⟨1, by omega⟩
-  · have h2 := andOr2_fanIn (c.outputs 0)
+  · have h2 := fanIn_andOr2 (c.outputs 0)
     simp only [encodeGate, Fin.val_mk]
     constructor <;> omega
 
@@ -61,7 +67,7 @@ private theorem gate_eval_eq_slot {W W' : Nat} (g : Gate Basis.andOr2 W) (hW : W
   obtain ⟨op, fanIn, arityOk, inputs, negated⟩ := g
   change fanIn = 2 at arityOk
   subst arityOk
-  cases op <;> simp [Gate.eval, Basis.andOr2, encodeGate, AONOp.eval,
+  cases op <;> simp [Gate.eval, Basis.andOr2, encodeGate, AndOrOp.eval,
     Fin.foldl_succ_last, Fin.foldl_zero, hwv]
 
 /-- Wire values agree between `Circuit.wireValue` and `wireValD` for wires
@@ -73,15 +79,15 @@ theorem wireValue_eq_wireValD {N G : Nat} [NeZero N]
       wireValD (circuitToDesc c) input ⟨w.val, by omega⟩ := by
   by_cases hwN : w.val < N
   · -- Primary input wire
-    rw [Circuit.wireValue_lt _ _ _ hwN]
+    rw [Circuit.wireValue_of_lt _ _ _ hwN]
     conv_rhs => unfold wireValD
     simp [hwN]
   · -- Gate wire
     push Not at hwN
     have hG : w.val - N < G := by omega
-    rw [Circuit.wireValue_ge c input w (by omega)]
+    rw [Circuit.wireValue_of_not_lt c input w (by omega)]
     -- h2 first, so omega can resolve Fin bounds
-    have h2 : (c.gates ⟨w.val - N, hG⟩).fanIn = 2 := andOr2_fanIn _
+    have h2 : (c.gates ⟨w.val - N, hG⟩).fanIn = 2 := fanIn_andOr2 _
     -- Acyclicity (before set, so set rewrites them consistently)
     have hacyc0 : ((c.gates ⟨w.val - N, hG⟩).inputs ⟨0, by omega⟩).val < w.val := by
       have h := c.acyclic ⟨w.val - N, hG⟩ ⟨0, by omega⟩
@@ -148,7 +154,7 @@ theorem circuit_eval_eq_evalD {N G : Nat} [NeZero N]
   simp only []
   simp only [circuitToDesc, show ¬((⟨N + G.succ - 1 - N, (by omega : N + G.succ - 1 - N < G + 1)⟩ :
     Fin (G + 1)).val < G) from by simp, dite_false]
-  have h2 := andOr2_fanIn (c.outputs 0)
+  have h2 := fanIn_andOr2 (c.outputs 0)
   simp only [encodeGate, Fin.val_mk,
     show ((c.outputs 0).inputs ⟨0, by omega⟩).val < N + G.succ - 1 from by
       exact Nat.lt_of_lt_of_le ((c.outputs 0).inputs ⟨0, by omega⟩).isLt (by omega),
