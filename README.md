@@ -51,7 +51,7 @@ Within an area, modules follow one discipline:
 So: import `Complexitylib` (or one area), read `Defs` and surface files, and
 trust the kernel for the rest. Headline results — Cook–Levin, universal-machine
 simulation with explicit overhead, the deterministic time hierarchy — are
-listed in `scripts/AxiomGuard.lean` with their fully qualified names.
+indexed in the root module `Complexitylib.lean` and mechanically guarded in `scripts/AxiomGuard.lean`.
 
 ## Building
 
