@@ -1,4 +1,5 @@
 # Style-lint baseline: pre-existing violations grandfathered during
 # the quality refactor. This file only shrinks; regenerate with
 #   python3 scripts/lint_style.py --update
-Complexitylib/Circuits/Internal/Schnorr.lean : lineLength
+#
+# The baseline is now EMPTY: no grandfathered style violations remain.

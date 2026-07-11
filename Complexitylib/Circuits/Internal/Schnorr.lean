@@ -318,7 +318,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         rename_i hi_lt
         have hw_lt_g : w.val < N + g.val := by omega
         simp only [show ¬(N + (w.val - N) < w.val) from by omega, ite_false, Bool.xor_false]
-        simp only [show ¬(wi.val < (liftWireE g w).val) from by rw [hlift_val]; simp [hw_lt_g]; omega,
+        simp only [show ¬(wi.val < (liftWireE g w).val)
+          from by rw [hlift_val]; simp [hw_lt_g]; omega,
           ite_false, Bool.xor_false]
       · -- Case 2b: i ≥ g (back reference)
         rename_i hi_ge
@@ -326,7 +327,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         cases rd with
         | const c =>
           simp only [show ¬(N + (w.val - N) < w.val) from by omega, ite_false, Bool.xor_false]
-          simp only [show wi.val < (liftWireE g w).val from by rw [hlift_val]; simp [hw_ge]; omega, ite_true]
+          simp only [show wi.val < (liftWireE g w).val
+            from by rw [hlift_val]; simp [hw_ge]; omega, ite_true]
           have hrd_spec := hrd x; simp only at hrd_spec
           -- wireVal d x ⟨N + g.val, ...⟩ = c, need wireVal d x ⟨wi.val, ...⟩ = c
           have hfin : (⟨wi.val, wi.isLt⟩ : Fin (N + (s + 1))) = ⟨N + g.val, by omega⟩ :=
@@ -364,7 +366,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         by_cases hwi_lt : wi.val - 1 < w.val
         · -- Back reference (shifted)
           -- wi > N + g.val and wi - 1 < w.val, so wi ≤ w.val, so wi.val ≤ w.val
-          -- liftWireE: w.val ≥ N + g.val (since wi.val > N + g.val and wi.val - 1 < w.val → w.val ≥ N + g.val)
+          -- liftWireE: w.val ≥ N + g.val
+          -- (since wi.val > N + g.val and wi.val - 1 < w.val → w.val ≥ N + g.val)
           have hw_ge : ¬(w.val < N + g.val) := by omega
           have hwi_lift : wi.val < (liftWireE g w).val := by rw [hlift_val]; simp [hw_ge]; omega
           simp only [hwi_lt, ite_true, hwi_lift, ite_true]
@@ -820,9 +823,11 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
             have hw2_fin : (d g).2.1.2 = 0 := by ext; exact hw2_zero
             have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR,
+                  hw1_fin]
             have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR,
+                  hw2_fin]
             have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
               change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
             have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
@@ -840,12 +845,14 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 dsimp only
                 have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
                 have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-                  change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR,
+                      hw1_fin]
                 have h_w2_val : (d_r g).2.1.2.val = w2.val - 1 := by
                   change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
-                  change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR,
+                      hw1_fin]
                 have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
                   change (restrictD d ⟨0, _⟩ false g).2.2.2 = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
@@ -854,7 +861,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 have hw2_lt' : (d_r g).2.1.2.val < n + g.val := by rw [h_w2_val]; exact hw2_back
                 simp only [hw1_nlt, ite_false, Bool.xor_false, hw2_lt', ite_true] at step1
                 rw [show (d_r g).1 = isAnd from rfl, h_n1, h_n2] at step1
-                simp only [h_w2_val, show (d g).2.2.1 = n1 from rfl, show (d g).2.2.2 = n2 from rfl] at step1
+                simp only [h_w2_val, show (d g).2.2.1 = n1 from rfl,
+                  show (d g).2.2.2 = n2 from rfl] at step1
                 rw [step1]
                 have hne : ¬n1 = !isAnd := hkill
                 have : n1 = isAnd := by rcases isAnd <;> rcases n1 <;> simp_all
@@ -868,7 +876,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
               have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-                change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+                change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR,
+                    hw1_fin]
               have h_w2_val : (d_r g).2.1.2.val = w2.val - 1 := by
                 change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
@@ -896,9 +905,11 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             have hw1_fin : (d g).2.1.1 = 0 := by ext; exact hw1_zero
             have hw2_fin : (d g).2.1.2 = 0 := by ext; exact h2
             have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR,
+                  hw1_fin]
             have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR,
+                  hw2_fin]
             have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
               change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
             have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
@@ -919,18 +930,21 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                   change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-                  change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR,
+                      hw2_fin]
                 have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
                   change (restrictD d ⟨0, _⟩ false g).2.2.1 = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
-                  change (restrictD d ⟨0, _⟩ false g).2.2.2 = _; simp [restrictD, remapWireR, hw2_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.2.2 = _; simp [restrictD, remapWireR,
+                      hw2_fin]
                 have step1 := wireVal_at_gate d_r x g
                 have hw1_lt : (d_r g).2.1.1.val < n + g.val := by rw [h_w1_val]; exact hw1_back
                 have hw2_nlt : ¬((d_r g).2.1.2.val < n + g.val) := by rw [h_w2_val]; omega
                 simp only [hw1_lt, ite_true, hw2_nlt, ite_false, Bool.xor_false] at step1
                 rw [show (d_r g).1 = isAnd from rfl, h_n1, h_n2] at step1
-                simp only [h_w1_val, show (d g).2.2.1 = n1 from rfl, show (d g).2.2.2 = n2 from rfl] at step1
+                simp only [h_w1_val, show (d g).2.2.1 = n1 from rfl,
+                  show (d g).2.2.2 = n2 from rfl] at step1
                 rw [step1]
                 have hne : ¬n2 = !isAnd := hkill
                 have : n2 = isAnd := by rcases isAnd <;> rcases n2 <;> simp_all
@@ -947,7 +961,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
               have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-                change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+                change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR,
+                    hw2_fin]
               have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
                 change (restrictD d ⟨0, _⟩ false g).2.2.1 = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
@@ -974,27 +989,39 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
     · -- const-const
       by_cases hlt : g₁.val < g₂.val
       · -- g₁ < g₂: eliminate g₂ first
-        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₂ (.const c₂) hrd₂ (fun _ _ h => by cases h) hg₂_not_last
+        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₂ (.const c₂) hrd₂
+          (fun _ _ h => by cases h) hg₂_not_last
         have key : ∀ y, wireVal (elimGateD d_r g₂ (.const c₂)) y ⟨n + g₁.val, by omega⟩ = c₁ := by
           intro y
-          have s := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂ (fun _ _ h => by cases h) y ⟨n + g₁.val, by omega⟩
-          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩ = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
+          have s := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂
+            (fun _ _ h => by cases h) y ⟨n + g₁.val, by omega⟩
+          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩
+            = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₁.val < n + g₂.val by omega))] at s
           exact s.trans (hrd₁ y)
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.const c₂)) ⟨g₁.val, by omega⟩ (.const c₁), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.const c₂)) (by omega : 0 < t + 1) ⟨g₁.val, by omega⟩ (.const c₁) key (fun _ _ h => by cases h) (show g₁.val < t + 1 by omega)
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.const c₂))
+          ⟨g₁.val, by omega⟩ (.const c₁), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.const c₂)) (by omega : 0 < t + 1)
+          ⟨g₁.val, by omega⟩ (.const c₁) key (fun _ _ h => by cases h)
+          (show g₁.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
       · -- g₂ < g₁: eliminate g₁ first
         have hlt : g₂.val < g₁.val := by omega
-        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₁ (.const c₁) hrd₁ (fun _ _ h => by cases h) hg₁_not_last
+        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₁ (.const c₁) hrd₁
+          (fun _ _ h => by cases h) hg₁_not_last
         have key : ∀ y, wireVal (elimGateD d_r g₁ (.const c₁)) y ⟨n + g₂.val, by omega⟩ = c₂ := by
           intro y
-          have s := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁ (fun _ _ h => by cases h) y ⟨n + g₂.val, by omega⟩
-          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩ = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
+          have s := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁
+            (fun _ _ h => by cases h) y ⟨n + g₂.val, by omega⟩
+          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩
+            = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₂.val < n + g₁.val by omega))] at s
           exact s.trans (hrd₂ y)
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.const c₁)) ⟨g₂.val, by omega⟩ (.const c₂), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.const c₁)) (by omega : 0 < t + 1) ⟨g₂.val, by omega⟩ (.const c₂) key (fun _ _ h => by cases h) (show g₂.val < t + 1 by omega)
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.const c₁))
+          ⟨g₂.val, by omega⟩ (.const c₂), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.const c₁)) (by omega : 0 < t + 1)
+          ⟨g₂.val, by omega⟩ (.const c₂) key (fun _ _ h => by cases h)
+          (show g₂.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
     · -- const-wire
       replace hrd₂_wire : w₂ < n + g₂.val := by have := hrd₂_wire ⟨w₂, hw₂⟩ f₂ rfl; simpa using this
@@ -1003,55 +1030,75 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
         have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₂ (.wire ⟨w₂, hw₂⟩ f₂) hrd₂
           (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
             fun w' fl h => by cases h; exact hrd₂_wire) hg₂_not_last
-        have key : ∀ y, wireVal (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) y ⟨n + g₁.val, by omega⟩ = c₁ := by
+        have key : ∀ y, wireVal (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) y ⟨n + g₁.val, by omega⟩
+          = c₁ := by
           intro y
           have s := wireVal_elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂) hrd₂
-            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip
+              → w'.val < n + g₂.val from
               fun w' fl h => by cases h; exact hrd₂_wire) y ⟨n + g₁.val, by omega⟩
-          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩ = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
+          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩
+            = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₁.val < n + g₂.val by omega))] at s
           exact s.trans (hrd₁ y)
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) ⟨g₁.val, by omega⟩ (.const c₁), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) (by omega : 0 < t + 1) ⟨g₁.val, by omega⟩ (.const c₁) key (fun _ _ h => by cases h) (show g₁.val < t + 1 by omega)
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂))
+          ⟨g₁.val, by omega⟩ (.const c₁), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) (by omega : 0 < t + 1)
+          ⟨g₁.val, by omega⟩ (.const c₁) key (fun _ _ h => by cases h)
+          (show g₁.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
       · -- g₂ < g₁: eliminate g₁ first
         have hlt : g₂.val < g₁.val := by omega
-        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₁ (.const c₁) hrd₁ (fun _ _ h => by cases h) hg₁_not_last
+        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₁ (.const c₁) hrd₁
+          (fun _ _ h => by cases h) hg₁_not_last
         have key : ∀ y, wireVal (elimGateD d_r g₁ (.const c₁)) y ⟨n + g₂.val, by omega⟩ =
             f₂.xor (wireVal (elimGateD d_r g₁ (.const c₁)) y ⟨w₂, by omega⟩) := by
           intro y
-          have s := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁ (fun _ _ h => by cases h) y ⟨n + g₂.val, by omega⟩
-          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩ = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
+          have s := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁
+            (fun _ _ h => by cases h) y ⟨n + g₂.val, by omega⟩
+          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩
+            = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₂.val < n + g₁.val by omega))] at s
           rw [s, hrd₂ y]; congr 1
-          have s₂ := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁ (fun _ _ h => by cases h) y ⟨w₂, by omega⟩
+          have s₂ := wireVal_elimGateD d_r g₁ (.const c₁) hrd₁
+            (fun _ _ h => by cases h) y ⟨w₂, by omega⟩
           rw [show liftWireE g₁ ⟨w₂, by omega⟩ = (⟨w₂, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show w₂ < n + g₁.val by omega))] at s₂
           exact s₂.symm
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.const c₁)) ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.const c₁)) (by omega : 0 < t + 1) ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂) key
-          (show ∀ w' flip, GateRedirect.wire ⟨w₂, by omega⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.const c₁))
+          ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.const c₁)) (by omega : 0 < t + 1)
+          ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂) key
+          (show ∀ w' flip, GateRedirect.wire ⟨w₂, by omega⟩ f₂ = .wire w' flip
+            → w'.val < n + g₂.val from
             fun w' fl h => by cases h; omega) (show g₂.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
     · -- wire-const
       replace hrd₁_wire : w₁ < n + g₁.val := by have := hrd₁_wire ⟨w₁, hw₁⟩ f₁ rfl; simpa using this
       by_cases hlt : g₁.val < g₂.val
       · -- g₁ < g₂: eliminate g₂ first
-        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₂ (.const c₂) hrd₂ (fun _ _ h => by cases h) hg₂_not_last
+        have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₂ (.const c₂) hrd₂
+          (fun _ _ h => by cases h) hg₂_not_last
         have key : ∀ y, wireVal (elimGateD d_r g₂ (.const c₂)) y ⟨n + g₁.val, by omega⟩ =
             f₁.xor (wireVal (elimGateD d_r g₂ (.const c₂)) y ⟨w₁, by omega⟩) := by
           intro y
-          have s := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂ (fun _ _ h => by cases h) y ⟨n + g₁.val, by omega⟩
-          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩ = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
+          have s := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂
+            (fun _ _ h => by cases h) y ⟨n + g₁.val, by omega⟩
+          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩
+            = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₁.val < n + g₂.val by omega))] at s
           rw [s, hrd₁ y]; congr 1
-          have s₂ := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂ (fun _ _ h => by cases h) y ⟨w₁, by omega⟩
+          have s₂ := wireVal_elimGateD d_r g₂ (.const c₂) hrd₂
+            (fun _ _ h => by cases h) y ⟨w₁, by omega⟩
           rw [show liftWireE g₂ ⟨w₁, by omega⟩ = (⟨w₁, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show w₁ < n + g₂.val by omega))] at s₂
           exact s₂.symm
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.const c₂)) ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.const c₂)) (by omega : 0 < t + 1) ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁) key
-          (show ∀ w' flip, GateRedirect.wire ⟨w₁, by omega⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.const c₂))
+          ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.const c₂)) (by omega : 0 < t + 1)
+          ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁) key
+          (show ∀ w' flip, GateRedirect.wire ⟨w₁, by omega⟩ f₁ = .wire w' flip
+            → w'.val < n + g₁.val from
             fun w' fl h => by cases h; omega) (show g₁.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
       · -- g₂ < g₁: eliminate g₁ first
@@ -1059,16 +1106,22 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
         have hd₁ := eval_elimGateD d_r (by omega : 0 < t + 2) g₁ (.wire ⟨w₁, hw₁⟩ f₁) hrd₁
           (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
             fun w' fl h => by cases h; exact hrd₁_wire) hg₁_not_last
-        have key : ∀ y, wireVal (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) y ⟨n + g₂.val, by omega⟩ = c₂ := by
+        have key : ∀ y, wireVal (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) y ⟨n + g₂.val, by omega⟩
+          = c₂ := by
           intro y
           have s := wireVal_elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁) hrd₁
-            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip
+              → w'.val < n + g₁.val from
               fun w' fl h => by cases h; exact hrd₁_wire) y ⟨n + g₂.val, by omega⟩
-          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩ = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
+          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩
+            = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₂.val < n + g₁.val by omega))] at s
           exact s.trans (hrd₂ y)
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) ⟨g₂.val, by omega⟩ (.const c₂), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) (by omega : 0 < t + 1) ⟨g₂.val, by omega⟩ (.const c₂) key (fun _ _ h => by cases h) (show g₂.val < t + 1 by omega)
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁))
+          ⟨g₂.val, by omega⟩ (.const c₂), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) (by omega : 0 < t + 1)
+          ⟨g₂.val, by omega⟩ (.const c₂) key (fun _ _ h => by cases h)
+          (show g₂.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
     · -- wire-wire
       replace hrd₁_wire : w₁ < n + g₁.val := by have := hrd₁_wire ⟨w₁, hw₁⟩ f₁ rfl; simpa using this
@@ -1082,20 +1135,26 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             f₁.xor (wireVal (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) y ⟨w₁, by omega⟩) := by
           intro y
           have s := wireVal_elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂) hrd₂
-            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip
+              → w'.val < n + g₂.val from
               fun w' fl h => by cases h; exact hrd₂_wire) y ⟨n + g₁.val, by omega⟩
-          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩ = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
+          rw [show liftWireE g₂ ⟨n + g₁.val, by omega⟩
+            = (⟨n + g₁.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₁.val < n + g₂.val by omega))] at s
           rw [s, hrd₁ y]; congr 1
           have s₂ := wireVal_elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂) hrd₂
-            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₂, hw₂⟩ f₂ = .wire w' flip
+              → w'.val < n + g₂.val from
               fun w' fl h => by cases h; exact hrd₂_wire) y ⟨w₁, by omega⟩
           rw [show liftWireE g₂ ⟨w₁, by omega⟩ = (⟨w₁, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show w₁ < n + g₂.val by omega))] at s₂
           exact s₂.symm
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) (by omega : 0 < t + 1) ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁) key
-          (show ∀ w' flip, GateRedirect.wire ⟨w₁, by omega⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂))
+          ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₂ (.wire ⟨w₂, hw₂⟩ f₂)) (by omega : 0 < t + 1)
+          ⟨g₁.val, by omega⟩ (.wire ⟨w₁, by omega⟩ f₁) key
+          (show ∀ w' flip, GateRedirect.wire ⟨w₁, by omega⟩ f₁ = .wire w' flip
+            → w'.val < n + g₁.val from
             fun w' fl h => by cases h; omega) (show g₁.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
       · -- g₂ < g₁: eliminate g₁ first
@@ -1107,20 +1166,26 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             f₂.xor (wireVal (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) y ⟨w₂, by omega⟩) := by
           intro y
           have s := wireVal_elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁) hrd₁
-            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip
+              → w'.val < n + g₁.val from
               fun w' fl h => by cases h; exact hrd₁_wire) y ⟨n + g₂.val, by omega⟩
-          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩ = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
+          rw [show liftWireE g₁ ⟨n + g₂.val, by omega⟩
+            = (⟨n + g₂.val, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show n + g₂.val < n + g₁.val by omega))] at s
           rw [s, hrd₂ y]; congr 1
           have s₂ := wireVal_elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁) hrd₁
-            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip → w'.val < n + g₁.val from
+            (show ∀ w' flip, GateRedirect.wire ⟨w₁, hw₁⟩ f₁ = .wire w' flip
+              → w'.val < n + g₁.val from
               fun w' fl h => by cases h; exact hrd₁_wire) y ⟨w₂, by omega⟩
           rw [show liftWireE g₁ ⟨w₂, by omega⟩ = (⟨w₂, by omega⟩ : Fin (n + (t + 3))) from
             Fin.ext (liftWireE_val_lt (show w₂ < n + g₁.val by omega))] at s₂
           exact s₂.symm
-        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂), by omega, comp, by omega, fun x => ?_⟩
-        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) (by omega : 0 < t + 1) ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂) key
-          (show ∀ w' flip, GateRedirect.wire ⟨w₂, by omega⟩ f₂ = .wire w' flip → w'.val < n + g₂.val from
+        refine ⟨t + 1, elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁))
+          ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂), by omega, comp, by omega, fun x => ?_⟩
+        have hd₂ := eval_elimGateD (elimGateD d_r g₁ (.wire ⟨w₁, hw₁⟩ f₁)) (by omega : 0 < t + 1)
+          ⟨g₂.val, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂) key
+          (show ∀ w' flip, GateRedirect.wire ⟨w₂, by omega⟩ f₂ = .wire w' flip
+            → w'.val < n + g₂.val from
             fun w' fl h => by cases h; omega) (show g₂.val < t + 1 by omega)
         rw [hd₂ x, hd₁ x, hd_r_eval x]
   · -- Case B: Only g₁ reads input 0 → g₁ is referenced → cascade
@@ -1261,7 +1326,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
         have hrd₂' : ∀ x, wireVal d₁ x ⟨n + (g'.val - 1), by omega⟩ =
             f₂.xor (wireVal d₁ x ⟨w₂, by omega⟩) := by
           intro x; have h := hrd₂ x; simp at h; exact h
-        rw [eval_elimGateD d₁ (by omega : 0 < t + 1) ⟨g'.val - 1, by omega⟩ (.wire ⟨w₂, by omega⟩ f₂)
+        rw [eval_elimGateD d₁ (by omega : 0 < t + 1) ⟨g'.val - 1, by omega⟩
+          (.wire ⟨w₂, by omega⟩ f₂)
           hrd₂' (fun w' fl h => by cases h; omega) hg'_not_last2 x]
         exact hd₁ x
     · -- Last gate case: g'.val - 1 = t + 1, so g'.val = t + 2
@@ -1363,8 +1429,10 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 -- Suffices to show each wire input gives the same xor'd value
                 suffices hwire : ∀ (ni : Bool) (wi_d1 : Fin (n + (t + 2))),
                     ni.xor (if (clampW ⟨k - n, by omega⟩ wi_d1).val < k then
-                      wireVal d₂ x ⟨(clampW ⟨k - n, by omega⟩ wi_d1).val, (clampW ⟨k - n, by omega⟩ wi_d1).isLt⟩ else false) =
-                    ni.xor (if wi_d1.val < k then wireVal d₁ x ⟨wi_d1.val, wi_d1.isLt⟩ else false) by
+                      wireVal d₂ x ⟨(clampW ⟨k - n, by omega⟩ wi_d1).val,
+                        (clampW ⟨k - n, by omega⟩ wi_d1).isLt⟩ else false) =
+                    ni.xor (if wi_d1.val < k then
+                      wireVal d₁ x ⟨wi_d1.val, wi_d1.isLt⟩ else false) by
                   split <;> (congr 1 <;> [skip; skip]) <;> exact hwire _ _
                 intro ni wi_d1
                 simp only [clampW]
