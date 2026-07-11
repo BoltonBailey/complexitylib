@@ -57,8 +57,12 @@ def SIZE (s : ℕ → ℕ) : Set Language :=
   SIZEWithBasis Basis.andOr2 s
 
 /-- **P/poly**: languages decided by polynomial-size nonuniform fan-in-two
-    AND/OR circuit families under the library's size convention. -/
+    AND/OR circuit families under the library's size convention, expressed
+    through the `SIZE` class as the union of the pointwise size classes over
+    all natural-coefficient polynomials. Equivalent to the pointwise
+    `PolynomialSize` formulation; see `PPoly_eq_iUnion_SIZE` (definitional) and
+    the big-O characterization `mem_PPoly_iff`. -/
 def PPoly : Set Language :=
-  {L | ∃ F : CircuitFamily Basis.andOr2, F.Decides L ∧ F.PolynomialSize}
+  ⋃ p : Polynomial ℕ, SIZE fun n => p.eval n
 
 end Complexity
