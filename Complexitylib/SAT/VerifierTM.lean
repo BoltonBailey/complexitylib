@@ -2317,7 +2317,8 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
-                  ih tail.length htail_len tail rfl (.boundary (cnf && clause) false true) 0 c2 htail_tok
+                  ih tail.length htail_len tail rfl (.boundary (cnf && clause) false true)
+                    0 c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
                   TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
@@ -2365,7 +2366,8 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
-                  ih tail.length htail_len tail rfl (.inLit cnf clause false sign) (var + 1) c2 htail_tok
+                  ih tail.length htail_len tail rfl (.inLit cnf clause false sign) (var + 1)
+                    c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
                   TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
@@ -3467,7 +3469,8 @@ private theorem verifyPairSplit_scanX_loop :
         (∀ j, j ≥ (c.work ⟨0, by omega⟩).head + bits.length →
             (c'.work ⟨0, by omega⟩).cells j = (c.work ⟨0, by omega⟩).cells j) ∧
         (∀ i, (h : i < bits.length) →
-            (c'.work ⟨0, by omega⟩).cells ((c.work ⟨0, by omega⟩).head + i) = Γ.ofBool (bits[i]'h)) ∧
+            (c'.work ⟨0, by omega⟩).cells ((c.work ⟨0, by omega⟩).head + i)
+              = Γ.ofBool (bits[i]'h)) ∧
         c'.work ⟨1, by omega⟩ = c.work ⟨1, by omega⟩ ∧
         (c'.work ⟨2, by omega⟩).head = (c.work ⟨2, by omega⟩).head + bits.length ∧
         (c'.work ⟨2, by omega⟩).cells 0 = Γ.start ∧
@@ -3484,7 +3487,8 @@ private theorem verifyPairSplit_scanX_loop :
   | nil =>
       intro c hst hih _ _ _ h0h h0c0 h0ns h1h h1ns h2h h2c0 h2ns _ _
       refine ⟨c, by simpa using (TM.reachesIn.zero (tm := verifyPairTM) (c := c)),
-        hst, by simp, rfl, by simp, h0c0, h0ns, ?_, ?_, ?_, rfl, by simp, h2c0, h2ns, ?_, ?_, ?_, rfl⟩
+        hst, by simp, rfl, by simp, h0c0, h0ns, ?_, ?_, ?_, rfl, by simp, h2c0, h2ns, ?_, ?_, ?_,
+          rfl⟩
       · intro j _; rfl
       · intro j _; rfl
       · intro i h; exact absurd h (by simp)
@@ -4044,7 +4048,8 @@ private theorem verifyPairSplit_copyAlpha_loop :
       (c.work ⟨2, by omega⟩).head ≥ 1 →
       (c.work ⟨2, by omega⟩).cells 0 = Γ.start →
       (∀ j, j ≥ 1 → (c.work ⟨2, by omega⟩).cells j ≠ Γ.start) →
-      (∀ i, i < as.length → (c.work ⟨2, by omega⟩).cells ((c.work ⟨2, by omega⟩).head + i) = Γ.one) →
+      (∀ i, i < as.length → (c.work ⟨2, by omega⟩).cells ((c.work ⟨2, by omega⟩).head + i)
+        = Γ.one) →
       c.output.head ≥ 1 → (∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) →
       ∃ c',
         verifyPairTM.reachesIn as.length c c' ∧
@@ -4125,7 +4130,8 @@ private theorem verifyPairSplit_copyAlpha_loop :
           (c1.work ⟨2, by omega⟩).cells ((c1.work ⟨2, by omega⟩).head + i) = Γ.one := by
         intro i hi
         rw [hc1_2h, hc1_2c, Function.update_of_ne (by omega),
-          show (c.work ⟨2, by omega⟩).head + 1 + i = (c.work ⟨2, by omega⟩).head + (i + 1) from by ring]
+          show (c.work ⟨2, by omega⟩).head + 1 + i
+            = (c.work ⟨2, by omega⟩).head + (i + 1) from by ring]
         exact hcnt (i + 1) (by simpa using hi)
       have hoh1 : c1.output.head ≥ 1 := by rw [hc1_o]; exact hoh
       have hons1 : ∀ j, j ≥ 1 → c1.output.cells j ≠ Γ.start := by
@@ -4185,7 +4191,8 @@ private theorem verifyPairSplit_rewindCounter_phase (p : ℕ) (c : Cfg 3 verifyP
       (c.work i).head ≥ 1 ∧ ∀ j, j ≥ 1 → (c.work i).cells j ≠ Γ.start)
     (hoh : c.output.head ≥ 1) (hons : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
     ∃ c', verifyPairTM.reachesIn (p + 1) c c' ∧ c'.state = .copyAlpha ∧
-      (c'.work ⟨2, by omega⟩).head = 1 ∧ (c'.work ⟨2, by omega⟩).cells = (c.work ⟨2, by omega⟩).cells ∧
+      (c'.work ⟨2, by omega⟩).head = 1 ∧ (c'.work ⟨2, by omega⟩).cells
+        = (c.work ⟨2, by omega⟩).cells ∧
       (∀ i, i ≠ (⟨2, by omega⟩ : Fin 3) → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output :=
   verifyPair_rewind_loop ⟨2, by omega⟩ .rewindCounterForAlpha .copyAlpha
@@ -4204,7 +4211,8 @@ private theorem verifyPairSplit_rewindFormula_phase (p : ℕ) (c : Cfg 3 verifyP
       (c.work i).head ≥ 1 ∧ ∀ j, j ≥ 1 → (c.work i).cells j ≠ Γ.start)
     (hoh : c.output.head ≥ 1) (hons : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
     ∃ c', verifyPairTM.reachesIn (p + 1) c c' ∧ c'.state = .rewindAssignment ∧
-      (c'.work ⟨0, by omega⟩).head = 1 ∧ (c'.work ⟨0, by omega⟩).cells = (c.work ⟨0, by omega⟩).cells ∧
+      (c'.work ⟨0, by omega⟩).head = 1 ∧ (c'.work ⟨0, by omega⟩).cells
+        = (c.work ⟨0, by omega⟩).cells ∧
       (∀ i, i ≠ (⟨0, by omega⟩ : Fin 3) → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output :=
   verifyPair_rewind_loop ⟨0, by omega⟩ .rewindFormula .rewindAssignment
@@ -4225,10 +4233,12 @@ private theorem verifyPairSplit_rewindAssignment_phase (p : ℕ) (c : Cfg 3 veri
     (hoh : c.output.head ≥ 1) (hons : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start) :
     ∃ c', verifyPairTM.reachesIn (p + 1) c c' ∧
       c'.state = .evalReadFirst (.boundary true false true) ∧
-      (c'.work ⟨1, by omega⟩).head = 1 ∧ (c'.work ⟨1, by omega⟩).cells = (c.work ⟨1, by omega⟩).cells ∧
+      (c'.work ⟨1, by omega⟩).head = 1 ∧ (c'.work ⟨1, by omega⟩).cells
+        = (c.work ⟨1, by omega⟩).cells ∧
       (∀ i, i ≠ (⟨1, by omega⟩ : Fin 3) → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output :=
-  verifyPair_rewind_loop ⟨1, by omega⟩ .rewindAssignment (.evalReadFirst (.boundary true false true))
+  verifyPair_rewind_loop ⟨1, by omega⟩ .rewindAssignment (.evalReadFirst (.boundary true false
+    true))
     verifyPairSplit_rewindAssignment_left_step verifyPairSplit_rewindAssignment_base_step
     p c hst hc0 hns hhead hih hins hframe hoh hons
 
@@ -4572,7 +4582,8 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
       (by rw [ho6']; intro j hj; rw [Tape.move_cells];
           cases j with | zero => omega | succ k => simp [Tape.init])
   have hw71 : c7.work ⟨1, by omega⟩ = c6.work ⟨1, by omega⟩ := hw7frame ⟨1, by omega⟩ (by simp)
-  have hw72h : (c7.work ⟨2, by omega⟩).head ≥ 1 := by rw [hw7frame ⟨2, by omega⟩ (by simp), hw6]; exact hw52h
+  have hw72h : (c7.work ⟨2, by omega⟩).head ≥ 1 := by
+    rw [hw7frame ⟨2, by omega⟩ (by simp), hw6]; exact hw52h
   have hw72ns : ∀ j, j ≥ 1 → (c7.work ⟨2, by omega⟩).cells j ≠ Γ.start := by
     rw [hw7frame ⟨2, by omega⟩ (by simp), hw6]; exact hw52ns
   have hframe7A : ∀ i, i ≠ (⟨1, by omega⟩ : Fin 3) →
@@ -5135,7 +5146,8 @@ private theorem verifyPairSplit_scan_reject :
                 simpa [List.length_cons] using hblank
               · intro j hj; rw [hc'ic]; exact hns j hj
             obtain ⟨c'', t, htb, hr'', hhalt'', hz''⟩ :=
-              ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst' hnone2
+              ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst'
+                hnone2
                 hsuf' hwst' (by rw [hc'o]; exact hout)
             exact ⟨c'', 2 + t, by simp only [List.length_cons] at hlen; omega,
               TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
@@ -5187,7 +5199,8 @@ private theorem verifyPairSplit_scan_reject :
                 simpa [List.length_cons] using hblank
               · intro j hj; rw [hc'ic]; exact hns j hj
             obtain ⟨c'', t, htb, hr'', hhalt'', hz''⟩ :=
-              ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst' hnone2
+              ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst'
+                hnone2
                 hsuf' hwst' (by rw [hc'o]; exact hout)
             exact ⟨c'', 2 + t, by simp only [List.length_cons] at hlen; omega,
               TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
