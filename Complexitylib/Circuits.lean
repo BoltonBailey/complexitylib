@@ -1,6 +1,10 @@
 import Complexitylib.Circuits.Basic
+import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.NF
 import Complexitylib.Circuits.AON
+import Complexitylib.Circuits.Encoding
+import Complexitylib.Circuits.Family
+import Complexitylib.Circuits.Encoding.Family
 import Complexitylib.Circuits.XOR
 import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.Shannon
@@ -19,8 +23,10 @@ built on Mathlib.
 
 A `Circuit B N M G` is an acyclic Boolean circuit over basis `B` with `N`
 primary inputs, `M` outputs, and `G` internal gates. The circuit's `size`
-is `G + M` (total gate count). The `size_complexity` of a Boolean function
-is the minimum size of any circuit computing it.
+is `G + M`: internal and output gates are counted, while primary-input
+vertices and per-edge negation flags are not. The `size_complexity` of a
+Boolean function is the minimum size of any circuit computing it under this
+convention.
 
 ## Main results
 
@@ -54,23 +60,32 @@ is the minimum size of any circuit computing it.
 
 Public modules (definitions a reviewer should read):
 
-* `Circ.Basic` — `BitString`, `BoolFunFamily`, `Circuit`, `Basis`, `Gate`,
+* `Complexitylib.Circuits.Basic` — `BitString`, `BoolFunFamily`, `Circuit`, `Basis`, `Gate`,
   `CompleteBasis`, `size_complexity`, `wireDepth`, `depth`
-* `Circ.AON.Defs` — `AONOp`, `Basis.unboundedAON`, `Basis.boundedAON`, `Basis.andOr2`
-* `Circ.NF.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`, `DNF.complexity`
-* `Circ.NF` — CNF/DNF lower bound for XOR (`xorBool_complexity_lb`)
-* `Circ.XOR` — `Schnorr.xorBool` (N-input parity)
-* `Circ.EssentialInput` — `IsEssentialInput`, `EssentialInputs`
-* `Circ.AC0.Defs` — `InAC0`
-* `Circ.Nondeterminism.Defs` — `existQuantify`, `forallQuantify`
+* `Complexitylib.Circuits.BitString` — canonical bridges between `BitString n`
+  and `List Bool`
+* `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
+  size/depth bounds, and the polynomial-size characterization
+* `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,
+  and iterative evaluation of fan-in-two AND/OR circuits
+* `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at
+  every input length, including the explicit empty-input answer
+* `Complexitylib.Circuits.AON.Defs` — `AONOp`, `Basis.unboundedAON`,
+  `Basis.boundedAON`, `Basis.andOr2`
+* `Complexitylib.Circuits.NF.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`, `DNF.complexity`
+* `Complexitylib.Circuits.NF` — CNF/DNF lower bound for XOR (`xorBool_complexity_lb`)
+* `Complexitylib.Circuits.XOR` — `Schnorr.xorBool` (N-input parity)
+* `Complexitylib.Circuits.EssentialInput` — `IsEssentialInput`, `EssentialInputs`
+* `Complexitylib.Circuits.AC0.Defs` — `InAC0`
+* `Complexitylib.Circuits.Nondeterminism.Defs` — `existQuantify`, `forallQuantify`
 
 Theorem modules (re-export definitions + main results):
 
-* `Circ.AON` — functional completeness of AND/OR
-* `Circ.Shannon` — Shannon counting lower bound
-* `Circ.LowerBound` — gate elimination lower bound
-* `Circ.Schnorr` — Schnorr's XOR lower bound
-* `Circ.Nondeterminism` — nondeterministic quantification complexity bounds
+* `Complexitylib.Circuits.AON` — functional completeness of AND/OR
+* `Complexitylib.Circuits.Shannon` — Shannon counting lower bound
+* `Complexitylib.Circuits.LowerBound` — gate elimination lower bound
+* `Complexitylib.Circuits.Schnorr` — Schnorr's XOR lower bound
+* `Complexitylib.Circuits.Nondeterminism` — nondeterministic quantification complexity bounds
 
 Internal modules contain proof machinery (CircDesc, DNF construction,
 restriction/elimination arguments) and are not intended for direct use.
