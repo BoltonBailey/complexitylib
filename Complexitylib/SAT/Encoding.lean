@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Semantics
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
-
-namespace Complexity
 
 /-!
 # SAT: Encoding Layer
@@ -48,6 +51,8 @@ No `decode` function is provided. The verifier's correctness theorem is
 stated directly against `encode`; we don't need an inverse as a Lean
 function to prove NP membership.
 -/
+
+namespace Complexity
 
 namespace SAT
 

@@ -1,10 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Language
 import Complexitylib.Classes.NP.Internal.PairBuildTM
 import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
-
-namespace Complexity
 
 /-!
 # SAT-specialized guess-and-verify NTM
@@ -12,11 +15,11 @@ namespace Complexity
 This file implements the concrete SAT route to NP. It avoids the still-open
 generic `NP.WitnessNTMConstruction` by using the proved linear counter
 subroutine for SAT witnesses, whose length is bounded by `|x| + 1`. The final
-theorems prove the composed machine decides `L_SAT` in polynomial time from a
+theorems prove the composed machine decides `language` in polynomial time from a
 polynomial-time verifier.
 
 The machine is parameterized by a verifier DTM `M : TM k` for
-`pairLang R_SAT`.  Its work-tape layout is:
+`pairLang Witness`.  Its work-tape layout is:
 
 - `0 .. k-1`: verifier-internal work tapes,
 - `k`: pair tape, used as the virtual input for `M`,
@@ -27,6 +30,8 @@ The state space is a direct sequence of the existing subroutine phases:
 counter setup, input rewind, bounded guessing, pair building, and verifier
 simulation.
 -/
+
+namespace Complexity
 
 namespace SAT
 
@@ -293,7 +298,7 @@ private theorem satGuessVerifyDelta_right_of_start (M : TM k)
 /-- SAT-specialized guess-and-verify NTM parameterized by a verifier `M`.
 
 It is a concrete composed machine. The proof layer below shows that, when `M`
-decides `pairLang R_SAT`, this machine decides `L_SAT` in polynomial time. -/
+decides `pairLang Witness`, this machine decides `language` in polynomial time. -/
 def satGuessVerifyNTM (M : TM k) : NTM (k + 3) :=
   haveI : DecidableEq M.Q := M.decEq
   haveI : Fintype M.Q := M.finQ
@@ -367,25 +372,25 @@ theorem satVerifyInnerCfg_eq_startedCfg (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) (c : Cfg (k + 3) M.Q)
     (hstate : c.state = verifierStartedState M)
     (hpair : c.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right)
+      (Tape.init (z.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right)
     (hwork : ∀ i : Fin k, c.work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right) :
+      (Tape.init []).move Dir3.right) :
     satVerifyInnerCfg M c = TM.startedCfg M z hne := by
   cases c with
   | mk state input work output =>
       simp [satVerifyInnerCfg, verifierStartedState, TM.startedCfg, TM.step, hne,
-        Tape.read, _root_.Complexity.Tape.init] at hstate hpair hout hwork ⊢
+        Tape.read, Tape.init] at hstate hpair hout hwork ⊢
       refine ⟨hstate, ?_, ?_, ?_⟩
       · rw [hpair]
-        simpa [TM.startedCfg, TM.step, hne, Tape.read, _root_.Complexity.Tape.init] using
+        simpa [TM.startedCfg, TM.step, hne, Tape.read, Tape.init] using
           (TM.startedCfg_input_eq M z hne).symm
       · funext i
         rw [hwork i]
-        simpa [TM.startedCfg, TM.step, hne, Tape.read, _root_.Complexity.Tape.init] using
+        simpa [TM.startedCfg, TM.step, hne, Tape.read, Tape.init] using
           (TM.startedCfg_work_eq_init_move_right M z hne i).symm
       · rw [hout]
-        simpa [TM.startedCfg, TM.step, hne, Tape.read, _root_.Complexity.Tape.init] using
+        simpa [TM.startedCfg, TM.step, hne, Tape.read, Tape.init] using
           (TM.startedCfg_output_eq_init_move_right M z hne).symm
 
 /-- A verifier that decides a language also halts from its post-start
@@ -708,7 +713,7 @@ theorem satBoundaryWork_stable_of_read_ne_start
 theorem satPair_cells_ne_start_of_initTape_ofBool_move_right (M : TM k)
     (bits : List Bool) (c : Cfg (k + 3) M.Q)
     (hpair : c.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right) :
+      (Tape.init (bits.map Γ.ofBool)).move Dir3.right) :
     ∀ j, j ≥ 1 → (c.work (satPairIdx k)).cells j ≠ Γ.start := by
   rw [hpair]
   exact Tape.init_ofBool_move_right_cells_ne_start bits
@@ -716,11 +721,11 @@ theorem satPair_cells_ne_start_of_initTape_ofBool_move_right (M : TM k)
 private theorem tape_eq_initTape_ofBool_move_right_of_head_cells
     (t : Tape) (bits : List Bool)
     (hhead : t.head = 1)
-    (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells) :
-    t = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
+    (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells) :
+    t = (Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
   cases t with
   | mk head cells =>
-      simp [Tape.move, _root_.Complexity.Tape.init] at hhead hcells ⊢
+      simp [Tape.move, Tape.init] at hhead hcells ⊢
       subst head
       subst cells
       exact ⟨rfl, rfl⟩
@@ -863,9 +868,9 @@ private theorem satCounter_trace_preserves_started_blank_other_work
     (T : ℕ) (choices : Fin T → Bool)
     (c : Cfg (k + 3) TM.LinearCounterPhase)
     (i : Fin (k + 3)) (hi : i ≠ satCounterIdx k)
-    (hwork : c.work i = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hwork : c.work i = (Tape.init []).move Dir3.right) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace T choices c).work i =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
   induction T generalizing c with
   | zero =>
       simpa [NTM.trace] using hwork
@@ -873,7 +878,7 @@ private theorem satCounter_trace_preserves_started_blank_other_work
       let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
       let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
         counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      have h1 : c1.work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      have h1 : c1.work i = (Tape.init []).move Dir3.right := by
         exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_other_work
           (satCounterIdx k) (choices ⟨0, by omega⟩) c i hi hwork
       rw [NTM.trace_succ counterNTM T choices c]
@@ -884,13 +889,13 @@ private theorem satCounter_trace_succ_initializes_blank_other_work
     (c : Cfg (k + 3) TM.LinearCounterPhase)
     (i : Fin (k + 3)) (hi : i ≠ satCounterIdx k)
     (hstate : c.state ≠ TM.LinearCounterPhase.done)
-    (hwork : c.work i = _root_.Complexity.Tape.init []) :
+    (hwork : c.work i = Tape.init []) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace (T + 1) choices c).work i =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
   let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
   let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
     counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-  have h1 : c1.work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have h1 : c1.work i = (Tape.init []).move Dir3.right := by
     exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
       (satCounterIdx k) (choices ⟨0, by omega⟩) c i hi hstate hwork
   rw [NTM.trace_succ counterNTM T choices c]
@@ -900,9 +905,9 @@ private theorem satCounter_trace_succ_initializes_blank_other_work
 private theorem satCounter_trace_preserves_started_blank_output
     (T : ℕ) (choices : Fin T → Bool)
     (c : Cfg (k + 3) TM.LinearCounterPhase)
-    (houtput : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (houtput : c.output = (Tape.init []).move Dir3.right) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace T choices c).output =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
   induction T generalizing c with
   | zero =>
       simpa [NTM.trace] using houtput
@@ -910,7 +915,7 @@ private theorem satCounter_trace_preserves_started_blank_output
       let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
       let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
         counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      have h1 : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      have h1 : c1.output = (Tape.init []).move Dir3.right := by
         exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
           (satCounterIdx k) (choices ⟨0, by omega⟩) c houtput
       rw [NTM.trace_succ counterNTM T choices c]
@@ -920,13 +925,13 @@ private theorem satCounter_trace_succ_initializes_blank_output
     (T : ℕ) (choices : Fin (T + 1) → Bool)
     (c : Cfg (k + 3) TM.LinearCounterPhase)
     (hstate : c.state ≠ TM.LinearCounterPhase.done)
-    (houtput : c.output = _root_.Complexity.Tape.init []) :
+    (houtput : c.output = Tape.init []) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace (T + 1) choices c).output =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
   let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
   let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
     counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-  have h1 : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have h1 : c1.output = (Tape.init []).move Dir3.right := by
     exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_output
       (satCounterIdx k) (choices ⟨0, by omega⟩) c hstate houtput
   rw [NTM.trace_succ counterNTM T choices c]
@@ -939,35 +944,35 @@ private theorem satCounter_init_boundary_started_blank_other_work
     let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
     let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
       { state := TM.LinearCounterPhase.scan,
-        input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-        work := fun _ => _root_.Complexity.Tape.init [],
-        output := _root_.Complexity.Tape.init [] }
+        input := Tape.init (x.map Γ.ofBool),
+        work := fun _ => Tape.init [],
+        output := Tape.init [] }
     let cT := counterNTM.trace T choices c0
-    satBoundaryWork cT.work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
+    satBoundaryWork cT.work i = (Tape.init []).move Dir3.right := by
   cases T with
   | zero =>
-      change satBoundaryWork (fun _ : Fin (k + 3) => _root_.Complexity.Tape.init []) i =
-        (_root_.Complexity.Tape.init []).move Dir3.right
+      change satBoundaryWork (fun _ : Fin (k + 3) => Tape.init []) i =
+        (Tape.init []).move Dir3.right
       simp [satBoundaryWork, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-        idleDir, _root_.Complexity.Tape.init]
+        idleDir, Tape.init]
   | succ T =>
       let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
       let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
         { state := TM.LinearCounterPhase.scan,
-          input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-          work := fun _ => _root_.Complexity.Tape.init [],
-          output := _root_.Complexity.Tape.init [] }
+          input := Tape.init (x.map Γ.ofBool),
+          work := fun _ => Tape.init [],
+          output := Tape.init [] }
       have htrace :
           (counterNTM.trace (T + 1) choices c0).work i =
-            (_root_.Complexity.Tape.init []).move Dir3.right := by
+            (Tape.init []).move Dir3.right := by
         exact satCounter_trace_succ_initializes_blank_other_work T choices c0 i hi
           (by simp [c0]) (by simp [c0])
       have hread :
           ((counterNTM.trace (T + 1) choices c0).work i).read ≠ Γ.start := by
         rw [htrace]
-        simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+        simp [Tape.read, Tape.move, Tape.init]
       change satBoundaryWork (counterNTM.trace (T + 1) choices c0).work i =
-        (_root_.Complexity.Tape.init []).move Dir3.right
+        (Tape.init []).move Dir3.right
       rw [satBoundaryWork_stable_of_read_ne_start
         (counterNTM.trace (T + 1) choices c0).work i hread]
       exact htrace
@@ -977,35 +982,35 @@ private theorem satCounter_init_boundary_started_blank_output
     let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
     let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
       { state := TM.LinearCounterPhase.scan,
-        input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-        work := fun _ => _root_.Complexity.Tape.init [],
-        output := _root_.Complexity.Tape.init [] }
+        input := Tape.init (x.map Γ.ofBool),
+        work := fun _ => Tape.init [],
+        output := Tape.init [] }
     let cT := counterNTM.trace T choices c0
-    satBoundaryOutput cT.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+    satBoundaryOutput cT.output = (Tape.init []).move Dir3.right := by
   cases T with
   | zero =>
-      change satBoundaryOutput (_root_.Complexity.Tape.init []) =
-        (_root_.Complexity.Tape.init []).move Dir3.right
+      change satBoundaryOutput (Tape.init []) =
+        (Tape.init []).move Dir3.right
       simp [satBoundaryOutput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-        idleDir, _root_.Complexity.Tape.init]
+        idleDir, Tape.init]
   | succ T =>
       let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
       let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
         { state := TM.LinearCounterPhase.scan,
-          input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-          work := fun _ => _root_.Complexity.Tape.init [],
-          output := _root_.Complexity.Tape.init [] }
+          input := Tape.init (x.map Γ.ofBool),
+          work := fun _ => Tape.init [],
+          output := Tape.init [] }
       have htrace :
           (counterNTM.trace (T + 1) choices c0).output =
-            (_root_.Complexity.Tape.init []).move Dir3.right := by
+            (Tape.init []).move Dir3.right := by
         exact satCounter_trace_succ_initializes_blank_output T choices c0
           (by simp [c0]) (by simp [c0])
       have hread :
           ((counterNTM.trace (T + 1) choices c0).output).read ≠ Γ.start := by
         rw [htrace]
-        simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+        simp [Tape.read, Tape.move, Tape.init]
       change satBoundaryOutput (counterNTM.trace (T + 1) choices c0).output =
-        (_root_.Complexity.Tape.init []).move Dir3.right
+        (Tape.init []).move Dir3.right
       rw [satBoundaryOutput_stable_of_read_ne_start
         (counterNTM.trace (T + 1) choices c0).output hread]
       exact htrace
@@ -1020,9 +1025,9 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
       let counterChoices : Fin t → Bool := fun i => choices ⟨i.val, by omega⟩
       let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
         { state := TM.LinearCounterPhase.scan,
-          input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-          work := fun _ => _root_.Complexity.Tape.init [],
-          output := _root_.Complexity.Tape.init [] }
+          input := Tape.init (x.map Γ.ofBool),
+          work := fun _ => Tape.init [],
+          output := Tape.init [] }
       let cT := counterNTM.trace t counterChoices c0
       (satGuessVerifyNTM M).trace (t + 1)
         (fun i => choices (Fin.castLE (by omega : t + 1 ≤
@@ -1036,38 +1041,38 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
       (satBoundaryInput cT.input).cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → (satBoundaryInput cT.input).cells j ≠ Γ.start) ∧
       (satBoundaryInput cT.input).cells =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+        (Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cT.input).head ≤
         TM.inputLengthPlusOneCounterTime x.length + 1 ∧
       (satBoundaryWork cT.work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (∀ i, i ≠ satCounterIdx k →
-        satBoundaryWork cT.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        satBoundaryWork cT.work i = (Tape.init []).move Dir3.right) ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryOutput cT.output =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
   let B := TM.inputLengthPlusOneCounterTime x.length
   let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
   let counterChoicesB : Fin B → Bool := fun i => choices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.LinearCounterPhase :=
     { state := TM.LinearCounterPhase.scan,
-      input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-      work := fun _ => _root_.Complexity.Tape.init [],
-      output := _root_.Complexity.Tape.init [] }
+      input := Tape.init (x.map Γ.ofBool),
+      work := fun _ => Tape.init [],
+      output := Tape.init [] }
   have hcounter :=
     TM.inputLengthPlusOneCounterTM_toNTM_hoareTime (satCounterIdx k) x
   have hpre :
-      (_root_.Complexity.Tape.init (x.map Γ.ofBool) = _root_.Complexity.Tape.init (x.map Γ.ofBool) ∧
-        (fun _ : Fin (k + 3) => _root_.Complexity.Tape.init []) (satCounterIdx k) =
-          _root_.Complexity.Tape.init []) := by
+      (Tape.init (x.map Γ.ofBool) = Tape.init (x.map Γ.ofBool) ∧
+        (fun _ : Fin (k + 3) => Tape.init []) (satCounterIdx k) =
+          Tape.init []) := by
     simp
   obtain ⟨t, ht, hhalt, hpost, hfirst⟩ :=
     hcounter.exists_first_halt_time_with_post
-      (inp := _root_.Complexity.Tape.init (x.map Γ.ofBool))
-      (work := fun _ : Fin (k + 3) => _root_.Complexity.Tape.init [])
-      (out := _root_.Complexity.Tape.init []) hpre counterChoicesB
+      (inp := Tape.init (x.map Γ.ofBool))
+      (work := fun _ : Fin (k + 3) => Tape.init [])
+      (out := Tape.init []) hpre counterChoicesB
   refine ⟨t, by simpa [B] using ht, ?_⟩
   let counterChoices : Fin t → Bool := fun i => choices ⟨i.val, by omega⟩
   let cT := counterNTM.trace t counterChoices c0
@@ -1092,7 +1097,7 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
       satGuessVerifyNTM] using hexit
   · have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     have hinv := Tape.StartInvariant.init_ofBool x
-    have hcell0 : cT.input.cells 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells 0 := by
+    have hcell0 : cT.input.cells 0 = (Tape.init (x.map Γ.ofBool)).cells 0 := by
       simpa [cT, c0] using congrFun hcells 0
     show (satBoundaryInput cT.input).cells 0 = Γ.start
     rw [satBoundaryInput, Tape.move_cells, hcell0]
@@ -1100,20 +1105,20 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
   · intro j hj
     have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     have hinv := Tape.StartInvariant.init_ofBool x
-    have hcell : cT.input.cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j := by
+    have hcell : cT.input.cells j = (Tape.init (x.map Γ.ofBool)).cells j := by
       simpa [cT, c0] using congrFun hcells j
     show (satBoundaryInput cT.input).cells j ≠ Γ.start
     rw [satBoundaryInput, Tape.move_cells, hcell]
     exact hinv.2 j hj
   · have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
     funext j
-    have hcell : cT.input.cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j := by
+    have hcell : cT.input.cells j = (Tape.init (x.map Γ.ofBool)).cells j := by
       simpa [cT, c0] using congrFun hcells j
-    show (satBoundaryInput cT.input).cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j
+    show (satBoundaryInput cT.input).cells j = (Tape.init (x.map Γ.ofBool)).cells j
     rw [satBoundaryInput, Tape.move_cells, hcell]
   · have htrace_head := NTM.input_head_trace_le counterNTM t counterChoices c0
     have hcT_head : cT.input.head ≤ t := by
-      have hc0 : c0.input.head = 0 := by simp [c0, _root_.Complexity.Tape.init]
+      have hc0 : c0.input.head = 0 := by simp [c0, Tape.init]
       rw [hc0, Nat.zero_add] at htrace_head
       simpa [cT] using htrace_head
     have hmove : (satBoundaryInput cT.input).head ≤ cT.input.head + 1 := by
@@ -1439,7 +1444,7 @@ theorem satGuessVerify_rewindInput_exits_with_frames_exact_input (M : TM k) (B :
     (x : List Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre : inp.cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → inp.cells j ≠ Γ.start) ∧ inp.head ≤ B)
-    (hinput_cells : inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells)
+    (hinput_cells : inp.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hout : out.read ≠ Γ.start ∧ out.head ≥ 1)
     (hwork : ∀ i, (work i).read ≠ Γ.start ∧ (work i).head ≥ 1)
     (choices : Fin (B + 2 + 1) → Bool) :
@@ -1458,7 +1463,7 @@ theorem satGuessVerify_rewindInput_exits_with_frames_exact_input (M : TM k) (B :
             work := satBoundaryWork cT.work,
             output := satBoundaryOutput cT.output } ∧
       satBoundaryInput cT.input =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work = work ∧
       satBoundaryOutput cT.output = out := by
   obtain ⟨t, ht, hrich⟩ :=
@@ -1629,7 +1634,7 @@ theorem satGuessVerify_guess_exits (M : TM k) (B : ℕ)
             output := satBoundaryOutput cT.output } ∧
       ∃ y : List Bool, y.length ≤ B ∧
         satBoundaryWork cT.work (satWitnessIdx k) =
-          (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := by
+          (Tape.init (y.map Γ.ofBool)).move Dir3.right := by
   let G := NTM.guessBoundedTime B 0
   let guessNTM := NTM.guessBoundedNTM (satWitnessIdx k) (satCounterIdx k)
   let guessChoicesG : Fin G → Bool := fun i => choices ⟨i.val, by omega⟩
@@ -1681,7 +1686,7 @@ theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
     (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
       (work (satCounterIdx k)).HasUnaryCounter B ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
     (hinp : inp.head ≥ 1 ∧ ∀ j, j ≥ 1 → inp.cells j ≠ Γ.start)
     (hout : out.read ≠ Γ.start)
     (hwork : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start)
@@ -1704,9 +1709,9 @@ theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
             output := satBoundaryOutput cT.output } ∧
       satBoundaryInput cT.input = inp ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryOutput cT.output = out ∧
       (∀ i : Fin k, satBoundaryWork cT.work (satVerifierWorkIdx i) =
         work (satVerifierWorkIdx i)) := by
@@ -1743,7 +1748,7 @@ theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
     exact satBoundaryInput_stable inp hinp.1 hinp.2
   have hpair_read : (work (satPairIdx k)).read ≠ Γ.start := by
     rw [hpre.2.2.2]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hpair_trace : cT.work (satPairIdx k) = work (satPairIdx k) := by
     simpa [guessNTM, guessChoices, c0, cT] using
       NTM.guessBoundedNTM_trace_preserves_other_work
@@ -1753,10 +1758,10 @@ theorem satGuessVerify_guess_exits_with_frames (M : TM k) (B : ℕ)
         (by simpa [c0] using hpair_read)
   have hpair_boundary :
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     have hread : (cT.work (satPairIdx k)).read ≠ Γ.start := by
       rw [hpair_trace, hpre.2.2.2]
-      simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+      simp [Tape.read, Tape.move, Tape.init]
     rw [satBoundaryWork_stable_of_read_ne_start cT.work (satPairIdx k) hread,
       hpair_trace]
     exact hpre.2.2.2
@@ -1799,7 +1804,7 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
     (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
       (work (satCounterIdx k)).HasUnaryCounter B ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
+      work (satPairIdx k) = (Tape.init []).move Dir3.right) :
     ∃ t, ∃ _ : t ≤ NTM.guessBoundedTime B 0,
       ∃ choices : Fin (t + 1) → Bool,
       let guessNTM := NTM.guessBoundedNTM (satWitnessIdx k) (satCounterIdx k)
@@ -1814,9 +1819,9 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
             work := satBoundaryWork cT.work,
             output := satBoundaryOutput cT.output } ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
   let G := NTM.guessBoundedTime B 0
   let guessNTM := NTM.guessBoundedNTM (satWitnessIdx k) (satCounterIdx k)
   let c0 : Cfg (k + 3) NTM.GuessBoundedPhase :=
@@ -1870,26 +1875,26 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
     satGuessVerify_guess_trace_exit M t choicesExit c0 hnot hdone
   have hwitness_full :
       ((guessNTM.trace G choicesG c0).work (satWitnessIdx k)) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := by
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right := by
     simpa [G, guessNTM, c0] using hchoicesG.2
   let choicesT : Fin t → Bool := fun i => choicesG (Fin.castLE ht i)
   have heq := guessNTM.trace_mono ht (choices := choicesT) (choices' := choicesG)
     (c := c0) (by intro i; rfl) hhalt
   have hwitness_first :
       ((guessNTM.trace t choicesT c0).work (satWitnessIdx k)) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := by
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right := by
     rw [heq] at hwitness_full
     exact hwitness_full
   have hwitness_cT :
       cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := by
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right := by
     change ((guessNTM.trace t (fun i => choicesExit ⟨i.val, by omega⟩) c0).work
-      (satWitnessIdx k)) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right
+      (satWitnessIdx k)) = (Tape.init (y.map Γ.ofBool)).move Dir3.right
     rw [hprefix_t]
     exact hwitness_first
   have hpair_read : (work (satPairIdx k)).read ≠ Γ.start := by
     rw [hpre.2.2.2]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hpair_trace :
       cT.work (satPairIdx k) = work (satPairIdx k) := by
     change ((guessNTM.trace t (fun i => choicesExit ⟨i.val, by omega⟩) c0).work
@@ -1902,7 +1907,7 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
         (Ne.symm (satCounterIdx_ne_pairIdx k))
         (by simpa [c0] using hpair_read)
   have hpair_cT :
-      cT.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      cT.work (satPairIdx k) = (Tape.init []).move Dir3.right := by
     rw [hpair_trace]
     exact hpre.2.2.2
   refine ⟨?_, ?_, ?_⟩
@@ -1914,7 +1919,7 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
     exact hwitness_cT
   · have hread : (cT.work (satPairIdx k)).read ≠ Γ.start := by
       rw [hpair_cT]
-      simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+      simp [Tape.read, Tape.move, Tape.init]
     rw [satBoundaryWork_stable_of_read_ne_start cT.work (satPairIdx k) hread]
     exact hpair_cT
 
@@ -1924,11 +1929,11 @@ theorem satGuessVerify_guess_generates_with_pair_frame (M : TM k) (B : ℕ)
 theorem satGuessVerify_guess_generates_with_input_pair_frame (M : TM k) (B : ℕ)
     (x y : List Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
     (hlen : y.length ≤ B)
-    (hinput : inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right)
+    (hinput : inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right)
     (hpre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
       (work (satCounterIdx k)).HasUnaryCounter B ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
+      work (satPairIdx k) = (Tape.init []).move Dir3.right) :
     ∃ t, ∃ _ : t ≤ NTM.guessBoundedTime B 0,
       ∃ choices : Fin (t + 1) → Bool,
       let guessNTM := NTM.guessBoundedNTM (satWitnessIdx k) (satCounterIdx k)
@@ -1943,11 +1948,11 @@ theorem satGuessVerify_guess_generates_with_input_pair_frame (M : TM k) (B : ℕ
             work := satBoundaryWork cT.work,
             output := satBoundaryOutput cT.output } ∧
       satBoundaryInput cT.input =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
   obtain ⟨t, ht, choices, hguess⟩ :=
     satGuessVerify_guess_generates_with_pair_frame M B y inp work out hlen hpre
   refine ⟨t, ht, choices, ?_⟩
@@ -1964,9 +1969,9 @@ theorem satGuessVerify_guess_generates_with_input_pair_frame (M : TM k) (B : ℕ
             work := satBoundaryWork cT.work,
             output := satBoundaryOutput cT.output } ∧
       satBoundaryWork cT.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     simpa [guessNTM, guessChoices, c0, cT] using hguess
   have hinput_read : inp.read ≠ Γ.start := by
     rw [hinput]
@@ -1977,8 +1982,8 @@ theorem satGuessVerify_guess_generates_with_input_pair_frame (M : TM k) (B : ℕ
         (satWitnessIdx k) (satCounterIdx k) t guessChoices c0 hinput_read
   refine ⟨hguess'.1, ?_, hguess'.2.1, hguess'.2.2⟩
   rw [hinput_cT, hinput]
-  exact satBoundaryInput_stable ((_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right)
-    (by simp [Tape.move, _root_.Complexity.Tape.init])
+  exact satBoundaryInput_stable ((Tape.init (x.map Γ.ofBool)).move Dir3.right)
+    (by simp [Tape.move, Tape.init])
     (Tape.init_ofBool_move_right_cells_ne_start x)
 
 /-- Compose input rewind with the completeness-oriented guess phase. Starting
@@ -1989,14 +1994,14 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
     (x y : List Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape)
     (hrewindPre : inp.cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → inp.cells j ≠ Γ.start) ∧ inp.head ≤ B)
-    (hinput_cells : inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells)
+    (hinput_cells : inp.cells = (Tape.init (x.map Γ.ofBool)).cells)
     (hout : out.read ≠ Γ.start ∧ out.head ≥ 1)
     (hwork : ∀ i, (work i).read ≠ Γ.start ∧ (work i).head ≥ 1)
     (hlen : y.length ≤ x.length + 1)
     (hguessPre : (work (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (work (satWitnessIdx k)).cells 0 = Γ.start ∧
       (work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right) :
+      work (satPairIdx k) = (Tape.init []).move Dir3.right) :
     ∃ T, ∃ choices : Fin T → Bool,
       ∃ cPair : Cfg (k + 3) TM.PairBuildPhase,
         T ≤ B + 2 + 1 + (NTM.guessBoundedTime (x.length + 1) 0 + 1) ∧
@@ -2005,10 +2010,10 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
             { state := TM.RewindPhase.moveLeft, input := inp, work := work, output := out }) =
           satPairWrap M cPair ∧
         cPair.state = TM.PairBuildPhase.init ∧
-        cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
         cPair.work (satWitnessIdx k) =
-          (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-        cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+          (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right ∧
         cPair.output = out ∧
         (∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
           work (satVerifierWorkIdx i)) := by
@@ -2031,7 +2036,7 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
             work := satBoundaryWork cR.work,
             output := satBoundaryOutput cR.output } ∧
       satBoundaryInput cR.input =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cR.work = work ∧
       satBoundaryOutput cR.output = out := by
     simpa [rewindNTM, rewindChoices, cRewind0, cR] using hrewind
@@ -2040,7 +2045,7 @@ theorem satGuessVerify_rewind_then_guess_generates_pair (M : TM k) (B : ℕ)
       ((satBoundaryWork cR.work) (satWitnessIdx k)).cells 0 = Γ.start ∧
       ((satBoundaryWork cR.work) (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (satBoundaryWork cR.work) (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     rw [hrewind'.2.2.1]
     exact hguessPre
   obtain ⟨tg, htg, guessChoices, hguess⟩ :=
@@ -2140,13 +2145,13 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
         (satGuessVerifyNTM M).trace T choices ((satGuessVerifyNTM M).initCfg x) =
           satPairWrap M cPair ∧
         cPair.state = TM.PairBuildPhase.init ∧
-        cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
         cPair.work (satWitnessIdx k) =
-          (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-        cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+          (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right ∧
+        cPair.output = (Tape.init []).move Dir3.right ∧
         (∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
-          (_root_.Complexity.Tape.init []).move Dir3.right) := by
+          (Tape.init []).move Dir3.right) := by
   let C := TM.inputLengthPlusOneCounterTime x.length
   let counterAllChoices : Fin (C + 1) → Bool := fun _ => false
   obtain ⟨tc, htc, hcounter⟩ :=
@@ -2155,9 +2160,9 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
   let counterChoices : Fin tc → Bool := fun i => counterAllChoices ⟨i.val, by omega⟩
   let cCounter0 : Cfg (k + 3) TM.LinearCounterPhase :=
     { state := TM.LinearCounterPhase.scan,
-      input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-      work := fun _ => _root_.Complexity.Tape.init [],
-      output := _root_.Complexity.Tape.init [] }
+      input := Tape.init (x.map Γ.ofBool),
+      work := fun _ => Tape.init [],
+      output := Tape.init [] }
   let cC := counterNTM.trace tc counterChoices cCounter0
   have hcounter' :
       (satGuessVerifyNTM M).trace (tc + 1)
@@ -2171,17 +2176,17 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       (satBoundaryInput cC.input).cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → (satBoundaryInput cC.input).cells j ≠ Γ.start) ∧
       (satBoundaryInput cC.input).cells =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+        (Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cC.input).head ≤ C + 1 ∧
       (satBoundaryWork cC.work (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
       (∀ i, i ≠ satCounterIdx k →
-        satBoundaryWork cC.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        satBoundaryWork cC.work i = (Tape.init []).move Dir3.right) ∧
       satBoundaryWork cC.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryWork cC.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryOutput cC.output =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     simpa [C, counterNTM, counterChoices, cCounter0, cC] using hcounter
   let inpR := satBoundaryInput cC.input
   let workR := satBoundaryWork cC.work
@@ -2191,26 +2196,26 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
         (∀ j, j ≥ 1 → inpR.cells j ≠ Γ.start) ∧ inpR.head ≤ C + 1 := by
     exact ⟨hcounter'.2.1, hcounter'.2.2.1, hcounter'.2.2.2.2.1⟩
   have hcounterInputCells :
-      inpR.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells :=
+      inpR.cells = (Tape.init (x.map Γ.ofBool)).cells :=
     hcounter'.2.2.2.1
   have hcounterUnary :
       (workR (satCounterIdx k)).HasUnaryCounter (x.length + 1) :=
     hcounter'.2.2.2.2.2.1
   have hothers :
       ∀ i, i ≠ satCounterIdx k →
-        workR i = (_root_.Complexity.Tape.init []).move Dir3.right :=
+        workR i = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.1
   have hwitnessBlank :
-      workR (satWitnessIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right :=
+      workR (satWitnessIdx k) = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.1
   have hpairBlank :
-      workR (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right :=
+      workR (satPairIdx k) = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.2.1
-  have houtBlank : outR = (_root_.Complexity.Tape.init []).move Dir3.right :=
+  have houtBlank : outR = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.2.2
   have houtR : outR.read ≠ Γ.start ∧ outR.head ≥ 1 := by
     rw [houtBlank]
-    constructor <;> simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    constructor <;> simp [Tape.read, Tape.move, Tape.init]
   have hworkR : ∀ i, (workR i).read ≠ Γ.start ∧ (workR i).head ≥ 1 := by
     intro i
     by_cases hic : i = satCounterIdx k
@@ -2222,17 +2227,17 @@ theorem satGuessVerify_setup_generates_pair (M : TM k) (x y : List Bool)
       · rw [hcounterUnary.1]
     · have hblank := hothers i hic
       rw [hblank]
-      constructor <;> simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+      constructor <;> simp [Tape.read, Tape.move, Tape.init]
   have hguessPreR :
       (workR (satWitnessIdx k)).HasBinaryPrefix [] ∧
       (workR (satWitnessIdx k)).cells 0 = Γ.start ∧
       (workR (satCounterIdx k)).HasUnaryCounter (x.length + 1) ∧
-      workR (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      workR (satPairIdx k) = (Tape.init []).move Dir3.right := by
     refine ⟨?_, ?_, hcounterUnary, hpairBlank⟩
     · rw [hwitnessBlank]
       exact Tape.init_nil_move_right_hasBinaryPrefix_nil
     · rw [hwitnessBlank]
-      simp [Tape.move, _root_.Complexity.Tape.init]
+      simp [Tape.move, Tape.init]
   obtain ⟨Ttail, tailChoices, cPair, hTtail, htailTrace, hpairState,
     hpairInput, hpairWitness, hpairBlankFinal, hpairOutput, hpairVerifierWork⟩ :=
     satGuessVerify_rewind_then_guess_generates_pair M (C + 1) x y
@@ -2284,13 +2289,13 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
         (satGuessVerifyNTM M).trace T setupChoices ((satGuessVerifyNTM M).initCfg x) =
           satPairWrap M cPair ∧
         cPair.state = TM.PairBuildPhase.init ∧
-        cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
         cPair.work (satWitnessIdx k) =
-          (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-        cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+          (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right ∧
+        cPair.output = (Tape.init []).move Dir3.right ∧
         (∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
-          (_root_.Complexity.Tape.init []).move Dir3.right) := by
+          (Tape.init []).move Dir3.right) := by
   let C := TM.inputLengthPlusOneCounterTime x.length
   let B := x.length + 1
   let G := NTM.guessBoundedTime B 0
@@ -2304,9 +2309,9 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
   let counterChoices : Fin tc → Bool := fun i => counterAllChoices ⟨i.val, by omega⟩
   let cCounter0 : Cfg (k + 3) TM.LinearCounterPhase :=
     { state := TM.LinearCounterPhase.scan,
-      input := _root_.Complexity.Tape.init (x.map Γ.ofBool),
-      work := fun _ => _root_.Complexity.Tape.init [],
-      output := _root_.Complexity.Tape.init [] }
+      input := Tape.init (x.map Γ.ofBool),
+      work := fun _ => Tape.init [],
+      output := Tape.init [] }
   let cC := counterNTM.trace tc counterChoices cCounter0
   have hcounter' :
       (satGuessVerifyNTM M).trace (tc + 1)
@@ -2320,17 +2325,17 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       (satBoundaryInput cC.input).cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → (satBoundaryInput cC.input).cells j ≠ Γ.start) ∧
       (satBoundaryInput cC.input).cells =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+        (Tape.init (x.map Γ.ofBool)).cells ∧
       (satBoundaryInput cC.input).head ≤ C + 1 ∧
       (satBoundaryWork cC.work (satCounterIdx k)).HasUnaryCounter B ∧
       (∀ i, i ≠ satCounterIdx k →
-        satBoundaryWork cC.work i = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+        satBoundaryWork cC.work i = (Tape.init []).move Dir3.right) ∧
       satBoundaryWork cC.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryWork cC.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryOutput cC.output =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     simpa [C, B, counterNTM, counterChoices, cCounter0, cC] using hcounter
   let inpR := satBoundaryInput cC.input
   let workR := satBoundaryWork cC.work
@@ -2340,26 +2345,26 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
         (∀ j, j ≥ 1 → inpR.cells j ≠ Γ.start) ∧ inpR.head ≤ C + 1 := by
     exact ⟨hcounter'.2.1, hcounter'.2.2.1, hcounter'.2.2.2.2.1⟩
   have hcounterInputCells :
-      inpR.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells :=
+      inpR.cells = (Tape.init (x.map Γ.ofBool)).cells :=
     hcounter'.2.2.2.1
   have hcounterUnary :
       (workR (satCounterIdx k)).HasUnaryCounter B :=
     hcounter'.2.2.2.2.2.1
   have hothers :
       ∀ i, i ≠ satCounterIdx k →
-        workR i = (_root_.Complexity.Tape.init []).move Dir3.right :=
+        workR i = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.1
   have hwitnessBlank :
-      workR (satWitnessIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right :=
+      workR (satWitnessIdx k) = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.1
   have hpairBlank :
-      workR (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right :=
+      workR (satPairIdx k) = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.2.1
-  have houtBlank : outR = (_root_.Complexity.Tape.init []).move Dir3.right :=
+  have houtBlank : outR = (Tape.init []).move Dir3.right :=
     hcounter'.2.2.2.2.2.2.2.2.2
   have houtR : outR.read ≠ Γ.start ∧ outR.head ≥ 1 := by
     rw [houtBlank]
-    constructor <;> simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    constructor <;> simp [Tape.read, Tape.move, Tape.init]
   have hworkR : ∀ i, (workR i).read ≠ Γ.start ∧ (workR i).head ≥ 1 := by
     intro i
     by_cases hic : i = satCounterIdx k
@@ -2371,7 +2376,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       · rw [hcounterUnary.1]
     · have hblank := hothers i hic
       rw [hblank]
-      constructor <;> simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+      constructor <;> simp [Tape.read, Tape.move, Tape.init]
   let rewindAllChoices : Fin (C + 1 + 2 + 1) → Bool := fun i =>
     choices ⟨tc + 1 + i.val, by
       unfold satGuessVerifySetupTime
@@ -2395,7 +2400,7 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
             work := satBoundaryWork cR.work,
             output := satBoundaryOutput cR.output } ∧
       satBoundaryInput cR.input =
-        (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cR.work = workR ∧
       satBoundaryOutput cR.output = outR := by
     simpa [rewindNTM, rewindChoices, cRewind0, cR] using hrewind
@@ -2404,22 +2409,22 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       ((satBoundaryWork cR.work) (satWitnessIdx k)).cells 0 = Γ.start ∧
       ((satBoundaryWork cR.work) (satCounterIdx k)).HasUnaryCounter B ∧
       (satBoundaryWork cR.work) (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+        (Tape.init []).move Dir3.right := by
     rw [hrewind'.2.2.1]
     refine ⟨?_, ?_, hcounterUnary, hpairBlank⟩
     · rw [hwitnessBlank]
       exact Tape.init_nil_move_right_hasBinaryPrefix_nil
     · rw [hwitnessBlank]
-      simp [Tape.move, _root_.Complexity.Tape.init]
+      simp [Tape.move, Tape.init]
   have hguessInput :
       (satBoundaryInput cR.input).head ≥ 1 ∧
         ∀ j, j ≥ 1 → (satBoundaryInput cR.input).cells j ≠ Γ.start := by
     rw [hrewind'.2.1]
-    exact ⟨by simp [Tape.move, _root_.Complexity.Tape.init],
+    exact ⟨by simp [Tape.move, Tape.init],
       Tape.init_ofBool_move_right_cells_ne_start x⟩
   have hguessOut : (satBoundaryOutput cR.output).read ≠ Γ.start := by
     rw [hrewind'.2.2.2, houtBlank]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hguessWork : ∀ i : Fin k,
       ((satBoundaryWork cR.work) (satVerifierWorkIdx i)).read ≠ Γ.start := by
     intro i
@@ -2457,9 +2462,9 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
         satPairWrap M cPair ∧
       satBoundaryInput cG.input = satBoundaryInput cR.input ∧
       satBoundaryWork cG.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
       satBoundaryWork cG.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init []).move Dir3.right ∧
       satBoundaryOutput cG.output = satBoundaryOutput cR.output ∧
       (∀ i : Fin k, satBoundaryWork cG.work (satVerifierWorkIdx i) =
         (satBoundaryWork cR.work) (satVerifierWorkIdx i)) := by
@@ -2513,13 +2518,13 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
     (satGuessVerifyNTM M).trace ((tc + 1) + ((tr + 1) + (tg + 1)))
         setupChoices ((satGuessVerifyNTM M).initCfg x) = satPairWrap M cPair ∧
       cPair.state = TM.PairBuildPhase.init ∧
-      cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+      cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
       cPair.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-      cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right ∧
+      cPair.output = (Tape.init []).move Dir3.right ∧
       (∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
-        (_root_.Complexity.Tape.init []).move Dir3.right)
+        (Tape.init []).move Dir3.right)
   rw [NTM.trace_add (satGuessVerifyNTM M) (tc + 1) ((tr + 1) + (tg + 1))
     setupChoices ((satGuessVerifyNTM M).initCfg x)]
   rw [hcounterChoices, hcounter'.1]
@@ -2659,15 +2664,15 @@ theorem satGuessVerify_pair_trace_exit (M : TM k) (T : ℕ)
 theorem satGuessVerify_pair_exits (M : TM k) (x y : List Bool)
     (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
     (choices : Fin (TM.pairBuildTime x.length y.length + 1) → Bool) :
     ∃ t, ∃ ht : t ≤ TM.pairBuildTime x.length y.length,
       let pairNTM := (TM.pairBuildTM (satWitnessIdx k) (satPairIdx k)).toNTM
       let pairChoices : Fin t → Bool := fun i => choices ⟨i.val, by omega⟩
       let c0 : Cfg (k + 3) TM.PairBuildPhase :=
         { state := TM.PairBuildPhase.init,
-          input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+          input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
           work := work,
           output := out }
       let cT := pairNTM.trace t pairChoices c0
@@ -2681,20 +2686,20 @@ theorem satGuessVerify_pair_exits (M : TM k) (x y : List Bool)
             work := satBoundaryWork cT.work,
             output := satBoundaryOutput cT.output } ∧
       satBoundaryWork cT.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+        (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
   let P := TM.pairBuildTime x.length y.length
   let pairNTM := (TM.pairBuildTM (satWitnessIdx k) (satPairIdx k)).toNTM
   let pairChoicesP : Fin P → Bool := fun i => choices ⟨i.val, by omega⟩
-  let inp0 := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right
+  let inp0 := (Tape.init (x.map Γ.ofBool)).move Dir3.right
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init, input := inp0, work := work, output := out }
   have hpair :=
     TM.pairBuildTM_toNTM_hoareTime_all_started_initTape_move_right
       (satWitnessIdx k) (satPairIdx k) (satWitnessIdx_ne_pairIdx k) x y
   have hpre' :
-      inp0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      inp0 = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right := by
     exact ⟨rfl, hpre.1, hpre.2⟩
   obtain ⟨t, ht, hhalt, hpost, hfirst⟩ :=
     hpair.exists_first_halt_time_with_post
@@ -2722,7 +2727,7 @@ theorem satGuessVerify_pair_exits (M : TM k) (x y : List Bool)
   · simpa [P, pairNTM, pairChoices, cT, choicesExit, c0, inp0] using hexit
   · have hpair_post :
         cT.work (satPairIdx k) =
-          (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+          (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
       simpa [P, pairNTM, pairChoicesP, pairChoices, cT, c0, inp0] using hpost
     have hread : (cT.work (satPairIdx k)).read ≠ Γ.start := by
       rw [hpair_post]
@@ -2736,8 +2741,8 @@ theorem satGuessVerify_pair_exits (M : TM k) (x y : List Bool)
 theorem satGuessVerify_pair_exits_with_verifier_frames (M : TM k) (x y : List Bool)
     (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
     (hout : out.read ≠ Γ.start)
     (hwork : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start)
     (choices : Fin (TM.pairBuildTime x.length y.length + 1) → Bool) :
@@ -2746,7 +2751,7 @@ theorem satGuessVerify_pair_exits_with_verifier_frames (M : TM k) (x y : List Bo
       let pairChoices : Fin t → Bool := fun i => choices ⟨i.val, by omega⟩
       let c0 : Cfg (k + 3) TM.PairBuildPhase :=
         { state := TM.PairBuildPhase.init,
-          input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+          input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
           work := work,
           output := out }
       let cT := pairNTM.trace t pairChoices c0
@@ -2761,7 +2766,7 @@ theorem satGuessVerify_pair_exits_with_verifier_frames (M : TM k) (x y : List Bo
         (satPairWrap M c0) =
         satVerifyWrap M cVerify ∧
       cVerify.work (satPairIdx k) =
-        (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right ∧
+        (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right ∧
       cVerify.output = out ∧
       (∀ i : Fin k, cVerify.work (satVerifierWorkIdx i) =
         work (satVerifierWorkIdx i)) := by
@@ -2773,7 +2778,7 @@ theorem satGuessVerify_pair_exits_with_verifier_frames (M : TM k) (x y : List Bo
   let pairChoices : Fin t → Bool := fun i => choices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3181,7 +3186,7 @@ theorem satGuessVerify_pair_exit_then_verify_halts (M : TM k)
         (satPairWrap M c0) =
           satVerifyWrap M c)
     (hpair : c.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
     (hinner : M.halted
       ((M.toNTM).trace V (fun i => choices (Fin.natAdd T i))
         (satVerifyInnerCfg M c))) :
@@ -3202,7 +3207,7 @@ theorem satGuessVerify_pair_exit_then_verify_accepts (M : TM k)
         (satPairWrap M c0) =
           satVerifyWrap M c)
     (hpair : c.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
     (hinnerHalt : M.halted
       ((M.toNTM).trace V (fun i => choices (Fin.natAdd T i))
         (satVerifyInnerCfg M c)))
@@ -3228,7 +3233,7 @@ theorem satGuessVerify_pair_exit_then_verify_outputs (M : TM k)
         (satPairWrap M c0) =
           satVerifyWrap M c)
     (hpair : c.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right)
     (g : Γ)
     (hinnerHalt : M.halted
       ((M.toNTM).trace V (fun i => choices (Fin.natAdd T i))
@@ -3250,8 +3255,8 @@ theorem satGuessVerify_pair_exit_then_verify_outputs (M : TM k)
 theorem satGuessVerify_pair_exits_then_verify_halts (M : TM k)
     (x y : List Bool) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
     (V : ℕ)
     (choices : Fin (TM.pairBuildTime x.length y.length + 1 + V) → Bool)
     (hinner :
@@ -3264,7 +3269,7 @@ theorem satGuessVerify_pair_exits_then_verify_halts (M : TM k)
           fun i => runChoices ⟨i.val, by omega⟩
         let c0 : Cfg (k + 3) TM.PairBuildPhase :=
           { state := TM.PairBuildPhase.init,
-            input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+            input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
             work := work,
             output := out }
         let cT := pairNTM.trace t pairChoices c0
@@ -3282,7 +3287,7 @@ theorem satGuessVerify_pair_exits_then_verify_halts (M : TM k)
           t + 1 + V ≤ TM.pairBuildTime x.length y.length + 1 + V) i)
       let c0 : Cfg (k + 3) TM.PairBuildPhase :=
         { state := TM.PairBuildPhase.init,
-          input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+          input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
           work := work,
           output := out }
       (satGuessVerifyNTM M).halted
@@ -3300,7 +3305,7 @@ theorem satGuessVerify_pair_exits_then_verify_halts (M : TM k)
   let pairChoices : Fin t → Bool := fun i => runChoices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3324,7 +3329,7 @@ theorem satGuessVerify_pair_exits_then_verify_halts (M : TM k)
     rw [hprefixChoices]
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, choicesPair] using hpairExit.1
   have hpairExact : cVerify.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, choicesPair, runChoices]
       using hpairExit.2
   have hinner_t :
@@ -3343,17 +3348,17 @@ theorem satGuessVerify_pair_start_halts_of_decidesInTime (M : TM k)
     {L : Language} {f : ℕ → ℕ} (hM : M.DecidesInTime L f)
     (x y : List Bool) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
-    (hout : out = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
+    (hout : out = (Tape.init []).move Dir3.right)
     (hwork : ∀ i : Fin k, work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right) :
+      (Tape.init []).move Dir3.right) :
     ∃ V, V + 1 ≤ f (pair x y).length ∧
       ∃ t, ∃ _ht : t ≤ TM.pairBuildTime x.length y.length,
         ∃ choices : Fin (t + 1 + V) → Bool,
           let c0 : Cfg (k + 3) TM.PairBuildPhase :=
             { state := TM.PairBuildPhase.init,
-              input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+              input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
               work := work,
               output := out }
           (satGuessVerifyNTM M).halted
@@ -3367,11 +3372,11 @@ theorem satGuessVerify_pair_start_halts_of_decidesInTime (M : TM k)
     fun i => pairVerifyChoices (Fin.castLE (by omega : P + 1 ≤ P + 1 + V) i)
   have houtRead : out.read ≠ Γ.start := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hworkRead : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start := by
     intro i
     rw [hwork i]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   obtain ⟨t, ht, hpairExit⟩ :=
     satGuessVerify_pair_exits_with_verifier_frames M x y work out hpre
       houtRead hworkRead pairExitChoices
@@ -3379,7 +3384,7 @@ theorem satGuessVerify_pair_start_halts_of_decidesInTime (M : TM k)
   let pairChoices : Fin t → Bool := fun i => pairExitChoices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3405,13 +3410,13 @@ theorem satGuessVerify_pair_start_halts_of_decidesInTime (M : TM k)
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairExitChoices] using
       hpairExit.1
   have hpairExact : cVerify.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairExitChoices] using
       hpairExit.2.1
-  have houtputExact : cVerify.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have houtputExact : cVerify.output = (Tape.init []).move Dir3.right := by
     rw [hpairExit.2.2.1, hout]
   have hworkExact : ∀ i : Fin k, cVerify.work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
     intro i
     rw [hpairExit.2.2.2 i, hwork i]
   let hne := TM.qstart_ne_qhalt_of_decidesInTime M hM
@@ -3442,17 +3447,17 @@ theorem satGuessVerify_pair_start_halts_within_bound_of_decidesInTime (M : TM k)
     {L : Language} {f : ℕ → ℕ} (hM : M.DecidesInTime L f)
     (x y : List Bool) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
-    (hout : out = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
+    (hout : out = (Tape.init []).move Dir3.right)
     (hwork : ∀ i : Fin k, work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right)
+      (Tape.init []).move Dir3.right)
     (hlen : y.length ≤ x.length + 1)
     (choices : Fin (TM.pairBuildTime x.length (x.length + 1) +
       satVerifierWindowTime f x.length) → Bool) :
     let c0 : Cfg (k + 3) TM.PairBuildPhase :=
       { state := TM.PairBuildPhase.init,
-        input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+        input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
         work := work,
         output := out }
     (satGuessVerifyNTM M).halted
@@ -3474,11 +3479,11 @@ theorem satGuessVerify_pair_start_halts_within_bound_of_decidesInTime (M : TM k)
     fun i => choices ⟨i.val, by omega⟩
   have houtRead : out.read ≠ Γ.start := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hworkRead : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start := by
     intro i
     rw [hwork i]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   obtain ⟨t, ht, hpairExit⟩ :=
     satGuessVerify_pair_exits_with_verifier_frames M x y work out hpre
       houtRead hworkRead pairPrefixChoices
@@ -3486,7 +3491,7 @@ theorem satGuessVerify_pair_start_halts_within_bound_of_decidesInTime (M : TM k)
   let pairChoices : Fin t → Bool := fun i => pairPrefixChoices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3512,13 +3517,13 @@ theorem satGuessVerify_pair_start_halts_within_bound_of_decidesInTime (M : TM k)
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairPrefixChoices] using
       hpairExit.1
   have hpairExact : cVerify.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairPrefixChoices] using
       hpairExit.2.1
-  have houtputExact : cVerify.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have houtputExact : cVerify.output = (Tape.init []).move Dir3.right := by
     rw [hpairExit.2.2.1, hout]
   have hworkExact : ∀ i : Fin k, cVerify.work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
     intro i
     rw [hpairExit.2.2.2 i, hwork i]
   let hne := TM.qstart_ne_qhalt_of_decidesInTime M hM
@@ -3557,17 +3562,17 @@ theorem satGuessVerify_pair_start_decides_within_bound_of_decidesInTime (M : TM 
     {L : Language} {f : ℕ → ℕ} (hM : M.DecidesInTime L f)
     (x y : List Bool) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
-    (hout : out = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
+    (hout : out = (Tape.init []).move Dir3.right)
     (hwork : ∀ i : Fin k, work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right)
+      (Tape.init []).move Dir3.right)
     (hlen : y.length ≤ x.length + 1)
     (choices : Fin (TM.pairBuildTime x.length (x.length + 1) +
       satVerifierWindowTime f x.length) → Bool) :
     let c0 : Cfg (k + 3) TM.PairBuildPhase :=
       { state := TM.PairBuildPhase.init,
-        input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+        input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
         work := work,
         output := out }
     let cFinal := (satGuessVerifyNTM M).trace
@@ -3590,11 +3595,11 @@ theorem satGuessVerify_pair_start_decides_within_bound_of_decidesInTime (M : TM 
     fun i => choices ⟨i.val, by omega⟩
   have houtRead : out.read ≠ Γ.start := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hworkRead : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start := by
     intro i
     rw [hwork i]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   obtain ⟨t, ht, hpairExit⟩ :=
     satGuessVerify_pair_exits_with_verifier_frames M x y work out hpre
       houtRead hworkRead pairPrefixChoices
@@ -3602,7 +3607,7 @@ theorem satGuessVerify_pair_start_decides_within_bound_of_decidesInTime (M : TM 
   let pairChoices : Fin t → Bool := fun i => pairPrefixChoices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3628,13 +3633,13 @@ theorem satGuessVerify_pair_start_decides_within_bound_of_decidesInTime (M : TM 
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairPrefixChoices] using
       hpairExit.1
   have hpairExact : cVerify.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairPrefixChoices] using
       hpairExit.2.1
-  have houtputExact : cVerify.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have houtputExact : cVerify.output = (Tape.init []).move Dir3.right := by
     rw [hpairExit.2.2.1, hout]
   have hworkExact : ∀ i : Fin k, cVerify.work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
     intro i
     rw [hpairExit.2.2.2 i, hwork i]
   let hne := TM.qstart_ne_qhalt_of_decidesInTime M hM
@@ -3702,18 +3707,18 @@ theorem satGuessVerify_pair_start_accepts_of_decidesInTime (M : TM k)
     {L : Language} {f : ℕ → ℕ} (hM : M.DecidesInTime L f)
     (x y : List Bool) (work : Fin (k + 3) → Tape) (out : Tape)
     (hpre :
-      work (satWitnessIdx k) = (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
-      work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right)
-    (hout : out = (_root_.Complexity.Tape.init []).move Dir3.right)
+      work (satWitnessIdx k) = (Tape.init (y.map Γ.ofBool)).move Dir3.right ∧
+      work (satPairIdx k) = (Tape.init []).move Dir3.right)
+    (hout : out = (Tape.init []).move Dir3.right)
     (hwork : ∀ i : Fin k, work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right)
+      (Tape.init []).move Dir3.right)
     (hmem : pair x y ∈ L) :
     ∃ V, V + 1 ≤ f (pair x y).length ∧
       ∃ t, ∃ _ht : t ≤ TM.pairBuildTime x.length y.length,
         ∃ choices : Fin (t + 1 + V) → Bool,
           let c0 : Cfg (k + 3) TM.PairBuildPhase :=
             { state := TM.PairBuildPhase.init,
-              input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+              input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
               work := work,
               output := out }
           let cFinal := (satGuessVerifyNTM M).trace (t + 1 + V) choices
@@ -3727,11 +3732,11 @@ theorem satGuessVerify_pair_start_accepts_of_decidesInTime (M : TM k)
     fun i => pairVerifyChoices (Fin.castLE (by omega : P + 1 ≤ P + 1 + V) i)
   have houtRead : out.read ≠ Γ.start := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   have hworkRead : ∀ i : Fin k, (work (satVerifierWorkIdx i)).read ≠ Γ.start := by
     intro i
     rw [hwork i]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   obtain ⟨t, ht, hpairExit⟩ :=
     satGuessVerify_pair_exits_with_verifier_frames M x y work out hpre
       houtRead hworkRead pairExitChoices
@@ -3739,7 +3744,7 @@ theorem satGuessVerify_pair_start_accepts_of_decidesInTime (M : TM k)
   let pairChoices : Fin t → Bool := fun i => pairExitChoices ⟨i.val, by omega⟩
   let c0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
   let cT := pairNTM.trace t pairChoices c0
@@ -3765,13 +3770,13 @@ theorem satGuessVerify_pair_start_accepts_of_decidesInTime (M : TM k)
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairExitChoices] using
       hpairExit.1
   have hpairExact : cVerify.work (satPairIdx k) =
-      (_root_.Complexity.Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
+      (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right := by
     simpa [P, pairNTM, pairChoices, c0, cT, cVerify, pairExitChoices] using
       hpairExit.2.1
-  have houtputExact : cVerify.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have houtputExact : cVerify.output = (Tape.init []).move Dir3.right := by
     rw [hpairExit.2.2.1, hout]
   have hworkExact : ∀ i : Fin k, cVerify.work (satVerifierWorkIdx i) =
-      (_root_.Complexity.Tape.init []).move Dir3.right := by
+      (Tape.init []).move Dir3.right := by
     intro i
     rw [hpairExit.2.2.2 i, hwork i]
   let hne := TM.qstart_ne_qhalt_of_decidesInTime M hM
@@ -3811,13 +3816,13 @@ theorem satGuessVerify_init_generates_witness_then_verify_halts (M : TM k)
     (hinner :
       ∀ (work : Fin (k + 3) → Tape) (out : Tape),
         work (satWitnessIdx k) =
-          (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right →
-        work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right →
+          (Tape.init (y.map Γ.ofBool)).move Dir3.right →
+        work (satPairIdx k) = (Tape.init []).move Dir3.right →
         ∀ t (_ht : t ≤ TM.pairBuildTime x.length y.length),
           let pairNTM := (TM.pairBuildTM (satWitnessIdx k) (satPairIdx k)).toNTM
           let c0 : Cfg (k + 3) TM.PairBuildPhase :=
             { state := TM.PairBuildPhase.init,
-              input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+              input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
               work := work,
               output := out }
           let cT := pairNTM.trace t (fun _ : Fin t => false) c0
@@ -3850,7 +3855,7 @@ theorem satGuessVerify_init_generates_witness_then_verify_halts (M : TM k)
           fun i => runChoices ⟨i.val, by omega⟩
         let c0 : Cfg (k + 3) TM.PairBuildPhase :=
           { state := TM.PairBuildPhase.init,
-            input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+            input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
             work := cPair.work,
             output := cPair.output }
         let cT := pairNTM.trace t pairChoices c0
@@ -3872,7 +3877,7 @@ theorem satGuessVerify_init_generates_witness_then_verify_halts (M : TM k)
     fun i => pairVerifyChoices (Fin.castLE (by omega : tpair + 1 + V ≤ P + 1 + V) i)
   let cPair0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := cPair.work,
       output := cPair.output }
   have hcPair : cPair = cPair0 := by
@@ -3942,7 +3947,7 @@ theorem satGuessVerify_init_generates_witness_halts_of_decidesInTime (M : TM k)
       ⟨hpairWitness, hpairBlank⟩ hpairOutput hpairVerifierWork
   let cPair0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := cPair.work,
       output := cPair.output }
   have hcPair : cPair = cPair0 := by
@@ -4016,7 +4021,7 @@ theorem satGuessVerify_init_generates_witness_accepts_of_decidesInTime (M : TM k
       hpairVerifierWork hmem
   let cPair0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := cPair.work,
       output := cPair.output }
   have hcPair : cPair = cPair0 := by
@@ -4100,14 +4105,14 @@ theorem satGuessVerify_acceptsInTime_of_witness_bound_of_decidesInTime (M : TM k
 /-- SAT-specific accepting run from any concrete satisfying assignment, assuming
     `M` decides the SAT verifier pair language. -/
 theorem satGuessVerify_acceptsInTime_of_RSAT_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f)
-    (x y : List Bool) (hR : R_SAT x y) :
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f)
+    (x y : List Bool) (hR : Witness x y) :
     (satGuessVerifyNTM M).AcceptsInTime x
       ((TM.inputLengthPlusOneCounterTime x.length + 1 +
         (TM.inputLengthPlusOneCounterTime x.length + 1 + 2 + 1 +
         (NTM.guessBoundedTime (x.length + 1) 0 + 1))) +
         (TM.pairBuildTime x.length y.length + f (pair x y).length)) := by
-  have hmem : pair x y ∈ pairLang R_SAT := ⟨x, y, rfl, hR⟩
+  have hmem : pair x y ∈ pairLang Witness := ⟨x, y, rfl, hR⟩
   obtain ⟨_, _, hlen, _⟩ := hR
   exact satGuessVerify_acceptsInTime_of_witness_of_decidesInTime M hM x y hlen
     hmem
@@ -4115,30 +4120,30 @@ theorem satGuessVerify_acceptsInTime_of_RSAT_of_decidesInTime (M : TM k)
 /-- SAT-specific accepting run from any concrete satisfying assignment under
     the uniform SAT-specialized bound. -/
 theorem satGuessVerify_acceptsInTime_of_RSAT_bound_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f)
-    (x y : List Bool) (hR : R_SAT x y) :
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f)
+    (x y : List Bool) (hR : Witness x y) :
     (satGuessVerifyNTM M).AcceptsInTime x (satGuessVerifyTime f x.length) := by
-  have hmem : pair x y ∈ pairLang R_SAT := ⟨x, y, rfl, hR⟩
+  have hmem : pair x y ∈ pairLang Witness := ⟨x, y, rfl, hR⟩
   obtain ⟨_, _, hlen, _⟩ := hR
   exact satGuessVerify_acceptsInTime_of_witness_bound_of_decidesInTime M hM x y
     hlen hmem
 
-/-- Timed yes-instance half for `L_SAT` under the uniform SAT-specialized bound,
+/-- Timed yes-instance half for `language` under the uniform SAT-specialized bound,
     assuming `M` decides the SAT verifier pair language. -/
 theorem satGuessVerify_acceptsInTime_of_mem_LSAT_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f)
-    (x : List Bool) (hx : x ∈ L_SAT) :
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f)
+    (x : List Bool) (hx : x ∈ language) :
     (satGuessVerifyNTM M).AcceptsInTime x (satGuessVerifyTime f x.length) := by
-  obtain ⟨y, hR⟩ := (L_SAT_iff_witness x).1 hx
+  obtain ⟨y, hR⟩ := (mem_language_iff_witness x).1 hx
   exact satGuessVerify_acceptsInTime_of_RSAT_bound_of_decidesInTime M hM x y hR
 
-/-- Yes-instances of `L_SAT` are accepted by the SAT-specialized
+/-- Yes-instances of `language` are accepted by the SAT-specialized
     guess-and-verify machine, assuming `M` decides the SAT verifier pair
     language. This is the unbounded acceptance half of the final NP decision
     theorem. -/
 theorem satGuessVerify_accepts_of_mem_LSAT_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f)
-    (x : List Bool) (hx : x ∈ L_SAT) :
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f)
+    (x : List Bool) (hx : x ∈ language) :
     (satGuessVerifyNTM M).Accepts x := by
   exact NTM.accepts_of_acceptsInTime
     (satGuessVerify_acceptsInTime_of_mem_LSAT_of_decidesInTime M hM x hx)
@@ -4162,20 +4167,20 @@ theorem satGuessVerify_allPathsHaltIn_of_decidesInTime (M : TM k)
     simpa [setupChoicesAll, setupChoices] using hsetup.1
   have hpairState : cPair.state = TM.PairBuildPhase.init := hsetup.2.1
   have hpairInput :
-      cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right := hsetup.2.2.1
+      cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right := hsetup.2.2.1
   have hpairWitness :
       cPair.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := hsetup.2.2.2.1
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right := hsetup.2.2.2.1
   have hpairBlank :
-      cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.1
+      cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right := hsetup.2.2.2.2.1
   have hpairOutput :
-      cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.1
+      cPair.output = (Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.1
   have hpairVerifierWork :
       ∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.2
+        (Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.2
   let cPair0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := cPair.work,
       output := cPair.output }
   have hcPair : cPair = cPair0 := by
@@ -4260,20 +4265,20 @@ theorem satGuessVerify_trace_decides_for_some_setup_witness_of_decidesInTime
     simpa [setupChoicesAll, setupChoices] using hsetup.1
   have hpairState : cPair.state = TM.PairBuildPhase.init := hsetup.2.1
   have hpairInput :
-      cPair.input = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right := hsetup.2.2.1
+      cPair.input = (Tape.init (x.map Γ.ofBool)).move Dir3.right := hsetup.2.2.1
   have hpairWitness :
       cPair.work (satWitnessIdx k) =
-        (_root_.Complexity.Tape.init (y.map Γ.ofBool)).move Dir3.right := hsetup.2.2.2.1
+        (Tape.init (y.map Γ.ofBool)).move Dir3.right := hsetup.2.2.2.1
   have hpairBlank :
-      cPair.work (satPairIdx k) = (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.1
+      cPair.work (satPairIdx k) = (Tape.init []).move Dir3.right := hsetup.2.2.2.2.1
   have hpairOutput :
-      cPair.output = (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.1
+      cPair.output = (Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.1
   have hpairVerifierWork :
       ∀ i : Fin k, cPair.work (satVerifierWorkIdx i) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.2
+        (Tape.init []).move Dir3.right := hsetup.2.2.2.2.2.2
   let cPair0 : Cfg (k + 3) TM.PairBuildPhase :=
     { state := TM.PairBuildPhase.init,
-      input := (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right,
+      input := (Tape.init (x.map Γ.ofBool)).move Dir3.right,
       work := cPair.work,
       output := cPair.output }
   have hcPair : cPair = cPair0 := by
@@ -4364,22 +4369,22 @@ theorem satGuessVerify_trace_decides_for_some_setup_witness_of_decidesInTime
     rw [hmono]
     exact hshortNo hnotmem
 
-/-- No SAT instance outside `L_SAT` has an accepting run within the uniform
-    SAT-specialized bound, assuming the verifier decides `pairLang R_SAT`. -/
+/-- No SAT instance outside `language` has an accepting run within the uniform
+    SAT-specialized bound, assuming the verifier decides `pairLang Witness`. -/
 theorem satGuessVerify_not_acceptsInTime_of_not_mem_LSAT_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f)
-    (x : List Bool) (hx : x ∉ L_SAT) :
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f)
+    (x : List Bool) (hx : x ∉ language) :
     ¬ (satGuessVerifyNTM M).AcceptsInTime x (satGuessVerifyTime f x.length) := by
   intro hacc
   obtain ⟨choices, hhalt, hout⟩ := hacc
   obtain ⟨y, hy, htrace⟩ :=
     satGuessVerify_trace_decides_for_some_setup_witness_of_decidesInTime M hM x choices
-  have hnotpair : pair x y ∉ pairLang R_SAT := by
+  have hnotpair : pair x y ∉ pairLang Witness := by
     intro hpair
     rcases hpair with ⟨x', y', hp, hR⟩
     obtain ⟨hx', hy'⟩ := pair_inj hp
     subst hx' hy'
-    exact hx ((L_SAT_iff_witness x).2 ⟨y, hR⟩)
+    exact hx ((mem_language_iff_witness x).2 ⟨y, hR⟩)
   have hzero : ((satGuessVerifyNTM M).trace (satGuessVerifyTime f x.length) choices
       ((satGuessVerifyNTM M).initCfg x)).output.cells 1 = Γ.zero :=
     htrace.2.2 hnotpair
@@ -4387,11 +4392,11 @@ theorem satGuessVerify_not_acceptsInTime_of_not_mem_LSAT_of_decidesInTime (M : T
   have hzero_ne_one : Γ.zero ≠ Γ.one := by decide
   exact hzero_ne_one hout
 
-/-- The SAT-specialized machine decides `L_SAT` within the uniform bound
+/-- The SAT-specialized machine decides `language` within the uniform bound
     `satGuessVerifyTime`, assuming `M` decides the SAT verifier pair language. -/
 theorem satGuessVerify_decidesInTime_of_decidesInTime (M : TM k)
-    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang R_SAT) f) :
-    (satGuessVerifyNTM M).DecidesInTime L_SAT (satGuessVerifyTime f) := by
+    {f : ℕ → ℕ} (hM : M.DecidesInTime (pairLang Witness) f) :
+    (satGuessVerifyNTM M).DecidesInTime language (satGuessVerifyTime f) := by
   refine ⟨satGuessVerify_allPathsHaltIn_of_decidesInTime M hM, ?_⟩
   intro x
   constructor
@@ -4441,12 +4446,12 @@ theorem satGuessVerifyTime_bigO_of_bigO {f : ℕ → ℕ} {c : ℕ}
   obtain ⟨q, hq⟩ := satGuessVerifyTime_polynomial_bound hfO
   exact ⟨q.natDegree, BigO.of_polynomial_bound q hq⟩
 
-/-- Direct SAT route: if the deterministic verifier for `R_SAT` is in `P`,
-    then the completed SAT-specialized guess-and-verify machine puts `L_SAT`
+/-- Direct SAT route: if the deterministic verifier for `Witness` is in `P`,
+    then the completed SAT-specialized guess-and-verify machine puts `language`
     in `NP`. This bypasses the still-open generic witness-language interface
     and packages the concrete construction proved in this file. -/
-theorem L_SAT_in_NP_of_verifierP_direct (h : pairLang R_SAT ∈ P) :
-    L_SAT ∈ NP := by
+theorem language_mem_NP_of_verifierP_direct (h : pairLang Witness ∈ P) :
+    language ∈ NP := by
   obtain ⟨c, k, M, f, hM, hfO⟩ := Set.mem_iUnion.mp h
   obtain ⟨d, hgO⟩ := satGuessVerifyTime_bigO_of_bigO hfO
   refine Set.mem_iUnion.mpr ⟨d, k + 3, satGuessVerifyNTM M, satGuessVerifyTime f, ?_, hgO⟩

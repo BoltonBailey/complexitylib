@@ -28,9 +28,9 @@ def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 /-- The library's headline theorems, fully qualified. -/
 def headlineTheorems : List Name := [
   -- Cook–Levin / NP-completeness
-  `Complexity.SAT.NPComplete_L_SAT,
-  `Complexity.SAT.L_SAT_mem_NP,
-  `Complexity.SAT.pairLang_R_SAT_mem_P,
+  `Complexity.SAT.NPComplete_language,
+  `Complexity.SAT.language_mem_NP,
+  `Complexity.SAT.pairLang_witness_mem_P,
   -- Universal machine
   `Complexity.TM.UTMBody.utmTM_universal,
   `Complexity.TM.UTMBody.utmTM_universal_padded,

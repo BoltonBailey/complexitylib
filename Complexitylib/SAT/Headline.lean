@@ -1,36 +1,41 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.VerifierTM
-import Complexitylib.SAT.GuessVerify
-
-namespace Complexity
+import Complexitylib.SAT.Internal.GuessVerify
 
 /-!
 # SAT ∈ NP — the headline theorem
 
 This file ties together the two halves of the `SAT ∈ NP` proof:
 
-* `SAT.TM.verifyPairTM_decidesInTime` (in `VerifierTM`) — the deterministic
-  three-tape verifier decides `pairLang R_SAT` within the quadratic budget
-  `verifyPairTMTime`, so `pairLang R_SAT ∈ P`.
-* `SAT.L_SAT_in_NP_of_verifierP_direct` (in `GuessVerify`) — the SAT-specialized
-  guess-and-verify NTM turns `pairLang R_SAT ∈ P` into `L_SAT ∈ NP`.
+* `SAT.VerifierTM.verifyPairTM_decidesInTime` (in `VerifierTM`) — the deterministic
+  three-tape verifier decides `pairLang Witness` within the quadratic budget
+  `verifyPairTMTime`, so `pairLang Witness ∈ P`.
+* `SAT.language_mem_NP_of_verifierP_direct` (in `GuessVerify`) — the SAT-specialized
+  guess-and-verify NTM turns `pairLang Witness ∈ P` into `language ∈ NP`.
 
-Combining them yields the unconditional theorem `SAT.L_SAT_mem_NP : L_SAT ∈ NP`.
+Combining them yields the unconditional theorem `SAT.language_mem_NP : language ∈ NP`.
 -/
+
+namespace Complexity
 
 namespace SAT
 
 /-- The paired SAT verifier language is decided in polynomial (in fact
-quadratic) time by `verifyPairTM`, hence `pairLang R_SAT ∈ P`. -/
-theorem pairLang_R_SAT_mem_P : pairLang R_SAT ∈ P :=
+quadratic) time by `verifyPairTM`, hence `pairLang Witness ∈ P`. -/
+theorem pairLang_witness_mem_P : pairLang Witness ∈ P :=
   Set.mem_iUnion.mpr
-    ⟨2, 3, TM.verifyPairTM, TM.verifyPairTMTime,
-      TM.verifyPairTM_decidesInTime, TM.verifyPairTMTime_bigO_quadratic⟩
+    ⟨2, 3, VerifierTM.verifyPairTM, VerifierTM.verifyPairTMTime,
+      VerifierTM.verifyPairTM_decidesInTime, VerifierTM.verifyPairTMTime_bigO_quadratic⟩
 
 /-- **SAT ∈ NP.** The Boolean satisfiability language is in `NP`, witnessed by
 the SAT-specialized guess-and-verify NTM running over the polynomial-time
 deterministic pair verifier. -/
-theorem L_SAT_mem_NP : L_SAT ∈ NP :=
-  L_SAT_in_NP_of_verifierP_direct pairLang_R_SAT_mem_P
+theorem language_mem_NP : language ∈ NP :=
+  language_mem_NP_of_verifierP_direct pairLang_witness_mem_P
 
 end SAT
 

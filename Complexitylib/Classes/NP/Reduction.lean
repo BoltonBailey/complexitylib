@@ -17,7 +17,7 @@ A reduction `L ≤ₚ L'` is a polynomial-time computable function `f` (i.e. `f 
 such that `x ∈ L ↔ f x ∈ L'`. A language is NP-hard when every language in `NP`
 reduces to it, and NP-complete when it is additionally a member of `NP`.
 
-The headline application is `SAT.NPComplete_L_SAT` (Cook–Levin), in
+The headline application is `SAT.NPComplete_language` (Cook–Levin), in
 `Complexitylib/SAT/CookLevin.lean`.
 -/
 

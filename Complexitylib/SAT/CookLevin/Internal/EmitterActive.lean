@@ -1,6 +1,9 @@
-import Complexitylib.SAT.CookLevin.EmitterStart
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.SAT.CookLevin.Internal.EmitterStart
 
 /-!
 # The active-transition family emitter
@@ -13,9 +16,11 @@ unrolled at definition level (`bigSeqTM` over their lists); rows and
 positions are runtime loops.
 -/
 
+namespace Complexity
+
 namespace SAT
 
-open _root_.Complexity.TM Tableau
+open TM Tableau
 
 open Emit
 

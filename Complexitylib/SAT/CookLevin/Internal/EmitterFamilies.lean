@@ -1,6 +1,9 @@
-import Complexitylib.SAT.CookLevin.EmitterLoop
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.SAT.CookLevin.Internal.EmitterLoop
 
 /-!
 # The clause-family emitters
@@ -12,9 +15,11 @@ The emitter's tape layout is fixed once (`Emit.nT = 20` work tapes, named
 indices below), so register-distinctness side conditions are all `decide`.
 -/
 
+namespace Complexity
+
 namespace SAT
 
-open _root_.Complexity.TM Tableau
+open TM Tableau
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Tape layout

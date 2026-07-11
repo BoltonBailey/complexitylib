@@ -1,6 +1,9 @@
-import Complexitylib.SAT.CookLevin.EmitterActive
-
-namespace Complexity
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.SAT.CookLevin.Internal.EmitterActive
 
 /-!
 # The reduction emitter, assembled
@@ -11,11 +14,13 @@ registers, and emit the seven encoded clause families of
 `tableauCNFFlat N (p.eval |x|) x`.
 -/
 
+namespace Complexity
+
 namespace SAT
 
 open Complexity
 
-open _root_.Complexity.TM Tableau
+open TM Tableau
 
 open Emit
 
@@ -1041,38 +1046,38 @@ theorem reductionFn_mem_FP (N : NTM 1) (p : Polynomial ℕ) :
 
 /-- **Single-tape Cook–Levin reduction.** A single-work-tape machine deciding
     `L` in polynomial time yields a polynomial-time many-one reduction to
-    `L_SAT`. The abstract bound `T` is first replaced by a dominating explicit
+    `language`. The abstract bound `T` is first replaced by a dominating explicit
     polynomial (`BigO.pow_polynomial_bound`), since the reduction function is
     only computable for explicit bounds; deciding transfers by
     monotonicity. -/
 theorem cookLevin_reduction_singleTape {L : Language} (N : NTM 1) (T : ℕ → ℕ)
     (c : ℕ) (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
-    L ≤ₚ L_SAT := by
+    L ≤ₚ language := by
   obtain ⟨p, hp⟩ := hTO.pow_polynomial_bound
   exact ⟨reductionFn N (fun n => p.eval n), reductionFn_mem_FP N p,
     tableauCNF_correct N _ (hdec.mono hp)⟩
 
 /-- **Per-machine Cook–Levin reduction.** If a nondeterministic machine `N`
     decides `L` within a polynomial time bound, then `L` polynomial-time
-    many-one reduces to `L_SAT`. Reduces to the single-work-tape case
+    many-one reduces to `language`. Reduces to the single-work-tape case
     (`NTM.exists_singleTape_decidesInTime`) and then builds the tableau formula. -/
 theorem cookLevin_reduction {k : ℕ} {L : Language} (N : NTM k) (T : ℕ → ℕ)
     (c : ℕ) (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
-    L ≤ₚ L_SAT := by
+    L ≤ₚ language := by
   obtain ⟨N', T', c', hdec', hTO'⟩ := N.exists_singleTape_decidesInTime hdec hTO
   exact cookLevin_reduction_singleTape N' T' c' hdec' hTO'
 
 /-- **NP-hardness of SAT.** Every language in `NP` polynomial-time reduces to
-    `L_SAT`. -/
-theorem NPHard_L_SAT : NPHard L_SAT := by
+    `language`. -/
+theorem NPHard_language : NPHard language := by
   intro L hL
   obtain ⟨d, hLd⟩ := Set.mem_iUnion.mp hL
   obtain ⟨k, N, f, hdec, hfO⟩ := hLd
   exact cookLevin_reduction N f d hdec hfO
 
 /-- **Cook–Levin theorem: SAT is NP-complete.** -/
-theorem NPComplete_L_SAT : NPComplete L_SAT :=
-  ⟨L_SAT_mem_NP, NPHard_L_SAT⟩
+theorem NPComplete_language : NPComplete language :=
+  ⟨language_mem_NP, NPHard_language⟩
 
 end SAT
 

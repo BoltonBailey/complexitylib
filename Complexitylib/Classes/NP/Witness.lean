@@ -140,7 +140,7 @@ theorem mem_NP_of_FNP_witness
 
 /-- **Restatement in terms of `witnessLang`.** If `R ∈ FNP`, then
     `witnessLang R ∈ NP`. This is the useful form for applying to
-    concrete relations like `R_SAT`. -/
+    concrete relations like `Witness`. -/
 theorem witnessLang_mem_NP_of_FNP
     (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} (hR : R ∈ FNP) :

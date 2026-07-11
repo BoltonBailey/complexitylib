@@ -1,6 +1,9 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Semantics
-
-namespace Complexity
 
 /-!
 # Variable renaming and satisfiability transport
@@ -23,6 +26,8 @@ machine actually emits (`docs/A5-ReductionEmitter.md`).
 - `SAT.CNF.satisfiable_mapVar_iff` — renaming along an injective map
   preserves satisfiability
 -/
+
+namespace Complexity
 
 namespace SAT
 

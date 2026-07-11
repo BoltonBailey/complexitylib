@@ -1,7 +1,10 @@
-import Complexitylib.SAT.CookLevin.EmitterFamilies
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.SAT.CookLevin.Internal.EmitterFamilies
 import Complexitylib.Models.TuringMachine.Registers.Probe
-
-namespace Complexity
 
 /-!
 # The start-clause family emitter
@@ -14,9 +17,11 @@ the scratch, emit. Tapes 1 and 2 are blank beyond `▷`, so their loops are
 ordinary constant-digit clause loops.
 -/
 
+namespace Complexity
+
 namespace SAT
 
-open _root_.Complexity.TM Tableau
+open TM Tableau
 
 open Emit
 

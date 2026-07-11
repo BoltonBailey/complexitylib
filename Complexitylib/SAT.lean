@@ -8,15 +8,8 @@ import Complexitylib.SAT.Rename
 import Complexitylib.SAT.Encoding
 import Complexitylib.SAT.Language
 import Complexitylib.SAT.Verifier
-import Complexitylib.SAT.VerifierTM
-import Complexitylib.SAT.GuessVerify
 import Complexitylib.SAT.Headline
 import Complexitylib.SAT.CookLevin
-import Complexitylib.SAT.CookLevin.Emitter
-import Complexitylib.SAT.CookLevin.EmitterLoop
-import Complexitylib.SAT.CookLevin.EmitterFamilies
-import Complexitylib.SAT.CookLevin.EmitterStart
-import Complexitylib.SAT.CookLevin.EmitterActive
 import Complexitylib.SAT.CookLevin.Assembly
 
 /-!
@@ -32,8 +25,8 @@ infrastructure used by the polynomial-time verifier.
   computes will be proved equal to `CNF.eval α φ`.
 - `Encoding`  — `CNF.encode : CNF → List Bool`, the bit-level format the
   verifier parses.
-- `Language`  — `L_SAT`, the witness relation `R_SAT`, and the proofs
-  `L_SAT_iff_witness` / `R_SAT_polyBalanced`.
+- `Language`  — `language`, the witness relation `Witness`, and the proofs
+  `mem_language_iff_witness` / `polyBalanced_witness`.
 - `Verifier` — executable decoding and checking for `pair(z, α)`.
 - `VerifierTM` — deterministic TM components for the machine-level verifier.
 - `GuessVerify` — the proved SAT-specialized NTM composition for counter

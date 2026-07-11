@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Verifier
 import Complexitylib.Classes.NP.Internal.PairSplitTM
 import Complexitylib.Models.TuringMachine.Subroutines.Counter
@@ -7,8 +12,6 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 
-namespace Complexity
-
 /-!
 # SAT verifier TMs
 
@@ -17,9 +20,11 @@ verifier. The first component is a simple deterministic checker for the witness
 length side-condition `|α| ≤ |z| + 1`.
 -/
 
+namespace Complexity
+
 namespace SAT
 
-namespace TM
+namespace VerifierTM
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Small tape helpers
@@ -27,7 +32,7 @@ namespace TM
 
 private theorem hasBinaryPrefix_cells_eq_initTape_cells {t : Tape} {bits : List Bool}
     (hprefix : t.HasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
-    t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells := by
+    t.cells = (Tape.init (bits.map Γ.ofBool)).cells := by
   funext j
   cases j with
   | zero =>
@@ -39,9 +44,9 @@ private theorem hasBinaryPrefix_cells_eq_initTape_cells {t : Tape} {bits : List 
         rw [hprefix.2.2 i hge, Tape.init_ofBool_cells_ge bits i hge]
 
 private theorem eq_initTape_move_right_of_cells_head_one {t : Tape} (bits : List Bool)
-    (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells)
+    (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells)
     (hhead : t.head = 1) :
-    t = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
+    t = (Tape.init (bits.map Γ.ofBool)).move Dir3.right := by
   have hbits : t.HasBinaryString bits := by
     refine ⟨hhead, ?_, ?_⟩
     · intro i hi
@@ -52,24 +57,24 @@ private theorem eq_initTape_move_right_of_cells_head_one {t : Tape} (bits : List
       exact Tape.init_ofBool_cells_ge bits i hi
   have h0 : t.cells 0 = Γ.start := by
     rw [hcells]
-    simp [_root_.Complexity.Tape.init]
+    simp [Tape.init]
   exact Tape.eq_init_move_right_of_hasBinaryString hbits h0
 
 private theorem cells_eq_initTape_ofBool_cell0 {t : Tape} (bits : List Bool)
-    (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells) :
+    (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells) :
     t.cells 0 = Γ.start := by
   rw [hcells]
-  simp [_root_.Complexity.Tape.init]
+  simp [Tape.init]
 
 private theorem cells_eq_initTape_ofBool_ne_start {t : Tape} (bits : List Bool)
-    (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells) :
+    (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells) :
     ∀ j, j ≥ 1 → t.cells j ≠ Γ.start := by
   intro j hj
   rw [hcells]
   exact Tape.init_ofBool_cells_ne_start bits j hj
 
 private theorem read_ne_start_of_cells_eq_initTape_ofBool {t : Tape} (bits : List Bool)
-    (hcells : t.cells = (_root_.Complexity.Tape.init (bits.map Γ.ofBool)).cells)
+    (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells)
     (hhead : t.head ≥ 1) :
     t.read ≠ Γ.start := by
   simp [Tape.read]
@@ -81,13 +86,13 @@ private def hasBoolSuffix (t : Tape) (bits : List Bool) : Prop :=
   t.cells (t.head + bits.length) = Γ.blank ∧
   (∀ j, j ≥ 1 → t.cells j ≠ Γ.start)
 
-private theorem Tape.init_move_right_hasBoolSuffix (bits : List Bool) :
-    hasBoolSuffix ((_root_.Complexity.Tape.init (bits.map Γ.ofBool)).move Dir3.right) bits := by
-  refine ⟨by simp [Tape.move, _root_.Complexity.Tape.init], ?_, ?_, ?_⟩
+private theorem initTape_move_right_hasBoolSuffix (bits : List Bool) :
+    hasBoolSuffix ((Tape.init (bits.map Γ.ofBool)).move Dir3.right) bits := by
+  refine ⟨by simp [Tape.move, Tape.init], ?_, ?_, ?_⟩
   · intro i hi
-    simpa [Tape.move, _root_.Complexity.Tape.init, Nat.add_comm] using
+    simpa [Tape.move, Tape.init, Nat.add_comm] using
       Tape.init_ofBool_cells_lt bits i hi
-  · simp [Tape.move, _root_.Complexity.Tape.init, Nat.add_comm]
+  · simp [Tape.move, Tape.init, Nat.add_comm]
   · intro j hj
     simp [Tape.move]
     exact Tape.init_ofBool_cells_ne_start bits j hj
@@ -120,22 +125,22 @@ private theorem hasBoolSuffix_read_ne_start {t : Tape} {bits : List Bool}
     t.read ≠ Γ.start := by
   exact h.2.2.2 t.head h.1
 
-private theorem retargetInput_step_preserves_input_of_read_ne_start {k : ℕ} (M : _root_.Complexity.TM k)
-    {c c' : Cfg (k + 1) (_root_.Complexity.TM.retargetInput M).Q}
-    (hstep : (_root_.Complexity.TM.retargetInput M).step c = some c')
+private theorem retargetInput_step_preserves_input_of_read_ne_start {k : ℕ} (M : TM k)
+    {c c' : Cfg (k + 1) (TM.retargetInput M).Q}
+    (hstep : (TM.retargetInput M).step c = some c')
     (hinp : c.input.read ≠ Γ.start) :
     c'.input = c.input := by
-  simp only [_root_.Complexity.TM.step, _root_.Complexity.TM.retargetInput] at hstep
+  simp only [TM.step, TM.retargetInput] at hstep
   split at hstep
   · simp at hstep
   · simp only [Option.some.injEq] at hstep
     subst hstep
-    simp [_root_.Complexity.TM.idleDir, hinp, Tape.move]
+    simp [TM.idleDir, hinp, Tape.move]
 
 private theorem retargetInput_reachesIn_preserves_input_of_read_ne_start {k : ℕ}
-    (M : _root_.Complexity.TM k)
-    {t : ℕ} {c c' : Cfg (k + 1) (_root_.Complexity.TM.retargetInput M).Q}
-    (hreach : (_root_.Complexity.TM.retargetInput M).reachesIn t c c')
+    (M : TM k)
+    {t : ℕ} {c c' : Cfg (k + 1) (TM.retargetInput M).Q}
+    (hreach : (TM.retargetInput M).reachesIn t c c')
     (hinp : c.input.read ≠ Γ.start) :
     c'.input = c.input := by
   induction hreach with
@@ -147,7 +152,7 @@ private theorem retargetInput_reachesIn_preserves_input_of_read_ne_start {k : �
       exact ih (by simpa [hmid] using hinp)
 
 private theorem started_blank_output_read_ne_start :
-    (((_root_.Complexity.Tape.init []).move Dir3.right).read) ≠ Γ.start := by
+    (((Tape.init []).move Dir3.right).read) ≠ Γ.start := by
   rw [Tape.init_nil_move_right_read]
   decide
 
@@ -162,7 +167,7 @@ private theorem unaryCounter_read_ne_start {t : Tape} {B : ℕ}
     simp
 
 private theorem started_input_read_ne_start (α : List Bool) :
-    (((_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
+    (((Tape.init (α.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
   exact Tape.init_ofBool_move_right_read_ne_start α
 
 private theorem fin2_ne_zero_eq_one (i : Fin 2) (h : i ≠ ⟨0, by omega⟩) :
@@ -207,74 +212,74 @@ def satLengthCheckTM : TM 1 where
     match state with
     | .init =>
         (.scan,
-          fun _ => _root_.Complexity.TM.readBackWrite counterHead,
-          _root_.Complexity.TM.readBackWrite oHead,
-          _root_.Complexity.TM.idleDir iHead,
-          fun _ => _root_.Complexity.TM.idleDir counterHead,
-          _root_.Complexity.TM.idleDir oHead)
+          fun _ => TM.readBackWrite counterHead,
+          TM.readBackWrite oHead,
+          TM.idleDir iHead,
+          fun _ => TM.idleDir counterHead,
+          TM.idleDir oHead)
     | .scan =>
         if iHead = Γ.blank then
           (.done,
-            fun _ => _root_.Complexity.TM.readBackWrite counterHead,
+            fun _ => TM.readBackWrite counterHead,
             Γw.one,
-            _root_.Complexity.TM.idleDir iHead,
-            fun _ => _root_.Complexity.TM.idleDir counterHead,
-            _root_.Complexity.TM.idleDir oHead)
+            TM.idleDir iHead,
+            fun _ => TM.idleDir counterHead,
+            TM.idleDir oHead)
         else if counterHead = Γ.one then
           (.scan,
             fun _ => Γw.blank,
-            _root_.Complexity.TM.readBackWrite oHead,
+            TM.readBackWrite oHead,
             Dir3.right,
             fun _ => Dir3.right,
-            _root_.Complexity.TM.idleDir oHead)
+            TM.idleDir oHead)
         else
           (.done,
-            fun _ => _root_.Complexity.TM.readBackWrite counterHead,
+            fun _ => TM.readBackWrite counterHead,
             Γw.zero,
-            _root_.Complexity.TM.idleDir iHead,
-            fun _ => _root_.Complexity.TM.idleDir counterHead,
-            _root_.Complexity.TM.idleDir oHead)
+            TM.idleDir iHead,
+            fun _ => TM.idleDir counterHead,
+            TM.idleDir oHead)
     | .done =>
-        _root_.Complexity.TM.allIdle .done iHead wHeads oHead
+        TM.allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
     let counterHead := wHeads ⟨0, by omega⟩
     match state with
     | .init =>
-        refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+        refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
         intro i hi
         have hi0 : i = ⟨0, by omega⟩ := by
           apply Fin.ext
           omega
         subst hi0
-        simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+        simpa [counterHead] using TM.idleDir_right_of_start hi
     | .scan =>
         dsimp only []
         split
-        · refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+        · refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
           intro i hi
           have hi0 : i = ⟨0, by omega⟩ := by
             apply Fin.ext
             omega
           subst hi0
-          simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+          simpa [counterHead] using TM.idleDir_right_of_start hi
         · split
-          · refine ⟨fun _ => rfl, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+          · refine ⟨fun _ => rfl, ?_, TM.idleDir_right_of_start⟩
             intro i _
             have hi0 : i = ⟨0, by omega⟩ := by
               apply Fin.ext
               omega
             subst hi0
             rfl
-          · refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+          · refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
             intro i hi
             have hi0 : i = ⟨0, by omega⟩ := by
               apply Fin.ext
               omega
             subst hi0
-            simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+            simpa [counterHead] using TM.idleDir_right_of_start hi
     | .done =>
-        exact _root_.Complexity.TM.rightOfStart_allIdle iHead wHeads oHead
+        exact TM.rightOfStart_allIdle iHead wHeads oHead
 
 /-- A convenient linear upper bound for the length checker. -/
 def satLengthCheckTime (n : ℕ) : ℕ :=
@@ -287,9 +292,9 @@ def satLengthCheckTime (n : ℕ) : ℕ :=
 private theorem satLengthCheck_init_step (α : List Bool) (B : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
     (hstate : c.state = .init)
-    (hinput : c.input = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right)
+    (hinput : c.input = (Tape.init (α.map Γ.ofBool)).move Dir3.right)
     (hcounter : (c.work ⟨0, by omega⟩).HasUnaryCounter B)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       c'.state = .scan ∧
       c'.input = c.input ∧
@@ -304,25 +309,25 @@ private theorem satLengthCheck_init_step (α : List Bool) (B : ℕ)
     exact started_blank_output_read_ne_start
   simp only [TM.step, hstate, satLengthCheckTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
-  · change _root_.Complexity.TM.transitionInput c.input = c.input
-    exact _root_.Complexity.TM.transitionInput_eq_self hinp
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork
-  · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_eq_self hout'
+  · change TM.transitionInput c.input = c.input
+    exact TM.transitionInput_eq_self hinp
+  · change TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
+    exact TM.transitionTape_eq_self hwork
+  · change TM.transitionTape c.output = c.output
+    exact TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
     (hk : k < α.length)
     (hkB : k < B)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
     (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder k B)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       c'.state = .scan ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
       (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + 1) B ∧
       c'.output = c.output := by
@@ -344,19 +349,19 @@ private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
     exact hinput_cells
   · simp [Tape.move, hinput_head]
   · simpa using Tape.hasCounterRemainder_consume hcounter hkB
-  · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_eq_self hout'
+  · change TM.transitionTape c.output = c.output
+    exact TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheck_scan_accept_step (α : List Bool) (B : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = α.length + 1)
     (_hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder α.length B)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       satLengthCheckTM.halted c' ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.output.cells 1 = Γ.one := by
   have hread_input : c.input.read = Γ.blank := by
     show c.input.cells c.input.head = Γ.blank
@@ -364,27 +369,27 @@ private theorem satLengthCheck_scan_accept_step (α : List Bool) (B : ℕ)
     exact Tape.init_ofBool_cells_ge α α.length le_rfl
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   simp only [TM.step, hstate, satLengthCheckTM, hread_input, hout_read]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · rw [Tape.move_cells]
     exact hinput_cells
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, _root_.Complexity.TM.idleDir, Γw.toΓ]
+      simp [Tape.move, Tape.init]
+    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, TM.idleDir, Γw.toΓ]
 
 private theorem satLengthCheck_scan_reject_step (α : List Bool) (B : ℕ)
     (c : Cfg 1 satLengthCheckTM.Q)
     (hB : B < α.length)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = B + 1)
     (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder B B)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckTM.step c = some c' ∧
       satLengthCheckTM.halted c' ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.output.cells 1 = Γ.zero := by
   have hread_input : c.input.read ≠ Γ.blank := by
     have hcell : c.input.read = Γ.ofBool (α[B]'hB) := by
@@ -397,15 +402,15 @@ private theorem satLengthCheck_scan_reject_step (α : List Bool) (B : ℕ)
     Tape.hasCounterRemainder_read_blank_of_done hcounter
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   simp only [TM.step, hstate, satLengthCheckTM, hread_input, hread_counter, hout_read]
   refine ⟨_, rfl, rfl, ?_, ?_⟩
   · rw [Tape.move_cells]
     exact hinput_cells
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, _root_.Complexity.TM.idleDir, Γw.toΓ]
+      simp [Tape.move, Tape.init]
+    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, TM.idleDir, Γw.toΓ]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Prefix scan loop
@@ -416,17 +421,17 @@ private theorem satLengthCheck_scan_prefix_loop (α : List Bool) (B : ℕ) :
       k + m ≤ α.length →
       k + m ≤ B →
       c.state = .scan →
-      c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
+      c.input.cells = (Tape.init (α.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
       (c.work ⟨0, by omega⟩).HasCounterRemainder k B →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c',
         satLengthCheckTM.reachesIn m c c' ∧
         c'.state = .scan ∧
-        c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
         (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + m) B ∧
-        c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+        c'.output = (Tape.init []).move Dir3.right := by
   intro m
   induction m with
   | zero =>
@@ -443,7 +448,7 @@ private theorem satLengthCheck_scan_prefix_loop (α : List Bool) (B : ℕ) :
           hinput_head hcounter hout
       have hlen1 : k + 1 + m ≤ α.length := by omega
       have hbound1 : k + 1 + m ≤ B := by omega
-      have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
         rw [hout1]
         exact hout
       obtain ⟨c', hreach, hstate', hcells', hhead', hcounter', hout'⟩ :=
@@ -465,11 +470,11 @@ iff `|α| ≤ B`. -/
 theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
     satLengthCheckTM.HoareTime
       (fun inp work out =>
-        inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        inp = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter B ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        out = (Tape.init []).move Dir3.right)
       (fun inp _work out =>
-        inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+        inp.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
   intro inp work out hpre
@@ -478,15 +483,15 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
     { state := satLengthCheckTM.qstart, input := inp, work := work, output := out }
   obtain ⟨c1, hstep1, hstate1, hinput1, hwork1, hout1⟩ :=
     satLengthCheck_init_step α B c0 rfl hinput hcounter hout
-  have hcells0 : c0.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
-    change inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells
+  have hcells0 : c0.input.cells = (Tape.init (α.map Γ.ofBool)).cells := by
+    change inp.cells = (Tape.init (α.map Γ.ofBool)).cells
     rw [hinput]
     exact Tape.move_cells _ _
   have hhead0 : c0.input.head = 1 := by
     change inp.head = 1
     rw [hinput]
-    simp [Tape.move, _root_.Complexity.Tape.init]
-  have hcells1 : c1.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+    simp [Tape.move, Tape.init]
+  have hcells1 : c1.input.cells = (Tape.init (α.map Γ.ofBool)).cells := by
     rw [hinput1]
     exact hcells0
   have hhead1 : c1.input.head = 1 := by
@@ -495,7 +500,7 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
   have hcounter1 : (c1.work ⟨0, by omega⟩).HasCounterRemainder 0 B := by
     rw [hwork1]
     exact (Tape.hasUnaryCounter_iff_remainder_zero).mp hcounter
-  have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
     rw [hout1]
     exact hout
   by_cases hle : α.length ≤ B
@@ -507,8 +512,8 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
         (by simpa using hhead2) (by simpa using hcounter2) hout2
     have hreach_total : satLengthCheckTM.reachesIn (1 + α.length + 1) c0 c3 := by
       simpa [Nat.add_assoc] using
-        _root_.Complexity.TM.reachesIn_trans _ (.step hstep1 .zero)
-          (_root_.Complexity.TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
+        TM.reachesIn_trans _ (.step hstep1 .zero)
+          (TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
     refine ⟨c3, 1 + α.length + 1, by
       simp [satLengthCheckTime]
       omega, hreach_total, hhalt3, ?_⟩
@@ -523,8 +528,8 @@ theorem satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
         (by simpa using hhead2) (by simpa using hcounter2) hout2
     have hreach_total : satLengthCheckTM.reachesIn (1 + B + 1) c0 c3 := by
       simpa [Nat.add_assoc] using
-        _root_.Complexity.TM.reachesIn_trans _ (.step hstep1 .zero)
-          (_root_.Complexity.TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
+        TM.reachesIn_trans _ (.step hstep1 .zero)
+          (TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
     refine ⟨c3, 1 + B + 1, by
       simp [satLengthCheckTime]
       omega, hreach_total, hhalt3, ?_⟩
@@ -537,15 +542,15 @@ counter bound, and the output tape receives `1` iff the witness length is at
 most that bound. The counter tape precondition includes the structural
 no-`▷` invariant required by `retargetInput`. -/
 theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bool) :
-    (_root_.Complexity.TM.retargetInput satLengthCheckTM).HoareTime
+    (TM.retargetInput satLengthCheckTM).HoareTime
       (fun _inp work out =>
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter B ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        out = (Tape.init []).move Dir3.right)
       (fun _inp work out =>
-        (work ⟨1, by omega⟩).cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+        (work ⟨1, by omega⟩).cells = (Tape.init (α.map Γ.ofBool)).cells ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
   have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
@@ -558,19 +563,19 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
   have hlen :
       satLengthCheckTM.HoareTime
         (fun inp work out =>
-          inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+          inp = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
           (work ⟨0, by omega⟩).HasUnaryCounter B ∧
           (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-          out = (_root_.Complexity.Tape.init []).move Dir3.right)
+          out = (Tape.init []).move Dir3.right)
         (fun inp _work out =>
-          inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+          inp.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
           out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
         (satLengthCheckTime α.length) :=
     (satLengthCheckTM_started_hoareTime B α).weaken_pre (by
       intro inp work out hpre
       exact ⟨hpre.1, hpre.2.1, hpre.2.2.2.2⟩)
-  have hret := _root_.Complexity.TM.retargetInput_hoareTime (M := satLengthCheckTM)
+  have hret := TM.retargetInput_hoareTime (M := satLengthCheckTM)
     hlen
     (hpre_inp := by
       intro _inp work out hpre
@@ -603,8 +608,8 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
 /-- Three-work-tape counter builder obtained by retargeting the input of
 `inputLengthPlusOneCounterTM` to work tape `2`. Tape `0` stores the unary
 counter, tape `1` is preserved, and tape `2` provides the formula bits. -/
-def satCounter3TM : _root_.Complexity.TM 3 :=
-  _root_.Complexity.TM.retargetInput (_root_.Complexity.TM.inputLengthPlusOneCounterTM ⟨0, by omega⟩)
+def satCounter3TM : TM 3 :=
+  TM.retargetInput (TM.inputLengthPlusOneCounterTM ⟨0, by omega⟩)
 
 /-- Build the unary counter `|z| + 1` on tape `0` from staged formula tape `2`
 while preserving the staged witness on tape `1` and leaving the output tape in
@@ -612,19 +617,19 @@ the started blank configuration. -/
 theorem satCounter3TM_started_hoareTime (z α : List Bool) :
     satCounter3TM.HoareTime
       (fun _inp work out =>
-        work ⟨2, by omega⟩ = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        work ⟨2, by omega⟩ = (Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨0, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        out = (Tape.init []).move Dir3.right)
       (fun _inp work out =>
-        (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
+        (work ⟨2, by omega⟩).cells = (Tape.init (z.map Γ.ofBool)).cells ∧
         (work ⟨2, by omega⟩).head = z.length + 1 ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter (z.length + 1) ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
-      (_root_.Complexity.TM.inputLengthPlusOneCounterTime z.length) := by
+        out = (Tape.init []).move Dir3.right)
+      (TM.inputLengthPlusOneCounterTime z.length) := by
   let counterIdx : Fin 2 := ⟨0, by decide⟩
   let passiveIdx : Fin 2 := ⟨1, by decide⟩
   have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
@@ -635,25 +640,25 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
     · intro j hj
       simpa [Tape.move_cells] using ht.2 j hj
   have hcounter :
-      (_root_.Complexity.TM.inputLengthPlusOneCounterTM counterIdx).HoareTime
+      (TM.inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work out =>
-          inp = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
-          work counterIdx = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-          work passiveIdx = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-          out = (_root_.Complexity.Tape.init []).move Dir3.right)
+          inp = (Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (Tape.init []).move Dir3.right ∧
+          work passiveIdx = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+          out = (Tape.init []).move Dir3.right)
         (fun inp work out =>
-          inp.cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
+          inp.cells = (Tape.init (z.map Γ.ofBool)).cells ∧
           inp.head = z.length + 1 ∧
-          work passiveIdx = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+          work passiveIdx = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
           (work counterIdx).HasUnaryCounter (z.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start) ∧
-          out = (_root_.Complexity.Tape.init []).move Dir3.right)
-        (_root_.Complexity.TM.inputLengthPlusOneCounterTime z.length) :=
-    _root_.Complexity.TM.inputLengthPlusOneCounterTM_started_tracksInput_preserves_work_hoareTime
+          out = (Tape.init []).move Dir3.right)
+        (TM.inputLengthPlusOneCounterTime z.length) :=
+    TM.inputLengthPlusOneCounterTM_started_tracksInput_preserves_work_hoareTime
       counterIdx passiveIdx (by decide) z α
-  have hret := _root_.Complexity.TM.retargetInput_hoareTime
-      (M := _root_.Complexity.TM.inputLengthPlusOneCounterTM counterIdx)
+  have hret := TM.retargetInput_hoareTime
+      (M := TM.inputLengthPlusOneCounterTM counterIdx)
       hcounter
     (hpre_inp := by
       intro _inp work out hpre
@@ -678,22 +683,22 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
       exact hmove_right_invariant (Tape.StartInvariant.init_nil))
   have hret' : satCounter3TM.HoareTime
       (fun _inp work out =>
-        work ⟨2, by omega⟩ = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        work ⟨2, by omega⟩ = (Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨0, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        out = (Tape.init []).move Dir3.right)
       (fun _inp work out =>
         ∃ vin : Tape, ∃ innerWork : Fin 2 → Tape,
-          (vin.cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
+          (vin.cells = (Tape.init (z.map Γ.ofBool)).cells ∧
             vin.head = z.length + 1 ∧
-            innerWork passiveIdx = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+            innerWork passiveIdx = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
             (innerWork counterIdx).HasUnaryCounter (z.length + 1) ∧
             (innerWork counterIdx).cells 0 = Γ.start ∧
             (∀ j, j ≥ 1 → (innerWork counterIdx).cells j ≠ Γ.start) ∧
-            out = (_root_.Complexity.Tape.init []).move Dir3.right) ∧
+            out = (Tape.init []).move Dir3.right) ∧
           (∀ i : Fin 2, work ⟨i.val, by omega⟩ = innerWork i) ∧
           work ⟨2, by omega⟩ = vin)
-      (_root_.Complexity.TM.inputLengthPlusOneCounterTime z.length) := by
+      (TM.inputLengthPlusOneCounterTime z.length) := by
     simpa [satCounter3TM] using hret
   refine hret'.strengthen_post ?_
   intro _inp work out hpost
@@ -714,20 +719,20 @@ theorem satCounter3TM_started_stableInput_hoareTime (z α : List Bool) :
     satCounter3TM.HoareTime
       (fun inp work out =>
         inp.read ≠ Γ.start ∧
-        work ⟨2, by omega⟩ = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        work ⟨2, by omega⟩ = (Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨0, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        out = (Tape.init []).move Dir3.right)
       (fun inp work out =>
         inp.read ≠ Γ.start ∧
-        (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).cells ∧
+        (work ⟨2, by omega⟩).cells = (Tape.init (z.map Γ.ofBool)).cells ∧
         (work ⟨2, by omega⟩).head = z.length + 1 ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter (z.length + 1) ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
-      (_root_.Complexity.TM.inputLengthPlusOneCounterTime z.length) := by
+        out = (Tape.init []).move Dir3.right)
+      (TM.inputLengthPlusOneCounterTime z.length) := by
   intro inp work out hpre
   let counterIdx : Fin 2 := ⟨0, by omega⟩
   obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ :=
@@ -735,7 +740,7 @@ theorem satCounter3TM_started_stableInput_hoareTime (z α : List Bool) :
   have hinput_keep :
       c'.input = inp :=
     retargetInput_reachesIn_preserves_input_of_read_ne_start
-      (_root_.Complexity.TM.inputLengthPlusOneCounterTM (n := 2) counterIdx)
+      (TM.inputLengthPlusOneCounterTM (n := 2) counterIdx)
       (by simpa [satCounter3TM] using hreach)
       hpre.1
   refine ⟨c', t, ht, hreach, hhalt, ?_⟩
@@ -748,7 +753,7 @@ theorem satCounter3TM_started_stableInput_hoareTime (z α : List Bool) :
 
 /-- A two-work-tape version of the SAT witness-length checker. Work tape `0`
 stores the unary bound, while work tape `1` is preserved exactly. -/
-def satLengthCheckPassiveTM : _root_.Complexity.TM 2 where
+def satLengthCheckPassiveTM : TM 2 where
   Q := SatLengthCheckPhase
   qstart := .init
   qhalt := .done
@@ -759,98 +764,98 @@ def satLengthCheckPassiveTM : _root_.Complexity.TM 2 where
     | .init =>
         (.scan,
           fun i =>
-            if i = ⟨0, by omega⟩ then _root_.Complexity.TM.readBackWrite counterHead
-            else _root_.Complexity.TM.readBackWrite passiveHead,
-          _root_.Complexity.TM.readBackWrite oHead,
-          _root_.Complexity.TM.idleDir iHead,
+            if i = ⟨0, by omega⟩ then TM.readBackWrite counterHead
+            else TM.readBackWrite passiveHead,
+          TM.readBackWrite oHead,
+          TM.idleDir iHead,
           fun i =>
-            if i = ⟨0, by omega⟩ then _root_.Complexity.TM.idleDir counterHead
-            else _root_.Complexity.TM.idleDir passiveHead,
-          _root_.Complexity.TM.idleDir oHead)
+            if i = ⟨0, by omega⟩ then TM.idleDir counterHead
+            else TM.idleDir passiveHead,
+          TM.idleDir oHead)
     | .scan =>
         if iHead = Γ.blank then
           (.done,
             fun i =>
-              if i = ⟨0, by omega⟩ then _root_.Complexity.TM.readBackWrite counterHead
-              else _root_.Complexity.TM.readBackWrite passiveHead,
+              if i = ⟨0, by omega⟩ then TM.readBackWrite counterHead
+              else TM.readBackWrite passiveHead,
             Γw.one,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨0, by omega⟩ then _root_.Complexity.TM.idleDir counterHead
-              else _root_.Complexity.TM.idleDir passiveHead,
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨0, by omega⟩ then TM.idleDir counterHead
+              else TM.idleDir passiveHead,
+            TM.idleDir oHead)
         else if counterHead = Γ.one then
           (.scan,
-            fun i => if i = ⟨0, by omega⟩ then Γw.blank else _root_.Complexity.TM.readBackWrite passiveHead,
-            _root_.Complexity.TM.readBackWrite oHead,
+            fun i => if i = ⟨0, by omega⟩ then Γw.blank else TM.readBackWrite passiveHead,
+            TM.readBackWrite oHead,
             Dir3.right,
-            fun i => if i = ⟨0, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir passiveHead,
-            _root_.Complexity.TM.idleDir oHead)
+            fun i => if i = ⟨0, by omega⟩ then Dir3.right else TM.idleDir passiveHead,
+            TM.idleDir oHead)
         else
           (.done,
             fun i =>
-              if i = ⟨0, by omega⟩ then _root_.Complexity.TM.readBackWrite counterHead
-              else _root_.Complexity.TM.readBackWrite passiveHead,
+              if i = ⟨0, by omega⟩ then TM.readBackWrite counterHead
+              else TM.readBackWrite passiveHead,
             Γw.zero,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨0, by omega⟩ then _root_.Complexity.TM.idleDir counterHead
-              else _root_.Complexity.TM.idleDir passiveHead,
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨0, by omega⟩ then TM.idleDir counterHead
+              else TM.idleDir passiveHead,
+            TM.idleDir oHead)
     | .done =>
-        _root_.Complexity.TM.allIdle .done iHead wHeads oHead
+        TM.allIdle .done iHead wHeads oHead
   δ_right_of_start := by
     intro state iHead wHeads oHead
     let counterHead := wHeads ⟨0, by omega⟩
     let passiveHead := wHeads ⟨1, by omega⟩
     match state with
     | .init =>
-        refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+        refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
         intro i hi
         by_cases hi0 : i = ⟨0, by omega⟩
         · subst hi0
-          simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+          simpa [counterHead] using TM.idleDir_right_of_start hi
         · have hi1 := fin2_ne_zero_eq_one i hi0
           subst hi1
-          simpa [passiveHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+          simpa [passiveHead] using TM.idleDir_right_of_start hi
     | .scan =>
         dsimp only []
         split
-        · refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+        · refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
           intro i hi
           by_cases hi0 : i = ⟨0, by omega⟩
           · subst hi0
-            simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+            simpa [counterHead] using TM.idleDir_right_of_start hi
           · have hi1 := fin2_ne_zero_eq_one i hi0
             subst hi1
-            simpa [passiveHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+            simpa [passiveHead] using TM.idleDir_right_of_start hi
         · split
-          · refine ⟨fun _ => rfl, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+          · refine ⟨fun _ => rfl, ?_, TM.idleDir_right_of_start⟩
             intro i hi
             by_cases hi0 : i = ⟨0, by omega⟩
             · subst hi0
               rfl
             · have hi1 := fin2_ne_zero_eq_one i hi0
               subst hi1
-              simpa [passiveHead] using _root_.Complexity.TM.idleDir_right_of_start hi
-          · refine ⟨_root_.Complexity.TM.idleDir_right_of_start, ?_, _root_.Complexity.TM.idleDir_right_of_start⟩
+              simpa [passiveHead] using TM.idleDir_right_of_start hi
+          · refine ⟨TM.idleDir_right_of_start, ?_, TM.idleDir_right_of_start⟩
             intro i hi
             by_cases hi0 : i = ⟨0, by omega⟩
             · subst hi0
-              simpa [counterHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+              simpa [counterHead] using TM.idleDir_right_of_start hi
             · have hi1 := fin2_ne_zero_eq_one i hi0
               subst hi1
-              simpa [passiveHead] using _root_.Complexity.TM.idleDir_right_of_start hi
+              simpa [passiveHead] using TM.idleDir_right_of_start hi
     | .done =>
-        exact _root_.Complexity.TM.rightOfStart_allIdle iHead wHeads oHead
+        exact TM.rightOfStart_allIdle iHead wHeads oHead
 
 private theorem satLengthCheckPassive_init_step (α β : List Bool) (B : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
     (hstate : c.state = .init)
-    (hinput : c.input = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right)
+    (hinput : c.input = (Tape.init (α.map Γ.ofBool)).move Dir3.right)
     (hcounter : (c.work ⟨0, by omega⟩).HasUnaryCounter B)
-    (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hpassive : c.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
       c'.state = .scan ∧
       c'.input = c.input ∧
@@ -869,28 +874,28 @@ private theorem satLengthCheckPassive_init_step (α β : List Bool) (B : ℕ)
     exact started_blank_output_read_ne_start
   simp only [TM.step, hstate, satLengthCheckPassiveTM]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
-  · change _root_.Complexity.TM.transitionInput c.input = c.input
-    exact _root_.Complexity.TM.transitionInput_eq_self hinp
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork0
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork1
-  · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_eq_self hout'
+  · change TM.transitionInput c.input = c.input
+    exact TM.transitionInput_eq_self hinp
+  · change TM.transitionTape (c.work ⟨0, by omega⟩) = c.work ⟨0, by omega⟩
+    exact TM.transitionTape_eq_self hwork0
+  · change TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
+    exact TM.transitionTape_eq_self hwork1
+  · change TM.transitionTape c.output = c.output
+    exact TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B k : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
     (hk : k < α.length)
     (hkB : k < B)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
     (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder k B)
-    (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hpassive : c.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
       c'.state = .scan ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
       (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + 1) B ∧
       c'.work ⟨1, by omega⟩ = c.work ⟨1, by omega⟩ ∧
@@ -916,22 +921,22 @@ private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B 
     exact hinput_cells
   · simp [Tape.move, hinput_head]
   · simpa using Tape.hasCounterRemainder_consume hcounter hkB
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
-  · change _root_.Complexity.TM.transitionTape c.output = c.output
-    exact _root_.Complexity.TM.transitionTape_eq_self hout'
+  · change TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
+    exact TM.transitionTape_eq_self hpassive_read
+  · change TM.transitionTape c.output = c.output
+    exact TM.transitionTape_eq_self hout'
 
 private theorem satLengthCheckPassive_scan_accept_step (α β : List Bool) (B : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = α.length + 1)
     (_hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder α.length B)
-    (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hpassive : c.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
       satLengthCheckPassiveTM.halted c' ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.work ⟨1, by omega⟩ = c.work ⟨1, by omega⟩ ∧
       c'.output.cells 1 = Γ.one := by
   have hread_input : c.input.read = Γ.blank := by
@@ -943,30 +948,30 @@ private theorem satLengthCheckPassive_scan_accept_step (α β : List Bool) (B : 
     exact started_input_read_ne_start β
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   simp only [TM.step, hstate, satLengthCheckPassiveTM, hread_input, hout_read]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · rw [Tape.move_cells]
     exact hinput_cells
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
+  · change TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
+    exact TM.transitionTape_eq_self hpassive_read
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, _root_.Complexity.TM.idleDir, Γw.toΓ]
+      simp [Tape.move, Tape.init]
+    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, TM.idleDir, Γw.toΓ]
 
 private theorem satLengthCheckPassive_scan_reject_step (α β : List Bool) (B : ℕ)
     (c : Cfg 2 satLengthCheckPassiveTM.Q)
     (hB : B < α.length)
     (hstate : c.state = .scan)
-    (hinput_cells : c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (Tape.init (α.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = B + 1)
     (hcounter : (c.work ⟨0, by omega⟩).HasCounterRemainder B B)
-    (hpassive : c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hpassive : c.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satLengthCheckPassiveTM.step c = some c' ∧
       satLengthCheckPassiveTM.halted c' ∧
-      c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+      c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
       c'.work ⟨1, by omega⟩ = c.work ⟨1, by omega⟩ ∧
       c'.output.cells 1 = Γ.zero := by
   have hread_input : c.input.read ≠ Γ.blank := by
@@ -983,36 +988,36 @@ private theorem satLengthCheckPassive_scan_reject_step (α β : List Bool) (B : 
     exact started_input_read_ne_start β
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   simp only [TM.step, hstate, satLengthCheckPassiveTM, hread_input, hread_counter, hout_read]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_⟩
   · rw [Tape.move_cells]
     exact hinput_cells
-  · change _root_.Complexity.TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
-    exact _root_.Complexity.TM.transitionTape_eq_self hpassive_read
+  · change TM.transitionTape (c.work ⟨1, by omega⟩) = c.work ⟨1, by omega⟩
+    exact TM.transitionTape_eq_self hpassive_read
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, _root_.Complexity.TM.idleDir, Γw.toΓ]
+      simp [Tape.move, Tape.init]
+    simp [Tape.writeAndMove, Tape.move, Tape.write, ho_head, TM.idleDir, Γw.toΓ]
 
 private theorem satLengthCheckPassive_scan_prefix_loop (α β : List Bool) (B : ℕ) :
     ∀ (m k : ℕ) (c : Cfg 2 satLengthCheckPassiveTM.Q),
       k + m ≤ α.length →
       k + m ≤ B →
       c.state = .scan →
-      c.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
+      c.input.cells = (Tape.init (α.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
       (c.work ⟨0, by omega⟩).HasCounterRemainder k B →
-      c.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c',
         satLengthCheckPassiveTM.reachesIn m c c' ∧
         c'.state = .scan ∧
-        c'.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+        c'.input.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
         (c'.work ⟨0, by omega⟩).HasCounterRemainder (k + m) B ∧
-        c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
-        c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+        c'.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        c'.output = (Tape.init []).move Dir3.right := by
   intro m
   induction m with
   | zero =>
@@ -1030,10 +1035,10 @@ private theorem satLengthCheckPassive_scan_prefix_loop (α β : List Bool) (B : 
       have hlen1 : k + 1 + m ≤ α.length := by omega
       have hbound1 : k + 1 + m ≤ B := by omega
       have hpassive1_started :
-          c1.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right := by
+          c1.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right := by
         rw [hpassive1]
         exact hpassive
-      have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
         rw [hout1]
         exact hout
       obtain ⟨c', hreach, hstate', hcells', hhead', hcounter', hpassive', hout'⟩ :=
@@ -1050,13 +1055,13 @@ private theorem satLengthCheckPassive_scan_prefix_loop (α β : List Bool) (B : 
 theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) :
     satLengthCheckPassiveTM.HoareTime
       (fun inp work out =>
-        inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        inp = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter B ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        out = (Tape.init []).move Dir3.right)
       (fun inp work out =>
-        inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        inp.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
+        work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
   intro inp work out hpre
@@ -1065,15 +1070,15 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
     { state := satLengthCheckPassiveTM.qstart, input := inp, work := work, output := out }
   obtain ⟨c1, hstep1, hstate1, hinput1, hwork01, hwork11, hout1⟩ :=
     satLengthCheckPassive_init_step α β B c0 rfl hinput hcounter hpassive hout
-  have hcells0 : c0.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
-    change inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells
+  have hcells0 : c0.input.cells = (Tape.init (α.map Γ.ofBool)).cells := by
+    change inp.cells = (Tape.init (α.map Γ.ofBool)).cells
     rw [hinput]
     exact Tape.move_cells _ _
   have hhead0 : c0.input.head = 1 := by
     change inp.head = 1
     rw [hinput]
-    simp [Tape.move, _root_.Complexity.Tape.init]
-  have hcells1 : c1.input.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+    simp [Tape.move, Tape.init]
+  have hcells1 : c1.input.cells = (Tape.init (α.map Γ.ofBool)).cells := by
     rw [hinput1]
     exact hcells0
   have hhead1 : c1.input.head = 1 := by
@@ -1082,10 +1087,10 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
   have hcounter1 : (c1.work ⟨0, by omega⟩).HasCounterRemainder 0 B := by
     rw [hwork01]
     exact (Tape.hasUnaryCounter_iff_remainder_zero).mp hcounter
-  have hpassive1 : c1.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right := by
+  have hpassive1 : c1.work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right := by
     rw [hwork11]
     exact hpassive
-  have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
     rw [hout1]
     exact hout
   by_cases hle : α.length ≤ B
@@ -1097,8 +1102,8 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
         (by simpa using hhead2) (by simpa using hcounter2) hpassive2 hout2
     have hreach_total : satLengthCheckPassiveTM.reachesIn (1 + α.length + 1) c0 c3 := by
       simpa [Nat.add_assoc] using
-        _root_.Complexity.TM.reachesIn_trans _ (.step hstep1 .zero)
-          (_root_.Complexity.TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
+        TM.reachesIn_trans _ (.step hstep1 .zero)
+          (TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
     refine ⟨c3, 1 + α.length + 1, by
       simp [satLengthCheckTime]
       omega, hreach_total, hhalt3, ?_⟩
@@ -1112,8 +1117,8 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
         (by simpa using hhead2) (by simpa using hcounter2) hpassive2 hout2
     have hreach_total : satLengthCheckPassiveTM.reachesIn (1 + B + 1) c0 c3 := by
       simpa [Nat.add_assoc] using
-        _root_.Complexity.TM.reachesIn_trans _ (.step hstep1 .zero)
-          (_root_.Complexity.TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
+        TM.reachesIn_trans _ (.step hstep1 .zero)
+          (TM.reachesIn_trans _ hreach2 (.step hstep3 .zero))
     refine ⟨c3, 1 + B + 1, by
       simp [satLengthCheckTime]
       omega, hreach_total, hhalt3, ?_⟩
@@ -1122,8 +1127,8 @@ theorem satLengthCheckPassiveTM_started_hoareTime (B : ℕ) (α β : List Bool) 
 /-- Three-work-tape length checker obtained by retargeting the input of
 `satLengthCheckPassiveTM` to work tape `2`. Tape `0` stores the unary bound,
 tape `1` is preserved, and tape `2` provides the witness bits. -/
-def satLengthCheck3TM : _root_.Complexity.TM 3 :=
-  _root_.Complexity.TM.retargetInput satLengthCheckPassiveTM
+def satLengthCheck3TM : TM 3 :=
+  TM.retargetInput satLengthCheckPassiveTM
 
 /-- Virtual-input/work-tape version of `satLengthCheckPassiveTM`: work tape
 `2` supplies the witness bits, work tape `0` supplies the unary bound, and
@@ -1131,15 +1136,15 @@ work tape `1` is preserved exactly. -/
 theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
     satLengthCheck3TM.HoareTime
       (fun _inp work out =>
-        (work ⟨2, by omega⟩) = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        (work ⟨2, by omega⟩) = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter B ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        out = (Tape.init []).move Dir3.right)
       (fun _inp work out =>
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
-        (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
+        work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        (work ⟨2, by omega⟩).cells = (Tape.init (α.map Γ.ofBool)).cells ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
   have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
@@ -1152,21 +1157,21 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
   have hlen :
       satLengthCheckPassiveTM.HoareTime
         (fun inp work out =>
-          inp = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+          inp = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
           (work ⟨0, by omega⟩).HasUnaryCounter B ∧
-          work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+          work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
           (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
           (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-          out = (_root_.Complexity.Tape.init []).move Dir3.right)
+          out = (Tape.init []).move Dir3.right)
         (fun inp work out =>
-          inp.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
-          work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+          inp.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
+          work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
           out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
         (satLengthCheckTime α.length) :=
     (satLengthCheckPassiveTM_started_hoareTime B α β).weaken_pre (by
       intro inp work out hpre
       exact ⟨hpre.1, hpre.2.1, hpre.2.2.1, hpre.2.2.2.2.2⟩)
-  have hret := _root_.Complexity.TM.retargetInput_hoareTime (M := satLengthCheckPassiveTM)
+  have hret := TM.retargetInput_hoareTime (M := satLengthCheckPassiveTM)
     hlen
     (hpre_inp := by
       intro _inp work out hpre
@@ -1198,16 +1203,16 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
       exact hmove_right_invariant (Tape.StartInvariant.init_nil))
   have hret' : satLengthCheck3TM.HoareTime
       (fun _inp work out =>
-        (work ⟨2, by omega⟩) = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+        (work ⟨2, by omega⟩) = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).HasUnaryCounter B ∧
-        work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
         (work ⟨0, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
-        out = (_root_.Complexity.Tape.init []).move Dir3.right)
+        out = (Tape.init []).move Dir3.right)
       (fun _inp work out =>
         ∃ vin : Tape, ∃ innerWork : Fin 2 → Tape,
-          (vin.cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
-            innerWork ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
+          (vin.cells = (Tape.init (α.map Γ.ofBool)).cells ∧
+            innerWork ⟨1, by omega⟩ = (Tape.init (β.map Γ.ofBool)).move Dir3.right ∧
             out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero)) ∧
           (∀ i : Fin 2, work ⟨i.val, by omega⟩ = innerWork i) ∧
           work ⟨2, by omega⟩ = vin)
@@ -1222,9 +1227,9 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
 
 /-- Tail of the SAT witness-length verifier after the witness has been copied
 to tape `2`: rewind tapes `1` and `2`, then run `satLengthCheck3TM`. -/
-def satWitnessLengthTailTM : _root_.Complexity.TM 3 :=
-  _root_.Complexity.TM.seqTM (_root_.Complexity.TM.rewindWorkTM ⟨1, by omega⟩) <|
-    _root_.Complexity.TM.seqTM (_root_.Complexity.TM.rewindWorkTM ⟨2, by omega⟩) satLengthCheck3TM
+def satWitnessLengthTailTM : TM 3 :=
+  TM.seqTM (TM.rewindWorkTM ⟨1, by omega⟩) <|
+    TM.seqTM (TM.rewindWorkTM ⟨2, by omega⟩) satLengthCheck3TM
 
 /-- Time bound for `satWitnessLengthTailTM`. -/
 def satWitnessLengthTailTime (αLen : ℕ) : ℕ :=
@@ -1304,7 +1309,7 @@ private def literalValueAtHead (sign : Bool) (g : Γ) : Bool :=
   assignmentBitAtHead g == sign
 
 private theorem assignmentBitAtHead_initTape_eq_get (α : Assignment) (var : ℕ) :
-    assignmentBitAtHead ((_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1)) =
+    assignmentBitAtHead ((Tape.init (α.map Γ.ofBool)).cells (var + 1)) =
       Assignment.get α var := by
   by_cases h : var < α.length
   · rw [Tape.init_ofBool_cells_lt α var h]
@@ -1316,7 +1321,7 @@ private theorem assignmentBitAtHead_initTape_eq_get (α : Assignment) (var : ℕ
 
 private theorem literalValueAtHead_initTape_eq_litEval
     (α : Assignment) (sign : Bool) (var : ℕ) :
-    literalValueAtHead sign ((_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1)) =
+    literalValueAtHead sign ((Tape.init (α.map Γ.ofBool)).cells (var + 1)) =
       (Assignment.get α var == sign) := by
   simp [literalValueAtHead, assignmentBitAtHead_initTape_eq_get]
 
@@ -1327,8 +1332,8 @@ private def finishEvalMode : SatEvalMode → Γw
 private def satEvalReject {n : ℕ} (state : SatEvalPhase)
     (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
     SatEvalPhase × (Fin n → Γw) × Γw × Dir3 × (Fin n → Dir3) × Dir3 :=
-  (state, fun i => _root_.Complexity.TM.readBackWrite (wHeads i), Γw.zero,
-    _root_.Complexity.TM.idleDir iHead, fun i => _root_.Complexity.TM.idleDir (wHeads i), _root_.Complexity.TM.idleDir oHead)
+  (state, fun i => TM.readBackWrite (wHeads i), Γw.zero,
+    TM.idleDir iHead, fun i => TM.idleDir (wHeads i), TM.idleDir oHead)
 
 private def satEvalTokenStep (mode : SatEvalMode) (tok : EncToken) (αHead : Γ) :
     SatEvalPhase × Dir3 × Γw :=
@@ -1367,20 +1372,20 @@ private def satEvalDelta :
     | .readFirst mode =>
         if iHead = Γ.blank then
           (.done,
-            fun i => _root_.Complexity.TM.readBackWrite (wHeads i),
+            fun i => TM.readBackWrite (wHeads i),
             finishEvalMode mode,
-            _root_.Complexity.TM.idleDir iHead,
-            fun i => _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+            TM.idleDir iHead,
+            fun i => TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           match readBit? iHead with
           | some b =>
               (.readSecond mode b,
-                fun i => _root_.Complexity.TM.readBackWrite (wHeads i),
-                _root_.Complexity.TM.readBackWrite oHead,
+                fun i => TM.readBackWrite (wHeads i),
+                TM.readBackWrite oHead,
                 Dir3.right,
-                fun i => _root_.Complexity.TM.idleDir (wHeads i),
-                _root_.Complexity.TM.idleDir oHead)
+                fun i => TM.idleDir (wHeads i),
+                TM.idleDir oHead)
           | none =>
               satEvalReject .done iHead wHeads oHead
     | .readSecond mode first =>
@@ -1389,34 +1394,34 @@ private def satEvalDelta :
             let (nextState, αDir, outWrite) :=
               satEvalTokenStep mode (tokenOfBits first second) αHead
             (nextState,
-              fun i => _root_.Complexity.TM.readBackWrite (wHeads i),
+              fun i => TM.readBackWrite (wHeads i),
               outWrite,
               Dir3.right,
               fun i =>
                 if i = ⟨0, by omega⟩ then
                   if αHead = Γ.start then Dir3.right else αDir
                 else
-                  _root_.Complexity.TM.idleDir (wHeads i),
-              _root_.Complexity.TM.idleDir oHead)
+                  TM.idleDir (wHeads i),
+              TM.idleDir oHead)
         | none =>
             satEvalReject .done iHead wHeads oHead
     | .rewindAlpha mode =>
         if αHead = Γ.start then
           (.readFirst mode,
-            fun i => _root_.Complexity.TM.readBackWrite (wHeads i),
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
-            fun i => if i = ⟨0, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+            fun i => TM.readBackWrite (wHeads i),
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
+            fun i => if i = ⟨0, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           (.rewindAlpha mode,
-            fun i => _root_.Complexity.TM.readBackWrite (wHeads i),
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
-            fun i => if i = ⟨0, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+            fun i => TM.readBackWrite (wHeads i),
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
+            fun i => if i = ⟨0, by omega⟩ then Dir3.left else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
     | .done =>
-        _root_.Complexity.TM.allIdle .done iHead wHeads oHead
+        TM.allIdle .done iHead wHeads oHead
 
 private theorem satEvalDelta_right_of_start
     (state : SatEvalPhase) (iHead : Γ) (wHeads : Fin 1 → Γ) (oHead : Γ) :
@@ -1425,8 +1430,8 @@ private theorem satEvalDelta_right_of_start
     (∀ i, wHeads i = Γ.start → tr.2.2.2.2.1 i = Dir3.right) ∧
     (oHead = Γ.start → tr.2.2.2.2.2 = Dir3.right) := by
   aesop (add simp [satEvalDelta, satEvalReject, readBit?, satEvalTokenStep,
-    tokenOfBits, _root_.Complexity.TM.allIdle, _root_.Complexity.TM.idleDir_right_of_start,
-    _root_.Complexity.TM.rightOfStart_allIdle])
+    tokenOfBits, TM.allIdle, TM.idleDir_right_of_start,
+    TM.rightOfStart_allIdle])
 
 /-- Deterministic evaluator for a SAT-encoded CNF on the input tape and an
 assignment on work tape `0`.
@@ -1436,7 +1441,7 @@ inputs and malformed raw literals, treats assignment positions beyond `α` as
 `false` by reading blanks, and writes the Boolean value of the decoded CNF to
 output cell `1`. The formal correctness theorem is the next layer; this
 definition is the concrete finite-state machine that theorem targets. -/
-def satEvalOnInputTM : _root_.Complexity.TM 1 where
+def satEvalOnInputTM : TM 1 where
   Q := SatEvalPhase
   qstart := .readFirst (.boundary true false true)
   qhalt := .done
@@ -1450,7 +1455,7 @@ private theorem satEval_readFirst_bit_step (mode : SatEvalMode) (b : Bool)
     (hstate : c.state = .readFirst mode)
     (hread : c.input.read = Γ.ofBool b)
     (hwork : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       c'.state = .readSecond mode b ∧
       c'.input = c.input.move Dir3.right ∧
@@ -1466,28 +1471,28 @@ private theorem satEval_readFirst_bit_step (mode : SatEvalMode) (b : Bool)
     { state := .readSecond mode b
       input := c.input.move Dir3.right
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
-          _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read) <|
-        _root_.Complexity.TM.idleDir c.output.read }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
+          TM.idleDir (c.work i).read
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read) <|
+        TM.idleDir c.output.read }
   refine ⟨c', ?_, rfl, rfl, ?_, ?_⟩
   · cases b <;>
-      simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread,
+      simp [c', satEvalOnInputTM, TM.step, satEvalDelta, hstate, hread,
         readBit?, Γ.ofBool]
   · funext i
     have hi0 : i = ⟨0, by omega⟩ := by
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork
-  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
+    exact TM.transitionTape_eq_self hwork
+  · exact TM.transitionTape_eq_self hout_read
 
 private theorem satEval_readFirst_blank_step (mode : SatEvalMode)
     (c : Cfg 1 satEvalOnInputTM.Q)
     (hstate : c.state = .readFirst mode)
     (hread : c.input.read = Γ.blank)
     (hwork : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       satEvalOnInputTM.halted c' ∧
       c'.input = c.input ∧
@@ -1495,28 +1500,28 @@ private theorem satEval_readFirst_blank_step (mode : SatEvalMode)
       c'.output.cells 1 = (finishEvalMode mode).toΓ := by
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   let c' : Cfg 1 satEvalOnInputTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
-          _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove (finishEvalMode mode) (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
+          TM.idleDir (c.work i).read
+      output := c.output.writeAndMove (finishEvalMode mode) (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_⟩
-  · simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread]
+  · simp [c', satEvalOnInputTM, TM.step, satEvalDelta, hstate, hread]
   · have hinp : c.input.read ≠ Γ.start := by rw [hread]; simp
-    exact _root_.Complexity.TM.transitionInput_eq_self hinp
+    exact TM.transitionInput_eq_self hinp
   · funext i
     have hi0 : i = ⟨0, by omega⟩ := by
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork
+    exact TM.transitionTape_eq_self hwork
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [c', Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, hout_read,
+      simp [Tape.move, Tape.init]
+    simp [c', Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, hout_read,
       ho_head, Γw.toΓ]
 
 private theorem satEval_readSecond_bit_step (mode : SatEvalMode) (first second : Bool)
@@ -1524,15 +1529,15 @@ private theorem satEval_readSecond_bit_step (mode : SatEvalMode) (first second :
     (hstate : c.state = .readSecond mode first)
     (hread : c.input.read = Γ.ofBool second)
     (hwork : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     let tr := satEvalTokenStep mode (tokenOfBits first second) (c.work ⟨0, by omega⟩).read
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       c'.state = tr.1 ∧
       c'.input = c.input.move Dir3.right ∧
       c'.work ⟨0, by omega⟩ =
         (c.work ⟨0, by omega⟩).writeAndMove
-          (_root_.Complexity.TM.readBackWrite (c.work ⟨0, by omega⟩).read).toΓ tr.2.1 ∧
-      c'.output = c.output.writeAndMove tr.2.2.toΓ (_root_.Complexity.TM.idleDir c.output.read) := by
+          (TM.readBackWrite (c.work ⟨0, by omega⟩).read).toΓ tr.2.1 ∧
+      c'.output = c.output.writeAndMove tr.2.2.toΓ (TM.idleDir c.output.read) := by
   have hout_read : c.output.read ≠ Γ.start := by
     rw [hout]
     exact started_blank_output_read_ne_start
@@ -1541,15 +1546,15 @@ private theorem satEval_readSecond_bit_step (mode : SatEvalMode) (first second :
     { state := tr.1
       input := c.input.move Dir3.right
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
           if i = ⟨0, by omega⟩ then
             if (c.work ⟨0, by omega⟩).read = Γ.start then Dir3.right else tr.2.1
           else
-            _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove tr.2.2 (_root_.Complexity.TM.idleDir c.output.read) }
+            TM.idleDir (c.work i).read
+      output := c.output.writeAndMove tr.2.2 (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, rfl, ?_, rfl⟩
   · cases second <;>
-      simp [c', tr, satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread,
+      simp [c', tr, satEvalOnInputTM, TM.step, satEvalDelta, hstate, hread,
         readBit?, Γ.ofBool]
   · have hwork0 : (c.work (0 : Fin 1)).read ≠ Γ.start := by
       simpa using hwork
@@ -1560,7 +1565,7 @@ private theorem satEval_readSecond_blank_step (mode : SatEvalMode) (first : Bool
     (hstate : c.state = .readSecond mode first)
     (hread : c.input.read = Γ.blank)
     (hwork : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       satEvalOnInputTM.halted c' ∧
       c'.input = c.input ∧
@@ -1568,30 +1573,30 @@ private theorem satEval_readSecond_blank_step (mode : SatEvalMode) (first : Bool
       c'.output.cells 1 = Γ.zero := by
   have hout_read : c.output.read = Γ.blank := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.Complexity.Tape.init]
+    simp [Tape.read, Tape.move, Tape.init]
   let c' : Cfg 1 satEvalOnInputTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
-          _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
+          TM.idleDir (c.work i).read
+      output := c.output.writeAndMove Γw.zero (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_⟩
   · cases first <;>
-      simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, satEvalReject,
+      simp [c', satEvalOnInputTM, TM.step, satEvalDelta, satEvalReject,
         hstate, hread, readBit?]
   · have hinp : c.input.read ≠ Γ.start := by rw [hread]; simp
-    exact _root_.Complexity.TM.transitionInput_eq_self hinp
+    exact TM.transitionInput_eq_self hinp
   · funext i
     have hi0 : i = ⟨0, by omega⟩ := by
       apply Fin.ext
       omega
     subst hi0
-    exact _root_.Complexity.TM.transitionTape_eq_self hwork
+    exact TM.transitionTape_eq_self hwork
   · have ho_head : c.output.head = 1 := by
       rw [hout]
-      simp [Tape.move, _root_.Complexity.Tape.init]
-    simp [c', Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, hout_read,
+      simp [Tape.move, Tape.init]
+    simp [c', Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, hout_read,
       ho_head, Γw.toΓ]
 
 private theorem satEval_rewindAlpha_left_step (mode : SatEvalMode)
@@ -1599,7 +1604,7 @@ private theorem satEval_rewindAlpha_left_step (mode : SatEvalMode)
     (hstate : c.state = .rewindAlpha mode)
     (hinp : c.input.read ≠ Γ.start)
     (hread : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       c'.state = .rewindAlpha mode ∧
       c'.input = c.input ∧
@@ -1611,21 +1616,21 @@ private theorem satEval_rewindAlpha_left_step (mode : SatEvalMode)
     exact started_blank_output_read_ne_start
   let c' : Cfg 1 satEvalOnInputTM.Q :=
     { state := .rewindAlpha mode
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
-          if i = ⟨0, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read) <|
-        _root_.Complexity.TM.idleDir c.output.read }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
+          if i = ⟨0, by omega⟩ then Dir3.left else TM.idleDir (c.work i).read
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read) <|
+        TM.idleDir c.output.read }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_, ?_⟩
   · have hread0 : (c.work (0 : Fin 1)).read ≠ Γ.start := by
       simpa using hread
-    simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread0]
+    simp [c', satEvalOnInputTM, TM.step, satEvalDelta, hstate, hread0]
     rfl
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp
+  · exact TM.transitionInput_eq_self hinp
   · simp [c', Tape.writeAndMove, Tape.move, Tape.write_head]
-  · exact _root_.Complexity.TM.tape_readBackWrite_preserves _ _ (Or.inr hread)
-  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
+  · exact TM.tape_readBackWrite_preserves _ _ (Or.inr hread)
+  · exact TM.transitionTape_eq_self hout_read
 
 private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
     (c : Cfg 1 satEvalOnInputTM.Q)
@@ -1633,7 +1638,7 @@ private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
     (hinp : c.input.read ≠ Γ.start)
     (hread : (c.work ⟨0, by omega⟩).read = Γ.start)
     (hnostart : ∀ j, j ≥ 1 → (c.work ⟨0, by omega⟩).cells j ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', satEvalOnInputTM.step c = some c' ∧
       c'.state = .readFirst mode ∧
       c'.input = c.input ∧
@@ -1645,12 +1650,12 @@ private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
     exact started_blank_output_read_ne_start
   let c' : Cfg 1 satEvalOnInputTM.Q :=
     { state := .readFirst mode
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read) <|
-          if i = ⟨0, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (c.work i).read
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read) <|
-        _root_.Complexity.TM.idleDir c.output.read }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read) <|
+          if i = ⟨0, by omega⟩ then Dir3.right else TM.idleDir (c.work i).read
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read) <|
+        TM.idleDir c.output.read }
   have hhead0 : (c.work ⟨0, by omega⟩).head = 0 := by
     by_contra hne
     have hge : (c.work ⟨0, by omega⟩).head ≥ 1 := by omega
@@ -1658,14 +1663,14 @@ private theorem satEval_rewindAlpha_base_step (mode : SatEvalMode)
   refine ⟨c', ?_, rfl, ?_, ?_, ?_, ?_⟩
   · have hread0 : (c.work (0 : Fin 1)).read = Γ.start := by
       simpa using hread
-    simp [c', satEvalOnInputTM, _root_.Complexity.TM.step, satEvalDelta, hstate, hread0]
+    simp [c', satEvalOnInputTM, TM.step, satEvalDelta, hstate, hread0]
     rfl
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp
+  · exact TM.transitionInput_eq_self hinp
   · have hhead00 : (c.work (0 : Fin 1)).head = 0 := by
       simpa using hhead0
     simp [c', Tape.writeAndMove, Tape.move, Tape.write_head, hhead00]
-  · exact _root_.Complexity.TM.tape_readBackWrite_preserves _ _ (Or.inl hhead0)
-  · exact _root_.Complexity.TM.transitionTape_eq_self hout_read
+  · exact TM.tape_readBackWrite_preserves _ _ (Or.inl hhead0)
+  · exact TM.transitionTape_eq_self hout_read
 
 private theorem satEval_rewindAlpha_loop (mode : SatEvalMode) :
     ∀ (p : ℕ) (c : Cfg 1 satEvalOnInputTM.Q),
@@ -1674,7 +1679,7 @@ private theorem satEval_rewindAlpha_loop (mode : SatEvalMode) :
       (c.work ⟨0, by omega⟩).cells 0 = Γ.start →
       (∀ j, j ≥ 1 → (c.work ⟨0, by omega⟩).cells j ≠ Γ.start) →
       (c.work ⟨0, by omega⟩).head = p →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c',
         satEvalOnInputTM.reachesIn (p + 1) c c' ∧
         c'.state = .readFirst mode ∧
@@ -1729,15 +1734,15 @@ private theorem satEval_two_bit_step (mode : SatEvalMode) (first second : Bool)
     (hstate : c.state = .readFirst mode)
     (hinput : hasBoolSuffix c.input (first :: second :: rest))
     (hwork : (c.work ⟨0, by omega⟩).read ≠ Γ.start)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     let tr := satEvalTokenStep mode (tokenOfBits first second) (c.work ⟨0, by omega⟩).read
     ∃ c', satEvalOnInputTM.reachesIn 2 c c' ∧
       c'.state = tr.1 ∧
       hasBoolSuffix c'.input rest ∧
       c'.work ⟨0, by omega⟩ =
         (c.work ⟨0, by omega⟩).writeAndMove
-          (_root_.Complexity.TM.readBackWrite (c.work ⟨0, by omega⟩).read).toΓ tr.2.1 ∧
-      c'.output = c.output.writeAndMove tr.2.2.toΓ (_root_.Complexity.TM.idleDir c.output.read) := by
+          (TM.readBackWrite (c.work ⟨0, by omega⟩).read).toΓ tr.2.1 ∧
+      c'.output = c.output.writeAndMove tr.2.2.toΓ (TM.idleDir c.output.read) := by
   have hread1 : c.input.read = Γ.ofBool first :=
     hasBoolSuffix_read_cons hinput
   obtain ⟨c1, hstep1, hst1, hinp1, hwork1, hout1⟩ :=
@@ -1750,7 +1755,7 @@ private theorem satEval_two_bit_step (mode : SatEvalMode) (first second : Bool)
   have hwork1_read : (c1.work ⟨0, by omega⟩).read ≠ Γ.start := by
     rw [hwork1]
     exact hwork
-  have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+  have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
     rw [hout1]
     exact hout
   obtain ⟨c2, hstep2, hst2, hinp2, hwork2, hout2⟩ :=
@@ -1765,39 +1770,39 @@ private theorem satEval_two_bit_step (mode : SatEvalMode) (first second : Bool)
 
 private theorem satEval_output_blank_id (w : Γw) :
     w = Γw.blank →
-      ((_root_.Complexity.Tape.init []).move Dir3.right).writeAndMove w.toΓ
-          (_root_.Complexity.TM.idleDir (((_root_.Complexity.Tape.init []).move Dir3.right).read)) =
-        (_root_.Complexity.Tape.init []).move Dir3.right := by
+      ((Tape.init []).move Dir3.right).writeAndMove w.toΓ
+          (TM.idleDir (((Tape.init []).move Dir3.right).read)) =
+        (Tape.init []).move Dir3.right := by
   intro hw
   subst hw
-  apply _root_.Complexity.TM.tape_writeAndMove_stable
-  · simp [Tape.move, _root_.Complexity.Tape.init]
+  apply TM.tape_writeAndMove_stable
+  · simp [Tape.move, Tape.init]
   · intro j hj
-    simp [Tape.move, _root_.Complexity.Tape.init, show j ≠ 0 by omega]
+    simp [Tape.move, Tape.init, show j ≠ 0 by omega]
 
 private theorem satEval_work_stay_id {t : Tape}
     (hread : t.read ≠ Γ.start) :
-    t.writeAndMove (_root_.Complexity.TM.readBackWrite t.read).toΓ Dir3.stay = t := by
-  simpa [_root_.Complexity.TM.transitionTape, _root_.Complexity.TM.idleDir, hread] using
-    (_root_.Complexity.TM.transitionTape_eq_self hread)
+    t.writeAndMove (TM.readBackWrite t.read).toΓ Dir3.stay = t := by
+  simpa [TM.transitionTape, TM.idleDir, hread] using
+    (TM.transitionTape_eq_self hread)
 
 private theorem satEval_work_cells_preserved_readBack {t : Tape} (d : Dir3)
     (hread : t.read ≠ Γ.start) :
-    (t.writeAndMove (_root_.Complexity.TM.readBackWrite t.read).toΓ d).cells = t.cells := by
-  exact _root_.Complexity.TM.tape_readBackWrite_preserves t d (Or.inr hread)
+    (t.writeAndMove (TM.readBackWrite t.read).toΓ d).cells = t.cells := by
+  exact TM.tape_readBackWrite_preserves t d (Or.inr hread)
 
 private theorem satEval_reject_output_zero (w : Γw) :
     w = Γw.zero →
-      (((_root_.Complexity.Tape.init []).move Dir3.right).writeAndMove w.toΓ
-          (_root_.Complexity.TM.idleDir (((_root_.Complexity.Tape.init []).move Dir3.right).read))).cells 1 =
+      (((Tape.init []).move Dir3.right).writeAndMove w.toΓ
+          (TM.idleDir (((Tape.init []).move Dir3.right).read))).cells 1 =
         Γ.zero := by
   intro hw
   subst hw
   have hidle :
-      _root_.Complexity.TM.idleDir (((_root_.Complexity.Tape.init []).move Dir3.right).read) = Dir3.stay := by
-    simp [Tape.read, Tape.move, _root_.Complexity.TM.idleDir, _root_.Complexity.Tape.init]
+      TM.idleDir (((Tape.init []).move Dir3.right).read) = Dir3.stay := by
+    simp [Tape.read, Tape.move, TM.idleDir, Tape.init]
   rw [hidle]
-  simp [Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.Tape.init]
+  simp [Tape.writeAndMove, Tape.write, Tape.move, Tape.init]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Pure semantic target for the streaming evaluator
@@ -1857,9 +1862,9 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
       c.state = .readFirst mode →
       hasBoolSuffix c.input (encodeTokens toks) →
       (c.work ⟨0, by omega⟩).cells =
-        (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
+        (Tape.init (α.map Γ.ofBool)).cells →
       (c.work ⟨0, by omega⟩).head = mode.assignmentHead var →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c' t,
         t ≤ 4 * toks.length + var + 1 ∧
         satEvalOnInputTM.reachesIn t c c' ∧
@@ -1902,21 +1907,21 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                     simpa [satEvalTokenStep, tokenOfBits] using
                       satEval_work_stay_id hwork_read
                   have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                      (Tape.init (α.map Γ.ofBool)).cells := by
                     rw [hwork2_eq]
                     exact hcells
                   have hhead2 : (c2.work ⟨0, by omega⟩).head =
                       (SatEvalMode.inLit cnf clause empty false).assignmentHead 0 := by
                     rw [hwork2_eq, hhead]
                     simp [SatEvalMode.assignmentHead]
-                  have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                  have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                     rw [hout2, hout]
                     exact satEval_output_blank_id _ (by rfl)
                   obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                     ih (.inLit cnf clause empty false) 0 c2
                       hstate2 hinput2 hcells2 hhead2 hout2_started
                   refine ⟨c', 2 + t, by simp only [List.length_cons]; omega,
-                    _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
+                    TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
                   simpa [satEvalSemRun, satEvalSemStep] using hout'
               | inLit cnf clause empty sign =>
                   refine ⟨c2, 2, by simp only [List.length_cons]; omega, hreach2, ?_, ?_⟩
@@ -1937,25 +1942,25 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                     simpa [satEvalTokenStep, tokenOfBits] using
                       satEval_work_stay_id hwork_read
                   have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                      (Tape.init (α.map Γ.ofBool)).cells := by
                     rw [hwork2_eq]
                     exact hcells
                   have hhead2 : (c2.work ⟨0, by omega⟩).head =
                       (SatEvalMode.inLit cnf clause empty true).assignmentHead 0 := by
                     rw [hwork2_eq, hhead]
                     simp [SatEvalMode.assignmentHead]
-                  have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                  have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                     rw [hout2, hout]
                     exact satEval_output_blank_id _ (by rfl)
                   obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                     ih (.inLit cnf clause empty true) 0 c2
                       hstate2 hinput2 hcells2 hhead2 hout2_started
                   refine ⟨c', 2 + t, by simp only [List.length_cons]; omega,
-                    _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
+                    TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
                   simpa [satEvalSemRun, satEvalSemStep] using hout'
               | inLit cnf clause empty sign =>
                   have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                      (Tape.init (α.map Γ.ofBool)).cells := by
                     rw [hwork2]
                     exact (satEval_work_cells_preserved_readBack Dir3.right hwork_read).trans hcells
                   have hhead2 : (c2.work ⟨0, by omega⟩).head =
@@ -1964,14 +1969,14 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                     simp [satEvalTokenStep, tokenOfBits, Tape.writeAndMove, Tape.move,
                       Tape.write_head]
                     simpa [SatEvalMode.assignmentHead] using hhead
-                  have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                  have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                     rw [hout2, hout]
                     exact satEval_output_blank_id _ (by rfl)
                   obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                     ih (.inLit cnf clause false sign) (var + 1) c2
                       hstate2 hinput2 hcells2 hhead2 hout2_started
                   refine ⟨c', 2 + t, by simp only [List.length_cons]; omega,
-                    _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
+                    TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
                   simpa [satEvalSemRun, satEvalSemStep] using hout'
       | litSep =>
           have hinput_bits : hasBoolSuffix c.input (false :: true :: encodeTokens toks) := by
@@ -1989,9 +1994,9 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
           | inLit cnf clause empty sign =>
               have hread_alpha :
                   (c.work ⟨0, by omega⟩).read =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
+                    (Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
                 show (c.work ⟨0, by omega⟩).cells (c.work ⟨0, by omega⟩).head =
-                  (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1)
+                  (Tape.init (α.map Γ.ofBool)).cells (var + 1)
                 rw [hhead, hcells]
                 simp [SatEvalMode.assignmentHead]
               have hstate2' : c2.state =
@@ -1999,17 +2004,17 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                     (clause || (Assignment.get α var == sign)) false) := by
                 have hread_alpha0 :
                     (c.work (0 : Fin 1)).read =
-                      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
+                      (Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
                   simpa using hread_alpha
                 have hstate2a : c2.state =
                     .rewindAlpha (.boundary cnf
                       (clause ||
                         literalValueAtHead sign
-                          ((_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1))) false) := by
+                          ((Tape.init (α.map Γ.ofBool)).cells (var + 1))) false) := by
                   simpa [satEvalTokenStep, tokenOfBits, hread_alpha0] using hstate2
                 simpa [literalValueAtHead_initTape_eq_litEval α sign var] using hstate2a
               have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                  (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                  (Tape.init (α.map Γ.ofBool)).cells := by
                 rw [hwork2]
                 exact (satEval_work_cells_preserved_readBack Dir3.stay hwork_read).trans hcells
               have hhead2 : (c2.work ⟨0, by omega⟩).head = var + 1 := by
@@ -2017,7 +2022,7 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                 simp [satEvalTokenStep, tokenOfBits, Tape.writeAndMove, Tape.move,
                   Tape.write_head]
                 simpa [SatEvalMode.assignmentHead] using hhead
-              have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+              have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                 rw [hout2, hout]
                 exact satEval_output_blank_id _ (by rfl)
               have hcell0 : (c2.work ⟨0, by omega⟩).cells 0 = Γ.start :=
@@ -2030,14 +2035,14 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                   (var + 1) c2 hstate2' (hasBoolSuffix_read_ne_start hinput2)
                   hcell0 hnostart hhead2 hout2_started
               have hcells3_init : (c3.work ⟨0, by omega⟩).cells =
-                  (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                  (Tape.init (α.map Γ.ofBool)).cells := by
                 rw [hcells3]
                 exact hcells2
               have hhead3' : (c3.work ⟨0, by omega⟩).head =
                   (SatEvalMode.boundary cnf
                     (clause || (Assignment.get α var == sign)) false).assignmentHead 0 := by
                 simpa [SatEvalMode.assignmentHead] using hhead3
-              have hout3_started : c3.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+              have hout3_started : c3.output = (Tape.init []).move Dir3.right := by
                 rw [hout3]
                 exact hout2_started
               obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
@@ -2045,8 +2050,8 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                   hstate3 (by rw [hinp3]; exact hinput2)
                   hcells3_init hhead3' hout3_started
               refine ⟨c', 2 + (var + 1 + 1) + t, by simp only [List.length_cons]; omega,
-                _root_.Complexity.TM.reachesIn_trans _
-                  (_root_.Complexity.TM.reachesIn_trans _ hreach2 hrewind) hreach,
+                TM.reachesIn_trans _
+                  (TM.reachesIn_trans _ hreach2 hrewind) hreach,
                 hhalt, ?_⟩
               simpa [satEvalSemRun, satEvalSemStep] using hout'
       | clauseSep =>
@@ -2062,21 +2067,21 @@ private theorem satEvalOnInputTM_token_loop_correct (α : Assignment) :
                 simpa [satEvalTokenStep, tokenOfBits] using
                   satEval_work_stay_id hwork_read
               have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                  (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                  (Tape.init (α.map Γ.ofBool)).cells := by
                 rw [hwork2_eq]
                 exact hcells
               have hhead2 : (c2.work ⟨0, by omega⟩).head =
                   (SatEvalMode.boundary (cnf && clause) false true).assignmentHead 0 := by
                 rw [hwork2_eq, hhead]
                 simp [SatEvalMode.assignmentHead]
-              have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+              have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                 rw [hout2, hout]
                 exact satEval_output_blank_id _ (by rfl)
               obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                 ih (.boundary (cnf && clause) false true) 0 c2
                   hstate2 hinput2 hcells2 hhead2 hout2_started
               refine ⟨c', 2 + t, by simp only [List.length_cons]; omega,
-                _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
+                TM.reachesIn_trans _ hreach2 hreach, hhalt, ?_⟩
               simpa [satEvalSemRun, satEvalSemStep] using hout'
           | inLit cnf clause empty sign =>
               refine ⟨c2, 2, by simp only [List.length_cons]; omega, hreach2, ?_, ?_⟩
@@ -2092,9 +2097,9 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
       c.state = .readFirst mode →
       hasBoolSuffix c.input suffix →
       (c.work ⟨0, by omega⟩).cells =
-        (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells →
+        (Tape.init (α.map Γ.ofBool)).cells →
       (c.work ⟨0, by omega⟩).head = mode.assignmentHead var →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c' t,
         t ≤ 2 * suffix.length + var + 1 ∧
         satEvalOnInputTM.reachesIn t c c' ∧
@@ -2128,7 +2133,7 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
           have hwork1_read : (c1.work ⟨0, by omega⟩).read ≠ Γ.start := by
             rw [hwork1]
             exact hwork_read
-          have hout1_started : c1.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+          have hout1_started : c1.output = (Tape.init []).move Dir3.right := by
             rw [hout1]
             exact hout
           obtain ⟨c2, hstep2, hhalt2, _hinp2, _hwork2, hout2⟩ :=
@@ -2156,21 +2161,21 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   simpa [satEvalTokenStep, tokenOfBits] using
                     satEval_work_stay_id hwork_read
                 have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hwork2_eq]
                   exact hcells
                 have hhead2 : (c2.work ⟨0, by omega⟩).head =
                     (SatEvalMode.inLit cnf clause empty false).assignmentHead 0 := by
                   rw [hwork2_eq, hhead]
                   simp [SatEvalMode.assignmentHead]
-                have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                   ih tail.length htail_len tail rfl (.inLit cnf clause empty false) 0 c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
-                  _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
+                  TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
             | inLit cnf clause empty sign =>
                 refine ⟨c2, 2, by simp only [List.length_cons] at hlen; omega, hreach2, ?_, ?_⟩
                 · simpa [satEvalOnInputTM] using hstate2
@@ -2188,9 +2193,9 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
             | inLit cnf clause empty sign =>
                 have hread_alpha :
                     (c.work ⟨0, by omega⟩).read =
-                      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
+                      (Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
                   show (c.work ⟨0, by omega⟩).cells (c.work ⟨0, by omega⟩).head =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1)
+                    (Tape.init (α.map Γ.ofBool)).cells (var + 1)
                   rw [hhead, hcells]
                   simp [SatEvalMode.assignmentHead]
                 have hstate2' : c2.state =
@@ -2198,17 +2203,17 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                       (clause || (Assignment.get α var == sign)) false) := by
                   have hread_alpha0 :
                       (c.work (0 : Fin 1)).read =
-                        (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
+                        (Tape.init (α.map Γ.ofBool)).cells (var + 1) := by
                     simpa using hread_alpha
                   have hstate2a : c2.state =
                       .rewindAlpha (.boundary cnf
                         (clause ||
                           literalValueAtHead sign
-                            ((_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells (var + 1))) false) := by
+                            ((Tape.init (α.map Γ.ofBool)).cells (var + 1))) false) := by
                     simpa [satEvalTokenStep, tokenOfBits, hread_alpha0] using hstate2
                   simpa [literalValueAtHead_initTape_eq_litEval α sign var] using hstate2a
                 have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hwork2]
                   exact (satEval_work_cells_preserved_readBack Dir3.stay hwork_read).trans hcells
                 have hhead2 : (c2.work ⟨0, by omega⟩).head = var + 1 := by
@@ -2216,7 +2221,7 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   simp [satEvalTokenStep, tokenOfBits, Tape.writeAndMove, Tape.move,
                     Tape.write_head]
                   simpa [SatEvalMode.assignmentHead] using hhead
-                have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 have hcell0 : (c2.work ⟨0, by omega⟩).cells 0 = Γ.start :=
@@ -2229,14 +2234,14 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                     (var + 1) c2 hstate2' (hasBoolSuffix_read_ne_start hinput2)
                     hcell0 hnostart hhead2 hout2_started
                 have hcells3_init : (c3.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hcells3]
                   exact hcells2
                 have hhead3' : (c3.work ⟨0, by omega⟩).head =
                     (SatEvalMode.boundary cnf
                       (clause || (Assignment.get α var == sign)) false).assignmentHead 0 := by
                   simpa [SatEvalMode.assignmentHead] using hhead3
-                have hout3_started : c3.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout3_started : c3.output = (Tape.init []).move Dir3.right := by
                   rw [hout3]
                   exact hout2_started
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
@@ -2245,8 +2250,8 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                     htail_tok hstate3 (by rw [hinp3]; exact hinput2)
                     hcells3_init hhead3' hout3_started
                 exact ⟨c', 2 + (var + 1 + 1) + t, by simp only [List.length_cons] at hlen; omega,
-                  _root_.Complexity.TM.reachesIn_trans _
-                    (_root_.Complexity.TM.reachesIn_trans _ hreach2 hrewind) hreach,
+                  TM.reachesIn_trans _
+                    (TM.reachesIn_trans _ hreach2 hrewind) hreach,
                   hhalt, hout'⟩
           · -- true false: clause separator
             cases mode with
@@ -2256,21 +2261,21 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   simpa [satEvalTokenStep, tokenOfBits] using
                     satEval_work_stay_id hwork_read
                 have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hwork2_eq]
                   exact hcells
                 have hhead2 : (c2.work ⟨0, by omega⟩).head =
                     (SatEvalMode.boundary (cnf && clause) false true).assignmentHead 0 := by
                   rw [hwork2_eq, hhead]
                   simp [SatEvalMode.assignmentHead]
-                have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                   ih tail.length htail_len tail rfl (.boundary (cnf && clause) false true) 0 c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
-                  _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
+                  TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
             | inLit cnf clause empty sign =>
                 refine ⟨c2, 2, by simp only [List.length_cons] at hlen; omega, hreach2, ?_, ?_⟩
                 · simpa [satEvalOnInputTM] using hstate2
@@ -2285,24 +2290,24 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   simpa [satEvalTokenStep, tokenOfBits] using
                     satEval_work_stay_id hwork_read
                 have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hwork2_eq]
                   exact hcells
                 have hhead2 : (c2.work ⟨0, by omega⟩).head =
                     (SatEvalMode.inLit cnf clause empty true).assignmentHead 0 := by
                   rw [hwork2_eq, hhead]
                   simp [SatEvalMode.assignmentHead]
-                have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                   ih tail.length htail_len tail rfl (.inLit cnf clause empty true) 0 c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
-                  _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
+                  TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
             | inLit cnf clause empty sign =>
                 have hcells2 : (c2.work ⟨0, by omega⟩).cells =
-                    (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+                    (Tape.init (α.map Γ.ofBool)).cells := by
                   rw [hwork2]
                   exact (satEval_work_cells_preserved_readBack Dir3.right hwork_read).trans hcells
                 have hhead2 : (c2.work ⟨0, by omega⟩).head =
@@ -2311,14 +2316,14 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                   simp [satEvalTokenStep, tokenOfBits, Tape.writeAndMove, Tape.move,
                     Tape.write_head]
                   simpa [SatEvalMode.assignmentHead] using hhead
-                have hout2_started : c2.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+                have hout2_started : c2.output = (Tape.init []).move Dir3.right := by
                   rw [hout2, hout]
                   exact satEval_output_blank_id _ (by rfl)
                 obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
                   ih tail.length htail_len tail rfl (.inLit cnf clause false sign) (var + 1) c2 htail_tok
                     hstate2 hinput2 hcells2 hhead2 hout2_started
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
-                  _root_.Complexity.TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
+                  TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
 
 def satEvalSemBits (α z : List Bool) : Bool :=
   match tokenize? z with
@@ -2341,27 +2346,27 @@ private theorem encodeTokens_length (toks : List EncToken) :
 private theorem satEvalOnInputTM_started_correct (α z : List Bool)
     (c : Cfg 1 satEvalOnInputTM.Q)
     (hstate : c.state = .readFirst (.boundary true false true))
-    (hinput : c.input = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right)
-    (hwork : c.work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hinput : c.input = (Tape.init (z.map Γ.ofBool)).move Dir3.right)
+    (hwork : c.work ⟨0, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right)
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c' t,
       t ≤ 2 * z.length + 1 ∧
       satEvalOnInputTM.reachesIn t c c' ∧
       satEvalOnInputTM.halted c' ∧
       c'.output.cells 1 = (if satEvalSemBits α z then Γ.one else Γ.zero) := by
   have hcells : (c.work ⟨0, by omega⟩).cells =
-      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells := by
+      (Tape.init (α.map Γ.ofBool)).cells := by
     rw [hwork]
     exact Tape.move_cells _ _
   have hhead : (c.work ⟨0, by omega⟩).head =
       (SatEvalMode.boundary true false true).assignmentHead 0 := by
     rw [hwork]
-    simp [Tape.move, _root_.Complexity.Tape.init, SatEvalMode.assignmentHead]
+    simp [Tape.move, Tape.init, SatEvalMode.assignmentHead]
   cases htok : tokenize? z with
   | none =>
       have hsuffix : hasBoolSuffix c.input z := by
         rw [hinput]
-        exact Tape.init_move_right_hasBoolSuffix z
+        exact initTape_move_right_hasBoolSuffix z
       obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
         satEvalOnInputTM_tokenize_none_reject α z (.boundary true false true) 0 c
           htok hstate hsuffix hcells hhead hout
@@ -2371,7 +2376,7 @@ private theorem satEvalOnInputTM_started_correct (α z : List Bool)
       have hz : z = encodeTokens toks := tokenize?_sound htok
       have hsuffix : hasBoolSuffix c.input (encodeTokens toks) := by
         rw [hinput, hz]
-        exact Tape.init_move_right_hasBoolSuffix (encodeTokens toks)
+        exact initTape_move_right_hasBoolSuffix (encodeTokens toks)
       obtain ⟨c', t, htb, hreach, hhalt, hout'⟩ :=
         satEvalOnInputTM_token_loop_correct α toks (.boundary true false true) 0 c
           hstate hsuffix hcells hhead hout
@@ -2433,17 +2438,7 @@ private lemma parseEvalResult_invalid_raw (α : Assignment) (toks : List EncToke
       · simp [RawInvalid.decodeRaw?_eq_none hbad]
       · simp [RawInvalid.ne_nil hbad]
 
-@[simp] theorem Clause.eval_append (α : Assignment) (c d : Clause) :
-    Clause.eval α (c ++ d) = (Clause.eval α c || Clause.eval α d) := by
-  induction c with
-  | nil => simp [Clause.eval]
-  | cons _ _ _ => simp [Clause.eval, List.any_cons, Bool.or_assoc]
 
-@[simp] theorem CNF.eval_append (α : Assignment) (φ ψ : CNF) :
-    CNF.eval α (φ ++ ψ) = (CNF.eval α φ && CNF.eval α ψ) := by
-  induction φ with
-  | nil => simp [CNF.eval]
-  | cons _ _ _ => simp [CNF.eval, List.all_cons, Bool.and_assoc]
 
 @[simp] theorem Clause.eval_singleton (α : Assignment) (ℓ : Lit) :
     Clause.eval α [ℓ] = Lit.eval α ℓ := by
@@ -2576,11 +2571,11 @@ theorem verifyPairSem_eq_verifyPair (w : List Bool) :
       cases CNF.decode? z <;> simp
 
 theorem verifyPairSem_eq_true_iff_mem_pairLang (w : List Bool) :
-    verifyPairSem w = true ↔ w ∈ pairLang R_SAT := by
+    verifyPairSem w = true ↔ w ∈ pairLang Witness := by
   rw [verifyPairSem_eq_verifyPair, verifyPair_eq_true_iff_mem_pairLang]
 
-theorem pairLang_R_SAT_eq_verifyPairSemLang :
-    pairLang R_SAT = {w | verifyPairSem w = true} := by
+theorem pairLang_witness_eq_verifyPairSemLang :
+    pairLang Witness = {w | verifyPairSem w = true} := by
   ext w
   exact (verifyPairSem_eq_true_iff_mem_pairLang w).symm
 
@@ -2639,37 +2634,37 @@ instance : Fintype VerifyPairPhase where
 
 private def verifyPairReject (iHead : Γ) (wHeads : Fin 3 → Γ) (oHead : Γ) :
     VerifyPairPhase × (Fin 3 → Γw) × Γw × Dir3 × (Fin 3 → Dir3) × Dir3 :=
-  (.done, fun i => _root_.Complexity.TM.readBackWrite (wHeads i), Γw.zero,
-    _root_.Complexity.TM.idleDir iHead, fun i => _root_.Complexity.TM.idleDir (wHeads i),
-    _root_.Complexity.TM.idleDir oHead)
+  (.done, fun i => TM.readBackWrite (wHeads i), Γw.zero,
+    TM.idleDir iHead, fun i => TM.idleDir (wHeads i),
+    TM.idleDir oHead)
 
 private def verifyPairPreserveWork (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
-  fun i => _root_.Complexity.TM.readBackWrite (wHeads i)
+  fun i => TM.readBackWrite (wHeads i)
 
 private def verifyPairSplitWrite (zBit : Bool) (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
   fun i =>
     if i = ⟨0, by omega⟩ then boolWrite zBit
     else if i = ⟨2, by omega⟩ then Γw.one
-    else _root_.Complexity.TM.readBackWrite (wHeads i)
+    else TM.readBackWrite (wHeads i)
 
 private def verifyPairSplitDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
   fun i =>
     if i = ⟨0, by omega⟩ then Dir3.right
     else if i = ⟨2, by omega⟩ then Dir3.right
-    else _root_.Complexity.TM.idleDir (wHeads i)
+    else TM.idleDir (wHeads i)
 
 private def verifyPairCopyAlphaWrite (aBit : Bool) (wHeads : Fin 3 → Γ) :
     Fin 3 → Γw :=
   fun i =>
     if i = ⟨1, by omega⟩ then boolWrite aBit
     else if i = ⟨2, by omega⟩ then Γw.blank
-    else _root_.Complexity.TM.readBackWrite (wHeads i)
+    else TM.readBackWrite (wHeads i)
 
 private def verifyPairCopyAlphaDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
   fun i =>
     if i = ⟨1, by omega⟩ then Dir3.right
     else if i = ⟨2, by omega⟩ then Dir3.right
-    else _root_.Complexity.TM.idleDir (wHeads i)
+    else TM.idleDir (wHeads i)
 
 private def verifyPairEvalDirs (αHead : Γ) (αDir : Dir3) (wHeads : Fin 3 → Γ) :
     Fin 3 → Dir3 :=
@@ -2678,7 +2673,7 @@ private def verifyPairEvalDirs (αHead : Γ) (αDir : Dir3) (wHeads : Fin 3 → 
     else if i = ⟨1, by omega⟩ then
       if αHead = Γ.start then Dir3.right else αDir
     else
-      _root_.Complexity.TM.idleDir (wHeads i)
+      TM.idleDir (wHeads i)
 
 private def verifyPairDelta :
     VerifyPairPhase → Γ → (Fin 3 → Γ) → Γ →
@@ -2691,7 +2686,7 @@ private def verifyPairDelta :
     | .init =>
         (.initCounter,
           verifyPairPreserveWork wHeads,
-          _root_.Complexity.TM.readBackWrite oHead,
+          TM.readBackWrite oHead,
           Dir3.right,
           fun _ => Dir3.right,
           Dir3.right)
@@ -2699,19 +2694,19 @@ private def verifyPairDelta :
         (.splitScan,
           fun i =>
             if i = ⟨2, by omega⟩ then Γw.one
-            else _root_.Complexity.TM.readBackWrite (wHeads i),
-          _root_.Complexity.TM.readBackWrite oHead,
-          _root_.Complexity.TM.idleDir iHead,
-          fun i => if i = ⟨2, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-          _root_.Complexity.TM.idleDir oHead)
+            else TM.readBackWrite (wHeads i),
+          TM.readBackWrite oHead,
+          TM.idleDir iHead,
+          fun i => if i = ⟨2, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+          TM.idleDir oHead)
     | .splitScan =>
         match readBit? iHead with
         | some false =>
-            (.splitAfterFalse, verifyPairPreserveWork wHeads, _root_.Complexity.TM.readBackWrite oHead,
-              Dir3.right, fun i => _root_.Complexity.TM.idleDir (wHeads i), _root_.Complexity.TM.idleDir oHead)
+            (.splitAfterFalse, verifyPairPreserveWork wHeads, TM.readBackWrite oHead,
+              Dir3.right, fun i => TM.idleDir (wHeads i), TM.idleDir oHead)
         | some true =>
-            (.splitAfterTrue, verifyPairPreserveWork wHeads, _root_.Complexity.TM.readBackWrite oHead,
-              Dir3.right, fun i => _root_.Complexity.TM.idleDir (wHeads i), _root_.Complexity.TM.idleDir oHead)
+            (.splitAfterTrue, verifyPairPreserveWork wHeads, TM.readBackWrite oHead,
+              Dir3.right, fun i => TM.idleDir (wHeads i), TM.idleDir oHead)
         | none =>
             verifyPairReject iHead wHeads oHead
     | .splitAfterFalse =>
@@ -2719,17 +2714,17 @@ private def verifyPairDelta :
         | some false =>
             (.splitScan,
               verifyPairSplitWrite false wHeads,
-              _root_.Complexity.TM.readBackWrite oHead,
+              TM.readBackWrite oHead,
               Dir3.right,
               verifyPairSplitDirs wHeads,
-              _root_.Complexity.TM.idleDir oHead)
+              TM.idleDir oHead)
         | some true =>
             (.rewindCounterForAlpha,
               verifyPairPreserveWork wHeads,
-              _root_.Complexity.TM.readBackWrite oHead,
+              TM.readBackWrite oHead,
               Dir3.right,
-              fun i => _root_.Complexity.TM.idleDir (wHeads i),
-              _root_.Complexity.TM.idleDir oHead)
+              fun i => TM.idleDir (wHeads i),
+              TM.idleDir oHead)
         | none =>
             verifyPairReject iHead wHeads oHead
     | .splitAfterTrue =>
@@ -2737,47 +2732,47 @@ private def verifyPairDelta :
         | some true =>
             (.splitScan,
               verifyPairSplitWrite true wHeads,
-              _root_.Complexity.TM.readBackWrite oHead,
+              TM.readBackWrite oHead,
               Dir3.right,
               verifyPairSplitDirs wHeads,
-              _root_.Complexity.TM.idleDir oHead)
+              TM.idleDir oHead)
         | _ =>
             verifyPairReject iHead wHeads oHead
     | .rewindCounterForAlpha =>
         if counterHead = Γ.start then
           (.copyAlpha,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨2, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨2, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           (.rewindCounterForAlpha,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨2, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨2, by omega⟩ then Dir3.left else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
     | .copyAlpha =>
         if iHead = Γ.blank then
           (.rewindFormula,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
-            fun i => _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
+            fun i => TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           match readBit? iHead with
           | some b =>
               if counterHead = Γ.one then
                 (.copyAlpha,
                   verifyPairCopyAlphaWrite b wHeads,
-                  _root_.Complexity.TM.readBackWrite oHead,
+                  TM.readBackWrite oHead,
                   Dir3.right,
                   verifyPairCopyAlphaDirs wHeads,
-                  _root_.Complexity.TM.idleDir oHead)
+                  TM.idleDir oHead)
               else
                 verifyPairReject iHead wHeads oHead
           | none =>
@@ -2786,54 +2781,54 @@ private def verifyPairDelta :
         if zHead = Γ.start then
           (.rewindAssignment,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨0, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨0, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           (.rewindFormula,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨0, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨0, by omega⟩ then Dir3.left else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
     | .rewindAssignment =>
         if αHead = Γ.start then
           (.evalReadFirst (.boundary true false true),
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨1, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨1, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           (.rewindAssignment,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨1, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨1, by omega⟩ then Dir3.left else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
     | .evalReadFirst mode =>
         if zHead = Γ.blank then
           (.done,
             verifyPairPreserveWork wHeads,
             finishEvalMode mode,
-            _root_.Complexity.TM.idleDir iHead,
-            fun i => _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+            TM.idleDir iHead,
+            fun i => TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           match readBit? zHead with
           | some b =>
               (.evalReadSecond mode b,
                 verifyPairPreserveWork wHeads,
-                _root_.Complexity.TM.readBackWrite oHead,
-                _root_.Complexity.TM.idleDir iHead,
+                TM.readBackWrite oHead,
+                TM.idleDir iHead,
                 fun i =>
-                  if i = ⟨0, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-                _root_.Complexity.TM.idleDir oHead)
+                  if i = ⟨0, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+                TM.idleDir oHead)
           | none =>
               verifyPairReject iHead wHeads oHead
     | .evalReadSecond mode first =>
@@ -2850,30 +2845,30 @@ private def verifyPairDelta :
             (nextState',
               verifyPairPreserveWork wHeads,
               outWrite,
-              _root_.Complexity.TM.idleDir iHead,
+              TM.idleDir iHead,
               verifyPairEvalDirs αHead αDir wHeads,
-              _root_.Complexity.TM.idleDir oHead)
+              TM.idleDir oHead)
         | none =>
             verifyPairReject iHead wHeads oHead
     | .evalRewindAlpha mode =>
         if αHead = Γ.start then
           (.evalReadFirst mode,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨1, by omega⟩ then Dir3.right else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨1, by omega⟩ then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
         else
           (.evalRewindAlpha mode,
             verifyPairPreserveWork wHeads,
-            _root_.Complexity.TM.readBackWrite oHead,
-            _root_.Complexity.TM.idleDir iHead,
+            TM.readBackWrite oHead,
+            TM.idleDir iHead,
             fun i =>
-              if i = ⟨1, by omega⟩ then Dir3.left else _root_.Complexity.TM.idleDir (wHeads i),
-            _root_.Complexity.TM.idleDir oHead)
+              if i = ⟨1, by omega⟩ then Dir3.left else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
     | .done =>
-        _root_.Complexity.TM.allIdle .done iHead wHeads oHead
+        TM.allIdle .done iHead wHeads oHead
 
 private theorem verifyPairDelta_right_of_start
     (state : VerifyPairPhase) (iHead : Γ) (wHeads : Fin 3 → Γ) (oHead : Γ) :
@@ -2884,8 +2879,8 @@ private theorem verifyPairDelta_right_of_start
   aesop (add simp [verifyPairDelta, verifyPairReject, verifyPairPreserveWork,
     verifyPairSplitWrite, verifyPairSplitDirs, verifyPairCopyAlphaWrite,
     verifyPairCopyAlphaDirs, verifyPairEvalDirs, readBit?, satEvalTokenStep,
-    tokenOfBits, _root_.Complexity.TM.allIdle, _root_.Complexity.TM.idleDir_right_of_start,
-    _root_.Complexity.TM.rightOfStart_allIdle])
+    tokenOfBits, TM.allIdle, TM.idleDir_right_of_start,
+    TM.rightOfStart_allIdle])
 
 /-- Deterministic three-work-tape verifier for the Boolean function
 `SAT.verifyPair`.
@@ -2894,7 +2889,7 @@ This is the machine-level verifier construction. The polynomial budget below
 is proved quadratic, and the end-to-end tape simulation below shows that this
 split/length/evaluation pipeline writes `1` exactly when
 `verifyPair w = true`. -/
-def verifyPairTM : _root_.Complexity.TM 3 where
+def verifyPairTM : TM 3 where
   Q := VerifyPairPhase
   qstart := .init
   qhalt := .done
@@ -2910,17 +2905,17 @@ def verifyPairTM : _root_.Complexity.TM 3 where
 /-- Writing back the symbol just read is a no-op when no interior cell holds the
 left marker (so the head, if `≥ 1`, reads a non-marker). -/
 private theorem writeBack_self (t : Tape) (h : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
-    t.write (_root_.Complexity.TM.readBackWrite t.read).toΓ = t := by
+    t.write (TM.readBackWrite t.read).toΓ = t := by
   by_cases hh : t.head = 0
   · simp [Tape.write, hh]
   · have hne : t.read ≠ Γ.start := by simp only [Tape.read]; exact h t.head (by omega)
-    rw [_root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hne]
+    rw [TM.toΓ_readBackWrite_of_ne_start hne]
     simp [Tape.write, hh, Tape.read, Function.update_eq_self]
 
 /-- Hence a write-back-and-move on such a tape is just a move (read-only behavior). -/
 private theorem writeBackMove_eq_move (t : Tape) (d : Dir3)
     (h : ∀ j, j ≥ 1 → t.cells j ≠ Γ.start) :
-    t.writeAndMove (_root_.Complexity.TM.readBackWrite t.read).toΓ d = t.move d := by
+    t.writeAndMove (TM.readBackWrite t.read).toΓ d = t.move d := by
   rw [Tape.writeAndMove, writeBack_self t h]
 
 /-- Project a `verifyPairTM` eval-phase state to the single-tape evaluator's. -/
@@ -2943,33 +2938,33 @@ private theorem verifyPairTM_init_steps (w : List Bool) :
     ∃ c',
       verifyPairTM.reachesIn 2 (verifyPairTM.initCfg w) c' ∧
       c'.state = .splitScan ∧
-      c'.input = (_root_.Complexity.Tape.init (w.map Γ.ofBool)).move Dir3.right ∧
-      c'.work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-      c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+      c'.input = (Tape.init (w.map Γ.ofBool)).move Dir3.right ∧
+      c'.work ⟨0, by omega⟩ = (Tape.init []).move Dir3.right ∧
+      c'.work ⟨1, by omega⟩ = (Tape.init []).move Dir3.right ∧
       (c'.work ⟨2, by omega⟩).HasUnaryPrefix 1 ∧
       (c'.work ⟨2, by omega⟩).cells 0 = Γ.start ∧
-      c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      c'.output = (Tape.init []).move Dir3.right := by
   let c₁ : Cfg 3 verifyPairTM.Q :=
     { state := .initCounter
-      input := (_root_.Complexity.Tape.init (w.map Γ.ofBool)).move Dir3.right
-      work := fun _ => (_root_.Complexity.Tape.init []).move Dir3.right
-      output := (_root_.Complexity.Tape.init []).move Dir3.right }
+      input := (Tape.init (w.map Γ.ofBool)).move Dir3.right
+      work := fun _ => (Tape.init []).move Dir3.right
+      output := (Tape.init []).move Dir3.right }
   let c₂ : Cfg 3 verifyPairTM.Q :=
     { state := .splitScan
-      input := (_root_.Complexity.Tape.init (w.map Γ.ofBool)).move Dir3.right
+      input := (Tape.init (w.map Γ.ofBool)).move Dir3.right
       work := fun i =>
         if i = ⟨2, by omega⟩ then
-          ((_root_.Complexity.Tape.init []).move Dir3.right).writeAndMove Γ.one Dir3.right
+          ((Tape.init []).move Dir3.right).writeAndMove Γ.one Dir3.right
         else
-          (_root_.Complexity.Tape.init []).move Dir3.right
-      output := (_root_.Complexity.Tape.init []).move Dir3.right }
+          (Tape.init []).move Dir3.right
+      output := (Tape.init []).move Dir3.right }
   have hstep₁ : verifyPairTM.step (verifyPairTM.initCfg w) = some c₁ := by
-    simp [c₁, verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta,
-      _root_.Complexity.TM.readBackWrite, Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.Tape.init]
+    simp [c₁, verifyPairTM, TM.step, verifyPairDelta,
+      TM.readBackWrite, Tape.writeAndMove, Tape.write, Tape.move, Tape.init]
   have hstep₂ : verifyPairTM.step c₁ = some c₂ := by
-    simp [c₁, c₂, verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta,
-      _root_.Complexity.TM.readBackWrite, _root_.Complexity.TM.idleDir, Tape.writeAndMove, Tape.write,
-      Tape.move, Tape.read, _root_.Complexity.Tape.init]
+    simp [c₁, c₂, verifyPairTM, TM.step, verifyPairDelta,
+      TM.readBackWrite, TM.idleDir, Tape.writeAndMove, Tape.write,
+      Tape.move, Tape.read, Tape.init]
     constructor
     · cases h : w[0]? with
       | none => simp
@@ -2984,16 +2979,16 @@ private theorem verifyPairTM_init_steps (w : List Bool) :
   · simp [c₂]
   · refine ⟨?_, ?_, ?_⟩
     · simp [c₂, Tape.writeAndMove, Tape.write, Tape.move,
-        _root_.Complexity.Tape.init]
+        Tape.init]
     · intro i hi
       have hi0 : i = 0 := by omega
       subst hi0
-      simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.Tape.init]
+      simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, Tape.init]
     · intro i hi
       have hne : i + 1 ≠ 1 := by omega
-      simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.Tape.init,
+      simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, Tape.init,
         Function.update_of_ne hne]
-  · simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.Tape.init]
+  · simp [c₂, Tape.writeAndMove, Tape.write, Tape.move, Tape.init]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Split phase: parse `pair z α`, stage `z`/`α`, build counter, check length
@@ -3017,18 +3012,18 @@ private theorem verifyPairSplit_scanX_false_step
     { state := .splitAfterFalse
       input := c.input.move Dir3.right
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_, ?_⟩
-  · simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hiread, readBit?,
+  · simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hiread, readBit?,
       verifyPairPreserveWork]
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
   · funext i
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- In `.splitAfterFalse`, reading the second `false` writes `false` to the
 formula tape `0`, adds a tally to the counter tape `2`, advances back to
@@ -3060,10 +3055,10 @@ private theorem verifyPairSplit_afterFalse_zero_step
       work := fun i =>
         (c.work i).writeAndMove (verifyPairSplitWrite false (fun j => (c.work j).read) i)
           (verifyPairSplitDirs (fun j => (c.work j).read) i)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hiread, readBit?]
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hiread, readBit?]
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
@@ -3075,17 +3070,17 @@ private theorem verifyPairSplit_afterFalse_zero_step
     simp [verifyPairSplitWrite, boolWrite, Γw.toΓ]
   · show ((c.work ⟨1, by omega⟩).writeAndMove _ _) = _
     rw [show verifyPairSplitWrite false (fun j => (c.work j).read) ⟨1, by omega⟩ =
-          _root_.Complexity.TM.readBackWrite (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitWrite],
+          TM.readBackWrite (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitWrite],
       show verifyPairSplitDirs (fun j => (c.work j).read) ⟨1, by omega⟩ =
-          _root_.Complexity.TM.idleDir (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitDirs]]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work ⟨1, by omega⟩) h1st.1 h1st.2
+          TM.idleDir (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitDirs]]
+    exact TM.tape_writeAndMove_stable (c.work ⟨1, by omega⟩) h1st.1 h1st.2
   · show (((c.work ⟨2, by omega⟩).writeAndMove _ _)).head = _
     simp [verifyPairSplitDirs, Tape.writeAndMove, Tape.move, Tape.write_head]
   · show (((c.work ⟨2, by omega⟩).writeAndMove _ _)).cells = _
     have hne2 : (c.work ⟨2, by omega⟩).head ≠ 0 := by omega
     simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, if_neg hne2]
     simp [verifyPairSplitWrite, Γw.toΓ]
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- In `.splitScan`, reading the first `true` advances to `.splitAfterTrue`,
 moving the input head right and leaving all work tapes and the output tape
@@ -3105,18 +3100,18 @@ private theorem verifyPairSplit_scanX_true_step
     { state := .splitAfterTrue
       input := c.input.move Dir3.right
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_, ?_⟩
-  · simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hiread, readBit?,
+  · simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hiread, readBit?,
       verifyPairPreserveWork]
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
   · funext i
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- In `.splitAfterFalse`, reading `true` recognizes the separator `01` and
 advances to `.rewindCounterForAlpha`, leaving all work tapes and the output
@@ -3136,18 +3131,18 @@ private theorem verifyPairSplit_afterFalse_sep_step
     { state := .rewindCounterForAlpha
       input := c.input.move Dir3.right
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   refine ⟨c', ?_, rfl, ?_, ?_, ?_, ?_⟩
-  · simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hiread, readBit?,
+  · simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hiread, readBit?,
       verifyPairPreserveWork]
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
   · funext i
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- In `.splitAfterTrue`, reading the second `true` writes `true` to the formula
 tape `0`, adds a tally to the counter tape `2`, advances back to `.splitScan`,
@@ -3178,10 +3173,10 @@ private theorem verifyPairSplit_afterTrue_one_step
       work := fun i =>
         (c.work i).writeAndMove (verifyPairSplitWrite true (fun j => (c.work j).read) i)
           (verifyPairSplitDirs (fun j => (c.work j).read) i)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hiread, readBit?]
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hiread, readBit?]
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
@@ -3193,17 +3188,17 @@ private theorem verifyPairSplit_afterTrue_one_step
     simp [verifyPairSplitWrite, boolWrite, Γw.toΓ]
   · show ((c.work ⟨1, by omega⟩).writeAndMove _ _) = _
     rw [show verifyPairSplitWrite true (fun j => (c.work j).read) ⟨1, by omega⟩ =
-          _root_.Complexity.TM.readBackWrite (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitWrite],
+          TM.readBackWrite (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitWrite],
       show verifyPairSplitDirs (fun j => (c.work j).read) ⟨1, by omega⟩ =
-          _root_.Complexity.TM.idleDir (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitDirs]]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work ⟨1, by omega⟩) h1st.1 h1st.2
+          TM.idleDir (c.work ⟨1, by omega⟩).read by simp [verifyPairSplitDirs]]
+    exact TM.tape_writeAndMove_stable (c.work ⟨1, by omega⟩) h1st.1 h1st.2
   · show (((c.work ⟨2, by omega⟩).writeAndMove _ _)).head = _
     simp [verifyPairSplitDirs, Tape.writeAndMove, Tape.move, Tape.write_head]
   · show (((c.work ⟨2, by omega⟩).writeAndMove _ _)).cells = _
     have hne2 : (c.work ⟨2, by omega⟩).head ≠ 0 := by omega
     simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, if_neg hne2]
     simp [verifyPairSplitWrite, Γw.toΓ]
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- Two-step decoding of a doubled `false` bit: writes `false` to the formula
 tape, a tally to the counter tape, and returns to `.splitScan`. -/
@@ -3479,7 +3474,7 @@ private theorem verifyPairSplit_scanX_loop :
           h2h1 h2c01 h2ns1 hoh1 hons1
       have hreach_total : verifyPairTM.reachesIn (2 * (b :: bs).length) c c' := by
         have htot : verifyPairTM.reachesIn (2 + 2 * bs.length) c c' :=
-          _root_.Complexity.TM.reachesIn_trans _ hreach1 hreach
+          TM.reachesIn_trans _ hreach1 hreach
         have heq : 2 * (b :: bs).length = 2 + 2 * bs.length := by
           simp only [List.length_cons]; omega
         rw [heq]; exact htot
@@ -3615,30 +3610,30 @@ private theorem verifyPairSplit_rewindCounter_left_step
   have hread2 : (c.work (2 : Fin 3)).read ≠ Γ.start := hread
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .rewindCounterForAlpha
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨2, by omega⟩ : Fin 3) then Dir3.left else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨2, by omega⟩ : Fin 3) then Dir3.left else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨2, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.left).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
-  · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨2, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
+    rw [Tape.writeAndMove, Tape.move_cells, TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindCounterForAlpha` base step: with the counter head at the left
 marker, move right into `.copyAlpha`, preserving everything else. -/
@@ -3661,30 +3656,30 @@ private theorem verifyPairSplit_rewindCounter_base_step
   have hhead2 : (c.work (2 : Fin 3)).head = 0 := hhead0
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .copyAlpha
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨2, by omega⟩ : Fin 3) then Dir3.right else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨2, by omega⟩ : Fin 3) then Dir3.right else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨2, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.right).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead2]
-  · show ((c.work ⟨2, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨2, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨2, by omega⟩).read).toΓ Dir3.right).cells = _
     rw [Tape.writeAndMove, Tape.move_cells]
     simp [Tape.write, hhead2]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindFormula` left step: move the formula tape left, preserving the rest. -/
 private theorem verifyPairSplit_rewindFormula_left_step
@@ -3704,30 +3699,30 @@ private theorem verifyPairSplit_rewindFormula_left_step
   have hread2 : (c.work (0 : Fin 3)).read ≠ Γ.start := hread
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .rewindFormula
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨0, by omega⟩ : Fin 3) then Dir3.left else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨0, by omega⟩ : Fin 3) then Dir3.left else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨0, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.left).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
-  · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨0, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
+    rw [Tape.writeAndMove, Tape.move_cells, TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindFormula` base step: move right into `.rewindAssignment`. -/
 private theorem verifyPairSplit_rewindFormula_base_step
@@ -3749,30 +3744,30 @@ private theorem verifyPairSplit_rewindFormula_base_step
   have hhead2 : (c.work (0 : Fin 3)).head = 0 := hhead0
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .rewindAssignment
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨0, by omega⟩ : Fin 3) then Dir3.right else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨0, by omega⟩ : Fin 3) then Dir3.right else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨0, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.right).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead2]
-  · show ((c.work ⟨0, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨0, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨0, by omega⟩).read).toΓ Dir3.right).cells = _
     rw [Tape.writeAndMove, Tape.move_cells]
     simp [Tape.write, hhead2]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindAssignment` left step: move the assignment tape left. -/
 private theorem verifyPairSplit_rewindAssignment_left_step
@@ -3792,30 +3787,30 @@ private theorem verifyPairSplit_rewindAssignment_left_step
   have hread2 : (c.work (1 : Fin 3)).read ≠ Γ.start := hread
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .rewindAssignment
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨1, by omega⟩ : Fin 3) then Dir3.left else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨1, by omega⟩ : Fin 3) then Dir3.left else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨1, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.left).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head]
-  · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨1, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.left).cells = _
-    rw [Tape.writeAndMove, Tape.move_cells, _root_.Complexity.TM.toΓ_readBackWrite_of_ne_start hread]
+    rw [Tape.writeAndMove, Tape.move_cells, TM.toΓ_readBackWrite_of_ne_start hread]
     simp [Tape.write, Tape.read, Function.update_eq_self]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.rewindAssignment` base step: move right into the evaluator's first read. -/
 private theorem verifyPairSplit_rewindAssignment_base_step
@@ -3838,30 +3833,30 @@ private theorem verifyPairSplit_rewindAssignment_base_step
   have hhead2 : (c.work (1 : Fin 3)).head = 0 := hhead0
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .evalReadFirst (.boundary true false true)
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (if i = (⟨1, by omega⟩ : Fin 3) then Dir3.right else _root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (if i = (⟨1, by omega⟩ : Fin 3) then Dir3.right else TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread2,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread2,
       verifyPairPreserveWork]
     rfl
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_⟩
-  · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨1, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.right).head = _
     simp [Tape.writeAndMove, Tape.move, Tape.write_head, hhead2]
-  · show ((c.work ⟨1, by omega⟩).writeAndMove (_root_.Complexity.TM.readBackWrite
+  · show ((c.work ⟨1, by omega⟩).writeAndMove (TM.readBackWrite
       (c.work ⟨1, by omega⟩).read).toΓ Dir3.right).cells = _
     rw [Tape.writeAndMove, Tape.move_cells]
     simp [Tape.write, hhead2]
   · intro i hi
     show (c.work i).writeAndMove _ _ = c.work i
     rw [if_neg hi]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hframe i hi).1 (hframe i hi).2
+  · exact TM.transitionInput_eq_self hinp_read
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.copyAlpha` bit step: with an assignment bit under the input head and a
 live counter tally, copy the bit to the assignment tape `1`, erase one counter
@@ -3895,21 +3890,21 @@ private theorem verifyPairSplit_copyAlpha_bit_step (b : Bool)
       work := fun i =>
         (c.work i).writeAndMove (verifyPairCopyAlphaWrite b (fun j => (c.work j).read) i)
           (verifyPairCopyAlphaDirs (fun j => (c.work j).read) i)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
     have hbit : readBit? c.input.read = some b := by rw [hib]; cases b <;> rfl
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hib_blank, hbit,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hib_blank, hbit,
       hcounter2]
   refine ⟨c', hstep, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp [c', Tape.move]
   · simpa using Tape.move_cells c.input Dir3.right
   · show (c.work ⟨0, by omega⟩).writeAndMove _ _ = c.work ⟨0, by omega⟩
     rw [show verifyPairCopyAlphaWrite b (fun j => (c.work j).read) ⟨0, by omega⟩ =
-          _root_.Complexity.TM.readBackWrite (c.work ⟨0, by omega⟩).read by simp [verifyPairCopyAlphaWrite],
+          TM.readBackWrite (c.work ⟨0, by omega⟩).read by simp [verifyPairCopyAlphaWrite],
       show verifyPairCopyAlphaDirs (fun j => (c.work j).read) ⟨0, by omega⟩ =
-          _root_.Complexity.TM.idleDir (c.work ⟨0, by omega⟩).read by simp [verifyPairCopyAlphaDirs]]
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work ⟨0, by omega⟩) h0st.1 h0st.2
+          TM.idleDir (c.work ⟨0, by omega⟩).read by simp [verifyPairCopyAlphaDirs]]
+    exact TM.tape_writeAndMove_stable (c.work ⟨0, by omega⟩) h0st.1 h0st.2
   · show ((c.work ⟨1, by omega⟩).writeAndMove _ _).head = _
     simp [verifyPairCopyAlphaDirs, Tape.writeAndMove, Tape.move, Tape.write_head]
   · show ((c.work ⟨1, by omega⟩).writeAndMove _ _).cells = _
@@ -3922,7 +3917,7 @@ private theorem verifyPairSplit_copyAlpha_bit_step (b : Bool)
     have hne2 : (c.work ⟨2, by omega⟩).head ≠ 0 := by omega
     simp only [Tape.writeAndMove, Tape.move_cells, Tape.write, if_neg hne2]
     simp [verifyPairCopyAlphaWrite, Γw.toΓ]
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- `.copyAlpha` blank step: once the input head reaches the blank after `α`,
 transition to `.rewindFormula`, leaving all work tapes and the output
@@ -3938,20 +3933,20 @@ private theorem verifyPairSplit_copyAlpha_blank_step
   have hinp_read : c.input.read ≠ Γ.start := by rw [hib]; decide
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .rewindFormula
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove (_root_.Complexity.TM.readBackWrite c.output.read)
-        (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove (TM.readBackWrite c.output.read)
+        (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hib,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hib,
       verifyPairPreserveWork]
   refine ⟨c', hstep, rfl, ?_, ?_, ?_⟩
-  · exact _root_.Complexity.TM.transitionInput_eq_self hinp_read
+  · exact TM.transitionInput_eq_self hinp_read
   · funext i
-    exact _root_.Complexity.TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
-  · exact _root_.Complexity.TM.tape_writeAndMove_stable c.output hoh hons
+    exact TM.tape_writeAndMove_stable (c.work i) (hwst i).1 (hwst i).2
+  · exact TM.tape_writeAndMove_stable c.output hoh hons
 
 /-- The copyAlpha success loop. Given enough counter tallies ahead (cells
 `head .. head + |as| - 1` all `Γ.one`), the machine copies the assignment bits
@@ -4064,7 +4059,7 @@ private theorem verifyPairSplit_copyAlpha_loop :
           h2h1 h2c01 h2ns1 hcnt1 hoh1 hons1
       have hreach_total : verifyPairTM.reachesIn (a :: as).length c c' := by
         have htot : verifyPairTM.reachesIn (1 + as.length) c c' :=
-          _root_.Complexity.TM.reachesIn_trans _ (.step hstep .zero) hreach
+          TM.reachesIn_trans _ (.step hstep .zero) hreach
         have heq : (a :: as).length = 1 + as.length := by simp only [List.length_cons]; omega
         rw [heq]; exact htot
       refine ⟨c', hreach_total, hst', ?_, ?_, ?_, ?_, hc_1c0, hc_1ns, ?_, ?_, ?_,
@@ -4166,34 +4161,34 @@ private theorem verifyPairSplit_copyAlpha_reject_step (b : Bool)
     (c : Cfg 3 verifyPairTM.Q) (hst : c.state = .copyAlpha)
     (hib : c.input.read = Γ.ofBool b)
     (hcounter : (c.work ⟨2, by omega⟩).read ≠ Γ.one)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', verifyPairTM.step c = some c' ∧ verifyPairTM.halted c' ∧
       c'.output.cells 1 = Γ.zero := by
   have hib_blank : c.input.read ≠ Γ.blank := by rw [hib]; exact Γ.ofBool_ne_blank b
   have hcounter2 : (c.work (2 : Fin 3)).read ≠ Γ.one := hcounter
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove Γw.zero (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
     have hbit : readBit? c.input.read = some b := by rw [hib]; cases b <;> rfl
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hib_blank, hbit,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hib_blank, hbit,
       hcounter2, verifyPairReject]
   refine ⟨c', hstep, rfl, ?_⟩
-  show (c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read)).cells 1 = Γ.zero
+  show (c.output.writeAndMove Γw.zero (TM.idleDir c.output.read)).cells 1 = Γ.zero
   rw [hout]
-  simp [Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, Tape.read,
-    _root_.Complexity.Tape.init, Γw.toΓ]
+  simp [Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, Tape.read,
+    Tape.init, Γw.toΓ]
 
 /-- The input tape after the initial `▷→cell 1` shift exposes the doubled bits
 of `z` at the positions the split loop reads them. -/
 private theorem verifyPair_input_doubled (z α : List Bool) (i : ℕ) (hi : i < z.length) :
-    ((_root_.Complexity.Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells (1 + 2 * i) =
+    ((Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells (1 + 2 * i) =
         Γ.ofBool (z[i]'hi) ∧
-    ((_root_.Complexity.Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells (1 + (2 * i + 1)) =
+    ((Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells (1 + (2 * i + 1)) =
         Γ.ofBool (z[i]'hi) := by
   have hlen2 : 2 * i < (pair z α).length := by rw [pair_length]; omega
   have hlen2' : 2 * i + 1 < (pair z α).length := by rw [pair_length]; omega
@@ -4212,47 +4207,47 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
     ∃ c', verifyPairTM.reachesIn (2 * z.length + 4) (verifyPairTM.initCfg (pair z α)) c' ∧
       c'.state = .rewindCounterForAlpha ∧
       c'.input.head = 2 * z.length + 3 ∧
-      c'.input.cells = ((_root_.Complexity.Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells ∧
+      c'.input.cells = ((Tape.init ((pair z α).map Γ.ofBool)).move Dir3.right).cells ∧
       (c'.work ⟨0, by omega⟩).head = 1 + z.length ∧
       (c'.work ⟨0, by omega⟩).cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → (c'.work ⟨0, by omega⟩).cells j ≠ Γ.start) ∧
       (∀ i, (h : i < z.length) → (c'.work ⟨0, by omega⟩).cells (1 + i) = Γ.ofBool (z[i]'h)) ∧
       (∀ j, j ≥ 1 + z.length → (c'.work ⟨0, by omega⟩).cells j = Γ.blank) ∧
-      c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
+      c'.work ⟨1, by omega⟩ = (Tape.init []).move Dir3.right ∧
       (c'.work ⟨2, by omega⟩).head = z.length + 2 ∧
       (c'.work ⟨2, by omega⟩).cells 0 = Γ.start ∧
       (∀ j, j ≥ 1 → (c'.work ⟨2, by omega⟩).cells j ≠ Γ.start) ∧
       (∀ i, i < z.length + 1 → (c'.work ⟨2, by omega⟩).cells (1 + i) = Γ.one) ∧
       (∀ j, j ≥ z.length + 2 → (c'.work ⟨2, by omega⟩).cells j = Γ.blank) ∧
-      c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      c'.output = (Tape.init []).move Dir3.right := by
   -- Phase 0: init (2 steps → .splitScan)
   obtain ⟨c1, hr1, hs1, hi1, hw01, hw11, hu2, hc2start, ho1⟩ :=
     verifyPairTM_init_steps (pair z α)
   -- Unpack the counter's `HasUnaryPrefix 1`
   obtain ⟨hu2h, hu2one, hu2blank⟩ := hu2
   -- input/work/output stability facts for c1
-  have hi1_head : c1.input.head = 1 := by rw [hi1]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hi1_head : c1.input.head = 1 := by rw [hi1]; simp [Tape.move, Tape.init]
   have hi1_cells0 : c1.input.cells 0 = Γ.start := by
-    rw [hi1]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hi1]; simp [Tape.move, Tape.init]
   have hi1_ns : ∀ j, j ≥ 1 → c1.input.cells j ≠ Γ.start := by
     intro j hj; rw [hi1, Tape.move_cells]
     exact Tape.init_ofBool_cells_ne_start (pair z α) j hj
   have hw01_head : (c1.work ⟨0, by omega⟩).head = 1 := by
-    rw [hw01]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hw01]; simp [Tape.move, Tape.init]
   have hw01_cells0 : (c1.work ⟨0, by omega⟩).cells 0 = Γ.start := by
-    rw [hw01]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hw01]; simp [Tape.move, Tape.init]
   have hw01_ns : ∀ j, j ≥ 1 → (c1.work ⟨0, by omega⟩).cells j ≠ Γ.start := by
     intro j hj; rw [hw01, Tape.move_cells]
     cases j with
     | zero => omega
-    | succ k => simp [_root_.Complexity.Tape.init]
+    | succ k => simp [Tape.init]
   have hw11_head : (c1.work ⟨1, by omega⟩).head = 1 := by
-    rw [hw11]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hw11]; simp [Tape.move, Tape.init]
   have hw11_ns : ∀ j, j ≥ 1 → (c1.work ⟨1, by omega⟩).cells j ≠ Γ.start := by
     intro j hj; rw [hw11, Tape.move_cells]
     cases j with
     | zero => omega
-    | succ k => simp [_root_.Complexity.Tape.init]
+    | succ k => simp [Tape.init]
   have hw21_ns : ∀ j, j ≥ 1 → (c1.work ⟨2, by omega⟩).cells j ≠ Γ.start := by
     intro j hj
     cases j with
@@ -4262,12 +4257,12 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
         · have : k = 0 := by omega
           subst this; rw [hu2one 0 (by omega)]; decide
         · rw [hu2blank k (by omega)]; decide
-  have ho1_head : c1.output.head = 1 := by rw [ho1]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have ho1_head : c1.output.head = 1 := by rw [ho1]; simp [Tape.move, Tape.init]
   have ho1_ns : ∀ j, j ≥ 1 → c1.output.cells j ≠ Γ.start := by
     intro j hj; rw [ho1, Tape.move_cells]
     cases j with
     | zero => omega
-    | succ k => simp [_root_.Complexity.Tape.init]
+    | succ k => simp [Tape.init]
   -- doubled-bit hypothesis for scanX
   have hdoubled : ∀ i, (h : i < z.length) →
       c1.input.cells (c1.input.head + 2 * i) = Γ.ofBool (z[i]'h) ∧
@@ -4308,7 +4303,7 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
       (by rw [ho2]; exact ho1_head.ge) (by rw [ho2]; exact ho1_ns)
   refine ⟨c3, ?_, hs3, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · have : verifyPairTM.reachesIn (2 + (2 * z.length + 2)) (verifyPairTM.initCfg (pair z α)) c3 :=
-      _root_.Complexity.TM.reachesIn_trans _ hr1 (_root_.Complexity.TM.reachesIn_trans _ hr2 hr3)
+      TM.reachesIn_trans _ hr1 (TM.reachesIn_trans _ hr2 hr3)
     rwa [show 2 * z.length + 4 = 2 + (2 * z.length + 2) from by omega]
   · rw [hi3h, hi2h, hi1_head]; omega
   · rw [hi3c, hi2c, hi1]
@@ -4324,7 +4319,7 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
     rw [hab, hw01, Tape.move_cells]
     cases j with
     | zero => omega
-    | succ k => simp [_root_.Complexity.Tape.init]
+    | succ k => simp [Tape.init]
   · rw [hw3, hw12, hw11]
   · rw [hw3, hw22h, hu2h]; omega
   · rw [hw3]; exact hw22c0
@@ -4357,12 +4352,12 @@ private theorem tape_eq_initTape_of_cells (t : Tape) (l : List Bool)
     (hh : t.head = 1) (h0 : t.cells 0 = Γ.start)
     (hdata : ∀ i, (h : i < l.length) → t.cells (1 + i) = Γ.ofBool (l[i]'h))
     (hblank : ∀ j, j ≥ 1 + l.length → t.cells j = Γ.blank) :
-    t = (_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right := by
-  have hc2 : t.cells = ((_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right).cells := by
+    t = (Tape.init (l.map Γ.ofBool)).move Dir3.right := by
+  have hc2 : t.cells = ((Tape.init (l.map Γ.ofBool)).move Dir3.right).cells := by
     funext j
     rw [Tape.move_cells]
     cases j with
-    | zero => rw [h0]; simp [_root_.Complexity.Tape.init]
+    | zero => rw [h0]; simp [Tape.init]
     | succ k =>
         by_cases hk : k < l.length
         · rw [Tape.init_ofBool_cells_lt l k hk]
@@ -4370,12 +4365,12 @@ private theorem tape_eq_initTape_of_cells (t : Tape) (l : List Bool)
           rwa [show (1 : ℕ) + k = k + 1 from by ring] at hd
         · rw [Tape.init_ofBool_cells_ge l k (by omega)]
           exact hblank (k + 1) (by omega)
-  have hh2 : t.head = ((_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right).head := by
-    rw [hh]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hh2 : t.head = ((Tape.init (l.map Γ.ofBool)).move Dir3.right).head := by
+    rw [hh]; simp [Tape.move, Tape.init]
   calc t = ⟨t.head, t.cells⟩ := rfl
-    _ = ⟨((_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right).head,
-          ((_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right).cells⟩ := by rw [hh2, hc2]
-    _ = (_root_.Complexity.Tape.init (l.map Γ.ofBool)).move Dir3.right := rfl
+    _ = ⟨((Tape.init (l.map Γ.ofBool)).move Dir3.right).head,
+          ((Tape.init (l.map Γ.ofBool)).move Dir3.right).cells⟩ := by rw [hh2, hc2]
+    _ = (Tape.init (l.map Γ.ofBool)).move Dir3.right := rfl
 
 /-- **Setup success path.** When `|α| ≤ |z| + 1`, the full split/setup pipeline
 runs from the initial configuration on `pair z α` to the evaluator's first read,
@@ -4392,22 +4387,22 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
       (c'.work ⟨1, by omega⟩).head = 1 ∧ (c'.work ⟨1, by omega⟩).cells 0 = Γ.start ∧
       (∀ i, (h : i < α.length) → (c'.work ⟨1, by omega⟩).cells (1 + i) = Γ.ofBool (α[i]'h)) ∧
       (∀ j, j ≥ 1 + α.length → (c'.work ⟨1, by omega⟩).cells j = Γ.blank) ∧
-      c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      c'.output = (Tape.init []).move Dir3.right := by
   obtain ⟨c3, hr3, hs3, hi3h, hi3c, hw30h, hw30c0, hw30ns, hw30data, hw30blank, hw31,
       hw32h, hw32c0, hw32ns, hw32tally, _hw32blank, ho3⟩ :=
     verifyPairSplit_setup_through_separator z α
   -- input invariants common to the remaining phases
-  have hi3c0 : c3.input.cells 0 = Γ.start := by rw [hi3c]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hi3c0 : c3.input.cells 0 = Γ.start := by rw [hi3c]; simp [Tape.move, Tape.init]
   have hi3ns : ∀ j, j ≥ 1 → c3.input.cells j ≠ Γ.start := by
     intro j hj; rw [hi3c, Tape.move_cells]
     exact Tape.init_ofBool_cells_ne_start (pair z α) j hj
   -- tape-1 (blank) stability facts
-  have hw31h : (c3.work ⟨1, by omega⟩).head = 1 := by rw [hw31]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hw31h : (c3.work ⟨1, by omega⟩).head = 1 := by rw [hw31]; simp [Tape.move, Tape.init]
   have hw31c0 : (c3.work ⟨1, by omega⟩).cells 0 = Γ.start := by
-    rw [hw31]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hw31]; simp [Tape.move, Tape.init]
   have hw31ns : ∀ j, j ≥ 1 → (c3.work ⟨1, by omega⟩).cells j ≠ Γ.start := by
     intro j hj; rw [hw31, Tape.move_cells]
-    cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+    cases j with | zero => omega | succ k => simp [Tape.init]
   have hframe3 : ∀ i, i ≠ (⟨2, by omega⟩ : Fin 3) →
       (c3.work i).head ≥ 1 ∧ ∀ j, j ≥ 1 → (c3.work i).cells j ≠ Γ.start := by
     intro i hi
@@ -4419,9 +4414,9 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
   -- Phase 3: rewind the counter (head |z|+2 → 1)
   obtain ⟨c4, hr4, hs4, hw42h, hw42c, hw4frame, hi4, ho4⟩ :=
     verifyPairSplit_rewindCounter_phase (z.length + 2) c3 hs3 hw32c0 hw32ns hw32h
-      hi3h1 hi3ns hframe3 (by rw [ho3]; simp [Tape.move, _root_.Complexity.Tape.init])
+      hi3h1 hi3ns hframe3 (by rw [ho3]; simp [Tape.move, Tape.init])
       (by rw [ho3]; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   have hw40 : c4.work ⟨0, by omega⟩ = c3.work ⟨0, by omega⟩ := hw4frame ⟨0, by omega⟩ (by simp)
   have hw41 : c4.work ⟨1, by omega⟩ = c3.work ⟨1, by omega⟩ := hw4frame ⟨1, by omega⟩ (by simp)
   have hc4ih : c4.input.head = 2 * z.length + 3 := by rw [hi4, hi3h]
@@ -4446,9 +4441,9 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
       (by rw [hc4w0h]; omega) (by rw [hw40]; exact hw30ns)
       hc4w1h.ge (by rw [hw41]; exact hw31c0) (by rw [hw41]; exact hw31ns)
       hw42h.ge (by rw [hw42c]; exact hw32c0) (by rw [hw42c]; exact hw32ns)
-      hcnt4 (by rw [ho4, ho3]; simp [Tape.move, _root_.Complexity.Tape.init])
+      hcnt4 (by rw [ho4, ho3]; simp [Tape.move, Tape.init])
       (by rw [ho4, ho3]; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   have hc5w1h : (c5.work ⟨1, by omega⟩).head = 1 + α.length := by rw [hw51h, hc4w1h]
   -- after copyAlpha, the input head sits on the blank past α
   have hi5read : c5.input.read = Γ.blank := by
@@ -4468,9 +4463,9 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
       (by rw [hi5h, hc4ih]; omega)
       (by rw [hi5c, hi4, hi3c]; intro j hj; rw [Tape.move_cells];
           exact Tape.init_ofBool_cells_ne_start (pair z α) j hj)
-      (by rw [ho5, ho4, ho3]; simp [Tape.move, _root_.Complexity.Tape.init])
+      (by rw [ho5, ho4, ho3]; simp [Tape.move, Tape.init])
       (by rw [ho5, ho4, ho3]; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   -- tape-0/tape-1 facts at c6
   have hw60h : (c6.work ⟨0, by omega⟩).head = 1 + z.length := by
     rw [hw6, hw50, hw40, hw30h]
@@ -4491,14 +4486,14 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
   have hi6ns : ∀ j, j ≥ 1 → c6.input.cells j ≠ Γ.start := by
     rw [hi6, hi5c, hi4, hi3c]; intro j hj; rw [Tape.move_cells]
     exact Tape.init_ofBool_cells_ne_start (pair z α) j hj
-  have ho6' : c6.output = (_root_.Complexity.Tape.init []).move Dir3.right := by rw [ho6, ho5, ho4, ho3]
+  have ho6' : c6.output = (Tape.init []).move Dir3.right := by rw [ho6, ho5, ho4, ho3]
   -- Phase 6: rewind the formula (head 1+|z| → 1)
   obtain ⟨c7, hr7, hs7, hw70h, hw70c, hw7frame, hi7, ho7⟩ :=
     verifyPairSplit_rewindFormula_phase (1 + z.length) c6 hs6 hw60c0 hw60ns hw60h
       (by rw [hi6, hi5h, hc4ih]; omega) hi6ns hframe6F
-      (by rw [ho6']; simp [Tape.move, _root_.Complexity.Tape.init])
+      (by rw [ho6']; simp [Tape.move, Tape.init])
       (by rw [ho6']; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   have hw71 : c7.work ⟨1, by omega⟩ = c6.work ⟨1, by omega⟩ := hw7frame ⟨1, by omega⟩ (by simp)
   have hw72h : (c7.work ⟨2, by omega⟩).head ≥ 1 := by rw [hw7frame ⟨2, by omega⟩ (by simp), hw6]; exact hw52h
   have hw72ns : ∀ j, j ≥ 1 → (c7.work ⟨2, by omega⟩).cells j ≠ Γ.start := by
@@ -4511,24 +4506,24 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
     | ⟨1, _⟩ => exact absurd rfl hi
     | ⟨2, _⟩ => exact ⟨hw72h, hw72ns⟩
   have hi7ns : ∀ j, j ≥ 1 → c7.input.cells j ≠ Γ.start := by rw [hi7]; exact hi6ns
-  have ho7' : c7.output = (_root_.Complexity.Tape.init []).move Dir3.right := by rw [ho7]; exact ho6'
+  have ho7' : c7.output = (Tape.init []).move Dir3.right := by rw [ho7]; exact ho6'
   -- Phase 7: rewind the assignment (head 1+|α| → 1) into the evaluator
   obtain ⟨c8, hr8, hs8, hw81h, hw81c, hw8frame, hi8, ho8⟩ :=
     verifyPairSplit_rewindAssignment_phase (1 + α.length) c7
       hs7 (by rw [hw71]; exact hw61c0) (by rw [hw71]; exact hw61ns) (by rw [hw71]; exact hw61h)
       (by rw [hi7, hi6, hi5h, hc4ih]; omega) hi7ns hframe7A
-      (by rw [ho7']; simp [Tape.move, _root_.Complexity.Tape.init])
+      (by rw [ho7']; simp [Tape.move, Tape.init])
       (by rw [ho7']; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   have hw80 : c8.work ⟨0, by omega⟩ = c7.work ⟨0, by omega⟩ := hw8frame ⟨0, by omega⟩ (by simp)
   -- Assemble
   refine ⟨c8, ?_, hs8, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · have hchain : verifyPairTM.reachesIn
         ((2 * z.length + 4) + ((z.length + 2 + 1) + (α.length + (1 +
           ((1 + z.length + 1) + (1 + α.length + 1)))))) (verifyPairTM.initCfg (pair z α)) c8 :=
-      _root_.Complexity.TM.reachesIn_trans _ hr3 (_root_.Complexity.TM.reachesIn_trans _ hr4
-        (_root_.Complexity.TM.reachesIn_trans _ hr5 (_root_.Complexity.TM.reachesIn_trans _ (.step hr6 .zero)
-          (_root_.Complexity.TM.reachesIn_trans _ hr7 hr8))))
+      TM.reachesIn_trans _ hr3 (TM.reachesIn_trans _ hr4
+        (TM.reachesIn_trans _ hr5 (TM.reachesIn_trans _ (.step hr6 .zero)
+          (TM.reachesIn_trans _ hr7 hr8))))
     rwa [show 4 * z.length + 2 * α.length + 12 =
       (2 * z.length + 4) + ((z.length + 2 + 1) + (α.length + (1 +
         ((1 + z.length + 1) + (1 + α.length + 1))))) from by omega]
@@ -4549,7 +4544,7 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
     rw [hw81c, hw71, hw6]
     have hab := hw51above j (by rw [hc4w1h]; omega)
     rw [hab, hw41, hw31, Tape.move_cells]
-    cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+    cases j with | zero => omega | succ k => simp [Tape.init]
   · rw [ho8]; exact ho7'
 
 /-- The setup success path, with the staged formula and assignment tapes
@@ -4559,9 +4554,9 @@ private theorem verifyPairSplit_setup_success_initTape (z α : List Bool)
     ∃ c', verifyPairTM.reachesIn (4 * z.length + 2 * α.length + 12)
         (verifyPairTM.initCfg (pair z α)) c' ∧
       c'.state = .evalReadFirst (.boundary true false true) ∧
-      c'.work ⟨0, by omega⟩ = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
-      c'.work ⟨1, by omega⟩ = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
-      c'.output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+      c'.work ⟨0, by omega⟩ = (Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
+      c'.work ⟨1, by omega⟩ = (Tape.init (α.map Γ.ofBool)).move Dir3.right ∧
+      c'.output = (Tape.init []).move Dir3.right := by
   obtain ⟨c', hr, hs, h0h, h0c0, h0data, h0blank, h1h, h1c0, h1data, h1blank, ho⟩ :=
     verifyPairSplit_setup_success z α hlen
   exact ⟨c', hr, hs,
@@ -4591,7 +4586,7 @@ theorem verifyPairTMTime_polynomial :
   ⟨2, verifyPairTMTime_bigO_quadratic⟩
 
 -- ════════════════════════════════════════════════════════════════════════
--- Lemma B (eval projection) + combine: `verifyPairTM` decides `pairLang R_SAT`
+-- Lemma B (eval projection) + combine: `verifyPairTM` decides `pairLang Witness`
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Predicate isolating the three evaluator-phase states of `verifyPairTM`. -/
@@ -4616,31 +4611,31 @@ private theorem projEval_step (c c' : Cfg 3 verifyPairTM.Q)
     (hstep : verifyPairTM.step c = some c') :
     satEvalOnInputTM.step (projEvalCfg c) = some (projEvalCfg c') := by
   have hwbm : ∀ d : Dir3, (c.work (0 : Fin 3)).writeAndMove
-      (_root_.Complexity.TM.readBackWrite (c.work (0 : Fin 3)).read).toΓ d
+      (TM.readBackWrite (c.work (0 : Fin 3)).read).toΓ d
       = (c.work (0 : Fin 3)).move d := fun d => writeBackMove_eq_move _ d hnostart
   have main : satEvalOnInputTM.step (projEvalCfg c) =
       Option.map projEvalCfg (verifyPairTM.step c) := by
     cases hcst : c.state with
     | evalReadFirst mode =>
         by_cases hb : (c.work (0 : Fin 3)).read = Γ.blank
-        · simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+        · simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
             projEvalState, verifyPairDelta, satEvalDelta, verifyPairPreserveWork, hb]
-          have hh := hwbm (_root_.Complexity.TM.idleDir Γ.blank)
+          have hh := hwbm (TM.idleDir Γ.blank)
           rw [hb] at hh; exact hh.symm
         · cases hr : readBit? (c.work (0 : Fin 3)).read with
           | some b =>
-              simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+              simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
                 projEvalState, verifyPairDelta, satEvalDelta, verifyPairPreserveWork, hb, hr]
               exact (hwbm _).symm
           | none =>
-              simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+              simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
                 projEvalState, verifyPairDelta, satEvalDelta,
                 verifyPairReject, satEvalReject, hb, hr]
               exact (hwbm _).symm
     | evalReadSecond mode first =>
         cases hr : readBit? (c.work (0 : Fin 3)).read with
         | some second =>
-            simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+            simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
               projEvalState, verifyPairDelta, satEvalDelta, verifyPairPreserveWork,
               verifyPairEvalDirs, hr]
             refine ⟨?_, (hwbm _).symm, ?_⟩
@@ -4649,16 +4644,16 @@ private theorem projEval_step (c c' : Cfg 3 verifyPairTM.Q)
               obtain rfl : i = 0 := Subsingleton.elim i 0
               simp
         | none =>
-            simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+            simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
               projEvalState, verifyPairDelta, satEvalDelta, verifyPairReject, satEvalReject, hr]
             exact (hwbm _).symm
     | evalRewindAlpha mode =>
         by_cases ha : (c.work (1 : Fin 3)).read = Γ.start
-        · simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+        · simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
             projEvalState, verifyPairDelta, satEvalDelta, verifyPairPreserveWork, ha]
           refine ⟨(hwbm _).symm, ?_⟩
           funext i; obtain rfl : i = 0 := Subsingleton.elim i 0; simp
-        · simp [_root_.Complexity.TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
+        · simp [TM.step, hcst, verifyPairTM, satEvalOnInputTM, projEvalCfg,
             projEvalState, verifyPairDelta, satEvalDelta, verifyPairPreserveWork, ha]
           refine ⟨(hwbm _).symm, ?_⟩
           funext i; obtain rfl : i = 0 := Subsingleton.elim i 0; simp
@@ -4675,9 +4670,9 @@ private theorem projEval_step (c c' : Cfg 3 verifyPairTM.Q)
   rw [main, hstep]; rfl
 
 /-- A TM step never modifies its read-only input tape's cells (only its head). -/
-private theorem step_input_cells {m : ℕ} {tm : _root_.Complexity.TM m} {c c' : Cfg m tm.Q}
+private theorem step_input_cells {m : ℕ} {tm : TM m} {c c' : Cfg m tm.Q}
     (h : tm.step c = some c') : c'.input.cells = c.input.cells := by
-  rw [_root_.Complexity.TM.step] at h
+  rw [TM.step] at h
   split at h
   · simp at h
   · rw [← Option.some.inj h]
@@ -4692,7 +4687,7 @@ private theorem verify_eval_next_state (c c' : Cfg 3 verifyPairTM.Q)
   have hmap : c'.state = (verifyPairDelta c.state c.input.read
       (fun i => (c.work i).read) c.output.read).1 := by
     have h := hvstep
-    rw [_root_.Complexity.TM.step, if_neg hcne] at h
+    rw [TM.step, if_neg hcne] at h
     exact congrArg Cfg.state (Option.some.inj h).symm
   cases hcst : c.state with
   | evalReadFirst mode =>
@@ -4754,7 +4749,7 @@ private theorem projEval_reaches :
           · obtain ⟨c', hvstep⟩ : ∃ c', verifyPairTM.step c = some c' := by
               have hcne : c.state ≠ verifyPairTM.qhalt := by
                 intro h; rw [h] at hev; simp [isEvalState, verifyPairTM] at hev
-              rw [_root_.Complexity.TM.step, if_neg hcne]; exact ⟨_, rfl⟩
+              rw [TM.step, if_neg hcne]; exact ⟨_, rfl⟩
             have hps := projEval_step c c' hev hns hvstep
             rw [hps] at hstep_sat
             obtain rfl := Option.some.inj hstep_sat
@@ -4771,7 +4766,7 @@ private theorem projEval_reaches :
           · exfalso
             have hq : (projEvalCfg c).state = satEvalOnInputTM.qhalt := by
               simp only [projEvalCfg, hdone, projEvalState, satEvalOnInputTM]
-            exact _root_.Complexity.TM.state_ne_qhalt_of_step hstep_sat hq
+            exact TM.state_ne_qhalt_of_step hstep_sat hq
 
 /-- **Lemma A-success + Lemma B.** When `|α| ≤ |z| + 1`, the verifier runs the
 whole split/setup/eval pipeline from `initCfg (pair z α)`, halting within
@@ -4789,10 +4784,10 @@ private theorem verifyPairSplit_eval_success (z α : List Bool)
   have hproj0_state : (projEvalCfg c0).state = .readFirst (.boundary true false true) := by
     simp only [projEvalCfg, hs0, projEvalState]
   have hproj0_input : (projEvalCfg c0).input =
-      (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right := hw0
+      (Tape.init (z.map Γ.ofBool)).move Dir3.right := hw0
   have hproj0_work : (projEvalCfg c0).work ⟨0, by omega⟩ =
-      (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right := hw1
-  have hproj0_out : (projEvalCfg c0).output = (_root_.Complexity.Tape.init []).move Dir3.right := ho0
+      (Tape.init (α.map Γ.ofBool)).move Dir3.right := hw1
+  have hproj0_out : (projEvalCfg c0).output = (Tape.init []).move Dir3.right := ho0
   obtain ⟨d, t2, ht2, hreach2, hhalt2, hout2⟩ :=
     satEvalOnInputTM_started_correct α z (projEvalCfg c0)
       hproj0_state hproj0_input hproj0_work hproj0_out
@@ -4805,7 +4800,7 @@ private theorem verifyPairSplit_eval_success (z α : List Bool)
   obtain ⟨c', hreach', hproj', heod', _hns'⟩ :=
     projEval_reaches t2 c0 d hc0eod hns0 hreach2
   refine ⟨c', 4 * z.length + 2 * α.length + 12 + t2, by omega,
-    _root_.Complexity.TM.reachesIn_trans _ hr0 hreach', ?_, ?_⟩
+    TM.reachesIn_trans _ hr0 hreach', ?_, ?_⟩
   · -- halted
     have hcs : projEvalState c'.state = .done := by
       have h1 : projEvalState c'.state = d.state := congrArg Cfg.state hproj'
@@ -4827,16 +4822,16 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
   obtain ⟨c3, hr3, hs3, hi3h, hi3c, hw30h, hw30c0, hw30ns, hw30data, hw30blank, hw31,
       hw32h, hw32c0, hw32ns, hw32tally, hw32blank, ho3⟩ :=
     verifyPairSplit_setup_through_separator z α
-  have hi3c0 : c3.input.cells 0 = Γ.start := by rw [hi3c]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hi3c0 : c3.input.cells 0 = Γ.start := by rw [hi3c]; simp [Tape.move, Tape.init]
   have hi3ns : ∀ j, j ≥ 1 → c3.input.cells j ≠ Γ.start := by
     intro j hj; rw [hi3c, Tape.move_cells]
     exact Tape.init_ofBool_cells_ne_start (pair z α) j hj
-  have hw31h : (c3.work ⟨1, by omega⟩).head = 1 := by rw [hw31]; simp [Tape.move, _root_.Complexity.Tape.init]
+  have hw31h : (c3.work ⟨1, by omega⟩).head = 1 := by rw [hw31]; simp [Tape.move, Tape.init]
   have hw31c0 : (c3.work ⟨1, by omega⟩).cells 0 = Γ.start := by
-    rw [hw31]; simp [Tape.move, _root_.Complexity.Tape.init]
+    rw [hw31]; simp [Tape.move, Tape.init]
   have hw31ns : ∀ j, j ≥ 1 → (c3.work ⟨1, by omega⟩).cells j ≠ Γ.start := by
     intro j hj; rw [hw31, Tape.move_cells]
-    cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+    cases j with | zero => omega | succ k => simp [Tape.init]
   have hframe3 : ∀ i, i ≠ (⟨2, by omega⟩ : Fin 3) →
       (c3.work i).head ≥ 1 ∧ ∀ j, j ≥ 1 → (c3.work i).cells j ≠ Γ.start := by
     intro i hi
@@ -4848,9 +4843,9 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
   -- Rewind the counter (head |z|+2 → 1)
   obtain ⟨c4, hr4, hs4, hw42h, hw42c, hw4frame, hi4, ho4⟩ :=
     verifyPairSplit_rewindCounter_phase (z.length + 2) c3 hs3 hw32c0 hw32ns hw32h
-      hi3h1 hi3ns hframe3 (by rw [ho3]; simp [Tape.move, _root_.Complexity.Tape.init])
+      hi3h1 hi3ns hframe3 (by rw [ho3]; simp [Tape.move, Tape.init])
       (by rw [ho3]; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   have hw40 : c4.work ⟨0, by omega⟩ = c3.work ⟨0, by omega⟩ := hw4frame ⟨0, by omega⟩ (by simp)
   have hw41 : c4.work ⟨1, by omega⟩ = c3.work ⟨1, by omega⟩ := hw4frame ⟨1, by omega⟩ (by simp)
   have hc4ih : c4.input.head = 2 * z.length + 3 := by rw [hi4, hi3h]
@@ -4876,9 +4871,9 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
       (by rw [hw40, hw30h]; omega) (by rw [hw40]; exact hw30ns)
       (by rw [hw41, hw31h]) (by rw [hw41]; exact hw31c0) (by rw [hw41]; exact hw31ns)
       hw42h.ge (by rw [hw42c]; exact hw32c0) (by rw [hw42c]; exact hw32ns)
-      hcnt4 (by rw [ho4, ho3]; simp [Tape.move, _root_.Complexity.Tape.init])
+      hcnt4 (by rw [ho4, ho3]; simp [Tape.move, Tape.init])
       (by rw [ho4, ho3]; intro j hj; rw [Tape.move_cells];
-          cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init])
+          cases j with | zero => omega | succ k => simp [Tape.init])
   -- the `(|z|+2)`-th assignment bit sits under the input head; the counter is dry
   have hib5 : c5.input.read = Γ.ofBool (α[z.length + 1]'(by omega)) := by
     show c5.input.cells c5.input.head = _
@@ -4898,77 +4893,77 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
       (by rw [ho5, ho4, ho3])
   refine ⟨c6, (2 * z.length + 4) + ((z.length + 2 + 1) + (as.length + 1)), ?_, ?_, hhalt6, hzero6⟩
   · rw [haslen]; omega
-  · exact _root_.Complexity.TM.reachesIn_trans _ hr3 (_root_.Complexity.TM.reachesIn_trans _ hr4
-      (_root_.Complexity.TM.reachesIn_trans _ hr5 (.step hstep6 .zero)))
+  · exact TM.reachesIn_trans _ hr3 (TM.reachesIn_trans _ hr4
+      (TM.reachesIn_trans _ hr5 (.step hstep6 .zero)))
 
 /-- A split-phase reject from `.splitScan` reading a blank (end of input). -/
 private theorem verifyPairSplit_splitScan_reject (c : Cfg 3 verifyPairTM.Q)
     (hst : c.state = .splitScan) (hread : c.input.read = Γ.blank)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', verifyPairTM.step c = some c' ∧ verifyPairTM.halted c' ∧
       c'.output.cells 1 = Γ.zero := by
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove Γw.zero (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread, readBit?,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread, readBit?,
       verifyPairReject]
   refine ⟨c', hstep, rfl, ?_⟩
-  show (c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read)).cells 1 = Γ.zero
+  show (c.output.writeAndMove Γw.zero (TM.idleDir c.output.read)).cells 1 = Γ.zero
   rw [hout]
-  simp [Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, Tape.read,
-    _root_.Complexity.Tape.init, Γw.toΓ]
+  simp [Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, Tape.read,
+    Tape.init, Γw.toΓ]
 
 /-- A split-phase reject from `.splitAfterFalse` reading a blank. -/
 private theorem verifyPairSplit_afterFalse_reject (c : Cfg 3 verifyPairTM.Q)
     (hst : c.state = .splitAfterFalse) (hread : c.input.read = Γ.blank)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', verifyPairTM.step c = some c' ∧ verifyPairTM.halted c' ∧
       c'.output.cells 1 = Γ.zero := by
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove Γw.zero (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
-    simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, hread, readBit?,
+    simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, hread, readBit?,
       verifyPairReject]
   refine ⟨c', hstep, rfl, ?_⟩
-  show (c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read)).cells 1 = Γ.zero
+  show (c.output.writeAndMove Γw.zero (TM.idleDir c.output.read)).cells 1 = Γ.zero
   rw [hout]
-  simp [Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, Tape.read,
-    _root_.Complexity.Tape.init, Γw.toΓ]
+  simp [Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, Tape.read,
+    Tape.init, Γw.toΓ]
 
 /-- A split-phase reject from `.splitAfterTrue` reading anything other than a
 second `true` (a blank, or a `0`). -/
 private theorem verifyPairSplit_afterTrue_reject (c : Cfg 3 verifyPairTM.Q)
     (hst : c.state = .splitAfterTrue)
     (hread : c.input.read = Γ.blank ∨ c.input.read = Γ.zero)
-    (hout : c.output = (_root_.Complexity.Tape.init []).move Dir3.right) :
+    (hout : c.output = (Tape.init []).move Dir3.right) :
     ∃ c', verifyPairTM.step c = some c' ∧ verifyPairTM.halted c' ∧
       c'.output.cells 1 = Γ.zero := by
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .done
-      input := c.input.move (_root_.Complexity.TM.idleDir c.input.read)
+      input := c.input.move (TM.idleDir c.input.read)
       work := fun i =>
-        (c.work i).writeAndMove (_root_.Complexity.TM.readBackWrite (c.work i).read)
-          (_root_.Complexity.TM.idleDir (c.work i).read)
-      output := c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read) }
+        (c.work i).writeAndMove (TM.readBackWrite (c.work i).read)
+          (TM.idleDir (c.work i).read)
+      output := c.output.writeAndMove Γw.zero (TM.idleDir c.output.read) }
   have hstep : verifyPairTM.step c = some c' := by
     rcases hread with h | h <;>
-      simp [c', verifyPairTM, _root_.Complexity.TM.step, verifyPairDelta, hst, h, readBit?,
+      simp [c', verifyPairTM, TM.step, verifyPairDelta, hst, h, readBit?,
         verifyPairReject]
   refine ⟨c', hstep, rfl, ?_⟩
-  show (c.output.writeAndMove Γw.zero (_root_.Complexity.TM.idleDir c.output.read)).cells 1 = Γ.zero
+  show (c.output.writeAndMove Γw.zero (TM.idleDir c.output.read)).cells 1 = Γ.zero
   rw [hout]
-  simp [Tape.writeAndMove, Tape.write, Tape.move, _root_.Complexity.TM.idleDir, Tape.read,
-    _root_.Complexity.Tape.init, Γw.toΓ]
+  simp [Tape.writeAndMove, Tape.write, Tape.move, TM.idleDir, Tape.read,
+    Tape.init, Γw.toΓ]
 
 /-- The split scan rejects every input that is not a valid `pair` encoding,
 mirroring the recursion of `unpair?`. -/
@@ -4978,7 +4973,7 @@ private theorem verifyPairSplit_scan_reject :
       unpair? suffix = none →
       hasBoolSuffix c.input suffix →
       (∀ i, (c.work i).head ≥ 1 ∧ ∀ j, j ≥ 1 → (c.work i).cells j ≠ Γ.start) →
-      c.output = (_root_.Complexity.Tape.init []).move Dir3.right →
+      c.output = (Tape.init []).move Dir3.right →
       ∃ c' t,
         t ≤ 2 * suffix.length + 2 ∧
         verifyPairTM.reachesIn t c c' ∧ verifyPairTM.halted c' ∧
@@ -4987,10 +4982,10 @@ private theorem verifyPairSplit_scan_reject :
   induction hlen : suffix.length using Nat.strong_induction_on generalizing suffix with
   | h n ih =>
     intro c hst hnone hsuf hwst hout
-    have hoh : c.output.head ≥ 1 := by rw [hout]; simp [Tape.move, _root_.Complexity.Tape.init]
+    have hoh : c.output.head ≥ 1 := by rw [hout]; simp [Tape.move, Tape.init]
     have hons : ∀ j, j ≥ 1 → c.output.cells j ≠ Γ.start := by
       rw [hout]; intro j hj; rw [Tape.move_cells]
-      cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+      cases j with | zero => omega | succ k => simp [Tape.init]
     cases suffix with
     | nil =>
         obtain ⟨c', hstep, hhalt, hz⟩ :=
@@ -5063,7 +5058,7 @@ private theorem verifyPairSplit_scan_reject :
               ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst' hnone2
                 hsuf' hwst' (by rw [hc'o]; exact hout)
             exact ⟨c'', 2 + t, by simp only [List.length_cons] at hlen; omega,
-              _root_.Complexity.TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
+              TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
           · -- false true: separator → `unpair?` succeeds, contradicting `hnone`
             simp [unpair?] at hnone
           · -- true false: reject (`.splitAfterTrue` reads `0`)
@@ -5115,7 +5110,7 @@ private theorem verifyPairSplit_scan_reject :
               ih rest2.length (by simp only [List.length_cons] at hlen; omega) rest2 rfl c' hst' hnone2
                 hsuf' hwst' (by rw [hc'o]; exact hout)
             exact ⟨c'', 2 + t, by simp only [List.length_cons] at hlen; omega,
-              _root_.Complexity.TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
+              TM.reachesIn_trans _ hr2 hr'', hhalt'', hz''⟩
 
 /-- **Reject (malformed input).** When `w` is not a valid `pair`, the split scan
 rejects, halting with output `0`. -/
@@ -5133,13 +5128,13 @@ private theorem verifyPairSplit_reject_malformed (w : List Bool)
     intro i
     match i with
     | ⟨0, _⟩ =>
-        refine ⟨by rw [hw01]; simp [Tape.move, _root_.Complexity.Tape.init], ?_⟩
+        refine ⟨by rw [hw01]; simp [Tape.move, Tape.init], ?_⟩
         rw [hw01]; intro j hj; rw [Tape.move_cells]
-        cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+        cases j with | zero => omega | succ k => simp [Tape.init]
     | ⟨1, _⟩ =>
-        refine ⟨by rw [hw11]; simp [Tape.move, _root_.Complexity.Tape.init], ?_⟩
+        refine ⟨by rw [hw11]; simp [Tape.move, Tape.init], ?_⟩
         rw [hw11]; intro j hj; rw [Tape.move_cells]
-        cases j with | zero => omega | succ k => simp [_root_.Complexity.Tape.init]
+        cases j with | zero => omega | succ k => simp [Tape.init]
     | ⟨2, _⟩ =>
         refine ⟨by rw [hu2h]; omega, ?_⟩
         intro j hj
@@ -5152,13 +5147,13 @@ private theorem verifyPairSplit_reject_malformed (w : List Bool)
             · rw [hu2blank k (by omega)]; decide
   obtain ⟨c', t, htb, hr', hhalt, hz⟩ :=
     verifyPairSplit_scan_reject w c1 hs1 hw
-      (by rw [hi1]; exact Tape.init_move_right_hasBoolSuffix w) hwst ho1
-  exact ⟨c', 2 + t, by omega, _root_.Complexity.TM.reachesIn_trans _ hr1 hr', hhalt, hz⟩
+      (by rw [hi1]; exact initTape_move_right_hasBoolSuffix w) hwst ho1
+  exact ⟨c', 2 + t, by omega, TM.reachesIn_trans _ hr1 hr', hhalt, hz⟩
 
-/-- **Combine.** `verifyPairTM` decides `pairLang R_SAT` within the quadratic
+/-- **Combine.** `verifyPairTM` decides `pairLang Witness` within the quadratic
 budget `verifyPairTMTime`. -/
 theorem verifyPairTM_decidesInTime :
-    verifyPairTM.DecidesInTime (pairLang R_SAT) verifyPairTMTime := by
+    verifyPairTM.DecidesInTime (pairLang Witness) verifyPairTMTime := by
   intro w
   obtain ⟨c', t, ht, hreach, hhalt, hout⟩ : ∃ c' t,
       t ≤ verifyPairTMTime w.length ∧
@@ -5212,7 +5207,7 @@ theorem verifyPairTM_decidesInTime :
       · exact h
     simp [hout, hb]
 
-end TM
+end VerifierTM
 
 end SAT
 

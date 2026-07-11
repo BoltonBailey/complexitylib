@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.CookLevin
 import Complexitylib.Models.TuringMachine.Registers.MixedRadix
 import Complexitylib.Models.TuringMachine.Registers.DecReg
-
-namespace Complexity
 
 /-!
 # The reduction emitter: clause and CNF machines
@@ -19,9 +22,11 @@ these with the concrete descriptor lists mirroring each family's
 definition.
 -/
 
+namespace Complexity
+
 namespace SAT
 
-open _root_.Complexity.TM
+open TM
 
 /-- The encoded word of one literal inside a clause (`Clause.encode_cons'`). -/
 def Lit.word (ℓ : Lit) : List Bool :=

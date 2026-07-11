@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Data.List.Basic
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Tactic.Linarith
-
-namespace Complexity
 
 /-!
 # SAT: Semantic Layer
@@ -35,6 +38,8 @@ the language closed under padding: a short satisfying assignment always
 exists, equal to a prefix of any longer one. This is essential for
 polynomial balance in the NP reduction.
 -/
+
+namespace Complexity
 
 namespace SAT
 
@@ -339,6 +344,18 @@ instance CNF.decidableSatisfiable (φ : CNF) : Decidable φ.Satisfiable := by
             List.getElem?_eq_none (by rw [hα'_len]; exact hi)]
   · rintro ⟨f, hf⟩
     exact ⟨List.ofFn f, by simp, hf⟩
+
+@[simp] theorem Clause.eval_append (α : Assignment) (c d : Clause) :
+    Clause.eval α (c ++ d) = (Clause.eval α c || Clause.eval α d) := by
+  induction c with
+  | nil => simp [Clause.eval]
+  | cons _ _ _ => simp [Clause.eval, List.any_cons, Bool.or_assoc]
+
+@[simp] theorem CNF.eval_append (α : Assignment) (φ ψ : CNF) :
+    CNF.eval α (φ ++ ψ) = (CNF.eval α φ && CNF.eval α ψ) := by
+  induction φ with
+  | nil => simp [CNF.eval]
+  | cons _ _ _ => simp [CNF.eval, List.all_cons, Bool.and_assoc]
 
 end SAT
 

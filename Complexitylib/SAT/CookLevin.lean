@@ -1,23 +1,26 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Headline
 import Complexitylib.SAT.Rename
 import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Models.TuringMachine.SingleTape
-
-namespace Complexity
 
 /-!
 # Cook–Levin tableau core
 
 This file defines the Cook–Levin tableau formula and proves its semantic
 correctness. The polynomial-time emitter, reductions, and final theorem
-`SAT.NPComplete_L_SAT` are assembled in `SAT/CookLevin/Assembly.lean`.
-Membership `L_SAT ∈ NP` is supplied by `SAT/Headline.lean`.
+`SAT.NPComplete_language` are assembled in `SAT/CookLevin/Assembly.lean`.
+Membership `language ∈ NP` is supplied by `SAT/Headline.lean`.
 
 ## Completed development
 
 ```
-NPComplete_L_SAT                       (= ⟨L_SAT_mem_NP, NPHard_L_SAT⟩)
-└ NPHard_L_SAT                         (unpack any L ∈ NP → its NTM)
+NPComplete_language                       (= ⟨language_mem_NP, NPHard_language⟩)
+└ NPHard_language                         (unpack any L ∈ NP → its NTM)
   └ cookLevin_reduction               (multi-tape → single-tape, then ↓)
     ├ NTM.exists_singleTape_decidesInTime   (SingleTape.lean)
     └ cookLevin_reduction_singleTape
@@ -34,6 +37,8 @@ NP-hardness/NP-completeness assembly live in `SAT/CookLevin/Assembly.lean`;
 the emitter implementation is split across the modules under
 `SAT/CookLevin/`.
 -/
+
+namespace Complexity
 
 open Complexity
 
@@ -100,10 +105,6 @@ theorem atLeastOne_eval (α : Assignment) (vars : List ℕ) :
   funext v
   simp [Lit.eval]
 
-/-- `CNF.eval` distributes over clause-list concatenation. -/
-theorem eval_append (α : Assignment) (φ ψ : CNF) :
-    CNF.eval α (φ ++ ψ) = (CNF.eval α φ && CNF.eval α ψ) := by
-  simp [CNF.eval, List.all_append]
 
 /-- The at-least-one clause is satisfied iff some listed variable is true (Prop form). -/
 theorem atLeastOne_sat (α : Assignment) (vars : List ℕ) :
@@ -117,7 +118,7 @@ theorem atMostOne_sat (α : Assignment) (vars : List ℕ) :
   induction vars with
   | nil => simp [atMostOne]
   | cons v vs ih =>
-    rw [atMostOne, eval_append, Bool.and_eq_true, ih, List.pairwise_cons]
+    rw [atMostOne, CNF.eval_append, Bool.and_eq_true, ih, List.pairwise_cons]
     refine and_congr ?_ Iff.rfl
     simp only [CNF.eval, List.all_map, List.all_eq_true]
     refine forall_congr' fun w => imp_congr Iff.rfl ?_
@@ -329,7 +330,7 @@ theorem startClauses_sat (N : NTM 1) (steps : ℕ) (x : List Bool) (α : Assignm
        (∀ tp, tp < 3 → α.get (vHead 0 tp 0) = true) ∧
        (∀ tp, tp < 3 → ∀ pos, pos ≤ steps + x.length + 1 →
          α.get (vCell 0 tp pos (symIdx (initCellSym x tp pos))) = true)) := by
-  simp only [startClauses, CNF.eval_cons, eval_append, unit_eval, cnf_eval_map,
+  simp only [startClauses, CNF.eval_cons, CNF.eval_append, unit_eval, cnf_eval_map,
     cnf_eval_flatMap, Bool.and_eq_true, List.all_eq_true, List.mem_range, Nat.lt_succ_iff]
 
 /-- The frame clauses hold iff, whenever a tape head is *not* at a position, that
@@ -426,7 +427,7 @@ theorem tableauCNF_eval_split (N : NTM 1) (steps : ℕ) (x : List Bool) (α : As
        CNF.eval α (Tableau.activeTransitionClauses N steps (steps + x.length + 1)) = true ∧
        CNF.eval α (Tableau.acceptClauses N steps) = true) := by
   rw [tableauCNF]
-  simp only [Tableau.eval_append, Bool.and_eq_true, and_assoc]
+  simp only [CNF.eval_append, Bool.and_eq_true, and_assoc]
 
 open Tableau in
 /-- `α` represents configuration `c` at time `t` (positions bounded by `P`): the
@@ -1231,9 +1232,9 @@ theorem tableauCNF_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool) :
     (tableauCNF N steps x).Satisfiable ↔ N.AcceptsInTime x steps :=
   ⟨tableau_sat_to_accepts N steps x, accepts_to_tableau_sat N steps x⟩
 
-/-- An encoded CNF is in `L_SAT` iff it is satisfiable (`CNF.encode` is injective,
+/-- An encoded CNF is in `language` iff it is satisfiable (`CNF.encode` is injective,
     via `CNF.decode?_encode`). -/
-theorem encode_mem_LSAT_iff (φ : CNF) : φ.encode ∈ L_SAT ↔ φ.Satisfiable := by
+theorem encode_mem_LSAT_iff (φ : CNF) : φ.encode ∈ language ↔ φ.Satisfiable := by
   constructor
   · rintro ⟨φ', hφ', hsat⟩
     have hφ : φ = φ' := by
@@ -1720,18 +1721,18 @@ theorem tableauCNFFlat_satisfiable_iff (N : NTM 1) (steps : ℕ) (x : List Bool)
 noncomputable def reductionFn (N : NTM 1) (T : ℕ → ℕ) : List Bool → List Bool :=
   fun x => (tableauCNFFlat N (T x.length) x).encode
 
-/-- **The reduction is correct.** `x ∈ L` iff the reduction output is in `L_SAT`,
+/-- **The reduction is correct.** `x ∈ L` iff the reduction output is in `language`,
     combining the tableau characterization with `N` deciding `L`. -/
 theorem tableauCNF_correct {L : Language} (N : NTM 1) (T : ℕ → ℕ)
     (hdec : N.DecidesInTime L T) (x : List Bool) :
-    x ∈ L ↔ reductionFn N T x ∈ L_SAT := by
+    x ∈ L ↔ reductionFn N T x ∈ language := by
   unfold reductionFn
   rw [encode_mem_LSAT_iff, tableauCNFFlat_satisfiable_iff]
   exact hdec.2 x
 
 /-! The reduction machine, its polynomial running time, and the headline
-theorems `reductionFn_mem_FP`, `cookLevin_reduction`, `NPHard_L_SAT`, and
-`NPComplete_L_SAT` live in `Complexitylib.SAT.CookLevin.Assembly`, built on
+theorems `reductionFn_mem_FP`, `cookLevin_reduction`, `NPHard_language`, and
+`NPComplete_language` live in `Complexitylib.SAT.CookLevin.Assembly`, built on
 the emitter development under `Complexitylib.SAT.CookLevin/`. -/
 
 end SAT

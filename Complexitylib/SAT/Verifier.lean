@@ -1,11 +1,14 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Language
-
-namespace Complexity
 
 /-!
 # SAT verifier specification
 
-This file defines an executable verifier for `pairLang R_SAT`:
+This file defines an executable verifier for `pairLang Witness`:
 
 1. split `pair(z, α)` back into `(z, α)` via `unpair?`,
 2. decode `z` as a CNF in SAT's concrete bit encoding,
@@ -13,9 +16,11 @@ This file defines an executable verifier for `pairLang R_SAT`:
 4. evaluate the decoded formula under `α`.
 
 The deterministic implementation `verifyPairTM` in `SAT/VerifierTM.lean`
-computes this specification and proves `pairLang R_SAT ∈ P`; this file is
+computes this specification and proves `pairLang Witness ∈ P`; this file is
 the small executable/semantic audit surface for that machine proof.
 -/
+
+namespace Complexity
 
 namespace SAT
 
@@ -370,14 +375,14 @@ def verifyPair (w : List Bool) : Bool :=
     verifyPair (pair φ.encode α) = (decide (α.length ≤ φ.encode.length + 1) && CNF.eval α φ) := by
   simp [verifyPair, CNF.decode?_encode]
 
-theorem verifyPair_true_of_R_SAT {z α : List Bool} (hR : R_SAT z α) :
+theorem verifyPair_true_of_witness {z α : List Bool} (hR : Witness z α) :
     verifyPair (pair z α) = true := by
   obtain ⟨φ, hz, hlen, heval⟩ := hR
   subst hz
   simp [verifyPair_pair_encode, hlen, heval]
 
 theorem verifyPair_eq_true_iff_mem_pairLang (w : List Bool) :
-    verifyPair w = true ↔ w ∈ pairLang R_SAT := by
+    verifyPair w = true ↔ w ∈ pairLang Witness := by
   constructor
   · intro h
     unfold verifyPair at h
@@ -399,14 +404,14 @@ theorem verifyPair_eq_true_iff_mem_pairLang (w : List Bool) :
             refine ⟨z, α, hw, ?_⟩
             exact ⟨φ, hz, hlen, h.2⟩
   · rintro ⟨z, α, rfl, hR⟩
-    exact verifyPair_true_of_R_SAT hR
+    exact verifyPair_true_of_witness hR
 
 theorem mem_pairLang_iff_verifyPair (w : List Bool) :
-    w ∈ pairLang R_SAT ↔ verifyPair w = true := by
+    w ∈ pairLang Witness ↔ verifyPair w = true := by
   rw [verifyPair_eq_true_iff_mem_pairLang]
 
-theorem pairLang_R_SAT_eq_verifyPairLang :
-    pairLang R_SAT = {w | verifyPair w = true} := by
+theorem pairLang_witness_eq_verifyPairLang :
+    pairLang Witness = {w | verifyPair w = true} := by
   ext w
   exact mem_pairLang_iff_verifyPair w
 
