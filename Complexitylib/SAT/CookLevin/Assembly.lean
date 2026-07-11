@@ -1,5 +1,7 @@
 import Complexitylib.SAT.CookLevin.EmitterActive
 
+namespace Complexity
+
 /-!
 # The reduction emitter, assembled
 
@@ -13,7 +15,7 @@ namespace SAT
 
 open Complexity
 
-open _root_.TM Tableau
+open _root_.Complexity.TM Tableau
 
 open Emit
 
@@ -1073,3 +1075,5 @@ theorem NPComplete_L_SAT : NPComplete L_SAT :=
   ⟨L_SAT_mem_NP, NPHard_L_SAT⟩
 
 end SAT
+
+end Complexity

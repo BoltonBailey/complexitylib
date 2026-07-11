@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyInternal
 import Complexitylib.Models.TuringMachine.UTM.VTape
 
+namespace Complexity
+
 /-!
 # Body machine: peek, default-move, and apply phases
 
@@ -903,3 +905,5 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
   · exact (hoth₅ dsT (by decide) (by decide)).trans hDs₄
 
 end TM.UTMBody
+
+end Complexity

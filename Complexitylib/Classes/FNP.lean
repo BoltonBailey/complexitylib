@@ -1,6 +1,8 @@
 import Complexitylib.Classes.FNP.Defs
 import Complexitylib.Classes.FNP.Internal
 
+namespace Complexity
+
 /-!
 # FNP and TFNP
 
@@ -32,3 +34,5 @@ theorem tfnp_of_np_conp_witnesses
     exact ⟨w, Or.inl hw⟩
   · obtain ⟨w, hw⟩ := (h_nmem x).mp hx
     exact ⟨w, Or.inr hw⟩
+
+end Complexity

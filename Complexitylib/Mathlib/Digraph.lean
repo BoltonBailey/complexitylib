@@ -2,12 +2,17 @@ import Mathlib.Combinatorics.Digraph.Basic
 import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Nat.Lattice
 
-/-! # Basic digraph definitions
+/-! # Digraph extensions for Mathlib
 
 General-purpose definitions on top of Mathlib's `Digraph`: directed walks
 and simple paths, `depth` (longest walk length), `IsAcyclic`, the
 `edgeFinset` of a digraph with decidable adjacency on a finite vertex
 type, and `deleteEdges`.
+
+This file lives in `Complexitylib/Mathlib/` because it extends a Mathlib
+type in its home (root) namespace — the one sanctioned exception to the
+`Complexity` root-namespace rule. Its contents are candidates for
+upstreaming to Mathlib.
 
 Depth-reduction-specific machinery (canonical labeling, acyclicity
 arguments, edge partitions by first-differing bit, etc.) lives in

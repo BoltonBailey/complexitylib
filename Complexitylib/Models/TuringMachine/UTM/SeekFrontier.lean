@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.UTM.Clock
 
+namespace Complexity
+
 /-!
 # Frontier-seeking clock machine for the time-bounded universal machine
 
@@ -359,3 +361,5 @@ theorem seekFrontierTM_hoareTime (V : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → 
       exact (max_eq_left hV).symm
 
 end TM
+
+end Complexity

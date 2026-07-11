@@ -2,6 +2,8 @@ import Complexitylib.SAT.CookLevin
 import Complexitylib.Models.TuringMachine.MixedRadix
 import Complexitylib.Models.TuringMachine.DecReg
 
+namespace Complexity
+
 /-!
 # The reduction emitter: clause and CNF machines
 
@@ -19,7 +21,7 @@ definition.
 
 namespace SAT
 
-open _root_.TM
+open _root_.Complexity.TM
 
 /-- The encoded word of one literal inside a clause (`Clause.encode_cons'`). -/
 def Lit.word (ℓ : Lit) : List Bool :=
@@ -312,3 +314,5 @@ theorem emitCNFTM_hoareTime
 end Context
 
 end SAT
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.BitString
 import Mathlib.Algebra.Polynomial.Eval.Defs
 
+namespace Complexity
+
 /-!
 # Boolean circuit families — definitions
 
@@ -90,3 +92,5 @@ def Computes (F : CircuitFamily B) (f : BoolFunFamily) : Prop :=
   F.function = f
 
 end CircuitFamily
+
+end Complexity

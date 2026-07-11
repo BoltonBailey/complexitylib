@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 import Complexitylib.Classes.Time
 
+namespace Complexity
+
 /-!
 # Randomized complexity classes
 
@@ -98,3 +100,5 @@ def PPTIME (T : ℕ → ℕ) : Set Language :=
     by a PTM in polynomial time with unbounded error: `PP = ⋃_k PPTIME(n^k)`. -/
 def PP : Set Language :=
   ⋃ k : ℕ, PPTIME (· ^ k)
+
+end Complexity

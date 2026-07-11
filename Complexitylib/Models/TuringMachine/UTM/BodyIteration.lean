@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyLoop
 import Complexitylib.Models.TuringMachine.UTM.StepGlue
 
+namespace Complexity
+
 /-!
 # Body correctness: the per-iteration theorem
 
@@ -434,3 +436,5 @@ theorem bodyIteration (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
           exact hvout'
 
 end TM.UTMBody
+
+end Complexity

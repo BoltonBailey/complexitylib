@@ -2,6 +2,8 @@ import Complexitylib.Circuits.Basic
 import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Data.Fintype.BigOperators
 
+namespace Complexity
+
 /-! # Nondeterministic Quantification of Boolean Functions
 
 This module defines existential and universal quantification over
@@ -159,3 +161,5 @@ theorem existQuantify_succ (f : BitString ((k + 1) + m) → Bool) (y : BitString
         split_ifs <;> simp_all <;> try omega
         · exfalso; simp_all [Fin.castLT]
         · congr 1; simp [Fin.ext_iff]; omega⟩
+
+end Complexity

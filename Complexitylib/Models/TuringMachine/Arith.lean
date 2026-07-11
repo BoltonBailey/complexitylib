@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.ForReg
 
+namespace Complexity
+
 /-!
 # Derived register arithmetic
 
@@ -273,3 +275,5 @@ theorem iterInc_hoareTime (q : Fin n) (c : ℕ) :
       omega
 
 end TM
+
+end Complexity

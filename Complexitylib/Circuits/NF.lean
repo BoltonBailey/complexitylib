@@ -2,6 +2,8 @@ import Complexitylib.Circuits.NF.Defs
 import Complexitylib.Circuits.Internal.NF
 import Complexitylib.Circuits.XOR
 
+namespace Complexity
+
 /-! # Normal Forms: CNF/DNF Lower Bound for XOR
 
 Any CNF or DNF formula computing the N-input XOR function requires at least
@@ -43,3 +45,5 @@ theorem CNF.xorBool_complexity_lb (φ : CNF N) (hN : 1 ≤ N)
   · intro x; rw [CNF.eval_neg, hcomp]
   · intro x i
     rw [Schnorr.xorBool_flip, Bool.not_not]
+
+end Complexity

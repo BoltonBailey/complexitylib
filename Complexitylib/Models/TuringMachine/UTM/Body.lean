@@ -9,6 +9,8 @@ import Mathlib.Data.Fintype.Prod
 import Mathlib.Data.Fintype.Option
 import Mathlib.Data.Fintype.Sum
 
+namespace Complexity
+
 /-!
 # The universal machine's loop body
 
@@ -381,3 +383,5 @@ def bodyTM : TM 6 where
     exact mkAct_right_of_start q' iH wH oH acts
 
 end TM.UTMBody
+
+end Complexity

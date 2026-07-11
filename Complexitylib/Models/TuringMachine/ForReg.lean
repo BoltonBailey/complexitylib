@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.RegisterOps
 
+namespace Complexity
+
 /-!
 # forRegTM: the register-fueled loop combinator
 
@@ -503,3 +505,5 @@ theorem forRegTM_hoareTime (body : TM n) (r : Fin n) (v : ℕ) (inp₀ : Tape)
 end ForReg
 
 end TM
+
+end Complexity

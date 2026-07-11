@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine
 
+namespace Complexity
+
 /-!
 # Single-tape simulation — encoding internals
 
@@ -334,3 +336,5 @@ theorem SimInvAt.materialized_ne_start {k : ℕ} {t : Tape} {w : Fin k → Tape}
     rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_start _).2
 
 end NTM.SingleTape
+
+end Complexity

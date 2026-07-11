@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Registers
 import Complexitylib.Models.TuringMachine.Hoare
 
+namespace Complexity
+
 /-!
 # Output-emission subroutines
 
@@ -809,3 +811,5 @@ theorem emitLitTM_hoareTime (s : Bool) (r : Fin n) (v : ℕ) (inp₀ : Tape)
     ← List.append_assoc [s, s]] at hout
 
 end TM
+
+end Complexity

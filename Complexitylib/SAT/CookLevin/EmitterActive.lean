@@ -1,5 +1,7 @@
 import Complexitylib.SAT.CookLevin.EmitterStart
 
+namespace Complexity
+
 /-!
 # The active-transition family emitter
 
@@ -13,7 +15,7 @@ positions are runtime loops.
 
 namespace SAT
 
-open _root_.TM Tableau
+open _root_.Complexity.TM Tableau
 
 open Emit
 
@@ -1794,3 +1796,5 @@ theorem emitActiveTM_hoareTime (Qc steps P M : ℕ)
 end ActiveContext
 
 end SAT
+
+end Complexity

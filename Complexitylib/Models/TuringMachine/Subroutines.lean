@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Combinators
 
+namespace Complexity
+
 /-!
 # TM Subroutines
 
@@ -410,3 +412,5 @@ def compareWorkTapesTM (idx₁ idx₂ : Fin n) : TM n where
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 end TM
+
+end Complexity

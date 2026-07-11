@@ -1,5 +1,7 @@
 import Mathlib.Data.Real.Basic
 
+namespace Complexity
+
 /-!
 # Negligible functions
 
@@ -12,3 +14,5 @@ polynomial. This is the standard notion used in cryptographic definitions.
     ensuring `n > 0` and `1/n^c` is well-defined. -/
 def Negligible (f : ℕ → ℝ) : Prop :=
   ∀ c : ℕ, ∃ N : ℕ, 0 < N ∧ ∀ n ≥ N, |f n| < 1 / (n : ℝ) ^ c
+
+end Complexity

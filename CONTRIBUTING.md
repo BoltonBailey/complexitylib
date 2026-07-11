@@ -91,8 +91,19 @@ Add yourself to `Authors:` when you make a substantial contribution to a file.
 - Every declaration lives under the `Complexity` root namespace. No library
   declaration may sit at the top level: bare names like `TM` or `Language`
   collide with Mathlib and pollute downstream scopes.
+- The one exception is `Complexitylib/Mathlib/`: files there extend Mathlib
+  types in their home (root) namespaces — dot-notation requires it — and are
+  candidates for upstreaming. Nothing complexity-specific may live there.
 - Namespaces are `UpperCamelCase`, matching the type they extend
   (`Complexity.TM`, `Complexity.Circuit`). Never lowercase.
+- Never name a nested namespace after an existing higher-level one: a
+  `namespace TM` block inside `SAT` creates `SAT.TM`, which shadows every
+  reference to the real `TM.*` API and forces `_root_.` escapes. Pick a
+  distinct name (`SAT.VerifierTM`, `Circuit.Encoding`, …).
+- Do not declare into a foreign namespace with `_root_.` from inside another
+  namespace; extend an API in its home namespace block, in the module that
+  owns it. `_root_.` is a last resort for genuine ambiguity and needs an
+  adjacent comment. The style linter tracks (`rootEscape`) and shrinks its use.
 
 ### Naming
 

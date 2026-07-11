@@ -2,6 +2,8 @@ import Complexitylib.Classes.P
 import Complexitylib.Classes.Containments
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
+namespace Complexity
+
 /-!
 # Trivial languages: `∅` and `Set.univ`
 
@@ -126,3 +128,5 @@ theorem empty_mem_EXP : Language.empty ∈ EXP := P_sub_EXP empty_mem_P
 
 /-- **`Set.univ ∈ EXP`.** -/
 theorem univ_mem_EXP : Language.univ ∈ EXP := P_sub_EXP univ_mem_P
+
+end Complexity

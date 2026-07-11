@@ -2,6 +2,8 @@ import Complexitylib.Circuits.NF.Defs
 import Complexitylib.Circuits.AON.Defs
 import Mathlib.Data.Fintype.BigOperators
 
+namespace Complexity
+
 /-! # Internal: Normal Form Proof Machinery
 
 This internal module contains the proof infrastructure for CNF/DNF:
@@ -385,3 +387,5 @@ theorem DNF.flip_complexity_lb (φ : DNF N) (hN : 1 ≤ N)
     rw [show (φ.terms[φ.terms.findIdx (fun t => t.all (fun l => l.eval x₁))]'hlt₁) =
         (φ.terms[k]'hlt) from by congr 1] at sat₁
     exact huniq _ (List.getElem_mem ..) x₁ x₂ sat₁ sat₂
+
+end Complexity

@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Internal.AON
 
+namespace Complexity
+
 /-! # Internal: Completeness of fan-in-2 AND/OR
 
 This module proves `CompleteBasis Basis.andOr2` using the generic simulation
@@ -885,3 +887,5 @@ end CompileAON
 instance : CompleteBasis Basis.andOr2 :=
   CompleteBasis.of_simulation Basis.unboundedAON Basis.andOr2
     fun c => ⟨CompileAON.G' c, CompileAON.compileFn c, CompileAON.compile_eval c⟩
+
+end Complexity

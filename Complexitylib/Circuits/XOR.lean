@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Basic
 
+namespace Complexity
+
 /-! # XOR (Parity) Function
 
 This module defines the N-input XOR function and its key properties.
@@ -57,3 +59,5 @@ theorem xorBool_essential (N : Nat) (a : Fin N) (x : BitString N) :
   rw [xorBool_flip]; cases xorBool N x <;> simp
 
 end Schnorr
+
+end Complexity

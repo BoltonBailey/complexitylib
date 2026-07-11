@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
 
+namespace Complexity
+
 /-!
 # `containsZero` and `containsOne`: "contains-a-bit" languages
 
@@ -126,3 +128,5 @@ theorem containsOne_mem_P : Language.containsOne ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ containsOne_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

@@ -3,6 +3,8 @@ import Complexitylib.Classes.Space
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
 
+namespace Complexity
+
 /-!
 # Simultaneous time-space complexity classes
 
@@ -27,3 +29,5 @@ def DTISP (T S : ℕ → ℕ) : Set Language :=
     `SC = ⋃_{k,j} DTISP(n^k, (log n)^j)`. -/
 def SC : Set Language :=
   ⋃ k : ℕ, ⋃ j : ℕ, DTISP (· ^ k) (fun n => (Nat.log 2 n) ^ j)
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Internal
 
+namespace Complexity
+
 /-!
 # Hoare-style specifications for Turing machines
 
@@ -361,3 +363,5 @@ theorem HoareTime.toNTM {tm : TM n} {pre post : TapePred n} {b : ℕ}
     exact htrace ▸ hpost
 
 end TM
+
+end Complexity

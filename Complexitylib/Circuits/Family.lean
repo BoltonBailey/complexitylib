@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Family.Defs
 import Complexitylib.Asymptotics
 
+namespace Complexity
+
 /-!
 # Boolean circuit families
 
@@ -127,3 +129,5 @@ theorem Computes.evalList {F : CircuitFamily B} {f : BoolFunFamily}
   h.apply x.length x.get
 
 end CircuitFamily
+
+end Complexity

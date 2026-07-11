@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.XOR
 import Complexitylib.Circuits.Internal.Bridge
 
+namespace Complexity
+
 /-! # Schnorr's Lower Bound for XOR Circuits
 
 Any fan-in-2 AND/OR circuit computing the N-input XOR function (or its
@@ -46,3 +48,5 @@ theorem schnorr_size_complexity (N : Nat) [NeZero N] (hN : 1 ≤ N)
     intro x; simp [congr_fun hc x]
   have hbound := schnorr_lower_bound_circuit N G c false heval hN
   rw [Circuit.size] at hs; omega
+
+end Complexity

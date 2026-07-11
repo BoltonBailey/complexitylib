@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal
 import Mathlib.Analysis.Asymptotics.Defs
 
+namespace Complexity
+
 /-!
 # P closure properties — proof internals
 
@@ -136,3 +138,5 @@ theorem bigO_union_bound {f₁ f₂ T₁ T₂ : ℕ → ℕ}
     (ho₁ : f₁ =O T₁) (ho₂ : f₂ =O T₂) :
     (fun n => 10 * f₁ n + f₂ n) =O (fun n => T₁ n + T₂ n) :=
   BigO.const_mul_add 10 ho₁ ho₂
+
+end Complexity

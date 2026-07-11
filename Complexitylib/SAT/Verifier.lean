@@ -1,5 +1,7 @@
 import Complexitylib.SAT.Language
 
+namespace Complexity
+
 /-!
 # SAT verifier specification
 
@@ -409,3 +411,5 @@ theorem pairLang_R_SAT_eq_verifyPairLang :
   exact mem_pairLang_iff_verifyPair w
 
 end SAT
+
+end Complexity

@@ -2,6 +2,8 @@ import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.Encoding.Internal.Codec
 import Complexitylib.Circuits.Internal.CircuitToDesc
 
+namespace Complexity
+
 /-!
 # Internal: semantics of encoded fan-in-two circuits
 
@@ -238,3 +240,5 @@ theorem evalCode_encodeCircuit_of_length_internal {N G : ℕ} [NeZero N]
   simpa using evalCode_encodeCircuit_internal c (BitString.ofList input hinput)
 
 end AONCircuitCode
+
+end Complexity

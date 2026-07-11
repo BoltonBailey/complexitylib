@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Mathlib.Data.Finset.Lattice.Fold
 
+namespace Complexity
+
 /-!
 # TM–NTM embedding: proof internals
 
@@ -277,3 +279,5 @@ theorem TM.toNTM_decidesInSpace (tm : TM n) {L : Language} {f : ℕ → ℕ}
     have hreach := tm.toNTM_trace_reaches (tm.initCfg x) t'
       (fun j : Fin t' => choices ⟨j.val, by omega⟩)
     exact h.1 x _ hreach i
+
+end Complexity

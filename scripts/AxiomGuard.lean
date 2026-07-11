@@ -28,21 +28,21 @@ def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 /-- The library's headline theorems, fully qualified. -/
 def headlineTheorems : List Name := [
   -- Cook–Levin / NP-completeness
-  `SAT.NPComplete_L_SAT,
-  `SAT.L_SAT_mem_NP,
-  `SAT.pairLang_R_SAT_mem_P,
+  `Complexity.SAT.NPComplete_L_SAT,
+  `Complexity.SAT.L_SAT_mem_NP,
+  `Complexity.SAT.pairLang_R_SAT_mem_P,
   -- Universal machine
-  `TM.UTMBody.utmTM_universal,
-  `TM.UTMBody.utmTM_universal_padded,
+  `Complexity.TM.UTMBody.utmTM_universal,
+  `Complexity.TM.UTMBody.utmTM_universal_padded,
   -- Time hierarchy
-  `time_hierarchy_weak,
-  `time_hierarchy_weak_ssubset,
-  `DTIME_pow_ssubset,
+  `Complexity.time_hierarchy_weak,
+  `Complexity.time_hierarchy_weak_ssubset,
+  `Complexity.DTIME_pow_ssubset,
   -- Structural containments
-  `P_sub_NP,
-  `P_sub_PSPACE,
-  `RP_sub_NP,
-  `BPP_sub_PP
+  `Complexity.P_sub_NP,
+  `Complexity.P_sub_PSPACE,
+  `Complexity.RP_sub_NP,
+  `Complexity.BPP_sub_PP
 ]
 
 open Elab Command in

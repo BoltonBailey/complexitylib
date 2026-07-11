@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.UTM.Sim
 import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
 import Complexitylib.Models.TuringMachine.Hoare
 
+namespace Complexity
+
 /-!
 # Universal machine: the simulate/halt-test loop
 
@@ -748,3 +750,5 @@ theorem utmTM_hoareTime (α x : List Bool) (hterm : TerminatedRegion α)
     simp [initTape, show j ≠ 0 by omega]
 
 end TM.UTMBody
+
+end Complexity

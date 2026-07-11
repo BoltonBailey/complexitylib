@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.EmitSeq
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Algebra.Polynomial.Eval.Degree
 
+namespace Complexity
+
 /-!
 # Horner layers: polynomial register evaluation
 
@@ -588,3 +590,5 @@ theorem polyEvalTM_hoareTime (X tmp tmp2 : Fin n)
   rw [g2, hA, Function.update_comm htt2, Function.update_idem]
 
 end TM
+
+end Complexity

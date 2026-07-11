@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.UTM.Interp
 import Complexitylib.Models.TuringMachine.UTM.Bits
 import Complexitylib.Models.TuringMachine.UTM.HaltTest
 
+namespace Complexity
+
 /-!
 # Halt-test verdict correspondence
 
@@ -99,3 +101,5 @@ theorem verdict_running (α : List Bool) {q : ℕ}
       omega
 
 end TM.UTMBody
+
+end Complexity

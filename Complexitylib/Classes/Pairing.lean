@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Mathlib.Algebra.Polynomial.Eval.Defs
 
+namespace Complexity
+
 /-!
 # Pairing and relation predicates
 
@@ -145,3 +147,5 @@ def PolyBalanced (R : List Bool → List Bool → Prop) : Prop :=
     the set of encoded pairs `pair(x, y)` such that `R x y` holds. -/
 def pairLang (R : List Bool → List Bool → Prop) : Language :=
   {z | ∃ x y, z = pair x y ∧ R x y}
+
+end Complexity

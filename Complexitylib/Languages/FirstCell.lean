@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # Languages determined by the first input cell
 
@@ -328,3 +330,5 @@ theorem nonempty_mem_P_via_compl : Language.nonempty ∈ P := by
 theorem nonempty_mem_P_via_union : Language.nonempty ∈ P := by
   rw [← firstBitZero_union_firstBitOne_eq_nonempty]
   exact P_union firstBitZero_mem_P firstBitOne_mem_P
+
+end Complexity

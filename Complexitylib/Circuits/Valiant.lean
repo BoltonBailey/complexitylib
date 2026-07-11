@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Internal.Valiant
 
+namespace Complexity
+
 /-! # Valiant's Depth Reduction Lemma
 
 The **length** of a directed path is the number of nodes in it. The
@@ -79,3 +81,5 @@ theorem depth_reduction
     exact Nat.zero_le _
 
 end Valiant
+
+end Complexity

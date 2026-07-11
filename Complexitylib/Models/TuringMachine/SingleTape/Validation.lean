@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.SingleTape.Delta
 
+namespace Complexity
+
 /-!
 # Single-tape simulation — executable validation (regression suite)
 
@@ -122,3 +124,5 @@ def N3 : NTM 1 where
 #guard nResult N3 30 = Γ.one
 
 end NTM.SingleTape.Validation
+
+end Complexity

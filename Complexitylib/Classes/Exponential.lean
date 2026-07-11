@@ -1,5 +1,7 @@
 import Complexitylib.Classes.Time
 
+namespace Complexity
+
 /-!
 # Exponential time complexity classes
 
@@ -16,3 +18,5 @@ def EXP : Set Language :=
     exponential time: `NEXP = ⋃_k NTIME(2^(n^k))`. -/
 def NEXP : Set Language :=
   ⋃ k : ℕ, NTIME (fun n => 2 ^ n ^ k)
+
+end Complexity

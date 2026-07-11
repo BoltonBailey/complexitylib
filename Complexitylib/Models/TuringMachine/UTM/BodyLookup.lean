@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.Verdict
 import Complexitylib.Models.TuringMachine.UTM.BodyApply
 
+namespace Complexity
+
 /-!
 # Match-loop ↔ lookup correspondence (pure list level)
 
@@ -527,3 +529,5 @@ theorem value_slices {w : ℕ} {seg : List Γw} {e : DescEntry}
     rw [hgrp (2 * w + 14) (2 * w + 15) (by omega) (by omega), ← grpDir_eq_decDir]
 
 end TM.UTMBody
+
+end Complexity

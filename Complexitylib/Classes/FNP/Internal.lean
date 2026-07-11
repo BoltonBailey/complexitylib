@@ -2,6 +2,8 @@ import Complexitylib.Classes.FNP.Defs
 import Complexitylib.Classes.P
 import Mathlib.Analysis.Asymptotics.Defs
 
+namespace Complexity
+
 /-!
 # FNP and TFNP — Internal proofs
 
@@ -57,3 +59,5 @@ theorem tagRelation_in_FNP {R₁ R₂ : List Bool → List Bool → Prop}
     (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP) :
     tagRelation R₁ R₂ ∈ FNP :=
   ⟨tagRelation_polyBalanced hR₁.1 hR₂.1, tagRelation_pairLang_in_P hR₁.2 hR₂.2⟩
+
+end Complexity

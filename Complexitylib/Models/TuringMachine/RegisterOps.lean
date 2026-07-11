@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Emit
 
+namespace Complexity
+
 /-!
 # Register operations
 
@@ -906,3 +908,5 @@ theorem clearRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape) (work₀ : Fi
 end ClearReg
 
 end TM
+
+end Complexity

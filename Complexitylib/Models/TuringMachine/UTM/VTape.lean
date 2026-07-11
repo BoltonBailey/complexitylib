@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine
 
+namespace Complexity
+
 /-!
 # Virtual tapes: the +1 shift representation
 
@@ -41,15 +43,15 @@ namespace TM
 /-- Cell 0 is `▷` and no other cell is: the standing shape of every tape
     reachable from an initial configuration (writes exclude `▷` and cell 0
     is immutable). -/
-def _root_.Tape.WFCells (t : Tape) : Prop :=
+def _root_.Complexity.Tape.WFCells (t : Tape) : Prop :=
   t.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
 
 /-- Compatibility alias for the core `Tape.write_head` theorem. -/
-theorem _root_.Tape.write_head' (t : Tape) (s : Γ) : (t.write s).head = t.head := by
+theorem _root_.Complexity.Tape.write_head' (t : Tape) (s : Γ) : (t.write s).head = t.head := by
   exact t.write_head s
 
 /-- Writing (any `Γw` symbol) preserves `WFCells`. -/
-theorem _root_.Tape.WFCells.write {t : Tape} (h : t.WFCells) (s : Γw) :
+theorem _root_.Complexity.Tape.WFCells.write {t : Tape} (h : t.WFCells) (s : Γw) :
     (t.write s.toΓ).WFCells := by
   unfold Tape.write
   split
@@ -66,11 +68,11 @@ theorem _root_.Tape.WFCells.write {t : Tape} (h : t.WFCells) (s : Γw) :
       · rw [Function.update_of_ne hje]; exact h.2 j hj
 
 /-- Moving preserves `WFCells` (cells unchanged). -/
-theorem _root_.Tape.WFCells.move {t : Tape} (h : t.WFCells) (d : Dir3) :
+theorem _root_.Complexity.Tape.WFCells.move {t : Tape} (h : t.WFCells) (d : Dir3) :
     (t.move d).WFCells := by
   cases d <;> exact h
 
-theorem _root_.Tape.WFCells.writeAndMove {t : Tape} (h : t.WFCells) (s : Γw) (d : Dir3) :
+theorem _root_.Complexity.Tape.WFCells.writeAndMove {t : Tape} (h : t.WFCells) (s : Γw) (d : Dir3) :
     (t.writeAndMove s.toΓ d).WFCells :=
   (h.write s).move d
 
@@ -216,7 +218,7 @@ theorem writeAndMove {sim utm : Tape} (h : VShift sim utm) (s : Γw) (d : Dir3)
 /-- The initial correspondence: the simulated initial tape (contents `l`)
     is shadowed by `▷ □ l ⋯` with head at cell 1. -/
 theorem initTape (l : List Γ) :
-    VShift (_root_.initTape l)
+    VShift (_root_.Complexity.initTape l)
       ⟨1, fun k => if k = 0 then Γ.start else if k = 1 then Γ.blank
         else ((l[k - 2]?).getD Γ.blank)⟩ := by
   refine ⟨?_, rfl⟩
@@ -225,7 +227,7 @@ theorem initTape (l : List Γ) :
   · simp [hk0]
   · by_cases hk1 : k = 1
     · simp [hk1]
-    · simp only [hk0, hk1, if_false, _root_.initTape,
+    · simp only [hk0, hk1, if_false, _root_.Complexity.initTape,
         show k - 1 ≠ 0 by omega, show k - 1 - 1 = k - 2 by omega]
 
 end VShift
@@ -237,7 +239,7 @@ end VShift
 /-- The tape holds exactly `syms` after `▷`: cell `i+1` is `syms[i]` for
     `i < |syms|` and `□` beyond. Used for the UTM's state, description, and
     scratch tapes, whose contents are fully determined. -/
-def _root_.Tape.HoldsExact (t : Tape) (syms : List Γw) : Prop :=
+def _root_.Complexity.Tape.HoldsExact (t : Tape) (syms : List Γw) : Prop :=
   t.cells 0 = Γ.start ∧
   ∀ i : ℕ, t.cells (i + 1) = if h : i < syms.length then (syms[i]).toΓ else Γ.blank
 
@@ -276,3 +278,5 @@ theorem initTape_nil : (initTape []).HoldsExact [] := by
 end Tape.HoldsExact
 
 end TM
+
+end Complexity

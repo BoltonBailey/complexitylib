@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Nondeterminism.Defs
 import Complexitylib.Circuits.Internal.ShannonUpper
 
+namespace Complexity
+
 /-! # Internal: Nondeterministic Quantification Circuit Constructions
 
 This internal module provides the circuit constructions needed for the
@@ -265,3 +267,5 @@ theorem restrictCircuit_eval {G : Nat} [NeZero m] (b : Bool)
   intro i hi hip
   have := wireValue_restrict b c x i (by omega) hip
   convert this using 2
+
+end Complexity

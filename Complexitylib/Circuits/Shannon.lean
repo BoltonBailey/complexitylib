@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Internal.Bridge
 import Complexitylib.Circuits.Internal.ShannonUpper
 
+namespace Complexity
+
 /-! # Shannon Bounds
 
 For `N ≥ 6`, there exists a Boolean function on `N` inputs that cannot be
@@ -60,3 +62,5 @@ theorem shannon_upper_bound [CompleteBasis Basis.andOr2]
     Circuit.size_complexity Basis.andOr2 f ≤ 18 * 2 ^ N / N := by
   obtain ⟨G, c, heval, hsize⟩ := ShannonUpper.shannon_construction N hN f
   exact le_trans (Circuit.size_complexity_le c f heval) hsize
+
+end Complexity

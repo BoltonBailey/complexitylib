@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Internal
 import Complexitylib.Models.TuringMachine.SingleTape
 
+namespace Complexity
+
 /-!
 # Deterministic NTMs → DTMs
 
@@ -331,3 +333,5 @@ theorem TM.exists_singleTape_toTM {k : ℕ} (M : TM k) {L : Language} {T : ℕ �
       NTM.toTM_decidesInTime (NTM.singleTapeSim_deterministic hdet)
         (NTM.singleTapeSim_decides M.toNTM hk hN)
         (NTM.singleTapeSim_rejectsWithZero hk hN.1 hrej)⟩
+
+end Complexity

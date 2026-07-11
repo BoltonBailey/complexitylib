@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # Correctness of the generic finite-state scanner
 
@@ -218,3 +220,5 @@ theorem scannerTM_decidesInTime
     rw [if_neg (by simp [hacc])]; rfl
 
 end TM
+
+end Complexity

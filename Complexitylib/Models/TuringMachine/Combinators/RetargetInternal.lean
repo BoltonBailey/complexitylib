@@ -5,6 +5,8 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.CounterSubroutines
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
+namespace Complexity
+
 /-!
 # retargetInput simulation — proof internals
 
@@ -55,10 +57,10 @@ def TapeInvariant (t : Tape) : Prop :=
   t.cells 0 = Γ.start ∧ ∀ j, j ≥ 1 → t.cells j ≠ Γ.start
 
 theorem TapeInvariant.initTape (xs : List Γ) (hxs : ∀ a ∈ xs, a ≠ Γ.start) :
-    TapeInvariant (_root_.initTape xs) := by
+    TapeInvariant (_root_.Complexity.initTape xs) := by
   refine ⟨rfl, ?_⟩
   intro j hj
-  simp only [_root_.initTape, show j ≠ 0 by omega, ↓reduceIte]
+  simp only [_root_.Complexity.initTape, show j ≠ 0 by omega, ↓reduceIte]
   cases h : xs[j - 1]? with
   | none => simp
   | some a =>
@@ -66,17 +68,17 @@ theorem TapeInvariant.initTape (xs : List Γ) (hxs : ∀ a ∈ xs, a ≠ Γ.star
     exact hxs a (List.mem_of_getElem? h)
 
 theorem TapeInvariant.initTape_ofBool (xs : List Bool) :
-    TapeInvariant (_root_.initTape (xs.map Γ.ofBool)) := by
+    TapeInvariant (_root_.Complexity.initTape (xs.map Γ.ofBool)) := by
   refine TapeInvariant.initTape _ ?_
   intro a ha
   rw [List.mem_map] at ha
   obtain ⟨b, _, rfl⟩ := ha
   cases b <;> simp [Γ.ofBool]
 
-theorem TapeInvariant.initTape_nil : TapeInvariant (_root_.initTape []) := by
+theorem TapeInvariant.initTape_nil : TapeInvariant (_root_.Complexity.initTape []) := by
   refine ⟨rfl, ?_⟩
   intro j hj
-  simp only [_root_.initTape, show j ≠ 0 by omega, ↓reduceIte]
+  simp only [_root_.Complexity.initTape, show j ≠ 0 by omega, ↓reduceIte]
   simp
 
 /-- The current read symbol is not `Γ.start` when head ≥ 1. -/
@@ -287,9 +289,9 @@ def retargetInitCfg (M : TM k) (z : List Bool) (realInput : Tape) :
   state := M.qstart
   input := realInput
   work := fun i =>
-    if i.val < k then _root_.initTape []
-    else _root_.initTape (z.map Γ.ofBool)
-  output := _root_.initTape []
+    if i.val < k then _root_.Complexity.initTape []
+    else _root_.Complexity.initTape (z.map Γ.ofBool)
+  output := _root_.Complexity.initTape []
 
 theorem retargetInitCfg_eq_wrap (M : TM k) (z : List Bool) (realInput : Tape) :
     retargetInitCfg M z realInput = retargetWrap M realInput (M.initCfg z) := by
@@ -393,7 +395,7 @@ theorem startedCfg_output_eq (M : TM k) (z₁ z₂ : List Bool)
     is the ordinary initialized input moved right to cell 1. -/
 theorem startedCfg_input_eq (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) :
-    (startedCfg M z hne).input = (_root_.initTape (z.map Γ.ofBool)).move Dir3.right := by
+    (startedCfg M z hne).input = (_root_.Complexity.initTape (z.map Γ.ofBool)).move Dir3.right := by
   have hinDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.1 =
         Dir3.right :=
@@ -407,7 +409,7 @@ theorem startedCfg_input_eq (M : TM k) (z : List Bool)
     is a blank initialized tape moved right to cell 1. -/
 theorem startedCfg_work_eq_init (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) (i : Fin k) :
-    (startedCfg M z hne).work i = (_root_.initTape []).move Dir3.right := by
+    (startedCfg M z hne).work i = (_root_.Complexity.initTape []).move Dir3.right := by
   have hworkDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.1 i =
         Dir3.right :=
@@ -421,7 +423,7 @@ theorem startedCfg_work_eq_init (M : TM k) (z : List Bool)
     is a blank initialized tape moved right to cell 1. -/
 theorem startedCfg_output_eq_init (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) :
-    (startedCfg M z hne).output = (_root_.initTape []).move Dir3.right := by
+    (startedCfg M z hne).output = (_root_.Complexity.initTape []).move Dir3.right := by
   have houtDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.2 =
         Dir3.right :=
@@ -562,12 +564,12 @@ input onto work tape `idx` within `|x| + 1` steps. -/
 theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : List Bool) :
     (retargetInput (copyInputToWorkTM idx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨idx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        work ⟨k, by omega⟩ = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨idx.val, by omega⟩ = (_root_.Complexity.initTape []).move Dir3.right ∧
         TapeInvariant out ∧
         (∀ i : Fin k, i ≠ idx → TapeInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
-        (work ⟨k, by omega⟩).cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
         (work ⟨idx.val, by omega⟩).hasBinaryPrefix x)
       (x.length + 1) := by
@@ -580,12 +582,12 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
   have hcopy :
       (copyInputToWorkTM idx).HoareTime
         (fun inp work out =>
-          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-          work idx = (_root_.initTape []).move Dir3.right ∧
+          inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work idx = (_root_.Complexity.initTape []).move Dir3.right ∧
           TapeInvariant out ∧
           (∀ i : Fin k, i ≠ idx → TapeInvariant (work i)))
         (fun inp work _out =>
-          inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+          inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
           (work idx).hasBinaryPrefix x)
         (x.length + 1) :=
@@ -626,8 +628,8 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
     (counterIdx : Fin k) (x : List Bool) :
     (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨counterIdx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        work ⟨k, by omega⟩ = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (_root_.Complexity.initTape []).move Dir3.right ∧
         TapeInvariant out ∧
         (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
@@ -644,8 +646,8 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>
-          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-          work counterIdx = (_root_.initTape []).move Dir3.right ∧
+          inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (_root_.Complexity.initTape []).move Dir3.right ∧
           TapeInvariant _out ∧
           (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
         (fun _inp work _out =>
@@ -688,12 +690,12 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     (counterIdx : Fin k) (x : List Bool) :
     (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨counterIdx.val, by omega⟩ = (_root_.initTape []).move Dir3.right ∧
+        work ⟨k, by omega⟩ = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (_root_.Complexity.initTape []).move Dir3.right ∧
         TapeInvariant out ∧
         (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
-        (work ⟨k, by omega⟩).cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
         (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
@@ -708,12 +710,12 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>
-          inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-          work counterIdx = (_root_.initTape []).move Dir3.right ∧
+          inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (_root_.Complexity.initTape []).move Dir3.right ∧
           TapeInvariant _out ∧
           (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
         (fun inp work _out =>
-          inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+          inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
           (work counterIdx).hasUnaryCounter (x.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
@@ -749,3 +751,5 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     by simpa [hmap counterIdx] using hinner.2.2.2.2⟩
 
 end TM
+
+end Complexity

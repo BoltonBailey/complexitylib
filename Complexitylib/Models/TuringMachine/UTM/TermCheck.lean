@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyIteration
 import Complexitylib.Models.TuringMachine.Registers
 
+namespace Complexity
+
 /-!
 # `termCheckTM`: deciding `TerminatedRegion` by a single input scan
 
@@ -640,3 +642,5 @@ theorem termCheckTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape) (out₀
 end TermCheck
 
 end TM.UTMBody
+
+end Complexity

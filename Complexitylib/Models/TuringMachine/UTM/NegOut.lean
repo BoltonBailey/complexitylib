@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # Output negation phase: `negOutTM`
 
@@ -284,3 +286,5 @@ theorem negOutTM_hoareTime (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : 
     hhalt, hin3, hw3, hc3, hh3⟩
 
 end TM
+
+end Complexity

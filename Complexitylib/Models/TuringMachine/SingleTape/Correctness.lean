@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.SingleTape.Delta
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # Single-tape simulation — correctness internals
 
@@ -5246,3 +5248,5 @@ theorem halts_rev {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (ch : ℕ → Bool) (x : 
   · rw [hsplit, hfreeze]; exact hbit
 
 end NTM.SingleTape
+
+end Complexity

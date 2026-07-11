@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Mathlib.Data.Fintype.Sum
 
+namespace Complexity
+
 /-!
 # TM Combinators
 
@@ -964,3 +966,5 @@ def retargetInput {k : ℕ} (M : TM k) : TM (k + 1) where
       exact hinp this
 
 end TM
+
+end Complexity

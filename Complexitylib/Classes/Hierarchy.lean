@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.UTM.Universal
 import Complexitylib.Classes.Containments
 import Mathlib.Analysis.Asymptotics.SpecificAsymptotics
 
+namespace Complexity
+
 /-!
 # The deterministic time hierarchy theorem (weak form)
 
@@ -42,7 +44,6 @@ open Asymptotics Filter Complexity
 -- Bridges: big-O / little-o versus pointwise bounds
 -- ════════════════════════════════════════════════════════════════════════
 
-namespace Complexity
 
 /-- Extract a natural-number constant and threshold from a big-O bound:
     `f =O g` yields `c` and `N` with `f n ≤ c * g n` for all `n ≥ N`. -/
@@ -70,7 +71,6 @@ theorem LittleO.pow_lt_pow {p q : ℕ} (hpq : p < q) :
   exact key.congr (fun n => by simp only [Function.comp_apply]; push_cast; ring)
     (fun n => by simp only [Function.comp_apply]; push_cast; ring)
 
-end Complexity
 
 -- ════════════════════════════════════════════════════════════════════════
 -- The hierarchy theorem
@@ -196,3 +196,5 @@ theorem DTIME_pow_ssubset (a : ℕ) (ha : 1 ≤ a) :
         _ = 2 * (n + 1) ^ (2 * a + 5) := by ring
     exact (BigO.of_le hle).trans (BigO.const_mul_left 2 (BigO.refl _))
   exact hstep.trans_subset hsub
+
+end Complexity

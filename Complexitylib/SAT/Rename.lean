@@ -1,5 +1,7 @@
 import Complexitylib.SAT.Semantics
 
+namespace Complexity
+
 /-!
 # Variable renaming and satisfiability transport
 
@@ -169,3 +171,5 @@ theorem CNF.satisfiable_mapVar_iff {f : ℕ → ℕ} (hf : Function.Injective f)
   ⟨CNF.Satisfiable.of_mapVar, fun h => h.mapVar hf⟩
 
 end SAT
+
+end Complexity

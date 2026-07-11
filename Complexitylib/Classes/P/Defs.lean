@@ -1,6 +1,8 @@
 import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
 
+namespace Complexity
+
 /-!
 # P, FP, and PSPACE
 
@@ -26,3 +28,5 @@ def FP : Set (List Bool → List Bool) :=
     polynomial space on work tapes: `PSPACE = ⋃_k DSPACE(n^k)`. -/
 def PSPACE : Set Language :=
   ⋃ k : ℕ, DSPACE (· ^ k)
+
+end Complexity

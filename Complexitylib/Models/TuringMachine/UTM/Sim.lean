@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.UTM.Machine
 import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.Init
 
+namespace Complexity
+
 /-!
 # Universal machine: simulation bridges
 
@@ -257,3 +259,5 @@ theorem reachesIn_output_first_blank {n : ℕ} {tm : TM n} {t : ℕ}
   · exact absurd ⟨t, Nat.le_refl t, hblank⟩ hall
 
 end TM.UTMBody
+
+end Complexity

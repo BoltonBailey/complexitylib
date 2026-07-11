@@ -1,6 +1,8 @@
 import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
 
+namespace Complexity
+
 /-!
 # NP, coNP, and NPSPACE
 
@@ -21,3 +23,5 @@ def CoNP : Set Language := complClass NP
     using polynomial space on work tapes: `NPSPACE = ⋃_k NSPACE(n^k)`. -/
 def NPSPACE : Set Language :=
   ⋃ k : ℕ, NSPACE (· ^ k)
+
+end Complexity

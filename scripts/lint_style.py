@@ -8,6 +8,9 @@ Checks every `.lean` file under `Complexitylib/` for:
   lineLength  — no line longer than 100 characters (lines containing URLs exempt)
   trailingWs  — no trailing whitespace
   finalNl     — file ends with exactly one newline
+  rootEscape  — no `_root_.` escapes; they signal a nested namespace shadowing
+                a root namespace (e.g. `SAT.TM` vs `TM`) or a declaration made
+                outside its home namespace — fix the structure instead
 
 Violations are compared against the baseline in `scripts/style-exceptions.txt`,
 one `path : check` entry per line. A violation not in the baseline fails the
@@ -54,6 +57,8 @@ def check_file(path: Path) -> set[str]:
         violations.add("trailingWs")
     if not text.endswith("\n") or text.endswith("\n\n"):
         violations.add("finalNl")
+    if "_root_." in text:
+        violations.add("rootEscape")
     return violations
 
 

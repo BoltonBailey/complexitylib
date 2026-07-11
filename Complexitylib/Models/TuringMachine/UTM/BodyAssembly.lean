@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.UTM.BodyApply
 import Complexitylib.Models.TuringMachine.UTM.DescLayout
 import Complexitylib.Models.TuringMachine.UTM.Verdict
 
+namespace Complexity
+
 /-!
 # Body correctness: phase assembly
 
@@ -1096,3 +1098,5 @@ theorem applyPhase (c : Cfg 6 bodyTM.Q) {f : VFlags} {sim0 sim1 sim2 : Tape}
 end HcPhase
 
 end TM.UTMBody
+
+end Complexity

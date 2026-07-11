@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Combinators
 
+namespace Complexity
+
 /-!
 # Generic proof tools for TM combinators
 
@@ -357,3 +359,5 @@ theorem transitionInput_id {t : Tape} (hread : t.read ≠ Γ.start) :
   simp only [transitionInput, idleDir, hread, ↓reduceIte, Tape.move]
 
 end TM
+
+end Complexity

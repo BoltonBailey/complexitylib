@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.AON.Defs
 
+namespace Complexity
+
 /-!
 # Machine-facing encoding of fan-in-two AND/OR circuits
 
@@ -230,3 +232,5 @@ def evalCode (N : ℕ) (code input : List Bool) : Option Bool := do
     none
 
 end AONCircuitCode
+
+end Complexity

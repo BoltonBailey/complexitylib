@@ -2,6 +2,8 @@ import Complexitylib.Circuits.Family.Defs
 import Complexitylib.Circuits.AON.Defs
 import Complexitylib.Models.TuringMachine
 
+namespace Complexity
+
 /-!
 # Nonuniform circuit classes — definitions
 
@@ -53,3 +55,5 @@ def SIZE (s : ℕ → ℕ) : Set Language :=
     AND/OR circuit families under the library's size convention. -/
 def PPoly : Set Language :=
   {L | ∃ F : CircuitFamily Basis.andOr2, F.Decides L ∧ F.PolynomialSize}
+
+end Complexity

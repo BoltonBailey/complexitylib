@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyInternal
 
+namespace Complexity
+
 /-!
 # Body machine: match-phase loop lemmas
 
@@ -1288,3 +1290,5 @@ theorem copyAct_blank_loop (f : VFlags) (W : ℕ → Γ)
       exact idle_tape_id (hoth i hiD hiE)
 
 end TM.UTMBody
+
+end Complexity

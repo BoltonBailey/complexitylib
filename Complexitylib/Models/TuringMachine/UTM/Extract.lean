@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.UTM.VTape
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # UTM extraction phase: `extractTM`
 
@@ -423,3 +425,7 @@ theorem extractTM_hoareTime (m B : ℕ)
   refine ⟨c₃, ((work₀ 2).head + 1) + 1 + (m + 1), by omega,
     reachesIn_trans _ (reachesIn_trans _ hr1 (.step hstepB .zero)) hr3,
     hhalt, hin3, hw3, hc3, hoc3⟩
+
+end TM
+
+end Complexity

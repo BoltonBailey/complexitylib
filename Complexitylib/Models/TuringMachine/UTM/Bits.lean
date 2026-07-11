@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Encoding
 
+namespace Complexity
+
 /-!
 # Fixed-width binary roundtrips
 
@@ -47,3 +49,5 @@ theorem Nat.fromBits_inj_of_length_eq {a b : List Bool} (hlen : a.length = b.len
   have ha := Nat.toBits_fromBits a
   rw [h, hlen] at ha
   rw [← ha, Nat.toBits_fromBits b]
+
+end Complexity

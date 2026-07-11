@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Arith
 
+namespace Complexity
+
 /-!
 # Input length into a register
 
@@ -470,3 +472,5 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
 end InputLen
 
 end TM
+
+end Complexity

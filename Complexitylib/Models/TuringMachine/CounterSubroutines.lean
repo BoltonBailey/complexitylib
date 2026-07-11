@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 
+namespace Complexity
+
 /-!
 # Counter-building TM subroutines
 
@@ -22,8 +24,8 @@ def hasUnaryPrefix (t : Tape) (used : ℕ) : Prop :=
   (∀ i, used ≤ i → t.cells (i + 1) = Γ.blank)
 
 theorem initTape_nil_move_right_hasUnaryPrefix_zero :
-    ((_root_.initTape []).move Dir3.right).hasUnaryPrefix 0 := by
-  simp [hasUnaryPrefix, _root_.initTape, Tape.move]
+    ((_root_.Complexity.initTape []).move Dir3.right).hasUnaryPrefix 0 := by
+  simp [hasUnaryPrefix, _root_.Complexity.initTape, Tape.move]
 
 /-- Writing one mark at the current head and moving right extends a unary
     prefix by one cell. -/
@@ -217,7 +219,7 @@ variable {n : ℕ}
 -- ════════════════════════════════════════════════════════════════════════
 
 private theorem started_ofBool_tape_read_ne_start (x : List Bool) :
-    (((_root_.initTape (x.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
+    (((_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
   exact initTape_ofBool_move_right_read_ne_start x
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -388,7 +390,7 @@ theorem inputLengthPlusOneCounterTM_scan_start_state
 theorem inputLengthPlusOneCounterTM_scan_start_initializes_counter
     (counterIdx : Fin n) (inp : Tape) (work : Fin n → Tape) (out : Tape)
     (hinp : inp.read = Γ.start)
-    (hcounter : work counterIdx = _root_.initTape []) :
+    (hcounter : work counterIdx = _root_.Complexity.initTape []) :
     ((((inputLengthPlusOneCounterTM counterIdx).step
       { state := LinearCounterPhase.scan, input := inp, work := work, output := out }).get
         (by simp [TM.step, inputLengthPlusOneCounterTM])).work counterIdx).hasUnaryPrefix 0 := by
@@ -466,33 +468,33 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_othe
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
     (i : Fin n) (hi : i ≠ counterIdx)
-    (hwork : c.work i = (_root_.initTape []).move Dir3.right) :
+    (hwork : c.work i = (_root_.Complexity.initTape []).move Dir3.right) :
     (((inputLengthPlusOneCounterTM counterIdx).toNTM).trace 1
-      (fun _ => choice) c).work i = (_root_.initTape []).move Dir3.right := by
+      (fun _ => choice) c).work i = (_root_.Complexity.initTape []).move Dir3.right := by
   cases c with
   | mk state input work output =>
-      change work i = (_root_.initTape []).move Dir3.right at hwork
+      change work i = (_root_.Complexity.initTape []).move Dir3.right at hwork
       cases state
       · by_cases hstart : input.cells input.head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart,
             counterPreserveWork, counterIdleDirs, hwork, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
         · by_cases hblank : input.cells input.head = Γ.blank
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hblank,
               counterWriteOneWork, counterAdvanceDirs, hwork, hi,
               Tape.writeAndMove, Tape.write, Tape.move, Tape.read, readBackWrite,
-              idleDir, _root_.initTape]
+              idleDir, _root_.Complexity.initTape]
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart, hblank,
               counterWriteOneWork, counterAdvanceDirs, hwork, hi,
               Tape.writeAndMove, Tape.write, Tape.move, Tape.read, readBackWrite,
-              idleDir, _root_.initTape]
+              idleDir, _root_.Complexity.initTape]
       · by_cases hcounter : (work counterIdx).cells (work counterIdx).head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             counterPreserveWork, counterAdvanceDirs, hwork, hi, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             counterPreserveWork, counterRewindDirs, hwork, hi, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
       · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hwork]
 
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
@@ -500,94 +502,94 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_other_work
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
     (i : Fin n) (hi : i ≠ counterIdx)
     (hstate : c.state ≠ LinearCounterPhase.done)
-    (hwork : c.work i = _root_.initTape []) :
+    (hwork : c.work i = _root_.Complexity.initTape []) :
     (((inputLengthPlusOneCounterTM counterIdx).toNTM).trace 1
-      (fun _ => choice) c).work i = (_root_.initTape []).move Dir3.right := by
+      (fun _ => choice) c).work i = (_root_.Complexity.initTape []).move Dir3.right := by
   cases c with
   | mk state input work output =>
-      change work i = _root_.initTape [] at hwork
+      change work i = _root_.Complexity.initTape [] at hwork
       cases state
       · by_cases hstart : input.cells input.head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart,
             counterPreserveWork, counterIdleDirs, hwork, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
         · by_cases hblank : input.cells input.head = Γ.blank
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hblank,
               counterWriteOneWork, counterAdvanceDirs, hwork, hi,
               Tape.writeAndMove, Tape.write, Tape.move, Tape.read, readBackWrite,
-              idleDir, _root_.initTape]
+              idleDir, _root_.Complexity.initTape]
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart, hblank,
               counterWriteOneWork, counterAdvanceDirs, hwork, hi,
               Tape.writeAndMove, Tape.write, Tape.move, Tape.read, readBackWrite,
-              idleDir, _root_.initTape]
+              idleDir, _root_.Complexity.initTape]
       · by_cases hcounter : (work counterIdx).cells (work counterIdx).head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             counterPreserveWork, counterAdvanceDirs, hwork, hi, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             counterPreserveWork, counterRewindDirs, hwork, hi, Tape.writeAndMove,
-            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.initTape]
+            Tape.write, Tape.move, Tape.read, readBackWrite, idleDir, _root_.Complexity.initTape]
       · exact (hstate rfl).elim
 
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
-    (houtput : c.output = (_root_.initTape []).move Dir3.right) :
+    (houtput : c.output = (_root_.Complexity.initTape []).move Dir3.right) :
     (((inputLengthPlusOneCounterTM counterIdx).toNTM).trace 1
-      (fun _ => choice) c).output = (_root_.initTape []).move Dir3.right := by
+      (fun _ => choice) c).output = (_root_.Complexity.initTape []).move Dir3.right := by
   cases c with
   | mk state input work output =>
-      change output = (_root_.initTape []).move Dir3.right at houtput
+      change output = (_root_.Complexity.initTape []).move Dir3.right at houtput
       cases state
       · by_cases hstart : input.cells input.head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
         · by_cases hblank : input.cells input.head = Γ.blank
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hblank,
               houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-              readBackWrite, idleDir, _root_.initTape]
+              readBackWrite, idleDir, _root_.Complexity.initTape]
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart, hblank,
               houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-              readBackWrite, idleDir, _root_.initTape]
+              readBackWrite, idleDir, _root_.Complexity.initTape]
       · by_cases hcounter : (work counterIdx).cells (work counterIdx).head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
       · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, houtput]
 
 theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_output
     (counterIdx : Fin n) (choice : Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
     (hstate : c.state ≠ LinearCounterPhase.done)
-    (houtput : c.output = _root_.initTape []) :
+    (houtput : c.output = _root_.Complexity.initTape []) :
     (((inputLengthPlusOneCounterTM counterIdx).toNTM).trace 1
-      (fun _ => choice) c).output = (_root_.initTape []).move Dir3.right := by
+      (fun _ => choice) c).output = (_root_.Complexity.initTape []).move Dir3.right := by
   cases c with
   | mk state input work output =>
-      change output = _root_.initTape [] at houtput
+      change output = _root_.Complexity.initTape [] at houtput
       cases state
       · by_cases hstart : input.cells input.head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
         · by_cases hblank : input.cells input.head = Γ.blank
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hblank,
               houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-              readBackWrite, idleDir, _root_.initTape]
+              readBackWrite, idleDir, _root_.Complexity.initTape]
           · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hstart, hblank,
               houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-              readBackWrite, idleDir, _root_.initTape]
+              readBackWrite, idleDir, _root_.Complexity.initTape]
       · by_cases hcounter : (work counterIdx).cells (work counterIdx).head = Γ.start
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
         · simp [NTM.trace, TM.toNTM, inputLengthPlusOneCounterTM, hcounter,
             houtput, Tape.writeAndMove, Tape.write, Tape.move, Tape.read,
-            readBackWrite, idleDir, _root_.initTape]
+            readBackWrite, idleDir, _root_.Complexity.initTape]
       · exact (hstate rfl).elim
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -596,45 +598,45 @@ theorem inputLengthPlusOneCounterTM_toNTM_trace_one_initializes_blank_output
 
 private theorem inputLengthPlusOneCounterTM_start_step
     (counterIdx : Fin n) (x : List Bool) (work : Fin n → Tape) (out : Tape)
-    (hcounter : work counterIdx = _root_.initTape []) :
+    (hcounter : work counterIdx = _root_.Complexity.initTape []) :
     ∃ c₁,
       (inputLengthPlusOneCounterTM counterIdx).step
         { state := LinearCounterPhase.scan,
-          input := _root_.initTape (x.map Γ.ofBool),
+          input := _root_.Complexity.initTape (x.map Γ.ofBool),
           work := work, output := out } = some c₁ ∧
       c₁.state = LinearCounterPhase.scan ∧
-      c₁.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+      c₁.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
       c₁.input.head = 1 ∧
       (c₁.work counterIdx).hasUnaryPrefix 0 ∧
       (c₁.work counterIdx).cells 0 = Γ.start := by
-  have hread : (_root_.initTape (x.map Γ.ofBool)).read = Γ.start := by
-    simp [Tape.read, _root_.initTape]
+  have hread : (_root_.Complexity.initTape (x.map Γ.ofBool)).read = Γ.start := by
+    simp [Tape.read, _root_.Complexity.initTape]
   simp [TM.step, inputLengthPlusOneCounterTM, hread]
   refine ⟨?_, ?_, ?_, ?_⟩
   · rw [tape_move_cells]
-  · simp [_root_.initTape, Tape.move]
+  · simp [_root_.Complexity.initTape, Tape.move]
   · have hcounter_read : (work counterIdx).read = Γ.start := by
       rw [hcounter]
-      simp [Tape.read, _root_.initTape]
+      simp [Tape.read, _root_.Complexity.initTape]
     simpa [counterPreserveWork, counterIdleDirs, hcounter, hcounter_read,
       Tape.writeAndMove, Tape.write] using
       Tape.initTape_nil_move_right_hasUnaryPrefix_zero
   · simp [counterIdleDirs, hcounter, Tape.writeAndMove, tape_move_cells,
-      Tape.write, _root_.initTape]
+      Tape.write, _root_.Complexity.initTape]
 
 private theorem inputLengthPlusOneCounterTM_scan_bit_step
     (counterIdx : Fin n) (x : List Bool) (k : ℕ)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
     (hk : k < x.length)
     (hstate : c.state = LinearCounterPhase.scan)
-    (hinput_cells : c.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = k + 1)
     (hprefix : (c.work counterIdx).hasUnaryPrefix k)
     (hcell0 : (c.work counterIdx).cells 0 = Γ.start) :
     ∃ c',
       (inputLengthPlusOneCounterTM counterIdx).step c = some c' ∧
       c'.state = LinearCounterPhase.scan ∧
-      c'.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+      c'.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
       c'.input.head = k + 2 ∧
       (c'.work counterIdx).hasUnaryPrefix (k + 1) ∧
       (c'.work counterIdx).cells 0 = Γ.start := by
@@ -663,14 +665,14 @@ private theorem inputLengthPlusOneCounterTM_scan_bits_loop
     ∀ (m k : ℕ) (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q),
       k + m ≤ x.length →
       c.state = LinearCounterPhase.scan →
-      c.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells →
+      c.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells →
       c.input.head = k + 1 →
       (c.work counterIdx).hasUnaryPrefix k →
       (c.work counterIdx).cells 0 = Γ.start →
       ∃ c',
         (inputLengthPlusOneCounterTM counterIdx).reachesIn m c c' ∧
         c'.state = LinearCounterPhase.scan ∧
-        c'.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        c'.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
         c'.input.head = k + m + 1 ∧
         (c'.work counterIdx).hasUnaryPrefix (k + m) ∧
         (c'.work counterIdx).cells 0 = Γ.start := by
@@ -700,7 +702,7 @@ private theorem inputLengthPlusOneCounterTM_scan_blank_step
     (counterIdx : Fin n) (x : List Bool)
     (c : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q)
     (hstate : c.state = LinearCounterPhase.scan)
-    (hinput_cells : c.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells)
+    (hinput_cells : c.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells)
     (hinput_head : c.input.head = x.length + 1)
     (hprefix : (c.work counterIdx).hasUnaryPrefix x.length)
     (hcell0 : (c.work counterIdx).cells 0 = Γ.start) :
@@ -829,8 +831,8 @@ theorem inputLengthPlusOneCounterTM_hoareTime
     (counterIdx : Fin n) (x : List Bool) :
     (inputLengthPlusOneCounterTM counterIdx).HoareTime
       (fun inp work _ =>
-        inp = _root_.initTape (x.map Γ.ofBool) ∧
-        work counterIdx = _root_.initTape [])
+        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
+        work counterIdx = _root_.Complexity.initTape [])
       (fun _ work _ =>
         (work counterIdx).hasUnaryCounter (x.length + 1))
       (inputLengthPlusOneCounterTime x.length) := by
@@ -838,7 +840,7 @@ theorem inputLengthPlusOneCounterTM_hoareTime
   subst inp
   let c0 : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q :=
     { state := LinearCounterPhase.scan,
-      input := _root_.initTape (x.map Γ.ofBool),
+      input := _root_.Complexity.initTape (x.map Γ.ofBool),
       work := work,
       output := out }
   obtain ⟨c1, hstep_start, hstate1, hcells1, hhead1, hprefix1, hcell01⟩ :=
@@ -896,8 +898,8 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
     (counterIdx : Fin n) (x : List Bool) :
     (inputLengthPlusOneCounterTM counterIdx).HoareTime
       (fun inp work _ =>
-        inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work counterIdx = (_root_.initTape []).move Dir3.right)
+        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work counterIdx = (_root_.Complexity.initTape []).move Dir3.right)
       (fun _ work _ =>
         (work counterIdx).hasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
@@ -908,19 +910,19 @@ theorem inputLengthPlusOneCounterTM_started_hoareTime
   subst inp
   let c0 : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q :=
     { state := LinearCounterPhase.scan,
-      input := (_root_.initTape (x.map Γ.ofBool)).move Dir3.right,
+      input := (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
-  have hcells0 : c0.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells := by
+  have hcells0 : c0.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells := by
     simp [c0, tape_move_cells]
   have hhead0 : c0.input.head = 1 := by
-    simp [c0, Tape.move, _root_.initTape]
+    simp [c0, Tape.move, _root_.Complexity.initTape]
   have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
     exact Tape.initTape_nil_move_right_hasUnaryPrefix_zero
   have hcell00 : (c0.work counterIdx).cells 0 = Γ.start := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
-    simp [Tape.move, _root_.initTape]
+    simp [Tape.move, _root_.Complexity.initTape]
   obtain ⟨c2, hreach_scan, hstate2, hcells2, hhead2, hprefix2, hcell02⟩ :=
     inputLengthPlusOneCounterTM_scan_bits_loop counterIdx x x.length 0 c0
       (by omega) rfl hcells0 hhead0 hprefix0 hcell00
@@ -975,10 +977,10 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     (counterIdx : Fin n) (x : List Bool) :
     (inputLengthPlusOneCounterTM counterIdx).HoareTime
       (fun inp work _ =>
-        inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work counterIdx = (_root_.initTape []).move Dir3.right)
+        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work counterIdx = (_root_.Complexity.initTape []).move Dir3.right)
       (fun inp work _ =>
-        inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
         (work counterIdx).hasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
@@ -989,19 +991,19 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   subst inp
   let c0 : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q :=
     { state := LinearCounterPhase.scan,
-      input := (_root_.initTape (x.map Γ.ofBool)).move Dir3.right,
+      input := (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right,
       work := work,
       output := out }
-  have hcells0 : c0.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells := by
+  have hcells0 : c0.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells := by
     simp [c0, tape_move_cells]
   have hhead0 : c0.input.head = 1 := by
-    simp [c0, Tape.move, _root_.initTape]
+    simp [c0, Tape.move, _root_.Complexity.initTape]
   have hprefix0 : (c0.work counterIdx).hasUnaryPrefix 0 := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
     exact Tape.initTape_nil_move_right_hasUnaryPrefix_zero
   have hcell00 : (c0.work counterIdx).cells 0 = Γ.start := by
     rw [show c0.work counterIdx = work counterIdx by rfl, hcounter]
-    simp [Tape.move, _root_.initTape]
+    simp [Tape.move, _root_.Complexity.initTape]
   obtain ⟨c2, hreach_scan, hstate2, hcells2, hhead2, hprefix2, hcell02⟩ :=
     inputLengthPlusOneCounterTM_scan_bits_loop counterIdx x x.length 0 c0
       (by omega) rfl hcells0 hhead0 hprefix0 hcell00
@@ -1035,7 +1037,7 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     intro j hj
     rw [hcells4]
     exact hnostart3 j hj
-  have hinput4_cells : c4.input.cells = (_root_.initTape (x.map Γ.ofBool)).cells := by
+  have hinput4_cells : c4.input.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells := by
     rw [hinput4, hinput3]
     exact hcells2
   have hinput4_head : c4.input.head = x.length + 1 := by
@@ -1062,14 +1064,14 @@ private theorem inputLengthPlusOneCounterTM_step_preserves_started_other_work
     (y : List Bool)
     {c c' : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q}
     (hstep : (inputLengthPlusOneCounterTM counterIdx).step c = some c')
-    (hpassive : c.work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right) :
+    (hpassive : c.work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right) :
     c'.work passiveIdx = c.work passiveIdx := by
   have hpassive_read : (c.work passiveIdx).read ≠ Γ.start := by
     rw [hpassive]
     exact started_ofBool_tape_read_ne_start y
   cases c with
   | mk state input work output =>
-      change work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right at hpassive
+      change work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right at hpassive
       cases state with
       | scan =>
           by_cases hstart : input.read = Γ.start
@@ -1111,8 +1113,8 @@ private theorem inputLengthPlusOneCounterTM_reachesIn_preserves_started_other_wo
     (y : List Bool)
     {t : ℕ} {c c' : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q}
     (hreach : (inputLengthPlusOneCounterTM counterIdx).reachesIn t c c')
-    (hpassive : c.work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right) :
-    c'.work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right := by
+    (hpassive : c.work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right) :
+    c'.work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right := by
   induction hreach with
   | zero =>
       exact hpassive
@@ -1127,14 +1129,14 @@ private theorem inputLengthPlusOneCounterTM_step_preserves_started_blank_output
     (counterIdx : Fin n)
     {c c' : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q}
     (hstep : (inputLengthPlusOneCounterTM counterIdx).step c = some c')
-    (hout : c.output = (_root_.initTape []).move Dir3.right) :
+    (hout : c.output = (_root_.Complexity.initTape []).move Dir3.right) :
     c'.output = c.output := by
   have hout_read : c.output.read ≠ Γ.start := by
     rw [hout]
-    simp [Tape.read, Tape.move, _root_.initTape]
+    simp [Tape.read, Tape.move, _root_.Complexity.initTape]
   cases c with
   | mk state input work output =>
-      change output = (_root_.initTape []).move Dir3.right at hout
+      change output = (_root_.Complexity.initTape []).move Dir3.right at hout
       cases state with
       | scan =>
           by_cases hstart : input.read = Γ.start
@@ -1174,8 +1176,8 @@ private theorem inputLengthPlusOneCounterTM_reachesIn_preserves_started_blank_ou
     (counterIdx : Fin n)
     {t : ℕ} {c c' : Cfg n (inputLengthPlusOneCounterTM counterIdx).Q}
     (hreach : (inputLengthPlusOneCounterTM counterIdx).reachesIn t c c')
-    (hout : c.output = (_root_.initTape []).move Dir3.right) :
-    c'.output = (_root_.initTape []).move Dir3.right := by
+    (hout : c.output = (_root_.Complexity.initTape []).move Dir3.right) :
+    c'.output = (_root_.Complexity.initTape []).move Dir3.right := by
   induction hreach with
   | zero =>
       exact hout
@@ -1193,18 +1195,18 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_preserves_work_hoareTime
     (x y : List Bool) :
     (inputLengthPlusOneCounterTM counterIdx).HoareTime
       (fun inp work out =>
-        inp = (_root_.initTape (x.map Γ.ofBool)).move Dir3.right ∧
-        work counterIdx = (_root_.initTape []).move Dir3.right ∧
-        work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right ∧
-        out = (_root_.initTape []).move Dir3.right)
+        inp = (_root_.Complexity.initTape (x.map Γ.ofBool)).move Dir3.right ∧
+        work counterIdx = (_root_.Complexity.initTape []).move Dir3.right ∧
+        work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right ∧
+        out = (_root_.Complexity.initTape []).move Dir3.right)
       (fun inp work out =>
-        inp.cells = (_root_.initTape (x.map Γ.ofBool)).cells ∧
+        inp.cells = (_root_.Complexity.initTape (x.map Γ.ofBool)).cells ∧
         inp.head = x.length + 1 ∧
-        work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right ∧
+        work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right ∧
         (work counterIdx).hasUnaryCounter (x.length + 1) ∧
         (work counterIdx).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work counterIdx).cells j ≠ Γ.start) ∧
-        out = (_root_.initTape []).move Dir3.right)
+        out = (_root_.Complexity.initTape []).move Dir3.right)
       (inputLengthPlusOneCounterTime x.length) := by
   intro inp work out hpre
   rcases hpre with ⟨hinput, hcounter, hpassive, hout⟩
@@ -1212,11 +1214,11 @@ theorem inputLengthPlusOneCounterTM_started_tracksInput_preserves_work_hoareTime
     inputLengthPlusOneCounterTM_started_tracksInput_hoareTime counterIdx x inp work out
       ⟨hinput, hcounter⟩
   have hpassive' :
-      c'.work passiveIdx = (_root_.initTape (y.map Γ.ofBool)).move Dir3.right :=
+      c'.work passiveIdx = (_root_.Complexity.initTape (y.map Γ.ofBool)).move Dir3.right :=
     inputLengthPlusOneCounterTM_reachesIn_preserves_started_other_work
       counterIdx passiveIdx hne y hreach hpassive
   have hout' :
-      c'.output = (_root_.initTape []).move Dir3.right :=
+      c'.output = (_root_.Complexity.initTape []).move Dir3.right :=
     inputLengthPlusOneCounterTM_reachesIn_preserves_started_blank_output
       counterIdx hreach hout
   exact ⟨c', t, ht, hreach, hhalt, ⟨hpost.1, hpost.2.1, hpassive', hpost.2.2.1,
@@ -1228,11 +1230,13 @@ theorem inputLengthPlusOneCounterTM_toNTM_hoareTime
     (counterIdx : Fin n) (x : List Bool) :
     ((inputLengthPlusOneCounterTM counterIdx).toNTM).HoareTime
       (fun inp work _ =>
-        inp = _root_.initTape (x.map Γ.ofBool) ∧
-        work counterIdx = _root_.initTape [])
+        inp = _root_.Complexity.initTape (x.map Γ.ofBool) ∧
+        work counterIdx = _root_.Complexity.initTape [])
       (fun _ work _ =>
         (work counterIdx).hasUnaryCounter (x.length + 1))
       (inputLengthPlusOneCounterTime x.length) :=
   (inputLengthPlusOneCounterTM_hoareTime counterIdx x).toNTM
 
 end TM
+
+end Complexity

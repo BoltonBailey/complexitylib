@@ -4,6 +4,8 @@ import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.FNP
 import Complexitylib.Classes.NP.Witness
 
+namespace Complexity
+
 /-!
 # SAT: Language and Witness Relation
 
@@ -141,3 +143,5 @@ example : CNF.Satisfiable [[{sign := true, var := 0}, {sign := false, var := 1}]
                            [{sign := true, var := 1}]] := by decide
 
 end SAT
+
+end Complexity

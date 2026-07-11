@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
 
+namespace Complexity
+
 /-!
 # `lastBitOne` and `lastBitZero`: final-symbol languages
 
@@ -110,3 +112,5 @@ theorem lastBitOne_mem_P : Language.lastBitOne ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ lastBitOne_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

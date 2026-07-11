@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # loopTM simulation — proof internals
 
@@ -315,3 +317,5 @@ theorem loopTM_iteration_halt (tmBody tmTest : TM n)
   · rw [hcells_done, hcells_check]; exact hcell1
 
 end TM
+
+end Complexity

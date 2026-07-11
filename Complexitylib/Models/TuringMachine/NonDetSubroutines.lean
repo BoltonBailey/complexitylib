@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.CounterSubroutines
 
+namespace Complexity
+
 /-!
 # Nondeterministic TM subroutines
 
@@ -66,7 +68,7 @@ theorem hasBinaryString_cells_ne_start {t : Tape} {bits : List Bool}
     exactly the standard initialized tape for those bits, moved to cell `1`. -/
 theorem hasBinaryString_eq_initTape_move_right {t : Tape} {bits : List Bool}
     (h : t.hasBinaryString bits) (h0 : t.cells 0 = Γ.start) :
-    t = (_root_.initTape (bits.map Γ.ofBool)).move Dir3.right := by
+    t = (_root_.Complexity.initTape (bits.map Γ.ofBool)).move Dir3.right := by
   cases t with
   | mk head cells =>
     simp only [hasBinaryString] at h
@@ -78,7 +80,7 @@ theorem hasBinaryString_eq_initTape_move_right {t : Tape} {bits : List Bool}
     funext j
     by_cases hj0 : j = 0
     · subst hj0
-      simp [_root_.initTape, h0]
+      simp [_root_.Complexity.initTape, h0]
     · let i := j - 1
       have hj : j = i + 1 := by omega
       rw [hj]
@@ -92,13 +94,13 @@ theorem hasBinaryString_eq_initTape_move_right {t : Tape} {bits : List Bool}
 theorem hasBoundedBinaryString_eq_initTape_move_right {t : Tape} {B : ℕ}
     (h : t.hasBoundedBinaryString B) (h0 : t.cells 0 = Γ.start) :
     ∃ bits : List Bool, bits.length ≤ B ∧
-      t = (_root_.initTape (bits.map Γ.ofBool)).move Dir3.right := by
+      t = (_root_.Complexity.initTape (bits.map Γ.ofBool)).move Dir3.right := by
   obtain ⟨bits, hlen, hbits⟩ := h
   exact ⟨bits, hlen, hasBinaryString_eq_initTape_move_right hbits h0⟩
 
 theorem initTape_nil_move_right_hasBinaryPrefix_nil :
-    ((_root_.initTape []).move Dir3.right).hasBinaryPrefix [] := by
-  simp [hasBinaryPrefix, _root_.initTape, Tape.move]
+    ((_root_.Complexity.initTape []).move Dir3.right).hasBinaryPrefix [] := by
+  simp [hasBinaryPrefix, _root_.Complexity.initTape, Tape.move]
 
 /-- Writing the next guessed bit extends a binary prefix by one cell. -/
 theorem hasBinaryPrefix_write_bit {t : Tape} {bits : List Bool} (bit : Bool)
@@ -1565,7 +1567,7 @@ theorem guessBoundedNTM_hoareTime_initTape_move_right
         (work counterIdx).hasUnaryCounter B)
       (fun _ work _ =>
         ∃ bits : List Bool, bits.length ≤ B ∧
-          work witnessIdx = (_root_.initTape (bits.map Γ.ofBool)).move Dir3.right)
+          work witnessIdx = (_root_.Complexity.initTape (bits.map Γ.ofBool)).move Dir3.right)
       (guessBoundedTime B 0) := by
   exact (guessBoundedNTM_hoareTime_with_cell0 witnessIdx counterIdx hne B).consequence
     (fun _ _ _ h => h)
@@ -1595,7 +1597,7 @@ theorem guessBoundedNTM_hoareTime_initTape_move_right_with_frames
         out = output0 ∧
         (∀ i, i ≠ witnessIdx → i ≠ counterIdx → work i = frame i) ∧
         ∃ bits : List Bool, bits.length ≤ B ∧
-          work witnessIdx = (_root_.initTape (bits.map Γ.ofBool)).move Dir3.right)
+          work witnessIdx = (_root_.Complexity.initTape (bits.map Γ.ofBool)).move Dir3.right)
       (guessBoundedTime B 0) := by
   intro inp work out hpre choices
   obtain ⟨hinp, hout, hframe, hwitness, hcell0, hcounter⟩ := hpre
@@ -1806,7 +1808,7 @@ theorem guessBoundedNTM_choose_generates_witness_initTape_move_right
         (guessBoundedTime B bits.length) choices c
       (guessBoundedNTM witnessIdx counterIdx).halted c' ∧
       c'.work witnessIdx =
-        (_root_.initTape ((bits ++ suffix).map Γ.ofBool)).move Dir3.right := by
+        (_root_.Complexity.initTape ((bits ++ suffix).map Γ.ofBool)).move Dir3.right := by
   obtain ⟨choices, hchoices⟩ :=
     guessBoundedNTM_choose_generates_witness witnessIdx counterIdx hne B bits suffix c
       hlen hstate hwitness hcell0 hcounter
@@ -1816,3 +1818,5 @@ theorem guessBoundedNTM_choose_generates_witness_initTape_move_right
     Tape.hasBinaryString_eq_initTape_move_right hchoices.2.1 hchoices.2.2⟩
 
 end NTM
+
+end Complexity

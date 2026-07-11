@@ -6,6 +6,8 @@ import Complexitylib.Classes.Exponential
 import Complexitylib.Models.TuringMachine.Internal
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # Containment relations between complexity classes
 
@@ -261,3 +263,4 @@ theorem P_inter {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) :
     ext x; simp
   rwa [heq] at hcomp
 
+end Complexity

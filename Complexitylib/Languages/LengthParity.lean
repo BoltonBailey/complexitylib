@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # Languages determined by the parity of the input length
 
@@ -348,3 +350,5 @@ theorem evenLength_mem_P : Language.evenLength ∈ P := by
 theorem oddLength_mem_P : Language.oddLength ∈ P := by
   rw [oddLength_eq_compl_evenLength]
   exact P_compl evenLength_mem_P
+
+end Complexity

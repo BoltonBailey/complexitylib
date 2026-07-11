@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.UTM.Clock
 
+namespace Complexity
+
 /-!
 # Frontier-parked clock machines for the time-bounded universal machine
 
@@ -447,3 +449,5 @@ theorem orZeroTM_hoareTime (v : ℕ) (verdict : Γ) (inp₀ : Tape)
   exact ⟨_, 1, by omega, .step hstep .zero, rfl, rfl, rfl, hcells_eq, houth⟩
 
 end TM
+
+end Complexity

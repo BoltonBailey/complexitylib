@@ -1,6 +1,8 @@
 import Mathlib.Tactic.Ring
 import Complexitylib.Models.TuringMachine.Arith
 
+namespace Complexity
+
 /-!
 # Clock constructibility for the time hierarchy theorem
 
@@ -2299,3 +2301,5 @@ theorem clockConstructible_pow : ∀ k, 1 ≤ k →
     · exact ((ih hkpos).mul_succ).congr fun n => by rw [Nat.pow_succ]
 
 end TM
+
+end Complexity

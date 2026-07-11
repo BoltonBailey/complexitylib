@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.InputLen
 
+namespace Complexity
+
 /-!
 # Sequencing emitter stages
 
@@ -54,3 +56,5 @@ theorem bigSeqTM_hoareTime (ms : List (TM n)) (inp₀ : Tape)
       omega
 
 end TM
+
+end Complexity

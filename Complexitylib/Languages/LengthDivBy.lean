@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
 import Mathlib.Data.ZMod.Basic
 
+namespace Complexity
+
 /-!
 # `lengthDivBy k`: length-divisibility language family
 
@@ -91,3 +93,5 @@ theorem lengthDivBy_mem_P (k : ℕ) [NeZero k] : Language.lengthDivBy k ∈ P :=
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ (lengthDivBy_in_DTIME k)⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

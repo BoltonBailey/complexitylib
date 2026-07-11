@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # `allZeros` and `allOnes`: single-symbol languages
 
@@ -126,3 +128,5 @@ theorem allOnes_mem_P : Language.allOnes ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ allOnes_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

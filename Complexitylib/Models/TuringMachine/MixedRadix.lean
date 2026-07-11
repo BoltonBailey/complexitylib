@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Horner
 
+namespace Complexity
+
 /-!
 # Mixed-radix variable loading and literal emission
 
@@ -411,3 +413,5 @@ theorem resetScratchTM_hoareTime (tmp tmp2 : Fin n) (htt2 : tmp ≠ tmp2)
     (emitPred_transition hinp₀ hWP ys) h₂).mono_bound (by omega)
 
 end TM
+
+end Complexity

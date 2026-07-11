@@ -1,6 +1,8 @@
 import Mathlib.Data.Fintype.BigOperators
 import Complexitylib.Circuits.Basic
 
+namespace Complexity
+
 /-! # Essential Inputs
 
 This module defines the notion of essential (non-redundant) input variables
@@ -24,3 +26,5 @@ instance {N M : Nat} {f : BitString N → BitString M} {i : Fin N} :
 /-- The set of input variables that `f` depends on. -/
 def EssentialInputs {N M : Nat} (f : BitString N → BitString M) : Finset (Fin N) :=
   Finset.univ.filter (IsEssentialInput f)
+
+end Complexity

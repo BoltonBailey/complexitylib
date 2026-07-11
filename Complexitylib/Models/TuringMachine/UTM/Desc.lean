@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Encoding
 
+namespace Complexity
+
 /-!
 # Machine descriptions for the universal Turing machine
 
@@ -476,3 +478,5 @@ theorem decodeDesc_encodeDesc_append {d : TMDesc} (hd : d.WF) (junk : List Bool)
 theorem decodeDesc_encodeDesc {d : TMDesc} (hd : d.WF) :
     decodeDesc (encodeDesc d) = d := by
   simpa using decodeDesc_encodeDesc_append hd []
+
+end Complexity

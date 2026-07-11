@@ -4,6 +4,8 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Classes.Pairing
 
+namespace Complexity
+
 /-!
 # UTM initialization machine
 
@@ -1597,3 +1599,5 @@ theorem initTM_hoareTime_started (α x : List Bool) :
   exact ⟨c', t + 1, by omega, .step hs₁ hreach, hhalt, hpost⟩
 
 end TM
+
+end Complexity

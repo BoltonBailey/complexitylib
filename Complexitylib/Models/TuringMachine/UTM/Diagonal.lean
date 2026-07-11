@@ -6,6 +6,8 @@ import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 import Complexitylib.Models.TuringMachine.UTM.ClockConstructible
 import Complexitylib.Models.TuringMachine.Combinators.RetargetInternal
 
+namespace Complexity
+
 /-!
 # The time-hierarchy diagonalizer `diagTM`
 
@@ -2242,3 +2244,5 @@ theorem diagTime_le_poly (C : ℕ) (g : ℕ → ℕ) :
   nlinarith [hC, hG1, hn1, hone]
 
 end TM
+
+end Complexity

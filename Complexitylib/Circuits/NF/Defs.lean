@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Basic
 
+namespace Complexity
+
 /-! # Normal Forms — Core Definitions
 
 This module defines Conjunctive Normal Form (CNF) and Disjunctive Normal Form (DNF)
@@ -115,3 +117,5 @@ theorem DNF.eval_neg (φ : DNF N) (x : BitString N) :
 /-- Negating a CNF preserves complexity. -/
 theorem CNF.neg_complexity (φ : CNF N) : φ.neg.complexity = φ.complexity := by
   simp [CNF.neg, DNF.complexity, CNF.complexity, List.length_map]
+
+end Complexity

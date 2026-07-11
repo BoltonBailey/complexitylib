@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Encoding.Defs
 import Complexitylib.Circuits.Encoding.Internal
 
+namespace Complexity
+
 /-!
 # Encoded fan-in-two circuits
 
@@ -71,3 +73,5 @@ theorem encodeCircuit_length_le_size {N G : ℕ} [NeZero N]
   encodeCircuit_length_le_size_internal c
 
 end AONCircuitCode
+
+end Complexity

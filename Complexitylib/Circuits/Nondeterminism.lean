@@ -2,6 +2,8 @@ import Complexitylib.Circuits.Nondeterminism.Defs
 import Complexitylib.Circuits.Internal.Nondeterminism
 import Complexitylib.Circuits.Shannon
 
+namespace Complexity
+
 /-! # Nondeterministic Circuit Complexity Bounds
 
 Upper bounds on the circuit complexity of existentially quantified
@@ -201,3 +203,5 @@ theorem existQuantify_complexity_min [CompleteBasis Basis.andOr2]
     Circuit.size_complexity Basis.andOr2 (existQuantify f) ≤
       min (2 ^ k * (Circuit.size_complexity Basis.andOr2 f + 1)) (18 * 2 ^ m / m) :=
   le_min (existQuantify_complexity_le f) (existQuantify_complexity_shannon f hm)
+
+end Complexity

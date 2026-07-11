@@ -8,7 +8,6 @@ Complexitylib/Circuits/AON.lean : copyright
 Complexitylib/Circuits/AON/Defs.lean : copyright
 Complexitylib/Circuits/Basic.lean : copyright
 Complexitylib/Circuits/BitString.lean : copyright
-Complexitylib/Circuits/Digraph/Defs.lean : copyright
 Complexitylib/Circuits/Encoding.lean : copyright
 Complexitylib/Circuits/Encoding/Defs.lean : copyright
 Complexitylib/Circuits/Encoding/Family.lean : copyright
@@ -49,7 +48,6 @@ Complexitylib/Circuits/XOR.lean : copyright
 Complexitylib/Classes.lean : copyright
 Complexitylib/Classes.lean : moduleDoc
 Complexitylib/Classes/Containments.lean : copyright
-Complexitylib/Classes/Containments.lean : finalNl
 Complexitylib/Classes/Containments.lean : lineLength
 Complexitylib/Classes/DTISP.lean : copyright
 Complexitylib/Classes/Exponential.lean : copyright
@@ -60,8 +58,10 @@ Complexitylib/Classes/Hierarchy.lean : copyright
 Complexitylib/Classes/L.lean : copyright
 Complexitylib/Classes/NP.lean : copyright
 Complexitylib/Classes/NP/PairBuildTM.lean : copyright
+Complexitylib/Classes/NP/PairBuildTM.lean : rootEscape
 Complexitylib/Classes/NP/PairSplitTM.lean : copyright
 Complexitylib/Classes/NP/PairSplitTM.lean : lineLength
+Complexitylib/Classes/NP/PairSplitTM.lean : rootEscape
 Complexitylib/Classes/NP/Reduction.lean : copyright
 Complexitylib/Classes/NP/Witness.lean : copyright
 Complexitylib/Classes/Negligible.lean : copyright
@@ -88,6 +88,7 @@ Complexitylib/Languages/LengthParity.lean : copyright
 Complexitylib/Languages/Palindromes.lean : copyright
 Complexitylib/Languages/Trivial.lean : copyright
 Complexitylib/Languages/ZeroPrefix.lean : copyright
+Complexitylib/Mathlib/Digraph.lean : copyright
 Complexitylib/Models.lean : copyright
 Complexitylib/Models.lean : moduleDoc
 Complexitylib/Models/TuringMachine.lean : copyright
@@ -103,10 +104,13 @@ Complexitylib/Models/TuringMachine/Combinators/Internal/Union.lean : lineLength
 Complexitylib/Models/TuringMachine/Combinators/LoopInternal.lean : copyright
 Complexitylib/Models/TuringMachine/Combinators/RetargetInternal.lean : copyright
 Complexitylib/Models/TuringMachine/Combinators/RetargetInternal.lean : lineLength
+Complexitylib/Models/TuringMachine/Combinators/RetargetInternal.lean : rootEscape
 Complexitylib/Models/TuringMachine/Combinators/RetargetInternal.lean : trailingWs
 Complexitylib/Models/TuringMachine/Combinators/ScannerInternal.lean : copyright
 Complexitylib/Models/TuringMachine/Combinators/SeqInternal.lean : copyright
 Complexitylib/Models/TuringMachine/CounterSubroutines.lean : copyright
+Complexitylib/Models/TuringMachine/CounterSubroutines.lean : lineLength
+Complexitylib/Models/TuringMachine/CounterSubroutines.lean : rootEscape
 Complexitylib/Models/TuringMachine/DecReg.lean : copyright
 Complexitylib/Models/TuringMachine/Det.lean : copyright
 Complexitylib/Models/TuringMachine/Emit.lean : copyright
@@ -123,6 +127,7 @@ Complexitylib/Models/TuringMachine/Internal.lean : lineLength
 Complexitylib/Models/TuringMachine/Lift.lean : copyright
 Complexitylib/Models/TuringMachine/MixedRadix.lean : copyright
 Complexitylib/Models/TuringMachine/NonDetSubroutines.lean : copyright
+Complexitylib/Models/TuringMachine/NonDetSubroutines.lean : rootEscape
 Complexitylib/Models/TuringMachine/Pad.lean : copyright
 Complexitylib/Models/TuringMachine/Probe.lean : copyright
 Complexitylib/Models/TuringMachine/RegisterOps.lean : copyright
@@ -140,6 +145,7 @@ Complexitylib/Models/TuringMachine/Subroutines.lean : copyright
 Complexitylib/Models/TuringMachine/Subroutines.lean : lineLength
 Complexitylib/Models/TuringMachine/Subroutines/Internal.lean : copyright
 Complexitylib/Models/TuringMachine/Subroutines/Internal.lean : lineLength
+Complexitylib/Models/TuringMachine/Subroutines/Internal.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/Bits.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Body.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/BodyApply.lean : copyright
@@ -154,6 +160,7 @@ Complexitylib/Models/TuringMachine/UTM/Clock.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/ClockConstructible.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/ClockFrontier.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/ClockedUtm.lean : copyright
+Complexitylib/Models/TuringMachine/UTM/ClockedUtm.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/Desc.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/DescLayout.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Diagonal.lean : copyright
@@ -165,6 +172,7 @@ Complexitylib/Models/TuringMachine/UTM/Interp.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Machine.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/NegOut.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/PairSelf.lean : copyright
+Complexitylib/Models/TuringMachine/UTM/PairSelf.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/SeekFrontier.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Sim.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/SimClocked.lean : copyright
@@ -174,19 +182,27 @@ Complexitylib/Models/TuringMachine/UTM/TermCheck.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Terminated.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/Universal.lean : copyright
 Complexitylib/Models/TuringMachine/UTM/VTape.lean : copyright
+Complexitylib/Models/TuringMachine/UTM/VTape.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/Verdict.lean : copyright
 Complexitylib/SAT.lean : copyright
 Complexitylib/SAT/CookLevin.lean : copyright
 Complexitylib/SAT/CookLevin.lean : lineLength
 Complexitylib/SAT/CookLevin/Assembly.lean : copyright
+Complexitylib/SAT/CookLevin/Assembly.lean : rootEscape
 Complexitylib/SAT/CookLevin/Emitter.lean : copyright
+Complexitylib/SAT/CookLevin/Emitter.lean : rootEscape
 Complexitylib/SAT/CookLevin/EmitterActive.lean : copyright
+Complexitylib/SAT/CookLevin/EmitterActive.lean : rootEscape
 Complexitylib/SAT/CookLevin/EmitterFamilies.lean : copyright
+Complexitylib/SAT/CookLevin/EmitterFamilies.lean : rootEscape
 Complexitylib/SAT/CookLevin/EmitterLoop.lean : copyright
+Complexitylib/SAT/CookLevin/EmitterLoop.lean : rootEscape
 Complexitylib/SAT/CookLevin/EmitterStart.lean : copyright
+Complexitylib/SAT/CookLevin/EmitterStart.lean : rootEscape
 Complexitylib/SAT/Encoding.lean : copyright
 Complexitylib/SAT/GuessVerify.lean : copyright
 Complexitylib/SAT/GuessVerify.lean : lineLength
+Complexitylib/SAT/GuessVerify.lean : rootEscape
 Complexitylib/SAT/Headline.lean : copyright
 Complexitylib/SAT/Language.lean : copyright
 Complexitylib/SAT/Rename.lean : copyright
@@ -195,4 +211,5 @@ Complexitylib/SAT/Verifier.lean : copyright
 Complexitylib/SAT/Verifier.lean : lineLength
 Complexitylib/SAT/VerifierTM.lean : copyright
 Complexitylib/SAT/VerifierTM.lean : lineLength
+Complexitylib/SAT/VerifierTM.lean : rootEscape
 Complexitylib/TimeConstructible.lean : copyright

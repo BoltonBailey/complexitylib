@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # ifTM simulation — proof internals
 
@@ -346,3 +348,5 @@ theorem ifTM_check_step_else_full (tmTest tmThen tmElse : TM n)
   · ext i; exact tape_writeAndMove_stable _ (h_wh i) (h_wns i)
 
 end TM
+
+end Complexity

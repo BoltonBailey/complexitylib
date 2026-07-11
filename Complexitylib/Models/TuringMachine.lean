@@ -2,6 +2,8 @@ import Mathlib.Logic.Relation
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Rat.Defs
 
+namespace Complexity
+
 /-!
 # Turing Machines (Arora-Barak style)
 
@@ -684,3 +686,5 @@ def TM.toNTM (tm : TM n) : NTM n where
   qhalt := tm.qhalt
   δ := fun _ => tm.δ
   δ_right_of_start := fun _ => tm.δ_right_of_start
+
+end Complexity

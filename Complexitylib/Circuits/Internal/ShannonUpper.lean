@@ -2,6 +2,8 @@ import Complexitylib.Circuits.AON.Defs
 import Mathlib.Data.Nat.Log
 import Mathlib.Tactic
 
+namespace Complexity
+
 /-! # Internal: Shannon Upper Bound Construction
 
 The Shannon (1949) upper bound: every Boolean function on `N` variables
@@ -1810,3 +1812,5 @@ theorem shannon_construction (N : Nat) [NeZero N] (hN : 16 ≤ N)
   exact ⟨G, c, heval, by rw [Circuit.size]; exact shannon_size_le N hN G hG⟩
 
 end ShannonUpper
+
+end Complexity

@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Bits
 
+namespace Complexity
+
 /-!
 # Time-constructible functions
 
@@ -59,3 +61,5 @@ theorem computable {T : ℕ → ℕ} (hT : TimeConstructible T) :
   hT.2
 
 end TimeConstructible
+
+end Complexity

@@ -2,6 +2,8 @@ import Mathlib.Tactic
 import Complexitylib.Circuits.XOR
 import Complexitylib.Circuits.Internal.CircDesc
 
+namespace Complexity
+
 set_option maxHeartbeats 400000
 
 /-! # Internal: Schnorr's Lower Bound for XOR Circuits
@@ -1398,3 +1400,5 @@ theorem xor_lower_bound_2 (N s : Nat) (hs : 0 < s) (d : CircDesc N s) (comp : Bo
     omega
 
 end Schnorr
+
+end Complexity

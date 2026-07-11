@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # `palindromes`: strings equal to their reverse
 
@@ -1132,3 +1134,5 @@ theorem palindromes_mem_P : Language.palindromes ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ palindromes_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 4 1)
   exact BigO.const_mul_left 3 (by simpa using BigO.refl (fun n : ℕ => n))
+
+end Complexity

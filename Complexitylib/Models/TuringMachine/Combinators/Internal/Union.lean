@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # unionTM simulation — proof internals
 
@@ -1368,3 +1370,5 @@ theorem head_bound_of_reachesIn (tm : TM n₁)
     exact ⟨by omega, by omega, fun i => by have := hs_work i; have := ih_work i; omega⟩
 
 end TM
+
+end Complexity

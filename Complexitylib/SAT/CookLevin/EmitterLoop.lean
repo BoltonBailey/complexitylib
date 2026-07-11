@@ -1,5 +1,7 @@
 import Complexitylib.SAT.CookLevin.Emitter
 
+namespace Complexity
+
 /-!
 # The emitter loop driver
 
@@ -18,7 +20,7 @@ distribution lemma.
 
 namespace SAT
 
-open _root_.TM
+open _root_.Complexity.TM
 
 -- ════════════════════════════════════════════════════════════════════════
 -- List and encode plumbing
@@ -394,3 +396,7 @@ theorem emitLoopGen_hoareTime (body : TM n) (ctr fuel : Fin n)
   refine hrule.consequence ?_ (fun _ _ _ h => h) (le_refl _)
   rintro inp work out ⟨g1, g2, g3⟩
   exact ⟨g1, g2, by simpa using g3⟩
+
+end SAT
+
+end Complexity

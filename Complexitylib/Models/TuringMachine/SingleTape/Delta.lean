@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.SingleTape.Sim
 import Complexitylib.Models.TuringMachine.Combinators
 
+namespace Complexity
+
 /-!
 # Single-tape simulation — transition function (under construction)
 
@@ -516,3 +518,5 @@ noncomputable def singleTapeSim {k : ℕ} (N : NTM k) : NTM 1 where
   δ_right_of_start := SingleTape.simDelta_right_of_start N
 
 end NTM
+
+end Complexity

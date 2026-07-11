@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.Combinators
 
+namespace Complexity
+
 /-!
 # Tape-layout combinators: extra work tapes and output retargeting
 
@@ -493,3 +495,5 @@ theorem retargetOutput_computesInTime (tm : TM n) {f : List Bool → List Bool}
   · rw [hwork]; exact hout
 
 end TM
+
+end Complexity

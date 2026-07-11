@@ -1,6 +1,8 @@
 import Complexitylib.Classes.P.Defs
 import Complexitylib.Classes.P.Internal
 
+namespace Complexity
+
 /-!
 # P — surface layer
 
@@ -32,3 +34,5 @@ theorem DTIME_union {T₁ T₂ : ℕ → ℕ} {L₁ L₂ : Language}
   exact ⟨k₁ + 1 + k₂, TM.unionTM tm₁ tm₂, fun n => 10 * f₁ n + f₂ n,
     TM.unionTM_decidesInTime hd₁ hd₂,
     bigO_union_bound ho₁ ho₂⟩
+
+end Complexity

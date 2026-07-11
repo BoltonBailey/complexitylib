@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal
 
+namespace Complexity
+
 /-!
 # Complement TM: proof internals
 
@@ -203,3 +205,5 @@ theorem complementTM_decidesInTime (tm : TM n) {L : Language} {f : ℕ → ℕ}
     rw [hflip, hyes hxc]; simp [flipBit]
 
 end TM
+
+end Complexity

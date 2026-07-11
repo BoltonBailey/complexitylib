@@ -3,6 +3,8 @@ import Complexitylib.SAT.Rename
 import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Models.TuringMachine.SingleTape
 
+namespace Complexity
+
 /-!
 # Cook–Levin tableau core
 
@@ -1739,3 +1741,5 @@ theorems `reductionFn_mem_FP`, `cookLevin_reduction`, `NPHard_L_SAT`, and
 the emitter development under `Complexitylib.SAT.CookLevin/`. -/
 
 end SAT
+
+end Complexity

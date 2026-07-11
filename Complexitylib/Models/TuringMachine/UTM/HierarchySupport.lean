@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Asymptotics
 
+namespace Complexity
+
 /-!
 # Support lemmas for the time-hierarchy theorem
 
@@ -55,7 +57,6 @@ end TM.UTMBody
 -- Little-o to ℕ-scaled eventual bound
 -- ════════════════════════════════════════════════════════════════════════
 
-namespace Complexity
 
 /-- A little-o hypothesis beats every constant multiple eventually: from
     `f = o(g)` extract, for any scale `C : ℕ`, a threshold `N` past which
@@ -71,7 +72,6 @@ theorem LittleO.nat_mul_le {f g : ℕ → ℕ} (h : LittleO f g) (C : ℕ) :
   simp only [Real.norm_natCast, one_mul] at hbound
   exact_mod_cast hbound
 
-end Complexity
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Run dichotomy
@@ -98,3 +98,5 @@ theorem TM.halt_or_run_dichotomy {k : ℕ} (tm : TM k) (c₀ : Cfg k tm.Q) (V : 
       rcases ih c₁ with ⟨T, c, hT, hr, hhalt⟩ | ⟨c, hr, hnh⟩
       · exact Or.inl ⟨T + 1, c, by omega, .step hs hr, hhalt⟩
       · exact Or.inr ⟨c, .step hs hr, hnh⟩
+
+end Complexity

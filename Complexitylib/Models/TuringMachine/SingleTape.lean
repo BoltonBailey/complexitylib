@@ -6,6 +6,8 @@ import Complexitylib.Models.TuringMachine.SingleTape.Delta
 import Complexitylib.Models.TuringMachine.SingleTape.Correctness
 import Complexitylib.Asymptotics
 
+namespace Complexity
+
 /-!
 # Multi-tape → single-tape simulation
 
@@ -147,3 +149,5 @@ theorem exists_singleTape_decider {k : ℕ} {L : Language} (N : NTM k)
       singleTapeSim_decides N hk hdec, singleTapeSimTime_bigO hTO⟩
 
 end NTM
+
+end Complexity

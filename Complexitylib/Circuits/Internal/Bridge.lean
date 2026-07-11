@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Internal.CircuitToDesc
 import Complexitylib.Circuits.Internal.Schnorr
 
+namespace Complexity
+
 /-! # Internal: Bridge from CircDesc to Circuit Model
 
 This internal module uses the faithful `Circuit`-to-`CircDesc` encoding to
@@ -115,3 +117,5 @@ theorem schnorr_lower_bound_circuit (N G : Nat) [NeZero N]
   have heval' : ∀ x, evalD hG1 (circuitToDesc c) x = comp.xor (Schnorr.xorBool N x) :=
     fun x => (congr_fun h x).symm ▸ heval x
   exact Schnorr.xor_lower_bound_2 N (G + 1) hG1 (circuitToDesc c) comp heval' hN
+
+end Complexity

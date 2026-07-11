@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # `{x : #false x = #true x}`: equal-count / "balanced" language
 
@@ -1024,3 +1026,5 @@ theorem balanced_mem_P : Language.balanced ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ balanced_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 3 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # `{0ⁿ 1ⁿ : n ≥ 0}`: the canonical push-down language
 
@@ -1125,3 +1127,5 @@ theorem anbn_mem_P : Language.anbn ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ anbn_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 3 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

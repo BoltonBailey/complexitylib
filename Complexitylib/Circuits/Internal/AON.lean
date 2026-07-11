@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.AON.Defs
 
+namespace Complexity
+
 /-! # Internal: AND/OR/NOT Completeness Proof
 
 This internal module proves functional completeness of `Basis.unboundedAON`
@@ -395,3 +397,5 @@ def AONForM_is_Correct {N M : Nat} [NeZero N] [NeZero M]
 
 instance : CompleteBasis Basis.unboundedAON where
   complete f := ⟨_, AONForM f, AONForM_is_Correct f⟩
+
+end Complexity

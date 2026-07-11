@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.Body
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # Body machine: step reduction
 
@@ -897,3 +899,5 @@ theorem dfCopy_loop (W : ℕ → Γ) (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start
       exact idle_tape_id (hoth i hi hi')
 
 end TM.UTMBody
+
+end Complexity

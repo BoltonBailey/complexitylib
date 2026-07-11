@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Models.TuringMachine.UTM.Terminated
 import Complexitylib.Models.TuringMachine.Det
 
+namespace Complexity
+
 /-!
 # The universal machine: headline theorems
 
@@ -107,3 +109,5 @@ theorem utmTM_universal_padded {k : ℕ} (M : TM k) {L : Language} {T : ℕ → 
   exact utmTM_simulates_decider hterm hdec' x
 
 end TM.UTMBody
+
+end Complexity

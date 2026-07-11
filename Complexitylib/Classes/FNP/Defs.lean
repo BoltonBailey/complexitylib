@@ -1,6 +1,8 @@
 import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.P
 
+namespace Complexity
+
 /-!
 # FNP and TFNP — Definitions
 
@@ -27,3 +29,5 @@ def TFNP : Set (List Bool → List Bool → Prop) :=
 def tagRelation (R₁ R₂ : List Bool → List Bool → Prop) :
     List Bool → List Bool → Prop :=
   fun x y => R₁ x y ∨ R₂ x y
+
+end Complexity

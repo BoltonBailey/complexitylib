@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Registers
 import Complexitylib.Models.TuringMachine.UTM.VTape
 
+namespace Complexity
+
 /-!
 # Clock infrastructure for the time-bounded universal machine
 
@@ -988,3 +990,5 @@ theorem zeroTestTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → Tape
   exact ⟨_, 1, by omega, .step hstep .zero, rfl, rfl, rfl, hcells_eq, houth⟩
 
 end TM
+
+end Complexity

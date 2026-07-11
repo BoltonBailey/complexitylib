@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Encoding.Defs
 
+namespace Complexity
+
 /-!
 # Correctness of the machine-facing circuit codec
 
@@ -512,3 +514,5 @@ theorem encodeCircuit_length_le_size_internal {N G : ℕ} [NeZero N]
       omega
 
 end AONCircuitCode
+
+end Complexity

@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.CounterSubroutines
 
+namespace Complexity
+
 /-!
 # Unary registers
 
@@ -224,3 +226,5 @@ theorem regCells_erase (d : ℕ) :
       · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
 
 end TM
+
+end Complexity

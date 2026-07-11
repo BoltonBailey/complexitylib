@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.AON.Defs
 
+namespace Complexity
+
 /-! # AC0 — Core Definitions
 
 This module defines the AC0 circuit complexity class.
@@ -26,3 +28,5 @@ def InAC0 (f : BoolFunFamily) : Prop :=
     ∃ (G : Nat) (circuit : Circuit Basis.unboundedAON N 1 G),
       circuit.depth ≤ d ∧ circuit.size ≤ N ^ c ∧
       (fun x => (circuit.eval x) 0) = f N
+
+end Complexity

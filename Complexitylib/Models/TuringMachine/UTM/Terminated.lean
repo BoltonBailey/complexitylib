@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyIteration
 
+namespace Complexity
+
 /-!
 # `TerminatedRegion` for encoded descriptions
 
@@ -77,3 +79,5 @@ theorem descOfTM_entries_ne_nil (M : TM 1) : (TM.descOfTM M).entries ≠ [] := b
   exact List.ne_nil_of_mem hmem
 
 end TM.UTMBody
+
+end Complexity

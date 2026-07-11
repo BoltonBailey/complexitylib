@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Encoding.Family
 
+namespace Complexity
+
 /-!
 # Encoded-circuit evaluator — executable validation
 
@@ -71,3 +73,5 @@ def sharedCircuit : RawCircuit :=
 #guard evalFamilyCode (false :: andCircuit.encode) [true, false] = none
 
 end AONCircuitCode.Validation
+
+end Complexity

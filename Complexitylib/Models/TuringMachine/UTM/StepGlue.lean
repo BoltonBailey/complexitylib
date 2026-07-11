@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.BodyLookup
 
+namespace Complexity
+
 /-!
 # Glue facts: phase outputs vs the interpreted step
 
@@ -102,3 +104,5 @@ theorem scratch_cellBit_eq_segBit {t : Tape} {seg : List Γw} {w k : ℕ}
   rw [hg]
 
 end TM.UTMBody
+
+end Complexity

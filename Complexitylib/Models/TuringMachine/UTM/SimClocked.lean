@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.SimLoop
 import Complexitylib.Models.TuringMachine.UTM.ClockFrontier
 
+namespace Complexity
+
 /-!
 # Universal machine: the clocked (time-bounded) simulate/halt-test loop
 
@@ -1009,3 +1011,5 @@ theorem clocked_loop_simulates (α x : List Bool) (hterm : TerminatedRegion α)
       hsi, hckc, hckh', h0, hns, hh1, hc1⟩
 
 end TM.UTMBody
+
+end Complexity

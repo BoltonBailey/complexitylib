@@ -2,6 +2,8 @@ import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Tactic
 import Complexitylib.Circuits.Basic
 
+namespace Complexity
+
 /-! # Internal: Circuit Descriptors and Shannon Counting Bound
 
 This internal module defines the circuit descriptor model used for counting
@@ -159,3 +161,5 @@ theorem shannon_lower_bound (N : Nat) (hN : 6 ≤ N) :
   -- By pigeonhole, some function is not in the image of evalD
   obtain ⟨f, _, hf⟩ := Finset.exists_mem_notMem_of_card_lt_card h_lt
   exact ⟨f, fun d hd => hf (Finset.mem_image.mpr ⟨d, Finset.mem_univ _, hd⟩)⟩
+
+end Complexity

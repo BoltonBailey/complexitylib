@@ -1,6 +1,8 @@
 import Complexitylib.SAT.VerifierTM
 import Complexitylib.SAT.GuessVerify
 
+namespace Complexity
+
 /-!
 # SAT ∈ NP — the headline theorem
 
@@ -31,3 +33,5 @@ theorem L_SAT_mem_NP : L_SAT ∈ NP :=
   L_SAT_in_NP_of_verifierP_direct pairLang_R_SAT_mem_P
 
 end SAT
+
+end Complexity

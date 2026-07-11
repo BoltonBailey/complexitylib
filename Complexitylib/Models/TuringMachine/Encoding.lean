@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine
 
+namespace Complexity
+
 /-!
 # TM State Normalization and Binary Encoding
 
@@ -253,3 +255,5 @@ theorem allΓFuncs_complete : ∀ (n : ℕ) (f : Fin n → Γ), f ∈ allΓFuncs
     · simp [hi]
     · have : i.val = n := by omega
       simp [hi]; congr 1; exact Fin.ext this.symm
+
+end Complexity

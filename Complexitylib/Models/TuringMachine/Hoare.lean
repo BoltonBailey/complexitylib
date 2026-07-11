@@ -4,6 +4,8 @@ import Complexitylib.Models.TuringMachine.Combinators.IfInternal
 import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # Hoare-style composition rules for TM combinators
 
@@ -346,3 +348,5 @@ theorem loopTM_hoareTime (tmBody tmTest : TM n)
     (h_variant_bound inp work out hinv)
 
 end TM
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.P.Defs
 
+namespace Complexity
+
 /-!
 # Polynomial-time many-one reductions and NP-completeness
 
@@ -32,3 +34,5 @@ def NPHard (L : Language) : Prop := ∀ L' ∈ NP, L' ≤ₚ L
 
 /-- **NP-completeness.** `L` is NP-complete when it is in `NP` and NP-hard. -/
 def NPComplete (L : Language) : Prop := L ∈ NP ∧ NPHard L
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.FNP
 
+namespace Complexity
+
 /-!
 # NP witness characterization
 
@@ -140,3 +142,5 @@ theorem witnessLang_mem_NP_of_FNP
   NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
 
 end NP
+
+end Complexity

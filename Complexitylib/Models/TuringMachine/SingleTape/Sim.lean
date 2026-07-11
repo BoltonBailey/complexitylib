@@ -4,6 +4,8 @@ import Mathlib.Data.Fintype.Sum
 import Mathlib.Data.Finite.Prod
 import Mathlib.Data.Finite.Sum
 
+namespace Complexity
+
 /-!
 # Single-tape simulation — simulator state type
 
@@ -109,3 +111,5 @@ noncomputable instance instDecidableEqSimQ (k : ℕ) (Q : Type) :
     DecidableEq (SimQ k Q) := Classical.decEq _
 
 end NTM.SingleTape
+
+end Complexity

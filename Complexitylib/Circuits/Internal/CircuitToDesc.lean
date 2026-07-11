@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.AON.Defs
 import Complexitylib.Circuits.Internal.CircDesc
 
+namespace Complexity
+
 /-! # Internal: Typed Circuits as Circuit Descriptors
 
 This internal module connects the typed `Circuit` model over `Basis.andOr2`
@@ -154,3 +156,5 @@ theorem circuit_eval_eq_evalD {N G : Nat} [NeZero N]
       exact Nat.lt_of_lt_of_le ((c.outputs 0).inputs ⟨1, by omega⟩).isLt (by omega),
     ite_true]
   simp only [show ¬(N + G.succ - 1 < N) from by omega, dite_false]
+
+end Complexity

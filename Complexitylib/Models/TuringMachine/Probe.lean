@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.MixedRadix
 
+namespace Complexity
+
 /-!
 # symProbeTM: read the input symbol at a register-indexed position
 
@@ -1060,3 +1062,5 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
 end Probe
 
 end TM
+
+end Complexity

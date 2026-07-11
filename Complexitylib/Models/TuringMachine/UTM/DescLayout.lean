@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.UTM.VTape
 import Complexitylib.Models.TuringMachine.UTM.Desc
 import Complexitylib.Models.TuringMachine.UTM.HaltTest
 
+namespace Complexity
+
 /-!
 # Description-tape layout
 
@@ -242,3 +244,5 @@ theorem exists_first_mismatch {A B : List Γw}
         simpa using hab
 
 end TM.UTMBody
+
+end Complexity

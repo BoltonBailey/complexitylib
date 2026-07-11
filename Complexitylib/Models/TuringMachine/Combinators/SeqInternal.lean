@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
+namespace Complexity
+
 /-!
 # seqTM simulation — proof internals
 
@@ -150,3 +152,5 @@ theorem phase2Wrap_output (tm₁ tm₂ : TM n) (c₂ : Cfg n tm₂.Q) :
     (phase2Wrap tm₁ tm₂ c₂).output = c₂.output := rfl
 
 end TM
+
+end Complexity

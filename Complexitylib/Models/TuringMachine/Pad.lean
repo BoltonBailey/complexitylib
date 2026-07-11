@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine
 
+namespace Complexity
+
 /-!
 # Padding a 0-work-tape NTM with a dummy work tape
 
@@ -151,3 +153,5 @@ theorem pad0_decidesInTime {L : Language} {N : NTM 0} {T : ℕ → ℕ}
    fun x => (hdec.2 x).trans (pad0_acceptsInTime_iff N x (T x.length)).symm⟩
 
 end NTM
+
+end Complexity

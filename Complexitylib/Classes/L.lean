@@ -5,6 +5,8 @@ import Complexitylib.Classes.Pairing
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
 
+namespace Complexity
+
 /-!
 # Log-space transducer classes
 
@@ -59,3 +61,5 @@ def FNL : Set (List Bool → List Bool → Prop) :=
     least one witness. -/
 def TFNL : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNL | ∀ x, ∃ y, R x y}
+
+end Complexity

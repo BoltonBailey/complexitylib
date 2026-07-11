@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
 import Complexitylib.Models.TuringMachine.UTM.BodyLookup
 
+namespace Complexity
+
 /-!
 # Body machine: the match-loop induction
 
@@ -1567,3 +1569,5 @@ theorem matchLoop (f : VFlags) (v0 v1 v2 : Γ) (stSyms : List Γw)
   exact fun R => main R.length R (Nat.le_refl _)
 
 end TM.UTMBody
+
+end Complexity

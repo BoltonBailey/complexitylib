@@ -2,6 +2,8 @@ import Mathlib.Data.List.Basic
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Tactic.Linarith
 
+namespace Complexity
+
 /-!
 # SAT: Semantic Layer
 
@@ -339,3 +341,5 @@ instance CNF.decidableSatisfiable (φ : CNF) : Decidable φ.Satisfiable := by
     exact ⟨List.ofFn f, by simp, hf⟩
 
 end SAT
+
+end Complexity

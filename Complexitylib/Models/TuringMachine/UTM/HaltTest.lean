@@ -3,6 +3,8 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.UTM.VTape
 import Complexitylib.Models.TuringMachine.UTM.Desc
 
+namespace Complexity
+
 /-!
 # The UTM halt test machine
 
@@ -1083,3 +1085,5 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
     exact hho₃
 
 end TM
+
+end Complexity

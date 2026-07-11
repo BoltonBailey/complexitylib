@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Encoding
 import Complexitylib.Circuits.Family
 
+namespace Complexity
+
 /-!
 # Encodings of whole circuit families
 
@@ -115,3 +117,5 @@ theorem encodeAt_succ_length_le (F : CircuitFamily Basis.andOr2) (n : ℕ) :
   omega
 
 end AONCircuitCode
+
+end Complexity

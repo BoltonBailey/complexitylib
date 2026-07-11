@@ -1,5 +1,7 @@
 import Complexitylib.SAT.CookLevin.EmitterLoop
 
+namespace Complexity
+
 /-!
 # The clause-family emitters
 
@@ -12,7 +14,7 @@ indices below), so register-distinctness side conditions are all `decide`.
 
 namespace SAT
 
-open _root_.TM Tableau
+open _root_.Complexity.TM Tableau
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Tape layout
@@ -2105,3 +2107,5 @@ theorem emitFrameTM_hoareTime (Qc steps P M : ℕ)
     exact g3
 
 end SAT
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Classes.PPoly.Defs
 import Complexitylib.Circuits.Family
 
+namespace Complexity
+
 /-!
 # P/poly and circuit-size classes
 
@@ -129,3 +131,5 @@ theorem PPoly_eq_iUnion_SIZE :
     exact ⟨p, F, hL, hp⟩
   · rintro ⟨p, F, hL, hp⟩
     exact ⟨F, hL, p, hp⟩
+
+end Complexity

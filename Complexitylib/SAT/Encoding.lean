@@ -2,6 +2,8 @@ import Complexitylib.SAT.Semantics
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
+namespace Complexity
+
 /-!
 # SAT: Encoding Layer
 
@@ -272,3 +274,5 @@ theorem doubleBits_pair_eq (bs : List Bool) (k : Nat) (h : 2 * k + 1 < (doubleBi
       exact ih'
 
 end SAT
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Circuits.Basic
 import Mathlib.Data.List.OfFn
 
+namespace Complexity
+
 /-!
 # Fixed-length bit strings and lists
 
@@ -52,3 +54,5 @@ def ofList (xs : List Bool) {n : ℕ} (h : xs.length = n) : BitString n :=
   exact List.ofFn_fin_append x y
 
 end BitString
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 
+namespace Complexity
+
 /-!
 # Base time complexity classes
 
@@ -40,3 +42,5 @@ def complClass (C : Set Language) : Set Language :=
 /-- The complement class is involutive: `complClass (complClass C) = C`. -/
 theorem complClass_complClass (C : Set Language) : complClass (complClass C) = C := by
   ext L; simp [complClass]
+
+end Complexity

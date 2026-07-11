@@ -1,5 +1,7 @@
 import Complexitylib.Circuits.Basic
 
+namespace Complexity
+
 /-! # AND/OR/NOT Basis — Definitions
 
 This module defines the AND/OR operations and various basis configurations
@@ -63,3 +65,5 @@ theorem AONOp.eval_two_and (inputs : BitString 2) :
 theorem AONOp.eval_two_or (inputs : BitString 2) :
     AONOp.eval .or 2 inputs = (inputs 0 || inputs 1) := by
   simp [AONOp.eval, Fin.foldl_succ_last, Fin.foldl_zero]
+
+end Complexity

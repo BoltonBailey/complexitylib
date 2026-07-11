@@ -2,6 +2,8 @@ import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
 
+namespace Complexity
+
 /-!
 # `{0ⁿ 1ᵐ : n ≥ m}`: a push-down language with inequality counter
 
@@ -1051,3 +1053,5 @@ theorem zeroPrefix_mem_P : Language.zeroPrefix ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ zeroPrefix_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 3 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

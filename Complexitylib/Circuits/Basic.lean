@@ -1,5 +1,7 @@
 import Mathlib.Data.Nat.Lattice
 
+namespace Complexity
+
 /-! # Boolean Circuit Complexity
 
 This file defines Boolean circuits parameterized by a basis of operations and
@@ -248,3 +250,5 @@ theorem size_complexity_witness [CompleteBasis B]
   Nat.sInf_mem (size_complexity_set_nonempty (B := B) f)
 
 end Circuit
+
+end Complexity

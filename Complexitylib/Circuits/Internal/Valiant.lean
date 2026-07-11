@@ -1,4 +1,4 @@
-import Complexitylib.Circuits.Digraph.Defs
+import Complexitylib.Mathlib.Digraph
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Data.Finset.Card
@@ -14,12 +14,14 @@ import Mathlib.Tactic.Ring
 Proof machinery supporting `Valiant.depth_reduction`. The public
 statement and high-level wrapper live in `Complexitylib.Circuits.Valiant`; the basic
 digraph definitions used below — `IsDirectedPath`, `IsSimplePath`,
-`depth`, `edgeFinset`, `deleteEdges` — live in `Complexitylib.Circuits.Digraph.Defs`.
+`depth`, `edgeFinset`, `deleteEdges` — live in `Complexitylib.Mathlib.Digraph`.
 This file defines the canonical labeling and collects the canonical
 labeling argument, the edge partition by first-differing bit, the
 averaging step, and the relabeling-after-removal bound.
 -/
 
+-- `canonicalLabel` extends Mathlib's `Digraph` and therefore lives in its
+-- root namespace (dot-notation requires it), ahead of the `Complexity` block.
 namespace Digraph
 
 /-- The **canonical labeling** of `G`: the length — node count — of a
@@ -32,6 +34,8 @@ noncomputable def canonicalLabel {V : Type*} [Fintype V]
   sSup { n | ∃ p : Fin (n + 1) → V, G.IsSimplePath p ∧ p (Fin.last n) = v } + 1
 
 end Digraph
+
+namespace Complexity
 
 namespace Valiant
 
@@ -650,3 +654,5 @@ lemma depth_deleteEdges_levelEdges_le
   exact (depth_le_image_card G' hlegal).trans himg
 
 end Valiant
+
+end Complexity

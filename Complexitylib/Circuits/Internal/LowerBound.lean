@@ -2,6 +2,8 @@ import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.AON.Defs
 
+namespace Complexity
+
 /-! # Internal: Gate Elimination Lower Bound
 
 This internal module proves the gate elimination lower bound: for any circuit
@@ -178,3 +180,5 @@ theorem lower_bound_all_inputs {k : Nat}
     _ ≤ k * c.size := essential_inputs_le_mul_size c f hf
 
 end Circuit
+
+end Complexity

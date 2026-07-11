@@ -2,6 +2,8 @@ import Complexitylib.Models.TuringMachine.UTM.SimClocked
 import Complexitylib.Models.TuringMachine.UTM.SeekFrontier
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
+namespace Complexity
+
 /-!
 # The clocked universal machine
 
@@ -95,7 +97,7 @@ private theorem reachesIn_output_wfCells {n : ℕ} {tm : TM n} :
     shape survives any run. This is what lets branch postconditions survive
     the combinators' final `transitionTape` (which preserves cells only on
     `▷`-clean tapes). -/
-theorem _root_.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
+theorem _root_.Complexity.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
     {pre post : TapePred n} {b : ℕ}
     (h : tm.HoareTime pre post b)
     (hpre : ∀ inp work out, pre inp work out →
@@ -918,3 +920,5 @@ theorem clockedUtmTM_hoareTime_timeout (α x : List Bool)
   omega
 
 end TM.UTMBody
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 
+namespace Complexity
+
 /-!
 # Base space complexity classes
 
@@ -27,3 +29,5 @@ def DSPACE (S : ℕ → ℕ) : Set Language :=
 def NSPACE (S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
     tm.DecidesInSpace L f ∧ f =O S}
+
+end Complexity

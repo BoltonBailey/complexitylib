@@ -1,6 +1,8 @@
 import Complexitylib.Models.TuringMachine.UTM.Desc
 import Complexitylib.Models.TuringMachine.Encoding
 
+namespace Complexity
+
 /-!
 # Interpreting machine descriptions
 
@@ -248,3 +250,5 @@ theorem exists_wf_desc_decidesInTime {L : Language} {T : ℕ → ℕ} (M : TM 1)
   ⟨M.descOfTM, M.descOfTM_wf, M.descOfTM_decidesInTime h⟩
 
 end TM
+
+end Complexity

@@ -1,6 +1,8 @@
 import Complexitylib.SAT.CookLevin.EmitterFamilies
 import Complexitylib.Models.TuringMachine.Probe
 
+namespace Complexity
+
 /-!
 # The start-clause family emitter
 
@@ -14,7 +16,7 @@ ordinary constant-digit clause loops.
 
 namespace SAT
 
-open _root_.TM Tableau
+open _root_.Complexity.TM Tableau
 
 open Emit
 
@@ -812,3 +814,5 @@ theorem emitStartTM_hoareTime (N : NTM 1) (x : List Bool) (steps P M : ℕ)
   exact g3
 
 end SAT
+
+end Complexity

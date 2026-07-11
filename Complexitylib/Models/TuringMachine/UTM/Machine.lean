@@ -4,6 +4,8 @@ import Complexitylib.Models.TuringMachine.UTM.Body
 import Complexitylib.Models.TuringMachine.UTM.HaltTest
 import Complexitylib.Models.TuringMachine.UTM.Extract
 
+namespace Complexity
+
 /-!
 # The universal Turing machine
 
@@ -31,3 +33,5 @@ def utmTM : TM 6 :=
   seqTM initTM (seqTM (loopTM UTMBody.bodyTM haltTestTM) extractTM)
 
 end TM
+
+end Complexity

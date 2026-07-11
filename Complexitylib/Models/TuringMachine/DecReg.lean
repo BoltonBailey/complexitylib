@@ -1,5 +1,7 @@
 import Complexitylib.Models.TuringMachine.MixedRadix
 
+namespace Complexity
+
 /-!
 # decRegTM: decrement a register
 
@@ -592,3 +594,5 @@ theorem decRegTM_hoareTime (q : Fin n) (d : ℕ) (inp₀ : Tape)
 end DecReg
 
 end TM
+
+end Complexity
