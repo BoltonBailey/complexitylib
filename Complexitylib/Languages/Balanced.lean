@@ -364,7 +364,8 @@ private theorem work_read_start_iff (inv : BalancedScanInv c x k h) :
 private theorem output_read (inv : BalancedScanInv c x k h) : c.output.read ≠ Γ.start := by
   simp only [Tape.read, inv.oh]; exact inv.ons
 
-private theorem output_stay (inv : BalancedScanInv c x k h) : idleDir c.output.read = Dir3.stay := by
+private theorem output_stay (inv : BalancedScanInv c x k h) :
+    idleDir c.output.read = Dir3.stay := by
   simp [idleDir, inv.output_read]
 
 end BalancedScanInv

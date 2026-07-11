@@ -123,7 +123,8 @@ theorem RTIME_subset_NTIME (T : ℕ → ℕ) : RTIME T ⊆ NTIME T := by
       | inr h => linarith
     have hpos : 0 < tm.acceptCount x (f x.length) := by
       unfold NTM.acceptCount
-      exact Finset.card_pos.mpr ⟨choices, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hhalt_ch, hout_ch⟩⟩
+      exact Finset.card_pos.mpr
+        ⟨choices, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hhalt_ch, hout_ch⟩⟩
     omega
 
 /-- **RP ⊆ NP**. -/

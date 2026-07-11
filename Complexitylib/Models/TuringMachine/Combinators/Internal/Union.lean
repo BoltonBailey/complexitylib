@@ -108,7 +108,8 @@ private theorem unionTM_delta_inr_inr (tm₁ : TM n₁) (tm₂ : TM n₂) {q : t
     (Sum.inr (Sum.inr r.1),
      fun i => if h : i.val ≤ n₁ then (Γw.blank : Γw) else r.2.1 ⟨i.val - (n₁ + 1), by omega⟩,
      r.2.2.1, r.2.2.2.1,
-     fun i => if h : i.val ≤ n₁ then idleDir (wHeads i) else r.2.2.2.2.1 ⟨i.val - (n₁ + 1), by omega⟩,
+     fun i => if h : i.val ≤ n₁ then idleDir (wHeads i)
+              else r.2.2.2.2.1 ⟨i.val - (n₁ + 1), by omega⟩,
      r.2.2.2.2.2) := by
   simp only [unionTM, if_neg hne]
 
@@ -193,7 +194,8 @@ private theorem phase1_init_step (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List B
   -- Rewrite the unionTM δ call
   simp only [unionTM_delta_inl tm₁ tm₂ hne]
   -- The phase1WorkReads of constant function is a constant function
-  have hwork_reads : phase1WorkReads (fun (_ : Fin (n₁ + 1 + n₂)) => (Tape.init ([] : List Γ)).read) =
+  have hwork_reads :
+      phase1WorkReads (fun (_ : Fin (n₁ + 1 + n₂)) => (Tape.init ([] : List Γ)).read) =
       fun _ => (Tape.init ([] : List Γ)).read := by ext; rfl
   simp_rw [hwork_reads]
   -- Now the δ calls match; show Cfg equality field by field
@@ -493,9 +495,11 @@ private theorem step_phase1_halted (tm₁ : TM n₁) (tm₂ : TM n₂)
   -- The result config
   set c' : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inl UnionPhase.rewindOut),
-      input := (unionPhase1Cfg tm₁ tm₂ c₁).input.move (idleDir (unionPhase1Cfg tm₁ tm₂ c₁).input.read),
+      input := (unionPhase1Cfg tm₁ tm₂ c₁).input.move
+        (idleDir (unionPhase1Cfg tm₁ tm₂ c₁).input.read),
       work := fun i => (((unionPhase1Cfg tm₁ tm₂ c₁).work i).write
-        ((if i.val = n₁ then readBackWrite ((unionPhase1Cfg tm₁ tm₂ c₁).work fakeOutIdx).read else .blank) : Γw).toΓ).move
+        ((if i.val = n₁ then readBackWrite ((unionPhase1Cfg tm₁ tm₂ c₁).work fakeOutIdx).read
+          else .blank) : Γw).toΓ).move
         (idleDir ((unionPhase1Cfg tm₁ tm₂ c₁).work i).read),
       output := ((unionPhase1Cfg tm₁ tm₂ c₁).output.write Γw.blank.toΓ).move
         (idleDir (unionPhase1Cfg tm₁ tm₂ c₁).output.read) } with hc'_def
@@ -533,7 +537,8 @@ private theorem rewind_fakeOut_loop (tm₁ : TM n₁) (tm₂ : TM n₂) :
       c'.output = unionIdleTape ∧
       (c.input.head ≥ 1 → (∀ i, i ≥ 1 → c.input.cells i ≠ Γ.start) →
         c'.input.head = c.input.head) ∧
-      (∀ i : Fin (n₁ + 1 + n₂), i.val > n₁ → c.work i = unionIdleTape → c'.work i = unionIdleTape) := by
+      (∀ i : Fin (n₁ + 1 + n₂), i.val > n₁ → c.work i = unionIdleTape →
+        c'.work i = unionIdleTape) := by
   intro h
   induction h with
   | zero =>
@@ -771,9 +776,11 @@ private theorem phase2_work_step_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
       congr 1; simp only [hine, ↓reduceIte]
     · -- q ≠ qhalt: write/dir have dif/if structure
       congr 1
-      · congr 1; show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else Γw.blank) = Γw.blank
+      · congr 1
+        show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else Γw.blank) = Γw.blank
         rw [dif_neg (show ¬((i : ℕ) < n₁) from by omega), if_neg hine]
-      · show (if h : (i : ℕ) < n₁ then _ else if (i : ℕ) = n₁ then _ else idleDir (c.work i).read) = _
+      · show (if h : (i : ℕ) < n₁ then _
+          else if (i : ℕ) = n₁ then _ else idleDir (c.work i).read) = _
         rw [dif_neg (show ¬((i : ℕ) < n₁) from by omega), if_neg hine]
   · rw [hq]; dsimp only [unionTM]; split
     · congr 1; simp only [hine, ↓reduceIte]
@@ -813,7 +820,8 @@ private theorem rewind_input_work_idle (tm₁ : TM n₁) (tm₂ : TM n₂)
       show ((c.work i).write _).move _ = _; rw [hidle]; exact idleTape_step_idle
     obtain ⟨c'', hreach, hidle''⟩ := ih c' rfl
       (by show (c.input.move Dir3.left).head = n; simp [Tape.move, hhead])
-      (by intro j hj; show (c.input.move Dir3.left).cells j ≠ _; rw [Tape.move_cells]; exact hnostart j hj)
+      (by intro j hj; show (c.input.move Dir3.left).cells j ≠ _
+          rw [Tape.move_cells]; exact hnostart j hj)
       (by show (c.input.move Dir3.left).cells 0 = _; rw [Tape.move_cells]; exact hcell0)
       hidle'
     exact ⟨c'', .step hstep hreach, hidle''⟩
@@ -954,11 +962,13 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
   set c_s2 : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inl UnionPhase.setup2),
       input := c_ri0.input.move Dir3.right,
-      work := fun i => ((c_ri0.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c_ri0.work i).read),
+      work := fun i =>
+        ((c_ri0.work i).write (Γw.blank : Γw).toΓ).move (idleDir (c_ri0.work i).read),
       output := (c_ri0.output.write Γw.blank.toΓ).move (idleDir c_ri0.output.read) }
     with hc_s2_def
   -- Step 7: setup2 → Phase 2 start (1 step)
-  have hstep7 := step_setup2_cfg tm₁ tm₂ (show c_s2.state = Sum.inr (Sum.inl UnionPhase.setup2) from rfl)
+  have hstep7 := step_setup2_cfg tm₁ tm₂
+    (show c_s2.state = Sum.inr (Sum.inl UnionPhase.setup2) from rfl)
   set c_mid : Cfg (n₁ + 1 + n₂) (UnionQ tm₁.Q tm₂.Q) :=
     { state := Sum.inr (Sum.inr tm₂.qstart),
       input := c_s2.input.move (moveLeftDir c_s2.input.read),
@@ -1024,7 +1034,8 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
     have hstateq : (unionPhase1Cfg tm₁ tm₂ c₁).state = Sum.inl tm₁.qhalt := by
       show Sum.inl c₁.state = Sum.inl tm₁.qhalt; rw [hhalt]
     have hstep' := phase2_work_step_idle tm₁ tm₂ hstep1
-      (Or.inl ⟨tm₁.qhalt, hstateq⟩) (i := ⟨n₁ + 1 + j.val, by omega⟩) (by omega : n₁ + 1 + j.val > n₁)
+      (Or.inl ⟨tm₁.qhalt, hstateq⟩) (i := ⟨n₁ + 1 + j.val, by omega⟩)
+      (by omega : n₁ + 1 + j.val > n₁)
     rw [hstep']
     have hp1 : (unionPhase1Cfg tm₁ tm₂ c₁).work ⟨n₁ + 1 + j.val, by omega⟩ = unionIdleTape := by
       simp [unionPhase1Cfg, show ¬(n₁ + 1 + j.val < n₁) from by omega,
@@ -1145,7 +1156,8 @@ theorem unionTM_transition_reject (tm₁ : TM n₁) (tm₂ : TM n₂) (x : List 
     omega
   have htime : 1 + (h_rw + (1 + 1)) + (h_ri + (1 + 1)) ≤ c₁.output.head + c₁.input.head + 7 := by
     omega
-  refine ⟨1 + (h_rw + (1 + 1)) + (h_ri + (1 + 1)), c_mid, ?_, hst_mid, hin_mid, hwork_mid, hout_mid, htime⟩
+  refine ⟨1 + (h_rw + (1 + 1)) + (h_ri + (1 + 1)), c_mid, ?_, hst_mid, hin_mid, hwork_mid,
+    hout_mid, htime⟩
   exact hreach_total
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -1187,7 +1199,8 @@ private theorem phase2_step_corr (tm₁ : TM n₁) (tm₂ : TM n₂)
   have hwork_reads : phase2WorkReads (fun i => (c_u.work i).read) =
       fun j => (c₂.work j).read := by
     ext ⟨j, hj⟩; simp only [phase2WorkReads]; exact congrArg Tape.read (hcompat.work_eq ⟨j, hj⟩)
-  -- Construct UnionPhase2Compat (state_eq, input_eq, output_eq all close; work_eq needs dif reduction)
+  -- Construct UnionPhase2Compat (state_eq, input_eq, output_eq all close;
+  -- work_eq needs dif reduction)
   refine ⟨?_, ?_, fun ⟨j, hj⟩ => ?_, ?_⟩ <;> dsimp only [] <;> rw [hcompat.state_eq] <;>
     simp only [unionTM_delta_inr_inr tm₁ tm₂ hne, hcompat.input_eq, hcompat.output_eq, hwork_reads]
   have hgt : ¬((n₁ + 1 + j) ≤ n₁) := by omega

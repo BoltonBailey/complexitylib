@@ -15,9 +15,24 @@ import Complexitylib.Models.TuringMachine.Hoare.Defs
 /-!
 # SAT verifier TMs
 
-This file starts the machine-level implementation of the deterministic SAT
-verifier. The first component is a simple deterministic checker for the witness
-length side-condition `|α| ≤ |z| + 1`.
+Machine-level implementation of the deterministic SAT verifier, in the
+`SAT.VerifierTM` namespace (recently renamed from a namespace that shadowed
+`TM`). Building blocks, in dependency order:
+
+* a deterministic checker for the witness-length side-condition
+  `|α| ≤ |z| + 1` (`satLengthCheckTM` and its retargeted variants);
+* a streaming evaluator `satEvalOnInputTM` for a SAT-encoded CNF against a
+  staged assignment tape, together with its pure semantic model
+  (`SatEvalSemState`, `satEvalSemStep`, `satEvalSemRun`, `satEvalSemBits`);
+* the three-work-tape machine `verifyPairTM`, which computes the Boolean
+  reference verifier `SAT.verifyPair` and hence decides `pairLang Witness`
+  within the quadratic budget `verifyPairTMTime`
+  (`verifyPairTM_decidesInTime`).
+
+The pure model is tied to the reference verifier by `verifyPairSem` and
+`verifyPairSem_eq_verifyPair`, so membership in `pairLang Witness` — the
+paired witness language underlying `SAT.language ∈ NP` — is characterized
+both semantically and at the machine level.
 -/
 
 namespace Complexity
@@ -189,8 +204,11 @@ private theorem fin2_ne_zero_eq_one (i : Fin 2) (h : i ≠ ⟨0, by omega⟩) :
 
 /-- Control states for the SAT witness-length checker. -/
 inductive SatLengthCheckPhase where
+  /-- Initial state: step off the left marker before scanning. -/
   | init
+  /-- Scanning state: consume one counter mark per input bit. -/
   | scan
+  /-- Halt state: the verdict has been written to the output tape. -/
   | done
   deriving DecidableEq
 
@@ -1248,7 +1266,11 @@ clause has no completed literals. `inLit ... sign` means a raw literal has
 started with sign bit `sign`; each following raw bit must be `true`, and the
 assignment work-tape head tracks the current unary variable index. -/
 inductive SatEvalMode where
+  /-- Between raw literals: `cnf` is the conjunction of completed clauses,
+  `clause` the disjunction so far, `empty` whether the clause has no literals. -/
   | boundary (cnf clause empty : Bool)
+  /-- Inside a raw literal with sign bit `sign`; the assignment head tracks
+  the unary variable index. -/
   | inLit (cnf clause empty sign : Bool)
   deriving DecidableEq, Repr
 
@@ -1269,9 +1291,14 @@ instance : Fintype SatEvalMode where
 /-- Control states for the streaming CNF evaluator. The input tape supplies the
 SAT encoding `z`; work tape `0` supplies the assignment `α`. -/
 inductive SatEvalPhase where
+  /-- Reading the first bit of a doubled-bit token in mode `mode`. -/
   | readFirst (mode : SatEvalMode)
+  /-- Reading the second bit of a token whose first bit was `first`. -/
   | readSecond (mode : SatEvalMode) (first : Bool)
+  /-- Rewinding the assignment tape to its left marker before continuing
+  in mode `mode`. -/
   | rewindAlpha (mode : SatEvalMode)
+  /-- Halt state: the verdict has been written to the output tape. -/
   | done
   deriving DecidableEq, Repr
 
@@ -1808,11 +1835,22 @@ private theorem satEval_reject_output_zero (w : Γw) :
 -- Pure semantic target for the streaming evaluator
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Pure parser/evaluator state for the streaming CNF evaluator, abstracting
+the machine mode `SatEvalMode`: either at a token `boundary` (tracking the
+CNF-so-far, clause-so-far, and clause-emptiness Booleans) or `inLit` scanning
+a raw literal with its sign and unary variable counter `var`. -/
 inductive SatEvalSemState where
+  /-- Between tokens: `cnf` is the conjunction of completed clauses, `clause`
+  the disjunction so far, `empty` whether the clause has no literals. -/
   | boundary (cnf clause empty : Bool)
+  /-- Inside a raw literal with sign bit `sign` and unary variable counter
+  `var`. -/
   | inLit (cnf clause empty sign : Bool) (var : Nat)
   deriving DecidableEq, Repr
 
+/-- End-of-input result: at a `boundary` the value is `cnf && empty` (the CNF
+so far, provided the trailing clause is empty, i.e. the last token was `#`);
+ending inside a literal is malformed and yields `false`. -/
 def SatEvalSemState.finish : SatEvalSemState → Bool
   | .boundary cnf _ empty => cnf && empty
   | .inLit .. => false
@@ -1839,6 +1877,10 @@ private theorem finishEvalMode_toΓ_eq_finish (mode : SatEvalMode) (var : ℕ) :
   | inLit cnf clause empty sign =>
       simp [finishEvalMode, SatEvalMode.toSemState, SatEvalSemState.finish]
 
+/-- One-token transition of the pure evaluator under assignment `α`:
+`none` on malformed input (a separator with no literal, or a `false` bit
+inside a literal body); otherwise the updated `SatEvalSemState`, folding a
+completed literal's value into the clause accumulator at each `litSep`. -/
 def satEvalSemStep (α : Assignment) : SatEvalSemState → EncToken → Option SatEvalSemState
   | .boundary cnf clause empty, .bit sign => some (.inLit cnf clause empty sign 0)
   | .boundary _ _ _, .litSep => none
@@ -1849,6 +1891,9 @@ def satEvalSemStep (α : Assignment) : SatEvalSemState → EncToken → Option S
       some (.boundary cnf (clause || (Assignment.get α var == sign)) false)
   | .inLit _ _ _ _ _, .clauseSep => none
 
+/-- Run the pure evaluator over a token stream from a given state: fold
+`satEvalSemStep` over the tokens, returning `false` on any malformed step and
+`SatEvalSemState.finish` at the end of input. -/
 def satEvalSemRun (α : Assignment) : List EncToken → SatEvalSemState → Bool
   | [], st => st.finish
   | tok :: toks, st =>
@@ -2325,6 +2370,9 @@ private theorem satEvalOnInputTM_tokenize_none_reject (α : Assignment) :
                 exact ⟨c', 2 + t, by simp only [List.length_cons] at hlen; omega,
                   TM.reachesIn_trans _ hreach2 hreach, hhalt, hout'⟩
 
+/-- Bit-level pure evaluator: tokenize `z` (rejecting odd-length inputs) and
+run `satEvalSemRun` from the initial state `.boundary true false true`.
+Equals `CNF.eval α` on the decoded CNF by `satEvalSemBits_eq_decode_eval`. -/
 def satEvalSemBits (α z : List Bool) : Bool :=
   match tokenize? z with
   | none => false
@@ -2440,6 +2488,7 @@ private lemma parseEvalResult_invalid_raw (α : Assignment) (toks : List EncToke
 
 
 
+/-- A singleton clause evaluates to the value of its unique literal. -/
 @[simp] theorem Clause.eval_singleton (α : Assignment) (ℓ : Lit) :
     Clause.eval α [ℓ] = Lit.eval α ℓ := by
   simp [Clause.eval]
@@ -2538,6 +2587,9 @@ private lemma satEvalSemRun_correct (α : Assignment) (toks : List EncToken) :
           | clauseSep =>
               simp [satEvalSemRun, satEvalSemStep, parseEvalResult, parseTokensAux]
 
+/-- Correctness of the pure evaluator: `satEvalSemBits α z` is `false` when
+`z` fails to decode as a CNF, and otherwise is `CNF.eval α` of the decoded
+formula. -/
 theorem satEvalSemBits_eq_decode_eval (α z : List Bool) :
     satEvalSemBits α z =
       match CNF.decode? z with
@@ -2553,11 +2605,16 @@ theorem satEvalSemBits_eq_decode_eval (α z : List Bool) :
         ⟨rfl, by simp [CNF.eval], by simp [Clause.eval], by simp⟩
       simpa [parseEvalResult] using h
 
+/-- Pure semantic model of the paired SAT verifier: unpair `w` into `(z, α)`,
+check the witness-length bound `|α| ≤ |z| + 1`, and evaluate the encoded CNF
+`z` under `α` via `satEvalSemBits`; `false` on malformed pairs. -/
 def verifyPairSem (w : List Bool) : Bool :=
   match unpair? w with
   | none => false
   | some (z, α) => decide (α.length ≤ z.length + 1) && satEvalSemBits α z
 
+/-- The pure semantic model agrees with the reference Boolean verifier
+`SAT.verifyPair` on every input. -/
 theorem verifyPairSem_eq_verifyPair (w : List Bool) :
     verifyPairSem w = verifyPair w := by
   unfold verifyPairSem verifyPair
@@ -2570,10 +2627,14 @@ theorem verifyPairSem_eq_verifyPair (w : List Bool) :
       rw [satEvalSemBits_eq_decode_eval]
       cases CNF.decode? z <;> simp
 
+/-- `verifyPairSem` accepts exactly the members of the paired witness
+language `pairLang Witness`. -/
 theorem verifyPairSem_eq_true_iff_mem_pairLang (w : List Bool) :
     verifyPairSem w = true ↔ w ∈ pairLang Witness := by
   rw [verifyPairSem_eq_verifyPair, verifyPair_eq_true_iff_mem_pairLang]
 
+/-- Set-level restatement: `pairLang Witness` is the language accepted by the
+pure semantic verifier `verifyPairSem`. -/
 theorem pairLang_witness_eq_verifyPairSemLang :
     pairLang Witness = {w | verifyPairSem w = true} := by
   ext w
@@ -2597,18 +2658,34 @@ the SAT witness length bound during the split, rewinds the staged `z` and `α`
 tapes, and then runs the same streaming CNF evaluator as `satEvalOnInputTM`
 against the staged work tapes. -/
 inductive VerifyPairPhase where
+  /-- Initial state: step off the left markers. -/
   | init
+  /-- Write the extra leading counter tally before the split scan. -/
   | initCounter
+  /-- Split scan: expecting the first bit of a doubled input bit or of the
+  separator `01`. -/
   | splitScan
+  /-- Split scan after a first `false`: a `false` completes a doubled bit,
+  a `true` completes the separator. -/
   | splitAfterFalse
+  /-- Split scan after a first `true`: only a second `true` is valid. -/
   | splitAfterTrue
+  /-- Rewind the counter tape before copying the assignment. -/
   | rewindCounterForAlpha
+  /-- Copy the assignment suffix to work tape `1`, consuming counter tallies
+  to enforce the witness-length bound. -/
   | copyAlpha
+  /-- Rewind the staged formula tape to its left marker. -/
   | rewindFormula
+  /-- Rewind the staged assignment tape to its left marker. -/
   | rewindAssignment
+  /-- Evaluator phase mirroring `SatEvalPhase.readFirst`. -/
   | evalReadFirst (mode : SatEvalMode)
+  /-- Evaluator phase mirroring `SatEvalPhase.readSecond`. -/
   | evalReadSecond (mode : SatEvalMode) (first : Bool)
+  /-- Evaluator phase mirroring `SatEvalPhase.rewindAlpha`. -/
   | evalRewindAlpha (mode : SatEvalMode)
+  /-- Halt state: the verdict has been written to the output tape. -/
   | done
   deriving DecidableEq, Repr
 
@@ -4569,6 +4646,7 @@ literal may rewind the assignment tape. -/
 def verifyPairTMTime (n : ℕ) : ℕ :=
   (n + 3) * (n + 3) + 6 * n + 20
 
+/-- The verifier's time budget `verifyPairTMTime` is `O(n²)`. -/
 theorem verifyPairTMTime_bigO_quadratic :
     Complexity.BigO verifyPairTMTime ((· ^ 2) : ℕ → ℕ) := by
   unfold Complexity.BigO
@@ -4581,6 +4659,8 @@ theorem verifyPairTMTime_bigO_quadratic :
     nlinarith [sq_nonneg ((n : ℝ) - 1)]
   exact hcalc
 
+/-- The verifier's time budget is polynomially bounded (witnessed by
+degree `2`), the form needed for polynomial-time verifier packaging. -/
 theorem verifyPairTMTime_polynomial :
     ∃ d : ℕ, Complexity.BigO verifyPairTMTime ((· ^ d) : ℕ → ℕ) :=
   ⟨2, verifyPairTMTime_bigO_quadratic⟩

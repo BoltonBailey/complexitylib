@@ -92,6 +92,7 @@ def posMoveOpt (v : ℕ) : Option Dir3 → ℕ
   | none => v
   | some d => posMove v d
 
+/-- `posMoveOpt` moves a position bounded by `P` to one bounded by `P + 1`. -/
 theorem posMoveOpt_le (v P : ℕ) (mv : Option Dir3) (hv : v ≤ P) :
     posMoveOpt v mv ≤ P + 1 := by
   cases mv with
@@ -184,20 +185,35 @@ variable (N : NTM 1)
 /-- The standing register facts of the active family's leaves. -/
 structure ActiveBase (Qc steps P M t pi pw po : ℕ)
     (base : Fin nT → Tape) : Prop where
+  /-- The mixed-radix capacity product is within the modulus bound `M`. -/
   hM : 4 * (steps + 1) * (max Qc 3) * (P + 2) * 4 ≤ M
+  /-- The row index is below the row count. -/
   ht : t < steps
+  /-- The input-head position is within the position bound. -/
   hpi : pi ≤ P
+  /-- The work-head position is within the position bound. -/
   hpw : pw ≤ P
+  /-- The output-head position is within the position bound. -/
   hpo : po ≤ P
+  /-- Every work tape is parked (head at cell 0). -/
   parked : ∀ l, Parked (base l)
+  /-- Radix register A holds the row capacity `steps + 1`. -/
   hrA : base rA = regTape (steps + 1)
+  /-- Radix register B holds the state capacity `max Qc 3`. -/
   hrB : base rB = regTape (max Qc 3)
+  /-- Radix register C holds the position capacity `P + 2`. -/
   hrC : base rC = regTape (P + 2)
+  /-- Radix register D holds the symbol capacity `4`. -/
   hrD : base rD = regTape 4
+  /-- The row register holds the current row `t`. -/
   htReg : base tReg = regTape t
+  /-- The successor-row register holds `t + 1`. -/
   htPlus : base tPlusReg = regTape (t + 1)
+  /-- The first position register holds the input-head position. -/
   hp1 : base pos1Reg = regTape pi
+  /-- The second position register holds the work-head position. -/
   hp2 : base pos2Reg = regTape pw
+  /-- The third position register holds the output-head position. -/
   hp3 : base pos3Reg = regTape po
 
 /-- The base facts survive scratch-position updates. -/
@@ -648,6 +664,7 @@ noncomputable def activeBLevelTM (q : N.Q) (si sw so : Γ)
       (if q = N.qhalt then none
         else some (N.δ b q si (fun _ => sw) so).2.2.2.2.2)))
 
+/-- Budget of the choice-bit unroll: two leaves. -/
 def activeBLevelBudget (M : ℕ) : ℕ := 2 * (activeLeafBudget M + 1) + 1
 
 /-- **`activeBLevelTM` Hoare specification.** -/
@@ -729,6 +746,7 @@ noncomputable def activeSoLevelTM (q : N.Q) (si sw : Γ)
     (pwZero poZero : Bool) : TM nT :=
   bigSeqTM (allSyms.map (fun so => activeBLevelTM N q si sw so pwZero poZero))
 
+/-- Budget of the output-symbol unroll: four choice-bit levels. -/
 def activeSoLevelBudget (M : ℕ) : ℕ := 4 * (activeBLevelBudget M + 1) + 1
 
 /-- **`activeSoLevelTM` Hoare specification.** -/
@@ -773,6 +791,8 @@ noncomputable def activePoSplitTM (q : N.Q) (si sw : Γ) (pwZero : Bool) :
           pos3Reg pos3Fuel)
         (setConstTM pos3Reg 0)))
 
+/-- Budget of the output-position block: the `po = 0` instance plus the
+    counter setup, the sweep loop, and the counter reset. -/
 def activePoSplitBudget (M : ℕ) : ℕ :=
   activeSoLevelBudget M + 1
     + (opBudget M + 1
@@ -971,6 +991,7 @@ noncomputable def activeSwLevelTM (q : N.Q) (si : Γ) (pwZero : Bool) :
     TM nT :=
   bigSeqTM (allSyms.map (fun sw => activePoSplitTM N q si sw pwZero))
 
+/-- Budget of the work-symbol unroll: four output-position blocks. -/
 def activeSwLevelBudget (M : ℕ) : ℕ := 4 * (activePoSplitBudget M + 1) + 1
 
 /-- **`activeSwLevelTM` Hoare specification.** -/
@@ -1011,6 +1032,8 @@ noncomputable def activePwSplitTM (q : N.Q) (si : Γ) : TM nT :=
       (seqTM (emitLoopTM (activeSwLevelTM N q si false) pos2Reg pos2Fuel)
         (setConstTM pos2Reg 0)))
 
+/-- Budget of the work-position block: the `pw = 0` instance plus the
+    counter setup, the sweep loop, and the counter reset. -/
 def activePwSplitBudget (M : ℕ) : ℕ :=
   activeSwLevelBudget M + 1
     + (opBudget M + 1
@@ -1213,6 +1236,7 @@ theorem activePwSplitTM_hoareTime (q : N.Q) (si : Γ)
 noncomputable def activeSiLevelTM (q : N.Q) : TM nT :=
   bigSeqTM (allSyms.map (fun si => activePwSplitTM N q si))
 
+/-- Budget of the input-symbol unroll: four work-position blocks. -/
 def activeSiLevelBudget (M : ℕ) : ℕ := 4 * (activePwSplitBudget M + 1) + 1
 
 /-- **`activeSiLevelTM` Hoare specification.** -/
@@ -1260,6 +1284,7 @@ noncomputable def activePiLoopTM (q : N.Q) : TM nT :=
   seqTM (emitLoopTM (activeSiLevelTM N q) pos1Reg pos1Fuel)
     (setConstTM pos1Reg 0)
 
+/-- Budget of the input-position sweep: the loop plus the counter reset. -/
 def activePiLoopBudget (M : ℕ) : ℕ :=
   loopBudget M (activeSiLevelBudget M) + 1 + opBudget M
 
@@ -1433,6 +1458,7 @@ noncomputable def activeQLevelTM : TM nT :=
   bigSeqTM ((Finset.univ : Finset N.Q).toList.map (fun q =>
     activePiLoopTM N q))
 
+/-- Budget of the machine-state unroll: one input-position sweep per state. -/
 def activeQLevelBudget (N : NTM 1) (M : ℕ) : ℕ :=
   Fintype.card N.Q * (activePiLoopBudget M + 1) + 1
 
@@ -1487,6 +1513,7 @@ theorem activeQLevelTM_hoareTime
 noncomputable def activeRowTM : TM nT :=
   seqTM (incRegTM tPlusReg) (activeQLevelTM N)
 
+/-- Budget of the row body: the register bump plus the state unroll. -/
 def activeRowBudget (N : NTM 1) (M : ℕ) : ℕ :=
   opBudget M + 1 + activeQLevelBudget N M
 

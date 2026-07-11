@@ -15,7 +15,8 @@ essential variables, the circuit has size at least ⌈n'/k⌉.
 
 The public definitions (`IsEssentialInput`, `essentialInputs`) are in
 `Complexitylib.Circuits.EssentialInput`. The public theorems (`card_essentialInputs_le_mul_size`,
-`le_mul_size_of_forall_isEssentialInput`) are accessible through `Complexitylib.Circuits.LowerBound`.
+`le_mul_size_of_forall_isEssentialInput`) are accessible through
+`Complexitylib.Circuits.LowerBound`.
 -/
 
 namespace Complexity

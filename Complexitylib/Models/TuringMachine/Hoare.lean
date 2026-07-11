@@ -219,7 +219,8 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
             ⟨tmThen.qstart, transitionInput c_test.input,
              fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifThenWrap]
-        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have hcfg_eta : c_branch =
+            ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
             ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
         rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,
@@ -259,7 +260,8 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
             ⟨tmElse.qstart, transitionInput c_test.input,
              fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifElseWrap]
-        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have hcfg_eta : c_branch =
+            ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
             ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
         rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,

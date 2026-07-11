@@ -112,7 +112,8 @@ def binopCircuit (op : AndOrOp) {N G₁ G₂ : Nat} [NeZero N]
   gates i := (binopGWP c₁ c₂ i).val
   outputs _ :=
     { op := op, fanIn := 2, arityOk := rfl,
-      inputs := fun j => if j.val = 0 then ⟨N + G₁, by omega⟩ else ⟨N + G₁ + G₂ + 1, by omega⟩,
+      inputs := fun j =>
+        if j.val = 0 then ⟨N + G₁, by omega⟩ else ⟨N + G₁ + G₂ + 1, by omega⟩,
       negated := fun _ => false }
   acyclic i k := (binopGWP c₁ c₂ i).property k
 
@@ -149,8 +150,10 @@ private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
     | _ n ih =>
       intro hn₁ hn₂
       by_cases hlt : n < N
-      · rw [Circuit.wireValue_of_lt _ _ ⟨n, hn₁⟩ (show (⟨n, hn₁⟩ : Fin _).val < N from hlt),
-             Circuit.wireValue_of_lt _ _ ⟨n, hn₂⟩ (show (⟨n, hn₂⟩ : Fin _).val < N from hlt)]
+      · rw [Circuit.wireValue_of_lt _ _ ⟨n, hn₁⟩
+              (show (⟨n, hn₁⟩ : Fin _).val < N from hlt),
+            Circuit.wireValue_of_lt _ _ ⟨n, hn₂⟩
+              (show (⟨n, hn₂⟩ : Fin _).val < N from hlt)]
       · rw [Circuit.wireValue_of_not_lt _ _ _ hlt, Circuit.wireValue_of_not_lt _ _ _ hlt]
         have hg : n - N < G₁ := by omega
         -- binopGWP takes first branch since n - N < G₁
@@ -160,9 +163,11 @@ private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
         simp only [binopGWP, dif_pos hg]
         rw [mkGate2'_eval, andOr2_gate_eval_two_inputs]
         have hacyc0 : (gw 0 (c₁.gates ⟨n - N, hg⟩)).val < n := by
-          have := c₁.acyclic ⟨_, hg⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₁.acyclic ⟨_, hg⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         have hacyc1 : (gw 1 (c₁.gates ⟨n - N, hg⟩)).val < n := by
-          have := c₁.acyclic ⟨_, hg⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₁.acyclic ⟨_, hg⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         cases (c₁.gates ⟨n - N, hg⟩).op <;> simp only <;> congr 1 <;> congr 1
         · exact ih _ hacyc0 (by omega) (by omega)
         · exact ih _ hacyc1 (by omega) (by omega)
@@ -206,9 +211,11 @@ private theorem binop_wireValue_c₂ {N G₁ G₂ : Nat} [NeZero N]
           ext; simp; omega
         simp only [this]
         have hacyc0 : (gw 0 (c₂.gates ⟨n - N, hg₂⟩)).val < n := by
-          have := c₂.acyclic ⟨_, hg₂⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₂.acyclic ⟨_, hg₂⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         have hacyc1 : (gw 1 (c₂.gates ⟨n - N, hg₂⟩)).val < n := by
-          have := c₂.acyclic ⟨_, hg₂⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₂.acyclic ⟨_, hg₂⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         cases (c₂.gates ⟨n - N, hg₂⟩).op <;> simp only <;> congr 1 <;> congr 1
         · exact ih _ hacyc0 (by omega)
         · exact ih _ hacyc1 (by omega)
@@ -238,7 +245,8 @@ theorem binopCircuit_or_correct {N G₁ G₂ : Nat} [NeZero N]
       (c₁.outputs 0).eval (c₁.wireValue x) := by
     rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬(N + G₁ < N) by omega)]
     change (binopGWP c₁ c₂ ⟨_, _⟩).val.eval _ = _
-    have hfin : (⟨N + G₁ - N, (by omega : N + G₁ - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
+    have hfin : (⟨N + G₁ - N, (by omega : N + G₁ - N < G₁ + G₂ + 2)⟩ :
+          Fin (G₁ + G₂ + 2)) =
         ⟨G₁, by omega⟩ := Fin.ext (show N + G₁ - N = G₁ by omega)
     rw [hfin]
     simp only [binopGWP, show ¬(G₁ < G₁) from Nat.lt_irrefl G₁, dite_false, dite_true]
@@ -250,8 +258,10 @@ theorem binopCircuit_or_correct {N G₁ G₂ : Nat} [NeZero N]
       (c₂.outputs 0).eval (c₂.wireValue x) := by
     rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬(N + G₁ + G₂ + 1 < N) by omega)]
     change (binopGWP c₁ c₂ ⟨_, _⟩).val.eval _ = _
-    have hfin : (⟨N + G₁ + G₂ + 1 - N, (by omega : N + G₁ + G₂ + 1 - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
-        ⟨G₁ + G₂ + 1, by omega⟩ := Fin.ext (show N + G₁ + G₂ + 1 - N = G₁ + G₂ + 1 by omega)
+    have hfin : (⟨N + G₁ + G₂ + 1 - N,
+          (by omega : N + G₁ + G₂ + 1 - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
+        ⟨G₁ + G₂ + 1, by omega⟩ :=
+      Fin.ext (show N + G₁ + G₂ + 1 - N = G₁ + G₂ + 1 by omega)
     rw [hfin]
     simp only [binopGWP,
       show ¬(G₁ + G₂ + 1 < G₁) by omega,
@@ -1139,7 +1149,8 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
       (hjW : N + 1 + j < N + szSections (addrBits N) (dataBits N)),
       (shannonCircuit N f hN).wireValue x ⟨N + 1 + j, hjW⟩ =
       decide (∀ i : Fin (treeLevel j + 1),
-        x ⟨addrBits N + i.val, by have := i.isLt; have := treeLevel_lt j (dataBits N) hj hq2; omega⟩ =
+        x ⟨addrBits N + i.val, by
+            have := i.isLt; have := treeLevel_lt j (dataBits N) hj hq2; omega⟩ =
           Nat.testBit (treePos j (treeLevel j)) i.val) := by
     intro j
     exact Nat.strongRecOn j fun j ih => by
@@ -1460,7 +1471,8 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       · rw [testBit_sum_cond_pow_fin k addr i hi]
         exact Eq.mpr (by congr 1) (h ⟨i, by omega⟩).symm
       · rw [Nat.testBit_lt_two_pow (lt_of_lt_of_le ha (Nat.pow_le_pow_right (by omega) (by omega))),
-            Nat.testBit_lt_two_pow (lt_of_lt_of_le haSum_lt (Nat.pow_le_pow_right (by omega) (by omega)))]
+            Nat.testBit_lt_two_pow (lt_of_lt_of_le haSum_lt
+              (Nat.pow_le_pow_right (by omega) (by omega)))]
     · intro h; subst h; intro i
       rw [testBit_sum_cond_pow_fin k addr i.val (by omega)]
   have constFalse_wire : ∀ (hW : N < N + szSections k q),
@@ -1469,7 +1481,8 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
     have h0N : (0 : Nat) < N := by linarith [hkq, hk3]
     -- unfolds shannonGateArray to expose the constFalse gate; genuine elaboration cost
     set_option maxHeartbeats 800000 in
-    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬((⟨N, hW⟩ : Fin _).val < N) from by show ¬(N < N); omega)]
+    rw [Circuit.wireValue_of_not_lt _ _ _
+      (show ¬((⟨N, hW⟩ : Fin _).val < N) from by show ¬(N < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
     change (shannonGateArray N f hN ⟨N - N, by omega⟩).val.eval
@@ -1534,8 +1547,9 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
     induction r with
     | zero =>
       have h_ne0 : oD k q + p * (2 ^ k - 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) + colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
-          ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) ≠ 0
+        show oD (addrBits N) (dataBits N) +
+          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+            ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) ≠ 0
         unfold oD oC; omega
       have h_ge_oC : ¬(oD k q + p * (2 ^ k - 1) < oC q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
@@ -1571,8 +1585,9 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       · simp only [Bool.eq_false_iff.mpr htb, Bool.false_and]; exact constFalse_wire _
     | succ r' ih =>
       have h_ne0' : oD k q + p * (2 ^ k - 1) + (r' + 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) + colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
-          ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) + (r' + 1) ≠ 0
+        show oD (addrBits N) (dataBits N) +
+          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+            ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) + (r' + 1) ≠ 0
         unfold oD oC; omega
       have h_ge_oC' : ¬(oD k q + p * (2 ^ k - 1) + (r' + 1) < oC q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
@@ -1718,7 +1733,8 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
   | succ r' ih =>
     -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
-    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬((⟨N + oF (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
+    rw [Circuit.wireValue_of_not_lt _ _ _
+      (show ¬((⟨N + oF (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
         Fin _).val < N) from by show ¬(N + oF (addrBits N) (dataBits N) + (r' + 1) < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray

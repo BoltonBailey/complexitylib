@@ -12,6 +12,12 @@ import Complexitylib.SAT.CookLevin.Internal.EmitterActive
 the input, evaluate the time polynomial, initialize the radix and fuel
 registers, and emit the seven encoded clause families of
 `tableauCNFFlat N (p.eval |x|) x`.
+
+The file then proves the running time polynomially bounded (via the
+`PolyBnd` closure kit), concluding `reductionFn N (p.eval ·) ∈ FP`, the
+Cook–Levin reductions `cookLevin_reduction_singleTape` /
+`cookLevin_reduction`, and the headlines `NPHard_language` and
+`NPComplete_language` for the SAT language `language`.
 -/
 
 namespace Complexity
@@ -43,6 +49,7 @@ def initVals (n steps P Qc tf : ℕ) : Fin nT → ℕ := fun i =>
 def Tape.inits (n steps P Qc tf : ℕ) : Fin nT → Tape :=
   fun i => regTape (initVals n steps P Qc tf i)
 
+/-- Every tape in the initialized register file is `Parked`. -/
 theorem Tape.inits_parked (n steps P Qc tf : ℕ) :
     ∀ i, Parked (Tape.inits n steps P Qc tf i) :=
   fun _ => parked_regTape _
@@ -385,6 +392,8 @@ theorem emitInitTM_hoareTime (N : NTM 1) (p : Polynomial ℕ) (x : List Bool)
 -- The family chain
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Overwriting `tFuel` in an initialized register file just changes the
+    fuel parameter. -/
 theorem Tape.inits_update_tFuel (n steps P Qc tf tf' : ℕ) :
     Function.update (Tape.inits n steps P Qc tf) tFuel (regTape tf')
       = Tape.inits n steps P Qc tf' := by
@@ -398,6 +407,8 @@ theorem Tape.inits_update_tFuel (n steps P Qc tf tf' : ℕ) :
     congr 1
     rw [initVals, initVals, if_neg hi, if_neg hi]
 
+/-- Zeroing the scratch registers `tmp`/`tmp2` of an initialized register
+    file is a no-op: they already hold `0`. -/
 theorem scratch_initTapes (n steps P Qc tf : ℕ) :
     scratch (Tape.inits n steps P Qc tf) tmp tmp2 0
       = Tape.inits n steps P Qc tf := by
@@ -792,12 +803,15 @@ def PolyBnd (f : ℕ → ℕ) : Prop := ∃ q : Polynomial ℕ, ∀ n, f n ≤ q
 
 namespace PolyBnd
 
+/-- Constant functions are polynomially bounded. -/
 theorem const (c : ℕ) : PolyBnd (fun _ => c) :=
   ⟨Polynomial.C c, fun n => by simp⟩
 
+/-- The identity function is polynomially bounded. -/
 theorem id : PolyBnd (fun n => n) :=
   ⟨Polynomial.X, fun n => by simp⟩
 
+/-- Polynomial boundedness is closed under pointwise addition. -/
 theorem add {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
     PolyBnd (fun n => f n + g n) := by
   obtain ⟨q₁, h₁⟩ := hf
@@ -806,6 +820,7 @@ theorem add {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
     rw [Polynomial.eval_add]
     exact Nat.add_le_add (h₁ n) (h₂ n)⟩
 
+/-- Polynomial boundedness is closed under pointwise multiplication. -/
 theorem mul {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
     PolyBnd (fun n => f n * g n) := by
   obtain ⟨q₁, h₁⟩ := hf
@@ -814,11 +829,14 @@ theorem mul {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
     rw [Polynomial.eval_mul]
     exact Nat.mul_le_mul (h₁ n) (h₂ n)⟩
 
+/-- A function pointwise below a polynomially bounded one is itself
+    polynomially bounded. -/
 theorem mono {f g : ℕ → ℕ} (hg : PolyBnd g) (h : ∀ n, f n ≤ g n) :
     PolyBnd f := by
   obtain ⟨q, hq⟩ := hg
   exact ⟨q, fun n => le_trans (h n) (hq n)⟩
 
+/-- Polynomial boundedness is closed under a fixed power. -/
 theorem pow {f : ℕ → ℕ} (hf : PolyBnd f) (k : ℕ) :
     PolyBnd (fun n => f n ^ k) := by
   induction k with
@@ -827,6 +845,7 @@ theorem pow {f : ℕ → ℕ} (hf : PolyBnd f) (k : ℕ) :
     refine PolyBnd.mono (PolyBnd.mul ih hf) fun n => ?_
     rw [pow_succ]
 
+/-- Evaluating a `Polynomial ℕ` is polynomially bounded (by itself). -/
 theorem eval (p : Polynomial ℕ) : PolyBnd (fun n => p.eval n) :=
   ⟨p, fun _ => le_refl _⟩
 
@@ -838,28 +857,40 @@ theorem PolyBnd.opBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
   have h2 : PolyBnd (fun n => f n + 2) := hf.add (PolyBnd.const 2)
   exact (PolyBnd.const 32).mul ((h2.mul h2).mul h2)
 
+/-- `layerBudget` of a polynomially bounded value cap is polynomially
+    bounded. -/
 theorem PolyBnd.layerBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
     PolyBnd (fun n => layerBudget (f n)) :=
   ((PolyBnd.const 4).mul hf.opBudget).add (PolyBnd.const 3)
 
+/-- `loadBudget` of a polynomially bounded value cap is polynomially
+    bounded. -/
 theorem PolyBnd.loadBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
     PolyBnd (fun n => loadBudget (f n)) :=
   (hf.opBudget.add ((PolyBnd.const 4).mul hf.layerBudget)).add
     (PolyBnd.const 4)
 
+/-- `emitVarBudget` of a polynomially bounded value cap is polynomially
+    bounded. -/
 theorem PolyBnd.emitVarBudget {f : ℕ → ℕ} (hf : PolyBnd f) :
     PolyBnd (fun n => emitVarBudget (f n)) :=
   (hf.loadBudget.add hf.opBudget).add (PolyBnd.const 1)
 
+/-- `clauseBudget` with polynomially bounded length and value cap is
+    polynomially bounded. -/
 theorem PolyBnd.clauseBudget {L : ℕ → ℕ} {f : ℕ → ℕ} (hL : PolyBnd L)
     (hf : PolyBnd f) : PolyBnd (fun n => clauseBudget (L n) (f n)) :=
   ((hL.mul (hf.emitVarBudget.add (PolyBnd.const 1))).add
     ((PolyBnd.const 2).mul hf.opBudget)).add (PolyBnd.const 6)
 
+/-- `cnfBudget` with polynomially bounded clause count, clause length, and
+    value cap is polynomially bounded. -/
 theorem PolyBnd.cnfBudget {K L f : ℕ → ℕ} (hK : PolyBnd K) (hL : PolyBnd L)
     (hf : PolyBnd f) : PolyBnd (fun n => cnfBudget (K n) (L n) (f n)) :=
   (hK.mul ((hL.clauseBudget hf).add (PolyBnd.const 1))).add (PolyBnd.const 1)
 
+/-- `loopBudget` with polynomially bounded iteration count and body budget
+    is polynomially bounded. -/
 theorem PolyBnd.loopBudget {f inner : ℕ → ℕ} (hf : PolyBnd f)
     (hinner : PolyBnd inner) :
     PolyBnd (fun n => loopBudget (f n) (inner n)) :=

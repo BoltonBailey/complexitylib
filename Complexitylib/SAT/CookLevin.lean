@@ -81,6 +81,7 @@ def symIdx : Γ → ℕ
   | Γ.blank => 2
   | Γ.start => 3
 
+/-- `symIdx` is injective: distinct tape symbols receive distinct indices. -/
 theorem symIdx_inj : Function.Injective symIdx := by
   intro a b h; cases a <;> cases b <;> simp_all [symIdx]
 
@@ -184,6 +185,7 @@ theorem cnf_eval_flatMap {β : Type*} (α : Assignment) (l : List β) (f : β �
     of `N.Q`; injective, so a one-hot encoding over `Fin (card Q)` names the states. -/
 noncomputable def stateIdx {k : ℕ} (N : NTM k) (q : N.Q) : ℕ := (Fintype.equivFin N.Q q).val
 
+/-- `stateIdx` is injective: distinct machine states receive distinct indices. -/
 theorem stateIdx_inj {k : ℕ} (N : NTM k) : Function.Injective (stateIdx N) := by
   intro a b h
   exact (Fintype.equivFin N.Q).injective (Fin.val_injective h)
@@ -259,8 +261,10 @@ def posMove (pos : ℕ) (d : Dir3) : ℕ :=
 /-- The four tape symbols, enumerated. -/
 def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
 
+/-- Every tape symbol appears in `allSyms`. -/
 @[simp] theorem mem_allSyms (s : Γ) : s ∈ allSyms := by cases s <;> simp [allSyms]
 
+/-- Every Boolean appears in the two-element list `[true, false]`. -/
 @[simp] theorem mem_true_false (b : Bool) : b ∈ [true, false] := by cases b <;> simp
 
 /-- The shared "read-config" condition literals (all negated) of one transition
@@ -407,7 +411,7 @@ end Tableau
     computation on input `x` within `steps` steps — variables encode the tape /
     head / state contents at each time-step together with the nondeterministic
     choice bits, and clauses enforce the start configuration, per-step transition
-    validity, and acceptance. **Definition to be supplied.** -/
+    validity, and acceptance. -/
 noncomputable def tableauCNF (N : NTM 1) (steps : ℕ) (x : List Bool) : CNF :=
   let P := steps + x.length + 1
   Tableau.oneHotStates N steps ++ Tableau.oneHotCells 1 steps P ++
@@ -488,13 +492,16 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
 /-! Tape `move`/`writeAndMove` cell/head behaviour, used to match `traceStep`'s
     fields against the active-transition consequence variables. -/
 
+/-- `Tape.move` changes the head exactly as `Tableau.posMove` computes. -/
 theorem tape_move_head (t : Tape) (d : Dir3) : (t.move d).head = Tableau.posMove t.head d := by
   cases d <;> rfl
 
+/-- `Tape.writeAndMove` changes the head exactly as `Tableau.posMove` computes. -/
 theorem tape_writeAndMove_head (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).head = Tableau.posMove t.head d := by
   rw [Tape.writeAndMove, tape_move_head, Tape.write_head]
 
+/-- `Tape.writeAndMove` leaves every cell other than the (old) head position unchanged. -/
 theorem tape_writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {pos : ℕ} (h : pos ≠ t.head) :
     (t.writeAndMove s d).cells pos = t.cells pos := by
   rw [Tape.writeAndMove, Tape.move_cells]
@@ -502,6 +509,8 @@ theorem tape_writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {pos : ℕ} (h
   · rfl
   · exact Function.update_of_ne h s t.cells
 
+/-- `Tape.writeAndMove` sets the (old) head cell to the written symbol, except at cell `0`
+    where writing is a no-op. -/
 theorem tape_writeAndMove_cells_self (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).cells t.head = if t.head = 0 then t.cells t.head else s := by
   rw [Tape.writeAndMove, Tape.move_cells]
@@ -676,6 +685,7 @@ theorem represents_step (N : NTM 1) (α : Assignment) (steps P : ℕ)
   · rw [hWorkHead]; exact C6
   · rw [hOutHead]; exact C7
 
+/-- A head move lands at most one cell to the right of where it started. -/
 theorem posMove_le (pos : ℕ) (d : Dir3) : Tableau.posMove pos d ≤ pos + 1 := by
   cases d <;> simp only [Tableau.posMove] <;> omega
 
@@ -718,9 +728,11 @@ theorem represents_trace (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List B
       _ (ih (by omega)) (by omega) (by omega) (by omega)
 
 open Tableau in
+/-- Symbol indices are below `4`, the number of tape symbols. -/
 theorem symIdx_lt (s : Γ) : symIdx s < 4 := by cases s <;> decide
 
 open Tableau in
+/-- State indices are below the number of machine states. -/
 theorem stateIdx_lt {k : ℕ} (N : NTM k) (q : N.Q) : stateIdx N q < Fintype.card N.Q :=
   (Fintype.equivFin N.Q q).isLt
 
@@ -766,10 +778,12 @@ theorem tableau_sat_to_accepts (N : NTM 1) (steps : ℕ) (x : List Bool)
     on that range. The forward direction builds its satisfying witness this way. -/
 def assignOf (M : ℕ) (g : ℕ → Bool) : Assignment := (List.range M).map g
 
+/-- `assignOf M g` reads back as `g` on variables below `M`. -/
 theorem assignOf_get {M : ℕ} (g : ℕ → Bool) {v : ℕ} (h : v < M) :
     (assignOf M g).get v = g v := by
   simp [assignOf, Assignment.get, h]
 
+/-- Every element of a list is bounded by the list's `foldr max 0`. -/
 theorem le_foldr_max {v : ℕ} {l : List ℕ} (h : v ∈ l) : v ≤ l.foldr max 0 := by
   induction l with
   | nil => simp at h
@@ -785,11 +799,13 @@ theorem le_foldr_max {v : ℕ} {l : List ℕ} (h : v ∈ l) : v ≤ l.foldr max 
     unlisted ones are either out of range or decided `false`. -/
 def listAssign (l : List ℕ) : Assignment := assignOf (l.foldr max 0 + 1) (fun i => decide (i ∈ l))
 
+/-- `listAssign l` reads `true` on every listed variable. -/
 theorem listAssign_get_true {l : List ℕ} {v : ℕ} (h : v ∈ l) :
     (listAssign l).get v = true := by
   rw [listAssign, assignOf_get _ (Nat.lt_succ_of_le (le_foldr_max h))]
   simp [h]
 
+/-- `listAssign l` reads `false` on every unlisted variable. -/
 theorem listAssign_get_false {l : List ℕ} {v : ℕ} (h : v ∉ l) :
     (listAssign l).get v = false := by
   by_cases hv : v < l.foldr max 0 + 1
@@ -798,6 +814,7 @@ theorem listAssign_get_false {l : List ℕ} {v : ℕ} (h : v ∉ l) :
     rw [List.getElem?_eq_none (by simp only [List.length_map, List.length_range]; omega)]
     rfl
 
+/-- A variable that `listAssign l` reads as `true` must be listed. -/
 theorem listAssign_mem_of_get {l : List ℕ} {v : ℕ} (h : (listAssign l).get v = true) :
     v ∈ l := by
   by_contra hv; rw [listAssign_get_false hv] at h; exact absurd h (by simp)
@@ -831,6 +848,7 @@ noncomputable def ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
     vHead t tp (fheadPos N x g t tp)))
 
 open Tableau in
+/-- A state variable is in `ftraceVars` iff it names the run's state at an in-range time. -/
 theorem vState_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t q : ℕ} :
     vState t q ∈ ftraceVars N x g steps P ↔ t ≤ steps ∧ q = stateIdx N (fcfg N x g t).state := by
   unfold ftraceVars
@@ -849,6 +867,7 @@ theorem vState_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (st
     exact Or.inl (Or.inl (Or.inl ⟨t, ht, rfl⟩))
 
 open Tableau in
+/-- A choice variable is in `ftraceVars` iff its time is in range and its choice bit is true. -/
 theorem vChoice_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t : ℕ} :
     vChoice t ∈ ftraceVars N x g steps P ↔ t < steps ∧ g t = true := by
   unfold ftraceVars
@@ -867,6 +886,7 @@ theorem vChoice_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (s
     exact Or.inl (Or.inl (Or.inr ⟨t, ht, by rw [if_pos hg]⟩))
 
 open Tableau in
+/-- A cell variable is in `ftraceVars` iff it names the run's symbol at an in-range cell. -/
 theorem vCell_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t tp pos s : ℕ} :
     vCell t tp pos s ∈ ftraceVars N x g steps P ↔
@@ -889,6 +909,8 @@ theorem vCell_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
     exact Or.inl (Or.inr ⟨t, ht, tp, htp, pos, hpos, rfl⟩)
 
 open Tableau in
+/-- A head variable is in `ftraceVars` iff it names the run's head position at an
+    in-range time and tape. -/
 theorem vHead_mem_ftraceVars (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t tp pos : ℕ} :
     vHead t tp pos ∈ ftraceVars N x g steps P ↔
@@ -914,6 +936,7 @@ noncomputable def fassign (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps 
   listAssign (ftraceVars N x g steps P)
 
 open Tableau in
+/-- `fassign` sets a state variable true iff it names the run's state (in range). -/
 theorem fassign_get_vState (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t q : ℕ} :
     (fassign N x g steps P).get (vState t q) = true ↔
       t ≤ steps ∧ q = stateIdx N (fcfg N x g t).state :=
@@ -921,12 +944,14 @@ theorem fassign_get_vState (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps
    fun h => listAssign_get_true ((vState_mem_ftraceVars N x g steps P).mpr h)⟩
 
 open Tableau in
+/-- `fassign` sets a choice variable true iff its time is in range and its bit is true. -/
 theorem fassign_get_vChoice (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) {t : ℕ} :
     (fassign N x g steps P).get (vChoice t) = true ↔ t < steps ∧ g t = true :=
   ⟨fun h => (vChoice_mem_ftraceVars N x g steps P).mp (listAssign_mem_of_get h),
    fun h => listAssign_get_true ((vChoice_mem_ftraceVars N x g steps P).mpr h)⟩
 
 open Tableau in
+/-- `fassign` sets a cell variable true iff it names the run's symbol (in range). -/
 theorem fassign_get_vCell (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t tp pos s : ℕ} :
     (fassign N x g steps P).get (vCell t tp pos s) = true ↔
@@ -935,6 +960,7 @@ theorem fassign_get_vCell (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps 
    fun h => listAssign_get_true ((vCell_mem_ftraceVars N x g steps P).mpr h)⟩
 
 open Tableau in
+/-- `fassign` sets a head variable true iff it names the run's head position (in range). -/
 theorem fassign_get_vHead (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t tp pos : ℕ} :
     (fassign N x g steps P).get (vHead t tp pos) = true ↔
@@ -954,6 +980,7 @@ theorem exactlyOne_of_unique {α : Assignment} {n : ℕ} {f : ℕ → ℕ} {k : 
   exact (List.nodup_range (n := n)).imp
     (fun {a b} hne hc => hne ((huniq a hc.1).trans (huniq b hc.2).symm))
 
+/-- After `t` steps every head position is at most `t`. -/
 theorem fheadPos_le (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp : ℕ) :
     fheadPos N x g t tp ≤ t := by
   obtain ⟨hi, hw, ho⟩ := trace_heads_le N g x t
@@ -961,6 +988,7 @@ theorem fheadPos_le (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp : ℕ) 
   split_ifs <;> assumption
 
 open Tableau in
+/-- `fassign` satisfies the state one-hot clauses. -/
 theorem fassign_oneHotStates (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
     CNF.eval (fassign N x g steps P) (oneHotStates N steps) = true := by
   rw [oneHotStates_sat]
@@ -970,6 +998,7 @@ theorem fassign_oneHotStates (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
     (fun j hj => ((fassign_get_vState N x g steps P).mp hj).2)
 
 open Tableau in
+/-- `fassign` satisfies the cell one-hot clauses. -/
 theorem fassign_oneHotCells (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
     CNF.eval (fassign N x g steps P) (oneHotCells 1 steps P) = true := by
   rw [oneHotCells_sat]
@@ -979,6 +1008,7 @@ theorem fassign_oneHotCells (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (step
     (fun j hj => ((fassign_get_vCell N x g steps P).mp hj).2.2.2)
 
 open Tableau in
+/-- `fassign` satisfies the head one-hot clauses (positions stay within `P ≥ steps`). -/
 theorem fassign_oneHotHeads (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     (hP : steps ≤ P) :
     CNF.eval (fassign N x g steps P) (oneHotHeads 1 steps P) = true := by
@@ -989,12 +1019,14 @@ theorem fassign_oneHotHeads (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (step
     ((fassign_get_vHead N x g steps P).mpr ⟨ht, htp, rfl⟩)
     (fun j hj => ((fassign_get_vHead N x g steps P).mp hj).2.2)
 
+/-- At time `0` every head is at cell `0`. -/
 theorem fheadPos_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp : ℕ) :
     fheadPos N x g 0 tp = 0 := by
   unfold fheadPos fcfg
   split_ifs <;> simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init]
 
 open Tableau in
+/-- At time `0` every cell of the run holds its `initCellSym` value. -/
 theorem fcellSym_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp pos : ℕ) :
     fcellSym N x g 0 tp pos = initCellSym x tp pos := by
   unfold fcellSym fcfg
@@ -1004,6 +1036,7 @@ theorem fcellSym_zero (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (tp pos : �
   · simp [NTM.trace, NTM.initCfg, Cfg.init, Tape.init, initCellSym, h0]
 
 open Tableau in
+/-- `fassign` satisfies the start clauses (with `P = steps + |x| + 1`). -/
 theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     (hP : steps + x.length + 1 = P) :
     CNF.eval (fassign N x g steps P) (startClauses N steps x) = true := by
@@ -1014,22 +1047,26 @@ theorem fassign_startClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   · rw [fassign_get_vCell]
     exact ⟨Nat.zero_le _, htp, hP ▸ hpos, by rw [fcellSym_zero]⟩
 
+/-- Peel the last step: `fcfg (t + 1)` is one `traceStep` from `fcfg t`. -/
 theorem fcfg_succ (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t : ℕ) :
     fcfg N x g (t + 1) = traceStep N (fcfg N x g t) (g t) :=
   trace_succ_eq N g t (N.initCfg x)
 
+/-- `traceStep` never changes an input-tape cell (the input tape is read-only). -/
 theorem traceStep_input_cells (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) (pos : ℕ) :
     (traceStep N c b).input.cells pos = c.input.cells pos := by
   unfold traceStep; split_ifs with hq
   · rfl
   · rw [Tape.move_cells]
 
+/-- `traceStep` leaves every work-tape cell other than the work head's unchanged. -/
 theorem traceStep_work_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : ℕ}
     (h : pos ≠ (c.work 0).head) : ((traceStep N c b).work 0).cells pos = (c.work 0).cells pos := by
   unfold traceStep; split_ifs with hq
   · rfl
   · exact tape_writeAndMove_cells_ne (c.work 0) _ _ h
 
+/-- `traceStep` leaves every output-tape cell other than the output head's unchanged. -/
 theorem traceStep_output_cells_ne (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool) {pos : ℕ}
     (h : pos ≠ c.output.head) : (traceStep N c b).output.cells pos = c.output.cells pos := by
   unfold traceStep; split_ifs with hq
@@ -1042,11 +1079,14 @@ variable (N : NTM 1) (c : Cfg 1 N.Q) (b : Bool)
 private theorem ts_hout : (fun i : Fin 1 => (c.work i).read) = fun _ => (c.work 0).read := by
   funext i; rw [Subsingleton.elim i 0]
 
+/-- The state after `traceStep`: unchanged when halted, otherwise `N.δ`'s next state. -/
 theorem traceStep_state : (traceStep N c b).state =
     if c.state = N.qhalt then c.state
     else (N.δ b c.state c.input.read (fun _ => (c.work 0).read) c.output.read).1 := by
   unfold traceStep; rw [ts_hout]; split_ifs <;> rfl
 
+/-- The input head after `traceStep`: unchanged when halted, otherwise moved per `N.δ`
+    (`posMove`). -/
 theorem traceStep_input_head : (traceStep N c b).input.head =
     if c.state = N.qhalt then c.input.head
     else Tableau.posMove c.input.head
@@ -1055,6 +1095,8 @@ theorem traceStep_input_head : (traceStep N c b).input.head =
   · rfl
   · exact tape_move_head c.input _
 
+/-- The work head after `traceStep`: unchanged when halted, otherwise moved per `N.δ`
+    (`posMove`). -/
 theorem traceStep_work_head : ((traceStep N c b).work 0).head =
     if c.state = N.qhalt then (c.work 0).head
     else Tableau.posMove (c.work 0).head
@@ -1063,6 +1105,8 @@ theorem traceStep_work_head : ((traceStep N c b).work 0).head =
   · rfl
   · exact tape_writeAndMove_head (c.work 0) _ _
 
+/-- The output head after `traceStep`: unchanged when halted, otherwise moved per `N.δ`
+    (`posMove`). -/
 theorem traceStep_output_head : (traceStep N c b).output.head =
     if c.state = N.qhalt then c.output.head
     else Tableau.posMove c.output.head
@@ -1071,6 +1115,8 @@ theorem traceStep_output_head : (traceStep N c b).output.head =
   · rfl
   · exact tape_writeAndMove_head c.output _ _
 
+/-- The work cell under the head after `traceStep`: unchanged when halted or at cell `0`
+    (writes there are no-ops), otherwise the symbol `N.δ` writes. -/
 theorem traceStep_work_cells_self : ((traceStep N c b).work 0).cells (c.work 0).head =
     if c.state = N.qhalt then (c.work 0).read
     else if (c.work 0).head = 0 then (c.work 0).read
@@ -1080,6 +1126,8 @@ theorem traceStep_work_cells_self : ((traceStep N c b).work 0).cells (c.work 0).
   · rw [tape_writeAndMove_cells_self, if_pos h0]; rfl
   · rw [tape_writeAndMove_cells_self, if_neg h0]
 
+/-- The output cell under the head after `traceStep`: unchanged when halted or at cell `0`
+    (writes there are no-ops), otherwise the symbol `N.δ` writes. -/
 theorem traceStep_output_cells_self : (traceStep N c b).output.cells c.output.head =
     if c.state = N.qhalt then c.output.read
     else if c.output.head = 0 then c.output.read
@@ -1091,6 +1139,7 @@ theorem traceStep_output_cells_self : (traceStep N c b).output.cells c.output.he
 
 end traceStepFields
 
+/-- In the run, a cell not under its tape's head keeps its symbol from time `t` to `t+1`. -/
 theorem fcellSym_succ_ne (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp pos : ℕ)
     (h : pos ≠ fheadPos N x g t tp) :
     fcellSym N x g (t + 1) tp pos = fcellSym N x g t tp pos := by
@@ -1101,6 +1150,8 @@ theorem fcellSym_succ_ne (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (t tp po
   · exact traceStep_output_cells_ne N (fcfg N x g t) (g t) h
 
 open Tableau in
+/-- `fassign` satisfies the acceptance clauses when the run halts at time `steps` with
+    output cell `1` holding `1`. -/
 theorem fassign_acceptClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     (hP : 1 ≤ P) (hhalt : (fcfg N x g steps).state = N.qhalt)
     (hout : (fcfg N x g steps).output.cells 1 = Γ.one) :
@@ -1116,6 +1167,8 @@ theorem fassign_acceptClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (st
     exact hout.symm
 
 open Tableau in
+/-- On in-range cell variables, `fassign` reads `true` exactly when the symbol index is
+    the run's symbol at that cell. -/
 theorem fassign_get_vCell_eq (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t tp pos s : ℕ} (ht : t ≤ steps) (htp : tp < 3) (hpos : pos ≤ P) :
     (fassign N x g steps P).get (vCell t tp pos s) =
@@ -1124,6 +1177,7 @@ theorem fassign_get_vCell_eq (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   exact ⟨fun h => h.2.2.2, fun h => ⟨ht, htp, hpos, h⟩⟩
 
 open Tableau in
+/-- `fassign` satisfies the frame clauses: in the run, off-head cells keep their symbols. -/
 theorem fassign_frameClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
     CNF.eval (fassign N x g steps P) (frameClauses 1 steps P) = true := by
   rw [frameClauses_sat]
@@ -1139,12 +1193,16 @@ theorem fassign_frameClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (ste
   rw [e1, e2, fcellSym_succ_ne N x g t tp pos hne]
 
 open Tableau in
+/-- On in-range choice variables, `fassign` reads back the choice function `g`. -/
 theorem fassign_get_vChoice_eq (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     {t : ℕ} (ht : t < steps) : (fassign N x g steps P).get (vChoice t) = g t := by
   rw [Bool.eq_iff_iff, fassign_get_vChoice]
   exact ⟨fun h => h.2, fun h => ⟨ht, h⟩⟩
 
 open Tableau in
+/-- `fassign` satisfies each `activeClausesAt` block: either the read-config does not match
+    the run (some condition literal is true), or it does and the consequence variables hold
+    because the run takes exactly that `traceStep`. -/
 theorem fassign_activeClausesAt (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ)
     (t : ℕ) (ht : t < steps) (q : N.Q) (pi : ℕ) (hpi : pi ≤ P) (si : Γ) (pw : ℕ) (hpw : pw ≤ P)
     (sw : Γ) (po : ℕ) (hpo : po ≤ P) (so : Γ) (b : Bool) :
@@ -1203,6 +1261,7 @@ theorem fassign_activeClausesAt (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (
         traceStep_output_head]
 
 open Tableau in
+/-- `fassign` satisfies the active transition clauses. -/
 theorem fassign_activeTransitionClauses (N : NTM 1) (x : List Bool) (g : ℕ → Bool) (steps P : ℕ) :
     CNF.eval (fassign N x g steps P) (activeTransitionClauses N steps P) = true := by
   rw [activeTransitionClauses_sat]
@@ -1304,6 +1363,7 @@ def flatToEnc (A B C D : ℕ) (v : ℕ) : ℕ :=
   else
     enc (v / D / C / B / A) (v / D / C / B % A) (v / D / C % B) (v / D % C) (v % D)
 
+/-- `flatToEnc` is injective: the mixed-radix components recompose the flat index. -/
 theorem flatToEnc_injective (A B C D : ℕ) :
     Function.Injective (flatToEnc A B C D) := by
   intro v v' h
@@ -1391,10 +1451,12 @@ theorem mapVar_flatMap {α : Type _} (f : ℕ → ℕ) (l : List α) (g : α →
     CNF.mapVar f (l.flatMap g) = l.flatMap (fun a => CNF.mapVar f (g a)) :=
   List.map_flatMap ..
 
+/-- Variable renaming commutes with `atLeastOne`. -/
 theorem mapVar_atLeastOne (f : ℕ → ℕ) (vars : List ℕ) :
     Clause.mapVar f (atLeastOne vars) = atLeastOne (vars.map f) := by
   simp [Clause.mapVar, atLeastOne, List.map_map, Function.comp_def, Lit.mapVar]
 
+/-- Variable renaming commutes with `atMostOne`. -/
 theorem mapVar_atMostOne (f : ℕ → ℕ) (vars : List ℕ) :
     CNF.mapVar f (atMostOne vars) = atMostOne (vars.map f) := by
   induction vars with
@@ -1409,6 +1471,7 @@ theorem mapVar_atMostOne (f : ℕ → ℕ) (vars : List ℕ) :
     rw [CNF.mapVar, List.map_map, List.map_map]
     exact List.map_congr_left fun w _ => rfl
 
+/-- Variable renaming commutes with `exactlyOne`. -/
 theorem mapVar_exactlyOne (f : ℕ → ℕ) (vars : List ℕ) :
     CNF.mapVar f (exactlyOne vars) = exactlyOne (vars.map f) := by
   rw [exactlyOne, exactlyOne, ← mapVar_atLeastOne f vars, ← mapVar_atMostOne f vars]
@@ -1468,9 +1531,11 @@ variable (N : NTM 1) (steps P : ℕ)
 noncomputable def encOf : ℕ → ℕ :=
   flatToEnc (steps + 1) (max (Fintype.card N.Q) 3) (P + 2) 4
 
+/-- `encOf` is injective (it is `flatToEnc` at fixed moduli). -/
 theorem encOf_injective : Function.Injective (encOf N steps P) :=
   flatToEnc_injective ..
 
+/-- Re-indexing by `encOf` carries `oneHotStatesF` to `oneHotStates`. -/
 theorem mapVar_oneHotStatesF :
     CNF.mapVar (encOf N steps P) (oneHotStatesF N steps P) = oneHotStates N steps := by
   rw [oneHotStatesF, oneHotStates, encOf, mapVar_flatMap]
@@ -1481,6 +1546,7 @@ theorem mapVar_oneHotStatesF :
   rw [List.mem_range] at ht hq
   exact flatToEnc_vStateF _ _ _ (by omega) hq
 
+/-- Re-indexing by `encOf` carries `oneHotCellsF` to `oneHotCells`. -/
 theorem mapVar_oneHotCellsF :
     CNF.mapVar (encOf N steps P) (oneHotCellsF (Fintype.card N.Q) steps P)
       = oneHotCells 1 steps P := by
@@ -1496,6 +1562,7 @@ theorem mapVar_oneHotCellsF :
   rw [List.mem_range] at ht htp hpos hs
   exact flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega)
 
+/-- Re-indexing by `encOf` carries `oneHotHeadsF` to `oneHotHeads`. -/
 theorem mapVar_oneHotHeadsF :
     CNF.mapVar (encOf N steps P) (oneHotHeadsF (Fintype.card N.Q) steps P)
       = oneHotHeads 1 steps P := by
@@ -1509,6 +1576,7 @@ theorem mapVar_oneHotHeadsF :
   rw [List.mem_range] at ht htp hpos
   exact flatToEnc_vHeadF _ _ _ (by omega) (by omega) (by omega)
 
+/-- Re-indexing by `encOf` carries `acceptClausesF` to `acceptClauses`. -/
 theorem mapVar_acceptClausesF :
     CNF.mapVar (encOf N steps P) (acceptClausesF N steps P) = acceptClauses N steps := by
   rw [acceptClausesF, acceptClauses, encOf]
@@ -1571,6 +1639,7 @@ noncomputable def activeTransitionClausesF (N : NTM 1) (steps P : ℕ) : List Cl
                   [true, false].flatMap fun b =>
                     activeClausesAtF N steps P t q pi si pw sw po so b
 
+/-- Re-indexing by `encOf` carries `startClausesF` to `startClauses`. -/
 theorem mapVar_startClausesF (x : List Bool) :
     CNF.mapVar (encOf N steps (steps + x.length + 1)) (startClausesF N steps x)
       = startClauses N steps x := by
@@ -1593,6 +1662,7 @@ theorem mapVar_startClausesF (x : List Bool) :
     simp only [Function.comp_def, Clause.mapVar, List.map_cons, List.map_nil, Lit.mapVar]
     rw [flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt _)]
 
+/-- Re-indexing by `encOf` carries `frameClausesF` to `frameClauses`. -/
 theorem mapVar_frameClausesF :
     CNF.mapVar (encOf N steps P) (frameClausesF (Fintype.card N.Q) steps P)
       = frameClauses 1 steps P := by
@@ -1610,6 +1680,7 @@ theorem mapVar_frameClausesF :
     flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega),
     flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (by omega)]
 
+/-- Re-indexing by `encOf` carries `activeCondF` to `activeCond` (for in-range tuples). -/
 theorem mapVar_activeCondF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : ℕ) (sw : Γ)
     (po : ℕ) (so : Γ) (b : Bool) (ht : t < steps) (hpi : pi ≤ P) (hpw : pw ≤ P)
     (hpo : po ≤ P) :
@@ -1626,6 +1697,8 @@ theorem mapVar_activeCondF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : ℕ) (
     flatToEnc_vCellF _ _ _ (by omega) (by omega) (by omega) (symIdx_lt so),
     flatToEnc_vChoiceF _ _ _ (by omega)]
 
+/-- Re-indexing by `encOf` carries `activeClausesAtF` to `activeClausesAt` (for in-range
+    tuples). -/
 theorem mapVar_activeClausesAtF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : ℕ)
     (sw : Γ) (po : ℕ) (so : Γ) (b : Bool) (ht : t < steps) (hpi : pi ≤ P)
     (hpw : pw ≤ P) (hpo : po ≤ P) :
@@ -1652,6 +1725,7 @@ theorem mapVar_activeClausesAtF (t : ℕ) (q : N.Q) (pi : ℕ) (si : Γ) (pw : �
     flatToEnc_vHeadF _ _ _ (by omega) (by omega) (hposM _ _ hpw),
     flatToEnc_vHeadF _ _ _ (by omega) (by omega) (hposM _ _ hpo)]
 
+/-- Re-indexing by `encOf` carries `activeTransitionClausesF` to `activeTransitionClauses`. -/
 theorem mapVar_activeTransitionClausesF :
     CNF.mapVar (encOf N steps P) (activeTransitionClausesF N steps P)
       = activeTransitionClauses N steps P := by

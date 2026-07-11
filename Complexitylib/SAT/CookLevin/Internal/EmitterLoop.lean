@@ -31,6 +31,8 @@ open TM
 -- List and encode plumbing
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Peel the last iteration off a `flatMap` over `List.range`:
+    `(range (i+1)).flatMap E = (range i).flatMap E ++ E i`. -/
 theorem flatMap_range_succ {α : Type _} (E : ℕ → List α) (i : ℕ) :
     (List.range (i + 1)).flatMap E = (List.range i).flatMap E ++ E i := by
   rw [List.range_succ, List.flatMap_append]
@@ -133,6 +135,7 @@ def emitLoopTM (body : TM n) (ctr fuel : Fin n) : TM n :=
     runs within `inner`. -/
 def loopBudget (M inner : ℕ) : ℕ := M * (inner + 1 + opBudget M + 2) + (M + 2)
 
+/-- `loopBudget M` is monotone in the inner budget. -/
 theorem loopBudget_mono {M inner inner' : ℕ} (h : inner ≤ inner') :
     loopBudget M inner ≤ loopBudget M inner' := by
   have := Nat.mul_le_mul_left M (show inner + 1 + opBudget M + 2
@@ -147,12 +150,14 @@ theorem loop_le_loopBudget {v M inner : ℕ} (hv : v ≤ M) :
   have := Nat.mul_le_mul_right ((inner + 1 + opBudget M) + 2) hv
   omega
 
+/-- `clauseBudget · M` is monotone in the literal count. -/
 theorem clauseBudget_mono {L L' M : ℕ} (h : L ≤ L') :
     clauseBudget L M ≤ clauseBudget L' M := by
   rw [clauseBudget, clauseBudget]
   have := Nat.mul_le_mul_right (emitVarBudget M + 1) h
   omega
 
+/-- `cnfBudget · · M` is monotone in both the clause count and the literal count. -/
 theorem cnfBudget_mono {K K' L L' M : ℕ} (hK : K ≤ K') (hL : L ≤ L') :
     cnfBudget K L M ≤ cnfBudget K' L' M := by
   rw [cnfBudget, cnfBudget]

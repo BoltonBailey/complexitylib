@@ -32,6 +32,8 @@ open TM
 def Lit.word (ℓ : Lit) : List Bool :=
   [ℓ.sign, ℓ.sign] ++ List.replicate (2 * ℓ.var) true ++ [false, true]
 
+/-- Prepending a literal to a clause prepends its encoded word (`Lit.word`)
+    to the clause encoding. -/
 theorem Clause.encode_cons_word (ℓ : Lit) (ℓs : Clause) :
     Clause.encode (ℓ :: ℓs) = ℓ.word ++ Clause.encode ℓs :=
   Clause.encode_cons' ℓ ℓs
@@ -57,11 +59,17 @@ theorem CNF.encode_map {α : Type _} (g : α → Clause) (l : List α) :
 /-- **Literal descriptor**: the machine-level recipe for one literal — a
     sign, the hardwired top digit, and the four mixed-radix digit sources. -/
 structure LitDesc (n : ℕ) where
+  /-- The literal's sign: `true` for a positive literal, `false` for negated. -/
   sign : Bool
+  /-- The hardwired top (most significant) mixed-radix digit of the variable. -/
   tag : ℕ
+  /-- Source of the first mixed-radix digit below the tag (radix `A`). -/
   sa : DigitSrc n
+  /-- Source of the second mixed-radix digit below the tag (radix `B`). -/
   sb : DigitSrc n
+  /-- Source of the third mixed-radix digit below the tag (radix `C`). -/
   sc : DigitSrc n
+  /-- Source of the fourth (least significant) mixed-radix digit (radix `D`). -/
   sd : DigitSrc n
 
 variable {n : ℕ}

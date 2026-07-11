@@ -316,7 +316,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         rename_i hi_lt
         have hw_lt_g : w.val < N + g.val := by omega
         simp only [show ¬(N + (w.val - N) < w.val) from by omega, ite_false, Bool.xor_false]
-        simp only [show ¬(wi.val < (liftWireE g w).val) from by rw [hlift_val]; simp [hw_lt_g]; omega,
+        simp only [show ¬(wi.val < (liftWireE g w).val) from by
+            rw [hlift_val]; simp [hw_lt_g]; omega,
           ite_false, Bool.xor_false]
       · -- Case 2b: i ≥ g (back reference)
         rename_i hi_ge
@@ -324,7 +325,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         cases rd with
         | const c =>
           simp only [show ¬(N + (w.val - N) < w.val) from by omega, ite_false, Bool.xor_false]
-          simp only [show wi.val < (liftWireE g w).val from by rw [hlift_val]; simp [hw_ge]; omega, ite_true]
+          simp only [show wi.val < (liftWireE g w).val from by
+            rw [hlift_val]; simp [hw_ge]; omega, ite_true]
           have hrd_spec := hrd x; simp only at hrd_spec
           -- wireValD d x ⟨N + g.val, ...⟩ = c, need wireValD d x ⟨wi.val, ...⟩ = c
           have hfin : (⟨wi.val, wi.isLt⟩ : Fin (N + (s + 1))) = ⟨N + g.val, by omega⟩ :=
@@ -362,7 +364,8 @@ private theorem remapWireE_effective {N s : Nat} (d : CircDesc N (s + 1))
         by_cases hwi_lt : wi.val - 1 < w.val
         · -- Back reference (shifted)
           -- wi > N + g.val and wi - 1 < w.val, so wi ≤ w.val, so wi.val ≤ w.val
-          -- liftWireE: w.val ≥ N + g.val (since wi.val > N + g.val and wi.val - 1 < w.val → w.val ≥ N + g.val)
+          -- liftWireE: w.val ≥ N + g.val
+          -- (since wi.val > N + g.val and wi.val - 1 < w.val → w.val ≥ N + g.val)
           have hw_ge : ¬(w.val < N + g.val) := by omega
           have hwi_lift : wi.val < (liftWireE g w).val := by rw [hlift_val]; simp [hw_ge]; omega
           simp only [hwi_lt, ite_true, hwi_lift, ite_true]
@@ -818,9 +821,11 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
             have hw2_fin : (d g).2.1.2 = 0 := by ext; exact hw2_zero
             have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
+              simp [restrictD, remapWireR, hw1_fin]
             have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
+              simp [restrictD, remapWireR, hw2_fin]
             have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
               change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
             have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
@@ -838,12 +843,14 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 dsimp only
                 have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
                 have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-                  change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
+              simp [restrictD, remapWireR, hw1_fin]
                 have h_w2_val : (d_r g).2.1.2.val = w2.val - 1 := by
                   change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
-                  change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.2.1 = _
+                  simp [restrictD, remapWireR, hw1_fin]
                 have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
                   change (restrictD d ⟨0, _⟩ false g).2.2.2 = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
@@ -852,7 +859,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 have hw2_lt' : (d_r g).2.1.2.val < n + g.val := by rw [h_w2_val]; exact hw2_back
                 simp only [hw1_nlt, ite_false, Bool.xor_false, hw2_lt', ite_true] at step1
                 rw [show (d_r g).1 = isAnd from rfl, h_n1, h_n2] at step1
-                simp only [h_w2_val, show (d g).2.2.1 = n1 from rfl, show (d g).2.2.2 = n2 from rfl] at step1
+                simp only [h_w2_val, show (d g).2.2.1 = n1 from rfl,
+                  show (d g).2.2.2 = n2 from rfl] at step1
                 rw [step1]
                 have hne : ¬n1 = !isAnd := hkill
                 have : n1 = isAnd := by rcases isAnd <;> rcases n1 <;> simp_all
@@ -866,7 +874,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
               have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-                change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+                change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
+              simp [restrictD, remapWireR, hw1_fin]
               have h_w2_val : (d_r g).2.1.2.val = w2.val - 1 := by
                 change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
@@ -894,9 +903,11 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
             have hw1_fin : (d g).2.1.1 = 0 := by ext; exact hw1_zero
             have hw2_fin : (d g).2.1.2 = 0 := by ext; exact h2
             have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _; simp [restrictD, remapWireR, hw1_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
+              simp [restrictD, remapWireR, hw1_fin]
             have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+              change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
+              simp [restrictD, remapWireR, hw2_fin]
             have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
               change (restrictD d ⟨0, _⟩ false g).2.2.1 = _; simp [restrictD, remapWireR, hw1_fin]
             have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
@@ -917,18 +928,21 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                   change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-                  change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
+              simp [restrictD, remapWireR, hw2_fin]
                 have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
                   change (restrictD d ⟨0, _⟩ false g).2.2.1 = _
                   simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
                 have h_n2 : (d_r g).2.2.2 = (d g).2.2.2 := by
-                  change (restrictD d ⟨0, _⟩ false g).2.2.2 = _; simp [restrictD, remapWireR, hw2_fin]
+                  change (restrictD d ⟨0, _⟩ false g).2.2.2 = _
+                  simp [restrictD, remapWireR, hw2_fin]
                 have step1 := wireValD_at_gate d_r x g
                 have hw1_lt : (d_r g).2.1.1.val < n + g.val := by rw [h_w1_val]; exact hw1_back
                 have hw2_nlt : ¬((d_r g).2.1.2.val < n + g.val) := by rw [h_w2_val]; omega
                 simp only [hw1_lt, ite_true, hw2_nlt, ite_false, Bool.xor_false] at step1
                 rw [show (d_r g).1 = isAnd from rfl, h_n1, h_n2] at step1
-                simp only [h_w1_val, show (d g).2.2.1 = n1 from rfl, show (d g).2.2.2 = n2 from rfl] at step1
+                simp only [h_w1_val, show (d g).2.2.1 = n1 from rfl,
+                  show (d g).2.2.2 = n2 from rfl] at step1
                 rw [step1]
                 have hne : ¬n2 = !isAnd := hkill
                 have : n2 = isAnd := by rcases isAnd <;> rcases n2 <;> simp_all
@@ -945,7 +959,8 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 change (restrictD d ⟨0, _⟩ false g).2.1.1.val = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)
               have h_w2_val : (d_r g).2.1.2.val = n + g.val := by
-                change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _; simp [restrictD, remapWireR, hw2_fin]
+                change (restrictD d ⟨0, _⟩ false g).2.1.2.val = _
+              simp [restrictD, remapWireR, hw2_fin]
               have h_n1 : (d_r g).2.2.1 = (d g).2.2.1 := by
                 change (restrictD d ⟨0, _⟩ false g).2.2.1 = _
                 simp only [restrictD, remapWireR]; split_ifs <;> (first | omega | rfl)

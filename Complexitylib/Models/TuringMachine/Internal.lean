@@ -101,7 +101,8 @@ lemma TM.toNTM_trace_of_reachesIn (tm : TM n) {c c' : Cfg n tm.Q}
       have ht_pos : t ≠ 0 := by
         intro h0; subst h0; cases h; exact hh hhalt
       obtain ⟨t', rfl⟩ := Nat.exists_eq_succ_of_ne_zero ht_pos
-      obtain ⟨c_mid, hstep, hrest⟩ : ∃ c_mid, tm.step c = some c_mid ∧ tm.reachesIn t' c_mid c' := by
+      obtain ⟨c_mid, hstep, hrest⟩ :
+          ∃ c_mid, tm.step c = some c_mid ∧ tm.reachesIn t' c_mid c' := by
         cases h with | step hs hr => exact ⟨_, hs, hr⟩
       rw [tm.toNTM_trace_step T ch hh]
       have : (tm.step c).get (by simp [TM.step, hh]) = c_mid := by

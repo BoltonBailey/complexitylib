@@ -8,8 +8,10 @@ import Complexitylib.SAT.CookLevin.Internal.EmitterLoop
 /-!
 # The clause-family emitters
 
-One emitting machine per `tableauCNFFlat` family, each with a Hoare
-specification appending exactly that family's `CNF.encode` image.
+One emitting machine per `tableauCNFFlat` family handled here — the accept,
+state/cell/head one-hot, and frame families — each with a Hoare specification
+appending exactly that family's `CNF.encode` image. (The start and active
+families are emitted in `EmitterStart` and `EmitterActive`.)
 
 The emitter's tape layout is fixed once (`Emit.nT = 20` work tapes, named
 indices below), so register-distinctness side conditions are all `decide`.
@@ -30,26 +32,46 @@ namespace Emit
 /-- Number of work tapes of the reduction emitter. -/
 abbrev nT : ℕ := 20
 
-abbrev rA : Fin nT := 0        -- radix A = steps + 1
-abbrev rB : Fin nT := 1        -- radix B = max Qc 3
-abbrev rC : Fin nT := 2        -- radix C = P + 2
-abbrev rD : Fin nT := 3        -- radix D = 4
-abbrev tmp : Fin nT := 4       -- numeral scratch
-abbrev tmp2 : Fin nT := 5      -- numeral scratch
-abbrev nReg : Fin nT := 6      -- |x|
-abbrev stepsReg : Fin nT := 7  -- steps = p.eval |x|
-abbrev pReg : Fin nT := 8      -- P = steps + |x| + 1
-abbrev tReg : Fin nT := 9      -- row counter t
-abbrev tFuel : Fin nT := 10    -- row-loop fuel
-abbrev tPlusReg : Fin nT := 11 -- t + 1
-abbrev pos1Reg : Fin nT := 12  -- position counter (pos / pi)
-abbrev pos1Fuel : Fin nT := 13 -- position-loop fuel (P + 1)
-abbrev pos2Reg : Fin nT := 14  -- second position counter (pos' / pw)
-abbrev pos2Fuel : Fin nT := 15 -- second position fuel (P + 1)
-abbrev pos3Reg : Fin nT := 16  -- third position counter (po)
-abbrev pos3Fuel : Fin nT := 17 -- third position fuel (P + 1)
-abbrev auxReg : Fin nT := 18   -- spare
-abbrev auxReg2 : Fin nT := 19  -- spare
+/-- Register holding radix `A = steps + 1`. -/
+abbrev rA : Fin nT := 0
+/-- Register holding radix `B = max Qc 3`. -/
+abbrev rB : Fin nT := 1
+/-- Register holding radix `C = P + 2`. -/
+abbrev rC : Fin nT := 2
+/-- Register holding radix `D = 4`. -/
+abbrev rD : Fin nT := 3
+/-- Numeral scratch register. -/
+abbrev tmp : Fin nT := 4
+/-- Second numeral scratch register. -/
+abbrev tmp2 : Fin nT := 5
+/-- Register holding the input length `|x|`. -/
+abbrev nReg : Fin nT := 6
+/-- Register holding `steps = p.eval |x|`. -/
+abbrev stepsReg : Fin nT := 7
+/-- Register holding `P = steps + |x| + 1`. -/
+abbrev pReg : Fin nT := 8
+/-- Register holding the row counter `t`. -/
+abbrev tReg : Fin nT := 9
+/-- Register holding the row-loop fuel. -/
+abbrev tFuel : Fin nT := 10
+/-- Register holding the successor row `t + 1`. -/
+abbrev tPlusReg : Fin nT := 11
+/-- Register holding the position counter (`pos` / `pi`). -/
+abbrev pos1Reg : Fin nT := 12
+/-- Register holding the position-loop fuel (`P + 1`). -/
+abbrev pos1Fuel : Fin nT := 13
+/-- Register holding the second position counter (`pos'` / `pw`). -/
+abbrev pos2Reg : Fin nT := 14
+/-- Register holding the second position fuel (`P + 1`). -/
+abbrev pos2Fuel : Fin nT := 15
+/-- Register holding the third position counter (`po`). -/
+abbrev pos3Reg : Fin nT := 16
+/-- Register holding the third position fuel (`P + 1`). -/
+abbrev pos3Fuel : Fin nT := 17
+/-- Spare register. -/
+abbrev auxReg : Fin nT := 18
+/-- Second spare register. -/
+abbrev auxReg2 : Fin nT := 19
 
 end Emit
 
@@ -69,6 +91,7 @@ theorem forall₂_map_map {α β γ : Type _} {R : β → γ → Prop} (g : α �
     exact .cons (hp a List.mem_cons_self)
       (ih fun a' ha' => hp a' (List.mem_cons_of_mem _ ha'))
 
+/-- `Forall₂` is preserved by appending componentwise-related lists. -/
 theorem forall₂_append {α β : Type _} {R : α → β → Prop} :
     ∀ {l₁ u₁ : List α} {l₂ u₂ : List β}, List.Forall₂ R l₁ l₂ →
     List.Forall₂ R u₁ u₂ → List.Forall₂ R (l₁ ++ u₁) (l₂ ++ u₂) := by
@@ -89,6 +112,8 @@ def exactlyOneD (mkPos mkNeg : ℕ → LitDesc n) (qs : List ℕ) :
     List (List (LitDesc n)) :=
   qs.map mkPos :: atMostOneD mkNeg qs
 
+/-- `atMostOneD mk qs` denotes `atMostOne (qs.map f)` clause-by-clause,
+    provided each descriptor `mk q` denotes the negative literal on `f q`. -/
 theorem forall₂_atMostOneD {R : LitDesc n → Lit → Prop} (mk : ℕ → LitDesc n)
     (f : ℕ → ℕ) :
     ∀ {qs : List ℕ}, (∀ q ∈ qs, R (mk q) ⟨false, f q⟩) →
@@ -106,6 +131,8 @@ theorem forall₂_atMostOneD {R : LitDesc n → Lit → Prop} (mk : ℕ → LitD
     exact .cons (hp q List.mem_cons_self)
       (.cons (hp q' (List.mem_cons_of_mem _ hq')) .nil)
 
+/-- `exactlyOneD mkPos mkNeg qs` denotes `exactlyOne (qs.map f)`
+    clause-by-clause, given the positive/negative literal denotations. -/
 theorem forall₂_exactlyOneD {R : LitDesc n → Lit → Prop}
     (mkPos mkNeg : ℕ → LitDesc n) (f : ℕ → ℕ) {qs : List ℕ}
     (hpos : ∀ q ∈ qs, R (mkPos q) ⟨true, f q⟩)
@@ -709,6 +736,7 @@ theorem emitOneHotCellsTM_hoareTime (Qc steps P M : ℕ)
 -- Family: oneHotHeadsF
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- `flatMap` respects pointwise-equal functions on the list's members. -/
 theorem flatMap_congr {α β : Type _} {l : List α} {f g : α → List β}
     (h : ∀ a ∈ l, f a = g a) : l.flatMap f = l.flatMap g := by
   induction l with
@@ -946,6 +974,8 @@ def headPairBodyTM (tp : ℕ) : TM nT :=
           pos2Reg auxReg)
         (seqTM (setConstTM pos2Reg 0) (decRegTM auxReg))))
 
+/-- The pairwise at-most-one head sweep: loop `headPairBodyTM` over the
+    outer position, then return the position counter to zero. -/
 def headAtMostTM (tp : ℕ) : TM nT :=
   seqTM (emitLoopTM (headPairBodyTM tp) pos1Reg pos1Fuel)
     (setConstTM pos1Reg 0)
@@ -1640,6 +1670,7 @@ theorem emitOneHotHeadsTM_hoareTime (Qc steps P M : ℕ)
 -- Family: frameClausesF
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- `Forall₂` is preserved by `flatMap` with pointwise-related images. -/
 theorem forall₂_flatMap {α β γ : Type _} {R : β → γ → Prop} (F : α → List β)
     (G : α → List γ) {l : List α}
     (h : ∀ a ∈ l, List.Forall₂ R (F a) (G a)) :
@@ -1690,9 +1721,11 @@ def frameLeafF (Qc steps P t tp pos : ℕ) : CNF :=
        ⟨true, vCellF Qc steps P t tp pos s⟩,
        ⟨false, vCellF Qc steps P (t + 1) tp pos s⟩] : Clause)]
 
+/-- Budget of one frame position sweep. -/
 def framePosChunkBudget (M : ℕ) : ℕ :=
   loopBudget M (cnfBudget 8 3 M) + 1 + opBudget M
 
+/-- Budget of the frame row body. -/
 def frameRowBudget (M : ℕ) : ℕ :=
   opBudget M + 1 + (3 * framePosChunkBudget M + 2)
 

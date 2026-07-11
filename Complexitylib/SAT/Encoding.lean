@@ -65,9 +65,11 @@ namespace Unary
 /-- Unary encoding of `n`: `n` consecutive `true` bits. `encode 0 = []`. -/
 def encode (n : Nat) : List Bool := List.replicate n true
 
+/-- The unary encoding of `n` has length exactly `n`. -/
 @[simp] theorem length_encode (n : Nat) : (encode n).length = n := by
   simp [encode]
 
+/-- Zero encodes to the empty bit list. -/
 @[simp] theorem encode_zero : encode 0 = [] := rfl
 
 /-- Every bit in a unary encoding is `true`. -/
@@ -88,6 +90,7 @@ namespace Lit
     single (undoubled) bits; the doubling happens at the clause level. -/
 def encodeRaw (ℓ : Lit) : List Bool := ℓ.sign :: Unary.encode ℓ.var
 
+/-- The raw literal encoding has length `ℓ.var + 1`: one sign bit plus a unary var. -/
 @[simp] theorem encodeRaw_length (ℓ : Lit) : ℓ.encodeRaw.length = ℓ.var + 1 := by
   simp [encodeRaw]
 
@@ -118,12 +121,15 @@ end Lit
     two-bit patterns, so `01` and `10` cannot appear in doubled data. -/
 def doubleBits (bs : List Bool) : List Bool := bs.flatMap (fun b => [b, b])
 
+/-- Doubling the empty bit list yields the empty list. -/
 @[simp] theorem doubleBits_nil : doubleBits [] = [] := rfl
 
+/-- Doubling a cons prepends the head bit twice: `doubleBits (b :: bs) = b :: b :: …`. -/
 @[simp] theorem doubleBits_cons (b : Bool) (bs : List Bool) :
     doubleBits (b :: bs) = b :: b :: doubleBits bs := by
   simp [doubleBits]
 
+/-- Doubling exactly doubles the length: `|doubleBits bs| = 2 * |bs|`. -/
 @[simp] theorem doubleBits_length (bs : List Bool) :
     (doubleBits bs).length = 2 * bs.length := by
   induction bs with
@@ -141,8 +147,11 @@ def encode : Clause → List Bool
   | [] => []
   | ℓ :: ℓs => doubleBits ℓ.encodeRaw ++ [false, true] ++ encode ℓs
 
+/-- The empty clause encodes to the empty bit list. -/
 @[simp] theorem encode_nil : encode ([] : Clause) = [] := rfl
 
+/-- Unfolding lemma: encoding `ℓ :: ℓs` emits the doubled raw literal,
+    the `[false, true]` literal separator, then the encoded tail. -/
 theorem encode_cons (ℓ : Lit) (ℓs : Clause) :
     encode (ℓ :: ℓs) = doubleBits ℓ.encodeRaw ++ [false, true] ++ encode ℓs := rfl
 
@@ -165,8 +174,11 @@ def encode : CNF → List Bool
   | [] => []
   | c :: cs => c.encode ++ [true, false] ++ encode cs
 
+/-- The empty CNF encodes to the empty bit list. -/
 @[simp] theorem encode_nil : encode ([] : CNF) = [] := rfl
 
+/-- Unfolding lemma: encoding `c :: cs` emits the encoded clause, the
+    `[true, false]` clause separator, then the encoded tail. -/
 theorem encode_cons (c : Clause) (cs : CNF) :
     encode (c :: cs) = c.encode ++ [true, false] ++ encode cs := rfl
 

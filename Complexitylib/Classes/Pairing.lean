@@ -56,7 +56,8 @@ theorem pair_cons_eq (b : Bool) (x y : List Bool) :
     rw [pair_cons_eq, List.length_cons, List.length_cons, List.length_cons, ih]
     omega
 
-/-- `pair` is injective: if `pair x₁ y₁ = pair x₂ y₂` then `x₁ = x₂` and `y₁ = y₂`. -/
+/-- `pair` is injective: if `pair x₁ y₁ = pair x₂ y₂` then `x₁ = x₂` and
+`y₁ = y₂`. -/
 theorem pair_inj {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
     (h : pair x₁ y₁ = pair x₂ y₂) : x₁ = x₂ ∧ y₁ = y₂ := by
   induction x₁ generalizing x₂ with
@@ -288,7 +289,8 @@ theorem pair_getElem_right (x y : List Bool) (j : ℕ) (hj : j < y.length) :
     rw [hprefix]
     omega
   have hj' :
-      (2 * x.length + 2 + j) - ((x.flatMap fun b => [b, b]) ++ [false, true]).length < y.length := by
+      (2 * x.length + 2 + j) -
+        ((x.flatMap fun b => [b, b]) ++ [false, true]).length < y.length := by
     rw [hprefix]
     omega
   calc

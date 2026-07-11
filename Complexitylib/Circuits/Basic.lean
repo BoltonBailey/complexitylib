@@ -200,6 +200,9 @@ Primary input vertices are not counted, and the negation flags on gate inputs
 have zero cost. Some texts instead count input vertices and explicit NOT gates;
 those conventions agree only up to additive/linear overhead, not on exact size
 bounds. -/
+-- The circuit argument is unused by design: `size` is determined by the
+-- indices, and the argument exists purely to enable `c.size` dot notation.
+@[nolint unusedArguments]
 def size (_ : Circuit B N M G) : Nat := G + M
 
 end Circuit

@@ -109,7 +109,7 @@ theorem polyBalanced_witness : PolyBalanced Witness := by
 -- `SAT/VerifierTM.lean` now discharges that verifier obligation. The generic
 -- theorem below remains parameterized by `WitnessNTMConstruction`; the
 -- unconditional SAT headline instead uses the specialized construction from
--- `SAT/GuessVerify.lean`.
+-- `SAT/Internal/GuessVerify.lean`.
 
 /-- **SAT is in FNP modulo the verifier.** If the verifier's pair language
     is in P, then `Witness` is an FNP relation — and hence a candidate NP

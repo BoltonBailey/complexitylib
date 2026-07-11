@@ -48,8 +48,10 @@ variable {k m : Nat}
 private theorem andOr2_eval_two {W : Nat} (g : Gate Basis.andOr2 W)
     (wv : BitString W) :
     g.eval wv =
-    let a0 := g.negated ⟨0, by rw [fanIn_andOr2]; omega⟩ ^^ wv (g.inputs ⟨0, by rw [fanIn_andOr2]; omega⟩)
-    let a1 := g.negated ⟨1, by rw [fanIn_andOr2]; omega⟩ ^^ wv (g.inputs ⟨1, by rw [fanIn_andOr2]; omega⟩)
+    let a0 := g.negated ⟨0, by rw [fanIn_andOr2]; omega⟩ ^^
+      wv (g.inputs ⟨0, by rw [fanIn_andOr2]; omega⟩)
+    let a1 := g.negated ⟨1, by rw [fanIn_andOr2]; omega⟩ ^^
+      wv (g.inputs ⟨1, by rw [fanIn_andOr2]; omega⟩)
     match g.op with
     | .and => a0 && a1
     | .or  => a0 || a1 := by
@@ -78,8 +80,8 @@ private def mkConstGateBounded {G : Nat} [NeZero m] (val : Bool) (bound : Nat) :
      fun _ => by dsimp; exact hB⟩
 
 /-- An identity/passthrough gate: `OP(w, w)` with negation `neg`. -/
-private def mkIdentGateBounded {G : Nat} (op : AndOrOp) (w : Fin (k + m + G)) (neg : Bool) (bound : Nat)
-    (hw : w.val < k + m + bound) :
+private def mkIdentGateBounded {G : Nat} (op : AndOrOp) (w : Fin (k + m + G)) (neg : Bool)
+    (bound : Nat) (hw : w.val < k + m + bound) :
     { g : Gate Basis.andOr2 (k + m + G) //
       ∀ j : Fin g.fanIn, (g.inputs j).val < k + m + bound } :=
   ⟨{ op := op, fanIn := 2, arityOk := rfl,
@@ -99,7 +101,8 @@ private theorem mkConstGateP_eval {G : Nat} [NeZero m] (val : Bool) (bound : Nat
 private theorem mkIdentGateP_eval {G : Nat} (op : AndOrOp) (w : Fin (k + m + G)) (neg : Bool)
     (bound : Nat) (hw : w.val < k + m + bound)
     (wv : BitString (k + m + G)) :
-    (mkIdentGateBounded (k := k) (m := m) (G := G) op w neg bound hw).val.eval wv = (neg ^^ wv w) := by
+    (mkIdentGateBounded (k := k) (m := m) (G := G) op w neg bound hw).val.eval wv =
+      (neg ^^ wv w) := by
   unfold mkIdentGateBounded
   rw [andOr2_eval_two]; simp only
   cases op <;> cases (neg ^^ wv w) <;> simp
@@ -238,12 +241,16 @@ private theorem wireValue_restrict {G : Nat} [NeZero m] (b : Bool)
   induction w using Nat.strongRecOn with
   | _ w ih =>
     by_cases hwN : w < (k + 1) + m
-    · rw [Circuit.wireValue_of_lt _ _ _ (show (⟨w, hwlt⟩ : Fin _).val < (k + 1) + m by simp; omega)]
-      rw [Circuit.wireValue_of_lt _ _ _ (show (⟨w - 1, (by omega)⟩ : Fin _).val < k + m by simp; omega)]
+    · rw [Circuit.wireValue_of_lt _ _ _
+        (show (⟨w, hwlt⟩ : Fin _).val < (k + 1) + m by simp; omega)]
+      rw [Circuit.wireValue_of_lt _ _ _
+        (show (⟨w - 1, (by omega)⟩ : Fin _).val < k + m by simp; omega)]
       simp only [prependInput, show ¬ (w = 0) from by omega, dite_false]
     · push Not at hwN
-      rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬ (⟨w, hwlt⟩ : Fin _).val < (k + 1) + m by simp; omega)]
-      rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬ (⟨w - 1, (by omega)⟩ : Fin _).val < k + m by simp; omega)]
+      rw [Circuit.wireValue_of_not_lt _ _ _
+        (show ¬ (⟨w, hwlt⟩ : Fin _).val < (k + 1) + m by simp; omega)]
+      rw [Circuit.wireValue_of_not_lt _ _ _
+        (show ¬ (⟨w - 1, (by omega)⟩ : Fin _).val < k + m by simp; omega)]
       simp only [restrictCircuit]
       have hidx : w - 1 - (k + m) = w - (k + 1 + m) := by omega
       have hg_eq : (⟨w - 1 - (k + m), by omega⟩ : Fin G) = ⟨w - (k + 1 + m), by omega⟩ := by

@@ -59,6 +59,8 @@ def satGuessVerifyTime (f : ℕ → ℕ) (n : ℕ) : ℕ :=
   satGuessVerifySetupTime n +
     (TM.pairBuildTime n (n + 1) + satVerifierWindowTime f n)
 
+/-- The verifier window bound dominates `f` on any pair `⟨x, y⟩` whose witness
+    `y` has length at most `|x| + 1`. -/
 theorem satVerifierWindowTime_bounds_pair (f : ℕ → ℕ) (x y : List Bool)
     (hlen : y.length ≤ x.length + 1) :
     f (pair x y).length ≤ satVerifierWindowTime f x.length := by
@@ -68,6 +70,8 @@ theorem satVerifierWindowTime_bounds_pair (f : ℕ → ℕ) (x y : List Bool)
     (f := fun m => f (2 * x.length + 2 + m))
     (by rw [Finset.mem_range]; omega)
 
+/-- Evaluation of a natural-coefficient polynomial is monotone in its
+    argument. -/
 theorem polynomial_eval_mono_nat (p : Polynomial ℕ) :
     Monotone fun n => p.eval n := by
   intro m n hmn
@@ -90,21 +94,25 @@ def satCounterIdx (k : ℕ) : Fin (k + 3) := ⟨k + 2, by omega⟩
 def satVerifierWorkIdx {k : ℕ} (i : Fin k) : Fin (k + 3) :=
   ⟨i.val, by omega⟩
 
+/-- The witness tape and the pair tape are distinct work tapes. -/
 theorem satWitnessIdx_ne_pairIdx (k : ℕ) : satWitnessIdx k ≠ satPairIdx k := by
   intro h
   have := congrArg Fin.val h
   simp [satWitnessIdx, satPairIdx] at this
 
+/-- The counter tape and the pair tape are distinct work tapes. -/
 theorem satCounterIdx_ne_pairIdx (k : ℕ) : satCounterIdx k ≠ satPairIdx k := by
   intro h
   have := congrArg Fin.val h
   simp [satCounterIdx, satPairIdx] at this
 
+/-- The counter tape and the witness tape are distinct work tapes. -/
 theorem satCounterIdx_ne_witnessIdx (k : ℕ) : satCounterIdx k ≠ satWitnessIdx k := by
   intro h
   have := congrArg Fin.val h
   simp [satCounterIdx, satWitnessIdx] at this
 
+/-- Embedded verifier work tapes are distinct from the pair tape. -/
 theorem satVerifierWorkIdx_ne_pairIdx {k : ℕ} (i : Fin k) :
     satVerifierWorkIdx i ≠ satPairIdx k := by
   intro h
@@ -112,6 +120,7 @@ theorem satVerifierWorkIdx_ne_pairIdx {k : ℕ} (i : Fin k) :
   simp [satVerifierWorkIdx, satPairIdx] at this
   omega
 
+/-- Embedded verifier work tapes are distinct from the witness tape. -/
 theorem satVerifierWorkIdx_ne_witnessIdx {k : ℕ} (i : Fin k) :
     satVerifierWorkIdx i ≠ satWitnessIdx k := by
   intro h
@@ -119,6 +128,7 @@ theorem satVerifierWorkIdx_ne_witnessIdx {k : ℕ} (i : Fin k) :
   simp [satVerifierWorkIdx, satWitnessIdx] at this
   omega
 
+/-- Embedded verifier work tapes are distinct from the counter tape. -/
 theorem satVerifierWorkIdx_ne_counterIdx {k : ℕ} (i : Fin k) :
     satVerifierWorkIdx i ≠ satCounterIdx k := by
   intro h
@@ -128,13 +138,19 @@ theorem satVerifierWorkIdx_ne_counterIdx {k : ℕ} (i : Fin k) :
 
 /-- Control states for the SAT-specialized guess-and-verify machine. -/
 inductive GuessVerifyPhase (Q : Type) where
+  /-- Building the `|x| + 1` unary counter on the counter tape. -/
   | counter : TM.LinearCounterPhase → GuessVerifyPhase Q
+  /-- Rewinding the input head back to the start marker. -/
   | rewindInput : TM.RewindPhase → GuessVerifyPhase Q
+  /-- Nondeterministically guessing a counter-bounded witness. -/
   | guess : NTM.GuessBoundedPhase → GuessVerifyPhase Q
+  /-- Writing `pair x y` of input and witness onto the pair tape. -/
   | pair : TM.PairBuildPhase → GuessVerifyPhase Q
+  /-- Simulating the verifier `M` in state `Q` on the pair tape. -/
   | verify : Q → GuessVerifyPhase Q
   deriving DecidableEq
 
+/-- `GuessVerifyPhase Q` is finite whenever `Q` is. -/
 instance {Q : Type} [DecidableEq Q] [Fintype Q] : Fintype (GuessVerifyPhase Q) where
   elems :=
     (Finset.univ.image GuessVerifyPhase.counter) ∪
@@ -565,6 +581,8 @@ theorem satVerifyPhaseTM_trace_project_prefix (M : TM k) :
         rw [ih choicesTail c1 htail]
         rw [hone]
 
+/-- The verifier-phase wrapper halts exactly when its projection to `M`
+    halts. -/
 theorem satVerifyPhaseTM_halted_iff (M : TM k) (c : Cfg (k + 3) M.Q) :
     (satVerifyPhaseTM M).halted c ↔ M.halted (satVerifyInnerCfg M c) :=
   Iff.rfl
@@ -672,6 +690,8 @@ def satVerifyWrap (M : TM k) (c : Cfg (k + 3) M.Q) :
     Cfg (k + 3) (GuessVerifyPhase M.Q) :=
   { state := .verify c.state, input := c.input, work := c.work, output := c.output }
 
+/-- The composed machine halts on a wrapped verifier configuration exactly
+    when the verifier-phase machine halts on the unwrapped one. -/
 theorem satGuessVerify_verify_halted_iff (M : TM k) (c : Cfg (k + 3) M.Q) :
     (satGuessVerifyNTM M).halted (satVerifyWrap M c) ↔
       (satVerifyPhaseTM M).halted c :=
@@ -690,17 +710,23 @@ def satBoundaryWork (work : Fin (k + 3) → Tape) : Fin (k + 3) → Tape :=
 def satBoundaryOutput (out : Tape) : Tape :=
   out.writeAndMove (readBackWrite out.read) (idleDir out.read)
 
+/-- A phase boundary leaves the input tape unchanged when its head is past
+    cell zero and no start markers occur beyond cell zero. -/
 theorem satBoundaryInput_stable (inp : Tape)
     (hhead : inp.head ≥ 1) (hns : ∀ j, j ≥ 1 → inp.cells j ≠ Γ.start) :
     satBoundaryInput inp = inp :=
   tape_move_idleDir_stable inp hhead hns
 
+/-- A phase boundary leaves a work tape unchanged when its head is past cell
+    zero and no start markers occur beyond cell zero. -/
 theorem satBoundaryWork_stable (work : Fin (k + 3) → Tape) (i : Fin (k + 3))
     (hhead : (work i).head ≥ 1)
     (hns : ∀ j, j ≥ 1 → (work i).cells j ≠ Γ.start) :
     satBoundaryWork work i = work i :=
   tape_writeAndMove_stable (work i) hhead hns
 
+/-- A phase boundary leaves a work tape unchanged when it is not currently
+    reading a start marker. -/
 theorem satBoundaryWork_stable_of_read_ne_start
     (work : Fin (k + 3) → Tape) (i : Fin (k + 3))
     (hread : (work i).read ≠ Γ.start) :
@@ -730,6 +756,8 @@ private theorem tape_eq_initTape_ofBool_move_right_of_head_cells
       subst cells
       exact ⟨rfl, rfl⟩
 
+/-- A phase boundary leaves every work tape unchanged when all heads are past
+    cell zero and no start markers occur beyond cell zero. -/
 theorem satBoundaryWork_stable_all (work : Fin (k + 3) → Tape)
     (hhead : ∀ i, (work i).head ≥ 1)
     (hns : ∀ i j, j ≥ 1 → (work i).cells j ≠ Γ.start) :
@@ -737,17 +765,23 @@ theorem satBoundaryWork_stable_all (work : Fin (k + 3) → Tape)
   funext i
   exact satBoundaryWork_stable work i (hhead i) (hns i)
 
+/-- A phase boundary leaves the output tape unchanged when its head is past
+    cell zero and no start markers occur beyond cell zero. -/
 theorem satBoundaryOutput_stable (out : Tape)
     (hhead : out.head ≥ 1) (hns : ∀ j, j ≥ 1 → out.cells j ≠ Γ.start) :
     satBoundaryOutput out = out :=
   tape_writeAndMove_stable out hhead hns
 
+/-- A phase boundary leaves the output tape unchanged when it is not currently
+    reading a start marker. -/
 theorem satBoundaryOutput_stable_of_read_ne_start (out : Tape)
     (hread : out.read ≠ Γ.start) :
     satBoundaryOutput out = out := by
   simpa [satBoundaryOutput] using
     Tape.writeAndMove_readBack_idle_of_ne_start out hread
 
+/-- One composed-machine step on a non-done counter configuration simulates
+    one step of the counter subroutine. -/
 theorem satGuessVerify_counter_trace_one (M : TM k)
     (choice : Bool) (c : Cfg (k + 3) TM.LinearCounterPhase)
     (hstate : c.state ≠ TM.LinearCounterPhase.done) :
@@ -1150,6 +1184,8 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
       satCounter_init_boundary_started_blank_output (k := k) x t counterChoices
     simpa [counterNTM, counterChoices, cT, c0] using houtput
 
+/-- One composed-machine step on a non-done rewind configuration simulates one
+    step of the input-rewind subroutine. -/
 theorem satGuessVerify_rewindInput_trace_one (M : TM k)
     (choice : Bool) (c : Cfg (k + 3) TM.RewindPhase)
     (hstate : c.state ≠ TM.RewindPhase.done) :
@@ -1493,6 +1529,8 @@ theorem satGuessVerify_rewindInput_exits_with_frames_exact_input (M : TM k) (B :
   exact tape_eq_initTape_ofBool_move_right_of_head_cells
     (satBoundaryInput cT.input) x hrich'.2.1 (by rw [hrich'.2.2.1, hinput_cells])
 
+/-- One composed-machine step on a non-done guess configuration simulates one
+    step of the bounded-guessing subroutine with the same choice bit. -/
 theorem satGuessVerify_guess_trace_one (M : TM k)
     (choice : Bool) (c : Cfg (k + 3) NTM.GuessBoundedPhase)
     (hstate : c.state ≠ NTM.GuessBoundedPhase.done) :
@@ -2542,6 +2580,8 @@ theorem satGuessVerify_setup_exits_with_pair_frames (M : TM k) (x : List Bool)
       hguess'.2.2.2.2.2 i, hrewind'.2.2.1]
     exact hothers (satVerifierWorkIdx i) (satVerifierWorkIdx_ne_counterIdx i)
 
+/-- One composed-machine step on a non-done pair configuration simulates one
+    step of the pair-builder subroutine. -/
 theorem satGuessVerify_pair_trace_one (M : TM k)
     (choice : Bool) (c : Cfg (k + 3) TM.PairBuildPhase)
     (hstate : c.state ≠ TM.PairBuildPhase.done) :
@@ -2816,6 +2856,8 @@ theorem satGuessVerify_pair_exits_with_verifier_frames (M : TM k) (x y : List Bo
     rw [satBoundaryWork_stable_of_read_ne_start cT.work (satVerifierWorkIdx i) hread_cT]
     exact hwork_cT
 
+/-- One composed-machine step on a non-halted verifier configuration simulates
+    one step of the verifier-phase machine. -/
 theorem satGuessVerify_verify_trace_one (M : TM k)
     (choice : Bool) (c : Cfg (k + 3) M.Q)
     (hstate : c.state ≠ M.qhalt) :
@@ -4521,6 +4563,8 @@ theorem satGuessVerify_pair_done_trace_one (M : TM k)
   funext i
   rfl
 
+/-- State-only form of the boundary step from a finished counter phase into
+    input rewinding. -/
 theorem satGuessVerify_counter_done_trace_one_state (M : TM k)
     (choice : Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape) :
     ((satGuessVerifyNTM M).trace 1 (fun _ => choice)
@@ -4529,6 +4573,8 @@ theorem satGuessVerify_counter_done_trace_one_state (M : TM k)
       GuessVerifyPhase.rewindInput TM.RewindPhase.moveLeft := by
   simp [satGuessVerifyNTM, satGuessVerifyDelta, phaseBoundary, NTM.trace]
 
+/-- State-only form of the boundary step from a finished rewind phase into
+    bounded guessing. -/
 theorem satGuessVerify_rewind_done_trace_one_state (M : TM k)
     (choice : Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape) :
     ((satGuessVerifyNTM M).trace 1 (fun _ => choice)
@@ -4537,6 +4583,8 @@ theorem satGuessVerify_rewind_done_trace_one_state (M : TM k)
       GuessVerifyPhase.guess NTM.GuessBoundedPhase.choose := by
   simp [satGuessVerifyNTM, satGuessVerifyDelta, phaseBoundary, NTM.trace]
 
+/-- State-only form of the boundary step from a finished guess phase into pair
+    building. -/
 theorem satGuessVerify_guess_done_trace_one_state (M : TM k)
     (choice : Bool) (inp : Tape) (work : Fin (k + 3) → Tape) (out : Tape) :
     ((satGuessVerifyNTM M).trace 1 (fun _ => choice)

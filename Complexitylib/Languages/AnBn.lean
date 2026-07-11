@@ -943,7 +943,9 @@ private theorem not_replicate_true_eq_cons_false (h : ℕ) (rest : List Bool) :
     List.replicate h true ≠ false :: rest := by
   cases h with
   | zero => simp [List.replicate]
-  | succ h' => rw [List.replicate_succ]; intro heq; exact absurd (List.cons_eq_cons.mp heq).1 (by decide)
+  | succ h' =>
+    rw [List.replicate_succ]; intro heq
+    exact absurd (List.cons_eq_cons.mp heq).1 (by decide)
 
 /-- `List.replicate 0 true = true :: rest` is impossible. -/
 private theorem not_replicate_zero_true_eq_cons_true (rest : List Bool) :

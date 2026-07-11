@@ -523,7 +523,8 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
               have hshift : c.input.head + 2 + 2 * i = c.input.head + 2 * (i + 1) := by ring
               simpa [hshift] using horig.1
             · rw [hc1_ic, hc1_ih]
-              have hshift : c.input.head + 2 + (2 * i + 1) = c.input.head + (2 * (i + 1) + 1) := by ring
+              have hshift :
+                  c.input.head + 2 + (2 * i + 1) = c.input.head + (2 * (i + 1) + 1) := by ring
               simpa [hshift] using horig.2
           have hc1_xh_ge : (c1.work xIdx).head ≥ 1 := by rw [hc1_xh]; omega
           have hc1_xc0 : (c1.work xIdx).cells 0 = Γ.start := by
@@ -545,7 +546,8 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
           obtain ⟨c', hreach, hst', hc_ih, hc_ic, hc_xh, hc_xc0, hc_xns,
                   hc_below, hc_above, hc_data, hc_yw⟩ :=
             ih c1 hst1 hc1_ih_ge hc1_ic0 hc1_ins hc1_hbits hc1_xh_ge hc1_xc0 hc1_xns hc1_yh hc1_yns
-          have hreach_total : (pairSplitCoreTM xIdx yIdx).reachesIn (2 * (List.length (false :: bs))) c c' := by
+          have hreach_total :
+              (pairSplitCoreTM xIdx yIdx).reachesIn (2 * (List.length (false :: bs))) c c' := by
             have htot : (pairSplitCoreTM xIdx yIdx).reachesIn (2 + 2 * bs.length) c c' :=
               reachesIn_trans _ hreach1 hreach
             have heq : 2 * (List.length (false :: bs)) = 2 + 2 * bs.length := by
@@ -612,7 +614,8 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
               have hshift : c.input.head + 2 + 2 * i = c.input.head + 2 * (i + 1) := by ring
               simpa [hshift] using horig.1
             · rw [hc1_ic, hc1_ih]
-              have hshift : c.input.head + 2 + (2 * i + 1) = c.input.head + (2 * (i + 1) + 1) := by ring
+              have hshift :
+                  c.input.head + 2 + (2 * i + 1) = c.input.head + (2 * (i + 1) + 1) := by ring
               simpa [hshift] using horig.2
           have hc1_xh_ge : (c1.work xIdx).head ≥ 1 := by rw [hc1_xh]; omega
           have hc1_xc0 : (c1.work xIdx).cells 0 = Γ.start := by
@@ -634,7 +637,8 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
           obtain ⟨c', hreach, hst', hc_ih, hc_ic, hc_xh, hc_xc0, hc_xns,
                   hc_below, hc_above, hc_data, hc_yw⟩ :=
             ih c1 hst1 hc1_ih_ge hc1_ic0 hc1_ins hc1_hbits hc1_xh_ge hc1_xc0 hc1_xns hc1_yh hc1_yns
-          have hreach_total : (pairSplitCoreTM xIdx yIdx).reachesIn (2 * (List.length (true :: bs))) c c' := by
+          have hreach_total :
+              (pairSplitCoreTM xIdx yIdx).reachesIn (2 * (List.length (true :: bs))) c c' := by
             have htot : (pairSplitCoreTM xIdx yIdx).reachesIn (2 + 2 * bs.length) c c' :=
               reachesIn_trans _ hreach1 hreach
             have heq : 2 * (List.length (true :: bs)) = 2 + 2 * bs.length := by
@@ -1142,7 +1146,8 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     pairSplit_copyY_from_input_segment xIdx yIdx hne y c2 hc2_state hc2_ih_ge hc2_ic0 hc2_ins
       hc2_ybits hc2_blank hc2_xh_ge hc2_xns hc2_xread hc2_yw_init
   have hreach_total : (pairSplitCoreTM xIdx yIdx).reachesIn (2 * x.length + y.length + 3) c c3 := by
-    have htot : (pairSplitCoreTM xIdx yIdx).reachesIn (y.length + (1 + (2 + 2 * x.length))) c c3 := by
+    have htot :
+        (pairSplitCoreTM xIdx yIdx).reachesIn (y.length + (1 + (2 + 2 * x.length))) c c3 := by
       simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
         reachesIn_trans _ hreach_sep_total hreach_y
     have heq : y.length + (1 + (2 + 2 * x.length)) = 2 * x.length + y.length + 3 := by

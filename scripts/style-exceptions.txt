@@ -1,22 +1,8 @@
 # Style-lint baseline: pre-existing violations grandfathered during
 # the quality refactor. This file only shrinks; regenerate with
 #   python3 scripts/lint_style.py --update
-Complexitylib/Circuits/Internal/AndOrNot.lean : lineLength
-Complexitylib/Circuits/Internal/LowerBound.lean : lineLength
-Complexitylib/Circuits/Internal/Nondeterminism.lean : lineLength
 Complexitylib/Circuits/Internal/Schnorr.lean : lineLength
-Complexitylib/Circuits/Internal/ShannonUpper.lean : lineLength
-Complexitylib/Circuits/Internal/Simulation.lean : lineLength
-Complexitylib/Classes/Containments.lean : lineLength
-Complexitylib/Classes/NP/Internal/PairSplitTM.lean : lineLength
-Complexitylib/Classes/Pairing.lean : lineLength
-Complexitylib/Languages/AnBn.lean : lineLength
-Complexitylib/Languages/Balanced.lean : lineLength
-Complexitylib/Models/TuringMachine/Combinators/Internal/Union.lean : lineLength
-Complexitylib/Models/TuringMachine/Hoare.lean : lineLength
-Complexitylib/Models/TuringMachine/Internal.lean : lineLength
 Complexitylib/Models/TuringMachine/SingleTape/Internal/Correctness.lean : lineLength
-Complexitylib/Models/TuringMachine/SingleTape/Validation.lean : lineLength
 Complexitylib/Models/TuringMachine/UTM/Internal/BodyInternal.lean : lineLength
 Complexitylib/SAT/CookLevin.lean : lineLength
 Complexitylib/SAT/Internal/GuessVerify.lean : lineLength

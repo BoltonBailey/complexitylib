@@ -46,7 +46,7 @@ structure RawGate where
   negated₀ : Bool
   /-- Whether the second input value is negated before applying `op`. -/
   negated₁ : Bool
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 /-- A raw single-output circuit.  The output is the value of the last gate. -/
 abbrev RawCircuit := List RawGate

@@ -358,13 +358,15 @@ theorem andOrNotForM_eval {N M : Nat} [NeZero N] [NeZero M]
     exact h
   -- Rewrite the foldl body
   suffices hsuff : Fin.foldl (2 ^ N) (fun acc k =>
-    acc || (AONForM_mkGate f (AONForM_idx j k)).eval ((andOrNotForM f).wireValue x)) false = f x j by
+      acc || (AONForM_mkGate f (AONForM_idx j k)).eval
+        ((andOrNotForM f).wireValue x)) false = f x j by
     convert hsuff using 2
     ext acc k
     congr 1; exact key k
   -- Now prove the suffices
   have h_iff : (Fin.foldl (2 ^ N) (fun acc k =>
-    acc || (AONForM_mkGate f (AONForM_idx j k)).eval ((andOrNotForM f).wireValue x)) false = true) ↔
+      acc || (AONForM_mkGate f (AONForM_idx j k)).eval
+        ((andOrNotForM f).wireValue x)) false = true) ↔
     (f x j = true) := by
     rw [foldl_bor_eq_true]
     constructor
@@ -373,22 +375,27 @@ theorem andOrNotForM_eval {N M : Nat} [NeZero N] [NeZero M]
       -- Use AONForM_idx_i and AONForM_idx_j to simplify
       have hi : AONForM_i (AONForM_idx j k) = k := AONForM_idx_i j k
       have hj' : AONForM_j (AONForM_idx j k) = j := AONForM_idx_j j k
-      by_cases hfk : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val) (AONForM_j (AONForM_idx j k)) = true
+      by_cases hfk : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val)
+          (AONForM_j (AONForM_idx j k)) = true
       · rw [AONForM_mkGate_eval_true_iff f _ _ hfk] at hk
         rw [hi, hj'] at hfk
         have hxeq : ∀ p : Fin N, x p = k.val.testBit p.val := by
           intro p; rw [← AONForM_wireValue_input f x p]
           rw [hi] at hk; exact hk p
-        have : f x j = f (fun p => k.val.testBit p.val) j := congr_arg (· j) (congr_arg f (funext hxeq))
+        have : f x j = f (fun p => k.val.testBit p.val) j :=
+          congr_arg (· j) (congr_arg f (funext hxeq))
         rw [this]; exact hfk
-      · have hfk' : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val) (AONForM_j (AONForM_idx j k)) = false := by
-          cases h : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val) (AONForM_j (AONForM_idx j k)) <;> simp_all
+      · have hfk' : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val)
+            (AONForM_j (AONForM_idx j k)) = false := by
+          cases h : f (fun p => (AONForM_i (AONForM_idx j k)).val.testBit p.val)
+              (AONForM_j (AONForM_idx j k)) <;> simp_all
         exact absurd (AONForM_mkGate_eval_false f _ _ hfk' ▸ hk) Bool.false_ne_true
     · -- f x j = true → some gate fires
       intro hfx
       obtain ⟨m, hm⟩ := exists_testBit_encode N x
       refine ⟨m, ?_⟩
-      have hfm : f (fun p => (AONForM_i (AONForM_idx j m)).val.testBit p.val) (AONForM_j (AONForM_idx j m)) = true := by
+      have hfm : f (fun p => (AONForM_i (AONForM_idx j m)).val.testBit p.val)
+          (AONForM_j (AONForM_idx j m)) = true := by
         rw [AONForM_idx_i, AONForM_idx_j]
         convert hfx using 1; congr 1; funext p; exact hm p
       rw [AONForM_mkGate_eval_true_iff f _ _ hfm]
