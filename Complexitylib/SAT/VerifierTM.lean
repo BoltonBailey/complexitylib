@@ -548,8 +548,8 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
         (work ⟨1, by omega⟩).cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, _root_.Complexity.TM.TapeInvariant t →
-      _root_.Complexity.TM.TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
+      Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -576,7 +576,7 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hcounter, _hcell0, _hnostart, _hout⟩
       rw [hvin]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_ofBool α))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool α))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, _hcounter, hcell0, hnostart, _hout⟩
@@ -589,7 +589,7 @@ theorem retargetInput_satLengthCheckTM_started_hoareTime (B : ℕ) (α : List Bo
       intro _inp work out hpre
       rcases hpre with ⟨_hvin, _hcounter, _hcell0, _hnostart, hout⟩
       rw [hout]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_nil))
+      exact hmove_right_invariant (Tape.StartInvariant.init_nil))
   refine hret.strengthen_post ?_
   intro _inp work out hpost
   rcases hpost with ⟨vin, innerWork, hinner, hmap, hvin⟩
@@ -627,8 +627,8 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
       (_root_.Complexity.TM.inputLengthPlusOneCounterTime z.length) := by
   let counterIdx : Fin 2 := ⟨0, by decide⟩
   let passiveIdx : Fin 2 := ⟨1, by decide⟩
-  have hmove_right_invariant : ∀ {t : Tape}, _root_.Complexity.TM.TapeInvariant t →
-      _root_.Complexity.TM.TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
+      Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -659,23 +659,23 @@ theorem satCounter3TM_started_hoareTime (z α : List Bool) :
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hblank, _hpassive, _hout⟩
       rw [hvin]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_ofBool z))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool z))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, hblank, hpassive, _hout⟩
       by_cases hi0 : i = counterIdx
       · subst hi0
         rw [hblank]
-        exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_nil)
+        exact hmove_right_invariant (Tape.StartInvariant.init_nil)
       · have hi1 := fin2_ne_zero_eq_one i hi0
         subst hi1
         rw [hpassive]
-        exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_ofBool α))
+        exact hmove_right_invariant (Tape.StartInvariant.init_ofBool α))
     (hpre_out := by
       intro _inp work out hpre
       rcases hpre with ⟨_hvin, _hblank, _hpassive, hout⟩
       rw [hout]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_nil))
+      exact hmove_right_invariant (Tape.StartInvariant.init_nil))
   have hret' : satCounter3TM.HoareTime
       (fun _inp work out =>
         work ⟨2, by omega⟩ = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right ∧
@@ -1142,8 +1142,8 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
         (work ⟨2, by omega⟩).cells = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).cells ∧
         out.cells 1 = (if α.length ≤ B then Γ.one else Γ.zero))
       (satLengthCheckTime α.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, _root_.Complexity.TM.TapeInvariant t →
-      _root_.Complexity.TM.TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t →
+      Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -1172,7 +1172,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hrest⟩
       rw [hvin]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_ofBool α))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool α))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, hrest⟩
@@ -1186,7 +1186,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
       · have hi1 := fin2_ne_zero_eq_one i hi0
         subst hi1
         rw [hpassive]
-        exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_ofBool β))
+        exact hmove_right_invariant (Tape.StartInvariant.init_ofBool β))
     (hpre_out := by
       intro _inp work out hpre
       rcases hpre with ⟨_hvin, hrest⟩
@@ -1195,7 +1195,7 @@ theorem satLengthCheck3TM_started_hoareTime (B : ℕ) (α β : List Bool) :
       rcases hrest with ⟨_hcell0, hrest⟩
       rcases hrest with ⟨_hnostart, hout⟩
       rw [hout]
-      exact hmove_right_invariant (_root_.Complexity.TM.TapeInvariant.Tape.init_nil))
+      exact hmove_right_invariant (Tape.StartInvariant.init_nil))
   have hret' : satLengthCheck3TM.HoareTime
       (fun _inp work out =>
         (work ⟨2, by omega⟩) = (_root_.Complexity.Tape.init (α.map Γ.ofBool)).move Dir3.right ∧

@@ -120,11 +120,11 @@ theorem initPost_simInv (α x : List Bool)
   · exact vshift_initTape_x x hw0c hw0h
   · exact vshift_initTape_nil hw1 hw1h
   · exact vshift_initTape_nil hw2 hw2h
-  · exact Tape.init_wfCells x
-  · show (Tape.init ([] : List Γ)).WFCells
-    simpa using Tape.init_wfCells []
-  · show (Tape.init ([] : List Γ)).WFCells
-    simpa using Tape.init_wfCells []
+  · exact Tape.StartInvariant.init_ofBool x
+  · show (Tape.init ([] : List Γ)).StartInvariant
+    simpa using Tape.StartInvariant.init_ofBool []
+  · show (Tape.init ([] : List Γ)).StartInvariant
+    simpa using Tape.StartInvariant.init_ofBool []
   · left
     have hstate : ((decodeDesc α).toTM.initCfg x).state
         = (decodeDesc α).toTM.qstart := rfl
@@ -140,7 +140,7 @@ theorem initPost_simInv (α x : List Bool)
   · exact hw5
   · exact hw5h
   · rw [Tape.read, hinp]
-    exact (Tape.init_wfCells (pair α x)).2 inp.head hinp_head
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 inp.head hinp_head
   · rw [Tape.read, houtc, houth]
     simp [Tape.init]
 
@@ -175,7 +175,7 @@ theorem simInv_verdict (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
 theorem writeAndMove_head_le (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).head ≤ t.head + 1 := by
   show ((t.write s).move d).head ≤ t.head + 1
-  cases d <;> (simp [Tape.move, Tape.write_head']; try omega)
+  cases d <;> (simp [Tape.move, Tape.write_head]; try omega)
 
 /-- One tape action leaves cells other than the head untouched. -/
 theorem writeAndMove_cells_ne (t : Tape) (s : Γ) (d : Dir3) {j : ℕ}

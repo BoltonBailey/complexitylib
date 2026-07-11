@@ -43,9 +43,9 @@ structure SimInv (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
   vin : VShift mc.input (work vIn)
   vwk : VShift (mc.work 0) (work vWk)
   vout : VShift mc.output (work vOut)
-  wf_in : mc.input.WFCells
-  wf_wk : (mc.work 0).WFCells
-  wf_out : mc.output.WFCells
+  wf_in : mc.input.StartInvariant
+  wf_wk : (mc.work 0).StartInvariant
+  wf_out : mc.output.StartInvariant
   state : (mc.state.val < 2 ^ (decodeDesc α).w ∧
       (work stT).HoldsExact
         (bitsToSyms (Nat.toBits (decodeDesc α).w mc.state.val)))
@@ -93,7 +93,7 @@ theorem others_read {α mc inp work out} (h : SimInv α mc inp work out) :
 /-- Any `HoldsExact` tape with head off `▷` reads a non-`▷` symbol. -/
 theorem read_ne_start_of_holdsExact {t : Tape} {l : List Γw}
     (h : t.HoldsExact l) (hh : 1 ≤ t.head) : t.read ≠ Γ.start :=
-  (Tape.HoldsExact.wfCells h).2 _ hh
+  (Tape.HoldsExact.startInvariant h).2 _ hh
 
 end SimInv
 
@@ -154,9 +154,9 @@ theorem hcPhase_halted (c : Cfg 6 bodyTM.Q)
     · rfl
   subst hSq
   have hS_wns : ∀ j, 1 ≤ j → (c.work stT).cells j ≠ Γ.start :=
-    (Tape.HoldsExact.wfCells hS_hold).2
+    (Tape.HoldsExact.startInvariant hS_hold).2
   have hW_wns : ∀ j, 1 ≤ j → (c.work dsT).cells j ≠ Γ.start :=
-    (Tape.HoldsExact.wfCells hinv.desc).2
+    (Tape.HoldsExact.startInvariant hinv.desc).2
   have hoth_d : ∀ i, i ≠ dsT → (c.work i).read ≠ Γ.start := by
     intro i hiD
     by_cases hiS : i = stT
@@ -286,9 +286,9 @@ theorem hcPhase_running (c : Cfg 6 bodyTM.Q)
       (fun s hs => takeField_fst_ne_blank _ s hs) hne_list
   have hnB' : n ≤ (qhaltField (groupPairs α)).length := hnB
   have hS_wns : ∀ j, 1 ≤ j → (c.work stT).cells j ≠ Γ.start :=
-    (Tape.HoldsExact.wfCells hS_hold).2
+    (Tape.HoldsExact.startInvariant hS_hold).2
   have hW_wns : ∀ j, 1 ≤ j → (c.work dsT).cells j ≠ Γ.start :=
-    (Tape.HoldsExact.wfCells hinv.desc).2
+    (Tape.HoldsExact.startInvariant hinv.desc).2
   have hoth_d : ∀ i, i ≠ dsT → (c.work i).read ≠ Γ.start := by
     intro i hiD
     by_cases hiS : i = stT
@@ -418,7 +418,7 @@ theorem peekSeekPhase (c : Cfg 6 bodyTM.Q)
   have hsc_read : (c.work scT).read ≠ Γ.start :=
     SimInv.read_ne_start_of_holdsExact hinv.scratch (by rw [hinv.scratch_head])
   have hW_wns : ∀ j, 1 ≤ j → (c.work dsT).cells j ≠ Γ.start :=
-    (Tape.HoldsExact.wfCells hinv.desc).2
+    (Tape.HoldsExact.startInvariant hinv.desc).2
   -- peek: two steps, all tapes restored
   obtain ⟨c₁, hr₁, hst₁, hv0₁, hv1₁, hv2₁, hstT₁, hdsT₁, hscT₁, hin₁, hout₁⟩ :=
     peek_correct hinv.vin hinv.vwk hinv.vout hinv.wf_in hinv.wf_wk hinv.wf_out
@@ -608,8 +608,8 @@ theorem defaultTail (c : Cfg 6 bodyTM.Q) (E : ℕ → Γ) (SL : List Γw)
       (c'.work scT).HoldsExact [] ∧ (c'.work scT).head = 1 ∧
       (∀ i, i ≠ stT → i ≠ dsT → i ≠ scT → c'.work i = c.work i) ∧
       c'.input = c.input ∧ c'.output = c.output := by
-  have hS_wns := (Tape.HoldsExact.wfCells hSL_hold).2
-  have hW_wns := (Tape.HoldsExact.wfCells hdesc).2
+  have hS_wns := (Tape.HoldsExact.startInvariant hSL_hold).2
+  have hW_wns := (Tape.HoldsExact.startInvariant hdesc).2
   have hst_read : (c.work stT).read ≠ Γ.start := by
     rw [Tape.read, hstH]; exact hS_wns sp hsp
   have hds_read : (c.work dsT).read ≠ Γ.start := by
@@ -910,12 +910,12 @@ theorem applyPhase (c : Cfg 6 bodyTM.Q) {f : VFlags} {sim0 sim1 sim2 : Tape}
     (hst : c.state = appRewScr f)
     (h0 : VShift sim0 (c.work vIn)) (h1 : VShift sim1 (c.work vWk))
     (h2 : VShift sim2 (c.work vOut))
-    (hwf0 : sim0.WFCells) (hwf1 : sim1.WFCells) (hwf2 : sim2.WFCells)
+    (hwf0 : sim0.StartInvariant) (hwf1 : sim1.StartInvariant) (hwf2 : sim2.StartInvariant)
     (hf0 : f.1 = decide (sim0.head = 0)) (hf1 : f.2.1 = decide (sim1.head = 0))
     (hf2 : f.2.2 = decide (sim2.head = 0))
     (hSL_hold : (c.work stT).HoldsExact SL) (hstH : (c.work stT).head = 1)
     (hEL_hold : (c.work scT).HoldsExact EL) (hscH : (c.work scT).head = sc_p)
-    (hdesc_wf : (c.work dsT).WFCells) (hdsH : (c.work dsT).head = dp)
+    (hdesc_wf : (c.work dsT).StartInvariant) (hdsH : (c.work dsT).head = dp)
     (hin : c.input.read ≠ Γ.start) (hout : c.output.read ≠ Γ.start) :
     ∃ c' t, t ≤ sc_p + 3 * SL.length + dp + 28 ∧
       bodyTM.reachesIn t c c' ∧
@@ -943,8 +943,8 @@ theorem applyPhase (c : Cfg 6 bodyTM.Q) {f : VFlags} {sim0 sim1 sim2 : Tape}
               (cellBit ((c.work scT).cells (1 + SL.length + 9)))))
         (c'.work vOut) ∧
       c'.input = c.input ∧ c'.output = c.output := by
-  have hE_wns := (Tape.HoldsExact.wfCells hEL_hold).2
-  have hS_wns := (Tape.HoldsExact.wfCells hSL_hold).2
+  have hE_wns := (Tape.HoldsExact.startInvariant hEL_hold).2
+  have hS_wns := (Tape.HoldsExact.startInvariant hSL_hold).2
   have hW_wns := hdesc_wf.2
   have hst_read : (c.work stT).read ≠ Γ.start := by
     rw [Tape.read, hstH]; exact hS_wns 1 (by omega)
@@ -1022,25 +1022,25 @@ theorem applyPhase (c : Cfg 6 bodyTM.Q) {f : VFlags} {sim0 sim1 sim2 : Tape}
     split
     · exact hE_wns _ (by omega)
     · exact hS_wns j hj
-  -- WFCells of the transformed simulated tapes
+  -- StartInvariant of the transformed simulated tapes
   have hwf0' : (sim0.move
       (if f.1 then Dir3.right
         else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 4)))
-          (cellBit ((c.work scT).cells (1 + SL.length + 5))))).WFCells :=
+          (cellBit ((c.work scT).cells (1 + SL.length + 5))))).StartInvariant :=
     hwf0.move _
   have hwf1' : (sim1.writeAndMove
       (grpΓw (cellBit ((c.work scT).cells (1 + SL.length)))
         (cellBit ((c.work scT).cells (1 + SL.length + 1)))).toΓ
       (if f.2.1 then Dir3.right
         else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 6)))
-          (cellBit ((c.work scT).cells (1 + SL.length + 7))))).WFCells :=
+          (cellBit ((c.work scT).cells (1 + SL.length + 7))))).StartInvariant :=
     hwf1.writeAndMove _ _
   have hwf2' : (sim2.writeAndMove
       (grpΓw (cellBit ((c.work scT).cells (1 + SL.length + 2)))
         (cellBit ((c.work scT).cells (1 + SL.length + 3)))).toΓ
       (if f.2.2 then Dir3.right
         else grpDir (cellBit ((c.work scT).cells (1 + SL.length + 8)))
-          (cellBit ((c.work scT).cells (1 + SL.length + 9))))).WFCells :=
+          (cellBit ((c.work scT).cells (1 + SL.length + 9))))).StartInvariant :=
     hwf2.writeAndMove _ _
   -- cleanup
   obtain ⟨c₄, hr₄, hst₄, hscHold₄, hscHead₄, hwtS₄, hwtD₄, hoth₄, hin₄, hout₄⟩ :=

@@ -159,7 +159,7 @@ def syms (w : ℕ) (e : DescEntry) : List Γw :=
   bitsToSyms e.act.dw.encode ++ bitsToSyms e.act.dOut.encode
 
 theorem syms_length (w : ℕ) (e : DescEntry) : (e.syms w).length = 2 * w + 16 := by
-  simp [syms, Nat.toBits_length, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
+  simp [syms, Nat.length_toBits, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
   omega
 
 theorem syms_ne_blank {w : ℕ} {e : DescEntry} {s : Γw} (h : s ∈ e.syms w) :
@@ -386,11 +386,11 @@ theorem parseEntry_syms {w : ℕ} {e : DescEntry}
         (Nat.toBits w e.act.q' ++ (e.act.ww.encode ++ (e.act.wo.encode ++
         (e.act.di.encode ++ (e.act.dw.encode ++ e.act.dOut.encode)))))))) := by
     simp [DescEntry.syms, List.filterMap_append, List.append_assoc]
-  have hq_len : (Nat.toBits w e.q).length = w := Nat.toBits_length ..
-  have hq'_len : (Nat.toBits w e.act.q').length = w := Nat.toBits_length ..
+  have hq_len : (Nat.toBits w e.q).length = w := Nat.length_toBits ..
+  have hq'_len : (Nat.toBits w e.act.q').length = w := Nat.length_toBits ..
   simp only [parseEntry, hbits]
   rw [if_neg (by
-    simp [Nat.toBits_length, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
+    simp [Nat.length_toBits, Γ.length_encode, Γw.length_encode, Dir3.length_encode]
     omega)]
   rw [List.take_left' hq_len, List.drop_left' hq_len,
       List.take_left' (Γ.length_encode e.si), List.drop_left' (Γ.length_encode e.si),
@@ -467,9 +467,9 @@ theorem decodeDesc_encodeDesc_append {d : TMDesc} (hd : d.WF) (junk : List Bool)
               Γw.blank :: groupPairs junk)) := by
     simp [TMDesc.syms, List.append_assoc]
   have hlen_s : (bitsToSyms (Nat.toBits d.w d.qstart)).length = d.w := by
-    simp [Nat.toBits_length]
+    simp [Nat.length_toBits]
   have hlen_h : (bitsToSyms (Nat.toBits d.w d.qhalt)).length = d.w := by
-    simp [Nat.toBits_length]
+    simp [Nat.length_toBits]
   rw [decodeDesc, hgroup, hassoc, parseSyms,
       takeField_append (fun s hs => bitsToSyms_ne_blank hs)]
   dsimp only

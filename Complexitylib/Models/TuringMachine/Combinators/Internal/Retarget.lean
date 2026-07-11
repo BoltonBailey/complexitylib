@@ -41,8 +41,8 @@ current write is a no-op. This requires:
 The second disjunct is equivalent to "cells at positions ≥ 1 never
 contain `Γ.start`". This is a *structural* invariant of any DTM run
 (since `δ` writes only `Γw`, which excludes `Γ.start`, and writes at
-cell 0 are no-ops) — captured by `TapeInvariant` below and preserved
-across `TM.step` by `TapeInvariant.step`.
+cell 0 are no-ops) — captured by `Tape.StartInvariant` below and preserved
+across `TM.step` by `Tape.StartInvariant.step`.
 -/
 
 namespace Complexity
@@ -50,94 +50,6 @@ namespace Complexity
 variable {k : ℕ}
 
 namespace TM
-
--- ════════════════════════════════════════════════════════════════════════
--- Structural tape invariant (cells 0 = ▷, cells ≥ 1 ≠ ▷)
--- ════════════════════════════════════════════════════════════════════════
-
-/-- Structural invariant on tapes: cell 0 holds `Γ.start` and no other
-    cell does. Preserved by any sequence of `Tape.writeAndMove` with
-    writes in `Γw` and initial `Tape.init`. -/
-def TapeInvariant (t : Tape) : Prop :=
-  t.cells 0 = Γ.start ∧ ∀ j, j ≥ 1 → t.cells j ≠ Γ.start
-
-theorem TapeInvariant.Tape.init (xs : List Γ) (hxs : ∀ a ∈ xs, a ≠ Γ.start) :
-    TapeInvariant (_root_.Complexity.Tape.init xs) := by
-  refine ⟨rfl, ?_⟩
-  intro j hj
-  simp only [_root_.Complexity.Tape.init, show j ≠ 0 by omega, ↓reduceIte]
-  cases h : xs[j - 1]? with
-  | none => simp
-  | some a =>
-    simp only [Option.getD_some]
-    exact hxs a (List.mem_of_getElem? h)
-
-theorem TapeInvariant.Tape.init_ofBool (xs : List Bool) :
-    TapeInvariant (_root_.Complexity.Tape.init (xs.map Γ.ofBool)) := by
-  refine TapeInvariant.Tape.init _ ?_
-  intro a ha
-  rw [List.mem_map] at ha
-  obtain ⟨b, _, rfl⟩ := ha
-  cases b <;> simp [Γ.ofBool]
-
-theorem TapeInvariant.Tape.init_nil : TapeInvariant (_root_.Complexity.Tape.init []) := by
-  refine ⟨rfl, ?_⟩
-  intro j hj
-  simp only [_root_.Complexity.Tape.init, show j ≠ 0 by omega, ↓reduceIte]
-  simp
-
-/-- The current read symbol is not `Γ.start` when head ≥ 1. -/
-theorem TapeInvariant.read_ne_start {t : Tape} (hinv : TapeInvariant t)
-    (hhead : t.head ≥ 1) : t.read ≠ Γ.start := by
-  simp only [Tape.read]; exact hinv.2 t.head hhead
-
-/-- Writing a `Γw` symbol and moving preserves the invariant. -/
-theorem TapeInvariant.writeAndMove {t : Tape} (s : Γw) (d : Dir3)
-    (hinv : TapeInvariant t) : TapeInvariant (t.writeAndMove s.toΓ d) := by
-  constructor
-  · -- cell 0 still = Γ.start
-    have hcells : (t.writeAndMove s.toΓ d).cells 0 = t.cells 0 := by
-      simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
-      by_cases hh : t.head = 0
-      · simp [hh]
-      · simp only [hh, ↓reduceIte]
-        rw [Function.update_of_ne (fun h => hh h.symm)]
-    rw [hcells]; exact hinv.1
-  · -- cells ≥ 1 still ≠ Γ.start
-    intro j hj
-    simp only [Tape.writeAndMove, Tape.move_cells, Tape.write]
-    by_cases hh : t.head = 0
-    · simp only [hh, ↓reduceIte]; exact hinv.2 j hj
-    · simp only [hh, ↓reduceIte]
-      by_cases hji : j = t.head
-      · rw [hji, Function.update_self]
-        cases s <;> simp [Γw.toΓ]
-      · rw [Function.update_of_ne hji]
-        exact hinv.2 j hj
-
-/-- `TapeInvariant` is preserved across one DTM step (for every tape). -/
-theorem TapeInvariant.step_preserves {n : ℕ} (tm : TM n)
-    {c c' : Cfg n tm.Q} (hstep : tm.step c = some c')
-    (hinp : TapeInvariant c.input) (hwork : ∀ i, TapeInvariant (c.work i))
-    (hout : TapeInvariant c.output) :
-    TapeInvariant c'.input ∧ (∀ i, TapeInvariant (c'.work i)) ∧
-    TapeInvariant c'.output := by
-  simp only [step] at hstep
-  split at hstep
-  · simp at hstep
-  · simp only [Option.some.injEq] at hstep
-    subst hstep
-    refine ⟨?_, ?_, ?_⟩
-    · -- input: only moved, cells unchanged
-      constructor
-      · show (c.input.move _).cells 0 = _
-        rw [Tape.move_cells]; exact hinp.1
-      · intro j hj
-        show (c.input.move _).cells j ≠ _
-        rw [Tape.move_cells]; exact hinp.2 j hj
-    · intro i
-      exact TapeInvariant.writeAndMove _ _ (hwork i)
-    · exact TapeInvariant.writeAndMove _ _ hout
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Config wrapping
@@ -200,7 +112,7 @@ private theorem tape_writeBack_eq_move (t : Tape) (d : Dir3)
     Requires the structural invariant on `c.input` (cells ≥ 1 ≠ start). -/
 theorem retargetInput_step_commute (M : TM k) {c c' : Cfg k M.Q}
     (hstep : M.step c = some c') (realInput : Tape)
-    (hinp : TapeInvariant c.input) :
+    (hinp : Tape.StartInvariant c.input) :
     (retargetInput M).step (retargetWrap M realInput c) =
     some (retargetWrap M (realInput.move (idleDir realInput.read)) c') := by
   have hne : c.state ≠ M.qhalt := state_ne_qhalt_of_step hstep
@@ -266,8 +178,8 @@ theorem retargetInput_step_commute (M : TM k) {c c' : Cfg k M.Q}
     only in the real-input tape drift) in the same `t` steps. -/
 theorem retargetInput_reachesIn_of_reachesIn (M : TM k)
     {c c' : Cfg k M.Q} {t : ℕ} (hreach : M.reachesIn t c c')
-    (hinp : TapeInvariant c.input) (hwork : ∀ i, TapeInvariant (c.work i))
-    (hout : TapeInvariant c.output) (realInput : Tape) :
+    (hinp : Tape.StartInvariant c.input) (hwork : ∀ i, Tape.StartInvariant (c.work i))
+    (hout : Tape.StartInvariant c.output) (realInput : Tape) :
     ∃ finalReal : Tape,
       (retargetInput M).reachesIn t
         (retargetWrap M realInput c)
@@ -276,7 +188,7 @@ theorem retargetInput_reachesIn_of_reachesIn (M : TM k)
   | zero => exact ⟨realInput, .zero⟩
   | @step c₀ c_mid _ _ hstep hrest ih =>
     obtain ⟨hinp', hwork', hout'⟩ :=
-      TapeInvariant.step_preserves M hstep hinp hwork hout
+      Tape.StartInvariant.step M hstep hinp hwork hout
     have hcommute := retargetInput_step_commute M hstep realInput hinp
     obtain ⟨finalReal', hreach'⟩ := ih hinp' hwork' hout'
       (realInput.move (idleDir realInput.read))
@@ -294,9 +206,9 @@ def retargetInitCfg (M : TM k) (z : List Bool) (realInput : Tape) :
   state := M.qstart
   input := realInput
   work := fun i =>
-    if i.val < k then _root_.Complexity.Tape.init []
-    else _root_.Complexity.Tape.init (z.map Γ.ofBool)
-  output := _root_.Complexity.Tape.init []
+    if i.val < k then Tape.init []
+    else Tape.init (z.map Γ.ofBool)
+  output := Tape.init []
 
 theorem retargetInitCfg_eq_retargetWrap (M : TM k) (z : List Bool) (realInput : Tape) :
     retargetInitCfg M z realInput = retargetWrap M realInput (M.initCfg z) := by
@@ -319,12 +231,12 @@ theorem retargetInput_reachesIn_halted_of_decidesInTime (M : TM k) {L : Language
       (z ∈ L → c'.output.cells 1 = Γ.one) ∧
       (z ∉ L → c'.output.cells 1 = Γ.zero) := by
   obtain ⟨c_M, t, ht, hreach, hhalt, hyes, hno⟩ := hM z
-  have hinp : TapeInvariant (M.initCfg z).input := by
-    exact TapeInvariant.Tape.init_ofBool z
-  have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun i => by
-    exact TapeInvariant.Tape.init_nil
-  have hout : TapeInvariant (M.initCfg z).output := by
-    exact TapeInvariant.Tape.init_nil
+  have hinp : Tape.StartInvariant (M.initCfg z).input := by
+    exact Tape.StartInvariant.init_ofBool z
+  have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun i => by
+    exact Tape.StartInvariant.init_nil
+  have hout : Tape.StartInvariant (M.initCfg z).output := by
+    exact Tape.StartInvariant.init_nil
   obtain ⟨finalReal, hreachSim⟩ :=
     retargetInput_reachesIn_of_reachesIn M hreach hinp hwork hout realInput
   refine ⟨retargetWrap M finalReal c_M, t, ht, ?_, ?_, ?_, ?_⟩
@@ -400,7 +312,7 @@ theorem startedCfg_output_eq (M : TM k) (z₁ z₂ : List Bool)
     is the ordinary initialized input moved right to cell 1. -/
 theorem startedCfg_input_eq (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) :
-    (startedCfg M z hne).input = (_root_.Complexity.Tape.init (z.map Γ.ofBool)).move Dir3.right := by
+    (startedCfg M z hne).input = (Tape.init (z.map Γ.ofBool)).move Dir3.right := by
   have hinDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.1 =
         Dir3.right :=
@@ -414,7 +326,7 @@ theorem startedCfg_input_eq (M : TM k) (z : List Bool)
     is a blank initialized tape moved right to cell 1. -/
 theorem startedCfg_work_eq_init_move_right (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) (i : Fin k) :
-    (startedCfg M z hne).work i = (_root_.Complexity.Tape.init []).move Dir3.right := by
+    (startedCfg M z hne).work i = (Tape.init []).move Dir3.right := by
   have hworkDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.1 i =
         Dir3.right :=
@@ -428,7 +340,7 @@ theorem startedCfg_work_eq_init_move_right (M : TM k) (z : List Bool)
     is a blank initialized tape moved right to cell 1. -/
 theorem startedCfg_output_eq_init_move_right (M : TM k) (z : List Bool)
     (hne : M.qstart ≠ M.qhalt) :
-    (startedCfg M z hne).output = (_root_.Complexity.Tape.init []).move Dir3.right := by
+    (startedCfg M z hne).output = (Tape.init []).move Dir3.right := by
   have houtDir :
       (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).2.2.2.2.2 =
         Dir3.right :=
@@ -471,26 +383,26 @@ theorem retargetInput_decidesVirtual_started (M : TM k) {L : Language} {T : ℕ 
       rw [← hstep, step_initCfg_startedCfg M z hne]
     exact Option.some.inj hs
   subst hstarted
-  have hinp : TapeInvariant (startedCfg M z hne).input := by
-    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.Tape.init_ofBool z
-    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.Tape.init_nil
-    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.Tape.init_nil
+  have hinp : Tape.StartInvariant (startedCfg M z hne).input := by
+    have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨hinp', _, _⟩ :=
-      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+      Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hinp'
-  have hwork : ∀ i, TapeInvariant ((startedCfg M z hne).work i) := by
-    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.Tape.init_ofBool z
-    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.Tape.init_nil
-    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.Tape.init_nil
+  have hwork : ∀ i, Tape.StartInvariant ((startedCfg M z hne).work i) := by
+    have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨_, hwork', _⟩ :=
-      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+      Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hwork'
-  have hout : TapeInvariant (startedCfg M z hne).output := by
-    have hinit : TapeInvariant (M.initCfg z).input := TapeInvariant.Tape.init_ofBool z
-    have hwork : ∀ i, TapeInvariant ((M.initCfg z).work i) := fun _ => TapeInvariant.Tape.init_nil
-    have hout : TapeInvariant (M.initCfg z).output := TapeInvariant.Tape.init_nil
+  have hout : Tape.StartInvariant (startedCfg M z hne).output := by
+    have hinit : Tape.StartInvariant (M.initCfg z).input := Tape.StartInvariant.init_ofBool z
+    have hwork : ∀ i, Tape.StartInvariant ((M.initCfg z).work i) := fun _ => Tape.StartInvariant.init_nil
+    have hout : Tape.StartInvariant (M.initCfg z).output := Tape.StartInvariant.init_nil
     obtain ⟨_, _, hout'⟩ :=
-      TapeInvariant.step_preserves M (step_initCfg_startedCfg M z hne) hinit hwork hout
+      Tape.StartInvariant.step M (step_initCfg_startedCfg M z hne) hinit hwork hout
     exact hout'
   obtain ⟨finalReal, hreachSim⟩ :=
     retargetInput_reachesIn_of_reachesIn M hrest hinp hwork hout realInput
@@ -512,9 +424,9 @@ theorem retargetInput_decidesVirtual_started (M : TM k) {L : Language} {T : ℕ 
 theorem retargetInput_hoareTime (M : TM k)
     {pre post : TapePred k} {b : ℕ}
     (hM : M.HoareTime pre post b)
-    (hpre_inp : ∀ inp work out, pre inp work out → TapeInvariant inp)
-    (hpre_work : ∀ inp work out, pre inp work out → ∀ i, TapeInvariant (work i))
-    (hpre_out : ∀ inp work out, pre inp work out → TapeInvariant out) :
+    (hpre_inp : ∀ inp work out, pre inp work out → Tape.StartInvariant inp)
+    (hpre_work : ∀ inp work out, pre inp work out → ∀ i, Tape.StartInvariant (work i))
+    (hpre_out : ∀ inp work out, pre inp work out → Tape.StartInvariant out) :
     (retargetInput M).HoareTime
       (fun _inp work out =>
         pre (work ⟨k, by omega⟩) (fun i => work ⟨i.val, by omega⟩) out)
@@ -529,9 +441,9 @@ theorem retargetInput_hoareTime (M : TM k)
   let innerWork : Fin k → Tape := fun i => work ⟨i.val, by omega⟩
   have hpreM : pre vin innerWork out := hpre
   obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := hM vin innerWork out hpreM
-  have hinp : TapeInvariant vin := hpre_inp vin innerWork out hpreM
-  have hwork : ∀ i, TapeInvariant (innerWork i) := hpre_work vin innerWork out hpreM
-  have hout : TapeInvariant out := hpre_out vin innerWork out hpreM
+  have hinp : Tape.StartInvariant vin := hpre_inp vin innerWork out hpreM
+  have hwork : ∀ i, Tape.StartInvariant (innerWork i) := hpre_work vin innerWork out hpreM
+  have hout : Tape.StartInvariant out := hpre_out vin innerWork out hpreM
   obtain ⟨finalReal, hreachSim⟩ :=
     retargetInput_reachesIn_of_reachesIn M hreach hinp hwork hout realInput
   let c0 : Cfg k M.Q :=
@@ -569,16 +481,16 @@ input onto work tape `idx` within `|x| + 1` steps. -/
 theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : List Bool) :
     (retargetInput (copyInputToWorkTM idx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨idx.val, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        TapeInvariant out ∧
-        (∀ i : Fin k, i ≠ idx → TapeInvariant (work ⟨i.val, by omega⟩)))
+        work ⟨k, by omega⟩ = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨idx.val, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        Tape.StartInvariant out ∧
+        (∀ i : Fin k, i ≠ idx → Tape.StartInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
-        (work ⟨k, by omega⟩).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
         (work ⟨idx.val, by omega⟩).hasBinaryPrefix x)
       (x.length + 1) := by
-  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -587,12 +499,12 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
   have hcopy :
       (copyInputToWorkTM idx).HoareTime
         (fun inp work out =>
-          inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-          work idx = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-          TapeInvariant out ∧
-          (∀ i : Fin k, i ≠ idx → TapeInvariant (work i)))
+          inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+          work idx = (Tape.init []).move Dir3.right ∧
+          Tape.StartInvariant out ∧
+          (∀ i : Fin k, i ≠ idx → Tape.StartInvariant (work i)))
         (fun inp work _out =>
-          inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+          inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
           (work idx).hasBinaryPrefix x)
         (x.length + 1) :=
@@ -606,14 +518,14 @@ theorem retargetInput_copyInputToWorkTM_started_hoareTime (idx : Fin k) (x : Lis
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
       rw [hvin]
-      exact hmove_right_invariant (TapeInvariant.Tape.init_ofBool x))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool x))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
       by_cases hi : i = idx
       · subst hi
         rw [hidx]
-        exact hmove_right_invariant TapeInvariant.Tape.init_nil
+        exact hmove_right_invariant Tape.StartInvariant.init_nil
       · exact hrest i hi)
     (hpre_out := by
       intro _inp work out hpre
@@ -633,16 +545,16 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
     (counterIdx : Fin k) (x : List Bool) :
     (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨counterIdx.val, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        TapeInvariant out ∧
-        (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
+        work ⟨k, by omega⟩ = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        Tape.StartInvariant out ∧
+        (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
         (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start)) 
       (inputLengthPlusOneCounterTime x.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -651,10 +563,10 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>
-          inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-          work counterIdx = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-          TapeInvariant _out ∧
-          (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
+          inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (Tape.init []).move Dir3.right ∧
+          Tape.StartInvariant _out ∧
+          (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work i)))
         (fun _inp work _out =>
           (work counterIdx).hasUnaryCounter (x.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
@@ -668,14 +580,14 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_hoareTime
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
       rw [hvin]
-      exact hmove_right_invariant (TapeInvariant.Tape.init_ofBool x))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool x))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
       by_cases hi : i = counterIdx
       · subst hi
         rw [hidx]
-        exact hmove_right_invariant TapeInvariant.Tape.init_nil
+        exact hmove_right_invariant Tape.StartInvariant.init_nil
       · exact hrest i hi)
     (hpre_out := by
       intro _inp work out hpre
@@ -695,18 +607,18 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
     (counterIdx : Fin k) (x : List Bool) :
     (retargetInput (inputLengthPlusOneCounterTM counterIdx)).HoareTime
       (fun _inp work out =>
-        work ⟨k, by omega⟩ = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-        work ⟨counterIdx.val, by omega⟩ = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-        TapeInvariant out ∧
-        (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work ⟨i.val, by omega⟩)))
+        work ⟨k, by omega⟩ = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+        work ⟨counterIdx.val, by omega⟩ = (Tape.init []).move Dir3.right ∧
+        Tape.StartInvariant out ∧
+        (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work ⟨i.val, by omega⟩)))
       (fun _inp work _out =>
-        (work ⟨k, by omega⟩).cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+        (work ⟨k, by omega⟩).cells = (Tape.init (x.map Γ.ofBool)).cells ∧
         (work ⟨k, by omega⟩).head = x.length + 1 ∧
         (work ⟨counterIdx.val, by omega⟩).hasUnaryCounter (x.length + 1) ∧
         (work ⟨counterIdx.val, by omega⟩).cells 0 = Γ.start ∧
         (∀ j, j ≥ 1 → (work ⟨counterIdx.val, by omega⟩).cells j ≠ Γ.start))
       (inputLengthPlusOneCounterTime x.length) := by
-  have hmove_right_invariant : ∀ {t : Tape}, TapeInvariant t → TapeInvariant (t.move Dir3.right) := by
+  have hmove_right_invariant : ∀ {t : Tape}, Tape.StartInvariant t → Tape.StartInvariant (t.move Dir3.right) := by
     intro t ht
     refine ⟨?_, ?_⟩
     · simpa [Tape.move_cells] using ht.1
@@ -715,12 +627,12 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
   have hcounter :
       (inputLengthPlusOneCounterTM counterIdx).HoareTime
         (fun inp work _out =>
-          inp = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
-          work counterIdx = (_root_.Complexity.Tape.init []).move Dir3.right ∧
-          TapeInvariant _out ∧
-          (∀ i : Fin k, i ≠ counterIdx → TapeInvariant (work i)))
+          inp = (Tape.init (x.map Γ.ofBool)).move Dir3.right ∧
+          work counterIdx = (Tape.init []).move Dir3.right ∧
+          Tape.StartInvariant _out ∧
+          (∀ i : Fin k, i ≠ counterIdx → Tape.StartInvariant (work i)))
         (fun inp work _out =>
-          inp.cells = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells ∧
+          inp.cells = (Tape.init (x.map Γ.ofBool)).cells ∧
           inp.head = x.length + 1 ∧
           (work counterIdx).hasUnaryCounter (x.length + 1) ∧
           (work counterIdx).cells 0 = Γ.start ∧
@@ -734,14 +646,14 @@ theorem retargetInput_inputLengthPlusOneCounterTM_started_tracksInput_hoareTime
       intro _inp work out hpre
       rcases hpre with ⟨hvin, _hidx, _hout, _hrest⟩
       rw [hvin]
-      exact hmove_right_invariant (TapeInvariant.Tape.init_ofBool x))
+      exact hmove_right_invariant (Tape.StartInvariant.init_ofBool x))
     (hpre_work := by
       intro _inp work out hpre i
       rcases hpre with ⟨_hvin, hidx, _hout, hrest⟩
       by_cases hi : i = counterIdx
       · subst hi
         rw [hidx]
-        exact hmove_right_invariant TapeInvariant.Tape.init_nil
+        exact hmove_right_invariant Tape.StartInvariant.init_nil
       · exact hrest i hi)
     (hpre_out := by
       intro _inp work out hpre

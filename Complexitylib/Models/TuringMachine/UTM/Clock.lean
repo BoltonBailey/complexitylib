@@ -841,7 +841,7 @@ theorem decClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → Tape
         (((c₂.work clkT).write Γw.blank).move .left) clkT).head = e
       rw [Function.update_self]
       show ((c₂.work clkT).write Γw.blank).head - 1 = e
-      rw [Tape.write_head', hc₂head]
+      rw [Tape.write_head, hc₂head]
       omega
     have hc₃w : ∀ i, i ≠ clkT → c₃.work i = work i := fun i hi => by
       show Function.update c₂.work clkT

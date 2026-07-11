@@ -136,7 +136,8 @@ theorem complementTM_rewind_and_flip (tm : TM n)
       c_rw.state = Sum.inr ComplementPhase.rewind ∧
       c_rw.output.cells = c_halt.output.cells ∧
       c_rw.output.head ≤ c_halt.output.head + 1 := by
-    simp only [TM.step, ↓reduceIte, show (complementCfg tm c_halt).state = Sum.inl c_halt.state from rfl,
+    simp only [TM.step, ↓reduceIte,
+      show (complementCfg tm c_halt).state = Sum.inl c_halt.state from rfl,
                complementTM, hhalt]
     refine ⟨_, rfl, rfl, ?_, ?_⟩
     · dsimp only [complementCfg]

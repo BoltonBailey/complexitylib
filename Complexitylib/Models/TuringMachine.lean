@@ -185,6 +185,45 @@ instance decidableHasOutput (t : Tape) (y : List Bool) : Decidable (t.hasOutput 
 abbrev writeAndMove (t : Tape) (s : Γ) (d : Dir3) : Tape :=
   (t.write s).move d
 
+/-- `t.StartInvariant` says the left-end marker `▷` sits at cell 0 and
+    nowhere else — the standing shape of every tape reachable from an
+    initial configuration, since writes exclude `▷` and cell 0 is
+    immutable. -/
+def StartInvariant (t : Tape) : Prop :=
+  t.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
+
+/-- Under the invariant, a head at position ≥ 1 never reads `▷`. -/
+theorem StartInvariant.read_ne_start {t : Tape} (h : t.StartInvariant)
+    (hhead : 1 ≤ t.head) : t.read ≠ Γ.start := by
+  simp only [read]; exact h.2 t.head hhead
+
+/-- Writing (any `Γw` symbol) preserves the invariant. -/
+theorem StartInvariant.write {t : Tape} (h : t.StartInvariant) (s : Γw) :
+    (t.write s.toΓ).StartInvariant := by
+  unfold Tape.write
+  split
+  · exact h
+  · next hne =>
+    refine ⟨?_, fun j hj => ?_⟩
+    · show Function.update t.cells t.head s.toΓ 0 = Γ.start
+      rw [Function.update_of_ne (Ne.symm hne)]; exact h.1
+    · show Function.update t.cells t.head s.toΓ j ≠ Γ.start
+      by_cases hje : j = t.head
+      · subst hje
+        rw [Function.update_self]
+        cases s <;> simp [Γw.toΓ]
+      · rw [Function.update_of_ne hje]; exact h.2 j hj
+
+/-- Moving preserves the invariant (cells unchanged). -/
+theorem StartInvariant.move {t : Tape} (h : t.StartInvariant) (d : Dir3) :
+    (t.move d).StartInvariant := by
+  cases d <;> exact h
+
+/-- Writing a `Γw` symbol and moving preserves the invariant. -/
+theorem StartInvariant.writeAndMove {t : Tape} (h : t.StartInvariant)
+    (s : Γw) (d : Dir3) : (t.writeAndMove s.toΓ d).StartInvariant :=
+  (h.write s).move d
+
 /-- One write-and-move step advances the head by at most one. -/
 theorem head_writeAndMove_le (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).head ≤ t.head + 1 := by
@@ -272,6 +311,34 @@ theorem Tape.init_ofBool_move_right_read_ne_start (contents : List Bool) :
     ((Tape.init (contents.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
   simp only [Tape.read, Tape.move]
   exact Tape.init_ofBool_cells_ne_start contents 1 (by omega)
+
+/-- An initialized tape whose contents avoid `▷` satisfies the invariant. -/
+theorem Tape.StartInvariant.init (xs : List Γ) (hxs : ∀ a ∈ xs, a ≠ Γ.start) :
+    (Tape.init xs).StartInvariant := by
+  refine ⟨rfl, ?_⟩
+  intro j hj
+  simp only [Tape.init, show j ≠ 0 by omega, ↓reduceIte]
+  cases h : xs[j - 1]? with
+  | none => simp
+  | some a =>
+    simp only [Option.getD_some]
+    exact hxs a (List.mem_of_getElem? h)
+
+/-- A Boolean-initialized tape satisfies the invariant. -/
+theorem Tape.StartInvariant.init_ofBool (xs : List Bool) :
+    (Tape.init (xs.map Γ.ofBool)).StartInvariant := by
+  refine Tape.StartInvariant.init _ ?_
+  intro a ha
+  rw [List.mem_map] at ha
+  obtain ⟨b, _, rfl⟩ := ha
+  cases b <;> simp [Γ.ofBool]
+
+/-- The empty initialized tape satisfies the invariant. -/
+theorem Tape.StartInvariant.init_nil : (Tape.init []).StartInvariant := by
+  refine ⟨rfl, ?_⟩
+  intro j hj
+  simp only [Tape.init, show j ≠ 0 by omega, ↓reduceIte]
+  simp
 
 /-- Moving the head does not introduce a left-end marker in the positive cells
     of a Boolean-initialized tape. -/

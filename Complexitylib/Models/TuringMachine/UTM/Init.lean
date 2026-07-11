@@ -1271,7 +1271,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
       c'.output.cells = (Tape.init []).cells ∧ c'.output.head = 1 := by
   have hP : pair α x = (α.flatMap fun b => [b, b]) ++ false :: true :: x := by
     simp [pair]
-  have hwf := Tape.init_wfCells (pair α x)
+  have hwf := Tape.StartInvariant.init_ofBool (pair α x)
   have hblank1 : (Tape.init []).cells 1 = Γ.blank := Tape.init_nil_cells_succ 0
   have hwo₁ : ∀ i, (c₁.work i).read ≠ Γ.start ∧ 1 ≤ (c₁.work i).head := by
     intro i
@@ -1340,8 +1340,8 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     rewind_loop (idx := 4) (qloop := .rewindDesc) (qnext := .copyField)
       (fun _ _ _ => rfl) (by decide)
       ((groupPairs α).length + 1) c₄ hst₄ hd4₄
-      (Tape.HoldsExact.wfCells hh4₄).1
-      (fun j hj => (Tape.HoldsExact.wfCells hh4₄).2 j hj)
+      (Tape.HoldsExact.startInvariant hh4₄).1
+      (fun j hj => (Tape.HoldsExact.startInvariant hh4₄).2 j hj)
       hi₄ hwo₄
       (by rw [hout₄']; exact ho₁) (by rw [hout₄']; exact hoh₁')
   -- ── copy the qstart field onto the state tape ──
@@ -1381,8 +1381,8 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     rewind_loop (idx := 4) (qloop := .rewindDesc2) (qnext := .rewindState)
       (fun _ _ _ => rfl) (by decide)
       ((takeField (groupPairs α)).1.length + 1) c₆ hst₆ hd4₆'
-      (Tape.HoldsExact.wfCells hh4₆).1
-      (fun j hj => (Tape.HoldsExact.wfCells hh4₆).2 j hj)
+      (Tape.HoldsExact.startInvariant hh4₆).1
+      (fun j hj => (Tape.HoldsExact.startInvariant hh4₆).2 j hj)
       (by rw [hin₆, hin₅]; exact hi₄) hwo₆
       (by rw [hout₆, hout₅, hout₄']; exact ho₁)
       (by rw [hout₆, hout₅, hout₄']; exact hoh₁')
@@ -1399,15 +1399,15 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     · subst h4
       refine ⟨?_, by rw [hd4₇]⟩
       rw [Tape.read, hd4₇]
-      exact (Tape.HoldsExact.wfCells hh4₇).2 1 (le_refl 1)
+      exact (Tape.HoldsExact.startInvariant hh4₇).2 1 (le_refl 1)
     · rw [hfr₇ i h4]
       exact hwo₆ i h4
   obtain ⟨c₈, hreach₈, hst₈, hd3₈, hcl3₈, hfr₈, hin₈, hout₈⟩ :=
     rewind_loop (idx := 3) (qloop := .rewindState) (qnext := .rewindV0)
       (fun _ _ _ => rfl) (by decide)
       ((takeField (groupPairs α)).1.length + 1) c₇ hst₇ hd3₇
-      (Tape.HoldsExact.wfCells hh3₇).1
-      (fun j hj => (Tape.HoldsExact.wfCells hh3₇).2 j hj)
+      (Tape.HoldsExact.startInvariant hh3₇).1
+      (fun j hj => (Tape.HoldsExact.startInvariant hh3₇).2 j hj)
       (by rw [hin₇, hin₆, hin₅]; exact hi₄) hwo₇
       (by rw [hout₇, hout₆, hout₅, hout₄']; exact ho₁)
       (by rw [hout₇, hout₆, hout₅, hout₄']; exact hoh₁')
@@ -1427,15 +1427,15 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
     · subst h3
       refine ⟨?_, by rw [hd3₈]⟩
       rw [Tape.read, hd3₈]
-      exact (Tape.HoldsExact.wfCells hh3₈).2 1 (le_refl 1)
+      exact (Tape.HoldsExact.startInvariant hh3₈).2 1 (le_refl 1)
     · rw [hfr₈ i h3]
       exact hwo₇ i h3
   obtain ⟨c₉, hreach₉, hst₉, hd0₉, hcl0₉, hfr₉, hin₉, hout₉⟩ :=
     rewind_loop (idx := 0) (qloop := .rewindV0) (qnext := .done)
       (fun _ _ _ => rfl) (by decide)
       (x.length + 2) c₈ hst₈ hd0₈
-      (Tape.HoldsExact.wfCells hh0₈).1
-      (fun j hj => (Tape.HoldsExact.wfCells hh0₈).2 j hj)
+      (Tape.HoldsExact.startInvariant hh0₈).1
+      (fun j hj => (Tape.HoldsExact.startInvariant hh0₈).2 j hj)
       (by rw [hin₈, hin₇, hin₆, hin₅]; exact hi₄) hwo₈
       (by rw [hout₈, hout₇, hout₆, hout₅, hout₄']; exact ho₁)
       (by rw [hout₈, hout₇, hout₆, hout₅, hout₄']; exact hoh₁')
@@ -1570,7 +1570,7 @@ theorem initTM_hoareTime_started (α x : List Bool) :
         out.cells = (Tape.init []).cells ∧ out.head = 1)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
   intro inp work out ⟨hic, hih, hwork, hoc, hoh⟩
-  have hwf := Tape.init_wfCells (pair α x)
+  have hwf := Tape.StartInvariant.init_ofBool (pair α x)
   have hblank1 : (Tape.init []).cells 1 = Γ.blank := Tape.init_nil_cells_succ 0
   -- ── step 1: an idle step — every head already sits at cell 1 ──
   obtain ⟨c₁, hs₁, hst₁, hin₁, hw₁, hout₁⟩ :=

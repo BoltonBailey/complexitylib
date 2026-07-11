@@ -119,7 +119,7 @@ private theorem simInv_verdict_len (α : List Bool) (mc : Cfg 1 (decodeDesc α).
   obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
   refine ⟨S, hhold, hnb, ?_, ?_⟩
   · rcases hwhich with ⟨-, rfl⟩ | ⟨-, rfl⟩
-    · rw [bitsToSyms_length, Nat.toBits_length, decodeDesc_w]
+    · rw [bitsToSyms_length, Nat.length_toBits, decodeDesc_w]
       exact takeField_fst_length_le' _
     · exact qhaltField_length_le' _
   · rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩
@@ -648,7 +648,7 @@ theorem utm_loop_extract_hoareTime (α x : List Bool) (hterm : TerminatedRegion 
       intro j hj
       rw [hcells2 j]
       exact hmnb j hj
-    have hwf2 : (work 2).WFCells := hvout.wfCells hinv.wf_out
+    have hwf2 : (work 2).StartInvariant := hvout.startInvariant hinv.wf_out
     have hheadF : mcF.output.head ≤ T := by
       have h := reachesIn_output_head_le hrun
       have h0 : ((decodeDesc α).toTM.initCfg x).output.head = 0 := rfl

@@ -225,7 +225,7 @@ theorem rewStep_loop {cur next : BodyQ} {t : Fin 6}
         (by
           dsimp only
           rw [if_pos rfl, if_neg hread]
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hhead]
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
           omega)
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
@@ -334,7 +334,7 @@ theorem blankRewStep_loop {cur next : BodyQ} {t : Fin 6}
         (by
           dsimp only
           rw [if_pos rfl, if_neg hread]
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hhead]
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hhead]
           omega)
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
@@ -404,7 +404,7 @@ theorem scanRight_loop {cur next : BodyQ} {t : Fin 6}
       show ((c.work t).write _).move .right = _
       have hcells := tape_readBackWrite_preserves (c.work t) Dir3.right (Or.inr hread')
       simp only [Tape.writeAndMove] at hcells
-      simp only [Tape.move, Tape.mk.injEq, Tape.write_head']
+      simp only [Tape.move, Tape.mk.injEq, Tape.write_head]
       refine ⟨by rw [hhead], ?_⟩
       have : ((c.work t).write (readBackWrite ((c.work t).read)).toΓ).cells
           = (c.work t).cells := by
@@ -453,7 +453,7 @@ theorem scanRight_loop {cur next : BodyQ} {t : Fin 6}
         (by
           dsimp only
           rw [if_pos rfl, if_neg hread']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hhead])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hhead])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hi => by
@@ -724,7 +724,7 @@ theorem dfBlank_loop :
         (by
           dsimp only
           rw [if_pos rfl, if_neg hread']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hhead])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hhead])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hi => by
@@ -864,7 +864,7 @@ theorem dfCopy_loop (W : ℕ → Γ) (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start
         (by
           dsimp only
           rw [if_pos rfl, if_neg hreads]
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadV])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadV])
         (by
           dsimp only
           rw [if_neg (by decide : dsT ≠ stT), if_pos rfl, if_neg hreadd',
@@ -872,7 +872,7 @@ theorem dfCopy_loop (W : ℕ → Γ) (hWns : ∀ j, 1 ≤ j → W j ≠ Γ.start
         (by
           dsimp only
           rw [if_neg (by decide : dsT ≠ stT), if_pos rfl, if_neg hreadd']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hi hi' => by

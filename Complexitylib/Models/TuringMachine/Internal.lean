@@ -398,6 +398,29 @@ theorem head_le_of_reachesIn (tm : TM n)
     exact ⟨by omega, by omega, fun i => by have := hs_work i; have := ih_work i; omega⟩
 end TM
 
+/-- The invariant is preserved across one DTM step, on every tape. -/
+theorem Tape.StartInvariant.step {n : ℕ} (tm : TM n)
+    {c c' : Cfg n tm.Q} (hstep : tm.step c = some c')
+    (hinp : c.input.StartInvariant) (hwork : ∀ i, (c.work i).StartInvariant)
+    (hout : c.output.StartInvariant) :
+    c'.input.StartInvariant ∧ (∀ i, (c'.work i).StartInvariant) ∧
+    c'.output.StartInvariant := by
+  simp only [TM.step] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    subst hstep
+    refine ⟨?_, ?_, ?_⟩
+    · constructor
+      · show (c.input.move _).cells 0 = _
+        rw [Tape.move_cells]; exact hinp.1
+      · intro j hj
+        show (c.input.move _).cells j ≠ _
+        rw [Tape.move_cells]; exact hinp.2 j hj
+    · intro i
+      exact Tape.StartInvariant.writeAndMove (hwork i) _ _
+    · exact Tape.StartInvariant.writeAndMove hout _ _
+
 namespace NTM
 
 variable {n : ℕ}

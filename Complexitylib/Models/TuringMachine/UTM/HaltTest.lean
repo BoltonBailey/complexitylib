@@ -960,8 +960,8 @@ theorem haltTestTM_hoareTime (stSyms dSyms : List Γw)
   intro inp work out ⟨hi, hw, ho⟩
   subst hi; subst hw; subst ho
   -- standing facts about the initial tapes
-  have hst_wf := Tape.HoldsExact.wfCells hst
-  have hd_wf := Tape.HoldsExact.wfCells hd
+  have hst_wf := Tape.HoldsExact.startInvariant hst
+  have hd_wf := Tape.HoldsExact.startInvariant hd
   have h3read : (work 3).read ≠ Γ.start := by
     rw [Tape.read, hsth]; exact hst_wf.2 1 le_rfl
   have h4read : (work 4).read ≠ Γ.start := by

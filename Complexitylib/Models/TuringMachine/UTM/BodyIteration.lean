@@ -43,9 +43,9 @@ private theorem holdsExact_cells_congr {t' t : Tape} {l : List Γw}
     (he : t'.cells = t.cells) (h : t.HoldsExact l) : t'.HoldsExact l :=
   ⟨by rw [he]; exact h.1, fun i => by rw [he]; exact h.2 i⟩
 
-/-- `WFCells` only inspects the cells. -/
+/-- `StartInvariant` only inspects the cells. -/
 private theorem wfCells_cells_congr {t' t : Tape} (he : t'.cells = t.cells)
-    (h : t.WFCells) : t'.WFCells :=
+    (h : t.StartInvariant) : t'.StartInvariant :=
   ⟨by rw [he]; exact h.1, fun j hj => by rw [he]; exact h.2 j hj⟩
 
 private theorem takeField_fst_length_le (l : List Γw) :
@@ -67,7 +67,7 @@ private theorem readBackWrite_eq_readback (g : Γ) :
 
 /-- The peek flag and the interpreter's `▷`-test decide the same
     sanitization. -/
-private theorem sanitize_dir_eq {sim : Tape} (hwf : sim.WFCells) (flag : Bool)
+private theorem sanitize_dir_eq {sim : Tape} (hwf : sim.StartInvariant) (flag : Bool)
     (hflag : flag = decide (sim.head = 0)) (d : Dir3) :
     (if flag then Dir3.right else d)
       = (if sim.read = Γ.start then Dir3.right else d) := by
@@ -81,12 +81,12 @@ private theorem sanitize_dir_eq {sim : Tape} (hwf : sim.WFCells) (flag : Bool)
     the UTM's readback-write plus flag-sanitized move on the shadow tape
     shadows the simulated tape's read-sanitized move. -/
 private theorem vshift_default_move {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) (flag : Bool) (hflag : flag = decide (sim.head = 0)) :
+    (hwf : sim.StartInvariant) (flag : Bool) (hflag : flag = decide (sim.head = 0)) :
     VShift (sim.move (if sim.read = Γ.start then Dir3.right else Dir3.stay))
       (utm.writeAndMove (readBackWrite utm.read).toΓ
         (if flag then Dir3.right else Dir3.stay)) := by
   rw [readBackWrite_eq_readback,
-    writeAndMove_readback_eq_move (h.wfCells hwf),
+    writeAndMove_readback_eq_move (h.startInvariant hwf),
     sanitize_dir_eq hwf flag hflag Dir3.stay]
   exact h.move _ (fun h0 => by rw [if_pos ((read_start_iff hwf).mpr h0)])
 
@@ -173,7 +173,7 @@ theorem bodyIteration (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
       · exact absurd hqh hh
     have hlenS : (bitsToSyms (Nat.toBits (decodeDesc α).w mc.state.val)).length
         = (decodeDesc α).w := by
-      rw [bitsToSyms_length, Nat.toBits_length]
+      rw [bitsToSyms_length, Nat.length_toBits]
     -- sim reads from the honest flags
     have hsr0 : simRead (decide (mc.input.head = 0)) ((c.work vIn).read)
         = mc.input.read := simRead_flag_eq hinv.vin hinv.wf_in
@@ -213,7 +213,7 @@ theorem bodyIteration (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
         (by omega)
         (fun j hj => by
           rw [hdsT₂']
-          exact (Tape.HoldsExact.wfCells hinv.desc).2 j hj)
+          exact (Tape.HoldsExact.startInvariant hinv.desc).2 j hj)
         (by rw [hwk₂' stT (by decide)]; exact hSt)
         (by rw [hwk₂' stT (by decide)]; exact hinv.state_head)
         (by rw [hwk₂' scT (by decide)]; exact hinv.scratch)
@@ -275,7 +275,7 @@ theorem bodyIteration (α : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
           (by rw [hstT₃, hwk₂' stT (by decide)]; exact hSt)
           (by rw [hstT₃, hwk₂' stT (by decide)]; exact hinv.state_head)
           hscHold₃ hscHead₃
-          (wfCells_cells_congr hdsC₃ (Tape.HoldsExact.wfCells hinv.desc))
+          (wfCells_cells_congr hdsC₃ (Tape.HoldsExact.startInvariant hinv.desc))
           rfl
           (by rw [hin₃, hin₂, hin₁]; exact hinv.inp_read)
           (by rw [hout₃, hout₂, hout₁]; exact hinv.out_read)

@@ -32,7 +32,7 @@ Under this shift the one-sided tape dynamics correspond exactly:
 ## Main definitions
 
 - `VShift sim utm` — the shift correspondence
-- `Tape.WFCells` — cell 0 is `▷` and nowhere else (preserved by all writes)
+- `Tape.StartInvariant` — cell 0 is `▷` and nowhere else (preserved by all writes)
 
 ## Main results
 
@@ -44,57 +44,6 @@ Under this shift the one-sided tape dynamics correspond exactly:
 namespace Complexity
 
 namespace TM
-
-/-- Cell 0 is `▷` and no other cell is: the standing shape of every tape
-    reachable from an initial configuration (writes exclude `▷` and cell 0
-    is immutable). -/
-def _root_.Complexity.Tape.WFCells (t : Tape) : Prop :=
-  t.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
-
-/-- Compatibility alias for the core `Tape.write_head` theorem. -/
-theorem _root_.Complexity.Tape.write_head' (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  exact t.write_head s
-
-/-- Writing (any `Γw` symbol) preserves `WFCells`. -/
-theorem _root_.Complexity.Tape.WFCells.write {t : Tape} (h : t.WFCells) (s : Γw) :
-    (t.write s.toΓ).WFCells := by
-  unfold Tape.write
-  split
-  · exact h
-  · next hne =>
-    refine ⟨?_, fun j hj => ?_⟩
-    · show Function.update t.cells t.head s.toΓ 0 = Γ.start
-      rw [Function.update_of_ne (Ne.symm hne)]; exact h.1
-    · show Function.update t.cells t.head s.toΓ j ≠ Γ.start
-      by_cases hje : j = t.head
-      · subst hje
-        rw [Function.update_self]
-        cases s <;> simp [Γw.toΓ]
-      · rw [Function.update_of_ne hje]; exact h.2 j hj
-
-/-- Moving preserves `WFCells` (cells unchanged). -/
-theorem _root_.Complexity.Tape.WFCells.move {t : Tape} (h : t.WFCells) (d : Dir3) :
-    (t.move d).WFCells := by
-  cases d <;> exact h
-
-theorem _root_.Complexity.Tape.WFCells.writeAndMove {t : Tape} (h : t.WFCells)
-    (s : Γw) (d : Dir3) :
-    (t.writeAndMove s.toΓ d).WFCells :=
-  (h.write s).move d
-
-/-- The initial tape is well-formed: `▷` at cell 0 only (contents drawn
-    from `Γ.ofBool` and blanks). -/
-theorem _root_.Complexity.Tape.init_wfCells (x : List Bool) :
-    (Tape.init (x.map Γ.ofBool)).WFCells := by
-  constructor
-  · simp [Tape.init]
-  · intro j hj
-    simp only [Tape.init, show j ≠ 0 by omega, if_false]
-    cases hx : (x.map Γ.ofBool)[j - 1]? with
-    | none => simp
-    | some g =>
-      obtain ⟨b, -, rfl⟩ := List.mem_map.mp (List.mem_of_getElem? hx)
-      cases b <;> simp [Γ.ofBool]
 
 /-- The **shift correspondence**: `utm` stores `sim` shifted one cell
     right, with `□` shadowing the simulated `▷` at UTM cell 1, and the head
@@ -125,7 +74,7 @@ theorem read_blank {sim utm : Tape} (h : VShift sim utm) (hp : sim.head = 0) :
   simp
 
 /-- The shadow never reads `▷` (given the simulated tape is well-formed). -/
-theorem read_ne_start {sim utm : Tape} (h : VShift sim utm) (hsim : sim.WFCells) :
+theorem read_ne_start {sim utm : Tape} (h : VShift sim utm) (hsim : sim.StartInvariant) :
     utm.read ≠ Γ.start := by
   rcases Nat.eq_zero_or_pos sim.head with hp | hp
   · rw [h.read_blank hp]; simp
@@ -134,8 +83,8 @@ theorem read_ne_start {sim utm : Tape} (h : VShift sim utm) (hsim : sim.WFCells)
 
 /-- The shadow's cells beyond 1 never hold `▷` (given the simulated tape is
     well-formed). -/
-theorem wfCells {sim utm : Tape} (h : VShift sim utm) (hsim : sim.WFCells) :
-    utm.WFCells := by
+theorem startInvariant {sim utm : Tape} (h : VShift sim utm) (hsim : sim.StartInvariant) :
+    utm.StartInvariant := by
   constructor
   · rw [h.1]; simp
   · intro j hj
@@ -166,7 +115,7 @@ theorem move {sim utm : Tape} (h : VShift sim utm) (d : Dir3)
 theorem write {sim utm : Tape} (h : VShift sim utm) (s : Γw) (hp : 1 ≤ sim.head) :
     VShift (sim.write s.toΓ) (utm.write s.toΓ) := by
   have hh : utm.head = sim.head + 1 := h.2
-  refine ⟨?_, by rw [Tape.write_head', Tape.write_head']; exact hh⟩
+  refine ⟨?_, by rw [Tape.write_head, Tape.write_head]; exact hh⟩
   unfold Tape.write
   rw [if_neg (by omega), if_neg (by omega)]
   funext k
@@ -192,7 +141,7 @@ theorem write {sim utm : Tape} (h : VShift sim utm) (s : Γw) (hp : 1 ≤ sim.he
 theorem write_origin {sim utm : Tape} (h : VShift sim utm) (hp : sim.head = 0) :
     VShift sim (utm.write Γ.blank) := by
   have hh : utm.head = sim.head + 1 := h.2
-  refine ⟨?_, by rw [Tape.write_head']; exact hh⟩
+  refine ⟨?_, by rw [Tape.write_head]; exact hh⟩
   unfold Tape.write
   rw [if_neg (by omega)]
   funext k
@@ -220,7 +169,7 @@ theorem writeAndMove {sim utm : Tape} (h : VShift sim utm) (s : Γw) (d : Dir3)
     exact (h.write_origin hp).move d hd
   · rw [if_neg (by omega)]
     exact (h.write s hp).move d
-      (fun h0 => absurd (by rwa [Tape.write_head'] at h0) (by omega))
+      (fun h0 => absurd (by rwa [Tape.write_head] at h0) (by omega))
 
 /-- The initial correspondence: the simulated initial tape (contents `l`)
     is shadowed by `▷ □ l ⋯` with head at cell 1. -/
@@ -252,7 +201,7 @@ def _root_.Complexity.Tape.HoldsExact (t : Tape) (syms : List Γw) : Prop :=
 
 namespace Tape.HoldsExact
 
-theorem wfCells {t : Tape} {syms : List Γw} (h : t.HoldsExact syms) : t.WFCells := by
+theorem startInvariant {t : Tape} {syms : List Γw} (h : t.HoldsExact syms) : t.StartInvariant := by
   refine ⟨h.1, fun j hj => ?_⟩
   obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
   rw [h.2 i]

@@ -138,7 +138,7 @@ theorem lockstep_agree_loop {cur : BodyQ} (hcur : cur ≠ bodyDone)
         (by
           dsimp only
           rw [if_pos rfl, if_neg hreadS']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadS])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadS])
         (by
           dsimp only
           rw [if_neg (by decide : dsT ≠ stT), if_pos rfl,
@@ -146,7 +146,7 @@ theorem lockstep_agree_loop {cur : BodyQ} (hcur : cur ≠ bodyDone)
         (by
           dsimp only
           rw [if_neg (by decide : dsT ≠ stT), if_pos rfl, if_neg hreadW']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hi hi' => by
@@ -420,11 +420,11 @@ theorem cmpS_match_loop (f : VFlags) (v0 v1 v2 : Γ) (W V : ℕ → Γ)
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, idle_input_id hin, idle_tape_id hout, ?_⟩
     · show (c.work stT).writeAndMove _ _ = (⟨a - 1, V⟩ : Tape)
       rw [if_neg hreadS']
-      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head']
+      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head]
       exact ⟨by omega, by rw [write_readBack_cells hreadS', hcV]⟩
     · show (c.work dsT).writeAndMove _ _ = (⟨b + 0 + 1, W⟩ : Tape)
       rw [if_neg hreadW']
-      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head']
+      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head]
       exact ⟨by omega, by rw [write_readBack_cells hreadW', hcW]⟩
     · intro i hiS hiD
       show (if i = dsT then _ else if i = stT then _ else _) = _
@@ -485,7 +485,7 @@ theorem cmpS_match_loop (f : VFlags) (v0 v1 v2 : Γ) (W V : ℕ → Γ)
             rw [if_pos rfl, tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiS hiD => by
@@ -608,7 +608,7 @@ theorem cmpS_mismatch_loop (f : VFlags) (v0 v1 v2 : Γ) (W : ℕ → Γ)
             rw [if_pos rfl, tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiD => by
@@ -751,14 +751,14 @@ theorem copyQ'_copy_loop (f : VFlags) (S W : ℕ → Γ)
         (by dsimp only
             rw [if_neg (by decide : stT ≠ scT), if_neg (by decide : stT ≠ dsT),
               if_pos rfl, if_neg hreadS']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadS]
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadS]
             omega)
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl,
               tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
             show (((c.work scT).write _).move Dir3.right).cells = _
@@ -773,7 +773,7 @@ theorem copyQ'_copy_loop (f : VFlags) (S W : ℕ → Γ)
             rw [hcE, hheadE, hWb])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadE])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiS hiD hiE => by
@@ -922,13 +922,13 @@ theorem copyQ'_blank_loop (f : VFlags) (S W : ℕ → Γ)
         (by dsimp only
             rw [if_neg (by decide : stT ≠ scT), if_neg (by decide : stT ≠ dsT),
               if_pos rfl, if_neg hreadS']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadS])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadS])
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl,
               tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
             show (((c.work scT).write _).move Dir3.right).cells = _
@@ -943,7 +943,7 @@ theorem copyQ'_blank_loop (f : VFlags) (S W : ℕ → Γ)
             rw [hcE, hheadE, hWb])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadE])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiS hiD hiE => by
@@ -1027,7 +1027,7 @@ theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
       idle_input_id hin, idle_tape_id hout, ?_⟩
     · show (c.work dsT).writeAndMove _ _ = (⟨b + 0 + 1, W⟩ : Tape)
       rw [if_neg hreadW']
-      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head']
+      simp only [Tape.writeAndMove, Tape.move, Tape.mk.injEq, Tape.write_head]
       exact ⟨by omega, by rw [write_readBack_cells hreadW', hcW]⟩
     · show (c.work scT).writeAndMove _ _ = _
       rw [if_neg hreadE']
@@ -1100,7 +1100,7 @@ theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
               tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
             show (((c.work scT).write _).move Dir3.right).cells = _
@@ -1115,7 +1115,7 @@ theorem copyAct_copy_loop (f : VFlags) (W : ℕ → Γ)
             rw [hcE, hheadE, hWb])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadE])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiD hiE => by
@@ -1248,7 +1248,7 @@ theorem copyAct_blank_loop (f : VFlags) (W : ℕ → Γ)
               tape_readBackWrite_preserves _ _ (Or.inr hreadW'), hcW])
         (by dsimp only
             rw [if_neg (by decide : dsT ≠ scT), if_pos rfl, if_neg hreadW']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadW])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadW])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
             show (((c.work scT).write _).move Dir3.right).cells = _
@@ -1263,7 +1263,7 @@ theorem copyAct_blank_loop (f : VFlags) (W : ℕ → Γ)
             rw [hcE, hheadE, hWb])
         (by dsimp only
             rw [if_pos rfl, if_neg hreadE']
-            simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+            simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadE])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hiD hiE => by

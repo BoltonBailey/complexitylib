@@ -191,8 +191,8 @@ private theorem roundMatch (f : VFlags) (v0 v1 v2 : Γ) (stSyms seg : List Γw)
       c'.work vOut = c.work vOut ∧
       c'.input = c.input ∧ c'.output = c.output := by
   obtain ⟨hc1, hc2, hlen⟩ := hMM
-  have hS_wns := (Tape.HoldsExact.wfCells hSt).2
-  have hE_wns := (Tape.HoldsExact.wfCells hSc).2
+  have hS_wns := (Tape.HoldsExact.startInvariant hSt).2
+  have hE_wns := (Tape.HoldsExact.startInvariant hSc).2
   have hsc_read : (c.work scT).read ≠ Γ.start :=
     SimInv.read_ne_start_of_holdsExact hSc (by rw [hschead])
   have hoth6 : ∀ i : Fin 6, i ≠ stT → i ≠ dsT → (c.work i).read ≠ Γ.start := by
@@ -440,8 +440,8 @@ private theorem roundMismatch (f : VFlags) (v0 v1 v2 : Γ) (stSyms seg : List Γ
       c'.work vIn = c.work vIn ∧ c'.work vWk = c.work vWk ∧
       c'.work vOut = c.work vOut ∧
       c'.input = c.input ∧ c'.output = c.output := by
-  have hS_wns := (Tape.HoldsExact.wfCells hSt).2
-  have hE_wns := (Tape.HoldsExact.wfCells hSc).2
+  have hS_wns := (Tape.HoldsExact.startInvariant hSt).2
+  have hE_wns := (Tape.HoldsExact.startInvariant hSc).2
   have hsc_read : (c.work scT).read ≠ Γ.start :=
     SimInv.read_ne_start_of_holdsExact hSc (by rw [hschead])
   have hsc_blank : ∀ j, 1 ≤ j → (c.work scT).cells j = Γ.blank := by
@@ -1170,7 +1170,7 @@ private theorem matchLoop_go (f : VFlags) (v0 v1 v2 : Γ) (stSyms : List Γw)
     MatchLoopStmt f v0 v1 v2 stSyms R := by
   intro pos c hRhd hst hcells hdhead hpos hWns hSt hsthead hSc hschead
     hv0 hv1 hv2 hv0s hv1s hv2s hin hout
-  have hS_wns := (Tape.HoldsExact.wfCells hSt).2
+  have hS_wns := (Tape.HoldsExact.startInvariant hSt).2
   -- the uniform segment view of the region
   have hview : ∀ j, (hj : j < (takeField R).1.length) →
       (c.work dsT).cells (pos + j) = ((takeField R).1[j]).toΓ := by

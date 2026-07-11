@@ -223,10 +223,10 @@ private theorem symProbeTM_ne_halt {s : ProbePhase} (h : s ≠ .done)
   exact h
 
 /-- Well-formed cells: `▷` exactly at cell 0. -/
-private def WFCells (t : Tape) : Prop :=
+private def StartInvariant (t : Tape) : Prop :=
   t.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
 
-private theorem WFCells.read_start_iff {t : Tape} (h : WFCells t) :
+private theorem StartInvariant.read_start_iff {t : Tape} (h : StartInvariant t) :
     t.read = Γ.start ↔ t.head = 0 := by
   constructor
   · intro hr
@@ -563,7 +563,7 @@ private theorem symProbeTM_walk_run (pos : ℕ) : ∀ (m k : ℕ), pos = k + m �
 /-- The input rewind: from head `h` back to cell 1, entering `backR`. -/
 private theorem symProbeTM_backI_run {k : Fin 4} : ∀ (h : ℕ),
     ∀ c : Cfg n (symProbeTM f r q).Q, c.state = .backI k →
-    WFCells c.input → c.input.head = h →
+    StartInvariant c.input → c.input.head = h →
     (∀ i, Parked (c.work i)) → Parked c.output →
     ∃ c', (symProbeTM f r q).reachesIn (h + 1) c c' ∧
       c'.state = .backR k ∧ c'.input.cells = c.input.cells ∧
@@ -863,7 +863,7 @@ theorem symProbeTM_hoareTime (f : Γ → Fin 4) (r q : Fin n) (hrq : r ≠ q)
         (Function.update work₀ q (regTape (d + (f (inp₀.cells pos)).val))) ys)
       (3 * pos + 2 * d + 20) := by
   rintro inp work out ⟨rfl, rfl, hout⟩
-  have hWF : WFCells inp := ⟨hwf, hinp₀.2⟩
+  have hWF : StartInvariant inp := ⟨hwf, hinp₀.2⟩
   have hqr : q ≠ r := fun h => hrq h.symm
   have hstep₀ := symProbeTM_step_pre (f := f) (r := r) (q := q)
     { state := .pre, input := inp, work := work, output := out } rfl

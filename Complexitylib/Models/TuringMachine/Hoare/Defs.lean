@@ -32,12 +32,15 @@ The precondition must imply that the starting configuration has the machine's
 
 namespace Complexity
 
+/-- A predicate on the tape configuration: input tape, work tapes, output tape. -/
+abbrev TapePred (n : ℕ) := Tape → (Fin n → Tape) → Tape → Prop
+
 namespace TM
 
 variable {n : ℕ}
 
-/-- A predicate on the tape configuration: input tape, work tapes, output tape. -/
-abbrev _root_.Complexity.TapePred (n : ℕ) := Tape → (Fin n → Tape) → Tape → Prop
+@[inherit_doc Complexity.TapePred]
+abbrev TapePred (n : ℕ) := Complexity.TapePred n
 
 /-- **Time-bounded Hoare triple**: for any tapes satisfying `pre`, starting
     from `qstart`, the machine halts within `bound` steps with tapes satisfying

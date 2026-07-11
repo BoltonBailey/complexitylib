@@ -24,7 +24,7 @@ namespace Complexity
 namespace TM.UTMBody
 
 /-- A well-formed tape reads `▷` exactly at cell 0. -/
-theorem read_start_iff {t : Tape} (h : t.WFCells) :
+theorem read_start_iff {t : Tape} (h : t.StartInvariant) :
     t.read = Γ.start ↔ t.head = 0 := by
   constructor
   · intro hr
@@ -37,7 +37,7 @@ theorem read_start_iff {t : Tape} (h : t.WFCells) :
 /-- The simulated read, reconstructed from the honest flag and the live
     shadow read, is exactly the simulated tape's read. -/
 theorem simRead_flag_eq {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) :
+    (hwf : sim.StartInvariant) :
     simRead (decide (sim.head = 0)) utm.read = sim.read := by
   by_cases hz : sim.head = 0
   · rw [simRead, decide_eq_true hz, if_pos rfl, Tape.read, hz]
@@ -63,7 +63,7 @@ theorem parseEntry_q'_lt {w : ℕ} {seg : List Γw} {e : DescEntry}
 
 /-- Writing back the read symbol (the interpreter's default action) and
     moving is just the move, on a well-formed tape. -/
-theorem writeAndMove_readback_eq_move {t : Tape} (hwf : t.WFCells) (d : Dir3) :
+theorem writeAndMove_readback_eq_move {t : Tape} (hwf : t.StartInvariant) (d : Dir3) :
     t.writeAndMove (TMDesc.readback t.read).toΓ d = t.move d := by
   show (t.write _).move d = t.move d
   congr 1

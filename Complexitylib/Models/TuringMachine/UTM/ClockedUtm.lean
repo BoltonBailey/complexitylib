@@ -75,7 +75,7 @@ private theorem reachesIn_input_cells {n : ℕ} {tm : TM n} :
     and cell 0 is immutable. -/
 private theorem reachesIn_output_wfCells {n : ℕ} {tm : TM n} :
     ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
-      c.output.WFCells → c'.output.WFCells := by
+      c.output.StartInvariant → c'.output.StartInvariant := by
   intro t
   induction t with
   | zero =>
@@ -112,7 +112,7 @@ theorem _root_.Complexity.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
         out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) b := by
   intro inp work out hp
   obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := h inp work out hp
-  have hwf : c'.output.WFCells := reachesIn_output_wfCells hreach (hpre _ _ _ hp)
+  have hwf : c'.output.StartInvariant := reachesIn_output_wfCells hreach (hpre _ _ _ hp)
   exact ⟨c', t, ht, hreach, hhalt, hpost, hwf.1, hwf.2⟩
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -174,16 +174,16 @@ private theorem simInv_work_reads'' (α : List Bool)
 private theorem simInv_work_wf (α : List Bool)
     {mc : Cfg 1 (decodeDesc α).toTM.Q}
     {inp : Tape} {work : Fin 6 → Tape} {out : Tape}
-    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).WFCells := by
+    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).StartInvariant := by
   rcases i with ⟨iv, hv⟩
   rcases iv with _ | _ | _ | _ | _ | _ | n
-  · exact hinv.vin.wfCells hinv.wf_in
-  · exact hinv.vwk.wfCells hinv.wf_wk
-  · exact hinv.vout.wfCells hinv.wf_out
+  · exact hinv.vin.startInvariant hinv.wf_in
+  · exact hinv.vwk.startInvariant hinv.wf_wk
+  · exact hinv.vout.startInvariant hinv.wf_out
   · obtain ⟨S, hSh, -, -⟩ := hinv.state_syms_ne_blank
-    exact Tape.HoldsExact.wfCells hSh
-  · exact Tape.HoldsExact.wfCells hinv.desc
-  · exact Tape.HoldsExact.wfCells hinv.scratch
+    exact Tape.HoldsExact.startInvariant hSh
+  · exact Tape.HoldsExact.startInvariant hinv.desc
+  · exact Tape.HoldsExact.startInvariant hinv.scratch
   · exact absurd hv (by omega)
 
 /-- The six embedded body tapes of the 7-tape layout are parked under
@@ -244,7 +244,7 @@ private theorem simInv_verdict_len'' (α : List Bool)
   obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
   refine ⟨S, hhold, hnb, ?_, ?_⟩
   · rcases hwhich with ⟨-, rfl⟩ | ⟨-, rfl⟩
-    · rw [bitsToSyms_length, Nat.toBits_length, decodeDesc_w]
+    · rw [bitsToSyms_length, Nat.length_toBits, decodeDesc_w]
       exact takeField_fst_length_le''' _
     · exact qhaltField_length_le''' _
   · rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩
@@ -487,7 +487,7 @@ private theorem seekPhase (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hclk, hoc, hoh⟩
   have hinp : inp.read ≠ Γ.start := by
     rw [Tape.read, hic]
-    exact (Tape.init_wfCells (pair α x)).2 inp.head hih
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 inp.head hih
   have hothers : ∀ i : Fin 7, i ≠ clkT → (work i).read ≠ Γ.start := fun i hi =>
     body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
   have hout : out.read ≠ Γ.start := by
@@ -691,7 +691,7 @@ private theorem testExit_allWF (α x : List Bool)
     simp [Tape.init]
   · intro j hj
     rw [hic]
-    exact (Tape.init_wfCells (pair α x)).2 j hj
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 j hj
   · intro i
     by_cases hi : i = clkT
     · subst hi
@@ -763,7 +763,7 @@ private theorem extractPhase (α x : List Bool) (V T m v : ℕ)
     intro j hj
     rw [hcells2 j]
     exact hmnb j hj
-  have hwf2 : (work (Fin.castAdd 1 2)).WFCells := hvout.wfCells hsi.wf_out
+  have hwf2 : (work (Fin.castAdd 1 2)).StartInvariant := hvout.startInvariant hsi.wf_out
   have hheadF : mcF.output.head ≤ T := by
     have h := reachesIn_output_head_le hrun
     have h0' : ((decodeDesc α).toTM.initCfg x).output.head = 0 := rfl

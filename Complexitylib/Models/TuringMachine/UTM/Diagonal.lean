@@ -537,7 +537,7 @@ private theorem reachesIn_input_cells_eq {n : ℕ} {tm : TM n} :
 /-- Runs preserve output-tape well-formedness. -/
 private theorem reachesIn_output_wf {n : ℕ} {tm : TM n} :
     ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
-      c.output.WFCells → c'.output.WFCells := by
+      c.output.StartInvariant → c'.output.StartInvariant := by
   intro t
   induction t with
   | zero =>
@@ -558,8 +558,8 @@ private theorem reachesIn_output_wf {n : ℕ} {tm : TM n} :
 
 /-- Writing a `Γw` symbol and moving preserves the structural tape
     invariant. -/
-private theorem writeAndMove_tapeInvariant {t : Tape} (h : TapeInvariant t)
-    (s : Γw) (d : Dir3) : TapeInvariant (t.writeAndMove s.toΓ d) := by
+private theorem writeAndMove_tapeInvariant {t : Tape} (h : Tape.StartInvariant t)
+    (s : Γw) (d : Dir3) : Tape.StartInvariant (t.writeAndMove s.toΓ d) := by
   obtain ⟨h0, hns⟩ := h
   have hcells : (t.writeAndMove s.toΓ d).cells = (t.write s.toΓ).cells :=
     Tape.move_cells _ _
@@ -587,7 +587,7 @@ private theorem writeAndMove_tapeInvariant {t : Tape} (h : TapeInvariant t)
 /-- Runs preserve the work tapes' structural invariant. -/
 private theorem reachesIn_work_inv {n : ℕ} {tm : TM n} :
     ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
-      (∀ i, TapeInvariant (c.work i)) → ∀ i, TapeInvariant (c'.work i) := by
+      (∀ i, Tape.StartInvariant (c.work i)) → ∀ i, Tape.StartInvariant (c'.work i) := by
   intro t
   induction t with
   | zero =>
@@ -657,16 +657,16 @@ private theorem simInv_work_reads (α : List Bool)
 private theorem simInv_work_wf (α : List Bool)
     {mc : Cfg 1 (decodeDesc α).toTM.Q}
     {inp : Tape} {work : Fin 6 → Tape} {out : Tape}
-    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).WFCells := by
+    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).StartInvariant := by
   rcases i with ⟨iv, hv⟩
   rcases iv with _ | _ | _ | _ | _ | _ | n
-  · exact hinv.vin.wfCells hinv.wf_in
-  · exact hinv.vwk.wfCells hinv.wf_wk
-  · exact hinv.vout.wfCells hinv.wf_out
+  · exact hinv.vin.startInvariant hinv.wf_in
+  · exact hinv.vwk.startInvariant hinv.wf_wk
+  · exact hinv.vout.startInvariant hinv.wf_out
   · obtain ⟨S, hSh, -, -⟩ := hinv.state_syms_ne_blank
-    exact Tape.HoldsExact.wfCells hSh
-  · exact Tape.HoldsExact.wfCells hinv.desc
-  · exact Tape.HoldsExact.wfCells hinv.scratch
+    exact Tape.HoldsExact.startInvariant hSh
+  · exact Tape.HoldsExact.startInvariant hinv.desc
+  · exact Tape.HoldsExact.startInvariant hinv.scratch
   · exact absurd hv (by omega)
 
 private theorem work7_reads_ne_clk {α : List Bool}
@@ -720,7 +720,7 @@ private theorem simInv_verdict_len (α : List Bool)
   obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
   refine ⟨S, hhold, hnb, ?_, ?_⟩
   · rcases hwhich with ⟨-, rfl⟩ | ⟨-, rfl⟩
-    · rw [bitsToSyms_length, Nat.toBits_length, decodeDesc_w]
+    · rw [bitsToSyms_length, Nat.length_toBits, decodeDesc_w]
       exact takeField_fst_length_le _
     · exact qhaltField_length_le _
   · rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩
@@ -900,7 +900,7 @@ private theorem seekPhaseD (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hclk, ho0, hons, hoh⟩
   have hinp : inp.read ≠ Γ.start := by
     rw [Tape.read, hic]
-    exact (Tape.init_wfCells (pair α x)).2 inp.head hih
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 inp.head hih
   have hothers : ∀ i : Fin 7, i ≠ clkT → (work i).read ≠ Γ.start := fun i hi =>
     body6ShapeD_reads hshape ⟨i.val, val_lt_of_ne_clkT hi⟩
   have hout : out.read ≠ Γ.start := by
@@ -1077,7 +1077,7 @@ private theorem testExit_allWFD (α x : List Bool)
     simp [Tape.init]
   · intro j hj
     rw [hic]
-    exact (Tape.init_wfCells (pair α x)).2 j hj
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 j hj
   · intro i
     by_cases hi : i = clkT
     · subst hi
@@ -1138,7 +1138,7 @@ private theorem extractPhaseD (α x : List Bool) (V T m v : ℕ)
     intro j hj
     rw [hcells2 j]
     exact hmnb j hj
-  have hwf2 : (work (Fin.castAdd 1 2)).WFCells := hvout.wfCells hsi.wf_out
+  have hwf2 : (work (Fin.castAdd 1 2)).StartInvariant := hvout.startInvariant hsi.wf_out
   have hheadF : mcF.output.head ≤ T := by
     have h := reachesIn_output_head_le hrun
     have h0' : ((decodeDesc α).toTM.initCfg x).output.head = 0 := rfl
@@ -1416,7 +1416,7 @@ private theorem workX_park (x : List Bool) :
   · rw [workX_ne7 x h7]
     exact ⟨le_rfl, blankStarted_read_ne_start⟩
 
-private theorem workX_inv (x : List Bool) : ∀ i, TapeInvariant (workX x i) := by
+private theorem workX_inv (x : List Bool) : ∀ i, Tape.StartInvariant (workX x i) := by
   intro i
   by_cases h7 : i = 7
   · subst h7
@@ -1439,7 +1439,7 @@ private theorem inpX_read (x : List Bool) : (inpX x).read ≠ Γ.start := by
   show (Tape.init (x.map Γ.ofBool)).cells 1 ≠ Γ.start
   exact Tape.init_ofBool_cells_ne_start x 1 le_rfl
 
-private theorem regT_inv (V : ℕ) : TapeInvariant (regTape V) :=
+private theorem regT_inv (V : ℕ) : Tape.StartInvariant (regTape V) :=
   ⟨rfl, fun _ hj => regCells_ne_start hj⟩
 
 private theorem outVX_cells0 : outVX.cells 0 = Γ.start := by
@@ -1551,13 +1551,13 @@ private theorem retargetPhase_halt (x : List Bool) (hterm : TerminatedRegion x)
     (hhalt : (decodeDesc x).toTM.halted mcF) :
     (retargetInput clockedUtmTM).HoareTime (retargetPre x V)
       (fun inp work out =>
-        inp = inpX x ∧ (∀ i, TapeInvariant (work i)) ∧
+        inp = inpX x ∧ (∀ i, Tape.StartInvariant (work i)) ∧
         out.cells 1 = mcF.output.cells 1 ∧
         out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
         out.head ≤ utmB x.length V + 1)
       (utmB x.length V) := by
   have hpre_inp : ∀ inp work out, cleanUtmPre x x V inp work out →
-      TapeInvariant inp := by
+      Tape.StartInvariant inp := by
     rintro inp work out ⟨hic, -, -, -, -, -, -⟩
     constructor
     · rw [hic]
@@ -1566,7 +1566,7 @@ private theorem retargetPhase_halt (x : List Bool) (hterm : TerminatedRegion x)
       rw [hic]
       exact Tape.init_ofBool_cells_ne_start _ _ hj
   have hpre_work : ∀ inp work out, cleanUtmPre x x V inp work out →
-      ∀ i, TapeInvariant (work i) := by
+      ∀ i, Tape.StartInvariant (work i) := by
     rintro inp work out ⟨-, -, hsix, hclk, -, -, -⟩ i
     by_cases hi : i = clkT
     · subst hi
@@ -1580,7 +1580,7 @@ private theorem retargetPhase_halt (x : List Bool) (hterm : TerminatedRegion x)
       exact ⟨by rw [Tape.move_cells]; rfl,
         fun j hj => by rw [Tape.move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
   have hpre_out : ∀ inp work out, cleanUtmPre x x V inp work out →
-      TapeInvariant out := by
+      Tape.StartInvariant out := by
     rintro inp work out ⟨-, -, -, -, h0, hns, -⟩
     exact ⟨h0, hns⟩
   have hRT := retargetInput_hoareTime clockedUtmTM
@@ -1593,7 +1593,7 @@ private theorem retargetPhase_halt (x : List Bool) (hterm : TerminatedRegion x)
   · exact retargetInput_run_input hreach (inpX_read x)
   · refine reachesIn_work_inv hreach ?_
     intro i
-    show TapeInvariant (work i)
+    show Tape.StartInvariant (work i)
     by_cases hi : i = 6
     · subst hi
       rw [hw6]
@@ -1616,13 +1616,13 @@ private theorem retargetPhase_timeout (x : List Bool) (hterm : TerminatedRegion 
     (hnh : ¬(decodeDesc x).toTM.halted mcV) :
     (retargetInput clockedUtmTM).HoareTime (retargetPre x V)
       (fun inp work out =>
-        inp = inpX x ∧ (∀ i, TapeInvariant (work i)) ∧
+        inp = inpX x ∧ (∀ i, Tape.StartInvariant (work i)) ∧
         out.cells 1 = Γ.one ∧
         out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
         out.head ≤ utmB x.length V + 1)
       (utmB x.length V) := by
   have hpre_inp : ∀ inp work out, cleanUtmPre x x V inp work out →
-      TapeInvariant inp := by
+      Tape.StartInvariant inp := by
     rintro inp work out ⟨hic, -, -, -, -, -, -⟩
     constructor
     · rw [hic]
@@ -1631,7 +1631,7 @@ private theorem retargetPhase_timeout (x : List Bool) (hterm : TerminatedRegion 
       rw [hic]
       exact Tape.init_ofBool_cells_ne_start _ _ hj
   have hpre_work : ∀ inp work out, cleanUtmPre x x V inp work out →
-      ∀ i, TapeInvariant (work i) := by
+      ∀ i, Tape.StartInvariant (work i) := by
     rintro inp work out ⟨-, -, hsix, hclk, -, -, -⟩ i
     by_cases hi : i = clkT
     · subst hi
@@ -1645,7 +1645,7 @@ private theorem retargetPhase_timeout (x : List Bool) (hterm : TerminatedRegion 
       exact ⟨by rw [Tape.move_cells]; rfl,
         fun j hj => by rw [Tape.move_cells]; exact Tape.init_nil_cells_ne_start j hj⟩
   have hpre_out : ∀ inp work out, cleanUtmPre x x V inp work out →
-      TapeInvariant out := by
+      Tape.StartInvariant out := by
     rintro inp work out ⟨-, -, -, -, h0, hns, -⟩
     exact ⟨h0, hns⟩
   have hRT := retargetInput_hoareTime clockedUtmTM
@@ -1658,7 +1658,7 @@ private theorem retargetPhase_timeout (x : List Bool) (hterm : TerminatedRegion 
   · exact retargetInput_run_input hreach (inpX_read x)
   · refine reachesIn_work_inv hreach ?_
     intro i
-    show TapeInvariant (work i)
+    show Tape.StartInvariant (work i)
     by_cases hi : i = 6
     · subst hi
       rw [hw6]
@@ -1775,7 +1775,7 @@ private theorem seamA23 (x : List Bool) (V : ℕ) :
 /-- Seam retargeted UTM → negation. -/
 private theorem seamA34 (x : List Bool) (V : ℕ) (s : Γ) :
     ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
-      (inp = inpX x ∧ (∀ i, TapeInvariant (work i)) ∧
+      (inp = inpX x ∧ (∀ i, Tape.StartInvariant (work i)) ∧
        out.cells 1 = s ∧ out.cells 0 = Γ.start ∧
        (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
        out.head ≤ utmB x.length V + 1) →

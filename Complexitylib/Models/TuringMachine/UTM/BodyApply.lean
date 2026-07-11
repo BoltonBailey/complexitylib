@@ -90,7 +90,7 @@ private theorem writeAndMove_readBack_move {t : Tape} (h : t.read ≠ Γ.start)
 /-- The shadow's cell at index `sim.head` (one left of the shadow head) is
     `▷` exactly when the simulated head is at the origin. -/
 private theorem vshift_cells_start_iff {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) :
+    (hwf : sim.StartInvariant) :
     utm.cells sim.head = Γ.start ↔ sim.head = 0 := by
   simp only [h.1]
   rcases sim.head with _ | (_ | q)
@@ -102,7 +102,7 @@ private theorem vshift_cells_start_iff {sim utm : Tape} (h : VShift sim utm)
 /-- The peek-left step: writing back and moving left from a shadow position
     lands the head at `sim.head` with cells preserved. -/
 private theorem peek_leftstep {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) :
+    (hwf : sim.StartInvariant) :
     utm.writeAndMove (readBackWrite utm.read).toΓ
       (if utm.read = Γ.start then Dir3.right else Dir3.left)
       = ⟨sim.head, utm.cells⟩ := by
@@ -112,7 +112,7 @@ private theorem peek_leftstep {sim utm : Tape} (h : VShift sim utm)
 /-- The peek-right (return) step: from head `sim.head` the write-back is a
     no-op (also at the `▷` bounce) and the right move restores the shadow. -/
 private theorem peek_return {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) :
+    (hwf : sim.StartInvariant) :
     (⟨sim.head, utm.cells⟩ : Tape).writeAndMove
       (readBackWrite ((⟨sim.head, utm.cells⟩ : Tape).read)).toΓ
       (if (⟨sim.head, utm.cells⟩ : Tape).read = Γ.start then Dir3.right
@@ -132,7 +132,7 @@ private theorem peek_return {sim utm : Tape} (h : VShift sim utm)
 /-- `peek_return` with the peeked tape given by an equation (for use on
     opaque configurations). -/
 private theorem peek_return' {sim utm t₁ : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) (ht : t₁ = ⟨sim.head, utm.cells⟩) :
+    (hwf : sim.StartInvariant) (ht : t₁ = ⟨sim.head, utm.cells⟩) :
     t₁.writeAndMove (readBackWrite t₁.read).toΓ
       (if t₁.read = Γ.start then Dir3.right else Dir3.right) = utm := by
   subst ht
@@ -140,7 +140,7 @@ private theorem peek_return' {sim utm t₁ : Tape} (h : VShift sim utm)
 
 /-- The flag the peek captures is exactly "simulated head at the origin". -/
 private theorem peek_flag {sim utm : Tape} (h : VShift sim utm)
-    (hwf : sim.WFCells) :
+    (hwf : sim.StartInvariant) :
     decide ((⟨sim.head, utm.cells⟩ : Tape).read = Γ.start)
       = decide (sim.head = 0) := by
   refine decide_eq_decide.mpr ?_
@@ -174,7 +174,7 @@ private theorem read_ne_start_all {w : Fin 6 → Tape}
 theorem peek_correct {c : Cfg 6 bodyTM.Q} {sim0 sim1 sim2 : Tape}
     (h0 : VShift sim0 (c.work vIn)) (h1 : VShift sim1 (c.work vWk))
     (h2 : VShift sim2 (c.work vOut))
-    (hwf0 : sim0.WFCells) (hwf1 : sim1.WFCells) (hwf2 : sim2.WFCells)
+    (hwf0 : sim0.StartInvariant) (hwf1 : sim1.StartInvariant) (hwf2 : sim2.StartInvariant)
     (hst : c.state = peek1)
     (hstT : (c.work stT).read ≠ Γ.start) (hdsT : (c.work dsT).read ≠ Γ.start)
     (hscT : (c.work scT).read ≠ Γ.start)
@@ -260,7 +260,7 @@ theorem segCheck_default_step {c : Cfg 6 bodyTM.Q} {f : VFlags}
     {sim0 sim1 sim2 : Tape}
     (h0 : VShift sim0 (c.work vIn)) (h1 : VShift sim1 (c.work vWk))
     (h2 : VShift sim2 (c.work vOut))
-    (hwf0 : sim0.WFCells) (hwf1 : sim1.WFCells) (hwf2 : sim2.WFCells)
+    (hwf0 : sim0.StartInvariant) (hwf1 : sim1.StartInvariant) (hwf2 : sim2.StartInvariant)
     (hf0 : f.1 = decide (sim0.head = 0)) (hf1 : f.2.1 = decide (sim1.head = 0))
     (hf2 : f.2.2 = decide (sim2.head = 0))
     (hst : c.state = segCheck f)
@@ -455,7 +455,7 @@ theorem appQ'_loop {f : VFlags} (E : ℕ → Γ) (hEns : ∀ j, 1 ≤ j → E j 
         (by
           dsimp only
           rw [if_pos rfl, if_neg hreads']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadS])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadS])
         (by
           dsimp only
           rw [if_neg (by decide : scT ≠ stT), if_pos rfl, if_neg hreadsc',
@@ -463,7 +463,7 @@ theorem appQ'_loop {f : VFlags} (E : ℕ → Γ) (hEns : ∀ j, 1 ≤ j → E j 
         (by
           dsimp only
           rw [if_neg (by decide : scT ≠ stT), if_pos rfl, if_neg hreadsc']
-          simp only [Tape.writeAndMove, Tape.move, Tape.write_head', hheadE])
+          simp only [Tape.writeAndMove, Tape.move, Tape.write_head, hheadE])
         (by dsimp only; rw [idle_input_id hin]; exact hin)
         (by dsimp only; rw [idle_tape_id hout]; exact hout)
         (fun i hi hi' => by
@@ -677,7 +677,7 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
     {E : ℕ → Γ} {e : ℕ}
     (h0 : VShift sim0 (c.work vIn)) (h1 : VShift sim1 (c.work vWk))
     (h2 : VShift sim2 (c.work vOut))
-    (hwf0 : sim0.WFCells) (hwf1 : sim1.WFCells) (hwf2 : sim2.WFCells)
+    (hwf0 : sim0.StartInvariant) (hwf1 : sim1.StartInvariant) (hwf2 : sim2.StartInvariant)
     (hf0 : f.1 = decide (sim0.head = 0)) (hf1 : f.2.1 = decide (sim1.head = 0))
     (hf2 : f.2.2 = decide (sim2.head = 0))
     (hst : c.state = appAct f 0 none)
@@ -738,7 +738,7 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
       exact h1.write_origin hz
     · rw [hf1, decide_eq_false hz, if_neg Bool.false_ne_true]
       exact h1.write _ (by omega)
-  have hwf1w : (sim1.write (grpΓw (cellBit (E e)) (cellBit (E (e + 1)))).toΓ).WFCells :=
+  have hwf1w : (sim1.write (grpΓw (cellBit (E e)) (cellBit (E (e + 1)))).toΓ).StartInvariant :=
     hwf1.write _
   have hr1w := h1w.read_ne_start hwf1w
   have hIn₁ : c₁.work vIn = c.work vIn := hoth₁ vIn (by decide) (by decide)
@@ -778,7 +778,8 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
       exact h2.write_origin hz
     · rw [hf2, decide_eq_false hz, if_neg Bool.false_ne_true]
       exact h2.write _ (by omega)
-  have hwf2w : (sim2.write (grpΓw (cellBit (E (e + 2))) (cellBit (E (e + 3)))).toΓ).WFCells :=
+  have hwf2w :
+      (sim2.write (grpΓw (cellBit (E (e + 2))) (cellBit (E (e + 3)))).toΓ).StartInvariant :=
     hwf2.write _
   have hr2w := h2w.read_ne_start hwf2w
   have hIn₂ : c₂.work vIn = c.work vIn := (hoth₂ vIn (by decide) (by decide)).trans hIn₁
@@ -815,7 +816,7 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
     exact h0.move _ fun hz => by rw [hf0, decide_eq_true hz, if_pos rfl]
   have hwf0m : (sim0.move
       (if f.1 then Dir3.right
-        else grpDir (cellBit (E (e + 4))) (cellBit (E (e + 5))))).WFCells :=
+        else grpDir (cellBit (E (e + 4))) (cellBit (E (e + 5))))).StartInvariant :=
     hwf0.move _
   have hr0m := h0m.read_ne_start hwf0m
   have hWk₃ : c₃.work vWk = c₁.work vWk := (hoth₃ vWk (by decide) (by decide)).trans hWk₂
@@ -853,11 +854,11 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
       (c₄.work vWk) := by
     rw [hv₄', ← hv₁']
     exact h1w.move _ fun hz => by
-      rw [Tape.write_head'] at hz
+      rw [Tape.write_head] at hz
       rw [hf1, decide_eq_true hz, if_pos rfl]
   have hwf1m : ((sim1.write (grpΓw (cellBit (E e)) (cellBit (E (e + 1)))).toΓ).move
       (if f.2.1 then Dir3.right
-        else grpDir (cellBit (E (e + 6))) (cellBit (E (e + 7))))).WFCells :=
+        else grpDir (cellBit (E (e + 6))) (cellBit (E (e + 7))))).StartInvariant :=
     hwf1w.move _
   have hr1m := h1m.read_ne_start hwf1m
   have hIn₄ : c₄.work vIn = c₃.work vIn := hoth₄ vIn (by decide) (by decide)
@@ -895,7 +896,7 @@ theorem appAct_all {c : Cfg 6 bodyTM.Q} {f : VFlags} {sim0 sim1 sim2 : Tape}
       (c₅.work vOut) := by
     rw [hv₅', ← hv₂']
     exact h2w.move _ fun hz => by
-      rw [Tape.write_head'] at hz
+      rw [Tape.write_head] at hz
       rw [hf2, decide_eq_true hz, if_pos rfl]
   -- ── assembly ──
   refine ⟨c₅, ?_, hs₅, ?_, ?_, h2m, ?_, ?_, hsc₅',

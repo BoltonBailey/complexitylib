@@ -267,7 +267,7 @@ theorem decFrontierTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 7 → T
       exact regCells_update hv
     have ht₁head : t₁.head = v - 1 := by
       show ((work clkT).write Γw.blank).head - 1 = _
-      rw [Tape.write_head', hhead]
+      rw [Tape.write_head, hhead]
     have hoth₁ : ∀ i : Fin 7, i ≠ clkT →
         ((Function.update work clkT t₁) i).read ≠ Γ.start := fun i hi => by
       rw [Function.update_of_ne hi]; exact hwork i hi

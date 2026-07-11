@@ -32,7 +32,8 @@ This is a reusable robustness lemma:
 * `singleTapeSimTime T` — the `(T + n + 1)²` time overhead.
 * `singleTapeSim_allPathsHaltIn`, `singleTapeSim_acceptsInTime_iff` — the two
   behavioural facts (timing + acceptance equivalence), assembled from the
-  forward (`acceptsInTime_singleTapeSim_of_acceptsInTime`) and reverse (`halted_singleTapeSim_of_trace_qhalt`) correspondence theorems of
+  forward (`acceptsInTime_singleTapeSim_of_acceptsInTime`) and reverse
+  (`halted_singleTapeSim_of_trace_qhalt`) correspondence theorems of
   `SingleTape/Correctness.lean`.
 * `singleTapeSimTime_bigO` — the overhead stays polynomial.
 
@@ -88,7 +89,8 @@ theorem singleTapeSim_allPathsHaltIn {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {T : �
   have hhaltN : (N.trace (T x.length)
       (fun i => SingleTape.inducedChoices k ch i.val) (N.initCfg x)).state = N.qhalt :=
     hN x _
-  obtain ⟨m, hm, hhalted, -⟩ := SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
+  obtain ⟨m, hm, hhalted, -⟩ :=
+    SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
   have hle : m ≤ singleTapeSimTime k T x.length :=
     le_trans hm (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
   have hagree : ∀ i : Fin m, choices ⟨i.val, lt_of_lt_of_le i.isLt hle⟩ = ch i.val := by
@@ -117,7 +119,8 @@ theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (T 
     have hhaltN : (N.trace (T x.length)
         (fun i => SingleTape.inducedChoices k ch i.val) (N.initCfg x)).state = N.qhalt :=
       hN x _
-    obtain ⟨m, hm, hhalted, hbit⟩ := SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
+    obtain ⟨m, hm, hhalted, hbit⟩ :=
+      SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
     have hle : m ≤ singleTapeSimTime k T x.length :=
       le_trans hm (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
     have hagree : ∀ i : Fin m, choices ⟨i.val, lt_of_lt_of_le i.isLt hle⟩ = ch i.val := by

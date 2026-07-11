@@ -172,7 +172,7 @@ private theorem simInv_verdict_len' (α : List Bool) (mc : Cfg 1 (decodeDesc α)
   obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
   refine ⟨S, hhold, hnb, ?_, ?_⟩
   · rcases hwhich with ⟨-, rfl⟩ | ⟨-, rfl⟩
-    · rw [bitsToSyms_length, Nat.toBits_length, decodeDesc_w]
+    · rw [bitsToSyms_length, Nat.length_toBits, decodeDesc_w]
       exact takeField_fst_length_le'' _
     · exact qhaltField_length_le'' _
   · rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩

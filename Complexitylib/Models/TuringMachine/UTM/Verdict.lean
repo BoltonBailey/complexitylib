@@ -100,7 +100,7 @@ theorem verdict_running (α : List Bool) {q : ℕ}
     constructor
     · intro h
       have := congrArg List.length h
-      simp only [bitsToSyms_length, Nat.toBits_length] at this
+      simp only [bitsToSyms_length, Nat.length_toBits] at this
       exact absurd this.symm hlen
     · intro h
       omega

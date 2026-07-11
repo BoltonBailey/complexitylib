@@ -1091,7 +1091,7 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
   · simpa [B, counterNTM, counterChoices, cT, choicesExit, c0, satCounterWrap,
       satGuessVerifyNTM] using hexit
   · have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
-    have hinv := TM.TapeInvariant.Tape.init_ofBool x
+    have hinv := Tape.StartInvariant.init_ofBool x
     have hcell0 : cT.input.cells 0 = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells 0 := by
       simpa [cT, c0] using congrFun hcells 0
     show (satBoundaryInput cT.input).cells 0 = Γ.start
@@ -1099,7 +1099,7 @@ theorem satGuessVerify_counter_init_exits (M : TM k) (x : List Bool)
     exact hinv.1
   · intro j hj
     have hcells := NTM.input_cells_trace counterNTM t counterChoices c0
-    have hinv := TM.TapeInvariant.Tape.init_ofBool x
+    have hinv := Tape.StartInvariant.init_ofBool x
     have hcell : cT.input.cells j = (_root_.Complexity.Tape.init (x.map Γ.ofBool)).cells j := by
       simpa [cT, c0] using congrFun hcells j
     show (satBoundaryInput cT.input).cells j ≠ Γ.start
