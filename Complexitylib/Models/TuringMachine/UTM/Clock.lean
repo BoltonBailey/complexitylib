@@ -271,28 +271,6 @@ private theorem cells_of_holdsExact_replicate {t : Tape} {v : ℕ}
     · rw [Tape.HoldsExact.cells_ge h (by rw [List.length_replicate]; omega)]
       exact (regCells_blank (by omega)).symm
 
-/-- Register cells off the sentinel are never `▷`. -/
-private theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
-    regCells v j ≠ Γ.start := by
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
-
-/-- Erasing the last mark turns `regCells (d + 1)` into `regCells d`. -/
-private theorem regCells_erase (d : ℕ) :
-    Function.update (regCells (d + 1)) (d + 1) Γ.blank = regCells d := by
-  funext j
-  rw [Function.update_apply]
-  split
-  · next hj =>
-    subst hj
-    exact (regCells_blank (by omega)).symm
-  · next hj =>
-    rcases Nat.eq_zero_or_pos j with rfl | hj1
-    · rfl
-    · rcases Nat.lt_or_ge d j with hlt | hge
-      · rw [regCells_blank (by omega), regCells_blank (by omega)]
-      · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
-
 -- ════════════════════════════════════════════════════════════════════════
 -- decClockTM: decrement the unary clock on tape 6
 -- ════════════════════════════════════════════════════════════════════════

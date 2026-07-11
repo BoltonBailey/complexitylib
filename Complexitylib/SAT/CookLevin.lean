@@ -4,13 +4,14 @@ import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Models.TuringMachine.SingleTape
 
 /-!
-# Cook–Levin: SAT is NP-complete
+# Cook–Levin tableau core
 
-This file assembles the **Cook–Levin theorem**, `SAT.NPComplete_L_SAT`:
-`L_SAT` is NP-complete. Membership `L_SAT ∈ NP` is `SAT.L_SAT_mem_NP`
-(`SAT/Headline.lean`); NP-hardness is the content here.
+This file defines the Cook–Levin tableau formula and proves its semantic
+correctness. The polynomial-time emitter, reductions, and final theorem
+`SAT.NPComplete_L_SAT` are assembled in `SAT/CookLevin/Assembly.lean`.
+Membership `L_SAT ∈ NP` is supplied by `SAT/Headline.lean`.
 
-## Architecture (full skeleton; leaves = `sorry`)
+## Completed development
 
 ```
 NPComplete_L_SAT                       (= ⟨L_SAT_mem_NP, NPHard_L_SAT⟩)
@@ -18,17 +19,18 @@ NPComplete_L_SAT                       (= ⟨L_SAT_mem_NP, NPHard_L_SAT⟩)
   └ cookLevin_reduction               (multi-tape → single-tape, then ↓)
     ├ NTM.exists_singleTape_decider   (SingleTape.lean)
     └ cookLevin_reduction_singleTape
-        ├ reductionFn                 (def: x ↦ (tableauCNF …).encode)
-        ├ reductionFn_mem_FP          ⬜ leaf (C): poly-time emitter TM
+        ├ reductionFn                 (def: x ↦ (tableauCNFFlat …).encode)
+        ├ reductionFn_mem_FP          ✓ poly-time emitter TM
         └ tableauCNF_correct          (= encode_mem_LSAT_iff ∘ B ∘ hdec)
-            ├ tableauCNF              ⬜ leaf (def): the tableau formula
-            ├ tableauCNF_satisfiable_iff  ⬜ leaf (B): sat ↔ accepting computation
+            ├ tableauCNF              ✓ the tableau formula
+            ├ tableauCNF_satisfiable_iff  ✓ sat ↔ accepting computation
             └ encode_mem_LSAT_iff     ✓ (CNF.encode injective)
 ```
 
-The remaining proof obligations are: the single-tape simulation
-(`SingleTape.lean`), the `tableauCNF` definition, its satisfiability
-characterization, and its `FP`-computable encoding.
+All nodes in this outline are proved. The reduction machine and final
+NP-hardness/NP-completeness assembly live in `SAT/CookLevin/Assembly.lean`;
+the emitter implementation is split across the modules under
+`SAT/CookLevin/`.
 -/
 
 open Complexity
@@ -484,13 +486,13 @@ theorem represents_init (N : NTM 1) (α : Assignment) (steps : ℕ) (x : List Bo
     fields against the active-transition consequence variables. -/
 
 theorem tape_move_cells (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
-  cases d <;> rfl
+  exact Tape.move_cells t d
 
 theorem tape_move_head (t : Tape) (d : Dir3) : (t.move d).head = Tableau.posMove t.head d := by
   cases d <;> rfl
 
 theorem tape_write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  unfold Tape.write; split <;> rfl
+  exact Tape.write_head t s
 
 theorem tape_writeAndMove_head (t : Tape) (s : Γ) (d : Dir3) :
     (t.writeAndMove s d).head = Tableau.posMove t.head d := by

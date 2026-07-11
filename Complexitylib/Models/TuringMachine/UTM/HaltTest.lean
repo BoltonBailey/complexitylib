@@ -83,9 +83,6 @@ namespace TM
 -- Γw.toΓ helper lemmas
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem toΓ_ne_start (s : Γw) : s.toΓ ≠ Γ.start := by
-  cases s <;> simp [Γw.toΓ]
-
 private theorem toΓ_ne_blank {s : Γw} (h : s ≠ Γw.blank) : s.toΓ ≠ Γ.blank := by
   cases s <;> simp_all [Γw.toΓ]
 
@@ -401,7 +398,9 @@ private theorem skip_loop (f : List Γw) (hf : ∀ s ∈ f, s ≠ Γw.blank) :
       rw [Tape.read, hhead]; exact hcells k hk
     have hread_nb : (c.work 4).read ≠ Γ.blank := by
       rw [hread]; exact toΓ_ne_blank (hf _ (f.getElem_mem hk))
-    have hread_ns : (c.work 4).read ≠ Γ.start := by rw [hread]; exact toΓ_ne_start _
+    have hread_ns : (c.work 4).read ≠ Γ.start := by
+      rw [hread]
+      exact Γw.toΓ_ne_start _
     have hstep : ∃ c₁, haltTestTM.step c = some c₁ ∧
         c₁.state = HaltTestPhase.skip ∧
         c₁.input = c.input ∧
@@ -592,7 +591,7 @@ private theorem compare_loop :
         exact fun h => toΓ_ne_blank (hB b (by simp)) h.symm
       obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
         compare_mismatch_step c hstate hneq (by rw [hr3]; simp)
-          (by rw [hr4]; exact toΓ_ne_start b) hin hout hoth
+          (by rw [hr4]; exact Γw.toΓ_ne_start b) hin hout hoth
       refine ⟨c₁, 1, by omega, .step hstep' .zero, by simpa using hst₁,
         hin₁, fun i h3i h4i => hw₁ i, hout₁,
         by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩ <;>
@@ -603,7 +602,9 @@ private theorem compare_loop :
       rw [Tape.read, hh3]; simpa using hc3 0 (by simp)
     have hr3nb : (c.work 3).read ≠ Γ.blank := by
       rw [hr3]; exact toΓ_ne_blank (hA a (by simp))
-    have hr3ns : (c.work 3).read ≠ Γ.start := by rw [hr3]; exact toΓ_ne_start a
+    have hr3ns : (c.work 3).read ≠ Γ.start := by
+      rw [hr3]
+      exact Γw.toΓ_ne_start a
     cases B with
     | nil =>
       have hr4 : (c.work 4).read = Γ.blank := by
@@ -625,7 +626,7 @@ private theorem compare_loop :
         have heq : (c.work 3).read = (c.work 4).read := by rw [hr3, hr4]
         obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁, hcl3, hcl4, hhd3, hhd4⟩ :=
           compare_advance_step c hstate heq hr3nb hr3ns
-            (by rw [hr4]; exact toΓ_ne_start a) hin hout hoth
+            (by rw [hr4]; exact Γw.toΓ_ne_start a) hin hout hoth
         obtain ⟨c', t', ht', hreach, hst', hin', hw', hout', hcl3', hcl4',
             hlo3, hhi3, hlo4, hhi4⟩ :=
           ihA (fun s hs => hA s (by simp [hs]))
@@ -664,7 +665,7 @@ private theorem compare_loop :
           exact fun h => hab (toΓ_inj h)
         obtain ⟨c₁, hstep', hst₁, hin₁, hw₁, hout₁⟩ :=
           compare_mismatch_step c hstate hneq hr3ns
-            (by rw [hr4]; exact toΓ_ne_start b) hin hout hoth
+            (by rw [hr4]; exact Γw.toΓ_ne_start b) hin hout hoth
         refine ⟨c₁, 1, by simp, .step hstep' .zero, ?_,
           hin₁, fun i h3i h4i => hw₁ i, hout₁,
           by rw [hw₁ 3], by rw [hw₁ 4], ?_, ?_, ?_, ?_⟩

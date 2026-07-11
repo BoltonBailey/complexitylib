@@ -129,18 +129,12 @@ private theorem val_lt_of_ne_clkT {k : Fin 7} (h : k ≠ clkT) : k.val < 6 := by
 -- regCells parking
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Register cells off the sentinel are never `▷`. -/
-private theorem regCells_ne_start' {v j : ℕ} (hj : 1 ≤ j) :
-    regCells v j ≠ Γ.start := by
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
-
 /-- A frontier-parked clock tape reads a non-`▷` symbol. -/
 private theorem clk_read_ne_start {t : Tape} {v : ℕ}
     (hc : t.cells = regCells v) (hh : t.head = max v 1) :
     t.read ≠ Γ.start := by
   rw [Tape.read, hh, hc]
-  exact regCells_ne_start' (le_max_right v 1)
+  exact regCells_ne_start (le_max_right v 1)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- SimInv bookkeeping (local copies of `SimLoop`'s private ones)

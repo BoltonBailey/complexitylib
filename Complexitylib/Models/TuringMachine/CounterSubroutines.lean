@@ -216,53 +216,9 @@ variable {n : ℕ}
 -- Small alphabet / initTape helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- `Γ.ofBool b` is never the start symbol `▷`. -/
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> simp [Γ.ofBool]
-
-/-- `Γ.ofBool b` is never the blank symbol `□`. -/
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> simp [Γ.ofBool]
-
-/-- `initTape` cell-access at `i+1`. -/
-private theorem initTape_cells_succ (l : List Γ) (i : ℕ) :
-    (_root_.initTape l).cells (i + 1) = (l[i]?).getD Γ.blank := by
-  show (if i + 1 = 0 then Γ.start else (l[i + 1 - 1]?).getD Γ.blank) = _
-  simp
-
-/-- `initTape (l.map Γ.ofBool)` cells at `i+1` for `i < |l|` equal `Γ.ofBool l[i]`. -/
-private theorem initTape_ofBool_cells_lt (l : List Bool) (i : ℕ) (h : i < l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (l[i]'h) := by
-  rw [initTape_cells_succ]
-  have hmap : i < (l.map Γ.ofBool).length := by simp; exact h
-  rw [List.getElem?_eq_getElem hmap]
-  simp
-
-/-- `initTape (l.map Γ.ofBool)` cells at `i+1` for `i ≥ |l|` equal `Γ.blank`. -/
-private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  have hmap : (l.map Γ.ofBool).length ≤ i := by simp; exact h
-  rw [List.getElem?_eq_none hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ne_start (l : List Bool) (j : ℕ) (hj : j ≥ 1) :
-    (_root_.initTape (l.map Γ.ofBool)).cells j ≠ Γ.start := by
-  cases j with
-  | zero =>
-      omega
-  | succ i =>
-      by_cases hi : i < l.length
-      · rw [initTape_ofBool_cells_lt l i hi]
-        cases l[i]'hi <;> simp [Γ.ofBool]
-      · have hge : i ≥ l.length := by omega
-        rw [initTape_ofBool_cells_ge l i hge]
-        simp
-
 private theorem started_ofBool_tape_read_ne_start (x : List Bool) :
     (((_root_.initTape (x.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
-  simp [Tape.read, Tape.move]
-  exact initTape_ofBool_cells_ne_start x 1 (by omega)
+  exact initTape_ofBool_move_right_read_ne_start x
 
 -- ════════════════════════════════════════════════════════════════════════
 -- inputLengthPlusOneCounterTM
@@ -688,10 +644,10 @@ private theorem inputLengthPlusOneCounterTM_scan_bit_step
     exact initTape_ofBool_cells_lt x k hk
   have hstart : c.input.read ≠ Γ.start := by
     rw [hread]
-    exact ofBool_ne_start _
+    exact Γ.ofBool_ne_start _
   have hblank : c.input.read ≠ Γ.blank := by
     rw [hread]
-    exact ofBool_ne_blank _
+    exact Γ.ofBool_ne_blank _
   simp only [TM.step, hstate, inputLengthPlusOneCounterTM, hstart, hblank]
   refine ⟨_, rfl, rfl, ?_, ?_, ?_, ?_⟩
   · rw [tape_move_cells]
@@ -1186,30 +1142,30 @@ private theorem inputLengthPlusOneCounterTM_step_preserves_started_blank_output
             subst hstep
             simpa [hout] using
               Tape.writeAndMove_readBack_idle_of_ne_start output
-                (by simpa [hout] using hout_read)
+                hout_read
           · by_cases hblank : input.read = Γ.blank
             · simp [TM.step, inputLengthPlusOneCounterTM, hblank] at hstep
               subst hstep
               simpa [hout] using
                 Tape.writeAndMove_readBack_idle_of_ne_start output
-                  (by simpa [hout] using hout_read)
+                  hout_read
             · simp [TM.step, inputLengthPlusOneCounterTM, hstart, hblank] at hstep
               subst hstep
               simpa [hout] using
                 Tape.writeAndMove_readBack_idle_of_ne_start output
-                  (by simpa [hout] using hout_read)
+                  hout_read
       | rewind =>
           by_cases hcounter : (work counterIdx).read = Γ.start
           · simp [TM.step, inputLengthPlusOneCounterTM, hcounter] at hstep
             subst hstep
             simpa [hout] using
               Tape.writeAndMove_readBack_idle_of_ne_start output
-                (by simpa [hout] using hout_read)
+                hout_read
           · simp [TM.step, inputLengthPlusOneCounterTM, hcounter] at hstep
             subst hstep
             simpa [hout] using
               Tape.writeAndMove_readBack_idle_of_ne_start output
-                (by simpa [hout] using hout_read)
+                hout_read
       | done =>
           simp [TM.step, inputLengthPlusOneCounterTM] at hstep
 

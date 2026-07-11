@@ -62,25 +62,6 @@ theorem hasBinaryString_cells_ne_start {t : Tape} {bits : List Bool}
     rw [hj_eq, h.2.2 i hge]
     decide
 
-private theorem initTape_cells_succ (l : List Γ) (i : ℕ) :
-    (_root_.initTape l).cells (i + 1) = (l[i]?).getD Γ.blank := by
-  show (if i + 1 = 0 then Γ.start else (l[i + 1 - 1]?).getD Γ.blank) = _
-  simp
-
-private theorem initTape_ofBool_cells_lt (l : List Bool) (i : ℕ) (h : i < l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (l[i]'h) := by
-  rw [initTape_cells_succ]
-  have hmap : i < (l.map Γ.ofBool).length := by simp; exact h
-  rw [List.getElem?_eq_getElem hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  have hmap : (l.map Γ.ofBool).length ≤ i := by simp; exact h
-  rw [List.getElem?_eq_none hmap]
-  simp
-
 /-- A completed binary witness tape with the left marker at cell `0` is
     exactly the standard initialized tape for those bits, moved to cell `1`. -/
 theorem hasBinaryString_eq_initTape_move_right {t : Tape} {bits : List Bool}

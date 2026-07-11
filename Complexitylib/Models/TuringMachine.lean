@@ -49,7 +49,7 @@ Arora and Barak's *Computational Complexity: A Modern Approach*.
 /-- The tape alphabet Γ = {0, 1, □, ▷}. -/
 inductive Γ where
   | zero | one | blank | start
-  deriving DecidableEq
+  deriving Repr, DecidableEq
 
 instance : Fintype Γ where
   elems := {.zero, .one, .blank, .start}
@@ -61,7 +61,7 @@ instance : Inhabited Γ := ⟨Γ.blank⟩
     transition function — this is enforced structurally by using `Γw` in the output of `δ`. -/
 inductive Γw where
   | zero | one | blank
-  deriving DecidableEq
+  deriving Repr, DecidableEq
 
 instance : Fintype Γw where
   elems := {.zero, .one, .blank}
@@ -75,15 +75,27 @@ instance : Fintype Γw where
 
 instance : Coe Γw Γ where coe := Γw.toΓ
 
+/-- A writable symbol is never the left-end marker. -/
+theorem Γw.toΓ_ne_start (s : Γw) : s.toΓ ≠ Γ.start := by
+  cases s <;> decide
+
 /-- Convert a boolean to an alphabet symbol. -/
 def Γ.ofBool : Bool → Γ
   | false => .zero
   | true => .one
 
+/-- A Boolean tape symbol is never the left-end marker. -/
+theorem Γ.ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
+  cases b <;> decide
+
+/-- A Boolean tape symbol is never blank. -/
+theorem Γ.ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
+  cases b <;> decide
+
 /-- Three-way tape head direction: left, right, or stay. -/
 inductive Dir3 where
   | left | right | stay
-  deriving DecidableEq
+  deriving Repr, DecidableEq
 
 instance : Fintype Dir3 where
   elems := {.left, .right, .stay}
@@ -99,6 +111,15 @@ structure Tape where
 
 namespace Tape
 
+/-- Tapes are equal when their head positions and cell functions agree. -/
+theorem ext' {a b : Tape} (hhead : a.head = b.head) (hcells : a.cells = b.cells) :
+    a = b := by
+  cases a
+  cases b
+  cases hhead
+  cases hcells
+  rfl
+
 /-- Read the symbol under the head. -/
 def read (t : Tape) : Γ := t.cells t.head
 
@@ -108,6 +129,11 @@ def write (t : Tape) (s : Γ) : Tape :=
   if t.head = 0 then t
   else { t with cells := Function.update t.cells t.head s }
 
+/-- Writing changes tape contents but preserves the head position. -/
+theorem write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
+  simp only [write]
+  split <;> rfl
+
 /-- Move the head according to a three-way direction.
     Moving left at position 0 stays at 0 (`Nat` subtraction saturates). -/
 def move (t : Tape) (d : Dir3) : Tape :=
@@ -115,6 +141,10 @@ def move (t : Tape) (d : Dir3) : Tape :=
   | .left => { t with head := t.head - 1 }
   | .right => { t with head := t.head + 1 }
   | .stay => t
+
+/-- Moving changes the head position but preserves tape contents. -/
+theorem move_cells (t : Tape) (d : Dir3) : (t.move d).cells = t.cells := by
+  cases d <;> rfl
 
 /-- The tape contains output `y : List Bool` starting at cell 1:
     cells 1 through |y| match `y`, and cell |y| + 1 is blank.
@@ -148,6 +178,87 @@ def initTape (contents : List Γ) : Tape where
   cells := fun i =>
     if i = 0 then Γ.start
     else (contents[i - 1]?).getD Γ.blank
+
+/-- An initialized tape starts with its head on the left-end marker. -/
+@[simp] theorem initTape_head (contents : List Γ) :
+    (initTape contents).head = 0 := rfl
+
+/-- Cell zero of an initialized tape is the left-end marker. -/
+@[simp] theorem initTape_cells_zero (contents : List Γ) :
+    (initTape contents).cells 0 = Γ.start := by
+  simp [initTape]
+
+/-- Cell `i + 1` of an initialized tape contains item `i`, or blank when `i`
+    lies beyond the initialized contents. -/
+theorem initTape_cells_succ (contents : List Γ) (i : ℕ) :
+    (initTape contents).cells (i + 1) = (contents[i]?).getD Γ.blank := by
+  simp [initTape]
+
+/-- Cells beyond the initialized contents are blank. -/
+theorem initTape_cells_ge (contents : List Γ) (i : ℕ)
+    (h : contents.length ≤ i) :
+    (initTape contents).cells (i + 1) = Γ.blank := by
+  rw [initTape_cells_succ, List.getElem?_eq_none h]
+  rfl
+
+/-- Every positive-indexed cell of the empty initialized tape is blank. -/
+@[simp] theorem initTape_nil_cells_succ (i : ℕ) :
+    (initTape []).cells (i + 1) = Γ.blank := by
+  exact initTape_cells_ge [] i (by simp)
+
+/-- No positive-indexed cell of the empty initialized tape is a start marker. -/
+theorem initTape_nil_cells_ne_start (j : ℕ) (hj : 1 ≤ j) :
+    (initTape []).cells j ≠ Γ.start := by
+  obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
+  rw [initTape_nil_cells_succ]
+  decide
+
+/-- Within the initialized Boolean contents, cell `i + 1` stores bit `i`. -/
+theorem initTape_ofBool_cells_lt (contents : List Bool) (i : ℕ)
+    (h : i < contents.length) :
+    (initTape (contents.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (contents[i]'h) := by
+  rw [initTape_cells_succ]
+  have hmap : i < (contents.map Γ.ofBool).length := by simpa using h
+  rw [List.getElem?_eq_getElem hmap]
+  simp
+
+/-- Beyond the initialized Boolean contents, cell `i + 1` is blank. -/
+theorem initTape_ofBool_cells_ge (contents : List Bool) (i : ℕ)
+    (h : contents.length ≤ i) :
+    (initTape (contents.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
+  exact initTape_cells_ge (contents.map Γ.ofBool) i (by simpa using h)
+
+/-- No positive-indexed cell of a Boolean-initialized tape contains the
+    left-end marker. -/
+theorem initTape_ofBool_cells_ne_start (contents : List Bool) (j : ℕ) (hj : 1 ≤ j) :
+    (initTape (contents.map Γ.ofBool)).cells j ≠ Γ.start := by
+  obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
+  by_cases hi : i < contents.length
+  · rw [initTape_ofBool_cells_lt contents i hi]
+    exact Γ.ofBool_ne_start _
+  · rw [initTape_ofBool_cells_ge contents i (Nat.le_of_not_gt hi)]
+    decide
+
+/-- Moving an empty initialized tape to cell one reads blank. -/
+@[simp] theorem initTape_nil_move_right_read :
+    ((initTape []).move Dir3.right).read = Γ.blank := by
+  simp [Tape.read, Tape.move]
+
+/-- A Boolean-initialized tape moved to its first data cell never reads the
+    left-end marker. -/
+theorem initTape_ofBool_move_right_read_ne_start (contents : List Bool) :
+    ((initTape (contents.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
+  simp only [Tape.read, Tape.move]
+  exact initTape_ofBool_cells_ne_start contents 1 (by omega)
+
+/-- Moving the head does not introduce a left-end marker in the positive cells
+    of a Boolean-initialized tape. -/
+theorem initTape_ofBool_move_right_cells_ne_start (contents : List Bool) :
+    ∀ j, 1 ≤ j →
+      ((initTape (contents.map Γ.ofBool)).move Dir3.right).cells j ≠ Γ.start := by
+  intro j hj
+  rw [Tape.move_cells]
+  exact initTape_ofBool_cells_ne_start contents j hj
 
 /-- A language is a set of binary strings. -/
 abbrev Language := Set (List Bool)
@@ -339,6 +450,27 @@ theorem Accepts_of_AcceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
     (h : tm.AcceptsInTime x T) : tm.Accepts x := by
   obtain ⟨c', t, _, hreach, hhalt, hcell⟩ := h
   exact ⟨c', reaches_of_reachesIn hreach, hhalt, hcell⟩
+
+/-- DTM acceptance is monotone in the time bound. -/
+theorem AcceptsInTime_mono {tm : TM n} {x : List Bool} {T T' : ℕ} (hle : T ≤ T')
+    (h : tm.AcceptsInTime x T) : tm.AcceptsInTime x T' := by
+  obtain ⟨c', t, ht, hreach, hhalt, hout⟩ := h
+  exact ⟨c', t, ht.trans hle, hreach, hhalt, hout⟩
+
+/-- DTM decision is monotone under pointwise enlargement of the time bound. -/
+theorem DecidesInTime.mono {tm : TM n} {L : Language} {T T' : ℕ → ℕ}
+    (hle : ∀ m, T m ≤ T' m) (h : tm.DecidesInTime L T) : tm.DecidesInTime L T' := by
+  intro x
+  obtain ⟨c', t, ht, hreach, hhalt, hyes, hno⟩ := h x
+  exact ⟨c', t, ht.trans (hle x.length), hreach, hhalt, hyes, hno⟩
+
+/-- DTM computation is monotone under pointwise enlargement of the time bound. -/
+theorem ComputesInTime.mono {tm : TM n} {f : List Bool → List Bool}
+    {T T' : ℕ → ℕ} (hle : ∀ m, T m ≤ T' m) (h : tm.ComputesInTime f T) :
+    tm.ComputesInTime f T' := by
+  intro x
+  obtain ⟨c', t, ht, hreach, hhalt, hout⟩ := h x
+  exact ⟨c', t, ht.trans (hle x.length), hreach, hhalt, hout⟩
 
 end TM
 

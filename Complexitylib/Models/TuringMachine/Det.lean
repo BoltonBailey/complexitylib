@@ -301,13 +301,6 @@ theorem singleTapeSim_rejectsWithZero {k : ℕ} {N : NTM k} (hk : 1 ≤ k)
 
 end NTM
 
-/-- `TM.DecidesInTime` is monotone in the time bound. -/
-private theorem TM.decidesInTime_mono {n : ℕ} {tm : TM n} {L : Language}
-    {T T' : ℕ → ℕ} (hle : ∀ m, T m ≤ T' m) (h : tm.DecidesInTime L T) :
-    tm.DecidesInTime L T' := fun x =>
-  let ⟨c', t, ht, hr, hh, hy, hn⟩ := h x
-  ⟨c', t, le_trans ht (hle x.length), hr, hh, hy, hn⟩
-
 /-- The original bound fits under the simulation overhead bound. -/
 private theorem le_singleTapeSimTime (k : ℕ) (T : ℕ → ℕ) (m : ℕ) :
     T m ≤ NTM.singleTapeSimTime k T m := by
@@ -331,7 +324,7 @@ theorem TM.exists_singleTape_toTM {k : ℕ} (M : TM k) {L : Language} {T : ℕ �
   have hrej : M.toNTM.RejectsWithZero L T := TM.toNTM_rejectsWithZero h
   rcases Nat.eq_zero_or_pos k with rfl | hk
   · exact ⟨(NTM.pad0 M.toNTM).toTM,
-      TM.decidesInTime_mono (le_singleTapeSimTime 0 T)
+      TM.DecidesInTime.mono (le_singleTapeSimTime 0 T)
         (NTM.toTM_decidesInTime (NTM.pad0_deterministic hdet)
           (NTM.pad0_decidesInTime hN) (NTM.pad0_rejectsWithZero hrej))⟩
   · exact ⟨(NTM.singleTapeSim M.toNTM).toTM,

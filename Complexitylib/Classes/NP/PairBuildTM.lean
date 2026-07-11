@@ -1060,37 +1060,10 @@ private theorem pair_getElem_sep1 (x y : List Bool) :
     rw [h1, ih]
 
 -- ════════════════════════════════════════════════════════════════════════
--- Small alphabet / initTape helpers
+-- Correctness specification
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- `Γ.ofBool b` is never the start symbol `▷`. -/
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> simp [Γ.ofBool]
-
-/-- `Γ.ofBool b` is never the blank symbol `□`. -/
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> simp [Γ.ofBool]
-
-/-- Every cell of `initTape (l.map Γ.ofBool)` at position `≥ 1` differs from
-    `Γ.start`: the cell is either `Γ.blank` (beyond `l`) or `Γ.ofBool _`. -/
-private theorem initTape_ofBool_cells_ne_start (l : List Bool) (i : ℕ) (hi : i ≥ 1) :
-    (_root_.initTape (l.map Γ.ofBool)).cells i ≠ Γ.start := by
-  show (if i = 0 then _ else _) ≠ _
-  rw [if_neg (by omega)]
-  cases hget : (l.map Γ.ofBool)[i - 1]? with
-  | none => simp
-  | some a =>
-    simp
-    have hmem : a ∈ l.map Γ.ofBool := List.mem_of_getElem? hget
-    rw [List.mem_map] at hmem
-    obtain ⟨b, _, hb⟩ := hmem
-    subst hb; exact ofBool_ne_start b
-
--- ════════════════════════════════════════════════════════════════════════
--- Correctness specification (proof deferred)
--- ════════════════════════════════════════════════════════════════════════
-
-/-- Running-time bound: `pairBuildTM` finishes in `4·|x| + |y| + 8` steps.
+/-- Running-time bound: `pairBuildTM` finishes in `4·|x| + 2·|y| + 10` steps.
 
     Breakdown:
     - `init`: 1 step.
@@ -1141,33 +1114,6 @@ private theorem pair_getElem_y (x y : List Bool) (j : ℕ) (hj : j < y.length) :
 -- ════════════════════════════════════════════════════════════════════════
 -- initTape helpers
 -- ════════════════════════════════════════════════════════════════════════
-
-/-- `initTape` cell-access at `i+1`. -/
-private theorem initTape_cells_succ (l : List Γ) (i : ℕ) :
-    (_root_.initTape l).cells (i + 1) = (l[i]?).getD Γ.blank := by
-  show (if i + 1 = 0 then Γ.start else (l[i + 1 - 1]?).getD Γ.blank) = _
-  simp
-
-/-- `initTape []` cells are `Γ.blank` at every position `≥ 1`. -/
-private theorem initTape_nil_cells_succ (i : ℕ) :
-    (_root_.initTape []).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]; simp
-
-/-- `initTape (l.map Γ.ofBool)` cells at `i+1` for `i < |l|` equal `Γ.ofBool l[i]`. -/
-private theorem initTape_ofBool_cells_lt (l : List Bool) (i : ℕ) (h : i < l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (l[i]'h) := by
-  rw [initTape_cells_succ]
-  have hmap : i < (l.map Γ.ofBool).length := by simp; exact h
-  rw [List.getElem?_eq_getElem hmap]
-  simp
-
-/-- `initTape (l.map Γ.ofBool)` cells at `i+1` for `i ≥ |l|` equal `Γ.blank`. -/
-private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  have hmap : (l.map Γ.ofBool).length ≤ i := by simp; exact h
-  rw [List.getElem?_eq_none hmap]
-  simp
 
 /-- A tape with head at cell 1, a start marker at cell 0, binary contents
     `bits`, and a blank tail is exactly the standard initialized tape for
@@ -1271,8 +1217,8 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
       rw [show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt x i hi
     refine ⟨?_, ?_⟩
-    · rw [heq]; exact ofBool_ne_blank _
-    · rw [heq]; exact ofBool_ne_start _
+    · rw [heq]; exact Γ.ofBool_ne_blank _
+    · rw [heq]; exact Γ.ofBool_ne_start _
   have hc1_yw_data : ∀ i, i < y.length →
       (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.blank ∧
       (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.start := by
@@ -1283,8 +1229,8 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
       rw [show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt y i hi
     refine ⟨?_, ?_⟩
-    · rw [heq]; exact ofBool_ne_blank _
-    · rw [heq]; exact ofBool_ne_start _
+    · rw [heq]; exact Γ.ofBool_ne_blank _
+    · rw [heq]; exact Γ.ofBool_ne_start _
   obtain ⟨c2, hreach_copyX, hc2_state, hc2_ic, hc2_ih, hc2_yw, hc2_ph, hc2_pc0,
           hc2_pns, hc2_below, hc2_above, hc2_data⟩ :=
     pairBuild_copyX_loop yIdx pIdx hne x.length c1 hc1_state hc1_ih_ge hc1_ic0
@@ -1398,8 +1344,8 @@ private theorem pairBuildTM_from_copyX1_initTape_move_right
         (_root_.initTape (y.map Γ.ofBool)).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       rw [show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt y i hi
-    exact ⟨by rw [heq]; exact ofBool_ne_blank _,
-           by rw [heq]; exact ofBool_ne_start _⟩
+    exact ⟨by rw [heq]; exact Γ.ofBool_ne_blank _,
+           by rw [heq]; exact Γ.ofBool_ne_start _⟩
   have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
     rw [hc5_yw_cells_eq]
     rfl
@@ -1669,8 +1615,8 @@ theorem pairBuildTM_hoareTime
       rw [hinp, show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt x i hi
     refine ⟨?_, ?_⟩
-    · rw [heq]; exact ofBool_ne_blank _
-    · rw [heq]; exact ofBool_ne_start _
+    · rw [heq]; exact Γ.ofBool_ne_blank _
+    · rw [heq]; exact Γ.ofBool_ne_start _
   -- The y-data bits ahead of c1.work yIdx head.
   have hc1_yw_data : ∀ i, i < y.length →
       (c1.work yIdx).cells ((c1.work yIdx).head + i) ≠ Γ.blank ∧
@@ -1683,8 +1629,8 @@ theorem pairBuildTM_hoareTime
       rw [hyw, show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt y i hi
     refine ⟨?_, ?_⟩
-    · rw [heq]; exact ofBool_ne_blank _
-    · rw [heq]; exact ofBool_ne_start _
+    · rw [heq]; exact Γ.ofBool_ne_blank _
+    · rw [heq]; exact Γ.ofBool_ne_start _
   -- ═══════════════════════════════════════════════════════════════════
   -- Phase 2: copyX loop (2|x| steps)
   -- ═══════════════════════════════════════════════════════════════════
@@ -1816,8 +1762,8 @@ theorem pairBuildTM_hoareTime
     have heq : (work yIdx).cells (1 + i) = Γ.ofBool (y[i]'hi) := by
       rw [hyw, show 1 + i = i + 1 from by omega]
       exact initTape_ofBool_cells_lt y i hi
-    exact ⟨by rw [heq]; exact ofBool_ne_blank _,
-           by rw [heq]; exact ofBool_ne_start _⟩
+    exact ⟨by rw [heq]; exact Γ.ofBool_ne_blank _,
+           by rw [heq]; exact Γ.ofBool_ne_start _⟩
   have hc5_yw_cell0 : (c5.work yIdx).cells 0 = Γ.start := by
     rw [hc5_yw_cells_eq]; exact hc0_yw_cell0
   -- ═══════════════════════════════════════════════════════════════════

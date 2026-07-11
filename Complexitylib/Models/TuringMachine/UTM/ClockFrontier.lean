@@ -34,12 +34,6 @@ namespace TM
 -- regCells frontier helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Register cells off the sentinel are never `▷`. -/
-private theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
-    regCells v j ≠ Γ.start := by
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
-
 /-- Blanking the frontier mark turns `regCells v` into `regCells (v - 1)`. -/
 private theorem regCells_update {v : ℕ} (hv : 1 ≤ v) :
     Function.update (regCells v) v Γ.blank = regCells (v - 1) := by

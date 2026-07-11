@@ -44,9 +44,9 @@ namespace TM
 def _root_.Tape.WFCells (t : Tape) : Prop :=
   t.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → t.cells j ≠ Γ.start
 
-/-- Writing never moves the head. -/
+/-- Compatibility alias for the core `Tape.write_head` theorem. -/
 theorem _root_.Tape.write_head' (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  unfold Tape.write; split <;> rfl
+  exact t.write_head s
 
 /-- Writing (any `Γw` symbol) preserves `WFCells`. -/
 theorem _root_.Tape.WFCells.write {t : Tape} (h : t.WFCells) (s : Γw) :

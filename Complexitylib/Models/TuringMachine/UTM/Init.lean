@@ -352,11 +352,6 @@ private theorem holdsExact_push {t : Tape} {l : List Γw} (h : t.HoldsExact l)
       · rw [dif_neg hlt, dif_neg (by simp; omega)]
   · simp [Tape.move, tape_write_head, hh]
 
-/-- Cells of the empty initial tape beyond cell 0 are blank. -/
-private theorem initTape_nil_cells_succ (j : ℕ) :
-    (initTape []).cells (j + 1) = Γ.blank := by
-  simp [initTape]
-
 private theorem bitSym_toΓ (b : Bool) : (bitSym b).toΓ = Γ.ofBool b := by
   cases b <;> rfl
 

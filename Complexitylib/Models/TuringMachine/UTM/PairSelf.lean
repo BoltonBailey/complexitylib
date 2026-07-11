@@ -64,34 +64,15 @@ def pairSelfTime (n : ℕ) : ℕ :=
 -- Small tape helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem tape_ext {t₁ t₂ : Tape}
-    (hh : t₁.head = t₂.head) (hc : t₁.cells = t₂.cells) : t₁ = t₂ := by
-  cases t₁; cases t₂; simp_all
-
-private theorem initTape_ofBool_cells_ne_start (l : List Bool) (j : ℕ) (hj : j ≥ 1) :
-    (_root_.initTape (l.map Γ.ofBool)).cells j ≠ Γ.start := by
-  show (if j = 0 then _ else _) ≠ _
-  rw [if_neg (by omega)]
-  cases hget : (l.map Γ.ofBool)[j - 1]? with
-  | none => simp
-  | some a =>
-    simp only [Option.getD_some]
-    have hmem : a ∈ l.map Γ.ofBool := List.mem_of_getElem? hget
-    rw [List.mem_map] at hmem
-    obtain ⟨b, _, hb⟩ := hmem
-    subst hb
-    cases b <;> simp [Γ.ofBool]
-
 /-- The started blank tape reads `□`. -/
 private theorem blankStarted_read :
     ((_root_.initTape []).move Dir3.right).read = Γ.blank := by
-  simp [Tape.read, Tape.move, _root_.initTape]
+  exact initTape_nil_move_right_read
 
 /-- A started `ofBool` data tape never reads `▷`. -/
 private theorem started_read_ne_start (l : List Bool) :
     ((_root_.initTape (l.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
-  simp only [Tape.read, Tape.move]
-  exact initTape_ofBool_cells_ne_start l 1 (by omega)
+  exact initTape_ofBool_move_right_read_ne_start l
 
 /-- The started blank tape never reads `▷`. -/
 private theorem blankStarted_read_ne_start :
@@ -139,22 +120,6 @@ private theorem write_blank_idle_of_read_blank {t : Tape} (h : t.read = Γ.blank
   · rfl
   · rw [← h]
     show { t with cells := Function.update t.cells t.head (t.cells t.head) } = t
-    rw [Function.update_eq_self]
-
-/-- Idling with a read-back write is a no-op once the tape reads `≠ ▷`. -/
-private theorem writeAndMove_readBack_idle_of_ne_start (t : Tape)
-    (hread : t.read ≠ Γ.start) :
-    t.writeAndMove (readBackWrite t.read) (idleDir t.read) = t := by
-  have hback : (readBackWrite t.read).toΓ = t.read := readBackWrite_toΓ_eq hread
-  have hdir : idleDir t.read = Dir3.stay := by simp [idleDir, hread]
-  show t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t
-  rw [hback, hdir]
-  show (t.write t.read).move Dir3.stay = t
-  simp only [Tape.move]
-  unfold Tape.write
-  split
-  · rfl
-  · show { t with cells := Function.update t.cells t.head (t.cells t.head) } = t
     rw [Function.update_eq_self]
 
 /-- A read-back write followed by a right move preserves cells and bumps
@@ -330,7 +295,7 @@ private theorem pairBuild_step_ytape
   have h07 : ¬ ((0 : Fin 8) = (7 : Fin 8)) := by decide
   have hidle : (c.work 0).writeAndMove (readBackWrite (c.work 0).read).toΓ
       (idleDir (c.work 0).read) = c.work 0 :=
-    writeAndMove_readBack_idle_of_ne_start _ hread
+    Tape.writeAndMove_readBack_idle_of_ne_start _ hread
   obtain ⟨hrc, hrh⟩ := writeAndMove_readBack_right (c.work 0) hread
   cases hstate : c.state with
   | done => exact absurd hstate hq
@@ -529,7 +494,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       intro inp work out inp' work' out' hP hcells _hhead hother hinp houtc houth
       obtain ⟨p1, p2, p3, p4, p5, p6⟩ := hP
       subst hinp
-      have hout_eq : out' = out := tape_ext houth houtc
+      have hout_eq : out' = out := Tape.ext' houth houtc
       subst hout_eq
       exact ⟨p1, p2, by rw [hcells]; exact p3,
         by rw [hother 7 (by decide)]; exact p4,
@@ -557,7 +522,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         exact transitionTape_id blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [htw0]
-        exact tape_ext (by rw [hw0h]; rfl) hw0c
+        exact Tape.ext' (by rw [hw0h]; rfl) hw0c
       · rw [hti]; exact hi_ne
       · rw [hto, hout]; exact blankStarted_read_ne_start
       · rw [hto, hout]; exact le_refl 1
@@ -711,7 +676,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         rw [hout]; exact transitionTape_id blankStarted_read_ne_start
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · rw [hti]
-        exact tape_ext (by rw [hih]; rfl) hic
+        exact Tape.ext' (by rw [hih]; rfl) hic
       · rw [htw0]; exact hw0
       · rw [htwi 7 (by decide)]; exact hwother 7 (by decide)
       · intro i hi0 hi7
@@ -734,7 +699,7 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
       intro inp work out inp' work' out' hP hcells _hhead hother hinp houtc houth
       obtain ⟨p1, p2, p3, p4, p5, p6, p7⟩ := hP
       subst hinp
-      have hout_eq : out' = out := tape_ext houth houtc
+      have hout_eq : out' = out := Tape.ext' houth houtc
       subst hout_eq
       exact ⟨p1, p2, by rw [hcells]; exact p3,
         fun i hlt => by rw [hcells]; exact p4 i hlt,

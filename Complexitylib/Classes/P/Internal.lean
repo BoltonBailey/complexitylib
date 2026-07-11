@@ -83,9 +83,9 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ accepted: output cell 1 = Γ.one
     have hcell := hmem₁ hx₁
     -- Derive output tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cell0 _)
+    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
     have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_noStart hi)
+      (fun i hi => initTape_nil_cells_ne_start i hi)
     -- Transition: rewind fake output, check, write Γ.one to real output, halt
     obtain ⟨t_tr, c_final, htrans, hhalt_f, hout_f, htr_bound⟩ :=
       transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
@@ -98,9 +98,9 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ rejected: output cell 1 = Γ.zero
     have hcell := hnmem₁ hx₁
     -- Derive output tape and input tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cell0 _)
+    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
     have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_noStart hi)
+      (fun i hi => initTape_nil_cells_ne_start i hi)
     have hinput_cells := input_cells_of_reachesIn hreach₁
     -- Transition: full transition to Phase 2
     obtain ⟨t_tr, c_mid, htrans, hmid_state, hmid_input, hmid_work, hmid_output, htr_bound⟩ :=
