@@ -1,5 +1,5 @@
 import Complexitylib.SAT.Language
-import Complexitylib.Classes.NP.PairBuildTM
+import Complexitylib.Classes.NP.Internal.PairBuildTM
 import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
@@ -4377,7 +4377,7 @@ theorem satGuessVerify_not_acceptsInTime_of_not_mem_LSAT_of_decidesInTime (M : T
   have hnotpair : pair x y ∉ pairLang R_SAT := by
     intro hpair
     rcases hpair with ⟨x', y', hp, hR⟩
-    obtain ⟨hx', hy'⟩ := pair_injective hp
+    obtain ⟨hx', hy'⟩ := pair_inj hp
     subst hx' hy'
     exact hx ((L_SAT_iff_witness x).2 ⟨y, hR⟩)
   have hzero : ((satGuessVerifyNTM M).trace (satGuessVerifyTime f x.length) choices

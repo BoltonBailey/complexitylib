@@ -16,7 +16,7 @@ The forward direction (`NP ⊆ witness form`) is a *computation-path* witness
 argument and is left for a later pass.
 
 The reverse direction — **the FNP ⇒ NP bridge** used by SAT ∈ NP — is
-captured here by `NP_of_FNP_witness`, parameterized by the single
+captured here by `mem_NP_of_FNP_witness`, parameterized by the single
 TM-engineering construction interface `WitnessNTMConstruction`: build the
 nondeterministic "guess-and-verify" machine from a deterministic verifier
 of `pairLang R`. Everything above that construction — unpacking FNP,
@@ -53,7 +53,7 @@ namespace NP
 
 /-- The witness language of a relation `R` — the set of inputs `x` that
     admit some witness. Isolated as a definition so the statement of
-    `NP_of_FNP_witness` reads cleanly. -/
+    `mem_NP_of_FNP_witness` reads cleanly. -/
 def witnessLang (R : List Bool → List Bool → Prop) : Language :=
   {x | ∃ y, R x y}
 
@@ -108,7 +108,7 @@ def WitnessNTMConstruction : Prop :=
     `M` for `pairLang R` and a polynomial witness-length bound, apply the
     construction to build the guess-and-verify NTM, and package the result as
     NP membership. -/
-theorem NP_of_FNP_witness
+theorem mem_NP_of_FNP_witness
     (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} {L : Language}
     (hR : R ∈ FNP)
@@ -139,7 +139,7 @@ theorem witnessLang_mem_NP_of_FNP
     (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} (hR : R ∈ FNP) :
     witnessLang R ∈ NP :=
-  NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
+  mem_NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
 
 end NP
 

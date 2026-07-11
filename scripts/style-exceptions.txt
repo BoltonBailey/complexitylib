@@ -56,11 +56,9 @@ Complexitylib/Classes/FNP/Internal.lean : copyright
 Complexitylib/Classes/Hierarchy.lean : copyright
 Complexitylib/Classes/L.lean : copyright
 Complexitylib/Classes/NP.lean : copyright
-Complexitylib/Classes/NP/PairBuildTM.lean : copyright
-Complexitylib/Classes/NP/PairBuildTM.lean : rootEscape
-Complexitylib/Classes/NP/PairSplitTM.lean : copyright
-Complexitylib/Classes/NP/PairSplitTM.lean : lineLength
-Complexitylib/Classes/NP/PairSplitTM.lean : rootEscape
+Complexitylib/Classes/NP/Internal/PairBuildTM.lean : copyright
+Complexitylib/Classes/NP/Internal/PairSplitTM.lean : copyright
+Complexitylib/Classes/NP/Internal/PairSplitTM.lean : lineLength
 Complexitylib/Classes/NP/Reduction.lean : copyright
 Complexitylib/Classes/NP/Witness.lean : copyright
 Complexitylib/Classes/Negligible.lean : copyright
@@ -70,6 +68,7 @@ Complexitylib/Classes/P/Internal.lean : copyright
 Complexitylib/Classes/PPoly.lean : copyright
 Complexitylib/Classes/PPoly/Defs.lean : copyright
 Complexitylib/Classes/Pairing.lean : copyright
+Complexitylib/Classes/Pairing.lean : lineLength
 Complexitylib/Classes/Randomized.lean : copyright
 Complexitylib/Classes/Space.lean : copyright
 Complexitylib/Classes/Time.lean : copyright

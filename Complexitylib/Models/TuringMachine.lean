@@ -340,6 +340,13 @@ theorem Tape.StartInvariant.init_nil : (Tape.init []).StartInvariant := by
   simp only [Tape.init, show j ≠ 0 by omega, ↓reduceIte]
   simp
 
+/-- After stepping onto cell 1 of an empty initialized tape, no positive
+    cell holds the left-end marker. -/
+theorem Tape.init_nil_move_right_cells_ne_start (j : ℕ) (hj : j ≥ 1) :
+    ((Tape.init []).move Dir3.right).cells j ≠ Γ.start := by
+  rw [Tape.move_cells]
+  simp [Tape.init, show j ≠ 0 by omega]
+
 /-- Moving the head does not introduce a left-end marker in the positive cells
     of a Boolean-initialized tape. -/
 theorem Tape.init_ofBool_move_right_cells_ne_start (contents : List Bool) :

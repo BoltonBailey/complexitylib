@@ -1,5 +1,5 @@
 import Complexitylib.SAT.Verifier
-import Complexitylib.Classes.NP.PairSplitTM
+import Complexitylib.Classes.NP.Internal.PairSplitTM
 import Complexitylib.Models.TuringMachine.Subroutines.Counter
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
@@ -4199,9 +4199,9 @@ private theorem verifyPair_input_doubled (z α : List Bool) (i : ℕ) (hi : i < 
   have hlen2' : 2 * i + 1 < (pair z α).length := by rw [pair_length]; omega
   refine ⟨?_, ?_⟩
   · rw [Tape.move_cells, show 1 + 2 * i = 2 * i + 1 from by ring,
-      Tape.init_ofBool_cells_lt (pair z α) (2 * i) hlen2, _root_.Complexity.TM.pair_get_left_first z α i hi]
+      Tape.init_ofBool_cells_lt (pair z α) (2 * i) hlen2, pair_getElem_left_first z α i hi]
   · rw [Tape.move_cells, show 1 + (2 * i + 1) = (2 * i + 1) + 1 from by ring,
-      Tape.init_ofBool_cells_lt (pair z α) (2 * i + 1) hlen2', _root_.Complexity.TM.pair_get_left_second z α i hi]
+      Tape.init_ofBool_cells_lt (pair z α) (2 * i + 1) hlen2', pair_getElem_left_second z α i hi]
 
 /-- From the initial configuration on `pair z α`, the machine runs the init,
 formula-scan, and separator phases, reaching `.rewindCounterForAlpha` with the
@@ -4285,12 +4285,12 @@ private theorem verifyPairSplit_setup_through_separator (z α : List Bool) :
   have hc1_sep0 : c1.input.cells (1 + 2 * z.length) = Γ.zero := by
     rw [hi1, Tape.move_cells, show 1 + 2 * z.length = 2 * z.length + 1 from by ring,
       Tape.init_ofBool_cells_lt (pair z α) (2 * z.length) (by rw [pair_length]; omega),
-      _root_.Complexity.TM.pair_get_sep_zero z α]; rfl
+      pair_getElem_sep_zero z α]; rfl
   have hc1_sep1 : c1.input.cells (1 + 2 * z.length + 1) = Γ.one := by
     rw [hi1, Tape.move_cells,
       show 1 + 2 * z.length + 1 = (2 * z.length + 1) + 1 from by ring,
       Tape.init_ofBool_cells_lt (pair z α) (2 * z.length + 1) (by rw [pair_length]; omega),
-      _root_.Complexity.TM.pair_get_sep_one z α]; rfl
+      pair_getElem_sep_one z α]; rfl
   have hsep0 : c2.input.read = Γ.zero := by
     show c2.input.cells c2.input.head = Γ.zero
     rw [hi2c, hi2h, hi1_head]; exact hc1_sep0
@@ -4434,7 +4434,7 @@ private theorem verifyPairSplit_setup_success (z α : List Bool)
     rw [hi4, hi3h, hi3c, Tape.move_cells,
       show 2 * z.length + 3 + j = (2 * z.length + 2 + j) + 1 from by ring,
       Tape.init_ofBool_cells_lt (pair z α) (2 * z.length + 2 + j) (by rw [pair_length]; omega),
-      _root_.Complexity.TM.pair_get_right z α j h]
+      pair_getElem_right z α j h]
   have hcnt4 : ∀ i, i < α.length →
       (c4.work ⟨2, by omega⟩).cells ((c4.work ⟨2, by omega⟩).head + i) = Γ.one := by
     intro i hi; rw [hw42h, hw42c]; exact hw32tally i (by omega)
@@ -4864,7 +4864,7 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
     rw [hi4, hi3h, hi3c, Tape.move_cells,
       show 2 * z.length + 3 + j = (2 * z.length + 2 + j) + 1 from by ring,
       Tape.init_ofBool_cells_lt (pair z α) (2 * z.length + 2 + j) (by rw [pair_length]; omega),
-      _root_.Complexity.TM.pair_get_right z α j hjα]
+      pair_getElem_right z α j hjα]
     simp only [has_def, List.getElem_take]
   have hcnt4 : ∀ i, i < as.length →
       (c4.work ⟨2, by omega⟩).cells ((c4.work ⟨2, by omega⟩).head + i) = Γ.one := by
@@ -4886,7 +4886,7 @@ private theorem verifyPairSplit_reject_long (z α : List Bool)
       show 2 * z.length + 3 + (z.length + 1) = (2 * z.length + 2 + (z.length + 1)) + 1 from by ring,
       Tape.init_ofBool_cells_lt (pair z α) (2 * z.length + 2 + (z.length + 1))
         (by rw [pair_length]; omega),
-      _root_.Complexity.TM.pair_get_right z α (z.length + 1) (by omega)]
+      pair_getElem_right z α (z.length + 1) (by omega)]
   have hcounter5 : (c5.work ⟨2, by omega⟩).read ≠ Γ.one := by
     show (c5.work ⟨2, by omega⟩).cells (c5.work ⟨2, by omega⟩).head ≠ Γ.one
     rw [hw52hexact, hw42h, haslen, show 1 + (z.length + 1) = z.length + 2 from by omega,
@@ -5176,7 +5176,7 @@ theorem verifyPairTM_decidesInTime :
         · rw [hzero]; simp [verifyPairSem, hunpair]
     | some zα =>
         obtain ⟨z, α⟩ := zα
-        have hw : w = pair z α := unpair?_sound hunpair
+        have hw : w = pair z α := eq_pair_of_unpair?_eq_some hunpair
         subst hw
         by_cases hlen : α.length ≤ z.length + 1
         · obtain ⟨c', t, ht, hreach, hhalt, hout⟩ := verifyPairSplit_eval_success z α hlen

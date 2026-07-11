@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Mathlib.Analysis.Asymptotics.Defs
+import Mathlib.Analysis.Asymptotics.SpecificAsymptotics
 import Mathlib.Analysis.Asymptotics.Lemmas
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Algebra.Polynomial.Eval.Degree
@@ -327,5 +328,31 @@ theorem BigO.of_polynomial_bound {f : ℕ → ℕ} (p : Polynomial ℕ)
     have : n ^ i ≤ n ^ p.natDegree := Nat.pow_le_pow_right hn hi'
     exact Nat.mul_le_mul_left _ this
   exact_mod_cast le_trans (h n) hp
+
+/-- Extract a natural-number constant and threshold from a big-O bound:
+    `f =O g` yields `c` and `N` with `f n ≤ c * g n` for all `n ≥ N`. -/
+theorem BigO.exists_nat_bound {f g : ℕ → ℕ} (h : f =O g) :
+    ∃ (c N : ℕ), ∀ n, N ≤ n → f n ≤ c * g n := by
+  rw [BigO, Asymptotics.isBigO_iff] at h
+  obtain ⟨C, hC⟩ := h
+  rw [Filter.eventually_atTop] at hC
+  obtain ⟨N, hN⟩ := hC
+  refine ⟨⌈C⌉₊, N, fun n hn => ?_⟩
+  have hb := hN n hn
+  simp only [Real.norm_natCast] at hb
+  have hr : (f n : ℝ) ≤ (⌈C⌉₊ : ℝ) * (g n : ℝ) :=
+    le_trans hb (mul_le_mul_of_nonneg_right (Nat.le_ceil C) (Nat.cast_nonneg _))
+  exact_mod_cast hr
+
+/-- Strict power gap, shifted to the everywhere-positive base `n + 1`:
+    `(n + 1)^p = o((n + 1)^q)` when `p < q`. -/
+theorem LittleO.pow_lt_pow {p q : ℕ} (hpq : p < q) :
+    LittleO (fun n => (n + 1) ^ p) (fun n => (n + 1) ^ q) := by
+  have hbase : Filter.Tendsto (fun n : ℕ => ((n : ℝ) + 1)) atTop atTop :=
+    Filter.tendsto_atTop_add_const_right atTop 1 tendsto_natCast_atTop_atTop
+  have key :=
+    (Asymptotics.isLittleO_pow_pow_atTop_of_lt (𝕜 := ℝ) hpq).comp_tendsto hbase
+  exact key.congr (fun n => by simp only [Function.comp_apply]; push_cast; ring)
+    (fun n => by simp only [Function.comp_apply]; push_cast; ring)
 
 end Complexity

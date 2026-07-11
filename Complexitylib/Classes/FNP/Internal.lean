@@ -8,13 +8,13 @@ namespace Complexity
 # FNP and TFNP — Internal proofs
 
 Helper lemmas for `tagRelation` used by the surface-layer theorem
-`tfnp_of_np_conp_witnesses`.
+`tagRelation_mem_TFNP_of_NP_coNP_witnesses`.
 -/
 
 open Complexity Asymptotics Filter
 
 /-- The combined relation is polynomially balanced when both components are. -/
-theorem tagRelation_polyBalanced {R₁ R₂ : List Bool → List Bool → Prop}
+theorem polyBalanced_tagRelation {R₁ R₂ : List Bool → List Bool → Prop}
     (h₁ : PolyBalanced R₁) (h₂ : PolyBalanced R₂) :
     PolyBalanced (tagRelation R₁ R₂) := by
   obtain ⟨p₁, hb₁⟩ := h₁
@@ -29,7 +29,7 @@ theorem tagRelation_polyBalanced {R₁ R₂ : List Bool → List Bool → Prop}
 /-- If both pair languages are in P, so is the pair language of the combined
     relation. Since `tagRelation R₁ R₂ = R₁ ∨ R₂`, the pair language is
     `pairLang R₁ ∪ pairLang R₂`, and P is closed under union. -/
-theorem tagRelation_pairLang_in_P {R₁ R₂ : List Bool → List Bool → Prop}
+theorem pairLang_tagRelation_mem_P {R₁ R₂ : List Bool → List Bool → Prop}
     (h₁ : pairLang R₁ ∈ P) (h₂ : pairLang R₂ ∈ P) :
     pairLang (tagRelation R₁ R₂) ∈ P := by
   -- pairLang (tagRelation R₁ R₂) = pairLang R₁ ∪ pairLang R₂
@@ -55,9 +55,9 @@ theorem tagRelation_pairLang_in_P {R₁ R₂ : List Bool → List Bool → Prop}
   exact_mod_cast this
 
 /-- The tagged relation is in FNP when both components are. -/
-theorem tagRelation_in_FNP {R₁ R₂ : List Bool → List Bool → Prop}
+theorem tagRelation_mem_FNP {R₁ R₂ : List Bool → List Bool → Prop}
     (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP) :
     tagRelation R₁ R₂ ∈ FNP :=
-  ⟨tagRelation_polyBalanced hR₁.1 hR₂.1, tagRelation_pairLang_in_P hR₁.2 hR₂.2⟩
+  ⟨polyBalanced_tagRelation hR₁.1 hR₂.1, pairLang_tagRelation_mem_P hR₁.2 hR₂.2⟩
 
 end Complexity

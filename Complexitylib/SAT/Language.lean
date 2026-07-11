@@ -118,13 +118,13 @@ theorem R_SAT_in_FNP_of_verifier (h : pairLang R_SAT ∈ P) : R_SAT ∈ FNP :=
     construction has been built, then `L_SAT ∈ NP`.
 
     Combines `R_SAT_in_FNP_of_verifier` (SAT's FNP witness relation) with
-    the generic NP witness theorem `NP_of_FNP_witness`. This theorem
+    the generic NP witness theorem `mem_NP_of_FNP_witness`. This theorem
     deliberately retains the generic construction as an explicit hypothesis;
     the SAT-specific unconditional route is provided by `SAT/Headline.lean`. -/
 theorem L_SAT_in_NP_of_verifier
     (hwitness : NP.WitnessNTMConstruction) (h : pairLang R_SAT ∈ P) :
     L_SAT ∈ NP :=
-  NP.NP_of_FNP_witness hwitness (R_SAT_in_FNP_of_verifier h) L_SAT_iff_witness
+  NP.mem_NP_of_FNP_witness hwitness (R_SAT_in_FNP_of_verifier h) L_SAT_iff_witness
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Worked examples: end-to-end sanity check of the semantic layer

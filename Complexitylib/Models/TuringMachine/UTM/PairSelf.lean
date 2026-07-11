@@ -3,7 +3,7 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.NP.PairBuildTM
+import Complexitylib.Classes.NP.Internal.PairBuildTM
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
 /-!

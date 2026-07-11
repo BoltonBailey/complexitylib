@@ -393,7 +393,7 @@ theorem verifyPair_eq_true_iff_mem_pairLang (w : List Bool) :
         | some φ =>
             simp [hdecode] at h
             have hz : z = φ.encode := CNF.decode?_sound hdecode
-            have hw : w = pair z α := unpair?_sound hunpair
+            have hw : w = pair z α := eq_pair_of_unpair?_eq_some hunpair
             have hlen : α.length ≤ z.length + 1 := by
               simpa [decide_eq_true_eq] using h.1
             refine ⟨z, α, hw, ?_⟩
