@@ -1,9 +1,12 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Classes.Pairing
-
-namespace Complexity
 
 /-!
 # `pairBuildTM`: construct `pair x y` on a work tape
@@ -38,9 +41,33 @@ Total running time: linear in `|x| + |y|` (see `pairBuildTM_hoareTime`).
 
 ## Status
 
-The machine transition function, `δ_right_of_start`, and the main
-`pairBuildTM_hoareTime` correctness theorem are proved.
+Everything in this file is fully proved (no `sorry`). The main contents:
+
+- **Machine**: `pairBuildTM` (with `δ_right_of_start`), the phase type
+  `PairBuildPhase`, and the running-time bound `pairBuildTime`.
+- **Init-step variants** for phase composition:
+  `pairBuild_init_step_started` (pair tape still fresh at head 0) and
+  `pairBuild_init_step_all_started` (all tracked tapes already past `▷`).
+- **Tape helper**: `Tape.eq_init_move_right_of_binary`, identifying a
+  head-1 binary tape with a standard `Tape.init` moved right once.
+- **Main correctness**: `pairBuildTM_hoareTime`, a `HoareTime` triple
+  stating that from `x` on the input tape, `y` on work tape `yIdx`, and an
+  empty work tape `pIdx`, the machine halts within
+  `pairBuildTime |x| |y|` steps with `pair x y` on tape `pIdx`.
+- **Corollaries**: `pairBuildTM_hoareTime_initTape_move_right` (the pair
+  tape equals `Tape.init` of the encoding moved right once),
+  `pairBuildTM_hoareTime_all_started_initTape_move_right` (same, from the
+  all-started layout), its NTM lift
+  `pairBuildTM_toNTM_hoareTime_all_started_initTape_move_right`, and
+  `pairBuildTM_hoareTime_hasOutput` (`Tape.HasOutput` form).
+- **Frame lemmas** for NTM traces: `pairBuildTM_trace_one_preserves_output`
+  / `pairBuildTM_trace_preserves_output` (the output tape is untouched) and
+  `pairBuildTM_trace_one_preserves_other_work` /
+  `pairBuildTM_trace_preserves_other_work` (work tapes other than `yIdx`
+  and `pIdx` are untouched), each assuming the tape's head is past `▷`.
 -/
+
+namespace Complexity
 
 namespace TM
 
@@ -48,6 +75,11 @@ namespace TM
 -- State type
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Control states of `pairBuildTM`, one per phase of the construction:
+    advance past `▷` (`init`), double each input bit onto the pair tape
+    (`copyX1`/`copyX2`), write the `[false, true]` separator
+    (`writeSep1`/`writeSep2`), copy the witness verbatim (`copyY`), rewind
+    the pair tape to cell 1 (`rewindP1`/`rewindP2`), and halt (`done`). -/
 inductive PairBuildPhase where
   | init
   | copyX1 | copyX2

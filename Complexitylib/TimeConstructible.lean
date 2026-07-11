@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Bits
-
-namespace Complexity
 
 /-!
 # Time-constructible functions
@@ -28,7 +31,8 @@ time-constructible.
 - `TimeConstructible.computable` — extract the witnessing TM and time bound
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- A function `T : ℕ → ℕ` is **time-constructible** (AB Definition 1.12) if
     `T(n) ≥ n` for all `n`, and the mapping `x ↦ T(|x|)` (encoded in binary

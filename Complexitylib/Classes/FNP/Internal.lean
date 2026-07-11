@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.FNP.Defs
 import Complexitylib.Classes.P
 import Mathlib.Analysis.Asymptotics.Defs
-
-namespace Complexity
 
 /-!
 # FNP and TFNP — Internal proofs
@@ -10,6 +13,8 @@ namespace Complexity
 Helper lemmas for `tagRelation` used by the surface-layer theorem
 `tagRelation_mem_TFNP_of_NP_coNP_witnesses`.
 -/
+
+namespace Complexity
 
 open Complexity Asymptotics Filter
 

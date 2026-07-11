@@ -52,8 +52,6 @@
  ["docBlame", "Complexity.ShannonUpper.treeLevel"],
  ["docBlame", "Complexity.ShannonUpper.treeParentIdx"],
  ["docBlame", "Complexity.ShannonUpper.treePos"],
- ["docBlame", "Complexity.TM.PairBuildPhase"],
- ["docBlame", "Complexity.TM.PairSplitPhase"],
  ["docBlame", "Complexity.TMDesc.entries"],
  ["docBlame", "Complexity.TMDesc.qhalt"],
  ["docBlame", "Complexity.TMDesc.qstart"],

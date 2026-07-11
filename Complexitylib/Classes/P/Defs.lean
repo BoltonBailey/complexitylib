@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
-
-namespace Complexity
 
 /-!
 # P, FP, and PSPACE
@@ -11,7 +14,8 @@ and **PSPACE** (polynomial space) in terms of the base classes `DTIME` and
 `DSPACE`.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **P** is the class of languages decidable by a deterministic TM in
     polynomial time: `P = ⋃_k DTIME(n^k)`. -/

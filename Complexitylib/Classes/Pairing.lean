@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Mathlib.Algebra.Polynomial.Eval.Defs
-
-namespace Complexity
 
 /-!
 # Pairing and relation predicates
@@ -11,6 +14,8 @@ used to encode `(x, y)` as a single binary string for verification by a TM, alon
 the shared predicates `PolyBalanced` and `pairLang` used by FNP, FNL, and other
 search-problem classes.
 -/
+
+namespace Complexity
 
 /-- Encode a pair of binary strings as a single binary string.
     Each bit of `x` is doubled (`false ↦ [false, false]`, `true ↦ [true, true]`),
@@ -82,6 +87,8 @@ theorem pair_inj {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
       subst hb; subst hx
       exact ⟨rfl, hy⟩
 
+/-- `unpair?` is a left inverse of `pair`: decoding an encoded pair
+    recovers exactly its two components. -/
 @[simp] theorem unpair?_pair (x y : List Bool) :
     unpair? (pair x y) = some (x, y) := by
   induction x with
@@ -91,6 +98,8 @@ theorem pair_inj {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
     rw [pair_cons_eq]
     cases b <;> simp [unpair?, ih]
 
+/-- Soundness of the decoder: if `unpair?` succeeds on `z`, producing `(x, y)`,
+    then `z` was exactly the encoding `pair x y`. -/
 theorem eq_pair_of_unpair?_eq_some {z x y : List Bool} (h : unpair? z = some (x, y)) :
     z = pair x y := by
   have hsound :
@@ -131,6 +140,8 @@ theorem eq_pair_of_unpair?_eq_some {z x y : List Bool} (h : unpair? z = some (x,
                     simpa [pair_cons_eq] using congrArg (fun t => true :: true :: t) hz2
   exact hsound z x y h
 
+/-- `unpair? z` returns `some (x, y)` if and only if `z = pair x y`,
+    characterizing exactly which strings are valid pair encodings. -/
 theorem unpair?_eq_some_iff {z x y : List Bool} :
     unpair? z = some (x, y) ↔ z = pair x y := by
   constructor

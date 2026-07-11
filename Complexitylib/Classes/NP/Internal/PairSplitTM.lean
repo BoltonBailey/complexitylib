@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.Pairing
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
-
-namespace Complexity
 
 /-!
 # `pairSplitCoreTM`: split `pair x y` into two work tapes
@@ -14,9 +17,13 @@ level. Given an input tape containing `pair x y`, the machine copies:
 - the suffix `y` onto work tape `yIdx`.
 
 The machine is intended as the front half of a deterministic verifier pipeline.
-For now, the main exposed artifact is the concrete TM plus the indexing lemmas
-its correctness proof uses.
+The main exposed artifacts are the concrete TM, its running-time function
+`pairSplitCoreTime`, and the end-to-end correctness theorems
+`pairSplitCoreTM_from_scanX_initTape_move_right` and
+`pairSplitCoreTM_from_init_initTape_move_right`.
 -/
+
+namespace Complexity
 
 namespace TM
 
@@ -24,6 +31,9 @@ namespace TM
 -- State type and machine definition
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- Control states of `pairSplitCoreTM`: `.init` steps off `▷`; `.scanX`,
+`.afterFalse`, and `.writeTrue` decode the doubled-bit prefix (with `01` as
+separator); `.copyY` copies the suffix; `.done` is the halting state. -/
 inductive PairSplitPhase where
   | init
   | scanX

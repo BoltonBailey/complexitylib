@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.P.Defs
-
-namespace Complexity
 
 /-!
 # Polynomial-time many-one reductions and NP-completeness
@@ -18,7 +21,8 @@ The headline application is `SAT.NPComplete_L_SAT` (Cook–Levin), in
 `Complexitylib/SAT/CookLevin.lean`.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **Polynomial-time many-one reduction.** `MapReducesPoly L L'` (written
     `L ≤ₚ L'`) holds when there is a polynomial-time computable function `f`

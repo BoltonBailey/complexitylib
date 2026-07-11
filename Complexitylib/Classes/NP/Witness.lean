@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.FNP
-
-namespace Complexity
 
 /-!
 # NP witness characterization
@@ -47,7 +50,8 @@ All downstream consequences (including `SAT ∈ NP` conditional on the SAT
 verifier being in P) rest only on that single lemma.
 -/
 
-open Complexity
+namespace Complexity
+
 
 namespace NP
 
@@ -57,6 +61,8 @@ namespace NP
 def witnessLang (R : List Bool → List Bool → Prop) : Language :=
   {x | ∃ y, R x y}
 
+/-- Membership in `witnessLang R` unfolds to the existence of a witness:
+    `x ∈ witnessLang R ↔ ∃ y, R x y`. -/
 @[simp] theorem mem_witnessLang {R : List Bool → List Bool → Prop} {x : List Bool} :
     x ∈ witnessLang R ↔ ∃ y, R x y := Iff.rfl
 

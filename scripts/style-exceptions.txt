@@ -1,7 +1,6 @@
 # Style-lint baseline: pre-existing violations grandfathered during
 # the quality refactor. This file only shrinks; regenerate with
 #   python3 scripts/lint_style.py --update
-Complexitylib/Circuits.lean : copyright
 Complexitylib/Circuits/AC0/Defs.lean : copyright
 Complexitylib/Circuits/AON.lean : copyright
 Complexitylib/Circuits/AON/Defs.lean : copyright
@@ -46,33 +45,9 @@ Complexitylib/Circuits/Valiant.lean : copyright
 Complexitylib/Circuits/XOR.lean : copyright
 Complexitylib/Classes.lean : copyright
 Complexitylib/Classes.lean : moduleDoc
-Complexitylib/Classes/Containments.lean : copyright
 Complexitylib/Classes/Containments.lean : lineLength
-Complexitylib/Classes/DTISP.lean : copyright
-Complexitylib/Classes/Exponential.lean : copyright
-Complexitylib/Classes/FNP.lean : copyright
-Complexitylib/Classes/FNP/Defs.lean : copyright
-Complexitylib/Classes/FNP/Internal.lean : copyright
-Complexitylib/Classes/Hierarchy.lean : copyright
-Complexitylib/Classes/L.lean : copyright
-Complexitylib/Classes/NP.lean : copyright
-Complexitylib/Classes/NP/Internal/PairBuildTM.lean : copyright
-Complexitylib/Classes/NP/Internal/PairSplitTM.lean : copyright
 Complexitylib/Classes/NP/Internal/PairSplitTM.lean : lineLength
-Complexitylib/Classes/NP/Reduction.lean : copyright
-Complexitylib/Classes/NP/Witness.lean : copyright
-Complexitylib/Classes/Negligible.lean : copyright
-Complexitylib/Classes/P.lean : copyright
-Complexitylib/Classes/P/Defs.lean : copyright
-Complexitylib/Classes/P/Internal.lean : copyright
-Complexitylib/Classes/PPoly.lean : copyright
-Complexitylib/Classes/PPoly/Defs.lean : copyright
-Complexitylib/Classes/Pairing.lean : copyright
 Complexitylib/Classes/Pairing.lean : lineLength
-Complexitylib/Classes/Randomized.lean : copyright
-Complexitylib/Classes/Space.lean : copyright
-Complexitylib/Classes/Time.lean : copyright
-Complexitylib/Languages.lean : copyright
 Complexitylib/Languages/AllSymbol.lean : copyright
 Complexitylib/Languages/AnBn.lean : copyright
 Complexitylib/Languages/AnBn.lean : lineLength
@@ -97,7 +72,6 @@ Complexitylib/Models/TuringMachine/UTM/BodyInternal.lean : lineLength
 Complexitylib/Models/TuringMachine/UTM/ClockedUtm.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/PairSelf.lean : rootEscape
 Complexitylib/Models/TuringMachine/UTM/VTape.lean : rootEscape
-Complexitylib/SAT.lean : copyright
 Complexitylib/SAT/CookLevin.lean : copyright
 Complexitylib/SAT/CookLevin.lean : lineLength
 Complexitylib/SAT/CookLevin/Assembly.lean : copyright
@@ -125,4 +99,3 @@ Complexitylib/SAT/Verifier.lean : lineLength
 Complexitylib/SAT/VerifierTM.lean : copyright
 Complexitylib/SAT/VerifierTM.lean : lineLength
 Complexitylib/SAT/VerifierTM.lean : rootEscape
-Complexitylib/TimeConstructible.lean : copyright

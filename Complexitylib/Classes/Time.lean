@@ -1,7 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
-
-namespace Complexity
 
 /-!
 # Base time complexity classes
@@ -14,7 +17,8 @@ Both use `=O` (Mathlib's `IsBigO` lifted to `ℕ → ℕ`) to express asymptotic
 bounds.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- `DTIME(T)` is the class of languages decidable by a deterministic TM in
     time `O(T(n))` (AB Definition 1.6). The machine may have any number of

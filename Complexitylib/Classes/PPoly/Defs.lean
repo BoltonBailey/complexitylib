@@ -1,8 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Family.Defs
 import Complexitylib.Circuits.AON.Defs
 import Complexitylib.Models.TuringMachine
-
-namespace Complexity
 
 /-!
 # Nonuniform circuit classes — definitions
@@ -17,6 +20,8 @@ after elementary overhead simulations, but exact `SIZE` bounds are
 convention-dependent. Basis/size invariance must be proved rather than treated
 as definitional.
 -/
+
+namespace Complexity
 
 namespace BoolFunFamily
 

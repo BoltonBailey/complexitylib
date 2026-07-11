@@ -1,20 +1,20 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.P.Defs
 import Complexitylib.Classes.P.Internal
-
-namespace Complexity
 
 /-!
 # P — surface layer
 
-This file aggregates the definitions and theorems for DTIME, P, DSPACE, and PSPACE.
+This file aggregates the definitions and theorems for P, FP, and PSPACE.
 
 ## Definitions (from `P/Defs.lean`)
 
-- `DTIME` — deterministic time complexity class (AB Definition 1.6)
 - `P` — polynomial time: `⋃ k, DTIME(n^k)`
 - `FP` — functions computable in polynomial time
-- `DSPACE` — deterministic space complexity class
-- `NSPACE` — nondeterministic space complexity class
 - `PSPACE` — polynomial space: `⋃ k, DSPACE(n^k)`
 
 ## Theorems
@@ -22,7 +22,8 @@ This file aggregates the definitions and theorems for DTIME, P, DSPACE, and PSPA
 - `DTIME_union` — DTIME is closed under union (AB Claim 1.5)
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **DTIME is closed under union** (AB Claim 1.5): if `L₁ ∈ DTIME(T₁)` and
     `L₂ ∈ DTIME(T₂)`, then `L₁ ∪ L₂ ∈ DTIME(T₁ + T₂)`. -/

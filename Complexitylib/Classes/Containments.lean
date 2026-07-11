@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.P
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.Randomized
@@ -5,8 +10,6 @@ import Complexitylib.Classes.L
 import Complexitylib.Classes.Exponential
 import Complexitylib.Models.TuringMachine.Internal
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
-
-namespace Complexity
 
 /-!
 # Containment relations between complexity classes
@@ -35,9 +38,18 @@ This file collects the standard containment results between complexity classes.
 - `DSPACE_subset_NSPACE` — `DSPACE(S) ⊆ NSPACE(S)`
 - `NSPACE_mono` — `S₁ =O S₂ → NSPACE(S₁) ⊆ NSPACE(S₂)`
 - `L_subset_NL` — `L ⊆ NL`
+- `ZPP_subset_RP` — `ZPP ⊆ RP`
+- `ZPP_subset_coRP` — `ZPP ⊆ coRP`
+- `DTIME_subset_NSPACE` — `DTIME(T) ⊆ NSPACE(T)`
+- `P_subset_NPSPACE` — `P ⊆ NPSPACE`
+- `P_subset_NEXP` — `P ⊆ NEXP`
+- `P_subset_PP` — `P ⊆ PP`
+- `P_union` — `L₁ ∈ P → L₂ ∈ P → L₁ ∪ L₂ ∈ P` (P closed under union)
+- `P_inter` — `L₁ ∈ P → L₂ ∈ P → L₁ ∩ L₂ ∈ P` (P closed under intersection)
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **DTIME ⊆ NTIME**: every language decidable by a DTM in time `O(T)` is also
     decidable by an NTM in time `O(T)`, via the `TM.toNTM` embedding. -/
@@ -238,7 +250,7 @@ theorem DTIME_subset_NSPACE (T : ℕ → ℕ) : DTIME T ⊆ NSPACE T :=
 theorem P_subset_NPSPACE : P ⊆ NPSPACE :=
   Set.iUnion_mono fun _ => (DTIME_subset_DSPACE _).trans (DSPACE_subset_NSPACE _)
 
-/-- **EXP ⊆ NEXP** was proved above; this is the containment via `P ⊆ EXP`. -/
+/-- **P ⊆ NEXP** via `P ⊆ EXP ⊆ NEXP`. -/
 theorem P_subset_NEXP : P ⊆ NEXP :=
   P_subset_EXP.trans EXP_subset_NEXP
 
