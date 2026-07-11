@@ -70,24 +70,21 @@ lemma one_le_canonicalLabel (G : Digraph V) (v : V) :
   show 1 ≤ _ + 1
   omega
 
-/-- In an acyclic digraph, the canonical label is bounded above by the
-graph's depth. (In a cyclic digraph the canonical label can exceed the
-walk-supremum `depth = 0`, so acyclicity is needed.) -/
-lemma canonicalLabel_le_depth
-    (G : Digraph V) (hac : IsAcyclic G) (v : V) :
+/-- The canonical label is bounded above by the graph's simple-path depth. -/
+lemma canonicalLabel_le_depth (G : Digraph V) (v : V) :
     G.canonicalLabel v ≤ G.depth := by
   set S : Set ℕ := { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v }
   show sSup S + 1 ≤ G.depth
-  obtain ⟨p, ⟨hpath, _⟩, _⟩ :=
+  obtain ⟨p, hpath, _⟩ :=
     Nat.sSup_mem ⟨0, zero_mem_canonicalLabel_set G v⟩ (canonicalLabel_set_bddAbove G v)
-  exact le_csSup hac ⟨p, hpath⟩
+  exact le_csSup (Digraph.pathLength_bddAbove G) ⟨p, hpath⟩
 
 /-- Under `G.depth ≤ 2 ^ k` (with `G` acyclic), every canonical label
 lies in `{1,...,2^k}`, so `ℓ(v) - 1 < 2 ^ k`. -/
 private lemma canonicalLabel_sub_one_lt_two_pow
-    (G : Digraph V) (hac : IsAcyclic G) {k : ℕ} (hd : G.depth ≤ 2 ^ k)
+    (G : Digraph V) {k : ℕ} (hd : G.depth ≤ 2 ^ k)
     (v : V) : G.canonicalLabel v - 1 < 2 ^ k := by
-  have h1 : G.canonicalLabel v ≤ 2 ^ k := (canonicalLabel_le_depth G hac v).trans hd
+  have h1 : G.canonicalLabel v ≤ 2 ^ k := (canonicalLabel_le_depth G v).trans hd
   have h2 : 1 ≤ G.canonicalLabel v := one_le_canonicalLabel G v
   omega
 
@@ -257,10 +254,11 @@ lemma depth_le_image_card (G : Digraph V)
     G.depth ≤ (Finset.univ.image ℓ).card := by
   unfold Digraph.depth
   apply csSup_le
-  · exact ⟨0, fun (i : Fin 0) => i.elim0, fun i _ => i.elim0⟩
+  · exact ⟨0, fun (i : Fin 0) => i.elim0,
+      ⟨fun i _ => i.elim0, fun i => i.elim0⟩⟩
   · rintro m ⟨p, hp⟩
     have hinj : Function.Injective (fun i : Fin m => ℓ (p i)) :=
-      (legal_label_strictMono hℓ hp).injective
+      (legal_label_strictMono hℓ hp.1).injective
     have hsubset :
         (Finset.univ : Finset (Fin m)).image (fun i => ℓ (p i)) ⊆
           Finset.univ.image ℓ := by
@@ -373,8 +371,8 @@ private lemma firstDifferBit_mem_Ioc
   have h1' : 1 ≤ G.canonicalLabel e.1 := one_le_canonicalLabel G _
   have hab : G.canonicalLabel e.1 - 1 ≠ G.canonicalLabel e.2 - 1 := by omega
   obtain ⟨hpos, hle, _⟩ := firstDifferBit_of_ne hab
-    (canonicalLabel_sub_one_lt_two_pow G hac hd _)
-    (canonicalLabel_sub_one_lt_two_pow G hac hd _)
+    (canonicalLabel_sub_one_lt_two_pow G hd _)
+    (canonicalLabel_sub_one_lt_two_pow G hd _)
   exact Finset.mem_Ioc.mpr ⟨hpos, hle⟩
 
 /-- **Partition.** When `G` is acyclic and `G.depth ≤ 2 ^ k`, every
@@ -635,9 +633,9 @@ lemma depth_deleteEdges_levelEdges_le
       canonicalLabel_isLegal G hac _ _ huv_G
     have hcu_pos : 1 ≤ G.canonicalLabel u := one_le_canonicalLabel G _
     have hu_lt : G.canonicalLabel u - 1 < 2 ^ k :=
-      canonicalLabel_sub_one_lt_two_pow G hac hd _
+      canonicalLabel_sub_one_lt_two_pow G hd _
     have hv_lt : G.canonicalLabel v - 1 < 2 ^ k :=
-      canonicalLabel_sub_one_lt_two_pow G hac hd _
+      canonicalLabel_sub_one_lt_two_pow G hd _
     have hxy : G.canonicalLabel u - 1 < G.canonicalLabel v - 1 := by omega
     exact maskOutI_lt_of_firstDifferBit_not_mem hxy hu_lt hv_lt hfd_not_in_I
   have himg : (Finset.univ.image ℓ).card ≤ 2 ^ (k - I.card) :=

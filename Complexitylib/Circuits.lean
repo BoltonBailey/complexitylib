@@ -63,7 +63,7 @@ convention.
   upper bound (`sizeComplexity_existsQuantify_le_min`).
 
 * **Valiant's depth reduction** (`Valiant.depth_reduction`):
-  In any digraph with `S` edges and depth at most `2^k`, for any `r ≤ k`
+  In any acyclic digraph with `S` edges and depth at most `2^k`, for any `r ≤ k`
   one can remove a set of at most `r · S / k` edges so that the remaining
   digraph has depth at most `2^k / 2^r`.
 

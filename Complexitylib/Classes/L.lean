@@ -15,19 +15,19 @@ import Mathlib.Data.Nat.Log
 This file defines the log-space complexity classes **L**, **NL**, **coNL**,
 **FL**, and the search problem classes **FNL**, **TFNL**.
 
-These classes require the machine to be a *transducer* (`IsTransducer`): the
-output tape head never moves left, preventing it from being used as extra
-workspace beyond the `O(log n)` space bound on work tapes.
-
-The base parametric classes `DSPACE` and `NSPACE` (which do not require the
-transducer property) are defined in `Space.lean`.
+These classes use the library's honest auxiliary-space convention: work-tape
+travel is bounded, excess input-head travel is charged, and language deciders
+also charge two-way output-tape travel beyond the verdict cell. They additionally
+use the *transducer* discipline (`IsTransducer`), under which the output head
+never moves left. `TM.ComputesInSpace` includes this discipline internally so
+function output may have unbounded length without becoming read-write workspace.
 -/
 
 namespace Complexity
 
 
 /-- **L** (LOGSPACE) is the class of languages decidable by a deterministic
-    log-space transducer: a DTM with `O(log n)` work tape space whose output
+    log-space transducer: a DTM with `O(log n)` auxiliary space whose output
     tape head never moves left. The transducer constraint prevents the output
     tape from being used as extra workspace beyond the space bound. -/
 def L : Set Language :=
@@ -35,7 +35,7 @@ def L : Set Language :=
     tm.IsTransducer ∧ tm.DecidesInSpace Lang f ∧ f =O (fun n => Nat.log 2 n)}
 
 /-- **NL** is the class of languages decidable by a nondeterministic log-space
-    transducer: an NTM with `O(log n)` work tape space whose output tape head
+    transducer: an NTM with `O(log n)` auxiliary space whose output tape head
     never moves left. -/
 def NL : Set Language :=
   {Lang | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
@@ -46,11 +46,11 @@ def NL : Set Language :=
 def coNL : Set Language := complClass NL
 
 /-- **FL** is the class of functions computable by a deterministic log-space
-    transducer: a DTM with `O(log n)` work tape space whose output tape head
+    transducer: a DTM with `O(log n)` auxiliary space whose output tape head
     never moves left. -/
 def FL : Set (List Bool → List Bool) :=
   {f | ∃ (k : ℕ) (tm : TM k) (S : ℕ → ℕ),
-    tm.IsTransducer ∧ tm.ComputesInSpace f S ∧ S =O (fun n => Nat.log 2 n)}
+    tm.ComputesInSpace f S ∧ S =O (fun n => Nat.log 2 n)}
 
 /-- **FNL** is the class of search problems with log-space verifiable relations:
     binary relations that are polynomially balanced (witnesses have poly-bounded

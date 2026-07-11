@@ -71,18 +71,27 @@ theorem P_subset_EXP : P ⊆ EXP :=
   Set.iUnion_mono fun _ => DTIME_mono (BigO.of_le (fun _ => Nat.lt_two_pow_self.le))
 
 /-- **DTIME ⊆ DSPACE**: a DTM running in time `T` uses at most
-    `O(T)` space, since the tape heads can move at most one cell per step. -/
+    `O(T)` auxiliary space, since every two-way tape head can move at most one
+    cell per step. -/
 theorem DTIME_subset_DSPACE (T : ℕ → ℕ) : DTIME T ⊆ DSPACE T := by
   intro L ⟨k, tm, f, hdec, hbig⟩
   refine ⟨k, tm, f, ⟨?_, ?_⟩, hbig⟩
-  · -- Space bound: all reachable configs have work tape heads ≤ f(|x|)
-    intro x c' hreach i
+  · -- Space bound: all reachable configurations obey the honest tape bounds
+    intro x c' hreach
     obtain ⟨c_halt, t_halt, hle, hreachIn_halt, hhalt, _, _⟩ := hdec x
     obtain ⟨t, hreachIn⟩ := TM.reaches_to_reachesIn tm hreach
     have ht_le := TM.reachesIn_le_halt tm hreachIn hreachIn_halt hhalt
-    have hbound := TM.work_head_reachesIn_bound tm hreachIn i
-    have := TM.initCfg_work_head_zero tm x i
-    omega
+    refine ⟨⟨?_, ?_⟩, ?_⟩
+    · intro i
+      have hbound := TM.work_head_reachesIn_bound tm hreachIn i
+      have hzero := TM.initCfg_work_head_zero tm x i
+      omega
+    · have hbound := TM.input_head_reachesIn_bound tm hreachIn
+      have hzero := TM.initCfg_input_head_zero tm x
+      omega
+    · have hbound := TM.output_head_reachesIn_bound tm hreachIn
+      have hzero := TM.initCfg_output_head_zero tm x
+      omega
   · -- Decision: reachesIn implies reaches, same output
     intro x
     obtain ⟨c', t, hle, hreachIn, hhalt, hyes, hno⟩ := hdec x

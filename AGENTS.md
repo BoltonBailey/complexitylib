@@ -25,7 +25,7 @@ Quality gates (also run in CI; see CONTRIBUTING.md):
 ```bash
 python3 scripts/lint_style.py        # headers, module docs, 100-col, _root_ escapes
 lake exe runLinter Complexitylib     # Mathlib/Batteries env linters
-lake env lean scripts/AxiomGuard.lean  # headline theorems on std axioms only
+lake env lean scripts/AxiomGuard.lean  # all project declarations on std axioms only
 ```
 
 Both linters are hard gates: any violation fails the run. The refactor cleared

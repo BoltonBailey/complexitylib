@@ -25,7 +25,7 @@ def NP : Set Language :=
 def coNP : Set Language := complClass NP
 
 /-- **NPSPACE** is the class of languages decidable by a nondeterministic TM
-    using polynomial space on work tapes: `NPSPACE = ⋃_k NSPACE(n^k)`. -/
+    using polynomial auxiliary space: `NPSPACE = ⋃_k NSPACE(n^k)`. -/
 def NPSPACE : Set Language :=
   ⋃ k : ℕ, NSPACE (· ^ k)
 

@@ -310,14 +310,23 @@ theorem liftTM_decidesInSpace (tm : TM n) (m : ℕ) {L : Language} {S : ℕ → 
     (tm.liftTM m).DecidesInSpace L (fun k => max (S k) 1) := by
   obtain ⟨hspace, hdec⟩ := h
   constructor
-  · intro x C' hreach i
+  · intro x C' hreach
     rcases liftTM_reaches_init_inv tm m x hreach with rfl | ⟨c', hc', rfl⟩
-    · exact Nat.zero_le _
-    · by_cases hik : i.val < n
-      · rw [liftCfg_work_lt tm m c' i hik]
-        exact le_trans (hspace x c' hc' ⟨i.val, hik⟩) (le_max_left _ _)
-      · rw [liftCfg_work_ge tm m c' i (Nat.le_of_not_lt hik)]
-        exact le_max_right _ _
+    · simp [Cfg.WithinDecisionSpace, Cfg.WithinAuxSpace]
+    · obtain ⟨⟨hwork, hin⟩, hout⟩ := hspace x c' hc'
+      refine ⟨⟨?_, ?_⟩, ?_⟩
+      · intro j
+        by_cases hj : j.val < n
+        · rw [liftCfg_work_lt tm m c' j hj]
+          exact (hwork ⟨j.val, hj⟩).trans (le_max_left _ _)
+        · rw [liftCfg_work_ge tm m c' j (Nat.le_of_not_lt hj)]
+          exact le_max_right _ _
+      · simp only [liftCfg_input]
+        have := le_max_left (S x.length) 1
+        omega
+      · simp only [liftCfg_output]
+        have := le_max_left (S x.length) 1
+        omega
   · intro x
     obtain ⟨c', hreach, hhalt, hyes, hno⟩ := hdec x
     obtain ⟨C', hR, hstate, hout⟩ := liftTM_reaches_init tm m x hreach

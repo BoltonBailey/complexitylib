@@ -4,28 +4,41 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib
+import Complexitylib.Circuits.Encoding.Validation
+import Complexitylib.Models.TuringMachine.SingleTape.Validation
 
 /-!
 # Axiom guard
 
-Asserts that the library's headline theorems depend only on the three standard
-axioms (`propext`, `Classical.choice`, `Quot.sound`) — no `sorry`, no custom
-axioms. Run with:
+Asserts that every kernel declaration compiled from a `Complexitylib` module
+depends only on the three standard axioms (`propext`, `Classical.choice`,
+`Quot.sound`). Auditing definitions and opaque declarations as well as proofs
+prevents nonstandard axioms from being hidden behind a non-theorem declaration.
+Run with:
 
 ```bash
 lake env lean scripts/AxiomGuard.lean
 ```
 
-CI runs this on every push. When a headline theorem is renamed, update
-`headlineTheorems` in the same commit.
+The audit selects declarations by their module of origin, not by declaration
+name. It therefore covers private and generated declarations as well as the
+library's extensions in foreign namespaces such as `Digraph` and `Nat`. The
+two executable validation modules are imported explicitly because they are
+intentionally absent from the public `Complexitylib` import graph.
+
+CI runs this on every push. `headlineTheorems` remains a readable index and a
+rename smoke test; it does not determine the scope of the axiom audit.
 -/
 
 open Lean
 
-/-- The axioms a headline theorem is allowed to depend on. -/
+/-- The axioms a Complexitylib declaration is allowed to depend on. -/
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 
-/-- The library's headline theorems, fully qualified. -/
+/-- The module-name prefix identifying declarations compiled from this library. -/
+def complexitylibModulePrefix : Name := `Complexitylib
+
+/-- A readable index of the library's headline theorems. -/
 def headlineTheorems : List Name := [
   -- Cook–Levin / NP-completeness
   `Complexity.SAT.NPComplete_language,
@@ -42,17 +55,73 @@ def headlineTheorems : List Name := [
   `Complexity.P_subset_NP,
   `Complexity.P_subset_PSPACE,
   `Complexity.RP_subset_NP,
-  `Complexity.BPP_subset_PP
+  `Complexity.BPP_subset_PP,
+  -- Circuit lower and upper bounds
+  `Complexity.shannon_lower_bound_circuit,
+  `Complexity.shannon_sizeComplexity,
+  `Complexity.shannon_upper_bound,
+  `Complexity.Circuit.card_essentialInputs_le_mul_size,
+  `Complexity.sizeComplexity_xorBool_ge,
+  `Complexity.Valiant.depth_reduction
 ]
+
+/-- One declaration with nonstandard axiom dependencies. -/
+structure AuditFailure where
+  moduleName : Name
+  declarationName : Name
+  disallowedAxioms : Array Name
+
+/-- Render one audit failure as an indented diagnostic line. -/
+def AuditFailure.format (failure : AuditFailure) : String :=
+  let axioms := failure.disallowedAxioms.toList.map fun ax => s!"`{ax}`"
+  s!"\n  `{failure.declarationName}` (module `{failure.moduleName}`): " ++
+    String.intercalate ", " axioms
+
+/-- Return all nonstandard axioms on which a declaration depends. -/
+def disallowedAxiomsOf (declarationName : Name) : CoreM (Array Name) := do
+  let axioms ← collectAxioms declarationName
+  return (axioms.filter fun ax => !allowedAxioms.contains ax).qsort Name.lt
 
 open Elab Command in
 run_cmd do
   let env ← getEnv
-  for thm in headlineTheorems do
-    unless env.contains thm do
-      throwError "axiom guard: unknown declaration `{thm}` — was it renamed?"
-    let axs ← liftCoreM (collectAxioms thm)
-    for ax in axs do
-      unless allowedAxioms.contains ax do
-        throwError "axiom guard: `{thm}` depends on disallowed axiom `{ax}`"
-  logInfo s!"axiom guard: {headlineTheorems.length} headline theorems use only standard axioms"
+  for headline in headlineTheorems do
+    unless env.contains headline do
+      throwError "axiom guard: unknown headline `{headline}` — was it renamed?"
+
+  let mut moduleCount := 0
+  let mut declarationCount := 0
+  let mut theoremCount := 0
+  let mut axiomCount := 0
+  let mut failures : Array AuditFailure := #[]
+  for h : moduleIdx in *...env.header.moduleData.size do
+    let moduleName := env.header.moduleNames[moduleIdx]!
+    if complexitylibModulePrefix.isPrefixOf moduleName then
+      moduleCount := moduleCount + 1
+      let moduleData := env.header.moduleData[moduleIdx]
+      unless moduleData.constNames.size == moduleData.constants.size do
+        throwError "axiom guard: malformed declaration table for module `{moduleName}`"
+      for h : declarationIdx in *...moduleData.constants.size do
+        declarationCount := declarationCount + 1
+        let declarationName := moduleData.constNames[declarationIdx]!
+        match moduleData.constants[declarationIdx] with
+        | .thmInfo _ => theoremCount := theoremCount + 1
+        | .axiomInfo _ => axiomCount := axiomCount + 1
+        | _ => pure ()
+        let disallowed ← liftCoreM (disallowedAxiomsOf declarationName)
+        unless disallowed.isEmpty do
+          failures := failures.push { moduleName, declarationName, disallowedAxioms := disallowed }
+
+  unless failures.isEmpty do
+    failures := failures.qsort fun left right =>
+      Name.lt left.declarationName right.declarationName
+    let details := String.join (failures.toList.map AuditFailure.format)
+    let failureMessage : MessageData :=
+      m!"axiom guard: {failures.size} Complexitylib declarations depend on " ++
+        m!"disallowed axioms:{details}"
+    throwError failureMessage
+
+  let summary : MessageData :=
+    m!"axiom guard: {declarationCount} declarations ({theoremCount} theorems, " ++
+      m!"{axiomCount} axioms) from {moduleCount} Complexitylib modules use only standard axioms"
+  logInfo summary

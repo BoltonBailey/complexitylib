@@ -32,6 +32,7 @@ Arora–Barak (*Computational Complexity: A Modern Approach*, Definitions
 - `TM.Computes` — computing a function (existential over time bound)
 - `TM.Accepts`, `TM.AcceptsInTime` — deterministic acceptance
 - `NTM.Accepts`, `NTM.AcceptsInTime` — nondeterministic acceptance (existential)
+- `Cfg.WithinAuxSpace`, `Cfg.WithinDecisionSpace` — honest tape-space bounds
 - `TM.DecidesInTime`, `NTM.DecidesInTime` — deciding a language within a time bound
 - `TM.DecidesInTimeSpace` — deciding with simultaneous time and space bounds
 - `NTM.acceptCount`, `NTM.acceptProb` — counting/probabilistic acceptance
@@ -384,6 +385,24 @@ abbrev init (qstart : Q) (x : List Bool) : Cfg n Q :=
 abbrev isHalted (qhalt : Q) (c : Cfg n Q) : Prop :=
   c.state = qhalt
 
+/-- The auxiliary-space bound for a configuration on an input of length
+    `inputLength`. Work-tape cells through `space` are available, while the
+    input itself and its first trailing blank are free; travel farther into the
+    input tape's blank tail is charged against `space`.
+
+    This predicate deliberately omits the output tape. It is suitable for
+    function computation only when the machine also satisfies the one-way
+    output discipline `TM.IsTransducer`. -/
+def WithinAuxSpace (c : Cfg n Q) (inputLength space : ℕ) : Prop :=
+  (∀ i, (c.work i).head ≤ space) ∧
+  c.input.head ≤ inputLength + space + 1
+
+/-- The space bound for a language-decider configuration. In addition to
+    `WithinAuxSpace`, the output head is bounded by `space + 1`: cell 1 is the
+    free verdict cell, and any farther two-way output-tape travel is charged. -/
+def WithinDecisionSpace (c : Cfg n Q) (inputLength space : ℕ) : Prop :=
+  c.WithinAuxSpace inputLength space ∧ c.output.head ≤ space + 1
+
 end Cfg
 
 /-- A deterministic Turing machine with `n` work tapes.
@@ -509,36 +528,45 @@ def ComputesInTime (tm : TM n) (f : List Bool → List Bool) (T : ℕ → ℕ) :
 def Computes (tm : TM n) (f : List Bool → List Bool) : Prop :=
   ∃ T, tm.ComputesInTime f T
 
-/-- DTM decides `L` using at most `S(|x|)` space on work tapes. Space is
-    measured as the maximum work tape head position reached during computation:
-    every reachable configuration has all work tape heads at position ≤ `S(|x|)`.
-    The input tape (read-only) and output tape are not counted. The machine
-    halts on all inputs with correct output. -/
+/-- DTM decides `L` using at most `S(|x|)` auxiliary space. Every reachable
+    configuration has work heads at position at most `S(|x|)`, input head at
+    position at most `|x| + S(|x|) + 1`, and output head at position at most
+    `S(|x|) + 1`. Thus the input region, its first trailing blank, and output
+    verdict cell 1 are free, but neither infinite tape can become uncharged
+    two-way workspace. The machine halts on all inputs with correct output. -/
 def DecidesInSpace (tm : TM n) (L : Language) (S : ℕ → ℕ) : Prop :=
-  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  (∀ x c', tm.reaches (tm.initCfg x) c' →
+    c'.WithinDecisionSpace x.length (S x.length)) ∧
   ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
 /-- DTM decides `L` within time `T(|x|)` and space `S(|x|)` simultaneously:
     a single machine halts in bounded time with correct output, and every
-    reachable configuration has bounded work tape heads. -/
+    reachable configuration satisfies the honest auxiliary-space convention of
+    `Cfg.WithinDecisionSpace`. -/
 def DecidesInTimeSpace (tm : TM n) (L : Language) (T S : ℕ → ℕ) : Prop :=
-  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  (∀ x c', tm.reaches (tm.initCfg x) c' →
+    c'.WithinDecisionSpace x.length (S x.length)) ∧
   ∀ x, ∃ c' t, t ≤ T x.length ∧ tm.reachesIn t (tm.initCfg x) c' ∧ tm.halted c' ∧
     (x ∈ L → c'.output.cells 1 = Γ.one) ∧ (x ∉ L → c'.output.cells 1 = Γ.zero)
 
 /-- The output tape head never moves left — the machine is a *transducer*.
-    This prevents the output tape from being used as extra workspace. Required
-    for log-space classes (L, NL, FL) where unbounded output space would
-    otherwise violate the space bound. -/
+    This prevents earlier output from being reread as workspace while allowing
+    unbounded output length. `ComputesInSpace` requires this discipline; the
+    decision-space predicates separately bound two-way output-head travel. -/
 def IsTransducer (tm : TM n) : Prop :=
   ∀ q iHead wHeads oHead,
     let (_, _, _, _, _, outDir) := tm.δ q iHead wHeads oHead
     outDir ≠ Dir3.left
 
-/-- DTM computes function `f` using at most `S(|x|)` space on work tapes. -/
+/-- DTM computes function `f` using at most `S(|x|)` auxiliary space.
+    Work-tape travel and input-head travel beyond the input's first trailing
+    blank are bounded by `Cfg.WithinAuxSpace`. The output length is not bounded:
+    instead, `IsTransducer` makes the output one-way so it cannot serve as
+    read-write workspace. -/
 def ComputesInSpace (tm : TM n) (f : List Bool → List Bool) (S : ℕ → ℕ) : Prop :=
-  (∀ x c', tm.reaches (tm.initCfg x) c' → ∀ i, (c'.work i).head ≤ S x.length) ∧
+  tm.IsTransducer ∧
+  (∀ x c', tm.reaches (tm.initCfg x) c' → c'.WithinAuxSpace x.length (S x.length)) ∧
   ∀ x, ∃ c', tm.reaches (tm.initCfg x) c' ∧ tm.halted c' ∧ c'.output.HasOutput (f x)
 
 /-- Transitivity: if `c₁` reaches `c₂` in `t₁` steps and `c₂` reaches `c₃`
@@ -769,22 +797,21 @@ noncomputable def outputProb (tm : NTM n) (x : List Bool) (T : ℕ)
     (y : List Bool) : ℚ :=
   (tm.outputCount x T y : ℚ) / (2 ^ T : ℚ)
 
-/-- NTM decides `L` using at most `S(|x|)` space on work tapes. Space is
-    measured as the maximum work tape head position reached during computation:
-    every intermediate configuration on every computation path has all work tape
-    heads at position ≤ `S(|x|)`. The input tape (read-only) and output tape are
-    not counted. There exists a time bound within which all paths halt and decide
-    correctly. -/
+/-- NTM decides `L` using at most `S(|x|)` auxiliary space. Every intermediate
+    configuration on every path obeys `Cfg.WithinDecisionSpace`: work heads are
+    bounded by `S`, the finite input plus first blank is free but farther input
+    travel is charged, and only output verdict cell 1 is free. There exists a
+    time bound within which all paths halt and decide correctly. -/
 def DecidesInSpace (tm : NTM n) (L : Language) (S : ℕ → ℕ) : Prop :=
   ∃ T, tm.DecidesInTime L T ∧
     ∀ x (choices : Fin (T x.length) → Bool) (t' : ℕ) (ht : t' ≤ T x.length),
-      ∀ i, ((tm.trace t' (fun j => choices ⟨j.val, by omega⟩) (tm.initCfg x)).work i).head
-        ≤ S x.length
+      (tm.trace t' (fun j => choices ⟨j.val, by omega⟩) (tm.initCfg x)).WithinDecisionSpace
+        x.length (S x.length)
 
 /-- The output tape head never moves left — the machine is a *transducer*.
-    This prevents the output tape from being used as extra workspace. Required
-    for log-space classes (NL) where unbounded output space would otherwise
-    violate the space bound. -/
+    This prevents earlier output from being reread as workspace while allowing
+    unbounded output length. Decision-space predicates separately bound two-way
+    output-head travel. -/
 def IsTransducer (tm : NTM n) : Prop :=
   ∀ b q iHead wHeads oHead,
     let (_, _, _, _, _, outDir) := tm.δ b q iHead wHeads oHead

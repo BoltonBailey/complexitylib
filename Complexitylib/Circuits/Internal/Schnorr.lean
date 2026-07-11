@@ -447,44 +447,22 @@ theorem eval_elimGateD {N s : Nat} (d : CircDesc N (s + 1))
 private theorem xor_needs_three_gates {N s : Nat} (hN : 2 ≤ N) (hs : 0 < s) (hs2 : s ≤ 2) :
     ∀ (d : CircDesc N s) (comp : Bool),
     ¬(∀ x : BitString N, eval hs d x = comp.xor (xorBool N x)) := by
-  by_cases hN4 : N ≤ 4
-  · have hs1 : 1 ≤ s := by omega
-    interval_cases N <;> interval_cases s <;> (native_decide +revert)
-  · -- N ≥ 5, s ≤ 2: counting argument
-    intro d comp heval
-    -- Every input is essential → referenced by some gate
-    have hess : ∀ a : Fin N, ∃ g : Fin s,
-        (d g).2.1.1.val = a.val ∨ (d g).2.1.2.val = a.val := by
-      intro a
-      exact eval_essential_means_referenced d hs a
-        ⟨fun _ => false, by
-          rw [heval, heval, xorBool_flip]
-          cases comp <;> cases xorBool N _ <;> simp [Bool.xor]⟩
-    -- Map each input to its value; the image has N elements
-    -- but refs (wire-input values across all gates) has ≤ 2s ≤ 4 elements
-    let refs : Finset Nat := Finset.univ.biUnion fun g : Fin s =>
-      {(d g).2.1.1.val, (d g).2.1.2.val}
-    have hcard : refs.card ≤ 2 * s := by
-      calc refs.card
-          ≤ ∑ g : Fin s, ({(d g).2.1.1.val, (d g).2.1.2.val} : Finset Nat).card :=
-            Finset.card_biUnion_le
-        _ ≤ ∑ _ : Fin s, 2 := Finset.sum_le_sum fun g _ => by
-            apply le_trans (Finset.card_insert_le _ _)
-            simp [Finset.card_singleton]
-        _ = 2 * s := by simp [Finset.sum_const, mul_comm]
-    have hess_mem : ∀ a : Fin N, (a : Nat) ∈ refs := by
-      intro a
-      obtain ⟨g, hg⟩ := hess a
-      exact Finset.mem_biUnion.mpr ⟨g, Finset.mem_univ _, by
-        rcases hg with h | h <;> simp [Finset.mem_insert, Finset.mem_singleton, h]⟩
-    have : N ≤ refs.card := by
-      calc N = ((Finset.univ : Finset (Fin N)).image Fin.val).card := by
-              rw [Finset.card_image_of_injective _ Fin.val_injective, Finset.card_fin]
-        _ ≤ refs.card := Finset.card_le_card fun x hx => by
-            simp [Finset.mem_image] at hx
-            obtain ⟨a, _, rfl⟩ := hx
-            exact hess_mem a
-    omega
+  -- Restricting the first input to `false` reduces parity on `N + 1` inputs
+  -- to parity on `N`, so only the two-input truth table needs finite checking.
+  induction N generalizing s with
+  | zero => omega
+  | succ N ih =>
+      by_cases hN1 : N = 1
+      · subst N
+        -- The two possible gate counts are finite truth-table checks. `+kernel`
+        -- makes the kernel reduce and verify the resulting proof term.
+        interval_cases s <;> (decide +revert +kernel)
+      · have hN' : 2 ≤ N := by omega
+        intro d comp heval
+        apply ih hN' hs hs2 (restrictD d ⟨0, by omega⟩ false) comp
+        intro x
+        rw [eval_restrictD, heval, xorBool_insertAt]
+        simp
 
 /-! ## Restriction eliminates two gates -/
 

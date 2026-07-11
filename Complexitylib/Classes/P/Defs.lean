@@ -29,7 +29,7 @@ def FP : Set (List Bool → List Bool) :=
     tm.ComputesInTime f T ∧ T =O (· ^ d)}
 
 /-- **PSPACE** is the class of languages decidable by a deterministic TM using
-    polynomial space on work tapes: `PSPACE = ⋃_k DSPACE(n^k)`. -/
+    polynomial auxiliary space: `PSPACE = ⋃_k DSPACE(n^k)`. -/
 def PSPACE : Set Language :=
   ⋃ k : ℕ, DSPACE (· ^ k)
 

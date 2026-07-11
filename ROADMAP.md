@@ -451,7 +451,7 @@ without an unjustified formula-size claim.
 **Goal.** Supply the space and alternation results needed by oracle and interactive
 proof tracks.
 
-**Prerequisites.** N1 encodings, existing work-tape space semantics, and N3 QBF
+**Prerequisites.** N1 encodings, existing auxiliary-space semantics, and N3 QBF
 syntax.
 
 **Staged milestones.**

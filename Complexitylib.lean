@@ -20,9 +20,9 @@ surface. Import an area module (`Complexitylib.Models`,
 
 ## Headline theorems
 
-Machine-checked with no `sorry` and no custom axioms — CI asserts each
-depends only on `propext`, `Classical.choice`, and `Quot.sound`
-(`scripts/AxiomGuard.lean`).
+Machine-checked with no `sorry` and no custom axioms — CI audits every
+Complexitylib declaration for dependencies beyond `propext`,
+`Classical.choice`, and `Quot.sound` (`scripts/AxiomGuard.lean`).
 
 **Cook–Levin: SAT is NP-complete.**
 - `Complexity.SAT.NPComplete_language` — `NPComplete SAT.language`

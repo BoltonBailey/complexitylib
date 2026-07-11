@@ -23,7 +23,8 @@ namespace Complexity
 
 /-- `DTISP(T, S)` is the class of languages decidable by a single deterministic
     TM running in time `O(T(n))` and space `O(S(n))` simultaneously
-    (AB Definition 4.11). -/
+    (AB Definition 4.11). Space includes work tapes, excess read-only input-head
+    travel, and two-way output-head travel beyond the free verdict cell. -/
 def DTISP (T S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : TM k) (t s : ℕ → ℕ),
     tm.DecidesInTimeSpace L t s ∧ t =O T ∧ s =O S}

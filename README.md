@@ -20,15 +20,19 @@ lives out of sight in `Internal` modules whose correctness is the type
 checker's job, not yours.
 
 **Concrete over abstract.** Machines, circuits, reductions, and encoders are
-executable definitions, not existence claims. Complexity is measured on real
+given as concrete definitions rather than bare existence claims. Constructions
+parameterized by an abstract finite type may be noncomputable at Lean's
+meta-level because choosing a canonical enumeration uses classical choice; the
+machine or codec semantics remain explicit. Complexity is measured on real
 encodings; parsing, malformed inputs, and output conventions are explicit.
-Constructions expose an exact resource bound first and an asymptotic
-corollary second.
+Constructions expose an exact resource bound first and an asymptotic corollary
+second.
 
 **Nothing on faith.** The library has no `sorry` and no custom axioms:
-`scripts/AxiomGuard.lean` mechanically asserts that the headline theorems
-depend only on Lean's three standard axioms, and CI enforces it — along with
-Mathlib's style and environment linters — on every push.
+`scripts/AxiomGuard.lean` mechanically audits every declaration compiled from
+Complexitylib modules for dependencies beyond Lean's three standard axioms,
+and CI enforces it — along with Mathlib's style and environment linters — on
+every push.
 
 ## How to read the library
 

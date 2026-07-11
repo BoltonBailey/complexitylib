@@ -168,9 +168,10 @@ The last three are the quality gates:
   hygiene, …), also as a hard gate. To suppress a genuinely-intended lint, put
   a documented inline `@[nolint …]` on the declaration — there is no
   project-level baseline.
-- **`scripts/AxiomGuard.lean`** asserts the headline theorems depend only on
-  `propext`, `Classical.choice`, and `Quot.sound`. If you rename a headline
-  theorem, update the list in the same commit.
+- **`scripts/AxiomGuard.lean`** audits every declaration originating in a
+  Complexitylib module and permits dependencies only on `propext`,
+  `Classical.choice`, and `Quot.sound`. Its headline list is also a rename
+  smoke test; update that index when a listed theorem is renamed.
 
 API documentation builds with doc-gen4 from the `docbuild/` subproject
 (`cd docbuild && lake build Complexitylib:docs`); CI publishes it weekly.

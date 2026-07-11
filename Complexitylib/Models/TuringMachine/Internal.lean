@@ -164,6 +164,26 @@ private lemma TM.work_head_step_bound (tm : TM n) {c c' : Cfg n tm.Q}
     rw [← h]
     exact Tape.head_writeAndMove_le _ _ _
 
+/-- The input head grows by at most one in a machine step. -/
+private lemma TM.input_head_step_bound (tm : TM n) {c c' : Cfg n tm.Q}
+    (h : tm.step c = some c') : c'.input.head ≤ c.input.head + 1 := by
+  simp only [TM.step] at h
+  split at h
+  · simp at h
+  · simp only [Option.some.injEq] at h
+    rw [← h]
+    exact Tape.head_move_le _ _
+
+/-- The output head grows by at most one in a machine step. -/
+private lemma TM.output_head_step_bound (tm : TM n) {c c' : Cfg n tm.Q}
+    (h : tm.step c = some c') : c'.output.head ≤ c.output.head + 1 := by
+  simp only [TM.step] at h
+  split at h
+  · simp at h
+  · simp only [Option.some.injEq] at h
+    rw [← h]
+    exact Tape.head_writeAndMove_le _ _ _
+
 /-- After `t` steps, each work tape head is at most `t` plus its initial value. -/
 theorem TM.work_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
     (h : tm.reachesIn t c c') (i : Fin n) :
@@ -172,6 +192,24 @@ theorem TM.work_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
   | zero => omega
   | @step c₀ c_mid _ _ hstep _ ih =>
     have := tm.work_head_step_bound hstep i
+    omega
+
+/-- After `t` steps, the input head is at most `t` plus its initial value. -/
+theorem TM.input_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
+    (h : tm.reachesIn t c c') : c'.input.head ≤ c.input.head + t := by
+  induction h with
+  | zero => omega
+  | @step c₀ c_mid _ _ hstep _ ih =>
+    have := tm.input_head_step_bound hstep
+    omega
+
+/-- After `t` steps, the output head is at most `t` plus its initial value. -/
+theorem TM.output_head_reachesIn_bound (tm : TM n) {c c' : Cfg n tm.Q} {t : ℕ}
+    (h : tm.reachesIn t c c') : c'.output.head ≤ c.output.head + t := by
+  induction h with
+  | zero => omega
+  | @step c₀ c_mid _ _ hstep _ ih =>
+    have := tm.output_head_step_bound hstep
     omega
 
 /-- Deterministic runs have unique endpoints: reaching two configurations in
@@ -224,6 +262,14 @@ theorem TM.reachesIn_le_halt (tm : TM n) {c c' c_halt : Cfg n tm.Q}
 lemma TM.initCfg_work_head_zero (tm : TM n) (x : List Bool) (i : Fin n) :
     ((tm.initCfg x).work i).head = 0 := by
   simp [Tape.init]
+
+/-- The initial input head is at position zero. -/
+lemma TM.initCfg_input_head_zero (tm : TM n) (x : List Bool) :
+    (tm.initCfg x).input.head = 0 := rfl
+
+/-- The initial output head is at position zero. -/
+lemma TM.initCfg_output_head_zero (tm : TM n) (x : List Bool) :
+    (tm.initCfg x).output.head = 0 := rfl
 
 /-- If a DTM is a transducer, so is its NTM embedding. -/
 theorem TM.toNTM_isTransducer (tm : TM n) (h : tm.IsTransducer) : tm.toNTM.IsTransducer := by
@@ -278,10 +324,10 @@ theorem TM.toNTM_decidesInSpace (tm : TM n) {L : Language} {f : ℕ → ℕ}
       have := hno x hxL
       simp_all
   · -- Space bound
-    intro x choices t' ht' i
+    intro x choices t' ht'
     have hreach := tm.toNTM_trace_reaches (tm.initCfg x) t'
       (fun j : Fin t' => choices ⟨j.val, by omega⟩)
-    exact h.1 x _ hreach i
+    exact h.1 x _ hreach
 
 
 namespace TM
