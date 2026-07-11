@@ -54,7 +54,7 @@ structure Lit where
   sign : Bool
   /-- Index of the variable this literal mentions. -/
   var : Nat
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 /-- A clause is a disjunction of literals. The empty clause is
     unsatisfiable (an empty disjunction is `false`). -/

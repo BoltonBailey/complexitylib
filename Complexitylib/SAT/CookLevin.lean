@@ -162,7 +162,7 @@ theorem litTrue {α : Assignment} {v : ℕ} (h : Lit.eval α ⟨true, v⟩ = tru
     α.get v = true := by simpa [Lit.eval] using h
 
 /-- A positive unit clause `[v]` is satisfied iff its variable is true. -/
-@[simp] theorem unit_eval (α : Assignment) (v : ℕ) :
+theorem unit_eval (α : Assignment) (v : ℕ) :
     Clause.eval α [(⟨true, v⟩ : Lit)] = α.get v := by
   simp [Clause.eval, Lit.eval]
 
@@ -265,7 +265,7 @@ def allSyms : List Γ := [Γ.zero, Γ.one, Γ.blank, Γ.start]
 @[simp] theorem mem_allSyms (s : Γ) : s ∈ allSyms := by cases s <;> simp [allSyms]
 
 /-- Every Boolean appears in the two-element list `[true, false]`. -/
-@[simp] theorem mem_true_false (b : Bool) : b ∈ [true, false] := by cases b <;> simp
+theorem mem_true_false (b : Bool) : b ∈ [true, false] := by cases b <;> simp
 
 /-- The shared "read-config" condition literals (all negated) of one transition
     tuple: state `q`, the three heads at `pi`/`pw`/`po` reading `si`/`sw`/`so`, and

@@ -106,7 +106,7 @@ theorem evalFamilyCode_isSome_iff_of_ne_nil (code input : List Bool)
     evalFamilyCode_encodeAt F input.get
 
 /-- The length-zero tagged code has exactly two bits: the tag and the answer. -/
-@[simp] theorem encodeAt_zero_length (F : CircuitFamily Basis.andOr2) :
+theorem encodeAt_zero_length (F : CircuitFamily Basis.andOr2) :
     (F.encodeAt 0).length = 2 := rfl
 
 /-- A positive-length tagged code is one bit (the tag) longer than the underlying

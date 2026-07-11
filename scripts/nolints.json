@@ -1,11 +1,1 @@
-[["simpNF", "Complexity.BoolFunFamily.mem_toLanguage_toList"],
- ["simpNF", "Complexity.CircuitCode.encodeAt_zero_length"],
- ["simpNF", "Complexity.CircuitFamily.nil_mem_language"],
- ["simpNF", "Complexity.CompileAndOr.fin2_one"],
- ["simpNF", "Complexity.CompileAndOr.fin2_zero"],
- ["simpNF", "Complexity.Γw.ofBool_toΓ"],
- ["simpNF", "Complexity.SAT.Tableau.mem_true_false"],
- ["simpNF", "Complexity.SAT.Tableau.unit_eval"],
- ["unusedArguments", "Complexity.ShannonUpper.colFun"],
- ["unusedArguments", "Complexity.instReprLiteral.repr"],
- ["unusedArguments", "Complexity.SAT.instReprLit.repr"]]
+[]

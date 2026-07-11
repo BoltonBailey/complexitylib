@@ -39,7 +39,7 @@ structure Literal (N : Nat) where
   var : Fin N
   /-- `true` = positive literal (xᵢ); `false` = negative literal (¬xᵢ). -/
   polarity : Bool
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 /-- Evaluate a literal on a bit assignment. -/
 def Literal.eval (l : Literal N) (x : BitString N) : Bool :=

@@ -627,6 +627,10 @@ theorem encodeCol_lt (k : Nat) (col : Fin (2^k) → Bool) :
 /-- The column function of `f` at data row `y`: maps an address `a` to
     `f(a, y)`, reading the first `k` input bits from `a` and the remaining
     `q` bits from `y`. -/
+-- `_hkq : k + q = N` is a documented precondition tying the address width
+-- `k` and data width `q` to `N`; it is threaded by every caller but not
+-- needed in the body, which is polymorphic in `k`, `q`.
+@[nolint unusedArguments]
 noncomputable def colFun (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (_hkq : k + q = N) (y : Fin (2^q)) : Fin (2^k) → Bool :=
   fun a => f (fun idx =>

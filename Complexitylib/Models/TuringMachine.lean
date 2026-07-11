@@ -107,7 +107,7 @@ def Γw.ofBool : Bool → Γw
   | false => .zero
   | true => .one
 
-@[simp] theorem Γw.ofBool_toΓ (b : Bool) : (Γw.ofBool b).toΓ = Γ.ofBool b := by
+theorem Γw.ofBool_toΓ (b : Bool) : (Γw.ofBool b).toΓ = Γ.ofBool b := by
   cases b <;> rfl
 
 /-- Three-way tape head direction: left, right, or stay. -/

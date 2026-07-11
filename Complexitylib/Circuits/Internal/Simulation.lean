@@ -295,10 +295,10 @@ lemma remapWire_lt_oOffset (c : Circuit Basis.unboundedAndOr N M G) (w : Fin (N 
 def fin2 (a b : α) : Fin 2 → α := fun i => if i.val = 0 then a else b
 
 /-- `fin2 a b` at index `0` is `a`. -/
-@[simp] lemma fin2_zero (a b : α) : fin2 a b ⟨0, by omega⟩ = a := rfl
+lemma fin2_zero (a b : α) : fin2 a b ⟨0, by omega⟩ = a := rfl
 
 /-- `fin2 a b` at index `1` is `b`. -/
-@[simp] lemma fin2_one (a b : α) : fin2 a b ⟨1, by omega⟩ = b := rfl
+lemma fin2_one (a b : α) : fin2 a b ⟨1, by omega⟩ = b := rfl
 
 /-- Operation for the chain gate: dual-op for constants, same op otherwise. -/
 private def mkChainOp (op : AndOrOp) (k : Nat) : AndOrOp :=

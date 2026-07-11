@@ -25,7 +25,7 @@ namespace BoolFunFamily
 
 /-- The serialization of a length-`n` bitstring lies in `f.toLanguage` iff
     `f n` evaluates to `true` on that bitstring. -/
-@[simp] theorem mem_toLanguage_toList {f : BoolFunFamily} {n : ℕ}
+theorem mem_toLanguage_toList {f : BoolFunFamily} {n : ℕ}
     (x : BitString n) : x.toList ∈ f.toLanguage ↔ f n x = true := by
   change f x.toList.length x.toList.get = true ↔ f n x = true
   have h := List.equivSigmaTuple.apply_symm_apply
@@ -57,7 +57,7 @@ variable {B : Basis}
 
 /-- The empty string is in a circuit family's language iff the length-zero
     circuit outputs `true`. -/
-@[simp] theorem nil_mem_language {F : CircuitFamily B} :
+theorem nil_mem_language {F : CircuitFamily B} :
     [] ∈ F.language ↔ F.emptyOutput = true := by
   rw [mem_language, F.evalList_nil]
 
