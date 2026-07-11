@@ -414,22 +414,6 @@ private theorem decRegTM_back_run (h : ℕ) :
       rw [Function.update_of_ne hi]
     · rw [hcells', hupd]
 
-/-- Erasing the last mark turns `regCells (d + 1)` into `regCells d`. -/
-private theorem regCells_erase (d : ℕ) :
-    Function.update (regCells (d + 1)) (d + 1) Γ.blank = regCells d := by
-  funext j
-  rw [Function.update_apply]
-  split
-  · next hj =>
-    subst hj
-    exact (regCells_blank (by omega)).symm
-  · next hj =>
-    rcases Nat.eq_zero_or_pos j with rfl | hj1
-    · rfl
-    · rcases Nat.lt_or_ge d j with hlt | hge
-      · rw [regCells_blank (by omega), regCells_blank (by omega)]
-      · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
-
 /-- **`decRegTM` Hoare specification.** From `regT d` in register `q`, reach
     `regT (d - 1)` in `2d + 4` steps (`regT 0` is left unchanged); the input,
     output, and every other work tape are untouched. -/

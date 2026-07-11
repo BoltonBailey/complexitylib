@@ -11,4 +11,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-      - uses: leanprover/lean-action@v1
+      - name: Build library with warnings as errors
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: true
+          build-args: "--wfail"
+      - name: Run single-tape simulation regression guards
+        run: lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
+      - name: Run encoded-circuit regression guards
+        run: lake build --wfail Complexitylib.Circuits.Encoding.Validation

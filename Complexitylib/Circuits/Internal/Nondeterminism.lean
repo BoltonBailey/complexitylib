@@ -4,7 +4,7 @@ import Complexitylib.Circuits.Internal.ShannonUpper
 /-! # Internal: Nondeterministic Quantification Circuit Constructions
 
 This internal module provides the circuit constructions needed for the
-nondeterministic quantification complexity bounds in `Circ.Nondeterminism`.
+nondeterministic quantification complexity bounds in `Complexitylib.Circuits.Nondeterminism`.
 
 ## Circuit restriction
 

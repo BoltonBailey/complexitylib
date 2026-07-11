@@ -15,41 +15,6 @@ namespace TM
 
 variable {n : ℕ}
 
-/-- Cells of the bumped input tape: `▷`, the bits of `x`, blanks. -/
-private theorem input_cells_zero (x : List Bool) :
-    (initTape (x.map Γ.ofBool)).cells 0 = Γ.start := by
-  simp [initTape]
-
-private theorem input_cells_bit (x : List Bool) {k : ℕ} (hk : k < x.length) :
-    (initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.ofBool x[k] := by
-  simp only [initTape]
-  rw [if_neg (by omega : ¬ k + 1 = 0)]
-  rw [show k + 1 - 1 = k from by omega]
-  rw [List.getElem?_eq_getElem (by simpa using hk)]
-  simp
-
-private theorem input_cells_blank (x : List Bool) {j : ℕ} (hj : x.length + 1 ≤ j) :
-    (initTape (x.map Γ.ofBool)).cells j = Γ.blank := by
-  simp only [initTape]
-  rw [if_neg (by omega : ¬ j = 0)]
-  rw [List.getElem?_eq_none (by simpa using by omega : (x.map Γ.ofBool).length ≤ j - 1)]
-  rfl
-
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> decide
-
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> decide
-
-private theorem input_cells_ne_start (x : List Bool) {j : ℕ} (hj : 1 ≤ j) :
-    (initTape (x.map Γ.ofBool)).cells j ≠ Γ.start := by
-  rcases Nat.lt_or_ge j (x.length + 1) with hlt | hge
-  · obtain ⟨k, rfl⟩ : ∃ k, j = k + 1 := ⟨j - 1, by omega⟩
-    rw [input_cells_bit x (by omega)]
-    exact ofBool_ne_start _
-  · rw [input_cells_blank x hge]
-    decide
-
 /-- **Measure the input length into register `q`**: lockstep scan right over
     the input bits writing marks, then lockstep rewind. -/
 def inputLenRegTM (q : Fin n) : TM n where
@@ -265,13 +230,13 @@ private theorem inputLenRegTM_scan_run (x : List Bool) (m : ℕ) :
     intro k hk c hst hic hih hwork hout hqc hqh
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact input_cells_bit x (by omega)
+      exact initTape_ofBool_cells_lt x k (by omega)
     have hbl : c.input.read ≠ Γ.blank := by
       rw [hread]
-      exact ofBool_ne_blank _
+      exact Γ.ofBool_ne_blank _
     have hns : c.input.read ≠ Γ.start := by
       rw [hread]
-      exact ofBool_ne_start _
+      exact Γ.ofBool_ne_start _
     have hstep := inputLenRegTM_step_scan_bit c hst hbl hns hwork hout
     have hq₁cells : (((c.work q).write Γw.one).move .right).cells
         = regCells (k + 1) := by
@@ -336,7 +301,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
         omega
       · show (c.input.move .right).cells j ≠ Γ.start
         rw [tape_move_cells, hic]
-        exact input_cells_ne_start x hj
+        exact initTape_ofBool_cells_ne_start x j hj
     have hstep₂ := inputLenRegTM_step_park (q := q)
       { state := .park, input := c.input.move .right,
         work := Function.update c.work q ((c.work q).move .right),
@@ -374,7 +339,7 @@ private theorem inputLenRegTM_back_run (x : List Bool) (h : ℕ) :
       exact hcr (h + 1) (by omega)
     have hins : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact input_cells_ne_start x (by omega)
+      exact initTape_ofBool_cells_ne_start x _ (by omega)
     have hstep₁ := inputLenRegTM_step_back_left c hst hqns hins hwork hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih { state := .back, input := c.input.move .left,
@@ -437,7 +402,7 @@ theorem inputLenRegTM_hoareTime (q : Fin n) (x : List Bool)
   have houtP₁ : Parked c₁.output := by rw [h7]; exact hout.parked
   have hibl : c₁.input.read = Γ.blank := by
     rw [Tape.read, h3, h2]
-    exact input_cells_blank x (le_refl _)
+    exact initTape_ofBool_cells_ge x x.length (le_refl _)
   have hqns₁ : (c₁.work q).read ≠ Γ.start := by
     rw [Tape.read, h6, h5]
     show regCells x.length (x.length + 1) ≠ Γ.start

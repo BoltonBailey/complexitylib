@@ -669,24 +669,6 @@ theorem rewindWorkTM_rich_hoareTime {n : ℕ} (idx : Fin n) (B_tape : ℕ)
     exact ⟨c_f, .step hstep' hreach_f, hhalt_f, hh_f,
       by rw [hcells_f, hcells1], hinp_f, hout_f, hw_f⟩
 
-private theorem initTape_ofBool_cells_lt (x : List Bool) (k : ℕ) (hk : k < x.length) :
-    (_root_.initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.ofBool (x[k]'hk) := by
-  show (if k + 1 = 0 then Γ.start else ((x.map Γ.ofBool)[k]?).getD Γ.blank) = _
-  simp
-  rw [show Option.map Γ.ofBool (x[k]?) = some (Γ.ofBool (x[k]'hk)) by
-    rw [List.getElem?_eq_getElem hk]
-    simp]
-  simp
-
-private theorem initTape_ofBool_cells_ge (x : List Bool) (k : ℕ) (hk : x.length ≤ k) :
-    (_root_.initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.blank := by
-  show (if k + 1 = 0 then Γ.start else ((x.map Γ.ofBool)[k]?).getD Γ.blank) = _
-  simp
-  rw [show Option.map Γ.ofBool (x[k]?) = none by
-    rw [List.getElem?_eq_none hk]
-    simp]
-  simp
-
 /-- Starting from cell `k + 1` of a started Boolean work tape whose first `k`
 cells have already been blanked, `blankWorkTM idx` clears the remaining suffix
 and halts with the entire tape blank from cell `1` onward. -/

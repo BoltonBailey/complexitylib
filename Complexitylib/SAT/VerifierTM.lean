@@ -23,41 +23,6 @@ namespace TM
 -- Small tape helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem initTape_cells_succ (l : List Γ) (i : ℕ) :
-    (_root_.initTape l).cells (i + 1) = (l[i]?).getD Γ.blank := by
-  show (if i + 1 = 0 then Γ.start else (l[i + 1 - 1]?).getD Γ.blank) = _
-  simp
-
-private theorem initTape_ofBool_cells_lt (l : List Bool) (i : ℕ) (h : i < l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (l[i]'h) := by
-  rw [initTape_cells_succ]
-  have hmap : i < (l.map Γ.ofBool).length := by simpa
-  rw [List.getElem?_eq_getElem hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  have hmap : (l.map Γ.ofBool).length ≤ i := by simpa
-  rw [List.getElem?_eq_none hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ne_start (l : List Bool) (j : ℕ) (hj : j ≥ 1) :
-    (_root_.initTape (l.map Γ.ofBool)).cells j ≠ Γ.start := by
-  cases j with
-  | zero =>
-      omega
-  | succ i =>
-      by_cases hi : i < l.length
-      · rw [initTape_ofBool_cells_lt l i hi]
-        cases l[i]'hi <;> simp [Γ.ofBool]
-      · have hge : i ≥ l.length := by omega
-        rw [initTape_ofBool_cells_ge l i hge]
-        simp
-
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> simp [Γ.ofBool]
-
 private theorem hasBinaryPrefix_cells_eq_initTape_cells {t : Tape} {bits : List Bool}
     (hprefix : t.hasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
     t.cells = (_root_.initTape (bits.map Γ.ofBool)).cells := by
@@ -181,7 +146,8 @@ private theorem retargetInput_reachesIn_preserves_input_of_read_ne_start {k : �
 
 private theorem started_blank_output_read_ne_start :
     (((_root_.initTape []).move Dir3.right).read) ≠ Γ.start := by
-  simp [Tape.read, Tape.move, _root_.initTape]
+  rw [initTape_nil_move_right_read]
+  decide
 
 private theorem unaryCounter_read_ne_start {t : Tape} {B : ℕ}
     (h : t.hasUnaryCounter B) : t.read ≠ Γ.start := by
@@ -195,8 +161,7 @@ private theorem unaryCounter_read_ne_start {t : Tape} {B : ℕ}
 
 private theorem started_input_read_ne_start (α : List Bool) :
     (((_root_.initTape (α.map Γ.ofBool)).move Dir3.right).read) ≠ Γ.start := by
-  simp [Tape.read, Tape.move]
-  exact initTape_ofBool_cells_ne_start α 1 (by omega)
+  exact initTape_ofBool_move_right_read_ne_start α
 
 private theorem fin2_ne_zero_eq_one (i : Fin 2) (h : i ≠ ⟨0, by omega⟩) :
     i = ⟨1, by omega⟩ := by
@@ -365,7 +330,7 @@ private theorem satLengthCheck_scan_continue_step (α : List Bool) (B k : ℕ)
     exact initTape_ofBool_cells_lt α k hk
   have hinput_nb : c.input.read ≠ Γ.blank := by
     rw [hread_input]
-    exact ofBool_ne_blank _
+    exact Γ.ofBool_ne_blank _
   have hcounter_read : (c.work ⟨0, by omega⟩).read = Γ.one :=
     Tape.hasCounterRemainder_read_one_of_remaining hcounter hkB
   have hout' : c.output.read ≠ Γ.start := by
@@ -425,7 +390,7 @@ private theorem satLengthCheck_scan_reject_step (α : List Bool) (B : ℕ)
       rw [hinput_head, hinput_cells]
       exact initTape_ofBool_cells_lt α B hB
     rw [hcell]
-    exact ofBool_ne_blank _
+    exact Γ.ofBool_ne_blank _
   have hread_counter : (c.work ⟨0, by omega⟩).read = Γ.blank :=
     Tape.hasCounterRemainder_read_blank_of_done hcounter
   have hout_read : c.output.read = Γ.blank := by
@@ -934,7 +899,7 @@ private theorem satLengthCheckPassive_scan_continue_step (α β : List Bool) (B 
     exact initTape_ofBool_cells_lt α k hk
   have hinput_nb : c.input.read ≠ Γ.blank := by
     rw [hread_input]
-    exact ofBool_ne_blank _
+    exact Γ.ofBool_ne_blank _
   have hcounter_read : (c.work ⟨0, by omega⟩).read = Γ.one :=
     Tape.hasCounterRemainder_read_one_of_remaining hcounter hkB
   have hpassive_read : (c.work ⟨1, by omega⟩).read ≠ Γ.start := by
@@ -1008,7 +973,7 @@ private theorem satLengthCheckPassive_scan_reject_step (α β : List Bool) (B : 
       rw [hinput_head, hinput_cells]
       exact initTape_ofBool_cells_lt α B hB
     rw [hcell]
-    exact ofBool_ne_blank _
+    exact Γ.ofBool_ne_blank _
   have hread_counter : (c.work ⟨0, by omega⟩).read = Γ.blank :=
     Tape.hasCounterRemainder_read_blank_of_done hcounter
   have hpassive_read : (c.work ⟨1, by omega⟩).read ≠ Γ.start := by
@@ -1491,7 +1456,7 @@ private theorem satEval_readFirst_bit_step (mode : SatEvalMode) (b : Bool)
       c'.output = c.output := by
   have hnot_blank : c.input.read ≠ Γ.blank := by
     rw [hread]
-    exact ofBool_ne_blank b
+    exact Γ.ofBool_ne_blank b
   have hout_read : c.output.read ≠ Γ.start := by
     rw [hout]
     exact started_blank_output_read_ne_start
@@ -2924,8 +2889,8 @@ private theorem verifyPairDelta_right_of_start
 `SAT.verifyPair`.
 
 This is the machine-level verifier construction. The polynomial budget below
-is proved quadratic; the remaining end-to-end theorem is the tape simulation
-showing that this split/length/evaluation pipeline writes `1` exactly when
+is proved quadratic, and the end-to-end tape simulation below shows that this
+split/length/evaluation pipeline writes `1` exactly when
 `verifyPair w = true`. -/
 def verifyPairTM : _root_.TM 3 where
   Q := VerifyPairPhase
@@ -3920,7 +3885,7 @@ private theorem verifyPairSplit_copyAlpha_bit_step (b : Bool)
       (c'.work ⟨2, by omega⟩).cells =
         Function.update (c.work ⟨2, by omega⟩).cells (c.work ⟨2, by omega⟩).head Γ.blank ∧
       c'.output = c.output := by
-  have hib_blank : c.input.read ≠ Γ.blank := by rw [hib]; exact ofBool_ne_blank b
+  have hib_blank : c.input.read ≠ Γ.blank := by rw [hib]; exact Γ.ofBool_ne_blank b
   have hcounter2 : (c.work (2 : Fin 3)).read = Γ.one := hcounter
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .copyAlpha
@@ -4202,7 +4167,7 @@ private theorem verifyPairSplit_copyAlpha_reject_step (b : Bool)
     (hout : c.output = (_root_.initTape []).move Dir3.right) :
     ∃ c', verifyPairTM.step c = some c' ∧ verifyPairTM.halted c' ∧
       c'.output.cells 1 = Γ.zero := by
-  have hib_blank : c.input.read ≠ Γ.blank := by rw [hib]; exact ofBool_ne_blank b
+  have hib_blank : c.input.read ≠ Γ.blank := by rw [hib]; exact Γ.ofBool_ne_blank b
   have hcounter2 : (c.work (2 : Fin 3)).read ≠ Γ.one := hcounter
   let c' : Cfg 3 verifyPairTM.Q :=
     { state := .done

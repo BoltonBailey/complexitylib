@@ -4,10 +4,10 @@ import Complexitylib.Models.TuringMachine.Arith
 /-!
 # Clock constructibility for the time hierarchy theorem
 
-`TM.ClockConstructible g` is the constructibility hypothesis of the
-forthcoming time hierarchy theorem: an 8-tape machine can write the unary
-clock `regT (g n)` on work tape 6 in time `O(g n + n)`, ghost-preserving
-the rest of the diagonalizer's tape layout.
+`TM.ClockConstructible g` is the constructibility hypothesis used by the
+proved time hierarchy theorem in `Complexitylib.Classes.Hierarchy`: an
+8-tape machine can write the unary clock `regT (g n)` on work tape 6 in time
+`O(g n + n)`, ghost-preserving the rest of the diagonalizer's tape layout.
 
 Contents:
 
@@ -48,61 +48,6 @@ theorem initTape_move_right_eq_regT_zero :
     simp only [initTape]
     rw [if_neg (by omega : ¬ j = 0)]
     simp
-
-private theorem inpCells_zero (x : List Bool) :
-    (initTape (x.map Γ.ofBool)).cells 0 = Γ.start := by
-  simp [initTape]
-
-private theorem inpCells_bit (x : List Bool) {k : ℕ} (hk : k < x.length) :
-    (initTape (x.map Γ.ofBool)).cells (k + 1) = Γ.ofBool x[k] := by
-  simp only [initTape]
-  rw [if_neg (by omega : ¬ k + 1 = 0)]
-  rw [show k + 1 - 1 = k from by omega]
-  rw [List.getElem?_eq_getElem (by simpa using hk)]
-  simp
-
-private theorem inpCells_blank (x : List Bool) {j : ℕ} (hj : x.length + 1 ≤ j) :
-    (initTape (x.map Γ.ofBool)).cells j = Γ.blank := by
-  simp only [initTape]
-  rw [if_neg (by omega : ¬ j = 0)]
-  rw [List.getElem?_eq_none (by simpa using by omega : (x.map Γ.ofBool).length ≤ j - 1)]
-  rfl
-
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> decide
-
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> decide
-
-private theorem inpCells_ne_start (x : List Bool) {j : ℕ} (hj : 1 ≤ j) :
-    (initTape (x.map Γ.ofBool)).cells j ≠ Γ.start := by
-  rcases Nat.lt_or_ge j (x.length + 1) with hlt | hge
-  · obtain ⟨k, rfl⟩ : ∃ k, j = k + 1 := ⟨j - 1, by omega⟩
-    rw [inpCells_bit x (by omega)]
-    exact ofBool_ne_start _
-  · rw [inpCells_blank x hge]
-    decide
-
-private theorem regCells_ne_start' {v j : ℕ} (hj : 1 ≤ j) :
-    regCells v j ≠ Γ.start := by
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
-
-/-- Erasing the top mark shrinks the register cells by one. -/
-private theorem regCells_erase (d : ℕ) :
-    Function.update (regCells (d + 1)) (d + 1) Γ.blank = regCells d := by
-  funext j
-  rw [Function.update_apply]
-  split
-  · next h =>
-    subst h
-    exact (regCells_blank (by omega)).symm
-  · next h =>
-    rcases Nat.eq_zero_or_pos j with rfl | hj1
-    · rfl
-    · rcases Nat.lt_or_ge d j with hlt | hge
-      · rw [regCells_blank (by omega), regCells_blank (by omega)]
-      · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
 
 /-- The output-tape frame carried through all clock-construction phases:
     head parked at cell 1, sentinel at cell 0, no spurious `▷`s. The clock
@@ -402,11 +347,11 @@ private theorem clockLen_scan_run (x : List Bool) (m : ℕ) :
     intro k hk c hst hic hih hoth hout hcl hhd
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact inpCells_bit x (by omega)
+      exact initTape_ofBool_cells_lt x k (by omega)
     have hns : c.input.read ≠ Γ.start := by
-      rw [hread]; exact ofBool_ne_start _
+      rw [hread]; exact Γ.ofBool_ne_start _
     have hbl : c.input.read ≠ Γ.blank := by
-      rw [hread]; exact ofBool_ne_blank _
+      rw [hread]; exact Γ.ofBool_ne_blank _
     have hstep := clockLen_step_scan_bit c hst hns hbl hoth hout
     have hq₁cells : (((c.work 6).write Γw.one).move .right).cells
         = regCells (k + 1) := by
@@ -473,7 +418,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
           rw [Tape.read, tape_move_cells]
           show c.input.cells (c.input.head + 1) ≠ Γ.start
           rw [hih, hic]
-          exact inpCells_ne_start x (by omega))
+          exact initTape_ofBool_cells_ne_start x _ (by omega))
       (fun i => by
         by_cases hir : i = (6 : Fin 8)
         · subst hir
@@ -508,7 +453,7 @@ private theorem clockLen_back_run (x : List Bool) (h : ℕ) :
       exact hcr (h + 1) (by omega)
     have hins : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact inpCells_ne_start x (by omega)
+      exact initTape_ofBool_cells_ne_start x _ (by omega)
     have hstep₁ := clockLen_step_back_left c hst hclk hins hoth hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5, h6, h7⟩ :=
       ih { state := .back, input := c.input.move .left,
@@ -592,7 +537,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
   have ho₂r : c₂.output.read ≠ Γ.start := by rw [ho₂]; exact houtr
   have hibl₂ : c₂.input.read = Γ.blank := by
     rw [Tape.read, hih₂, hic₂]
-    exact inpCells_blank x le_rfl
+    exact initTape_ofBool_cells_ge x x.length le_rfl
   have hclk₂ : (c₂.work 6).read ≠ Γ.start := by
     rw [Tape.read, hhd₂, hcl₂, regCells_blank le_rfl]
     decide
@@ -630,7 +575,7 @@ private theorem clockLenTM_hoareTime (x : List Bool) (work₀ : Fin 8 → Tape)
         exact hoth₂ i hi)
       ho₂r
       (by rw [hc₃cl]; rfl)
-      (fun j hj => by rw [hc₃cl]; exact regCells_ne_start' hj)
+      (fun j hj => by rw [hc₃cl]; exact regCells_ne_start hj)
       hc₃hd
   refine ⟨c₄, _, ?_,
     reachesIn_trans _ hr₂ (.step hstep₃ hr₄), hst₄, ?_, ?_, ?_, ?_⟩
@@ -1162,7 +1107,7 @@ private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8
     exact regCells_blank (by omega)
   have h5ns₂ : (c₂.work 5).read ≠ Γ.start := by
     rw [Tape.read, hhd5₂, hcl5₂]
-    exact regCells_ne_start' (by omega)
+    exact regCells_ne_start (by omega)
   have hstep₃ := moveClock_step_scan_turn c₂ hst₂ h6bl₂ h5ns₂ hin₂r hoth₂ ho₂r
   obtain ⟨c₄, hr₄, hst₄, hin₄, hw₄, hcl5₄, hhd5₄, hcl6₄, hhd6₄, ho₄⟩ :=
     moveClock_back_run v
@@ -1186,7 +1131,7 @@ private theorem moveClockTM_hoareTime (v : ℕ) (inp₀ : Tape) (work₀ : Fin 8
         rw [Function.update_self]
         show (c₂.work 5).cells j ≠ _
         rw [hcl5₂]
-        exact regCells_ne_start' hj)
+        exact regCells_ne_start hj)
       (by dsimp only
           rw [Function.update_self]
           show (c₂.work 5).head - 1 = v
@@ -1655,11 +1600,11 @@ private theorem clockMul_inScan_run (x : List Bool) (m : ℕ) :
     intro k d hk c hst hic hih hoth hout hcl hhd
     have hread : c.input.read = Γ.ofBool (x[k]'(by omega)) := by
       rw [Tape.read, hih, hic]
-      exact inpCells_bit x (by omega)
+      exact initTape_ofBool_cells_lt x k (by omega)
     have hns : c.input.read ≠ Γ.start := by
-      rw [hread]; exact ofBool_ne_start _
+      rw [hread]; exact Γ.ofBool_ne_start _
     have hbl : c.input.read ≠ Γ.blank := by
-      rw [hread]; exact ofBool_ne_blank _
+      rw [hread]; exact Γ.ofBool_ne_blank _
     have hstep := clockMul_step_inScan_bit c hst hns hbl hoth hout
     have hq₁cells : (((c.work 6).write Γw.one).move .right).cells
         = regCells (d + 1) := by
@@ -1718,7 +1663,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     intro c hst hic hih hall hout
     have hi : c.input.read = Γ.start := by
       rw [Tape.read, hih, hic]
-      exact inpCells_zero x
+      exact initTape_cells_zero _
     have hstep := clockMul_step_inRew_start c hst hi hall hout
     refine ⟨_, .step hstep .zero, rfl, ?_, ?_, rfl, rfl⟩
     · show (c.input.move .right).cells = _
@@ -1730,7 +1675,7 @@ private theorem clockMul_inRew_run (x : List Bool) (h : ℕ) :
     intro c hst hic hih hall hout
     have hns : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact inpCells_ne_start x (by omega)
+      exact initTape_ofBool_cells_ne_start x _ (by omega)
     have hstep := clockMul_step_inRew_left c hst hns hall hout
     obtain ⟨c', hreach, h1, h2, h3, h4, h5⟩ :=
       ih { state := .inRew, input := c.input.move .left,
@@ -1932,7 +1877,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
       exact regCells_one (by omega) (by omega)
     have hinpr : c.input.read ≠ Γ.start := by
       rw [Tape.read, hih, hic]
-      exact inpCells_ne_start x le_rfl
+      exact initTape_ofBool_cells_ne_start x 1 le_rfl
     have h6blank : (c.work 6).read = Γ.blank := by
       rw [Tape.read, hhd6, hcl6]
       exact regCells_blank le_rfl
@@ -1948,7 +1893,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
     have h5read₁ : (((c.work 5).move .right)).read ≠ Γ.start := by
       show (c.work 5).cells ((c.work 5).head + 1) ≠ Γ.start
       rw [hhd5, hcl5]
-      exact regCells_ne_start' (by omega)
+      exact regCells_ne_start (by omega)
     obtain ⟨c₂, hr₂, hst₂, hic₂, hih₂, hw₂, hcl₂, hhd₂, ho₂⟩ :=
       clockMul_inScan_run x x.length 0 (r * (x.length + 1)) (by omega)
         { state := .inScan, input := c.input,
@@ -1985,7 +1930,7 @@ private theorem clockMul_drive_run (x : List Bool) (v : ℕ) (m : ℕ) :
     have ho₂r : c₂.output.read ≠ Γ.start := by rw [ho₂]; exact hout
     have hibl₂ : c₂.input.read = Γ.blank := by
       rw [Tape.read, hih₂, hic₂]
-      exact inpCells_blank x le_rfl
+      exact initTape_ofBool_cells_ge x x.length le_rfl
     have hstep₃ := clockMul_step_inScan_blank c₂ hst₂ hibl₂ hoth₂ ho₂r
     have hc₃cl : (((c₂.work 6).write Γw.one).move .right).cells
         = regCells (r * (x.length + 1) + x.length + 1) := by
@@ -2112,7 +2057,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
   -- exit the loop at the scratch's first blank
   have hinp₁r : c₁.input.read ≠ Γ.start := by
     rw [Tape.read, hih₁, hic₁]
-    exact inpCells_ne_start x le_rfl
+    exact initTape_ofBool_cells_ne_start x 1 le_rfl
   have ho₁r : c₁.output.read ≠ Γ.start := by rw [ho₁]; exact houtr
   have h5bl₁ : (c₁.work 5).read = Γ.blank := by
     rw [Tape.read, hhd5₁, hcl5₁]
@@ -2168,7 +2113,7 @@ private theorem clockMulTM_hoareTime (v : ℕ) (x : List Bool) (work₀ : Fin 8 
       (by rw [hw₃6, hcl6₁]; rfl)
       (fun j hj => by
         rw [hw₃6, hcl6₁]
-        exact regCells_ne_start' hj)
+        exact regCells_ne_start hj)
       (by rw [hw₃6]; exact hhd6₁)
   refine ⟨c₄, _, ?_,
     reachesIn_trans _ hr₁ (.step hstep₂ (reachesIn_trans _ hr₃ hr₄)),
@@ -2209,7 +2154,7 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
     rw [h5, initTape_move_right_eq_regT_zero]
   have hinpX : ((⟨1, (initTape (x.map Γ.ofBool)).cells⟩ : Tape)).read ≠ Γ.start := by
     show (initTape (x.map Γ.ofBool)).cells 1 ≠ Γ.start
-    exact inpCells_ne_start x le_rfl
+    exact initTape_ofBool_cells_ne_start x 1 le_rfl
   -- phase 1: the g-clock
   have h₁ := hspec x work₀ hpark h5 h6
   -- ghost frames after phases 1 and 2

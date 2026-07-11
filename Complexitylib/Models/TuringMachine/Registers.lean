@@ -24,11 +24,6 @@ actions and stable under the combinator phase transitions.
 - `TM.reg_zero_init` — a freshly bumped blank tape is `reg 0`
 -/
 
-/-- Tapes are equal when their heads and cells agree. -/
-theorem Tape.ext' {a b : Tape} (hhead : a.head = b.head) (hcells : a.cells = b.cells) :
-    a = b := by
-  cases a; cases b; cases hhead; cases hcells; rfl
-
 namespace TM
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -165,6 +160,12 @@ theorem regCells_one {v j : ℕ} (h1 : 1 ≤ j) (h2 : j ≤ v) : regCells v j = 
 theorem regCells_blank {v j : ℕ} (h : v + 1 ≤ j) : regCells v j = Γ.blank := by
   rw [regCells, if_neg (by omega), if_neg (by omega)]
 
+/-- Register cells away from the sentinel are never `▷`. -/
+theorem regCells_ne_start {v j : ℕ} (hj : 1 ≤ j) :
+    regCells v j ≠ Γ.start := by
+  rw [regCells, if_neg (by omega)]
+  split <;> decide
+
 theorem reg_regT (v : ℕ) : reg v (regT v) :=
   ⟨rfl, rfl, fun _ hi => by rw [regT_cells]; exact regCells_one (by omega) (by omega),
    fun _ hj => by rw [regT_cells]; exact regCells_blank hj⟩
@@ -188,10 +189,7 @@ theorem regT_parked (v : ℕ) : Parked (regT v) := (reg_regT v).parked
 /-- Register cells with the head anywhere off `▷` form a parked tape. -/
 theorem parked_regCells {h v : ℕ} (hh : 1 ≤ h) :
     Parked (⟨h, regCells v⟩ : Tape) := by
-  refine ⟨hh, fun j hj => ?_⟩
-  show regCells v j ≠ Γ.start
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
+  exact ⟨hh, fun _ hj => regCells_ne_start hj⟩
 
 /-- Writing the next mark turns `regCells d` into `regCells (d + 1)`. -/
 theorem regCells_update_succ (d : ℕ) :
@@ -204,6 +202,22 @@ theorem regCells_update_succ (d : ℕ) :
     exact (regCells_one (by omega) (by omega)).symm
   · next h =>
     rcases Nat.eq_zero_or_pos j with rfl | hj
+    · rfl
+    · rcases Nat.lt_or_ge d j with hlt | hge
+      · rw [regCells_blank (by omega), regCells_blank (by omega)]
+      · rw [regCells_one (by omega) (by omega), regCells_one (by omega) (by omega)]
+
+/-- Erasing the final mark turns `regCells (d + 1)` into `regCells d`. -/
+theorem regCells_erase (d : ℕ) :
+    Function.update (regCells (d + 1)) (d + 1) Γ.blank = regCells d := by
+  funext j
+  rw [Function.update_apply]
+  split
+  · next hj =>
+    subst hj
+    exact (regCells_blank (by omega)).symm
+  · next hj =>
+    rcases Nat.eq_zero_or_pos j with rfl | hj1
     · rfl
     · rcases Nat.lt_or_ge d j with hlt | hge
       · rw [regCells_blank (by omega), regCells_blank (by omega)]

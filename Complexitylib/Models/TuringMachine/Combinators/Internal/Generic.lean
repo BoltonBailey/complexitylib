@@ -31,7 +31,8 @@ namespace TM
 
 /-- Moving a tape preserves its cells. -/
 theorem tape_move_cells (t : Tape) (d : Dir3) :
-    (t.move d).cells = t.cells := by cases d <;> rfl
+    (t.move d).cells = t.cells :=
+  Tape.move_cells t d
 
 /-- `readBackWrite` recovers the original symbol for non-start symbols. -/
 theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
@@ -39,7 +40,7 @@ theorem readBackWrite_toΓ_eq {g : Γ} (h : g ≠ Γ.start) :
 
 /-- Writing to a tape preserves the head position. -/
 theorem tape_write_head (t : Tape) (s : Γ) : (t.write s).head = t.head := by
-  simp only [Tape.write]; split <;> rfl
+  exact Tape.write_head t s
 
 /-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under
     `writeAndMove(readBackWrite(read).toΓ, idleDir(read))`. -/

@@ -12,7 +12,7 @@ satisfying term mention all N variables, making the terms injective on the
 `2^{N-1}`-element true-set.  The CNF case reduces to the DNF case via
 De Morgan duality (`CNF.neg`).
 
-## Definitions (from `Circ.NF.Defs`)
+## Definitions (from `Complexitylib.Circuits.NF.Defs`)
 
 * `Literal` — a Boolean variable with a polarity flag
 * `CNF` — conjunction of clauses (disjunctions of literals)

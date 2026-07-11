@@ -5,11 +5,13 @@ import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.Combinators.RetargetInternal
 
 /-!
-# SAT-specialized guess-and-verify NTM skeleton
+# SAT-specialized guess-and-verify NTM
 
-This file starts the concrete SAT route to NP.  It avoids the still-open
-generic polynomial-counter problem by using the proved linear counter
-subroutine for SAT witnesses, whose length is bounded by `|x| + 1`.
+This file implements the concrete SAT route to NP. It avoids the still-open
+generic `NP.WitnessNTMConstruction` by using the proved linear counter
+subroutine for SAT witnesses, whose length is bounded by `|x| + 1`. The final
+theorems prove the composed machine decides `L_SAT` in polynomial time from a
+polynomial-time verifier.
 
 The machine is parameterized by a verifier DTM `M : TM k` for
 `pairLang R_SAT`.  Its work-tape layout is:
@@ -288,9 +290,8 @@ private theorem satGuessVerifyDelta_right_of_start (M : TM k)
 
 /-- SAT-specialized guess-and-verify NTM parameterized by a verifier `M`.
 
-It is a concrete machine skeleton.  The later proof layer shows that, when
-`M` decides `pairLang R_SAT`, this machine decides `L_SAT` in polynomial
-time. -/
+It is a concrete composed machine. The proof layer below shows that, when `M`
+decides `pairLang R_SAT`, this machine decides `L_SAT` in polynomial time. -/
 def satGuessVerifyNTM (M : TM k) : NTM (k + 3) :=
   haveI : DecidableEq M.Q := M.decEq
   haveI : Fintype M.Q := M.finQ
@@ -699,34 +700,6 @@ theorem satBoundaryWork_stable_of_read_ne_start
     satBoundaryWork work i = work i := by
   simpa [satBoundaryWork] using
     Tape.writeAndMove_readBack_idle_of_ne_start (work i) hread
-
-private theorem initTape_ofBool_move_right_read_ne_start (bits : List Bool) :
-    ((_root_.initTape (bits.map Γ.ofBool)).move Dir3.right).read ≠ Γ.start := by
-  cases bits with
-  | nil => simp [Tape.read, Tape.move, _root_.initTape]
-  | cons b bs =>
-      cases b <;> simp [Tape.read, Tape.move, _root_.initTape, Γ.ofBool]
-
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> simp [Γ.ofBool]
-
-private theorem initTape_ofBool_move_right_cells_ne_start (bits : List Bool) :
-    ∀ j, j ≥ 1 →
-      (((_root_.initTape (bits.map Γ.ofBool)).move Dir3.right).cells j ≠ Γ.start) := by
-  intro j hj
-  rw [tape_move_cells]
-  show (if j = 0 then _ else _) ≠ _
-  rw [if_neg (by omega)]
-  cases hcell : (bits.map Γ.ofBool)[j - 1]? with
-  | none =>
-      simp
-  | some g =>
-      simp
-      have hmem : g ∈ bits.map Γ.ofBool := List.mem_of_getElem? hcell
-      rw [List.mem_map] at hmem
-      obtain ⟨b, _, hb⟩ := hmem
-      subst hb
-      exact ofBool_ne_start b
 
 /-- Exact initialized Boolean contents on the SAT pair tape imply the clean-tape
     invariant required by the verifier phase. -/

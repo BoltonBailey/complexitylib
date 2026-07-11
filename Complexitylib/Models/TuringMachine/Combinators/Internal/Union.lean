@@ -253,9 +253,6 @@ private theorem idle_move_preserves_head (t : Tape)
     (t.move (idleDir t.read)).head = t.head := by
   rw [idleDir_stay_of_ge_one t hhead hno]; rfl
 
-private theorem Γw_toΓ_ne_start (w : Γw) : w.toΓ ≠ Γ.start := by
-  cases w <;> decide
-
 /-- Cell 0 stays Γ.start after write + move. -/
 private theorem tape_cell0_preserved (t : Tape) (s : Γ) (d : Dir3)
     (h0 : t.cells 0 = Γ.start) :
@@ -291,7 +288,7 @@ private theorem output_noStart_step {tm : TM n₁} {c c' : Cfg n₁ tm.Q}
     ∀ i, i ≥ 1 → c'.output.cells i ≠ Γ.start := by
   have hne := ne_qhalt_of_step hs
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
-  exact tape_noStart_preserved _ _ _ (Γw_toΓ_ne_start _) hno
+  exact tape_noStart_preserved _ _ _ (Γw.toΓ_ne_start _) hno
 
 theorem output_cell0_of_reachesIn {tm : TM n₁} {t : ℕ} {c₀ c : Cfg n₁ tm.Q}
     (h : tm.reachesIn t c₀ c) (h0 : c₀.output.cells 0 = Γ.start) :
@@ -319,13 +316,6 @@ theorem input_cells_of_reachesIn {tm : TM n₁} {t : ℕ} {c₀ c : Cfg n₁ tm.
   induction h with
   | zero => rfl
   | step hs _ ih => rw [ih, input_cells_of_step hs]
-
-theorem initTape_cell0 (xs : List Γ) : (initTape xs).cells 0 = Γ.start := by
-  simp [initTape]
-
-theorem initTape_nil_noStart {i : ℕ} (hi : i ≥ 1) :
-    (initTape ([] : List Γ)).cells i ≠ Γ.start := by
-  simp [initTape, show i ≠ 0 from by omega]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Union TM delta helpers for Mid states
@@ -1335,10 +1325,6 @@ private theorem Tape.move_head_le (t : Tape) (d : Dir3) :
     (t.move d).head ≤ t.head + 1 := by
   cases d <;> simp [Tape.move]; omega
 
-private theorem Tape.write_head_eq (t : Tape) (s : Γ) :
-    (t.write s).head = t.head := by
-  simp [Tape.write]; split <;> rfl
-
 /-- After one step, each tape head increases by at most 1. -/
 private theorem step_head_bound (tm : TM n₁) (c c' : Cfg n₁ tm.Q)
     (hs : tm.step c = some c') :
@@ -1354,10 +1340,10 @@ private theorem step_head_bound (tm : TM n₁) (c c' : Cfg n₁ tm.Q)
     set δr := tm.δ c.state c.input.read (fun i => (c.work i).read) c.output.read
     refine ⟨Tape.move_head_le _ δr.2.2.2.1, ?_, fun i => ?_⟩
     · have hm := Tape.move_head_le (c.output.write δr.2.2.1.toΓ) δr.2.2.2.2.2
-      simp only [Tape.write_head_eq] at hm
+      simp only [Tape.write_head] at hm
       exact hm
     · have hm := Tape.move_head_le ((c.work i).write (δr.2.1 i).toΓ) (δr.2.2.2.2.1 i)
-      simp only [Tape.write_head_eq] at hm
+      simp only [Tape.write_head] at hm
       exact hm
 
 /-- A tape head moves at most 1 cell per step. After `t` steps starting

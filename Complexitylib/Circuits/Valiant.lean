@@ -25,7 +25,7 @@ argument proceeds.
 
 The proof machinery — canonical labelings, the edge partition by
 first-differing bit, averaging, and the relabeling-after-removal
-bound — lives in `Circ.Internal.Valiant`.
+bound — lives in `Complexitylib.Circuits.Internal.Valiant`.
 -/
 
 namespace Valiant

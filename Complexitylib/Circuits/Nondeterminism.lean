@@ -12,7 +12,7 @@ Given `f : BitString (k + m) → Bool`, the existential quantification
 `g(y) = ∃ x ∈ {0,1}^k, f(x ++ y)`.  This models a nondeterministic
 circuit that guesses the first `k` input bits.
 
-## Definitions (from `Circ.Nondeterminism.Defs`)
+## Definitions (from `Complexitylib.Circuits.Nondeterminism.Defs`)
 
 * `existQuantify` — existential quantification over first `k` inputs
 * `forallQuantify` — universal quantification over first `k` inputs
@@ -55,7 +55,7 @@ instance instNeZeroAddLeft [NeZero m] : NeZero (k + m) :=
     Given a circuit of size `s` computing `f`, we modify each gate in-place
     (via `restrictGateP`): any input that referenced the hardwired variable
     is redirected using the gate's negation flags to produce the correct
-    constant, without adding extra gates.  See `Circ.Internal.Nondeterminism`
+    constant, without adding extra gates.  See `Complexitylib.Circuits.Internal.Nondeterminism`
     for the construction. -/
 theorem restrict_size_complexity_le [CompleteBasis Basis.andOr2] [NeZero m]
     (f : BitString ((k + 1) + m) → Bool) (b : Bool) :

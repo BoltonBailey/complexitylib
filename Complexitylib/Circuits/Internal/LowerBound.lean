@@ -9,8 +9,8 @@ over a bounded fan-in k AND/OR basis, if the computed function depends on n'
 essential variables, the circuit has size at least ⌈n'/k⌉.
 
 The public definitions (`IsEssentialInput`, `EssentialInputs`) are in
-`Circ.EssentialInput`. The public theorems (`gate_elimination_lower_bound`,
-`lower_bound_all_inputs`) are accessible through `Circ.LowerBound`.
+`Complexitylib.Circuits.EssentialInput`. The public theorems (`gate_elimination_lower_bound`,
+`lower_bound_all_inputs`) are accessible through `Complexitylib.Circuits.LowerBound`.
 -/
 
 namespace Circuit

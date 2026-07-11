@@ -11,7 +11,7 @@ type, and `deleteEdges`.
 
 Depth-reduction-specific machinery (canonical labeling, acyclicity
 arguments, edge partitions by first-differing bit, etc.) lives in
-`Circ.Internal.Valiant`.
+`Complexitylib.Circuits.Internal.Valiant`.
 -/
 
 namespace Digraph

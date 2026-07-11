@@ -10,7 +10,8 @@ machine, run on concrete tiny machines. Built via a computable step-iterator
 if a future change breaks the phase logic.
 
 This file is **not** imported by the library aggregation; build it explicitly
-with `lake build Complexitylib.Models.TuringMachine.SingleTape.Validation`.
+with
+`lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation`.
 
 These tests caught two real design bugs (see commit history): a head moving off
 cell 0 never getting a marker, and a misaligned `scatter1 → scatter2` position

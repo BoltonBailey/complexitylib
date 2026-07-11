@@ -7,7 +7,7 @@ import Complexitylib.Circuits.Basic
 This internal module defines the circuit descriptor model used for counting
 arguments, and proves the Shannon lower bound for this model. The public
 theorem `shannon_lower_bound_circuit` (which speaks in terms of `Circuit`)
-is in `Circ.Internal.Bridge`.
+is in `Complexitylib.Circuits.Internal.Bridge`.
 -/
 
 /-! ## Gate and Circuit Descriptors -/
@@ -21,6 +21,16 @@ abbrev GateSlot (W : Nat) := Bool × (Fin W × Fin W) × (Bool × Bool)
 /-- A circuit descriptor with `N` primary inputs and `s` gates.
     Wires `0..N-1` are primary inputs; wires `N..N+s-1` are gate outputs. -/
 abbrev CircDesc (N s : Nat) := Fin s → GateSlot (N + s)
+
+namespace CircDesc
+
+/-- A descriptor is ordered when every gate only references primary inputs or
+    strictly earlier gates.  For gate `i`, those are exactly the wires with
+    indices below `N + i`. -/
+def Ordered {N s : Nat} (d : CircDesc N s) : Prop :=
+  ∀ i : Fin s, (d i).2.1.1.val < N + i.val ∧ (d i).2.1.2.val < N + i.val
+
+end CircDesc
 
 /-! ## Wire and Circuit Evaluation -/
 

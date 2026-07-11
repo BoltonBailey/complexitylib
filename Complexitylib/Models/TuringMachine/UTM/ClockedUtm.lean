@@ -137,18 +137,12 @@ private theorem val_lt_of_ne_clkT' {k : Fin 7} (h : k ≠ clkT) : k.val < 6 := b
 -- regCells parking (local copies)
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- Register cells off the sentinel are never `▷`. -/
-private theorem regCells_ne_start'' {v j : ℕ} (hj : 1 ≤ j) :
-    regCells v j ≠ Γ.start := by
-  rw [regCells, if_neg (by omega)]
-  split <;> decide
-
 /-- A frontier-parked clock tape reads a non-`▷` symbol. -/
 private theorem clk_read_ne_start' {t : Tape} {v : ℕ}
     (hc : t.cells = regCells v) (hh : t.head = max v 1) :
     t.read ≠ Γ.start := by
   rw [Tape.read, hh, hc]
-  exact regCells_ne_start'' (le_max_right v 1)
+  exact regCells_ne_start (le_max_right v 1)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- SimInv bookkeeping (local copies of `SimLoop`/`SimClocked` private ones)
@@ -424,7 +418,7 @@ private theorem body6Shape_reads {α x : List Bool} {w : Fin 6 → Tape}
 /-- The canonical register tape is parked at cell 1. -/
 private theorem regT_read_ne_start (V : ℕ) : (regT V).read ≠ Γ.start := by
   show regCells V 1 ≠ Γ.start
-  exact regCells_ne_start'' le_rfl
+  exact regCells_ne_start le_rfl
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 1: the lifted init
@@ -701,7 +695,7 @@ private theorem testExit_allWF (α x : List Bool)
     by_cases hi : i = clkT
     · subst hi
       rw [hckc]
-      exact regCells_ne_start'' hj
+      exact regCells_ne_start hj
     · exact (simInv_work_wf α hsi ⟨i.val, val_lt_of_ne_clkT' hi⟩).2 j hj
 
 /-- The test leaves the output head at cell 1. -/

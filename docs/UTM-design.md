@@ -1,5 +1,11 @@
 # Universal Turing Machine — Design
 
+> **Completed — historical design document.** M2/M3, the universal simulation
+> interface, the clocked UTM, and the diagonalization support are now
+> implemented under `Complexitylib/Models/TuringMachine/UTM/`; the resulting
+> hierarchy theorem is in `Complexitylib/Classes/Hierarchy.lean`. The status
+> line below records the milestone at which this design was written.
+
 Status: M1 (desc encoding + interpreter) done. This document specifies M2/M3:
 the machine `utmTM : TM 6` and its semantic/time theorems.
 
@@ -9,9 +15,10 @@ The UTM simulates **single-work-tape** machines only. Multi-tape machines are
 handled by composing with the existing `NTM.singleTapeSim` quadratic
 reduction (M3b). Because the simulated machine has exactly three heads
 (input, work, output) and the UTM has six tapes, each simulated head is
-shadowed by a dedicated UTM tape at the *same* position — so a simulated
-step costs O(|description|) UTM steps (one table scan), not O(T). Total:
-`C(α) · (T + |x| + 1)` for the whole run — *linear* in T.
+shadowed by a dedicated UTM tape using the +1-shifted representation described
+below. A simulated step therefore costs O(|description|) UTM steps (one table
+scan), not O(T). Total: `C(α) · (T + |x| + 1)` for the whole run — *linear*
+in T.
 
 The specification of the UTM is `TMDesc.toTM` (`UTM/Interp.lean`): for every
 binary string `α`, `utmTM` on input `pair α x` behaves like

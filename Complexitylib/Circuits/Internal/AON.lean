@@ -4,7 +4,8 @@ import Complexitylib.Circuits.AON.Defs
 
 This internal module proves functional completeness of `Basis.unboundedAON`
 via DNF (disjunctive normal form) construction. The basis definitions are
-in `Circ.AON.Defs`; this module is re-exported through `Circ.AON`.
+in `Complexitylib.Circuits.AON.Defs`; this module is re-exported through
+`Complexitylib.Circuits.AON`.
 -/
 
 /-- Indicator circuit: outputs `true` iff the input equals `s`.

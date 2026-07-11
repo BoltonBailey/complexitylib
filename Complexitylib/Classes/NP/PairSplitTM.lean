@@ -335,49 +335,6 @@ private theorem initTape_nil_move_right_stable :
   · intro j hj
     exact initTape_nil_move_right_cells_ne_start j hj
 
-private theorem initTape_cells_succ (l : List Γ) (i : ℕ) :
-    (_root_.initTape l).cells (i + 1) = (l[i]?).getD Γ.blank := by
-  show (if i + 1 = 0 then Γ.start else (l[i + 1 - 1]?).getD Γ.blank) = _
-  simp
-
-private theorem initTape_ofBool_cells_lt (l : List Bool) (i : ℕ) (h : i < l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.ofBool (l[i]'h) := by
-  rw [initTape_cells_succ]
-  have hmap : i < (l.map Γ.ofBool).length := by simpa
-  rw [List.getElem?_eq_getElem hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ge (l : List Bool) (i : ℕ) (h : i ≥ l.length) :
-    (_root_.initTape (l.map Γ.ofBool)).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  have hmap : (l.map Γ.ofBool).length ≤ i := by simpa
-  rw [List.getElem?_eq_none hmap]
-  simp
-
-private theorem initTape_ofBool_cells_ne_start (l : List Bool) (j : ℕ) (hj : j ≥ 1) :
-    (_root_.initTape (l.map Γ.ofBool)).cells j ≠ Γ.start := by
-  cases j with
-  | zero =>
-      omega
-  | succ i =>
-      by_cases hi : i < l.length
-      · rw [initTape_ofBool_cells_lt l i hi]
-        cases l[i]'hi <;> simp [Γ.ofBool]
-      · have hge : i ≥ l.length := by omega
-        rw [initTape_ofBool_cells_ge l i hge]
-        simp
-
-private theorem ofBool_ne_start (b : Bool) : Γ.ofBool b ≠ Γ.start := by
-  cases b <;> simp [Γ.ofBool]
-
-private theorem ofBool_ne_blank (b : Bool) : Γ.ofBool b ≠ Γ.blank := by
-  cases b <;> simp [Γ.ofBool]
-
-private theorem initTape_nil_cells_succ (i : ℕ) :
-    (_root_.initTape []).cells (i + 1) = Γ.blank := by
-  rw [initTape_cells_succ]
-  simp
-
 -- ════════════════════════════════════════════════════════════════════════
 -- `copyY` phase: step lemmas
 -- ════════════════════════════════════════════════════════════════════════
@@ -726,7 +683,7 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
             rw [hc1_xc]
             by_cases hjx : j = (c.work xIdx).head
             · rw [hjx, Function.update_self]
-              exact ofBool_ne_start false
+              exact Γ.ofBool_ne_start false
             · rw [Function.update_of_ne hjx]
               exact hxns j hj
           have hc1_yh : (c1.work yIdx).head ≥ 1 := by rw [hc1_yw]; exact hyh
@@ -815,7 +772,7 @@ private theorem pairSplit_scanX_loop {k : ℕ} (xIdx yIdx : Fin k)
             rw [hc1_xc]
             by_cases hjx : j = (c.work xIdx).head
             · rw [hjx, Function.update_self]
-              exact ofBool_ne_start true
+              exact Γ.ofBool_ne_start true
             · rw [Function.update_of_ne hjx]
               exact hxns j hj
           have hc1_yh : (c1.work yIdx).head ≥ 1 := by rw [hc1_yw]; exact hyh
@@ -1117,7 +1074,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
       c.input.cells (c.input.head + i) ≠ Γ.start := by
     intro i hi
     rw [hbits i hi]
-    exact ⟨ofBool_ne_blank _, ofBool_ne_start _⟩
+    exact ⟨Γ.ofBool_ne_blank _, Γ.ofBool_ne_start _⟩
   obtain ⟨c1, hreach, hst1, hc1_ih, hc1_ic, hc1_xw, hc1_yh, hc1_yc0, hc1_yns,
           hc1_below, hc1_above, hc1_data⟩ :=
     pairSplit_copyY_loop xIdx yIdx hne y.length c hst hih hic0 hins hdata
@@ -1131,7 +1088,7 @@ private theorem pairSplit_copyY_from_input_segment {k : ℕ}
     have habove : 1 + y.length ≥ (c.work yIdx).head + y.length := by
       rw [hyh]
     rw [hc1_above (1 + y.length) habove, hyw, tape_move_cells]
-    simpa [Nat.add_comm] using initTape_nil_cells_succ y.length
+    simp [Nat.add_comm]
   have hc1_xread : (c1.work xIdx).read = Γ.blank := by
     rw [hc1_xw]
     exact hxread
@@ -1326,7 +1283,7 @@ theorem pairSplitCoreTM_from_scanX_initTape_move_right
     have habove : 1 + x.length ≥ (c.work xIdx).head + x.length := by
       rw [hxh_eq]
     rw [hc1_above (1 + x.length) habove, hxw, tape_move_cells]
-    simpa [Nat.add_comm] using initTape_nil_cells_succ x.length
+    simp [Nat.add_comm]
   have hc2_yw_init : c2.work yIdx = (_root_.initTape []).move Dir3.right := by
     rw [hc2_yw, hc1_yw]
     exact hyw
@@ -1426,12 +1383,10 @@ theorem pairSplitCoreTM_from_init_initTape_move_right
     rw [hxw]
     show ((_root_.initTape []).move Dir3.right).read ≠ Γ.start
     simp [Tape.read, Tape.move]
-    exact initTape_nil_move_right_cells_ne_start 1 (by omega)
   have hy_read : (c.work yIdx).read ≠ Γ.start := by
     rw [hyw]
     show ((_root_.initTape []).move Dir3.right).read ≠ Γ.start
     simp [Tape.read, Tape.move]
-    exact initTape_nil_move_right_cells_ne_start 1 (by omega)
   obtain ⟨c1, hstep_init, hc1_state, hc1_inp, hc1_xw, hc1_yw⟩ :=
     pairSplit_init_step_all_started xIdx yIdx c hst hinp_read hx_read hy_read
   obtain ⟨c2, hreach_core, hhalt, hc2_ih, hc2_ic, hc2_xh, hc2_xc0, hc2_xdata,

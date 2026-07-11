@@ -16,10 +16,11 @@ relation `R_SAT`, and proves the two core bridge theorems:
   (satisfying assignments can always be truncated to length `φ.maxVar + 1`,
   and `φ.maxVar ≤ |φ.encode|` from the unary encoding)
 
-Together, these reduce `SAT ∈ NP` to showing `pairLang R_SAT ∈ P` —
-i.e., that the *verifier* (decode φ, decode α, run CNF.eval) is
-poly-time. The TM construction for that verifier is developed in the
-subsequent phases (`SAT/Verifier.lean`).
+These are the semantic and witness-length ingredients used by both routes to
+`SAT ∈ NP`. The executable verifier is specified in `SAT/Verifier.lean`, its
+polynomial-time TM implementation is proved in `SAT/VerifierTM.lean`, and the
+SAT-specialized guess-and-verify construction is assembled into the
+unconditional headline theorem in `SAT/Headline.lean`.
 -/
 
 namespace SAT
@@ -92,16 +93,16 @@ theorem R_SAT_polyBalanced : PolyBalanced R_SAT := by
 -- Route to SAT ∈ NP
 -- ════════════════════════════════════════════════════════════════════════
 --
--- With `R_SAT_polyBalanced` in hand, SAT ∈ NP reduces to the single
--- remaining obligation: the verifier's pair language `pairLang R_SAT`
--- is in P. That is, there is a poly-time deterministic TM that, given
+-- With `R_SAT_polyBalanced` in hand, one route to SAT ∈ NP asks whether
+-- the verifier's pair language `pairLang R_SAT` is in P. That is, whether
+-- there is a poly-time deterministic TM that, given
 -- `pair(z, α)`, decides whether `R_SAT z α` holds — equivalently, that
 -- parses `z` as a CNF and evaluates it at `α`.
 --
--- Once that is proved, `R_SAT ∈ FNP` by definition; combined with a
--- generic NP-witness theorem (`L ∈ NP ↔ ∃ R ∈ FNP, L = {z | ∃ y, R z y}`),
--- this gives `L_SAT ∈ NP`. See `Complexitylib/SAT/Verifier.lean`
--- (forthcoming) for the TM construction.
+-- `SAT/VerifierTM.lean` now discharges that verifier obligation. The generic
+-- theorem below remains parameterized by `WitnessNTMConstruction`; the
+-- unconditional SAT headline instead uses the specialized construction from
+-- `SAT/GuessVerify.lean`.
 
 /-- **SAT is in FNP modulo the verifier.** If the verifier's pair language
     is in P, then `R_SAT` is an FNP relation — and hence a candidate NP
@@ -115,9 +116,9 @@ theorem R_SAT_in_FNP_of_verifier (h : pairLang R_SAT ∈ P) : R_SAT ∈ FNP :=
     construction has been built, then `L_SAT ∈ NP`.
 
     Combines `R_SAT_in_FNP_of_verifier` (SAT's FNP witness relation) with
-    the generic NP witness theorem `NP_of_FNP_witness`. The only remaining
-    obligations are the concrete poly-time TM construction for the SAT
-    verifier and the generic bounded guess-and-verify NTM construction. -/
+    the generic NP witness theorem `NP_of_FNP_witness`. This theorem
+    deliberately retains the generic construction as an explicit hypothesis;
+    the SAT-specific unconditional route is provided by `SAT/Headline.lean`. -/
 theorem L_SAT_in_NP_of_verifier
     (hwitness : NP.WitnessNTMConstruction) (h : pairLang R_SAT ∈ P) :
     L_SAT ∈ NP :=

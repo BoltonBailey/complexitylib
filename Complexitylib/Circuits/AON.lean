@@ -6,7 +6,7 @@ import Complexitylib.Circuits.Internal.Simulation
 
 This module provides the AND/OR basis definitions and completeness results.
 
-## Definitions (from `Circ.AON.Defs`)
+## Definitions (from `Complexitylib.Circuits.AON.Defs`)
 
 * `AONOp` — AND/OR operations
 * `Basis.unboundedAON` — unbounded fan-in AND/OR basis
