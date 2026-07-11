@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Semantics
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
@@ -47,6 +52,8 @@ stated directly against `encode`; we don't need an inverse as a Lean
 function to prove NP membership.
 -/
 
+namespace Complexity
+
 namespace SAT
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -58,9 +65,11 @@ namespace Unary
 /-- Unary encoding of `n`: `n` consecutive `true` bits. `encode 0 = []`. -/
 def encode (n : Nat) : List Bool := List.replicate n true
 
-@[simp] theorem encode_length (n : Nat) : (encode n).length = n := by
+/-- The unary encoding of `n` has length exactly `n`. -/
+@[simp] theorem length_encode (n : Nat) : (encode n).length = n := by
   simp [encode]
 
+/-- Zero encodes to the empty bit list. -/
 @[simp] theorem encode_zero : encode 0 = [] := rfl
 
 /-- Every bit in a unary encoding is `true`. -/
@@ -81,6 +90,7 @@ namespace Lit
     single (undoubled) bits; the doubling happens at the clause level. -/
 def encodeRaw (ℓ : Lit) : List Bool := ℓ.sign :: Unary.encode ℓ.var
 
+/-- The raw literal encoding has length `ℓ.var + 1`: one sign bit plus a unary var. -/
 @[simp] theorem encodeRaw_length (ℓ : Lit) : ℓ.encodeRaw.length = ℓ.var + 1 := by
   simp [encodeRaw]
 
@@ -111,12 +121,15 @@ end Lit
     two-bit patterns, so `01` and `10` cannot appear in doubled data. -/
 def doubleBits (bs : List Bool) : List Bool := bs.flatMap (fun b => [b, b])
 
+/-- Doubling the empty bit list yields the empty list. -/
 @[simp] theorem doubleBits_nil : doubleBits [] = [] := rfl
 
+/-- Doubling a cons prepends the head bit twice: `doubleBits (b :: bs) = b :: b :: …`. -/
 @[simp] theorem doubleBits_cons (b : Bool) (bs : List Bool) :
     doubleBits (b :: bs) = b :: b :: doubleBits bs := by
   simp [doubleBits]
 
+/-- Doubling exactly doubles the length: `|doubleBits bs| = 2 * |bs|`. -/
 @[simp] theorem doubleBits_length (bs : List Bool) :
     (doubleBits bs).length = 2 * bs.length := by
   induction bs with
@@ -134,14 +147,17 @@ def encode : Clause → List Bool
   | [] => []
   | ℓ :: ℓs => doubleBits ℓ.encodeRaw ++ [false, true] ++ encode ℓs
 
+/-- The empty clause encodes to the empty bit list. -/
 @[simp] theorem encode_nil : encode ([] : Clause) = [] := rfl
 
+/-- Unfolding lemma: encoding `ℓ :: ℓs` emits the doubled raw literal,
+    the `[false, true]` literal separator, then the encoded tail. -/
 theorem encode_cons (ℓ : Lit) (ℓs : Clause) :
     encode (ℓ :: ℓs) = doubleBits ℓ.encodeRaw ++ [false, true] ++ encode ℓs := rfl
 
 /-- Length bound on the encoded clause: each literal contributes at most
     `2 * |encodeRaw| + 2` bits (doubling + separator). -/
-theorem encode_length (c : Clause) :
+theorem length_encode (c : Clause) :
     c.encode.length = c.foldr (fun ℓ acc => 2 * ℓ.encodeRaw.length + 2 + acc) 0 := by
   induction c with
   | nil => rfl
@@ -158,13 +174,16 @@ def encode : CNF → List Bool
   | [] => []
   | c :: cs => c.encode ++ [true, false] ++ encode cs
 
+/-- The empty CNF encodes to the empty bit list. -/
 @[simp] theorem encode_nil : encode ([] : CNF) = [] := rfl
 
+/-- Unfolding lemma: encoding `c :: cs` emits the encoded clause, the
+    `[true, false]` clause separator, then the encoded tail. -/
 theorem encode_cons (c : Clause) (cs : CNF) :
     encode (c :: cs) = c.encode ++ [true, false] ++ encode cs := rfl
 
 /-- Length bound: each clause contributes `|c.encode| + 2` bits to the CNF. -/
-theorem encode_length (φ : CNF) :
+theorem length_encode (φ : CNF) :
     φ.encode.length = φ.foldr (fun c acc => c.encode.length + 2 + acc) 0 := by
   induction φ with
   | nil => rfl
@@ -272,3 +291,5 @@ theorem doubleBits_pair_eq (bs : List Bool) (k : Nat) (h : 2 * k + 1 < (doubleBi
       exact ih'
 
 end SAT
+
+end Complexity

@@ -1,6 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
 
 /-!
 # `containsZero` and `containsOne`: "contains-a-bit" languages
@@ -19,6 +24,8 @@ The strings containing at least one `0`-bit (resp. `1`-bit). Decided by a
 - `containsZero_in_DTIME`, `containsOne_in_DTIME` — both in `DTIME(n + 2)`.
 - `containsZero_mem_P`, `containsOne_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 
@@ -126,3 +133,5 @@ theorem containsOne_mem_P : Language.containsOne ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ containsOne_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

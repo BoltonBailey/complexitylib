@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Basic
 
 /-! # XOR (Parity) Function
@@ -13,6 +18,8 @@ This module defines the N-input XOR function and its key properties.
 * `Schnorr.xorBool_flip` — flipping any input bit flips XOR
 * `Schnorr.xorBool_essential` — XOR depends on all inputs
 -/
+
+namespace Complexity
 
 namespace Schnorr
 
@@ -57,3 +64,5 @@ theorem xorBool_essential (N : Nat) (a : Fin N) (x : BitString N) :
   rw [xorBool_flip]; cases xorBool N x <;> simp
 
 end Schnorr
+
+end Complexity

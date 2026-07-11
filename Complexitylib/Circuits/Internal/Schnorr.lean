@@ -1,6 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Tactic
 import Complexitylib.Circuits.XOR
-import Complexitylib.Circuits.Internal.CircDesc
+import Complexitylib.Circuits.Internal.CircuitDescriptor
+
+namespace Complexity
 
 set_option maxHeartbeats 400000
 
@@ -210,6 +217,8 @@ private theorem wireValD_restrictD {N s : Nat} (d : CircDesc (N + 1) s)
         (fun w' hw' => wireValD_restrictD d a b x w')
 termination_by w.val
 
+/-- Evaluating the restricted circuit on `x` agrees with evaluating the original circuit
+    on `x` with the fixed bit `b` inserted at position `a`. -/
 theorem evalD_restrictD {N s : Nat} (d : CircDesc (N + 1) s)
     (hs : 0 < s) (a : Fin (N + 1)) (b : Bool) (x : BitString N) :
     evalD hs (restrictD d a b) x = evalD hs d (insertAt x a b) := by
@@ -224,7 +233,9 @@ theorem evalD_restrictD {N s : Nat} (d : CircDesc (N + 1) s)
 
 /-- How to redirect references to an eliminated gate. -/
 inductive GateRedirect (W : Nat) where
+  /-- Replace references to the eliminated gate by the constant `c`. -/
   | const (c : Bool)
+  /-- Replace references to the eliminated gate by wire `w`, XORed with `flip`. -/
   | wire (w : Fin W) (flip : Bool)
 
 /-- Remap a wire reference when eliminating gate `g`. -/
@@ -408,6 +419,8 @@ private theorem wireValD_elimGateD {N s : Nat} (d : CircDesc N (s + 1))
           (fun w' hw' => wireValD_elimGateD d g rd hrd hrd_wire x w')
 termination_by w.val
 
+/-- Eliminating a non-output gate whose value the redirect `rd` correctly describes
+    preserves the circuit's evaluation on every input. -/
 theorem evalD_elimGateD {N s : Nat} (d : CircDesc N (s + 1))
     (hs : 0 < s) (g : Fin (s + 1)) (rd : GateRedirect (N + s))
     (hrd : ∀ x : BitString N,
@@ -849,7 +862,7 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 exact hw2_back⟩⟩
           · -- Second wire forward-ref after restriction (proof 3)
             exact ⟨.const (if isAnd then n1 && n2 else n1 || n2), ⟨fun x => by
-  
+
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw1_fin : (d g).2.1.1 = 0 := by ext; exact h1
               have h_w1_val : (d_r g).2.1.1.val = n + g.val := by
@@ -925,7 +938,7 @@ theorem restriction_eliminates_two {n s : Nat} (d : CircDesc (n + 1) s)
                 exact hw1_back⟩⟩
           · -- proof 6: w1≠0 forward-ref, w2=0 (const case)
             exact ⟨.const (if isAnd then n1 && n2 else n1 || n2), ⟨fun x => by
-  
+
               have h_isAnd : (d_r g).1 = (d g).1 := rfl
               have hw2_fin : (d g).2.1.2 = 0 := by ext; exact h2
               have h_w1_val : (d_r g).2.1.1.val = w1.val - 1 := by
@@ -1398,3 +1411,5 @@ theorem xor_lower_bound_2 (N s : Nat) (hs : 0 < s) (d : CircDesc N s) (comp : Bo
     omega
 
 end Schnorr
+
+end Complexity

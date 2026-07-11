@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.FNP
 
@@ -14,7 +19,7 @@ The forward direction (`NP ⊆ witness form`) is a *computation-path* witness
 argument and is left for a later pass.
 
 The reverse direction — **the FNP ⇒ NP bridge** used by SAT ∈ NP — is
-captured here by `NP_of_FNP_witness`, parameterized by the single
+captured here by `mem_NP_of_FNP_witness`, parameterized by the single
 TM-engineering construction interface `WitnessNTMConstruction`: build the
 nondeterministic "guess-and-verify" machine from a deterministic verifier
 of `pairLang R`. Everything above that construction — unpacking FNP,
@@ -45,16 +50,19 @@ All downstream consequences (including `SAT ∈ NP` conditional on the SAT
 verifier being in P) rest only on that single lemma.
 -/
 
-open Complexity
+namespace Complexity
+
 
 namespace NP
 
 /-- The witness language of a relation `R` — the set of inputs `x` that
     admit some witness. Isolated as a definition so the statement of
-    `NP_of_FNP_witness` reads cleanly. -/
+    `mem_NP_of_FNP_witness` reads cleanly. -/
 def witnessLang (R : List Bool → List Bool → Prop) : Language :=
   {x | ∃ y, R x y}
 
+/-- Membership in `witnessLang R` unfolds to the existence of a witness:
+    `x ∈ witnessLang R ↔ ∃ y, R x y`. -/
 @[simp] theorem mem_witnessLang {R : List Bool → List Bool → Prop} {x : List Bool} :
     x ∈ witnessLang R ↔ ∃ y, R x y := Iff.rfl
 
@@ -106,7 +114,7 @@ def WitnessNTMConstruction : Prop :=
     `M` for `pairLang R` and a polynomial witness-length bound, apply the
     construction to build the guess-and-verify NTM, and package the result as
     NP membership. -/
-theorem NP_of_FNP_witness
+theorem mem_NP_of_FNP_witness
     (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} {L : Language}
     (hR : R ∈ FNP)
@@ -132,11 +140,13 @@ theorem NP_of_FNP_witness
 
 /-- **Restatement in terms of `witnessLang`.** If `R ∈ FNP`, then
     `witnessLang R ∈ NP`. This is the useful form for applying to
-    concrete relations like `R_SAT`. -/
+    concrete relations like `Witness`. -/
 theorem witnessLang_mem_NP_of_FNP
     (hwitness : WitnessNTMConstruction)
     {R : List Bool → List Bool → Prop} (hR : R ∈ FNP) :
     witnessLang R ∈ NP :=
-  NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
+  mem_NP_of_FNP_witness hwitness hR fun _ => Iff.rfl
 
 end NP
+
+end Complexity

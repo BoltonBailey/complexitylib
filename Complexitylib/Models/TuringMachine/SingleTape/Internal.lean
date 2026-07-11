@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 
 /-!
@@ -11,6 +16,8 @@ over the fixed alphabet `Γ = {0,1,□,▷}` needs a binary code (so that litera
 layout. Proof internals only — correctness of the full simulation is
 established downstream.
 -/
+
+namespace Complexity
 
 namespace NTM.SingleTape
 
@@ -111,6 +118,7 @@ def blockWidth (k : ℕ) : ℕ := 3 * k
 /-- First cell of the block for super-position `p ≥ 1`. -/
 def blockStart (k p : ℕ) : ℕ := 1 + (p - 1) * blockWidth k
 
+/-- The first super-position's block starts at cell 1, directly after the `▷`. -/
 @[simp] theorem blockStart_one (k : ℕ) : blockStart k 1 = 1 := by
   simp [blockStart]
 
@@ -150,7 +158,7 @@ def headBitCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val
 def symCell (k p : ℕ) (j : Fin k) : ℕ := blockStart k p + 3 * j.val + 1
 
 /-- Within a block, tape `j`'s three cells stay inside `[blockStart, blockStart+3k)`. -/
-theorem headBitCell_lt_next (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
+theorem headBitCell_lt_blockStart_succ (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
     headBitCell k p j < blockStart k (p + 1) := by
   rw [blockStart_succ k p hp]
   have hj : j.val < k := j.isLt
@@ -165,7 +173,7 @@ theorem blockStart_le (k : ℕ) {p q : ℕ} (hpq : p ≤ q) :
 
 /-- Tape `j`'s whole triple fits strictly before the next block:
     `headBitCell + 3 ≤ blockStart (p+1)` (the `+2` cell is the last of the triple). -/
-theorem headBitCell_add_three_le (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
+theorem headBitCell_add_three_le_blockStart_succ (k p : ℕ) (j : Fin k) (hp : 1 ≤ p) :
     headBitCell k p j + 3 ≤ blockStart k (p + 1) := by
   rw [blockStart_succ k p hp]
   have hj : j.val < k := j.isLt
@@ -200,23 +208,23 @@ structure SimInvAt (k : ℕ) (t : Tape) (w : Fin k → Tape) (M : ℕ) : Prop wh
   /-- Everything from block `M+1` onward is blank — the `□` sentinel region. -/
   sentinel : ∀ c : ℕ, blockStart k (M + 1) ≤ c → t.cells c = Γ.blank
 
-/-- **Base case.** The initial single tape `initTape []` encodes the initial
+/-- **Base case.** The initial single tape `Tape.init []` encodes the initial
     `k`-tape configuration (all heads at 0, all blank), materialized to `M = 0`
     (empty used region — the sentinel `□` starts right at cell 1). -/
 theorem simInvAt_init (k : ℕ) :
-    SimInvAt k (initTape []) (fun _ => initTape []) 0 where
-  cell0 := by simp [initTape]
-  wfStart := fun _ => by simp [initTape]
+    SimInvAt k (Tape.init []) (fun _ => Tape.init []) 0 where
+  cell0 := by simp [Tape.init]
+  wfStart := fun _ => by simp [Tape.init]
   noStart := fun _ p hp => by
-    simp only [initTape]
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ p = 0)]
     simp
-  heads_le := fun _ => by simp [initTape]
+  heads_le := fun _ => by simp [Tape.init]
   headBit := fun p hp1 hp0 _ => by omega
   sym := fun p hp1 hp0 _ => by omega
   sentinel := fun c hc => by
     rw [blockStart_one] at hc
-    simp only [initTape]
+    simp only [Tape.init]
     rw [if_neg (by omega : ¬ c = 0)]
     simp
 
@@ -235,7 +243,7 @@ theorem SimInvAt.cells_congr {k : ℕ} {t t' : Tape} {w : Fin k → Tape} {M : �
 /-- **GATHER decode kernel (head off cell 0).** When tape `j`'s head is in the
     materialized region, decoding its two symbol cells recovers exactly the
     symbol under that head — what the sweep accumulates. -/
-theorem SimInvAt.decode_headSym {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
+theorem SimInvAt.decSymΓ_symCell_head {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
     (h : SimInvAt k t w M) (j : Fin k)
     (hp1 : 1 ≤ (w j).head) (hpM : (w j).head ≤ M) :
     decSymΓ (t.cells (symCell k ((w j).head) j))
@@ -246,7 +254,7 @@ theorem SimInvAt.decode_headSym {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : �
 
 /-- **GATHER decode kernel (head on cell 0).** A head at position 0 reads `▷`;
     the sweep finds no marker for it and records `▷`. -/
-theorem SimInvAt.head0_read {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
+theorem SimInvAt.read_eq_start_of_head_eq_zero {k : ℕ} {t : Tape} {w : Fin k → Tape} {M : ℕ}
     (h : SimInvAt k t w M) (j : Fin k) (h0 : (w j).head = 0) :
     (w j).read = Γ.start := by
   rw [Tape.read, h0]; exact h.wfStart j
@@ -334,3 +342,5 @@ theorem SimInvAt.materialized_ne_start {k : ℕ} {t : Tape} {w : Fin k → Tape}
     rw [hcs, (h.sym (q + 1) hp1 hpM ⟨ib / 3, hjk⟩).2]; exact (encSymΓ_ne_start _).2
 
 end NTM.SingleTape
+
+end Complexity

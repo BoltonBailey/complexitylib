@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.P
 import Complexitylib.Classes.Containments
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
@@ -25,6 +30,8 @@ complexity class.
 - `empty_mem_EXP`, `univ_mem_EXP`
 -/
 
+namespace Complexity
+
 open Complexity
 
 namespace Language
@@ -41,16 +48,16 @@ namespace TM
 
 variable {n : ℕ}
 
-/-- `initTape []` is the canonical output-tape initial value: cell 0 is `▷`,
+/-- `Tape.init []` is the canonical output-tape initial value: cell 0 is `▷`,
     every other cell is `□`, and the head is at position 0. This is exactly
     the well-formedness precondition of `writeTM_hoareTime` with `B = 0`. -/
-theorem initTape_nil_wf :
-    (initTape []).cells 0 = Γ.start ∧
-    (∀ j, j ≥ 1 → (initTape []).cells j ≠ Γ.start) ∧
-    (initTape []).head ≤ 0 := by
+theorem Tape.init_nil_wf :
+    (Tape.init []).cells 0 = Γ.start ∧
+    (∀ j, j ≥ 1 → (Tape.init []).cells j ≠ Γ.start) ∧
+    (Tape.init []).head ≤ 0 := by
   refine ⟨rfl, fun j hj => ?_, le_refl _⟩
   have hj' : j ≠ 0 := by omega
-  simp [initTape, hj']
+  simp [Tape.init, hj']
 
 /-- **`writeTM` halts on every input in 3 steps with `sym` on output cell 1.**
 
@@ -63,8 +70,8 @@ theorem writeTM_decidesInTime_const (sym : Γw) (x : List Bool) :
       c'.output.cells 1 = sym.toΓ := by
   obtain ⟨c', t, hle, hreach, hhalt, hpost⟩ :=
     writeTM_hoareTime (n := n) sym 0
-      (initTape (x.map Γ.ofBool)) (fun _ => initTape []) (initTape [])
-      initTape_nil_wf
+      (Tape.init (x.map Γ.ofBool)) (fun _ => Tape.init []) (Tape.init [])
+      Tape.init_nil_wf
   exact ⟨c', t, by omega, hreach, hhalt, hpost⟩
 
 end TM
@@ -104,25 +111,27 @@ theorem univ_mem_P : Language.univ ∈ P :=
   Set.mem_iUnion.mpr ⟨0, DTIME_mono (BigO.const_le_pow 3 0) univ_in_DTIME⟩
 
 /-- **`∅ ∈ NP`.** -/
-theorem empty_mem_NP : Language.empty ∈ NP := P_sub_NP empty_mem_P
+theorem empty_mem_NP : Language.empty ∈ NP := P_subset_NP empty_mem_P
 
 /-- **`Set.univ ∈ NP`.** -/
-theorem univ_mem_NP : Language.univ ∈ NP := P_sub_NP univ_mem_P
+theorem univ_mem_NP : Language.univ ∈ NP := P_subset_NP univ_mem_P
 
 /-- **`∅ ∈ BPP`.** -/
-theorem empty_mem_BPP : Language.empty ∈ BPP := P_sub_BPP empty_mem_P
+theorem empty_mem_BPP : Language.empty ∈ BPP := P_subset_BPP empty_mem_P
 
 /-- **`Set.univ ∈ BPP`.** -/
-theorem univ_mem_BPP : Language.univ ∈ BPP := P_sub_BPP univ_mem_P
+theorem univ_mem_BPP : Language.univ ∈ BPP := P_subset_BPP univ_mem_P
 
 /-- **`∅ ∈ PSPACE`.** -/
-theorem empty_mem_PSPACE : Language.empty ∈ PSPACE := P_sub_PSPACE empty_mem_P
+theorem empty_mem_PSPACE : Language.empty ∈ PSPACE := P_subset_PSPACE empty_mem_P
 
 /-- **`Set.univ ∈ PSPACE`.** -/
-theorem univ_mem_PSPACE : Language.univ ∈ PSPACE := P_sub_PSPACE univ_mem_P
+theorem univ_mem_PSPACE : Language.univ ∈ PSPACE := P_subset_PSPACE univ_mem_P
 
 /-- **`∅ ∈ EXP`.** -/
-theorem empty_mem_EXP : Language.empty ∈ EXP := P_sub_EXP empty_mem_P
+theorem empty_mem_EXP : Language.empty ∈ EXP := P_subset_EXP empty_mem_P
 
 /-- **`Set.univ ∈ EXP`.** -/
-theorem univ_mem_EXP : Language.univ ∈ EXP := P_sub_EXP univ_mem_P
+theorem univ_mem_EXP : Language.univ ∈ EXP := P_subset_EXP univ_mem_P
+
+end Complexity

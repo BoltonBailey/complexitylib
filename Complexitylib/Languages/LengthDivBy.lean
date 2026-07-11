@@ -1,6 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
 import Mathlib.Data.ZMod.Basic
 
 /-!
@@ -22,6 +27,8 @@ This generalizes `evenLength` (which is `lengthDivBy 2`).
 - `lengthDivBy_in_DTIME` — `lengthDivBy k ∈ DTIME(n + 2)`.
 - `lengthDivBy_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 
@@ -91,3 +98,5 @@ theorem lengthDivBy_mem_P (k : ℕ) [NeZero k] : Language.lengthDivBy k ∈ P :=
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ (lengthDivBy_in_DTIME k)⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

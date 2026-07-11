@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.P
 
@@ -8,6 +13,8 @@ Core definitions for the function/search complexity classes **FNP** and **TFNP**
 and the `tagRelation` combinator used to construct TFNP problems from
 NP ∩ coNP witness pairs.
 -/
+
+namespace Complexity
 
 /-- **FNP** is the class of search problems defined by NP relations: binary
     relations that are polynomially balanced and decidable in polynomial time.
@@ -27,3 +34,5 @@ def TFNP : Set (List Bool → List Bool → Prop) :=
 def tagRelation (R₁ R₂ : List Bool → List Bool → Prop) :
     List Bool → List Bool → Prop :=
   fun x y => R₁ x y ∨ R₂ x y
+
+end Complexity

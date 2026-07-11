@@ -1,4 +1,9 @@
-import Complexitylib.Circuits.Digraph.Defs
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Mathlib.Digraph
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Data.Finset.Card
@@ -13,25 +18,14 @@ import Mathlib.Tactic.Ring
 
 Proof machinery supporting `Valiant.depth_reduction`. The public
 statement and high-level wrapper live in `Complexitylib.Circuits.Valiant`; the basic
-digraph definitions used below — `IsDirectedPath`, `IsSimplePath`,
-`depth`, `edgeFinset`, `deleteEdges` — live in `Complexitylib.Circuits.Digraph.Defs`.
-This file defines the canonical labeling and collects the canonical
-labeling argument, the edge partition by first-differing bit, the
-averaging step, and the relabeling-after-removal bound.
+digraph definitions used below — `IsDirectedWalk`, `IsPath`, `canonicalLabel`,
+`depth`, `edgeFinset`, `deleteEdges` — live in `Complexitylib.Mathlib.Digraph`.
+This file collects the canonical labeling argument (legality and depth
+bounds for `canonicalLabel`), the edge partition by first-differing bit,
+the averaging step, and the relabeling-after-removal bound.
 -/
 
-namespace Digraph
-
-/-- The **canonical labeling** of `G`: the length — node count — of a
-longest simple directed path ending at `v`. Parameterized by edge
-count `n`, with the outer `+ 1` converting to node count; the
-single-vertex path `![v]` always witnesses `n = 0`, so the label is
-automatically at least `1`. -/
-noncomputable def canonicalLabel {V : Type*} [Fintype V]
-    (G : Digraph V) (v : V) : Nat :=
-  sSup { n | ∃ p : Fin (n + 1) → V, G.IsSimplePath p ∧ p (Fin.last n) = v } + 1
-
-end Digraph
+namespace Complexity
 
 namespace Valiant
 
@@ -49,7 +43,7 @@ def IsLegalLabeling (G : Digraph V) (ℓ : V → ℕ) : Prop :=
 /-- The canonical-label set is bounded above by `Fintype.card V`: any
 injective `Fin (n + 1) → V` forces `n + 1 ≤ Fintype.card V`. -/
 private lemma canonicalLabel_set_bddAbove (G : Digraph V) (v : V) :
-    BddAbove { n | ∃ p : Fin (n + 1) → V, G.IsSimplePath p ∧ p (Fin.last n) = v } := by
+    BddAbove { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v } := by
   refine ⟨Fintype.card V, ?_⟩
   rintro n ⟨p, ⟨_, hinj⟩, _⟩
   have := Fintype.card_le_of_injective p hinj
@@ -60,7 +54,7 @@ omit [Fintype V] in
 /-- The single-vertex path at `v` witnesses `0` in the canonical-label
 edge-count set. -/
 private lemma zero_mem_canonicalLabel_set (G : Digraph V) (v : V) :
-    (0 : ℕ) ∈ { n | ∃ p : Fin (n + 1) → V, G.IsSimplePath p ∧ p (Fin.last n) = v } := by
+    (0 : ℕ) ∈ { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v } := by
   refine ⟨fun _ => v, ⟨fun i h => by omega, ?_⟩, rfl⟩
   intro a b _
   apply Fin.ext
@@ -68,6 +62,7 @@ private lemma zero_mem_canonicalLabel_set (G : Digraph V) (v : V) :
   have hb := b.isLt
   omega
 
+omit [Fintype V] in
 /-- Every canonical label is at least `1`: immediate from the outer
 `+ 1` in the definition. -/
 lemma one_le_canonicalLabel (G : Digraph V) (v : V) :
@@ -81,7 +76,7 @@ walk-supremum `depth = 0`, so acyclicity is needed.) -/
 lemma canonicalLabel_le_depth
     (G : Digraph V) (hac : IsAcyclic G) (v : V) :
     G.canonicalLabel v ≤ G.depth := by
-  set S : Set ℕ := { n | ∃ p : Fin (n + 1) → V, G.IsSimplePath p ∧ p (Fin.last n) = v }
+  set S : Set ℕ := { n | ∃ p : Fin (n + 1) → V, G.IsPath p ∧ p (Fin.last n) = v }
   show sSup S + 1 ≤ G.depth
   obtain ⟨p, ⟨hpath, _⟩, _⟩ :=
     Nat.sSup_mem ⟨0, zero_mem_canonicalLabel_set G v⟩ (canonicalLabel_set_bddAbove G v)
@@ -103,7 +98,7 @@ a cycle. We can then build directed walks of arbitrary length by repeatedly
 going around the cycle, so `G` is not acyclic. -/
 private lemma not_acyclic_of_cycle_witness
     (G : Digraph V) {u v : V} (huv : G.Adj u v)
-    {m : ℕ} (p : Fin m → V) (hpath : G.IsDirectedPath p)
+    {m : ℕ} (p : Fin m → V) (hpath : G.IsDirectedWalk p)
     (iu iv : Fin m) (hpu : p iu = u) (hiu : iu.val + 1 = m) (hpv : p iv = v) :
     ¬ IsAcyclic G := by
   rw [IsAcyclic, not_bddAbove_iff]
@@ -164,8 +159,8 @@ simple path `p` ending at `u` followed by an edge `u → v` yields a
 simple path ending at `v` that is one longer. -/
 private lemma extend_simple_path [DecidableEq V] (G : Digraph V) (hac : IsAcyclic G)
     {u v : V} (huv : G.Adj u v) {n : ℕ} {p : Fin (n + 1) → V}
-    (hsp : G.IsSimplePath p) (hpu : p (Fin.last n) = u) :
-    ∃ p' : Fin (n + 2) → V, G.IsSimplePath p' ∧ p' (Fin.last (n + 1)) = v := by
+    (hsp : G.IsPath p) (hpu : p (Fin.last n) = u) :
+    ∃ p' : Fin (n + 2) → V, G.IsPath p' ∧ p' (Fin.last (n + 1)) = v := by
   obtain ⟨hpath, hinj⟩ := hsp
   have hv_notin : ∀ i : Fin (n + 1), p i ≠ v := fun i hpv =>
     not_acyclic_of_cycle_witness G huv p hpath (Fin.last n) i hpu rfl hpv hac
@@ -211,7 +206,7 @@ variable {V : Type*}
 gap along any directed walk. -/
 private lemma legal_label_add_le
     {G : Digraph V} {ℓ : V → ℕ} (hℓ : IsLegalLabeling G ℓ)
-    {m : ℕ} {p : Fin m → V} (hp : G.IsDirectedPath p) :
+    {m : ℕ} {p : Fin m → V} (hp : G.IsDirectedWalk p) :
     ∀ k a (h₁ : a < m) (h₂ : a + k < m),
       ℓ (p ⟨a, h₁⟩) + k ≤ ℓ (p ⟨a + k, h₂⟩) := by
   intro k
@@ -234,7 +229,7 @@ private lemma legal_label_add_le
 is strictly monotonic. -/
 private lemma legal_label_strictMono
     {G : Digraph V} {ℓ : V → ℕ} (hℓ : IsLegalLabeling G ℓ)
-    {m : ℕ} {p : Fin m → V} (hp : G.IsDirectedPath p) :
+    {m : ℕ} {p : Fin m → V} (hp : G.IsDirectedWalk p) :
     StrictMono (fun i : Fin m => ℓ (p i)) := by
   intro i j hij
   have hile : i.val < j.val := hij
@@ -650,3 +645,5 @@ lemma depth_deleteEdges_levelEdges_le
   exact (depth_le_image_card G' hlegal).trans himg
 
 end Valiant
+
+end Complexity

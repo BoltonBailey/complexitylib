@@ -1,9 +1,14 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Language
 
 /-!
 # SAT verifier specification
 
-This file defines an executable verifier for `pairLang R_SAT`:
+This file defines an executable verifier for `pairLang Witness`:
 
 1. split `pair(z, α)` back into `(z, α)` via `unpair?`,
 2. decode `z` as a CNF in SAT's concrete bit encoding,
@@ -11,9 +16,11 @@ This file defines an executable verifier for `pairLang R_SAT`:
 4. evaluate the decoded formula under `α`.
 
 The deterministic implementation `verifyPairTM` in `SAT/VerifierTM.lean`
-computes this specification and proves `pairLang R_SAT ∈ P`; this file is
+computes this specification and proves `pairLang Witness ∈ P`; this file is
 the small executable/semantic audit surface for that machine proof.
 -/
+
+namespace Complexity
 
 namespace SAT
 
@@ -23,8 +30,11 @@ namespace SAT
 
 /-- The four two-bit tokens used by SAT's concrete encoding. -/
 inductive EncToken where
+  /-- A doubled data bit: `false` is encoded as `00`, `true` as `11`. -/
   | bit (b : Bool)
+  /-- The literal separator `|`, encoded as `01`. -/
   | litSep
+  /-- The clause separator `#`, encoded as `10`. -/
   | clauseSep
   deriving DecidableEq, Repr
 
@@ -52,12 +62,15 @@ def tokenize? : List Bool → Option (List EncToken)
   | false :: true :: rest => Option.map (EncToken.litSep :: ·) (tokenize? rest)
   | true :: false :: rest => Option.map (EncToken.clauseSep :: ·) (tokenize? rest)
 
+/-- The empty token stream encodes to the empty bitstring. -/
 @[simp] theorem encodeTokens_nil : encodeTokens [] = [] := rfl
 
+/-- `encodeTokens` unfolds on `cons`: the head token's bits precede the tail's encoding. -/
 @[simp] theorem encodeTokens_cons (tok : EncToken) (toks : List EncToken) :
     encodeTokens (tok :: toks) = tok.encode ++ encodeTokens toks := by
   cases tok <;> rfl
 
+/-- `encodeTokens` is a monoid homomorphism: it distributes over list append. -/
 @[simp] theorem encodeTokens_append (xs ys : List EncToken) :
     encodeTokens (xs ++ ys) = encodeTokens xs ++ encodeTokens ys := by
   induction xs with
@@ -65,6 +78,7 @@ def tokenize? : List Bool → Option (List EncToken)
   | cons x xs ih =>
       simp [List.append_assoc, ih]
 
+/-- Round trip: tokenizing an encoded token stream recovers the original tokens. -/
 @[simp] theorem tokenize?_encodeTokens (toks : List EncToken) :
     tokenize? (encodeTokens toks) = some toks := by
   induction toks with
@@ -74,10 +88,12 @@ def tokenize? : List Bool → Option (List EncToken)
       | bit b =>
           cases b with
           | false =>
-              change tokenize? (false :: false :: encodeTokens toks) = some (EncToken.bit false :: toks)
+              change tokenize? (false :: false :: encodeTokens toks)
+                = some (EncToken.bit false :: toks)
               simp [tokenize?, ih]
           | true =>
-              change tokenize? (true :: true :: encodeTokens toks) = some (EncToken.bit true :: toks)
+              change tokenize? (true :: true :: encodeTokens toks)
+                = some (EncToken.bit true :: toks)
               simp [tokenize?, ih]
       | litSep =>
           change tokenize? (false :: true :: encodeTokens toks) = some (EncToken.litSep :: toks)
@@ -86,6 +102,8 @@ def tokenize? : List Bool → Option (List EncToken)
           change tokenize? (true :: false :: encodeTokens toks) = some (EncToken.clauseSep :: toks)
           simp [tokenize?, ih]
 
+/-- Soundness of `tokenize?`: any successfully tokenized bitstring is the
+encoding of the resulting token stream. -/
 theorem tokenize?_sound {z : List Bool} {toks : List EncToken}
     (h : tokenize? z = some toks) : z = encodeTokens toks := by
   let rec hsound : ∀ z toks, tokenize? z = some toks → z = encodeTokens toks
@@ -117,6 +135,7 @@ theorem tokenize?_sound {z : List Bool} {toks : List EncToken}
         simp [encodeTokens, EncToken.encode, henc]
   exact hsound z toks h
 
+/-- Encoding a stream of `bit` tokens doubles each underlying bit. -/
 @[simp] theorem encodeTokens_map_bit (bs : List Bool) :
     encodeTokens (bs.map EncToken.bit) = doubleBits bs := by
   induction bs with
@@ -139,12 +158,15 @@ def decodeRaw? : List Bool → Option Lit
       else
         none
 
+/-- Round trip: decoding a literal's raw encoding recovers the literal. -/
 @[simp] theorem decodeRaw?_encodeRaw (ℓ : Lit) :
     decodeRaw? ℓ.encodeRaw = some ℓ := by
   cases ℓ with
   | mk sign var =>
       simp [decodeRaw?, encodeRaw, Unary.encode]
 
+/-- Soundness of `decodeRaw?`: any successfully decoded bitstring is the raw
+encoding of the resulting literal. -/
 theorem decodeRaw?_sound {bs : List Bool} {ℓ : Lit}
     (h : decodeRaw? bs = some ℓ) : bs = ℓ.encodeRaw := by
   cases bs with
@@ -167,6 +189,7 @@ theorem decodeRaw?_sound {bs : List Bool} {ℓ : Lit}
 def rawTokens (ℓ : Lit) : List EncToken :=
   ℓ.encodeRaw.map EncToken.bit
 
+/-- A literal's token-level encoding flattens to its raw bits, doubled. -/
 @[simp] theorem encodeTokens_rawTokens (ℓ : Lit) :
     encodeTokens ℓ.rawTokens = doubleBits ℓ.encodeRaw := by
   simp [rawTokens]
@@ -184,6 +207,7 @@ def tokens : Clause → List EncToken
   | [] => []
   | ℓ :: ℓs => ℓ.rawTokens ++ [EncToken.litSep] ++ tokens ℓs
 
+/-- A clause's token-level encoding flattens to its concrete bit encoding. -/
 @[simp] theorem encodeTokens_tokens (c : Clause) :
     encodeTokens (tokens c) = c.encode := by
   induction c with
@@ -191,6 +215,7 @@ def tokens : Clause → List EncToken
   | cons ℓ ℓs ih =>
       simp [tokens, encode_cons, ih, List.append_assoc, EncToken.encode]
 
+/-- `Clause.tokens` distributes over list append. -/
 @[simp] theorem tokens_append (c₁ c₂ : Clause) :
     tokens (c₁ ++ c₂) = tokens c₁ ++ tokens c₂ := by
   induction c₁ with
@@ -207,6 +232,7 @@ def tokens : CNF → List EncToken
   | [] => []
   | c :: cs => c.tokens ++ [EncToken.clauseSep] ++ tokens cs
 
+/-- A CNF's token-level encoding flattens to its concrete bit encoding. -/
 @[simp] theorem encodeTokens_tokens (φ : CNF) :
     encodeTokens (tokens φ) = φ.encode := by
   induction φ with
@@ -214,6 +240,7 @@ def tokens : CNF → List EncToken
   | cons c cs ih =>
       simp [tokens, encode_cons, ih, List.append_assoc, EncToken.encode]
 
+/-- `CNF.tokens` distributes over list append. -/
 @[simp] theorem tokens_append (φ ψ : CNF) :
     tokens (φ ++ ψ) = tokens φ ++ tokens ψ := by
   induction φ with
@@ -328,6 +355,7 @@ def CNF.decode? (z : List Bool) : Option CNF := do
   let toks <- tokenize? z
   parseTokensAux toks [] [] []
 
+/-- Round trip: decoding an encoded CNF recovers the formula. -/
 @[simp] theorem CNF.decode?_encode (φ : CNF) :
     CNF.decode? φ.encode = some φ := by
   rw [CNF.decode?, ← CNF.encodeTokens_tokens φ, tokenize?_encodeTokens]
@@ -335,6 +363,8 @@ def CNF.decode? (z : List Bool) : Option CNF := do
   have hparse := parseTokensAux_cnf_tokens φ [] []
   simpa [parseTokensAux] using hparse
 
+/-- Soundness of `CNF.decode?`: any successfully decoded bitstring is the
+encoding of the resulting CNF. -/
 theorem CNF.decode?_sound {z : List Bool} {φ : CNF}
     (h : CNF.decode? z = some φ) : z = φ.encode := by
   unfold CNF.decode? at h
@@ -364,18 +394,23 @@ def verifyPair (w : List Bool) : Bool :=
       | none => false
       | some φ => decide (α.length ≤ z.length + 1) && CNF.eval α φ
 
+/-- On a well-formed pair `pair(φ.encode, α)`, `verifyPair` reduces to the
+witness length check conjoined with evaluating `φ` under `α`. -/
 @[simp] theorem verifyPair_pair_encode (φ : CNF) (α : Assignment) :
     verifyPair (pair φ.encode α) = (decide (α.length ≤ φ.encode.length + 1) && CNF.eval α φ) := by
   simp [verifyPair, CNF.decode?_encode]
 
-theorem verifyPair_true_of_R_SAT {z α : List Bool} (hR : R_SAT z α) :
+/-- Completeness: `verifyPair` accepts the pairing of any witnessed instance. -/
+theorem verifyPair_true_of_witness {z α : List Bool} (hR : Witness z α) :
     verifyPair (pair z α) = true := by
   obtain ⟨φ, hz, hlen, heval⟩ := hR
   subst hz
   simp [verifyPair_pair_encode, hlen, heval]
 
+/-- Correctness of the verifier: `verifyPair` accepts exactly the members of
+`pairLang Witness`. -/
 theorem verifyPair_eq_true_iff_mem_pairLang (w : List Bool) :
-    verifyPair w = true ↔ w ∈ pairLang R_SAT := by
+    verifyPair w = true ↔ w ∈ pairLang Witness := by
   constructor
   · intro h
     unfold verifyPair at h
@@ -391,21 +426,25 @@ theorem verifyPair_eq_true_iff_mem_pairLang (w : List Bool) :
         | some φ =>
             simp [hdecode] at h
             have hz : z = φ.encode := CNF.decode?_sound hdecode
-            have hw : w = pair z α := unpair?_sound hunpair
+            have hw : w = pair z α := eq_pair_of_unpair?_eq_some hunpair
             have hlen : α.length ≤ z.length + 1 := by
               simpa [decide_eq_true_eq] using h.1
             refine ⟨z, α, hw, ?_⟩
             exact ⟨φ, hz, hlen, h.2⟩
   · rintro ⟨z, α, rfl, hR⟩
-    exact verifyPair_true_of_R_SAT hR
+    exact verifyPair_true_of_witness hR
 
+/-- `verifyPair_eq_true_iff_mem_pairLang` with the biconditional flipped. -/
 theorem mem_pairLang_iff_verifyPair (w : List Bool) :
-    w ∈ pairLang R_SAT ↔ verifyPair w = true := by
+    w ∈ pairLang Witness ↔ verifyPair w = true := by
   rw [verifyPair_eq_true_iff_mem_pairLang]
 
-theorem pairLang_R_SAT_eq_verifyPairLang :
-    pairLang R_SAT = {w | verifyPair w = true} := by
+/-- `pairLang Witness` equals the language decided by `verifyPair`, as sets. -/
+theorem pairLang_witness_eq_verifyPairLang :
+    pairLang Witness = {w | verifyPair w = true} := by
   ext w
   exact mem_pairLang_iff_verifyPair w
 
 end SAT
+
+end Complexity

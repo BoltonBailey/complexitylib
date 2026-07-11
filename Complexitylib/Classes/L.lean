@@ -1,6 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Classes.Time
-import Complexitylib.Classes.Space
 import Complexitylib.Classes.Pairing
 import Complexitylib.Asymptotics
 import Mathlib.Data.Nat.Log
@@ -19,26 +23,27 @@ The base parametric classes `DSPACE` and `NSPACE` (which do not require the
 transducer property) are defined in `Space.lean`.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **L** (LOGSPACE) is the class of languages decidable by a deterministic
     log-space transducer: a DTM with `O(log n)` work tape space whose output
     tape head never moves left. The transducer constraint prevents the output
     tape from being used as extra workspace beyond the space bound. -/
 def L : Set Language :=
-  {L | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
-    tm.IsTransducer ∧ tm.DecidesInSpace L f ∧ f =O (fun n => Nat.log 2 n)}
+  {Lang | ∃ (k : ℕ) (tm : TM k) (f : ℕ → ℕ),
+    tm.IsTransducer ∧ tm.DecidesInSpace Lang f ∧ f =O (fun n => Nat.log 2 n)}
 
 /-- **NL** is the class of languages decidable by a nondeterministic log-space
     transducer: an NTM with `O(log n)` work tape space whose output tape head
     never moves left. -/
 def NL : Set Language :=
-  {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
-    tm.IsTransducer ∧ tm.DecidesInSpace L f ∧ f =O (fun n => Nat.log 2 n)}
+  {Lang | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
+    tm.IsTransducer ∧ tm.DecidesInSpace Lang f ∧ f =O (fun n => Nat.log 2 n)}
 
 /-- **coNL** is the class of languages whose complements are in NL.
     By the Immerman-Szelepcsényi theorem coNL = NL, but this is nontrivial. -/
-def CoNL : Set Language := complClass NL
+def coNL : Set Language := complClass NL
 
 /-- **FL** is the class of functions computable by a deterministic log-space
     transducer: a DTM with `O(log n)` work tape space whose output tape head
@@ -59,3 +64,5 @@ def FNL : Set (List Bool → List Bool → Prop) :=
     least one witness. -/
 def TFNL : Set (List Bool → List Bool → Prop) :=
   {R ∈ FNL | ∀ x, ∃ y, R x y}
+
+end Complexity

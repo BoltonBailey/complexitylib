@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 
@@ -14,7 +19,8 @@ definitions; classes where the output tape could serve as extra workspace (e.g.
 L, NL) add the transducer constraint (`IsTransducer`) at the class level.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- `DSPACE(S)` is the class of languages decidable by a deterministic TM using
     `O(S(n))` space on work tapes. -/
@@ -27,3 +33,5 @@ def DSPACE (S : ℕ → ℕ) : Set Language :=
 def NSPACE (S : ℕ → ℕ) : Set Language :=
   {L | ∃ (k : ℕ) (tm : NTM k) (f : ℕ → ℕ),
     tm.DecidesInSpace L f ∧ f =O S}
+
+end Complexity

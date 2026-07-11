@@ -1,8 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Hoare.Defs
-import Complexitylib.Models.TuringMachine.Combinators.SeqInternal
-import Complexitylib.Models.TuringMachine.Combinators.IfInternal
-import Complexitylib.Models.TuringMachine.Combinators.LoopInternal
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Seq
+import Complexitylib.Models.TuringMachine.Combinators.Internal.If
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Loop
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 /-!
 # Hoare-style composition rules for TM combinators
@@ -20,9 +25,11 @@ Each rule specifies how pre/postconditions and time bounds compose.
 ## Tape transition effects
 
 All combinators apply `transitionTape` / `transitionInput` at phase boundaries.
-These are the identity on stable tapes (head ≥ 1, read ≠ ▷) — see `transitionTape_id`.
+These are the identity on stable tapes (head ≥ 1, read ≠ ▷) — see `transitionTape_eq_self`.
 The `AllTapesWF` invariant ensures stability is preserved across transitions.
 -/
+
+namespace Complexity
 
 namespace TM
 
@@ -44,8 +51,8 @@ theorem seqTM_hoareTime (tm₁ tm₂ : TM n)
   obtain ⟨c₂, t₂, ht₂, hreach₂, hhalt₂, hpost⟩ := h₂ _ _ _ hmid'
   refine ⟨phase2Wrap tm₁ tm₂ c₂, t₁ + 1 + t₂, ?_, ?_, ?_, ?_⟩
   · omega
-  · convert seqTM_full_simulation tm₁ tm₂ hreach₁ hhalt₁ hreach₂ using 1
-  · rw [phase2Wrap_halted]; exact hhalt₂
+  · convert seqTM_reachesIn_of_reachesIn tm₁ tm₂ hreach₁ hhalt₁ hreach₂ using 1
+  · rw [phase2Wrap_halted_iff]; exact hhalt₂
   · exact hpost
 
 /-- Well-formedness condition on all tapes: cells 0 = start and cells ≥ 1 ≠ start. -/
@@ -71,10 +78,10 @@ theorem AllTapesWF.transition {inp : Tape} {work : Fin n → Tape} {out : Tape}
   obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := h
   exact ⟨transitionInput_head_ge inp hic0,
     by rw [transitionInput_cells]; exact hins,
-    fun i => transitionTape_head_ge _ (hwc0 i),
+    fun i => one_le_head_transitionTape _ (hwc0 i),
     fun i j hj => by rw [transitionTape_cells _ (hwns i)]; exact hwns i j hj,
     transitionTape_cells out hons,
-    transitionTape_head_ge out hoc0⟩
+    one_le_head_transitionTape out hoc0⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Complement rule
@@ -148,15 +155,15 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
   have hhead_bound := h_head _ _ _ hmid
   obtain ⟨hic0, hins, hwc0, hwns, hoc0, hons⟩ := hwf
   -- Phase 1: test simulation
-  have hsim := ifTM_test_simulation tmTest tmThen tmElse hreach₁
+  have hsim := ifTM_reachesIn_ifTestWrap tmTest tmThen tmElse hreach₁
   -- Phase 2: test → rewind transition (1 step)
   have h_tr := ifTM_test_to_rewind tmTest tmThen tmElse hhalt₁
   -- Phase 3: rewind loop (tracks all tapes, using AllTapesWF propagation)
   obtain ⟨h_inp_ge, h_inp_ns, h_work_ge, h_work_ns, h_out_cells, _⟩ :=
     AllTapesWF.transition (h_wf _ _ _ hmid)
-  have h_out_head_bound := transitionTape_head_bound hoc0 hhead_bound
+  have h_out_head_bound := head_transitionTape_le hoc0 hhead_bound
   obtain ⟨c_check, hreach_rw, hst_check, hh_check, hcells_check, hinp_check, hwork_check⟩ :=
-    ifTM_rewind_loop_full tmTest tmThen tmElse (transitionTape c_test.output).head
+    ifTM_rewindOut_reachesIn_check tmTest tmThen tmElse (transitionTape c_test.output).head
       { state := Sum.inr (Sum.inl IfPhase.rewindOut),
         input := transitionInput c_test.input,
         work := fun i => transitionTape (c_test.work i),
@@ -192,7 +199,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     have hmid_then := h_to_then c_test.input c_test.work c_test.output hmid hcell1
     obtain ⟨c_then, t₃, ht₃, hreach₃, hhalt₃, hpost_then⟩ :=
       h_then _ _ _ hmid_then
-    have hsim₃ := ifTM_then_simulation tmTest tmThen tmElse hreach₃
+    have hsim₃ := ifTM_reachesIn_ifThenWrap tmTest tmThen tmElse hreach₃
     have h_halt_step := ifTM_then_halt_step tmTest tmThen tmElse hhalt₃
     have hpost := h_post_then c_then.input c_then.work c_then.output hpost_then
     -- Compose: test sim + transition + rewind + check + branch sim + halt
@@ -212,7 +219,8 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
             ⟨tmThen.qstart, transitionInput c_test.input,
              fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifThenWrap]
-        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have hcfg_eta : c_branch =
+            ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
             ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
         rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,
@@ -222,7 +230,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
       have r2 := reachesIn_trans _ r1 (.step hstep_branch .zero)
       have r3 := reachesIn_trans _ r2 hsim₃
       exact reachesIn_trans _ r3 (.step h_halt_step .zero)
-    · exact ifTM_halted_done tmTest tmThen tmElse _ rfl
+    · exact ifTM_halted_of_state_eq_done tmTest tmThen tmElse _ rfl
     · exact hpost
   · -- Else branch (symmetric)
     obtain ⟨c_branch, hstep_check, hst_branch, hcells_branch, hhead_branch,
@@ -233,7 +241,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
     have hmid_else := h_to_else c_test.input c_test.work c_test.output hmid hcell1
     obtain ⟨c_else, t₃, ht₃, hreach₃, hhalt₃, hpost_else⟩ :=
       h_else _ _ _ hmid_else
-    have hsim₃ := ifTM_else_simulation tmTest tmThen tmElse hreach₃
+    have hsim₃ := ifTM_reachesIn_ifElseWrap tmTest tmThen tmElse hreach₃
     have h_halt_step := ifTM_else_halt_step tmTest tmThen tmElse hhalt₃
     have hpost := h_post_else c_else.input c_else.work c_else.output hpost_else
     let c_done_else : Cfg n (ifTM tmTest tmThen tmElse).Q :=
@@ -252,7 +260,8 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
             ⟨tmElse.qstart, transitionInput c_test.input,
              fun i => transitionTape (c_test.work i), ⟨1, c_test.output.cells⟩⟩) := by
         rw [hstep_check]; congr 1; simp only [ifElseWrap]
-        have hcfg_eta : c_branch = ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
+        have hcfg_eta : c_branch =
+            ⟨c_branch.state, c_branch.input, c_branch.work, c_branch.output⟩ := rfl
         have htape_eta : c_branch.output =
             ⟨c_branch.output.head, c_branch.output.cells⟩ := rfl
         rw [hcfg_eta, hst_branch, hinp_branch, hinp_check, hwork_branch, hwork_check,
@@ -262,7 +271,7 @@ theorem ifTM_hoareTime (tmTest tmThen tmElse : TM n)
       have r2 := reachesIn_trans _ r1 (.step hstep_branch .zero)
       have r3 := reachesIn_trans _ r2 hsim₃
       exact reachesIn_trans _ r3 (.step h_halt_step .zero)
-    · exact ifTM_halted_done tmTest tmThen tmElse _ rfl
+    · exact ifTM_halted_of_state_eq_done tmTest tmThen tmElse _ rfl
     · exact hpost
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -346,3 +355,5 @@ theorem loopTM_hoareTime (tmBody tmTest : TM n)
     (h_variant_bound inp work out hinv)
 
 end TM
+
+end Complexity

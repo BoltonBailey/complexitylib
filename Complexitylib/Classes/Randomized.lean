@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Asymptotics
 import Complexitylib.Classes.Time
@@ -20,7 +25,8 @@ The acceptance-probability conditions shared across classes are factored into
 `NTM.RejectsWithProb` (upper-bounding acceptance on no-instances).
 -/
 
-open Complexity
+namespace Complexity
+
 
 namespace NTM
 
@@ -78,12 +84,12 @@ def RP : Set Language :=
 /-- **coRP** is the class of languages whose complements are in RP.
     Equivalently: yes-instances always accepted (probability 1), no-instances
     accepted with probability ≤ 1/2. -/
-def CoRP : Set Language := complClass RP
+def coRP : Set Language := complClass RP
 
 /-- **ZPP** (zero-error probabilistic polynomial time) is RP ∩ coRP. A language
     is in ZPP iff it has a PTM with zero-error expected polynomial running
     time. -/
-def ZPP : Set Language := RP ∩ CoRP
+def ZPP : Set Language := RP ∩ coRP
 
 /-- `PPTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`
     with unbounded error: `x ∈ L` iff the PTM accepts with probability
@@ -98,3 +104,5 @@ def PPTIME (T : ℕ → ℕ) : Set Language :=
     by a PTM in polynomial time with unbounded error: `PP = ⋃_k PPTIME(n^k)`. -/
 def PP : Set Language :=
   ⋃ k : ℕ, PPTIME (· ^ k)
+
+end Complexity

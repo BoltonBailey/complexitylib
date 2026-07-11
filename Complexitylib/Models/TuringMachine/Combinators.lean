@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
 import Mathlib.Data.Fintype.Sum
 
@@ -11,6 +16,18 @@ closure properties of complexity classes.
 
 - `TM.unionTM` — Given `tm₁ : TM n₁` deciding `L₁` and `tm₂ : TM n₂` deciding `L₂`,
   construct a `TM (n₁ + 1 + n₂)` that decides `L₁ ∪ L₂`.
+- `TM.complementTM` — Given a TM deciding `L`, construct a TM (with the same
+  number of work tapes) deciding `Lᶜ` by flipping the output bit.
+- `TM.seqTM` — Sequential composition: run `tm₁` to completion, then `tm₂`
+  on the same tapes.
+- `TM.ifTM` — Conditional branching: run a test machine, then branch to a
+  "then" or "else" machine based on its output.
+- `TM.loopTM` — Loop combinator: repeatedly run a body machine then a test
+  machine, halting when the test outputs `Γ.one`.
+- `TM.scannerTM` — Generic finite-state scanner: fold a finite-state
+  transition function over the input bits and emit a final symbol.
+- `TM.retargetInput` — Given `M : TM k`, construct a `TM (k + 1)` that runs
+  `M` but reads its "input" from work tape `k` instead of the input tape.
 
 ## Design
 
@@ -32,9 +49,11 @@ The union machine has three phases:
 
 ### State space
 
-`Q₁ ⊕ Mid ⊕ Q₂` where `Mid` encodes the four transition states
+`Q₁ ⊕ UnionPhase ⊕ Q₂` where `UnionPhase` encodes the four transition states
 between Phase 1 and Phase 2.
 -/
+
+namespace Complexity
 
 variable {n₁ n₂ : ℕ}
 
@@ -55,13 +74,18 @@ def idleDir (head : Γ) : Dir3 :=
 def moveLeftDir (head : Γ) : Dir3 :=
   if head = Γ.start then .right else .left
 
+/-- `idleDir` moves right when reading the start symbol `▷`. -/
 theorem idleDir_start : idleDir Γ.start = Dir3.right := rfl
 private theorem moveLeftDir_start : moveLeftDir Γ.start = Dir3.right := rfl
 
+/-- If the head reads `▷`, then `idleDir` moves right — the shape of the
+    `δ_right_of_start` obligation for idle tapes. -/
 theorem idleDir_right_of_start (h : head = Γ.start) : idleDir head = Dir3.right := by
   subst h; rfl
 
-private theorem moveLeftDir_right_of_start (h : head = Γ.start) : moveLeftDir head = Dir3.right :=
+/-- If the head reads `▷`, then `moveLeftDir` moves right — the shape of the
+    `δ_right_of_start` obligation for tapes being rewound. -/
+theorem moveLeftDir_right_of_start (h : head = Γ.start) : moveLeftDir head = Dir3.right :=
   by subst h; rfl
 
 /-- Write back the same symbol read from a tape, preserving cell contents.
@@ -81,7 +105,7 @@ def allIdle {σ : Type} {k : ℕ}
   (newState, fun _ => .blank, .blank, idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
 
 /-- Proof that all-idle directions satisfy `δ_right_of_start`. -/
-def rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
+theorem rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
     (iHead = Γ.start → idleDir iHead = Dir3.right) ∧
     (∀ i, wHeads i = Γ.start → idleDir (wHeads i) = Dir3.right) ∧
     (oHead = Γ.start → idleDir oHead = Dir3.right) :=
@@ -92,19 +116,19 @@ def rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- Intermediate states between Phase 1 and Phase 2 of the union machine. -/
-inductive Mid where
+inductive UnionPhase where
   | rewindOut    -- rewind fake output (work tape n₁) to cell 0
   | checkResult  -- at fake output cell 1: read and decide accept/continue
   | rewindIn     -- rewind input tape to cell 0
   | setup2       -- move Phase-2 tapes from cell 1 to cell 0
   deriving DecidableEq
 
-instance : Fintype Mid where
+instance : Fintype UnionPhase where
   elems := {.rewindOut, .checkResult, .rewindIn, .setup2}
   complete := fun x => by cases x <;> simp
 
 /-- The state type for the union TM. -/
-abbrev UnionQ (Q₁ Q₂ : Type) := Q₁ ⊕ Mid ⊕ Q₂
+abbrev UnionQ (Q₁ Q₂ : Type) := Q₁ ⊕ UnionPhase ⊕ Q₂
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Index helpers for the n₁ + 1 + n₂ work tapes
@@ -914,7 +938,7 @@ def scannerTM {S : Type} [DecidableEq S] [Fintype S]
     - Work tape `k`: plays the role of `M`'s input tape (read-only, no
       writes except a no-op `readBackWrite` that preserves cells).
 
-    When work tape `k` is initialized with `initTape (z.map Γ.ofBool)`, the
+    When work tape `k` is initialized with `Tape.init (z.map Γ.ofBool)`, the
     machine simulates `M` on input `z`.
 
     Used in `witnessLang` NTM constructions where the verifier DTM's
@@ -964,3 +988,5 @@ def retargetInput {k : ℕ} (M : TM k) : TM (k + 1) where
       exact hinp this
 
 end TM
+
+end Complexity

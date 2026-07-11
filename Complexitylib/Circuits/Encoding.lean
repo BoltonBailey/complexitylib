@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Encoding.Defs
 import Complexitylib.Circuits.Encoding.Internal
 
@@ -9,27 +14,29 @@ This module exposes the machine-facing representation of
 
 ## Main definitions
 
-- `AONCircuitCode.RawGate` and `RawCircuit`: proof-free ordered syntax.
+- `CircuitCode.RawGate` and `RawCircuit`: proof-free ordered syntax.
 - `RawCircuit.WellFormed`: nonempty, strictly backward-pointing gate lists.
 - `RawCircuit.encode` / `decode?`: canonical terminated-unary bit codec.
 - `RawCircuit.eval?`: array-backed iterative evaluation.
-- `AONCircuitCode.encodeCircuit`: serialization of a typed circuit.
-- `AONCircuitCode.evalCode`: decode and evaluate with an exact arity check.
+- `CircuitCode.encodeCircuit`: serialization of a typed circuit.
+- `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
 
 ## Main results
 
 - `RawCircuit.decode?_eq_some_iff`: exact decoder soundness and completeness.
 - `RawCircuit.eval?_isSome_iff`: executable success exactly matches
   well-formedness.
-- `AONCircuitCode.evalCode_encodeCircuit`: encoded evaluation agrees with
+- `CircuitCode.evalCode_encodeCircuit`: encoded evaluation agrees with
   `Circuit.eval`.
-- `AONCircuitCode.evalCode_encodeCircuit_of_length`: the corresponding
+- `CircuitCode.evalCode_encodeCircuit_of_length`: the corresponding
   list-native theorem for machine-facing clients.
-- `AONCircuitCode.encodeCircuit_length_le_size`: concrete polynomial bit-length
+- `CircuitCode.encodeCircuit_length_le_size`: concrete polynomial bit-length
   bound for the unary encoding.
 -/
 
-namespace AONCircuitCode
+namespace Complexity
+
+namespace CircuitCode
 
 namespace RawCircuit
 
@@ -70,4 +77,6 @@ theorem encodeCircuit_length_le_size {N G : ℕ} [NeZero N]
       1 + c.size * (2 * (N + c.size) + 6) :=
   encodeCircuit_length_le_size_internal c
 
-end AONCircuitCode
+end CircuitCode
+
+end Complexity

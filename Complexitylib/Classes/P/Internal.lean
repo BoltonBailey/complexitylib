@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.P.Defs
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal
@@ -11,42 +16,13 @@ The key simulation theorem `unionTM_decidesInTime` establishes that the
 composite machine from `TM.unionTM` correctly decides `L₁ ∪ L₂`.
 -/
 
+namespace Complexity
+
 open Complexity Asymptotics Filter
 
 variable {n₁ n₂ : ℕ}
 
 namespace TM
-
--- ════════════════════════════════════════════════════════════════════════
--- Auxiliary lemma: DecidesInTime implies qstart ≠ qhalt
--- ════════════════════════════════════════════════════════════════════════
-
-/-- A TM that decides a language must have distinct start and halt states.
-    If `qstart = qhalt`, the machine halts at step 0 with output `□`,
-    which equals neither `Γ.one` nor `Γ.zero`. -/
-private theorem qstart_ne_qhalt_of_decidesInTime {tm : TM n₁}
-    {L : Language} {f : ℕ → ℕ} (h : tm.DecidesInTime L f) :
-    tm.qstart ≠ tm.qhalt := by
-  intro heq
-  -- Pick any input, e.g., []
-  obtain ⟨c', t, _, hreach, hhalt, hmem, hnmem⟩ := h []
-  -- Since qstart = qhalt, initCfg is halted, so reachesIn can only give t=0, c'=initCfg
-  have hhalted_init : (tm.initCfg []).state = tm.qhalt := by
-    simp [heq]
-  -- step returns none for halted configs, so reachesIn must be zero
-  have : c' = tm.initCfg [] ∧ t = 0 := by
-    cases hreach with
-    | zero => exact ⟨rfl, rfl⟩
-    | step hstep _ =>
-      simp [step, heq] at hstep
-  obtain ⟨rfl, _⟩ := this
-  -- output cell 1 of initCfg is blank
-  have hblank : (tm.initCfg []).output.cells 1 = Γ.blank := by
-    simp [initTape]
-  -- But DecidesInTime requires it to be either one or zero
-  by_cases hx : ([] : List Bool) ∈ L
-  · have := hmem hx; rw [hblank] at this; exact absurd this (by decide)
-  · have := hnmem hx; rw [hblank] at this; exact absurd this (by decide)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Core simulation theorem
@@ -60,8 +36,8 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
     {L₁ L₂ : Language} {f₁ f₂ : ℕ → ℕ}
     (h₁ : tm₁.DecidesInTime L₁ f₁) (h₂ : tm₂.DecidesInTime L₂ f₂) :
     (unionTM tm₁ tm₂).DecidesInTime (L₁ ∪ L₂) (fun n => 10 * f₁ n + f₂ n) := by
-  have hne₁ := qstart_ne_qhalt_of_decidesInTime h₁
-  have hne₂ := qstart_ne_qhalt_of_decidesInTime h₂
+  have hne₁ := qstart_ne_qhalt_of_decidesInTime _ h₁
+  have hne₂ := qstart_ne_qhalt_of_decidesInTime _ h₂
   intro x
   obtain ⟨c₁, t₁, ht₁, hreach₁, hhalt₁, hmem₁, hnmem₁⟩ := h₁ x
   obtain ⟨c₂, t₂, ht₂, hreach₂, hhalt₂, hmem₂, hnmem₂⟩ := h₂ x
@@ -75,20 +51,20 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
     · cases hreach₂; exact absurd hhalt₂ hne₂
     · omega
   -- Head bounds: tape heads are ≤ t₁ after Phase 1
-  have hbounds := head_bound_of_reachesIn tm₁ hreach₁
+  have hbounds := head_le_of_reachesIn tm₁ hreach₁
   -- Phase 1: union machine simulates tm₁ for t₁ steps
-  have hphase1 := phase1_simulation tm₁ tm₂ x hreach₁ ht₁_pos
+  have hphase1 := unionTM_phase1_simulation tm₁ tm₂ x hreach₁ ht₁_pos
   -- Case split on whether tm₁ accepted
   by_cases hx₁ : x ∈ L₁
   · -- tm₁ accepted: output cell 1 = Γ.one
     have hcell := hmem₁ hx₁
     -- Derive output tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
-    have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_cells_ne_start i hi)
+    have hcell0_out := output_cells_zero_eq_start_of_reachesIn hreach₁ (Tape.init_cells_zero _)
+    have hnostart_out := output_cells_ne_start_of_reachesIn hreach₁
+      (fun i hi => Tape.init_nil_cells_ne_start i hi)
     -- Transition: rewind fake output, check, write Γ.one to real output, halt
     obtain ⟨t_tr, c_final, htrans, hhalt_f, hout_f, htr_bound⟩ :=
-      transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
+      unionTM_transition_accept tm₁ tm₂ hhalt₁ hcell hcell0_out hnostart_out
     -- Combine Phase 1 + transition
     have hoh := hbounds.2.1  -- c₁.output.head ≤ t₁
     refine ⟨c_final, t₁ + t_tr, ?_, reachesIn_trans _ hphase1 htrans, hhalt_f, ?_, ?_⟩
@@ -98,16 +74,16 @@ theorem unionTM_decidesInTime {tm₁ : TM n₁} {tm₂ : TM n₂}
   · -- tm₁ rejected: output cell 1 = Γ.zero
     have hcell := hnmem₁ hx₁
     -- Derive output tape and input tape invariants from reachesIn
-    have hcell0_out := output_cell0_of_reachesIn hreach₁ (initTape_cells_zero _)
-    have hnostart_out := output_noStart_of_reachesIn hreach₁
-      (fun i hi => initTape_nil_cells_ne_start i hi)
-    have hinput_cells := input_cells_of_reachesIn hreach₁
+    have hcell0_out := output_cells_zero_eq_start_of_reachesIn hreach₁ (Tape.init_cells_zero _)
+    have hnostart_out := output_cells_ne_start_of_reachesIn hreach₁
+      (fun i hi => Tape.init_nil_cells_ne_start i hi)
+    have hinput_cells := input_cells_eq_of_reachesIn hreach₁
     -- Transition: full transition to Phase 2
     obtain ⟨t_tr, c_mid, htrans, hmid_state, hmid_input, hmid_work, hmid_output, htr_bound⟩ :=
-      transition_reject tm₁ tm₂ x hhalt₁ hcell hcell0_out hnostart_out hinput_cells
+      unionTM_transition_reject tm₁ tm₂ x hhalt₁ hcell hcell0_out hnostart_out hinput_cells
     -- Phase 2: union machine simulates tm₂ for t₂ steps
     obtain ⟨c_end, hphase2, hend_state, hend_output⟩ :=
-      phase2_simulation tm₁ tm₂ x hreach₂ hmid_state hmid_input hmid_work hmid_output
+      unionTM_phase2_simulation tm₁ tm₂ x hreach₂ hmid_state hmid_input hmid_work hmid_output
     -- Combine Phase 1 + transition + Phase 2
     have hfull := reachesIn_trans _ (reachesIn_trans _ hphase1 htrans) hphase2
     -- The final config is halted
@@ -136,3 +112,5 @@ theorem bigO_union_bound {f₁ f₂ T₁ T₂ : ℕ → ℕ}
     (ho₁ : f₁ =O T₁) (ho₂ : f₂ =O T₂) :
     (fun n => 10 * f₁ n + f₂ n) =O (fun n => T₁ n + T₂ n) :=
   BigO.const_mul_add 10 ho₁ ho₂
+
+end Complexity

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A Lean 4 library formalizing computational complexity theory, built on Mathlib. The definitions follow Arora and Barak's *Computational Complexity: A Modern Approach*, using a concrete 4-symbol alphabet and separate deterministic/nondeterministic machine types. NTMs and PTMs share the same structure (two transition functions); they differ only in acceptance semantics (existential vs counting).
+A Lean 4 library formalizing computational complexity theory, built on Mathlib. The machine model is shaped by Arora and Barak's *Computational Complexity: A Modern Approach* — a concrete 4-symbol alphabet and separate deterministic/nondeterministic machine types — but the library sets its own conventions and diverges from any one text where a cleaner formalization exists. NTMs and PTMs share the same structure (two transition functions); they differ only in acceptance semantics (existential vs counting).
 
 For project direction and dependency-ordered contribution tracks, read
 `ROADMAP.md` before beginning a large feature. Prefer landing one reusable
@@ -19,6 +19,17 @@ lake build --wfail Complexitylib.Circuits.Encoding.Validation
 Always verify all three commands pass before considering a change complete.
 The latter two run executable regression guards that are intentionally kept
 out of the public import graph.
+
+Quality gates (also run in CI; see CONTRIBUTING.md):
+
+```bash
+python3 scripts/lint_style.py        # headers, module docs, 100-col, _root_ escapes
+lake exe runLinter Complexitylib     # Mathlib/Batteries env linters
+lake env lean scripts/AxiomGuard.lean  # headline theorems on std axioms only
+```
+
+Both linters ratchet against shrink-only baselines (`scripts/style-exceptions.txt`,
+`scripts/nolints.json`): never add entries, delete them when you fix files.
 
 ## Architecture
 
@@ -40,14 +51,14 @@ The codebase uses three layers to separate concerns:
 1. **Definitions layer** (`Foo/Defs.lean`) — Core types, structures, and
    definitions. Imported by both Internal and surface layers. Minimal
    imports. Human-auditable: a reader should be able to verify that these
-   definitions faithfully capture the textbook concepts.
+   definitions faithfully capture the intended concepts.
 2. **Internal layer** (`Foo/Internal.lean` or `Foo/Internal/`) — Proof
    internals, helper lemmas, and auxiliary constructions. Imports `Foo/Defs`
    (not `Foo.lean`). Not meant for human review — correctness is
    established by the type checker.
 3. **Surface layer** (`Foo.lean`) — Public theorem statements with proofs
    supplied by importing from Internal. Also human-auditable: a reader
-   should be able to verify that the theorem types match the textbook
+   should be able to verify that the theorem types mean what they claim
    without understanding proof internals.
 
 Import graph (no cycles):
@@ -69,6 +80,14 @@ same file are acceptable.
 
 ### Key Design Decisions
 
+- **`Complexity` root namespace**: every declaration lives under `Complexity`
+  (avoids collisions with Mathlib's `Language`, keeps `P`/`NP`/`TM` out of the
+  root scope). Files are wrapped in `namespace Complexity … end Complexity`.
+  Sole exception: `Complexitylib/Mathlib/` extends Mathlib types in their home
+  namespaces (dot-notation requires it) and holds upstreaming candidates only.
+- **Never shadow a root namespace**: an inner `namespace TM` block inside
+  another namespace (e.g. producing `SAT.TM`) shadows the real `TM.*` API and
+  forces `_root_.` escapes — the style linter tracks and shrinks `_root_.` use.
 - **Arora-Barak style**: Fixed alphabet `Γ = {0, 1, □, ▷}`, three-way directions (`Dir3`), explicit `qstart`/`qhalt` states.
 - **Named tapes**: `Cfg` has separate `input : Tape`, `work : Fin n → Tape`, `output : Tape` fields. This avoids degenerate `Fin k` indexing and makes the read-only/read-write distinction structural.
 - **DTM (`TM`)**: Single deterministic transition function `δ`. Execution via `step` (computable) and relational `stepRel`/`reaches`/`reachesIn`.

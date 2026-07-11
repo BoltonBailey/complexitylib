@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.P.Defs
 
@@ -12,11 +17,12 @@ A reduction `L ≤ₚ L'` is a polynomial-time computable function `f` (i.e. `f 
 such that `x ∈ L ↔ f x ∈ L'`. A language is NP-hard when every language in `NP`
 reduces to it, and NP-complete when it is additionally a member of `NP`.
 
-The headline application is `SAT.NPComplete_L_SAT` (Cook–Levin), in
+The headline application is `SAT.NPComplete_language` (Cook–Levin), in
 `Complexitylib/SAT/CookLevin.lean`.
 -/
 
-open Complexity
+namespace Complexity
+
 
 /-- **Polynomial-time many-one reduction.** `MapReducesPoly L L'` (written
     `L ≤ₚ L'`) holds when there is a polynomial-time computable function `f`
@@ -32,3 +38,5 @@ def NPHard (L : Language) : Prop := ∀ L' ∈ NP, L' ≤ₚ L
 
 /-- **NP-completeness.** `L` is NP-complete when it is in `NP` and NP-hard. -/
 def NPComplete (L : Language) : Prop := L ∈ NP ∧ NPHard L
+
+end Complexity

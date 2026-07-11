@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
 
 /-!
@@ -23,13 +28,15 @@ configuration embedding (`liftCfg` / `retargetCfg`): one step of the
 derived machine on an embedded configuration equals one step of `tm`,
 embedded. The embeddings park the dummy tapes at cell 1 with blank cells;
 the initial configuration instead has dummy heads at cell 0 (on `▷`), so
-the step lemma is stated for any dummy tape with `cells = initTape []` and
+the step lemma is stated for any dummy tape with `cells = Tape.init []` and
 `head ≤ 1` — covering both the initial bounce and the parked steady state
 (mirroring `NTM.pad0`).
 
 The time bounds are preserved *exactly* (no `+ 1`): the dummy-tape bounce
 happens during the simulated machine's own first step.
 -/
+
+namespace Complexity
 
 namespace TM
 
@@ -41,27 +48,27 @@ variable {n : ℕ}
 
 /-- One idle action (`readBackWrite` of the read + `idleDir`) sends any
     blank tape with head at cell 0 or 1 to the canonical *parked* tape
-    `(initTape []).move Dir3.right` (head 1, blank cells): at cell 0 the
+    `(Tape.init []).move Dir3.right` (head 1, blank cells): at cell 0 the
     write is a structural no-op and the head bounces right off `▷`; at
     cell 1 it writes `□` over `□` and stays. -/
 private theorem dummy_writeAndMove (w : Tape)
-    (hc : w.cells = (initTape []).cells) (hh : w.head ≤ 1) :
+    (hc : w.cells = (Tape.init []).cells) (hh : w.head ≤ 1) :
     w.writeAndMove (readBackWrite w.read).toΓ (idleDir w.read)
-      = (initTape []).move Dir3.right := by
-  have hread : w.read = (initTape []).cells w.head := by rw [Tape.read, hc]
+      = (Tape.init []).move Dir3.right := by
+  have hread : w.read = (Tape.init []).cells w.head := by rw [Tape.read, hc]
   rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hh with h0 | h1
-  · -- head at cell 0: `w` *is* `initTape []`, and the action is the bounce
-    have hw : w = initTape [] := by
+  · -- head at cell 0: `w` *is* `Tape.init []`, and the action is the bounce
+    have hw : w = Tape.init [] := by
       calc w = ⟨w.head, w.cells⟩ := rfl
-        _ = initTape [] := by rw [h0, hc]; rfl
+        _ = Tape.init [] := by rw [h0, hc]; rfl
     subst hw
     rfl
   · -- head at cell 1: write `□` over `□` and stay
     have hr : w.read = Γ.blank := by rw [hread, h1]; rfl
     rw [hr]
-    show w.write (readBackWrite Γ.blank).toΓ = (initTape []).move Dir3.right
+    show w.write (readBackWrite Γ.blank).toΓ = (Tape.init []).move Dir3.right
     rw [Tape.write, if_neg (show ¬ w.head = 0 by omega), h1, hc]
-    rw [show (readBackWrite Γ.blank).toΓ = (initTape []).cells 1 from rfl,
+    rw [show (readBackWrite Γ.blank).toΓ = (Tape.init []).cells 1 from rfl,
       Function.update_eq_self]
     rfl
 
@@ -104,7 +111,7 @@ def liftCfg (tm : TM n) (m : ℕ) (c : Cfg n tm.Q) : Cfg (n + m) tm.Q where
   state := c.state
   input := c.input
   work := fun i =>
-    if h : i.val < n then c.work ⟨i.val, h⟩ else (initTape []).move Dir3.right
+    if h : i.val < n then c.work ⟨i.val, h⟩ else (Tape.init []).move Dir3.right
   output := c.output
 
 /-- `liftCfg` leaves the state unchanged. -/
@@ -127,7 +134,7 @@ theorem liftCfg_work_lt (tm : TM n) (m : ℕ) (c : Cfg n tm.Q)
 /-- `liftCfg` maps the extra work tapes to the parked blank tape. -/
 theorem liftCfg_work_ge (tm : TM n) (m : ℕ) (c : Cfg n tm.Q)
     (i : Fin (n + m)) (h : n ≤ i.val) :
-    (tm.liftCfg m c).work i = (initTape []).move Dir3.right :=
+    (tm.liftCfg m c).work i = (Tape.init []).move Dir3.right :=
   dif_neg (Nat.not_lt.mpr h)
 
 /-- **Unified step commutation** for `liftTM`. If the extra work tapes of
@@ -140,7 +147,7 @@ private theorem liftTM_step_of_extras (tm : TM n) (m : ℕ) {c : Cfg n tm.Q}
     (hs : C.state = c.state) (hi : C.input = c.input) (ho : C.output = c.output)
     (hw : ∀ (i : Fin (n + m)) (h : i.val < n), C.work i = c.work ⟨i.val, h⟩)
     (hd : ∀ i : Fin (n + m), n ≤ i.val →
-      (C.work i).cells = (initTape []).cells ∧ (C.work i).head ≤ 1) :
+      (C.work i).cells = (Tape.init []).cells ∧ (C.work i).head ≤ 1) :
     (tm.liftTM m).step C = (tm.step c).map (tm.liftCfg m) := by
   by_cases hh : c.state = tm.qhalt
   · -- both machines are halted
@@ -366,7 +373,7 @@ def retargetCfg (tm : TM n) (c : Cfg n tm.Q) : Cfg (n + 1) tm.Q where
   state := c.state
   input := c.input
   work := fun i => if h : i.val < n then c.work ⟨i.val, h⟩ else c.output
-  output := (initTape []).move Dir3.right
+  output := (Tape.init []).move Dir3.right
 
 /-- `retargetCfg` leaves the state unchanged. -/
 @[simp] theorem retargetCfg_state (tm : TM n) (c : Cfg n tm.Q) :
@@ -395,7 +402,7 @@ private theorem retargetOutput_step_of_extras (tm : TM n) {c : Cfg n tm.Q}
     (hs : C.state = c.state) (hi : C.input = c.input)
     (hw : ∀ (i : Fin (n + 1)) (h : i.val < n), C.work i = c.work ⟨i.val, h⟩)
     (hlast : C.work (Fin.last n) = c.output)
-    (ho : C.output.cells = (initTape []).cells ∧ C.output.head ≤ 1) :
+    (ho : C.output.cells = (Tape.init []).cells ∧ C.output.head ≤ 1) :
     (tm.retargetOutput).step C = (tm.step c).map tm.retargetCfg := by
   by_cases hh : c.state = tm.qhalt
   · -- both machines are halted
@@ -442,7 +449,7 @@ theorem retargetOutput_step_retargetCfg (tm : TM n) (c : Cfg n tm.Q) :
 /-- The first step out of the retargeted initial configuration: the real
     output tape bounces off `▷` into the parked position while `tm`
     performs its own first step (work tape `n` mirrors `tm`'s output tape,
-    which also starts at `initTape []`). -/
+    which also starts at `Tape.init []`). -/
 private theorem retargetOutput_step_initCfg (tm : TM n) (x : List Bool) :
     (tm.retargetOutput).step ((tm.retargetOutput).initCfg x)
       = (tm.step (tm.initCfg x)).map tm.retargetCfg :=
@@ -484,7 +491,7 @@ theorem retargetOutput_computesInTime (tm : TM n) {f : List Bool → List Bool}
     ∃ (c' : Cfg (n + 1) tm.Q) (t : ℕ), t ≤ T x.length ∧
       (tm.retargetOutput).reachesIn t ((tm.retargetOutput).initCfg x) c' ∧
       (tm.retargetOutput).halted c' ∧
-      (c'.work (Fin.last n)).hasOutput (f x) := by
+      (c'.work (Fin.last n)).HasOutput (f x) := by
   obtain ⟨c₀, t, ht, hreach, hhalt, hout⟩ := h x
   obtain ⟨C', hR, hstate, hwork⟩ := retargetOutput_reachesIn_init tm x hreach
   refine ⟨C', t, ht, hR, ?_, ?_⟩
@@ -493,3 +500,5 @@ theorem retargetOutput_computesInTime (tm : TM n) {f : List Bool → List Bool}
   · rw [hwork]; exact hout
 
 end TM
+
+end Complexity

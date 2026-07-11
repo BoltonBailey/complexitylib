@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Mathlib.Data.List.Basic
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Tactic.Linarith
@@ -34,6 +39,8 @@ exists, equal to a prefix of any longer one. This is essential for
 polynomial balance in the NP reduction.
 -/
 
+namespace Complexity
+
 namespace SAT
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -43,9 +50,11 @@ namespace SAT
 /-- A literal: `sign = true` means the positive literal `x_var`;
     `sign = false` means `¬x_var`. -/
 structure Lit where
+  /-- Polarity of the literal: `true` for `x_var`, `false` for `¬x_var`. -/
   sign : Bool
+  /-- Index of the variable this literal mentions. -/
   var : Nat
-  deriving DecidableEq, Repr
+  deriving DecidableEq
 
 /-- A clause is a disjunction of literals. The empty clause is
     unsatisfiable (an empty disjunction is `false`). -/
@@ -93,8 +102,10 @@ def Satisfiable (φ : CNF) : Prop := ∃ α : Assignment, eval α φ = true
 -- Basic sanity lemmas (proved here so downstream files can rely on them)
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- The empty CNF evaluates to `true` (empty conjunction). -/
 @[simp] theorem eval_nil (α : Assignment) : eval α [] = true := rfl
 
+/-- Evaluating `c :: φ` is the conjunction of evaluating `c` and evaluating `φ`. -/
 @[simp] theorem eval_cons (α : Assignment) (c : Clause) (φ : CNF) :
     eval α (c :: φ) = (Clause.eval α c && eval α φ) := by
   simp [eval, List.all_cons]
@@ -121,8 +132,10 @@ def Clause.maxVar : Clause → Nat
   | [] => 0
   | ℓ :: ℓs => max ℓ.var (maxVar ℓs)
 
+/-- The empty clause has `maxVar = 0`. -/
 @[simp] theorem Clause.maxVar_nil : Clause.maxVar [] = 0 := rfl
 
+/-- `maxVar` of `ℓ :: ℓs` is the max of `ℓ.var` and `maxVar ℓs`. -/
 @[simp] theorem Clause.maxVar_cons (ℓ : Lit) (ℓs : Clause) :
     Clause.maxVar (ℓ :: ℓs) = max ℓ.var (Clause.maxVar ℓs) := rfl
 
@@ -143,8 +156,10 @@ def CNF.maxVar : CNF → Nat
   | [] => 0
   | c :: cs => max c.maxVar (maxVar cs)
 
+/-- The empty CNF has `maxVar = 0`. -/
 @[simp] theorem CNF.maxVar_nil : CNF.maxVar [] = 0 := rfl
 
+/-- `maxVar` of `c :: cs` is the max of `c.maxVar` and `maxVar cs`. -/
 @[simp] theorem CNF.maxVar_cons (c : Clause) (cs : CNF) :
     CNF.maxVar (c :: cs) = max c.maxVar (CNF.maxVar cs) := rfl
 
@@ -165,6 +180,7 @@ theorem CNF.clause_maxVar_le_maxVar {c : Clause} {φ : CNF} (hc : c ∈ φ) :
 -- and extending α with false never changes eval.
 -- ════════════════════════════════════════════════════════════════════════
 
+/-- `Assignment.get` on `α ++ β` agrees with `α` at in-range indices. -/
 theorem Assignment.get_append_left (α β : Assignment) (i : Nat) (h : i < α.length) :
     Assignment.get (α ++ β) i = Assignment.get α i := by
   simp only [Assignment.get, List.getElem?_append_left h]
@@ -338,4 +354,20 @@ instance CNF.decidableSatisfiable (φ : CNF) : Decidable φ.Satisfiable := by
   · rintro ⟨f, hf⟩
     exact ⟨List.ofFn f, by simp, hf⟩
 
+/-- Evaluating a concatenation of clauses is the disjunction of the evaluations. -/
+@[simp] theorem Clause.eval_append (α : Assignment) (c d : Clause) :
+    Clause.eval α (c ++ d) = (Clause.eval α c || Clause.eval α d) := by
+  induction c with
+  | nil => simp [Clause.eval]
+  | cons _ _ _ => simp [Clause.eval, List.any_cons, Bool.or_assoc]
+
+/-- Evaluating a concatenation of CNFs is the conjunction of the evaluations. -/
+@[simp] theorem CNF.eval_append (α : Assignment) (φ ψ : CNF) :
+    CNF.eval α (φ ++ ψ) = (CNF.eval α φ && CNF.eval α ψ) := by
+  induction φ with
+  | nil => simp [CNF.eval]
+  | cons _ _ _ => simp [CNF.eval, List.all_cons, Bool.and_assoc]
+
 end SAT
+
+end Complexity

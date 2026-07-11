@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.BitString
 import Mathlib.Algebra.Polynomial.Eval.Defs
 
@@ -12,6 +17,8 @@ The first component of `circuits n` is the number of internal gates. Family
 `size` counts internal and output gates, but not primary-input vertices or the
 free per-edge negation flags.
 -/
+
+namespace Complexity
 
 namespace Circuit
 
@@ -35,7 +42,11 @@ count `G` and a circuit `Circuit B n 1 G`. The unique length-zero input is
 handled by `emptyOutput`, since the base circuit model deliberately requires
 at least one input wire. -/
 structure CircuitFamily (B : Basis) where
+  /-- The family's answer on the unique length-zero input, stored directly
+      because `Circuit` requires a positive input arity. -/
   emptyOutput : Bool
+  /-- For each positive length `n`, an internal-gate count `G` paired with a
+      single-output circuit on `n` inputs and `G` internal gates. -/
   circuits : ∀ (n : ℕ) [NeZero n], Σ G, Circuit B n 1 G
 
 namespace CircuitFamily
@@ -90,3 +101,5 @@ def Computes (F : CircuitFamily B) (f : BoolFunFamily) : Prop :=
   F.function = f
 
 end CircuitFamily
+
+end Complexity

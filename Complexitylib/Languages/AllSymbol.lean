@@ -1,7 +1,12 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.ScannerInternal
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Scanner
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 /-!
 # `allZeros` and `allOnes`: single-symbol languages
@@ -20,6 +25,8 @@ single `Bool` tracking "every bit so far equals target".
 - `allZeros_in_DTIME`, `allOnes_in_DTIME` — both in `DTIME(n + 2)`.
 - `allZeros_mem_P`, `allOnes_mem_P`.
 -/
+
+namespace Complexity
 
 open Complexity
 
@@ -126,3 +133,5 @@ theorem allOnes_mem_P : Language.allOnes ∈ P := by
   refine Set.mem_iUnion.mpr ⟨1, DTIME_mono ?_ allOnes_in_DTIME⟩
   refine BigO.add ?_ (BigO.const_le_pow 2 1)
   simpa using BigO.refl (fun n : ℕ => n)
+
+end Complexity

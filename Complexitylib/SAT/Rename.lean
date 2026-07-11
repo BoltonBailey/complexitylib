@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.SAT.Semantics
 
 /-!
@@ -22,6 +27,8 @@ machine actually emits (`docs/A5-ReductionEmitter.md`).
   preserves satisfiability
 -/
 
+namespace Complexity
+
 namespace SAT
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -37,11 +44,14 @@ def Clause.mapVar (f : ℕ → ℕ) (c : Clause) : Clause := c.map (Lit.mapVar f
 /-- Rename every variable of a CNF along `f`. -/
 def CNF.mapVar (f : ℕ → ℕ) (φ : CNF) : CNF := φ.map (Clause.mapVar f)
 
+/-- Renaming the empty CNF yields the empty CNF. -/
 @[simp] theorem CNF.mapVar_nil (f : ℕ → ℕ) : CNF.mapVar f [] = [] := rfl
 
+/-- Renaming distributes over `cons`: rename the head clause and the tail CNF. -/
 theorem CNF.mapVar_cons (f : ℕ → ℕ) (c : Clause) (φ : CNF) :
     CNF.mapVar f (c :: φ) = Clause.mapVar f c :: CNF.mapVar f φ := rfl
 
+/-- Renaming distributes over CNF concatenation. -/
 theorem CNF.mapVar_append (f : ℕ → ℕ) (φ ψ : CNF) :
     CNF.mapVar f (φ ++ ψ) = CNF.mapVar f φ ++ CNF.mapVar f ψ :=
   List.map_append ..
@@ -59,10 +69,12 @@ theorem Assignment.get_of_length_le {α : Assignment} {v : ℕ} (h : α.length �
 /-- Tabulate the first `M` values of a Boolean function as an assignment. -/
 def Assignment.ofFn (M : ℕ) (g : ℕ → Bool) : Assignment := (List.range M).map g
 
+/-- The tabulated assignment `Assignment.ofFn M g` has length `M`. -/
 @[simp] theorem Assignment.ofFn_length (M : ℕ) (g : ℕ → Bool) :
     (Assignment.ofFn M g).length = M := by
   simp [Assignment.ofFn]
 
+/-- Reading `Assignment.ofFn M g` at an in-range variable `v < M` returns `g v`. -/
 theorem Assignment.ofFn_get {M v : ℕ} (g : ℕ → Bool) (h : v < M) :
     (Assignment.ofFn M g).get v = g v := by
   simp [Assignment.ofFn, Assignment.get, List.getElem?_map, List.getElem?_range h]
@@ -169,3 +181,5 @@ theorem CNF.satisfiable_mapVar_iff {f : ℕ → ℕ} (hf : Function.Injective f)
   ⟨CNF.Satisfiable.of_mapVar, fun h => h.mapVar hf⟩
 
 end SAT
+
+end Complexity

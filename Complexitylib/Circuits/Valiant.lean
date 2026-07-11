@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Internal.Valiant
 
 /-! # Valiant's Depth Reduction Lemma
@@ -27,6 +32,8 @@ The proof machinery — canonical labelings, the edge partition by
 first-differing bit, averaging, and the relabeling-after-removal
 bound — lives in `Complexitylib.Circuits.Internal.Valiant`.
 -/
+
+namespace Complexity
 
 namespace Valiant
 
@@ -73,9 +80,11 @@ theorem depth_reduction
       rw [hpow]
       exact hbound
   · refine ⟨∅, Finset.empty_subset _, by simp, ?_⟩
-    rw [deleteEdges_empty_depth]
+    rw [depth_deleteEdges_empty]
     show sSup _ ≤ _
     rw [Nat.sSup_of_not_bddAbove hac]
     exact Nat.zero_le _
 
 end Valiant
+
+end Complexity

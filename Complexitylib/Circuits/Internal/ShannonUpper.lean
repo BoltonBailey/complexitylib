@@ -1,4 +1,9 @@
-import Complexitylib.Circuits.AON.Defs
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Circuits.AndOrNot.Defs
 import Mathlib.Data.Nat.Log
 import Mathlib.Tactic
 
@@ -23,6 +28,8 @@ for column functions, AND/OR combining layers. Total ≤ `18 · 2^N / N`
 gates for `N ≥ 16`.
 -/
 
+namespace Complexity
+
 namespace ShannonUpper
 
 /-! ## Parameters -/
@@ -36,7 +43,7 @@ def dataBits (N : Nat) : Nat := N - addrBits N
 /-! ## Gate Construction Helpers -/
 
 /-- Build a fan-in-2 gate bundled with an acyclicity proof. -/
-private def mkGate2' (op : AONOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
+private def mkGate2' (op : AndOrOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
     (bound : Nat) (hw₀ : w₀.val < bound) (hw₁ : w₁.val < bound) :
     { g : Gate Basis.andOr2 W // ∀ k : Fin g.fanIn, (g.inputs k).val < bound } :=
   ⟨{ op := op, fanIn := 2, arityOk := rfl,
@@ -56,10 +63,10 @@ private lemma remap₂_val_lt (N G₁ G₂ : Nat) (w : Fin (N + G₂))
 
 private def gw (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
     (_ : idx < 2 := by omega) : Fin W :=
-  g.inputs ⟨idx, by rw [andOr2_fanIn]; omega⟩
+  g.inputs ⟨idx, by rw [fanIn_andOr2]; omega⟩
 private def gn (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
     (_ : idx < 2 := by omega) : Bool :=
-  g.negated ⟨idx, by rw [andOr2_fanIn]; omega⟩
+  g.negated ⟨idx, by rw [fanIn_andOr2]; omega⟩
 
 /-! ## Binary Circuit Composition -/
 
@@ -73,8 +80,8 @@ private def binopGWP {N G₁ G₂ : Nat} [NeZero N]
     let g := c₁.gates ⟨i.val, h₁⟩
     mkGate2' g.op ⟨(gw 0 g).val, by omega⟩ ⟨(gw 1 g).val, by omega⟩ (gn 0 g) (gn 1 g)
       (N + i.val)
-      (show (gw 0 g).val < _ from c₁.acyclic ⟨_, h₁⟩ ⟨0, by rw [andOr2_fanIn]; omega⟩)
-      (show (gw 1 g).val < _ from c₁.acyclic ⟨_, h₁⟩ ⟨1, by rw [andOr2_fanIn]; omega⟩)
+      (show (gw 0 g).val < _ from c₁.acyclic ⟨_, h₁⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩)
+      (show (gw 1 g).val < _ from c₁.acyclic ⟨_, h₁⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩)
   else if h₂ : i.val = G₁ then
     let g := c₁.outputs 0
     mkGate2' g.op ⟨(gw 0 g).val, by omega⟩ ⟨(gw 1 g).val, by omega⟩ (gn 0 g) (gn 1 g)
@@ -86,9 +93,9 @@ private def binopGWP {N G₁ G₂ : Nat} [NeZero N]
     mkGate2' g.op (remap₂ N G₁ G₂ (gw 0 g)) (remap₂ N G₁ G₂ (gw 1 g)) (gn 0 g) (gn 1 g)
       (N + i.val)
       (remap₂_val_lt N G₁ G₂ (gw 0 g) i.val (by omega)
-        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨0, by rw [andOr2_fanIn]; omega⟩))
+        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩))
       (remap₂_val_lt N G₁ G₂ (gw 1 g) i.val (by omega)
-        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨1, by rw [andOr2_fanIn]; omega⟩))
+        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩))
   else
     let g := c₂.outputs 0
     mkGate2' g.op (remap₂ N G₁ G₂ (gw 0 g)) (remap₂ N G₁ G₂ (gw 1 g)) (gn 0 g) (gn 1 g)
@@ -99,17 +106,18 @@ private def binopGWP {N G₁ G₂ : Nat} [NeZero N]
         (show (gw 1 g).val < _ by have := (gw 1 g).isLt; omega))
 
 /-- Compose two circuits with a binary AND/OR. -/
-def binopCircuit (op : AONOp) {N G₁ G₂ : Nat} [NeZero N]
+def binopCircuit (op : AndOrOp) {N G₁ G₂ : Nat} [NeZero N]
     (c₁ : Circuit Basis.andOr2 N 1 G₁) (c₂ : Circuit Basis.andOr2 N 1 G₂) :
     Circuit Basis.andOr2 N 1 (G₁ + G₂ + 2) where
   gates i := (binopGWP c₁ c₂ i).val
   outputs _ :=
     { op := op, fanIn := 2, arityOk := rfl,
-      inputs := fun j => if j.val = 0 then ⟨N + G₁, by omega⟩ else ⟨N + G₁ + G₂ + 1, by omega⟩,
+      inputs := fun j =>
+        if j.val = 0 then ⟨N + G₁, by omega⟩ else ⟨N + G₁ + G₂ + 1, by omega⟩,
       negated := fun _ => false }
   acyclic i k := (binopGWP c₁ c₂ i).property k
 
-private theorem mkGate2'_eval (o : AONOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
+private theorem mkGate2'_eval (o : AndOrOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
     (b : Nat) (h₀ : w₀.val < b) (h₁ : w₁.val < b)
     (wv : BitString W) :
     (mkGate2' o w₀ w₁ n₀ n₁ b h₀ h₁).val.eval wv =
@@ -117,7 +125,7 @@ private theorem mkGate2'_eval (o : AONOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n�
     | .and => (n₀ ^^ wv w₀) && (n₁ ^^ wv w₁)
     | .or => (n₀ ^^ wv w₀) || (n₁ ^^ wv w₁) := by
   simp only [mkGate2', Gate.eval, Basis.andOr2]
-  cases o <;> simp [AONOp.eval, Fin.foldl_succ_last, Fin.foldl_zero]
+  cases o <;> simp [AndOrOp.eval, Fin.foldl_succ_last, Fin.foldl_zero]
 
 private theorem andOr2_gate_eval_two_inputs {W : Nat}
     (g : Gate Basis.andOr2 W) (wv : BitString W) :
@@ -125,12 +133,12 @@ private theorem andOr2_gate_eval_two_inputs {W : Nat}
     match g.op with
     | .and => (gn 0 g ^^ wv (gw 0 g)) && (gn 1 g ^^ wv (gw 1 g))
     | .or => (gn 0 g ^^ wv (gw 0 g)) || (gn 1 g ^^ wv (gw 1 g)) := by
-  have hf := andOr2_fanIn g
+  have hf := fanIn_andOr2 g
   simp only [Gate.eval, Basis.andOr2, gw, gn]
-  cases g.op <;> simp_all [AONOp.eval, Fin.foldl_succ_last, Fin.foldl_zero, Fin.cast]
+  cases g.op <;> simp_all [AndOrOp.eval, Fin.foldl_succ_last, Fin.foldl_zero, Fin.cast]
 
 private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
-    (op : AONOp)
+    (op : AndOrOp)
     (c₁ : Circuit Basis.andOr2 N 1 G₁) (c₂ : Circuit Basis.andOr2 N 1 G₂)
     (x : BitString N) (w : Fin (N + G₁))
     (hw : w.val < N + G₁) :
@@ -142,9 +150,11 @@ private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
     | _ n ih =>
       intro hn₁ hn₂
       by_cases hlt : n < N
-      · rw [Circuit.wireValue_lt _ _ ⟨n, hn₁⟩ (show (⟨n, hn₁⟩ : Fin _).val < N from hlt),
-             Circuit.wireValue_lt _ _ ⟨n, hn₂⟩ (show (⟨n, hn₂⟩ : Fin _).val < N from hlt)]
-      · rw [Circuit.wireValue_ge _ _ _ hlt, Circuit.wireValue_ge _ _ _ hlt]
+      · rw [Circuit.wireValue_of_lt _ _ ⟨n, hn₁⟩
+              (show (⟨n, hn₁⟩ : Fin _).val < N from hlt),
+            Circuit.wireValue_of_lt _ _ ⟨n, hn₂⟩
+              (show (⟨n, hn₂⟩ : Fin _).val < N from hlt)]
+      · rw [Circuit.wireValue_of_not_lt _ _ _ hlt, Circuit.wireValue_of_not_lt _ _ _ hlt]
         have hg : n - N < G₁ := by omega
         -- binopGWP takes first branch since n - N < G₁
         -- Change goal to use binopGWP
@@ -153,9 +163,11 @@ private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
         simp only [binopGWP, dif_pos hg]
         rw [mkGate2'_eval, andOr2_gate_eval_two_inputs]
         have hacyc0 : (gw 0 (c₁.gates ⟨n - N, hg⟩)).val < n := by
-          have := c₁.acyclic ⟨_, hg⟩ ⟨0, by rw [andOr2_fanIn]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₁.acyclic ⟨_, hg⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         have hacyc1 : (gw 1 (c₁.gates ⟨n - N, hg⟩)).val < n := by
-          have := c₁.acyclic ⟨_, hg⟩ ⟨1, by rw [andOr2_fanIn]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₁.acyclic ⟨_, hg⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         cases (c₁.gates ⟨n - N, hg⟩).op <;> simp only <;> congr 1 <;> congr 1
         · exact ih _ hacyc0 (by omega) (by omega)
         · exact ih _ hacyc1 (by omega) (by omega)
@@ -165,7 +177,7 @@ private theorem binop_wireValue_c₁ {N G₁ G₂ : Nat} [NeZero N]
   convert this using 2
 
 private theorem binop_wireValue_c₂ {N G₁ G₂ : Nat} [NeZero N]
-    (op : AONOp)
+    (op : AndOrOp)
     (c₁ : Circuit Basis.andOr2 N 1 G₁) (c₂ : Circuit Basis.andOr2 N 1 G₂)
     (x : BitString N) (w : Fin (N + G₂)) :
     (binopCircuit op c₁ c₂).wireValue x (remap₂ N G₁ G₂ w) = c₂.wireValue x w := by
@@ -179,11 +191,11 @@ private theorem binop_wireValue_c₂ {N G₁ G₂ : Nat} [NeZero N]
       by_cases hlt : n < N
       · -- Input wire: remap₂ preserves it
         simp only [remap₂, dif_pos hlt]
-        rw [Circuit.wireValue_lt _ _ _ hlt, Circuit.wireValue_lt _ _ _ hlt]
+        rw [Circuit.wireValue_of_lt _ _ _ hlt, Circuit.wireValue_of_lt _ _ _ hlt]
       · -- Gate wire: remap₂ shifts by G₁ + 1
         simp only [remap₂, dif_neg hlt]
         have hge : ¬(n + G₁ + 1 < N) := by omega
-        rw [Circuit.wireValue_ge _ _ _ hge, Circuit.wireValue_ge _ _ _ hlt]
+        rw [Circuit.wireValue_of_not_lt _ _ _ hge, Circuit.wireValue_of_not_lt _ _ _ hlt]
         have hg₂ : n - N < G₂ := by omega
         have hidx : n + G₁ + 1 - N = n - N + G₁ + 1 := by omega
         -- Change to binopGWP form
@@ -199,9 +211,11 @@ private theorem binop_wireValue_c₂ {N G₁ G₂ : Nat} [NeZero N]
           ext; simp; omega
         simp only [this]
         have hacyc0 : (gw 0 (c₂.gates ⟨n - N, hg₂⟩)).val < n := by
-          have := c₂.acyclic ⟨_, hg₂⟩ ⟨0, by rw [andOr2_fanIn]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₂.acyclic ⟨_, hg₂⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         have hacyc1 : (gw 1 (c₂.gates ⟨n - N, hg₂⟩)).val < n := by
-          have := c₂.acyclic ⟨_, hg₂⟩ ⟨1, by rw [andOr2_fanIn]; omega⟩; simp [gw] at this ⊢; omega
+          have := c₂.acyclic ⟨_, hg₂⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩
+          simp [gw] at this ⊢; omega
         cases (c₂.gates ⟨n - N, hg₂⟩).op <;> simp only <;> congr 1 <;> congr 1
         · exact ih _ hacyc0 (by omega)
         · exact ih _ hacyc1 (by omega)
@@ -221,17 +235,18 @@ theorem binopCircuit_or_correct {N G₁ G₂ : Nat} [NeZero N]
     (f₁ f₂ : BitString N → Bool)
     (hf₁ : (fun x => (c₁.eval x) 0) = f₁)
     (hf₂ : (fun x => (c₂.eval x) 0) = f₂) :
-    (fun x => ((binopCircuit AONOp.or c₁ c₂).eval x) 0) =
+    (fun x => ((binopCircuit AndOrOp.or c₁ c₂).eval x) 0) =
     fun x => f₁ x || f₂ x := by
   funext x
   simp only [← hf₁, ← hf₂, Circuit.eval]
-  set cb := binopCircuit AONOp.or c₁ c₂
+  set cb := binopCircuit AndOrOp.or c₁ c₂
   -- Wire N + G₁ corresponds to c₁'s output gate (gate G₁ in combined circuit)
   have hw1 : cb.wireValue x ⟨N + G₁, by omega⟩ =
       (c₁.outputs 0).eval (c₁.wireValue x) := by
-    rw [Circuit.wireValue_ge _ _ _ (show ¬(N + G₁ < N) by omega)]
+    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬(N + G₁ < N) by omega)]
     change (binopGWP c₁ c₂ ⟨_, _⟩).val.eval _ = _
-    have hfin : (⟨N + G₁ - N, (by omega : N + G₁ - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
+    have hfin : (⟨N + G₁ - N, (by omega : N + G₁ - N < G₁ + G₂ + 2)⟩ :
+          Fin (G₁ + G₂ + 2)) =
         ⟨G₁, by omega⟩ := Fin.ext (show N + G₁ - N = G₁ by omega)
     rw [hfin]
     simp only [binopGWP, show ¬(G₁ < G₁) from Nat.lt_irrefl G₁, dite_false, dite_true]
@@ -241,10 +256,12 @@ theorem binopCircuit_or_correct {N G₁ G₂ : Nat} [NeZero N]
   -- Wire N + G₁ + G₂ + 1 corresponds to c₂'s output gate
   have hw2 : cb.wireValue x ⟨N + G₁ + G₂ + 1, by omega⟩ =
       (c₂.outputs 0).eval (c₂.wireValue x) := by
-    rw [Circuit.wireValue_ge _ _ _ (show ¬(N + G₁ + G₂ + 1 < N) by omega)]
+    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬(N + G₁ + G₂ + 1 < N) by omega)]
     change (binopGWP c₁ c₂ ⟨_, _⟩).val.eval _ = _
-    have hfin : (⟨N + G₁ + G₂ + 1 - N, (by omega : N + G₁ + G₂ + 1 - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
-        ⟨G₁ + G₂ + 1, by omega⟩ := Fin.ext (show N + G₁ + G₂ + 1 - N = G₁ + G₂ + 1 by omega)
+    have hfin : (⟨N + G₁ + G₂ + 1 - N,
+          (by omega : N + G₁ + G₂ + 1 - N < G₁ + G₂ + 2)⟩ : Fin (G₁ + G₂ + 2)) =
+        ⟨G₁ + G₂ + 1, by omega⟩ :=
+      Fin.ext (show N + G₁ + G₂ + 1 - N = G₁ + G₂ + 1 by omega)
     rw [hfin]
     simp only [binopGWP,
       show ¬(G₁ + G₂ + 1 < G₁) by omega,
@@ -258,7 +275,7 @@ theorem binopCircuit_or_correct {N G₁ G₂ : Nat} [NeZero N]
   show (cb.outputs 0).eval (cb.wireValue x) = _
   rw [andOr2_gate_eval_two_inputs (g := cb.outputs 0)]
   -- The output gate has op = .or, negated = false, inputs 0 = N+G₁, inputs 1 = N+G₁+G₂+1
-  have hcb_op : (cb.outputs 0).op = AONOp.or := rfl
+  have hcb_op : (cb.outputs 0).op = AndOrOp.or := rfl
   have hcb_gn0 : gn 0 (cb.outputs 0) = false := rfl
   have hcb_gn1 : gn 1 (cb.outputs 0) = false := rfl
   have hcb_gw0 : gw 0 (cb.outputs 0) = ⟨N + G₁, by omega⟩ := by
@@ -278,14 +295,17 @@ private theorem log_ge_one (N : Nat) (hN : 16 ≤ N) : 1 ≤ Nat.log 2 N :=
 private theorem log_lt_N (N : Nat) (hN : 16 ≤ N) : Nat.log 2 N < N :=
   Nat.log_lt_of_lt_pow (by omega) (@Nat.lt_pow_self N 2 (by omega))
 
+/-- For `N ≥ 16` there are at least three address variables. -/
 theorem addrBits_ge_three (N : Nat) (hN : 16 ≤ N) : 3 ≤ addrBits N := by
   unfold addrBits
   have := Nat.le_log_of_pow_le (by omega : 1 < 2) (show 2 ^ 4 ≤ N by omega)
   omega
 
+/-- For `N ≥ 16` there is at least one data variable. -/
 theorem dataBits_pos (N : Nat) (hN : 16 ≤ N) : 0 < dataBits N := by
   unfold dataBits addrBits; have := log_lt_N N hN; omega
 
+/-- For `N ≥ 16` there are at least two data variables. -/
 theorem dataBits_ge_two (N : Nat) (hN : 16 ≤ N) : 2 ≤ dataBits N := by
   unfold dataBits addrBits
   have : Nat.log 2 N < N := log_lt_N N hN
@@ -424,6 +444,8 @@ private theorem term3 (N : Nat) (hN : 16 ≤ N) :
 private theorem n_le_pow (N : Nat) : N ≤ 2 ^ N := by
   have := @Nat.lt_pow_self N 2 (by omega); omega
 
+/-- Core counting bound: the total Shannon gate budget times `N` is at most
+    `18 · 2^N`, for `N ≥ 16`. -/
 theorem shannon_arithmetic (N : Nat) (hN : 16 ≤ N) :
     (4 * 2 ^ dataBits N + 2 * 2 ^ addrBits N +
       2 ^ (2 ^ addrBits N + addrBits N)) * N ≤ 18 * 2 ^ N := by
@@ -432,6 +454,8 @@ theorem shannon_arithmetic (N : Nat) (hN : 16 ≤ N) :
   have h3 := term3 N hN
   nlinarith
 
+/-- Any gate count within the Shannon budget is at most `18 · 2^N / N` (with the
+    `+1` accounting for the output gate), for `N ≥ 16`. -/
 theorem shannon_size_le (N : Nat) (hN : 16 ≤ N) (G : Nat)
     (hG : G + 1 ≤ 4 * 2 ^ dataBits N + 2 * 2 ^ addrBits N +
             2 ^ (2 ^ addrBits N + addrBits N)) :
@@ -448,7 +472,7 @@ theorem shannon_size_le (N : Nat) (hN : 16 ≤ N) (G : Nat)
 
 /-! ### Gate construction helper -/
 
-private def mkG (W : Nat) (op : AONOp) (w0 w1 : Nat) (n0 n1 : Bool)
+private def mkG (W : Nat) (op : AndOrOp) (w0 w1 : Nat) (n0 n1 : Bool)
     (hw0 : w0 < W) (hw1 : w1 < W)
     (bound : Nat) (hb0 : w0 < bound) (hb1 : w1 < bound) :
     { g : Gate Basis.andOr2 W // ∀ j : Fin g.fanIn, (g.inputs j).val < bound } :=
@@ -459,17 +483,28 @@ private def mkG (W : Nat) (op : AONOp) (w0 w1 : Nat) (n0 n1 : Bool)
 
 /-! ### Circuit layout -/
 
+/-- Total gate count of the Shannon circuit for `kk` address and `qq` data
+    variables: one constant-false gate, the data minterm tree
+    (`2^(qq+1) - 4`), the address minterm tree (`2^(kk+1) - 4`), the column
+    library (`2^(2^kk)` OR chains of length `2^kk - 1`), the AND layer
+    (`2^qq`), and the final OR chain (`2^qq - 1`). -/
 def szSections (kk qq : Nat) : Nat :=
   1 + (2^(qq+1) - 4) + (2^(kk+1) - 4) + 2^(2^kk) * (2^kk - 1) + 2^qq + (2^qq - 1)
 
+/-- The Shannon gate array is nonempty. -/
 lemma szSections_pos (kk qq : Nat) : 0 < szSections kk qq := by
   unfold szSections; positivity
 
 /-! ### Section offsets (not private so they can be unfolded after `set`) -/
 
+/-- Gate-index offset of Section C (address minterm tree): after the
+    constant-false gate and the data minterm tree. -/
 def oC (qq : Nat) : Nat := 1 + (2^(qq+1) - 4)
+/-- Gate-index offset of Section D (column library): after Section C. -/
 def oD (kk qq : Nat) : Nat := oC qq + (2^(kk+1) - 4)
+/-- Gate-index offset of Section E (AND layer): after the column library. -/
 def oE (kk qq : Nat) : Nat := oD kk qq + 2^(2^kk) * (2^kk - 1)
+/-- Gate-index offset of Section F (final OR chain): after the AND layer. -/
 def oF (kk qq : Nat) : Nat := oE kk qq + 2^qq
 
 /-! ### Power-of-2 helpers -/
@@ -482,13 +517,18 @@ private lemma pow_double (n : Nat) : 2 ^ (n + 1) = 2 * 2 ^ n := by ring
 
 /-! ### Minterm tree level -/
 
+/-- Level of node `j` in a minterm tree, where level `l` occupies indices
+    `2^(l+1) - 4, …, 2^(l+2) - 5`: equals `⌊log₂ (j + 4)⌋ - 1`. -/
 def treeLevel (j : Nat) : Nat := Nat.log 2 (j + 4) - 1
 
+/-- Minterm-tree nodes with index `≥ 4` sit at level 2 or deeper. -/
 lemma treeLevel_ge_two (j : Nat) (hj : 4 ≤ j) : 2 ≤ treeLevel j := by
   unfold treeLevel
   have : 3 ≤ Nat.log 2 (j + 4) := Nat.le_log_of_pow_le (by omega) (by omega)
   omega
 
+/-- Nodes within an `n`-variable minterm tree (index `< 2^(n+1) - 4`) sit at
+    level `< n`. -/
 lemma treeLevel_lt (j n : Nat) (hj : j < 2^(n+1) - 4) (hn : 2 ≤ n) :
     treeLevel j < n := by
   unfold treeLevel
@@ -496,10 +536,15 @@ lemma treeLevel_lt (j n : Nat) (hj : j < 2^(n+1) - 4) (hn : 2 ≤ n) :
   have : Nat.log 2 (j + 4) < n + 1 := Nat.log_lt_of_lt_pow (by omega) this
   omega
 
+/-- Index of the first minterm-tree node at level `l`: `2^(l+1) - 4`. -/
 def treeBase (l : Nat) : Nat := 2^(l+1) - 4
+/-- Position of node `j` within level `l` of a minterm tree. -/
 def treePos (j l : Nat) : Nat := j - treeBase l
+/-- Index of the parent (at level `l - 1`) of the level-`l` node at
+    position `m`: the parent's level position is `m % 2^l`. -/
 def treeParentIdx (l m : Nat) : Nat := treeBase (l-1) + (m % 2^l)
 
+/-- Every node with index `≥ 4` lies at or beyond the base of its level. -/
 lemma treeBase_le_of_level (j : Nat) (hj : 4 ≤ j) :
     treeBase (treeLevel j) ≤ j := by
   unfold treeBase treeLevel
@@ -510,6 +555,8 @@ lemma treeBase_le_of_level (j : Nat) (hj : 4 ≤ j) :
   have hpow_le : 2 ^ Nat.log 2 (j + 4) ≤ j + 4 := Nat.pow_log_le_self 2 (by omega)
   rw [hlog_sub]; omega
 
+/-- A minterm-tree node's parent has a strictly smaller index, so tree wiring
+    is acyclic. -/
 lemma treeParentIdx_lt_j (l m j : Nat) (hl : 2 ≤ l)
     (hm : m = treePos j l) (hbase : treeBase l ≤ j) :
     treeParentIdx l m < j := by
@@ -551,6 +598,8 @@ private lemma treePos_parent (l m : Nat) (_hl : 2 ≤ l) :
 
 /-! ### Column pattern encoding -/
 
+/-- Encode a column function `col : Fin (2^k) → Bool` as a natural number
+    whose `j`-th bit is `col j`; used to index the column pattern library. -/
 noncomputable def encodeCol (k : Nat) (col : Fin (2^k) → Bool) : Nat :=
   Finset.sum (Finset.univ : Finset (Fin (2^k)))
     fun j => if col j then 2^j.val else 0
@@ -566,6 +615,7 @@ private lemma sum_pow_two_lt (n : Nat) :
         < 2 ^ n + 2 ^ n := by omega
       _ = 2 ^ (n + 1) := by ring
 
+/-- Column encodings are indices into the library of `2^(2^k)` patterns. -/
 theorem encodeCol_lt (k : Nat) (col : Fin (2^k) → Bool) :
     encodeCol k col < 2^(2^k) := by
   unfold encodeCol
@@ -574,16 +624,26 @@ theorem encodeCol_lt (k : Nat) (col : Fin (2^k) → Bool) :
         apply Finset.sum_le_sum; intro j _; split_ifs <;> simp
     _ < 2 ^ (2^k) := sum_pow_two_lt (2^k)
 
+/-- The column function of `f` at data row `y`: maps an address `a` to
+    `f(a, y)`, reading the first `k` input bits from `a` and the remaining
+    `q` bits from `y`. -/
+-- `_hkq : k + q = N` is a documented precondition tying the address width
+-- `k` and data width `q` to `N`; it is threaded by every caller but not
+-- needed in the body, which is polymorphic in `k`, `q`.
+@[nolint unusedArguments]
 noncomputable def colFun (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (_hkq : k + q = N) (y : Fin (2^q)) : Fin (2^k) → Bool :=
   fun a => f (fun idx =>
     if _ : idx.val < k then Nat.testBit a.val idx.val
     else Nat.testBit y.val (idx.val - k))
 
+/-- Pattern-library index of the column of `f` at data row `y`:
+    `encodeCol` applied to `colFun`. -/
 noncomputable def colPatIdx (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (hkq : k + q = N) (y : Fin (2^q)) : Nat :=
   encodeCol k (colFun N f k q hkq y)
 
+/-- Column pattern indices are bounded by the library size `2^(2^k)`. -/
 theorem colPatIdx_lt (N : Nat) (f : BitString N → Bool)
     (k q : Nat) (hkq : k + q = N) (y : Fin (2^q)) :
     colPatIdx N f k q hkq y < 2^(2^k) :=
@@ -1055,7 +1115,7 @@ private theorem or_andLayerSem_eq_f (N : Nat) [NeZero N]
   have hfoldl := foldl_or_unique_true (dataSum N hN x) hds_lt hP_ne
   rw [hfoldl, dif_pos hds_lt, andLayerSem_eq N f hN x]
 
-/-- The OR chain accumulates AND-layer semantic values.
+/-! The OR chain accumulates AND-layer semantic values.
 
     This is the key wire-level fact: by induction on r, the OR-chain gate
     at position r in Section F evaluates to the foldl-OR of AND-layer
@@ -1093,13 +1153,15 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
       (hjW : N + 1 + j < N + szSections (addrBits N) (dataBits N)),
       (shannonCircuit N f hN).wireValue x ⟨N + 1 + j, hjW⟩ =
       decide (∀ i : Fin (treeLevel j + 1),
-        x ⟨addrBits N + i.val, by have := i.isLt; have := treeLevel_lt j (dataBits N) hj hq2; omega⟩ =
+        x ⟨addrBits N + i.val, by
+            have := i.isLt; have := treeLevel_lt j (dataBits N) hj hq2; omega⟩ =
           Nat.testBit (treePos j (treeLevel j)) i.val) := by
     intro j
     exact Nat.strongRecOn j fun j ih => by
       intro hj hjW
+      -- unfolds shannonGateArray's 6-way case split per tree level; genuine elaboration cost
       set_option maxHeartbeats 3200000 in
-      rw [Circuit.wireValue_ge _ _ _ (by show ¬(N + 1 + j < N); omega)]
+      rw [Circuit.wireValue_of_not_lt _ _ _ (by show ¬(N + 1 + j < N); omega)]
       change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
       unfold shannonGateArray
       simp only [show N + 1 + j - N = 1 + j from by omega]
@@ -1109,13 +1171,13 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
       by_cases hjL1 : j < 4
       ·
         rw [dif_pos hjL1]
-        simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+        simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
           Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and]
         simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
           show ¬((1 : Nat) = 0) from by omega]
-        rw [Circuit.wireValue_lt _ _ _ (show (⟨addrBits N, _⟩ : Fin _).val < N from by
+        rw [Circuit.wireValue_of_lt _ _ _ (show (⟨addrBits N, _⟩ : Fin _).val < N from by
           show addrBits N < N; have := addr_le_N N hN; omega)]
-        rw [Circuit.wireValue_lt _ _ _ (show (⟨addrBits N + 1, _⟩ : Fin _).val < N from by
+        rw [Circuit.wireValue_of_lt _ _ _ (show (⟨addrBits N + 1, _⟩ : Fin _).val < N from by
           show addrBits N + 1 < N; have := addr_le_N N hN; omega)]
         have htl : treeLevel j = 1 := by
           unfold treeLevel
@@ -1148,7 +1210,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
           cases j.testBit 1 <;> cases (decide (j % 2 = 1)) <;> simp_all
       ·
         rw [dif_neg hjL1]
-        simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+        simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
           Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and]
         simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
           show ¬((1 : Nat) = 0) from by omega]
@@ -1157,7 +1219,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
         have hbase : treeBase (treeLevel j) ≤ j := treeBase_le_of_level j (by omega)
         have hpi_lt : treeParentIdx (treeLevel j) (treePos j (treeLevel j)) < j :=
           treeParentIdx_lt_j _ _ j hl2 rfl hbase
-        rw [Circuit.wireValue_lt _ _ _ (show (⟨addrBits N + treeLevel j, _⟩ : Fin _).val < N
+        rw [Circuit.wireValue_of_lt _ _ _ (show (⟨addrBits N + treeLevel j, _⟩ : Fin _).val < N
           from by show addrBits N + treeLevel j < N; omega)]
         have hpar := ih (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
           hpi_lt (by omega) (by omega)
@@ -1244,6 +1306,7 @@ private theorem wireValue_dataLeaf (N : Nat) [NeZero N]
     rw [testBit_sum_cond_pow_fin (dataBits N) data i.val hi]
     exact Eq.mpr (by congr 1) rfl
 
+-- traces wireValue through the full column library and address tree; genuine elaboration cost
 set_option maxHeartbeats 12800000 in
 private theorem wireValue_colOutput (N : Nat) [NeZero N]
     (f : BitString N → Bool) (hN : 16 ≤ N) (x : BitString N)
@@ -1288,8 +1351,9 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       intro j
       exact Nat.strongRecOn j fun j ih => by
         intro hj hjW
+        -- unfolds shannonGateArray's 6-way case split per tree level; genuine elaboration cost
         set_option maxHeartbeats 3200000 in
-        rw [Circuit.wireValue_ge _ _ _ (by show ¬(N + oC q + j < N); omega)]
+        rw [Circuit.wireValue_of_not_lt _ _ _ (by show ¬(N + oC q + j < N); omega)]
         change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
         unfold shannonGateArray
         simp only [show N + oC q + j - N = oC q + j from by omega]
@@ -1300,13 +1364,13 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
           show oC q + j - oC q = j; omega]
         by_cases hjL1 : j < 4
         · rw [dif_pos hjL1]
-          simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+          simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
             Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and]
           simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
             show ¬((1 : Nat) = 0) from by omega]
-          rw [Circuit.wireValue_lt _ _ _ (show (⟨0, _⟩ : Fin _).val < N from by
+          rw [Circuit.wireValue_of_lt _ _ _ (show (⟨0, _⟩ : Fin _).val < N from by
             show 0 < N; linarith [hkq, hk3])]
-          rw [Circuit.wireValue_lt _ _ _ (show (⟨1, _⟩ : Fin _).val < N from by
+          rw [Circuit.wireValue_of_lt _ _ _ (show (⟨1, _⟩ : Fin _).val < N from by
             show 1 < N; linarith [hkq, hk3])]
           have htl : treeLevel j = 1 := by
             unfold treeLevel
@@ -1329,7 +1393,7 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
           cases x ⟨0, hN2 0 (by omega)⟩ <;> cases x ⟨1, hN2 1 (by omega)⟩ <;>
             cases j.testBit 1 <;> cases (decide (j % 2 = 1)) <;> simp_all
         · rw [dif_neg hjL1]
-          simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+          simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
             Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and]
           simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
             show ¬((1 : Nat) = 0) from by omega]
@@ -1339,7 +1403,7 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
           have hpi_lt : treeParentIdx (treeLevel j) (treePos j (treeLevel j)) < j :=
             treeParentIdx_lt_j _ _ j hl2 rfl hbase
           simp only [Bool.false_xor]
-          rw [Circuit.wireValue_lt _ _ _ (show (⟨treeLevel j, _⟩ : Fin _).val < N from by
+          rw [Circuit.wireValue_of_lt _ _ _ (show (⟨treeLevel j, _⟩ : Fin _).val < N from by
             show treeLevel j < N; linarith [hkq, hlk])]
           have hpar := ih (treeParentIdx (treeLevel j) (treePos j (treeLevel j)))
             hpi_lt (by omega) (by omega)
@@ -1411,26 +1475,29 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       · rw [testBit_sum_cond_pow_fin k addr i hi]
         exact Eq.mpr (by congr 1) (h ⟨i, by omega⟩).symm
       · rw [Nat.testBit_lt_two_pow (lt_of_lt_of_le ha (Nat.pow_le_pow_right (by omega) (by omega))),
-            Nat.testBit_lt_two_pow (lt_of_lt_of_le haSum_lt (Nat.pow_le_pow_right (by omega) (by omega)))]
+            Nat.testBit_lt_two_pow (lt_of_lt_of_le haSum_lt
+              (Nat.pow_le_pow_right (by omega) (by omega)))]
     · intro h; subst h; intro i
       rw [testBit_sum_cond_pow_fin k addr i.val (by omega)]
   have constFalse_wire : ∀ (hW : N < N + szSections k q),
       (shannonCircuit N f hN).wireValue x ⟨N, hW⟩ = false := by
     intro hW
     have h0N : (0 : Nat) < N := by linarith [hkq, hk3]
+    -- unfolds shannonGateArray to expose the constFalse gate; genuine elaboration cost
     set_option maxHeartbeats 800000 in
-    rw [Circuit.wireValue_ge _ _ _ (show ¬((⟨N, hW⟩ : Fin _).val < N) from by show ¬(N < N); omega)]
+    rw [Circuit.wireValue_of_not_lt _ _ _
+      (show ¬((⟨N, hW⟩ : Fin _).val < N) from by show ¬(N < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
     change (shannonGateArray N f hN ⟨N - N, by omega⟩).val.eval
       ((shannonCircuit N f hN).wireValue x) = false
     unfold shannonGateArray
     rw [dif_pos (show N - N = 0 from by omega)]
-    simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+    simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and]
     simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
       show ¬((1 : Nat) = 0) from by omega, Bool.false_xor, Bool.true_xor]
-    rw [Circuit.wireValue_lt _ _ _ (show (⟨0, _⟩ : Fin _).val < N from h0N)]
+    rw [Circuit.wireValue_of_lt _ _ _ (show (⟨0, _⟩ : Fin _).val < N from h0N)]
     cases x ⟨0, h0N⟩ <;> rfl
   have colChain : ∀ (r : Nat) (hr : r < 2 ^ k - 1)
       (hrW : N + oD k q + p * (2 ^ k - 1) + r < N + szSections k q),
@@ -1484,15 +1551,16 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
     induction r with
     | zero =>
       have h_ne0 : oD k q + p * (2 ^ k - 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) + colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
-          ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) ≠ 0
+        show oD (addrBits N) (dataBits N) +
+          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+            ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) ≠ 0
         unfold oD oC; omega
       have h_ge_oC : ¬(oD k q + p * (2 ^ k - 1) < oC q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
         unfold oD oC; omega
       have h_ge_oD : ¬(oD k q + p * (2 ^ k - 1) < oD k q) := by omega
       have h_lt_oE : oD k q + p * (2 ^ k - 1) < oE k q := by linarith [hoE_lt]
-      rw [Circuit.wireValue_ge _ _ _ (by
+      rw [Circuit.wireValue_of_not_lt _ _ _ (by
         show ¬(N + oD k q + p * (2 ^ k - 1) + 0 < N); omega)]
       change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
       unfold shannonGateArray
@@ -1505,7 +1573,7 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       simp_rw [show p * (2 ^ k - 1) % (2 ^ k - 1) = 0 from by
         rw [Nat.mul_comm]; exact Nat.mul_mod_right _ _]
       simp only [show p * (2 ^ k - 1) / (2 ^ k - 1) = p from Nat.mul_div_cancel p hblk]
-      simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+      simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
         Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or]
       simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
         show ¬((1 : Nat) = 0) from by omega, Bool.false_xor,
@@ -1521,15 +1589,16 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
       · simp only [Bool.eq_false_iff.mpr htb, Bool.false_and]; exact constFalse_wire _
     | succ r' ih =>
       have h_ne0' : oD k q + p * (2 ^ k - 1) + (r' + 1) ≠ 0 := by
-        show oD (addrBits N) (dataBits N) + colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
-          ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) + (r' + 1) ≠ 0
+        show oD (addrBits N) (dataBits N) +
+          colPatIdx N f (addrBits N) (dataBits N) (addrDataSum N hN)
+            ⟨y, hy⟩ * (2 ^ (addrBits N) - 1) + (r' + 1) ≠ 0
         unfold oD oC; omega
       have h_ge_oC' : ¬(oD k q + p * (2 ^ k - 1) + (r' + 1) < oC q) := by
         simp only [show k = addrBits N from rfl, show q = dataBits N from rfl] at *
         unfold oD oC; omega
       have h_ge_oD' : ¬(oD k q + p * (2 ^ k - 1) + (r' + 1) < oD k q) := by omega
       have h_lt_oE' : oD k q + p * (2 ^ k - 1) + (r' + 1) < oE k q := by linarith [hoE_lt]
-      rw [Circuit.wireValue_ge _ _ _ (by
+      rw [Circuit.wireValue_of_not_lt _ _ _ (by
         show ¬(N + oD k q + p * (2 ^ k - 1) + (r' + 1) < N); omega)]
       change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
       unfold shannonGateArray
@@ -1547,7 +1616,7 @@ private theorem wireValue_colOutput (N : Nat) [NeZero N]
               Nat.add_mul_mod_self_left]; exact Nat.mod_eq_of_lt (by omega)]
       simp only [show r' + 1 ≠ 0 from by omega, ite_false,
         show r' + 1 - 1 = r' from by omega]
-      simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+      simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
         Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or]
       simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
         show ¬((1 : Nat) = 0) from by omega, Bool.false_xor,
@@ -1594,8 +1663,9 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
         ⟨N + oE (addrBits N) (dataBits N) + y, hyW⟩ =
       andLayerSem N f hN x y hy := by
     intro y hy hyW
+    -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
-    rw [Circuit.wireValue_ge _ _ _ (by
+    rw [Circuit.wireValue_of_not_lt _ _ _ (by
       show ¬(N + oE (addrBits N) (dataBits N) + y < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
@@ -1611,7 +1681,7 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
       ¬(oE (addrBits N) (dataBits N) + y < oE (addrBits N) (dataBits N)))]
     rw [dif_pos (by unfold oF; omega :
       oE (addrBits N) (dataBits N) + y < oF (addrBits N) (dataBits N))]
-    simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+    simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.true_and, ite_self, Bool.false_xor]
     simp only [Fin.val_last, Fin.val_castSucc, ite_true, ite_false,
       show ¬((1 : Nat) = 0) from by omega,
@@ -1628,8 +1698,9 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
   have h4q := pow_ge_4 (dataBits N) hq2
   induction r with
   | zero =>
+    -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
-    rw [Circuit.wireValue_ge _ _ _ (show ¬((⟨N + oF (addrBits N) (dataBits N) + 0, hW⟩ :
+    rw [Circuit.wireValue_of_not_lt _ _ _ (show ¬((⟨N + oF (addrBits N) (dataBits N) + 0, hW⟩ :
         Fin _).val < N) from by show ¬(N + oF (addrBits N) (dataBits N) + 0 < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
@@ -1644,7 +1715,7 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
       ¬(oF (addrBits N) (dataBits N) + 0 < oE (addrBits N) (dataBits N)))]
     rw [dif_neg (by omega :
       ¬(oF (addrBits N) (dataBits N) + 0 < oF (addrBits N) (dataBits N)))]
-    simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+    simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or, ite_self, Bool.false_xor]
     simp only [show oF (addrBits N) (dataBits N) + 0 - oF (addrBits N) (dataBits N) = 0
       from by omega, ite_true,
@@ -1664,8 +1735,10 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
       Bool.false_or, dif_pos (show 0 < 2 ^ dataBits N from by omega),
       dif_pos (show 1 < 2 ^ dataBits N from by omega)]
   | succ r' ih =>
+    -- unfolds shannonGateArray through all five section guards; genuine elaboration cost
     set_option maxHeartbeats 3200000 in
-    rw [Circuit.wireValue_ge _ _ _ (show ¬((⟨N + oF (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
+    rw [Circuit.wireValue_of_not_lt _ _ _
+      (show ¬((⟨N + oF (addrBits N) (dataBits N) + (r' + 1), hW⟩ :
         Fin _).val < N) from by show ¬(N + oF (addrBits N) (dataBits N) + (r' + 1) < N); omega)]
     change (shannonGateArray N f hN ⟨_, _⟩).val.eval _ = _
     unfold shannonGateArray
@@ -1681,7 +1754,7 @@ private theorem wireValue_orChain_sem (N : Nat) [NeZero N]
       ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oE (addrBits N) (dataBits N)))]
     rw [dif_neg (by omega :
       ¬(oF (addrBits N) (dataBits N) + (r' + 1) < oF (addrBits N) (dataBits N)))]
-    simp only [mkG, Gate.eval, Basis.andOr2, AONOp.eval,
+    simp only [mkG, Gate.eval, Basis.andOr2, AndOrOp.eval,
       Fin.foldl_succ_last, Fin.foldl_zero, Bool.false_or, ite_self, Bool.false_xor]
     simp only [show oF (addrBits N) (dataBits N) + (r' + 1) -
       oF (addrBits N) (dataBits N) = r' + 1 from by omega,
@@ -1768,7 +1841,7 @@ private theorem shannonCircuit_correct (N : Nat) [NeZero N]
     ((shannonCircuit N f hN).eval x) 0 = f x := by
   -- eval at output 0 = outputs-gate.eval(wireValue)
   simp only [Circuit.eval, shannonCircuit, Gate.eval, Basis.andOr2]
-  rw [AONOp.eval_two_or]
+  rw [AndOrOp.eval_two_or]
   simp only [Bool.false_xor, Bool.or_self]
   exact shannon_lastWire_correct N f hN x
 
@@ -1787,6 +1860,9 @@ private theorem szSections_le_bound (N : Nat) (_hN : 16 ≤ N) :
       _ = 2 ^ (2 ^ addrBits N + addrBits N) := by rw [← Nat.pow_add]
   omega
 
+/-- Assembled Shannon construction: for `N ≥ 16`, every Boolean function on
+    `N` variables has a fan-in-2 AND/OR circuit whose gate count (plus output
+    gate) is within the explicit section-by-section budget. -/
 theorem shannon_assembly (N : Nat) [NeZero N] (hN : 16 ≤ N)
     (f : BitString N → Bool) :
     ∃ G, ∃ c : Circuit Basis.andOr2 N 1 G,
@@ -1810,3 +1886,5 @@ theorem shannon_construction (N : Nat) [NeZero N] (hN : 16 ≤ N)
   exact ⟨G, c, heval, by rw [Circuit.size]; exact shannon_size_le N hN G hG⟩
 
 end ShannonUpper
+
+end Complexity

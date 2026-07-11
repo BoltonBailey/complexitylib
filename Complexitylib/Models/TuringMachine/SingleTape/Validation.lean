@@ -1,4 +1,9 @@
-import Complexitylib.Models.TuringMachine.SingleTape.Delta
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Delta
 
 /-!
 # Single-tape simulation — executable validation (regression suite)
@@ -18,6 +23,8 @@ cell 0 never getting a marker, and a misaligned `scatter1 → scatter2` position
 hand-off. They cover off-0 moves, right/left moves with writes, repeated
 materialization, distant writes read back, and `k = 2` tape interleaving.
 -/
+
+namespace Complexity
 
 namespace NTM.SingleTape.Validation
 
@@ -62,10 +69,12 @@ def δ1 : Bool → Fin 5 → Γ → (Fin 1 → Γ) → Γ →
   fun _ q iHead wHeads oHead => match q.val with
     | 0 => (1, fun _ => .blank, .blank, .right, fun _ => .right, .right)
     | 1 => (2, fun _ => .one, .blank, idleDir iHead, fun _ => .right, idleDir oHead)
-    | 2 => (3, fun _ => .zero, .blank, idleDir iHead, fun _ => moveLeftDir (wHeads 0), idleDir oHead)
+    | 2 => (3, fun _ => .zero, .blank, idleDir iHead,
+            fun _ => moveLeftDir (wHeads 0), idleDir oHead)
     | 3 => if wHeads 0 = .one
            then (4, fun _ => .one, .one, idleDir iHead, fun _ => idleDir (wHeads 0), idleDir oHead)
-           else (4, fun _ => .blank, .zero, idleDir iHead, fun _ => idleDir (wHeads 0), idleDir oHead)
+           else (4, fun _ => .blank, .zero, idleDir iHead,
+                 fun _ => idleDir (wHeads 0), idleDir oHead)
     | _ => (4, fun _ => .blank, .blank, idleDir iHead, fun _ => idleDir (wHeads 0), idleDir oHead)
 
 def N1 : NTM 1 where
@@ -82,7 +91,8 @@ def δ2 : Bool → Fin 5 → Γ → (Fin 2 → Γ) → Γ →
     | 1 => (2, fun i => if i.val = 0 then .one else .zero, .blank, idleDir iHead,
             fun i => if i.val = 0 then .right else idleDir (wHeads i), idleDir oHead)
     | 2 => (3, fun i => readBackWrite (wHeads i), .blank, idleDir iHead,
-            fun i => if i.val = 0 then moveLeftDir (wHeads 0) else idleDir (wHeads i), idleDir oHead)
+            fun i => if i.val = 0 then moveLeftDir (wHeads 0) else idleDir (wHeads i),
+            idleDir oHead)
     | 3 => if wHeads 0 = .one ∧ wHeads 1 = .zero
            then (4, fun i => readBackWrite (wHeads i), .one, idleDir iHead,
                  fun i => idleDir (wHeads i), idleDir oHead)
@@ -122,3 +132,5 @@ def N3 : NTM 1 where
 #guard nResult N3 30 = Γ.one
 
 end NTM.SingleTape.Validation
+
+end Complexity

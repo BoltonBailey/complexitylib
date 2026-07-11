@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.UTM.Diagonal
 import Complexitylib.Models.TuringMachine.UTM.Universal
 import Complexitylib.Classes.Containments
@@ -26,9 +31,7 @@ The witness is the diagonal language `diagLang clk` of the diagonalizer
 
 ## Main results
 
-- `Complexity.BigO.exists_nat_bound` — extract a natural constant and
   threshold from a big-O bound
-- `Complexity.LittleO.pow_lt_pow` — `(n + 1)^p = o((n + 1)^q)` for `p < q`
 - `time_hierarchy_weak` — the separation, existential form
 - `time_hierarchy_weak_ssubset` — the separation as a strict inclusion
   `DTIME f ⊂ DTIME ((n + 1)² · (g n + 1))`
@@ -36,41 +39,14 @@ The witness is the diagonal language `diagLang clk` of the diagonalizer
   `DTIME((n + 1)^a) ⊂ DTIME((n + 1)^(2a + 5))` for `a ≥ 1`
 -/
 
+namespace Complexity
+
 open Asymptotics Filter Complexity
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Bridges: big-O / little-o versus pointwise bounds
 -- ════════════════════════════════════════════════════════════════════════
 
-namespace Complexity
-
-/-- Extract a natural-number constant and threshold from a big-O bound:
-    `f =O g` yields `c` and `N` with `f n ≤ c * g n` for all `n ≥ N`. -/
-theorem BigO.exists_nat_bound {f g : ℕ → ℕ} (h : f =O g) :
-    ∃ (c N : ℕ), ∀ n, N ≤ n → f n ≤ c * g n := by
-  rw [BigO, Asymptotics.isBigO_iff] at h
-  obtain ⟨C, hC⟩ := h
-  rw [Filter.eventually_atTop] at hC
-  obtain ⟨N, hN⟩ := hC
-  refine ⟨⌈C⌉₊, N, fun n hn => ?_⟩
-  have hb := hN n hn
-  simp only [Real.norm_natCast] at hb
-  have hr : (f n : ℝ) ≤ (⌈C⌉₊ : ℝ) * (g n : ℝ) :=
-    le_trans hb (mul_le_mul_of_nonneg_right (Nat.le_ceil C) (Nat.cast_nonneg _))
-  exact_mod_cast hr
-
-/-- Strict power gap, shifted to the everywhere-positive base `n + 1`:
-    `(n + 1)^p = o((n + 1)^q)` when `p < q`. -/
-theorem LittleO.pow_lt_pow {p q : ℕ} (hpq : p < q) :
-    LittleO (fun n => (n + 1) ^ p) (fun n => (n + 1) ^ q) := by
-  have hbase : Filter.Tendsto (fun n : ℕ => ((n : ℝ) + 1)) atTop atTop :=
-    Filter.tendsto_atTop_add_const_right atTop 1 tendsto_natCast_atTop_atTop
-  have key :=
-    (Asymptotics.isLittleO_pow_pow_atTop_of_lt (𝕜 := ℝ) hpq).comp_tendsto hbase
-  exact key.congr (fun n => by simp only [Function.comp_apply]; push_cast; ring)
-    (fun n => by simp only [Function.comp_apply]; push_cast; ring)
-
-end Complexity
 
 -- ════════════════════════════════════════════════════════════════════════
 -- The hierarchy theorem
@@ -94,7 +70,7 @@ theorem time_hierarchy_weak {f g : ℕ → ℕ}
   intro hL
   -- Step 1: a hypothetical O(f) decider, reduced to a single tape.
   obtain ⟨k, M, f₀, hM, hf₀⟩ := hL
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hM
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hM
   have hwf := TM.descOfTM_wf M₁
   -- Step 3: constants — f₀ ≤ c·f eventually, and the scaled square ≤ g.
   obtain ⟨c, N₀, hc⟩ := Complexity.BigO.exists_nat_bound hf₀
@@ -196,3 +172,5 @@ theorem DTIME_pow_ssubset (a : ℕ) (ha : 1 ≤ a) :
         _ = 2 * (n + 1) ^ (2 * a + 5) := by ring
     exact (BigO.of_le hle).trans (BigO.const_mul_left 2 (BigO.refl _))
   exact hstep.trans_subset hsub
+
+end Complexity

@@ -1,5 +1,10 @@
-import Complexitylib.Models.TuringMachine.UTM.SimClocked
-import Complexitylib.Models.TuringMachine.UTM.SeekFrontier
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.UTM.Internal.SimClocked
+import Complexitylib.Models.TuringMachine.UTM.Internal.SeekFrontier
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
 /-!
@@ -34,6 +39,56 @@ both within `clockedUtmTime α x V` steps from the started tapes
 `retargetInput` mid-sequence).
 -/
 
+namespace Complexity
+
+namespace TM
+
+/-- Runs preserve output-tape well-formedness: writes are `Γw` (never `▷`)
+    and cell 0 is immutable. -/
+private theorem reachesIn_output_wfCells {n : ℕ} {tm : TM n} :
+    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
+      c.output.StartInvariant → c'.output.StartInvariant := by
+  intro t
+  induction t with
+  | zero =>
+    intro c c' h hwf
+    cases h
+    exact hwf
+  | succ t ih =>
+    intro c c' h hwf
+    cases h with
+    | step hstep hrest =>
+      next c'' =>
+      refine ih hrest ?_
+      unfold TM.step at hstep
+      split at hstep
+      · exact absurd hstep (by simp)
+      · simp only [Option.some.injEq] at hstep
+        subst hstep
+        exact hwf.writeAndMove _ _
+
+/-- **Output-WF strengthening for Hoare triples.** If the precondition puts
+    a well-formed output tape at the start (cell 0 = `▷` and nowhere else),
+    the postcondition may be strengthened with the same well-formedness of
+    the final output tape — writes are `Γw` and cell 0 is immutable, so the
+    shape survives any run. This is what lets branch postconditions survive
+    the combinators' final `transitionTape` (which preserves cells only on
+    `▷`-clean tapes). -/
+theorem HoareTime.with_output_wf {n : ℕ} {tm : TM n}
+    {pre post : TapePred n} {b : ℕ}
+    (h : tm.HoareTime pre post b)
+    (hpre : ∀ inp work out, pre inp work out →
+      out.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → out.cells j ≠ Γ.start) :
+    tm.HoareTime pre
+      (fun inp work out => post inp work out ∧
+        out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) b := by
+  intro inp work out hp
+  obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := h inp work out hp
+  have hwf : c'.output.StartInvariant := reachesIn_output_wfCells hreach (hpre _ _ _ hp)
+  exact ⟨c', t, ht, hreach, hhalt, hpost, hwf.1, hwf.2⟩
+
+end TM
+
 namespace TM.UTMBody
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -61,52 +116,10 @@ private theorem reachesIn_input_cells {n : ℕ} {tm : TM n} :
         · exact absurd hstep (by simp)
         · simp only [Option.some.injEq] at hstep
           subst hstep
-          exact tape_move_cells ..
+          exact Tape.move_cells ..
       rw [ih hrest, h1]
 
-/-- Runs preserve output-tape well-formedness: writes are `Γw` (never `▷`)
-    and cell 0 is immutable. -/
-private theorem reachesIn_output_wfCells {n : ℕ} {tm : TM n} :
-    ∀ {t : ℕ} {c c' : Cfg n tm.Q}, tm.reachesIn t c c' →
-      c.output.WFCells → c'.output.WFCells := by
-  intro t
-  induction t with
-  | zero =>
-    intro c c' h hwf
-    cases h
-    exact hwf
-  | succ t ih =>
-    intro c c' h hwf
-    cases h with
-    | step hstep hrest =>
-      next c'' =>
-      refine ih hrest ?_
-      unfold TM.step at hstep
-      split at hstep
-      · exact absurd hstep (by simp)
-      · simp only [Option.some.injEq] at hstep
-        subst hstep
-        exact hwf.writeAndMove _ _
 
-/-- **Output-WF strengthening for Hoare triples.** If the precondition puts
-    a well-formed output tape at the start (cell 0 = `▷` and nowhere else),
-    the postcondition may be strengthened with the same well-formedness of
-    the final output tape — writes are `Γw` and cell 0 is immutable, so the
-    shape survives any run. This is what lets branch postconditions survive
-    the combinators' final `transitionTape` (which preserves cells only on
-    `▷`-clean tapes). -/
-theorem _root_.TM.HoareTime.with_output_wf {n : ℕ} {tm : TM n}
-    {pre post : TapePred n} {b : ℕ}
-    (h : tm.HoareTime pre post b)
-    (hpre : ∀ inp work out, pre inp work out →
-      out.cells 0 = Γ.start ∧ ∀ j, 1 ≤ j → out.cells j ≠ Γ.start) :
-    tm.HoareTime pre
-      (fun inp work out => post inp work out ∧
-        out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start)) b := by
-  intro inp work out hp
-  obtain ⟨c', t, ht, hreach, hhalt, hpost⟩ := h inp work out hp
-  have hwf : c'.output.WFCells := reachesIn_output_wfCells hreach (hpre _ _ _ hp)
-  exact ⟨c', t, ht, hreach, hhalt, hpost, hwf.1, hwf.2⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Fin-7 index bookkeeping (local copies of `SimClocked`'s private ones)
@@ -167,16 +180,16 @@ private theorem simInv_work_reads'' (α : List Bool)
 private theorem simInv_work_wf (α : List Bool)
     {mc : Cfg 1 (decodeDesc α).toTM.Q}
     {inp : Tape} {work : Fin 6 → Tape} {out : Tape}
-    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).WFCells := by
+    (hinv : SimInv α mc inp work out) (i : Fin 6) : (work i).StartInvariant := by
   rcases i with ⟨iv, hv⟩
   rcases iv with _ | _ | _ | _ | _ | _ | n
-  · exact hinv.vin.wfCells hinv.wf_in
-  · exact hinv.vwk.wfCells hinv.wf_wk
-  · exact hinv.vout.wfCells hinv.wf_out
+  · exact hinv.vin.startInvariant hinv.wf_in
+  · exact hinv.vwk.startInvariant hinv.wf_wk
+  · exact hinv.vout.startInvariant hinv.wf_out
   · obtain ⟨S, hSh, -, -⟩ := hinv.state_syms_ne_blank
-    exact Tape.HoldsExact.wfCells hSh
-  · exact Tape.HoldsExact.wfCells hinv.desc
-  · exact Tape.HoldsExact.wfCells hinv.scratch
+    exact Tape.HoldsExact.startInvariant hSh
+  · exact Tape.HoldsExact.startInvariant hinv.desc
+  · exact Tape.HoldsExact.startInvariant hinv.scratch
   · exact absurd hv (by omega)
 
 /-- The six embedded body tapes of the 7-tape layout are parked under
@@ -237,7 +250,7 @@ private theorem simInv_verdict_len'' (α : List Bool)
   obtain ⟨S, hhold, hnb, hwhich⟩ := hinv.state_syms_ne_blank
   refine ⟨S, hhold, hnb, ?_, ?_⟩
   · rcases hwhich with ⟨-, rfl⟩ | ⟨-, rfl⟩
-    · rw [bitsToSyms_length, Nat.toBits_length, decodeDesc_w]
+    · rw [bitsToSyms_length, Nat.length_toBits, decodeDesc_w]
       exact takeField_fst_length_le''' _
     · exact qhaltField_length_le''' _
   · rcases hwhich with ⟨hlt, rfl⟩ | ⟨hq, rfl⟩
@@ -263,8 +276,8 @@ private theorem output_first_blank_shift' {n : ℕ} {tm : TM n} {T : ℕ}
   classical
   have hblank : c'.output.cells (T + 1) = Γ.blank := by
     rw [reachesIn_output_cells_far h (T + 1) (by show (0 : ℕ) + T < T + 1; omega)]
-    show (initTape []).cells (T + 1) = Γ.blank
-    simp [initTape]
+    show (Tape.init []).cells (T + 1) = Γ.blank
+    simp [Tape.init]
   have hP : ∃ m, c'.output.cells (m + 1) = Γ.blank := ⟨T, hblank⟩
   refine ⟨Nat.find hP, ?_, Nat.find_spec hP, fun j hj => Nat.find_min hP hj⟩
   exact Nat.le_of_not_lt fun hcon => (Nat.find_min hP hcon) hblank
@@ -287,14 +300,14 @@ def clockedUtmTM : TM 7 :=
 /-- The clocked universal machine's precondition, in started form (the
     machine runs under `retargetInput` mid-sequence): input `pair α x` with
     the head parked at cell 1, the six UTM tapes blank and parked, the
-    clock tape holding the canonical unary register `regT V`, and the
+    clock tape holding the canonical unary register `regTape V`, and the
     output tape blank and parked. -/
 def clockedUtmPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
-    (∀ i : Fin 6, work (Fin.castAdd 1 i) = (initTape []).move Dir3.right) ∧
-    work clkT = regT V ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ inp.head = 1 ∧
+    (∀ i : Fin 6, work (Fin.castAdd 1 i) = (Tape.init []).move Dir3.right) ∧
+    work clkT = regTape V ∧
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- The clocked universal machine's time bound, covering both the
     halt-within-budget and timeout cases: initialization, the frontier
@@ -324,35 +337,35 @@ private def body6Shape (α x : List Bool) (w : Fin 6 → Tape) : Prop :=
     output, and the untouched register-parked clock. -/
 private def initPost7 (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
-    out.cells = (initTape []).cells ∧ out.head = 1 ∧
-    work clkT = regT V
+    out.cells = (Tape.init []).cells ∧ out.head = 1 ∧
+    work clkT = regTape V
 
 /-- Entry of the frontier-seek phase (`initPost7` after the seam, with the
     input head bounced off `▷`). -/
 private def seekPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
-    work clkT = regT V ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    work clkT = regTape V ∧
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- Exit of the frontier-seek phase: the clock head has walked to the
     frontier `max V 1`. -/
 private def seekPost (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧ 1 ≤ inp.head ∧
     body6Shape α x (fun k : Fin 6 => work (Fin.castAdd 1 k)) ∧
     (work clkT).cells = regCells V ∧ (work clkT).head = max V 1 ∧
-    out.cells = (initTape []).cells ∧ out.head = 1
+    out.cells = (Tape.init []).cells ∧ out.head = 1
 
 /-- Entry of the clocked loop: `SimInv` at the interpreted machine's
     initial configuration, the frontier-parked clock at `V`, and a
     `▷`-clean parked output tape. -/
 private def loopPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α ((decodeDesc α).toTM.initCfg x) inp
       (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells V ∧ (work clkT).head = max V 1 ∧
@@ -365,7 +378,7 @@ private def loopPre (α x : List Bool) (V : ℕ) : TapePred 7 :=
 private def loopExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
     (v : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α mc inp (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells v ∧ (work clkT).head = max v 1 ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
@@ -376,7 +389,7 @@ private def loopExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
 private def testExit (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
     (v : ℕ) : TapePred 7 :=
   fun inp work out =>
-    inp.cells = (initTape ((pair α x).map Γ.ofBool)).cells ∧
+    inp.cells = (Tape.init ((pair α x).map Γ.ofBool)).cells ∧
     SimInv α mc inp (fun k : Fin 6 => work (Fin.castAdd 1 k)) out ∧
     (work clkT).cells = regCells v ∧ (work clkT).head = max v 1 ∧
     out.cells 0 = Γ.start ∧ (∀ j, 1 ≤ j → out.cells j ≠ Γ.start) ∧
@@ -416,7 +429,7 @@ private theorem body6Shape_reads {α x : List Bool} {w : Fin 6 → Tape}
   · exact absurd hv (by omega)
 
 /-- The canonical register tape is parked at cell 1. -/
-private theorem regT_read_ne_start (V : ℕ) : (regT V).read ≠ Γ.start := by
+private theorem regT_read_ne_start (V : ℕ) : (regTape V).read ≠ Γ.start := by
   show regCells V 1 ≠ Γ.start
   exact regCells_ne_start le_rfl
 
@@ -425,13 +438,13 @@ private theorem regT_read_ne_start (V : ℕ) : (regT V).read ≠ Γ.start := by
 -- ════════════════════════════════════════════════════════════════════════
 
 /-- The lifted init phase: `initTM_hoareTime_started` through the frame
-    rule, the clock tape pinned at `regT V`. -/
+    rule, the clock tape pinned at `regTape V`. -/
 private theorem initPhase (α x : List Bool) (V : ℕ) :
     (initTM.liftTM 1).HoareTime (clockedUtmPre α x V) (initPost7 α x V)
       (4 * (pair α x).length + 4 * (groupPairs α).length + 24) := by
-  have hex : ∀ j : Fin 1, 1 ≤ (regT V).head ∧ (regT V).read ≠ Γ.start :=
+  have hex : ∀ j : Fin 1, 1 ≤ (regTape V).head ∧ (regTape V).read ≠ Γ.start :=
     fun _ => ⟨le_rfl, regT_read_ne_start V⟩
-  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regT V) hex
+  refine (liftTM_hoareTime_frame initTM (fun _ : Fin 1 => regTape V) hex
     (initTM_hoareTime_started α x)).consequence ?_ ?_ le_rfl
   · rintro inp work out ⟨hic, hih, hw, hclk, hoc, hoh⟩
     exact ⟨⟨hic, hih, hw, hoc, hoh⟩,
@@ -452,19 +465,19 @@ private theorem initSeam (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hshape, hoc, hoh, hclk⟩
   have hinp0 : inp.cells 0 = Γ.start := by
     rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   have hout_read : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       rw [hclk]
       exact regT_read_ne_start V
     · exact body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   exact ⟨by rw [transitionInput_cells]; exact hic,
     transitionInput_head_ge inp hinp0, hshape, hclk, hoc, hoh⟩
@@ -480,12 +493,12 @@ private theorem seekPhase (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hclk, hoc, hoh⟩
   have hinp : inp.read ≠ Γ.start := by
     rw [Tape.read, hic]
-    exact (initTape_wfCells (pair α x)).2 inp.head hih
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 inp.head hih
   have hothers : ∀ i : Fin 7, i ≠ clkT → (work i).read ≠ Γ.start := fun i hi =>
     body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
   have hout : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   obtain ⟨c', t, ht, hr, hh, hin', hwoth, hckc, hckh, hout'⟩ :=
     seekFrontierTM_hoareTime V inp work out hclk hinp hothers hout
       inp work out ⟨rfl, rfl, rfl⟩
@@ -514,18 +527,18 @@ private theorem seekSeam (α x : List Bool) (V : ℕ) :
   rintro inp work out ⟨hic, hih, hshape, hckc, hckh, hoc, hoh⟩
   have hinp0 : inp.cells 0 = Γ.start := by
     rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   have hout_read : out.read ≠ Γ.start := by
     rw [Tape.read, hoh, hoc]
-    simp [initTape]
+    simp [Tape.init]
   have hwtr : (fun i : Fin 7 => transitionTape (work i)) = work := by
     funext i
-    refine transitionTape_id ?_
+    refine transitionTape_eq_self ?_
     by_cases hi : i = clkT
     · subst hi
       exact clk_read_ne_start' hckc hckh
     · exact body6Shape_reads hshape ⟨i.val, val_lt_of_ne_clkT' hi⟩
-  have hotr : transitionTape out = out := transitionTape_id hout_read
+  have hotr : transitionTape out = out := transitionTape_eq_self hout_read
   rw [hwtr, hotr]
   obtain ⟨hw0c, hw0h, hw1, hw1h, hw2, hw2h, hw3, hw3h, hw4, hw4h, hw5, hw5h⟩ :=
     hshape
@@ -536,10 +549,10 @@ private theorem seekSeam (α x : List Bool) (V : ℕ) :
        hw2, hw2h, hw3, hw3h, hw4, hw4h, hw5, hw5h, hoc, hoh⟩
       (transitionInput_head_ge inp hinp0)
   · rw [hoc]
-    simp [initTape]
+    simp [Tape.init]
   · intro j hj
     rw [hoc]
-    simp [initTape, show j ≠ 0 by omega]
+    simp [Tape.init, show j ≠ 0 by omega]
 
 -- ════════════════════════════════════════════════════════════════════════
 -- Phase 3: the clocked loop (both exit cases)
@@ -588,10 +601,10 @@ private theorem loopSeam (α x : List Bool) (mc : Cfg 1 (decodeDesc α).toTM.Q)
       loopExit α x mc v (transitionInput inp)
         (fun i => transitionTape (work i)) (transitionTape out) := by
   rintro inp work out ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads' hsi hckc hckh i)
-  have h3 : transitionTape out = out := transitionTape_id hsi.out_read
+    funext fun i => transitionTape_eq_self (work7_reads' hsi hckc hckh i)
+  have h3 : transitionTape out = out := transitionTape_eq_self hsi.out_read
   rw [h1, h2, h3]
   exact ⟨hic, hsi, hckc, hckh, h0, hns, hoh, hone⟩
 
@@ -681,10 +694,10 @@ private theorem testExit_allWF (α x : List Bool)
   rintro inp work out ⟨hic, hsi, hckc, hckh, h0, hns, -, -⟩
   refine ⟨?_, ?_, ?_, ?_, h0, hns⟩
   · rw [hic]
-    simp [initTape]
+    simp [Tape.init]
   · intro j hj
     rw [hic]
-    exact (initTape_wfCells (pair α x)).2 j hj
+    exact (Tape.StartInvariant.init_ofBool (pair α x)).2 j hj
   · intro i
     by_cases hi : i = clkT
     · subst hi
@@ -715,9 +728,9 @@ private theorem testExit_to_branch (α x : List Bool)
       branchPre α mc v (transitionInput inp)
         (fun i => transitionTape (work i)) ⟨1, out.cells⟩ := by
   rintro inp work out ⟨-, hsi, hckc, hckh, h0, hns, -, -⟩
-  have h1 : transitionInput inp = inp := transitionInput_id hsi.inp_read
+  have h1 : transitionInput inp = inp := transitionInput_eq_self hsi.inp_read
   have h2 : (fun i => transitionTape (work i)) = work :=
-    funext fun i => transitionTape_id (work7_reads' hsi hckc hckh i)
+    funext fun i => transitionTape_eq_self (work7_reads' hsi hckc hckh i)
   rw [h1, h2]
   have hread : (⟨1, out.cells⟩ : Tape).read ≠ Γ.start := by
     show out.cells 1 ≠ Γ.start
@@ -756,7 +769,7 @@ private theorem extractPhase (α x : List Bool) (V T m v : ℕ)
     intro j hj
     rw [hcells2 j]
     exact hmnb j hj
-  have hwf2 : (work (Fin.castAdd 1 2)).WFCells := hvout.wfCells hsi.wf_out
+  have hwf2 : (work (Fin.castAdd 1 2)).StartInvariant := hvout.startInvariant hsi.wf_out
   have hheadF : mcF.output.head ≤ T := by
     have h := reachesIn_output_head_le hrun
     have h0' : ((decodeDesc α).toTM.initCfg x).output.head = 0 := rfl
@@ -918,3 +931,5 @@ theorem clockedUtmTM_hoareTime_timeout (α x : List Bool)
   omega
 
 end TM.UTMBody
+
+end Complexity

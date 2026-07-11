@@ -1,113 +1,79 @@
 # Complexitylib
 
-Complexitylib is a Lean 4 formalization of computational complexity theory,
-built on [Mathlib](https://github.com/leanprover-community/mathlib4). Its
-machine definitions follow Arora and Barak's *Computational Complexity: A
-Modern Approach*, while the library also develops Boolean circuit complexity,
-randomized classes, reductions, universal simulation, and concrete languages.
+A Lean 4 formalization of computational complexity theory, built on
+[Mathlib](https://github.com/leanprover-community/mathlib4). The machine
+model takes its shape from Arora and Barak's *Computational Complexity: A
+Modern Approach*, but the library sets its own conventions — stated
+precisely where they're used, with literature references where they help,
+and unafraid to diverge from any one text when a cleaner formalization
+exists.
 
-The project aims for textbook-faithful, human-auditable statements backed by
-fully checked constructions. The Lean modules contain no proof placeholders or
-custom axioms.
+## Ethos
 
-## Current highlights
+**Statements you can audit, proofs you don't have to.** Every public theorem
+is stated so a reader can check it means what it claims — concrete machine
+model, explicit resource bounds, honest encodings — while the proof machinery
+lives out of sight in `Internal` modules whose correctness is the type
+checker's job, not yours.
 
-- Deterministic, nondeterministic, and probabilistic multi-tape Turing
-  machines over a concrete four-symbol alphabet.
-- Time, space, randomized, nonuniform, function, and search classes, including
-  `P`, `PPoly` (`P/poly`), `NP`, `CoNP` (`coNP`), `PSPACE`, `BPP`, `RP`,
-  `ZPP`, `PP`, `FNP`, and `TFNP`.
-- Standard containments such as `P ⊆ NP`, `P ⊆ PSPACE`, `P ⊆ BPP`,
-  `RP ⊆ NP`, and `BPP ⊆ PP`.
-- A quadratic multi-tape-to-single-tape simulation and a fixed universal
-  Turing machine with an explicit time bound.
-- A weak deterministic time hierarchy theorem and concrete strict polynomial
-  time separations.
-- A machine-checked Cook–Levin development, including a polynomial-time SAT
-  verifier and `SAT.NPComplete_L_SAT`.
-- A finite Boolean-circuit model with circuit families, `P/poly`, canonical
-  proof-free serialization and evaluation, normal forms, Shannon bounds,
-  gate-elimination bounds, Schnorr's XOR lower bound, nondeterministic
-  quantification, and depth-reduction results.
-- Worked language deciders, including parity, `0ⁿ1ⁿ`, balanced strings,
-  divisibility of length, and palindromes.
+**Concrete over abstract.** Machines, circuits, reductions, and encoders are
+executable definitions, not existence claims. Complexity is measured on real
+encodings; parsing, malformed inputs, and output conventions are explicit.
+Constructions expose an exact resource bound first and an asymptotic
+corollary second.
 
-## Library map
+**Nothing on faith.** The library has no `sorry` and no custom axioms:
+`scripts/AxiomGuard.lean` mechanically asserts that the headline theorems
+depend only on Lean's three standard axioms, and CI enforces it — along with
+Mathlib's style and environment linters — on every push.
 
-| Area | Entry point | Contents |
+## How to read the library
+
+Everything lives in the `Complexity` root namespace and splits into areas,
+each with its own entry module:
+
+| Area | Import | What it is |
 | --- | --- | --- |
-| Machine models | `Complexitylib.Models` | Tapes, configurations, TM/NTM semantics, subroutines, combinators, single-tape simulation, encodings, and universal machines |
-| Asymptotics | `Complexitylib.Asymptotics` | Natural-valued big-O/little-o adapters and polynomial bounds |
-| Complexity classes | `Complexitylib.Classes` | Time, space, randomized, function/search classes, containments, reductions, and hierarchy results |
-| SAT | `Complexitylib.SAT` | CNF semantics and encoding, verifier machines, Cook–Levin, and NP-completeness |
-| Circuits | `Complexitylib.Circuits` | Circuit semantics, fixed-length/list bridges, families, canonical encodings, bases, normal forms, lower bounds, AC⁰ definitions, and depth reduction |
-| Examples | `Complexitylib.Languages` | Concrete languages with verified deciders and class memberships |
+| Machine models | `Complexitylib.Models` | Arora–Barak multi-tape Turing machines — deterministic, nondeterministic, probabilistic — and everything built from them: combinators, simulations, universal machines |
+| Asymptotics | `Complexitylib.Asymptotics` | `=O`/`=o` notation on `ℕ → ℕ`, bridging to Mathlib's asymptotics |
+| Complexity classes | `Complexitylib.Classes` | `P`, `NP`, `BPP`, `PSPACE`, and friends; containments, closure properties, reductions, and the time-hierarchy theorem |
+| SAT | `Complexitylib.SAT` | CNF semantics and encoding, a verified SAT verifier, and the Cook–Levin theorem: `SAT` is NP-complete |
+| Circuits | `Complexitylib.Circuits` | Boolean circuits with size and depth, circuit families, `P/poly`, normal forms, and classical lower bounds |
+| Languages | `Complexitylib.Languages` | Concrete decidable languages exercising the machine API end to end |
+| Mathlib prelude | `Complexitylib.Mathlib` | Extensions to Mathlib types in their home namespaces; candidates for upstreaming |
 
-Import `Complexitylib` for the complete public development, or use an area
-entry point to keep dependencies smaller.
+Within an area, modules follow one discipline:
 
-## Machine model
+- **`Foo/Defs.lean`** — definitions. Short, minimally-imported, auditable.
+- **`Foo.lean`** — the surface: theorem statements worth reading.
+- **`Foo/Internal…`** — proof machinery. Skip it; the type checker read it.
 
-The base model uses the fixed alphabet `Γ = {0, 1, □, ▷}` and a writable
-subalphabet that excludes `▷`. Tapes are one-sided: cell `0` is the immutable
-left-end marker, and moving left from it is a no-op. A configuration has a
-read-only input tape, finitely many named work tapes, and a separate output
-tape. Deterministic machines have one transition function; nondeterministic
-and probabilistic machines share a two-branch transition structure and differ
-in their acceptance semantics.
+So: import `Complexitylib` (or one area), read `Defs` and surface files, and
+trust the kernel for the rest. Headline results — Cook–Levin, universal-machine
+simulation with explicit overhead, the deterministic time hierarchy — are
+indexed in the root module `Complexitylib.lean` and mechanically guarded in `scripts/AxiomGuard.lean`.
 
-Definitions, internal proof machinery, and public theorem statements are
-separated where the dependency graph warrants it. See [AGENTS.md](AGENTS.md)
-for the architecture and proof-development conventions.
+## Building
 
-## Building and checking
-
-Install [elan](https://github.com/leanprover/elan); the repository pins both
-Lean and Mathlib, currently at v4.30.0.
+Install [elan](https://github.com/leanprover/elan); Lean and Mathlib versions
+are pinned (currently v4.30.0).
 
 ```bash
 lake build --wfail
 ```
 
-The single-tape simulator also has an executable regression module. It is
-kept out of the public import graph, so run it explicitly:
-
-```bash
-lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
-```
-
-The encoded-circuit parser and evaluator have an analogous malformed-input
-regression module:
-
-```bash
-lake build --wfail Complexitylib.Circuits.Encoding.Validation
-```
-
-The first build downloads and compiles Mathlib. Later builds are incremental.
-CI runs the library and both regression modules, treating warnings as failures.
+CI additionally runs two executable regression suites and three quality gates;
+see [CONTRIBUTING.md](CONTRIBUTING.md) for the full list and the style guide.
+API documentation builds with doc-gen4 from `docbuild/`.
 
 ## Contributing
 
-The project welcomes contributions at several scales:
-
-- Small: foundational API lemmas, deduplication, documentation, executable
-  regression cases, and additional concrete language deciders.
-- Medium: closure properties, reductions, alternative machine simulations,
-  circuit constructions, and reusable finite-combinatorics infrastructure.
-- Large: uniform circuit characterizations, derandomization and nonuniformity,
-  algebraic branching programs, interactive proofs, and formalized barriers.
-
-The detailed [roadmap](ROADMAP.md) orders these programs by dependency and
-breaks them into intermediate milestones suitable for future contributors and
-coding agents. See [CONTRIBUTING.md](CONTRIBUTING.md) for style, validation,
-and commit-message conventions.
-
-## Design notes
-
-The `docs/` directory contains construction notes for the universal machine,
-single-tape simulation, SAT verifier, Cook–Levin emitter, and ongoing uniform
-circuit bridge. Some documents are retained as historical implementation plans;
-each such document is marked with its completion status.
+[ROADMAP.md](ROADMAP.md) orders the open research programs by dependency —
+from core API consolidation through uniform circuits, interactive proofs, and
+formalized barriers — and breaks each into review-sized steps.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers style, layering, naming, and commit
+conventions. Design notes for the larger completed constructions live in
+`docs/`.
 
 ## License
 

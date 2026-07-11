@@ -1,6 +1,11 @@
-import Complexitylib.Models.TuringMachine.UTM.SimLoop
-import Complexitylib.Models.TuringMachine.UTM.Terminated
-import Complexitylib.Models.TuringMachine.Det
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+import Complexitylib.Models.TuringMachine.UTM.Internal.SimLoop
+import Complexitylib.Models.TuringMachine.UTM.Internal.Terminated
+import Complexitylib.Models.TuringMachine.Deterministic
 
 /-!
 # The universal machine: headline theorems
@@ -19,6 +24,8 @@ import Complexitylib.Models.TuringMachine.Det
   from paired inputs within `utmTime α (singleTapeSimTime k T ·) ·` — the
   quadratic factor coming solely from the single-tape reduction.
 -/
+
+namespace Complexity
 
 namespace TM.UTMBody
 
@@ -43,8 +50,8 @@ theorem utmTM_simulates_decider {α : List Bool} (hterm : TerminatedRegion α)
   obtain ⟨mcF, t₀, ht₀, hrun, hhalt, hmem, hnmem⟩ := hdec x
   have hht := utmTM_hoareTime α x hterm t₀ mcF hrun hhalt
   obtain ⟨c', t, ht, hreach, hhalt', hpost⟩ :=
-    hht (initTape ((pair α x).map Γ.ofBool)) (fun _ => initTape [])
-      (initTape []) ⟨rfl, fun _ => rfl, rfl⟩
+    hht (Tape.init ((pair α x).map Γ.ofBool)) (fun _ => Tape.init [])
+      (Tape.init []) ⟨rfl, fun _ => rfl, rfl⟩
   obtain ⟨m, hm, -, -, hagree⟩ := hpost
   have hcell1 : c'.output.cells 1 = mcF.output.cells 1 := hagree 0 (by omega)
   refine ⟨c', t, ?_, hreach, hhalt', fun hx => by rw [hcell1]; exact hmem hx,
@@ -71,7 +78,7 @@ theorem utmTM_universal {k : ℕ} (M : TM k) {L : Language} {T : ℕ → ℕ}
         utmTM.halted c' ∧
         (x ∈ L → c'.output.cells 1 = Γ.one) ∧
         (x ∉ L → c'.output.cells 1 = Γ.zero) := by
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hdec
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hdec
   have hwf := TM.descOfTM_wf M₁
   have hterm : TerminatedRegion (encodeDesc (TM.descOfTM M₁)) :=
     terminatedRegion_encodeDesc_plain hwf (descOfTM_entries_ne_nil M₁)
@@ -95,7 +102,7 @@ theorem utmTM_universal_padded {k : ℕ} (M : TM k) {L : Language} {T : ℕ → 
         utmTM.halted c' ∧
         (x ∈ L → c'.output.cells 1 = Γ.one) ∧
         (x ∉ L → c'.output.cells 1 = Γ.zero) := by
-  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_toTM M hdec
+  obtain ⟨M₁, hM₁⟩ := TM.exists_singleTape_decidesInTime M hdec
   have hwf := TM.descOfTM_wf M₁
   refine ⟨encodeDesc (TM.descOfTM M₁), fun junk x => ?_⟩
   have hterm : TerminatedRegion (encodeDesc (TM.descOfTM M₁) ++ junk) :=
@@ -107,3 +114,5 @@ theorem utmTM_universal_padded {k : ℕ} (M : TM k) {L : Language} {T : ℕ → 
   exact utmTM_simulates_decider hterm hdec' x
 
 end TM.UTMBody
+
+end Complexity

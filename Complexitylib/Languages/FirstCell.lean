@@ -1,6 +1,11 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Languages.Trivial
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.ComplementInternal
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
 
 /-!
 # Languages determined by the first input cell
@@ -36,6 +41,8 @@ languages.
   used to present `nonempty` as a union.
 -/
 
+namespace Complexity
+
 open Complexity
 
 -- ════════════════════════════════════════════════════════════════════════
@@ -55,10 +62,10 @@ def firstCell : List Bool → Γ
 
 /-- `firstCell x` reads cell 1 of the initial input tape. -/
 theorem firstCell_eq_initTape_cells_one (x : List Bool) :
-    firstCell x = (initTape (x.map Γ.ofBool)).cells 1 := by
+    firstCell x = (Tape.init (x.map Γ.ofBool)).cells 1 := by
   cases x with
-  | nil => simp [firstCell, initTape]
-  | cons b xs => simp [firstCell, initTape]
+  | nil => simp [firstCell, Tape.init]
+  | cons b xs => simp [firstCell, Tape.init]
 
 namespace TM
 
@@ -171,8 +178,8 @@ theorem decideFirstCellTM_reachesIn (yesOn : Γ → Bool) (x : List Bool) :
     exact (firstCell_eq_initTape_cells_one x).symm
   have ho1_read_ne : c₁.output.read ≠ Γ.start := by
     simp only [Tape.read, ho1h, ho1c]
-    show (initTape []).cells 1 ≠ Γ.start
-    simp [initTape]
+    show (Tape.init []).cells 1 ≠ Γ.start
+    simp [Tape.init]
   obtain ⟨c₂, hstep2, hhalt, hout⟩ :=
     decideFirstCellTM_step_decide (n := n) yesOn c₁ hst1 ho1h ho1_read_ne
   refine ⟨c₂, .step hstep1 (.step hstep2 .zero), hhalt, ?_⟩
@@ -328,3 +335,5 @@ theorem nonempty_mem_P_via_compl : Language.nonempty ∈ P := by
 theorem nonempty_mem_P_via_union : Language.nonempty ∈ P := by
   rw [← firstBitZero_union_firstBitOne_eq_nonempty]
   exact P_union firstBitZero_mem_P firstBitOne_mem_P
+
+end Complexity

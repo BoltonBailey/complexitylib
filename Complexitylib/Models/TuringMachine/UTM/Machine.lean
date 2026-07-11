@@ -1,8 +1,13 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.UTM.Init
-import Complexitylib.Models.TuringMachine.UTM.Body
-import Complexitylib.Models.TuringMachine.UTM.HaltTest
-import Complexitylib.Models.TuringMachine.UTM.Extract
+import Complexitylib.Models.TuringMachine.UTM.Internal.Init
+import Complexitylib.Models.TuringMachine.UTM.Internal.Body
+import Complexitylib.Models.TuringMachine.UTM.Internal.HaltTest
+import Complexitylib.Models.TuringMachine.UTM.Internal.Extract
 
 /-!
 # The universal Turing machine
@@ -23,6 +28,8 @@ the simulation and time-bound theorems are assembled in `UTM/Sim.lean`
 from the phase Hoare triples.
 -/
 
+namespace Complexity
+
 namespace TM
 
 /-- **The universal Turing machine**: initialization, then the
@@ -31,3 +38,5 @@ def utmTM : TM 6 :=
   seqTM initTM (seqTM (loopTM UTMBody.bodyTM haltTestTM) extractTM)
 
 end TM
+
+end Complexity

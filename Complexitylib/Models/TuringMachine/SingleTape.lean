@@ -1,9 +1,14 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Models.TuringMachine
-import Complexitylib.Models.TuringMachine.Pad
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Pad
 import Complexitylib.Models.TuringMachine.SingleTape.Internal
-import Complexitylib.Models.TuringMachine.SingleTape.Sim
-import Complexitylib.Models.TuringMachine.SingleTape.Delta
-import Complexitylib.Models.TuringMachine.SingleTape.Correctness
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Sim
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Delta
+import Complexitylib.Models.TuringMachine.SingleTape.Internal.Correctness
 import Complexitylib.Asymptotics
 
 /-!
@@ -27,12 +32,15 @@ This is a reusable robustness lemma:
 * `singleTapeSimTime T` — the `(T + n + 1)²` time overhead.
 * `singleTapeSim_allPathsHaltIn`, `singleTapeSim_acceptsInTime_iff` — the two
   behavioural facts (timing + acceptance equivalence), assembled from the
-  forward (`accepts_fwd`) and reverse (`halts_rev`) correspondence theorems of
+  forward (`acceptsInTime_singleTapeSim_of_acceptsInTime`) and reverse
+  (`halted_singleTapeSim_of_trace_qhalt`) correspondence theorems of
   `SingleTape/Correctness.lean`.
 * `singleTapeSimTime_bigO` — the overhead stays polynomial.
 
-`singleTapeSim_decides` and `exists_singleTape_decider` are assembled from these.
+`singleTapeSim_decidesInTime` and `exists_singleTape_decidesInTime` are assembled from these.
 -/
+
+namespace Complexity
 
 open Complexity
 
@@ -70,7 +78,7 @@ theorem singleTapeSimTime_bigO {k : ℕ} {T : ℕ → ℕ} {c : ℕ} (hTO : T =O
     whenever `N` does: an arbitrary simulator choice stream induces an `N`-run
     (read off at the closed-form decision positions), `N` halts on it within
     `T`, and the simulator then halts right after its corresponding macro-step
-    (`SingleTape.halts_rev`). -/
+    (`SingleTape.halted_singleTapeSim_of_trace_qhalt`). -/
 theorem singleTapeSim_allPathsHaltIn {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {T : ℕ → ℕ}
     (hN : N.AllPathsHaltIn T) :
     (singleTapeSim N).AllPathsHaltIn (singleTapeSimTime k T) := by
@@ -81,7 +89,8 @@ theorem singleTapeSim_allPathsHaltIn {k : ℕ} (N : NTM k) (hk : 1 ≤ k) {T : �
   have hhaltN : (N.trace (T x.length)
       (fun i => SingleTape.inducedChoices k ch i.val) (N.initCfg x)).state = N.qhalt :=
     hN x _
-  obtain ⟨m, hm, hhalted, -⟩ := SingleTape.halts_rev N hk ch x (T x.length) hhaltN
+  obtain ⟨m, hm, hhalted, -⟩ :=
+    SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
   have hle : m ≤ singleTapeSimTime k T x.length :=
     le_trans hm (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
   have hagree : ∀ i : Fin m, choices ⟨i.val, lt_of_lt_of_le i.isLt hle⟩ = ch i.val := by
@@ -110,7 +119,8 @@ theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (T 
     have hhaltN : (N.trace (T x.length)
         (fun i => SingleTape.inducedChoices k ch i.val) (N.initCfg x)).state = N.qhalt :=
       hN x _
-    obtain ⟨m, hm, hhalted, hbit⟩ := SingleTape.halts_rev N hk ch x (T x.length) hhaltN
+    obtain ⟨m, hm, hhalted, hbit⟩ :=
+      SingleTape.halted_singleTapeSim_of_trace_qhalt N hk ch x (T x.length) hhaltN
     have hle : m ≤ singleTapeSimTime k T x.length :=
       le_trans hm (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
     have hagree : ∀ i : Fin m, choices ⟨i.val, lt_of_lt_of_le i.isLt hle⟩ = ch i.val := by
@@ -121,13 +131,13 @@ theorem singleTapeSim_acceptsInTime_iff {k : ℕ} (N : NTM k) (hk : 1 ≤ k) (T 
     exact ⟨fun i => SingleTape.inducedChoices k ch i.val, hhaltN, hbit.mp hout⟩
   · -- forward flow: simulate the accepting `N`-run, then pad the time bound
     intro h
-    exact NTM.AcceptsInTime_mono
+    exact NTM.AcceptsInTime.mono
       (SingleTape.mul_macroBound_succ_le k (T x.length) x.length)
-      (SingleTape.accepts_fwd N hk x (T x.length) h)
+      (SingleTape.acceptsInTime_singleTapeSim_of_acceptsInTime N hk x (T x.length) h)
 
 /-- The single-tape simulator decides the same language within the overhead time
     bound. -/
-theorem singleTapeSim_decides {k : ℕ} {L : Language} (N : NTM k) (hk : 1 ≤ k) {T : ℕ → ℕ}
+theorem singleTapeSim_decidesInTime {k : ℕ} {L : Language} (N : NTM k) (hk : 1 ≤ k) {T : ℕ → ℕ}
     (hdec : N.DecidesInTime L T) :
     (singleTapeSim N).DecidesInTime L (singleTapeSimTime k T) :=
   ⟨singleTapeSim_allPathsHaltIn N hk hdec.1,
@@ -138,12 +148,14 @@ theorem singleTapeSim_decides {k : ℕ} {L : Language} (N : NTM k) (hk : 1 ≤ k
     same `L` within a polynomial time bound. For `k = 0` the machine is padded
     with a dummy work tape (`pad0`); for `k ≥ 1` it is simulated
     (`singleTapeSim`). -/
-theorem exists_singleTape_decider {k : ℕ} {L : Language} (N : NTM k)
+theorem exists_singleTape_decidesInTime {k : ℕ} {L : Language} (N : NTM k)
     {T : ℕ → ℕ} {c : ℕ} (hdec : N.DecidesInTime L T) (hTO : T =O (· ^ c)) :
     ∃ (N' : NTM 1) (T' : ℕ → ℕ) (c' : ℕ), N'.DecidesInTime L T' ∧ T' =O (· ^ c') := by
   rcases Nat.eq_zero_or_pos k with rfl | hk
   · exact ⟨pad0 N, T, c, pad0_decidesInTime hdec, hTO⟩
   · exact ⟨singleTapeSim N, singleTapeSimTime k T, 2 * c + 2,
-      singleTapeSim_decides N hk hdec, singleTapeSimTime_bigO hTO⟩
+      singleTapeSim_decidesInTime N hk hdec, singleTapeSimTime_bigO hTO⟩
 
 end NTM
+
+end Complexity

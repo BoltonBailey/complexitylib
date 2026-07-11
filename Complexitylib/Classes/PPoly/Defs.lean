@@ -1,5 +1,10 @@
+/-
+Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
 import Complexitylib.Circuits.Family.Defs
-import Complexitylib.Circuits.AON.Defs
+import Complexitylib.Circuits.AndOrNot.Defs
 import Complexitylib.Models.TuringMachine
 
 /-!
@@ -15,6 +20,8 @@ after elementary overhead simulations, but exact `SIZE` bounds are
 convention-dependent. Basis/size invariance must be proved rather than treated
 as definitional.
 -/
+
+namespace Complexity
 
 namespace BoolFunFamily
 
@@ -53,3 +60,5 @@ def SIZE (s : ℕ → ℕ) : Set Language :=
     AND/OR circuit families under the library's size convention. -/
 def PPoly : Set Language :=
   {L | ∃ F : CircuitFamily Basis.andOr2, F.Decides L ∧ F.PolynomialSize}
+
+end Complexity
