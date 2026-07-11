@@ -4469,7 +4469,8 @@ theorem satGuessVerifyTime_polynomial_bound {f : ℕ → ℕ} {c : ℕ}
     have hpmono : p.eval (2 * n + 2 + m) ≤ p.eval (3 * n + 3) :=
       polynomial_eval_mono_nat p harg
     exact le_trans hfm (by
-      simpa [lin, Polynomial.eval_comp, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hpmono)
+      simpa [lin, Polynomial.eval_comp, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc]
+        using hpmono)
   have htime : satGuessVerifyTime f n ≤ 15 * n + 44 + (p.comp lin).eval n := by
     have hwindow' := hwindow
     unfold satGuessVerifyTime satGuessVerifySetupTime

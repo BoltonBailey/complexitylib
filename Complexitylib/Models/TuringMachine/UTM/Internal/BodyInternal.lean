@@ -324,7 +324,8 @@ theorem blankRewStep_loop {cur next : BodyQ} {t : Fin 6}
           rw [if_pos rfl, if_neg hread]
           show (((c.work t).write _).move Dir3.left).cells = _
           have : (c.work t).write Γw.blank.toΓ
-              = { c.work t with cells := Function.update (c.work t).cells (c.work t).head Γw.blank.toΓ } := by
+              = { c.work t with cells :=
+                    Function.update (c.work t).cells (c.work t).head Γw.blank.toΓ } := by
             unfold Tape.write
             rw [if_neg (by omega)]
           rw [this]
@@ -482,17 +483,21 @@ theorem arm_haltRewS : bodyδ haltRewS iH wH oH = rewStep haltRewS haltRewD iH w
 theorem arm_haltRewD : bodyδ haltRewD iH wH oH = rewStep haltRewD bodyDone iH wH oH dsT := rfl
 theorem arm_preRewS : bodyδ preRewS iH wH oH = rewStep preRewS preRewD iH wH oH stT := rfl
 theorem arm_preRewD : bodyδ preRewD iH wH oH = rewStep preRewD peek1 iH wH oH dsT := rfl
-theorem arm_rewindSt : bodyδ (rewindSt f) iH wH oH = rewStep (rewindSt f) (cmpQ f) iH wH oH stT := rfl
-theorem arm_appRewScr : bodyδ (appRewScr f) iH wH oH = rewStep (appRewScr f) (appQ' f) iH wH oH scT := rfl
+theorem arm_rewindSt :
+    bodyδ (rewindSt f) iH wH oH = rewStep (rewindSt f) (cmpQ f) iH wH oH stT := rfl
+theorem arm_appRewScr :
+    bodyδ (appRewScr f) iH wH oH = rewStep (appRewScr f) (appQ' f) iH wH oH scT := rfl
 theorem arm_dfStRew : bodyδ dfStRew iH wH oH = rewStep dfStRew dfBlank iH wH oH stT := rfl
 theorem arm_dfStRew2 : bodyδ dfStRew2 iH wH oH = rewStep dfStRew2 dfDescRew iH wH oH stT := rfl
 theorem arm_dfDescRew : bodyδ dfDescRew iH wH oH = rewStep dfDescRew dfSkip iH wH oH dsT := rfl
 theorem arm_dfStRew3 : bodyδ dfStRew3 iH wH oH = rewStep dfStRew3 dfDescRew2 iH wH oH stT := rfl
-theorem arm_dfDescRew2 : bodyδ dfDescRew2 iH wH oH = rewStep dfDescRew2 bodyDone iH wH oH dsT := rfl
+theorem arm_dfDescRew2 :
+    bodyδ dfDescRew2 iH wH oH = rewStep dfDescRew2 bodyDone iH wH oH dsT := rfl
 theorem arm_clSt : bodyδ clSt iH wH oH = rewStep clSt clDesc iH wH oH stT := rfl
 theorem arm_clDesc : bodyδ clDesc iH wH oH = rewStep clDesc bodyDone iH wH oH dsT := rfl
 
-theorem arm_mmScr : bodyδ (mmScr f) iH wH oH = blankRewStep (mmScr f) (rewindSt f) iH wH oH scT := rfl
+theorem arm_mmScr :
+    bodyδ (mmScr f) iH wH oH = blankRewStep (mmScr f) (rewindSt f) iH wH oH scT := rfl
 theorem arm_dfScr : bodyδ dfScr iH wH oH = blankRewStep dfScr dfStRew iH wH oH scT := rfl
 theorem arm_clScr : bodyδ clScr iH wH oH = blankRewStep clScr clSt iH wH oH scT := rfl
 

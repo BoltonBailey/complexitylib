@@ -88,10 +88,12 @@ def tokenize? : List Bool → Option (List EncToken)
       | bit b =>
           cases b with
           | false =>
-              change tokenize? (false :: false :: encodeTokens toks) = some (EncToken.bit false :: toks)
+              change tokenize? (false :: false :: encodeTokens toks)
+                = some (EncToken.bit false :: toks)
               simp [tokenize?, ih]
           | true =>
-              change tokenize? (true :: true :: encodeTokens toks) = some (EncToken.bit true :: toks)
+              change tokenize? (true :: true :: encodeTokens toks)
+                = some (EncToken.bit true :: toks)
               simp [tokenize?, ih]
       | litSep =>
           change tokenize? (false :: true :: encodeTokens toks) = some (EncToken.litSep :: toks)

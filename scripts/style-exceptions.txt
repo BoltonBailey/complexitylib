@@ -3,8 +3,5 @@
 #   python3 scripts/lint_style.py --update
 Complexitylib/Circuits/Internal/Schnorr.lean : lineLength
 Complexitylib/Models/TuringMachine/SingleTape/Internal/Correctness.lean : lineLength
-Complexitylib/Models/TuringMachine/UTM/Internal/BodyInternal.lean : lineLength
 Complexitylib/SAT/CookLevin.lean : lineLength
-Complexitylib/SAT/Internal/GuessVerify.lean : lineLength
-Complexitylib/SAT/Verifier.lean : lineLength
 Complexitylib/SAT/VerifierTM.lean : lineLength
