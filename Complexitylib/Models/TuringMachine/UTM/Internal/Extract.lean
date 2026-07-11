@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Hoare.Defs
-import Complexitylib.Models.TuringMachine.UTM.VTape
+import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!

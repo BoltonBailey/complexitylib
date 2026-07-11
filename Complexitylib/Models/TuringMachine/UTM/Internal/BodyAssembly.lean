@@ -3,10 +3,10 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.BodyMatch
-import Complexitylib.Models.TuringMachine.UTM.BodyApply
-import Complexitylib.Models.TuringMachine.UTM.DescLayout
-import Complexitylib.Models.TuringMachine.UTM.Verdict
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyMatch
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyApply
+import Complexitylib.Models.TuringMachine.UTM.Internal.DescLayout
+import Complexitylib.Models.TuringMachine.UTM.Internal.Verdict
 
 /-!
 # Body correctness: phase assembly

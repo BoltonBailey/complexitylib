@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.UTM.Machine
-import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
-import Complexitylib.Models.TuringMachine.UTM.Init
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyAssembly
+import Complexitylib.Models.TuringMachine.UTM.Internal.Init
 
 /-!
 # Universal machine: simulation bridges

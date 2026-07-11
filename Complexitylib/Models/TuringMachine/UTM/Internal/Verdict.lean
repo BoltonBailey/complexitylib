@@ -3,9 +3,9 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.Interp
-import Complexitylib.Models.TuringMachine.UTM.Bits
-import Complexitylib.Models.TuringMachine.UTM.HaltTest
+import Complexitylib.Models.TuringMachine.UTM.Internal.Interp
+import Complexitylib.Models.TuringMachine.UTM.Internal.Bits
+import Complexitylib.Models.TuringMachine.UTM.Internal.HaltTest
 
 /-!
 # Halt-test verdict correspondence

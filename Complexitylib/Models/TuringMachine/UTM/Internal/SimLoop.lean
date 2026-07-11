@@ -3,8 +3,8 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.BodyIteration
-import Complexitylib.Models.TuringMachine.UTM.Sim
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyIteration
+import Complexitylib.Models.TuringMachine.UTM.Internal.Sim
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Loop
 import Complexitylib.Models.TuringMachine.Hoare
 

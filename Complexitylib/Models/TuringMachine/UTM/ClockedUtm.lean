@@ -3,8 +3,8 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.SimClocked
-import Complexitylib.Models.TuringMachine.UTM.SeekFrontier
+import Complexitylib.Models.TuringMachine.UTM.Internal.SimClocked
+import Complexitylib.Models.TuringMachine.UTM.Internal.SeekFrontier
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
 /-!

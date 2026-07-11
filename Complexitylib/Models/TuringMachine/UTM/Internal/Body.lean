@@ -5,8 +5,8 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.UTM.Desc
-import Complexitylib.Models.TuringMachine.UTM.VTape
+import Complexitylib.Models.TuringMachine.UTM.Internal.Desc
+import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
 import Mathlib.Tactic.DeriveFintype
 import Mathlib.Tactic.FinCases
 import Mathlib.Data.Fintype.Sigma

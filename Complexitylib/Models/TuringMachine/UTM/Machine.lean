@@ -4,10 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.UTM.Init
-import Complexitylib.Models.TuringMachine.UTM.Body
-import Complexitylib.Models.TuringMachine.UTM.HaltTest
-import Complexitylib.Models.TuringMachine.UTM.Extract
+import Complexitylib.Models.TuringMachine.UTM.Internal.Init
+import Complexitylib.Models.TuringMachine.UTM.Internal.Body
+import Complexitylib.Models.TuringMachine.UTM.Internal.HaltTest
+import Complexitylib.Models.TuringMachine.UTM.Internal.Extract
 
 /-!
 # The universal Turing machine

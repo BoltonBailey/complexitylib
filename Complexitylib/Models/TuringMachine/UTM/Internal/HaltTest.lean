@@ -5,8 +5,8 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.UTM.VTape
-import Complexitylib.Models.TuringMachine.UTM.Desc
+import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
+import Complexitylib.Models.TuringMachine.UTM.Internal.Desc
 
 /-!
 # The UTM halt test machine

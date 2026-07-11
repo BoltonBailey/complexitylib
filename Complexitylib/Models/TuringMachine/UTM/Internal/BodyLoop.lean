@@ -3,8 +3,8 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.BodyAssembly
-import Complexitylib.Models.TuringMachine.UTM.BodyLookup
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyAssembly
+import Complexitylib.Models.TuringMachine.UTM.Internal.BodyLookup
 
 /-!
 # Body machine: the match-loop induction
