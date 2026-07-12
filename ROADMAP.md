@@ -944,9 +944,10 @@ track grows it toward the headline theorems.
 
 - [~] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
   structures, and its order-independence. *Decomposed:*
-  - [ ] `SOFormula` syntax: extend `Formula` with relation-variable application
+  - [x] `SOFormula` syntax: extend `Formula` with relation-variable application
     and second-order quantifiers (relation variables de Bruijn-indexed by a
-    context of arities).
+    context of arities). (`SecondOrder/Syntax.lean`: `SOFormula`, `SOSentence`,
+    the FO embedding `SOFormula.ofFormula`, and `SOFormula.size`.)
   - [ ] SO semantics: satisfaction under a relation-variable assignment (in
     addition to the element `Env`).
   - [ ] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
