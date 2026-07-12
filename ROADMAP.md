@@ -966,10 +966,12 @@ track grows it toward the headline theorems.
   - [x] Relational part of a structure's encoding (concatenate the truth tables)
     and its total length (`encodeRels`, `encodeRels_length`).
   - [~] Full encoding: prepend `card` (and any constants) and make it computable;
-    a decode/encode round-trip on ordered structures. (`Encoding.lean`: a
-    computable tuple enumeration `allTuples` (length `card^k`, `mem_allTuples`) and
-    computable relation encoding `encodeRelC`/`encodeRelC_length` are done;
-    prepending `card`/constants and the round-trip remain.)
+    a decode/encode round-trip on ordered structures. (`Encoding.lean`: computable
+    tuple enumeration `allTuples` (length `card^k`, `mem_allTuples`), computable
+    relation/structure encodings `encodeRelC`/`encodeRelsC`, and the full
+    `encodeStruct` (unary `card` prefix + relations) with cardinality recovery
+    `encodeStruct_card` are done; encoding the constants and a full structure
+    round-trip remain.)
   - [ ] The induced language `⟦Q⟧ : Language` of an order-independent query.
 - [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
   existential second-order logic captures `NP`. *Decomposed:*

@@ -8,6 +8,7 @@ import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Data.List.FinRange
 import Mathlib.Data.Fin.Tuple.Basic
+import Mathlib.Data.List.TakeWhile
 
 /-!
 # Encoding finite structures as bit strings
@@ -72,6 +73,33 @@ def encodeRelC {card k : Nat} (r : (Fin k → Fin card) → Bool) : List Bool :=
 theorem encodeRelC_length {card k : Nat} (r : (Fin k → Fin card) → Bool) :
     (encodeRelC r).length = card ^ k := by
   rw [encodeRelC, List.length_map, allTuples_length]
+
+/-- The **computable** relational encoding of a decidable structure: the computable
+    truth tables of all its relations, concatenated. -/
+def encodeRelsC {V : Vocabulary} (A : DecFinStruct V) : List Bool :=
+  (List.finRange V.numRels).flatMap (fun i => encodeRelC (A.rel i))
+
+/-- The computable relational encoding has the expected total length. -/
+theorem encodeRelsC_length {V : Vocabulary} (A : DecFinStruct V) :
+    (encodeRelsC A).length
+      = ((List.finRange V.numRels).map (fun i => A.card ^ V.relArity i)).sum := by
+  simp only [encodeRelsC, List.length_flatMap]
+  congr 1
+  apply List.map_congr_left
+  intro i _
+  exact encodeRelC_length (A.rel i)
+
+/-- The **full** computable encoding of a decidable structure: the cardinality in
+    unary (a block of `card` `true`s terminated by a `false`), followed by the
+    relational encoding. The unary prefix makes `card` self-delimiting. -/
+def encodeStruct {V : Vocabulary} (A : DecFinStruct V) : List Bool :=
+  List.replicate A.card true ++ false :: encodeRelsC A
+
+/-- The cardinality is recoverable from the encoding as the length of the leading
+    run of `true`s. -/
+theorem encodeStruct_card {V : Vocabulary} (A : DecFinStruct V) :
+    ((encodeStruct A).takeWhile id).length = A.card := by
+  rw [encodeStruct]; simp
 
 /-- Encode a `Bool`-valued arity-`k` relation on `Fin card` as its **truth table**:
     the list of its values over all `k`-tuples, in the canonical `Fintype` order. -/
