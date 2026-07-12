@@ -1002,6 +1002,37 @@ theorem influence_parityFun (i : Fin n) (S : Finset (Fin n)) :
   rw [Finset.sum_ite_eq]
   simp [Finset.mem_filter]
 
+/-- The squared degree-1 coefficient at `i` is a lower bound for the influence of `i`:
+    `𝓕(f, {i})² ≤ Infᵢ[f]`. It is the `S = {i}` term of the spectral sum defining the
+    influence, and all other terms are nonnegative. -/
+theorem fourierCoeff_singleton_sq_le_influence (i : Fin n) (f : BooleanFunction n) :
+    (𝓕 f {i}) ^ 2 ≤ influence i f := by
+  rw [influence]
+  apply Finset.single_le_sum (f := fun S => (𝓕 f S) ^ 2) (fun S _ => sq_nonneg _)
+  exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, Finset.mem_singleton_self i⟩
+
+/-- **Degree-1 weight is bounded by total influence**: `W¹[f] ≤ I[f]`. Each degree-1
+    frequency contributes its weight once to `W¹` but `|S| = 1` times (i.e. also once)
+    to `I`, and higher-degree frequencies only add to `I`. -/
+theorem fourierWeightAtDegree_one_le_totalInfluence (f : BooleanFunction n) :
+    𝐖 f 1 ≤ totalInfluence f := by
+  rw [fourierWeightAtDegree, totalInfluence]
+  have hcongr : ∀ S ∈ Finset.univ.filter (fun S : Finset (Fin n) => S.card = 1),
+      fourierWeight f S = (S.card : ℝ) * (𝓕 f S) ^ 2 := by
+    intro S hS; rw [Finset.mem_filter] at hS
+    rw [fourierWeight, hS.2]; simp
+  rw [Finset.sum_congr rfl hcongr]
+  exact Finset.sum_le_sum_of_subset_of_nonneg (Finset.filter_subset _ _)
+    (fun S _ _ => mul_nonneg (by positivity) (sq_nonneg _))
+
+/-- **Level-1 inequality (coordinate form).** The total weight on the degree-1
+    coefficients is at most the total influence: `∑_i 𝓕(f, {i})² ≤ I[f]`. Immediate by
+    summing `fourierCoeff_singleton_sq_le_influence` over the coordinates. -/
+theorem sum_fourierCoeff_singleton_sq_le_totalInfluence (f : BooleanFunction n) :
+    ∑ i : Fin n, (𝓕 f {i}) ^ 2 ≤ totalInfluence f := by
+  rw [totalInfluence_eq_sum_influence]
+  exact Finset.sum_le_sum fun i _ => fourierCoeff_singleton_sq_le_influence i f
+
 /-- Flip coordinate `i` of a point of the Hamming cube. -/
 def flipCoord (i : Fin n) (x : Cube n) : Cube n := Function.update x i (x i + 1)
 
