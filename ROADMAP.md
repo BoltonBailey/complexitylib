@@ -972,7 +972,9 @@ track grows it toward the headline theorems.
     `encodeStruct` (unary `card` prefix + relations) with cardinality recovery
     `encodeStruct_card` are done; encoding the constants and a full structure
     round-trip remain.)
-  - [ ] The induced language `⟦Q⟧ : Language` of an order-independent query.
+  - [x] The induced language `⟦Q⟧ : Language` of a query (`Language.lean`:
+    `queryLanguage` — the encodings of `Q`-satisfying structures — and
+    `mem_queryLanguage`). This is the bridge to the machine-model `Language`.
 - [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
   existential second-order logic captures `NP`. *Decomposed:*
   - [ ] `∃SO ⊆ NP`: given an `∃SO` sentence, an NTM that guesses the witnessing
