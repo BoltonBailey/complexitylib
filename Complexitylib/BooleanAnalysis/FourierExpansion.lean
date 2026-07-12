@@ -932,6 +932,58 @@ theorem influence_parityFun (i : Fin n) (S : Finset (Fin n)) :
   rw [Finset.sum_ite_eq]
   simp [Finset.mem_filter]
 
+/-- The **discrete derivative** `D_i f` of `f` in the direction of coordinate `i`,
+    defined spectrally: `D_i f = ∑_{S ∋ i} 𝓕(f, S) · χ_{S∖{i}}`. It strips
+    coordinate `i` from every frequency that contains it. -/
+noncomputable def derivative (i : Fin n) (f : BooleanFunction n) : BooleanFunction n :=
+  ∑ S ∈ Finset.univ.filter (fun S => i ∈ S), (𝓕 f S) • (χ (S.erase i))
+
+/-- **Fourier formula for the derivative**: `𝓕(D_i f, T) = 𝓕(f, T ∪ {i})` when
+    `i ∉ T`, and `0` when `i ∈ T`. -/
+theorem fourierCoeff_derivative (i : Fin n) (f : BooleanFunction n) (T : Finset (Fin n)) :
+    𝓕 (derivative i f) T = if i ∈ T then 0 else 𝓕 f (insert i T) := by
+  rw [derivative, fourierCoeff_eq_inner, sum_inner]
+  simp only [real_inner_smul_left, ← fourierCoeff_eq_inner, fourierCoeff_parityFun]
+  by_cases hiT : i ∈ T
+  · rw [if_pos hiT]
+    apply Finset.sum_eq_zero
+    intro S hS
+    rw [Finset.mem_filter] at hS
+    have hne : S.erase i ≠ T := fun h => (Finset.mem_erase.mp (h ▸ hiT)).1 rfl
+    rw [if_neg hne, mul_zero]
+  · rw [if_neg hiT, Finset.sum_eq_single (insert i T)]
+    · rw [Finset.erase_insert hiT, if_pos rfl, mul_one]
+    · intro S hS hSne
+      rw [Finset.mem_filter] at hS
+      have hne : S.erase i ≠ T := fun h => hSne (by rw [← h, Finset.insert_erase hS.2])
+      rw [if_neg hne, mul_zero]
+    · intro h
+      exact absurd (Finset.mem_filter.mpr
+        ⟨Finset.mem_univ (insert i T), Finset.mem_insert_self i T⟩) h
+
+/-- **Influence is the squared norm of the derivative**: `Infᵢ[f] = ‖D_i f‖²`. This
+    is the analytic form of coordinate influence — the standard bridge to the
+    combinatorial "probability `f` is sensitive at `i`" (O'Donnell §2.2). -/
+theorem influence_eq_norm_sq_derivative (i : Fin n) (f : BooleanFunction n) :
+    influence i f = ‖derivative i f‖₂ ^ 2 := by
+  rw [norm_sq_eq_sum_fourierCoeff_sq, influence,
+    ← Finset.sum_filter_add_sum_filter_not Finset.univ (fun T => i ∈ T)]
+  have h1 : ∑ T ∈ Finset.univ.filter (fun T => i ∈ T), (𝓕 (derivative i f) T) ^ 2 = 0 := by
+    apply Finset.sum_eq_zero
+    intro T hT
+    rw [Finset.mem_filter] at hT
+    rw [fourierCoeff_derivative, if_pos hT.2]; simp
+  rw [h1, zero_add]
+  apply Finset.sum_nbij' (fun S => S.erase i) (fun T => insert i T)
+  · intro S hS; rw [Finset.mem_filter] at hS ⊢; exact ⟨Finset.mem_univ _, by simp⟩
+  · intro T hT
+    rw [Finset.mem_filter] at hT ⊢; exact ⟨Finset.mem_univ _, Finset.mem_insert_self i T⟩
+  · intro S hS; rw [Finset.mem_filter] at hS; rw [Finset.insert_erase hS.2]
+  · intro T hT; rw [Finset.mem_filter] at hT; rw [Finset.erase_insert hT.2]
+  · intro S hS
+    rw [Finset.mem_filter] at hS
+    rw [fourierCoeff_derivative, if_neg (by simp : i ∉ S.erase i), Finset.insert_erase hS.2]
+
 /-- Elementary inequality `1 - ρ^k ≤ (1 - ρ) · k` for `ρ ∈ [0, 1]` (a telescoping /
     Bernoulli bound), used to control noise-stability decay by total influence. -/
 private theorem one_sub_pow_le_mul {ρ : ℝ} (h0 : 0 ≤ ρ) (h1 : ρ ≤ 1) (k : ℕ) :
