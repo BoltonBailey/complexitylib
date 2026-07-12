@@ -516,6 +516,54 @@ theorem input_head_trace_le (tm : NTM n) (T : ℕ)
           _ ≤ (c.input.head + 1) + T := by omega
           _ ≤ c.input.head + (T + 1) := by omega
 
+/-- During an NTM trace, every work-tape head increases by at most one per step. -/
+theorem work_head_trace_le (tm : NTM n) (T : ℕ)
+    (choices : Fin T → Bool) (c : Cfg n tm.Q) (i : Fin n) :
+    ((tm.trace T choices c).work i).head ≤ (c.work i).head + T := by
+  induction T generalizing c with
+  | zero => simp [NTM.trace]
+  | succ T ih =>
+      by_cases hhalt : c.state = tm.qhalt
+      · simp [NTM.trace, hhalt]
+      · simp only [NTM.trace, hhalt, if_false]
+        let b := choices ⟨0, Nat.zero_lt_succ T⟩
+        let tr := tm.δ b c.state c.input.read (fun j => (c.work j).read) c.output.read
+        let c' : Cfg n tm.Q :=
+          { state := tr.1
+            input := c.input.move tr.2.2.2.1
+            work := fun j => (c.work j).writeAndMove (tr.2.1 j) (tr.2.2.2.2.1 j)
+            output := c.output.writeAndMove tr.2.2.1 tr.2.2.2.2.2 }
+        have hrec := ih (fun j => choices ⟨j.val + 1, by omega⟩) c'
+        have hstep : (c'.work i).head ≤ (c.work i).head + 1 := by
+          exact Tape.head_writeAndMove_le _ _ _
+        change ((tm.trace T (fun j => choices ⟨j.val + 1, by omega⟩) c').work i).head ≤
+          (c.work i).head + (T + 1)
+        omega
+
+/-- During an NTM trace, the output-tape head increases by at most one per step. -/
+theorem output_head_trace_le (tm : NTM n) (T : ℕ)
+    (choices : Fin T → Bool) (c : Cfg n tm.Q) :
+    (tm.trace T choices c).output.head ≤ c.output.head + T := by
+  induction T generalizing c with
+  | zero => simp [NTM.trace]
+  | succ T ih =>
+      by_cases hhalt : c.state = tm.qhalt
+      · simp [NTM.trace, hhalt]
+      · simp only [NTM.trace, hhalt, if_false]
+        let b := choices ⟨0, Nat.zero_lt_succ T⟩
+        let tr := tm.δ b c.state c.input.read (fun i => (c.work i).read) c.output.read
+        let c' : Cfg n tm.Q :=
+          { state := tr.1
+            input := c.input.move tr.2.2.2.1
+            work := fun i => (c.work i).writeAndMove (tr.2.1 i) (tr.2.2.2.2.1 i)
+            output := c.output.writeAndMove tr.2.2.1 tr.2.2.2.2.2 }
+        have hrec := ih (fun i => choices ⟨i.val + 1, by omega⟩) c'
+        have hstep : c'.output.head ≤ c.output.head + 1 := by
+          exact Tape.head_writeAndMove_le _ _ _
+        change (tm.trace T (fun i => choices ⟨i.val + 1, by omega⟩) c').output.head ≤
+          c.output.head + (T + 1)
+        omega
+
 /-- Split a two-step trace into two one-step traces. -/
 theorem trace_two (tm : NTM n) (choices : Fin 2 → Bool) (c : Cfg n tm.Q) :
     tm.trace 2 choices c =
@@ -598,6 +646,16 @@ theorem trace_add (tm : NTM n) (T U : ℕ)
     funext i
     apply congrArg choices
     exact Fin.ext (by simp [Fin.val_natAdd]; omega)
+
+/-- Split a trace driven by an infinite choice stream at a natural-number
+offset. This is the cast-free form used by fixed-schedule simulations. -/
+theorem trace_add_fun (tm : NTM n) (T U : ℕ)
+    (choices : ℕ → Bool) (c : Cfg n tm.Q) :
+    tm.trace (T + U) (fun i => choices i.val) c =
+      tm.trace U (fun i => choices (T + i.val))
+        (tm.trace T (fun i => choices i.val) c) := by
+  simpa [Fin.castLE, Fin.natAdd] using
+    tm.trace_add T U (fun i => choices i.val) c
 
 end NTM
 

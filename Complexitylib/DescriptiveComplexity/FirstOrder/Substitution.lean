@@ -24,8 +24,9 @@ formula along an `FOInterpretation`.
 - `Term.shift`, `Term.shift_eval` — index shift and its evaluation invariance.
 - `Term.substTerm`, `Term.substTerm_eval` — term substitution and its evaluation.
 - `liftSubst`, `liftSubst_eval` — lifting a substitution under a binder.
-- `Formula.subst`, `Formula.subst_sat` — formula substitution and the substitution
-  theorem.
+- `Formula.subst`, `Formula.quantifierRank_subst` — formula substitution preserves
+  quantifier rank.
+- `Formula.subst_sat` — the substitution theorem.
 -/
 
 namespace Complexity
@@ -91,6 +92,13 @@ def Formula.subst : {m n : Nat} → Formula V m → (Fin m → Term V n) → For
   | _, _, .disj φ ψ, ρ => .disj (φ.subst ρ) (ψ.subst ρ)
   | _, _, .exist φ, ρ => .exist (φ.subst (liftSubst ρ))
   | _, _, .all φ, ρ => .all (φ.subst (liftSubst ρ))
+
+/-- Substituting terms for free variables preserves quantifier rank exactly. -/
+theorem Formula.quantifierRank_subst {m n : Nat} (φ : Formula V m)
+    (ρ : Fin m → Term V n) :
+    (φ.subst ρ).quantifierRank = φ.quantifierRank := by
+  induction φ generalizing n <;>
+    simp [Formula.subst, Formula.quantifierRank, *]
 
 /-- **The substitution theorem.** Satisfaction of a substituted formula under `σ`
     equals satisfaction of the original formula under the environment that evaluates

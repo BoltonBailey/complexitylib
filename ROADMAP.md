@@ -103,9 +103,12 @@ from stable public modules so later work does not duplicate local lemmas.
 
 **Current progress.** The core model now exposes alphabet separation facts,
 `Tape.ext`, initialized/started-tape cell and read lemmas, `Tape.move_cells`,
-`Tape.write_head`, canonical register-cell facts, and DTM time-bound
-monotonicity. Several large consumers have been migrated away from private
-copies; endpoint/run lemmas and a few older local tape helpers remain.
+`Tape.write_head`, canonical `readBackWrite` no-op/move facts, canonical
+register-cell facts, and DTM time-bound monotonicity. NTM traces now expose
+left-end-marker preservation on every tape, as well as internal
+input/work/output head-growth bounds. Several large consumers have been
+migrated away from private copies; endpoint/run lemmas and a few older local
+tape helpers remain.
 
 **Staged milestones.**
 
@@ -197,8 +200,16 @@ probability definitions; N1 for encoded experiments.
 cardinality `card (Fin T -> Bool) = 2^T`, the prefix/suffix block split packaged
 as an `Equiv` (projection and concatenation maps inverse by construction), the
 finite union bound `card_filter_exists_le`, and a strict-`majority` function with
-its odd-length negation antisymmetry `majority_not_of_odd`. The remaining
-milestones concern finite event probability, amplification, and permutations.
+its odd-length negation antisymmetry `majority_not_of_odd`. Boolean vectors now
+biject with their true supports, giving exact `Nat.choose` counts for every
+`popCount` fiber and exact binomial-tail counts for majority success/failure. The
+`blocksEquiv` schedule extends this to the actual long machine seed space, with
+weighted block-event fibers and an exact normalized odd-majority failure
+probability. A concrete `12k + 1`-repetition theorem reduces error from `1/3` to
+at most `1 / 2^k`. The executable fixed-time PTM repetition machine, its fresh
+tape-bank layout, its exact random-bit schedule, and cancellation of ignored
+administrative bits are now public. Its trace-simulation proof is the remaining
+part of the N2 wrapper milestone.
 
 **Staged milestones.**
 
@@ -208,14 +219,24 @@ milestones concern finite event probability, amplification, and permutations.
 - [x] Define finite event probability once and relate it to `Finset.card` and the
   existing rational PTM probabilities (`Complexitylib.Classes.EventProb`:
   `eventProb`, its basic laws, and `NTM.acceptProb_eq_eventProb`).
-- [~] Prove union, complement, conditioning-by-partition, and product lemmas.
-  *(`eventProb_union_le`, `eventProb_compl`, and the `popCount` complement count
-  done; conditioning-by-partition and product remain.)*
-- [ ] Formalize binomial coefficients and majority failure counts in the exact
-  finite sample space used by machines.
-- [ ] Prove a concrete amplification theorem from error `1/3` to `2^-k` (or another
-  explicit exponentially small bound) with a fully specified repetition count.
-- [ ] Lift the combinatorial theorem to a reusable PTM repetition construction.
+- [x] Prove union, complement, conditioning-by-partition, and product lemmas
+  (`eventProb_union_le`, `eventProb_compl`, `eventProb_eq_sum_fiberwise`,
+  `eventProb_block`, and the `popCount` complement count).
+- [x] Formalize binomial coefficients and majority failure counts in the exact
+  finite sample space used by machines (`blocksEquiv`,
+  `card_blockEventCount_eq`, `card_blockMajority_eq_false`, and
+  `eventProb_blockMajority_eq_false`).
+- [x] Prove a concrete amplification theorem from error `1/3` to `2^-k` with a
+  fully specified repetition count (`eventProb_blockMajority_false_le_two_pow`:
+  `12k + 1` independent repetitions).
+- [~] Lift the combinatorial theorem to a reusable PTM repetition construction.
+  - [x] Define `NTM.repeatAtTime` with fresh work-tape banks, an exact
+    `2 + k * (2 * T + 2)` schedule, explicit zero-time/zero-repetition behavior,
+    and an executable regression guard.
+  - [x] Prove the compact/full seed schedule alignment, exact constant-fiber
+    count, and probability cancellation for administrative choice bits.
+  - [ ] Prove the pathwise trace simulation and derive the exact repeated-machine
+    acceptance-probability/majority theorem.
 
 **Formalization hazards.** Independence should not be smuggled in through an
 informal product argument: the bijection between one long choice string and blocks
@@ -1043,18 +1064,19 @@ track grows it toward the headline theorems.
   constant), `FOInterpretation.apply` with `apply_idInterp`, `FOReduces` between
   Boolean queries with reflexivity `FOReduces.refl`, the quantifier-free restriction
   `FOInterpretation.IsQuantifierFree` and **first-order projections** `FOProjReduces`
-  (with `toFOReduces`, `refl`); the many-one **complement congruence**
+  (with `toFOReduces`, `refl`, and `trans`); the many-one **complement congruence**
   `FOReduces.complement`; and — the keystone — the full **de Bruijn substitution
   machinery** (`FirstOrder/Substitution.lean`: `Term.shift`, `Formula.subst`,
-  `Formula.subst_sat`) with the **transport theorem**
+  `Formula.subst_sat`, and quantifier-rank preservation
+  `Formula.quantifierRank_subst`) with the **transport theorem**
   `FOInterpretation.translate_sat` and **transitivity** `FOReduces.trans` (so
-  FO-reducibility is a preorder). *Remaining:*
+  FO-reducibility is a preorder); and closure of FO-definable queries under
+  FO-reductions and FO-projections (`Definable.lean`:
+  `FODefinable.of_reduces`/`of_projReduces`). *Remaining:*
   - [ ] General **dimension-`k`** interpretations: target universe a definable subset
     of `domᵏ` (needs a `Fin (card^k) ≃ (Fin k → Fin card)` tuple codec and an
     environment-assembly for the `arity·k` free variables), so reductions may grow
     the universe.
-  - [ ] Closure of `FODefinable` under FO-reductions (via `translate_sat`), and
-    `FOProjReduces.trans` (composition preserves quantifier-freeness).
   - [ ] The **string-level** FO-reduction on the machine model: an FO map on
     encodings, so `FOReduces Q₁ Q₂` yields a `Language`-level many-one reduction of
     `queryLanguage Q₁` to `queryLanguage Q₂` (connects to the `MapReducesPoly`

@@ -29,9 +29,11 @@ string-level FO-reduction (an FO map on encodings) is a further step on track L6
 
 - `FOInterpretation` — a dimension-1 first-order interpretation `V → W`.
 - `FOInterpretation.apply` — the induced structure map, with `apply_idInterp`.
-- `FOReduces` — first-order reducibility between Boolean queries; `FOReduces.refl`.
+- `FOReduces` — first-order reducibility between Boolean queries, with reflexivity
+  and transitivity.
 - `FOInterpretation.IsQuantifierFree`, `FOProjReduces` — first-order projections,
-  with `FOProjReduces.toFOReduces` and `FOProjReduces.refl`.
+  with `FOInterpretation.IsQuantifierFree.comp`, `FOProjReduces.toFOReduces`, and
+  reflexivity/transitivity.
 -/
 
 namespace Complexity
@@ -184,10 +186,41 @@ theorem FOReduces.trans {U : Vocabulary} {Q₁ : BooleanQuery U} {Q₂ : Boolean
 def FOInterpretation.IsQuantifierFree (I : FOInterpretation V W) : Prop :=
   ∀ i, (I.relFormula i).quantifierRank = 0
 
+/-- Translating through a quantifier-free interpretation preserves quantifier rank.
+    Relation atoms are replaced by quantifier-free defining formulas, while all
+    logical connectives and quantifiers retain their original structure. -/
+theorem FOInterpretation.IsQuantifierFree.quantifierRank_translate
+    {I : FOInterpretation V W} (hI : I.IsQuantifierFree) {n : Nat}
+    (φ : Formula W n) :
+    (I.translate φ).quantifierRank = φ.quantifierRank := by
+  induction φ with
+  | relApp i ts =>
+    simpa [FOInterpretation.translate, Formula.quantifierRank_subst] using hI i
+  | eq t₁ t₂ => rfl
+  | neg φ ih =>
+    simpa [FOInterpretation.translate, Formula.quantifierRank] using ih
+  | conj φ ψ ihφ ihψ =>
+    simp only [FOInterpretation.translate, Formula.quantifierRank, ihφ, ihψ]
+  | disj φ ψ ihφ ihψ =>
+    simp only [FOInterpretation.translate, Formula.quantifierRank, ihφ, ihψ]
+  | exist φ ih =>
+    simp only [FOInterpretation.translate, Formula.quantifierRank, ih]
+  | all φ ih =>
+    simp only [FOInterpretation.translate, Formula.quantifierRank, ih]
+
 /-- The identity interpretation is quantifier-free (each relation is a bare atom). -/
 theorem FOInterpretation.idInterp_isQuantifierFree :
     (FOInterpretation.idInterp V).IsQuantifierFree :=
   fun _ => rfl
+
+/-- Composing quantifier-free interpretations remains quantifier-free. -/
+theorem FOInterpretation.IsQuantifierFree.comp {U : Vocabulary}
+    {I₂ : FOInterpretation V W} {I₁ : FOInterpretation U V}
+    (hI₂ : I₂.IsQuantifierFree) (hI₁ : I₁.IsQuantifierFree) :
+    (I₂.comp I₁).IsQuantifierFree := by
+  intro i
+  rw [show (I₂.comp I₁).relFormula i = I₁.translate (I₂.relFormula i) from rfl,
+    hI₁.quantifierRank_translate, hI₂ i]
 
 /-- A **first-order projection** reduction: an FO-reduction witnessed by a
     quantifier-free interpretation. -/
@@ -203,6 +236,16 @@ theorem FOProjReduces.toFOReduces {Q₁ : BooleanQuery V} {Q₂ : BooleanQuery W
 theorem FOProjReduces.refl (Q : BooleanQuery V) : FOProjReduces Q Q :=
   ⟨FOInterpretation.idInterp V, FOInterpretation.idInterp_isQuantifierFree,
     fun A => by rw [FOInterpretation.apply_idInterp]⟩
+
+/-- **FO-projection reducibility is transitive.** Composition preserves both the
+    query-membership equivalence and quantifier-freeness of the interpretation. -/
+theorem FOProjReduces.trans {U : Vocabulary} {Q₁ : BooleanQuery U}
+    {Q₂ : BooleanQuery V} {Q₃ : BooleanQuery W} (h₁ : FOProjReduces Q₁ Q₂)
+    (h₂ : FOProjReduces Q₂ Q₃) : FOProjReduces Q₁ Q₃ := by
+  obtain ⟨I₁, hqf₁, hI₁⟩ := h₁
+  obtain ⟨I₂, hqf₂, hI₂⟩ := h₂
+  refine ⟨I₂.comp I₁, hqf₂.comp hqf₁, fun A => ?_⟩
+  rw [hI₁ A, hI₂ (I₁.apply A), FOInterpretation.apply_comp]
 
 end DescriptiveComplexity
 

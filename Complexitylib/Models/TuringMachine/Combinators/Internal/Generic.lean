@@ -47,10 +47,6 @@ namespace TM
 -- Shared tape lemmas (deduplicated from Internal files)
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- `readBackWrite` recovers the original symbol for non-start symbols. -/
-theorem toΓ_readBackWrite_of_ne_start {g : Γ} (h : g ≠ Γ.start) :
-    (readBackWrite g).toΓ = g := by cases g <;> simp_all [readBackWrite, Γw.toΓ]
-
 /-- A tape with head ≥ 1 and cells ≥ 1 ≠ start is stable under
     `writeAndMove(readBackWrite(read).toΓ, idleDir(read))`. -/
 theorem tape_writeAndMove_stable (t : Tape)

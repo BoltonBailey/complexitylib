@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.DescriptiveComplexity.Query
 import Complexitylib.DescriptiveComplexity.FirstOrder
+import Complexitylib.DescriptiveComplexity.Reduction
 import Complexitylib.DescriptiveComplexity.SecondOrder
 
 /-!
@@ -27,6 +28,8 @@ bounds.
 - `DescriptiveComplexity.FODefinable.orderIndependent` — FO-definable ⟹
   order-independent.
 - `FODefinable.complement`, `.inter`, `.union` — Boolean closure.
+- `FODefinable.of_reduces`, `.of_projReduces` — closure under first-order
+  reductions and projections.
 - `FODefinable.toSODefinable` — `FO ⊆ SO` at the query level.
 -/
 
@@ -74,6 +77,24 @@ theorem FODefinable.union {Q₁ Q₂ : BooleanQuery V}
   obtain ⟨ψ, hψ⟩ := h₂
   exact ⟨φ.disj ψ, fun A => by
     simp only [BooleanQuery.union, hφ A, hψ A, Sentence.Models, Formula.Sat]⟩
+
+/-- **FO-definability is closed under first-order reductions.** If `Q₁` reduces to
+    an FO-definable query `Q₂`, translating a sentence for `Q₂` along the reduction
+    interpretation gives a sentence for `Q₁`. -/
+theorem FODefinable.of_reduces {W : Vocabulary} {Q₁ : BooleanQuery V}
+    {Q₂ : BooleanQuery W} (hQ₂ : FODefinable Q₂) (hred : FOReduces Q₁ Q₂) :
+    FODefinable Q₁ := by
+  obtain ⟨I, hI⟩ := hred
+  obtain ⟨φ, hφ⟩ := hQ₂
+  refine ⟨I.translate φ, fun A => ?_⟩
+  rw [hI A, hφ (I.apply A)]
+  simpa only [Sentence.Models] using I.translate_sat A (emptyEnv A.card) φ
+
+/-- FO-definability is closed under first-order projections. -/
+theorem FODefinable.of_projReduces {W : Vocabulary} {Q₁ : BooleanQuery V}
+    {Q₂ : BooleanQuery W} (hQ₂ : FODefinable Q₂) (hred : FOProjReduces Q₁ Q₂) :
+    FODefinable Q₁ :=
+  hQ₂.of_reduces hred.toFOReduces
 
 /-- **`FO ⊆ SO` at the query level:** every first-order definable query is
     second-order definable, via the truth-preserving FO embedding into SO. -/

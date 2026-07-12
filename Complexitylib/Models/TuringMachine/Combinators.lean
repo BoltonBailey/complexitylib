@@ -97,6 +97,27 @@ def readBackWrite (g : Γ) : Γw :=
   | .blank => .blank
   | .start => .blank
 
+/-- `readBackWrite` recovers the original symbol away from the left-end marker. -/
+theorem toΓ_readBackWrite_of_ne_start {g : Γ} (h : g ≠ Γ.start) :
+    (readBackWrite g).toΓ = g := by
+  cases g <;> simp_all [readBackWrite, Γw.toΓ]
+
+/-- Writing back the symbol under an off-start head is a no-op. -/
+theorem write_readBack (t : Tape) (hread : t.read ≠ Γ.start) :
+    t.write (readBackWrite t.read) = t := by
+  rw [Tape.write]
+  split
+  · rfl
+  · refine Tape.ext rfl ?_
+    show Function.update t.cells t.head (readBackWrite t.read).toΓ = t.cells
+    rw [toΓ_readBackWrite_of_ne_start hread, Tape.read, Function.update_eq_self]
+
+/-- Writing back the symbol under an off-start head and moving is just the move. -/
+theorem writeAndMove_readBack (t : Tape) (hread : t.read ≠ Γ.start) (d : Dir3) :
+    t.writeAndMove (readBackWrite t.read) d = t.move d := by
+  show (t.write _).move d = t.move d
+  rw [write_readBack t hread]
+
 /-- The "do nothing" transition output: all writes are `□`, all directions
     are `idleDir`. Used for states that only change the control state. -/
 def allIdle {σ : Type} {k : ℕ}

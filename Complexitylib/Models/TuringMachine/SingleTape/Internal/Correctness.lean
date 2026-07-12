@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.SingleTape.Internal.Delta
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+import Complexitylib.Models.TuringMachine.Internal
 
 /-!
 # Single-tape simulation — correctness internals
@@ -23,26 +24,6 @@ namespace Complexity
 namespace NTM
 
 variable {n : ℕ}
-
-/-- Split a trace into a first `a` steps and a remaining `b` steps, with the
-    choice sequence drawn from a single `ℕ`-indexed function `f` (avoiding the
-    dependent-`Fin` reindexing pain). Generalizes `trace_succ`. -/
-theorem trace_add_fun (tm : NTM n) (a b : ℕ) (f : ℕ → Bool) (c : Cfg n tm.Q) :
-    tm.trace (a + b) (fun i => f i.val) c =
-      tm.trace b (fun i => f (a + i.val)) (tm.trace a (fun i => f i.val) c) := by
-  induction a generalizing f c with
-  | zero => rw [Nat.zero_add]; simp [NTM.trace]
-  | succ a ih =>
-    rw [show a + 1 + b = a + b + 1 from by omega]
-    by_cases hhalt : c.state = tm.qhalt
-    · simp only [NTM.trace, hhalt, if_true]
-      exact (tm.trace_halted b _ hhalt).symm
-    · simp only [NTM.trace, hhalt, if_false]
-      rw [ih (fun j => f (j + 1))]
-      congr 1
-      funext i
-      congr 1
-      omega
 
 end NTM
 

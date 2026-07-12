@@ -10,6 +10,7 @@ import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Deterministic
 import Complexitylib.Models.TuringMachine.Lift
+import Complexitylib.Models.TuringMachine.Repetition
 import Complexitylib.Models.TuringMachine.UTM.Encoding
 import Complexitylib.Models.TuringMachine.UTM.Machine
 import Complexitylib.Models.TuringMachine.UTM.Universal

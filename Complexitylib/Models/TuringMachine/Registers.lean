@@ -60,23 +60,6 @@ theorem Parked.move_idle {t : Tape} (h : Parked t) :
   rw [idleDir, if_neg h.read_ne_start]
   rfl
 
-/-- Writing back the read symbol is a no-op (off `▷` the symbol round-trips;
-    on `▷` the write is structurally void). -/
-theorem write_readBack (t : Tape) (hread : t.read ≠ Γ.start) :
-    t.write (readBackWrite t.read) = t := by
-  rw [Tape.write]
-  split
-  · rfl
-  · refine Tape.ext rfl ?_
-    show Function.update t.cells t.head (readBackWrite t.read).toΓ = t.cells
-    rw [toΓ_readBackWrite_of_ne_start hread, Tape.read, Function.update_eq_self]
-
-/-- Writing back the read symbol and moving is just the move. -/
-theorem writeAndMove_readBack (t : Tape) (hread : t.read ≠ Γ.start) (d : Dir3) :
-    t.writeAndMove (readBackWrite t.read) d = t.move d := by
-  show (t.write _).move d = t.move d
-  rw [write_readBack t hread]
-
 /-- Parked tapes pass through combinator phase boundaries unchanged. -/
 theorem Parked.transitionTape_eq_self {t : Tape} (h : Parked t) : transitionTape t = t :=
   TM.transitionTape_eq_self h.read_ne_start

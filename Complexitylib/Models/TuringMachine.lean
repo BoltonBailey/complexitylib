@@ -671,6 +671,38 @@ theorem trace_halted (tm : NTM n) {c : Cfg n tm.Q}
   | zero => rfl
   | succ T _ => simp [NTM.trace, h]
 
+/-- An NTM trace preserves the unique left-end marker on the input, work,
+    and output tapes. -/
+theorem trace_startInvariant (tm : NTM n) (T : ℕ)
+    (choices : Fin T → Bool) (c : Cfg n tm.Q)
+    (hinp : c.input.StartInvariant)
+    (hwork : ∀ i, (c.work i).StartInvariant)
+    (hout : c.output.StartInvariant) :
+    (tm.trace T choices c).input.StartInvariant ∧
+      (∀ i, ((tm.trace T choices c).work i).StartInvariant) ∧
+      (tm.trace T choices c).output.StartInvariant := by
+  induction T generalizing c with
+  | zero => exact ⟨hinp, hwork, hout⟩
+  | succ T ih =>
+      by_cases hhalt : c.state = tm.qhalt
+      · simpa [trace, hhalt] using And.intro hinp (And.intro hwork hout)
+      · simp only [trace, hhalt, if_false]
+        apply ih
+        · exact hinp.move _
+        · intro i
+          exact (hwork i).writeAndMove _ _
+        · exact hout.writeAndMove _ _
+
+/-- Every tape in a trace from `initCfg` has a unique left-end marker. -/
+theorem trace_initCfg_startInvariant (tm : NTM n) (x : List Bool) (T : ℕ)
+    (choices : Fin T → Bool) :
+    (tm.trace T choices (tm.initCfg x)).input.StartInvariant ∧
+      (∀ i, ((tm.trace T choices (tm.initCfg x)).work i).StartInvariant) ∧
+      (tm.trace T choices (tm.initCfg x)).output.StartInvariant :=
+  tm.trace_startInvariant T choices (tm.initCfg x)
+    (Tape.StartInvariant.init_ofBool x) (fun _ => Tape.StartInvariant.init_nil)
+    Tape.StartInvariant.init_nil
+
 /-- NTM accepts `x`: there exists a time bound and choice sequence leading to
     `qhalt` with output cell 1 = `1`. -/
 def Accepts (tm : NTM n) (x : List Bool) : Prop :=
