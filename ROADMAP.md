@@ -955,8 +955,10 @@ track grows it toward the headline theorems.
   - [x] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
     (`SecondOrder/Isomorphism.lean`: `REnv.map`/`rCons_map`, `SOFormula.sat_iso`,
     `SOSentence.models_iso`, `SODefinable`, `SODefinable.orderIndependent`).
-  - [ ] Mark the `∃SO` fragment (second-order existentials only, over an FO
-    matrix) — the exact fragment Fagin characterizes.
+  - [x] Mark the `∃SO` fragment (second-order existentials only, over an FO
+    matrix) — the exact fragment Fagin characterizes. (`SecondOrder/Syntax.lean`:
+    `SOFormula.IsFOMatrix`, `IsExistSO`, and `ofFormula_isFOMatrix`/`_isExistSO`
+    placing `FO ⊆ ∃SO`.)
 - [ ] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
   to connect `BooleanQuery` to the machine-model `Language`. *Decomposed:*
   - [ ] Canonical bit encoding of an ordered `FinStruct` (relations as truth

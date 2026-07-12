@@ -87,6 +87,46 @@ def size {V : Vocabulary} {rctx : List Nat} {n : Nat} : SOFormula V rctx n → N
   | .soExist _ φ => φ.size + 1
   | .soAll _ φ => φ.size + 1
 
+/-- A formula has no second-order quantifiers — an FO matrix over the relation
+    variables in scope. -/
+def IsFOMatrix {V : Vocabulary} : {rctx : List Nat} → {n : Nat} → SOFormula V rctx n → Prop
+  | _, _, .relApp _ _ => True
+  | _, _, .soRelApp _ _ => True
+  | _, _, .eq _ _ => True
+  | _, _, .neg φ => IsFOMatrix φ
+  | _, _, .conj φ ψ => IsFOMatrix φ ∧ IsFOMatrix ψ
+  | _, _, .disj φ ψ => IsFOMatrix φ ∧ IsFOMatrix ψ
+  | _, _, .exist φ => IsFOMatrix φ
+  | _, _, .all φ => IsFOMatrix φ
+  | _, _, .soExist _ _ => False
+  | _, _, .soAll _ _ => False
+
+/-- A formula is in **existential second-order** (`∃SO`) form: a block of
+    second-order existential quantifiers over an FO matrix. This is the exact
+    fragment Fagin's theorem characterizes as `NP`. -/
+def IsExistSO {V : Vocabulary} : {rctx : List Nat} → {n : Nat} → SOFormula V rctx n → Prop
+  | _, _, .soExist _ ψ => IsExistSO ψ
+  | _, _, φ => φ.IsFOMatrix
+
+/-- The first-order embedding of any formula is an FO matrix. -/
+theorem ofFormula_isFOMatrix {V : Vocabulary} :
+    ∀ {n : Nat} (φ : Formula V n) (rctx : List Nat), (SOFormula.ofFormula φ rctx).IsFOMatrix := by
+  intro n φ
+  induction φ with
+  | relApp i args => intro rctx; exact True.intro
+  | eq a b => intro rctx; exact True.intro
+  | neg φ ih => intro rctx; exact ih rctx
+  | conj φ ψ ihφ ihψ => intro rctx; exact ⟨ihφ rctx, ihψ rctx⟩
+  | disj φ ψ ihφ ihψ => intro rctx; exact ⟨ihφ rctx, ihψ rctx⟩
+  | exist φ ih => intro rctx; exact ih rctx
+  | all φ ih => intro rctx; exact ih rctx
+
+/-- The first-order fragment sits inside `∃SO`: an embedded FO formula is a
+    (quantifier-free-in-second-order) `∃SO` formula. -/
+theorem ofFormula_isExistSO {V : Vocabulary} {n : Nat} (φ : Formula V n) (rctx : List Nat) :
+    (SOFormula.ofFormula φ rctx).IsExistSO := by
+  cases φ <;> exact ofFormula_isFOMatrix _ _
+
 end SOFormula
 
 end DescriptiveComplexity
