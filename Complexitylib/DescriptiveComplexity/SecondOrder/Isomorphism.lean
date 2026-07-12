@@ -133,6 +133,29 @@ theorem SODefinable.orderIndependent {Q : BooleanQuery V} (hQ : SODefinable Q) :
   rw [hφ A, hφ B]
   exact SOSentence.models_iso f φ
 
+/-- Second-order definable queries are closed under complement (via `¬`). -/
+theorem SODefinable.complement {Q : BooleanQuery V} (hQ : SODefinable Q) :
+    SODefinable Q.complement := by
+  obtain ⟨φ, hφ⟩ := hQ
+  exact ⟨SOFormula.neg φ, fun A => by
+    simp only [BooleanQuery.complement, hφ A, SOSentence.Models, SOFormula.Sat]⟩
+
+/-- Second-order definable queries are closed under intersection (via `∧`). -/
+theorem SODefinable.inter {Q₁ Q₂ : BooleanQuery V}
+    (h₁ : SODefinable Q₁) (h₂ : SODefinable Q₂) : SODefinable (Q₁.inter Q₂) := by
+  obtain ⟨φ, hφ⟩ := h₁
+  obtain ⟨ψ, hψ⟩ := h₂
+  exact ⟨SOFormula.conj φ ψ, fun A => by
+    simp only [BooleanQuery.inter, hφ A, hψ A, SOSentence.Models, SOFormula.Sat]⟩
+
+/-- Second-order definable queries are closed under union (via `∨`). -/
+theorem SODefinable.union {Q₁ Q₂ : BooleanQuery V}
+    (h₁ : SODefinable Q₁) (h₂ : SODefinable Q₂) : SODefinable (Q₁.union Q₂) := by
+  obtain ⟨φ, hφ⟩ := h₁
+  obtain ⟨ψ, hψ⟩ := h₂
+  exact ⟨SOFormula.disj φ ψ, fun A => by
+    simp only [BooleanQuery.union, hφ A, hψ A, SOSentence.Models, SOFormula.Sat]⟩
+
 end DescriptiveComplexity
 
 end Complexity
