@@ -996,6 +996,66 @@ a query "logical", so the encoding and the invariance results must be kept in
 sync. Fagin's theorem's `∃SO ⊆ NP` direction needs a model-checking machine; the
 converse needs to express an accepting computation as an `∃SO` formula.
 
+### L7. Analysis of Boolean functions
+
+**Goal.** Develop the Fourier analysis of Boolean functions (after Ryan O'Donnell)
+as the analytic foundation for small-depth-circuit lower bounds (L4) and the
+natural-proofs barrier (L3). The subtheory lives in `Complexitylib.BooleanAnalysis`
+(`FourierExpansion` surface, `FourierExpansion.Defs`/`.Internal`), all 0 custom
+axioms.
+
+**Foundations (done).**
+
+- [x] The ±1 cube `Cube n = Fin n → ZMod 2`, `BooleanFunction n = Cube n → ℝ` as a
+  real inner-product space; the parity basis `χ S` and its orthonormality
+  (`Defs`: `chi`, `parityFun`, `expect`, `inner`; `expect_parityFun`).
+- [x] Fourier coefficients/weights, the expansion `f = ∑_S 𝓕(f,S)·χ_S`, Plancherel
+  and Parseval, and mean/variance/convolution (`fourier_expansion`, `parseval`,
+  `parseval_boolean`, `variance_boolean`, `fourierCoeff_convolution`).
+- [x] Fourier linearity and the degree decomposition: `fourierCoeff_add`/`_smul`/
+  `_sub`/`_neg`, `degreePart`, `norm_sq_degreePart`, spectral samples.
+- [x] The BLR linearity test: `isLinear_iff_isMultiplicative`, `blrAcceptProb_eq`,
+  `blr_soundness`, `local_correctability`.
+
+**Chapter 2 — noise and average sensitivity (done).**
+
+- [x] Noise stability/sensitivity and the bilinear form, with monotonicity and the
+  Fourier-weight formula (`noiseStability`, `noiseStabilityBilin`,
+  `noiseSensitivity`, `noiseStability_eq_sum_weight`, `noiseSensitivity_le_influence`).
+- [x] Total influence (= average sensitivity) and coordinate influence, with
+  `totalInfluence_eq_sum_influence`, the Poincaré inequality
+  `variance_le_totalInfluence`, and the parity checks
+  `totalInfluence_parityFun`/`influence_parityFun`.
+- [x] The discrete derivative `Dᵢ` and `Infᵢ[f] = ‖Dᵢ f‖²`
+  (`derivative`, `fourierCoeff_derivative`, `influence_eq_norm_sq_derivative`).
+- [x] The coordinate flip as a measure-preserving involution, the sensitivity
+  operator `Lᵢ f = (f − f∘flipᵢ)/2` with `Infᵢ[f] = ‖Lᵢ f‖²`, and the probabilistic
+  reading `Infᵢ[f] = Pr_x[f(x) ≠ f(x⊕eᵢ)]`, capped by `I[f] = 𝔼ₓ[#pivotal
+  coordinates]` (`flipEquiv`, `expect_flipCoord`, `fourierCoeff_comp_flipCoord`,
+  `sensitivityOp`, `fourierCoeff_sensitivityOp`,
+  `influence_boolean_eq_expect_sensitive`, `totalInfluence_boolean_eq_expect_sensitive`).
+
+**Milestones (open), roughly increasing in difficulty.**
+
+- [ ] The level-1 inequality and the FKN theorem (functions with almost all weight
+  at level 1 are close to a dictator).
+- [ ] Monotone functions: `Infᵢ[f] = 𝓕(f,{i})` and the Margulis–Russo formula
+  (needs a coordinate partial order on the cube in the ±1 convention).
+- [ ] Hypercontractivity (the `(2,4)`-norm bound) and its Fourier corollary — the
+  gateway lemma for the remaining results.
+- [ ] The KKL theorem (some coordinate has influence `Ω(log n / n)`).
+- [ ] Friedgut's junta theorem (bounded total influence ⟹ close to a junta).
+- [ ] The `AC⁰` Fourier concentration bound (Linial–Mansour–Nisan), linking this
+  track to the switching-lemma work in L4.
+
+**Formalization hazards.** The ±1 encoding flips the coordinate order (`χ(0)=+1`,
+`χ(1)=−1`), so a monotonicity convention must be fixed explicitly. Hypercontractivity
+is analytically heavy; prove the finite two-point inequality first and induct on
+coordinates rather than importing continuous machinery. Influence has two distinct
+operators — the spectral derivative `Dᵢ` (strips `i` from each frequency) and the
+sensitivity operator `Lᵢ` (keeps frequencies containing `i`) — with the same squared
+norm; keep them separate to avoid off-by-a-coordinate errors.
+
 ## Cross-cutting project ideas
 
 These projects can proceed alongside the dependency-ordered tracks when they reuse
