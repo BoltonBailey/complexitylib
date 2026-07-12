@@ -26,6 +26,8 @@ and interactive proofs (roadmap track N2).
 - `blockEquiv` — the split of a length-`a + b` random string into its length-`a`
   prefix and length-`b` suffix, packaged as an `Equiv` (so the projection and
   concatenation maps are inverse by construction)
+- `card_filter_block` — block independence: the count of seeds whose prefix and
+  suffix satisfy given predicates is the product of the two counts
 - `card_filter_exists_le` — the finite union bound: the number of sample points
   satisfying *some* predicate in a finite family is at most the sum of the
   per-predicate counts
@@ -102,6 +104,33 @@ def blockAppend (a b : ℕ) (u : Fin a → Bool) (v : Fin b → Bool) : Fin (a +
 @[simp] theorem blockAppend_fst_snd (a b : ℕ) (w : Fin (a + b) → Bool) :
     blockAppend a b (blockFst a b w) (blockSnd a b w) = w := by
   simp [blockAppend, blockFst, blockSnd]
+
+/-- **Block independence (exact counting form).** The number of length-`a + b` seeds
+    whose prefix satisfies `P` and suffix satisfies `Q` is the product of the two
+    individual counts. Because `blockEquiv` is a bijection onto the product sample
+    space, the joint event factors — the exact-count statement of independence across
+    blocks, and the combinatorial heart of relating a repeated machine's acceptance to
+    its single-run acceptance (amplification, roadmap N2/M2). -/
+theorem card_filter_block {a b : ℕ}
+    (P : (Fin a → Bool) → Prop) (Q : (Fin b → Bool) → Prop)
+    [DecidablePred P] [DecidablePred Q] :
+    (Finset.univ.filter
+        (fun w : Fin (a + b) → Bool => P (blockFst a b w) ∧ Q (blockSnd a b w))).card
+      = (Finset.univ.filter P).card * (Finset.univ.filter Q).card := by
+  rw [← Finset.card_product]
+  apply Finset.card_bij' (fun w _ => blockEquiv a b w) (fun p _ => (blockEquiv a b).symm p)
+  · intro w hw
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, blockFst, blockSnd] at hw ⊢
+    exact Finset.mem_product.mpr
+      ⟨Finset.mem_filter.mpr ⟨Finset.mem_univ _, hw.1⟩,
+        Finset.mem_filter.mpr ⟨Finset.mem_univ _, hw.2⟩⟩
+  · intro p hp
+    simp only [Finset.mem_product, Finset.mem_filter, Finset.mem_univ, true_and] at hp
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, blockFst, blockSnd,
+      Equiv.apply_symm_apply]
+    exact ⟨hp.1, hp.2⟩
+  · intro w _; simp [Equiv.symm_apply_apply]
+  · intro p _; simp [Equiv.apply_symm_apply]
 
 /-! ### Finite union bound -/
 

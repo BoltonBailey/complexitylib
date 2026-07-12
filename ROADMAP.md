@@ -433,7 +433,12 @@ accepting NTM path.
 - [x] Prove the “expected bad inputs below one implies a perfect seed exists”
   counting lemma independently of machines
   (`Complexitylib.Classes.FiniteCounting.exists_good_seed`).
-- [M] Define a PTM repetition wrapper with an explicit choice-block schedule.
+- [x] Prove block independence in exact-counting form: the number of seeds whose
+  prefix and suffix satisfy given predicates is the product of the counts
+  (`Complexitylib.Classes.FiniteCounting.card_filter_block`, via `blockEquiv`). The
+  combinatorial core for relating a repeated machine's acceptance to its single run.
+- [M] Define a PTM repetition wrapper with an explicit choice-block schedule (the
+  `blockEquiv`/`card_filter_block` seed-splitting machinery is now in place).
 - [M] Add a circuit/advice hardwiring operation and prove evaluation correctness.
 
 ### M3. Small-depth circuits and Barrington's theorem
