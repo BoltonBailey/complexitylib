@@ -958,6 +958,35 @@ theorem parityFun_flipCoord (i : Fin n) (S : Finset (Fin n)) (x : Cube n) :
     apply Finset.prod_congr rfl
     intro j hj; rw [Function.update_of_ne (ne_of_mem_of_not_mem hj hi)]
 
+/-- Flipping coordinate `i` twice is the identity (`ZMod 2` has characteristic two). -/
+theorem flipCoord_flipCoord (i : Fin n) (x : Cube n) : flipCoord i (flipCoord i x) = x := by
+  simp only [flipCoord, Function.update_self, Function.update_idem]
+  rw [add_assoc, show (1 : ZMod 2) + 1 = 0 from by decide, add_zero, Function.update_eq_self]
+
+/-- Flipping coordinate `i` is an involutive equivalence of the Hamming cube. -/
+def flipEquiv (i : Fin n) : Cube n ≃ Cube n :=
+  ⟨flipCoord i, flipCoord i, flipCoord_flipCoord i, flipCoord_flipCoord i⟩
+
+/-- The uniform expectation is invariant under a coordinate flip: `flipCoord i` is a
+    measure-preserving bijection of the cube. -/
+theorem expect_flipCoord (i : Fin n) (g : Cube n → ℝ) :
+    (𝔼[fun x => g (flipCoord i x)]) = 𝔼[g] := by
+  simp only [expect]
+  exact Finset.expect_equiv (flipEquiv i) (by simp) (fun x _ => rfl)
+
+/-- **Fourier coefficient of `f` precomposed with a coordinate flip.** Flipping
+    coordinate `i` negates exactly the frequencies containing `i`:
+    `𝓕(f ∘ flipᵢ, T) = (−1)^[i∈T] · 𝓕(f, T)`. -/
+theorem fourierCoeff_comp_flipCoord (i : Fin n) (f : BooleanFunction n) (T : Finset (Fin n)) :
+    𝓕 (fun x => f (flipCoord i x)) T = (if i ∈ T then -1 else 1) * 𝓕 f T := by
+  rw [fourierCoeff_eq_inner, inner_eq_expect,
+    ← expect_flipCoord i (fun x => f (flipCoord i x) * (χ T) x)]
+  simp only [flipCoord_flipCoord, parityFun_flipCoord]
+  rw [fourierCoeff_eq_inner, inner_eq_expect]
+  simp only [expect]
+  rw [Finset.mul_expect]
+  exact Finset.expect_congr rfl (fun x _ => by ring)
+
 /-- The **discrete derivative** `D_i f` of `f` in the direction of coordinate `i`,
     defined spectrally: `D_i f = ∑_{S ∋ i} 𝓕(f, S) · χ_{S∖{i}}`. It strips
     coordinate `i` from every frequency that contains it. -/
@@ -1009,6 +1038,55 @@ theorem influence_eq_norm_sq_derivative (i : Fin n) (f : BooleanFunction n) :
   · intro S hS
     rw [Finset.mem_filter] at hS
     rw [fourierCoeff_derivative, if_neg (by simp : i ∉ S.erase i), Finset.insert_erase hS.2]
+
+/-- The **sensitivity operator** `Lᵢ f` at coordinate `i`, the point-value analogue of
+    the derivative: `(Lᵢ f)(x) = (f(x) − f(x ⊕ eᵢ)) / 2`. It vanishes exactly where `f`
+    is insensitive to coordinate `i`, and equals `±1` where flipping `i` flips `f`. -/
+noncomputable def sensitivityOp (i : Fin n) (f : BooleanFunction n) : BooleanFunction n :=
+  fun x => (f x - f (flipCoord i x)) / 2
+
+/-- **Fourier formula for the sensitivity operator**: `Lᵢ` keeps the frequencies
+    containing `i` and kills the rest — `𝓕(Lᵢ f, T) = 𝓕(f, T)` if `i ∈ T`, else `0`.
+    (Contrast the derivative `Dᵢ`, which additionally strips `i` from each frequency.) -/
+theorem fourierCoeff_sensitivityOp (i : Fin n) (f : BooleanFunction n) (T : Finset (Fin n)) :
+    𝓕 (sensitivityOp i f) T = if i ∈ T then 𝓕 f T else 0 := by
+  have key : 𝓕 (sensitivityOp i f) T
+      = (1 / 2) * 𝓕 f T - (1 / 2) * 𝓕 (fun x => f (flipCoord i x)) T := by
+    rw [fourierCoeff_eq_inner, inner_eq_expect, fourierCoeff_eq_inner f, inner_eq_expect,
+      fourierCoeff_eq_inner (fun x => f (flipCoord i x)), inner_eq_expect]
+    simp only [expect, sensitivityOp]
+    rw [Finset.mul_expect, Finset.mul_expect, ← Finset.expect_sub_distrib]
+    exact Finset.expect_congr rfl (fun x _ => by ring)
+  rw [key, fourierCoeff_comp_flipCoord]
+  by_cases h : i ∈ T
+  · rw [if_pos h, if_pos h]; ring
+  · rw [if_neg h, if_neg h]; ring
+
+/-- **Influence is the squared norm of the sensitivity operator**: `Infᵢ[f] = ‖Lᵢ f‖²`.
+    A second analytic form of coordinate influence, complementing
+    `influence_eq_norm_sq_derivative`. -/
+theorem influence_eq_norm_sq_sensitivityOp (i : Fin n) (f : BooleanFunction n) :
+    influence i f = ‖sensitivityOp i f‖₂ ^ 2 := by
+  rw [norm_sq_eq_sum_fourierCoeff_sq, influence, Finset.sum_filter]
+  refine Finset.sum_congr rfl fun S _ => ?_
+  rw [fourierCoeff_sensitivityOp]
+  by_cases h : i ∈ S
+  · rw [if_pos h, if_pos h]
+  · rw [if_neg h, if_neg h]; ring
+
+/-- **Average sensitivity as a probability.** For a Boolean-valued `f`, the influence of
+    coordinate `i` is the probability that flipping `i` flips the output:
+    `Infᵢ[f] = Pr_x[f(x) ≠ f(x ⊕ eᵢ)]` (O'Donnell §2.2). Summed over `i`, this reads
+    total influence as the expected number of pivotal coordinates — the combinatorial
+    meaning of "average sensitivity". -/
+theorem influence_boolean_eq_expect_sensitive (i : Fin n) (f : BooleanFunction n)
+    (hf : IsBooleanValued f) :
+    influence i f = 𝔼[fun x => if f x ≠ f (flipCoord i x) then 1 else 0] := by
+  rw [influence_eq_norm_sq_sensitivityOp, norm_sq_eq_inner, inner_eq_expect]
+  refine Finset.expect_congr rfl fun x _ => ?_
+  simp only [sensitivityOp]
+  rcases hf x with hx | hx <;> rcases hf (flipCoord i x) with hy | hy <;>
+    simp only [hx, hy] <;> norm_num
 
 /-- Elementary inequality `1 - ρ^k ≤ (1 - ρ) · k` for `ρ ∈ [0, 1]` (a telescoping /
     Bernoulli bound), used to control noise-stability decay by total influence. -/

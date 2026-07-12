@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.DescriptiveComplexity.SecondOrder.Syntax
 import Complexitylib.DescriptiveComplexity.SecondOrder.Semantics
+import Complexitylib.DescriptiveComplexity.SecondOrder.Isomorphism
 
 /-!
 # Second-order logic over finite structures
