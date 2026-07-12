@@ -14,6 +14,7 @@ import Complexitylib.Circuits.BarringtonS5
 import Complexitylib.Circuits.BarringtonBridge
 import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
+import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.MultilinearExtension
 import Complexitylib.Circuits.NormalForm
 import Complexitylib.Circuits.AndOrNot

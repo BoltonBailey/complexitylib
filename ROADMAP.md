@@ -492,8 +492,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   (vs `17 ^ depth`), and a *uniform family-level* class statement (`FormulaFamily`
   / poly-size-BP-family definitions) rather than the per-formula bound proved
   here.)
-- [ ] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
-  of constant-size permutation transition matrices/functions.
+- [~] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
+  of constant-size permutation transition matrices/functions. (Forward direction at
+  the family level **done**: `Circuits/BarringtonFamily.lean`
+  `FormulaFamily.logDepth_polyLength_bp` — a logarithmic-depth (`NC¹`) formula family
+  is computed formula-by-formula by a family of width-`5` branching programs of
+  polynomial length `C·(n+1)^p`, 0 custom axioms. The converse — poly-size width-`5`
+  BPs give `NC¹` formulas by balanced composition — remains.)
 - [ ] Add a uniform version only after instruction-generation uniformity is
   formalized.
 
