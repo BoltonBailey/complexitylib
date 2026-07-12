@@ -179,6 +179,44 @@ theorem Γ.decode_encode (g : Γ) : Γ.decode (Γ.encode g) = some g := by
 theorem Γ.encode_injective : Function.Injective Γ.encode := by
   intro a b h; cases a <;> cases b <;> simp_all [Γ.encode]
 
+/-- Decode 2 bits back to a write symbol; reject the unused `[true, true]`
+    pattern and every non-two-bit input. -/
+def Γw.decode : List Bool → Option Γw
+  | [false, false] => some .zero
+  | [false, true]  => some .one
+  | [true, false]  => some .blank
+  | _              => none
+
+/-- Decode 2 bits back to a direction; reject the unused `[true, true]` pattern
+    and every non-two-bit input. -/
+def Dir3.decode : List Bool → Option Dir3
+  | [false, false] => some .left
+  | [false, true]  => some .right
+  | [true, false]  => some .stay
+  | _              => none
+
+/-- Roundtrip for write symbols: `decode ∘ encode = some`. -/
+theorem Γw.decode_encode (g : Γw) : Γw.decode (Γw.encode g) = some g := by
+  cases g <;> rfl
+
+/-- Roundtrip for directions: `decode ∘ encode = some`. -/
+theorem Dir3.decode_encode (d : Dir3) : Dir3.decode (Dir3.encode d) = some d := by
+  cases d <;> rfl
+
+/-- Γw encoding is injective. -/
+theorem Γw.encode_injective : Function.Injective Γw.encode := by
+  intro a b h; cases a <;> cases b <;> simp_all [Γw.encode]
+
+/-- Dir3 encoding is injective. -/
+theorem Dir3.encode_injective : Function.Injective Dir3.encode := by
+  intro a b h; cases a <;> cases b <;> simp_all [Dir3.encode]
+
+/-- The unused two-bit pattern is rejected as malformed (write symbols). -/
+theorem Γw.decode_true_true : Γw.decode [true, true] = none := rfl
+
+/-- The unused two-bit pattern is rejected as malformed (directions). -/
+theorem Dir3.decode_true_true : Dir3.decode [true, true] = none := rfl
+
 /-- All 4 tape symbols in canonical order. -/
 def allΓ : List Γ := [.zero, .one, .blank, .start]
 

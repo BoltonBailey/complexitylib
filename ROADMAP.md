@@ -33,6 +33,12 @@ The library already contains substantial foundations:
   reduction theorem.
 - A growing collection of concrete languages that exercise the machine API and
   witness nontrivial class membership.
+- A logarithmic-cost random access machine model with a soundness theorem
+  distinguishing it from the unsound unit-cost measure.
+- A Fourier-analysis-of-Boolean-functions subtheory (`Complexitylib.BooleanAnalysis`,
+  after Ryan O'Donnell): Chapter 1, with the parity functions as an orthonormal
+  basis, Fourier coefficients/weights, and the mean/variance/convolution API — the
+  analytic foundation for small-depth-circuit lower bounds and natural proofs.
 
 This baseline is not yet a single unified theory. In particular, machine
 encodings, circuit families, uniformity, advice, oracle access, interactive
@@ -126,8 +132,8 @@ its public name or provide a compatibility alias.
   `writeAndMove` as concrete consumers demonstrate the need.
 - [S] Migrate the remaining older modules to the shared initialized-tape and
   Boolean-symbol lemmas, deleting their local wrappers where this stays clear.
-- [S] Add `TM.reachesIn_snoc`, endpoint uniqueness, and
-  `TM.step_eq_none_iff_halted`.
+- [x] Add `TM.reachesIn_snoc`, endpoint uniqueness (`TM.reachesIn_right_unique`),
+  and `TM.step_eq_none_iff_halted`.
 - [S] Refresh module documentation that still describes completed proofs as
   skeletons.
 
@@ -172,8 +178,10 @@ injectivity.
 - [S] Add analogous `List.ofFn` bridge lemmas for a non-Boolean alphabet when a
   second consumer demonstrates the need for a generic API.
 - [S] Add a codec for `Fin n` with an explicit `Nat.log2`-style length bound.
-- [M] Encode/decode the four tape symbols and three directions, including malformed
-  bit patterns.
+- [x] Encode/decode the four tape symbols and three directions, including malformed
+  bit patterns (`Complexitylib.Models.TuringMachine.UTM.Encoding`: `Γ`, `Γw`, `Dir3`
+  two-bit codecs with round-trip, length, injectivity, and `[true, true]` rejection
+  lemmas).
 - [M] Define a generic length-bounded codec combinator for lists.
 
 ### N2. Finite counting and error amplification toolkit
@@ -185,13 +193,24 @@ interactive proofs, and cryptographic games.
 **Prerequisites.** Existing `NTM.acceptCount`, `acceptProb`, and rational
 probability definitions; N1 for encoded experiments.
 
+**Current progress.** `Complexitylib.Classes.FiniteCounting` has the sample-space
+cardinality `card (Fin T -> Bool) = 2^T`, the prefix/suffix block split packaged
+as an `Equiv` (projection and concatenation maps inverse by construction), the
+finite union bound `card_filter_exists_le`, and a strict-`majority` function with
+its odd-length negation antisymmetry `majority_not_of_odd`. The remaining
+milestones concern finite event probability, amplification, and permutations.
+
 **Staged milestones.**
 
-- [ ] Develop cardinality lemmas for `Fin T -> Bool`, restriction to prefixes,
-  concatenation into blocks, and permutations of random bits.
-- [ ] Define finite event probability once and relate it to `Finset.card` and the
-  existing rational PTM probabilities.
-- [ ] Prove union, complement, conditioning-by-partition, and product lemmas.
+- [x] Develop cardinality lemmas for `Fin T -> Bool`, restriction to prefixes,
+  concatenation into blocks, and permutations of random bits (`card_finArrowBool`,
+  `blockEquiv`/`blockFst`/`blockAppend`, `eventProb_map`).
+- [x] Define finite event probability once and relate it to `Finset.card` and the
+  existing rational PTM probabilities (`Complexitylib.Classes.EventProb`:
+  `eventProb`, its basic laws, and `NTM.acceptProb_eq_eventProb`).
+- [~] Prove union, complement, conditioning-by-partition, and product lemmas.
+  *(`eventProb_union_le`, `eventProb_compl`, and the `popCount` complement count
+  done; conditioning-by-partition and product remain.)*
 - [ ] Formalize binomial coefficients and majority failure counts in the exact
   finite sample space used by machines.
 - [ ] Prove a concrete amplification theorem from error `1/3` to `2^-k` (or another
@@ -206,11 +225,11 @@ to formalizing an optimal Chernoff constant first.
 
 **Small entry tasks.**
 
-- [S] Prove `Fintype.card (Fin T -> Bool) = 2^T` in the form needed by
+- [x] Prove `Fintype.card (Fin T -> Bool) = 2^T` in the form needed by
   `acceptProb`.
-- [S] Define block projection and concatenation maps and prove they are inverse.
-- [M] Prove the finite union bound for a list of predicates by card counting.
-- [M] Implement a majority function on `Fin k -> Bool` and prove its complement
+- [x] Define block projection and concatenation maps and prove they are inverse.
+- [x] Prove the finite union bound for a list of predicates by card counting.
+- [x] Implement a majority function on `Fin k -> Bool` and prove its complement
   symmetry.
 
 ### N3. Canonical complete problems and reduction infrastructure
@@ -229,7 +248,11 @@ many-one reduction.
   Tseitin transformation.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and
   INDEPENDENT-SET with explicit codecs.
-- [ ] Add TQBF/QBF syntax and semantics as the canonical PSPACE problem.
+- [~] Add TQBF/QBF syntax and semantics as the canonical PSPACE problem.
+  *(`Complexitylib.SAT.QBF`: `QBF` syntax, `QBF.eval` semantics, quantifier
+  substitution lemmas, `freeVars` + semantic locality `eval_eq_of_agree`, and the
+  closed-formula TQBF layer `Closed`/`IsTrue`/`eval_closed_eq` all done; only the
+  PSPACE-completeness theorem itself remains.)*
 - [ ] Prove one PSPACE-completeness route only after the space-simulation API is
   stable.
 
@@ -242,9 +265,19 @@ proved before polynomial-time membership.
 
 - [S] Add reduction identity and transitivity lemmas with concrete composed time
   bounds.
-- [S] Define 3CNF syntax as either a refinement or a predicate on the existing CNF.
-- [M] Implement clause padding and prove equisatisfiability.
-- [M] Add graph adjacency-matrix encoding with decode/encode and size lemmas.
+- [x] Define 3CNF syntax as either a refinement or a predicate on the existing CNF
+  (`Complexitylib.SAT.ThreeCNF`: `CNF.Is3CNF` predicate, decidable, with cons
+  characterization and renaming-preservation).
+- [x] Implement clause padding and prove equisatisfiability
+  (`Complexitylib.SAT.ThreeCNF`: `Clause.padTo3`/`CNF.padTo3`, `padTo3_eval`,
+  `padTo3_satisfiable_iff`, `is3CNF_padTo3` for width `1…3`; wide-clause Tseitin
+  splitting still open).
+- [x] Add graph adjacency-matrix encoding with decode/encode and size lemmas
+  (`Complexitylib.Classes.FiniteCounting`: `card_adjMatrix` — `2^(n·n)` directed
+  graphs on `n` vertices — and `adjMatrixEquivBitVec`, the row-major
+  adjacency-matrix ↔ `n²`-bit-string bijection, encode/decode inverse by
+  construction; compose with the existing `BitString`→`List Bool` bridge for the
+  serialized form).
 
 ## Mid-term tracks
 
@@ -389,8 +422,9 @@ accepting NTM path.
 - [S] Define the bad-seed set for a fixed input and rewrite its cardinality in terms
   of `acceptCount`.
 - [S] Enumerate all `BitString n` inputs and prove its cardinality is `2^n`.
-- [M] Prove the “expected bad inputs below one implies a perfect seed exists”
-  counting lemma independently of machines.
+- [x] Prove the “expected bad inputs below one implies a perfect seed exists”
+  counting lemma independently of machines
+  (`Complexitylib.Classes.FiniteCounting.exists_good_seed`).
 - [M] Define a PTM repetition wrapper with an explicit choice-block schedule.
 - [M] Add a circuit/advice hardwiring operation and prove evaluation correctness.
 
@@ -416,13 +450,48 @@ programs by log-depth circuits and a clearly stated uniformity convention.
 
 - [ ] Define Boolean formulas with literals, depth, evaluation, and compilation
   from a selected circuit output by recursively unfolding its DAG.
-- [ ] Define width-`w` permutation branching programs: instructions selected by
+- [x] Define width-`w` permutation branching programs: instructions selected by
   one input bit, ordered product semantics, length, and acceptance convention.
-- [ ] Specialize to permutations of `Fin 5` and prove the explicit conjugation and
-  commutator identities used by Barrington's induction.
-- [ ] Compile literals and negation, then the AND/OR induction, tracking target
-  cycles and the `4^d` length bound.
-- [ ] State and prove the finite Barrington theorem.
+  (`Circuits/BranchingProgram.lean`: `BPInstr`, `BP`, `eval`, `eval_append`,
+  `eval_cons`, `eval_rename`.)
+- [~] Specialize to permutations of `Fin 5` and prove the explicit conjugation and
+  commutator identities used by Barrington's induction. (Abstract core done in
+  `Circuits/Barrington.lean`: `BP.inverse`/`eval_inverse`, the representation
+  predicate `BP.Computes`, and the closure lemmas `Computes_conj`,
+  `Computes_not`, and `Computes_and` — the commutator trick `⁅σ, τ⁆` for the AND
+  gate — hold at any width. The `S₅` input is now proven in
+  `Circuits/BarringtonS5.lean`: `exists_fiveCycle_commutator` exhibits two
+  `5`-cycles (`finRotate 5` and `(0 2 4 3 1)`) whose commutator is again a
+  `5`-cycle — verified by kernel `decide` (0 axioms, no `native_decide`) — and
+  `every_fiveCycle_is_commutator` upgrades this to *every* `5`-cycle via the
+  single-conjugacy-class fact (`isConj_iff_cycleType_eq`) plus conjugation
+  distributing over `⁅·,·⁆`. So the full `S₅` target-cycle freedom Barrington's
+  induction consumes is proven. What remains is threading it through the
+  formula→BP induction with the `4^d` length bookkeeping.)
+- [x] Compile literals and negation, then the AND/OR induction, tracking target
+  cycles and a length bound. (The abstract move-set is functionally complete in
+  `Circuits/Barrington.lean`: base cases `Computes_false`, `Computes_true`,
+  `Computes_var` (literals), negation `Computes_not`, AND `Computes_and`, OR
+  `Computes_or` (De Morgan). `Circuits/BarringtonBridge.lean` joins these to the
+  `S₅` algebra: `BP.Computes_retarget` re-aims a program to any target `5`-cycle,
+  and `BP.Computes_and5` gives the `AND` gate with full target-cycle freedom. The
+  full formula recursion is done in `Circuits/BarringtonRepr.lean`
+  (`Computes_formula`). Length is now tracked in `Circuits/BarringtonLength.lean`:
+  `Computes_formula_len` + `barrington_representation_len` give a program of length
+  `≤ 13 ^ (size φ)`. The tighter textbook `4 ^ depth` constant is NOT yet
+  attained — it needs a construction avoiding the retargeting overhead.)
+- [~] State and prove the finite Barrington theorem. (Representation form
+  **proven**: `Circuits/BarringtonRepr.lean` `barrington_representation` — every
+  Boolean formula is computed by a width-`5` permutation branching program (some
+  nonidentity `σ ∈ S₅` with program-value `= σ ↔ φ` true).
+  `Circuits/BarringtonLength.lean` adds length bounds: `barrington_representation_len`
+  (`≤ 13 ^ size`), `barrington_representation_depth` (`≤ 17 ^ depth`), and
+  `barrington_poly_of_log_depth` — the **concrete `NC¹ ⟹` poly-size** statement: a
+  formula of depth `≤ log₂ n` compiles to a width-`5` program of length `≤ n⁵` (via
+  `17^{log₂ n} ≤ n⁵`). All 0 custom axioms. Remaining: the tight base `4 ^ depth`
+  (vs `17 ^ depth`), and a *uniform family-level* class statement (`FormulaFamily`
+  / poly-size-BP-family definitions) rather than the per-formula bound proved
+  here.)
 - [ ] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
   of constant-size permutation transition matrices/functions.
 - [ ] Add a uniform version only after instruction-generation uniformity is
@@ -437,9 +506,12 @@ without an unjustified formula-size claim.
 
 **Small entry tasks.**
 
-- [S] Define branching-program evaluation and prove append/product semantics.
-- [S] Encode a program instruction and prove evaluation is invariant under a
-  semantics-preserving rename of input variables.
+- [x] Define branching-program evaluation and prove append/product semantics
+  (`Complexitylib.Circuits.BranchingProgram`: `BPInstr`, `BP`, `BP.eval`,
+  `BP.eval_append`, `BP.eval_cons`).
+- [x] Encode a program instruction and prove evaluation is invariant under a
+  semantics-preserving rename of input variables (`BPInstr.rename`, `BP.rename`,
+  `BP.eval_rename` in `Complexitylib.Circuits.BranchingProgram`).
 - [M] Search for and verify concrete `S_5` permutations with the required
   commutator identity, initially by `native_decide` if appropriate.
 - [M] Implement literal and NOT programs with exact length bounds.
@@ -481,7 +553,8 @@ is accounted for.
   are truncated to the relevant cells.
 - [M] Bound the number of bounded configurations in terms of state count, tape
   count, and space.
-- [M] Define QBF evaluation and prove elementary substitution lemmas.
+- [x] Define QBF evaluation and prove elementary substitution lemmas
+  (`Complexitylib.SAT.QBF`: `QBF.eval`, `eval_ex_iff`, `eval_all_iff`).
 - [M] Implement the recursive reachability predicate before implementing its TM.
 
 ### M5. Interactive-proof foundations
@@ -630,7 +703,9 @@ soundness constants should be explicit before class-level amplification.
 
 **Small entry tasks.**
 
-- [S] Prove Boolean multilinear-extension identities for one variable.
+- [x] Prove Boolean multilinear-extension identities for one variable
+  (`Complexitylib.Circuits.MultilinearExtension`: `mle₁`, `mle₁_zero`, `mle₁_one`,
+  `mle₁_bool`).
 - [M] Prove a univariate root-count probability bound over a finite field.
 - [M] Define the sum-check verifier state and prove round-by-round invariant
   preservation.
@@ -727,10 +802,11 @@ not be silently interchanged.
 
 **Small entry tasks.**
 
-- [S] Define truth tables and prove there are `2^(2^n)` Boolean functions on `n`
-  bits.
-- [S] Define property density as an exact rational and prove complement/union
-  identities.
+- [x] Define truth tables and prove there are `2^(2^n)` Boolean functions on `n`
+  bits (`Complexitylib.Classes.FiniteCounting.card_boolFunc`).
+- [x] Define property density as an exact rational and prove complement/union
+  identities (`Complexitylib.Classes.PropertyDensity`: `density`, `density_compl`,
+  `density_union_le`).
 - [M] Define usefulness against `SIZE(s)` at one length.
 - [M] Prove the abstract range-vs-uniform-distribution distinguisher lemma with no
   circuit assumptions.
@@ -766,10 +842,15 @@ circuit lower bound.
 
 **Small entry tasks.**
 
-- [S] Define restriction composition and prove evaluation commutes with applying a
-  restriction.
-- [S] Define formula size/leaves separately from DAG circuit size.
-- [M] Prove decision-tree evaluation and depth lemmas.
+- [x] Define restriction composition and prove evaluation commutes with applying a
+  restriction (`Complexitylib.Circuits.Restriction`: `Restriction`, `applyTo`,
+  `comp`, `applyTo_comp`, `BoolFormula.restrict`, `BoolFormula.eval_restrict`).
+- [x] Define formula size/leaves separately from DAG circuit size
+  (`Complexitylib.Circuits.Formula`: `BoolFormula`, `size`, `leaves`,
+  `leaves_le_size`).
+- [x] Prove decision-tree evaluation and depth lemmas
+  (`Complexitylib.Circuits.DecisionTree`: `DecisionTree`, `eval`, `depth`,
+  `numLeaves`, `numLeaves_le_two_pow_depth`).
 - [M] Formalize random restrictions as a finite sample space.
 
 ### L5. Counting, polynomial hierarchy, and proof complexity
@@ -783,15 +864,21 @@ randomness, interaction, and lower bounds.
 
 - [ ] Define the polynomial hierarchy both by alternating quantifiers and oracle
   levels, then prove equivalence at fixed levels.
-- [ ] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
-  counts.
+- [~] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
+  counts. *(`#P` = `SharpP` and `GapP` (with `GapP.neg_mem`) in
+  `Complexitylib.Classes.SharpP` done; parsimonious reductions remain.)*
 - [ ] Prove elementary closure properties and relate PP to GapP sign.
 - [ ] Formalize `PH subset P^#P`/Toda-style results only after polynomial
   interpolation and modular counting are available.
 - [ ] Define propositional proof systems, proof length, and Cook--Reckhow
   polynomial verification.
-- [ ] Connect resolution proofs to CNF and establish basic width/size facts before
-  attempting lower bounds.
+- [~] Connect resolution proofs to CNF and establish basic width/size facts before
+  attempting lower bounds. *(`Complexitylib.SAT.Resolution`: `CNF.Entails`,
+  `entails_of_mem`, `entails_resolvent`. The resolution proof system is now a
+  first-class inductive relation `CNF.Derives` with `entails_of_derives`
+  (soundness), `refutation_sound` (a derivation of the empty clause proves
+  unsatisfiability), and `derives_cons` (weakening). `resolvent_length_le` gives
+  the one-step width bound; fuller width/size measures over derivations remain.)*
 
 **Formalization hazards.** Counting paths depends on a clock and on a canonical
 number of nondeterministic choices; early halting must be padded consistently.
@@ -803,9 +890,13 @@ syntactic derivation system.
 
 - [S] Define a clocked accepting-path count and prove invariance after halted-path
   padding.
-- [M] Define `#P` functions using the existing NTM path semantics.
-- [M] Define quantified Boolean formulas with a bounded alternation counter.
-- [M] Define resolution clauses and verify soundness of one resolution step.
+- [x] Define `#P` functions using the existing NTM path semantics
+  (`Complexitylib.Classes.SharpP`: `SharpP` class, `NTM.acceptCount_le`,
+  `SharpP.le_two_pow`).
+- [x] Define quantified Boolean formulas with a bounded alternation counter
+  (`Complexitylib.SAT.QBF`: `QBF`, `QBF.quantDepth`, `QBF.QuantifierFree`).
+- [x] Define resolution clauses and verify soundness of one resolution step
+  (`Complexitylib.SAT.Resolution`: `Clause.resolvent`, `Clause.resolvent_sound`).
 
 ## Cross-cutting project ideas
 

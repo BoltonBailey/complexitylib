@@ -5,6 +5,9 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Rename
+import Complexitylib.SAT.ThreeCNF
+import Complexitylib.SAT.QBF
+import Complexitylib.SAT.Resolution
 import Complexitylib.SAT.Encoding
 import Complexitylib.SAT.Language
 import Complexitylib.SAT.Verifier

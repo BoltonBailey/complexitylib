@@ -5,6 +5,10 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Classes.Time
 import Complexitylib.Classes.Space
+import Complexitylib.Classes.FiniteCounting
+import Complexitylib.Classes.EventProb
+import Complexitylib.Classes.PropertyDensity
+import Complexitylib.Classes.SharpP
 import Complexitylib.Classes.Negligible
 import Complexitylib.Classes.P
 import Complexitylib.Classes.PPoly

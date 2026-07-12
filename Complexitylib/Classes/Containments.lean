@@ -252,6 +252,15 @@ theorem ZPP_subset_RP : ZPP ⊆ RP := Set.inter_subset_left
 /-- **ZPP ⊆ coRP**. -/
 theorem ZPP_subset_coRP : ZPP ⊆ coRP := Set.inter_subset_right
 
+/-- **ZPP ⊆ NP** via `ZPP ⊆ RP ⊆ NP`. -/
+theorem ZPP_subset_NP : ZPP ⊆ NP := ZPP_subset_RP.trans RP_subset_NP
+
+/-- **RP ⊆ NEXP** via `RP ⊆ NP ⊆ NEXP`. -/
+theorem RP_subset_NEXP : RP ⊆ NEXP := RP_subset_NP.trans NP_subset_NEXP
+
+/-- **ZPP ⊆ NEXP** via `ZPP ⊆ NP ⊆ NEXP`. -/
+theorem ZPP_subset_NEXP : ZPP ⊆ NEXP := ZPP_subset_NP.trans NP_subset_NEXP
+
 /-- **DTIME ⊆ NSPACE** (composition of `DTIME ⊆ DSPACE` and `DSPACE ⊆ NSPACE`). -/
 theorem DTIME_subset_NSPACE (T : ℕ → ℕ) : DTIME T ⊆ NSPACE T :=
   (DTIME_subset_DSPACE T).trans (DSPACE_subset_NSPACE T)
@@ -284,5 +293,17 @@ theorem P_inter {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) :
   have heq : (L₁ᶜ ∪ L₂ᶜ)ᶜ = L₁ ∩ L₂ := by
     ext x; simp
   rwa [heq] at hcomp
+
+/-- **P is closed under set difference**: `L₁ \ L₂ = L₁ ∩ L₂ᶜ`. -/
+theorem P_diff {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) : L₁ \ L₂ ∈ P := by
+  rw [Set.diff_eq]
+  exact P_inter h₁ (P_compl h₂)
+
+/-- **P is closed under symmetric difference**:
+    `L₁ △ L₂ = (L₁ \ L₂) ∪ (L₂ \ L₁)`. Together with `P_compl`/`P_union`/`P_inter`
+    this makes `P` a Boolean subalgebra of the languages. -/
+theorem P_symmDiff {L₁ L₂ : Language} (h₁ : L₁ ∈ P) (h₂ : L₂ ∈ P) :
+    (L₁ \ L₂) ∪ (L₂ \ L₁) ∈ P :=
+  P_union (P_diff h₁ h₂) (P_diff h₂ h₁)
 
 end Complexity

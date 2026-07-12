@@ -126,6 +126,28 @@ theorem acceptProg_decides : acceptProg.DecidesInTime Set.univ (fun _ => 2) := b
 theorem univ_mem_DTIME : Set.univ ∈ DTIME (fun _ => 2) :=
   ⟨acceptProg, (fun _ => 2), acceptProg_decides, BigO.refl _⟩
 
+/-- The always-reject program: set the verdict register to `0`. -/
+def rejectProg : Program := [Instr.imm 0 0]
+
+/-- On any input, `rejectProg` halts after one step with verdict `0`. -/
+theorem rejectProg_run (x : List Bool) :
+    (run rejectProg 1 (initCfg x)).verdict = 0 := by rfl
+
+/-- `rejectProg` decides the empty language in constant logarithmic time,
+    exercising the rejection side of the `DecidesInTime` API. -/
+theorem rejectProg_decides : rejectProg.DecidesInTime (∅ : Language) (fun _ => 2) := by
+  intro x
+  refine ⟨1, ?_, ?_, ?_, ?_⟩
+  · rfl
+  · show (1 : ℕ) ≤ 2; omega
+  · intro hx; simp at hx
+  · intro _; rfl
+
+/-- The empty language is in `RAM.DTIME` at a constant bound (the rejection
+    counterpart of `univ_mem_DTIME`). -/
+theorem empty_mem_DTIME : (∅ : Language) ∈ DTIME (fun _ => 2) :=
+  ⟨rejectProg, (fun _ => 2), rejectProg_decides, BigO.refl _⟩
+
 end RAM
 
 end Complexity

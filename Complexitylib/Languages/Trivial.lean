@@ -134,4 +134,16 @@ theorem empty_mem_EXP : Language.empty ∈ EXP := P_subset_EXP empty_mem_P
 /-- **`Set.univ ∈ EXP`.** -/
 theorem univ_mem_EXP : Language.univ ∈ EXP := P_subset_EXP univ_mem_P
 
+/-- **`∅ ∈ PP`.** -/
+theorem empty_mem_PP : Language.empty ∈ PP := P_subset_PP empty_mem_P
+
+/-- **`Set.univ ∈ PP`.** -/
+theorem univ_mem_PP : Language.univ ∈ PP := P_subset_PP univ_mem_P
+
+/-- **`∅ ∈ NEXP`.** -/
+theorem empty_mem_NEXP : Language.empty ∈ NEXP := P_subset_NEXP empty_mem_P
+
+/-- **`Set.univ ∈ NEXP`.** -/
+theorem univ_mem_NEXP : Language.univ ∈ NEXP := P_subset_NEXP univ_mem_P
+
 end Complexity

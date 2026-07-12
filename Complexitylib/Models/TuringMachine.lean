@@ -588,6 +588,21 @@ theorem reaches_of_reachesIn {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q}
   | zero => exact Relation.ReflTransGen.refl
   | step hs _ ih => exact Relation.ReflTransGen.head hs ih
 
+/-- `step` returns `none` exactly when the configuration is halted. The two ways
+    a DTM can "stop" — no successor configuration and being in `qhalt` —
+    coincide. -/
+theorem step_eq_none_iff_halted {tm : TM n} {c : Cfg n tm.Q} :
+    tm.step c = none ↔ c.state = tm.qhalt := by
+  by_cases h : c.state = tm.qhalt <;> simp [step, h]
+
+/-- Append a single step to the end of a run: reaching `c'` in `t` steps and then
+    stepping once to `c''` gives a run of `t + 1` steps. The `snoc` counterpart to
+    the `cons`-shaped `reachesIn.step`. -/
+theorem reachesIn_snoc {tm : TM n} {t : ℕ} {c c' c'' : Cfg n tm.Q}
+    (h : tm.reachesIn t c c') (hstep : tm.step c' = some c'') :
+    tm.reachesIn (t + 1) c c'' :=
+  tm.reachesIn_trans h (reachesIn.step hstep reachesIn.zero)
+
 /-- `AcceptsInTime` implies `Accepts` — forget the time bound. -/
 theorem accepts_of_acceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
     (h : tm.AcceptsInTime x T) : tm.Accepts x := by

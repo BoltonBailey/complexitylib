@@ -152,6 +152,13 @@ theorem logTimeUpto_mono {c : Cfg} {f f' : ℕ} (hle : f ≤ f') :
   rw [logTimeUpto_add]
   exact Nat.le_add_right _ _
 
+/-- Unit time is monotone in the fuel. -/
+theorem unitTimeUpto_mono {c : Cfg} {f f' : ℕ} (hle : f ≤ f') :
+    unitTimeUpto P f c ≤ unitTimeUpto P f' c := by
+  obtain ⟨g, rfl⟩ := Nat.le.dest hle
+  rw [unitTimeUpto_add]
+  exact Nat.le_add_right _ _
+
 /-! ### Cost lower bounds -/
 
 /-- Every instruction costs at least one time unit under the logarithmic

@@ -5,6 +5,16 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Basic
 import Complexitylib.Circuits.BitString
+import Complexitylib.Circuits.DecisionTree
+import Complexitylib.Circuits.Formula
+import Complexitylib.Circuits.Restriction
+import Complexitylib.Circuits.BranchingProgram
+import Complexitylib.Circuits.Barrington
+import Complexitylib.Circuits.BarringtonS5
+import Complexitylib.Circuits.BarringtonBridge
+import Complexitylib.Circuits.BarringtonRepr
+import Complexitylib.Circuits.BarringtonLength
+import Complexitylib.Circuits.MultilinearExtension
 import Complexitylib.Circuits.NormalForm
 import Complexitylib.Circuits.AndOrNot
 import Complexitylib.Circuits.Encoding
