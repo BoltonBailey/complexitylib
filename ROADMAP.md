@@ -1036,8 +1036,32 @@ track grows it toward the headline theorems.
   - [ ] `NP ⊆ ∃SO`: express "there is an accepting polynomial-time computation"
     as an `∃SO` sentence (guess the computation-tableau relation; FO-check the
     local transition constraints).
+- [~] **First-order reductions and projections.** The reductions of descriptive
+  complexity: a target structure defined from the source by FO formulas. *Started
+  (`Reduction.lean`, dimension-1 / universe-preserving case):* `FOInterpretation`
+  (a defining FO formula per target relation + a source constant per target
+  constant), `FOInterpretation.apply` with `apply_idInterp`, `FOReduces` between
+  Boolean queries with reflexivity `FOReduces.refl`, the quantifier-free restriction
+  `FOInterpretation.IsQuantifierFree` and **first-order projections** `FOProjReduces`
+  (with `toFOReduces`, `refl`). *Remaining:*
+  - [ ] General **dimension-`k`** interpretations: target universe a definable subset
+    of `domᵏ` (needs a `Fin (card^k) ≃ (Fin k → Fin card)` tuple codec and an
+    environment-assembly for the `arity·k` free variables), so reductions may grow
+    the universe.
+  - [ ] The **substitution/transport theorem** (fundamental theorem of
+    interpretations): satisfaction over `I.apply A` equals satisfaction of a
+    syntactically translated formula over `A`. This is the crux for **transitivity**
+    (`FOReduces` composes) and for closure of `FODefinable` under FO-reductions.
+  - [ ] The **string-level** FO-reduction on the machine model: an FO map on
+    encodings, so `FOReduces Q₁ Q₂` yields a `Language`-level many-one reduction of
+    `queryLanguage Q₁` to `queryLanguage Q₂` (connects to the `MapReducesPoly`
+    reduction preorder in `Classes.NP.Reduction`).
+  - [ ] Refine **first-order projections** to Immerman's exact projective form (each
+    target bit determined by a single source bit under a quantifier-free guard) and
+    prove an FO-projection-completeness example.
 - [ ] `FO ⊆ AC⁰` (and the converse for a suitable uniform `AC⁰`), linking this
-  track to the circuit tracks (M3/L4).
+  track to the circuit tracks (M3/L4). First-order projections are the reductions
+  under which the `AC⁰`-complete problems are complete.
 - [ ] Immerman–Vardi (`FO(LFP) = P` on ordered structures) after adding least
   fixed-point operators.
 
