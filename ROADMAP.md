@@ -977,8 +977,11 @@ track grows it toward the headline theorems.
     `mem_queryLanguage`). This is the bridge to the machine-model `Language`.
 - [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
   existential second-order logic captures `NP`. *Decomposed:*
-  - [ ] `∃SO ⊆ NP`: given an `∃SO` sentence, an NTM that guesses the witnessing
-    relations and FO-model-checks the matrix in polynomial time.
+  - [~] `∃SO ⊆ NP`: given an `∃SO` sentence, an NTM that guesses the witnessing
+    relations and FO-model-checks the matrix in polynomial time. (The FO
+    model-checking half is done: `ModelChecking.lean` `Formula.evalB` /
+    `Sentence.evalB` are computable and proven correct (`evalB_eq_sat` /
+    `evalB_eq_models`). The guess-the-relations NTM and its poly-time bound remain.)
   - [ ] `NP ⊆ ∃SO`: express "there is an accepting polynomial-time computation"
     as an `∃SO` sentence (guess the computation-tableau relation; FO-check the
     local transition constraints).
