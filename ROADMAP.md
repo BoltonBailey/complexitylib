@@ -322,10 +322,12 @@ payoff and factors into the two simulation directions:
   - [ ] Prove the tableau-circuit emitter runs in polynomial time (in `FP`), giving
     P-uniformity, and conclude `P ⊆ P-uniform P/poly`.
 
-**Definitions to settle for the headline.** A `UniformPPoly` (P-uniform `P/poly`)
-class: languages decided by a polynomial-size family whose code map `1^n ↦ (code of
-C_n)` lies in `FP`. Keep it separate from the nonuniform `PPoly` already defined
-(`UniformPPoly ⊆ PPoly` is immediate; the headline is `UniformPPoly = P`). The
+**Definitions for the headline.** [x] The `UniformPPoly` (P-uniform `P/poly`) class
+is now defined (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F`
+asks the tagged code map `1ⁿ ↦ F.encodeAt n` (via the existing family codec) to lie
+in `FP`, and `UniformPPoly` is the languages decided by a P-uniform polynomial-size
+family. The trivial containment `UniformPPoly_subset_PPoly` is proved (forget the
+generator); the headline is `UniformPPoly = P`. The
 Cook–Levin tableau infrastructure already in the library (`SAT` reduction emitters)
 is related but is a CNF *satisfiability* encoding, not a deterministic
 output-computing circuit — the functional unrolling needs its own construction and
