@@ -294,6 +294,43 @@ proved before polynomial-time membership.
 **Goal.** Connect the existing finite circuit model to language classes and prove
 machine/circuit characterizations with explicit uniformity.
 
+**Headline theorem: `P = P-uniform SIZE(poly)`.** A language is in `P` iff it is
+decided by a P-uniform polynomial-size circuit family. This is the central M1
+payoff and factors into the two simulation directions:
+
+- **Circuits → TMs (`P-uniform P/poly ⊆ P`).** A polynomial-time DTM, given `1^n`,
+  runs the uniform generator to produce the length-`n` circuit code, then evaluates
+  that code on the input with a memoized topological evaluator — all in polynomial
+  time. *Decomposed:*
+  - [ ] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
+    tagged family code paired with its input, with a polynomial running-time bound
+    (the fan-in-two encoding, exact decoder, topological validator, and array-backed
+    iterative evaluator already exist as pure functions — this is their DTM
+    realization and timing).
+  - [ ] Compose the uniform generator with the evaluator; prove the resulting DTM
+    decides the family's language in polynomial time.
+- **TMs → uniform circuits (`P ⊆ P-uniform P/poly`).** Unroll a `T(n)`-time DTM into
+  a computation-tableau circuit of size `poly(T(n))` computing its output bit, and
+  show the code map `1^n ↦ C_n` is itself computable in polynomial time (P-uniform).
+  *Decomposed:*
+  - [ ] Compile one deterministic transition step (configuration → next
+    configuration, over the fixed-width tape window a step touches) into a Boolean
+    circuit block; prove it computes `step`.
+  - [ ] Tile the step block over a `T(n) × space(n)` tableau into a full circuit;
+    prove semantic correctness (output bit = acceptance) and a `poly(T(n))` size
+    bound.
+  - [ ] Prove the tableau-circuit emitter runs in polynomial time (in `FP`), giving
+    P-uniformity, and conclude `P ⊆ P-uniform P/poly`.
+
+**Definitions to settle for the headline.** A `UniformPPoly` (P-uniform `P/poly`)
+class: languages decided by a polynomial-size family whose code map `1^n ↦ (code of
+C_n)` lies in `FP`. Keep it separate from the nonuniform `PPoly` already defined
+(`UniformPPoly ⊆ PPoly` is immediate; the headline is `UniformPPoly = P`). The
+Cook–Levin tableau infrastructure already in the library (`SAT` reduction emitters)
+is related but is a CNF *satisfiability* encoding, not a deterministic
+output-computing circuit — the functional unrolling needs its own construction and
+correctness theorem (see hazards).
+
 **Prerequisites.** The N1 list/`BitString` bridge, the existing typed
 `Circuit.eval` semantics, and stable machine composition/time accounting from
 N0. The proof-free circuit codec and polynomial-time DTM evaluator are M1
