@@ -1044,10 +1044,12 @@ axioms.
 - [~] The level-1 inequality and the FKN theorem (functions with almost all weight
   at level 1 are close to a dictator). *The elementary level-1 bounds are done:
   `𝓕(f,{i})² ≤ Infᵢ[f]`, `W¹[f] ≤ I[f]`, and the coordinate form
-  `∑_i 𝓕(f,{i})² ≤ I[f]` (`fourierCoeff_singleton_sq_le_influence`,
+  `∑_i 𝓕(f,{i})² ≤ I[f]`, with the tight identity `∑_i 𝓕(f,{i})² = W¹[f]`
+  (`fourierCoeff_singleton_sq_le_influence`,
   `fourierWeightAtDegree_one_le_totalInfluence`,
-  `sum_fourierCoeff_singleton_sq_le_totalInfluence`). The sharp `O(𝔼[f]²log(1/𝔼[f]))`
-  level-1 inequality and FKN need hypercontractivity.*
+  `sum_fourierCoeff_singleton_sq_le_totalInfluence`,
+  `sum_fourierCoeff_singleton_sq_eq_fourierWeightAtDegree_one`). The sharp
+  `O(𝔼[f]²log(1/𝔼[f]))` level-1 inequality and FKN need hypercontractivity.*
 - [ ] Monotone functions: `Infᵢ[f] = 𝓕(f,{i})` and the Margulis–Russo formula
   (needs a coordinate partial order on the cube in the ±1 convention).
 - [~] Hypercontractivity (the `(2,4)`-norm bound) and its Fourier corollary — the

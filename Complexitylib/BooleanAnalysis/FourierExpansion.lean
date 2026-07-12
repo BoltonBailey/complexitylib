@@ -1033,6 +1033,23 @@ theorem sum_fourierCoeff_singleton_sq_le_totalInfluence (f : BooleanFunction n) 
   rw [totalInfluence_eq_sum_influence]
   exact Finset.sum_le_sum fun i _ => fourierCoeff_singleton_sq_le_influence i f
 
+/-- The coordinate sum of squared degree-1 coefficients **is** the degree-1 weight:
+    `∑_i 𝓕(f, {i})² = W¹[f]`. The singletons `{i}` are exactly the cardinality-1
+    frequencies, so the coordinate sum and the degree-1 weight coincide. -/
+theorem sum_fourierCoeff_singleton_sq_eq_fourierWeightAtDegree_one (f : BooleanFunction n) :
+    ∑ i : Fin n, (𝓕 f {i}) ^ 2 = 𝐖 f 1 := by
+  rw [fourierWeightAtDegree]
+  have himg : (Finset.univ.filter (fun S : Finset (Fin n) => S.card = 1))
+      = Finset.univ.image (fun i => ({i} : Finset (Fin n))) := by
+    ext S
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+    rw [Finset.card_eq_one]
+    constructor
+    · rintro ⟨a, rfl⟩; exact ⟨a, rfl⟩
+    · rintro ⟨a, rfl⟩; exact ⟨a, rfl⟩
+  rw [himg, Finset.sum_image (fun i _ j _ h => Finset.singleton_injective h)]
+  exact Finset.sum_congr rfl fun i _ => by rw [fourierWeight]
+
 /-- Flip coordinate `i` of a point of the Hamming cube. -/
 def flipCoord (i : Fin n) (x : Cube n) : Cube n := Function.update x i (x i + 1)
 
