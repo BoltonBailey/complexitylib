@@ -959,12 +959,15 @@ track grows it toward the headline theorems.
     matrix) — the exact fragment Fagin characterizes. (`SecondOrder/Syntax.lean`:
     `SOFormula.IsFOMatrix`, `IsExistSO`, and `ofFormula_isFOMatrix`/`_isExistSO`
     placing `FO ⊆ ∃SO`.)
-- [ ] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
+- [~] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
   to connect `BooleanQuery` to the machine-model `Language`. *Decomposed:*
-  - [ ] Canonical bit encoding of an ordered `FinStruct` (relations as truth
-    tables over `Fin card` tuples, in the built-in order).
-  - [ ] The induced language `⟦Q⟧ : Language` of an order-independent query, and
-    a decode/encode round-trip.
+  - [x] Truth-table encoding of a single relation over `Fin card` tuples, with its
+    length `card ^ arity` (`Encoding.lean`: `encodeRel`, `encodeRel_length`).
+  - [x] Relational part of a structure's encoding (concatenate the truth tables)
+    and its total length (`encodeRels`, `encodeRels_length`).
+  - [ ] Full encoding: prepend `card` (and any constants) and make it computable;
+    a decode/encode round-trip on ordered structures.
+  - [ ] The induced language `⟦Q⟧ : Language` of an order-independent query.
 - [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
   existential second-order logic captures `NP`. *Decomposed:*
   - [ ] `∃SO ⊆ NP`: given an `∃SO` sentence, an NTM that guesses the witnessing

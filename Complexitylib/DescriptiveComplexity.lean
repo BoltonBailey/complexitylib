@@ -11,6 +11,7 @@ import Complexitylib.DescriptiveComplexity.Env
 import Complexitylib.DescriptiveComplexity.FirstOrder
 import Complexitylib.DescriptiveComplexity.SecondOrder
 import Complexitylib.DescriptiveComplexity.Definable
+import Complexitylib.DescriptiveComplexity.Encoding
 import Complexitylib.DescriptiveComplexity.Examples
 
 /-!
