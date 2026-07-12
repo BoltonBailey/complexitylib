@@ -936,6 +936,9 @@ track grows it toward the headline theorems.
   isomorphism-invariance (`Term.eval_iso`, `Formula.sat_iso`).
 - [x] Worked examples: directed 3-cycles with an explicit isomorphism, a binary
   string with built-in order (`.Examples`).
+- [x] First-order *definable* queries and the packaged crux
+  (`.Definable`: `FODefinable`, `FODefinable.orderIndependent` — FO-definable ⟹
+  order-independent — with Boolean closure `complement`/`inter`/`union`).
 
 **Milestones (open).**
 

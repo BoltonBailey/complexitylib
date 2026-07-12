@@ -9,6 +9,7 @@ import Complexitylib.DescriptiveComplexity.Isomorphism
 import Complexitylib.DescriptiveComplexity.Query
 import Complexitylib.DescriptiveComplexity.Env
 import Complexitylib.DescriptiveComplexity.FirstOrder
+import Complexitylib.DescriptiveComplexity.Definable
 import Complexitylib.DescriptiveComplexity.Examples
 
 /-!
