@@ -948,8 +948,10 @@ track grows it toward the headline theorems.
     and second-order quantifiers (relation variables de Bruijn-indexed by a
     context of arities). (`SecondOrder/Syntax.lean`: `SOFormula`, `SOSentence`,
     the FO embedding `SOFormula.ofFormula`, and `SOFormula.size`.)
-  - [ ] SO semantics: satisfaction under a relation-variable assignment (in
-    addition to the element `Env`).
+  - [x] SO semantics: satisfaction under a relation-variable assignment (in
+    addition to the element `Env`). (`SecondOrder/Semantics.lean`: `REnv`/`rCons`/
+    `emptyREnv`, `SOFormula.Sat`, `SOSentence.Models`, and the truth-preserving FO
+    embedding `SOFormula.ofFormula_sat` / `SOSentence.models_ofFormula`.)
   - [ ] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
     (mirror `Formula.sat_iso`/`Sentence.orderIndependent`).
   - [ ] Mark the `∃SO` fragment (second-order existentials only, over an FO
