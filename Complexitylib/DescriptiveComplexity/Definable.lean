@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.DescriptiveComplexity.Query
 import Complexitylib.DescriptiveComplexity.FirstOrder
+import Complexitylib.DescriptiveComplexity.SecondOrder
 
 /-!
 # First-order definable queries
@@ -26,6 +27,7 @@ bounds.
 - `DescriptiveComplexity.FODefinable.orderIndependent` — FO-definable ⟹
   order-independent.
 - `FODefinable.complement`, `.inter`, `.union` — Boolean closure.
+- `FODefinable.toSODefinable` — `FO ⊆ SO` at the query level.
 -/
 
 open scoped Complexity.DescriptiveComplexity
@@ -72,6 +74,13 @@ theorem FODefinable.union {Q₁ Q₂ : BooleanQuery V}
   obtain ⟨ψ, hψ⟩ := h₂
   exact ⟨φ.disj ψ, fun A => by
     simp only [BooleanQuery.union, hφ A, hψ A, Sentence.Models, Formula.Sat]⟩
+
+/-- **`FO ⊆ SO` at the query level:** every first-order definable query is
+    second-order definable, via the truth-preserving FO embedding into SO. -/
+theorem FODefinable.toSODefinable {Q : BooleanQuery V} (hQ : FODefinable Q) :
+    SODefinable Q := by
+  obtain ⟨φ, hφ⟩ := hQ
+  exact ⟨SOFormula.ofFormula φ [], fun A => (hφ A).trans (SOSentence.models_ofFormula A φ).symm⟩
 
 end DescriptiveComplexity
 
