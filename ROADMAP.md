@@ -1043,15 +1043,18 @@ track grows it toward the headline theorems.
   constant), `FOInterpretation.apply` with `apply_idInterp`, `FOReduces` between
   Boolean queries with reflexivity `FOReduces.refl`, the quantifier-free restriction
   `FOInterpretation.IsQuantifierFree` and **first-order projections** `FOProjReduces`
-  (with `toFOReduces`, `refl`). *Remaining:*
+  (with `toFOReduces`, `refl`); the many-one **complement congruence**
+  `FOReduces.complement`; and — the keystone — the full **de Bruijn substitution
+  machinery** (`FirstOrder/Substitution.lean`: `Term.shift`, `Formula.subst`,
+  `Formula.subst_sat`) with the **transport theorem**
+  `FOInterpretation.translate_sat` and **transitivity** `FOReduces.trans` (so
+  FO-reducibility is a preorder). *Remaining:*
   - [ ] General **dimension-`k`** interpretations: target universe a definable subset
     of `domᵏ` (needs a `Fin (card^k) ≃ (Fin k → Fin card)` tuple codec and an
     environment-assembly for the `arity·k` free variables), so reductions may grow
     the universe.
-  - [ ] The **substitution/transport theorem** (fundamental theorem of
-    interpretations): satisfaction over `I.apply A` equals satisfaction of a
-    syntactically translated formula over `A`. This is the crux for **transitivity**
-    (`FOReduces` composes) and for closure of `FODefinable` under FO-reductions.
+  - [ ] Closure of `FODefinable` under FO-reductions (via `translate_sat`), and
+    `FOProjReduces.trans` (composition preserves quantifier-freeness).
   - [ ] The **string-level** FO-reduction on the machine model: an FO map on
     encodings, so `FOReduces Q₁ Q₂` yields a `Language`-level many-one reduction of
     `queryLanguage Q₁` to `queryLanguage Q₂` (connects to the `MapReducesPoly`

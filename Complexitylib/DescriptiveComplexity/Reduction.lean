@@ -135,6 +135,23 @@ theorem FOInterpretation.translate_sat (I : FOInterpretation V W) (A : FinStruct
   | exist φ ih => exact exists_congr fun a => ih (envCons a σ)
   | all φ ih => exact forall_congr' fun a => ih (envCons a σ)
 
+/-- Compose two interpretations by translating the outer defining formulas through
+    the inner interpretation (`I₂ ∘ I₁`, source `U → V → W`). -/
+def FOInterpretation.comp (I₂ : FOInterpretation V W) (I₁ : FOInterpretation U V) :
+    FOInterpretation U W where
+  relFormula := fun i => I₁.translate (I₂.relFormula i)
+  constMap := fun c => I₁.constMap (I₂.constMap c)
+
+/-- **Composition applies as composition of structure maps**: `(I₂ ∘ I₁).apply A =
+    I₂.apply (I₁.apply A)`. The relation fields agree by the transport theorem. -/
+theorem FOInterpretation.apply_comp (I₂ : FOInterpretation V W) (I₁ : FOInterpretation U V)
+    (A : FinStruct U) : (I₂.comp I₁).apply A = I₂.apply (I₁.apply A) := by
+  have hrel : ((I₂.comp I₁).apply A).rel = (I₂.apply (I₁.apply A)).rel := by
+    funext i args
+    exact propext (I₁.translate_sat A args (I₂.relFormula i)).symm
+  rw [show (I₂.comp I₁).apply A
+      = { I₂.apply (I₁.apply A) with rel := ((I₂.comp I₁).apply A).rel } from rfl, hrel]
+
 /-- **First-order reduction** between Boolean queries: an FO-interpretation carrying
     `Q₁`-membership to `Q₂`-membership on the interpreted structure. -/
 def FOReduces (Q₁ : BooleanQuery V) (Q₂ : BooleanQuery W) : Prop :=
@@ -150,6 +167,17 @@ theorem FOReduces.complement {Q₁ : BooleanQuery V} {Q₂ : BooleanQuery W}
     (h : FOReduces Q₁ Q₂) : FOReduces Q₁.complement Q₂.complement := by
   obtain ⟨I, hI⟩ := h
   exact ⟨I, fun A => by simp only [BooleanQuery.complement, hI A]⟩
+
+/-- **FO-reducibility is transitive**, via composition of interpretations (the
+    transport theorem is exactly what makes the composite carry membership). Together
+    with `FOReduces.refl`, FO-reducibility is a preorder on Boolean queries. -/
+theorem FOReduces.trans {U : Vocabulary} {Q₁ : BooleanQuery U} {Q₂ : BooleanQuery V}
+    {Q₃ : BooleanQuery W} (h₁ : FOReduces Q₁ Q₂) (h₂ : FOReduces Q₂ Q₃) :
+    FOReduces Q₁ Q₃ := by
+  obtain ⟨I₁, hI₁⟩ := h₁
+  obtain ⟨I₂, hI₂⟩ := h₂
+  refine ⟨I₂.comp I₁, fun A => ?_⟩
+  rw [hI₁ A, hI₂ (I₁.apply A), FOInterpretation.apply_comp]
 
 /-- An interpretation is **quantifier-free** when every defining formula has quantifier
     rank `0` — the coarse form of a first-order projection. -/
