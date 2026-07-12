@@ -76,4 +76,24 @@ theorem FormulaFamily.logDepth_polyLength_bp (F : FormulaFamily) (hF : F.LogDept
     _ ≤ 17 ^ (c * Nat.log 2 n + c) := Nat.pow_le_pow_right (by omega) (hc n)
     _ ≤ 17 ^ c * (n + 1) ^ (5 * c) := pow17_poly c n
 
+/-- **Family-level Barrington, Boolean-decision form.** A logarithmic-depth formula
+    family is *decided* by a family of polynomial-length width-`5` branching
+    programs together with a family of query points: reading whether program `R n`
+    moves point `x n` computes formula `F n`. -/
+theorem FormulaFamily.logDepth_polyLength_decides (F : FormulaFamily) (hF : F.LogDepth) :
+    ∃ (R : ℕ → BP 5) (x : ℕ → Fin 5) (C p : ℕ),
+      (∀ n, (R n).length ≤ C * (n + 1) ^ p) ∧
+      (∀ n α, ((BP.eval α (R n)) (x n) ≠ x n) ↔ BoolFormula.eval α (F n) = true) := by
+  obtain ⟨R, S, C, p, hS, hev, hlen⟩ := F.logDepth_polyLength_bp hF
+  have hmove : ∀ n, ∃ y, S n y ≠ y := fun n => by
+    by_contra h
+    simp only [not_exists, not_not] at h
+    exact hS n (Equiv.ext h)
+  choose x hx using hmove
+  refine ⟨R, x, C, p, hlen, fun n α => ?_⟩
+  rw [hev n α]
+  cases hev' : BoolFormula.eval α (F n)
+  · simp
+  · simp [hx n]
+
 end Complexity

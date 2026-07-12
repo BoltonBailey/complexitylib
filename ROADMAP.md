@@ -242,8 +242,16 @@ many-one reduction.
 
 **Staged milestones.**
 
-- [ ] Prove transitivity, identity, composition-time, and class-closure lemmas for
-  polynomial reductions in their most reusable forms.
+- [~] Prove transitivity, identity, composition-time, and class-closure lemmas for
+  polynomial reductions in their most reusable forms. *Decomposed:*
+  - [x] `≤ₚ` reflexivity/transitivity *modulo* two `FP` facts
+    (`Classes/NP/Reduction.lean`: `MapReducesPoly.refl_of_id_mem`,
+    `MapReducesPoly.trans_of_comp`) — isolates exactly what remains.
+  - [ ] `id ∈ FP` — build a copy TM (input tape → output tape) with a linear
+    `ComputesInTime` proof; then `≤ₚ` is reflexive.
+  - [ ] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
+    pipe its output tape to `g`'s input tape, run `g`'s machine) with a
+    `poly ∘ poly = poly` time bound; then `≤ₚ` is transitive.
 - [ ] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
   Tseitin transformation.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and

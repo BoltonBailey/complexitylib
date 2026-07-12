@@ -39,4 +39,24 @@ def NPHard (L : Language) : Prop := ∀ L' ∈ NP, L' ≤ₚ L
 /-- **NP-completeness.** `L` is NP-complete when it is in `NP` and NP-hard. -/
 def NPComplete (L : Language) : Prop := L ∈ NP ∧ NPHard L
 
+/-! ### `≤ₚ` is a preorder, modulo two `FP` facts
+
+Reflexivity and transitivity of polynomial-time many-one reducibility follow
+purely from `FP` being closed under identity and composition. The two lemmas
+below isolate exactly those two facts; discharging them (via a copy Turing
+machine for `id ∈ FP`, and a sequential-composition machine for closure under
+`∘`) is all that remains to make `≤ₚ` a genuine preorder. -/
+
+/-- **Reflexivity of `≤ₚ` reduces to `id ∈ FP`.** -/
+theorem MapReducesPoly.refl_of_id_mem (hid : id ∈ FP) (L : Language) : L ≤ₚ L :=
+  ⟨id, hid, fun _ => Iff.rfl⟩
+
+/-- **Transitivity of `≤ₚ` reduces to `FP` being closed under composition.** -/
+theorem MapReducesPoly.trans_of_comp
+    (hcomp : ∀ f g : List Bool → List Bool, f ∈ FP → g ∈ FP → (g ∘ f) ∈ FP)
+    {L₁ L₂ L₃ : Language} (h₁ : L₁ ≤ₚ L₂) (h₂ : L₂ ≤ₚ L₃) : L₁ ≤ₚ L₃ := by
+  obtain ⟨f, hf, hf'⟩ := h₁
+  obtain ⟨g, hg, hg'⟩ := h₂
+  exact ⟨g ∘ f, hcomp f g hf hg, fun x => (hf' x).trans (hg' (f x))⟩
+
 end Complexity
