@@ -294,24 +294,26 @@ proved before polynomial-time membership.
 **Goal.** Connect the existing finite circuit model to language classes and prove
 machine/circuit characterizations with explicit uniformity.
 
-**Headline theorem: `P = P-uniform SIZE(poly)`.** A language is in `P` iff it is
-decided by a P-uniform polynomial-size circuit family. This is the central M1
-payoff and factors into the two simulation directions:
+**Headline theorem: `P = logspace-uniform SIZE(poly)` (Arora–Barak Theorem 6.7).**
+A language is in `P` iff it is decided by a logspace-uniform polynomial-size circuit
+family. This is the central M1 payoff and factors into the two simulation directions.
+Uniformity is **logspace** (an `FL` generator, Arora–Barak Definition 6.5), not the
+weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
 
-- **Circuits → TMs (`P-uniform P/poly ⊆ P`).** A polynomial-time DTM, given `1^n`,
-  runs the uniform generator to produce the length-`n` circuit code, then evaluates
-  that code on the input with a memoized topological evaluator — all in polynomial
-  time. *Decomposed:*
+- **Circuits → TMs (`UniformPPoly ⊆ P`).** A polynomial-time DTM, given `1^n`, runs
+  the log-space generator (`FL ⊆ P`) to produce the length-`n` circuit code, then
+  evaluates that code on the input with a memoized topological evaluator — all in
+  polynomial time. *Decomposed:*
   - [ ] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
     tagged family code paired with its input, with a polynomial running-time bound
     (the fan-in-two encoding, exact decoder, topological validator, and array-backed
     iterative evaluator already exist as pure functions — this is their DTM
     realization and timing).
-  - [ ] Compose the uniform generator with the evaluator; prove the resulting DTM
+  - [ ] Compose the log-space generator with the evaluator; prove the resulting DTM
     decides the family's language in polynomial time.
-- **TMs → uniform circuits (`P ⊆ P-uniform P/poly`).** Unroll a `T(n)`-time DTM into
-  a computation-tableau circuit of size `poly(T(n))` computing its output bit, and
-  show the code map `1^n ↦ C_n` is itself computable in polynomial time (P-uniform).
+- **TMs → uniform circuits (`P ⊆ UniformPPoly`).** Unroll a `T(n)`-time DTM into a
+  computation-tableau circuit of size `poly(T(n))` computing its output bit, and show
+  the code map `1^n ↦ C_n` is computable in **log space** (logspace-uniform).
   *Decomposed:*
   - [ ] Compile one deterministic transition step (configuration → next
     configuration, over the fixed-width tape window a step touches) into a Boolean
@@ -319,19 +321,22 @@ payoff and factors into the two simulation directions:
   - [ ] Tile the step block over a `T(n) × space(n)` tableau into a full circuit;
     prove semantic correctness (output bit = acceptance) and a `poly(T(n))` size
     bound.
-  - [ ] Prove the tableau-circuit emitter runs in polynomial time (in `FP`), giving
-    P-uniformity, and conclude `P ⊆ P-uniform P/poly`.
+  - [ ] Prove the tableau-circuit emitter is computable in log space (in `FL`) — the
+    regular tableau structure makes the connection function log-space computable —
+    giving logspace-uniformity, and conclude `P ⊆ UniformPPoly`. (The emitter being
+    in `FL` rather than merely `FP` is the extra cost of matching Arora–Barak, and is
+    what makes the notion reusable for `NC`/`AC`.)
 
-**Definitions for the headline.** [x] The `UniformPPoly` (P-uniform `P/poly`) class
-is now defined (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F`
-asks the tagged code map `1ⁿ ↦ F.encodeAt n` (via the existing family codec) to lie
-in `FP`, and `UniformPPoly` is the languages decided by a P-uniform polynomial-size
-family. The trivial containment `UniformPPoly_subset_PPoly` is proved (forget the
-generator); the headline is `UniformPPoly = P`. The
-Cook–Levin tableau infrastructure already in the library (`SAT` reduction emitters)
-is related but is a CNF *satisfiability* encoding, not a deterministic
-output-computing circuit — the functional unrolling needs its own construction and
-correctness theorem (see hazards).
+**Definitions for the headline.** [x] The `UniformPPoly` class is defined
+(`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F` asks the tagged
+code map `1ⁿ ↦ F.encodeAt n` (via the existing family codec) to lie in `FL`
+(logspace-uniform, Arora–Barak Definition 6.5), and `UniformPPoly` is the languages
+decided by a logspace-uniform polynomial-size family. The trivial containment
+`UniformPPoly_subset_PPoly` is proved (forget the generator); the headline is
+`UniformPPoly = P` (Arora–Barak Theorem 6.7). The Cook–Levin tableau infrastructure
+already in the library (`SAT` reduction emitters) is related but is a CNF
+*satisfiability* encoding, not a deterministic output-computing circuit — the
+functional unrolling needs its own construction and correctness theorem (see hazards).
 
 **Prerequisites.** The N1 list/`BitString` bridge, the existing typed
 `Circuit.eval` semantics, and stable machine composition/time accounting from
