@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 import Complexitylib.DescriptiveComplexity.Structure
 import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Data.List.FinRange
+import Mathlib.Data.Fin.Tuple.Basic
 
 /-!
 # Encoding finite structures as bit strings
@@ -23,11 +25,53 @@ relational part of that encoding and computes its length; it is step 5 (structur
   (length `card ^ arity`).
 - `DescriptiveComplexity.encodeRels`, `encodeRels_length` — the relational part of
   a structure's encoding, and its total length.
+- `DescriptiveComplexity.allTuples`, `encodeRelC` — a **computable** tuple
+  enumeration and a computable truth-table encoding (needed for the machine-side
+  Fagin bridge).
 -/
 
 namespace Complexity
 
 namespace DescriptiveComplexity
+
+/-- A **computable** enumeration of all `k`-tuples over `Fin card`, built by
+    prepending each element to each shorter tuple. -/
+def allTuples (card : ℕ) : (k : ℕ) → List (Fin k → Fin card)
+  | 0 => [Fin.elim0]
+  | k + 1 => (allTuples card k).flatMap (fun t => (List.finRange card).map (fun v => Fin.cons v t))
+
+/-- The enumeration has length `card ^ k`. -/
+theorem allTuples_length (card k : ℕ) : (allTuples card k).length = card ^ k := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+    rw [allTuples, List.length_flatMap, Nat.pow_succ, ← ih]
+    simp only [List.length_map, List.length_finRange]
+    generalize allTuples card k = L
+    induction L with
+    | nil => simp
+    | cons t rest ihl =>
+      simp only [List.map_cons, List.sum_cons, List.length_cons]
+      rw [ihl, Nat.succ_mul]; omega
+
+/-- Every tuple appears in the enumeration. -/
+theorem mem_allTuples (card k : ℕ) (t : Fin k → Fin card) : t ∈ allTuples card k := by
+  induction k with
+  | zero => simp only [allTuples, List.mem_singleton]; funext i; exact i.elim0
+  | succ k ih =>
+    rw [allTuples, List.mem_flatMap]
+    refine ⟨Fin.tail t, ih _, ?_⟩
+    rw [List.mem_map]
+    exact ⟨t 0, List.mem_finRange _, by rw [Fin.cons_self_tail]⟩
+
+/-- A **computable** truth-table encoding of a relation, using `allTuples`. -/
+def encodeRelC {card k : Nat} (r : (Fin k → Fin card) → Bool) : List Bool :=
+  (allTuples card k).map r
+
+/-- The computable encoding also has length `card ^ k`. -/
+theorem encodeRelC_length {card k : Nat} (r : (Fin k → Fin card) → Bool) :
+    (encodeRelC r).length = card ^ k := by
+  rw [encodeRelC, List.length_map, allTuples_length]
 
 /-- Encode a `Bool`-valued arity-`k` relation on `Fin card` as its **truth table**:
     the list of its values over all `k`-tuples, in the canonical `Fintype` order. -/
