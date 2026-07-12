@@ -772,6 +772,31 @@ theorem noiseStability_eq_sum_weight (ρ : ℝ) (f : BooleanFunction n) :
   rw [Finset.mem_filter] at hS
   rw [fourierWeight, hS.2]
 
+/-- The **noise operator** `T_ρ` (a.k.a. the Bonami–Beckner operator), defined
+    spectrally: `T_ρ f = ∑_S ρ^{|S|} · 𝓕(f, S) · χ_S`. It damps each frequency by
+    `ρ^{|S|}`, and is the operator behind noise stability. -/
+noncomputable def noiseOp (ρ : ℝ) (f : BooleanFunction n) : BooleanFunction n :=
+  ∑ S : Finset (Fin n), (ρ ^ S.card * 𝓕 f S) • (χ S)
+
+/-- **Fourier formula for the noise operator**: `𝓕(T_ρ f, T) = ρ^{|T|} · 𝓕(f, T)`. -/
+theorem fourierCoeff_noiseOp (ρ : ℝ) (f : BooleanFunction n) (T : Finset (Fin n)) :
+    𝓕 (noiseOp ρ f) T = ρ ^ T.card * 𝓕 f T := by
+  rw [noiseOp, fourierCoeff_eq_inner, sum_inner]
+  simp only [real_inner_smul_left, ← fourierCoeff_eq_inner, fourierCoeff_parityFun]
+  rw [Finset.sum_eq_single T]
+  · rw [if_pos rfl, mul_one]
+  · intro S _ hST; rw [if_neg hST, mul_zero]
+  · intro h; exact absurd (Finset.mem_univ T) h
+
+/-- **Noise stability is the correlation of `f` with its noised copy**:
+    `Stabᵨ[f] = ⟪f, T_ρ f⟫` (Plancherel). This is the operator form of the spectral
+    definition. -/
+theorem noiseStability_eq_inner (ρ : ℝ) (f : BooleanFunction n) :
+    noiseStability ρ f = ⟪f, noiseOp ρ f⟫ := by
+  rw [plancherel]
+  simp only [fourierCoeff_noiseOp, noiseStability]
+  exact Finset.sum_congr rfl fun S _ => by ring
+
 /-- Noise stability is monotone in the correlation `ρ` on `ρ ≥ 0`: more
     correlation can only increase agreement. -/
 theorem noiseStability_mono {ρ₁ ρ₂ : ℝ} (h0 : 0 ≤ ρ₁) (h12 : ρ₁ ≤ ρ₂)
@@ -804,6 +829,29 @@ theorem noiseStabilityBilin_one (f g : BooleanFunction n) :
     noiseStabilityBilin 1 f g = ⟪f, g⟫ := by
   simp only [noiseStabilityBilin, one_pow, one_mul]
   rw [plancherel]
+
+/-! ### Hypercontractivity foundations
+
+The `(2, 4)`-hypercontractive inequality `‖T_{1/√3} f‖₄ ≤ ‖f‖₂` is the analytic
+engine behind the KKL theorem, Friedgut's junta theorem, and the Linial–Mansour–Nisan
+`AC⁰` bound (roadmap L7). Its proof is an induction over coordinates whose base case
+is the elementary single-bit inequality below; the tensorization step remains. -/
+
+/-- **The two-point `(2, 4)`-hypercontractive inequality** (Bonami's base case). For a
+    single-bit function `f(x) = a + b·x` on `x ∈ {−1, +1}`, the noised function
+    `T_{1/√3} f = a + (b/√3)·x` satisfies `𝔼[(T_{1/√3} f)⁴] ≤ (𝔼[f²])² = (a² + b²)²`.
+    The left side is `((a + b/√3)⁴ + (a − b/√3)⁴)/2`; the slack is `8b⁴/9 ≥ 0`. -/
+theorem two_point_hypercontractive (a b : ℝ) :
+    ((a + b / Real.sqrt 3) ^ 4 + (a - b / Real.sqrt 3) ^ 4) / 2 ≤ (a ^ 2 + b ^ 2) ^ 2 := by
+  have h3 : (Real.sqrt 3) ^ 2 = 3 := Real.sq_sqrt (by norm_num)
+  set c := b / Real.sqrt 3 with hc
+  have hc2 : c ^ 2 = b ^ 2 / 3 := by rw [hc, div_pow, h3]
+  have hc4 : c ^ 4 = b ^ 4 / 9 := by
+    have h : c ^ 4 = (c ^ 2) ^ 2 := by ring
+    rw [h, hc2]; ring
+  have expand : ((a + c) ^ 4 + (a - c) ^ 4) / 2 = a ^ 4 + 6 * a ^ 2 * c ^ 2 + c ^ 4 := by ring
+  rw [expand]
+  nlinarith [hc2, hc4, sq_nonneg (b ^ 2)]
 
 /-! ### §2.3 Total influence (average sensitivity, spectral form)
 

@@ -1022,6 +1022,9 @@ axioms.
 - [x] Noise stability/sensitivity and the bilinear form, with monotonicity and the
   Fourier-weight formula (`noiseStability`, `noiseStabilityBilin`,
   `noiseSensitivity`, `noiseStability_eq_sum_weight`, `noiseSensitivity_le_influence`).
+- [x] The noise operator `T_ρ` with its Fourier formula `𝓕(T_ρ f, S) = ρ^|S|·𝓕(f,S)`
+  and the operator form `Stabᵨ[f] = ⟪f, T_ρ f⟫` (`noiseOp`, `fourierCoeff_noiseOp`,
+  `noiseStability_eq_inner`).
 - [x] Total influence (= average sensitivity) and coordinate influence, with
   `totalInfluence_eq_sum_influence`, the Poincaré inequality
   `variance_le_totalInfluence`, and the parity checks
@@ -1041,8 +1044,10 @@ axioms.
   at level 1 are close to a dictator).
 - [ ] Monotone functions: `Infᵢ[f] = 𝓕(f,{i})` and the Margulis–Russo formula
   (needs a coordinate partial order on the cube in the ±1 convention).
-- [ ] Hypercontractivity (the `(2,4)`-norm bound) and its Fourier corollary — the
-  gateway lemma for the remaining results.
+- [~] Hypercontractivity (the `(2,4)`-norm bound) and its Fourier corollary — the
+  gateway lemma for the remaining results. *The Bonami base case is done
+  (`two_point_hypercontractive`: `𝔼[(T_{1/√3}(a+bx))⁴] ≤ (a²+b²)²` on one bit); the
+  L^p-norm API and the coordinate-tensorization induction remain.*
 - [ ] The KKL theorem (some coordinate has influence `Ω(log n / n)`).
 - [ ] Friedgut's junta theorem (bounded total influence ⟹ close to a junta).
 - [ ] The `AC⁰` Fourier concentration bound (Linial–Mansour–Nisan), linking this
