@@ -22,6 +22,8 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
 - `eventProb` with `eventProb_nonneg`, `eventProb_le_one`, `eventProb_empty`,
   `eventProb_univ`, the complement identity `eventProb_compl`, and the union
   bound `eventProb_union_le`
+- `eventProb_block` — independence across blocks: a prefix/suffix-separable event's
+  probability is the product of the two block probabilities
 - `NTM.acceptProb_eq_eventProb` — the PTM acceptance probability *is* the event
   probability of its set of accepting choice sequences
 -/
@@ -91,6 +93,23 @@ theorem eventProb_biUnion_le {T : ℕ} {ι : Type*} [DecidableEq ι] (s : Finset
     rw [Finset.biUnion_insert, Finset.sum_insert ha]
     refine le_trans (eventProb_union_le _ _) ?_
     gcongr
+
+/-- **Independence across blocks (probability form).** For an event that constrains
+    the prefix and suffix of a length-`a + b` random string separately, the joint
+    probability is the product of the two block probabilities. This is the
+    probability-level counterpart of `card_filter_block` and the quantitative engine
+    behind error amplification: `k` independent runs multiply their success
+    probabilities. -/
+theorem eventProb_block {a b : ℕ}
+    (P : (Fin a → Bool) → Prop) (Q : (Fin b → Bool) → Prop)
+    [DecidablePred P] [DecidablePred Q] :
+    eventProb (Finset.univ.filter
+        (fun w : Fin (a + b) → Bool => P (blockFst a b w) ∧ Q (blockSnd a b w)))
+      = eventProb (Finset.univ.filter P) * eventProb (Finset.univ.filter Q) := by
+  unfold eventProb
+  rw [card_filter_block, pow_add, div_mul_div_comm]
+  push_cast
+  rfl
 
 /-- Event probability is invariant under any relabeling of the sample space — in
     particular under permuting the bit positions (`Equiv.arrowCongr σ`) — since a
