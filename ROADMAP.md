@@ -1022,9 +1022,10 @@ axioms.
 - [x] Noise stability/sensitivity and the bilinear form, with monotonicity and the
   Fourier-weight formula (`noiseStability`, `noiseStabilityBilin`,
   `noiseSensitivity`, `noiseStability_eq_sum_weight`, `noiseSensitivity_le_influence`).
-- [x] The noise operator `T_ρ` with its Fourier formula `𝓕(T_ρ f, S) = ρ^|S|·𝓕(f,S)`
-  and the operator form `Stabᵨ[f] = ⟪f, T_ρ f⟫` (`noiseOp`, `fourierCoeff_noiseOp`,
-  `noiseStability_eq_inner`).
+- [x] The noise operator `T_ρ` with its Fourier formula `𝓕(T_ρ f, S) = ρ^|S|·𝓕(f,S)`,
+  the identity `T_1 = id`, and the (self-adjoint) operator forms `Stabᵨ[f] = ⟪f, T_ρ f⟫`
+  and `Stabᵨ[f,g] = ⟪f, T_ρ g⟫` (`noiseOp`, `fourierCoeff_noiseOp`, `noiseOp_one`,
+  `noiseStability_eq_inner`, `noiseStabilityBilin_eq_inner`).
 - [x] Total influence (= average sensitivity) and coordinate influence, with
   `totalInfluence_eq_sum_influence`, the Poincaré inequality
   `variance_le_totalInfluence`, and the parity checks

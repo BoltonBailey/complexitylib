@@ -797,6 +797,19 @@ theorem noiseStability_eq_inner (ρ : ℝ) (f : BooleanFunction n) :
   simp only [fourierCoeff_noiseOp, noiseStability]
   exact Finset.sum_congr rfl fun S _ => by ring
 
+/-- At `ρ = 1` the noise operator is the identity: `T_1 f = f` (no frequency is
+    damped). Proved by Fourier uniqueness — the difference has all Fourier
+    coefficients zero, hence zero norm. -/
+theorem noiseOp_one (f : BooleanFunction n) : noiseOp 1 f = f := by
+  have hzero : ‖noiseOp 1 f - f‖₂ ^ 2 = 0 := by
+    rw [norm_sq_eq_sum_fourierCoeff_sq]
+    apply Finset.sum_eq_zero
+    intro S _
+    rw [fourierCoeff_sub, fourierCoeff_noiseOp, one_pow, one_mul, sub_self]
+    ring
+  have hn : ‖noiseOp 1 f - f‖₂ = 0 := pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero
+  exact sub_eq_zero.mp (norm_eq_zero.mp hn)
+
 /-- Noise stability is monotone in the correlation `ρ` on `ρ ≥ 0`: more
     correlation can only increase agreement. -/
 theorem noiseStability_mono {ρ₁ ρ₂ : ℝ} (h0 : 0 ≤ ρ₁) (h12 : ρ₁ ≤ ρ₂)
@@ -829,6 +842,15 @@ theorem noiseStabilityBilin_one (f g : BooleanFunction n) :
     noiseStabilityBilin 1 f g = ⟪f, g⟫ := by
   simp only [noiseStabilityBilin, one_pow, one_mul]
   rw [plancherel]
+
+/-- **Bilinear noise stability is the correlation across the noise operator**:
+    `Stabᵨ[f, g] = ⟪f, T_ρ g⟫`. Since `Stabᵨ` is symmetric, this also exhibits `T_ρ`
+    as self-adjoint: `⟪f, T_ρ g⟫ = ⟪T_ρ f, g⟫`. -/
+theorem noiseStabilityBilin_eq_inner (ρ : ℝ) (f g : BooleanFunction n) :
+    noiseStabilityBilin ρ f g = ⟪f, noiseOp ρ g⟫ := by
+  rw [plancherel]
+  simp only [fourierCoeff_noiseOp, noiseStabilityBilin]
+  exact Finset.sum_congr rfl fun S _ => by ring
 
 /-! ### Hypercontractivity foundations
 
