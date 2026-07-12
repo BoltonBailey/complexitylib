@@ -911,6 +911,52 @@ syntactic derivation system.
 - [x] Define resolution clauses and verify soundness of one resolution step
   (`Complexitylib.SAT.Resolution`: `Clause.resolvent`, `Clause.resolvent_sound`).
 
+### L6. Descriptive complexity
+
+**Goal.** Develop the logic-vs-complexity correspondence (after Immerman and
+Fagin): characterize complexity classes by the logics that define them, so that
+lower bounds become expressibility questions. The `descriptive-complexity`
+project was imported wholesale as `Complexitylib.DescriptiveComplexity`; this
+track grows it toward the headline theorems.
+
+**Foundations (imported, all 0 custom axioms).**
+
+- [x] Vocabularies/signatures and finite structures over `Fin card`
+  (`DescriptiveComplexity.Vocabulary`, `.Structure`: `Vocabulary`, `FinStruct`,
+  built-in `≤`/successor/min/max, `DecFinStruct`).
+- [x] Isomorphisms, embeddings, substructures; isomorphism is an equivalence and
+  preserves cardinality (`.Isomorphism`: `Iso.refl`/`symm`/`trans`,
+  `Iso.card_eq`, `Embedding`, `IsSubstructure`).
+- [x] First-order syntax and semantics with de Bruijn environments; quantifier
+  rank and formula size (`.FirstOrder.Syntax`, `.Semantics`, `.Env`).
+- [x] Boolean queries and order-independence, closed under Boolean operations
+  (`.Query`: `BooleanQuery`, `IsOrderIndependent`, complement/inter/union).
+- [x] **FO sentences define order-independent queries** (Immerman Prop 1.16):
+  `.FirstOrder.Isomorphism` `Sentence.orderIndependent`, via term/formula
+  isomorphism-invariance (`Term.eval_iso`, `Formula.sat_iso`).
+- [x] Worked examples: directed 3-cycles with an explicit isomorphism, a binary
+  string with built-in order (`.Examples`).
+
+**Milestones (open).**
+
+- [ ] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
+  structures, and its order-independence.
+- [ ] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
+  to connect `BooleanQuery` to the machine-model `Language`.
+- [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
+  existential second-order logic captures `NP`. (Needs the structure encoding,
+  the `NP` bridge, and both containment directions.)
+- [ ] `FO ⊆ AC⁰` (and the converse for a suitable uniform `AC⁰`), linking this
+  track to the circuit tracks (M3/L4).
+- [ ] Immerman–Vardi (`FO(LFP) = P` on ordered structures) after adding least
+  fixed-point operators.
+
+**Formalization hazards.** The structure↔bit-string encoding must fix an
+ordering convention (Proviso 1.14) consistently; order-independence is what makes
+a query "logical", so the encoding and the invariance results must be kept in
+sync. Fagin's theorem's `∃SO ⊆ NP` direction needs a model-checking machine; the
+converse needs to express an accepting computation as an `∃SO` formula.
+
 ## Cross-cutting project ideas
 
 These projects can proceed alongside the dependency-ordered tracks when they reuse
