@@ -469,12 +469,34 @@ theorem fourierCoeff_sub (f g : BooleanFunction n) (S : Finset (Fin n)) :
     𝓕 (f - g) S = 𝓕 f S - 𝓕 g S := by
   simp only [fourierCoeff, inner_sub_left]
 
+/-- **Fourier uniqueness.** Two functions with identical Fourier coefficients are
+    equal: the difference has zero norm by Parseval. The convenient way to prove a
+    functional identity `f = g` by checking spectra. -/
+theorem fourierCoeff_ext {f g : BooleanFunction n} (h : ∀ S, 𝓕 f S = 𝓕 g S) : f = g := by
+  have hzero : ‖f - g‖₂ ^ 2 = 0 := by
+    rw [norm_sq_eq_sum_fourierCoeff_sq]
+    apply Finset.sum_eq_zero
+    intro S _
+    rw [fourierCoeff_sub, h S]; ring
+  exact sub_eq_zero.mp
+    (norm_eq_zero.mp (pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero))
+
 /-- **A parity function is its own indicator in Fourier space.** By
     orthonormality, `𝓕 χ_S T = 1` if `T = S` and `0` otherwise — the parities are
     exactly the Fourier basis vectors. -/
 theorem fourierCoeff_parityFun (S T : Finset (Fin n)) :
     𝓕 (χ S) T = if S = T then 1 else 0 := by
   rw [fourierCoeff_eq_inner, parityFun_orthonormal]
+
+/-- **Multiplying by a parity shifts the frequency by symmetric difference**:
+    `𝓕(χ_S · g, T) = 𝓕(g, S △ T)`. Since `χ_S · χ_T = χ_{S△T}`, multiplication by a
+    character permutes the Fourier basis, so it relabels every coefficient of `g`. -/
+theorem fourierCoeff_parityFun_mul (S : Finset (Fin n)) (g : BooleanFunction n)
+    (T : Finset (Fin n)) :
+    𝓕 (fun x => (χ S) x * g x) T = 𝓕 g (symmDiff S T) := by
+  rw [fourierCoeff_eq_inner, inner_eq_expect, fourierCoeff_eq_inner, inner_eq_expect]
+  refine Finset.expect_congr rfl fun x _ => ?_
+  rw [← parityFun_mul]; ring
 
 /-- The degree-`k` part is additive, inheriting linearity from the Fourier
     coefficients: `(f + g)^{=k} = f^{=k} + g^{=k}`. -/
@@ -798,38 +820,22 @@ theorem noiseStability_eq_inner (ρ : ℝ) (f : BooleanFunction n) :
   exact Finset.sum_congr rfl fun S _ => by ring
 
 /-- At `ρ = 1` the noise operator is the identity: `T_1 f = f` (no frequency is
-    damped). Proved by Fourier uniqueness — the difference has all Fourier
-    coefficients zero, hence zero norm. -/
-theorem noiseOp_one (f : BooleanFunction n) : noiseOp 1 f = f := by
-  have hzero : ‖noiseOp 1 f - f‖₂ ^ 2 = 0 := by
-    rw [norm_sq_eq_sum_fourierCoeff_sq]
-    apply Finset.sum_eq_zero
-    intro S _
-    rw [fourierCoeff_sub, fourierCoeff_noiseOp, one_pow, one_mul, sub_self]
-    ring
-  have hn : ‖noiseOp 1 f - f‖₂ = 0 := pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero
-  exact sub_eq_zero.mp (norm_eq_zero.mp hn)
+    damped). -/
+theorem noiseOp_one (f : BooleanFunction n) : noiseOp 1 f = f :=
+  fourierCoeff_ext fun S => by rw [fourierCoeff_noiseOp, one_pow, one_mul]
 
 /-- At `ρ = 0` the noise operator collapses `f` to its mean: `T_0 f = 𝔼[f] · 1`
     (only the empty frequency, with `0⁰ = 1`, survives). This is the constant function
     `𝔼[f]`, written as `𝔼[f] • χ_∅`. Complements `noiseOp_one`. -/
 theorem noiseOp_zero (f : BooleanFunction n) :
-    noiseOp 0 f = 𝔼[f] • (χ (∅ : Finset (Fin n))) := by
-  have hzero : ‖noiseOp 0 f - 𝔼[f] • (χ (∅ : Finset (Fin n)))‖₂ ^ 2 = 0 := by
-    rw [norm_sq_eq_sum_fourierCoeff_sq]
-    apply Finset.sum_eq_zero
-    intro S _
-    rw [fourierCoeff_sub, fourierCoeff_noiseOp, fourierCoeff_smul, fourierCoeff_parityFun]
+    noiseOp 0 f = 𝔼[f] • (χ (∅ : Finset (Fin n))) :=
+  fourierCoeff_ext fun S => by
+    rw [fourierCoeff_noiseOp, fourierCoeff_smul, fourierCoeff_parityFun]
     by_cases hS : S = ∅
-    · subst hS
-      rw [if_pos rfl, expect_eq_fourierCoeff_empty]
-      simp
+    · subst hS; rw [if_pos rfl, expect_eq_fourierCoeff_empty]; simp
     · rw [if_neg (Ne.symm hS)]
       have hc : S.card ≠ 0 := by simp [Finset.card_eq_zero, hS]
       rw [zero_pow hc]; ring
-  have hn : ‖noiseOp 0 f - 𝔼[f] • (χ (∅ : Finset (Fin n)))‖₂ = 0 :=
-    pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero
-  exact sub_eq_zero.mp (norm_eq_zero.mp hn)
 
 /-- Noise stability is monotone in the correlation `ρ` on `ρ ≥ 0`: more
     correlation can only increase agreement. -/
@@ -1212,6 +1218,35 @@ theorem influence_eq_norm_sq_sensitivityOp (i : Fin n) (f : BooleanFunction n) :
   by_cases h : i ∈ S
   · rw [if_pos h, if_pos h]
   · rw [if_neg h, if_neg h]; ring
+
+/-- **The sensitivity operator is the parity-twisted derivative**: `Lᵢ f = χ_{i} · Dᵢ f`.
+    Both strip coordinate `i` from the surviving frequencies, but `Lᵢ` twists each back
+    by `χ_{i}`; since `|χ_{i}| = 1` this is why `‖Lᵢ f‖ = ‖Dᵢ f‖` and the two influence
+    formulas agree. -/
+theorem sensitivityOp_eq_parityFun_mul_derivative (i : Fin n) (f : BooleanFunction n) :
+    sensitivityOp i f = fun x => (χ ({i} : Finset (Fin n))) x * (derivative i f) x := by
+  have hins : ∀ T : Finset (Fin n), i ∈ T →
+      insert i (symmDiff ({i} : Finset (Fin n)) T) = T := by
+    intro T h; ext a
+    simp only [Finset.mem_insert, Finset.mem_symmDiff, Finset.mem_singleton]
+    constructor
+    · rintro (rfl | ⟨rfl, _⟩ | ⟨ha, _⟩)
+      · exact h
+      · exact h
+      · exact ha
+    · intro ha; by_cases hai : a = i
+      · exact Or.inl hai
+      · exact Or.inr (Or.inr ⟨ha, hai⟩)
+  apply fourierCoeff_ext
+  intro T
+  rw [fourierCoeff_sensitivityOp, fourierCoeff_parityFun_mul, fourierCoeff_derivative]
+  by_cases hiT : i ∈ T
+  · rw [if_pos hiT]
+    have h1 : i ∉ symmDiff ({i} : Finset (Fin n)) T := by simp [Finset.mem_symmDiff, hiT]
+    rw [if_neg h1, hins T hiT]
+  · rw [if_neg hiT]
+    have h2 : i ∈ symmDiff ({i} : Finset (Fin n)) T := by simp [Finset.mem_symmDiff, hiT]
+    rw [if_pos h2]
 
 /-- **Average sensitivity as a probability.** For a Boolean-valued `f`, the influence of
     coordinate `i` is the probability that flipping `i` flips the output:
