@@ -952,8 +952,9 @@ track grows it toward the headline theorems.
     addition to the element `Env`). (`SecondOrder/Semantics.lean`: `REnv`/`rCons`/
     `emptyREnv`, `SOFormula.Sat`, `SOSentence.Models`, and the truth-preserving FO
     embedding `SOFormula.ofFormula_sat` / `SOSentence.models_ofFormula`.)
-  - [ ] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
-    (mirror `Formula.sat_iso`/`Sentence.orderIndependent`).
+  - [x] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
+    (`SecondOrder/Isomorphism.lean`: `REnv.map`/`rCons_map`, `SOFormula.sat_iso`,
+    `SOSentence.models_iso`, `SODefinable`, `SODefinable.orderIndependent`).
   - [ ] Mark the `∃SO` fragment (second-order existentials only, over an FO
     matrix) — the exact fragment Fagin characterizes.
 - [ ] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
