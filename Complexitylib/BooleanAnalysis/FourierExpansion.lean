@@ -932,6 +932,32 @@ theorem influence_parityFun (i : Fin n) (S : Finset (Fin n)) :
   rw [Finset.sum_ite_eq]
   simp [Finset.mem_filter]
 
+/-- Flip coordinate `i` of a point of the Hamming cube. -/
+def flipCoord (i : Fin n) (x : Cube n) : Cube n := Function.update x i (x i + 1)
+
+/-- The character `χ` negates under a bit flip: `χ(b + 1) = -χ(b)`. -/
+theorem chi_add_one (b : ZMod 2) : chi (b + 1) = - chi b := by
+  fin_cases b
+  · show chi 1 = - chi 0; simp [chi]
+  · show chi 0 = - chi 1; simp [chi]
+
+/-- **A parity under a coordinate flip.** `χ_S` flips sign exactly when the flipped
+    coordinate is one of its inputs: `χ_S(x with coordinate i flipped) = (−1)^{[i∈S]}
+    · χ_S(x)`. This is the key step toward reading coordinate influence as the
+    probability that `f` is sensitive at `i`. -/
+theorem parityFun_flipCoord (i : Fin n) (S : Finset (Fin n)) (x : Cube n) :
+    (χ S) (flipCoord i x) = (if i ∈ S then -1 else 1) * (χ S) x := by
+  simp only [parityFun, flipCoord]
+  by_cases hi : i ∈ S
+  · rw [if_pos hi, ← Finset.prod_erase_mul S _ hi, ← Finset.prod_erase_mul S _ hi,
+      Function.update_self]
+    have hrest : ∀ j ∈ S.erase i, chi (Function.update x i (x i + 1) j) = chi (x j) := by
+      intro j hj; rw [Function.update_of_ne (Finset.ne_of_mem_erase hj)]
+    rw [Finset.prod_congr rfl hrest, chi_add_one]; ring
+  · rw [if_neg hi, one_mul]
+    apply Finset.prod_congr rfl
+    intro j hj; rw [Function.update_of_ne (ne_of_mem_of_not_mem hj hi)]
+
 /-- The **discrete derivative** `D_i f` of `f` in the direction of coordinate `i`,
     defined spectrally: `D_i f = ∑_{S ∋ i} 𝓕(f, S) · χ_{S∖{i}}`. It strips
     coordinate `i` from every frequency that contains it. -/
