@@ -10,6 +10,7 @@ import Complexitylib.Classes
 import Complexitylib.Languages
 import Complexitylib.SAT
 import Complexitylib.Circuits
+import Complexitylib.BooleanAnalysis
 
 /-!
 # Complexitylib
