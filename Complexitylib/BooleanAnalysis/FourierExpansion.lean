@@ -898,6 +898,40 @@ theorem influence_le_totalInfluence (i : Fin n) (f : BooleanFunction n) :
   rw [totalInfluence_eq_sum_influence]
   exact Finset.single_le_sum (fun j _ => influence_nonneg j f) (Finset.mem_univ i)
 
+/-- A coordinate's influence is at most the total power `⟪f, f⟫`. -/
+theorem influence_le_self_inner (i : Fin n) (f : BooleanFunction n) :
+    influence i f ≤ ⟪f, f⟫ := by
+  rw [parseval, influence]
+  exact Finset.sum_le_sum_of_subset_of_nonneg (Finset.filter_subset _ _) (fun S _ _ => sq_nonneg _)
+
+/-- For a Boolean-valued function, every coordinate influence is at most `1`. -/
+theorem influence_boolean_le_one (i : Fin n) (f : BooleanFunction n) (hf : IsBooleanValued f) :
+    influence i f ≤ 1 := by
+  have h := influence_le_self_inner i f
+  rwa [parseval, parseval_boolean f hf] at h
+
+/-- **Average sensitivity of a parity.** The parity `χ_S` has total influence
+    exactly `|S|`: each of its `|S|` relevant coordinates is fully influential
+    (a concrete check of the average-sensitivity theory on the Fourier basis). -/
+theorem totalInfluence_parityFun (S : Finset (Fin n)) :
+    totalInfluence (χ S) = (S.card : ℝ) := by
+  simp only [totalInfluence, fourierCoeff_parityFun]
+  rw [Finset.sum_eq_single S]
+  · simp
+  · intro T _ hT; rw [if_neg (Ne.symm hT)]; simp
+  · intro h; exact absurd (Finset.mem_univ S) h
+
+/-- **Coordinate influence of a parity.** Coordinate `i` influences `χ_S` fully
+    when `i ∈ S`, and not at all otherwise. -/
+theorem influence_parityFun (i : Fin n) (S : Finset (Fin n)) :
+    influence i (χ S) = if i ∈ S then 1 else 0 := by
+  have hsq : ∀ T : Finset (Fin n),
+      ((if S = T then (1 : ℝ) else 0)) ^ 2 = if S = T then 1 else 0 := by
+    intro T; by_cases h : S = T <;> simp [h]
+  simp only [influence, fourierCoeff_parityFun, hsq]
+  rw [Finset.sum_ite_eq]
+  simp [Finset.mem_filter]
+
 /-- Elementary inequality `1 - ρ^k ≤ (1 - ρ) · k` for `ρ ∈ [0, 1]` (a telescoping /
     Bernoulli bound), used to control noise-stability decay by total influence. -/
 private theorem one_sub_pow_le_mul {ρ : ℝ} (h0 : 0 ≤ ρ) (h1 : ρ ≤ 1) (k : ℕ) :
