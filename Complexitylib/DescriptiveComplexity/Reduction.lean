@@ -38,7 +38,7 @@ namespace Complexity
 
 namespace DescriptiveComplexity
 
-variable {V W : Vocabulary}
+variable {V W : Vocabulary} {n : Nat}
 
 /-- A **(dimension-1) first-order interpretation** from vocabulary `V` to `W`: each
     target relation symbol is defined by an FO formula over `V` with one free variable
@@ -71,6 +71,22 @@ theorem FOInterpretation.apply_idInterp (A : FinStruct V) :
   | mk card hcard rel const =>
     simp only [FOInterpretation.apply, FOInterpretation.idInterp, Formula.Sat, Term.eval]
 
+/-- Translate a `W`-term to a `V`-term along the interpretation: a variable stays
+    put, and a target constant becomes its designated source constant. -/
+def FOInterpretation.translateTerm (I : FOInterpretation V W) : Term W n → Term V n
+  | .var j => Term.var j
+  | .const c => Term.const (I.constMap c)
+
+/-- **Term-level transport.** Evaluating a translated term in the source structure
+    agrees with evaluating the original term in the interpreted structure. This is the
+    base case of the full (formula-level) transport theorem. -/
+theorem FOInterpretation.translateTerm_eval (I : FOInterpretation V W) (A : FinStruct V)
+    (σ : Env A.card n) (t : Term W n) :
+    Term.eval A σ (I.translateTerm t) = Term.eval (I.apply A) σ t := by
+  cases t with
+  | var j => rfl
+  | const c => rfl
+
 /-- **First-order reduction** between Boolean queries: an FO-interpretation carrying
     `Q₁`-membership to `Q₂`-membership on the interpreted structure. -/
 def FOReduces (Q₁ : BooleanQuery V) (Q₂ : BooleanQuery W) : Prop :=
@@ -79,6 +95,13 @@ def FOReduces (Q₁ : BooleanQuery V) (Q₂ : BooleanQuery W) : Prop :=
 /-- FO-reducibility is reflexive, via the identity interpretation. -/
 theorem FOReduces.refl (Q : BooleanQuery V) : FOReduces Q Q :=
   ⟨FOInterpretation.idInterp V, fun A => by rw [FOInterpretation.apply_idInterp]⟩
+
+/-- **First-order reductions respect complementation**: the same interpretation
+    witnesses `Q₁ᶜ ≤ Q₂ᶜ`, since the carrying biconditional negates. -/
+theorem FOReduces.complement {Q₁ : BooleanQuery V} {Q₂ : BooleanQuery W}
+    (h : FOReduces Q₁ Q₂) : FOReduces Q₁.complement Q₂.complement := by
+  obtain ⟨I, hI⟩ := h
+  exact ⟨I, fun A => by simp only [BooleanQuery.complement, hI A]⟩
 
 /-- An interpretation is **quantifier-free** when every defining formula has quantifier
     rank `0` — the coarse form of a first-order projection. -/
