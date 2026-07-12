@@ -1023,9 +1023,10 @@ axioms.
   Fourier-weight formula (`noiseStability`, `noiseStabilityBilin`,
   `noiseSensitivity`, `noiseStability_eq_sum_weight`, `noiseSensitivity_le_influence`).
 - [x] The noise operator `T_ρ` with its Fourier formula `𝓕(T_ρ f, S) = ρ^|S|·𝓕(f,S)`,
-  the identity `T_1 = id`, and the (self-adjoint) operator forms `Stabᵨ[f] = ⟪f, T_ρ f⟫`
-  and `Stabᵨ[f,g] = ⟪f, T_ρ g⟫` (`noiseOp`, `fourierCoeff_noiseOp`, `noiseOp_one`,
-  `noiseStability_eq_inner`, `noiseStabilityBilin_eq_inner`).
+  the endpoints `T_1 = id` and `T_0 f = 𝔼[f]·1`, and the (self-adjoint) operator forms
+  `Stabᵨ[f] = ⟪f, T_ρ f⟫` and `Stabᵨ[f,g] = ⟪f, T_ρ g⟫` (`noiseOp`,
+  `fourierCoeff_noiseOp`, `noiseOp_one`, `noiseOp_zero`, `noiseStability_eq_inner`,
+  `noiseStabilityBilin_eq_inner`).
 - [x] Total influence (= average sensitivity) and coordinate influence, with
   `totalInfluence_eq_sum_influence`, the Poincaré inequality
   `variance_le_totalInfluence`, and the parity checks

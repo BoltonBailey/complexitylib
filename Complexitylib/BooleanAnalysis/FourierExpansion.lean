@@ -810,6 +810,27 @@ theorem noiseOp_one (f : BooleanFunction n) : noiseOp 1 f = f := by
   have hn : ‖noiseOp 1 f - f‖₂ = 0 := pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero
   exact sub_eq_zero.mp (norm_eq_zero.mp hn)
 
+/-- At `ρ = 0` the noise operator collapses `f` to its mean: `T_0 f = 𝔼[f] · 1`
+    (only the empty frequency, with `0⁰ = 1`, survives). This is the constant function
+    `𝔼[f]`, written as `𝔼[f] • χ_∅`. Complements `noiseOp_one`. -/
+theorem noiseOp_zero (f : BooleanFunction n) :
+    noiseOp 0 f = 𝔼[f] • (χ (∅ : Finset (Fin n))) := by
+  have hzero : ‖noiseOp 0 f - 𝔼[f] • (χ (∅ : Finset (Fin n)))‖₂ ^ 2 = 0 := by
+    rw [norm_sq_eq_sum_fourierCoeff_sq]
+    apply Finset.sum_eq_zero
+    intro S _
+    rw [fourierCoeff_sub, fourierCoeff_noiseOp, fourierCoeff_smul, fourierCoeff_parityFun]
+    by_cases hS : S = ∅
+    · subst hS
+      rw [if_pos rfl, expect_eq_fourierCoeff_empty]
+      simp
+    · rw [if_neg (Ne.symm hS)]
+      have hc : S.card ≠ 0 := by simp [Finset.card_eq_zero, hS]
+      rw [zero_pow hc]; ring
+  have hn : ‖noiseOp 0 f - 𝔼[f] • (χ (∅ : Finset (Fin n)))‖₂ = 0 :=
+    pow_eq_zero_iff (n := 2) (by norm_num) |>.mp hzero
+  exact sub_eq_zero.mp (norm_eq_zero.mp hn)
+
 /-- Noise stability is monotone in the correlation `ρ` on `ρ ≥ 0`: more
     correlation can only increase agreement. -/
 theorem noiseStability_mono {ρ₁ ρ₂ : ℝ} (h0 : 0 ≤ ρ₁) (h12 : ρ₁ ≤ ρ₂)
