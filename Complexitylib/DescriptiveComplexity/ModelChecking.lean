@@ -83,6 +83,12 @@ theorem Sentence.evalB_eq_models (A : DecFinStruct V) (φ : Sentence V) :
     (Sentence.evalB A φ = true) ↔ Sentence.Models A.toFinStruct φ :=
   Formula.evalB_eq_sat A φ (emptyEnv A.card)
 
+/-- **First-order truth over a finite structure is decidable** (via the correct
+    `Bool` evaluator). -/
+instance decidableModels (A : DecFinStruct V) (φ : Sentence V) :
+    Decidable (Sentence.Models A.toFinStruct φ) :=
+  decidable_of_iff _ (Sentence.evalB_eq_models A φ)
+
 end DescriptiveComplexity
 
 end Complexity
