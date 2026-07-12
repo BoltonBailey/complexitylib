@@ -1088,6 +1088,20 @@ theorem influence_boolean_eq_expect_sensitive (i : Fin n) (f : BooleanFunction n
   rcases hf x with hx | hx <;> rcases hf (flipCoord i x) with hy | hy <;>
     simp only [hx, hy] <;> norm_num
 
+/-- **Total influence is the expected number of pivotal coordinates.** For a
+    Boolean-valued `f`, summing the per-coordinate sensitivity probabilities over all
+    coordinates gives `I[f] = 𝔼ₓ[#{i : f(x) ≠ f(x ⊕ eᵢ)}]` — the literal meaning of
+    "average sensitivity" (average, over a uniform input, of the number of coordinates
+    whose flip changes the output). -/
+theorem totalInfluence_boolean_eq_expect_sensitive (f : BooleanFunction n)
+    (hf : IsBooleanValued f) :
+    totalInfluence f
+      = 𝔼[fun x => ∑ i : Fin n, if f x ≠ f (flipCoord i x) then (1 : ℝ) else 0] := by
+  rw [totalInfluence_eq_sum_influence]
+  simp_rw [influence_boolean_eq_expect_sensitive _ f hf]
+  simp only [expect]
+  exact (Finset.expect_sum_comm _ _ _).symm
+
 /-- Elementary inequality `1 - ρ^k ≤ (1 - ρ) · k` for `ρ ∈ [0, 1]` (a telescoping /
     Bernoulli bound), used to control noise-stability decay by total influence. -/
 private theorem one_sub_pow_le_mul {ρ : ℝ} (h0 : 0 ≤ ρ) (h1 : ρ ≤ 1) (k : ℕ) :
