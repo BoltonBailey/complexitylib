@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.DescriptiveComplexity.FirstOrder.Syntax
 import Complexitylib.DescriptiveComplexity.FirstOrder.Semantics
 import Complexitylib.DescriptiveComplexity.FirstOrder.Isomorphism
+import Complexitylib.DescriptiveComplexity.FirstOrder.Substitution
 
 /-!
 # First-order logic over finite structures

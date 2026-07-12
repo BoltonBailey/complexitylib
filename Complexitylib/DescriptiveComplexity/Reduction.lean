@@ -87,6 +87,54 @@ theorem FOInterpretation.translateTerm_eval (I : FOInterpretation V W) (A : FinS
   | var j => rfl
   | const c => rfl
 
+/-- The interpreted structure's relation is (definitionally) satisfaction of the
+    defining formula. -/
+theorem FOInterpretation.apply_rel (I : FOInterpretation V W) (A : FinStruct V)
+    (i : Fin W.numRels) (args : Fin (W.relArity i) → Fin A.card) :
+    (I.apply A).rel i args = Formula.Sat A args (I.relFormula i) := rfl
+
+/-- Translate a `W`-formula to a `V`-formula along the interpretation: a target
+    relation atom is replaced by its defining formula with the (translated) argument
+    terms substituted in; other connectives and quantifiers are traversed. -/
+def FOInterpretation.translate (I : FOInterpretation V W) :
+    {n : Nat} → Formula W n → Formula V n
+  | _, .relApp i ts => (I.relFormula i).subst (fun k => I.translateTerm (ts k))
+  | _, .eq t₁ t₂ => .eq (I.translateTerm t₁) (I.translateTerm t₂)
+  | _, .neg φ => .neg (I.translate φ)
+  | _, .conj φ ψ => .conj (I.translate φ) (I.translate ψ)
+  | _, .disj φ ψ => .disj (I.translate φ) (I.translate ψ)
+  | _, .exist φ => .exist (I.translate φ)
+  | _, .all φ => .all (I.translate φ)
+
+/-- **The transport theorem (fundamental theorem of interpretations).** Satisfaction of
+    a formula in the interpreted structure `I.apply A` equals satisfaction of its
+    translation in the source structure `A`. This is what makes FO-reductions compose.
+    -/
+theorem FOInterpretation.translate_sat (I : FOInterpretation V W) (A : FinStruct V) :
+    ∀ {n : Nat} (σ : Env A.card n) (φ : Formula W n),
+      Formula.Sat (I.apply A) σ φ ↔ Formula.Sat A σ (I.translate φ) := by
+  intro n σ φ
+  induction φ with
+  | relApp i ts =>
+    simp only [FOInterpretation.translate]
+    rw [Formula.subst_sat]
+    show (I.apply A).rel i _ ↔ _
+    rw [FOInterpretation.apply_rel]
+    have henv : (fun j => Term.eval (I.apply A) σ (ts j))
+        = (fun k => Term.eval A σ (I.translateTerm (ts k))) := by
+      funext k; rw [I.translateTerm_eval]
+    rw [henv]
+  | eq t₁ t₂ =>
+    simp only [FOInterpretation.translate, Formula.Sat]
+    constructor
+    · intro h; rw [I.translateTerm_eval, I.translateTerm_eval]; exact h
+    · intro h; rw [I.translateTerm_eval, I.translateTerm_eval] at h; exact h
+  | neg φ ih => exact not_congr (ih σ)
+  | conj φ ψ ihφ ihψ => exact and_congr (ihφ σ) (ihψ σ)
+  | disj φ ψ ihφ ihψ => exact or_congr (ihφ σ) (ihψ σ)
+  | exist φ ih => exact exists_congr fun a => ih (envCons a σ)
+  | all φ ih => exact forall_congr' fun a => ih (envCons a σ)
+
 /-- **First-order reduction** between Boolean queries: an FO-interpretation carrying
     `Q₁`-membership to `Q₂`-membership on the interpreted structure. -/
 def FOReduces (Q₁ : BooleanQuery V) (Q₂ : BooleanQuery W) : Prop :=
