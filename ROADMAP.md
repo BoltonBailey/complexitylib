@@ -942,13 +942,30 @@ track grows it toward the headline theorems.
 
 **Milestones (open).**
 
-- [ ] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
-  structures, and its order-independence.
+- [~] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
+  structures, and its order-independence. *Decomposed:*
+  - [ ] `SOFormula` syntax: extend `Formula` with relation-variable application
+    and second-order quantifiers (relation variables de Bruijn-indexed by a
+    context of arities).
+  - [ ] SO semantics: satisfaction under a relation-variable assignment (in
+    addition to the element `Env`).
+  - [ ] SO isomorphism-invariance ⟹ SO-definable queries are order-independent
+    (mirror `Formula.sat_iso`/`Sentence.orderIndependent`).
+  - [ ] Mark the `∃SO` fragment (second-order existentials only, over an FO
+    matrix) — the exact fragment Fagin characterizes.
 - [ ] Encode `FinStruct` as a bit-string language (ordered structures ↔ inputs)
-  to connect `BooleanQuery` to the machine-model `Language`.
+  to connect `BooleanQuery` to the machine-model `Language`. *Decomposed:*
+  - [ ] Canonical bit encoding of an ordered `FinStruct` (relations as truth
+    tables over `Fin card` tuples, in the built-in order).
+  - [ ] The induced language `⟦Q⟧ : Language` of an order-independent query, and
+    a decode/encode round-trip.
 - [ ] **Fagin's theorem** `NP = ∃SO`: the descriptive-complexity headline —
-  existential second-order logic captures `NP`. (Needs the structure encoding,
-  the `NP` bridge, and both containment directions.)
+  existential second-order logic captures `NP`. *Decomposed:*
+  - [ ] `∃SO ⊆ NP`: given an `∃SO` sentence, an NTM that guesses the witnessing
+    relations and FO-model-checks the matrix in polynomial time.
+  - [ ] `NP ⊆ ∃SO`: express "there is an accepting polynomial-time computation"
+    as an `∃SO` sentence (guess the computation-tableau relation; FO-check the
+    local transition constraints).
 - [ ] `FO ⊆ AC⁰` (and the converse for a suitable uniform `AC⁰`), linking this
   track to the circuit tracks (M3/L4).
 - [ ] Immerman–Vardi (`FO(LFP) = P` on ordered structures) after adding least

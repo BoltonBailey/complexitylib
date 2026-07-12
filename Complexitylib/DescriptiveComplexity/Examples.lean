@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.DescriptiveComplexity.Query
+import Complexitylib.DescriptiveComplexity.FirstOrder
 
 /-!
   # Examples of Finite Structures
@@ -96,6 +97,14 @@ def string101 : FinStruct stringBuiltinOrder where
   rel := fun _ args =>
     args 0 = ⟨0, by omega⟩ ∨ args 0 = ⟨2, by omega⟩
   const := Fin.elim0
+
+/-- The two example 3-cycles satisfy exactly the same first-order sentences: they
+    are isomorphic (`cycle3Iso`), and first-order logic cannot distinguish
+    isomorphic structures. An end-to-end check of the isomorphism-invariance
+    chain. -/
+theorem cycle3_fo_indistinguishable (φ : Sentence Vocabulary.graph) :
+    (cycle3 ⊨ φ) ↔ (cycle3' ⊨ φ) :=
+  Sentence.orderIndependent φ ⟨cycle3Iso⟩
 
 end DescriptiveComplexity
 
