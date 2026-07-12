@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Classes.NP
-import Complexitylib.Classes.P.Defs
+import Complexitylib.Classes.P
 
 /-!
 # Polynomial-time many-one reductions and NP-completeness
@@ -39,17 +39,19 @@ def NPHard (L : Language) : Prop := ∀ L' ∈ NP, L' ≤ₚ L
 /-- **NP-completeness.** `L` is NP-complete when it is in `NP` and NP-hard. -/
 def NPComplete (L : Language) : Prop := L ∈ NP ∧ NPHard L
 
-/-! ### `≤ₚ` is a preorder, modulo two `FP` facts
+/-! ### `≤ₚ` is a preorder, modulo composition closure of `FP`
 
-Reflexivity and transitivity of polynomial-time many-one reducibility follow
-purely from `FP` being closed under identity and composition. The two lemmas
-below isolate exactly those two facts; discharging them (via a copy Turing
-machine for `id ∈ FP`, and a sequential-composition machine for closure under
-`∘`) is all that remains to make `≤ₚ` a genuine preorder. -/
+Reflexivity is unconditional because `id ∈ FP`. Transitivity follows from
+closure of `FP` under composition; `MapReducesPoly.trans_of_comp` isolates that
+remaining fact. -/
 
 /-- **Reflexivity of `≤ₚ` reduces to `id ∈ FP`.** -/
 theorem MapReducesPoly.refl_of_id_mem (hid : id ∈ FP) (L : Language) : L ≤ₚ L :=
   ⟨id, hid, fun _ => Iff.rfl⟩
+
+/-- **Polynomial-time many-one reducibility is reflexive.** -/
+theorem MapReducesPoly.refl (L : Language) : L ≤ₚ L :=
+  MapReducesPoly.refl_of_id_mem id_mem_FP L
 
 /-- **Transitivity of `≤ₚ` reduces to `FP` being closed under composition.** -/
 theorem MapReducesPoly.trans_of_comp

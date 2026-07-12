@@ -265,15 +265,24 @@ than a single endpoint.
 **Prerequisites.** Existing SAT semantics, encodings, verifier, and polynomial
 many-one reduction.
 
+**Current progress.** Polynomial many-one reductions are reflexive: an
+executable zero-work-tape machine copies its input to its output in exactly the
+linear bound `n + 2`, proving `id ∈ FP` (`id_mem_FP`) and hence
+`MapReducesPoly.refl`. Transitivity remains factored through the pending closure
+of `FP` under composition.
+
 **Staged milestones.**
 
 - [~] Prove transitivity, identity, composition-time, and class-closure lemmas for
   polynomial reductions in their most reusable forms. *Decomposed:*
-  - [x] `≤ₚ` reflexivity/transitivity *modulo* two `FP` facts
+  - [x] Generic `≤ₚ` reflexivity/transitivity lemmas parameterized by the
+    required `FP` facts
     (`Classes/NP/Reduction.lean`: `MapReducesPoly.refl_of_id_mem`,
-    `MapReducesPoly.trans_of_comp`) — isolates exactly what remains.
-  - [ ] `id ∈ FP` — build a copy TM (input tape → output tape) with a linear
-    `ComputesInTime` proof; then `≤ₚ` is reflexive.
+    `MapReducesPoly.trans_of_comp`); identity is discharged below, while
+    composition closure remains open.
+  - [x] `id ∈ FP` — `TM.copyInputToOutputTM` copies the input tape to the
+    output tape in `n + 2` steps (`TM.copyInputToOutputTM_computesInTime`),
+    yielding `id_mem_FP` and unconditional `MapReducesPoly.refl`.
   - [ ] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
     pipe its output tape to `g`'s input tape, run `g`'s machine) with a
     `poly ∘ poly = poly` time bound; then `≤ₚ` is transitive.

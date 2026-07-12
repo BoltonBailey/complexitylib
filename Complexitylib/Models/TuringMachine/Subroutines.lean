@@ -11,8 +11,9 @@ import Complexitylib.Models.TuringMachine.Combinators
 Small concrete Turing machines used as composable building blocks for
 constructing larger machines via `seqTM`, `ifTM`, and `loopTM`.
 
-Each subroutine has a corresponding `HoareTime` specification in
-`Complexitylib.Models.TuringMachine.Subroutines.Internal`.
+Subroutine correctness theorems live in the proof modules under
+`Complexitylib.Models.TuringMachine.Subroutines.Internal`; reusable public
+statements are re-exported by focused surface modules when needed.
 
 ## Main definitions
 
@@ -23,6 +24,7 @@ Each subroutine has a corresponding `HoareTime` specification in
 - `TM.blankWorkTM` — blank a started work tape while scanning right
 - `TM.clearWorkTM` — blank a started work tape and rewind it to cell 1
 - `TM.copyInputToWorkTM` — copy input tape contents to a work tape
+- `TM.copyInputToOutputTM` — copy input tape contents to the output tape
 - `TM.copyWorkToWorkTM` — copy one work tape's contents to another
 - `TM.compareWorkTapesTM` — compare two work tapes cell by cell
 -/
@@ -281,7 +283,7 @@ def clearWorkTM (idx : Fin n) : TM n :=
 -- copyInputToWorkTM: copy input tape to a work tape
 -- ════════════════════════════════════════════════════════════════════════
 
-/-- State space of `copyInputToWorkTM`/`copyWorkToWorkTM`: copy symbols
+/-- State space shared by the input/work/output copy machines: copy symbols
 rightward until the source reads `Γ.blank`, then halt. -/
 inductive CopyPhase where
   | copying | done
@@ -321,6 +323,36 @@ def copyInputToWorkTM (idx : Fin n) : TM n where
         intro i hwi; simp only []; split
         · rfl
         · exact idleDir_right_of_start hwi
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- Copy the Boolean input to the output tape while scanning both tapes
+rightward. The first transition skips the left-end markers, each subsequent
+nonblank input symbol is written to the output, and the machine halts at the
+first input blank. Work-tape contents are preserved; heads reading the
+left-end marker take their required one-cell rightward bounce. -/
+def copyInputToOutputTM : TM n where
+  Q := CopyPhase
+  qstart := .copying
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .copying =>
+      if iHead = Γ.blank then
+        (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+      else
+        (.copying, fun i => readBackWrite (wHeads i), readBackWrite iHead,
+         Dir3.right, fun i => idleDir (wHeads i), Dir3.right)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .copying =>
+      dsimp only []
+      split
+      · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
+      · exact ⟨fun _ => rfl, fun _ => idleDir_right_of_start, fun _ => rfl⟩
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 /-- Copy the contents of work tape `src` to work tape `dst`. Reads `src`
