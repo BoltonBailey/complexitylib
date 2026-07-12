@@ -35,6 +35,7 @@ zero-step run votes according to the initial configuration of `tm`.
 - `NTM.RepeatQ` — finite control states for fixed-time repetition
 - `NTM.repeatTapeIdx`, `NTM.repeatWorkIdx`, `NTM.repeatOutputIdx` — fresh-bank layout
 - `NTM.repeatAtTimeStride`, `NTM.repeatAtTimeSteps`, `NTM.repeatChoiceIdx` — schedule
+- `NTM.repeatAcceptEvent` — the source machine's single-run accepting event
 - `NTM.repeatAtTime` — the repeated majority-vote machine
 -/
 
@@ -97,6 +98,13 @@ def repeatChoiceIdx (T : ℕ) (j : Fin k) (t : Fin T) :
       _ = (j.val + 1) * repeatAtTimeStride T := by rw [Nat.add_mul, one_mul]
       _ ≤ k * repeatAtTimeStride T :=
         Nat.mul_le_mul_right _ (Nat.succ_le_iff.mpr j.isLt)⟩
+
+/-- The single-run accepting event on `T` source-machine choices. -/
+def repeatAcceptEvent (tm : NTM n) (x : List Bool) (T : ℕ) :
+    Finset (Fin T → Bool) :=
+  Finset.univ.filter fun choices =>
+    let c := tm.trace T choices (tm.initCfg x)
+    c.state = tm.qhalt ∧ c.output.cells 1 = Γ.one
 
 /-! ### Control state and transition helpers -/
 

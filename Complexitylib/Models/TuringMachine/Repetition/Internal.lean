@@ -246,6 +246,34 @@ theorem repeatAtTime_begin_simulates (tm : NTM n) (x : List Bool)
       simpa [Tape.read, Tape.move, Tape.init, TM.readBackWrite, Γw.toΓ] using
         repeatPositionBlank_init
 
+/-- With positive repetition count and simulation time, the second setup
+transition gives trial zero the exact source initial configuration. This
+stronger projection fact also covers `tm.qstart = tm.qhalt`. -/
+theorem repeatAtTime_begin_project (tm : NTM n) (x : List Bool)
+    (hk : 0 < k) (hT : 0 < T) (choice : Fin 1 → Bool) :
+    let j : Fin k := ⟨0, hk⟩
+    let C := (repeatAtTime tm k T).trace 1 choice (repeatParkedCfg tm k T x)
+    repeatProjectCfg tm j tm.qstart C = tm.initCfg x := by
+  dsimp only
+  apply (Cfg.mk.injEq ..).mpr
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  · simp [NTM.trace, repeatAtTime, repeatGuardTransition, repeatParkedCfg,
+      hk, hT]
+    have hread := Tape.init_ofBool_move_right_read_ne_start x
+    rw [show repeatSafeDir ((Tape.init (x.map Γ.ofBool)).move .right).read
+        (TM.moveLeftDir ((Tape.init (x.map Γ.ofBool)).move .right).read) = .left by
+      simp [repeatSafeDir, TM.moveLeftDir, hread]]
+    rfl
+  · funext i
+    simp [NTM.trace, repeatAtTime, repeatGuardTransition, repeatParkedCfg,
+      repeatPositionBankDirs, repeatWorkIdx, hk, hT]
+    simpa [Tape.read, Tape.move, Tape.init, TM.readBackWrite, Γw.toΓ] using
+      repeatPositionBlank_init
+  · simp [NTM.trace, repeatAtTime, repeatGuardTransition, repeatParkedCfg,
+      repeatPositionBankDirs, repeatOutputIdx, hk, hT]
+    simpa [Tape.read, Tape.move, Tape.init, TM.readBackWrite, Γw.toΓ] using
+      repeatPositionBlank_init
+
 /-- The complete two-transition setup establishes the source initial
 configuration in trial zero. -/
 theorem repeatAtTime_trace_setup_simulates (tm : NTM n) (x : List Bool)
@@ -259,6 +287,18 @@ theorem repeatAtTime_trace_setup_simulates (tm : NTM n) (x : List Bool)
   rw [(repeatAtTime tm k T).trace_two]
   rw [repeatAtTime_trace_setup]
   exact repeatAtTime_begin_simulates tm x hk hT
+    (fun _ => choices ⟨1, by omega⟩)
+
+/-- The complete positive-time setup gives trial zero the exact source initial
+configuration. -/
+theorem repeatAtTime_trace_setup_project (tm : NTM n) (x : List Bool)
+    (hk : 0 < k) (hT : 0 < T) (choices : Fin 2 → Bool) :
+    let j : Fin k := ⟨0, hk⟩
+    let C := (repeatAtTime tm k T).trace 2 choices ((repeatAtTime tm k T).initCfg x)
+    repeatProjectCfg tm j tm.qstart C = tm.initCfg x := by
+  rw [(repeatAtTime tm k T).trace_two]
+  rw [repeatAtTime_trace_setup]
+  exact repeatAtTime_begin_project tm x hk hT
     (fun _ => choices ⟨1, by omega⟩)
 
 /-- One non-halted repetition `.run` transition commutes exactly with one raw

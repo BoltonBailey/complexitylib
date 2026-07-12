@@ -44,6 +44,8 @@ and interactive proofs (roadmap track N2).
   whose fibers all have the same power-of-two cardinality
 - `card_blockMajority_eq_false` — the exact weighted lower-tail count for failure
   across an odd number of blocks
+- `blockEventCount_add_compl`, `blockMajority_compl_of_odd` — event-complement
+  symmetry for block counts and odd strict majorities
 - `card_majority_eq_true`, `card_majority_eq_false` — exact binomial-tail counts
   for strict-majority success and failure
 - `majority_not_of_odd` — strict majority is antisymmetric under pointwise
@@ -433,6 +435,18 @@ def blockEventCount {k T : ℕ} (E : Finset (Fin T → Bool))
     (w : Fin (k * T) → Bool) : ℕ :=
   (Finset.univ.filter (fun i : Fin k => blocksEquiv k T w i ∈ E)).card
 
+/-- Every block lies in exactly one of an event and its complement. -/
+theorem blockEventCount_add_compl {k T : ℕ} (E : Finset (Fin T → Bool))
+    (w : Fin (k * T) → Bool) :
+    blockEventCount E w + blockEventCount Eᶜ w = k := by
+  unfold blockEventCount
+  rw [show Finset.univ.filter (fun i : Fin k => blocksEquiv k T w i ∈ Eᶜ) =
+      Finset.univ.filter (fun i : Fin k => ¬blocksEquiv k T w i ∈ E) by
+    ext i
+    simp]
+  rw [Finset.card_filter_add_card_filter_not]
+  simp
+
 private theorem card_filter_blockEventCount_eq_iff (k T j : ℕ)
     (E : Finset (Fin T → Bool)) :
     (Finset.univ.filter (fun w : Fin (k * T) → Bool => blockEventCount E w = j)).card =
@@ -542,6 +556,20 @@ theorem card_blockEventCount_eq {T : ℕ} (E : Finset (Fin T → Bool)) (k j : �
 def blockMajority {k T : ℕ} (E : Finset (Fin T → Bool))
     (w : Fin (k * T) → Bool) : Bool :=
   decide (2 * blockEventCount E w > k)
+
+/-- At an odd number of blocks, complementing the event flips the strict
+majority verdict. -/
+theorem blockMajority_compl_of_odd {k T : ℕ} (hk : Odd k)
+    (E : Finset (Fin T → Bool)) (w : Fin (k * T) → Bool) :
+    blockMajority Eᶜ w = !(blockMajority E w) := by
+  obtain ⟨r, rfl⟩ := hk
+  have hcount := blockEventCount_add_compl E w
+  simp only [blockMajority]
+  by_cases h : 2 * blockEventCount E w > 2 * r + 1
+  · have hc : ¬2 * blockEventCount Eᶜ w > 2 * r + 1 := by omega
+    rw [decide_eq_false hc, decide_eq_true h, Bool.not_true]
+  · have hc : 2 * blockEventCount Eᶜ w > 2 * r + 1 := by omega
+    rw [decide_eq_true hc, decide_eq_false h, Bool.not_false]
 
 theorem blockMajority_eq_false_iff {k T : ℕ} (E : Finset (Fin T → Bool))
     (w : Fin (k * T) → Bool) :

@@ -19,13 +19,6 @@ namespace NTM
 
 variable {n k T : ℕ}
 
-/-- The single-run accepting event on `T` source-machine choices. -/
-def repeatAcceptEvent (tm : NTM n) (x : List Bool) (T : ℕ) :
-    Finset (Fin T → Bool) :=
-  Finset.univ.filter fun choices =>
-    let c := tm.trace T choices (tm.initCfg x)
-    c.state = tm.qhalt ∧ c.output.cells 1 = Γ.one
-
 /-- Verdict of source trial `j` in a compact `k * T` repetition seed. -/
 def repeatTrialVote (tm : NTM n) (x : List Bool) (k T : ℕ)
     (seed : Fin (k * T) → Bool) (j : Fin k) : Bool :=

@@ -208,8 +208,10 @@ weighted block-event fibers and an exact normalized odd-majority failure
 probability. A concrete `12k + 1`-repetition theorem reduces error from `1/3` to
 at most `1 / 2^k`. The executable fixed-time PTM repetition machine, its fresh
 tape-bank layout, its exact random-bit schedule, and cancellation of ignored
-administrative bits are now public. Its trace-simulation proof is the remaining
-part of the N2 wrapper milestone.
+administrative bits are now public. The wrapper's complete pathwise simulation,
+exact acceptance-probability identity, and yes/no amplification bounds are proved
+in `Complexitylib.Models.TuringMachine.Repetition.Correctness`, completing the N2
+wrapper milestone.
 
 **Staged milestones.**
 
@@ -229,14 +231,16 @@ part of the N2 wrapper milestone.
 - [x] Prove a concrete amplification theorem from error `1/3` to `2^-k` with a
   fully specified repetition count (`eventProb_blockMajority_false_le_two_pow`:
   `12k + 1` independent repetitions).
-- [~] Lift the combinatorial theorem to a reusable PTM repetition construction.
+- [x] Lift the combinatorial theorem to a reusable PTM repetition construction.
   - [x] Define `NTM.repeatAtTime` with fresh work-tape banks, an exact
     `2 + k * (2 * T + 2)` schedule, explicit zero-time/zero-repetition behavior,
     and an executable regression guard.
   - [x] Prove the compact/full seed schedule alignment, exact constant-fiber
     count, and probability cancellation for administrative choice bits.
-  - [ ] Prove the pathwise trace simulation and derive the exact repeated-machine
-    acceptance-probability/majority theorem.
+  - [x] Prove the pathwise trace simulation and derive the exact repeated-machine
+    acceptance-probability/majority theorem
+    (`NTM.repeatAtTime_trace_correct`,
+    `NTM.repeatAtTime_acceptProb_eq_eventProb`).
 
 **Formalization hazards.** Independence should not be smuggled in through an
 informal product argument: the bijection between one long choice string and blocks

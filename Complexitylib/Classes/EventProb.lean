@@ -37,6 +37,9 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
   majority failure across an odd number of independent blocks
 - `eventProb_blockMajority_false_le_two_pow` — `12k + 1` independent repetitions
   reduce error from at most `1/3` to at most `1 / 2^k`
+- `eventProb_blockMajority_true_ge_one_sub_two_pow`,
+  `eventProb_blockMajority_true_le_two_pow` — the corresponding amplified
+  yes- and no-instance bounds
 - `NTM.acceptProb_eq_eventProb` — the PTM acceptance probability *is* the event
   probability of its set of accepting choice sequences
 - `NTM.acceptProb_eq_eventProb_repeatRandomSeed` — remove administrative random
@@ -85,6 +88,17 @@ theorem eventProb_compl {T : ℕ} (E : Finset (Fin T → Bool)) :
     norm_cast
   unfold eventProb
   rw [hcard, sub_div, div_self hpos]
+
+/-- For a Boolean-valued experiment, success probability is one minus failure
+probability. -/
+theorem eventProb_filter_bool_true (T : ℕ)
+    (f : (Fin T → Bool) → Bool) :
+    eventProb (Finset.univ.filter (fun w => f w = true)) =
+      1 - eventProb (Finset.univ.filter (fun w => f w = false)) := by
+  rw [← eventProb_compl]
+  congr 1
+  ext w
+  cases f w <;> simp
 
 /-- The **union bound** in probability form: the probability of `E ∪ F` is at
     most the sum of their probabilities. -/
@@ -325,6 +339,40 @@ theorem eventProb_blockMajority_false_le_two_pow
   have hreps : 2 * (6 * k) + 1 = 12 * k + 1 := by omega
   rw [← hreps]
   exact eventProb_blockMajority_false_le_two_pow_aux T k E hE
+
+/-- Majority amplification on yes-instances: a source success probability at
+least `2/3` becomes at least `1 - 2^-k` after `12k + 1` trials. -/
+theorem eventProb_blockMajority_true_ge_one_sub_two_pow
+    (T k : ℕ) (E : Finset (Fin T → Bool)) (hE : 2 / 3 ≤ eventProb E) :
+    1 - 1 / (2 : ℚ) ^ k ≤
+      eventProb (Finset.univ.filter
+        (fun w : Fin ((12 * k + 1) * T) → Bool => blockMajority E w = true)) := by
+  rw [eventProb_filter_bool_true]
+  have hfail := eventProb_blockMajority_false_le_two_pow T k E hE
+  linarith
+
+/-- Majority amplification on no-instances: a source success probability at
+most `1/3` becomes at most `2^-k` after `12k + 1` trials. -/
+theorem eventProb_blockMajority_true_le_two_pow
+    (T k : ℕ) (E : Finset (Fin T → Bool)) (hE : eventProb E ≤ 1 / 3) :
+    eventProb (Finset.univ.filter
+        (fun w : Fin ((12 * k + 1) * T) → Bool => blockMajority E w = true))
+      ≤ 1 / (2 : ℚ) ^ k := by
+  have hcompl : 2 / 3 ≤ eventProb Eᶜ := by
+    rw [eventProb_compl]
+    linarith
+  have htail := eventProb_blockMajority_false_le_two_pow T k Eᶜ hcompl
+  have hodd : Odd (12 * k + 1) := ⟨6 * k, by omega⟩
+  have hset :
+      Finset.univ.filter
+          (fun w : Fin ((12 * k + 1) * T) → Bool => blockMajority E w = true) =
+        Finset.univ.filter
+          (fun w : Fin ((12 * k + 1) * T) → Bool => blockMajority Eᶜ w = false) := by
+    ext w
+    have hflip := blockMajority_compl_of_odd hodd E w
+    cases h : blockMajority E w <;> simp_all
+  rw [hset]
+  exact htail
 
 /-- Event probability is invariant under any relabeling of the sample space — in
     particular under permuting the bit positions (`Equiv.arrowCongr σ`) — since a
