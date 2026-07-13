@@ -40,6 +40,9 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
 - `eventProb_blockMajority_true_ge_one_sub_two_pow`,
   `eventProb_blockMajority_true_le_two_pow` — the corresponding amplified
   yes- and no-instance bounds
+- `exists_good_seed_of_sum_eventProb_lt_one`,
+  `exists_good_seed_of_eventProb_le_two_pow_succ` — probabilistic-method
+  adapters from bad-event bounds to one seed that works on every input
 - `NTM.acceptProb_eq_eventProb` — the PTM acceptance probability *is* the event
   probability of its set of accepting choice sequences
 - `NTM.acceptProb_eq_eventProb_repeatRandomSeed` — remove administrative random
@@ -66,6 +69,46 @@ theorem eventProb_le_one {T : ℕ} (E : Finset (Fin T → Bool)) : eventProb E �
   calc eventProb E = (E.card : ℚ) / 2 ^ T := rfl
     _ ≤ (2 ^ T) / 2 ^ T := by gcongr
     _ = 1 := div_self hpos
+
+/-! ### Good seeds from probability bounds -/
+
+/-- **The probabilistic method in probability form.** If the sum, over a
+    finite input set, of the probabilities of the corresponding bad-seed
+    events is strictly below one, then one seed avoids every bad event. -/
+theorem exists_good_seed_of_sum_eventProb_lt_one {S : ℕ} {ι : Type*}
+    (inputs : Finset ι) (bad : ι → Finset (Fin S → Bool))
+    (h : ∑ i ∈ inputs, eventProb (bad i) < 1) :
+    ∃ seed : Fin S → Bool, ∀ i ∈ inputs, seed ∉ bad i := by
+  apply exists_good_seed inputs bad
+  rw [card_finArrowBool]
+  have hden : (0 : ℚ) < 2 ^ S := by positivity
+  unfold eventProb at h
+  rw [← Finset.sum_div, div_lt_one hden] at h
+  exact_mod_cast h
+
+/-- A `2^-(n+1)` bad-seed bound for each `n`-bit input leaves a single seed
+    that is good for all inputs simultaneously. The strict slack of one bit
+    makes the argument uniform even when `n = 0` or `S = 0`. -/
+theorem exists_good_seed_of_eventProb_le_two_pow_succ (n S : ℕ)
+    (bad : (Fin n → Bool) → Finset (Fin S → Bool))
+    (hbad : ∀ x, eventProb (bad x) ≤ 1 / (2 : ℚ) ^ (n + 1)) :
+    ∃ seed : Fin S → Bool, ∀ x, seed ∉ bad x := by
+  have hsum :
+      ∑ x ∈ (Finset.univ : Finset (Fin n → Bool)), eventProb (bad x) < 1 := by
+    calc
+      ∑ x ∈ (Finset.univ : Finset (Fin n → Bool)), eventProb (bad x)
+          ≤ ∑ _x ∈ (Finset.univ : Finset (Fin n → Bool)),
+              1 / (2 : ℚ) ^ (n + 1) := by
+            exact Finset.sum_le_sum fun x _ => hbad x
+      _ = (((2 ^ n : ℕ) : ℚ) * (1 / (2 : ℚ) ^ (n + 1))) := by
+        simp
+      _ = 1 / 2 := by
+        rw [show (((2 ^ n : ℕ) : ℚ)) = (2 : ℚ) ^ n by norm_cast, pow_succ]
+        field_simp
+      _ < 1 := by norm_num
+  obtain ⟨seed, hseed⟩ :=
+    exists_good_seed_of_sum_eventProb_lt_one Finset.univ bad hsum
+  exact ⟨seed, fun x => hseed x (Finset.mem_univ x)⟩
 
 @[simp] theorem eventProb_empty {T : ℕ} : eventProb (∅ : Finset (Fin T → Bool)) = 0 := by
   simp [eventProb]
