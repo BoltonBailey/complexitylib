@@ -1,8 +1,13 @@
 # M1 — Uniform circuits and the machine bridge
 
-Status: the nonuniform family foundation and a canonical serialized-circuit
-evaluator are implemented. The evaluator Turing machine and both directions of
-the uniform characterization remain open.
+Status: the family foundation, proof-free codec, serialized-circuit evaluator
+Turing machine, `UniformPPoly_subset_P`, and deterministic direct-unrolling
+family are implemented. The remaining headline direction is
+`P_subset_UniformPPoly`: its append-only direct-unrolling serializer must still
+be proved to lie in `FL`. The canonical binary count-up loop supplies one reusable
+serializer substrate; fixed-polynomial binary arithmetic and the serializer
+itself remain open. Experimental rose-tree lowering is deferred and is not on
+this dependency path.
 
 This note fixes the intended construction boundary for M1. The public family
 API lives in `Complexitylib.Circuits.Family`; `SIZE` and `PPoly` live in
@@ -37,13 +42,13 @@ The model also requires a genuine counted AND/OR output gate, so even a
 projection or negated projection has size one rather than zero. This is another
 constant exact-size difference, not a `P/poly` difference.
 
-Arora and Barak's main uniformity definition uses an implicitly
-logspace-computable map from unary `1^n` to the description of `C_n`. As a first
-variant, Complexitylib will use the common weaker notion usually called
-P-uniformity: an explicit-output polynomial-time generator on `1^n`. This choice
-still characterizes `P` for polynomial-size families, but it must not be
-conflated with logspace or direct-connection uniformity for finer circuit
-classes.
+Arora and Barak's main uniformity definition uses a logspace-computable map from
+unary `1^n` to the description of `C_n`. Complexitylib follows that convention:
+`CircuitFamily.Uniform F` requires the tagged code map on unary lengths to lie in
+`FL`, and `UniformPPoly` uses that logspace-uniform family predicate. The weaker
+explicit-output polynomial-time notion usually called P-uniformity may be added
+separately, but it is not the definition used by the M1 headline. Direct-connection
+or DLOGTIME uniformity for finer circuit classes also remains a separate layer.
 
 References:
 
@@ -170,41 +175,50 @@ down gate order, output convention, malformed-input behavior, and the
 `List Bool`/`BitString` bridge before any Turing-machine implementation depends
 on them.
 
-## Machine-evaluator milestone
+## Completed machine-evaluator milestone
 
 The deterministic evaluator consumes the single input `pair code x`, using the
 existing pairing codec and split machine. Its length is exactly
-`2 * code.length + 2 + x.length`, so all time bounds should be stated in that
-combined length. After splitting, the evaluator should stream the validated
-code, keep `x ++ previously computed gate values` on a work tape, reject an
-out-of-range reference, and append one result per gate. A coarse quadratic or
-cubic bound is sufficient. Reuse the parsing, unary lookup, tape rewinding, and
-sequential-composition patterns from the SAT verifier and machine-combinator
-modules.
+`2 * code.length + 2 + x.length`, and the implemented end-to-end bound is stated
+in that combined length. After total outer-pair validation and staging, the
+three-work-tape controller streams the tagged code, memoizes input and gate
+values, and rejects every malformed count, reference, tag, and trailing suffix.
+`evalFamilyTM_hoareTime` proves agreement with `evalFamilyPair?` on every raw
+input, `evalFamilyTM_decidesInTime` decides `circuitEvalLanguage`, and
+`evalFamilyTime_bigO_quadratic` proves the complete budget is quadratic.
 
-The machine theorem should state both functional correctness and an explicit
-time bound. Only then define P-uniformity by requiring an `FP` generator to
-produce `encodeAt F n` from unary `List.replicate n true`, including the tagged
-empty-input answer at `n = 0`. Unary input is essential: polynomial time in a
-binary encoding of `n` would impose a much stronger uniformity condition.
+The family generator consumes unary `List.replicate n true`, including the
+tagged empty-input answer at `n = 0`. Its required class is `FL`, not merely
+`FP`. The proved containment `FL_subset_FP` lets the completed
+`UniformPPoly_subset_P` direction run that generator in polynomial time before
+invoking the evaluator. Unary input is essential: a binary encoding of `n` would
+measure the generator against a much shorter input and impose a stronger
+uniformity condition.
 
 ## Route to the characterization
 
-1. On input `x`, run the unary family generator on `1^|x|`, pair its tagged code
-   with `x`, and invoke the validated evaluator. This proves that a P-uniform
-   polynomial-size family decides a language in `P`.
-2. For the converse, totalize a time-bounded deterministic transition so halted
-   configurations remain fixed.
-3. Compile one transition layer to a raw ordered gate list.
-4. Unroll the layer for the polynomial time bound and select the final output
-   bit.
-5. Prove semantic correctness and a concrete polynomial size bound.
-6. Implement the circuit-list emitter as an `FP` machine, establishing
-   P-uniformity rather than merely nonuniform existence.
+1. **Complete:** on input `x`, compute `1^|x|`, run the `FL` family generator,
+   pair its tagged code with `x`, and invoke the validated evaluator. Together
+   with `FL_subset_FP`, this proves `UniformPPoly_subset_P`.
+2. **Complete:** compile the totalized deterministic transition into raw ordered
+   gate fragments and unroll it for the polynomial time horizon.
+3. **Complete:** prove exact deterministic semantics and a concrete polynomial
+   size bound. `TM.unrollingCircuitFamily` yields `P_subset_PPoly` nonuniformly.
+4. **Complete:** define `TM.directUnrollingCircuitFamily` directly from the raw
+   tableau gates and prove its tagged encoding is exactly
+   `TM.directUnrollingCode`, avoiding typed prefix hardwiring in the generator.
+5. **Open:** implement an append-only machine that emits
+   `TM.directUnrollingCode` from unary `1^n`, prove that function lies in `FL`,
+   and package `P_subset_UniformPPoly` and `UniformPPoly = P`.
 
-Advice machines need not wait for the uniform emitter. Once validated evaluation
-and the nonuniform unrolling/size theorem are available, prove the standard
-advice equivalence with `PPoly` in parallel; this unblocks BPP-in-P/poly. The
-harder `FP` emitter is needed for the full P-uniform characterization.
-Direct-connection or DLOGTIME uniformity for `NC` and `AC` should remain a
-separate later layer.
+The current binary count-up layer is a substrate for step 5, not its completion.
+Fixed-polynomial evaluation and remaining binary indexing arithmetic are still
+needed before instantiating the loop as the raw-tableau serializer. This route
+uses the concrete `TM` and its proof-level contracts directly; the deferred
+rose-tree lowering is optional and not a prerequisite.
+
+The advice equivalence no longer waits on this route:
+`PAdvice_subset_PPoly`, `PPoly_subset_PAdvice`, and `PAdvice_eq_PPoly` are proved,
+and `BPP_subset_PAdvice` follows through the completed `BPP_subset_PPoly` theorem.
+Direct-connection or DLOGTIME uniformity for `NC` and `AC` remains a separate
+later layer.

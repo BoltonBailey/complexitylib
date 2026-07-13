@@ -614,8 +614,13 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         the exact runtime and endpoint frame,
         `TM.binaryLengthTM_hoareTimeSpace` covers every reachable configuration,
         and `TM.binaryLengthSpace_bigO_log` proves the explicit budget logarithmic.
-      - [ ] Add the fixed-polynomial evaluation and bounded binary-loop operations
-        needed by the raw tableau serializer.
+      - [x] Add the canonical binary count-up loop substrate for streaming
+        emitters: distinct counter and limit tapes, exact full-width
+        comparison/rewind timing, exact iteration certificates, all-prefix
+        auxiliary-space accounting, and structural one-way-output closure. This
+        lands the reusable loop layer, not the direct-unrolling serializer.
+      - [ ] Add fixed-polynomial evaluation and the remaining binary arithmetic and
+        indexing operations needed by the raw tableau serializer.
     - [ ] Implement the append-only raw-tableau serializer, prove its code function is
       in `FL`, package `P_subset_UniformPPoly`, and combine both directions.
 
@@ -696,6 +701,11 @@ The forward uniform circuit bridge is now complete: a reusable unary-length
 transducer and computed-value/input fanout combinator build
 `pair (gen (unaryList |x|)) x` in `FP`; preimage closure then applies the verified
 quadratic serialized evaluator and yields `UniformPPoly_subset_P`.
+The current patch also lands the canonical binary count-up substrate for the
+reverse emitter, with exact comparison/iteration timing, generic loop and
+all-prefix space certificates, and transducer closure. Fixed-polynomial binary
+arithmetic and the concrete append-only direct-unrolling serializer remain open;
+the deferred rose-tree lowering is not on this dependency path.
 Independently, `BPP_subset_PAdvice` follows from the existing
 `BPP_subset_PPoly` theorem.
 

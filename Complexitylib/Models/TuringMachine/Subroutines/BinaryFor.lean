@@ -10,11 +10,11 @@ import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal
 # Canonical binary count-up loops
 
 This module exposes an output-safe bounded loop whose counter and preserved
-limit use canonical little-endian binary work tapes. Every test scans the full
-limit width, so a comparison has the value-independent exact time
-`2 * limit.size + 2`. A nonterminal test runs the supplied body, increments the
-counter, and returns to a fresh test; equality halts with both binary tapes
-rewound.
+limit use canonical little-endian binary work tapes. Under the certified
+invariant `counter ≤ limit`, every test scans the full limit width, so a
+comparison has the value-independent exact time `2 * limit.size + 2`. A
+nonterminal test runs the supplied body, increments the counter, and returns
+to a fresh test; equality halts with both binary tapes rewound.
 
 The generic certificates keep body-specific facts explicit. In particular,
 the loop driver does not assume that an arbitrary body preserves its counter,

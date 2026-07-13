@@ -215,22 +215,24 @@ def binaryForLoopTime (bodyTime : ℕ → ℕ) (limit value : ℕ) : ℕ → ℕ
 count-up loop.
 
 All configurations use the public state type of
-`binaryForTM body counterIdx limitIdx`. A nonterminal test reaches the
+`binaryForTM body counterIdx limitIdx`. The client supplies the intended
+canonical configuration family and proves that a nonterminal test reaches the
 composite iteration, which runs the body and successor before one loopback
-step advances to the next scanner configuration. `limitValue` is the first
-counter value whose equality test reaches the final configuration. -/
+step advances to the next scanner configuration. At `limitValue`, the client
+supplies the final comparison run. -/
 structure BinaryForLoopSpec {n : ℕ} (body : TM n)
     (counterIdx limitIdx : Fin n) (bodyTime : ℕ → ℕ)
     (limitValue : ℕ) where
   /-- The counter and preserved-limit tapes are distinct. -/
   counter_ne_limit : counterIdx ≠ limitIdx
-  /-- Canonical combined-machine configuration before testing `value`. -/
+  /-- Client-supplied canonical combined-machine configuration before testing
+  `value`. -/
   scanCfg : ℕ → Cfg n (binaryForTM body counterIdx limitIdx).Q
-  /-- Canonical combined-machine configuration at the composite iteration start. -/
+  /-- Client-supplied canonical configuration at the composite iteration start. -/
   iterationStartCfg : ℕ → Cfg n (binaryForTM body counterIdx limitIdx).Q
-  /-- Canonical combined-machine configuration after the exact composite iteration. -/
+  /-- Client-supplied canonical configuration after the exact composite iteration. -/
   iterationDoneCfg : ℕ → Cfg n (binaryForTM body counterIdx limitIdx).Q
-  /-- Canonical final driver configuration. -/
+  /-- Client-supplied canonical final driver configuration. -/
   doneCfg : Cfg n (binaryForTM body counterIdx limitIdx).Q
   /-- A nonterminal comparison and rewind enter the composite iteration. -/
   testRun : ∀ value, value < limitValue →
