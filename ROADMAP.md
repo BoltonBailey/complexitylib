@@ -627,6 +627,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         `emitNatCodeTime value`, and has the all-prefix auxiliary-space bound
         `initialSpace + 2 * value.size + 5`. Loading or changing the preserved
         value remains the caller's responsibility.
+      - [x] Compose the circuit-code leaf used by the eventual tableau stream:
+        `CircuitCode.Machine.emitRawGateTM` emits the fixed operation/negation
+        header and two dynamic terminated-unary wire references from preserved
+        binary tapes, restores its reusable zero scratch and complete frame,
+        and carries explicit time, all-prefix space, and transducer contracts.
       - [ ] Add fixed-polynomial evaluation and the remaining binary arithmetic and
         indexing operations needed by the raw tableau serializer.
     - [ ] Implement the append-only raw-tableau serializer, prove its code function is
@@ -716,9 +721,11 @@ consumer now emits a preserved binary value as terminated-unary `NatCode`, then
 restores its zero scratch and complete input/work frame within
 `emitNatCodeTime value`; every reachable configuration stays within
 `initialSpace + 2 * value.size + 5`, and output is structurally one-way. Loading
-successive values, fixed-polynomial binary arithmetic, and the concrete append-only
-direct-unrolling serializer remain open; the deferred rose-tree lowering is not
-on this dependency path.
+successive values and fixed-polynomial binary arithmetic remain open. Complete
+raw gates can now be emitted from two preserved binary references with the same
+framed, all-prefix-space, and one-way-output guarantees; the concrete append-only
+direct-unrolling schedule remains open, and the deferred rose-tree lowering is
+not on this dependency path.
 Independently, `BPP_subset_PAdvice` follows from the existing
 `BPP_subset_PPoly` theorem.
 
