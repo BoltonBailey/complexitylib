@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.SAT.Language
+import Complexitylib.Asymptotics
 import Complexitylib.Classes.NP.Internal.PairBuildTM
 import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
@@ -69,17 +70,6 @@ theorem satVerifierWindowTime_bounds_pair (f : ℕ → ℕ) (x y : List Bool)
   exact Finset.le_sup (s := Finset.range (x.length + 2))
     (f := fun m => f (2 * x.length + 2 + m))
     (by rw [Finset.mem_range]; omega)
-
-/-- Evaluation of a natural-coefficient polynomial is monotone in its
-    argument. -/
-theorem polynomial_eval_mono_nat (p : Polynomial ℕ) :
-    Monotone fun n => p.eval n := by
-  intro m n hmn
-  dsimp
-  rw [Polynomial.eval_eq_sum_range, Polynomial.eval_eq_sum_range]
-  refine Finset.sum_le_sum ?_
-  intro i hi
-  exact Nat.mul_le_mul_left _ (Nat.pow_le_pow_left hmn _)
 
 /-- Work-tape index for the pair/virtual-input tape. -/
 def satPairIdx (k : ℕ) : Fin (k + 3) := ⟨k, by omega⟩

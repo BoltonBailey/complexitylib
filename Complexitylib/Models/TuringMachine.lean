@@ -374,6 +374,14 @@ structure Cfg (n : ℕ) (Q : Type) where
 
 namespace Cfg
 
+/-- Two machine configurations are equal when their named components agree. -/
+@[ext] theorem ext {c c' : Cfg n Q}
+    (hstate : c.state = c'.state) (hinput : c.input = c'.input)
+    (hwork : c.work = c'.work) (houtput : c.output = c'.output) : c = c' := by
+  cases c
+  cases c'
+  simp_all
+
 /-- Initial configuration for any TM: input on the input tape, all tapes start with `▷`. -/
 abbrev init (qstart : Q) (x : List Bool) : Cfg n Q :=
   { state := qstart

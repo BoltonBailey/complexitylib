@@ -36,6 +36,7 @@ opened and read like standard complexity-theoretic asymptotic notation.
 - `BigO.const_mul_left` — constant multiple preserves big-O
 - `BigO.le_add_left` / `BigO.le_add_right` — projections from a sum
 - `BigO.const_mul_add` — `c * f₁ + f₂ = O(T₁ + T₂)`
+- `polynomial_eval_mono_nat` — natural polynomial evaluation is monotone
 
 ### LittleO
 - `LittleO.isBigO` — little-o implies big-O
@@ -263,6 +264,17 @@ theorem BigO.pow_add_pow (j k : ℕ) :
   have h2 : n ^ k ≤ n ^ max j k := Nat.pow_le_pow_right hn (Nat.le_max_right j k)
   have : n ^ j + n ^ k ≤ 2 * n ^ max j k := by omega
   exact_mod_cast this
+
+/-! ### Natural polynomial evaluation -/
+
+/-- Evaluation of a polynomial with natural coefficients is monotone in its
+    natural-number argument. -/
+theorem polynomial_eval_mono_nat (p : Polynomial ℕ) : Monotone p.eval := by
+  intro m n hmn
+  change p.eval m ≤ p.eval n
+  rw [Polynomial.eval_eq_sum_range, Polynomial.eval_eq_sum_range]
+  exact Finset.sum_le_sum fun i _ =>
+    Nat.mul_le_mul_left (p.coeff i) (Nat.pow_le_pow_left hmn i)
 
 -- ════════════════════════════════════════════════════════════════════════
 -- BigO ⇒ polynomial bound

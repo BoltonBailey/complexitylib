@@ -268,8 +268,11 @@ many-one reduction.
 **Current progress.** Polynomial many-one reductions are reflexive: an
 executable zero-work-tape machine copies its input to its output in exactly the
 linear bound `n + 2`, proving `id ∈ FP` (`id_mem_FP`) and hence
-`MapReducesPoly.refl`. Transitivity remains factored through the pending closure
-of `FP` under composition.
+`MapReducesPoly.refl`. For composition, time-bounded computation now exposes an
+output-length bound, `FP` witnesses can be normalized to monotone polynomial
+evaluations, and `TM.placeWorkTM` embeds a machine in a disjoint block of work
+tapes without time overhead. The remaining work is the sequential pipeline and
+its polynomial accounting.
 
 **Staged milestones.**
 
@@ -283,9 +286,15 @@ of `FP` under composition.
   - [x] `id ∈ FP` — `TM.copyInputToOutputTM` copies the input tape to the
     output tape in `n + 2` steps (`TM.copyInputToOutputTM_computesInTime`),
     yielding `id_mem_FP` and unconditional `MapReducesPoly.refl`.
-  - [ ] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
+  - [~] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
     pipe its output tape to `g`'s input tape, run `g`'s machine) with a
     `poly ∘ poly = poly` time bound; then `≤ₚ` is transitive.
+    - [x] Prove output length is bounded by running time and normalize `FP`
+      witnesses to everywhere-valid monotone polynomial evaluations.
+    - [x] Embed a machine into a disjoint middle block of work tapes with exact
+      same-time simulation and arbitrary preserved frame tapes.
+    - [ ] Implement the output-to-input pipeline and compose the machines and
+      time bounds.
 - [ ] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
   Tseitin transformation.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and

@@ -9,6 +9,8 @@ import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
+import Complexitylib.Models.TuringMachine.OutputBounds
+import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Deterministic
 import Complexitylib.Models.TuringMachine.Lift
 import Complexitylib.Models.TuringMachine.Repetition
