@@ -150,7 +150,10 @@ lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
 lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
 python3 scripts/lint_style.py
-lake exe runLinter Complexitylib
+lake exe runLinter Complexitylib \
+  Complexitylib.Models.TuringMachine.SingleTape.Validation \
+  Complexitylib.Circuits.Encoding.Validation \
+  Complexitylib.SAT.Tseitin.Machine.Validation
 lake env lean scripts/AxiomGuard.lean
 ```
 
@@ -163,11 +166,11 @@ The last three are the quality gates:
 
 - **`scripts/lint_style.py`** checks copyright headers, module docstrings,
   line length, and whitespace. It is a hard gate: any violation fails the run.
-- **`lake exe runLinter Complexitylib`** runs the Mathlib/Batteries
-  environment linters (missing docstrings, naming, unused arguments, simp
-  hygiene, …), also as a hard gate. To suppress a genuinely-intended lint, put
-  a documented inline `@[nolint …]` on the declaration — there is no
-  project-level baseline.
+- **`lake exe runLinter …`** runs the Mathlib/Batteries environment linters
+  (missing docstrings, naming, unused arguments, simp hygiene, …) over the
+  public root and all three validation-only import graphs, also as a hard gate.
+  To suppress a genuinely-intended lint, put a documented inline
+  `@[nolint …]` on the declaration — there is no project-level baseline.
 - **`scripts/AxiomGuard.lean`** audits every declaration originating in a
   Complexitylib module and permits dependencies only on `propext`,
   `Classical.choice`, and `Quot.sound`. Its headline list is also a rename

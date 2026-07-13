@@ -168,6 +168,10 @@ proof-carrying `TapeAction` makes the one-sided-tape safety condition structural
 eliminating the usual phase-by-phase `δ_right_of_start` proof. Keep it local until
 another controller demonstrates that the same action vocabulary is genuinely
 reusable.
+The same slice exposed a quality-gate blind spot: environment linting followed
+only the public root, not the required validation-only graphs. CI now lints all
+three validation roots as well, so internal proof seams cannot silently accrue
+missing docs, unused arguments, or unsafe simp declarations.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -445,9 +449,13 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       lookups, appends one value per gate, and rejects malformed inner codes.
       Executable guards cover both tags, shared gates, invalid references,
       trailing garbage, and empty circuits.
-    - [ ] Prove the streaming controller agrees with `evalFamilyCode` and give its
+    - [x] Prove the pure counted gate stream agrees with `evalCode`, including
+      malformed codes, and lift it to the tagged `evalFamilyCode` semantics.
+      Extract exact binary-cursor, marker-boundary, and named-action proof seams;
+      promote the duplicated canonical-cell lemma to the neutral tape API.
+    - [ ] Prove the machine controller realizes the pure stream and give its
       quadratic `HoareTime` bound. The neutral `Tape.HasBinarySuffix` cursor API
-      has been extracted and adopted by the SAT verifier for this proof.
+      has also been extracted and adopted by the SAT verifier for this proof.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -514,8 +522,9 @@ linear-time validate/rewind/split contract for its outer pair encoding. Malforme
 machine inputs retain fresh work tapes and cannot reach the future evaluator core;
 valid inputs expose appendable code and data prefixes on named work tapes. A
 three-tape fused evaluator controller now executes both family tags and memoizes
-topologically ordered gates; its semantic-correctness and quadratic-time proofs
-remain before the reverse advice containment can be packaged.
+topologically ordered gates. Its pure counted-gate stream now agrees with the
+existing exact codec and evaluator; the machine-execution and quadratic-time
+proofs remain before the reverse advice containment can be packaged.
 
 **Settled conventions.**
 

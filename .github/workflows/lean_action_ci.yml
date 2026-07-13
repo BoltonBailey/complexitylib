@@ -25,7 +25,11 @@ jobs:
         run: lake build --wfail Complexitylib.Circuits.Encoding.Validation
       - name: Run Tseitin-machine regression guards
         run: lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
-      - name: Run environment linters
-        run: lake exe runLinter Complexitylib
+      - name: Run environment linters, including validation-only graphs
+        run: |
+          lake exe runLinter Complexitylib \
+            Complexitylib.Models.TuringMachine.SingleTape.Validation \
+            Complexitylib.Circuits.Encoding.Validation \
+            Complexitylib.SAT.Tseitin.Machine.Validation
       - name: Axiom guard for headline theorems
         run: lake env lean scripts/AxiomGuard.lean

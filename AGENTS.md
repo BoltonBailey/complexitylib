@@ -25,7 +25,10 @@ Quality gates (also run in CI; see CONTRIBUTING.md):
 
 ```bash
 python3 scripts/lint_style.py        # headers, module docs, 100-col, _root_ escapes
-lake exe runLinter Complexitylib     # Mathlib/Batteries env linters
+lake exe runLinter Complexitylib \
+  Complexitylib.Models.TuringMachine.SingleTape.Validation \
+  Complexitylib.Circuits.Encoding.Validation \
+  Complexitylib.SAT.Tseitin.Machine.Validation  # env linters, including private graphs
 lake env lean scripts/AxiomGuard.lean  # all project declarations on std axioms only
 ```
 
