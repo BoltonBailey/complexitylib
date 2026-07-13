@@ -46,9 +46,12 @@ Complexitylib declaration for dependencies beyond `propext`,
   `DTIME((n+1)^a) ⊂ DTIME((n+1)^(2a+5))`
 
 **Structural containments.** `Complexity.P_subset_NP`,
-`Complexity.P_subset_PSPACE`, `Complexity.RP_subset_NP`,
-`Complexity.BPP_subset_PPoly`, and `Complexity.BPP_subset_PP`. The general
-containment index is `Complexitylib.Classes.Containments`.
+`Complexity.P_subset_PSPACE`, `Complexity.P_subset_PPoly`,
+`Complexity.RP_subset_NP`,
+`Complexity.BPP_subset_PPoly`, and `Complexity.BPP_subset_PP`. The nonuniform
+results live in `Complexitylib.Classes.PPoly.Unrolling` and
+`Complexitylib.Classes.Randomized.PPoly`; the broader time/space index is
+`Complexitylib.Classes.Containments`.
 
 **Circuit lower bounds.** Shannon's counting bound, gate-elimination
 (`Circuit.card_essentialInputs_le_mul_size`), Schnorr's XOR bound

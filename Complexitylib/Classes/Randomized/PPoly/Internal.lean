@@ -75,26 +75,19 @@ theorem hardwiredAmplificationFamily_size_bigO_internal
     hf.trans (BigO.pow_le_pow_right (Nat.le_succ d))
   have hshift : (fun n => f n + 2) =O ((· ^ (d + 1)) : ℕ → ℕ) :=
     BigO.add hf' (BigO.const_le_pow 2 (d + 1))
-  have hcubeRaw :
-      (fun n => (f n + 2) * (f n + 2) * (f n + 2)) =O
-        (fun n => n ^ (d + 1) * n ^ (d + 1) * n ^ (d + 1)) :=
-    BigO.mul (BigO.mul hshift hshift) hshift
+  have hcubeRaw := BigO.pow hshift 3
   have hcubePow :
-      (fun n : ℕ => n ^ (d + 1) * n ^ (d + 1) * n ^ (d + 1)) =O
+      (fun n : ℕ => (n ^ (d + 1)) ^ 3) =O
         ((· ^ (3 * (d + 1))) : ℕ → ℕ) := by
     apply BigO.of_le
     intro n
     apply le_of_eq
-    rw [← pow_add, ← pow_add]
+    rw [← pow_mul]
     congr 1
     omega
-  have hcubeShape :
-      (fun n => (f n + 2) ^ 3) =O
-        (fun n => (f n + 2) * (f n + 2) * (f n + 2)) :=
-    BigO.of_le fun n => le_of_eq (by ring)
   have hcube : (fun n => (f n + 2) ^ 3) =O
       ((· ^ (3 * (d + 1))) : ℕ → ℕ) :=
-    hcubeShape.trans (hcubeRaw.trans hcubePow)
+    hcubeRaw.trans hcubePow
   have hn : (fun n : ℕ => n) =O ((· ^ 1) : ℕ → ℕ) := by
     simpa only [pow_one] using BigO.refl (fun n : ℕ => n)
   have hn1 : (fun n : ℕ => n + 1) =O ((· ^ 1) : ℕ → ℕ) :=

@@ -27,6 +27,7 @@ zero-length case separately.
 - `eval?_acceptanceRawCircuit`: raw evaluation returns the acceptance bit.
 - `acceptanceCircuit_eval`: typed evaluation has the same semantics.
 - `canonicalAcceptanceCircuit_eval`: canonical choices-first semantics.
+- `canonicalAcceptanceCircuit_size_le`: canonical cubic size bound.
 - `card_acceptingChoices_eq_acceptCount`: circuit acceptance counts machine
   accepting paths exactly.
 -/
@@ -179,6 +180,14 @@ theorem canonicalAcceptanceCircuit_eval
       apply Fin.ext
       rfl
     rw [hchoice, Fin.append_left]
+
+/-- The canonical choices-first acceptance circuit inherits the generic cubic
+size bound. -/
+theorem canonicalAcceptanceCircuit_size_le
+    (tm : NTM k) (T n : ℕ) [NeZero (T + n)] :
+    (canonicalAcceptanceCircuit tm T n).size ≤
+      acceptanceSizeCoeff tm * (T + 2) ^ 3 :=
+  acceptanceCircuit_size_le tm T n (T + n) (prefixInputWires T n)
 
 /-- The number of canonical choice strings accepted by the circuit is exactly
 the machine's bounded accepting-path count. -/

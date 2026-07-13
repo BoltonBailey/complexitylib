@@ -149,6 +149,10 @@ its public name or provide a compatibility alias.
 - [M] Inventory the repeated controller mechanics in the UTM, repetition, and
   Tseitin developments; extract one small generic child-call/routing layer before
   committing to a larger syntax or metaprogramming framework.
+- [x] Extract fixed-power `BigO` closure from repeated circuit-size proofs and
+  validate it in both deterministic unrolling and BPP amplification.
+- [x] Add exact-semantics fixed-choice acceptance hardwiring as the single-run
+  counterpart of the amplified fixed-seed wrapper.
 - [S] Refresh module documentation that still describes completed proofs as
   skeletons.
 
@@ -388,12 +392,14 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
   computation-tableau circuit of size `poly(T(n))` computing its output bit, and show
   the code map `1^n ↦ C_n` is computable in **log space** (logspace-uniform).
   *Decomposed:*
-  - [ ] Compile one deterministic transition step (configuration → next
+  - [x] Compile one deterministic transition step (configuration → next
     configuration, over the fixed-width tape window a step touches) into a Boolean
-    circuit block; prove it computes `step`.
-  - [ ] Tile the step block over a `T(n) × space(n)` tableau into a full circuit;
-    prove semantic correctness (output bit = acceptance) and a `poly(T(n))` size
-    bound.
+    circuit block; prove it computes `step` (the generic NTM compiler specializes
+    to `tm.toNTM`).
+  - [x] Tile the step block over a bounded tableau into a full circuit; prove
+    semantic correctness (output bit = acceptance) and a `poly(T(n))` size bound
+    (`TM.unrollingCircuitFamily`, with `P_subset_PPoly` as the nonuniform class
+    theorem).
   - [ ] Prove the tableau-circuit emitter is computable in log space (in `FL`) — the
     regular tableau structure makes the connection function log-space computable —
     giving logspace-uniformity, and conclude `P ⊆ UniformPPoly`. (The emitter being
@@ -408,8 +414,8 @@ decided by a logspace-uniform polynomial-size family. The trivial containment
 `UniformPPoly_subset_PPoly` is proved (forget the generator); the headline is
 `UniformPPoly = P` (Arora–Barak Theorem 6.7). The Cook–Levin tableau infrastructure
 already in the library (`SAT` reduction emitters) is related but is a CNF
-*satisfiability* encoding, not a deterministic output-computing circuit — the
-functional unrolling needs its own construction and correctness theorem (see hazards).
+*satisfiability* encoding, not a deterministic output-computing circuit. The
+dedicated functional unrolling is now complete; its logspace emitter remains open.
 
 **Prerequisites.** The N1 list/`BitString` bridge, the existing typed
 `Circuit.eval` semantics, and stable machine composition/time accounting from
@@ -429,7 +435,11 @@ one-hot configuration layout, initialization and one-step compilers, and a
 complete tiled trace fragment with exact semantics, topology, and a cubic size
 bound. A final halt-and-output gate now turns that trace into a typed
 single-output circuit, with canonical choices-first evaluation and accepting
-choice count exactly equal to `NTM.acceptCount`.
+choice count exactly equal to `NTM.acceptCount`. Fixed-choice hardwiring now
+specializes this construction to a canonical deterministic circuit family.
+`TM.DecidesInTime.unrollingCircuitFamily_decides` proves exact semantics,
+`TM.unrollingCircuitFamily_size_bigO` gives size `O(n^(3d))` for time `O(n^d)`,
+and `P_subset_PPoly` packages the direct nonuniform containment.
 
 **Settled conventions.**
 
@@ -467,13 +477,15 @@ preserved by serialized encodings and uniform generators.
   its input in polynomial time, including the explicit length-zero case.
 - [ ] Prove the easy direction: a P-uniform polynomial-size family yields a
   polynomial-time DTM decider.
-- [ ] Build a functional computation-tableau/unrolling construction from a
+- [x] Build a functional computation-tableau/unrolling construction from a
   time-bounded DTM to a bounded-fan-in circuit computing its output bit.
-- [ ] Prove semantic correctness and a concrete polynomial size bound for the
-  nonuniform unrolling construction.
+- [x] Prove semantic correctness and a concrete polynomial size bound for the
+  nonuniform unrolling construction (`TM.unrollingCircuitFamily` and
+  `P_subset_PPoly`).
 - [ ] Define advice TMs and prove equivalence between polynomial advice and
-  nonuniform polynomial-size circuits. This can proceed before the uniform
-  emitter and unblocks M2.
+  nonuniform polynomial-size circuits. The advice-to-circuit direction can use
+  the completed unrolling; the reverse direction should reuse the serialized
+  circuit-evaluator DTM rather than introduce a second evaluator.
 - [ ] Implement the circuit emitter in `FP`, then prove `P` equals P-uniform
   polynomial-size circuit families.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
@@ -482,9 +494,9 @@ preserved by serialized encodings and uniform generators.
 
 **Formalization hazards.**
 
-- A Cook--Levin CNF expressing an accepting computation is not yet a circuit that
-  computes the unique output of a deterministic run; the functional construction
-  needs its own correctness theorem.
+- A Cook--Levin CNF expressing an accepting computation is not a circuit that
+  computes the unique output of a deterministic run; use the dedicated functional
+  unrolling construction rather than transporting SAT satisfiability semantics.
 - The circuit generator's input length is `log n` if `n` is binary. Standard
   P-uniformity usually measures generator time polynomial in `n`, so encode `1^n`
   or state the convention explicitly.
@@ -534,8 +546,8 @@ preserved by serialized encodings and uniform generators.
 **Goal.** Prove the classical nonuniform derandomization theorem
 `BPP subset P/poly` using amplification and the probabilistic method.
 
-**Prerequisites.** N2 amplification, M1 nonuniform circuit/advice equivalence, and
-the PTM all-paths-halting discipline already present in the library.
+**Prerequisites.** N2 amplification, M1 circuit-family acceptance unrolling and
+hardwiring, and the PTM all-paths-halting discipline already present in the library.
 
 **Target theorem variant.** Start with the library's concrete `BPP` definition and
 the circuit-family definition of `P/poly`. The proof should not claim a uniform

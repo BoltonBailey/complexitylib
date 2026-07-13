@@ -189,12 +189,6 @@ noncomputable def acceptanceCopiesVerdictWires (tm : NTM k)
 def strictMajorityThreshold (runs : ℕ) : ℕ :=
   runs / 2 + 1
 
-/-- Exact bounded-trace acceptance bit computed by one acceptance copy. -/
-def boundedAcceptanceBit (tm : NTM k) (T : ℕ) (x : BitString n)
-    (choices : BitString T) : Bool :=
-  decide ((tm.trace T choices (tm.initCfg (BitString.toList x))).state = tm.qhalt ∧
-    (tm.trace T choices (tm.initCfg (BitString.toList x))).output.cells 1 = Γ.one)
-
 /-- Acceptance bits produced by independent bounded runs sharing one input. -/
 def parallelAcceptanceBits (tm : NTM k) (T : ℕ) (x : BitString n)
     (choices : Fin runs → BitString T) : BitString runs :=

@@ -33,6 +33,7 @@ opened and read like standard complexity-theoretic asymptotic notation.
 - `BigO.trans` — transitivity
 - `BigO.of_le` — pointwise `≤` implies big-O
 - `BigO.add` — sum of big-O is big-O
+- `BigO.pow` — fixed powers preserve big-O
 - `BigO.const_mul_left` — constant multiple preserves big-O
 - `BigO.le_add_left` / `BigO.le_add_right` — projections from a sum
 - `BigO.const_mul_add` — `c * f₁ + f₂ = O(T₁ + T₂)`
@@ -111,6 +112,15 @@ theorem BigO.mul {f₁ f₂ g₁ g₂ : ℕ → ℕ} (h₁ : f₁ =O g₁) (h₂
   convert key using 1
   · ext n; push_cast; ring
   · ext n; push_cast; ring
+
+/-- Raising both sides of a big-O bound to a fixed natural power preserves
+big-O. -/
+theorem BigO.pow {f g : ℕ → ℕ} (h : f =O g) (k : ℕ) :
+    (fun n => (f n) ^ k) =O (fun n => (g n) ^ k) := by
+  induction k with
+  | zero => exact BigO.refl fun _ => 1
+  | succ k ih =>
+      simpa only [pow_succ] using BigO.mul ih h
 
 /-- Constant multiple preserves big-O. -/
 theorem BigO.const_mul_left (c : ℕ) {f g : ℕ → ℕ} (h : f =O g) :

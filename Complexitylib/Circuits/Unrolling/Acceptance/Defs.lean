@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.Unrolling.Trace.Defs
 
 /-!
@@ -40,6 +41,13 @@ noncomputable def acceptanceRawCircuit (tm : NTM k) (T n available : ℕ)
 cubic bounded-trace size bound. -/
 noncomputable def acceptanceSizeCoeff (tm : NTM k) : ℕ :=
   traceSizeCoeff tm + 1
+
+/-- Exact bounded-trace acceptance bit computed from one data input and one
+choice string. -/
+def boundedAcceptanceBit (tm : NTM k) (T : ℕ) (x : BitString n)
+    (choices : BitString T) : Bool :=
+  decide ((tm.trace T choices (tm.initCfg x.toList)).state = tm.qhalt ∧
+    (tm.trace T choices (tm.initCfg x.toList)).output.cells 1 = Γ.one)
 
 end CircuitUnrolling
 

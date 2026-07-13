@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Unrolling.Defs
 import Complexitylib.Circuits.Unrolling.Acceptance
+import Complexitylib.Circuits.Unrolling.Acceptance.Hardwiring
 import Complexitylib.Circuits.Unrolling.Amplification
 import Complexitylib.Circuits.Unrolling.Internal.Initialization
 import Complexitylib.Circuits.Unrolling.Trace
