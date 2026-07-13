@@ -173,7 +173,15 @@ exact full-frame proofs. The rewind and unary-count runs show that named
 configurations, namespaced action constructors, explicit preservation frames,
 and `reachesIn` composition handle straight-line phases cleanly. Use the positive
 gate loop to measure the remaining routing, semantic-transport, and cost-accounting
-duplication before extracting a shared combinator, tactic, or controller DSL.
+duplication before extracting a shared combinator, tactic, or controller DSL. The
+successful loop now supplies that measurement: phase-generic named-action lemmas
+within the controller remove repeated configuration plumbing, but the two reference rewinds
+and unary scans still need phase-specific proofs; transporting a pure gate result
+also needs an existential runtime because `GateStepResult` deliberately omits the
+first reference that controls the exact cost. The loop invariant itself remains
+compact when it records the code suffix, memo frontier, counter remainder,
+last-value/output correspondence, and one fixed maximum memo length. Reassess the
+same seams after the rejection branches before promoting any local abstraction.
 The same slice exposed a quality-gate blind spot: environment linting followed
 only the public root, not the required validation-only graphs. CI now lints all
 three validation roots as well, so internal proof seams cannot silently accrue
@@ -470,8 +478,17 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       - [x] Scan a terminated unary gate count in exactly `g + 1` steps, preserve
         its left marker, and rewind it in exactly `g + 2` more steps to the
         gate-loop counter shape.
-      - [ ] Prove one controller-ordered gate attempt and the positive
-        gate-stream loop, then derive the quadratic bound.
+      - [x] Prove every successful controller-ordered gate attempt with exact
+        cost `p + 2r₀ + |memo| + 11`, bridge it to `gateStep? = some`, and give
+        the uniform bound `4|memo| + 9`.
+      - [x] Induct successful `gateStream?` runs through the exhausted-counter
+        check and compose the positive-family run from the staging frontiers
+        under `positiveCoreRunBudget`; prove the concrete bound
+        `20(|code| + |input| + 1)^2` whenever the unary gate count fits in the
+        serialized code.
+      - [ ] Prove the malformed and out-of-range rejection attempts, lift the
+        loop to total pure-stream agreement, and package the quadratic
+        `HoareTime` contract.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -541,8 +558,11 @@ three-tape fused evaluator controller now executes both family tags and memoizes
 topologically ordered gates. Its pure counted-gate stream now agrees with the
 existing exact codec and evaluator. Exact full-frame machine proofs now cover
 the initial rewinds, exhaustive tag routing, the well-formed empty-family run,
-and terminated unary-count setup; the positive gate loop and quadratic-time
-proof remain before the reverse advice containment can be packaged.
+terminated unary-count setup, every successful gate attempt, and the complete
+successful positive gate loop from staging frontiers under a named quadratic
+budget. Malformed/out-of-range gate attempts, total loop agreement, and the
+public `HoareTime` package remain before the reverse advice containment can be
+packaged.
 
 **Settled conventions.**
 

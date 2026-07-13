@@ -5,6 +5,9 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Action
 import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate.Attempt
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate.Loop
 import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Pure
 import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Tape
 
@@ -12,5 +15,5 @@ import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Tape
 # Streaming evaluator proof internals
 
 Internal aggregation module for the evaluator's action, execution,
-pure-semantics, and tape-cursor proof seams.
+gate-loop execution, pure-semantics, and tape-cursor proof seams.
 -/
