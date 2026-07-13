@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Circuits.Hardwiring
 import Complexitylib.Circuits.Unrolling.Amplification
 import Complexitylib.Models.TuringMachine.Repetition.Defs
 
@@ -12,7 +13,9 @@ import Complexitylib.Models.TuringMachine.Repetition.Defs
 This module is the dependency boundary between circuit unrolling and finite
 probability. The circuit layer counts true verdict wires with `Fin.countP`;
 the randomized-complexity layer interprets the same vector as independent
-choice blocks and hence as `blockEventCount` and `blockMajority`.
+choice blocks and hence as `blockEventCount` and `blockMajority`. It also
+provides the fixed-seed wrapper that hardwires every choice input while leaving
+the positive-length data suffix live.
 -/
 
 namespace Complexity
@@ -61,6 +64,47 @@ theorem canonicalAmplifiedAcceptanceCircuit_eval_eq_blockMajority
         blockMajority (NTM.repeatAcceptEvent tm x.toList T) seed := by
   rw [canonicalAmplifiedAcceptanceCircuit_eval]
   exact canonicalThresholdValue_eq_blockMajority tm runs T x seed
+
+/-- Fix every random-choice input of a canonical amplified acceptance circuit,
+leaving only the positive-length data input live. This is the generic
+circuit-level bridge from an amplified random seed to nonuniform advice. -/
+noncomputable def fixedSeedAmplifiedAcceptanceCircuit
+    (tm : NTM k) (runs T n : ℕ) [NeZero n]
+    (seed : BitString (runs * T)) :
+    Circuit Basis.andOr2 n 1
+      ((canonicalAmplifiedAcceptanceRawCircuit tm runs T n).length - 1) :=
+  Circuit.restrictPrefix seed
+    (canonicalAmplifiedAcceptanceCircuit tm runs T n)
+
+/-- A fixed-seed amplified circuit computes the block-majority verdict for
+that seed and the live data input. -/
+theorem fixedSeedAmplifiedAcceptanceCircuit_eval
+    (tm : NTM k) (runs T n : ℕ) [NeZero n]
+    (seed : BitString (runs * T)) (x : BitString n) :
+    ((fixedSeedAmplifiedAcceptanceCircuit tm runs T n seed).eval x) 0 =
+      blockMajority (NTM.repeatAcceptEvent tm x.toList T) seed := by
+  rw [fixedSeedAmplifiedAcceptanceCircuit, Circuit.restrictPrefix_eval]
+  exact canonicalAmplifiedAcceptanceCircuit_eval_eq_blockMajority
+    tm runs T n seed x
+
+/-- Fixing the random seed preserves the amplified circuit's exact size. -/
+@[simp] theorem fixedSeedAmplifiedAcceptanceCircuit_size
+    (tm : NTM k) (runs T n : ℕ) [NeZero n]
+    (seed : BitString (runs * T)) :
+    (fixedSeedAmplifiedAcceptanceCircuit tm runs T n seed).size =
+      (canonicalAmplifiedAcceptanceCircuit tm runs T n).size := by
+  rw [fixedSeedAmplifiedAcceptanceCircuit, Circuit.restrictPrefix_size]
+
+/-- A fixed-seed amplified circuit inherits the canonical cubic-by-quadratic
+size bound. -/
+theorem fixedSeedAmplifiedAcceptanceCircuit_size_le
+    (tm : NTM k) (runs T n : ℕ) [NeZero n]
+    (seed : BitString (runs * T)) :
+    (fixedSeedAmplifiedAcceptanceCircuit tm runs T n seed).size ≤
+      runs * (acceptanceSizeCoeff tm * (T + 2) ^ 3) + 3 +
+        2 * runs * runs := by
+  rw [fixedSeedAmplifiedAcceptanceCircuit_size]
+  exact canonicalAmplifiedAcceptanceCircuit_size_le tm runs T n
 
 end CircuitUnrolling
 

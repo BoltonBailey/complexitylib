@@ -22,22 +22,28 @@ namespace Complexity
 
 namespace NTM
 
+/-- Number of independent trials used to select one seed that is correct on
+every input of length `n`. The `n + 1` error exponent makes a union bound over
+all `2^n` inputs strict. -/
+def uniformSeedRuns (n : ℕ) : ℕ :=
+  12 * (n + 1) + 1
+
 /-- For every input length, one compact amplified seed gives the correct
     majority verdict on every input of that length. -/
 theorem exists_uniform_correct_seed (tm : NTM k) (L : Language) (f : ℕ → ℕ)
     (haccept : tm.AcceptsWithProb L f (2 / 3))
     (hreject : tm.RejectsWithProb L f (1 / 3)) (n : ℕ) :
-    ∃ seed : BitString ((12 * (n + 1) + 1) * f n), ∀ x : BitString n,
+    ∃ seed : BitString (uniformSeedRuns n * f n), ∀ x : BitString n,
       blockMajority (repeatAcceptEvent tm x.toList (f n)) seed = true ↔
         x.toList ∈ L := by
   classical
-  let bad : BitString n → Finset (BitString ((12 * (n + 1) + 1) * f n)) :=
+  let bad : BitString n → Finset (BitString (uniformSeedRuns n * f n)) :=
     fun x => Finset.univ.filter fun seed =>
       ¬(blockMajority (repeatAcceptEvent tm (BitString.toList x) (f n)) seed = true ↔
         BitString.toList x ∈ L)
   obtain ⟨seed, hseed⟩ :=
     exists_good_seed_of_eventProb_le_two_pow_succ n
-      ((12 * (n + 1) + 1) * f n) bad (by
+      (uniformSeedRuns n * f n) bad (by
         intro x
         by_cases hx : BitString.toList x ∈ L
         · have hprob :
@@ -49,7 +55,7 @@ theorem exists_uniform_correct_seed (tm : NTM k) (L : Language) (f : ℕ → ℕ
             (f n) (n + 1) (repeatAcceptEvent tm (BitString.toList x) (f n)) hprob
           have hbad :
               bad x = Finset.univ.filter
-                (fun seed : BitString ((12 * (n + 1) + 1) * f n) =>
+                (fun seed : BitString (uniformSeedRuns n * f n) =>
                   blockMajority
                     (repeatAcceptEvent tm (BitString.toList x) (f n)) seed = false) := by
             ext candidate
@@ -64,7 +70,7 @@ theorem exists_uniform_correct_seed (tm : NTM k) (L : Language) (f : ℕ → ℕ
             (f n) (n + 1) (repeatAcceptEvent tm (BitString.toList x) (f n)) hprob
           have hbad :
               bad x = Finset.univ.filter
-                (fun seed : BitString ((12 * (n + 1) + 1) * f n) =>
+                (fun seed : BitString (uniformSeedRuns n * f n) =>
                   blockMajority
                     (repeatAcceptEvent tm (BitString.toList x) (f n)) seed = true) := by
             ext candidate

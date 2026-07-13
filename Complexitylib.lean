@@ -47,8 +47,8 @@ Complexitylib declaration for dependencies beyond `propext`,
 
 **Structural containments.** `Complexity.P_subset_NP`,
 `Complexity.P_subset_PSPACE`, `Complexity.RP_subset_NP`,
-`Complexity.BPP_subset_PP`, and the rest of the
-`Complexitylib.Classes.Containments` index.
+`Complexity.BPP_subset_PPoly`, and `Complexity.BPP_subset_PP`. The general
+containment index is `Complexitylib.Classes.Containments`.
 
 **Circuit lower bounds.** Shannon's counting bound, gate-elimination
 (`Circuit.card_essentialInputs_le_mul_size`), Schnorr's XOR bound

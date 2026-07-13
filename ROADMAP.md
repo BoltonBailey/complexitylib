@@ -551,10 +551,13 @@ not on the individual input.
 - [x] Prove by a union bound over all `2^n` inputs that some single random string is
   correct for every input of that length
   (`NTM.exists_uniform_correct_seed`).
-- [ ] Hardwire that string into the deterministic simulation/circuit for length
-  `n`.
-- [ ] Prove the resulting family has polynomial size and concludes
-  `BPP subset P/poly`.
+- [x] Hardwire that string into the amplified acceptance circuit for length `n`
+  (`CircuitUnrolling.fixedSeedAmplifiedAcceptanceCircuit` and
+  `NTM.hardwiredAmplificationFamily`).
+- [x] Prove the resulting family has polynomial size and conclude
+  `BPP subset P/poly` (`BPP_subset_PPoly`; if the BPP time witness is
+  `O(n^d)`, `NTM.hardwiredAmplificationFamily_size_bigO` gives size
+  `O(n^(3d+4))`).
 - [ ] Derive the advice-TM formulation as a corollary, or conversely use it as the
   main proof if the advice bridge is cleaner.
 
