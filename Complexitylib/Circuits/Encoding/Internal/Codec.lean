@@ -63,6 +63,21 @@ private theorem decodeAux?_sound {bits : List Bool} {acc n : ℕ}
           rw [List.replicate_succ]
           simp [hbits]
 
+private theorem decodeAux?_eq_none_iff (bits : List Bool) (acc : ℕ) :
+    decodeAux? bits acc = none ↔
+      bits = List.replicate bits.length true := by
+  induction bits generalizing acc with
+  | nil => simp [decodeAux?]
+  | cons bit bits ih =>
+      cases bit <;> simp [decodeAux?, ih, List.replicate_succ]
+
+/-- Unary prefix decoding fails exactly when every available bit is a one,
+so no zero terminator occurs. -/
+theorem decodePrefix?_eq_none_iff (bits : List Bool) :
+    decodePrefix? bits = none ↔
+      bits = List.replicate bits.length true := by
+  simpa [decodePrefix?] using decodeAux?_eq_none_iff bits 0
+
 /-- Successful unary prefix decoding reconstructs the consumed input exactly. -/
 theorem decodePrefix?_eq_some_iff (bits : List Bool) (n : ℕ) (suffix : List Bool) :
     decodePrefix? bits = some (n, suffix) ↔ bits = encode n ++ suffix := by

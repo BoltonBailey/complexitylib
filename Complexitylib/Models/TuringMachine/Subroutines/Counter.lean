@@ -161,6 +161,18 @@ theorem hasCounterRemainder_read_one_of_remaining {t : Tape} {used total : ℕ}
   have hcell := h.2.2.2.1 used (le_rfl) hlt
   simp [Tape.read, h.2.1, hcell]
 
+/-- A well-shaped counter remainder never reads the left-end marker. -/
+theorem hasCounterRemainder_read_ne_start {t : Tape} {used total : ℕ}
+    (h : t.HasCounterRemainder used total) : t.read ≠ Γ.start := by
+  by_cases hremaining : used < total
+  · rw [hasCounterRemainder_read_one_of_remaining h hremaining]
+    decide
+  · have hle : used ≤ total := h.1
+    have hdone : used = total := by omega
+    subst total
+    rw [hasCounterRemainder_read_blank_of_done h]
+    decide
+
 /-- Blanking the current counter mark and moving right advances the unary
     counter remainder by one. -/
 theorem hasCounterRemainder_consume {t : Tape} {used total : ℕ}

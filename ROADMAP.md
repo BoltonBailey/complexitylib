@@ -180,8 +180,13 @@ and unary scans still need phase-specific proofs; transporting a pure gate resul
 also needs an existential runtime because `GateStepResult` deliberately omits the
 first reference that controls the exact cost. The loop invariant itself remains
 compact when it records the code suffix, memo frontier, counter remainder,
-last-value/output correspondence, and one fixed maximum memo length. Reassess the
-same seams after the rejection branches before promoting any local abstraction.
+last-value/output correspondence, and one fixed maximum memo length. The
+rejection branches confirm the same boundary: short headers and terminal
+rejection steps compose through generic configuration lemmas, while the
+first- and second-reference unterminated/out-of-range runners remain close
+phase-specific twins. Keep those helpers local for now; one controller is still
+insufficient evidence for a public DSL, but the duplication is a concrete target
+for the cross-construction audit.
 The same slice exposed a quality-gate blind spot: environment linting followed
 only the public root, not the required validation-only graphs. CI now lints all
 three validation roots as well, so internal proof seams cannot silently accrue
@@ -486,9 +491,13 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         under `positiveCoreRunBudget`; prove the concrete bound
         `20(|code| + |input| + 1)^2` whenever the unary gate count fits in the
         serialized code.
-      - [ ] Prove the malformed and out-of-range rejection attempts, lift the
-        loop to total pure-stream agreement, and package the quadratic
-        `HoareTime` contract.
+      - [x] Prove every failed `gateStep?` attempt, including truncated headers,
+        unterminated unary references, and out-of-range memo reads, within
+        `4|memo| + 8`; induct every rejecting counted gate stream under the same
+        `gateLoopBudget`, including exhausted no-gate and trailing-data cases.
+      - [ ] Complete malformed unary-count and empty-family rejection, lift the
+        tagged controller to total `familyStream?` agreement, and package the
+        quadratic `HoareTime` contract.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -560,9 +569,11 @@ existing exact codec and evaluator. Exact full-frame machine proofs now cover
 the initial rewinds, exhaustive tag routing, the well-formed empty-family run,
 terminated unary-count setup, every successful gate attempt, and the complete
 successful positive gate loop from staging frontiers under a named quadratic
-budget. Malformed/out-of-range gate attempts, total loop agreement, and the
-public `HoareTime` package remain before the reverse advice containment can be
-packaged.
+budget. Bounded machine runs now also cover every pure one-gate failure and the
+complete rejecting counted gate loop, including exhausted no-gate and trailing
+data. Malformed unary-count and empty-family cases, total tagged-family
+agreement, and the public `HoareTime` package remain before the reverse advice
+containment can be packaged.
 
 **Settled conventions.**
 

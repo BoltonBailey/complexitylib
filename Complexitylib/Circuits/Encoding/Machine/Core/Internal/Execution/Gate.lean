@@ -180,20 +180,6 @@ theorem gateNeg1_step (op negated0 negated1 : Bool) (rest : List Bool)
   · exact hcounter
   · exact houtput
 
-/-- A counter remainder always reads either a unary mark or blank, never the
-left marker. -/
-private theorem counterRemainder_read_ne_start {counter : Tape}
-    {used total : ℕ} (hcounter : counter.HasCounterRemainder used total) :
-    counter.read ≠ Γ.start := by
-  by_cases hremaining : used < total
-  · rw [Tape.hasCounterRemainder_read_one_of_remaining hcounter hremaining]
-    decide
-  · have hle : used ≤ total := hcounter.1
-    have hdone : used = total := by omega
-    subst total
-    rw [Tape.hasCounterRemainder_read_blank_of_done hcounter]
-    decide
-
 /-- Consuming a counter mark and the three fixed gate bits reaches the first
 reference rewind in exactly four steps. -/
 theorem gateHeader_run (sawGate op negated0 negated1 : Bool)
@@ -214,7 +200,8 @@ theorem gateHeader_run (sawGate op negated0 negated1 : Bool)
         (used + 1) total := by
   have hcounterNext :=
     Tape.hasCounterRemainder_consume hcounter hremaining
-  have hcounterNextRead := counterRemainder_read_ne_start hcounterNext
+  have hcounterNextRead :=
+    Tape.hasCounterRemainder_read_ne_start hcounterNext
   have hstep0 := gateCheck_step_one sawGate used total
     input code wires counter output hcounter hremaining hinput
     hcode.read_ne_start hwires.read_ne_start houtput
@@ -916,7 +903,7 @@ theorem gateAttempt_run_encoded (sawGate : Bool) (gate : RawGate)
       (NatCode.encode gate.input₀ ++ NatCode.encode gate.input₁ ++ rest)
       input code wires counter output hcodeHeader hwires hcounter hremaining
       hinput houtput
-  have hcounterRead := counterRemainder_read_ne_start hcounterNext
+  have hcounterRead := Tape.hasCounterRemainder_read_ne_start hcounterNext
   obtain ⟨wires0, hrewind0, hwires0⟩ :=
     rewindRef0_run gate.opBit gate.negated₀ gate.negated₁
       input code0 wires (counter.writeAndMove Γ.blank Dir3.right) output
