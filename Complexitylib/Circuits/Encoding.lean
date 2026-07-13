@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Defs
 import Complexitylib.Circuits.Encoding.Internal
+import Complexitylib.Circuits.Encoding.ToCircuit
 
 /-!
 # Encoded fan-in-two circuits
@@ -20,6 +21,7 @@ This module exposes the machine-facing representation of
 - `RawCircuit.eval?`: array-backed iterative evaluation.
 - `CircuitCode.encodeCircuit`: serialization of a typed circuit.
 - `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
+- `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
 
 ## Main results
 
@@ -32,6 +34,8 @@ This module exposes the machine-facing representation of
   list-native theorem for machine-facing clients.
 - `CircuitCode.encodeCircuit_length_le_size`: concrete polynomial bit-length
   bound for the unary encoding.
+- `RawCircuit.ofCircuit_toCircuit`, `RawCircuit.eval?_toCircuit`, and
+  `RawCircuit.size_toCircuit`: exact reconstruction, semantics, and size.
 -/
 
 namespace Complexity

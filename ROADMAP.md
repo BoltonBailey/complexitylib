@@ -487,7 +487,7 @@ preserved by serialized encodings and uniform generators.
 
 **Small entry tasks.**
 
-- [S] Package a well-formed raw circuit as a typed `Circuit` if a later proof
+- [x] Package a well-formed raw circuit as a typed `Circuit` if a later proof
   needs the reverse bridge; the executable evaluator itself does not require it.
 - [M] Implement a DTM realizing the topological memoized evaluator for serialized
   circuits and prove a polynomial running-time bound.
