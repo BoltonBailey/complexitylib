@@ -21,6 +21,8 @@ jobs:
           build-args: "--wfail"
       - name: Run single-tape simulation regression guards
         run: lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
+      - name: Run fixed-time repetition regression guards
+        run: lake build --wfail Complexitylib.Models.TuringMachine.Repetition.Validation
       - name: Run encoded-circuit regression guards
         run: lake build --wfail Complexitylib.Circuits.Encoding.Validation
       - name: Run Tseitin-machine regression guards
@@ -29,6 +31,7 @@ jobs:
         run: |
           lake exe runLinter Complexitylib \
             Complexitylib.Models.TuringMachine.SingleTape.Validation \
+            Complexitylib.Models.TuringMachine.Repetition.Validation \
             Complexitylib.Circuits.Encoding.Validation \
             Complexitylib.SAT.Tseitin.Machine.Validation
       - name: Axiom guard for headline theorems

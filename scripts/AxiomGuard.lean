@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib
 import Complexitylib.Circuits.Encoding.Validation
+import Complexitylib.Models.TuringMachine.Repetition.Validation
 import Complexitylib.Models.TuringMachine.SingleTape.Validation
 import Complexitylib.SAT.Tseitin.Machine.Validation
 
