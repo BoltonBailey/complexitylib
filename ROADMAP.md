@@ -546,7 +546,16 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     regular tableau structure makes the connection function log-space computable —
     giving logspace-uniformity, and conclude `P ⊆ UniformPPoly`. (The emitter being
     in `FL` rather than merely `FP` is the extra cost of matching Arora–Barak, and is
-    what makes the notion reusable for `NC`/`AC`.)
+    what makes the notion reusable for `NC`/`AC`.) *Decomposed:*
+    - [x] Expose a deterministic unrolling family reconstructed directly from its raw
+      tableau gate list. `TM.directUnrollingCircuitFamily_encodeAt` identifies the
+      complete tagged family code with `TM.directUnrollingCode`, avoiding the repeated
+      typed hardwiring transformation while retaining exact semantics and cubic size.
+    - [ ] Add the binary-counter and fixed-polynomial arithmetic substrate needed to
+      enumerate polynomially many gates and unary-coded wire references in logarithmic
+      auxiliary space.
+    - [ ] Implement the append-only raw-tableau serializer, prove its code function is
+      in `FL`, package `P_subset_UniformPPoly`, and combine both directions.
 
 **Definitions for the headline.** [x] The `UniformPPoly` class is defined
 (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F` asks the tagged
@@ -582,6 +591,13 @@ specializes this construction to a canonical deterministic circuit family.
 `TM.DecidesInTime.unrollingCircuitFamily_decides` proves exact semantics,
 `TM.unrollingCircuitFamily_size_bigO` gives size `O(n^(3d))` for time `O(n^d)`,
 and `P_subset_PPoly` packages the direct nonuniform containment.
+The reverse uniformity path now has a syntax-stable target as well:
+`TM.directUnrollingCircuitFamily` reuses primary wire zero for the choice inputs
+ignored by `tm.toNTM`, reconstructs the positive member directly from
+`acceptanceRawCircuit`, and proves that its tagged serialization is exactly
+`TM.directUnrollingCode`. This removes typed prefix hardwiring from the future
+log-space emitter without changing deterministic trace semantics or the cubic
+size estimate.
 Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the

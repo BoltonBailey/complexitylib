@@ -15,6 +15,7 @@ import Complexitylib.Classes.PPoly
 import Complexitylib.Classes.PPoly.Advice
 import Complexitylib.Classes.PPoly.Unrolling
 import Complexitylib.Classes.PPoly.Uniform
+import Complexitylib.Classes.PPoly.Uniform.Unrolling
 import Complexitylib.Classes.PPoly.Uniform.Preprocessing
 import Complexitylib.Classes.PPoly.Uniform.Containment
 import Complexitylib.Classes.NP
