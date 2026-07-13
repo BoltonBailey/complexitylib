@@ -497,6 +497,8 @@ preserved by serialized encodings and uniform generators.
   needs the reverse bridge; the executable evaluator itself does not require it.
 - [x] Compile Boolean formulas into appendable raw fragments with exact size,
   topology, prefix-preservation, and evaluation laws.
+- [x] Batch-compile Boolean formulas and pack their results into a contiguous
+  block suitable for the next encoded configuration.
 - [x] Define the bounded one-hot configuration layout used by functional
   unrolling and compile the initial configuration as an exact-size raw fragment.
 - [x] Hardwire an arbitrary prefix of typed-circuit inputs without increasing
@@ -561,6 +563,8 @@ accepting NTM path.
   `blockEquiv`/`card_filter_block` seed-splitting machinery is now in place).
 - [x] Add a circuit/advice hardwiring operation and prove evaluation correctness
   (`Circuit.restrictPrefix`, with exact size preservation).
+- [x] Compile an at-least threshold over existing verdict wires as an appendable
+  quadratic-size raw fragment, ready for strict-majority amplification.
 
 ### M3. Small-depth circuits and Barrington's theorem
 
