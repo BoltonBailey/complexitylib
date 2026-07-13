@@ -35,9 +35,12 @@ This layer is the foundation for the Cook–Levin reduction emitter
 ## Main results
 
 - `TM.OutAcc.hasOutput` — accumulated output is `HasOutput`
+- `TM.OutAcc.eq` — the accumulated word uniquely determines its output tape
 - `TM.outAcc_append_bit` — one `writeAndMove _ .right` extends the accumulator
+- `TM.emitBitsTM_reachesIn_frame` — exact emission with a complete input/work frame
 - `TM.emitBitsTM_hoareTime` — `emitBitsTM w` appends `w` in `|w|` steps,
   preserving the input and work tapes
+- `TM.emitBitsTM_isTransducer` — fixed-word emission never moves output left
 -/
 
 namespace Complexity
@@ -83,6 +86,22 @@ theorem parked {ys : List Bool} {out : Tape} (h : OutAcc ys out) : Parked out :=
 theorem hasOutput {ys : List Bool} {out : Tape} (h : OutAcc ys out) :
     out.HasOutput ys :=
   ⟨fun i hi => h.2.2.1 i hi, h.2.2.2 _ (le_refl _)⟩
+
+/-- An output accumulator is uniquely determined by its accumulated word. -/
+theorem eq {ys : List Bool} {first second : Tape}
+    (hfirst : OutAcc ys first) (hsecond : OutAcc ys second) :
+    first = second := by
+  apply Tape.ext
+  · rw [hfirst.1, hsecond.1]
+  · funext j
+    by_cases hj0 : j = 0
+    · subst j
+      rw [hfirst.2.1, hsecond.2.1]
+    · by_cases hj : j ≤ ys.length
+      · obtain ⟨i, hi, rfl⟩ : ∃ i, i < ys.length ∧ j = i + 1 := by
+          refine ⟨j - 1, by omega, by omega⟩
+        rw [hfirst.2.2.1 i hi, hsecond.2.2.1 i hi]
+      · rw [hfirst.2.2.2 j (by omega), hsecond.2.2.2 j (by omega)]
 
 end OutAcc
 
@@ -266,6 +285,38 @@ private theorem emitBitsTM_run (w : List Bool) (m : ℕ) :
     refine ⟨c', .step hstep hreach, hst', hinp', hwork', ?_⟩
     rwa [List.append_assoc, List.singleton_append,
       List.getElem_cons_drop] at hout'
+
+/-- Exact fixed-word emission appends `w`, preserves the complete input/work
+frame, and reaches the halt state in exactly `|w|` steps. -/
+theorem emitBitsTM_reachesIn_frame (w : List Bool) (inp₀ : Tape)
+    (work₀ : Fin n → Tape) (out₀ : Tape) (ys : List Bool)
+    (hinp₀ : Parked inp₀) (hwork₀ : ∀ i, Parked (work₀ i))
+    (hout₀ : OutAcc ys out₀) :
+    ∃ c',
+      (emitBitsTM (n := n) w).reachesIn w.length
+        { state := (emitBitsTM (n := n) w).qstart
+          input := inp₀
+          work := work₀
+          output := out₀ } c' ∧
+      (emitBitsTM (n := n) w).halted c' ∧
+      c'.input = inp₀ ∧
+      c'.work = work₀ ∧
+      OutAcc (ys ++ w) c'.output := by
+  obtain ⟨c', hreach, hhalt, hinput, hwork, houtput⟩ :=
+    emitBitsTM_run w w.length 0 (by omega)
+      { state := ⟨0, by omega⟩, input := inp₀, work := work₀, output := out₀ }
+      ys rfl hinp₀ hwork₀ hout₀
+  refine ⟨c', hreach, hhalt, hinput, hwork, ?_⟩
+  rwa [List.drop_zero] at houtput
+
+/-- Fixed-word emission satisfies the one-way-output transducer discipline. -/
+theorem emitBitsTM_isTransducer (w : List Bool) :
+    (emitBitsTM (n := n) w).IsTransducer := by
+  intro k iHead wHeads oHead
+  by_cases h : k.val < w.length
+  · simp [emitBitsTM, h]
+  · simp [emitBitsTM, h, allIdle, idleDir]
+    split <;> decide
 
 /-- **`emitBitsTM` Hoare specification.** Appends the word `w` to the output
     accumulator in `|w|` steps, leaving the (parked) input and work tapes
