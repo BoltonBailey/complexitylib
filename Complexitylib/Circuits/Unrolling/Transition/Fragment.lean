@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Unrolling.Transition.Fragment.Defs
+import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.ArrayEvaluation
 import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.Evaluation
 import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.Size
 import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.Structure
@@ -103,12 +104,41 @@ theorem evalAux?_stepFragment
   evalAux?_stepFragment_internal tm T configBase choiceWire available choice
     assignment wires c hsize hinput hchoice hconfig hchoiceBound hconfigBound hheads
 
+/-- Evaluate a packed step directly from an encoded configuration and the
+concrete value stored at its choice wire. -/
+theorem evalAux?_stepFragment_of_encodes
+    (tm : NTM k) (T configBase choiceWire available : ℕ) [NeZero available]
+    (choice : Bool) (wires : Array Bool) (c : Cfg k tm.Q)
+    (hsize : wires.size = available)
+    (hchoice : wires[choiceWire]? = some choice)
+    (hconfig : EncodesConfig tm T configBase wires c)
+    (hchoiceBound : choiceWire < available)
+    (hconfigBound : configBase + configWidth tm T ≤ available)
+    (hheads : HeadsLt T c) :
+    ∃ result,
+      CircuitCode.RawCircuit.evalAux?
+          (stepFragment tm T configBase choiceWire available) wires = some result ∧
+        result.size =
+          wires.size + stepFragmentSize tm T configBase choiceWire ∧
+        (∀ i < wires.size, result[i]? = wires[i]?) ∧
+        EncodesConfig tm T
+          (stepOutputBase tm T configBase choiceWire available) result
+          (choiceStep tm choice c) :=
+  evalAux?_stepFragment_of_encodes_internal tm T configBase choiceWire available
+    choice wires c hsize hchoice hconfig hchoiceBound hconfigBound hheads
+
 /-- The exact packed one-step gate count is quadratic in the trace horizon,
 with a coefficient depending only on the fixed machine. -/
 theorem stepFragmentSize_le (tm : NTM k) (T configBase choiceWire : ℕ) :
     stepFragmentSize tm T configBase choiceWire ≤
       stepSizeCoeff tm * (T + 2) ^ 2 :=
   stepFragmentSize_le_internal tm T configBase choiceWire
+
+/-- A bounded configuration block has width linear in the trace horizon. -/
+theorem configWidth_le (tm : NTM k) (T : ℕ) :
+    configWidth tm T ≤
+      (Fintype.card tm.Q + 5 * (k + 2)) * (T + 2) :=
+  configWidth_le_explicit_internal tm T
 
 end CircuitUnrolling
 

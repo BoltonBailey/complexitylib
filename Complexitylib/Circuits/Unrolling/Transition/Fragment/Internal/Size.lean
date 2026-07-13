@@ -420,6 +420,12 @@ theorem configWidth_le_linear_internal (tm : NTM k) (T : ℕ) :
       Nat.add_le_add_right hstate _
     _ = (Fintype.card tm.Q + 5 * (k + 2)) * (T + 2) := by ring
 
+/-- Internal explicit form of the linear configuration-width bound. -/
+theorem configWidth_le_explicit_internal (tm : NTM k) (T : ℕ) :
+    configWidth tm T ≤
+      (Fintype.card tm.Q + 5 * (k + 2)) * (T + 2) := by
+  simpa [widthSizeCoeff] using configWidth_le_linear_internal tm T
+
 private theorem stepSizeCoeff_eq_internal (tm : NTM k) :
     stepSizeCoeff tm = widthSizeCoeff tm * (nextSizeCoeff tm + 1) := by
   simp only [stepSizeCoeff, widthSizeCoeff, nextSizeCoeff, effectSizeCoeff,
