@@ -113,6 +113,11 @@ private def twoOfThree : RawCircuit :=
 #guard evalFamilyCode (true :: andCircuit.encode) [true, false] = some false
 #guard evalFamilyCode (false :: andCircuit.encode) [true, false] = none
 
+#guard evalFamilyPair? (pair [false, true] []) = some true
+#guard evalFamilyPair? (pair (true :: andCircuit.encode) [true, false]) = some false
+#guard evalFamilyPair? (pair [false, true, false] []) = none
+#guard evalFamilyPair? [] = none
+
 end CircuitCode.Validation
 
 end Complexity

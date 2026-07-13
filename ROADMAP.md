@@ -109,7 +109,10 @@ register-cell facts, and DTM time-bound monotonicity. NTM traces now expose
 left-end-marker preservation on every tape, as well as internal
 input/work/output head-growth bounds. Several large consumers have been
 migrated away from private copies; endpoint/run lemmas and a few older local
-tape helpers remain.
+tape helpers remain. The first serialized-evaluator boundary now composes the
+public validator, frame-preserving rewind, and canonical pair splitter under one
+total `HoareTime` contract; doing so exposed and repaired missing left-marker and
+frame facts instead of hiding them in another controller-local proof.
 
 **Staged milestones.**
 
@@ -153,6 +156,13 @@ validator, pair splitter, tape scanner, memo-wire appends, and evaluator loop
 should compose through public contracts without reopening transition-level proofs.
 Track proof size and the kinds of residual obligations at each boundary so the
 eventual controller DSL, if warranted, is driven by evidence from a real consumer.
+The completed front-end slice records the first data point: the sequential machine
+contracts compose directly, while conditional routing, normalization of the test
+output, and exact branch-cost arithmetic still require bespoke plumbing. The slice
+also showed that appendable-prefix contracts must expose the left marker explicitly;
+that fact is now part of the reusable pair-split interface. Likewise, a staged
+verdict is not compositional unless its output contract retains `Tape.StartInvariant`;
+the front end now exposes that invariant for the core's final overwrite.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -422,6 +432,14 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     (the fan-in-two encoding, exact decoder, topological validator, and array-backed
     iterative evaluator already exist as pure functions — this is their DTM
     realization and timing).
+    - [x] Validate the outer pair on every input, rewind without destroying tape
+      frames, and stage canonical code/input prefixes on distinct work tapes in
+      time `4n + 16`; malformed inputs cannot enter the future evaluator core.
+    - [ ] Stream the staged code, validate its tagged circuit structure, and
+      memoize each gate value on the appendable wire tape.
+    - [ ] Overwrite the staging verdict with the evaluator result on every valid
+      outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
+      running-time bound.
   - [ ] Compose the log-space generator with the evaluator; prove the resulting DTM
     decides the family's language in polynomial time.
 - **TMs → uniform circuits (`P ⊆ UniformPPoly`).** Unroll a `T(n)`-time DTM into a
@@ -481,8 +499,9 @@ pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
 advice-to-circuit direction; the reverse direction still depends on the
 serialized circuit-evaluator DTM. The evaluator front end now has a total
-linear-time validator for its outer pair encoding, so malformed machine inputs
-can reject before the canonical splitter stages the code and data tapes.
+linear-time validate/rewind/split contract for its outer pair encoding. Malformed
+machine inputs retain fresh work tapes and cannot reach the future evaluator core;
+valid inputs expose appendable code and data prefixes on named work tapes.
 
 **Settled conventions.**
 

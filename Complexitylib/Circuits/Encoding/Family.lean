@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding
 import Complexitylib.Circuits.Family
+import Complexitylib.Encoding.Pairing
 
 /-!
 # Encodings of whole circuit families
@@ -53,6 +54,18 @@ def evalFamilyCode (code input : List Bool) : Option Bool :=
     match code with
     | true :: circuitCode => evalCode input.length circuitCode input
     | _ => none
+
+/-- Decode one self-delimiting machine input into a tagged family code and
+its argument, then evaluate the code. Malformed outer pairs and malformed
+inner circuit codes both return `none`. -/
+def evalFamilyPair? (z : List Bool) : Option Bool :=
+  (unpair? z).bind fun (code, input) => evalFamilyCode code input
+
+/-- Evaluating a canonical pair delegates directly to the tagged family-code
+evaluator. -/
+@[simp] theorem evalFamilyPair?_pair (code input : List Bool) :
+    evalFamilyPair? (pair code input) = evalFamilyCode code input := by
+  simp [evalFamilyPair?]
 
 /-- On the empty input, successful evaluation is exactly a canonical zero tag
     carrying one answer bit. -/
@@ -104,6 +117,14 @@ theorem evalFamilyCode_isSome_iff_of_ne_nil (code input : List Bool)
     evalFamilyCode (F.encodeAt input.length) input = some (F.evalList input) := by
   simpa [BitString.toList, CircuitFamily.evalList] using
     evalFamilyCode_encodeAt F input.get
+
+/-- Pairing a family member's canonical code with its input evaluates to the
+family's Boolean answer. -/
+theorem evalFamilyPair?_encodeAt (F : CircuitFamily Basis.andOr2)
+    (input : List Bool) :
+    evalFamilyPair? (pair (F.encodeAt input.length) input) =
+      some (F.evalList input) := by
+  simp
 
 /-- The length-zero tagged code has exactly two bits: the tag and the answer. -/
 theorem encodeAt_zero_length (F : CircuitFamily Basis.andOr2) :

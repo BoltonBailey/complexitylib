@@ -21,6 +21,7 @@ import Complexitylib.Circuits.AndOrNot
 import Complexitylib.Circuits.Encoding
 import Complexitylib.Circuits.Family
 import Complexitylib.Circuits.Encoding.Family
+import Complexitylib.Circuits.Encoding.Machine
 import Complexitylib.Circuits.XOR
 import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.Shannon
@@ -94,6 +95,8 @@ Public modules (definitions a reviewer should read):
   and iterative evaluation of fan-in-two AND/OR circuits
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at
   every input length, including the explicit empty-input answer
+* `Complexitylib.Circuits.Encoding.Machine` — total linear-time validation and
+  tape staging for the serialized circuit-family evaluator
 * `Complexitylib.Circuits.AndOrNot.Defs` — `AndOrOp`, `Basis.unboundedAndOr`,
   `Basis.boundedAndOr`, `Basis.andOr2`
 * `Complexitylib.Circuits.NormalForm.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`,
