@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Models.TuringMachine.Experimental.EmitSpec
 import Complexitylib.SAT.Tseitin.Machine.Defs
 import Mathlib.Tactic.FinCases
 
@@ -189,23 +190,17 @@ theorem emitClauseTM_hoareTime_internal
   have hSep := TM.emitBitsTM_hoareTime [true, false] inp work
     (((ys ++ literalBits aSign a) ++ literalBits bSign b) ++ literalBits cSign c)
     hinp hwork
-  have hCSep := TM.seqTM_hoareTime (TM.emitLitTM cSign cReg)
-    (TM.emitBitsTM [true, false])
-    (by simpa [literalBits] using hC)
-    (TM.emitPred_transition hinp hwork _)
-    hSep
-  have hBCSep := TM.seqTM_hoareTime (TM.emitLitTM bSign bReg)
-    (TM.seqTM (TM.emitLitTM cSign cReg) (TM.emitBitsTM [true, false]))
-    (by simpa [literalBits] using hB)
-    (TM.emitPred_transition hinp hwork _)
-    hCSep
-  have hAll := TM.seqTM_hoareTime (TM.emitLitTM aSign aReg)
-    (TM.seqTM (TM.emitLitTM bSign bReg)
-      (TM.seqTM (TM.emitLitTM cSign cReg) (TM.emitBitsTM [true, false])))
+  have hA' := TM.Experimental.EmitSpec.ofHoareTime hinp hwork
     (by simpa [literalBits] using hA)
-    (TM.emitPred_transition hinp hwork _)
-    hBCSep
-  simpa [emitClauseTM, clauseBits, clauseTime, literalTime, List.append_assoc] using hAll
+  have hB' := TM.Experimental.EmitSpec.ofHoareTime hinp hwork
+    (by simpa [literalBits] using hB)
+  have hC' := TM.Experimental.EmitSpec.ofHoareTime hinp hwork
+    (by simpa [literalBits] using hC)
+  have hSep' := TM.Experimental.EmitSpec.ofHoareTime hinp hwork
+    (by simpa [literalBits] using hSep)
+  have hAll := hA'.seq (hB'.seq (hC'.seq hSep'))
+  simpa [emitClauseTM, clauseBits, clauseTime, literalTime, literalBits,
+    List.append_assoc] using hAll.hoareTime
 
 /-- Specialized wide-link emitter `(a ∨ b ∨ fresh)`. -/
 theorem emitWideLinkTM_hoareTime_internal
@@ -375,31 +370,19 @@ theorem rollWideBuffersTM_hoareTime_internal
     (fun i _ => v₃.work_parked i) v₃.work_fresh
   have hClear := TM.clearRegTM_hoareTime currentReg v₄.current inp v₄.work ys hinp
     (fun i _ => v₄.work_parked i) v₄.work_current
-  have hIncClear := TM.seqTM_hoareTime (TM.incRegTM freshReg)
-    (TM.clearRegTM currentReg)
-    (by simpa [BufferPred, v₃, v₄] using hInc)
-    (TM.emitPred_transition hinp v₄.work_parked ys)
-    (by simpa [BufferPred, v₄] using hClear)
-  have hCurRest := TM.seqTM_hoareTime (TM.copyIntoTM currentReg bufferCReg)
-    (TM.seqTM (TM.incRegTM freshReg) (TM.clearRegTM currentReg))
-    (by simpa [BufferPred, v₂, v₃] using hCurC)
-    (TM.emitPred_transition hinp v₃.work_parked ys)
-    hIncClear
-  have hCBRest := TM.seqTM_hoareTime (TM.copyIntoTM bufferCReg bufferBReg)
-    (TM.seqTM (TM.copyIntoTM currentReg bufferCReg)
-      (TM.seqTM (TM.incRegTM freshReg) (TM.clearRegTM currentReg)))
-    (by simpa [BufferPred, v₁, v₂] using hCB)
-    (TM.emitPred_transition hinp v₂.work_parked ys)
-    hCurRest
-  have hAll := TM.seqTM_hoareTime (TM.copyIntoTM freshReg bufferAReg)
-    (TM.seqTM (TM.copyIntoTM bufferCReg bufferBReg)
-      (TM.seqTM (TM.copyIntoTM currentReg bufferCReg)
-        (TM.seqTM (TM.incRegTM freshReg) (TM.clearRegTM currentReg))))
+  have hFA' := TM.Experimental.EmitSpec.ofHoareTime hinp v₁.work_parked
     (by simpa [BufferPred, v₁] using hFA)
-    (TM.emitPred_transition hinp v₁.work_parked ys)
-    hCBRest
+  have hCB' := TM.Experimental.EmitSpec.ofHoareTime hinp v₂.work_parked
+    (by simpa [BufferPred, v₁, v₂] using hCB)
+  have hCurC' := TM.Experimental.EmitSpec.ofHoareTime hinp v₃.work_parked
+    (by simpa [BufferPred, v₂, v₃] using hCurC)
+  have hInc' := TM.Experimental.EmitSpec.ofHoareTime hinp v₄.work_parked
+    (by simpa [BufferPred, v₃, v₄] using hInc)
+  have hClear' := TM.Experimental.EmitSpec.ofHoareTime hinp v.rolled.work_parked
+    (by simpa [BufferPred, v₄, BufferValues.rolled] using hClear)
+  have hAll := hFA'.seq (hCB'.seq (hCurC'.seq (hInc'.seq hClear')))
   simpa [rollWideBuffersTM, rollWideBuffersTime, copyTime, unaryUpdateTime,
-    BufferPred, BufferValues.rolled, v₁, v₂, v₃, v₄] using hAll
+    BufferPred, BufferValues.rolled, v₁, v₂, v₃, v₄] using hAll.hoareTime
 
 /-! ## Literal commit -/
 
