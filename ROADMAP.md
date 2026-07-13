@@ -365,7 +365,10 @@ many-one reduction.
 `TM.copyInputToOutputTM` proves `id ∈ FP` and `MapReducesPoly.refl`.
 `TM.compositionTM` runs two function machines through a disjoint-tape,
 output-to-input pipeline within `4·T_f(n) + 11 + T_g(T_f(n))`; polynomial normal
-forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
+forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`. The same
+pipeline now runs a function computation before a language decider;
+`mem_P_preimage` and `MapReducesPoly.mem_P` package closure of `P` under
+polynomial-time preimages and reductions.
 
 **Staged milestones.**
 
@@ -388,6 +391,10 @@ forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
     - [x] Implement the output-to-input pipeline and compose the machines and
       time bounds (`TM.compositionTM_computesInTime`, `mem_FP_comp`, and
       `MapReducesPoly.trans`).
+    - [x] Generalize the pipeline's final contract to decision verdicts, normalize
+      `P` witnesses to polynomial evaluations, and prove closure under `FP`
+      preimages and polynomial reductions (`TM.compositionTM_decidesInTime`,
+      `mem_P_preimage`, and `MapReducesPoly.mem_P`).
 - [~] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
   Tseitin transformation. *Decomposed:*
   - [x] Name the existing encoded CNF problem as `CNFSAT.language`, expose
@@ -458,7 +465,7 @@ Uniformity is **logspace** (an `FL` generator, Arora–Barak Definition 6.5), no
 weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
 
 - **Circuits → TMs (`UniformPPoly ⊆ P`).** A polynomial-time DTM, given `1^n`, runs
-  the log-space generator (`FL ⊆ P`) to produce the length-`n` circuit code, then
+  the log-space generator (`FL ⊆ FP`) to produce the length-`n` circuit code, then
   evaluates that code on the input with a memoized topological evaluator — all in
   polynomial time. *Decomposed:*
   - [x] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
@@ -508,8 +515,19 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [x] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
-  - [ ] Compose the log-space generator with the evaluator; prove the resulting DTM
-    decides the family's language in polynomial time.
+  - [~] Compose the log-space generator with the evaluator; prove the resulting DTM
+    decides the family's language in polynomial time. *Decomposed:*
+    - [x] Prove the generic function-to-decider composition theorem, normalize `P`
+      and `FP` time witnesses to polynomial evaluations, and derive closure of `P`
+      under `FP` preimages (`TM.compositionTM_decidesInTime`,
+      `mem_P_iff_decidesInTime_polynomial`, and `mem_P_preimage`).
+    - [ ] Prove the bounded reduced-configuration theorem for total log-space
+      transducers and conclude the correctly typed containment `FL ⊆ FP`.
+    - [ ] Implement in `FP` the family-specific preprocessing map
+      `x ↦ pair (gen (unaryList |x|)) x`, preserving the original input while the
+      generator runs on unary length.
+    - [ ] Apply evaluator correctness through `mem_P_preimage` and conclude
+      `UniformPPoly_subset_P`.
 - **TMs → uniform circuits (`P ⊆ UniformPPoly`).** Unroll a `T(n)`-time DTM into a
   computation-tableau circuit of size `poly(T(n))` computing its output bit, and show
   the code map `1^n ↦ C_n` is computable in **log space** (logspace-uniform).

@@ -66,6 +66,19 @@ theorem MapReducesPoly.trans {L₁ L₂ L₃ : Language}
     (h₁ : L₁ ≤ₚ L₂) (h₂ : L₂ ≤ₚ L₃) : L₁ ≤ₚ L₃ :=
   MapReducesPoly.trans_of_comp (fun _ _ hf hg => mem_FP_comp hf hg) h₁ h₂
 
+/-! ### Transporting P membership -/
+
+/-- Membership in `P` transports backward along a polynomial-time many-one
+reduction. -/
+theorem MapReducesPoly.mem_P {L₁ L₂ : Language}
+    (hred : L₁ ≤ₚ L₂) (hL₂ : L₂ ∈ P) : L₁ ∈ P := by
+  obtain ⟨f, hf, hcorrect⟩ := hred
+  have hpre : f ⁻¹' L₂ ∈ P := mem_P_preimage hf hL₂
+  have heq : L₁ = f ⁻¹' L₂ := by
+    ext x
+    exact hcorrect x
+  rwa [heq]
+
 /-! ### Transporting NP-hardness and NP-completeness -/
 
 /-- NP-hardness transfers forward along a polynomial-time many-one reduction. -/

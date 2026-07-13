@@ -10,13 +10,14 @@ import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
-# Function-composition tail pipeline
+# Sequential-composition tail pipeline
 
 This module verifies the pipeline after the first function computation has
 placed its raw output on the dedicated work tape. The pipeline rewinds that
 tape, copies its delimited `HasOutput` value onto a fresh canonical tape,
 rewinds the fresh tape, and runs the placed started-input wrapper for the
-second computation.
+second machine. Its final output contract may describe either a computed string
+or a decision verdict.
 
 The phase-expanded bound is
 `(B + 2) + 1 + (|y| + 1) + 1 + (|y| + 1 + 2) + 1 + G(|y|)`,
@@ -41,29 +42,39 @@ private theorem transitionTape_eq_of_startInvariant {t : Tape}
     transitionTape t = t :=
   transitionTape_eq_self (read_ne_start_of_startInvariant hinv hhead)
 
-/-- The post-first-computation tail correctly runs the second function.
+/-- Boundary contract consumed only by the proof-internal composition tail. -/
+private def CompositionTailPre (nf ng : ℕ) (y : List Bool) (B : ℕ)
+    (inp : Tape) (work : Fin (compositionTapeCount nf ng) → Tape)
+    (out : Tape) : Prop :=
+  (work (compositionRawOutputIdx nf ng)).HasOutput y ∧
+  Tape.StartInvariant (work (compositionRawOutputIdx nf ng)) ∧
+  (work (compositionRawOutputIdx nf ng)).head ≤ B ∧
+  work (compositionVirtualInputIdx nf ng) = (Tape.init []).move Dir3.right ∧
+  (∀ j : Fin ng, work (compositionSecondWorkIdx nf ng j) =
+    (Tape.init []).move Dir3.right) ∧
+  out = (Tape.init []).move Dir3.right ∧
+  Tape.StartInvariant inp ∧ 1 ≤ inp.head ∧
+  (∀ i : Fin nf, Tape.StartInvariant (work (compositionPrefixIdx nf ng i)) ∧
+    1 ≤ (work (compositionPrefixIdx nf ng i)).head)
+
+/-- Generic post-first-computation tail driven by a virtual-input run contract.
 
 The prefix tapes are arbitrary stable frame tapes. The raw tape may initially
 have any head up to `B`, and cells after its first output delimiter may contain
 arbitrary junk. The virtual-input tape, second-machine scratch block, and real
 output begin in their canonical parked blank shapes. -/
-theorem compositionTailTM_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
-    {g : List Bool → List Bool} {G : ℕ → ℕ}
-    (hG : tmG.ComputesInTime g G) (y : List Bool) (B : ℕ) :
+private theorem compositionTailTM_hoareTime_of_virtualRun_internal
+    {nf ng : ℕ} (tmG : TM ng) {G : ℕ → ℕ}
+    (y : List Bool) (B : ℕ) (P : Tape → Prop)
+    (hG : ∀ realInput : Tape,
+      ∃ (c' : Cfg (ng + 1) tmG.Q) (t : ℕ),
+        t ≤ G y.length ∧
+        (retargetInputStarted tmG).reachesIn t
+          (retargetInputStartedCfg tmG y realInput) c' ∧
+        (retargetInputStarted tmG).halted c' ∧ P c'.output) :
     (compositionTailTM nf ng tmG).HoareTime
-      (fun inp work out =>
-        (work (compositionRawOutputIdx nf ng)).HasOutput y ∧
-        Tape.StartInvariant (work (compositionRawOutputIdx nf ng)) ∧
-        (work (compositionRawOutputIdx nf ng)).head ≤ B ∧
-        work (compositionVirtualInputIdx nf ng) =
-          (Tape.init []).move Dir3.right ∧
-        (∀ j : Fin ng, work (compositionSecondWorkIdx nf ng j) =
-          (Tape.init []).move Dir3.right) ∧
-        out = (Tape.init []).move Dir3.right ∧
-        Tape.StartInvariant inp ∧ 1 ≤ inp.head ∧
-        (∀ i : Fin nf, Tape.StartInvariant (work (compositionPrefixIdx nf ng i)) ∧
-          1 ≤ (work (compositionPrefixIdx nf ng i)).head))
-      (fun _inp _work out => out.HasOutput (g y))
+      (CompositionTailPre nf ng y B)
+      (fun _inp _work out => P out)
       ((B + 2) + 1 + ((y.length + 1) + 1 +
         ((y.length + 1 + 2) + 1 + G y.length))) := by
   intro inp work out hpre
@@ -367,9 +378,21 @@ theorem compositionTailTM_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
     intro i _hi
     rw [show extras i = c₃.work i from hc₃WorkTr i]
     exact (hc₃WorkStable i).2
-  obtain ⟨c₄, C₄, t₄, ht₄, hreach₄, hC₄, hhalt₄, hout₄⟩ :=
-    placeWorkTM_retargetInputStarted_computesVirtual tmG secondPre 0 extras
-      hG y realInput hextrasInv hextrasHead
+  obtain ⟨c₄, t₄, ht₄, hreachSource₄, hhaltSource₄, hout₄⟩ := hG realInput
+  let C₄ := placeWorkCfg (retargetInputStarted tmG) secondPre 0 extras c₄
+  have hreach₄ :
+      (placeWorkTM secondPre 0 (retargetInputStarted tmG)).reachesIn t₄
+        (placeWorkCfg (retargetInputStarted tmG) secondPre 0 extras
+          (retargetInputStartedCfg tmG y realInput)) C₄ := by
+    apply placeWorkTM_reachesIn_placeWorkCfg_stable_internal
+      (retargetInputStarted tmG) secondPre 0 extras hreachSource₄
+    intro i hi
+    show (extras i).cells (extras i).head ≠ Γ.start
+    exact (hextrasInv i hi).2 (extras i).head (hextrasHead i hi)
+  have hhalt₄ :
+      (placeWorkTM secondPre 0 (retargetInputStarted tmG)).halted C₄ := by
+    show c₄.state = (retargetInputStarted tmG).qhalt
+    exact hhaltSource₄
   let gEntry : Cfg (compositionTapeCount nf ng) (compositionSecondTM nf tmG).Q :=
     { state := (compositionSecondTM nf tmG).qstart
       input := transitionInput c₃.input
@@ -494,8 +517,40 @@ theorem compositionTailTM_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
   · change (seqTM tm₁ tm₂₃₄).halted cFinal
     rw [phase2Wrap_halted_iff, phase2Wrap_halted_iff, phase2Wrap_halted_iff]
     exact hhalt₄
-  · show C₄.output.HasOutput (g y)
+  · show P C₄.output
     exact hout₄
+
+/-- The post-first-computation tail correctly runs the second function. -/
+theorem compositionTailTM_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
+    {g : List Bool → List Bool} {G : ℕ → ℕ}
+    (hG : tmG.ComputesInTime g G) (y : List Bool) (B : ℕ) :
+    (compositionTailTM nf ng tmG).HoareTime
+      (CompositionTailPre nf ng y B)
+      (fun _inp _work out => out.HasOutput (g y))
+      ((B + 2) + 1 + ((y.length + 1) + 1 +
+        ((y.length + 1 + 2) + 1 + G y.length))) := by
+  apply compositionTailTM_hoareTime_of_virtualRun_internal tmG y B
+    (fun out => out.HasOutput (g y))
+  intro realInput
+  exact retargetInputStarted_computesVirtual tmG hG y realInput
+
+/-- The same tail pipeline retains a second machine's decision verdict. -/
+theorem compositionTailTM_decides_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
+    {L : Language} {G : ℕ → ℕ}
+    (hG : tmG.DecidesInTime L G) (y : List Bool) (B : ℕ) :
+    (compositionTailTM nf ng tmG).HoareTime
+      (CompositionTailPre nf ng y B)
+      (fun _inp _work out =>
+        (y ∈ L → out.cells 1 = Γ.one) ∧
+        (y ∉ L → out.cells 1 = Γ.zero))
+      ((B + 2) + 1 + ((y.length + 1) + 1 +
+        ((y.length + 1 + 2) + 1 + G y.length))) := by
+  apply compositionTailTM_hoareTime_of_virtualRun_internal tmG y B
+    (fun out =>
+      (y ∈ L → out.cells 1 = Γ.one) ∧
+      (y ∉ L → out.cells 1 = Γ.zero))
+  intro realInput
+  exact retargetInputStarted_decidesVirtual tmG hG y realInput
 
 end TM
 

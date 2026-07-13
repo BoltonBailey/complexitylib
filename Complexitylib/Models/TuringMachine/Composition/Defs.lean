@@ -9,13 +9,14 @@ import Complexitylib.Models.TuringMachine.Placement.Defs
 import Complexitylib.Models.TuringMachine.Subroutines
 
 /-!
-# Sequential composition of function-computing machines
+# Sequential composition after function computation
 
-This file fixes the tape layout and executable phase pipeline used to compose
-two deterministic function computations. Proofs of correctness and time bounds
-live in the internal and public theorem layers.
+This file fixes the tape layout and executable phase pipeline used to feed one
+deterministic function computation into a second machine. Proofs of correctness
+and time bounds live in the internal and public theorem layers.
 
-For `tmF : TM nf` and `tmG : TM ng`, the composite has
+For a function-computing `tmF : TM nf` and a second machine `tmG : TM ng`, the
+composite has
 `nf + 1 + (ng + 1)` work tapes:
 
 - `0 .. nf - 1`: work tapes of `tmF`
@@ -33,7 +34,7 @@ namespace TM
 
 variable {nf ng : ℕ}
 
-/-- Work-tape count of the sequential function-composition machine. -/
+/-- Work-tape count of the sequential composition machine. -/
 abbrev compositionTapeCount (nf ng : ℕ) := 0 + (nf + 1) + (ng + 1)
 
 /-- Physical work tape holding the raw redirected output of the first machine. -/
@@ -111,8 +112,8 @@ def compositionTailTM (nf ng : ℕ) (tmG : TM ng) : TM (compositionTapeCount nf 
       (seqTM (rewindWorkTM (compositionVirtualInputIdx nf ng))
         (compositionSecondTM nf tmG)))
 
-/-- Executable sequential composition of two deterministic function-computing
-machines. -/
+/-- Executable sequential composition of a function computation with a second
+deterministic machine. -/
 def compositionTM (tmF : TM nf) (tmG : TM ng) : TM (compositionTapeCount nf ng) :=
   seqTM (compositionFirstTM tmF ng) (compositionTailTM nf ng tmG)
 

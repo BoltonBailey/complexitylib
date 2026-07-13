@@ -7,7 +7,7 @@ import Complexitylib.Models.TuringMachine.Composition.Defs
 import Complexitylib.Models.TuringMachine.Composition.Internal
 
 /-!
-# Sequential composition of function-computing machines
+# Sequential composition after function computation
 
 `TM.compositionTM tmF tmG` is an executable deterministic machine that runs
 `tmF`, copies its delimited output onto a fresh virtual-input tape, and then
@@ -18,6 +18,7 @@ first delimiter.
 ## Main result
 
 - `TM.compositionTM_computesInTime` — correctness with a monotone coarse time bound
+- `TM.compositionTM_decidesInTime` — function computation followed by a decider
 -/
 
 namespace Complexity
@@ -38,6 +39,19 @@ theorem compositionTM_computesInTime
     (compositionTM tmF tmG).ComputesInTime (g ∘ f)
       (fun n => 4 * TF n + 11 + TG (TF n)) :=
   compositionTM_computesInTime_internal hF hG hmono
+
+/-- Sequential deterministic preprocessing followed by a language decider.
+The composite decides the preimage language with the same coarse monotone time
+bound as function composition. -/
+theorem compositionTM_decidesInTime
+    {tmF : TM nf} {tmG : TM ng}
+    {f : List Bool → List Bool} {L : Language} {TF TG : ℕ → ℕ}
+    (hF : tmF.ComputesInTime f TF)
+    (hG : tmG.DecidesInTime L TG)
+    (hmono : Monotone TG) :
+    (compositionTM tmF tmG).DecidesInTime (f ⁻¹' L)
+      (fun n => 4 * TF n + 11 + TG (TF n)) :=
+  compositionTM_decidesInTime_preimage_internal hF hG hmono
 
 end TM
 

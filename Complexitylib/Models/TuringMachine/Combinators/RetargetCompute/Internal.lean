@@ -168,6 +168,25 @@ theorem retargetInputStarted_computesVirtual_internal (M : TM k)
     retargetInputStarted_computesVirtual_exact_internal M hcomp y realInput
   exact ⟨c', t, by omega, hreach, hhalt, hout⟩
 
+/-- A decider run can be resumed on a virtual input with the same advertised
+time bound while retaining both verdict implications. -/
+theorem retargetInputStarted_decidesVirtual_internal (M : TM k)
+    {L : Language} {T : ℕ → ℕ}
+    (hdec : M.DecidesInTime L T) (y : List Bool) (realInput : Tape) :
+    ∃ (c' : Cfg (k + 1) M.Q) (t : ℕ),
+      t ≤ T y.length ∧
+      (retargetInputStarted M).reachesIn t
+        (retargetInputStartedCfg M y realInput) c' ∧
+      (retargetInputStarted M).halted c' ∧
+      (y ∈ L → c'.output.cells 1 = Γ.one) ∧
+      (y ∉ L → c'.output.cells 1 = Γ.zero) := by
+  obtain ⟨c', t, ht, hreach, hhalt, hyes, hno⟩ :=
+    retargetInput_decidesVirtual_started M hdec y realInput
+  refine ⟨c', t, by omega, ?_, hhalt, hyes, hno⟩
+  rw [retargetInputStartedCfg_eq_retargetWrap_internal M y realInput
+    (qstart_ne_qhalt_of_decidesInTime M hdec)]
+  exact retargetInputStarted_reachesIn_of_retargetInput_internal M hreach
+
 /-- Hoare form of the same-time virtual-input seam. -/
 theorem retargetInputStarted_hoareTime_internal (M : TM k)
     {f : List Bool → List Bool} {T : ℕ → ℕ}
@@ -222,6 +241,41 @@ theorem placeWorkTM_retargetInputStarted_computesVirtual_internal (M : TM k)
     exact hhalt
   · show c'.output.HasOutput (f y)
     exact hout
+
+/-- Placed virtual-input decision with an exact preserved physical frame. -/
+theorem placeWorkTM_retargetInputStarted_decidesVirtual_internal (M : TM k)
+    (pre post : ℕ) (extras : Fin (pre + (k + 1) + post) → Tape)
+    {L : Language} {T : ℕ → ℕ}
+    (hdec : M.DecidesInTime L T) (y : List Bool) (realInput : Tape)
+    (hinv : ∀ i, ¬placeWorkInMiddle pre (k + 1) i →
+      Tape.StartInvariant (extras i))
+    (hhead : ∀ i, ¬placeWorkInMiddle pre (k + 1) i →
+      1 ≤ (extras i).head) :
+    ∃ (c' : Cfg (k + 1) M.Q)
+      (C' : Cfg (pre + (k + 1) + post)
+        (placeWorkTM pre post (retargetInputStarted M)).Q) (t : ℕ),
+      t ≤ T y.length ∧
+      (placeWorkTM pre post (retargetInputStarted M)).reachesIn t
+        (placeWorkCfg (retargetInputStarted M) pre post extras
+          (retargetInputStartedCfg M y realInput)) C' ∧
+      C' = placeWorkCfg (retargetInputStarted M) pre post extras c' ∧
+      (placeWorkTM pre post (retargetInputStarted M)).halted C' ∧
+      (y ∈ L → C'.output.cells 1 = Γ.one) ∧
+      (y ∉ L → C'.output.cells 1 = Γ.zero) := by
+  obtain ⟨c', t, ht, hreach, hhalt, hyes, hno⟩ :=
+    retargetInputStarted_decidesVirtual_internal M hdec y realInput
+  let C' := placeWorkCfg (retargetInputStarted M) pre post extras c'
+  refine ⟨c', C', t, ht, ?_, rfl, ?_, ?_, ?_⟩
+  · apply placeWorkTM_reachesIn_placeWorkCfg_stable_internal _ pre post extras hreach
+    intro i hi
+    show (extras i).cells (extras i).head ≠ Γ.start
+    exact (hinv i hi).2 (extras i).head (hhead i hi)
+  · show c'.state = (retargetInputStarted M).qhalt
+    exact hhalt
+  · show y ∈ L → c'.output.cells 1 = Γ.one
+    exact hyes
+  · show y ∉ L → c'.output.cells 1 = Γ.zero
+    exact hno
 
 end TM
 
