@@ -92,6 +92,20 @@ theorem eq_init_move_right_of_hasBinaryString {t : Tape} {bits : List Bool}
       · have hge : bits.length ≤ i := by omega
         rw [htail i hge, Tape.init_ofBool_cells_ge bits i hge]
 
+/-- A binary prefix with the left marker at cell zero has exactly the
+canonical initialized cell contents, independently of its current head. -/
+theorem HasBinaryPrefix.cells_eq_init {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
+    t.cells = (Tape.init (bits.map Γ.ofBool)).cells := by
+  funext j
+  cases j with
+  | zero => simpa using h0
+  | succ i =>
+      by_cases hi : i < bits.length
+      · rw [h.2.1 i hi, Tape.init_ofBool_cells_lt bits i hi]
+      · have hge : bits.length ≤ i := by omega
+        rw [h.2.2 i hge, Tape.init_ofBool_cells_ge bits i hge]
+
 /-- Bounded completed binary tapes expose exact initialized tape shape for
     some string whose length satisfies the same bound. -/
 theorem exists_eq_init_move_right_of_hasBoundedBinaryString {t : Tape} {B : ℕ}

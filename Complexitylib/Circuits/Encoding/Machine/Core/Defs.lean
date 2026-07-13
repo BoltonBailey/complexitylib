@@ -27,8 +27,11 @@ namespace Machine
 
 /-- One tape-head action together with its left-end safety proof. -/
 structure TapeAction (head : Γ) where
+  /-- Writable symbol emitted at the current head. -/
   write : Γw
+  /-- Direction taken after the write. -/
   dir : Dir3
+  /-- The action moves right whenever it reads the left-end marker. -/
   rightOfStart : head = Γ.start → dir = Dir3.right
 
 namespace TapeAction
@@ -90,10 +93,15 @@ inductive CorePhase where
 
 /-- Named actions for the three evaluator work tapes and the output tape. -/
 structure CoreAction (wHeads : Fin workTapeCount → Γ) (oHead : Γ) where
+  /-- Controller phase entered after this action. -/
   next : CorePhase
+  /-- Action for the serialized-code tape. -/
   code : TapeAction (wHeads codeIdx)
+  /-- Action for the input-and-memo wire tape. -/
   wires : TapeAction (wHeads wiresIdx)
+  /-- Action for the unary gate-counter tape. -/
   counter : TapeAction (wHeads counterIdx)
+  /-- Action for the Boolean verdict output tape. -/
   output : TapeAction oHead
 
 namespace CoreAction

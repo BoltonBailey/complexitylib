@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Family
-import Complexitylib.Circuits.Encoding.Machine.Core.Defs
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal
 
 /-!
 # Encoded-circuit evaluator — executable validation

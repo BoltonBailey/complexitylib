@@ -7,6 +7,7 @@ import Complexitylib.Models.TuringMachine.Composition.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Function-composition tail pipeline
@@ -39,17 +40,6 @@ private theorem transitionTape_eq_of_startInvariant {t : Tape}
     (hinv : Tape.StartInvariant t) (hhead : 1 ≤ t.head) :
     transitionTape t = t :=
   transitionTape_eq_self (read_ne_start_of_startInvariant hinv hhead)
-
-/-- A binary prefix with a left marker has exactly the canonical initialized
-cell function, even before its head is rewound. -/
-private theorem cells_eq_init_of_hasBinaryPrefix {t : Tape} {bits : List Bool}
-    (hprefix : t.HasBinaryPrefix bits) (hcell0 : t.cells 0 = Γ.start) :
-    t.cells = (Tape.init (bits.map Γ.ofBool)).cells := by
-  let t' : Tape := { head := 1, cells := t.cells }
-  have hstring : t'.HasBinaryString bits :=
-    Tape.hasBinaryString_of_hasBinaryPrefix hprefix rfl rfl
-  have heq := Tape.eq_init_move_right_of_hasBinaryString hstring hcell0
-  simpa [t', Tape.move] using congrArg Tape.cells heq
 
 /-- The post-first-computation tail correctly runs the second function.
 
@@ -242,7 +232,7 @@ theorem compositionTailTM_hoareTime_internal {nf ng : ℕ} (tmG : TM ng)
   rcases hc₂Frame with ⟨hc₂Input, hc₂Output, hc₂Other⟩
   have hc₂VinCells : (c₂.work vin).cells =
       (Tape.init (y.map Γ.ofBool)).cells :=
-    cells_eq_init_of_hasBinaryPrefix hc₂VinPrefix hc₂Vin0
+    hc₂VinPrefix.cells_eq_init hc₂Vin0
   have hc₂RawInv : Tape.StartInvariant (c₂.work raw) := by
     refine ⟨?_, ?_⟩
     · rw [hc₂RawCells]

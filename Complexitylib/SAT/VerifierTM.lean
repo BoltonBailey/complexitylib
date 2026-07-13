@@ -46,19 +46,6 @@ namespace VerifierTM
 -- Small tape helpers
 -- ════════════════════════════════════════════════════════════════════════
 
-private theorem hasBinaryPrefix_cells_eq_initTape_cells {t : Tape} {bits : List Bool}
-    (hprefix : t.HasBinaryPrefix bits) (h0 : t.cells 0 = Γ.start) :
-    t.cells = (Tape.init (bits.map Γ.ofBool)).cells := by
-  funext j
-  cases j with
-  | zero =>
-      simpa using h0
-  | succ i =>
-      by_cases hi : i < bits.length
-      · rw [hprefix.2.1 i hi, Tape.init_ofBool_cells_lt bits i hi]
-      · have hge : bits.length ≤ i := by omega
-        rw [hprefix.2.2 i hge, Tape.init_ofBool_cells_ge bits i hge]
-
 private theorem eq_initTape_move_right_of_cells_head_one {t : Tape} (bits : List Bool)
     (hcells : t.cells = (Tape.init (bits.map Γ.ofBool)).cells)
     (hhead : t.head = 1) :
