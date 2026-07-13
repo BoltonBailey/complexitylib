@@ -128,10 +128,19 @@ frame facts instead of hiding them in another controller-local proof.
 - [ ] Investigate a typed controller/phase DSL for executable TMs: declare
   phases, child-machine calls, and tape frames once, then generate the composite
   state plumbing, transition routing, and reusable run/`HoareTime` proof skeletons.
-- [ ] Evaluate CREI's rose-tree machine (RTM) as a high-level authoring language.
-  Prototype a verified lowering of its first-order `InPlace` fragment through a
-  named-tape/effect routine layer and the existing combinators to the concrete
-  `TM`, carrying correctness, preservation frames, and concrete time/space bounds.
+- [ ] Evaluate CREI's rose-tree machine (RTM) as a high-level authoring language
+  and prototype a verified lowering of its first-order `InPlace` fragment. *Decomposed:*
+  - [x] Audit the upstream `rtm` branch and record the adoption decision. The
+    pinned evaluation in `docs/N0-MachineAuthoring.md` rejects a direct dependency
+    for now: the experimental stack is not root-tested or warning-clean and has no
+    RTM-to-TM compiler or compatible all-reachable tape-space contract.
+  - [x] Add an experimental first-order routine layer with structural lowering for
+    calls, sequencing, and input iteration. The indexed `ForInputLoopSpec` and
+    `ForInputLoopSpaceSpec` certificates recover exact execution and all-reachable
+    space for `Experimental.binaryLengthRoutine = forInput (call binarySuccTM)`.
+  - [ ] Add a well-scoped, Data-valued `InPlace` core and lower a rose-tree list
+    operation (preferably `reverse`) through named tapes with concrete refinement,
+    frame, time, and all-reachable space theorems.
 - [ ] Audit proof-engineering mechanics across representative machine and circuit
   constructions: inventory repeated state/tape/wire bookkeeping, run or trace
   stitching, semantic transport, and resource accounting, then prototype the
@@ -171,6 +180,10 @@ finite-state compilation, concrete time overhead, space preservation, and frame
 preservation on the pipeline, loop, and serializer benchmarks. If that slice
 does not fit cleanly, retain the local routine IR and port only RTM's rose-tree,
 builder, and first-order-fragment ideas.
+
+The pinned compatibility audit, no-dependency decision, benchmark baseline, and
+promotion gates live in `docs/N0-MachineAuthoring.md`. The first local slice is
+intentionally control-flow-only; it does not yet validate rose-tree serialization.
 
 The serialized-circuit evaluator is the current end-to-end experiment: its
 validator, pair splitter, tape scanner, memo-wire appends, and evaluator loop
