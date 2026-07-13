@@ -11,8 +11,9 @@ import Complexitylib.Models.TuringMachine
 Generic predicates and lemmas for tapes containing canonical binary strings.
 `Tape.HasBinaryPrefix` describes a string being written from left to right,
 `Tape.HasBinaryString` describes the same contents after rewinding the head to
-cell one, and `Tape.HasBinarySuffix` describes a read cursor at the beginning
-of a remaining suffix. These shapes are shared by deterministic and
+cell one, `Tape.HasBinaryContent` forgets the head while an in-place arithmetic
+cursor moves, and `Tape.HasBinarySuffix` describes a read cursor at the
+beginning of a remaining suffix. These shapes are shared by deterministic and
 nondeterministic machine constructions.
 -/
 
@@ -34,6 +35,12 @@ def HasBinaryString (t : Tape) (bits : List Bool) : Prop :=
   (∀ i, (h : i < bits.length) → t.cells (i + 1) = Γ.ofBool (bits[i]'h)) ∧
   (∀ i, bits.length ≤ i → t.cells (i + 1) = Γ.blank)
 
+/-- Canonical binary contents independently of the tape head. This is the
+stable invariant for in-place arithmetic cursors that scan and rewind. -/
+def HasBinaryContent (t : Tape) (bits : List Bool) : Prop :=
+  (∀ i, (h : i < bits.length) → t.cells (i + 1) = Γ.ofBool (bits[i]'h)) ∧
+  ∀ i, bits.length ≤ i → t.cells (i + 1) = Γ.blank
+
 /-- A read cursor at the beginning of a remaining binary suffix. The suffix
 starts under the current off-marker head, is followed immediately by blank,
 and the tape has no stray left markers. -/
@@ -47,6 +54,80 @@ def HasBinarySuffix (t : Tape) (bits : List Bool) : Prop :=
 /-- A completed binary string whose length is at most `B`. -/
 def HasBoundedBinaryString (t : Tape) (B : ℕ) : Prop :=
   ∃ bits : List Bool, bits.length ≤ B ∧ t.HasBinaryString bits
+
+/-- A completed binary string has the same canonical contents after forgetting
+its parked head. -/
+theorem HasBinaryString.hasBinaryContent {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryString bits) : t.HasBinaryContent bits :=
+  h.2
+
+/-- Canonical contents become a completed binary string when the head is at
+cell one. -/
+theorem HasBinaryContent.hasBinaryString {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryContent bits) (hhead : t.head = 1) :
+    t.HasBinaryString bits :=
+  ⟨hhead, h⟩
+
+/-- Moving a cursor preserves its canonical binary contents. -/
+theorem HasBinaryContent.move {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryContent bits) (dir : Dir3) :
+    (t.move dir).HasBinaryContent bits := by
+  simpa only [HasBinaryContent, Tape.move_cells] using h
+
+/-- Canonical binary contents contain no stray left marker after cell zero. -/
+theorem HasBinaryContent.cells_ne_start {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryContent bits) :
+    ∀ j, 1 ≤ j → t.cells j ≠ Γ.start := by
+  intro j hj
+  let i := j - 1
+  have hji : j = i + 1 := by omega
+  by_cases hi : i < bits.length
+  · rw [hji, h.1 i hi]
+    exact Γ.ofBool_ne_start _
+  · rw [hji, h.2 i (Nat.le_of_not_gt hi)]
+    decide
+
+/-- Overwriting one in-range binary cell preserves canonical contents and
+updates exactly that bit. -/
+theorem HasBinaryContent.write_set {t : Tape} {bits : List Bool}
+    {i : ℕ} (bit : Bool) (h : t.HasBinaryContent bits)
+    (hhead : t.head = i + 1) (hi : i < bits.length) :
+    (t.write (Γ.ofBool bit)).HasBinaryContent (bits.set i bit) := by
+  rcases h with ⟨hbits, htail⟩
+  have hhead0 : ¬t.head = 0 := by omega
+  constructor
+  · intro j hj
+    rw [Tape.write, if_neg hhead0]
+    simp only
+    rw [List.length_set] at hj
+    rw [hhead]
+    by_cases hij : i = j
+    · subst j
+      rw [Function.update_self, List.getElem_set]
+      simp
+    · have hne : i + 1 ≠ j + 1 := by omega
+      rw [Function.update_of_ne (Ne.symm hne), hbits j hj,
+        List.getElem_set]
+      simp [hij]
+  · intro j hj
+    rw [Tape.write, if_neg hhead0]
+    simp only
+    rw [List.length_set] at hj
+    rw [hhead]
+    have hne : i + 1 ≠ j + 1 := by omega
+    rw [Function.update_of_ne (Ne.symm hne)]
+    exact htail j hj
+
+/-- Writing away from cell zero and then moving preserves the left marker. -/
+theorem write_move_cell0 {t : Tape} (symbol : Γ) (dir : Dir3)
+    (h0 : t.cells 0 = Γ.start) :
+    ((t.write symbol).move dir).cells 0 = Γ.start := by
+  rw [Tape.move_cells, Tape.write]
+  split
+  · exact h0
+  · simp only
+    rw [Function.update_of_ne (by omega)]
+    exact h0
 
 /-- A completed binary tape encodes exactly `bits` as its output string. -/
 theorem hasOutput_of_hasBinaryString {t : Tape} {bits : List Bool}
@@ -246,6 +327,14 @@ theorem hasBinaryPrefix_write_bit {t : Tape} {bits : List Bool} (bit : Bool)
     exact h.2.2 i (by
       rw [List.length_append, List.length_singleton] at hi
       omega)
+
+/-- Writing at the first blank appends one canonical binary cell. -/
+theorem HasBinaryContent.write_append {t : Tape} {bits : List Bool}
+    (bit : Bool) (h : t.HasBinaryContent bits)
+    (hhead : t.head = bits.length + 1) :
+    (t.write (Γ.ofBool bit)).HasBinaryContent (bits ++ [bit]) := by
+  have hprefix : t.HasBinaryPrefix bits := ⟨hhead, h⟩
+  exact (hasBinaryPrefix_write_bit bit hprefix).2
 
 /-- Writing the next bit preserves the left-end marker cell. -/
 theorem hasBinaryPrefix_write_bit_cell0 {t : Tape} {bits : List Bool} (bit : Bool)

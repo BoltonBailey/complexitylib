@@ -52,6 +52,26 @@ theorem WithinAuxSpace.transition_internal {c : Cfg n Q}
       _ ≤ inputLength + space + 1 + 1 := Nat.add_le_add_right h.2 1
       _ = inputLength + (space + 1) + 1 := by omega
 
+/-- Internal reachability rule: after `time` concrete transitions, one extra
+auxiliary-space cell per transition covers every input and work head. -/
+theorem WithinAuxSpace.reachesIn_internal {tm : TM n}
+    {c c' : Cfg n tm.Q} {time inputLength space : ℕ}
+    (h : c.WithinAuxSpace inputLength space)
+    (hreach : tm.reachesIn time c c') :
+    c'.WithinAuxSpace inputLength (space + time) := by
+  constructor
+  · intro i
+    calc
+      (c'.work i).head ≤ (c.work i).head + time :=
+        tm.work_head_reachesIn_bound hreach i
+      _ ≤ space + time := Nat.add_le_add_right (h.1 i) time
+  · calc
+      c'.input.head ≤ c.input.head + time :=
+        tm.input_head_reachesIn_bound hreach
+      _ ≤ inputLength + (space + time) + 1 := by
+        have hinput := h.2
+        omega
+
 end Cfg
 
 namespace TM
@@ -93,22 +113,7 @@ theorem HoareTime.toHoareTimeSpace_internal {tm : TM n}
   obtain ⟨t, hreachIn⟩ := tm.reaches_to_reachesIn hreach
   have ht : t ≤ haltTime := tm.reachesIn_le_halt hreachIn hrun hhalt
   have hstart := hinitial inp work out hpre
-  constructor
-  · intro i
-    calc
-      (c.work i).head ≤ (work i).head + t :=
-        tm.work_head_reachesIn_bound hreachIn i
-      _ ≤ initialSpace + time := by
-        have hwork : (work i).head ≤ initialSpace := by
-          simpa using hstart.1 i
-        omega
-  · calc
-      c.input.head ≤ inp.head + t :=
-        tm.input_head_reachesIn_bound hreachIn
-      _ ≤ inputLength + (initialSpace + time) + 1 := by
-        have hinput : inp.head ≤ inputLength + initialSpace + 1 := by
-          simpa using hstart.2
-        omega
+  exact (hstart.reachesIn_internal hreachIn).mono_internal le_rfl (by omega)
 
 /-- Internal consequence rule for time-and-space Hoare contracts. -/
 theorem HoareTimeSpace.consequence_internal {tm : TM n}

@@ -19,6 +19,7 @@ closure, and a fresh-start computation bridge.
 
 - `TM.HoareTimeSpace.consequence` — weaken/strengthen every contract component.
 - `TM.HoareSpace.weaken_pre`, `TM.HoareSpace.mono` — structural space rules.
+- `Cfg.WithinAuxSpace.reachesIn` — bound head growth along a concrete run.
 - `TM.HoareTime.and_hoareSpace` — pair existing endpoint and safety proofs.
 - `TM.HoareTime.toHoareTimeSpace` — derive all-reachable space from time and
   an initial head bound.
@@ -50,6 +51,15 @@ theorem WithinAuxSpace.transition {c : Cfg n Q}
        output := TM.transitionTape c.output } : Cfg n Q).WithinAuxSpace
       inputLength (space + 1) :=
   h.transition_internal
+
+/-- A `time`-step run can increase every charged head position by at most
+`time`, so adding that many cells preserves the auxiliary-space bound. -/
+theorem WithinAuxSpace.reachesIn {tm : TM n}
+    {c c' : Cfg n tm.Q} {time inputLength space : ℕ}
+    (h : c.WithinAuxSpace inputLength space)
+    (hreach : tm.reachesIn time c c') :
+    c'.WithinAuxSpace inputLength (space + time) :=
+  h.reachesIn_internal hreach
 
 end Cfg
 
