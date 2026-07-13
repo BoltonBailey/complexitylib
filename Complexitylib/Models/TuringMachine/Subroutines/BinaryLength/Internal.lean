@@ -7,6 +7,7 @@ import Complexitylib.Asymptotics
 import Complexitylib.Mathlib.NatBits
 import Complexitylib.Models.TuringMachine.Combinators.ForInput.Internal
 import Complexitylib.Models.TuringMachine.Hoare.Space
+import Complexitylib.Models.TuringMachine.Experimental.Routine.Internal
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 
@@ -110,7 +111,9 @@ private theorem binaryLengthInput_read_blank (x : List Bool) :
 private theorem binaryLengthTM_start_step (x : List Bool) (counterIdx : Fin n) :
     (binaryLengthTM counterIdx).step ((binaryLengthTM counterIdx).initCfg x) =
       some (binaryLengthScanCfg x counterIdx 0) := by
-  simp [binaryLengthTM, TM.step, forInputTM, binaryLengthScanCfg,
+  simp [binaryLengthTM, Experimental.binaryLengthRoutine,
+    Experimental.Routine.lower, TM.step,
+    forInputTM, binaryLengthScanCfg,
     binaryLengthInput, binaryLengthWork, binaryLengthCounterTape,
     binaryLengthStartedBlank, Tape.read, Tape.init, readBackWrite, idleDir,
     Tape.writeAndMove, Tape.write, Tape.move]
@@ -193,6 +196,27 @@ private theorem binaryLengthTM_loopback_step (x : List Bool)
   simpa [binaryLengthTM, binaryLengthBodyDoneCfg, binaryLengthScanCfg,
     forInputBodyWrap, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hstep
 
+private def binaryLengthLoopSpec (x : List Bool) (counterIdx : Fin n) :
+    ForInputLoopSpec (binarySuccTM counterIdx) binarySuccTime x.length where
+  scanCfg := binaryLengthScanCfg x counterIdx
+  bodyStartCfg := fun value =>
+    forInputBodyWrap (binarySuccTM counterIdx)
+      (binaryLengthBodyStartCfg x counterIdx value)
+  bodyDoneCfg := fun value =>
+    forInputBodyWrap (binarySuccTM counterIdx)
+      (binaryLengthBodyDoneCfg x counterIdx value)
+  doneCfg := binaryLengthDoneCfg x counterIdx
+  scanStep := fun value hvalue =>
+    binaryLengthTM_scan_bit_step x counterIdx value hvalue
+  bodyRun := fun value _ => by
+    simpa [binaryLengthTM, Experimental.binaryLengthRoutine,
+      Experimental.Routine.lower] using
+      forInputTM_body_reachesIn_internal (binarySuccTM counterIdx)
+        (binaryLengthTM_body_run x counterIdx value)
+  loopbackStep := fun value _ =>
+    binaryLengthTM_loopback_step x counterIdx value
+  blankStep := binaryLengthTM_scan_blank_step x counterIdx
+
 private theorem binaryLengthTM_init_withinAuxSpace (x : List Bool)
     (counterIdx : Fin n) :
     ((binaryLengthTM counterIdx).initCfg x).WithinAuxSpace x.length
@@ -266,47 +290,40 @@ private theorem binaryLengthBodyPrefix_withinAuxSpace (x : List Bool)
     _ = binaryLengthSpace x.length := by
       simp [binaryLengthSpace]
 
+private def binaryLengthLoopSpaceSpec (x : List Bool) (counterIdx : Fin n) :
+    ForInputLoopSpaceSpec (binaryLengthLoopSpec x counterIdx) x.length
+      (binaryLengthSpace x.length) where
+  scanWithin := fun value hvalue =>
+    binaryLengthScanCfg_withinAuxSpace x counterIdx value hvalue
+  doneWithin := binaryLengthDoneCfg_withinAuxSpace x counterIdx
+  bodyPrefixWithin := by
+    intro value t c hvalue htime hreach
+    obtain ⟨d, hprefix, _hsuffix⟩ := reachesIn_prefix_internal
+      (binaryLengthTM_body_run x counterIdx value) htime
+    have hcanonical : (forInputTM (binarySuccTM counterIdx)).reachesIn t
+        ((binaryLengthLoopSpec x counterIdx).bodyStartCfg value)
+        (forInputBodyWrap (binarySuccTM counterIdx) d) := by
+      simpa [binaryLengthLoopSpec] using
+        forInputTM_body_reachesIn_internal (binarySuccTM counterIdx) hprefix
+    have hc := (forInputTM (binarySuccTM counterIdx)).reachesIn_right_unique
+      hreach hcanonical
+    rw [hc]
+    simpa [forInputBodyWrap] using
+      binaryLengthBodyPrefix_withinAuxSpace x counterIdx value t d
+        hvalue hprefix
+
 private theorem binaryLengthTM_loop (x : List Bool) (counterIdx : Fin n) :
     ∀ count value, value + count = x.length →
       (binaryLengthTM counterIdx).reachesIn
         (binaryLengthLoopTime value count)
         (binaryLengthScanCfg x counterIdx value)
         (binaryLengthDoneCfg x counterIdx) := by
-  intro count
-  induction count with
-  | zero =>
-      intro value hlength
-      have hvalue : value = x.length := by omega
-      subst value
-      exact .step (binaryLengthTM_scan_blank_step x counterIdx) .zero
-  | succ count ih =>
-      intro value hlength
-      have hvalue : value < x.length := by omega
-      have hscan : (binaryLengthTM counterIdx).reachesIn 1
-          (binaryLengthScanCfg x counterIdx value)
-          (forInputBodyWrap (binarySuccTM counterIdx)
-            (binaryLengthBodyStartCfg x counterIdx value)) :=
-        .step (binaryLengthTM_scan_bit_step x counterIdx value hvalue) .zero
-      have hbody : (binaryLengthTM counterIdx).reachesIn
-          (binarySuccTime value)
-          (forInputBodyWrap (binarySuccTM counterIdx)
-            (binaryLengthBodyStartCfg x counterIdx value))
-          (forInputBodyWrap (binarySuccTM counterIdx)
-            (binaryLengthBodyDoneCfg x counterIdx value)) := by
-        simpa [binaryLengthTM] using
-          forInputTM_body_reachesIn_internal (binarySuccTM counterIdx)
-            (binaryLengthTM_body_run x counterIdx value)
-      have hloopback : (binaryLengthTM counterIdx).reachesIn 1
-          (forInputBodyWrap (binarySuccTM counterIdx)
-            (binaryLengthBodyDoneCfg x counterIdx value))
-          (binaryLengthScanCfg x counterIdx (value + 1)) :=
-        .step (binaryLengthTM_loopback_step x counterIdx value) .zero
-      have htail := ih (value + 1) (by omega)
-      have hreach := reachesIn_trans (binaryLengthTM counterIdx) hscan
-        (reachesIn_trans (binaryLengthTM counterIdx) hbody
-          (reachesIn_trans (binaryLengthTM counterIdx) hloopback htail))
-      simpa [binaryLengthLoopTime, Nat.add_assoc, Nat.add_comm,
-        Nat.add_left_comm] using hreach
+  intro count value hlength
+  simpa [binaryLengthTM, Experimental.binaryLengthRoutine,
+    Experimental.Routine.lower,
+    binaryLengthLoopTime, binaryLengthLoopSpec] using
+    (binaryLengthLoopSpec x counterIdx).reachesIn_internal
+      count value hlength
 
 private theorem binaryLengthTM_loop_withinAuxSpace (x : List Bool)
     (counterIdx : Fin n) :
@@ -316,113 +333,15 @@ private theorem binaryLengthTM_loop_withinAuxSpace (x : List Bool)
         (binaryLengthScanCfg x counterIdx value) c →
       t ≤ binaryLengthLoopTime value count →
       c.WithinAuxSpace x.length (binaryLengthSpace x.length) := by
-  intro count
-  induction count with
-  | zero =>
-      intro value t c hlength hreach ht
-      have hvalue : value = x.length := by omega
-      subst value
-      simp only [binaryLengthLoopTime] at ht
-      have ht' : t = 0 ∨ t = 1 := by omega
-      rcases ht' with rfl | rfl
-      · cases hreach
-        exact binaryLengthScanCfg_withinAuxSpace x counterIdx x.length le_rfl
-      · have hdone : (binaryLengthTM counterIdx).reachesIn 1
-            (binaryLengthScanCfg x counterIdx x.length)
-            (binaryLengthDoneCfg x counterIdx) :=
-          .step (binaryLengthTM_scan_blank_step x counterIdx) .zero
-        have hc := (binaryLengthTM counterIdx).reachesIn_right_unique
-          hreach hdone
-        rw [hc]
-        exact binaryLengthDoneCfg_withinAuxSpace x counterIdx
-  | succ count ih =>
-      intro value t c hlength hreach ht
-      have hvalue : value < x.length := by omega
-      by_cases htzero : t = 0
-      · subst t
-        cases hreach
-        exact binaryLengthScanCfg_withinAuxSpace x counterIdx value
-          (Nat.le_of_lt hvalue)
-      · let u := t - 1
-        have htu : 1 + u = t := by
-          dsimp only [u]
-          omega
-        by_cases hubody : u ≤ binarySuccTime value
-        · obtain ⟨d, hprefix, _hsuffix⟩ := reachesIn_prefix_internal
-            (binaryLengthTM_body_run x counterIdx value) hubody
-          have hlift : (binaryLengthTM counterIdx).reachesIn u
-              (forInputBodyWrap (binarySuccTM counterIdx)
-                (binaryLengthBodyStartCfg x counterIdx value))
-              (forInputBodyWrap (binarySuccTM counterIdx) d) := by
-            simpa [binaryLengthTM] using
-              forInputTM_body_reachesIn_internal
-                (binarySuccTM counterIdx) hprefix
-          have hcanonical : (binaryLengthTM counterIdx).reachesIn t
-              (binaryLengthScanCfg x counterIdx value)
-              (forInputBodyWrap (binarySuccTM counterIdx) d) := by
-            have hscan : (binaryLengthTM counterIdx).reachesIn 1
-                (binaryLengthScanCfg x counterIdx value)
-                (forInputBodyWrap (binarySuccTM counterIdx)
-                  (binaryLengthBodyStartCfg x counterIdx value)) :=
-              .step (binaryLengthTM_scan_bit_step x counterIdx value hvalue) .zero
-            have htotal := reachesIn_trans (binaryLengthTM counterIdx)
-              hscan hlift
-            simpa [htu] using htotal
-          have hc := (binaryLengthTM counterIdx).reachesIn_right_unique
-            hreach hcanonical
-          rw [hc]
-          simpa [forInputBodyWrap] using
-            binaryLengthBodyPrefix_withinAuxSpace x counterIdx value u d
-              hvalue hprefix
-        · let prefixTime := 1 + binarySuccTime value + 1
-          have hprefixTime : prefixTime ≤ t := by
-            dsimp only [prefixTime, u] at ⊢ hubody
-            omega
-          let tailTime := t - prefixTime
-          have htailEq : prefixTime + tailTime = t := by
-            dsimp only [tailTime]
-            exact Nat.add_sub_of_le hprefixTime
-          have htailBound :
-              tailTime ≤ binaryLengthLoopTime (value + 1) count := by
-            rw [binaryLengthLoopTime] at ht
-            dsimp only [prefixTime, tailTime] at ⊢
-            omega
-          have htailFull := binaryLengthTM_loop x counterIdx count (value + 1)
-            (by omega)
-          obtain ⟨d, htail, _hsuffix⟩ := reachesIn_prefix_internal
-            htailFull htailBound
-          have hscan : (binaryLengthTM counterIdx).reachesIn 1
-              (binaryLengthScanCfg x counterIdx value)
-              (forInputBodyWrap (binarySuccTM counterIdx)
-                (binaryLengthBodyStartCfg x counterIdx value)) :=
-            .step (binaryLengthTM_scan_bit_step x counterIdx value hvalue) .zero
-          have hbody : (binaryLengthTM counterIdx).reachesIn
-              (binarySuccTime value)
-              (forInputBodyWrap (binarySuccTM counterIdx)
-                (binaryLengthBodyStartCfg x counterIdx value))
-              (forInputBodyWrap (binarySuccTM counterIdx)
-                (binaryLengthBodyDoneCfg x counterIdx value)) := by
-            simpa [binaryLengthTM] using
-              forInputTM_body_reachesIn_internal (binarySuccTM counterIdx)
-                (binaryLengthTM_body_run x counterIdx value)
-          have hloopback : (binaryLengthTM counterIdx).reachesIn 1
-              (forInputBodyWrap (binarySuccTM counterIdx)
-                (binaryLengthBodyDoneCfg x counterIdx value))
-              (binaryLengthScanCfg x counterIdx (value + 1)) :=
-            .step (binaryLengthTM_loopback_step x counterIdx value) .zero
-          have hcanonical := reachesIn_trans (binaryLengthTM counterIdx) hscan
-            (reachesIn_trans (binaryLengthTM counterIdx) hbody
-              (reachesIn_trans (binaryLengthTM counterIdx) hloopback htail))
-          have hcanonical' : (binaryLengthTM counterIdx).reachesIn t
-              (binaryLengthScanCfg x counterIdx value) d := by
-            convert hcanonical using 1
-            all_goals
-              dsimp only [prefixTime] at htailEq ⊢
-              omega
-          have hc := (binaryLengthTM counterIdx).reachesIn_right_unique
-            hreach hcanonical'
-          rw [hc]
-          exact ih (value + 1) tailTime d (by omega) htail htailBound
+  intro count value t c hlength hreach htime
+  have hreach' : (forInputTM (binarySuccTM counterIdx)).reachesIn t
+      ((binaryLengthLoopSpec x counterIdx).scanCfg value) c := by
+    simpa [binaryLengthTM, Experimental.binaryLengthRoutine,
+      Experimental.Routine.lower,
+      binaryLengthLoopSpec] using hreach
+  exact (binaryLengthLoopSpaceSpec x counterIdx).prefix_withinAuxSpace_internal
+    count value t c hlength hreach' (by
+      simpa [binaryLengthLoopTime] using htime)
 
 /-! ## Public-theorem internals -/
 
@@ -435,7 +354,7 @@ theorem binaryLengthTime_le_internal (length : ℕ) :
     induction count with
     | zero =>
         intro value _
-        simp [binaryLengthLoopTime]
+        simp [binaryLengthLoopTime, forInputLoopTime]
     | succ count ih =>
         intro value hlength
         have hvalue : value ≤ length := by omega
@@ -443,9 +362,14 @@ theorem binaryLengthTime_le_internal (length : ℕ) :
         have hsucc : binarySuccTime value ≤ 2 * length.size + 2 :=
           le_trans (binarySuccTime_le value) (by omega)
         have htail := ih (value + 1) (by omega)
-        rw [binaryLengthLoopTime]
+        have htail' :
+            forInputLoopTime binarySuccTime (value + 1) count ≤
+              1 + count * (2 * length.size + 4) := by
+          simpa [binaryLengthLoopTime] using htail
+        rw [binaryLengthLoopTime, forInputLoopTime]
         calc
-          1 + binarySuccTime value + 1 + binaryLengthLoopTime (value + 1) count
+          1 + binarySuccTime value + 1 +
+              forInputLoopTime binarySuccTime (value + 1) count
               ≤ 1 + (2 * length.size + 2) + 1 +
                   (1 + count * (2 * length.size + 4)) := by omega
           _ = 1 + (count + 1) * (2 * length.size + 4) := by ring
@@ -579,9 +503,16 @@ theorem binaryLengthTM_hoareTimeSpace_internal (counterIdx : Fin n)
     exact binaryLengthTM_loop_withinAuxSpace x counterIdx x.length 0
       tailTime d (by omega) htail htailBound
 
+theorem Experimental.binaryLengthRoutine_transducerSafe_internal
+    (counterIdx : Fin n) :
+    (Experimental.binaryLengthRoutine counterIdx).TransducerSafe := by
+  exact .forInput (.call (binarySuccTM_isTransducer counterIdx))
+
 theorem binaryLengthTM_isTransducer_internal (counterIdx : Fin n) :
     (binaryLengthTM counterIdx).IsTransducer := by
-  exact binarySuccTM_isTransducer counterIdx |>.forInputTM_internal
+  simpa [binaryLengthTM] using
+    Experimental.Routine.TransducerSafe.lower_isTransducer_internal
+      (Experimental.binaryLengthRoutine_transducerSafe_internal counterIdx)
 
 end TM
 

@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Models.TuringMachine.Experimental.Routine
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength.Internal
 
@@ -23,6 +24,8 @@ reuses the local successor bound at each iteration and is formally `O(log n)`.
 - `TM.binaryLengthTM_reachesIn_frame` — exact endpoint and complete tape frame.
 - `TM.binaryLengthTM_hoareTimeSpace` — time-bounded and all-reachable space contract.
 - `TM.binaryLengthSpace_bigO_log` — the explicit space budget is logarithmic.
+- `TM.Experimental.binaryLengthRoutine_transducerSafe` — the experimental routine is
+  structurally output-safe.
 - `TM.binaryLengthTM_isTransducer` — the output head never moves left.
 -/
 
@@ -95,6 +98,13 @@ theorem binaryLengthTM_hoareTimeSpace {n : ℕ} (counterIdx : Fin n)
         out = (Tape.init []).move Dir3.right)
       (binaryLengthTime x.length) x.length (binaryLengthSpace x.length) :=
   binaryLengthTM_hoareTimeSpace_internal counterIdx x
+
+/-- Binary length counting is assembled only from transducer-safe routine
+constructors and calls. -/
+theorem Experimental.binaryLengthRoutine_transducerSafe {n : ℕ}
+    (counterIdx : Fin n) :
+    (Experimental.binaryLengthRoutine counterIdx).TransducerSafe :=
+  Experimental.binaryLengthRoutine_transducerSafe_internal counterIdx
 
 /-- `binaryLengthTM` is safe for append-only-output composition. -/
 theorem binaryLengthTM_isTransducer {n : ℕ} (counterIdx : Fin n) :

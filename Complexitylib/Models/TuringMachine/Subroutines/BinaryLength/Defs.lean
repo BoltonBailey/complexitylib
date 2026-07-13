@@ -3,7 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Combinators.ForInput.Defs
+import Complexitylib.Models.TuringMachine.Experimental.Routine.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc.Defs
 
 /-!
@@ -20,10 +20,8 @@ namespace TM
 
 /-- Exact remaining driver time: run successor on `value` once for each of
 `count` remaining input symbols, then take the final blank-exit step. -/
-def binaryLengthLoopTime (value : ℕ) : ℕ → ℕ
-  | 0 => 1
-  | count + 1 =>
-      1 + binarySuccTime value + 1 + binaryLengthLoopTime (value + 1) count
+def binaryLengthLoopTime (value count : ℕ) : ℕ :=
+  forInputLoopTime binarySuccTime value count
 
 /-- Exact fresh-start running time of the binary input-length counter. The
 leading one is the initial left-marker setup step. -/
@@ -34,10 +32,16 @@ def binaryLengthTime (length : ℕ) : ℕ :=
 def binaryLengthSpace (length : ℕ) : ℕ :=
   2 * length.size + 3
 
+/-- First-order routine program for binary input-length counting. -/
+def Experimental.binaryLengthRoutine {n : ℕ}
+    (counterIdx : Fin n) : Experimental.Routine n :=
+  .forInput (.call (binarySuccTM counterIdx))
+
 /-- Count the Boolean input length in canonical little-endian binary on work
-tape `counterIdx`. -/
+tape `counterIdx`. The executable machine is obtained by structural routine
+lowering. -/
 def binaryLengthTM {n : ℕ} (counterIdx : Fin n) : TM n :=
-  forInputTM (binarySuccTM counterIdx)
+  (Experimental.binaryLengthRoutine counterIdx).lower
 
 end TM
 
