@@ -121,6 +121,9 @@ tape helpers remain.
 - [ ] Audit aggregation modules so public imports do not need to name proof-only
   implementation files.
 - [ ] Add lightweight regression examples for core simplification behavior.
+- [ ] Investigate a typed controller/phase DSL for executable TMs: declare
+  phases, child-machine calls, and tape frames once, then generate the composite
+  state plumbing, transition routing, and reusable run/`HoareTime` proof skeletons.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -137,6 +140,9 @@ its public name or provide a compatibility alias.
   Boolean-symbol lemmas, deleting their local wrappers where this stays clear.
 - [x] Add `TM.reachesIn_snoc`, endpoint uniqueness (`TM.reachesIn_right_unique`),
   and `TM.step_eq_none_iff_halted`.
+- [M] Inventory the repeated controller mechanics in the UTM, repetition, and
+  Tseitin developments; extract one small generic child-call/routing layer before
+  committing to a larger syntax or metaprogramming framework.
 - [S] Refresh module documentation that still describes completed proofs as
   skeletons.
 
@@ -489,6 +495,11 @@ preserved by serialized encodings and uniform generators.
 
 - [x] Package a well-formed raw circuit as a typed `Circuit` if a later proof
   needs the reverse bridge; the executable evaluator itself does not require it.
+- [x] Compile Boolean formulas into appendable raw fragments with exact size,
+  topology, prefix-preservation, and evaluation laws.
+- [x] Hardwire an arbitrary prefix of typed-circuit inputs without increasing
+  the circuit size, retaining a positive live suffix under the typed-circuit
+  convention (families handle length zero separately).
 - [M] Implement a DTM realizing the topological memoized evaluator for serialized
   circuits and prove a polynomial running-time bound.
 - [M] Define polynomial advice and basic monotonicity/containment lemmas.
