@@ -106,7 +106,8 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 * `Complexitylib.Circuits.Hardwiring` — exact-size prefix hardwiring
 * `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts,
-  initialization, verified trace tiling, and typed acceptance circuits
+  initialization, verified trace tiling, typed acceptance circuits, and
+  parallel strict-majority amplification
 
 Theorem modules (re-export definitions + main results):
 

@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Unrolling.Defs
 import Complexitylib.Circuits.Unrolling.Acceptance
+import Complexitylib.Circuits.Unrolling.Amplification
 import Complexitylib.Circuits.Unrolling.Internal.Initialization
 import Complexitylib.Circuits.Unrolling.Trace
 import Complexitylib.Circuits.Unrolling.Transition
@@ -18,7 +19,9 @@ one-step transition compiler, and complete bounded-trace tiling for
 nondeterministic Turing machines. The tiled fragment has exact evaluation and
 topology laws together with a machine-dependent cubic size bound. A final gate
 selects the exact halt-and-output acceptance predicate, and the resulting raw
-code reconstructs to a typed single-output circuit.
+code reconstructs to a typed single-output circuit. Parallel copies can share
+the data input, consume disjoint choice blocks, and feed a strict-majority
+threshold with an explicit polynomial gate bound.
 -/
 
 namespace Complexity
