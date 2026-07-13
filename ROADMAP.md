@@ -124,6 +124,12 @@ tape helpers remain.
 - [ ] Investigate a typed controller/phase DSL for executable TMs: declare
   phases, child-machine calls, and tape frames once, then generate the composite
   state plumbing, transition routing, and reusable run/`HoareTime` proof skeletons.
+- [ ] Audit proof-engineering mechanics across representative machine and circuit
+  constructions: inventory repeated state/tape/wire bookkeeping, run or trace
+  stitching, semantic transport, and resource accounting, then prototype the
+  smallest reusable lemma, combinator, tactic, or typed DSL layer that removes
+  the duplication. Validate each proposed abstraction on at least two independent
+  constructions before making it a shared interface.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
