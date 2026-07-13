@@ -5,9 +5,10 @@ Turing machine, `UniformPPoly_subset_P`, and deterministic direct-unrolling
 family are implemented. The remaining headline direction is
 `P_subset_UniformPPoly`: its append-only direct-unrolling serializer must still
 be proved to lie in `FL`. The canonical binary count-up loop supplies one reusable
-serializer substrate; fixed-polynomial binary arithmetic and the serializer
-itself remain open. Experimental rose-tree lowering is deferred and is not on
-this dependency path.
+serializer substrate, and its first consumer now emits a prepared binary value as
+terminated-unary `NatCode` with restored scratch and frame. Fixed-polynomial binary
+arithmetic, loading successive values, and the serializer itself remain open.
+Experimental rose-tree lowering is deferred and is not on this dependency path.
 
 This note fixes the intended construction boundary for M1. The public family
 API lives in `Complexitylib.Circuits.Family`; `SIZE` and `PPoly` live in
@@ -212,8 +213,15 @@ uniformity condition.
    and package `P_subset_UniformPPoly` and `UniformPPoly = P`.
 
 The current binary count-up layer is a substrate for step 5, not its completion.
-Fixed-polynomial evaluation and remaining binary indexing arithmetic are still
-needed before instantiating the loop as the raw-tableau serializer. This route
+`CircuitCode.Machine.emitNatCodeTM` now demonstrates the intended serialization
+boundary: given a distinct zero scratch counter and a preserved canonical binary
+value, it appends exactly `NatCode.encode value`, restores the complete input/work
+frame so the scratch can be reused, and never moves output left. Its explicit
+time bound is `emitNatCodeTime value`; its all-prefix auxiliary-space budget is
+`initialSpace + 2 * value.size + 5`, so the unary output length is not disguised
+as work space. The caller must still load or change the preserved value between
+emissions. Fixed-polynomial evaluation and remaining binary indexing arithmetic
+are also needed before the raw-tableau serializer can be instantiated. This route
 uses the concrete `TM` and its proof-level contracts directly; the deferred
 rose-tree lowering is optional and not a prerequisite.
 

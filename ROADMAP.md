@@ -619,6 +619,14 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         comparison/rewind timing, exact iteration certificates, all-prefix
         auxiliary-space accounting, and structural one-way-output closure. This
         lands the reusable loop layer, not the direct-unrolling serializer.
+      - [x] Validate that loop at the circuit-code boundary: from a preserved
+        canonical binary value and a distinct zero scratch counter,
+        `CircuitCode.Machine.emitNatCodeTM` appends its terminated-unary
+        `NatCode`, restores the complete input/work frame (including zeroed,
+        reusable scratch), satisfies one-way output, runs within
+        `emitNatCodeTime value`, and has the all-prefix auxiliary-space bound
+        `initialSpace + 2 * value.size + 5`. Loading or changing the preserved
+        value remains the caller's responsibility.
       - [ ] Add fixed-polynomial evaluation and the remaining binary arithmetic and
         indexing operations needed by the raw tableau serializer.
     - [ ] Implement the append-only raw-tableau serializer, prove its code function is
@@ -701,11 +709,16 @@ The forward uniform circuit bridge is now complete: a reusable unary-length
 transducer and computed-value/input fanout combinator build
 `pair (gen (unaryList |x|)) x` in `FP`; preimage closure then applies the verified
 quadratic serialized evaluator and yields `UniformPPoly_subset_P`.
-The current patch also lands the canonical binary count-up substrate for the
-reverse emitter, with exact comparison/iteration timing, generic loop and
-all-prefix space certificates, and transducer closure. Fixed-polynomial binary
-arithmetic and the concrete append-only direct-unrolling serializer remain open;
-the deferred rose-tree lowering is not on this dependency path.
+The library also has the canonical binary count-up substrate for the reverse
+emitter, with exact comparison/iteration timing, generic loop and
+all-prefix space certificates, and transducer closure. Its first circuit-code
+consumer now emits a preserved binary value as terminated-unary `NatCode`, then
+restores its zero scratch and complete input/work frame within
+`emitNatCodeTime value`; every reachable configuration stays within
+`initialSpace + 2 * value.size + 5`, and output is structurally one-way. Loading
+successive values, fixed-polynomial binary arithmetic, and the concrete append-only
+direct-unrolling serializer remain open; the deferred rose-tree lowering is not
+on this dependency path.
 Independently, `BPP_subset_PAdvice` follows from the existing
 `BPP_subset_PPoly` theorem.
 
