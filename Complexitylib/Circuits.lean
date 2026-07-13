@@ -29,6 +29,7 @@ import Complexitylib.Circuits.Schnorr
 import Complexitylib.Circuits.AC0
 import Complexitylib.Circuits.Nondeterminism
 import Complexitylib.Circuits.Hardwiring
+import Complexitylib.Circuits.Unrolling
 import Complexitylib.Circuits.Valiant
 
 /-! # Circuit Complexity Library
@@ -104,6 +105,8 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.AC0` — `AC0`
 * `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 * `Complexitylib.Circuits.Hardwiring` — exact-size prefix hardwiring
+* `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts and
+  their circuit initialization fragment
 
 Theorem modules (re-export definitions + main results):
 
