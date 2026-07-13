@@ -5,6 +5,8 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Combinators.ForInput.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.SpaceTime.Internal.Reachability
 
 /-!
 # Read-only-input loop combinator — proof internals
@@ -116,6 +118,125 @@ theorem forInputTM_step_body_halt_internal (body : TM n)
     rfl
   · rw [writeAndMove_readBack _ houtput, idleDir, if_neg houtput]
     rfl
+
+/-- A certified input-driven loop has the advertised exact remaining run. -/
+theorem ForInputLoopSpec.reachesIn_internal {body : TM n}
+    {bodyTime : ℕ → ℕ} {total : ℕ}
+    (spec : ForInputLoopSpec body bodyTime total) :
+    ∀ count value, value + count = total →
+      (forInputTM body).reachesIn (forInputLoopTime bodyTime value count)
+        (spec.scanCfg value) spec.doneCfg := by
+  intro count
+  induction count with
+  | zero =>
+      intro value htotal
+      have hvalue : value = total := by omega
+      subst value
+      exact .step spec.blankStep .zero
+  | succ count ih =>
+      intro value htotal
+      have hvalue : value < total := by omega
+      have hscan : (forInputTM body).reachesIn 1
+          (spec.scanCfg value) (spec.bodyStartCfg value) :=
+        .step (spec.scanStep value hvalue) .zero
+      have hbody := spec.bodyRun value hvalue
+      have hloopback : (forInputTM body).reachesIn 1
+          (spec.bodyDoneCfg value) (spec.scanCfg (value + 1)) :=
+        .step (spec.loopbackStep value hvalue) .zero
+      have htail := ih (value + 1) (by omega)
+      have hreach := reachesIn_trans (forInputTM body) hscan
+        (reachesIn_trans (forInputTM body) hbody
+          (reachesIn_trans (forInputTM body) hloopback htail))
+      convert hreach using 1
+      simp only [forInputLoopTime]
+      omega
+
+/-- Every configuration reached no later than a certified loop's exact
+remaining runtime satisfies its auxiliary-space budget. -/
+theorem ForInputLoopSpaceSpec.prefix_withinAuxSpace_internal
+    {body : TM n} {bodyTime : ℕ → ℕ} {total inputLength spaceBound : ℕ}
+    {spec : ForInputLoopSpec body bodyTime total}
+    (spaceSpec : ForInputLoopSpaceSpec spec inputLength spaceBound) :
+    ∀ count value t (c : Cfg n (forInputTM body).Q),
+      value + count = total →
+      (forInputTM body).reachesIn t (spec.scanCfg value) c →
+      t ≤ forInputLoopTime bodyTime value count →
+      c.WithinAuxSpace inputLength spaceBound := by
+  intro count
+  induction count with
+  | zero =>
+      intro value t c htotal hreach ht
+      have hvalue : value = total := by omega
+      subst value
+      simp only [forInputLoopTime] at ht
+      have ht' : t = 0 ∨ t = 1 := by omega
+      rcases ht' with rfl | rfl
+      · cases hreach
+        exact spaceSpec.scanWithin total le_rfl
+      · have hdone : (forInputTM body).reachesIn 1
+            (spec.scanCfg total) spec.doneCfg :=
+          .step spec.blankStep .zero
+        have hc := (forInputTM body).reachesIn_right_unique hreach hdone
+        rw [hc]
+        exact spaceSpec.doneWithin
+  | succ count ih =>
+      intro value t c htotal hreach ht
+      have hvalue : value < total := by omega
+      by_cases htzero : t = 0
+      · subst t
+        cases hreach
+        exact spaceSpec.scanWithin value (Nat.le_of_lt hvalue)
+      · let u := t - 1
+        have htu : 1 + u = t := by
+          dsimp only [u]
+          omega
+        by_cases hubody : u ≤ bodyTime value
+        · obtain ⟨d, hprefix, _hsuffix⟩ := reachesIn_prefix_internal
+            (spec.bodyRun value hvalue) hubody
+          have hcanonical : (forInputTM body).reachesIn t
+              (spec.scanCfg value) d := by
+            have hscan : (forInputTM body).reachesIn 1
+                (spec.scanCfg value) (spec.bodyStartCfg value) :=
+              .step (spec.scanStep value hvalue) .zero
+            have htotalRun := reachesIn_trans (forInputTM body) hscan hprefix
+            simpa [htu] using htotalRun
+          have hc := (forInputTM body).reachesIn_right_unique hreach hcanonical
+          rw [hc]
+          exact spaceSpec.bodyPrefixWithin value u d hvalue hubody hprefix
+        · let prefixTime := 1 + bodyTime value + 1
+          have hprefixTime : prefixTime ≤ t := by
+            dsimp only [prefixTime, u] at ⊢ hubody
+            omega
+          let tailTime := t - prefixTime
+          have htailEq : prefixTime + tailTime = t := by
+            dsimp only [tailTime]
+            exact Nat.add_sub_of_le hprefixTime
+          have htailBound :
+              tailTime ≤ forInputLoopTime bodyTime (value + 1) count := by
+            rw [forInputLoopTime] at ht
+            dsimp only [prefixTime, tailTime] at ⊢
+            omega
+          have htailFull := spec.reachesIn_internal count (value + 1) (by omega)
+          obtain ⟨d, htail, _hsuffix⟩ := reachesIn_prefix_internal
+            htailFull htailBound
+          have hscan : (forInputTM body).reachesIn 1
+              (spec.scanCfg value) (spec.bodyStartCfg value) :=
+            .step (spec.scanStep value hvalue) .zero
+          have hloopback : (forInputTM body).reachesIn 1
+              (spec.bodyDoneCfg value) (spec.scanCfg (value + 1)) :=
+            .step (spec.loopbackStep value hvalue) .zero
+          have hcanonical := reachesIn_trans (forInputTM body) hscan
+            (reachesIn_trans (forInputTM body) (spec.bodyRun value hvalue)
+              (reachesIn_trans (forInputTM body) hloopback htail))
+          have hcanonical' : (forInputTM body).reachesIn t
+              (spec.scanCfg value) d := by
+            convert hcanonical using 1
+            all_goals
+              dsimp only [prefixTime] at htailEq ⊢
+              omega
+          have hc := (forInputTM body).reachesIn_right_unique hreach hcanonical'
+          rw [hc]
+          exact ih (value + 1) tailTime d (by omega) htail htailBound
 
 /-- A read-only-input loop preserves the body's one-way-output discipline. -/
 theorem IsTransducer.forInputTM_internal {body : TM n}

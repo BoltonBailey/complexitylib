@@ -81,6 +81,61 @@ def forInputTM {n : ℕ} (body : TM n) : TM n where
         · exact rightOfStart_allReadBack iHead wHeads oHead
         · exact body.δ_right_of_start q iHead wHeads oHead
 
+/-- Exact remaining time for an input-driven loop whose body takes
+`bodyTime value` steps on iteration `value`. The terminal input-blank exit
+takes one step. Each nonterminal iteration takes one scanner step, the body
+run, and one loopback step. -/
+def forInputLoopTime (bodyTime : ℕ → ℕ) (value : ℕ) : ℕ → ℕ
+  | 0 => 1
+  | count + 1 =>
+      1 + bodyTime value + 1 + forInputLoopTime bodyTime (value + 1) count
+
+/-- Wrapper-free certificate for the exact control flow of an input-driven
+loop. All configurations use the public state type of `forInputTM body`, so
+clients need not mention the internal body-state embedding.
+
+`total` is the first scanner index whose input symbol is blank. -/
+structure ForInputLoopSpec {n : ℕ} (body : TM n) (bodyTime : ℕ → ℕ)
+    (total : ℕ) where
+  /-- Canonical scanner configuration at iteration `value`. -/
+  scanCfg : ℕ → Cfg n (forInputTM body).Q
+  /-- Canonical combined-machine configuration at the start of the body. -/
+  bodyStartCfg : ℕ → Cfg n (forInputTM body).Q
+  /-- Canonical combined-machine configuration after the exact body run. -/
+  bodyDoneCfg : ℕ → Cfg n (forInputTM body).Q
+  /-- Canonical final driver configuration. -/
+  doneCfg : Cfg n (forInputTM body).Q
+  /-- A nonterminal scanner step enters the body. -/
+  scanStep : ∀ value, value < total →
+    (forInputTM body).step (scanCfg value) = some (bodyStartCfg value)
+  /-- The body has the advertised exact runtime. -/
+  bodyRun : ∀ value, value < total →
+    (forInputTM body).reachesIn (bodyTime value)
+      (bodyStartCfg value) (bodyDoneCfg value)
+  /-- The preserving seam step advances to the next scanner configuration. -/
+  loopbackStep : ∀ value, value < total →
+    (forInputTM body).step (bodyDoneCfg value) = some (scanCfg (value + 1))
+  /-- The scanner exits on the first blank. -/
+  blankStep :
+    (forInputTM body).step (scanCfg total) = some doneCfg
+
+/-- Space obligations needed to turn a `ForInputLoopSpec` into an
+all-prefix auxiliary-space certificate. The body obligation concerns only
+prefixes of its advertised exact run; later combined-machine execution may
+already have crossed the loopback seam. -/
+structure ForInputLoopSpaceSpec {n : ℕ} {body : TM n} {bodyTime : ℕ → ℕ}
+    {total : ℕ} (spec : ForInputLoopSpec body bodyTime total)
+    (inputLength spaceBound : ℕ) where
+  /-- Every canonical scanner configuration is within the space budget. -/
+  scanWithin : ∀ value, value ≤ total →
+    (spec.scanCfg value).WithinAuxSpace inputLength spaceBound
+  /-- The canonical final configuration is within the space budget. -/
+  doneWithin : spec.doneCfg.WithinAuxSpace inputLength spaceBound
+  /-- Every prefix of each exact body run is within the space budget. -/
+  bodyPrefixWithin : ∀ value t c, value < total → t ≤ bodyTime value →
+    (forInputTM body).reachesIn t (spec.bodyStartCfg value) c →
+    c.WithinAuxSpace inputLength spaceBound
+
 end TM
 
 end Complexity
