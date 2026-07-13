@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Unrolling.Defs
+import Complexitylib.Circuits.Unrolling.Acceptance
 import Complexitylib.Circuits.Unrolling.Internal.Initialization
 import Complexitylib.Circuits.Unrolling.Trace
 import Complexitylib.Circuits.Unrolling.Transition
@@ -15,8 +16,9 @@ import Complexitylib.Circuits.Unrolling.Transition.Fragment
 This module exposes the auditable wire layout, initialization layer, packed
 one-step transition compiler, and complete bounded-trace tiling for
 nondeterministic Turing machines. The tiled fragment has exact evaluation and
-topology laws together with a machine-dependent cubic size bound. Final-output
-selection is added in a later module.
+topology laws together with a machine-dependent cubic size bound. A final gate
+selects the exact halt-and-output acceptance predicate, and the resulting raw
+code reconstructs to a typed single-output circuit.
 -/
 
 namespace Complexity
