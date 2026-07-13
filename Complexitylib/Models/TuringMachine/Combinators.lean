@@ -125,8 +125,24 @@ def allIdle {σ : Type} {k : ℕ}
     σ × (Fin k → Γw) × Γw × Dir3 × (Fin k → Dir3) × Dir3 :=
   (newState, fun _ => .blank, .blank, idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
 
+/-- The content-preserving driver action: write every currently read work and
+output symbol back, and use `idleDir` on every tape. Every off-start tape is
+preserved exactly; a head on `▷` takes the structurally mandatory move right. -/
+def allReadBack {σ : Type} {k : ℕ}
+    (newState : σ) (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
+    σ × (Fin k → Γw) × Γw × Dir3 × (Fin k → Dir3) × Dir3 :=
+  (newState, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+    idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+
 /-- Proof that all-idle directions satisfy `δ_right_of_start`. -/
 theorem rightOfStart_allIdle (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
+    (iHead = Γ.start → idleDir iHead = Dir3.right) ∧
+    (∀ i, wHeads i = Γ.start → idleDir (wHeads i) = Dir3.right) ∧
+    (oHead = Γ.start → idleDir oHead = Dir3.right) :=
+  ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, idleDir_right_of_start⟩
+
+/-- `allReadBack` satisfies the one-sided-tape direction invariant. -/
+theorem rightOfStart_allReadBack (iHead : Γ) (wHeads : Fin k → Γ) (oHead : Γ) :
     (iHead = Γ.start → idleDir iHead = Dir3.right) ∧
     (∀ i, wHeads i = Γ.start → idleDir (wHeads i) = Dir3.right) ∧
     (oHead = Γ.start → idleDir oHead = Dir3.right) :=
