@@ -106,7 +106,9 @@ structure CoreAction (wHeads : Fin workTapeCount → Γ) (oHead : Γ) where
 
 namespace CoreAction
 
-/-- A frame-preserving action that changes only the controller phase. -/
+/-- Change only the controller phase and install `TapeAction.preserve` on
+every tape. This is exact tape preservation when the framed heads are off the
+left marker. -/
 def preserve (next : CorePhase) (wHeads : Fin workTapeCount → Γ)
     (oHead : Γ) : CoreAction wHeads oHead where
   next := next
@@ -166,35 +168,49 @@ end CoreAction
 def evalOpBit (op value0 value1 : Bool) : Bool :=
   if op then value0 && value1 else value0 || value1
 
-private def rejectAction (wHeads : Fin workTapeCount → Γ) (oHead : Γ) :
+namespace CoreAction
+
+/-- Halt with an explicit rejecting write, installing `TapeAction.preserve` on
+the work tapes. -/
+def reject (wHeads : Fin workTapeCount → Γ) (oHead : Γ) :
     CoreAction wHeads oHead :=
   { CoreAction.preserve .done wHeads oHead with
     output := TapeAction.writeStay oHead .zero }
 
-private def finishAction (answer : Bool) (wHeads : Fin workTapeCount → Γ)
+/-- Halt with the supplied Boolean write, installing `TapeAction.preserve` on
+the work tapes. -/
+def finish (answer : Bool) (wHeads : Fin workTapeCount → Γ)
     (oHead : Γ) : CoreAction wHeads oHead :=
   { CoreAction.preserve .done wHeads oHead with
     output := TapeAction.writeStay oHead (Γw.ofBool answer) }
 
-private def moveCodeRightAction (next : CorePhase)
+/-- Move the code head right and install `TapeAction.preserve` on every other
+tape. -/
+def moveCodeRight (next : CorePhase)
     (wHeads : Fin workTapeCount → Γ) (oHead : Γ) :
     CoreAction wHeads oHead :=
   { CoreAction.preserve next wHeads oHead with
     code := TapeAction.moveRight _ }
 
-private def moveWiresRightAction (next : CorePhase)
+/-- Move the wire head right and install `TapeAction.preserve` on every other
+tape. -/
+def moveWiresRight (next : CorePhase)
     (wHeads : Fin workTapeCount → Γ) (oHead : Γ) :
     CoreAction wHeads oHead :=
   { CoreAction.preserve next wHeads oHead with
     wires := TapeAction.moveRight _ }
 
-private def readCodeBitAction (next : Bool → CorePhase)
+/-- Read one Boolean code symbol, moving right on success and rejecting any
+non-Boolean symbol. -/
+def readCodeBit (next : Bool → CorePhase)
     (wHeads : Fin workTapeCount → Γ) (oHead : Γ) :
     CoreAction wHeads oHead :=
   match wHeads codeIdx with
-  | .zero => moveCodeRightAction (next false) wHeads oHead
-  | .one => moveCodeRightAction (next true) wHeads oHead
-  | _ => rejectAction wHeads oHead
+  | .zero => moveCodeRight (next false) wHeads oHead
+  | .one => moveCodeRight (next true) wHeads oHead
+  | _ => reject wHeads oHead
+
+end CoreAction
 
 /-- One finite-control action of the streaming evaluator. -/
 def coreAction (phase : CorePhase) (wHeads : Fin workTapeCount → Γ)
@@ -212,28 +228,28 @@ def coreAction (phase : CorePhase) (wHeads : Fin workTapeCount → Γ)
           code := TapeAction.moveLeft codeHead }
   | .rewindWires =>
       if wiresHead = Γ.start then
-        moveWiresRightAction .familyTag wHeads oHead
+        CoreAction.moveWiresRight .familyTag wHeads oHead
       else
         { CoreAction.preserve .rewindWires wHeads oHead with
           wires := TapeAction.moveLeft wiresHead }
   | .familyTag =>
       match wiresHead, codeHead with
-      | .blank, .zero => moveCodeRightAction .emptyAnswer wHeads oHead
-      | .zero, .one => moveCodeRightAction .count wHeads oHead
-      | .one, .one => moveCodeRightAction .count wHeads oHead
-      | _, _ => rejectAction wHeads oHead
-  | .emptyAnswer => readCodeBitAction .emptyEnd wHeads oHead
+      | .blank, .zero => CoreAction.moveCodeRight .emptyAnswer wHeads oHead
+      | .zero, .one => CoreAction.moveCodeRight .count wHeads oHead
+      | .one, .one => CoreAction.moveCodeRight .count wHeads oHead
+      | _, _ => CoreAction.reject wHeads oHead
+  | .emptyAnswer => CoreAction.readCodeBit .emptyEnd wHeads oHead
   | .emptyEnd answer =>
-      if codeHead = Γ.blank then finishAction answer wHeads oHead
-      else rejectAction wHeads oHead
+      if codeHead = Γ.blank then CoreAction.finish answer wHeads oHead
+      else CoreAction.reject wHeads oHead
   | .count =>
       match codeHead with
       | .one =>
           { CoreAction.preserve .count wHeads oHead with
             code := TapeAction.moveRight codeHead
             counter := TapeAction.writeRight counterHead .one }
-      | .zero => moveCodeRightAction .rewindCounter wHeads oHead
-      | _ => rejectAction wHeads oHead
+      | .zero => CoreAction.moveCodeRight .rewindCounter wHeads oHead
+      | _ => CoreAction.reject wHeads oHead
   | .rewindCounter =>
       if counterHead = Γ.start then
         { CoreAction.preserve (.gateCheck false) wHeads oHead with
@@ -250,12 +266,12 @@ def coreAction (phase : CorePhase) (wHeads : Fin workTapeCount → Γ)
           if sawGate && codeHead = Γ.blank then
             CoreAction.preserve .done wHeads oHead
           else
-            rejectAction wHeads oHead
-      | _ => rejectAction wHeads oHead
-  | .gateOp => readCodeBitAction .gateNeg0 wHeads oHead
-  | .gateNeg0 op => readCodeBitAction (.gateNeg1 op) wHeads oHead
+            CoreAction.reject wHeads oHead
+      | _ => CoreAction.reject wHeads oHead
+  | .gateOp => CoreAction.readCodeBit .gateNeg0 wHeads oHead
+  | .gateNeg0 op => CoreAction.readCodeBit (.gateNeg1 op) wHeads oHead
   | .gateNeg1 op negated0 =>
-      readCodeBitAction (.rewindRef0 op negated0) wHeads oHead
+      CoreAction.readCodeBit (.rewindRef0 op negated0) wHeads oHead
   | .rewindRef0 op negated0 negated1 =>
       if wiresHead = Γ.start then
         { CoreAction.preserve (.ref0 op negated0 negated1) wHeads oHead with
@@ -274,12 +290,14 @@ def coreAction (phase : CorePhase) (wHeads : Fin workTapeCount → Γ)
             code := TapeAction.moveRight codeHead
             wires := TapeAction.moveRight wiresHead }
       | .zero, .zero =>
-          moveCodeRightAction (.rewindRef1 op negated1 (negated0.xor false))
+          CoreAction.moveCodeRight
+            (.rewindRef1 op negated1 (negated0.xor false))
             wHeads oHead
       | .zero, .one =>
-          moveCodeRightAction (.rewindRef1 op negated1 (negated0.xor true))
+          CoreAction.moveCodeRight
+            (.rewindRef1 op negated1 (negated0.xor true))
             wHeads oHead
-      | _, _ => rejectAction wHeads oHead
+      | _, _ => CoreAction.reject wHeads oHead
   | .rewindRef1 op negated1 value0 =>
       if wiresHead = Γ.start then
         { CoreAction.preserve (.ref1 op negated1 value0) wHeads oHead with
@@ -298,21 +316,21 @@ def coreAction (phase : CorePhase) (wHeads : Fin workTapeCount → Γ)
             code := TapeAction.moveRight codeHead
             wires := TapeAction.moveRight wiresHead }
       | .zero, .zero =>
-          moveCodeRightAction
+          CoreAction.moveCodeRight
             (.seekAppend (evalOpBit op value0 (negated1.xor false))) wHeads oHead
       | .zero, .one =>
-          moveCodeRightAction
+          CoreAction.moveCodeRight
             (.seekAppend (evalOpBit op value0 (negated1.xor true))) wHeads oHead
-      | _, _ => rejectAction wHeads oHead
+      | _, _ => CoreAction.reject wHeads oHead
   | .seekAppend value =>
       match wiresHead with
-      | .zero => moveWiresRightAction (.seekAppend value) wHeads oHead
-      | .one => moveWiresRightAction (.seekAppend value) wHeads oHead
+      | .zero => CoreAction.moveWiresRight (.seekAppend value) wHeads oHead
+      | .one => CoreAction.moveWiresRight (.seekAppend value) wHeads oHead
       | .blank =>
           { CoreAction.preserve (.gateCheck true) wHeads oHead with
             wires := TapeAction.writeRight wiresHead (Γw.ofBool value)
             output := TapeAction.writeStay oHead (Γw.ofBool value) }
-      | .start => rejectAction wHeads oHead
+      | .start => CoreAction.reject wHeads oHead
   | .done => CoreAction.preserve .done wHeads oHead
 
 /-- Streaming evaluator for a valid outer pair after `validPairStageTM`.

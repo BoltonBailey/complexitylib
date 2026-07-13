@@ -11,10 +11,10 @@ import Complexitylib.Circuits.Encoding.Machine.Core.Defs
 The machine controller parses and evaluates one gate before moving to the next.
 The public codec first decodes the complete gate list and then evaluates it.
 This file supplies a verdict-level streaming evaluator and proves that the two
-orders produce the same result. It reuses `RawGate.decodePrefix?`, so it does
-not claim the controller's exact ref0-before-ref1 microstep order. Execution
-proofs can target its final verdict while retaining `evalFamilyCode` as their
-external specification.
+orders produce the same result. A controller-ordered one-gate step additionally
+exposes the ref0-before-ref1 dependency order needed by execution proofs while
+retaining `evalFamilyCode` as their external specification; it is not a
+transition-level trace model.
 -/
 
 namespace Complexity
@@ -37,6 +37,79 @@ def gateStream? : ℕ → List Bool → List Bool → Option Bool → Option Boo
       let value₁ ← wires[gate.input₁]?
       let value := gate.eval value₀ value₁
       gateStream? count rest (wires ++ [value]) (some value)
+
+/-- The semantic result of one controller-ordered gate evaluation. -/
+structure GateStepResult where
+  /-- The unconsumed circuit code after both references. -/
+  rest : List Bool
+  /-- The wire memo after appending the new gate value. -/
+  wires : List Bool
+  /-- The newly computed gate value. -/
+  value : Bool
+
+/-- Parse and evaluate one gate in the controller's reference dependency
+order: parse the first reference, read its wire, parse the second reference,
+and read its wire. -/
+def gateStep? (code wires : List Bool) : Option GateStepResult :=
+  match code with
+  | op :: negated₀ :: negated₁ :: rest => do
+      let (input₀, rest₀) ← NatCode.decodePrefix? rest
+      let value₀ ← wires[input₀]?
+      let (input₁, rest₁) ← NatCode.decodePrefix? rest₀
+      let value₁ ← wires[input₁]?
+      let value := evalOpBit op (negated₀.xor value₀) (negated₁.xor value₁)
+      some { rest := rest₁, wires := wires ++ [value], value }
+  | _ => none
+
+/-- Decoding an operation bit and evaluating the resulting raw gate agrees
+with the controller's Boolean operation. -/
+theorem rawGate_eval_opOfBit (op negated₀ negated₁ value₀ value₁ : Bool)
+    (input₀ input₁ : ℕ) :
+    ({ op := RawGate.opOfBit op, input₀, input₁, negated₀, negated₁ } :
+        RawGate).eval value₀ value₁ =
+      evalOpBit op (negated₀.xor value₀) (negated₁.xor value₁) := by
+  cases op <;> rfl
+
+/-- A positive gate-stream step is exactly one controller-ordered gate step
+followed by the remaining stream. -/
+theorem gateStream?_succ_eq_gateStep? (count : ℕ) (code wires : List Bool)
+    (last : Option Bool) :
+    gateStream? (count + 1) code wires last =
+      (gateStep? code wires).bind fun step =>
+        gateStream? count step.rest step.wires (some step.value) := by
+  cases code with
+  | nil => rfl
+  | cons op code =>
+      cases code with
+      | nil => rfl
+      | cons negated₀ code =>
+          cases code with
+          | nil => rfl
+          | cons negated₁ rest =>
+              cases h₀ : NatCode.decodePrefix? rest with
+              | none =>
+                  simp [gateStream?, gateStep?, RawGate.decodePrefix?, h₀]
+              | some parsed₀ =>
+                  obtain ⟨input₀, rest₀⟩ := parsed₀
+                  cases h₁ : NatCode.decodePrefix? rest₀ with
+                  | none =>
+                      cases hw₀ : wires[input₀]? <;>
+                        simp [gateStream?, gateStep?, RawGate.decodePrefix?, h₀, h₁,
+                          hw₀]
+                  | some parsed₁ =>
+                      obtain ⟨input₁, rest₁⟩ := parsed₁
+                      cases hw₀ : wires[input₀]? with
+                      | none =>
+                          simp [gateStream?, gateStep?, RawGate.decodePrefix?, h₀, h₁,
+                            hw₀]
+                      | some value₀ =>
+                          cases hw₁ : wires[input₁]? with
+                          | none =>
+                              simp [gateStream?, gateStep?, RawGate.decodePrefix?, h₀, h₁,
+                                hw₀, hw₁]
+                          | some value₁ =>
+                              simp [gateStream?, gateStep?, RawGate.decodePrefix?, h₀, h₁,
+                                hw₀, hw₁, rawGate_eval_opOfBit]
 
 /-- Parse a circuit's unary gate count and evaluate its gate stream. -/
 def positiveStream? (code input : List Bool) : Option Bool := do

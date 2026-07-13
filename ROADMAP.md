@@ -167,7 +167,13 @@ The evaluator controller adds a second mechanics experiment: a local
 proof-carrying `TapeAction` makes the one-sided-tape safety condition structural,
 eliminating the usual phase-by-phase `δ_right_of_start` proof. Keep it local until
 another controller demonstrates that the same action vocabulary is genuinely
-reusable.
+reusable. Its execution layer packages the `Fin 3` work-family boundary as one
+named configuration with an eta theorem, eliminating repeated index routing from
+exact full-frame proofs. The rewind and unary-count runs show that named
+configurations, namespaced action constructors, explicit preservation frames,
+and `reachesIn` composition handle straight-line phases cleanly. Use the positive
+gate loop to measure the remaining routing, semantic-transport, and cost-accounting
+duplication before extracting a shared combinator, tactic, or controller DSL.
 The same slice exposed a quality-gate blind spot: environment linting followed
 only the public root, not the required validation-only graphs. CI now lints all
 three validation roots as well, so internal proof seams cannot silently accrue
@@ -456,6 +462,16 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [ ] Prove the machine controller realizes the pure stream and give its
       quadratic `HoareTime` bound. The neutral `Tape.HasBinarySuffix` cursor API
       has also been extracted and adopted by the SAT verifier for this proof.
+      - [x] Package the three named work tapes behind one exact configuration
+        seam; prove both initial rewinds with full frames in exactly
+        `|code| + |input| + 4` steps; route every family-tag case; and complete
+        the well-formed empty-family branch from staging frontier to halted
+        verdict in exactly nine steps.
+      - [x] Scan a terminated unary gate count in exactly `g + 1` steps, preserve
+        its left marker, and rewind it in exactly `g + 2` more steps to the
+        gate-loop counter shape.
+      - [ ] Prove one controller-ordered gate attempt and the positive
+        gate-stream loop, then derive the quadratic bound.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -523,8 +539,10 @@ machine inputs retain fresh work tapes and cannot reach the future evaluator cor
 valid inputs expose appendable code and data prefixes on named work tapes. A
 three-tape fused evaluator controller now executes both family tags and memoizes
 topologically ordered gates. Its pure counted-gate stream now agrees with the
-existing exact codec and evaluator; the machine-execution and quadratic-time
-proofs remain before the reverse advice containment can be packaged.
+existing exact codec and evaluator. Exact full-frame machine proofs now cover
+the initial rewinds, exhaustive tag routing, the well-formed empty-family run,
+and terminated unary-count setup; the positive gate loop and quadratic-time
+proof remain before the reverse advice containment can be packaged.
 
 **Settled conventions.**
 

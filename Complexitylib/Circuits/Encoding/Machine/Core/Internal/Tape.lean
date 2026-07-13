@@ -112,6 +112,22 @@ theorem read_frontier {t : Tape} {bits : List Bool}
   rw [Tape.read, h.2.1, h.2.2]
   exact Tape.init_ofBool_cells_ge bits bits.length le_rfl
 
+/-- A position-zero cursor exposes the neutral completed-string contract. -/
+theorem hasBinaryString {t : Tape} {bits : List Bool}
+    (h : BinaryCursor t bits 0) : t.HasBinaryString bits := by
+  refine ⟨by simpa using h.2.1, ?_, ?_⟩
+  · intro i hi
+    rw [h.2.2]
+    exact Tape.init_ofBool_cells_lt bits i hi
+  · intro i hi
+    rw [h.2.2]
+    exact Tape.init_ofBool_cells_ge bits i hi
+
+/-- A position-zero cursor exposes the whole string as its remaining suffix. -/
+theorem hasBinarySuffix {t : Tape} {bits : List Bool}
+    (h : BinaryCursor t bits 0) : t.HasBinarySuffix bits :=
+  h.hasBinaryString.hasBinarySuffix
+
 /-- Moving right advances an in-bounds cursor and preserves its contents. -/
 theorem moveRight {t : Tape} {bits : List Bool} {position : ℕ}
     (h : BinaryCursor t bits position) (hlt : position < bits.length) :
@@ -178,17 +194,21 @@ theorem startInvariant {t : Tape} {bits : List Bool}
   rw [h.2]
   simpa [Tape.StartInvariant] using Tape.StartInvariant.init_ofBool bits
 
+/-- Writing back at the immutable marker and moving right is exactly an
+ordinary right move. -/
+theorem applyMoveRight {t : Tape} {bits : List Bool}
+    (h : BinaryAtMarker t bits) :
+    t.writeAndMove (TM.readBackWrite t.read) Dir3.right =
+      t.move Dir3.right := by
+  show (t.write (TM.readBackWrite t.read)).move Dir3.right = _
+  rw [Tape.write, if_pos h.1]
+
 /-- The controller's marker bounce returns to the position-zero cursor. -/
 theorem returnToFirstBit {t : Tape} {bits : List Bool}
     (h : BinaryAtMarker t bits) :
     BinaryCursor
       (t.writeAndMove (TM.readBackWrite t.read) Dir3.right) bits 0 := by
-  have hstep :
-      t.writeAndMove (TM.readBackWrite t.read) Dir3.right =
-        t.move Dir3.right := by
-    show (t.write (TM.readBackWrite t.read)).move Dir3.right = _
-    rw [Tape.write, if_pos h.1]
-  rw [hstep]
+  rw [h.applyMoveRight]
   apply BinaryCursor.atFirstBit
   · simp [Tape.move, h.1]
   · simpa [Tape.move_cells] using h.2
