@@ -126,6 +126,16 @@ theorem encodeAt_succ_length_le (F : CircuitFamily Basis.andOr2) (n : ℕ) :
   rw [F.size_succ]
   omega
 
+/-- Every tagged family code satisfies the concrete length bound, including
+    the explicit two-bit code at input length zero. -/
+theorem encodeAt_length_le (F : CircuitFamily Basis.andOr2) (n : ℕ) :
+    (F.encodeAt n).length ≤
+      2 + F.size n * (2 * (n + F.size n) + 6) := by
+  cases n with
+  | zero => simp
+  | succ n =>
+      simpa [Nat.succ_eq_add_one] using encodeAt_succ_length_le F n
+
 end CircuitCode
 
 end Complexity
