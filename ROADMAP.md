@@ -561,7 +561,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       - [x] Add canonical fixed-width little-endian natural-number encodings with exact
         length, modular and fitting-value round trips, fixed-width injectivity, and a
         bridge to the standard rewound binary-tape shape.
-      - [ ] Add an append-on-overflow little-endian successor subroutine with an exact
+      - [x] Add an append-on-overflow little-endian successor subroutine with an exact
         frame-preserving endpoint, concrete time bound, all-reachable space contract,
         and one-way-output proof.
       - [ ] Convert unary input length to a logarithmic-width binary counter, then add
