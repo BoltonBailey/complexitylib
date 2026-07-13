@@ -221,6 +221,20 @@ private theorem liftTM_reachesIn_init (tm : TM n) (m : ℕ) (x : List Bool)
         (liftTM_reachesIn_liftCfg tm m hrest),
       rfl, rfl⟩
 
+/-- A positive-length run of a lifted machine from genuine initialization has
+the exact `liftCfg` endpoint of the underlying run. The positivity hypothesis
+excludes the sole mismatch at time zero, when the extra tapes have not yet
+bounced from cell `0` to their canonical parked position at cell `1`. -/
+theorem liftTM_reachesIn_initCfg_of_pos (tm : TM n) (m : ℕ) (x : List Bool)
+    {t : ℕ} {c' : Cfg n tm.Q} (ht : 0 < t)
+    (h : tm.reachesIn t (tm.initCfg x) c') :
+    (tm.liftTM m).reachesIn t ((tm.liftTM m).initCfg x) (tm.liftCfg m c') := by
+  cases h with
+  | zero => omega
+  | step hstep hrest =>
+      exact .step (by rw [liftTM_step_initCfg, hstep]; rfl)
+        (liftTM_reachesIn_liftCfg tm m hrest)
+
 /-- Unbounded-reachability commutation through `liftCfg`. -/
 private theorem liftTM_reaches_liftCfg (tm : TM n) (m : ℕ) {c c' : Cfg n tm.Q}
     (h : tm.reaches c c') :

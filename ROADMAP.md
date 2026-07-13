@@ -162,6 +162,11 @@ its public name or provide a compatibility alias.
   internals, with a genuine `initCfg` endpoint, stable tape frames, an exact
   encoded-length cost seam, and a frame-preserving `HoareTime` specification.
   This is the first serializer-shaped proof-engineering benchmark.
+- [x] Recognize the image of the pair codec with the generic finite-state
+  scanner, obtaining total malformed-input rejection in exactly `n + 2` steps
+  plus a frame-rich lifted specification. This is a concrete benchmark win:
+  the regular control logic needs only a fold invariant, while the scanner and
+  lift APIs supply execution, resource, and unused-tape proofs.
 - [M] Inventory the repeated controller mechanics in the UTM, repetition, and
   Tseitin developments; extract one small generic child-call/routing layer before
   committing to a larger syntax or metaprogramming framework.
@@ -460,7 +465,9 @@ Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
 advice-to-circuit direction; the reverse direction still depends on the
-serialized circuit-evaluator DTM.
+serialized circuit-evaluator DTM. The evaluator front end now has a total
+linear-time validator for its outer pair encoding, so malformed machine inputs
+can reject before the canonical splitter stages the code and data tapes.
 
 **Settled conventions.**
 
