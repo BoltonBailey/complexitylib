@@ -206,7 +206,9 @@ instance : Fintype ScanPhase where
   elems := {.scanning, .done}
   complete := fun x => by cases x <;> simp
 
-/-- Scan work tape `idx` right until finding `Γ.blank`. Preserves tape contents. -/
+/-- Scan work tape `idx` right until finding `Γ.blank`. On canonical binary
+tapes, its exact content- and frame-preserving behavior is specified by
+`scanRightTM_reachesIn_frame` and `scanRightTM_hoareTime_frame`. -/
 def scanRightTM (idx : Fin n) : TM n where
   Q := ScanPhase
   qstart := .scanning
@@ -215,25 +217,33 @@ def scanRightTM (idx : Fin n) : TM n where
     match state with
     | .scanning =>
       if wHeads idx = Γ.blank then
-        allIdle .done iHead wHeads oHead
+        (.done,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       else
         (.scanning,
-         fun i => if i = idx then readBackWrite (wHeads idx) else .blank,
-         .blank, idleDir iHead,
+         fun i => readBackWrite (wHeads i),
+         readBackWrite oHead, idleDir iHead,
          fun i => if i = idx then Dir3.right else idleDir (wHeads i),
          idleDir oHead)
-    | .done => allIdle .done iHead wHeads oHead
+    | .done =>
+        (.done,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
   δ_right_of_start := by
     intro state iHead wHeads oHead
     match state with
     | .scanning =>
       dsimp only []; split
-      · exact rightOfStart_allIdle iHead wHeads oHead
+      · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
       · refine ⟨idleDir_right_of_start, ?_, idleDir_right_of_start⟩
         intro i hwi; simp only []; split
         · rfl
         · exact idleDir_right_of_start hwi
-    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+    | .done =>
+        exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
 
 -- ════════════════════════════════════════════════════════════════════════
 -- blankWorkTM: blank a work tape while scanning right

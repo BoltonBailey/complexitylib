@@ -131,6 +131,11 @@ tape helpers remain.
   smallest reusable lemma, combinator, tactic, or typed DSL layer that removes
   the duplication. Validate each proposed abstraction on at least two independent
   constructions before making it a shared interface.
+- [ ] Standardize the low-level contracts that make those larger abstractions
+  compositional: reusable tape-shape predicates, explicit preservation frames,
+  appendable endpoints, and exact-time sequential/loop rules. Treat an attractive
+  machine definition with a destructive or under-specified proof interface as an
+  API defect, and repair the interface before building more controllers on it.
 
 **Proof-engineering benchmark.** Evaluate proposed mechanics on three distinct
 shapes: a straight-line child-machine pipeline, a loop/repetition controller, and
@@ -142,6 +147,12 @@ of repeated plumbing in at least two shapes, and avoid making ordinary local pro
 more opaque. Prefer small combinators and theorem APIs first; add syntax generation
 or tactics only where the benchmark shows that lemmas alone do not address the
 repetition.
+
+The serialized-circuit evaluator is the current end-to-end experiment: its
+validator, pair splitter, tape scanner, memo-wire appends, and evaluator loop
+should compose through public contracts without reopening transition-level proofs.
+Track proof size and the kinds of residual obligations at each boundary so the
+eventual controller DSL, if warranted, is driven by evidence from a real consumer.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -167,6 +178,10 @@ its public name or provide a compatibility alias.
   plus a frame-rich lifted specification. This is a concrete benchmark win:
   the regular control logic needs only a fold invariant, while the scanner and
   lift APIs supply execution, resource, and unused-tape proofs.
+- [x] Move canonical binary-string tape shapes into a neutral encoding module;
+  make pair splitting expose its full appendable-prefix invariant; and give the
+  right-scanner an exact linear-time, frame-preserving contract. This closes the
+  proof-information seam between decoding a pair and appending memoized wires.
 - [M] Inventory the repeated controller mechanics in the UTM, repetition, and
   Tseitin developments; extract one small generic child-call/routing layer before
   committing to a larger syntax or metaprogramming framework.

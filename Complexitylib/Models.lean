@@ -8,11 +8,13 @@ import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 import Complexitylib.Models.TuringMachine.Subroutines.PairValidate
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
+import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Composition

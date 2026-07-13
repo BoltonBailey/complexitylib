@@ -6,13 +6,15 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit.Internal
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Split a paired input onto work tapes
 
 `pairSplitCoreTM` is the deterministic machine-level inverse of the neutral
-`pair` codec. On a canonical input `pair x y`, it writes `x` and `y` to two
-distinct work tapes in exact time `2 * |x| + |y| + 4`.
+`pair` codec. On a canonical input `pair x y`, it writes `x` and `y` as
+canonical binary prefixes on two distinct work tapes in exact time
+`2 * |x| + |y| + 4`.
 
 This is intentionally a canonical-pair primitive, not a total recognizer for
 the image of `pair`: malformed inputs may share its halting state. A client
@@ -23,8 +25,10 @@ with a distinct failure result.
 
 - `pairSplitCoreTM_reachesIn_initCfg` — exact initialized endpoint with frames.
 - `pairSplitCoreTM_from_init_initTape_move_right` — exact endpoint semantics.
-- `pairSplitCoreTM_hoareTime_frame` — compositional frame-preserving specification.
-- `pairSplitCoreTM_hoareTime` — compact target-tape specification.
+- `pairSplitCoreTM_hoareTime_prefix_frame` — binary-prefix specification with frames.
+- `pairSplitCoreTM_hoareTime_prefix` — compact binary-prefix specification.
+- `pairSplitCoreTM_hoareTime_frame` and `pairSplitCoreTM_hoareTime` — compatible
+  `HasOutput` specifications.
 -/
 
 namespace Complexity
@@ -139,10 +143,10 @@ theorem pairSplitCoreTM_from_init_initTape_move_right
   pairSplitCoreTM_from_init_initTape_move_right_internal xIdx yIdx hne x y c
     hst hinp hxw hyw
 
-/-- Frame-preserving compositional specification. In addition to decoding the
-two target tapes, the splitter preserves an arbitrary off-start output tape
-and every arbitrary off-start work tape outside the two targets. -/
-theorem pairSplitCoreTM_hoareTime_frame
+/-- Frame-preserving compositional specification. The decoded components are
+canonical binary prefixes, and the splitter preserves an arbitrary off-start
+output tape and every arbitrary off-start work tape outside the two targets. -/
+theorem pairSplitCoreTM_hoareTime_prefix_frame
     {k : ℕ} (xIdx yIdx : Fin k) (hne : xIdx ≠ yIdx)
     (x y : List Bool) (frameWork : Fin k → Tape) (frameOutput : Tape)
     (hframeWork : ∀ i, i ≠ xIdx → i ≠ yIdx →
@@ -158,10 +162,8 @@ theorem pairSplitCoreTM_hoareTime_frame
       (fun inp work out =>
         inp.head = (pair x y).length + 1 ∧
         inp.cells = (Tape.init ((pair x y).map Γ.ofBool)).cells ∧
-        (work xIdx).head = 1 + x.length ∧
-        (work xIdx).HasOutput x ∧
-        (work yIdx).head = 1 + y.length ∧
-        (work yIdx).HasOutput y ∧
+        (work xIdx).HasBinaryPrefix x ∧
+        (work yIdx).HasBinaryPrefix y ∧
         (∀ i, i ≠ xIdx → i ≠ yIdx → work i = frameWork i) ∧
         out = frameOutput)
       (pairSplitCoreTime x.length y.length) := by
@@ -202,15 +204,84 @@ theorem pairSplitCoreTM_hoareTime_frame
     rw [htrace] at hpres
     exact hpres.trans hout
   refine ⟨c', pairSplitCoreTime x.length y.length, le_rfl, hreach, hhalt,
-    hinputHead, hinputCells, hxHead, ?_, hyHead, ?_, hother, hout'⟩
-  · exact ⟨hxData, hxTail x.length le_rfl⟩
-  · exact ⟨hyData, hyTail y.length le_rfl⟩
+    hinputHead, hinputCells, ?_, ?_, hother, hout'⟩
+  · exact ⟨by simpa [Nat.add_comm] using hxHead, hxData, hxTail⟩
+  · exact ⟨by simpa [Nat.add_comm] using hyHead, hyData, hyTail⟩
+
+/-- Frame-preserving compositional specification exposing the decoded heads
+and `HasOutput` facts. The prefix-strengthened form is
+`pairSplitCoreTM_hoareTime_prefix_frame`. -/
+theorem pairSplitCoreTM_hoareTime_frame
+    {k : ℕ} (xIdx yIdx : Fin k) (hne : xIdx ≠ yIdx)
+    (x y : List Bool) (frameWork : Fin k → Tape) (frameOutput : Tape)
+    (hframeWork : ∀ i, i ≠ xIdx → i ≠ yIdx →
+      (frameWork i).read ≠ Γ.start)
+    (hframeOutput : frameOutput.read ≠ Γ.start) :
+    (pairSplitCoreTM xIdx yIdx).HoareTime
+      (fun inp work out =>
+        inp = (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right ∧
+        work xIdx = (Tape.init []).move Dir3.right ∧
+        work yIdx = (Tape.init []).move Dir3.right ∧
+        (∀ i, i ≠ xIdx → i ≠ yIdx → work i = frameWork i) ∧
+        out = frameOutput)
+      (fun inp work out =>
+        inp.head = (pair x y).length + 1 ∧
+        inp.cells = (Tape.init ((pair x y).map Γ.ofBool)).cells ∧
+        (work xIdx).head = 1 + x.length ∧
+        (work xIdx).HasOutput x ∧
+        (work yIdx).head = 1 + y.length ∧
+        (work yIdx).HasOutput y ∧
+        (∀ i, i ≠ xIdx → i ≠ yIdx → work i = frameWork i) ∧
+        out = frameOutput)
+      (pairSplitCoreTime x.length y.length) := by
+  refine (pairSplitCoreTM_hoareTime_prefix_frame xIdx yIdx hne x y
+    frameWork frameOutput hframeWork hframeOutput).strengthen_post ?_
+  intro inp work out hpost
+  rcases hpost with ⟨hinputHead, hinputCells, hxPrefix, hyPrefix, hwork, hout⟩
+  refine ⟨hinputHead, hinputCells, ?_, ?_, ?_, ?_, hwork, hout⟩
+  · simpa [Nat.add_comm] using hxPrefix.1
+  · exact ⟨hxPrefix.2.1, hxPrefix.2.2 x.length le_rfl⟩
+  · simpa [Nat.add_comm] using hyPrefix.1
+  · exact ⟨hyPrefix.2.1, hyPrefix.2.2 y.length le_rfl⟩
 
 /-- Compositional canonical-pair specification. The target work tapes begin
-empty at cell `1`; on exit they contain the two decoded strings, with their
-heads just after the data. This compact theorem makes no claim about unrelated
-work tapes or the output; use `pairSplitCoreTM_hoareTime_frame` when those
+empty at cell `1`; on exit they are canonical binary prefixes for the two
+decoded strings. This compact theorem makes no claim about unrelated work
+tapes or the output; use `pairSplitCoreTM_hoareTime_prefix_frame` when those
 frames must be preserved. -/
+theorem pairSplitCoreTM_hoareTime_prefix
+    {k : ℕ} (xIdx yIdx : Fin k) (hne : xIdx ≠ yIdx)
+    (x y : List Bool) :
+    (pairSplitCoreTM xIdx yIdx).HoareTime
+      (fun inp work _ =>
+        inp = (Tape.init ((pair x y).map Γ.ofBool)).move Dir3.right ∧
+        work xIdx = (Tape.init []).move Dir3.right ∧
+        work yIdx = (Tape.init []).move Dir3.right)
+      (fun inp work _ =>
+        inp.head = (pair x y).length + 1 ∧
+        inp.cells = (Tape.init ((pair x y).map Γ.ofBool)).cells ∧
+        (work xIdx).HasBinaryPrefix x ∧
+        (work yIdx).HasBinaryPrefix y)
+      (pairSplitCoreTime x.length y.length) := by
+  intro inp work out hpre
+  obtain ⟨hinp, hxw, hyw⟩ := hpre
+  let c : Cfg k (pairSplitCoreTM xIdx yIdx).Q :=
+    { state := (pairSplitCoreTM xIdx yIdx).qstart
+      input := inp
+      work := work
+      output := out }
+  obtain ⟨c', hreach, hhalt, hinputHead, hinputCells,
+      hxHead, -, hxData, hxTail, hyHead, -, hyData, hyTail⟩ :=
+    pairSplitCoreTM_from_init_initTape_move_right_internal xIdx yIdx hne x y c
+      rfl hinp hxw hyw
+  refine ⟨c', pairSplitCoreTime x.length y.length, le_rfl, hreach, hhalt,
+    hinputHead, hinputCells, ?_, ?_⟩
+  · exact ⟨by simpa [Nat.add_comm] using hxHead, hxData, hxTail⟩
+  · exact ⟨by simpa [Nat.add_comm] using hyHead, hyData, hyTail⟩
+
+/-- Compact canonical-pair specification exposing the decoded heads and
+`HasOutput` facts. The prefix-strengthened form is
+`pairSplitCoreTM_hoareTime_prefix`. -/
 theorem pairSplitCoreTM_hoareTime
     {k : ℕ} (xIdx yIdx : Fin k) (hne : xIdx ≠ yIdx)
     (x y : List Bool) :
@@ -227,21 +298,14 @@ theorem pairSplitCoreTM_hoareTime
         (work yIdx).head = 1 + y.length ∧
         (work yIdx).HasOutput y)
       (pairSplitCoreTime x.length y.length) := by
-  intro inp work out hpre
-  obtain ⟨hinp, hxw, hyw⟩ := hpre
-  let c : Cfg k (pairSplitCoreTM xIdx yIdx).Q :=
-    { state := (pairSplitCoreTM xIdx yIdx).qstart
-      input := inp
-      work := work
-      output := out }
-  obtain ⟨c', hreach, hhalt, hinputHead, hinputCells,
-      hxHead, -, hxData, hxTail, hyHead, -, hyData, hyTail⟩ :=
-    pairSplitCoreTM_from_init_initTape_move_right_internal xIdx yIdx hne x y c
-      rfl hinp hxw hyw
-  refine ⟨c', pairSplitCoreTime x.length y.length, le_rfl, hreach, hhalt,
-    hinputHead, hinputCells, hxHead, ?_, hyHead, ?_⟩
-  · exact ⟨hxData, hxTail x.length le_rfl⟩
-  · exact ⟨hyData, hyTail y.length le_rfl⟩
+  refine (pairSplitCoreTM_hoareTime_prefix xIdx yIdx hne x y).strengthen_post ?_
+  intro inp work out hpost
+  rcases hpost with ⟨hinputHead, hinputCells, hxPrefix, hyPrefix⟩
+  refine ⟨hinputHead, hinputCells, ?_, ?_, ?_, ?_⟩
+  · simpa [Nat.add_comm] using hxPrefix.1
+  · exact ⟨hxPrefix.2.1, hxPrefix.2.2 x.length le_rfl⟩
+  · simpa [Nat.add_comm] using hyPrefix.1
+  · exact ⟨hyPrefix.2.1, hyPrefix.2.2 y.length le_rfl⟩
 
 end TM
 

@@ -302,7 +302,8 @@ private theorem pairBuild_step_ytape
   have h07 : ¬ ((0 : Fin 8) = (7 : Fin 8)) := by decide
   have hidle : (c.work 0).writeAndMove (readBackWrite (c.work 0).read).toΓ
       (idleDir (c.work 0).read) = c.work 0 :=
-    Tape.writeAndMove_readBack_idle_of_ne_start _ hread
+    by simpa [transitionTape] using
+      (transitionTape_eq_self (t := c.work 0) hread)
   obtain ⟨hrc, hrh⟩ := writeAndMove_readBack_right (c.work 0) hread
   cases hstate : c.state with
   | done => exact absurd hstate hq

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Subroutines
-import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
@@ -1383,8 +1383,8 @@ private theorem copyInputToWorkTM_loop {n : ℕ} (idx : Fin n) (x : List Bool) :
           simp [TM.idleDir, hread, Tape.move]
         have hwork_keep :
             (c.work idx).writeAndMove Γ.blank (TM.idleDir ((c.work idx).read)) = c.work idx := by
-          simpa [hwork_blank] using
-            (Tape.writeAndMove_readBack_idle_of_ne_start (c.work idx) (by simp [hwork_blank]))
+          simpa [transitionTape, hwork_blank] using
+            (transitionTape_eq_self (t := c.work idx) (by simp [hwork_blank]))
         refine ⟨c1, ?_, rfl, ?_, ?_, ?_⟩
         · simp [TM.step, hstate, copyInputToWorkTM, hread, c1, allIdle]
         · rw [show c1.input = c.input by simpa [c1] using hinput_keep]

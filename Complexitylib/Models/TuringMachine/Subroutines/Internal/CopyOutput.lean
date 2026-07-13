@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Subroutines
-import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
+import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
 # Input-to-output copy correctness
@@ -67,7 +68,7 @@ private theorem copyInputToOutputTM_loop {n : ℕ} (x : List Bool) :
       have houtput_keep :
           c.output.writeAndMove (readBackWrite c.output.read)
               (idleDir c.output.read) = c.output := by
-        exact Tape.writeAndMove_readBack_idle_of_ne_start c.output (by simp [houtput_blank])
+        exact transitionTape_eq_self (t := c.output) (by simp [houtput_blank])
       have hstep : (copyInputToOutputTM (n := n)).step c = some c1 := by
         simp [TM.step, hstate, copyInputToOutputTM, hread, c1]
       refine ⟨c1, .step hstep .zero, rfl, ?_, ?_, ?_⟩
