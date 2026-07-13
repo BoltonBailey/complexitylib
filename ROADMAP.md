@@ -424,7 +424,11 @@ predicate, `SIZE`, and the nonuniform class `PPoly`, together with its big-O
 power characterization. Fan-in-two circuits now have a canonical proof-free
 terminated-unary encoding, exact decoder, topological validator, array-backed
 iterative evaluator, semantic equivalence with `Circuit.eval`, and a concrete
-polynomial bit-length bound.
+polynomial bit-length bound. Functional machine unrolling now has a bounded
+one-hot configuration layout, initialization and one-step compilers, and a
+complete tiled trace fragment with exact semantics, topology, and a cubic size
+bound. Selecting the final acceptance bit and packaging the raw fragment as a
+typed circuit remain.
 
 **Settled conventions.**
 
@@ -492,6 +496,9 @@ preserved by serialized encodings and uniform generators.
   a memoized/streaming evaluator instead of assuming `Circuit.eval` is linear.
 - Dependent gate indices and proof-carrying acyclicity should not leak into every
   simulation lemma.
+- Raw initialization and formula fragments require a nonempty existing-wire
+  prefix for constant gates. The canonical `T + n = 0` case must use the
+  circuit-family empty-input branch or reserve a dummy primary wire.
 - Arora--Barak count input vertices and explicit NOT gates, unlike the library's
   exact size convention. Prove additive/linear simulations before transporting
   exact `SIZE` bounds or claiming basis invariance; polynomial-size `PPoly` is
@@ -516,6 +523,10 @@ preserved by serialized encodings and uniform generators.
 - [x] Compile one fixed transition layer into a Boolean circuit as a local
   precursor to full unrolling, with exact packed semantics and a quadratic size
   bound in the trace horizon.
+- [x] Tile initialization with one transition fragment per bounded choice,
+  proving exact final-configuration semantics, topology, and a cubic size bound.
+- [ ] Append the final halt-and-output acceptance gate and package the resulting
+  well-formed raw fragment as a typed single-output circuit.
 
 ### M2. BPP is contained in P/poly
 
