@@ -6,11 +6,13 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.ForInput
 import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
@@ -43,11 +45,12 @@ import Complexitylib.Models.RandomAccessMachine
 
 Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, time- and
-space-aware Hoare specifications, reusable binary-successor, unary-length, and
-pair-emission subroutines, computed-value/input fanout, finite space-to-time
-bounds, determinism results, the universal machine, and the logarithmic-cost
-random access machine (`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
-(`…/Internal/…`, register machinery, emitter plumbing) are deliberately
-not imported here — they stay in the build through the surface modules and
-theorem files that need them.
+space-aware Hoare specifications, reusable read-only-input loops,
+binary-successor, binary-length, unary-length, and pair-emission subroutines,
+computed-value/input fanout, finite space-to-time bounds, determinism results,
+the universal machine, and the logarithmic-cost random access machine
+(`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
+(`…/Internal/…`, register machinery, emitter plumbing) are deliberately not
+imported here — they stay in the build through the surface modules and theorem
+files that need them.
 -/
