@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Rename
 import Complexitylib.SAT.ThreeCNF
+import Complexitylib.SAT.ThreeSAT
+import Complexitylib.SAT.Tseitin
 import Complexitylib.SAT.QBF
 import Complexitylib.SAT.Resolution
 import Complexitylib.SAT.Encoding
@@ -28,6 +30,8 @@ infrastructure used by the polynomial-time verifier.
   computes will be proved equal to `CNF.eval α φ`.
 - `Encoding`  — `CNF.encode : CNF → List Bool`, the bit-level format the
   verifier parses.
+- `ThreeSAT` / `Tseitin` — the exact-3 language, total encoded reduction,
+  equisatisfiability, and quadratic encoding-size bound.
 - `Language`  — `language`, the witness relation `Witness`, and the proofs
   `mem_language_iff_witness` / `polyBalanced_witness`.
 - `Verifier` — executable decoding and checking for `pair(z, α)`.

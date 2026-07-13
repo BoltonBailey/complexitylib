@@ -292,8 +292,22 @@ forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
     - [x] Implement the output-to-input pipeline and compose the machines and
       time bounds (`TM.compositionTM_computesInTime`, `mem_FP_comp`, and
       `MapReducesPoly.trans`).
-- [ ] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
-  Tseitin transformation.
+- [~] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
+  Tseitin transformation. *Decomposed:*
+  - [x] Name the existing encoded CNF problem as `CNFSAT.language`, expose
+    injective encode/decode characterizations, and define the exact-3 restricted
+    decoder and `ThreeSAT.language`.
+  - [x] Give a total fresh-variable CNF-to-3CNF transformation, including an
+    empty-clause contradiction gadget and wide-clause chains; prove exact-3
+    shape and equisatisfiability (`CNF.to3_is3CNF`,
+    `CNF.to3_satisfiable_iff`).
+  - [x] Prove structural freshness bounds and the honest unary-codec bound
+    `|encode (to3 φ)| ≤ 96 · (|encode φ| + 1)²`; lift the typed construction to
+    a total semantic bit-string reduction (`ThreeSAT.reduction_correct`).
+  - [ ] Implement `ThreeSAT.reduction` in `FP`, derive
+    `CNFSAT.language ≤ₚ ThreeSAT.language`, and transfer NP-completeness.
+  - [ ] Add a codec/language for general `BoolFormula` SAT and relate it to the
+    established CNF-SAT surface without introducing a third formula syntax.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and
   INDEPENDENT-SET with explicit codecs.
 - [~] Add TQBF/QBF syntax and semantics as the canonical PSPACE problem.

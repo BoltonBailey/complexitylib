@@ -47,9 +47,8 @@ well-defined token stream for any valid encoding.
 - Distinguishes `[]` (true CNF) from `[[]]` (one unsatisfiable clause):
   the former encodes to `[]`, the latter to `[true, false]`.
 
-No `decode` function is provided. The verifier's correctness theorem is
-stated directly against `encode`; we don't need an inverse as a Lean
-function to prove NP membership.
+The matching executable decoder `CNF.decode?`, its round-trip theorem, and its
+soundness theorem live with the token parser in `Complexitylib.SAT.Verifier`.
 -/
 
 namespace Complexity
