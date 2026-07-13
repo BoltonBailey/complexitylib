@@ -76,6 +76,40 @@ theorem HoareSpace.mono_internal {tm : TM n}
   intro inp work out hpre c' hreach
   exact (h inp work out hpre c' hreach).mono_internal hinput hspace
 
+/-- Internal time-to-space bridge. Determinism bounds every reachable prefix
+by the terminating run supplied by the Hoare triple, and tape heads grow by at
+most one cell per step. -/
+theorem HoareTime.toHoareTimeSpace_internal {tm : TM n}
+    {pre post : TapePred n} {time inputLength initialSpace : ℕ}
+    (htime : tm.HoareTime pre post time)
+    (hinitial : ∀ inp work out, pre inp work out →
+      ({ state := tm.qstart, input := inp, work := work, output := out } :
+        Cfg n tm.Q).WithinAuxSpace inputLength initialSpace) :
+    tm.HoareTimeSpace pre post time inputLength (initialSpace + time) := by
+  refine ⟨htime, ?_⟩
+  intro inp work out hpre c hreach
+  obtain ⟨cHalt, haltTime, hhaltTime, hrun, hhalt, _hpost⟩ :=
+    htime inp work out hpre
+  obtain ⟨t, hreachIn⟩ := tm.reaches_to_reachesIn hreach
+  have ht : t ≤ haltTime := tm.reachesIn_le_halt hreachIn hrun hhalt
+  have hstart := hinitial inp work out hpre
+  constructor
+  · intro i
+    calc
+      (c.work i).head ≤ (work i).head + t :=
+        tm.work_head_reachesIn_bound hreachIn i
+      _ ≤ initialSpace + time := by
+        have hwork : (work i).head ≤ initialSpace := by
+          simpa using hstart.1 i
+        omega
+  · calc
+      c.input.head ≤ inp.head + t :=
+        tm.input_head_reachesIn_bound hreachIn
+      _ ≤ inputLength + (initialSpace + time) + 1 := by
+        have hinput : inp.head ≤ inputLength + initialSpace + 1 := by
+          simpa using hstart.2
+        omega
+
 /-- Internal consequence rule for time-and-space Hoare contracts. -/
 theorem HoareTimeSpace.consequence_internal {tm : TM n}
     {pre pre' post post' : TapePred n}

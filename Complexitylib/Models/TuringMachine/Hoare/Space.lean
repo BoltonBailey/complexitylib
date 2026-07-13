@@ -20,6 +20,8 @@ closure, and a fresh-start computation bridge.
 - `TM.HoareTimeSpace.consequence` — weaken/strengthen every contract component.
 - `TM.HoareSpace.weaken_pre`, `TM.HoareSpace.mono` — structural space rules.
 - `TM.HoareTime.and_hoareSpace` — pair existing endpoint and safety proofs.
+- `TM.HoareTime.toHoareTimeSpace` — derive all-reachable space from time and
+  an initial head bound.
 - `TM.seqTM_hoareTimeSpace` — compose two phases at one space budget.
 - `TM.IsTransducer.seqTM` — sequential composition remains append-only.
 - `TM.computesInSpace_of_hoareTimeSpace` — package per-input contracts.
@@ -81,6 +83,19 @@ theorem HoareTime.and_hoareSpace {tm : TM n}
     (hspace : tm.HoareSpace pre inputLength space) :
     tm.HoareTimeSpace pre post time inputLength space :=
   ⟨htime, hspace⟩
+
+/-- Upgrade a terminating time-bounded Hoare triple to an all-reachable
+time-and-space contract. If every starting configuration fits in
+`initialSpace`, then at most one additional cell per machine step gives the
+uniform bound `initialSpace + time`. -/
+theorem HoareTime.toHoareTimeSpace {tm : TM n}
+    {pre post : TapePred n} {time inputLength initialSpace : ℕ}
+    (htime : tm.HoareTime pre post time)
+    (hinitial : ∀ inp work out, pre inp work out →
+      ({ state := tm.qstart, input := inp, work := work, output := out } :
+        Cfg n tm.Q).WithinAuxSpace inputLength initialSpace) :
+    tm.HoareTimeSpace pre post time inputLength (initialSpace + time) :=
+  htime.toHoareTimeSpace_internal hinitial
 
 /-- A time-and-space contract exposes its ordinary time-bounded Hoare triple. -/
 theorem HoareTimeSpace.toHoareTime {tm : TM n}
