@@ -513,8 +513,9 @@ preserved by serialized encodings and uniform generators.
 - [M] Implement a DTM realizing the topological memoized evaluator for serialized
   circuits and prove a polynomial running-time bound.
 - [M] Define polynomial advice and basic monotonicity/containment lemmas.
-- [L] Compile one fixed deterministic transition layer into a Boolean circuit as a
-  local precursor to full unrolling.
+- [x] Compile one fixed transition layer into a Boolean circuit as a local
+  precursor to full unrolling, with exact packed semantics and a quadratic size
+  bound in the trace horizon.
 
 ### M2. BPP is contained in P/poly
 
