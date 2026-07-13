@@ -8,6 +8,7 @@ import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
@@ -40,8 +41,8 @@ import Complexitylib.Models.RandomAccessMachine
 # Computation models
 
 Aggregation module for the machine models: the core Turing-machine
-semantics, the single-tape simulation, machine combinators, Hoare-style
-specifications, reusable unary-length and pair-emission subroutines,
+semantics, the single-tape simulation, machine combinators, time- and
+space-aware Hoare specifications, reusable unary-length and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
 the universal machine, and the logarithmic-cost random access machine
 (`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules

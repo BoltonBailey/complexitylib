@@ -551,6 +551,10 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       tableau gate list. `TM.directUnrollingCircuitFamily_encodeAt` identifies the
       complete tagged family code with `TM.directUnrollingCode`, avoiding the repeated
       typed hardwiring transformation while retaining exact semantics and cubic size.
+    - [x] Add compositional all-reachable space contracts. `TM.HoareSpace` and
+      `TM.HoareTimeSpace` now compose through `seqTM`, preserve the transducer
+      discipline, and package fresh-start contracts as `TM.ComputesInSpace` without
+      mistaking a terminal head bound for a whole-run space proof.
     - [ ] Add the binary-counter and fixed-polynomial arithmetic substrate needed to
       enumerate polynomially many gates and unary-coded wire references in logarithmic
       auxiliary space.
