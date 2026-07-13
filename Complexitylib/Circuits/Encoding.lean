@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Defs
+import Complexitylib.Circuits.Encoding.Fragment
+import Complexitylib.Circuits.Encoding.Formula
 import Complexitylib.Circuits.Encoding.Internal
 import Complexitylib.Circuits.Encoding.ToCircuit
 
@@ -22,6 +24,8 @@ This module exposes the machine-facing representation of
 - `CircuitCode.encodeCircuit`: serialization of a typed circuit.
 - `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
 - `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
+- `RawCircuit.evalAux?_append`: compose appendable raw fragments.
+- `BoolFormula.compileRaw`: compile formulas into appendable raw fragments.
 
 ## Main results
 
@@ -36,6 +40,7 @@ This module exposes the machine-facing representation of
   bound for the unary encoding.
 - `RawCircuit.ofCircuit_toCircuit`, `RawCircuit.eval?_toCircuit`, and
   `RawCircuit.size_toCircuit`: exact reconstruction, semantics, and size.
+- `BoolFormula.evalAux?_compileRaw`: exact formula-fragment evaluation.
 -/
 
 namespace Complexity

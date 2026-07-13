@@ -57,6 +57,16 @@ def sharedCircuit : RawCircuit :=
      negated₀ := false
      negated₁ := false }]
 
+-- The compiled fragment reads wires 2 and 3, both produced by the raw prefix.
+private def priorWirePrefix : RawCircuit :=
+  andCircuit ++ negatedCircuit
+
+private def priorWireFormula : BoolFormula :=
+  .disj (.var 2) (.var 3)
+
+private def priorWireCircuit : RawCircuit :=
+  priorWirePrefix ++ BoolFormula.compileRaw 4 priorWireFormula
+
 #guard RawCircuit.decode? andCircuit.encode = some andCircuit
 #guard RawCircuit.decode? andCircuit.encode.dropLast = none
 #guard RawCircuit.decode? (andCircuit.encode ++ [false]) = none
@@ -67,6 +77,13 @@ def sharedCircuit : RawCircuit :=
 #guard evalCode 2 sharedCircuit.encode [true, false] = some true
 #guard evalCode 2 andCircuit.encode [true] = none
 #guard evalCode 2 selfReferentialCircuit.encode [true, false] = none
+
+#guard (BoolFormula.compileRaw 4 priorWireFormula).length = 3
+#guard priorWireCircuit.length = 5
+#guard RawCircuit.isWellFormed 2 priorWireCircuit = true
+#guard priorWireCircuit.eval? [true, true] = some true
+#guard priorWireCircuit.eval? [false, true] = some true
+#guard priorWireCircuit.eval? [true, false] = some false
 
 -- Positive codes are parameterized by the evaluator's arity rather than
 -- carrying a serialized arity stamp of their own.
