@@ -497,6 +497,8 @@ preserved by serialized encodings and uniform generators.
   needs the reverse bridge; the executable evaluator itself does not require it.
 - [x] Compile Boolean formulas into appendable raw fragments with exact size,
   topology, prefix-preservation, and evaluation laws.
+- [x] Define the bounded one-hot configuration layout used by functional
+  unrolling and compile the initial configuration as an exact-size raw fragment.
 - [x] Hardwire an arbitrary prefix of typed-circuit inputs without increasing
   the circuit size, retaining a positive live suffix under the typed-circuit
   convention (families handle length zero separately).
@@ -557,7 +559,8 @@ accepting NTM path.
   run (`k` independent runs multiply their success probabilities).
 - [M] Define a PTM repetition wrapper with an explicit choice-block schedule (the
   `blockEquiv`/`card_filter_block` seed-splitting machinery is now in place).
-- [M] Add a circuit/advice hardwiring operation and prove evaluation correctness.
+- [x] Add a circuit/advice hardwiring operation and prove evaluation correctness
+  (`Circuit.restrictPrefix`, with exact size preservation).
 
 ### M3. Small-depth circuits and Barrington's theorem
 
