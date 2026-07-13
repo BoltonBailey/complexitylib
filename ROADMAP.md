@@ -544,12 +544,13 @@ not on the individual input.
 
 **Staged milestones.**
 
-- [ ] Normalize a BPP witness to explicit completeness at least `2/3` and
-  soundness at most `1/3`, if the existing definition permits other constants.
-- [ ] Construct repeated independent runs and majority output with error below
+- [x] Use the explicit completeness `2/3` and soundness `1/3` already built into
+  the library's concrete `BPP` definition; no constant-normalization layer is needed.
+- [x] Construct repeated independent runs and majority output with error below
   `2^-(n+1)` on each input of length `n`.
-- [ ] Prove by a union bound over all `2^n` inputs that some single random string is
-  correct for every input of that length.
+- [x] Prove by a union bound over all `2^n` inputs that some single random string is
+  correct for every input of that length
+  (`NTM.exists_uniform_correct_seed`).
 - [ ] Hardwire that string into the deterministic simulation/circuit for length
   `n`.
 - [ ] Prove the resulting family has polynomial size and concludes
@@ -562,13 +563,17 @@ number of random bits, and early halting must not change the block layout. A str
 inequality below `1/2^n` is needed to conclude that the number of bad seeds is less
 than the total number of seeds. Majority ties require an odd repetition count.
 Hardwiring must preserve the exact acceptance bit, not merely the existence of an
-accepting NTM path.
+accepting NTM path. Do not obtain the nonuniform circuit by unrolling
+`repeatAtTime`: its control state stores the entire vote vector, so its
+finite-state cardinality is exponential in the repetition count. Compose copies
+of the original machine's acceptance circuit and a threshold fragment instead.
 
 **Small entry tasks.**
 
 - [S] Define the bad-seed set for a fixed input and rewrite its cardinality in terms
   of `acceptCount`.
-- [S] Enumerate all `BitString n` inputs and prove its cardinality is `2^n`.
+- [x] Enumerate all `BitString n` inputs and prove its cardinality is `2^n`
+  (`card_finArrowBool`).
 - [x] Prove the “expected bad inputs below one implies a perfect seed exists”
   counting lemma independently of machines
   (`Complexitylib.Classes.FiniteCounting.exists_good_seed`).
@@ -578,8 +583,8 @@ accepting NTM path.
   prefix/suffix-separable event's probability is the product of the two block
   probabilities. The core for relating a repeated machine's acceptance to its single
   run (`k` independent runs multiply their success probabilities).
-- [M] Define a PTM repetition wrapper with an explicit choice-block schedule (the
-  `blockEquiv`/`card_filter_block` seed-splitting machinery is now in place).
+- [x] Define a PTM repetition wrapper with an explicit choice-block schedule
+  (`NTM.repeatAtTime`) and prove its compact-seed acceptance semantics.
 - [x] Add a circuit/advice hardwiring operation and prove evaluation correctness
   (`Circuit.restrictPrefix`, with exact size preservation).
 - [x] Compile an at-least threshold over existing verdict wires as an appendable
