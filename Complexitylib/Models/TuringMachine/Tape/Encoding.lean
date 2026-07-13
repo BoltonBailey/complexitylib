@@ -121,6 +121,16 @@ theorem init_nil_move_right_hasBinaryPrefix_nil :
     ((Tape.init []).move Dir3.right).HasBinaryPrefix [] := by
   simp [HasBinaryPrefix, Tape.init, Tape.move]
 
+/-- A standard initialized binary tape moved right to its first data cell is
+a completed binary string. -/
+theorem init_move_right_hasBinaryString (bits : List Bool) :
+    ((Tape.init (bits.map Γ.ofBool)).move Dir3.right).HasBinaryString bits := by
+  refine ⟨by simp [Tape.move], ?_, ?_⟩
+  · intro i hi
+    exact Tape.init_ofBool_cells_lt bits i hi
+  · intro i hi
+    exact Tape.init_ofBool_cells_ge bits i hi
+
 /-- The head of an appendable binary prefix reads its first trailing blank. -/
 theorem HasBinaryPrefix.read_blank {t : Tape} {bits : List Bool}
     (h : t.HasBinaryPrefix bits) : t.read = Γ.blank := by
