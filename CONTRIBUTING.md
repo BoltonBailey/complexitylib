@@ -148,16 +148,16 @@ Aggregation files (`Complexitylib.lean`, `Models.lean`, …) contain only
 lake build --wfail
 lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
+lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
 python3 scripts/lint_style.py
 lake exe runLinter Complexitylib
 lake env lean scripts/AxiomGuard.lean
 ```
 
-All six commands must pass before submitting changes; CI runs them on every
+All seven commands must pass before submitting changes; CI runs them on every
 push. The first checks the complete library and treats warnings (including
-proof placeholders) as failures. The next two run executable `#guard`
-regression suites for the single-tape simulator and encoded-circuit evaluator;
-both are intentionally outside the public import graph.
+proof placeholders) as failures. The next three run executable regression
+suites that are intentionally outside the public import graph.
 
 The last three are the quality gates:
 

@@ -14,10 +14,11 @@ definition or intermediate theorem layer at a time.
 lake build --wfail
 lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
+lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
 ```
 
-Always verify all three commands pass before considering a change complete.
-The latter two run executable regression guards that are intentionally kept
+Always verify all four commands pass before considering a change complete.
+The latter three run executable regression guards that are intentionally kept
 out of the public import graph.
 
 Quality gates (also run in CI; see CONTRIBUTING.md):

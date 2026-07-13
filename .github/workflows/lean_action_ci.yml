@@ -23,6 +23,8 @@ jobs:
         run: lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
       - name: Run encoded-circuit regression guards
         run: lake build --wfail Complexitylib.Circuits.Encoding.Validation
+      - name: Run Tseitin-machine regression guards
+        run: lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
       - name: Run environment linters
         run: lake exe runLinter Complexitylib
       - name: Axiom guard for headline theorems

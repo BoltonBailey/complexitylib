@@ -66,4 +66,25 @@ theorem MapReducesPoly.trans {L₁ L₂ L₃ : Language}
     (h₁ : L₁ ≤ₚ L₂) (h₂ : L₂ ≤ₚ L₃) : L₁ ≤ₚ L₃ :=
   MapReducesPoly.trans_of_comp (fun _ _ hf hg => mem_FP_comp hf hg) h₁ h₂
 
+/-! ### Transporting NP-hardness and NP-completeness -/
+
+/-- NP-hardness transfers forward along a polynomial-time many-one reduction. -/
+theorem NPHard.of_reduction {L₁ L₂ : Language}
+    (h₁ : NPHard L₁) (h₂ : L₁ ≤ₚ L₂) : NPHard L₂ := by
+  intro L hL
+  exact MapReducesPoly.trans (h₁ L hL) h₂
+
+/-- A language in `NP` is NP-complete when an NP-hard language reduces to it. -/
+theorem NPComplete.of_mem_of_reduction {L₁ L₂ : Language}
+    (h₁ : NPHard L₁) (hmem : L₂ ∈ NP) (h₂ : L₁ ≤ₚ L₂) :
+    NPComplete L₂ :=
+  ⟨hmem, h₁.of_reduction h₂⟩
+
+/-- NP-completeness transfers forward along a polynomial-time reduction once
+membership of the target language in `NP` is known. -/
+theorem NPComplete.transfer {L₁ L₂ : Language}
+    (h₁ : NPComplete L₁) (hmem : L₂ ∈ NP) (h₂ : L₁ ≤ₚ L₂) :
+    NPComplete L₂ :=
+  NPComplete.of_mem_of_reduction h₁.2 hmem h₂
+
 end Complexity

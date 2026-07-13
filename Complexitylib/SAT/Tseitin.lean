@@ -35,6 +35,21 @@ namespace SAT
 
 namespace CNF
 
+/-- Splitting from any initial counter produces an exact 3-CNF. -/
+theorem to3Aux_is3CNF (next : ℕ) (φ : CNF) :
+    (to3Aux next φ).1.Is3CNF :=
+  to3Aux_is3CNF_internal next φ
+
+/-- Splitting from a counter above every source variable preserves and reflects
+satisfiability. -/
+theorem to3Aux_satisfiable_iff (next : ℕ) (φ : CNF) (hnext : φ.maxVar < next) :
+    (to3Aux next φ).1.Satisfiable ↔ φ.Satisfiable := by
+  apply satisfiable_to3Aux_iff_internal
+  intro c hc ℓ hℓ
+  have hℓc := Clause.var_le_maxVar hℓ
+  have hcφ := CNF.clause_maxVar_le_maxVar hc
+  omega
+
 /-- Splitting produces an exact 3-CNF. -/
 theorem to3_is3CNF (φ : CNF) : φ.to3.Is3CNF :=
   to3_is3CNF_internal φ
@@ -67,6 +82,18 @@ theorem encode_to3_length_le (φ : CNF) :
     φ.to3.encode.length ≤ 96 * (φ.encode.length + 1) ^ 2 :=
   encode_to3_length_le_internal φ
 
+/-- A compact fresh start preserves the same quadratic encoded-size bound as
+the canonical transformation. -/
+theorem encode_to3Aux_length_le (next : ℕ) (φ : CNF)
+    (hfresh : φ.maxVar < next) (hnext : next ≤ φ.encode.length + 1) :
+    (to3Aux next φ).1.encode.length ≤ 96 * (φ.encode.length + 1) ^ 2 := by
+  apply encode_to3Aux_length_le_internal
+  · intro c hc ℓ hℓ
+    have hℓc := Clause.var_le_maxVar hℓ
+    have hcφ := CNF.clause_maxVar_le_maxVar hc
+    omega
+  · exact hnext
+
 end CNF
 
 namespace ThreeSAT
@@ -75,7 +102,7 @@ namespace ThreeSAT
 inputs map to a fixed valid no-instance. -/
 def reduction (z : List Bool) : List Bool :=
   match CNF.decode? z with
-  | some φ => φ.to3.encode
+  | some φ => (CNF.to3Aux (z.length + 1) φ).1.encode
   | none => fallbackEncoding
 
 /-- A typed CNF's transformed encoding belongs to 3SAT exactly when the source
@@ -86,6 +113,17 @@ theorem encode_to3_mem_language_iff (φ : CNF) :
   constructor
   · exact fun h => (CNF.to3_satisfiable_iff φ).mp h.2
   · exact fun h => ⟨CNF.to3_is3CNF φ, (CNF.to3_satisfiable_iff φ).mpr h⟩
+
+/-- A typed CNF split from any fresh counter belongs to 3SAT exactly when the
+source formula is satisfiable. -/
+theorem encode_to3Aux_mem_language_iff (next : ℕ) (φ : CNF)
+    (hnext : φ.maxVar < next) :
+    (CNF.to3Aux next φ).1.encode ∈ language ↔ φ.Satisfiable := by
+  rw [encode_mem_language_iff]
+  constructor
+  · exact fun h => (CNF.to3Aux_satisfiable_iff next φ hnext).mp h.2
+  · exact fun h => ⟨CNF.to3Aux_is3CNF next φ,
+      (CNF.to3Aux_satisfiable_iff next φ hnext).mpr h⟩
 
 /-- **Semantic correctness of the total encoded reduction.** -/
 theorem reduction_correct (z : List Bool) :
@@ -101,8 +139,13 @@ theorem reduction_correct (z : List Bool) :
   | some φ =>
       have hz : z = φ.encode := CNF.decode?_sound hdecode
       rw [hz]
-      rw [show reduction φ.encode = φ.to3.encode by simp [reduction],
-        encode_to3_mem_language_iff, CNFSAT.encode_mem_language_iff]
+      have hfresh : φ.maxVar < φ.encode.length + 1 := by
+        have hmax := CNF.maxVar_le_encode_length φ
+        omega
+      rw [show reduction φ.encode =
+          (CNF.to3Aux (φ.encode.length + 1) φ).1.encode by simp [reduction],
+        encode_to3Aux_mem_language_iff _ _ hfresh,
+        CNFSAT.encode_mem_language_iff]
 
 /-- Source-first orientation of `reduction_correct`, matching the convention
 used by polynomial-time many-one reductions. -/
@@ -130,7 +173,11 @@ theorem reduction_length_le (z : List Bool) :
   | some φ =>
       have hz : z = φ.encode := CNF.decode?_sound hdecode
       subst z
-      simpa [reduction] using CNF.encode_to3_length_le φ
+      have hfresh : φ.maxVar < φ.encode.length + 1 := by
+        have hmax := CNF.maxVar_le_encode_length φ
+        omega
+      simpa [reduction] using CNF.encode_to3Aux_length_le
+        (φ.encode.length + 1) φ hfresh le_rfl
 
 end ThreeSAT
 

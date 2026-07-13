@@ -304,6 +304,11 @@ forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
   - [x] Prove structural freshness bounds and the honest unary-codec bound
     `|encode (to3 φ)| ≤ 96 · (|encode φ| + 1)²`; lift the typed construction to
     a total semantic bit-string reduction (`ThreeSAT.reduction_correct`).
+  - [x] Prove `ThreeSAT.language ∈ NP` directly by intersecting the existing SAT
+    witness verifier with a finite-state exact-3 syntax checker.
+  - [~] Implement the validation-first streaming transducer and its concrete
+    register-machine controller, with a pure typed-token specification and
+    executable regression guards. *(Controller simulation and time proofs remain.)*
   - [ ] Implement `ThreeSAT.reduction` in `FP`, derive
     `CNFSAT.language ≤ₚ ThreeSAT.language`, and transfer NP-completeness.
   - [ ] Add a codec/language for general `BoolFormula` SAT and relate it to the

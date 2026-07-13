@@ -196,27 +196,45 @@ theorem exists_evalTotal_to3Aux_internal (next : ℕ) (φ : CNF)
           exact Clause.var_lt_of_mem_to3CNF_internal next c
             (hsource c List.mem_cons_self) hout hℓ
 
+/-- Function-valued satisfiability is preserved and reflected by `to3Aux`
+whenever its initial counter is fresh for every source variable. -/
+theorem functionSatisfiable_to3Aux_iff_internal (next : ℕ) (φ : CNF)
+    (hsource : ∀ c ∈ φ, ∀ ℓ ∈ c, ℓ.var < next) :
+    (to3Aux next φ).1.FunctionSatisfiable ↔ φ.FunctionSatisfiable := by
+  constructor
+  · rintro ⟨α, hα⟩
+    exact ⟨α, evalTotal_to3Aux_sound_internal α next φ hα⟩
+  · rintro ⟨α, hα⟩
+    obtain ⟨β, _hβ, hout⟩ := exists_evalTotal_to3Aux_internal
+      next φ α hsource hα
+    exact ⟨β, hout⟩
+
+/-- Existing finite-list satisfiability is preserved and reflected by `to3Aux`
+whenever its initial counter is fresh for every source variable. -/
+theorem satisfiable_to3Aux_iff_internal (next : ℕ) (φ : CNF)
+    (hsource : ∀ c ∈ φ, ∀ ℓ ∈ c, ℓ.var < next) :
+    (to3Aux next φ).1.Satisfiable ↔ φ.Satisfiable := by
+  rw [satisfiable_iff_functionSatisfiable_internal,
+    satisfiable_iff_functionSatisfiable_internal,
+    functionSatisfiable_to3Aux_iff_internal next φ hsource]
+
 /-- Function-valued satisfiability is preserved and reflected by `to3`. -/
 theorem functionSatisfiable_to3_iff_internal (φ : CNF) :
     φ.to3.FunctionSatisfiable ↔ φ.FunctionSatisfiable := by
-  constructor
-  · rintro ⟨α, hα⟩
-    exact ⟨α, evalTotal_to3Aux_sound_internal α (φ.maxVar + 1) φ hα⟩
-  · rintro ⟨α, hα⟩
-    obtain ⟨β, _hβ, hout⟩ := exists_evalTotal_to3Aux_internal
-      (φ.maxVar + 1) φ α (by
-        intro c hc ℓ hℓ
-        have hclause := CNF.clause_maxVar_le_maxVar hc
-        have hlit := Clause.var_le_maxVar hℓ
-        omega) hα
-    exact ⟨β, hout⟩
+  apply functionSatisfiable_to3Aux_iff_internal
+  intro c hc ℓ hℓ
+  have hclause := CNF.clause_maxVar_le_maxVar hc
+  have hlit := Clause.var_le_maxVar hℓ
+  omega
 
 /-- Existing finite-list satisfiability is preserved and reflected by `to3`. -/
 theorem satisfiable_to3_iff_internal (φ : CNF) :
     φ.to3.Satisfiable ↔ φ.Satisfiable := by
-  rw [satisfiable_iff_functionSatisfiable_internal,
-    satisfiable_iff_functionSatisfiable_internal,
-    functionSatisfiable_to3_iff_internal]
+  apply satisfiable_to3Aux_iff_internal
+  intro c hc ℓ hℓ
+  have hclause := CNF.clause_maxVar_le_maxVar hc
+  have hlit := Clause.var_le_maxVar hℓ
+  omega
 
 end CNF
 

@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib
 import Complexitylib.Circuits.Encoding.Validation
 import Complexitylib.Models.TuringMachine.SingleTape.Validation
+import Complexitylib.SAT.Tseitin.Machine.Validation
 
 /-!
 # Axiom guard
@@ -23,7 +24,7 @@ lake env lean scripts/AxiomGuard.lean
 The audit selects declarations by their module of origin, not by declaration
 name. It therefore covers private and generated declarations as well as the
 library's extensions in foreign namespaces such as `Digraph` and `Nat`. The
-two executable validation modules are imported explicitly because they are
+executable validation modules are imported explicitly because they are
 intentionally absent from the public `Complexitylib` import graph.
 
 CI runs this on every push. `headlineTheorems` remains a readable index and a
