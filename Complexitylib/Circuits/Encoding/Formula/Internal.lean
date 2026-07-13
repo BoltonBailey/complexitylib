@@ -16,24 +16,6 @@ formula compiler. Public statements are re-exported by
 
 namespace Complexity
 
-namespace CircuitCode
-
-namespace RawGate
-
-/-- Internal semantic equation for duplicated-input copy gates. -/
-theorem eval_copy_internal (input : ℕ) (negated value : Bool) :
-    (copy input negated).eval value value = negated.xor value := by
-  cases negated <;> cases value <;> rfl
-
-/-- Internal semantic equation for dual-input constant gates. -/
-theorem eval_constant_internal (input : ℕ) (constantValue wireValue : Bool) :
-    (constant input constantValue).eval wireValue wireValue = constantValue := by
-  cases constantValue <;> cases wireValue <;> rfl
-
-end RawGate
-
-end CircuitCode
-
 namespace BoolFormula
 
 open CircuitCode

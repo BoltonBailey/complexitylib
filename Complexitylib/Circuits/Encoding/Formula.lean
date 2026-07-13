@@ -28,24 +28,6 @@ circuits; circuit families handle their zero-input member separately.
 
 namespace Complexity
 
-namespace CircuitCode
-
-namespace RawGate
-
-/-- A duplicated-input copy gate returns its input, optionally negated. -/
-@[simp] theorem eval_copy (input : ℕ) (negated value : Bool) :
-    (copy input negated).eval value value = negated.xor value :=
-  eval_copy_internal input negated value
-
-/-- A dual-input constant gate ignores the value of its witness wire. -/
-@[simp] theorem eval_constant (input : ℕ) (constantValue wireValue : Bool) :
-    (constant input constantValue).eval wireValue wireValue = constantValue :=
-  eval_constant_internal input constantValue wireValue
-
-end RawGate
-
-end CircuitCode
-
 namespace BoolFormula
 
 /-- Formula compilation emits exactly one raw gate per syntax-tree node. -/

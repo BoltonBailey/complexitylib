@@ -8,15 +8,29 @@ import Complexitylib.Circuits.Encoding.Internal.Fragment
 /-!
 # Appendable raw-circuit fragments
 
-Generic composition laws for building a `CircuitCode.RawCircuit` in successive
-topologically ordered fragments. Evaluation passes the memo array from one
-fragment to the next, and successful evaluation preserves every previously
-available wire.
+Primitive copy/constant gates and generic composition laws for building a
+`CircuitCode.RawCircuit` in successive topologically ordered fragments.
+Evaluation passes the memo array from one fragment to the next, and successful
+evaluation preserves every previously available wire.
 -/
 
 namespace Complexity
 
 namespace CircuitCode
+
+namespace RawGate
+
+/-- A duplicated-input copy gate returns its input, optionally negated. -/
+@[simp] theorem eval_copy (input : ℕ) (negated value : Bool) :
+    (copy input negated).eval value value = negated.xor value :=
+  eval_copy_internal input negated value
+
+/-- A dual-input constant gate ignores the value of its witness wire. -/
+@[simp] theorem eval_constant (input : ℕ) (constantValue wireValue : Bool) :
+    (constant input constantValue).eval wireValue wireValue = constantValue :=
+  eval_constant_internal input constantValue wireValue
+
+end RawGate
 
 namespace RawCircuit
 

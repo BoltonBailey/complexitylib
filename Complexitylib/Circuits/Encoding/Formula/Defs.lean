@@ -3,7 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Defs
+import Complexitylib.Circuits.Encoding.Fragment.Defs
 import Complexitylib.Circuits.Formula
 
 /-!
@@ -20,37 +20,6 @@ gate's free edge-negation flags. Binary formulas are emitted in postorder.
 -/
 
 namespace Complexity
-
-namespace CircuitCode
-
-namespace RawGate
-
-/-- Copy an existing wire, optionally negating it for free on both input edges. -/
-def copy (input : ℕ) (negated : Bool := false) : RawGate where
-  op := .and
-  input₀ := input
-  input₁ := input
-  negated₀ := negated
-  negated₁ := negated
-
-/-- Produce a Boolean constant from an existing wire and its negation. -/
-def constant (input : ℕ) : Bool → RawGate
-  | false =>
-      { op := .and
-        input₀ := input
-        input₁ := input
-        negated₀ := false
-        negated₁ := true }
-  | true =>
-      { op := .or
-        input₀ := input
-        input₁ := input
-        negated₀ := false
-        negated₁ := true }
-
-end RawGate
-
-end CircuitCode
 
 namespace BoolFormula
 

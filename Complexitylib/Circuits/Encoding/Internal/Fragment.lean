@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Internal.Codec
+import Complexitylib.Circuits.Encoding.Fragment.Defs
 
 /-!
 # Internal laws for appendable raw-circuit fragments
@@ -16,6 +17,20 @@ iterative raw-circuit evaluator. The statements are exposed by
 namespace Complexity
 
 namespace CircuitCode
+
+namespace RawGate
+
+/-- Internal semantic equation for duplicated-input copy gates. -/
+theorem eval_copy_internal (input : ℕ) (negated value : Bool) :
+    (copy input negated).eval value value = negated.xor value := by
+  cases negated <;> cases value <;> rfl
+
+/-- Internal semantic equation for dual-input constant gates. -/
+theorem eval_constant_internal (input : ℕ) (constantValue wireValue : Bool) :
+    (constant input constantValue).eval wireValue wireValue = constantValue := by
+  cases constantValue <;> cases wireValue <;> rfl
+
+end RawGate
 
 namespace RawCircuit
 
