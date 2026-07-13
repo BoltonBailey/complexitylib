@@ -125,11 +125,19 @@ frame facts instead of hiding them in another controller-local proof.
 - [ ] Audit aggregation modules so public imports do not need to name proof-only
   implementation files.
 - [ ] Add lightweight regression examples for core simplification behavior.
-- [ ] Investigate a typed controller/phase DSL for executable TMs: declare
-  phases, child-machine calls, and tape frames once, then generate the composite
-  state plumbing, transition routing, and reusable run/`HoareTime` proof skeletons.
-- [ ] Evaluate CREI's rose-tree machine (RTM) as a high-level authoring language
-  and prototype a verified lowering of its first-order `InPlace` fragment. *Decomposed:*
+- [ ] Advance proof-level named-tape/effect contracts for executable TMs: name
+  phase endpoints and tape frames once, then derive reusable composition rules
+  before deciding whether syntax generation or a typed controller DSL is warranted.
+  *Decomposed:*
+  - [x] Add the opt-in `TM.Experimental.EmitSpec` contract and validate its
+    heterogeneous sequencing rule on two complementary Tseitin pipelines. The
+    concrete machines and theorem statements are unchanged; the consumer file
+    shrank by 17 lines, but the 86-line shared module is not yet amortized.
+  - [ ] Test the endpoint vocabulary in a separate construction where it removes
+    material plumbing, then decide whether to add time-space/transducer dimensions
+    or carry effects in authoring syntax.
+- [x] Evaluate CREI's rose-tree machine (RTM) as a possible frontend and test its
+  transferable first-order control-flow idea in a local vertical slice. *Decomposed:*
   - [x] Audit the upstream `rtm` branch and record the adoption decision. The
     pinned evaluation in `docs/N0-MachineAuthoring.md` rejects a direct dependency
     for now: the experimental stack is not root-tested or warning-clean and has no
@@ -138,9 +146,10 @@ frame facts instead of hiding them in another controller-local proof.
     calls, sequencing, and input iteration. The indexed `ForInputLoopSpec` and
     `ForInputLoopSpaceSpec` certificates recover exact execution and all-reachable
     space for `Experimental.binaryLengthRoutine = forInput (call binarySuccTM)`.
-  - [ ] Add a well-scoped, Data-valued `InPlace` core and lower a rose-tree list
-    operation (preferably `reverse`) through named tapes with concrete refinement,
-    frame, time, and all-reachable space theorems.
+  - [x] Close the formerly scheduled rose-tree `Data`/`InPlace` lowering as
+    deferred and optional, not implemented. It is not a dependency of the
+    named-tape/effect work; revisit only when a real construction needs recursive
+    Data-valued syntax and the bounded slice can meet all promotion gates.
 - [ ] Audit proof-engineering mechanics across representative machine and circuit
   constructions: inventory repeated state/tape/wire bookkeeping, run or trace
   stitching, semantic transport, and resource accounting, then prototype the
@@ -164,26 +173,28 @@ more opaque. Prefer small combinators and theorem APIs first; add syntax generat
 or tactics only where the benchmark shows that lemmas alone do not address the
 repetition.
 
-**Candidate authoring language: CREI's RTM.** Keep the concrete `TM` as the
-semantic target and complexity-theoretic ground truth, but investigate the
-pipeline `RTM program -> named-tape/effect routine -> TM combinators -> TM`.
-CREI's experimental [RTM](https://github.com/crei/cslib/tree/rtm/Cslib/Computability/Machines/RTM)
-is a promising source layer: rose-tree data gives natural typed encodings, its
+**External design reference: CREI's RTM.** Keep the concrete `TM` as the
+semantic target and complexity-theoretic ground truth. The active pipeline is
+`concrete phase machines + proof-level effect contracts -> TM combinators -> TM`;
+`Routine` supplies one experimental control-flow layer, and a rose-tree frontend
+could eventually sit above it, but neither syntax is required to validate the
+middle-layer contracts. CREI's experimental
+[RTM](https://github.com/crei/cslib/tree/rtm/Cslib/Computability/Machines/RTM)
+remains useful design evidence: rose-tree data gives natural typed encodings, its
 program builder provides functional composition and loops, and `InPlace`
 excludes escaping closures specifically so that multi-tape simulation is direct.
-It is not yet a drop-in replacement for the middle layer: its semantics do not
+It is not a drop-in replacement for the middle layer: its semantics do not
 express this library's one-sided named-tape frames, read-only input, append-only
 output, exact `HoareTime`, or all-reachable auxiliary-space obligations, and a
-verified lowering to the fixed four-symbol `TM` is not yet available. Do not add
-a dependency before a vertical slice proves executable semantic refinement,
-finite-state compilation, concrete time overhead, space preservation, and frame
-preservation on the pipeline, loop, and serializer benchmarks. If that slice
-does not fit cleanly, retain the local routine IR and port only RTM's rose-tree,
-builder, and first-order-fragment ideas.
+verified lowering to the fixed four-symbol `TM` is not available.
 
-The pinned compatibility audit, no-dependency decision, benchmark baseline, and
-promotion gates live in `docs/N0-MachineAuthoring.md`. The first local slice is
-intentionally control-flow-only; it does not yet validate rose-tree serialization.
+The pinned compatibility audit, no-dependency decision, benchmark measurements,
+and promotion gates live in `docs/N0-MachineAuthoring.md`. Revisit rose-tree
+lowering only after the effect layer reduces plumbing in independent
+constructions, a concrete roadmap task is blocked on recursive Data-valued
+syntax, and a bounded slice can prove semantic refinement, finite-state
+compilation, explicit time, all-reachable space, and complete frames. If those
+triggers fire, `reverse (var 0)` remains the preferred diagnostic benchmark.
 
 The serialized-circuit evaluator is the current end-to-end experiment: its
 validator, pair splitter, tape scanner, memo-wire appends, and evaluator loop

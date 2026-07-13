@@ -1,8 +1,9 @@
 # N0 — Higher-level machine authoring
 
-**Status:** active experiment. The first local routine/lowering slice is
-implemented; rose-tree data lowering remains open. No external dependency has
-been adopted.
+**Status:** external evaluation complete; proof-level TM-indexed named-tape
+endpoint/effect composition is the active local experiment. Rose-tree
+frontend/lowering is deferred and optional. No external dependency has been
+adopted.
 
 This note records the evaluation of CREI's experimental rose-tree machine
 (RTM) as a possible source language for `Complexitylib` machines. The concrete
@@ -30,10 +31,10 @@ The upstream design has several ideas worth preserving:
 These are strong source-language and proof-interface ideas. They are not yet a
 verified lowering into this library's machine model.
 
-## Adoption decision
+## Adoption and prioritization decision
 
-Do not add CSLib as a dependency for the first vertical slice. Use a small local
-routine IR inspired by its builder and first-order-fragment ideas.
+The first vertical slice did not add CSLib as a dependency. It used a small
+local routine IR inspired by the builder and first-order-fragment ideas.
 
 | Question | Finding | Consequence |
 | --- | --- | --- |
@@ -44,6 +45,14 @@ routine IR inspired by its builder and first-order-fragment ideas.
 | Lowering direction | No `InPlace → TM` compiler or refinement theorem exists. The current simulator interprets a single-tape TM *in RTM*. | Direct reuse does not supply the compiler needed here. |
 | Resource notion | RTM semantics records an abstract value cost; `TM.HoareSpace` bounds work heads and charged input-tail travel in every reachable configuration, while output safety is a separate transducer obligation. | A lowering must separately prove representation overhead and the concrete auxiliary-space and output-discipline contracts. |
 | Tape interface | RTM values do not distinguish read-only input, named work tapes, or append-only output. | The middle layer needs explicit tape roles and preservation effects. |
+
+The current priority is therefore the middle layer: proof-level contracts that
+make named tape roles, preservation frames, output-accumulator endpoints, and
+time bounds compose around concrete machine combinators while leaving other
+resource dimensions explicit. The existing experimental `Routine` layer could
+be expanded to consume that interface, or a rose-tree source language could sit
+above it later. Building either syntax first would front-load compiler and
+representation proofs before the shared composition boundary is stable.
 
 Selective copying of the current `PB` stack is also premature: it would copy
 unfinished proofs without addressing the missing concrete lowering. Revisit a
@@ -105,31 +114,76 @@ yet a promotion result:
 - rose-tree representation and semantic refinement are not represented;
 - fresh-start setup and final Hoare packaging remain partly bespoke.
 
-The certificate should next be tested on a second loop or serializer phase.
-Only then should more of the repeated setup/packaging be moved into the shared
-interface.
+The loop certificate itself still has only one loop consumer. It should not be
+generalized further until another loop or serializer needs the same indexed
+all-prefix argument.
 
-## RTM-shaped follow-up
+## Second local benchmark: named-tape emitter effects
 
-The local control-flow slice is not enough to validate rose-tree data. The next
-decisive benchmark is the upstream-style `reverse (var 0)` program:
+The next experiment packages the endpoint effect shared by short emitter
+pipelines without changing their concrete machines. `TM.Experimental.EmitSpec`
+names a fixed parked input, the work-tape family before and after a machine, the
+output accumulator before and after it, and an upper time bound. Its sequencing
+rule owns the real one-step `seqTM` phase boundary and the parked-tape seam.
 
-1. define a well-scoped, Data-valued local `InPlace` core;
-2. encode `Data` as balanced Boolean parentheses on named work tapes;
-3. lower `empty`, `cons`, `elim`, immediate `let`, and `while` through the
-   routine layer;
-4. prove functional refinement for list reversal;
-5. prove concrete time overhead, all-reachable auxiliary space, and complete
-   input/work/output frames.
+Two existing Tseitin pipelines now use the contract:
 
-`tail (var 0)` is an acceptable representation warm-up, but it does not test
-the loop compiler. Arithmetic `forLoop` and the universal simulator are not
-first-slice candidates because their upstream resource proofs are unfinished.
+- `emitClauseTM` keeps the input and work family fixed while evolving the
+  output accumulator through four heterogeneous stages;
+- `rollWideBuffersTM` changes the six-register work family through five
+  heterogeneous stages while preserving the output accumulator.
+
+Both concrete machine definitions and both theorem statements are unchanged.
+Against the pre-experiment tree, the clause theorem decreased from 39 to 33
+lines and the rotation theorem from 48 to 36 lines. `BufferSpecs.lean`
+decreased from 584 to 567 lines including its new import. The shared contract
+module is 86 lines, so this slice is still net +69 Lean lines. It demonstrates
+local reuse and clearer phase composition, not global amortization or two
+independent roadmap constructions.
+
+The contract is intentionally narrower than a full effect system and is
+indexed by concrete `TM`s, not by `Routine` syntax. This records the key result
+of the benchmark: the present reduction comes from packaging endpoint/frame
+facts, not from a higher-level authoring language. It also does not assert exact
+running time, all-reachable space, append-only extension, or structural
+transducer safety. Those properties must remain explicit until a future
+contract carries and proves them. Before adding effects to the routine syntax
+or generating controller phases, test this proof-level vocabulary in a separate
+construction where it removes material plumbing.
+
+## Optional rose-tree revisit
+
+The upstream-style `reverse (var 0)` program remains a useful frontend
+benchmark, but it is not scheduled work. Revisit it only when:
+
+1. named-tape/effect contracts have reduced plumbing in independent constructions;
+2. a concrete roadmap construction needs recursive Data-valued syntax rather
+   than ordinary concrete named-tape machines; and
+3. a bounded slice can include executable lowering, semantic refinement,
+   finite controller state, explicit time, all-reachable space, and complete
+   tape frames.
+
+Until those triggers fire, retain the RTM audit and its builder/first-order
+ideas as design history rather than expanding the dependency or representation
+surface. If revisited, `reverse (var 0)` remains preferable to a trivial
+destructor because it exercises construction, elimination, and iteration.
 
 ## Evaluation gates
 
-Do not promote the experimental layer to a general public authoring language
-until it passes at least two independent constructions and all of these gates:
+Do not move the proof-level endpoint contract into the stable API until it:
+
+- removes material plumbing in a construction independent of the two Tseitin
+  pipelines;
+- states every carried endpoint and resource dimension precisely, without
+  implying append-only output, exact runtime, space, or transducer safety;
+- remains complementary to the uniform-list `bigSeqTM_hoareTime` rule rather
+  than duplicating it;
+- demonstrates enough reuse to justify its shared implementation cost; and
+- preserves the existing warning, linter, and axiom gates.
+
+Do not promote `Routine` or any future frontend to a general public authoring
+language until it passes at least two independent constructions and these
+additional compiler gates:
 
 - executable definitional lowering to `TM`;
 - semantic refinement stated independently of the compiler implementation;
@@ -137,9 +191,4 @@ until it passes at least two independent constructions and all of these gates:
 - exact or explicit concrete time overhead;
 - every-reachable-configuration space preservation;
 - named-tape and append-only-output frame preservation;
-- a measured reduction in consumer proof plumbing;
-- no loss of the existing warning, linter, and axiom gates.
-
-If the rose-tree slice does not meet these gates cleanly, retain only the local
-routine/certificate layer and treat CSLib RTM as design inspiration rather than
-an integration target.
+- a measured reduction in consumer proof plumbing.

@@ -6,7 +6,7 @@ statements; they are not the source of truth for current proof status.
 
 | Document | Subject | Current status |
 | --- | --- | --- |
-| [N0 — Higher-level machine authoring](N0-MachineAuthoring.md) | CREI RTM evaluation, local routine lowering, and proof-engineering gates | Active experiment; direct dependency rejected for the first slice |
+| [N0 — Higher-level machine authoring](N0-MachineAuthoring.md) | CREI RTM evaluation, local routine lowering, and proof-engineering gates | RTM audit complete; TM-indexed endpoint/effect experiment active; rose-tree lowering deferred |
 | [A3 — Guess-and-Verify NTM](A3-GuessVerifyNTM.md) | SAT witness generation, pairing, and verifier composition | SAT-specialized route implemented; generic construction remains open |
 | [A4 — Single-Tape Simulation](A4-SingleTapeSimulation.md) | Quadratic multi-tape-to-single-tape simulation | Implemented and covered by executable regression guards |
 | [A5 — Reduction Emitter](A5-ReductionEmitter.md) | Polynomial-time construction of Cook–Levin formulas | Implemented; SAT NP-completeness is proved |
