@@ -5,13 +5,17 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Unrolling.Defs
 import Complexitylib.Circuits.Unrolling.Internal.Initialization
+import Complexitylib.Circuits.Unrolling.Transition
+import Complexitylib.Circuits.Unrolling.Transition.Fragment
 
 /-!
 # Circuit unrolling for bounded Turing-machine traces
 
-This module exposes the auditable wire layout and initialization layer for
-compiling a bounded nondeterministic Turing-machine trace to a Boolean circuit.
-The transition and output layers are intentionally added in later modules.
+This module exposes the auditable wire layout, initialization layer, and packed
+one-step transition compiler for bounded nondeterministic Turing-machine traces.
+The transition fragment has exact evaluation and topology laws together with a
+machine-dependent quadratic size bound. Tiling and final-output selection are
+added in later modules.
 -/
 
 namespace Complexity

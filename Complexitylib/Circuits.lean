@@ -105,8 +105,8 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.AC0` — `AC0`
 * `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 * `Complexitylib.Circuits.Hardwiring` — exact-size prefix hardwiring
-* `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts and
-  their circuit initialization fragment
+* `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts,
+  initialization, and a verified packed one-step transition fragment
 
 Theorem modules (re-export definitions + main results):
 
