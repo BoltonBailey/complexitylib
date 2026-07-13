@@ -18,7 +18,7 @@ length-n member)` is computable by a deterministic log-space transducer (`FL`).
 Uniformity is what makes a nonuniform circuit class comparable to a uniform machine
 class: the headline `UniformPPoly = P` (Arora–Barak Theorem 6.7; roadmap M1) rests on
 this definition — the easy containment `UniformPPoly ⊆ P` runs the log-space generator
-(`FL ⊆ P`) and evaluates the produced code, and `P ⊆ UniformPPoly` unrolls a
+(`FL ⊆ FP`) and evaluates the produced code, and `P ⊆ UniformPPoly` unrolls a
 time-bounded DTM into a logspace-uniform tableau family.
 
 Logspace-uniformity (rather than the weaker P-uniformity) is the Arora–Barak
@@ -31,6 +31,9 @@ convention and is what lets the same uniformity notion later scale down to `NC`/
   is in `FL`).
 - `UniformPPoly` — the logspace-uniform polynomial-size class.
 - `UniformPPoly_subset_PPoly` — uniform P/poly is contained in nonuniform P/poly.
+
+The circuits-to-machines containment is exposed separately as
+`UniformPPoly_subset_P` in `Complexitylib.Classes.PPoly.Uniform.Containment`.
 -/
 
 namespace Complexity

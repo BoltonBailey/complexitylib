@@ -15,6 +15,8 @@ import Complexitylib.Classes.PPoly
 import Complexitylib.Classes.PPoly.Advice
 import Complexitylib.Classes.PPoly.Unrolling
 import Complexitylib.Classes.PPoly.Uniform
+import Complexitylib.Classes.PPoly.Uniform.Preprocessing
+import Complexitylib.Classes.PPoly.Uniform.Containment
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.Randomized
 import Complexitylib.Classes.Randomized.GoodSeed
@@ -35,6 +37,7 @@ import Complexitylib.Classes.Hierarchy
 # Complexity classes
 
 Aggregation module for the class definitions and their relationships:
-time and space classes, `P`, `NP`, randomized and nonuniform classes,
-function classes, reductions, containments, and the time hierarchy.
+time and space classes, `P`, `NP`, randomized and nonuniform classes, the
+logspace-uniform circuit containment in `P`, function classes, reductions,
+containments, and the time hierarchy.
 -/

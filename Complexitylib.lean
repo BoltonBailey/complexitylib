@@ -47,6 +47,7 @@ Complexitylib declaration for dependencies beyond `propext`,
 
 **Structural containments.** `Complexity.P_subset_NP`,
 `Complexity.P_subset_PSPACE`, `Complexity.P_subset_PPoly`,
+`Complexity.UniformPPoly_subset_P`,
 `Complexity.PAdvice_subset_PPoly`, `Complexity.PPoly_subset_PAdvice`,
 `Complexity.RP_subset_NP`, `Complexity.BPP_subset_PPoly`,
 `Complexity.BPP_subset_PAdvice`, and `Complexity.BPP_subset_PP`. The nonuniform

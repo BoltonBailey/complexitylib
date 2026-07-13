@@ -121,6 +121,18 @@ theorem init_nil_move_right_hasBinaryPrefix_nil :
     ((Tape.init []).move Dir3.right).HasBinaryPrefix [] := by
   simp [HasBinaryPrefix, Tape.init, Tape.move]
 
+/-- The head of an appendable binary prefix reads its first trailing blank. -/
+theorem HasBinaryPrefix.read_blank {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryPrefix bits) : t.read = Γ.blank := by
+  rw [Tape.read, h.1]
+  exact h.2.2 bits.length le_rfl
+
+/-- An appendable binary prefix already contains the advertised delimited
+output, independently of its current head. -/
+theorem HasBinaryPrefix.hasOutput {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryPrefix bits) : t.HasOutput bits :=
+  ⟨h.2.1, h.2.2 bits.length le_rfl⟩
+
 /-- A freshly initialized binary tape starts with its whole string as the
 remaining suffix. -/
 theorem init_move_right_hasBinarySuffix (bits : List Bool) :
@@ -143,6 +155,16 @@ theorem HasBinaryString.hasBinarySuffix {t : Tape} {bits : List Bool}
     simpa [Nat.add_comm] using h.2.1 i hi
   · rw [h.1]
     simpa [Nat.add_comm] using h.2.2 bits.length le_rfl
+
+/-- A delimited output parked at cell one is a binary suffix cursor when the
+tape has no stray left-end markers. -/
+theorem HasOutput.hasBinarySuffix {t : Tape} {bits : List Bool}
+    (h : t.HasOutput bits) (hhead : t.head = 1) (hinv : t.StartInvariant) :
+    t.HasBinarySuffix bits := by
+  refine ⟨by rw [hhead], ?_, ?_, hinv.2⟩
+  · intro i hi
+    simpa [hhead, Nat.add_comm] using h.1 i hi
+  · simpa [hhead, Nat.add_comm] using h.2
 
 /-- The first symbol of a nonempty binary suffix is under the tape head. -/
 theorem HasBinarySuffix.read_cons {t : Tape} {bit : Bool} {bits : List Bool}

@@ -515,7 +515,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [x] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
-  - [~] Compose the log-space generator with the evaluator; prove the resulting DTM
+  - [x] Compose the log-space generator with the evaluator; prove the resulting DTM
     decides the family's language in polynomial time. *Decomposed:*
     - [x] Prove the generic function-to-decider composition theorem, normalize `P`
       and `FP` time witnesses to polynomial evaluations, and derive closure of `P`
@@ -523,11 +523,13 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       `mem_P_iff_decidesInTime_polynomial`, and `mem_P_preimage`).
     - [x] Prove the bounded reduced-configuration theorem for total log-space
       transducers and conclude `FL ⊆ FP` (and the parallel containment `L ⊆ P`).
-    - [ ] Implement in `FP` the family-specific preprocessing map
+    - [x] Implement in `FP` the family-specific preprocessing map
       `x ↦ pair (gen (unaryList |x|)) x`, preserving the original input while the
-      generator runs on unary length.
-    - [ ] Apply evaluator correctness through `mem_P_preimage` and conclude
-      `UniformPPoly_subset_P`.
+      generator runs on unary length (`unaryLength_mem_FP`,
+      `mem_FP_pairWithInput`, and `generatorEvalInput_mem_FP`).
+    - [x] Apply evaluator correctness through `mem_P_preimage` and conclude
+      `UniformPPoly_subset_P` (`circuitEvalLanguage_mem_P` packages the verified
+      evaluator language).
 - **TMs → uniform circuits (`P ⊆ UniformPPoly`).** Unroll a `T(n)`-time DTM into a
   computation-tableau circuit of size `poly(T(n))` computing its output bit, and show
   the code map `1^n ↦ C_n` is computable in **log space** (logspace-uniform).
@@ -612,7 +614,11 @@ the observable output frontier determine future execution, so a halted run has
 one distinct snapshot per time index. The resulting explicit time bound is
 polynomial under logarithmic auxiliary space, yielding both `L_subset_P` and
 `FL_subset_FP`.
-Consequently `BPP_subset_PAdvice` now follows from the existing
+The forward uniform circuit bridge is now complete: a reusable unary-length
+transducer and computed-value/input fanout combinator build
+`pair (gen (unaryList |x|)) x` in `FP`; preimage closure then applies the verified
+quadratic serialized evaluator and yields `UniformPPoly_subset_P`.
+Independently, `BPP_subset_PAdvice` follows from the existing
 `BPP_subset_PPoly` theorem.
 
 **Settled conventions.**
@@ -625,10 +631,10 @@ Consequently `BPP_subset_PAdvice` now follows from the existing
   Its asymptotic meaning matches the literature, while exact `SIZE(s)` uses the
   library convention that excludes input vertices and makes negation flags free.
 
-**Remaining convention.** **P-uniformity** will mean that a deterministic
-polynomial-time generator maps unary `1^n` to a tagged family encoding: the tag
-distinguishes the length-zero output bit from a positive-arity circuit code. This
-is the accessible first theorem variant.
+**Uniformity convention.** `UniformPPoly` uses an `FL` generator on unary `1^n`
+to produce a tagged family encoding: the tag distinguishes the length-zero output
+bit from a positive-arity circuit code. P-uniformity may be introduced separately
+if a later theorem specifically needs the weaker notion.
 
 - Later, direct-connection or DLOGTIME uniformity for `NC`/`AC`. It should not be
   conflated with P-uniformity.
@@ -649,8 +655,10 @@ preserved by serialized encodings and uniform generators.
   length, including the explicit empty-input answer.
 - [x] Build a DTM that validates and evaluates a tagged family code paired with
   its input in polynomial time, including the explicit length-zero case.
-- [ ] Prove the easy direction: a P-uniform polynomial-size family yields a
-  polynomial-time DTM decider.
+- [x] Prove the circuits-to-machines direction for the chosen logspace-uniform
+  convention: `UniformPPoly_subset_P` promotes the `FL` generator to `FP`,
+  constructs the evaluator input, and applies the verified evaluator through
+  `mem_P_preimage`.
 - [x] Build a functional computation-tableau/unrolling construction from a
   time-bounded DTM to a bounded-fan-in circuit computing its output bit.
 - [x] Prove semantic correctness and a concrete polynomial size bound for the
@@ -661,8 +669,9 @@ preserved by serialized encodings and uniform generators.
   `PAdvice_subset_PPoly`, `PPoly_subset_PAdvice`, and `PAdvice_eq_PPoly` complete
   both directions. The reverse direction reuses the serialized circuit-evaluator
   DTM rather than introducing a second evaluator.
-- [ ] Implement the circuit emitter in `FP`, then prove `P` equals P-uniform
-  polynomial-size circuit families.
+- [ ] Implement the tableau-circuit code emitter in `FL`, prove
+  `P_subset_UniformPPoly`, and combine it with `UniformPPoly_subset_P` for the
+  logspace-uniform equality.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
 - [ ] Introduce `DEPTH`, `NC^i`, and `AC^i` after uniformity and zero-length
   conventions have been propagated through the existing `AC0` definition.

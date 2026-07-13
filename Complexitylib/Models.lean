@@ -12,13 +12,16 @@ import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
+import Complexitylib.Models.TuringMachine.Subroutines.PairEmit
 import Complexitylib.Models.TuringMachine.Subroutines.PairValidate
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
 import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
+import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.SpaceTime
 import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Composition
+import Complexitylib.Models.TuringMachine.Composition.PairWithInput
 import Complexitylib.Models.TuringMachine.Deterministic
 import Complexitylib.Models.TuringMachine.Lift
 import Complexitylib.Models.TuringMachine.Repetition
@@ -38,8 +41,9 @@ import Complexitylib.Models.RandomAccessMachine
 
 Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, Hoare-style
-specifications, reusable subroutines, finite space-to-time bounds, determinism results, the
-universal machine, and the logarithmic-cost random access machine
+specifications, reusable unary-length and pair-emission subroutines,
+computed-value/input fanout, finite space-to-time bounds, determinism results,
+the universal machine, and the logarithmic-cost random access machine
 (`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
 (`…/Internal/…`, register machinery, emitter plumbing) are deliberately
 not imported here — they stay in the build through the surface modules and
