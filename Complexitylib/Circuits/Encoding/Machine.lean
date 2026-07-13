@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Circuits.Encoding.Machine.Defs
 import Complexitylib.Circuits.Encoding.Machine.Core
 import Complexitylib.Circuits.Encoding.Machine.Internal.FrontEnd
+import Complexitylib.Circuits.Encoding.Machine.NatCode
 
 /-!
 # Serialized circuit-evaluator machine
@@ -26,6 +27,8 @@ its final verdict.
 - `Machine.evalFamilyTM_decidesInTime` proves the complete evaluator decides
   `circuitEvalLanguage`, and `Machine.evalFamilyTime_bigO_quadratic` gives its
   polynomial bound.
+- `Machine.emitNatCodeTM_hoareTimeSpace` emits terminated-unary natural codes
+  from binary work tapes with reusable scratch and an all-prefix space bound.
 -/
 
 namespace Complexity

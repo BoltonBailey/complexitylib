@@ -98,6 +98,9 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.Encoding.Machine` — total linear-time validation and
   tape staging plus the verified end-to-end quadratic serialized circuit-family
   evaluator
+* `Complexitylib.Circuits.Encoding.Machine.NatCode` — framed, one-way
+  terminated-unary natural-code emission from a preserved binary value, with
+  reusable zero scratch and explicit time/all-prefix-space bounds
 * `Complexitylib.Circuits.AndOrNot.Defs` — `AndOrOp`, `Basis.unboundedAndOr`,
   `Basis.boundedAndOr`, `Basis.andOr2`
 * `Complexitylib.Circuits.NormalForm.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`,
