@@ -21,7 +21,8 @@ The library already contains substantial foundations:
   emitters, counters, pairing machines, multi-tape-to-single-tape simulation, and
   a universal-machine development.
 - Definitions of major classes including `DTIME`, `NTIME`, `DSPACE`, `NSPACE`,
-  `P`, `PPoly`, `NP`, `BPP`, `RP`, `ZPP`, `PP`, `PSPACE`, `EXP`, `NEXP`, `SC`,
+  `P`, `PPoly`, `PAdvice`, `NP`, `BPP`, `RP`, `ZPP`, `PP`, `PSPACE`, `EXP`,
+  `NEXP`, `SC`,
   `FNP`, and `TFNP`, together with selected containments and closure results.
 - A deterministic time-hierarchy theorem in a concrete, clock-constructible
   formulation.
@@ -130,6 +131,17 @@ tape helpers remain.
   smallest reusable lemma, combinator, tactic, or typed DSL layer that removes
   the duplication. Validate each proposed abstraction on at least two independent
   constructions before making it a shared interface.
+
+**Proof-engineering benchmark.** Evaluate proposed mechanics on three distinct
+shapes: a straight-line child-machine pipeline, a loop/repetition controller, and
+a serializer or circuit evaluator. Record which obligations remain bespoke
+(routing cases, frame preservation, run stitching, semantic transport, and exact
+cost arithmetic). A successful abstraction should keep the machine executable,
+provide compositional correctness and resource theorems, remove a material amount
+of repeated plumbing in at least two shapes, and avoid making ordinary local proofs
+more opaque. Prefer small combinators and theorem APIs first; add syntax generation
+or tactics only where the benchmark shows that lemmas alone do not address the
+repetition.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -440,6 +452,11 @@ specializes this construction to a canonical deterministic circuit family.
 `TM.DecidesInTime.unrollingCircuitFamily_decides` proves exact semantics,
 `TM.unrollingCircuitFamily_size_bigO` gives size `O(n^(3d))` for time `O(n^d)`,
 and `P_subset_PPoly` packages the direct nonuniform containment.
+Polynomial advice now has an explicit self-delimiting input convention,
+pointwise polynomial-length predicate, advised decision semantics, and a
+hardwired family construction. `PAdvice_subset_PPoly` proves the
+advice-to-circuit direction; the reverse direction still depends on the
+serialized circuit-evaluator DTM.
 
 **Settled conventions.**
 
@@ -482,10 +499,11 @@ preserved by serialized encodings and uniform generators.
 - [x] Prove semantic correctness and a concrete polynomial size bound for the
   nonuniform unrolling construction (`TM.unrollingCircuitFamily` and
   `P_subset_PPoly`).
-- [ ] Define advice TMs and prove equivalence between polynomial advice and
-  nonuniform polynomial-size circuits. The advice-to-circuit direction can use
-  the completed unrolling; the reverse direction should reuse the serialized
-  circuit-evaluator DTM rather than introduce a second evaluator.
+- [~] Define advice TMs and prove equivalence between polynomial advice and
+  nonuniform polynomial-size circuits. `Advice`, `PolynomialAdvice`, `PAdvice`,
+  and `PAdvice_subset_PPoly` complete the advice-to-circuit direction. The
+  reverse direction should reuse the serialized circuit-evaluator DTM rather
+  than introduce a second evaluator.
 - [ ] Implement the circuit emitter in `FP`, then prove `P` equals P-uniform
   polynomial-size circuit families.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
@@ -532,7 +550,8 @@ preserved by serialized encodings and uniform generators.
   convention (families handle length zero separately).
 - [M] Implement a DTM realizing the topological memoized evaluator for serialized
   circuits and prove a polynomial running-time bound.
-- [M] Define polynomial advice and basic monotonicity/containment lemmas.
+- [x] Define polynomial advice and basic monotonicity/containment lemmas,
+  including `PAdvice_subset_PPoly` by double hardwiring.
 - [x] Compile one fixed transition layer into a Boolean circuit as a local
   precursor to full unrolling, with exact packed semantics and a quadratic size
   bound in the trace horizon.
@@ -571,7 +590,9 @@ not on the individual input.
   `O(n^d)`, `NTM.hardwiredAmplificationFamily_size_bigO` gives size
   `O(n^(3d+4))`).
 - [ ] Derive the advice-TM formulation as a corollary, or conversely use it as the
-  main proof if the advice bridge is cleaner.
+  main proof if the advice bridge is cleaner. (`PAdvice_subset_PPoly` is done;
+  `PPoly_subset_PAdvice`, and hence `BPP_subset_PAdvice`, awaits the serialized
+  circuit-evaluator DTM.)
 
 **Formalization hazards.** The amplified machine consumes a length-dependent
 number of random bits, and early halting must not change the block layout. A strict
