@@ -3,7 +3,8 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.Nat.Basic
+import Mathlib.Data.Nat.Log
+import Mathlib.Data.Nat.Size
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Lemma
 
@@ -146,3 +147,65 @@ theorem Nat.fromBitsLE_inj_of_length_eq {first second : List Bool}
   have hfirst := Nat.toBitsLE_fromBitsLE first
   rw [hvalue, hlen] at hfirst
   rw [← hfirst, Nat.toBitsLE_fromBitsLE second]
+
+private theorem Nat.fromBits_append_singleton :
+    ∀ (bits : List Bool) (bit : Bool),
+      Nat.fromBits (bits ++ [bit]) =
+        2 * Nat.fromBits bits + (if bit then 1 else 0)
+  | [], bit => by cases bit <;> simp [Nat.fromBits]
+  | first :: rest, bit => by
+      rw [List.cons_append, Nat.fromBits,
+        Nat.fromBits_append_singleton rest bit]
+      simp only [List.length_append, List.length_singleton, pow_succ]
+      cases first <;> simp [Nat.fromBits]
+      omega
+
+/-- Little-endian decoding exposes its least-significant head bit. -/
+theorem Nat.fromBitsLE_cons (bit : Bool) (bits : List Bool) :
+    Nat.fromBitsLE (bit :: bits) =
+      (if bit then 1 else 0) + 2 * Nat.fromBitsLE bits := by
+  simp only [Nat.fromBitsLE, List.reverse_cons]
+  rw [Nat.fromBits_append_singleton]
+  omega
+
+/-- Decoding the canonical variable-width little-endian bits recovers the
+original natural number. -/
+theorem Nat.fromBitsLE_bits : ∀ value : ℕ,
+    Nat.fromBitsLE value.bits = value := by
+  intro value
+  induction value using Nat.binaryRec' with
+  | zero => simp [Nat.fromBitsLE, Nat.fromBits]
+  | bit bit value hvalue ih =>
+      rw [Nat.bits_append_bit value bit hvalue,
+        Nat.fromBitsLE_cons, ih]
+      cases bit <;> simp [Nat.bit]
+      omega
+
+/-- The minimal fixed-width little-endian encoding is exactly the canonical
+variable-width bit list. -/
+theorem Nat.toBitsLE_size (value : ℕ) :
+    Nat.toBitsLE value.size value = value.bits := by
+  calc
+    Nat.toBitsLE value.size value =
+        Nat.toBitsLE value.bits.length (Nat.fromBitsLE value.bits) := by
+      congr 1
+      · exact (Nat.size_eq_bits_len value).symm
+      · exact (Nat.fromBitsLE_bits value).symm
+    _ = value.bits := Nat.toBitsLE_fromBitsLE value.bits
+
+/-- Binary digit width is at most floor-log base two plus one. -/
+theorem Nat.size_le_log_two_add_one (value : ℕ) :
+    value.size ≤ Nat.log 2 value + 1 := by
+  rw [Nat.size_le]
+  simpa only [Nat.succ_eq_add_one] using
+    Nat.lt_pow_succ_log_self (b := 2) (by omega) value
+
+/-- Every positive natural has binary digit width exactly floor-log base two
+plus one. -/
+theorem Nat.size_eq_log_two_add_one {value : ℕ} (hvalue : value ≠ 0) :
+    value.size = Nat.log 2 value + 1 := by
+  apply le_antisymm (Nat.size_le_log_two_add_one value)
+  have hlower : Nat.log 2 value < value.size := by
+    rw [Nat.lt_size]
+    exact Nat.pow_log_le_self 2 hvalue
+  omega
