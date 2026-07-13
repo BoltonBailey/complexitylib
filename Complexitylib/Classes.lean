@@ -16,6 +16,7 @@ import Complexitylib.Classes.PPoly.Uniform
 import Complexitylib.Classes.NP
 import Complexitylib.Classes.Randomized
 import Complexitylib.Classes.Randomized.GoodSeed
+import Complexitylib.Classes.Randomized.CircuitAmplification
 import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.FNP
 import Complexitylib.Classes.NP.Witness

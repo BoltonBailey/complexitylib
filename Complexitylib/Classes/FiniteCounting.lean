@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Mathlib.Data.Fintype.Card
+import Mathlib.Data.Fintype.Fin
 import Mathlib.Data.Fintype.Sum
 import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Data.Finset.Card
@@ -36,6 +37,8 @@ and interactive proofs (roadmap track N2).
   per-predicate counts
 - `boolFunEquivFinset`, `card_filter_popCount_eq` — Boolean vectors as true
   supports and their exact binomial weight counts
+- `finCountP_eq_popCount` — the bridge from the dependency-light `Fin.countP`
+  used by circuit encoders to finite-set support counting
 - `blocksEquiv`, `card_blockEventCount_eq` — a long machine seed as independent
   blocks and the exact weighted binomial count for any block event
 - `repeatRandomSeed`, `card_repeatRandomSeed_fiber` — extract the actual simulation
@@ -195,6 +198,22 @@ theorem exists_good_seed {S ι : Type*} [Fintype S] [DecidableEq S]
 /-- The number of `true` positions of a Boolean vector. -/
 def popCount {k : ℕ} (f : Fin k → Bool) : ℕ :=
   (Finset.univ.filter (fun i => f i = true)).card
+
+private theorem popCount_succ {k : ℕ} (f : Fin (k + 1) → Bool) :
+    popCount f = (if f 0 = true then 1 else 0) +
+      popCount (fun i : Fin k => f i.succ) := by
+  unfold popCount
+  rw [Fin.card_filter_univ_succ']
+
+/-- Batteries' fold-based Boolean count agrees with the finite-set support
+count used by the randomized-counting layer. -/
+theorem finCountP_eq_popCount {k : ℕ} (f : Fin k → Bool) :
+    Fin.countP f = popCount f := by
+  induction k with
+  | zero => simp [popCount]
+  | succ k ih =>
+      rw [Fin.countP_succ, popCount_succ, ih]
+      cases f 0 <;> simp
 
 /-- Boolean-valued functions are equivalent to their true supports. -/
 def boolFunEquivFinset (α : Type*) [Fintype α] [DecidableEq α] :
