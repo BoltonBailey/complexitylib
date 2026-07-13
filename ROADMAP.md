@@ -163,6 +163,11 @@ also showed that appendable-prefix contracts must expose the left marker explici
 that fact is now part of the reusable pair-split interface. Likewise, a staged
 verdict is not compositional unless its output contract retains `Tape.StartInvariant`;
 the front end now exposes that invariant for the core's final overwrite.
+The evaluator controller adds a second mechanics experiment: a local
+proof-carrying `TapeAction` makes the one-sided-tape safety condition structural,
+eliminating the usual phase-by-phase `δ_right_of_start` proof. Keep it local until
+another controller demonstrates that the same action vocabulary is genuinely
+reusable.
 
 **Formalization hazards.** Broad `[simp]` attributes can make machine-step goals
 explode or loop. Prefer projection lemmas and narrowly oriented rewrite rules over
@@ -435,8 +440,14 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [x] Validate the outer pair on every input, rewind without destroying tape
       frames, and stage canonical code/input prefixes on distinct work tapes in
       time `4n + 16`; malformed inputs cannot enter the future evaluator core.
-    - [ ] Stream the staged code, validate its tagged circuit structure, and
-      memoize each gate value on the appendable wire tape.
+    - [x] Define the total three-tape streaming controller: it parses the tagged
+      code once, consumes the declared unary gate count, performs unary memo-wire
+      lookups, appends one value per gate, and rejects malformed inner codes.
+      Executable guards cover both tags, shared gates, invalid references,
+      trailing garbage, and empty circuits.
+    - [ ] Prove the streaming controller agrees with `evalFamilyCode` and give its
+      quadratic `HoareTime` bound. The neutral `Tape.HasBinarySuffix` cursor API
+      has been extracted and adopted by the SAT verifier for this proof.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -501,7 +512,10 @@ advice-to-circuit direction; the reverse direction still depends on the
 serialized circuit-evaluator DTM. The evaluator front end now has a total
 linear-time validate/rewind/split contract for its outer pair encoding. Malformed
 machine inputs retain fresh work tapes and cannot reach the future evaluator core;
-valid inputs expose appendable code and data prefixes on named work tapes.
+valid inputs expose appendable code and data prefixes on named work tapes. A
+three-tape fused evaluator controller now executes both family tags and memoizes
+topologically ordered gates; its semantic-correctness and quadratic-time proofs
+remain before the reverse advice containment can be packaged.
 
 **Settled conventions.**
 

@@ -11,6 +11,7 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Defs
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # SAT verifier TMs
@@ -95,50 +96,31 @@ private theorem read_ne_start_of_cells_eq_initTape_ofBool {t : Tape} (bits : Lis
   simp [Tape.read]
   exact cells_eq_initTape_ofBool_ne_start bits hcells t.head hhead
 
-private def hasBoolSuffix (t : Tape) (bits : List Bool) : Prop :=
-  t.head ≥ 1 ∧
-  (∀ i, (h : i < bits.length) → t.cells (t.head + i) = Γ.ofBool (bits[i]'h)) ∧
-  t.cells (t.head + bits.length) = Γ.blank ∧
-  (∀ j, j ≥ 1 → t.cells j ≠ Γ.start)
+private abbrev hasBoolSuffix := Tape.HasBinarySuffix
 
 private theorem initTape_move_right_hasBoolSuffix (bits : List Bool) :
-    hasBoolSuffix ((Tape.init (bits.map Γ.ofBool)).move Dir3.right) bits := by
-  refine ⟨by simp [Tape.move, Tape.init], ?_, ?_, ?_⟩
-  · intro i hi
-    simpa [Tape.move, Tape.init, Nat.add_comm] using
-      Tape.init_ofBool_cells_lt bits i hi
-  · simp [Tape.move, Tape.init, Nat.add_comm]
-  · intro j hj
-    simp [Tape.move]
-    exact Tape.init_ofBool_cells_ne_start bits j hj
+    hasBoolSuffix ((Tape.init (bits.map Γ.ofBool)).move Dir3.right) bits :=
+  Tape.init_move_right_hasBinarySuffix bits
 
 private theorem hasBoolSuffix_read_cons {t : Tape} {b : Bool} {bits : List Bool}
     (h : hasBoolSuffix t (b :: bits)) :
-    t.read = Γ.ofBool b := by
-  have h0 := h.2.1 0 (by simp)
-  simpa [Tape.read] using h0
+    t.read = Γ.ofBool b :=
+  h.read_cons
 
 private theorem hasBoolSuffix_move_right_cons {t : Tape} {b : Bool} {bits : List Bool}
     (h : hasBoolSuffix t (b :: bits)) :
-    hasBoolSuffix (t.move Dir3.right) bits := by
-  refine ⟨by simp [Tape.move], ?_, ?_, ?_⟩
-  · intro i hi
-    have hcell := h.2.1 (i + 1) (by simpa using hi)
-    simpa [Tape.move, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
-  · have hcell := h.2.2.1
-    simpa [Tape.move, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
-  · intro j hj
-    simpa [Tape.move_cells] using h.2.2.2 j hj
+    hasBoolSuffix (t.move Dir3.right) bits :=
+  h.move_right_cons
 
 private theorem hasBoolSuffix_read_nil {t : Tape}
     (h : hasBoolSuffix t []) :
-    t.read = Γ.blank := by
-  simpa [Tape.read] using h.2.2.1
+    t.read = Γ.blank :=
+  h.read_nil
 
 private theorem hasBoolSuffix_read_ne_start {t : Tape} {bits : List Bool}
     (h : hasBoolSuffix t bits) :
-    t.read ≠ Γ.start := by
-  exact h.2.2.2 t.head h.1
+    t.read ≠ Γ.start :=
+  h.read_ne_start
 
 private theorem retargetInput_step_preserves_input_of_read_ne_start {k : ℕ} (M : TM k)
     {c c' : Cfg (k + 1) (TM.retargetInput M).Q}

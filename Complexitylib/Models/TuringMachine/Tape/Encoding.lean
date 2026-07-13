@@ -10,8 +10,9 @@ import Complexitylib.Models.TuringMachine
 
 Generic predicates and lemmas for tapes containing canonical binary strings.
 `Tape.HasBinaryPrefix` describes a string being written from left to right,
-while `Tape.HasBinaryString` describes the same contents after rewinding the
-head to cell one. These shapes are shared by deterministic and
+`Tape.HasBinaryString` describes the same contents after rewinding the head to
+cell one, and `Tape.HasBinarySuffix` describes a read cursor at the beginning
+of a remaining suffix. These shapes are shared by deterministic and
 nondeterministic machine constructions.
 -/
 
@@ -32,6 +33,16 @@ def HasBinaryString (t : Tape) (bits : List Bool) : Prop :=
   t.head = 1 ∧
   (∀ i, (h : i < bits.length) → t.cells (i + 1) = Γ.ofBool (bits[i]'h)) ∧
   (∀ i, bits.length ≤ i → t.cells (i + 1) = Γ.blank)
+
+/-- A read cursor at the beginning of a remaining binary suffix. The suffix
+starts under the current off-marker head, is followed immediately by blank,
+and the tape has no stray left markers. -/
+def HasBinarySuffix (t : Tape) (bits : List Bool) : Prop :=
+  t.head ≥ 1 ∧
+  (∀ i, (h : i < bits.length) →
+    t.cells (t.head + i) = Γ.ofBool (bits[i]'h)) ∧
+  t.cells (t.head + bits.length) = Γ.blank ∧
+  (∀ j, j ≥ 1 → t.cells j ≠ Γ.start)
 
 /-- A completed binary string whose length is at most `B`. -/
 def HasBoundedBinaryString (t : Tape) (B : ℕ) : Prop :=
@@ -95,6 +106,59 @@ theorem exists_eq_init_move_right_of_hasBoundedBinaryString {t : Tape} {B : ℕ}
 theorem init_nil_move_right_hasBinaryPrefix_nil :
     ((Tape.init []).move Dir3.right).HasBinaryPrefix [] := by
   simp [HasBinaryPrefix, Tape.init, Tape.move]
+
+/-- A freshly initialized binary tape starts with its whole string as the
+remaining suffix. -/
+theorem init_move_right_hasBinarySuffix (bits : List Bool) :
+    ((Tape.init (bits.map Γ.ofBool)).move Dir3.right).HasBinarySuffix bits := by
+  refine ⟨by simp [Tape.move, Tape.init], ?_, ?_, ?_⟩
+  · intro i hi
+    simpa [Tape.move, Tape.init, Nat.add_comm] using
+      Tape.init_ofBool_cells_lt bits i hi
+  · simp [Tape.move, Tape.init, Nat.add_comm]
+  · intro j hj
+    simp [Tape.move]
+    exact Tape.init_ofBool_cells_ne_start bits j hj
+
+/-- A completed binary string exposes the same bits as its remaining suffix. -/
+theorem HasBinaryString.hasBinarySuffix {t : Tape} {bits : List Bool}
+    (h : t.HasBinaryString bits) : t.HasBinarySuffix bits := by
+  refine ⟨by rw [h.1], ?_, ?_, cells_ne_start_of_hasBinaryString h⟩
+  · intro i hi
+    rw [h.1]
+    simpa [Nat.add_comm] using h.2.1 i hi
+  · rw [h.1]
+    simpa [Nat.add_comm] using h.2.2 bits.length le_rfl
+
+/-- The first symbol of a nonempty binary suffix is under the tape head. -/
+theorem HasBinarySuffix.read_cons {t : Tape} {bit : Bool} {bits : List Bool}
+    (h : t.HasBinarySuffix (bit :: bits)) :
+    t.read = Γ.ofBool bit := by
+  have hzero := h.2.1 0 (by simp)
+  simpa [Tape.read] using hzero
+
+/-- Moving right after reading the first bit exposes the remaining suffix. -/
+theorem HasBinarySuffix.move_right_cons {t : Tape} {bit : Bool}
+    {bits : List Bool} (h : t.HasBinarySuffix (bit :: bits)) :
+    (t.move Dir3.right).HasBinarySuffix bits := by
+  refine ⟨by simp [Tape.move], ?_, ?_, ?_⟩
+  · intro i hi
+    have hcell := h.2.1 (i + 1) (by simpa using hi)
+    simpa [Tape.move, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
+  · have hcell := h.2.2.1
+    simpa [Tape.move, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hcell
+  · intro j hj
+    simpa [Tape.move_cells] using h.2.2.2 j hj
+
+/-- An empty remaining suffix reads the terminating blank. -/
+theorem HasBinarySuffix.read_nil {t : Tape} (h : t.HasBinarySuffix []) :
+    t.read = Γ.blank := by
+  simpa [Tape.read] using h.2.2.1
+
+/-- A binary suffix cursor never reads the left-end marker. -/
+theorem HasBinarySuffix.read_ne_start {t : Tape} {bits : List Bool}
+    (h : t.HasBinarySuffix bits) : t.read ≠ Γ.start :=
+  h.2.2.2 t.head h.1
 
 /-- Writing the next bit extends a binary prefix by one cell. -/
 theorem hasBinaryPrefix_write_bit {t : Tape} {bits : List Bool} (bit : Bool)
