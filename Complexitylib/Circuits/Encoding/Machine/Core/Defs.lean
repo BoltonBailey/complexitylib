@@ -388,6 +388,23 @@ run the streaming core only on the valid branch. -/
 def evalFamilyTM : TM workTapeCount :=
   evalFamilyTMWith evalFamilyCoreTM
 
+/-- Concrete end-to-end time budget for validating, staging, and evaluating a
+serialized circuit-family input of length `n`. -/
+def evalFamilyTime (n : ℕ) : ℕ :=
+  evalFamilyTMWithTime n (evalFamilyCoreTime n 0)
+
+/-- Halted end-to-end contract for the serialized-family evaluator. The input
+cells retain the original encoding and the output carries the defaulted paired
+evaluation verdict with its canonical head and left-marker invariant. Terminal
+work tapes are intentionally unconstrained across valid and rejecting branches. -/
+@[nolint unusedArguments]
+def EvalFamilyPost (bits : List Bool) (inp : Tape)
+    (_work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
+  inp.cells = (Tape.init (bits.map Γ.ofBool)).cells ∧
+  out.head = 1 ∧
+  out.StartInvariant ∧
+  out.cells 1 = Γ.ofBool ((evalFamilyPair? bits).getD false)
+
 end Machine
 
 end CircuitCode

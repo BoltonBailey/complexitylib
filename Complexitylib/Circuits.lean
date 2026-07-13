@@ -96,8 +96,8 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at
   every input length, including the explicit empty-input answer
 * `Complexitylib.Circuits.Encoding.Machine` — total linear-time validation and
-  tape staging plus the verified quadratic serialized circuit-family evaluator
-  core
+  tape staging plus the verified end-to-end quadratic serialized circuit-family
+  evaluator
 * `Complexitylib.Circuits.AndOrNot.Defs` — `AndOrOp`, `Basis.unboundedAndOr`,
   `Basis.boundedAndOr`, `Basis.andOr2`
 * `Complexitylib.Circuits.NormalForm.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`,

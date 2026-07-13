@@ -13,7 +13,8 @@ import Complexitylib.Circuits.Encoding.Machine.Internal.FrontEnd
 This module exposes the audited front end for a deterministic evaluator of
 serialized circuit families. It validates the outer self-delimiting pair,
 stages its code and input components on separate appendable work tapes, and
-exposes the verified quadratic-time memoized evaluator core.
+exposes the verified quadratic-time memoized evaluator from raw input through
+its final verdict.
 
 ## Main results
 
@@ -22,6 +23,9 @@ exposes the verified quadratic-time memoized evaluator core.
 - `pairStageTM_hoareTime` gives the total staged-input contract in linear time.
 - `Machine.evalFamilyCoreTM_hoareTime` gives the total staged-core contract in
   concrete quadratic time.
+- `Machine.evalFamilyTM_decidesInTime` proves the complete evaluator decides
+  `circuitEvalLanguage`, and `Machine.evalFamilyTime_bigO_quadratic` gives its
+  polynomial bound.
 -/
 
 namespace Complexity
@@ -64,7 +68,7 @@ input prefixes for the evaluator core. -/
 theorem pairStageTM_hoareTime (bits : List Bool) :
     pairStageTM.HoareTime (PairStagePre bits) (PairStagePost bits)
       (pairStageTime bits.length) :=
-  pairStageTM_hoareTime_internal bits
+  Internal.pairStageTM_hoareTime_internal bits
 
 end Machine
 

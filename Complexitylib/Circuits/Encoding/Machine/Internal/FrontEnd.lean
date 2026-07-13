@@ -22,7 +22,11 @@ namespace CircuitCode
 
 namespace Machine
 
-private def validatorPost (bits : List Bool) (inp : Tape)
+namespace Internal
+
+/-- Tape contract produced by the lifted outer-pair validator before branch
+routing. -/
+def ValidatorPost (bits : List Bool) (inp : Tape)
     (work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
   TM.AllTapesWF inp work out ∧
   inp.cells = (Tape.init (bits.map Γ.ofBool)).cells ∧
@@ -34,7 +38,7 @@ private def validatorPost (bits : List Bool) (inp : Tape)
 
 /-- Tapes after the conditional has normalized the validator output and routed
 to the branch for `verdict`. -/
-private def Routed (bits : List Bool) (verdict : Bool) (inp : Tape)
+def Routed (bits : List Bool) (verdict : Bool) (inp : Tape)
     (work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
   inp.cells = (Tape.init (bits.map Γ.ofBool)).cells ∧
   inp.cells 0 = Γ.start ∧
@@ -45,11 +49,15 @@ private def Routed (bits : List Bool) (verdict : Bool) (inp : Tape)
   out.head = 1 ∧
   out.cells 1 = Γ.ofBool verdict
 
-private def ValidRouted (bits : List Bool) (inp : Tape)
+/-- Routed tapes on the validator's accepting branch, together with validity of
+the serialized outer pair. -/
+def ValidRouted (bits : List Bool) (inp : Tape)
     (work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
   Routed bits true inp work out ∧ bits ∈ validPairEncoding
 
-private def InvalidRouted (bits : List Bool) (inp : Tape)
+/-- Routed tapes on the validator's rejecting branch, together with failure of
+the serialized outer-pair decoder. -/
+def InvalidRouted (bits : List Bool) (inp : Tape)
     (work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
   Routed bits false inp work out ∧ bits ∉ validPairEncoding
 
@@ -285,7 +293,9 @@ private theorem validPairStageTM_hoareTime_pair (code input : List Bool) :
   rw [TM.pairSplitCoreTime_eq_pair_length]
   omega
 
-private theorem validPairStageTM_hoareTime (bits : List Bool) :
+/-- The valid staging branch exposes the public pair-staging postcondition in
+linear time. -/
+theorem validPairStageTM_hoareTime (bits : List Bool) :
     validPairStageTM.HoareTime (ValidRouted bits) (PairStagePost bits)
       (2 * bits.length + 7) := by
   intro inp work out hpre
@@ -295,7 +305,9 @@ private theorem validPairStageTM_hoareTime (bits : List Bool) :
   subst bits
   exact validPairStageTM_hoareTime_pair code input inp work out hroute
 
-private theorem invalidPairStageTM_hoareTime (bits : List Bool) :
+/-- The invalid staging branch rewinds while retaining the validator's zero
+verdict and fresh work tapes. -/
+theorem invalidPairStageTM_hoareTime (bits : List Bool) :
     (TM.rewindInputTM (n := workTapeCount)).HoareTime
       (InvalidRouted bits) (PairStagePost bits) (bits.length + 4) := by
   intro inp work out hpre
@@ -312,9 +324,11 @@ private theorem invalidPairStageTM_hoareTime (bits : List Bool) :
   rw [hdecode]
   exact ⟨hinputHead, hworks, by simpa [Γ.ofBool] using houtputCell⟩
 
-private theorem validator_transition_routed (bits : List Bool) (verdict : Bool)
+/-- The conditional transition turns a validator endpoint with a fixed verdict
+into the corresponding routed branch precondition. -/
+theorem validator_transition_routed (bits : List Bool) (verdict : Bool)
     (inp : Tape) (work : Fin workTapeCount → Tape) (out : Tape)
-    (hpost : validatorPost bits inp work out)
+    (hpost : ValidatorPost bits inp work out)
     (hcell : out.cells 1 = Γ.ofBool verdict) :
     Routed bits verdict (TM.transitionInput inp)
       (fun i => TM.transitionTape (work i)) ⟨1, out.cells⟩ := by
@@ -351,19 +365,19 @@ theorem pairStageTM_hoareTime_internal (bits : List Bool) :
     pairStageTM.HoareTime (PairStagePre bits) (PairStagePost bits)
       (pairStageTime bits.length) := by
   have htest : (TM.pairValidateTM.liftTM workTapeCount).HoareTime
-      (PairStagePre bits) (validatorPost bits) (bits.length + 2) := by
-    simpa [PairStagePre, validatorPost] using
+      (PairStagePre bits) (ValidatorPost bits) (bits.length + 2) := by
+    simpa [PairStagePre, ValidatorPost] using
       TM.pairValidateTM_lift_hoareTime workTapeCount bits
-  have hwf : ∀ inp work out, validatorPost bits inp work out →
+  have hwf : ∀ inp work out, ValidatorPost bits inp work out →
       TM.AllTapesWF inp work out := by
     intro inp work out hpost
     exact hpost.1
-  have hhead : ∀ inp work out, validatorPost bits inp work out →
+  have hhead : ∀ inp work out, ValidatorPost bits inp work out →
       out.head ≤ bits.length + 2 := by
     intro inp work out hpost
     rcases hpost with ⟨-, -, -, -, houtputHead, -, -⟩
     exact houtputHead
-  have htoThen : ∀ inp work out, validatorPost bits inp work out →
+  have htoThen : ∀ inp work out, ValidatorPost bits inp work out →
       out.cells 1 = Γ.one →
       ValidRouted bits (TM.transitionInput inp)
         (fun i => TM.transitionTape (work i)) ⟨1, out.cells⟩ := by
@@ -376,7 +390,7 @@ theorem pairStageTM_hoareTime_internal (bits : List Bool) :
       exact (show Γ.one ≠ Γ.zero by decide)
         (hcell.symm.trans (hreject hinvalid))
     exact ⟨hroute, hvalid⟩
-  have htoElse : ∀ inp work out, validatorPost bits inp work out →
+  have htoElse : ∀ inp work out, ValidatorPost bits inp work out →
       out.cells 1 ≠ Γ.one →
       InvalidRouted bits (TM.transitionInput inp)
         (fun i => TM.transitionTape (work i)) ⟨1, out.cells⟩ := by
@@ -387,7 +401,7 @@ theorem pairStageTM_hoareTime_internal (bits : List Bool) :
       intro hvalid
       exact hcell (haccept hvalid)
     have hzero := hreject hinvalid
-    have hpost' : validatorPost bits inp work out :=
+    have hpost' : ValidatorPost bits inp work out :=
       ⟨hwf', hinputCells, hinputHead, hworks, houtputHead, haccept, hreject⟩
     have hroute := validator_transition_routed bits false inp work out hpost' (by
       simpa [Γ.ofBool] using hzero)
@@ -405,6 +419,8 @@ theorem pairStageTM_hoareTime_internal (bits : List Bool) :
       2 * bits.length + 7 := max_eq_left (by omega)
   unfold pairStageTM pairStageTime
   exact TM.HoareTime.mono_bound hcomposed (by simp [hmax]; omega)
+
+end Internal
 
 end Machine
 

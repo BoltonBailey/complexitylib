@@ -461,7 +461,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
   the log-space generator (`FL ⊆ P`) to produce the length-`n` circuit code, then
   evaluates that code on the input with a memoized topological evaluator — all in
   polynomial time. *Decomposed:*
-  - [~] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
+  - [x] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
     tagged family code paired with its input, with a polynomial running-time bound
     (the fan-in-two encoding, exact decoder, topological validator, and array-backed
     iterative evaluator already exist as pure functions — this is their DTM
@@ -505,7 +505,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         tagged controller to total defaulted `familyStream?` agreement
         (`none ↦ false`), and expose `evalFamilyCoreTM_hoareTime` under
         `evalFamilyCoreTime = 20(|code| + |input| + 1)^2`.
-    - [ ] Overwrite the staging verdict with the evaluator result on every valid
+    - [x] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
   - [ ] Compose the log-space generator with the evaluator; prove the resulting DTM
@@ -565,8 +565,8 @@ and `P_subset_PPoly` packages the direct nonuniform containment.
 Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
-advice-to-circuit direction; the reverse direction still depends on the
-serialized circuit-evaluator DTM. The evaluator front end now has a total
+advice-to-circuit direction; packaging the reverse direction is now the next
+advice milestone. The evaluator front end has a total
 linear-time validate/rewind/split contract for its outer pair encoding. Malformed
 machine inputs retain fresh work tapes and cannot reach the evaluator core;
 valid inputs expose appendable code and data prefixes on named work tapes. A
@@ -581,8 +581,12 @@ complete rejecting counted gate loop, including exhausted no-gate and trailing
 data. Exact malformed unary-count and empty-family runs now close the remaining
 tagged branches. `familyCore_fromFrontiers_run` proves total defaulted agreement
 with `evalFamilyCode`, and the public `evalFamilyCoreTM_hoareTime` packages the
-concrete quadratic bound. Composing that contract through the outer pair staging
-machine remains before the reverse advice containment can be packaged.
+concrete quadratic core bound. The total `evalFamilyTM` now composes that core
+through outer validation and staging: `evalFamilyTM_hoareTime` agrees with
+`evalFamilyPair?` on every raw input, `evalFamilyTM_decidesInTime` decides
+`circuitEvalLanguage`, and `evalFamilyTime_bigO_quadratic` proves the complete
+budget is `O(n²)`. The reverse advice containment can reuse this finished
+evaluator directly.
 
 **Settled conventions.**
 
@@ -616,7 +620,7 @@ preserved by serialized encodings and uniform generators.
   plus a concrete encoding-length bound.
 - [x] Add the tagged family wrapper and prove functional correctness at every
   length, including the explicit empty-input answer.
-- [~] Build a DTM that validates and evaluates a tagged family code paired with
+- [x] Build a DTM that validates and evaluates a tagged family code paired with
   its input in polynomial time, including the explicit length-zero case.
 - [ ] Prove the easy direction: a P-uniform polynomial-size family yields a
   polynomial-time DTM decider.
@@ -674,7 +678,7 @@ preserved by serialized encodings and uniform generators.
 - [x] Hardwire an arbitrary prefix of typed-circuit inputs without increasing
   the circuit size, retaining a positive live suffix under the typed-circuit
   convention (families handle length zero separately).
-- [M] Implement a DTM realizing the topological memoized evaluator for serialized
+- [x] Implement a DTM realizing the topological memoized evaluator for serialized
   circuits and prove a polynomial running-time bound.
 - [x] Define polynomial advice and basic monotonicity/containment lemmas,
   including `PAdvice_subset_PPoly` by double hardwiring.
@@ -716,9 +720,9 @@ not on the individual input.
   `O(n^d)`, `NTM.hardwiredAmplificationFamily_size_bigO` gives size
   `O(n^(3d+4))`).
 - [ ] Derive the advice-TM formulation as a corollary, or conversely use it as the
-  main proof if the advice bridge is cleaner. (`PAdvice_subset_PPoly` is done;
-  `PPoly_subset_PAdvice`, and hence `BPP_subset_PAdvice`, awaits the serialized
-  circuit-evaluator DTM.)
+  main proof if the advice bridge is cleaner. (`PAdvice_subset_PPoly` and the
+  serialized circuit-evaluator DTM are done; packaging `PPoly_subset_PAdvice`,
+  and hence `BPP_subset_PAdvice`, is next.)
 
 **Formalization hazards.** The amplified machine consumes a length-dependent
 number of random bits, and early halting must not change the block layout. A strict
