@@ -128,6 +128,10 @@ frame facts instead of hiding them in another controller-local proof.
 - [ ] Investigate a typed controller/phase DSL for executable TMs: declare
   phases, child-machine calls, and tape frames once, then generate the composite
   state plumbing, transition routing, and reusable run/`HoareTime` proof skeletons.
+- [ ] Evaluate CREI's rose-tree machine (RTM) as a high-level authoring language.
+  Prototype a verified lowering of its first-order `InPlace` fragment through a
+  named-tape/effect routine layer and the existing combinators to the concrete
+  `TM`, carrying correctness, preservation frames, and concrete time/space bounds.
 - [ ] Audit proof-engineering mechanics across representative machine and circuit
   constructions: inventory repeated state/tape/wire bookkeeping, run or trace
   stitching, semantic transport, and resource accounting, then prototype the
@@ -150,6 +154,23 @@ of repeated plumbing in at least two shapes, and avoid making ordinary local pro
 more opaque. Prefer small combinators and theorem APIs first; add syntax generation
 or tactics only where the benchmark shows that lemmas alone do not address the
 repetition.
+
+**Candidate authoring language: CREI's RTM.** Keep the concrete `TM` as the
+semantic target and complexity-theoretic ground truth, but investigate the
+pipeline `RTM program -> named-tape/effect routine -> TM combinators -> TM`.
+CREI's experimental [RTM](https://github.com/crei/cslib/tree/rtm/Cslib/Computability/Machines/RTM)
+is a promising source layer: rose-tree data gives natural typed encodings, its
+program builder provides functional composition and loops, and `InPlace`
+excludes escaping closures specifically so that multi-tape simulation is direct.
+It is not yet a drop-in replacement for the middle layer: its semantics do not
+express this library's one-sided named-tape frames, read-only input, append-only
+output, exact `HoareTime`, or all-reachable auxiliary-space obligations, and a
+verified lowering to the fixed four-symbol `TM` is not yet available. Do not add
+a dependency before a vertical slice proves executable semantic refinement,
+finite-state compilation, concrete time overhead, space preservation, and frame
+preservation on the pipeline, loop, and serializer benchmarks. If that slice
+does not fit cleanly, retain the local routine IR and port only RTM's rose-tree,
+builder, and first-order-fragment ideas.
 
 The serialized-circuit evaluator is the current end-to-end experiment: its
 validator, pair splitter, tape scanner, memo-wire appends, and evaluator loop
@@ -564,9 +585,13 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       - [x] Add an append-on-overflow little-endian successor subroutine with an exact
         frame-preserving endpoint, concrete time bound, all-reachable space contract,
         and one-way-output proof.
-      - [ ] Convert unary input length to a logarithmic-width binary counter, then add
-        the fixed-polynomial evaluation and bounded-loop operations needed by the raw
-        tableau serializer.
+      - [x] Convert input length to a logarithmic-width binary counter without
+        materializing unary work fuel. `TM.binaryLengthTM_reachesIn_frame` gives
+        the exact runtime and endpoint frame,
+        `TM.binaryLengthTM_hoareTimeSpace` covers every reachable configuration,
+        and `TM.binaryLengthSpace_bigO_log` proves the explicit budget logarithmic.
+      - [ ] Add the fixed-polynomial evaluation and bounded binary-loop operations
+        needed by the raw tableau serializer.
     - [ ] Implement the append-only raw-tableau serializer, prove its code function is
       in `FL`, package `P_subset_UniformPPoly`, and combine both directions.
 
