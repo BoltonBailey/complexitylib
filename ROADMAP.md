@@ -521,8 +521,8 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       and `FP` time witnesses to polynomial evaluations, and derive closure of `P`
       under `FP` preimages (`TM.compositionTM_decidesInTime`,
       `mem_P_iff_decidesInTime_polynomial`, and `mem_P_preimage`).
-    - [ ] Prove the bounded reduced-configuration theorem for total log-space
-      transducers and conclude the correctly typed containment `FL ⊆ FP`.
+    - [x] Prove the bounded reduced-configuration theorem for total log-space
+      transducers and conclude `FL ⊆ FP` (and the parallel containment `L ⊆ P`).
     - [ ] Implement in `FP` the family-specific preprocessing map
       `x ↦ pair (gen (unaryList |x|)) x`, preserving the original input while the
       generator runs on unary length.
@@ -606,6 +606,12 @@ through outer validation and staging: `evalFamilyTM_hoareTime` agrees with
 `circuitEvalLanguage`, and `evalFamilyTime_bigO_quadratic` proves the complete
 budget is `O(n²)`. Canonical family codes have length `O(n^(2(d+1)))` when
 family size is `O(n^d)`; evaluating them as advice takes `O(n^(4(d+1)))`.
+The uniformity dependency path now has an exact finite reduced-configuration
+theorem for one-way-output transducers: bounded input/work observations plus
+the observable output frontier determine future execution, so a halted run has
+one distinct snapshot per time index. The resulting explicit time bound is
+polynomial under logarithmic auxiliary space, yielding both `L_subset_P` and
+`FL_subset_FP`.
 Consequently `BPP_subset_PAdvice` now follows from the existing
 `BPP_subset_PPoly` theorem.
 

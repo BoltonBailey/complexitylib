@@ -25,6 +25,7 @@ import Complexitylib.Classes.FNP
 import Complexitylib.Classes.NP.Witness
 import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Classes.L
+import Complexitylib.Classes.L.PolynomialTime
 import Complexitylib.Classes.Exponential
 import Complexitylib.Classes.DTISP
 import Complexitylib.Classes.Containments

@@ -16,6 +16,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.PairValidate
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
 import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
 import Complexitylib.Models.TuringMachine.OutputBounds
+import Complexitylib.Models.TuringMachine.SpaceTime
 import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Composition
 import Complexitylib.Models.TuringMachine.Deterministic
@@ -37,7 +38,7 @@ import Complexitylib.Models.RandomAccessMachine
 
 Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, Hoare-style
-specifications, reusable subroutines, determinism results, the
+specifications, reusable subroutines, finite space-to-time bounds, determinism results, the
 universal machine, and the logarithmic-cost random access machine
 (`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
 (`…/Internal/…`, register machinery, emitter plumbing) are deliberately
