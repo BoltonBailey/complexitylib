@@ -589,6 +589,10 @@ of the original machine's acceptance circuit and a threshold fragment instead.
   (`Circuit.restrictPrefix`, with exact size preservation).
 - [x] Compile an at-least threshold over existing verdict wires as an appendable
   quadratic-size raw fragment, ready for strict-majority amplification.
+- [x] Compose independent copies of the original machine's bounded acceptance
+  circuit over shared data and disjoint choice blocks, append strict majority,
+  and prove exact `blockMajority` semantics with size
+  `runs * O((T + 2)^3) + O(runs^2)`.
 
 ### M3. Small-depth circuits and Barrington's theorem
 
