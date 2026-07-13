@@ -7,6 +7,7 @@ import Complexitylib.SAT.Tseitin
 import Complexitylib.SAT.Tseitin.Internal.Streaming
 import Complexitylib.SAT.Tseitin.Machine.Controller
 import Complexitylib.SAT.Tseitin.Machine.Internal.Execution
+import Complexitylib.SAT.Tseitin.Machine.Internal.PolynomialTime
 import Complexitylib.SAT.Tseitin.Machine.Internal.Validation
 
 /-!
@@ -17,17 +18,14 @@ validator in `Machine.Defs`. It checks both the pure automaton and the concrete
 Turing machine against `CNF.decode?`, exhaustively on every bit string through
 length eight, in addition to focused examples for each malformed-input case.
 
-This file is intentionally separate from the public import graph. Its imported
-proof layer establishes:
+This file is intentionally separate from the public import graph. In addition
+to the executable guards, its imported proof layer establishes:
 
 1. `validEncoding z = (CNF.decode? z).isSome` for every `z`;
-2. a `HoareTime` theorem for `validationTM` with exact time `|z| + 2`.
-
-The remaining proof layers are:
-
-1. a `HoareTime` theorem that `seedFreshTM` leaves `freshReg = |z| + 1`;
-2. a streaming controller theorem relating the buffer phases to
-   `ThreeSAT.Streaming.transformBits?`.
+2. a `HoareTime` theorem for `validationTM` with exact time `|z| + 2`;
+3. an exact typed-token simulation of the streaming controller;
+4. `reductionTM_computesInTime_internal`, covering valid and malformed inputs
+   within one explicit quartic bound.
 -/
 
 namespace Complexity

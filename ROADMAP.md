@@ -306,11 +306,13 @@ forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
     a total semantic bit-string reduction (`ThreeSAT.reduction_correct`).
   - [x] Prove `ThreeSAT.language ∈ NP` directly by intersecting the existing SAT
     witness verifier with a finite-state exact-3 syntax checker.
-  - [~] Implement the validation-first streaming transducer and its concrete
-    register-machine controller, with a pure typed-token specification and
-    executable regression guards. *(Controller simulation and time proofs remain.)*
-  - [ ] Implement `ThreeSAT.reduction` in `FP`, derive
-    `CNFSAT.language ≤ₚ ThreeSAT.language`, and transfer NP-completeness.
+  - [x] Implement the validation-first streaming transducer and its concrete
+    register-machine controller, with a pure typed-token specification,
+    executable regression guards, an exact controller simulation, and an
+    explicit quartic time bound.
+  - [x] Implement `ThreeSAT.reduction` in `FP`, derive
+    `CNFSAT.language ≤ₚ ThreeSAT.language`, and transfer NP-completeness
+    (`ThreeSAT.reduction_mem_FP`, `cnfsat_le_language`, `NPComplete_language`).
   - [ ] Add a codec/language for general `BoolFormula` SAT and relate it to the
     established CNF-SAT surface without introducing a third formula syntax.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and

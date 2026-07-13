@@ -7,8 +7,10 @@ import Complexitylib.SAT.Semantics
 import Complexitylib.SAT.Rename
 import Complexitylib.SAT.ThreeCNF
 import Complexitylib.SAT.ThreeSAT
+import Complexitylib.SAT.ThreeSAT.Completeness
 import Complexitylib.SAT.ThreeSAT.Syntax
 import Complexitylib.SAT.Tseitin
+import Complexitylib.SAT.Tseitin.Machine
 import Complexitylib.SAT.QBF
 import Complexitylib.SAT.Resolution
 import Complexitylib.SAT.Encoding
@@ -34,7 +36,8 @@ infrastructure used by the polynomial-time verifier.
   verifier parses.
 - `ThreeSAT` / `Tseitin` — the exact-3 language, its linear-time syntax
   checker, total encoded reduction, equisatisfiability, and quadratic
-  encoding-size bound.
+  encoding-size bound; `Tseitin.Machine` proves the concrete reduction is in
+  `FP`, and `ThreeSAT.Completeness` proves 3SAT is NP-complete.
 - `Language`  — `language`, the witness relation `Witness`, and the proofs
   `mem_language_iff_witness` / `polyBalanced_witness`.
 - `Verifier` — executable decoding and checking for `pair(z, α)`.

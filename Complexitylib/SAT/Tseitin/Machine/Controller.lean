@@ -9,8 +9,8 @@ import Mathlib.Data.Fintype.Sigma
 /-!
 # Streaming controller for the CNF-to-3CNF reduction machine
 
-`validEmitterTM` is the concrete valid-input controller missing from the
-buffer and emission layer. It reads the already-validated input in two-bit
+`validEmitterTM` is the concrete valid-input controller for the buffer and
+emission layer. It reads the already-validated input in two-bit
 tokens, keeps literal signs and the number of pending literals in finite
 control, and stores all unbounded variable indices in unary work registers.
 
@@ -25,9 +25,9 @@ uses sigma types. Each child is run to its halt state before the controller
 resumes reading at the next input token. `reductionTM` installs this controller
 in the validation-first total assembly from `Machine.Defs`.
 
-This file defines the machine but deliberately does not claim
-`TM.ComputesInTime`; the simulation invariant and polynomial time accounting
-remain a separate proof layer.
+This file defines the machine. Its simulation invariant and polynomial-time
+accounting live in proof-only internal modules and are exposed publicly by
+`Complexitylib.SAT.Tseitin.Machine`.
 -/
 
 namespace Complexity
@@ -256,8 +256,8 @@ def validEmitterTM : TM workTapeCount :=
 
 /-- Final concrete machine for the total encoded reduction. It initializes the
 fresh counter, validates before emission, clears the validator verdict on the
-valid branch, runs `validEmitterTM`, and emits the fixed fallback on malformed
-inputs. -/
+selected branch, runs `validEmitterTM` on valid inputs, and emits the fixed
+fallback on malformed inputs. -/
 def reductionTM : TM workTapeCount := reductionTMWith validEmitterTM
 
 end Machine

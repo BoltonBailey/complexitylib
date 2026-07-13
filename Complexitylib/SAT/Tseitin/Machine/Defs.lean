@@ -21,9 +21,9 @@ The six work tapes have fixed roles. The fresh-variable register is initialized
 to `|z| + 1`, and four further registers hold the current literal and the three
 pending literals used by the streaming Tseitin algorithm. This file also gives
 the concrete register-copy and emission machines for committing a literal,
-emitting a wide-clause link, and closing a clause. The remaining layer is a
-finite-state controller that reads validated tokens and schedules these
-machines.
+emitting a wide-clause link, and closing a clause. `Machine.Controller`
+supplies the finite-state controller that reads validated tokens and schedules
+these machines.
 
 ## Main definitions
 
@@ -284,18 +284,16 @@ def clearValidationOutputTM : TM workTapeCount where
 
 /-- Assemble the validation-first total reduction around a valid-input
 streaming emitter. The validator runs before either branch emits transformed
-data. A valid input is rewound to cell one and handed to `validEmitter`; an
-invalid input emits the fixed no-instance `fallbackEncoding`.
-
-The remaining implementation obligation is a controller `validEmitter` that
-schedules `commitLiteralTM` and `closeClauseTM` according to the validated
-token stream. -/
+data, and both branches clear its verdict before producing output. A valid
+input is rewound to cell one and handed to `validEmitter`; an invalid input
+emits the fixed no-instance `fallbackEncoding`. `Machine.Controller` supplies
+the concrete valid emitter used by the final reduction machine. -/
 def reductionTMWith (validEmitter : TM workTapeCount) : TM workTapeCount :=
   TM.seqTM seedFreshTM
     (TM.ifTM validationTM
       (TM.seqTM clearValidationOutputTM
         (TM.seqTM TM.rewindInputTM validEmitter))
-      (TM.emitBitsTM fallbackEncoding))
+      (TM.seqTM clearValidationOutputTM (TM.emitBitsTM fallbackEncoding)))
 
 end Machine
 
