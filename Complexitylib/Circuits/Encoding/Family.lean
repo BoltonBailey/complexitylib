@@ -157,6 +157,52 @@ theorem encodeAt_length_le (F : CircuitFamily Basis.andOr2) (n : ℕ) :
   | succ n =>
       simpa [Nat.succ_eq_add_one] using encodeAt_succ_length_le F n
 
+/-- Polynomial-size families have polynomial-length tagged member encodings. -/
+theorem encodeAt_length_bigO (F : CircuitFamily Basis.andOr2) {d : ℕ}
+    (hsize : F.size =O ((· ^ d) : ℕ → ℕ)) :
+    (fun n => (F.encodeAt n).length) =O
+      ((· ^ (2 * (d + 1))) : ℕ → ℕ) := by
+  let q : ℕ → ℕ := fun n => F.size n + n + 3
+  have hsize' : F.size =O ((· ^ (d + 1)) : ℕ → ℕ) :=
+    hsize.trans (BigO.pow_le_pow_right (Nat.le_succ d))
+  have hnBase : (fun n : ℕ => n) =O ((· ^ 1) : ℕ → ℕ) := by
+    simpa only [pow_one] using BigO.refl (fun n : ℕ => n)
+  have hn : (fun n : ℕ => n) =O ((· ^ (d + 1)) : ℕ → ℕ) :=
+    hnBase.trans (BigO.pow_le_pow_right (by omega))
+  have hq : q =O ((· ^ (d + 1)) : ℕ → ℕ) := by
+    dsimp only [q]
+    exact BigO.add (BigO.add hsize' hn) (BigO.const_le_pow 3 (d + 1))
+  have hqSquareRaw := BigO.pow hq 2
+  have hpowerSquare :
+      (fun n : ℕ => (n ^ (d + 1)) ^ 2) =O
+        ((· ^ (2 * (d + 1))) : ℕ → ℕ) := by
+    apply BigO.of_le
+    intro n
+    apply le_of_eq
+    rw [← pow_mul]
+    congr 1
+    omega
+  have hqSquare : (fun n => (q n) ^ 2) =O
+      ((· ^ (2 * (d + 1))) : ℕ → ℕ) :=
+    hqSquareRaw.trans hpowerSquare
+  have hcodePoint : ∀ n, (F.encodeAt n).length ≤ 2 + 2 * (q n) ^ 2 := by
+    intro n
+    calc
+      (F.encodeAt n).length ≤
+          2 + F.size n * (2 * (n + F.size n) + 6) :=
+        encodeAt_length_le F n
+      _ = 2 + (2 * F.size n) * (n + F.size n + 3) := by ring
+      _ ≤ 2 + (2 * q n) * q n := by
+        apply Nat.add_le_add_left
+        exact Nat.mul_le_mul
+          (Nat.mul_le_mul_left 2 (by dsimp only [q]; omega))
+          (by dsimp only [q]; omega)
+      _ = 2 + 2 * (q n) ^ 2 := by ring
+  apply (BigO.of_le hcodePoint).trans
+  exact BigO.add
+    (BigO.const_le_pow 2 (2 * (d + 1)))
+    (BigO.const_mul_left 2 hqSquare)
+
 end CircuitCode
 
 end Complexity

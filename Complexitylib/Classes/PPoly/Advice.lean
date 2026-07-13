@@ -5,13 +5,15 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Classes.PPoly.Advice.Defs
 import Complexitylib.Classes.PPoly.Advice.Internal
+import Complexitylib.Classes.PPoly.Advice.Reverse
 
 /-!
 # Polynomial advice and nonuniform circuits
 
-This module exposes the polynomial-advice machine class and the direct
-advice-to-circuit simulation. The reverse simulation requires the roadmap's
-polynomial-time DTM evaluator for serialized circuits and remains separate.
+This module exposes the polynomial-advice machine class and its equivalence
+with polynomial-size nonuniform circuits. The reverse simulation supplies each
+canonical family-member encoding as advice to the verified serialized-circuit
+evaluator.
 
 ## Main definitions and results
 
@@ -20,6 +22,9 @@ polynomial-time DTM evaluator for serialized circuits and remains separate.
 - `TM.adviceCircuitFamily`: hardwire advice into bounded acceptance circuits.
 - `PAdvice_subset_PPoly`: polynomial-time advice machines have polynomial-size
   circuit families.
+- `PPoly_subset_PAdvice`: polynomial-size circuit families yield
+  polynomial-time advice machines.
+- `PAdvice_eq_PPoly`: the two nonuniform formulations coincide.
 -/
 
 namespace Complexity
@@ -127,5 +132,10 @@ end TM
 /-- Polynomial-time advice machines have polynomial-size nonuniform circuits. -/
 theorem PAdvice_subset_PPoly : PAdvice ⊆ PPoly :=
   PAdvice_subset_PPoly_internal
+
+/-- Polynomial advice and polynomial-size nonuniform circuit families define
+the same language class. -/
+theorem PAdvice_eq_PPoly : PAdvice = PPoly :=
+  Set.Subset.antisymm PAdvice_subset_PPoly PPoly_subset_PAdvice
 
 end Complexity

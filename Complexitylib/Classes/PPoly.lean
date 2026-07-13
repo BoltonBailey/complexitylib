@@ -149,8 +149,8 @@ end BigO
 
 /-- `PPoly` is definitionally the union of the pointwise `SIZE` classes over
     all natural-coefficient polynomials. This is not the substantive
-    advice-machine characterization of `P/poly`; the advice-to-circuit
-    direction is exposed in `Complexitylib.Classes.PPoly.Advice`. -/
+    advice-machine characterization of `P/poly`; that equivalence is exposed
+    in `Complexitylib.Classes.PPoly.Advice`. -/
 theorem PPoly_eq_iUnion_SIZE :
     PPoly = ⋃ p : Polynomial ℕ, SIZE fun n => p.eval n := rfl
 

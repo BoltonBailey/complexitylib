@@ -47,10 +47,11 @@ Complexitylib declaration for dependencies beyond `propext`,
 
 **Structural containments.** `Complexity.P_subset_NP`,
 `Complexity.P_subset_PSPACE`, `Complexity.P_subset_PPoly`,
-`Complexity.PAdvice_subset_PPoly`, `Complexity.RP_subset_NP`,
-`Complexity.BPP_subset_PPoly`, and `Complexity.BPP_subset_PP`. The nonuniform
-results live in `Complexitylib.Classes.PPoly.Unrolling` and
-`Complexitylib.Classes.PPoly.Advice`, while randomized hardwiring lives in
+`Complexity.PAdvice_subset_PPoly`, `Complexity.PPoly_subset_PAdvice`,
+`Complexity.RP_subset_NP`, `Complexity.BPP_subset_PPoly`,
+`Complexity.BPP_subset_PAdvice`, and `Complexity.BPP_subset_PP`. The nonuniform
+equivalence lives in `Complexitylib.Classes.PPoly.Advice`, while randomized
+hardwiring and its advice corollary live in
 `Complexitylib.Classes.Randomized.PPoly`; the broader time/space index is
 `Complexitylib.Classes.Containments`.
 

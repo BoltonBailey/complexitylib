@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Classes.PPoly.Advice.Reverse
 import Complexitylib.Classes.Randomized.PPoly.Defs
 import Complexitylib.Classes.Randomized.PPoly.Internal
 
@@ -11,7 +12,9 @@ import Complexitylib.Classes.Randomized.PPoly.Internal
 
 For each input length, finite amplification supplies one seed that is correct
 simultaneously on every input of that length. Fixing that seed in a parallel
-bounded-acceptance circuit produces a polynomial-size nonuniform family.
+bounded-acceptance circuit produces a polynomial-size nonuniform family. The
+serialized circuit evaluator then turns that family into a polynomial-advice
+decider.
 
 ## Main results
 
@@ -20,6 +23,7 @@ bounded-acceptance circuit produces a polynomial-size nonuniform family.
 - `NTM.hardwiredAmplificationFamily_decides`: whole-language correctness.
 - `NTM.hardwiredAmplificationFamily_size_bigO`: quantitative size bound.
 - `BPP_subset_PPoly`: every language in `BPP` has polynomial-size circuits.
+- `BPP_subset_PAdvice`: every language in `BPP` has a polynomial-advice decider.
 -/
 
 namespace Complexity
@@ -74,5 +78,10 @@ that is correct on all inputs of each length, and hardwire that seed into a
 parallel bounded-acceptance circuit. -/
 theorem BPP_subset_PPoly : BPP ⊆ PPoly :=
   BPP_subset_PPoly_internal
+
+/-- **BPP ⊆ PAdvice**: the polynomial-size family supplied by nonuniform
+derandomization is evaluated using its length-dependent encoding as advice. -/
+theorem BPP_subset_PAdvice : BPP ⊆ PAdvice :=
+  BPP_subset_PPoly.trans PPoly_subset_PAdvice
 
 end Complexity

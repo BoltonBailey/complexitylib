@@ -565,8 +565,9 @@ and `P_subset_PPoly` packages the direct nonuniform containment.
 Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
-advice-to-circuit direction; packaging the reverse direction is now the next
-advice milestone. The evaluator front end has a total
+advice-to-circuit direction, while `PPoly_subset_PAdvice` uses canonical member
+encodings with the serialized evaluator for the reverse direction;
+`PAdvice_eq_PPoly` packages the equivalence. The evaluator front end has a total
 linear-time validate/rewind/split contract for its outer pair encoding. Malformed
 machine inputs retain fresh work tapes and cannot reach the evaluator core;
 valid inputs expose appendable code and data prefixes on named work tapes. A
@@ -585,8 +586,10 @@ concrete quadratic core bound. The total `evalFamilyTM` now composes that core
 through outer validation and staging: `evalFamilyTM_hoareTime` agrees with
 `evalFamilyPair?` on every raw input, `evalFamilyTM_decidesInTime` decides
 `circuitEvalLanguage`, and `evalFamilyTime_bigO_quadratic` proves the complete
-budget is `O(n²)`. The reverse advice containment can reuse this finished
-evaluator directly.
+budget is `O(n²)`. Canonical family codes have length `O(n^(2(d+1)))` when
+family size is `O(n^d)`; evaluating them as advice takes `O(n^(4(d+1)))`.
+Consequently `BPP_subset_PAdvice` now follows from the existing
+`BPP_subset_PPoly` theorem.
 
 **Settled conventions.**
 
@@ -629,11 +632,11 @@ preserved by serialized encodings and uniform generators.
 - [x] Prove semantic correctness and a concrete polynomial size bound for the
   nonuniform unrolling construction (`TM.unrollingCircuitFamily` and
   `P_subset_PPoly`).
-- [~] Define advice TMs and prove equivalence between polynomial advice and
+- [x] Define advice TMs and prove equivalence between polynomial advice and
   nonuniform polynomial-size circuits. `Advice`, `PolynomialAdvice`, `PAdvice`,
-  and `PAdvice_subset_PPoly` complete the advice-to-circuit direction. The
-  reverse direction should reuse the serialized circuit-evaluator DTM rather
-  than introduce a second evaluator.
+  `PAdvice_subset_PPoly`, `PPoly_subset_PAdvice`, and `PAdvice_eq_PPoly` complete
+  both directions. The reverse direction reuses the serialized circuit-evaluator
+  DTM rather than introducing a second evaluator.
 - [ ] Implement the circuit emitter in `FP`, then prove `P` equals P-uniform
   polynomial-size circuit families.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
@@ -719,10 +722,9 @@ not on the individual input.
   `BPP subset P/poly` (`BPP_subset_PPoly`; if the BPP time witness is
   `O(n^d)`, `NTM.hardwiredAmplificationFamily_size_bigO` gives size
   `O(n^(3d+4))`).
-- [ ] Derive the advice-TM formulation as a corollary, or conversely use it as the
-  main proof if the advice bridge is cleaner. (`PAdvice_subset_PPoly` and the
-  serialized circuit-evaluator DTM are done; packaging `PPoly_subset_PAdvice`,
-  and hence `BPP_subset_PAdvice`, is next.)
+- [x] Derive the advice-TM formulation as a corollary
+  (`PPoly_subset_PAdvice` and `BPP_subset_PAdvice`) using canonical serialized
+  family-member codes as polynomial-length advice to the verified evaluator.
 
 **Formalization hazards.** The amplified machine consumes a length-dependent
 number of random bits, and early halting must not change the block layout. A strict
