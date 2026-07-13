@@ -158,6 +158,10 @@ its public name or provide a compatibility alias.
   Boolean-symbol lemmas, deleting their local wrappers where this stays clear.
 - [x] Add `TM.reachesIn_snoc`, endpoint uniqueness (`TM.reachesIn_right_unique`),
   and `TM.step_eq_none_iff_halted`.
+- [x] Promote the canonical pair codec and pair-splitting machine out of NP
+  internals, with a genuine `initCfg` endpoint, stable tape frames, an exact
+  encoded-length cost seam, and a frame-preserving `HoareTime` specification.
+  This is the first serializer-shaped proof-engineering benchmark.
 - [M] Inventory the repeated controller mechanics in the UTM, repetition, and
   Tseitin developments; extract one small generic child-call/routing layer before
   committing to a larger syntax or metaprogramming framework.

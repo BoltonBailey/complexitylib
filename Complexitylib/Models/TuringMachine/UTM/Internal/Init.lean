@@ -7,7 +7,7 @@ import Complexitylib.Models.TuringMachine.UTM.Internal.Desc
 import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
 import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Classes.Pairing
+import Complexitylib.Encoding.Pairing
 
 /-!
 # UTM initialization machine
