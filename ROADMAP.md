@@ -427,8 +427,9 @@ iterative evaluator, semantic equivalence with `Circuit.eval`, and a concrete
 polynomial bit-length bound. Functional machine unrolling now has a bounded
 one-hot configuration layout, initialization and one-step compilers, and a
 complete tiled trace fragment with exact semantics, topology, and a cubic size
-bound. Selecting the final acceptance bit and packaging the raw fragment as a
-typed circuit remain.
+bound. A final halt-and-output gate now turns that trace into a typed
+single-output circuit, with canonical choices-first evaluation and accepting
+choice count exactly equal to `NTM.acceptCount`.
 
 **Settled conventions.**
 
@@ -525,7 +526,7 @@ preserved by serialized encodings and uniform generators.
   bound in the trace horizon.
 - [x] Tile initialization with one transition fragment per bounded choice,
   proving exact final-configuration semantics, topology, and a cubic size bound.
-- [ ] Append the final halt-and-output acceptance gate and package the resulting
+- [x] Append the final halt-and-output acceptance gate and package the resulting
   well-formed raw fragment as a typed single-output circuit.
 
 ### M2. BPP is contained in P/poly
