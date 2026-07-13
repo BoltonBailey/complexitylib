@@ -58,13 +58,8 @@ theorem gateLoop_run_none (remaining maxWireLength : ℕ)
         simpa [hused] using hcounter
       have houtput : output.read ≠ Γ.start :=
         houtputInv.read_ne_start (by omega)
-      have houtputZeroHead : (output.write Γ.zero).head = 1 := by
-        simpa [Tape.write_head] using houtputHead
-      have houtputZeroInv : (output.write Γ.zero).StartInvariant := by
-        change (output.write Γw.zero.toΓ).StartInvariant
-        exact houtputInv.write Γw.zero
-      have houtputZeroCell : (output.write Γ.zero).cells 1 = Γ.zero := by
-        simp [Tape.write, houtputHead]
+      obtain ⟨houtputZeroHead, houtputZeroInv, houtputZeroCell⟩ :=
+        outputWriteZero_frame output houtputHead houtputInv
       cases codeBits with
       | nil =>
           have hlastEq : last = none := by
@@ -109,14 +104,8 @@ theorem gateLoop_run_none (remaining maxWireLength : ℕ)
           obtain ⟨t, code1, wires1, ht, hrun, hcounter1⟩ :=
             gateAttempt_run_none sawGate input code wires counter output hgate
               hcode hwires hcounter hremaining hinput houtput
-          have houtputZeroHead : (output.write Γ.zero).head = 1 := by
-            simpa [Tape.write_head] using houtputHead
-          have houtputZeroInv : (output.write Γ.zero).StartInvariant := by
-            change (output.write Γw.zero.toΓ).StartInvariant
-            exact houtputInv.write Γw.zero
-          have houtputZeroCell :
-              (output.write Γ.zero).cells 1 = Γ.zero := by
-            simp [Tape.write, houtputHead]
+          obtain ⟨houtputZeroHead, houtputZeroInv, houtputZeroCell⟩ :=
+            outputWriteZero_frame output houtputHead houtputInv
           refine ⟨t, code1, wires1,
             counter.writeAndMove Γ.blank Dir3.right,
             output.write Γ.zero, used + 1, ?_, hrun, hcounter1,

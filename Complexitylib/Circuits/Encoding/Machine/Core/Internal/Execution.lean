@@ -88,6 +88,27 @@ theorem coreCfg_eta (c : Cfg workTapeCount evalFamilyCoreTM.Q) :
       (c.work counterIdx) c.output = c := by
   exact Cfg.ext rfl rfl (coreWork_eta c.work) rfl
 
+/-- Writing a Boolean verdict at output cell one preserves its parked head and
+left-marker invariant and records the exact verdict cell. -/
+theorem outputWriteBool_frame (value : Bool) (output : Tape)
+    (hhead : output.head = 1) (hinvariant : output.StartInvariant) :
+    (output.write (Γ.ofBool value)).head = 1 ∧
+    (output.write (Γ.ofBool value)).StartInvariant ∧
+    (output.write (Γ.ofBool value)).cells 1 = Γ.ofBool value := by
+  refine ⟨by simpa [Tape.write_head] using hhead, ?_, ?_⟩
+  · rw [← Γw.ofBool_toΓ]
+    exact hinvariant.write (Γw.ofBool value)
+  · simp [Tape.write, hhead]
+
+/-- Zero-verdict specialization of `outputWriteBool_frame`, matching every
+controller rejection action. -/
+theorem outputWriteZero_frame (output : Tape) (hhead : output.head = 1)
+    (hinvariant : output.StartInvariant) :
+    (output.write Γ.zero).head = 1 ∧
+    (output.write Γ.zero).StartInvariant ∧
+    (output.write Γ.zero).cells 1 = Γ.zero := by
+  simpa [Γ.ofBool] using outputWriteBool_frame false output hhead hinvariant
+
 /-- A unary-prefix counter with its canonical left marker is the corresponding
 binary cursor over `true` bits at its append frontier. -/
 theorem binaryCursor_of_hasUnaryPrefix {counter : Tape} {count : ℕ}
@@ -777,10 +798,11 @@ theorem familyTag_step_reject_missing (inputBits : List Bool)
   · exact hcounter
   · exact houtput
 
-/-- The empty-family answer phase consumes its Boolean answer bit. -/
-theorem emptyAnswer_step (answer : Bool)
+/-- The empty-family answer phase consumes its Boolean answer bit, independently
+of the remaining serialized suffix. -/
+theorem emptyAnswer_step (answer : Bool) (rest : List Bool)
     (input code wires counter output : Tape)
-    (hcode : BinaryCursor code [false, answer] 1)
+    (hcode : BinaryCursor code (false :: answer :: rest) 1)
     (hwires : BinaryCursor wires [] 0)
     (hinput : input.read ≠ Γ.start) (hcounter : counter.read ≠ Γ.start)
     (houtput : output.read ≠ Γ.start) :
@@ -856,7 +878,7 @@ theorem emptyFamily_run (answer : Bool)
   have hstep₁ := familyTag_step_empty [answer] input code wires counter output
     hcode hwires hinput hcounter houtput
   have hcode₁ := hcode.moveRight (by simp)
-  have hstep₂ := emptyAnswer_step answer input (code.move Dir3.right)
+  have hstep₂ := emptyAnswer_step answer [] input (code.move Dir3.right)
     wires counter output hcode₁ hwires hinput hcounter houtput
   have hcode₂ := hcode₁.moveRight (by simp)
   have hstep₃ := emptyEnd_step answer input

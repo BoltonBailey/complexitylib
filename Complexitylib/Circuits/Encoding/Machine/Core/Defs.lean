@@ -351,6 +351,38 @@ def evalFamilyCoreTM : TM workTapeCount where
     exact ⟨TM.idleDir_right_of_start, action.workDir_rightOfStart,
       action.output.rightOfStart⟩
 
+/-- Uniform quadratic time budget for evaluating a staged tagged-family code.
+The arguments are the serialized code length and primary-input length. -/
+def evalFamilyCoreTime (codeLength inputLength : ℕ) : ℕ :=
+  20 * (codeLength + inputLength + 1) ^ 2
+
+/-- Staged tapes expected by the serialized-family evaluator core. The input
+tape is threaded as an explicit frame while the code and primary-input work
+tapes are parked at their append frontiers and the counter tape is fresh. -/
+def FamilyCorePre (codeBits inputBits : List Bool) (initialInput : Tape)
+    (inp : Tape) (work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
+  inp = initialInput ∧
+  inp.read ≠ Γ.start ∧
+  (work codeIdx).cells 0 = Γ.start ∧
+  (work codeIdx).HasBinaryPrefix codeBits ∧
+  (work wiresIdx).cells 0 = Γ.start ∧
+  (work wiresIdx).HasBinaryPrefix inputBits ∧
+  work counterIdx = (Tape.init []).move Dir3.right ∧
+  out.head = 1 ∧
+  out.StartInvariant
+
+/-- Halted defaulted-verdict contract for the serialized-family evaluator
+core. Malformed codes and successful false evaluations both write zero. The
+terminal work tapes are intentionally unconstrained because rejecting parses
+halt at different code, memo, and counter cursor positions. -/
+@[nolint unusedArguments]
+def FamilyCorePost (codeBits inputBits : List Bool) (initialInput : Tape)
+    (inp : Tape) (_work : Fin workTapeCount → Tape) (out : Tape) : Prop :=
+  inp = initialInput ∧
+  out.head = 1 ∧
+  out.StartInvariant ∧
+  out.cells 1 = Γ.ofBool ((evalFamilyCode codeBits inputBits).getD false)
+
 /-- Total serialized-family evaluator: validate and stage the outer pair, then
 run the streaming core only on the valid branch. -/
 def evalFamilyTM : TM workTapeCount :=

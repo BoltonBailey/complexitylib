@@ -4,21 +4,24 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Encoding.Machine.Defs
+import Complexitylib.Circuits.Encoding.Machine.Core
 import Complexitylib.Circuits.Encoding.Machine.Internal.FrontEnd
 
 /-!
 # Serialized circuit-evaluator machine
 
 This module exposes the audited front end for a deterministic evaluator of
-serialized circuit families. It validates the outer self-delimiting pair and
-stages its code and input components on separate appendable work tapes. The
-memoized evaluator core will build on this contract.
+serialized circuit families. It validates the outer self-delimiting pair,
+stages its code and input components on separate appendable work tapes, and
+exposes the verified quadratic-time memoized evaluator core.
 
 ## Main results
 
 - `pair_mem_circuitEvalLanguage_iff` identifies the target language on canonical
   paired inputs.
 - `pairStageTM_hoareTime` gives the total staged-input contract in linear time.
+- `Machine.evalFamilyCoreTM_hoareTime` gives the total staged-core contract in
+  concrete quadratic time.
 -/
 
 namespace Complexity

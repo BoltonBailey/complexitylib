@@ -186,7 +186,13 @@ rejection steps compose through generic configuration lemmas, while the
 first- and second-reference unterminated/out-of-range runners remain close
 phase-specific twins. Keep those helpers local for now; one controller is still
 insufficient evidence for a public DSL, but the duplication is a concrete target
-for the cross-construction audit.
+for the cross-construction audit. Total branch assembly also exposed one useful
+small seam: generalizing the empty-answer transition theorem over its untouched
+code suffix eliminated a duplicate proof immediately, without introducing new
+syntax or hiding the controller's execution order. Likewise, the repeated
+head/invariant/cell obligations after verdict writes are now one local
+`outputWriteBool_frame` contract, reused across successful and rejecting branch
+assemblies.
 The same slice exposed a quality-gate blind spot: environment linting followed
 only the public root, not the required validation-only graphs. CI now lints all
 three validation roots as well, so internal proof seams cannot silently accrue
@@ -455,14 +461,14 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
   the log-space generator (`FL ⊆ P`) to produce the length-`n` circuit code, then
   evaluates that code on the input with a memoized topological evaluator — all in
   polynomial time. *Decomposed:*
-  - [ ] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
+  - [~] Poly-time DTM circuit-code evaluator: validate and memoized-evaluate a
     tagged family code paired with its input, with a polynomial running-time bound
     (the fan-in-two encoding, exact decoder, topological validator, and array-backed
     iterative evaluator already exist as pure functions — this is their DTM
     realization and timing).
     - [x] Validate the outer pair on every input, rewind without destroying tape
       frames, and stage canonical code/input prefixes on distinct work tapes in
-      time `4n + 16`; malformed inputs cannot enter the future evaluator core.
+      time `4n + 16`; malformed inputs cannot enter the evaluator core.
     - [x] Define the total three-tape streaming controller: it parses the tagged
       code once, consumes the declared unary gate count, performs unary memo-wire
       lookups, appends one value per gate, and rejects malformed inner codes.
@@ -472,7 +478,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       malformed codes, and lift it to the tagged `evalFamilyCode` semantics.
       Extract exact binary-cursor, marker-boundary, and named-action proof seams;
       promote the duplicated canonical-cell lemma to the neutral tape API.
-    - [ ] Prove the machine controller realizes the pure stream and give its
+    - [x] Prove the machine controller realizes the pure stream and give its
       quadratic `HoareTime` bound. The neutral `Tape.HasBinarySuffix` cursor API
       has also been extracted and adopted by the SAT verifier for this proof.
       - [x] Package the three named work tapes behind one exact configuration
@@ -495,9 +501,10 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         unterminated unary references, and out-of-range memo reads, within
         `4|memo| + 8`; induct every rejecting counted gate stream under the same
         `gateLoopBudget`, including exhausted no-gate and trailing-data cases.
-      - [ ] Complete malformed unary-count and empty-family rejection, lift the
-        tagged controller to total `familyStream?` agreement, and package the
-        quadratic `HoareTime` contract.
+      - [x] Complete malformed unary-count and empty-family rejection, lift the
+        tagged controller to total defaulted `familyStream?` agreement
+        (`none ↦ false`), and expose `evalFamilyCoreTM_hoareTime` under
+        `evalFamilyCoreTime = 20(|code| + |input| + 1)^2`.
     - [ ] Overwrite the staging verdict with the evaluator result on every valid
       outer pair, prove agreement with `evalFamilyPair?`, and package a polynomial
       running-time bound.
@@ -561,7 +568,7 @@ hardwired family construction. `PAdvice_subset_PPoly` proves the
 advice-to-circuit direction; the reverse direction still depends on the
 serialized circuit-evaluator DTM. The evaluator front end now has a total
 linear-time validate/rewind/split contract for its outer pair encoding. Malformed
-machine inputs retain fresh work tapes and cannot reach the future evaluator core;
+machine inputs retain fresh work tapes and cannot reach the evaluator core;
 valid inputs expose appendable code and data prefixes on named work tapes. A
 three-tape fused evaluator controller now executes both family tags and memoizes
 topologically ordered gates. Its pure counted-gate stream now agrees with the
@@ -571,9 +578,11 @@ terminated unary-count setup, every successful gate attempt, and the complete
 successful positive gate loop from staging frontiers under a named quadratic
 budget. Bounded machine runs now also cover every pure one-gate failure and the
 complete rejecting counted gate loop, including exhausted no-gate and trailing
-data. Malformed unary-count and empty-family cases, total tagged-family
-agreement, and the public `HoareTime` package remain before the reverse advice
-containment can be packaged.
+data. Exact malformed unary-count and empty-family runs now close the remaining
+tagged branches. `familyCore_fromFrontiers_run` proves total defaulted agreement
+with `evalFamilyCode`, and the public `evalFamilyCoreTM_hoareTime` packages the
+concrete quadratic bound. Composing that contract through the outer pair staging
+machine remains before the reverse advice containment can be packaged.
 
 **Settled conventions.**
 
@@ -607,7 +616,7 @@ preserved by serialized encodings and uniform generators.
   plus a concrete encoding-length bound.
 - [x] Add the tagged family wrapper and prove functional correctness at every
   length, including the explicit empty-input answer.
-- [ ] Build a DTM that validates and evaluates a tagged family code paired with
+- [~] Build a DTM that validates and evaluates a tagged family code paired with
   its input in polynomial time, including the explicit length-zero case.
 - [ ] Prove the easy direction: a P-uniform polynomial-size family yields a
   polynomial-time DTM decider.
