@@ -6,7 +6,9 @@ Authors: Samuel Schlesinger
 import Complexitylib.Circuits.Encoding.Defs
 import Complexitylib.Circuits.Encoding.Fragment
 import Complexitylib.Circuits.Encoding.Formula
+import Complexitylib.Circuits.Encoding.Formula.Batch
 import Complexitylib.Circuits.Encoding.Internal
+import Complexitylib.Circuits.Encoding.Threshold
 import Complexitylib.Circuits.Encoding.ToCircuit
 
 /-!
@@ -26,6 +28,8 @@ This module exposes the machine-facing representation of
 - `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
 - `RawCircuit.evalAux?_append`: compose appendable raw fragments.
 - `BoolFormula.compileRaw`: compile formulas into appendable raw fragments.
+- `BoolFormula.compileRawBatch`: compile many formulas and pack their outputs.
+- `Threshold.compileRaw`: append a unary dynamic-programming threshold test.
 
 ## Main results
 
@@ -41,6 +45,8 @@ This module exposes the machine-facing representation of
 - `RawCircuit.ofCircuit_toCircuit`, `RawCircuit.eval?_toCircuit`, and
   `RawCircuit.size_toCircuit`: exact reconstruction, semantics, and size.
 - `BoolFormula.evalAux?_compileRaw`: exact formula-fragment evaluation.
+- `BoolFormula.evalAux?_compileRawBatch`: exact contiguous batch-output semantics.
+- `Threshold.evalAux?_compileRaw`: exact threshold-fragment evaluation.
 -/
 
 namespace Complexity

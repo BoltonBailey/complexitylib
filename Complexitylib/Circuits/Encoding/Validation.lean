@@ -67,6 +67,13 @@ private def priorWireFormula : BoolFormula :=
 private def priorWireCircuit : RawCircuit :=
   priorWirePrefix ++ BoolFormula.compileRaw 4 priorWireFormula
 
+private def formulaBatch : RawCircuit :=
+  BoolFormula.compileRawBatch 2
+    [.conj (.var 0) (.var 1), .neg (.var 0)]
+
+private def twoOfThree : RawCircuit :=
+  Threshold.compileRaw 3 2 fun i : Fin 3 => i.val
+
 #guard RawCircuit.decode? andCircuit.encode = some andCircuit
 #guard RawCircuit.decode? andCircuit.encode.dropLast = none
 #guard RawCircuit.decode? (andCircuit.encode ++ [false]) = none
@@ -84,6 +91,18 @@ private def priorWireCircuit : RawCircuit :=
 #guard priorWireCircuit.eval? [true, true] = some true
 #guard priorWireCircuit.eval? [false, true] = some true
 #guard priorWireCircuit.eval? [true, false] = some false
+
+#guard formulaBatch.length = 7
+#guard RawCircuit.isWellFormed 2 formulaBatch = true
+#guard (RawCircuit.evalAux? formulaBatch #[true, false]).bind (fun wires => wires[7]?) =
+  some false
+#guard (RawCircuit.evalAux? formulaBatch #[false, true]).bind (fun wires => wires[8]?) =
+  some true
+
+#guard twoOfThree.length = 15
+#guard RawCircuit.isWellFormed 3 twoOfThree = true
+#guard twoOfThree.eval? [true, false, true] = some true
+#guard twoOfThree.eval? [true, false, false] = some false
 
 -- Positive codes are parameterized by the evaluator's arity rather than
 -- carrying a serialized arity stamp of their own.
