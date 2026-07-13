@@ -490,6 +490,25 @@ private theorem retargetOutput_reachesIn_init (tm : TM n) (x : List Bool)
         (retargetOutput_reachesIn_retargetCfg tm hrest),
       rfl, retargetCfg_work_last tm c'⟩
 
+/-- A run of an output-retargeted machine leaves the virtual output on the
+last work tape and keeps the real output blank with its head at cell zero or
+one. A subsequent combinator transition therefore parks it at cell one. -/
+theorem retargetOutput_reachesIn_init_boundary (tm : TM n) (x : List Bool)
+    {t : ℕ} {c' : Cfg n tm.Q} (h : tm.reachesIn t (tm.initCfg x) c') :
+    ∃ C' : Cfg (n + 1) tm.Q,
+      (tm.retargetOutput).reachesIn t ((tm.retargetOutput).initCfg x) C' ∧
+      C'.state = c'.state ∧ C'.work (Fin.last n) = c'.output ∧
+      C'.output.cells = (Tape.init []).cells ∧ C'.output.head ≤ 1 := by
+  cases h with
+  | zero =>
+      exact ⟨(tm.retargetOutput).initCfg x, .zero, rfl, rfl, rfl,
+        Nat.zero_le 1⟩
+  | step hstep hrest =>
+      refine ⟨tm.retargetCfg c',
+        .step (by rw [retargetOutput_step_initCfg, hstep]; rfl)
+          (retargetOutput_reachesIn_retargetCfg tm hrest),
+        rfl, retargetCfg_work_last tm c', rfl, le_rfl⟩
+
 /-- **Output retargeting preserves computation, with the same time
     bound.** If `tm` computes `f` within time `T`, then `retargetOutput
     tm` halts within `T(|x|)` steps with `f x` written on work tape `n`
@@ -507,6 +526,26 @@ theorem retargetOutput_computesInTime (tm : TM n) {f : List Bool → List Bool}
   · show C'.state = (tm.retargetOutput).qhalt
     rw [hstate]; exact hhalt
   · rw [hwork]; exact hout
+
+/-- Output retargeting with the blank real-output frame exposed. This is the
+form used by sequential function composition. -/
+theorem retargetOutput_computesInTime_boundary (tm : TM n)
+    {f : List Bool → List Bool} {T : ℕ → ℕ}
+    (h : tm.ComputesInTime f T) (x : List Bool) :
+    ∃ (c' : Cfg (n + 1) tm.Q) (t : ℕ), t ≤ T x.length ∧
+      (tm.retargetOutput).reachesIn t ((tm.retargetOutput).initCfg x) c' ∧
+      (tm.retargetOutput).halted c' ∧
+      (c'.work (Fin.last n)).HasOutput (f x) ∧
+      c'.output.cells = (Tape.init []).cells ∧ c'.output.head ≤ 1 := by
+  obtain ⟨c₀, t, ht, hreach, hhalt, hout⟩ := h x
+  obtain ⟨C', hR, hstate, hwork, houtCells, houtHead⟩ :=
+    retargetOutput_reachesIn_init_boundary tm x hreach
+  refine ⟨C', t, ht, hR, ?_, ?_, houtCells, houtHead⟩
+  · show C'.state = (tm.retargetOutput).qhalt
+    rw [hstate]
+    exact hhalt
+  · rw [hwork]
+    exact hout
 
 end TM
 

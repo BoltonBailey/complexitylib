@@ -39,11 +39,11 @@ def NPHard (L : Language) : Prop := ∀ L' ∈ NP, L' ≤ₚ L
 /-- **NP-completeness.** `L` is NP-complete when it is in `NP` and NP-hard. -/
 def NPComplete (L : Language) : Prop := L ∈ NP ∧ NPHard L
 
-/-! ### `≤ₚ` is a preorder, modulo composition closure of `FP`
+/-! ### `≤ₚ` is a preorder
 
-Reflexivity is unconditional because `id ∈ FP`. Transitivity follows from
-closure of `FP` under composition; `MapReducesPoly.trans_of_comp` isolates that
-remaining fact. -/
+Reflexivity follows from `id ∈ FP`, and transitivity follows from closure of
+`FP` under composition. The parameterized helper theorems retain the individual
+dependencies for reuse. -/
 
 /-- **Reflexivity of `≤ₚ` reduces to `id ∈ FP`.** -/
 theorem MapReducesPoly.refl_of_id_mem (hid : id ∈ FP) (L : Language) : L ≤ₚ L :=
@@ -60,5 +60,10 @@ theorem MapReducesPoly.trans_of_comp
   obtain ⟨f, hf, hf'⟩ := h₁
   obtain ⟨g, hg, hg'⟩ := h₂
   exact ⟨g ∘ f, hcomp f g hf hg, fun x => (hf' x).trans (hg' (f x))⟩
+
+/-- **Polynomial-time many-one reducibility is transitive.** -/
+theorem MapReducesPoly.trans {L₁ L₂ L₃ : Language}
+    (h₁ : L₁ ≤ₚ L₂) (h₂ : L₂ ≤ₚ L₃) : L₁ ≤ₚ L₃ :=
+  MapReducesPoly.trans_of_comp (fun _ _ hf hg => mem_FP_comp hf hg) h₁ h₂
 
 end Complexity

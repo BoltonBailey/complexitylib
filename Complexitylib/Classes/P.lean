@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Classes.P.Defs
 import Complexitylib.Classes.P.Internal
 import Complexitylib.Classes.P.NormalForm
+import Complexitylib.Classes.P.Composition
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 
 /-!
@@ -24,6 +25,7 @@ This file aggregates the definitions and theorems for P, FP, and PSPACE.
 - `DTIME_union` — DTIME is closed under union (AB Claim 1.5)
 - `id_mem_FP` — the identity function is computable in linear time
 - `mem_FP_iff_computesInTime_polynomial` — polynomial-evaluation normal form
+- `mem_FP_comp` — `FP` is closed under function composition
 -/
 
 namespace Complexity

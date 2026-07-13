@@ -265,36 +265,33 @@ than a single endpoint.
 **Prerequisites.** Existing SAT semantics, encodings, verifier, and polynomial
 many-one reduction.
 
-**Current progress.** Polynomial many-one reductions are reflexive: an
-executable zero-work-tape machine copies its input to its output in exactly the
-linear bound `n + 2`, proving `id ∈ FP` (`id_mem_FP`) and hence
-`MapReducesPoly.refl`. For composition, time-bounded computation now exposes an
-output-length bound, `FP` witnesses can be normalized to monotone polynomial
-evaluations, and `TM.placeWorkTM` embeds a machine in a disjoint block of work
-tapes without time overhead. The remaining work is the sequential pipeline and
-its polynomial accounting.
+**Current progress.** Polynomial many-one reductions form a preorder.
+`TM.copyInputToOutputTM` proves `id ∈ FP` and `MapReducesPoly.refl`.
+`TM.compositionTM` runs two function machines through a disjoint-tape,
+output-to-input pipeline within `4·T_f(n) + 11 + T_g(T_f(n))`; polynomial normal
+forms then give `mem_FP_comp` and unconditional `MapReducesPoly.trans`.
 
 **Staged milestones.**
 
-- [~] Prove transitivity, identity, composition-time, and class-closure lemmas for
+- [x] Prove transitivity, identity, composition-time, and class-closure lemmas for
   polynomial reductions in their most reusable forms. *Decomposed:*
   - [x] Generic `≤ₚ` reflexivity/transitivity lemmas parameterized by the
     required `FP` facts
     (`Classes/NP/Reduction.lean`: `MapReducesPoly.refl_of_id_mem`,
-    `MapReducesPoly.trans_of_comp`); identity is discharged below, while
-    composition closure remains open.
+    `MapReducesPoly.trans_of_comp`).
   - [x] `id ∈ FP` — `TM.copyInputToOutputTM` copies the input tape to the
     output tape in `n + 2` steps (`TM.copyInputToOutputTM_computesInTime`),
     yielding `id_mem_FP` and unconditional `MapReducesPoly.refl`.
-  - [~] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
+  - [x] `FP` closed under `∘` — a sequential-composition TM (run `f`'s machine,
     pipe its output tape to `g`'s input tape, run `g`'s machine) with a
     `poly ∘ poly = poly` time bound; then `≤ₚ` is transitive.
     - [x] Prove output length is bounded by running time and normalize `FP`
       witnesses to everywhere-valid monotone polynomial evaluations.
     - [x] Embed a machine into a disjoint middle block of work tapes with exact
       same-time simulation and arbitrary preserved frame tapes.
-    - [ ] Implement the output-to-input pipeline and compose the machines and
-      time bounds.
+    - [x] Implement the output-to-input pipeline and compose the machines and
+      time bounds (`TM.compositionTM_computesInTime`, `mem_FP_comp`, and
+      `MapReducesPoly.trans`).
 - [ ] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
   Tseitin transformation.
 - [ ] Add standard NP-complete graph languages such as CLIQUE, VERTEX-COVER, and

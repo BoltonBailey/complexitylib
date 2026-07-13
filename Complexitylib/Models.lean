@@ -6,11 +6,14 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
+import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.Placement
+import Complexitylib.Models.TuringMachine.Composition
 import Complexitylib.Models.TuringMachine.Deterministic
 import Complexitylib.Models.TuringMachine.Lift
 import Complexitylib.Models.TuringMachine.Repetition
