@@ -27,6 +27,24 @@ theorem prepareRecentReference_sound (reference : Fin WorkCount) (offset : ℕ) 
     (prepareRecentReference reference offset).Sound :=
   prepareRecentReference_sound_internal reference offset
 
+/-- Fixed-offset recent-reference preparation has a pointwise width
+certificate when the source, old destination, and requested offset fit the
+shared width. -/
+theorem prepareRecentReference_spaceBoundByWidth
+    (reference : Fin WorkCount) (offset : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      offset ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt (prepareRecentReference reference offset)
+      initialSpace values width :=
+  prepareRecentReference_spaceBoundByWidth_internal reference offset
+    havailable hreference hoffset
+
 /-- The recent-reference domain is exactly a zero copy counter and a valid
 offset, once the three framed-copy indices are known to be distinct. -/
 theorem prepareRecentReference_requires (reference : Fin WorkCount)
@@ -57,6 +75,29 @@ theorem emitRecentGate_sound (op : AndOrOp) (negated₀ negated₁ : Bool)
     (offset₀ offset₁ : ℕ) :
     (emitRecentGate op negated₀ negated₁ offset₀ offset₁).Sound :=
   emitRecentGate_sound_internal op negated₀ negated₁ offset₀ offset₁
+
+/-- A raw gate from two fixed recent-wire offsets has a pointwise width
+certificate when the frontier, old references, and offsets fit the shared
+width. -/
+theorem emitRecentGate_spaceBoundByWidth
+    (op : AndOrOp) (negated₀ negated₁ : Bool) (offset₀ offset₁ : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hoffset₀ : ∀ inputLength,
+      offset₀ ≤ values inputLength Work.available)
+    (hoffset₁ : ∀ inputLength,
+      offset₁ ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitRecentGate op negated₀ negated₁ offset₀ offset₁)
+      initialSpace values width :=
+  emitRecentGate_spaceBoundByWidth_internal op negated₀ negated₁ offset₀
+    offset₁ havailable hreference₀ hreference₁ hoffset₀ hoffset₁
 
 /-- Exact dynamic domain for recent-wire gate emission. -/
 theorem emitRecentGate_requires (op : AndOrOp) (negated₀ negated₁ : Bool)

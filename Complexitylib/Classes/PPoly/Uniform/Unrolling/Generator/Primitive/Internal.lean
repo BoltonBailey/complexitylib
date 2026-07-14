@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive.Defs
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 
 /-!
 # Direct-unrolling generator primitives -- proof internals
@@ -89,6 +90,80 @@ private theorem repeatBinaryPred_requires (reference : Fin WorkCount) :
       rw [ih]
       simp only [Function.update_self]
       omega
+
+private theorem repeatBinaryPred_spaceBoundByWidth
+    (reference : Fin WorkCount) : ∀ offset,
+    ∀ {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+      {width : ℕ → ℕ},
+      (∀ inputLength, offset ≤ values inputLength reference) →
+      (∀ inputLength,
+        values inputLength reference ≤ width inputLength) →
+      BinaryRoutine.SpaceBoundByWidthAt
+        (BinaryRoutine.repeatRoutine offset
+          (BinaryRoutine.binaryPred reference)) initialSpace values width := by
+  intro offset
+  induction offset with
+  | zero =>
+      intro initialSpace values width _ _
+      simpa [BinaryRoutine.repeatRoutine, BinaryRoutine.seqList] using
+        (BinaryRoutine.SpaceBoundByWidthAt.identity
+          (initialSpace := initialSpace) (values := values) (width := width))
+  | succ offset ih =>
+      intro initialSpace values width hfit hreference
+      rw [BinaryRoutine.repeatRoutine, List.replicate_succ,
+        BinaryRoutine.seqList]
+      apply BinaryRoutine.SpaceBoundByWidthAt.seq
+      · apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+        intro inputLength
+        have hpositive : 0 < values inputLength reference := by
+          have := hfit inputLength
+          omega
+        have hpred : values inputLength reference - 1 + 1 =
+            values inputLength reference := by
+          omega
+        rw [hpred]
+        exact hreference inputLength
+      · apply ih
+        · intro inputLength
+          simp only [BinaryRoutine.binaryPred, Function.update_self]
+          have := hfit inputLength
+          omega
+        · intro inputLength
+          simp only [BinaryRoutine.binaryPred, Function.update_self]
+          exact (Nat.sub_le _ _).trans (hreference inputLength)
+
+theorem prepareRecentReference_spaceBoundByWidth_internal
+    (reference : Fin WorkCount) (offset : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      offset ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt (prepareRecentReference reference offset)
+      initialSpace values width := by
+  let copy := BinaryRoutine.binaryCopy Work.available reference
+    Work.copyCounter
+  let copied : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (values inputLength)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.available reference
+      Work.copyCounter havailable hreference
+  have hrepeat : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine offset (BinaryRoutine.binaryPred reference))
+      initialSpace copied width := by
+    apply repeatBinaryPred_spaceBoundByWidth reference offset
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy] using
+        hoffset inputLength
+    · intro inputLength
+      simp [copied, copy, BinaryRoutine.binaryCopy]
+      exact havailable inputLength
+  simpa [prepareRecentReference, copy, copied] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hcopy hrepeat)
 
 theorem prepareRecentReference_sound_internal
     (reference : Fin WorkCount) (offset : ℕ) :
@@ -211,6 +286,117 @@ theorem emitRecentGate_effect_internal (op : AndOrOp)
   funext i
   simp only [Function.update_apply]
   split_ifs <;> simp_all
+
+theorem emitRecentGate_spaceBoundByWidth_internal
+    (op : AndOrOp) (negated₀ negated₁ : Bool) (offset₀ offset₁ : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hoffset₀ : ∀ inputLength,
+      offset₀ ≤ values inputLength Work.available)
+    (hoffset₁ : ∀ inputLength,
+      offset₁ ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitRecentGate op negated₀ negated₁ offset₀ offset₁)
+      initialSpace values width := by
+  let prepare₀ := prepareRecentReference Work.reference₀ offset₀
+  let prepare₁ := prepareRecentReference Work.reference₁ offset₁
+  let emit := BinaryRoutine.emitRawGateStep op negated₀ negated₁
+    Work.emitCounter Work.available Work.reference₀ Work.reference₁
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare₀.effect (values inputLength)
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare₁.effect (values₁ inputLength)
+  let values₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emit.effect (values₂ inputLength)
+  let values₄ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.clear Work.reference₀).effect (values₃ inputLength)
+  have hprepare₀ : BinaryRoutine.SpaceBoundByWidthAt prepare₀ initialSpace
+      values width :=
+    prepareRecentReference_spaceBoundByWidth_internal Work.reference₀ offset₀
+      havailable hreference₀ hoffset₀
+  have hvalues₁Available : ∀ inputLength,
+      values₁ inputLength Work.available ≤ width inputLength := by
+    intro inputLength
+    simpa [values₁, prepare₀, prepareRecentReference_effect_internal,
+      Work.available, Work.reference₀] using havailable inputLength
+  have hvalues₁Reference₁ : ∀ inputLength,
+      values₁ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simpa [values₁, prepare₀, prepareRecentReference_effect_internal,
+      Work.reference₀, Work.reference₁] using hreference₁ inputLength
+  have hvalues₁Offset₁ : ∀ inputLength,
+      offset₁ ≤ values₁ inputLength Work.available := by
+    intro inputLength
+    simpa [values₁, prepare₀, prepareRecentReference_effect_internal,
+      Work.available, Work.reference₀] using hoffset₁ inputLength
+  have hprepare₁ : BinaryRoutine.SpaceBoundByWidthAt prepare₁ initialSpace
+      values₁ width :=
+    prepareRecentReference_spaceBoundByWidth_internal Work.reference₁ offset₁
+      hvalues₁Available hvalues₁Reference₁ hvalues₁Offset₁
+  have hvalues₂Available : ∀ inputLength,
+      values₂ inputLength Work.available ≤ width inputLength := by
+    intro inputLength
+    simpa [values₂, prepare₁, prepareRecentReference_effect_internal,
+      Work.available, Work.reference₁] using hvalues₁Available inputLength
+  have hvalues₂Reference₀ : ∀ inputLength,
+      values₂ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    simp [values₂, prepare₁, prepareRecentReference_effect_internal,
+      Work.reference₀, Work.reference₁]
+    simp [values₁, prepare₀, prepareRecentReference_effect_internal,
+      Work.reference₀]
+    have := havailable inputLength
+    omega
+  have hvalues₂Reference₁ : ∀ inputLength,
+      values₂ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simp [values₂, prepare₁, prepareRecentReference_effect_internal,
+      Work.reference₁]
+    have := hvalues₁Available inputLength
+    omega
+  have hemit : BinaryRoutine.SpaceBoundByWidthAt emit initialSpace values₂
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep op negated₀ negated₁
+      Work.emitCounter Work.available Work.reference₀ Work.reference₁
+      hvalues₂Available hvalues₂Reference₀ hvalues₂Reference₁
+  have hvalues₃Reference₀ : ∀ inputLength,
+      values₃ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    simpa [values₃, emit, BinaryRoutine.emitRawGateStep,
+      Work.available, Work.reference₀] using hvalues₂Reference₀ inputLength
+  have hclear₀ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₀) initialSpace values₃ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₀
+      hvalues₃Reference₀
+  have hvalues₄Reference₁ : ∀ inputLength,
+      values₄ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simp [values₄, values₃, emit, BinaryRoutine.clear,
+      BinaryRoutine.emitRawGateStep, Work.available, Work.reference₀,
+      Work.reference₁]
+    exact hvalues₂Reference₁ inputLength
+  have hclear₁ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₁) initialSpace values₄ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₁
+      hvalues₄Reference₁
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace
+      (fun inputLength =>
+        (BinaryRoutine.clear Work.reference₁).effect (values₄ inputLength))
+      width := BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hprepare₀
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hprepare₁
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hemit
+        (BinaryRoutine.SpaceBoundByWidthAt.seq hclear₀
+          (BinaryRoutine.SpaceBoundByWidthAt.seq hclear₁ hid))))
+  simpa [emitRecentGate, BinaryRoutine.seqList, prepare₀, prepare₁, emit,
+    values₁, values₂, values₃, values₄] using hroutine
 
 theorem emitRecentGate_emitted_internal (op : AndOrOp)
     (negated₀ negated₁ : Bool) (offset₀ offset₁ : ℕ)

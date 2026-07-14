@@ -8,6 +8,7 @@ import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 
 /-!
 # Direct-unrolling generator program -- proof internals
@@ -20,6 +21,91 @@ namespace CircuitUnrolling
 namespace Serializer
 
 namespace DirectGenerator
+
+private noncomputable def preambleSpaceWidthPolynomial
+    (tm : TM k) (q : Polynomial ℕ) : Polynomial ℕ :=
+  TM.binaryPolynomialSpaceWidthPolynomial
+      (TM.directSerializerHorizonPolynomial q) +
+    TM.binaryPolynomialSpaceWidthPolynomial
+      (TM.directSerializerFrontierPolynomial tm q) +
+    TM.binaryPolynomialSpaceWidthPolynomial
+      (TM.directSerializerGateCountPolynomial tm q) +
+    Polynomial.X + TM.directSerializerGateCountPolynomial tm q +
+    Polynomial.C 1
+
+theorem positivePreamble_spaceBoundByWidth_internal
+    (tm : TM k) (q : Polynomial ℕ) :
+    ∃ p : Polynomial ℕ,
+      BinaryRoutine.SpaceBoundByWidthAt (positivePreamble tm q)
+        TM.binaryLengthSpace
+        (BinaryRoutine.inputLengthValues Work.inputLength) p.eval := by
+  refine ⟨preambleSpaceWidthPolynomial tm q, ?_⟩
+  unfold positivePreamble
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList_internal
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.evalPolynomial_internal
+    intro inputLength
+    simp [preambleSpaceWidthPolynomial, BinaryRoutine.inputLengthValues,
+      Work.inputLength]
+    omega
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.evalPolynomial_internal
+    intro inputLength
+    simp [preambleSpaceWidthPolynomial, BinaryRoutine.evalPolynomial,
+      BinaryRoutine.inputLengthValues, Work.inputLength, Work.horizon]
+    omega
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.evalPolynomial_internal
+    intro inputLength
+    simp [preambleSpaceWidthPolynomial, BinaryRoutine.evalPolynomial,
+      BinaryRoutine.inputLengthValues, Work.inputLength, Work.horizon,
+      Work.frontier]
+    omega
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy_internal
+    · intro inputLength
+      simp [preambleSpaceWidthPolynomial, BinaryRoutine.evalPolynomial,
+        BinaryRoutine.inputLengthValues, Work.inputLength, Work.horizon,
+        Work.frontier, Work.gateCount]
+      omega
+    · intro inputLength
+      simp [preambleSpaceWidthPolynomial, BinaryRoutine.evalPolynomial,
+        BinaryRoutine.inputLengthValues, Work.inputLength, Work.horizon,
+        Work.frontier, Work.gateCount, Work.available]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy_internal
+    · intro inputLength
+      simp [preambleSpaceWidthPolynomial, BinaryRoutine.binaryCopy,
+        BinaryRoutine.evalPolynomial, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available]
+      omega
+    · intro inputLength
+      simp [preambleSpaceWidthPolynomial, BinaryRoutine.binaryCopy,
+        BinaryRoutine.evalPolynomial, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase]
+  constructor
+  · exact BinaryRoutine.SpaceBoundByWidthAt.emitBits_internal [true]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.emitNatCode_internal
+    intro inputLength
+    simp [preambleSpaceWidthPolynomial, BinaryRoutine.emitBits,
+      BinaryRoutine.binaryCopy, BinaryRoutine.evalPolynomial,
+      BinaryRoutine.inputLengthValues, Work.inputLength, Work.horizon,
+      Work.frontier, Work.gateCount, Work.available, Work.configBase]
+    omega
+  · trivial
+
+theorem positivePreamble_space_bigO_log_internal
+    (tm : TM k) (q : Polynomial ℕ) :
+    BinaryRoutine.SpaceBoundInLogAt (positivePreamble tm q)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) := by
+  obtain ⟨p, hspace⟩ :=
+    positivePreamble_spaceBoundByWidth_internal tm q
+  exact hspace.to_log TM.binaryLengthSpace_bigO_log p (fun _ => le_rfl)
 
 theorem positivePreamble_sound_internal (tm : TM k) (q : Polynomial ℕ) :
     (positivePreamble tm q).Sound := by
@@ -59,6 +145,14 @@ theorem zeroMember_sound_internal (tm : TM k) (q : Polynomial ℕ) :
     (zeroMember tm q).Sound :=
   BinaryRoutine.emitBits_sound _
 
+theorem zeroMember_space_bigO_log_internal (tm : TM k)
+    (q : Polynomial ℕ) :
+    BinaryRoutine.SpaceBoundInLogAt (zeroMember tm q)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) := by
+  exact BinaryRoutine.SpaceBoundInLogAt.emitBits_internal _
+    TM.binaryLengthSpace_bigO_log
+
 theorem program_sound_internal (tm : TM k) (q : Polynomial ℕ)
     {positiveBody : BinaryRoutine WorkCount} (hbody : positiveBody.Sound) :
     (program tm q positiveBody).Sound :=
@@ -73,6 +167,32 @@ theorem positivePreamble_effect_internal (tm : TM k) (q : Polynomial ℕ)
     BinaryRoutine.evalPolynomial, BinaryRoutine.binaryCopy,
     BinaryRoutine.emitNatCode, preambleValues, Work.inputLength, Work.horizon,
     Work.frontier, Work.gateCount, Work.available, Work.configBase]
+
+theorem positiveMember_space_bigO_log_internal
+    (tm : TM k) (q : Polynomial ℕ) (body : BinaryRoutine WorkCount)
+    (hbody : BinaryRoutine.SpaceBoundInLogAt body TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength))) :
+    BinaryRoutine.SpaceBoundInLogAt (positiveMember tm q body)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) := by
+  apply BinaryRoutine.SpaceBoundInLogAt.seq_internal
+    (positivePreamble_space_bigO_log_internal tm q)
+  simpa only [positivePreamble_effect_internal] using hbody
+
+theorem program_space_bigO_log_internal
+    (tm : TM k) (q : Polynomial ℕ)
+    (positiveBody : BinaryRoutine WorkCount)
+    (hbody : BinaryRoutine.SpaceBoundInLogAt positiveBody
+      TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength))) :
+    BinaryRoutine.SpaceBoundInLogAt (program tm q positiveBody)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) := by
+  exact BinaryRoutine.SpaceBoundInLogAt.branchZero_internal Work.inputLength
+    (zeroMember_space_bigO_log_internal tm q)
+    (positiveMember_space_bigO_log_internal tm q positiveBody hbody)
 
 theorem positivePreamble_requires_inputLengthValues_internal
     (tm : TM k) (q : Polynomial ℕ) (length : ℕ) :

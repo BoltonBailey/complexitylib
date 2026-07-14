@@ -27,11 +27,31 @@ theorem positivePreamble_sound (tm : TM k) (q : Polynomial ℕ) :
     (positivePreamble tm q).Sound :=
   positivePreamble_sound_internal tm q
 
+/-- The positive polynomial/header prefix uses logarithmic all-prefix space
+after the unary input length has been loaded in binary. -/
+theorem positivePreamble_space_bigO_log (tm : TM k) (q : Polynomial ℕ) :
+    BinaryRoutine.SpaceBoundInLogAt (positivePreamble tm q)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) :=
+  positivePreamble_space_bigO_log_internal tm q
+
 /-- A sound positive tableau body composes with the verified header prefix. -/
 theorem positiveMember_sound (tm : TM k) (q : Polynomial ℕ)
     {body : BinaryRoutine WorkCount} (hbody : body.Sound) :
     (positiveMember tm q body).Sound :=
   positiveMember_sound_internal tm q hbody
+
+/-- A logarithmic-space positive body remains logarithmic after the verified
+polynomial/header prefix. -/
+theorem positiveMember_space_bigO_log
+    (tm : TM k) (q : Polynomial ℕ) (body : BinaryRoutine WorkCount)
+    (hbody : BinaryRoutine.SpaceBoundInLogAt body TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength))) :
+    BinaryRoutine.SpaceBoundInLogAt (positiveMember tm q body)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) :=
+  positiveMember_space_bigO_log_internal tm q body hbody
 
 /-- The hardwired zero-length family member is sound. -/
 theorem zeroMember_sound (tm : TM k) (q : Polynomial ℕ) :
@@ -44,6 +64,20 @@ theorem program_sound (tm : TM k) (q : Polynomial ℕ)
     {positiveBody : BinaryRoutine WorkCount} (hbody : positiveBody.Sound) :
     (program tm q positiveBody).Sound :=
   program_sound_internal tm q hbody
+
+/-- A logarithmic-space positive body yields a logarithmic-space complete
+zero/positive generator skeleton. -/
+theorem program_space_bigO_log
+    (tm : TM k) (q : Polynomial ℕ)
+    (positiveBody : BinaryRoutine WorkCount)
+    (hbody : BinaryRoutine.SpaceBoundInLogAt positiveBody
+      TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength))) :
+    BinaryRoutine.SpaceBoundInLogAt (program tm q positiveBody)
+      TM.binaryLengthSpace
+      (BinaryRoutine.inputLengthValues Work.inputLength) :=
+  program_space_bigO_log_internal tm q positiveBody hbody
 
 /-- The positive prefix's arithmetic/scratch obligations hold from the
 canonical input-length work vector. -/

@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Offset.Defs
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 
 /-!
 # Dynamic recent-wire offsets -- proof internals
@@ -107,6 +108,146 @@ private theorem binaryForPredRequires (reference offset counter : Fin WorkCount)
       · simp [BinaryRoutine.binaryPred, Ne.symm hreferenceOffset,
           Ne.symm hcounterOffset]
 
+theorem decrementReferenceBy_spaceBoundByWidth_internal
+    (reference offset counter : Fin WorkCount)
+    (hdistinct : DecrementReferenceDistinct reference offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hcounterOffset : ∀ inputLength,
+      values inputLength counter ≤ values inputLength offset)
+    (hiterationsFit : ∀ inputLength,
+      values inputLength offset - values inputLength counter ≤
+        values inputLength reference)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (decrementReferenceBy reference offset counter) initialSpace values
+      width := by
+  let loop := BinaryRoutine.binaryFor (BinaryRoutine.binaryPred reference)
+    counter offset
+  have hloop : BinaryRoutine.SpaceBoundByWidthAt loop initialSpace values
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_envelope 8
+    intro inputLength
+    refine
+      { compareSpace := ?_
+        initialSpace_le := by omega
+        bodySpace := ?_
+        successorSpace := ?_ }
+    · have hsize := Nat.size_le_size (hoffset inputLength)
+      simp only [TM.binaryForCompareTime]
+      omega
+    · intro count hcount
+      rw [binaryForPredValues reference counter
+        hdistinct.reference_ne_counter]
+      have hcount' : count <
+          values inputLength offset - values inputLength counter := by
+        simpa only [BinaryRoutine.binaryForCount] using hcount
+      have hcountReference : count < values inputLength reference := by
+        exact hcount'.trans_le (hiterationsFit inputLength)
+      have hcurrent : values inputLength reference - count ≤
+          width inputLength := by
+        exact (Nat.sub_le _ _).trans (hreference inputLength)
+      have hcurrentSize := Nat.size_le_size hcurrent
+      have hpositive : 0 < values inputLength reference - count := by
+        omega
+      have hpred : values inputLength reference - count - 1 + 1 =
+          values inputLength reference - count := by
+        omega
+      simp only [BinaryRoutine.binaryPred, Function.update_apply,
+        TM.binaryPredSpace]
+      rw [if_neg hdistinct.reference_ne_counter]
+      simp only [if_true]
+      rw [hpred]
+      omega
+    · intro count hcount
+      rw [binaryForPredValues reference counter
+        hdistinct.reference_ne_counter]
+      have hcount' : count <
+          values inputLength offset - values inputLength counter := by
+        simpa only [BinaryRoutine.binaryForCount] using hcount
+      have hcounterCount : values inputLength counter + count <
+          values inputLength offset :=
+        Nat.lt_sub_iff_add_lt'.mp hcount'
+      have hcurrentCounter : values inputLength counter + count ≤
+          width inputLength := by
+        exact hcounterCount.le.trans (hoffset inputLength)
+      have hcurrentSize := Nat.size_le_size hcurrentCounter
+      have htime := TM.binarySuccTime_le
+        (values inputLength counter + count)
+      simp
+      omega
+  have hcounterAfter : ∀ inputLength,
+      loop.effect (values inputLength) counter ≤ width inputLength := by
+    intro inputLength
+    simp only [loop, BinaryRoutine.binaryFor]
+    rw [binaryForPredValues reference counter
+      hdistinct.reference_ne_counter]
+    simp only [Function.update_self]
+    rw [BinaryRoutine.binaryForCount,
+      Nat.add_sub_of_le (hcounterOffset inputLength)]
+    exact hoffset inputLength
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hloop
+    (BinaryRoutine.SpaceBoundByWidthAt.clear counter hcounterAfter)
+  simpa [decrementReferenceBy, loop] using hroutine
+
+theorem prepareDynamicRecentReference_spaceBoundByWidth_internal
+    (reference offset counter : Fin WorkCount)
+    (hdistinct : DynamicRecentDistinct reference offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hcounter : ∀ inputLength, values inputLength counter = 0)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (prepareDynamicRecentReference reference offset counter)
+      initialSpace values width := by
+  let copy := BinaryRoutine.binaryCopy Work.available reference
+    Work.copyCounter
+  let copied : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (values inputLength)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.available reference
+      Work.copyCounter havailable hreference
+  have hdecrement : BinaryRoutine.SpaceBoundByWidthAt
+      (decrementReferenceBy reference offset counter) initialSpace copied
+      width := by
+    apply decrementReferenceBy_spaceBoundByWidth_internal reference offset
+      counter hdistinct.toDecrementReferenceDistinct
+    · intro inputLength
+      simp [copied, copy, BinaryRoutine.binaryCopy,
+        Ne.symm hdistinct.reference_ne_counter,
+        Ne.symm hdistinct.reference_ne_offset, hcounter inputLength]
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy,
+        Ne.symm hdistinct.reference_ne_offset,
+        Ne.symm hdistinct.reference_ne_counter, hcounter inputLength] using
+          hoffset inputLength
+    · intro inputLength
+      simp [copied, copy, BinaryRoutine.binaryCopy]
+      exact havailable inputLength
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy,
+        Ne.symm hdistinct.reference_ne_offset] using
+          (hoffset inputLength).trans (havailable inputLength)
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace
+      (fun inputLength =>
+        (decrementReferenceBy reference offset counter).effect
+          (copied inputLength)) width :=
+    BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hcopy
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hdecrement hid)
+  simpa [prepareDynamicRecentReference, BinaryRoutine.seqList, copy, copied]
+    using hroutine
+
 theorem decrementReferenceBy_requires_internal
     (reference offset counter : Fin WorkCount)
     (values : BinaryValues WorkCount) :
@@ -203,6 +344,142 @@ theorem prepareDynamicRecentReference_effect_internal
     simp only [if_neg (Ne.symm hdistinct.reference_ne_offset)]
     rw [Function.update_idem]
   · simp [Ne.symm hdistinct.reference_ne_counter, hcounter]
+
+theorem emitDynamicRecentGate_spaceBoundByWidth_internal
+    (op : AndOrOp) (negated₀ negated₁ : Bool)
+    (offset counter : Fin WorkCount) (fixedOffset₁ : ℕ)
+    (hdistinct : DynamicRecentGateDistinct offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hcounter : ∀ inputLength, values inputLength counter = 0)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ values inputLength Work.available)
+    (hfixedOffset₁ : ∀ inputLength,
+      fixedOffset₁ ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitDynamicRecentGate op negated₀ negated₁ offset counter
+        fixedOffset₁) initialSpace values width := by
+  let prepare₀ := prepareDynamicRecentReference Work.reference₀ offset counter
+  let prepare₁ := prepareRecentReference Work.reference₁ fixedOffset₁
+  let emit := BinaryRoutine.emitRawGateStep op negated₀ negated₁
+    Work.emitCounter Work.available Work.reference₀ Work.reference₁
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare₀.effect (values inputLength)
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare₁.effect (values₁ inputLength)
+  let values₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emit.effect (values₂ inputLength)
+  let values₄ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.clear Work.reference₀).effect (values₃ inputLength)
+  have hprepare₀ : BinaryRoutine.SpaceBoundByWidthAt prepare₀ initialSpace
+      values width :=
+    prepareDynamicRecentReference_spaceBoundByWidth_internal Work.reference₀
+      offset counter hdistinct.toDynamicRecentDistinct havailable hreference₀
+      hcounter hoffset
+  have hvalues₁Available : ∀ inputLength,
+      values₁ inputLength Work.available ≤ width inputLength := by
+    intro inputLength
+    rw [show values₁ inputLength =
+        prepare₀.effect (values inputLength) by rfl]
+    rw [prepareDynamicRecentReference_effect_internal Work.reference₀ offset
+      counter (values inputLength) hdistinct.toDynamicRecentDistinct
+      (hcounter inputLength)]
+    simpa [hdistinct.available_ne_reference,
+      hdistinct.available_ne_counter] using havailable inputLength
+  have hvalues₁Reference₁ : ∀ inputLength,
+      values₁ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    rw [show values₁ inputLength =
+        prepare₀.effect (values inputLength) by rfl]
+    rw [prepareDynamicRecentReference_effect_internal Work.reference₀ offset
+      counter (values inputLength) hdistinct.toDynamicRecentDistinct
+      (hcounter inputLength)]
+    simpa [Ne.symm hdistinct.reference₀_ne_reference₁,
+      Ne.symm hdistinct.counter_ne_reference₁] using hreference₁ inputLength
+  have hvalues₁FixedOffset : ∀ inputLength,
+      fixedOffset₁ ≤ values₁ inputLength Work.available := by
+    intro inputLength
+    rw [show values₁ inputLength =
+        prepare₀.effect (values inputLength) by rfl]
+    rw [prepareDynamicRecentReference_effect_internal Work.reference₀ offset
+      counter (values inputLength) hdistinct.toDynamicRecentDistinct
+      (hcounter inputLength)]
+    simpa [hdistinct.available_ne_reference,
+      hdistinct.available_ne_counter] using hfixedOffset₁ inputLength
+  have hprepare₁ : BinaryRoutine.SpaceBoundByWidthAt prepare₁ initialSpace
+      values₁ width :=
+    prepareRecentReference_spaceBoundByWidth Work.reference₁ fixedOffset₁
+      hvalues₁Available hvalues₁Reference₁ hvalues₁FixedOffset
+  have hvalues₂Available : ∀ inputLength,
+      values₂ inputLength Work.available ≤ width inputLength := by
+    intro inputLength
+    simpa [values₂, prepare₁, prepareRecentReference_effect,
+      hdistinct.available_ne_reference₁] using
+        hvalues₁Available inputLength
+  have hvalues₂Reference₀ : ∀ inputLength,
+      values₂ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    simp only [values₂, prepare₁, prepareRecentReference_effect,
+      Function.update_apply]
+    rw [if_neg hdistinct.reference₀_ne_reference₁]
+    simp only [values₁, prepare₀]
+    rw [prepareDynamicRecentReference_effect_internal Work.reference₀ offset
+      counter (values inputLength) hdistinct.toDynamicRecentDistinct
+      (hcounter inputLength)]
+    simp only [Function.update_apply, if_true]
+    rw [if_neg hdistinct.reference_ne_counter]
+    exact (Nat.sub_le _ _).trans (havailable inputLength)
+  have hvalues₂Reference₁ : ∀ inputLength,
+      values₂ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simp only [values₂, prepare₁, prepareRecentReference_effect,
+      Function.update_self]
+    exact (Nat.sub_le _ _).trans (hvalues₁Available inputLength)
+  have hemit : BinaryRoutine.SpaceBoundByWidthAt emit initialSpace values₂
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep op negated₀ negated₁
+      Work.emitCounter Work.available Work.reference₀ Work.reference₁
+      hvalues₂Available hvalues₂Reference₀ hvalues₂Reference₁
+  have hvalues₃Reference₀ : ∀ inputLength,
+      values₃ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    simpa [values₃, emit, BinaryRoutine.emitRawGateStep,
+      Ne.symm hdistinct.available_ne_reference] using
+        hvalues₂Reference₀ inputLength
+  have hclear₀ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₀) initialSpace values₃ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₀
+      hvalues₃Reference₀
+  have hvalues₄Reference₁ : ∀ inputLength,
+      values₄ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simp only [values₄, BinaryRoutine.clear, Function.update_apply]
+    rw [if_neg (Ne.symm hdistinct.reference₀_ne_reference₁)]
+    simpa [values₃, emit, BinaryRoutine.emitRawGateStep,
+      Ne.symm hdistinct.available_ne_reference₁] using
+        hvalues₂Reference₁ inputLength
+  have hclear₁ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₁) initialSpace values₄ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₁
+      hvalues₄Reference₁
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace
+      (fun inputLength =>
+        (BinaryRoutine.clear Work.reference₁).effect (values₄ inputLength))
+      width := BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hprepare₀
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hprepare₁
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hemit
+        (BinaryRoutine.SpaceBoundByWidthAt.seq hclear₀
+          (BinaryRoutine.SpaceBoundByWidthAt.seq hclear₁ hid))))
+  simpa [emitDynamicRecentGate, BinaryRoutine.seqList, prepare₀, prepare₁,
+    emit, values₁, values₂, values₃, values₄] using hroutine
 
 theorem prepareDynamicRecentReference_emitted_internal
     (reference offset counter : Fin WorkCount)

@@ -26,6 +26,28 @@ theorem decrementReferenceBy_sound (reference offset counter : Fin WorkCount) :
     (decrementReferenceBy reference offset counter).Sound :=
   decrementReferenceBy_sound_internal reference offset counter
 
+/-- Dynamic subtraction has a pointwise width certificate when its controller
+segment, starting reference, and preserved offset all fit the shared width. -/
+theorem decrementReferenceBy_spaceBoundByWidth
+    (reference offset counter : Fin WorkCount)
+    (hdistinct : DecrementReferenceDistinct reference offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hcounterOffset : ∀ inputLength,
+      values inputLength counter ≤ values inputLength offset)
+    (hiterationsFit : ∀ inputLength,
+      values inputLength offset - values inputLength counter ≤
+        values inputLength reference)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (decrementReferenceBy reference offset counter) initialSpace values
+      width :=
+  decrementReferenceBy_spaceBoundByWidth_internal reference offset counter
+    hdistinct hcounterOffset hiterationsFit hreference hoffset
+
 /-- The subtraction domain explicitly requires distinct registers, a zero
 controller, and an offset no larger than the starting reference. -/
 theorem decrementReferenceBy_requires (reference offset counter : Fin WorkCount)
@@ -59,6 +81,27 @@ theorem prepareDynamicRecentReference_sound
     (reference offset counter : Fin WorkCount) :
     (prepareDynamicRecentReference reference offset counter).Sound :=
   prepareDynamicRecentReference_sound_internal reference offset counter
+
+/-- Dynamic recent-reference preparation has a pointwise width certificate
+when the available wire, old destination, zero controller, and offset fit the
+shared width. -/
+theorem prepareDynamicRecentReference_spaceBoundByWidth
+    (reference offset counter : Fin WorkCount)
+    (hdistinct : DynamicRecentDistinct reference offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength)
+    (hcounter : ∀ inputLength, values inputLength counter = 0)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (prepareDynamicRecentReference reference offset counter)
+      initialSpace values width :=
+  prepareDynamicRecentReference_spaceBoundByWidth_internal reference offset
+    counter hdistinct havailable hreference hcounter hoffset
 
 /-- The preparation domain records every register separation, both zero
 controllers, and the valid dynamic offset. -/
@@ -101,6 +144,33 @@ theorem emitDynamicRecentGate_sound (op : AndOrOp)
         fixedOffset₁).Sound :=
   emitDynamicRecentGate_sound_internal op negated₀ negated₁ offset counter
     fixedOffset₁
+
+/-- One-dynamic-offset gate emission has a pointwise width certificate when
+its wire frontier, references, zero controller, and both offsets fit the
+shared width. -/
+theorem emitDynamicRecentGate_spaceBoundByWidth
+    (op : AndOrOp) (negated₀ negated₁ : Bool)
+    (offset counter : Fin WorkCount) (fixedOffset₁ : ℕ)
+    (hdistinct : DynamicRecentGateDistinct offset counter)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hcounter : ∀ inputLength, values inputLength counter = 0)
+    (hoffset : ∀ inputLength,
+      values inputLength offset ≤ values inputLength Work.available)
+    (hfixedOffset₁ : ∀ inputLength,
+      fixedOffset₁ ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitDynamicRecentGate op negated₀ negated₁ offset counter
+        fixedOffset₁) initialSpace values width :=
+  emitDynamicRecentGate_spaceBoundByWidth_internal op negated₀ negated₁
+    offset counter fixedOffset₁ hdistinct havailable hreference₀ hreference₁
+    hcounter hoffset hfixedOffset₁
 
 /-- Exact domain for one-dynamic-offset raw-gate emission. -/
 theorem emitDynamicRecentGate_requires (op : AndOrOp)
