@@ -108,12 +108,14 @@ from stable public modules so later work does not duplicate local lemmas.
 register-cell facts, and DTM time-bound monotonicity. NTM traces now expose
 left-end-marker preservation on every tape, canonical final-step splitting,
 and indexed invariant induction without dependent prefix-cast plumbing, as
-well as internal input/work/output head-growth bounds. Several large consumers have been
-migrated away from private copies; endpoint/run lemmas and a few older local
-tape helpers remain. The first serialized-evaluator boundary now composes the
-public validator, frame-preserving rewind, and canonical pair splitter under one
-total `HoareTime` contract; doing so exposed and repaired missing left-marker and
-frame facts instead of hiding them in another controller-local proof.
+well as internal input/work/output head-growth bounds. Stable phase boundaries
+now expose one public fixed-point certificate for the input, whole work family,
+and output. Several large consumers have been migrated away from private copies;
+endpoint/run lemmas and a few older local tape helpers remain. The first
+serialized-evaluator boundary now composes the public validator, frame-preserving
+rewind, and canonical pair splitter under one total `HoareTime` contract; doing so
+exposed and repaired missing left-marker and frame facts instead of hiding them in
+another controller-local proof.
 
 **Staged milestones.**
 
@@ -161,8 +163,11 @@ frame facts instead of hiding them in another controller-local proof.
   `NTM.trace_invariant` now serve repetition, SAT phase exits, `GuessBounded`,
   `PairSplit`, `PairBuild`, and SAT verifier/counter invariants; the tableau loop
   now reuses the generic paired-and-clamped width theorem instead of two local
-  wrappers. Stable phase-boundary routing is the next small candidate; a combined
-  stage DSL was explicitly rejected.
+  wrappers. `TM.phaseTransition_eq_self_of_reads_ne_start` now serves five stable
+  `PairSelf` seams and both `ClockConstructible.mul_succ` seams, while the
+  bounce-capable left-marker boundary remains explicit. The helper is
+  cross-construction but not yet line-amortized; a combined stage DSL remains
+  explicitly rejected.
 - [ ] Standardize the low-level contracts that make those larger abstractions
   compositional: reusable tape-shape predicates, explicit preservation frames,
   appendable endpoints, and exact-time sequential/loop rules. Treat an attractive

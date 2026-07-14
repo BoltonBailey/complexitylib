@@ -2228,11 +2228,11 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
         · rw [hw i hi5 hi6, hW₂, Function.update_of_ne hi6,
             Function.update_of_ne hi5]
     subst hweq
-    refine ⟨transitionInput_eq_self hinpX, ?_, ?_⟩
-    · funext i
-      exact transitionTape_eq_self (hW₂all i)
-    · rw [transitionTape_eq_self (outF_read_ne_start hout)]
-      exact hout
+    obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+      phaseTransition_eq_self_of_reads_ne_start hinpX hW₂all
+        (outF_read_ne_start hout)
+    rw [hinputEq, hworkEq, houtputEq]
+    exact ⟨rfl, rfl, hout⟩
   have hseq₂₃ := seqTM_hoareTime moveClockTM clockMulTM h₂ htrans₂₃ h₃
   -- phase 1 → phase 2 transition
   have htrans₁₂ : ∀ (inp : Tape) (work : Fin 8 → Tape) (out : Tape),
@@ -2255,11 +2255,11 @@ theorem ClockConstructible.mul_succ {g : ℕ → ℕ} (h : ClockConstructible g)
       · rw [hw i hi6, hW₁, Function.update_of_ne hi6]
     subst hweq
     have houtF : outF out := ⟨ho1, ho2, ho3⟩
-    refine ⟨transitionInput_eq_self hinpX, ?_, ?_⟩
-    · funext i
-      exact transitionTape_eq_self (hW₁all i)
-    · rw [transitionTape_eq_self (outF_read_ne_start houtF)]
-      exact houtF
+    obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+      phaseTransition_eq_self_of_reads_ne_start hinpX hW₁all
+        (outF_read_ne_start houtF)
+    rw [hinputEq, hworkEq, houtputEq]
+    exact ⟨rfl, rfl, houtF⟩
   have hseq := seqTM_hoareTime tm (seqTM moveClockTM clockMulTM) h₁ htrans₁₂ hseq₂₃
   -- massage into the ClockConstructible shape
   refine hseq.consequence (fun _ _ _ hp => hp) ?_ ?_

@@ -2,10 +2,10 @@
 
 **Status:** external evaluation and the first cross-construction mechanics
 audit are complete. Canonical NTM trace splitting/invariant rules and the
-existing binary-loop space contract now remove duplicated proof plumbing;
-stable phase-boundary routing is the next small contract candidate. Rose-tree
-frontend/lowering is deferred and optional. No external dependency has been
-adopted.
+existing binary-loop space contract now remove duplicated proof plumbing. A
+stable phase-boundary certificate is adopted by two independent UTM
+constructions; broader endpoint/effect work remains active. Rose-tree
+frontend/lowering is deferred and optional. No external dependency has been adopted.
 
 This note records the evaluation of CREI's experimental rose-tree machine
 (RTM) as a possible source language for `Complexitylib` machines. The concrete
@@ -166,14 +166,21 @@ starting from a proposed language:
 
 The audit found two distinct kinds of repetition. Stable `seqTM` boundaries
 repeatedly prove that input/work/output transition maps are identities before
-transporting an endpoint predicate. The UTM `PairSelf` proof is the clearest
-case: five ordinary stable seams are surrounded by one genuinely special
-left-marker bounce that must remain explicit. This motivates one small
-read-stable boundary-routing lemma as the next experiment, not a generated
-controller language. A separate evaluator/Tseitin pattern existentially
-packages bounded intermediate runs; a transparent bounded-reachability wrapper
-may help there, but exact-cost theorems should continue to expose
-`reachesIn` directly.
+transporting an endpoint predicate.
+`TM.phaseTransition_eq_self_of_reads_ne_start` now packages exactly the input,
+whole work-family, and output fixed-point equalities implied when every current
+head reads something other than `Γ.start`. All five ordinary `PairSelf` seams
+and both `ClockConstructible.mul_succ` seams use it. The `PairSelf` 4→5 child
+contract does not expose the corresponding input-read fact, so its possible
+left-marker bounce remains explicit through separate cell and head bounds. The
+helper identifies transition maps only: endpoint-specific routing, frames,
+time, space, and transducer claims remain in the consumers. A more generic
+higher-order predicate router was rejected because the concrete conjunction
+goals could not infer its predicate without restating the large endpoints.
+
+A separate evaluator/Tseitin pattern existentially packages bounded
+intermediate runs; a transparent bounded-reachability wrapper may help there,
+but exact-cost theorems should continue to expose `reachesIn` directly.
 
 The first promoted result addresses finite NTM traces. The public
 `NTM.trace_snoc` rule splits off the final choice with `Fin.last`/`castSucc`,
@@ -199,6 +206,11 @@ domains, emitted semantics, space, frames, and routing; it would obscure those
 honest distinctions. `Routine`, evaluator-local `TapeAction`, and the
 serializer-local effect/space pairing therefore remain experimental or local
 until independent consumers justify promotion.
+
+The stable-boundary follow-up adds 129 and deletes 123 Lean lines, for a net
+increase of six. Its two consumer files shrink by 13 lines while the public
+`Hoare` surface and module documentation grow by 19 net lines. The result is
+cross-construction and semantically narrower, but not yet line-amortized.
 
 ## Optional rose-tree revisit
 

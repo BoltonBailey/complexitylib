@@ -518,33 +518,29 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hw0c (by omega)
       have hw7_ne : (work 7).read ≠ Γ.start := by
         rw [hw7]; exact started_read_ne_start _
-      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
-      have htw7 : transitionTape (work 7) = work 7 := transitionTape_eq_self hw7_ne
-      have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
-      have htwo : ∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-          transitionTape (work i) = work i := by
-        intro i hi0 hi7
-        rw [hother i hi0 hi7]
-        exact transitionTape_eq_self blankStarted_read_ne_start
-      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [htw0]
-        exact Tape.ext (by rw [hw0h]; rfl) hw0c
-      · rw [hti]; exact hi_ne
-      · rw [hto, hout]; exact blankStarted_read_ne_start
-      · rw [hto, hout]; exact le_refl 1
+      have hworkRead : ∀ i, (work i).read ≠ Γ.start := by
+        intro i
+        by_cases hi0 : i = 0
+        · subst hi0; exact hw0_ne
+        · by_cases hi7 : i = 7
+          · subst hi7; exact hw7_ne
+          · rw [hother i hi0 hi7]
+            exact blankStarted_read_ne_start
+      have hout_ne : out.read ≠ Γ.start := by
+        rw [hout]; exact blankStarted_read_ne_start
+      obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+        phaseTransition_eq_self_of_reads_ne_start hi_ne hworkRead hout_ne
+      rw [hinputEq, houtputEq]
+      simp_rw [congrFun hworkEq]
+      refine ⟨Tape.ext (by rw [hw0h]; rfl) hw0c, hi_ne, hout_ne, ?_, ?_, ?_⟩
+      · rw [hout]; exact le_refl 1
       · intro i hi0
+        refine ⟨hworkRead i, ?_⟩
         by_cases hi7 : i = 7
         · subst hi7
-          rw [htw7, hw7]
-          exact ⟨started_read_ne_start _, le_refl 1⟩
-        · rw [htwo i hi0 hi7, hother i hi0 hi7]
-          exact ⟨blankStarted_read_ne_start, le_refl 1⟩
-      · exact ⟨by rw [hti]; exact hic, by rw [hti]; exact hih,
-          by rw [htw7]; exact hw7,
-          fun i hi0 hi7 => by rw [htwo i hi0 hi7]; exact hother i hi0 hi7,
-          by rw [hto]; exact hout⟩)
+          rw [hw7]; exact le_refl 1
+        · rw [hother i hi0 hi7]; exact le_refl 1
+      · exact ⟨hic, hih, hw7, hother, hout⟩)
     h7
   -- Phase 5: rewind the input head to cell 1.
   have h5 := rewindInputTM_hoareTime_frame (n := 8) (6 * x.length + 12)
@@ -572,37 +568,34 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hw0c hw0h1
       have hw7_ne : (work 7).read ≠ Γ.start := by
         rw [hw7]; exact started_read_ne_start _
-      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
-      have htw7 : transitionTape (work 7) = work 7 := transitionTape_eq_self hw7_ne
-      have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
-      have htwo : ∀ i : Fin 8, i ≠ 0 → i ≠ 7 →
-          transitionTape (work i) = work i := by
-        intro i hi0 hi7
-        rw [hother i hi0 hi7]
-        exact transitionTape_eq_self blankStarted_read_ne_start
-      refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [htw0, hw0c]; rfl
+      have hworkRead : ∀ i, (work i).read ≠ Γ.start := by
+        intro i
+        by_cases hi0 : i = 0
+        · subst hi0; exact hw0_ne
+        · by_cases hi7 : i = 7
+          · subst hi7; exact hw7_ne
+          · rw [hother i hi0 hi7]
+            exact blankStarted_read_ne_start
+      have hout_ne : out.read ≠ Γ.start := by
+        rw [hout]; exact blankStarted_read_ne_start
+      obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+        phaseTransition_eq_self_of_reads_ne_start hi_ne hworkRead hout_ne
+      rw [hinputEq, houtputEq]
+      simp_rw [congrFun hworkEq]
+      refine ⟨?_, ?_, ?_, hi_ne, hout_ne, ?_, ?_, ?_⟩
+      · rw [hw0c]; rfl
       · intro j hj
-        rw [htw0, hw0c]
+        rw [hw0c]
         exact Tape.init_ofBool_cells_ne_start x j hj
-      · rw [htw0]; omega
-      · rw [hti]; exact hi_ne
-      · rw [hto, hout]; exact blankStarted_read_ne_start
-      · rw [hto, hout]; exact le_refl 1
+      · omega
+      · rw [hout]; exact le_refl 1
       · intro i hi0
+        refine ⟨hworkRead i, ?_⟩
         by_cases hi7 : i = 7
         · subst hi7
-          rw [htw7, hw7]
-          exact ⟨started_read_ne_start _, le_refl 1⟩
-        · rw [htwo i hi0 hi7, hother i hi0 hi7]
-          exact ⟨blankStarted_read_ne_start, le_refl 1⟩
-      · exact ⟨by rw [hti]; exact hic, by rw [hti]; exact hih,
-          by rw [htw0]; exact hw0c,
-          by rw [htw7]; exact hw7,
-          fun i hi0 hi7 => by rw [htwo i hi0 hi7]; exact hother i hi0 hi7,
-          by rw [hto]; exact hout⟩)
+          rw [hw7]; exact le_refl 1
+        · rw [hother i hi0 hi7]; exact le_refl 1
+      · exact ⟨hic, hih, hw0c, hw7, hother, hout⟩)
     h67
   -- Phase 4: build `pair x x` on work tape 7.
   have h4 := pairBuild_rich_hoareTime x
@@ -674,22 +667,20 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         read_ne_start_of_cells_initTape hic (by omega)
       have hw0_ne : (work 0).read ≠ Γ.start := by
         rw [hw0]; exact started_read_ne_start x
-      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
-      have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
-        intro i hi
-        rw [hwother i hi]
-        exact transitionTape_eq_self blankStarted_read_ne_start
-      have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
-      refine ⟨?_, ?_, ?_, ?_, ?_⟩
-      · rw [hti]
-        exact Tape.ext (by rw [hih]; rfl) hic
-      · rw [htw0]; exact hw0
-      · rw [htwi 7 (by decide)]; exact hwother 7 (by decide)
-      · intro i hi0 hi7
-        rw [htwi i hi0]; exact hwother i hi0
-      · rw [hto]; exact hout)
+      have hworkRead : ∀ i, (work i).read ≠ Γ.start := by
+        intro i
+        by_cases hi0 : i = 0
+        · subst hi0; exact hw0_ne
+        · rw [hwother i hi0]
+          exact blankStarted_read_ne_start
+      have hout_ne : out.read ≠ Γ.start := by
+        rw [hout]; exact blankStarted_read_ne_start
+      obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+        phaseTransition_eq_self_of_reads_ne_start hi_ne hworkRead hout_ne
+      rw [hinputEq, houtputEq]
+      simp_rw [congrFun hworkEq]
+      exact ⟨Tape.ext (by rw [hih]; rfl) hic, hw0,
+        hwother 7 (by decide), fun i hi0 _ => hwother i hi0, hout⟩)
     h4567
   -- Phase 2: rewind work tape 0 after the copy.
   have h2 := rewindWorkTM_hoareTime_frame (0 : Fin 8) (x.length + 1)
@@ -724,35 +715,34 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         exact hw0ns _ (by omega)
       have hi_ne : inp.read ≠ Γ.start :=
         read_ne_start_of_cells_initTape hic (by omega)
-      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
-      have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
-        intro i hi
-        rw [hwother i hi]
-        exact transitionTape_eq_self blankStarted_read_ne_start
-      have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
+      have hworkRead : ∀ i, (work i).read ≠ Γ.start := by
+        intro i
+        by_cases hi0 : i = 0
+        · subst hi0; exact hw0_ne
+        · rw [hwother i hi0]
+          exact blankStarted_read_ne_start
+      have hout_ne : out.read ≠ Γ.start := by
+        rw [hout]; exact blankStarted_read_ne_start
       have hw0xs : work 0 = (Tape.init (x.map Γ.ofBool)).move Dir3.right :=
         Tape.eq_init_move_right_of_hasBinaryString ⟨hw0h, hbits, htail⟩ hw0c0
+      obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+        phaseTransition_eq_self_of_reads_ne_start hi_ne hworkRead hout_ne
+      rw [hinputEq, houtputEq]
+      simp_rw [congrFun hworkEq]
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [hti, hic]; rfl
+      · rw [hic]; rfl
       · intro j hj
-        rw [hti, hic]
+        rw [hic]
         exact Tape.init_ofBool_cells_ne_start x j hj
-      · rw [hti]; omega
-      · rw [hto, hout]; exact blankStarted_read_ne_start
-      · rw [hto, hout]; exact le_refl 1
+      · omega
+      · exact hout_ne
+      · rw [hout]; exact le_refl 1
       · intro i
+        refine ⟨hworkRead i, ?_⟩
         by_cases hi0 : i = 0
-        · subst hi0
-          rw [htw0]
-          exact ⟨hw0_ne, by omega⟩
-        · rw [htwi i hi0, hwother i hi0]
-          exact ⟨blankStarted_read_ne_start, le_refl 1⟩
-      · exact ⟨by rw [hti]; exact hic,
-          by rw [htw0]; exact hw0xs,
-          fun i hi => by rw [htwi i hi]; exact hwother i hi,
-          by rw [hto]; exact hout⟩)
+        · subst hi0; omega
+        · rw [hwother i hi0]; exact le_refl 1
+      · exact ⟨hic, hw0xs, hwother, hout⟩)
     h34567
   -- Phase 1: copy the input onto work tape 0 from the fresh configuration.
   have h1 := copyInput_fresh_hoareTime x
@@ -768,33 +758,30 @@ theorem pairSelfTM_hoareTime (x : List Bool) :
         rw [hw0pre.1, hw0pre.2.2 x.length le_rfl]
         decide
       have hw0ns := Tape.cells_ne_start_of_hasBinaryPrefix hw0pre
-      have hti : transitionInput inp = inp := transitionInput_eq_self hi_ne
-      have htw0 : transitionTape (work 0) = work 0 := transitionTape_eq_self hw0_ne
-      have htwi : ∀ i : Fin 8, i ≠ 0 → transitionTape (work i) = work i := by
-        intro i hi
-        rw [hwother i hi]
-        exact transitionTape_eq_self blankStarted_read_ne_start
-      have hto : transitionTape out = out := by
-        rw [hout]; exact transitionTape_eq_self blankStarted_read_ne_start
+      have hworkRead : ∀ i, (work i).read ≠ Γ.start := by
+        intro i
+        by_cases hi0 : i = 0
+        · subst hi0; exact hw0_ne
+        · rw [hwother i hi0]
+          exact blankStarted_read_ne_start
+      have hout_ne : out.read ≠ Γ.start := by
+        rw [hout]; exact blankStarted_read_ne_start
+      obtain ⟨hinputEq, hworkEq, houtputEq⟩ :=
+        phaseTransition_eq_self_of_reads_ne_start hi_ne hworkRead hout_ne
+      rw [hinputEq, houtputEq]
+      simp_rw [congrFun hworkEq]
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [htw0]; exact hw0c0
+      · exact hw0c0
       · intro j hj
-        rw [htw0]
         exact hw0ns j hj
-      · rw [htw0, hw0pre.1]
-      · rw [hti]; exact hi_ne
-      · rw [hto, hout]; exact blankStarted_read_ne_start
-      · rw [hto, hout]; exact le_refl 1
+      · rw [hw0pre.1]
+      · exact hi_ne
+      · exact hout_ne
+      · rw [hout]; exact le_refl 1
       · intro i hi0
-        rw [htwi i hi0, hwother i hi0]
-        exact ⟨blankStarted_read_ne_start, le_refl 1⟩
-      · exact ⟨by rw [hti]; exact hic,
-          by rw [hti]; exact hih,
-          by rw [htw0]; exact hw0c0,
-          fun i hlt => by rw [htw0]; exact hw0pre.2.1 i hlt,
-          fun i hge => by rw [htw0]; exact hw0pre.2.2 i hge,
-          fun i hi => by rw [htwi i hi]; exact hwother i hi,
-          by rw [hto]; exact hout⟩)
+        refine ⟨hworkRead i, ?_⟩
+        rw [hwother i hi0]; exact le_refl 1
+      · exact ⟨hic, hih, hw0c0, hw0pre.2.1, hw0pre.2.2, hwother, hout⟩)
     h234567
   -- Assemble: massage the final postcondition and the time bound.
   refine hall.consequence (fun _ _ _ h => h) ?_ ?_

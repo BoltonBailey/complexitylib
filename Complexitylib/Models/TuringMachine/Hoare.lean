@@ -18,6 +18,7 @@ Each rule specifies how pre/postconditions and time bounds compose.
 ## Main results
 
 - `seqTM_hoareTime` — sequential composition: time `b₁ + 1 + b₂`
+- `phaseTransition_eq_self_of_reads_ne_start` — identify a stable phase boundary
 - `complementTM_hoareTime` — complement flips output cell 1: time `b + p_bound + 4`
 - `ifTM_hoareTime` — if-then-else branching: time `b_test + p_bound + max b_then b_else + 5`
 - `loopTM_hoareTime` — loop invariant with variant: time `(k + 1) * b_iter`
@@ -25,8 +26,9 @@ Each rule specifies how pre/postconditions and time bounds compose.
 ## Tape transition effects
 
 All combinators apply `transitionTape` / `transitionInput` at phase boundaries.
-These are the identity on stable tapes (head ≥ 1, read ≠ ▷) — see `transitionTape_eq_self`.
-The `AllTapesWF` invariant ensures stability is preserved across transitions.
+A current read other than `▷` is exactly what their fixed-point rules require;
+parked tapes, or `AllTapesWF` together with positive-head facts, provide common
+stronger certificates.
 -/
 
 namespace Complexity
@@ -54,6 +56,23 @@ theorem seqTM_hoareTime (tm₁ tm₂ : TM n)
   · convert seqTM_reachesIn_of_reachesIn tm₁ tm₂ hreach₁ hhalt₁ hreach₂ using 1
   · rw [phase2Wrap_halted_iff]; exact hhalt₂
   · exact hpost
+
+/-- The input, work family, and output transition maps are jointly the
+identity when every tape is reading something other than the left-end marker.
+This shared read-local boundary certificate matches the transition shape
+accepted by both time-only and time-space sequential composition; it
+deliberately does not require parked heads or global tape well-formedness. -/
+theorem phaseTransition_eq_self_of_reads_ne_start
+    {inp out : Tape} {work : Fin n → Tape}
+    (hinput : inp.read ≠ Γ.start)
+    (hwork : ∀ i, (work i).read ≠ Γ.start)
+    (houtput : out.read ≠ Γ.start) :
+    transitionInput inp = inp ∧
+      (fun i => transitionTape (work i)) = work ∧
+      transitionTape out = out := by
+  exact ⟨transitionInput_eq_self hinput,
+    funext fun i => transitionTape_eq_self (hwork i),
+    transitionTape_eq_self houtput⟩
 
 /-- Well-formedness condition on all tapes: cells 0 = start and cells ≥ 1 ≠ start. -/
 def AllTapesWF (inp : Tape) (work : Fin n → Tape) (out : Tape) : Prop :=
