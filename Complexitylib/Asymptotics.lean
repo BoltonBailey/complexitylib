@@ -9,6 +9,8 @@ import Mathlib.Analysis.Asymptotics.Lemmas
 import Mathlib.Algebra.Polynomial.Eval.Defs
 import Mathlib.Algebra.Polynomial.Eval.Degree
 import Mathlib.Data.Finset.Lattice.Fold
+import Mathlib.Data.Nat.Log
+import Mathlib.Data.Nat.Size
 import Mathlib.Algebra.Order.Floor.Semiring
 
 /-!
@@ -35,6 +37,7 @@ opened and read like standard complexity-theoretic asymptotic notation.
 - `BigO.add` — sum of big-O is big-O
 - `BigO.pow` — fixed powers preserve big-O
 - `BigO.const_mul_left` — constant multiple preserves big-O
+- `BigO.natSize_of_pow` — binary widths of power-bounded values are logarithmic
 - `BigO.le_add_left` / `BigO.le_add_right` — projections from a sum
 - `BigO.const_mul_add` — `c * f₁ + f₂ = O(T₁ + T₂)`
 - `polynomial_eval_mono_nat` — natural polynomial evaluation is monotone
@@ -234,6 +237,12 @@ theorem BigO.max_le_add (T₁ T₂ : ℕ → ℕ) :
     (fun n => max (T₁ n) (T₂ n)) =O (fun n => T₁ n + T₂ n) :=
   BigO.of_le fun _ => Nat.max_le.mpr ⟨Nat.le_add_right _ _, Nat.le_add_left _ _⟩
 
+/-- A pointwise maximum of two functions with the same asymptotic bound has
+that bound as well. -/
+theorem BigO.max_same {f₁ f₂ g : ℕ → ℕ} (h₁ : f₁ =O g) (h₂ : f₂ =O g) :
+    (fun n => max (f₁ n) (f₂ n)) =O g :=
+  (BigO.max_le_add f₁ f₂).trans (BigO.add h₁ h₂)
+
 /-- Any function is big-O of itself-plus-constant: `f =O (fun n => f n + c)`. -/
 theorem BigO.self_le_add_const (f : ℕ → ℕ) (c : ℕ) :
     f =O (fun n => f n + c) :=
@@ -263,6 +272,17 @@ theorem BigO.const_le_pow (c k : ℕ) :
   simp only [Real.norm_natCast]
   have : 1 ≤ n ^ k := Nat.one_le_pow _ _ hn
   exact_mod_cast le_mul_of_one_le_right (Nat.zero_le _) this
+
+/-- Every fixed natural constant is eventually bounded by a constant multiple
+of the unshifted base-two logarithm. The threshold `n ≥ 2` is necessary because
+`Nat.log 2 0 = Nat.log 2 1 = 0`. -/
+theorem BigO.const_le_logTwo (c : ℕ) :
+    (fun _ : ℕ => c) =O (fun n => Nat.log 2 n) := by
+  apply IsBigO.of_bound c
+  filter_upwards [Filter.eventually_ge_atTop 2] with n hn
+  simp only [Real.norm_natCast]
+  have hlog : 1 ≤ Nat.log 2 n := Nat.log_pos (by omega) hn
+  exact_mod_cast le_mul_of_one_le_right (Nat.zero_le c) hlog
 
 /-- `n^j + n^k =O n^(max j k)` on sequences with `n ≥ 1`. -/
 theorem BigO.pow_add_pow (j k : ℕ) :
@@ -365,6 +385,56 @@ theorem BigO.exists_nat_bound {f g : ℕ → ℕ} (h : f =O g) :
   have hr : (f n : ℝ) ≤ (⌈C⌉₊ : ℝ) * (g n : ℝ) :=
     le_trans hb (mul_le_mul_of_nonneg_right (Nat.le_ceil C) (Nat.cast_nonneg _))
   exact_mod_cast hr
+
+/-- Binary widths of power-bounded natural values are logarithmic. The proof
+raises the eventual power bound by one, which uniformly handles exponent zero
+and constant functions. -/
+theorem BigO.natSize_of_pow {f : ℕ → ℕ} {d : ℕ}
+    (hf : f =O ((· ^ d) : ℕ → ℕ)) :
+    (fun n => (f n).size) =O (fun n => Nat.log 2 n) := by
+  obtain ⟨c, N, hbound⟩ := BigO.exists_nat_bound hf
+  rw [BigO]
+  apply Asymptotics.IsBigO.of_bound (2 * (d + 1))
+  filter_upwards [Filter.eventually_ge_atTop (max 2 (max c N))] with n hn
+  simp only [Real.norm_natCast]
+  have hn2 : 2 ≤ n := le_trans (Nat.le_max_left 2 (max c N)) hn
+  have hcn : c ≤ n := le_trans (le_trans (Nat.le_max_left c N)
+    (Nat.le_max_right 2 (max c N))) hn
+  have hNn : N ≤ n := le_trans (le_trans (Nat.le_max_right c N)
+    (Nat.le_max_right 2 (max c N))) hn
+  have hvalue : f n ≤ n ^ (d + 1) := by
+    calc
+      f n ≤ c * n ^ d := hbound n hNn
+      _ ≤ n * n ^ d := Nat.mul_le_mul_right _ hcn
+      _ = n ^ (d + 1) := by rw [pow_succ']
+  have hlog : 1 ≤ Nat.log 2 n := Nat.log_pos (by omega) hn2
+  have hpow : n ^ (d + 1) < 2 ^ ((d + 1) * (Nat.log 2 n + 1)) := by
+    calc
+      n ^ (d + 1) < (2 ^ (Nat.log 2 n + 1)) ^ (d + 1) :=
+        Nat.pow_lt_pow_left (Nat.lt_pow_succ_log_self (by omega) n) (by omega)
+      _ = 2 ^ ((d + 1) * (Nat.log 2 n + 1)) := by
+        rw [← pow_mul']
+  have hsize : (f n).size ≤ (d + 1) * (Nat.log 2 n + 1) :=
+    Nat.size_le.mpr (lt_of_le_of_lt hvalue hpow)
+  have hlog' : Nat.log 2 n + 1 ≤ 2 * Nat.log 2 n := by omega
+  have hfinal : (f n).size ≤ (2 * (d + 1)) * Nat.log 2 n :=
+    hsize.trans (by
+      calc
+        (d + 1) * (Nat.log 2 n + 1) ≤
+            (d + 1) * (2 * Nat.log 2 n) := Nat.mul_le_mul_left _ hlog'
+        _ = (2 * (d + 1)) * Nat.log 2 n := by ring)
+  exact_mod_cast hfinal
+
+/-- Binary widths of pointwise polynomial-bounded natural values are logarithmic. -/
+theorem BigO.natSize_of_polynomial_bound {f : ℕ → ℕ}
+    (p : Polynomial ℕ) (hf : ∀ n, f n ≤ p.eval n) :
+    (fun n => (f n).size) =O (fun n => Nat.log 2 n) :=
+  BigO.natSize_of_pow (BigO.of_polynomial_bound p hf)
+
+/-- The binary width of a fixed natural polynomial evaluation is logarithmic. -/
+theorem BigO.natSize_polynomial_eval (p : Polynomial ℕ) :
+    (fun n => (p.eval n).size) =O (fun n => Nat.log 2 n) :=
+  BigO.natSize_of_polynomial_bound p fun _ => le_rfl
 
 /-- Strict power gap, shifted to the everywhere-positive base `n + 1`:
     `(n + 1)^p = o((n + 1)^q)` when `p < q`. -/
