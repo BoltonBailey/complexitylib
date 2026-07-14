@@ -654,8 +654,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         header and two dynamic terminated-unary wire references from preserved
         binary tapes, restores its reusable zero scratch and complete frame,
         and carries explicit time, all-prefix space, and transducer contracts.
-      - [ ] Add fixed-polynomial evaluation and the remaining binary arithmetic and
-        indexing operations needed by the raw tableau serializer.
+      - [x] Add fixed-polynomial evaluation and the remaining binary arithmetic and
+        indexing operations needed by the raw tableau serializer. Fixed-polynomial
+        Horner evaluation now has exact framed semantics and an honest logarithmic
+        all-prefix space bound; the initialization block is also exposed as an exact
+        natural-index schedule with no run-time formula or configuration syntax.
     - [ ] Implement the append-only raw-tableau serializer, prove its code function is
       in `FL`, package `P_subset_UniformPPoly`, and combine both directions.
 
