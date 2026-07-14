@@ -1483,6 +1483,1128 @@ theorem emitMovedHeadFormula_emitted_internal (tm : NTM k)
       simpa [Work.available] using havailable
     first | omega | (congr 1 <;> omega)
 
+private theorem emitSavedMovedHeadConnector_spaceBoundByWidthAt
+    (save : Fin WorkCount) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength, 1 ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitSavedMovedHeadConnector save)
+      initialSpace values width := by
+  let prepare := prepareRecentReference Work.reference₁ 1
+  let prepared : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare.effect (values inputLength)
+  let emit := BinaryRoutine.emitRawGateStep .or false false Work.emitCounter
+    Work.available save Work.reference₁
+  let emitted : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emit.effect (prepared inputLength)
+  have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+      values width := by
+    apply prepareRecentReference_spaceBoundByWidth Work.reference₁ 1
+    · exact fun inputLength => hvalues inputLength Work.available
+    · exact fun inputLength => hvalues inputLength Work.reference₁
+    · exact havailable
+  have hprepared : ∀ inputLength index,
+      prepared inputLength index ≤ width inputLength := by
+    intro inputLength index
+    dsimp only [prepared, prepare]
+    rw [prepareRecentReference_effect]
+    apply BinaryRoutine.values_update_le Work.reference₁
+      (hvalues inputLength)
+    exact (Nat.sub_le _ _).trans (hvalues inputLength Work.available)
+  have hemit : BinaryRoutine.SpaceBoundByWidthAt emit initialSpace prepared
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .or false false
+    · exact fun inputLength => hprepared inputLength Work.available
+    · exact fun inputLength => hprepared inputLength save
+    · exact fun inputLength => hprepared inputLength Work.reference₁
+  have hemittedReference : ∀ inputLength,
+      emitted inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    dsimp only [emitted, emit]
+    simp only [BinaryRoutine.emitRawGateStep]
+    simpa [Work.available, Work.reference₁] using
+      hprepared inputLength Work.reference₁
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₁) initialSpace emitted width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₁
+      hemittedReference
+  rw [emitSavedMovedHeadConnector]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hprepare, hemit, hclear, trivial⟩
+
+private theorem emitMovedHeadConjunction_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hloop : ∀ inputLength, values inputLength Work.loop₃ = 0)
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+          (values inputLength Work.horizon) ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      movedHeadPredecessorSize (values inputLength Work.horizon) + 1 ≤
+        values inputLength Work.available)
+    (havailable : ∀ inputLength, 1 ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt emitMovedHeadConjunction initialSpace
+      values width := by
+  rw [emitMovedHeadConjunction]
+  apply emitPolynomialRecentGate_spaceBoundByWidth
+  · exact hpolynomialCap
+  · exact fun inputLength => hvalues inputLength Work.available
+  · exact fun inputLength => hvalues inputLength Work.reference₀
+  · exact fun inputLength => hvalues inputLength Work.reference₁
+  · exact hloop
+  · intro inputLength
+    simpa [predecessorHeadSchedulePolynomial_eval] using hoffset inputLength
+  · exact havailable
+
+private theorem emitMovedHeadMember_spaceBoundByWidthAt
+    (tm : NTM k) (tape : TapeSlot k) (direction : Dir3)
+    (directionCode : ℕ) (save : Fin WorkCount)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hloop₁ : ∀ inputLength, values inputLength Work.loop₁ = 0)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.limit₂ ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength, 1 ≤ values inputLength Work.available)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadEffectSizeAt (transitionCases tm).length k
+            (values inputLength Work.horizon) (movedHeadCaseSelectedAt tm tape)
+            (effectCaseChoiceAt tm) (movedHeadDirectionCode direction) +
+          movedHeadPredecessorSize (values inputLength Work.horizon) + 1 ≤
+        width inputLength)
+    (heffectCap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            movedHeadEffectSizeAt (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm)
+              (movedHeadDirectionCode direction) +
+          transitionStateRef (values inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+              (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+              4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength)
+    (hpredecessorCap : ∀ inputLength,
+      transitionHeadRef (Fintype.card tm.Q)
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tape.index
+          (values inputLength Work.horizon + 1) + tape.index +
+          values inputLength Work.horizon + 1 +
+          2 * (values inputLength Work.horizon + 2) ≤ width inputLength)
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+          (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitMovedHeadMember tm tape direction directionCode save)
+      initialSpace values width := by
+  let effectSize : ℕ → ℕ := fun inputLength =>
+    movedHeadEffectSizeAt (transitionCases tm).length k
+      (values inputLength Work.horizon) (movedHeadCaseSelectedAt tm tape)
+      (effectCaseChoiceAt tm) (movedHeadDirectionCode direction)
+  let afterEffect : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (values inputLength) Work.available
+      (values inputLength Work.available + effectSize inputLength)
+  let afterPosition : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (afterEffect inputLength) Work.position
+      (afterEffect inputLength Work.limit₂)
+  let afterTape : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (afterPosition inputLength) Work.tapeIndex tape.index
+  let afterPredecessor : ℕ → BinaryValues WorkCount :=
+    fun inputLength =>
+      Function.update (afterTape inputLength) Work.available
+        (afterTape inputLength Work.available +
+          movedHeadPredecessorSize (afterTape inputLength Work.horizon))
+  let afterConjunction : ℕ → BinaryValues WorkCount :=
+    fun inputLength =>
+      Function.update (afterPredecessor inputLength) Work.available
+        (afterPredecessor inputLength Work.available + 1)
+  let afterSave : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (afterConjunction inputLength) save
+      (afterConjunction inputLength Work.available - 1)
+  have heffectTrajectory : ∀ inputLength,
+      (emitMovedHeadEffect tm tape direction).effect (values inputLength) =
+        afterEffect inputLength := by
+    intro inputLength
+    simpa [afterEffect, effectSize] using
+      emitMovedHeadEffect_effect_internal tm tape direction
+        (values inputLength) (hclean inputLength) (havailable inputLength)
+  have heffect : BinaryRoutine.SpaceBoundByWidthAt
+      (emitMovedHeadEffect tm tape direction) initialSpace values width := by
+    rw [emitMovedHeadEffect]
+    apply emitEffectFormula_spaceBoundByWidth
+    · exact hclean
+    · exact hvalues
+    · intro inputLength stateIndex tapeIndex symbolIndex position
+        hstate htape hsymbol hposition
+      cases direction <;>
+        simpa [movedHeadEffectSizeAt, movedHeadCaseSelectedAt,
+          movedHeadDirectionCode] using
+            heffectCap inputLength stateIndex tapeIndex symbolIndex position
+              hstate htape hsymbol hposition
+  have hafterEffectValues : ∀ inputLength index,
+      afterEffect inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available
+      (hvalues inputLength)
+    have hf := hfrontier inputLength
+    dsimp only [effectSize]
+    omega
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryCopy Work.limit₂ Work.position Work.copyCounter)
+      initialSpace afterEffect width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy
+    · exact fun inputLength => hafterEffectValues inputLength Work.limit₂
+    · exact fun inputLength => hafterEffectValues inputLength Work.position
+  have hafterPositionValues : ∀ inputLength index,
+      afterPosition inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.position
+      (hafterEffectValues inputLength)
+    exact hafterEffectValues inputLength Work.limit₂
+  have htapeWidth : ∀ inputLength, tape.index ≤ width inputLength := by
+    intro inputLength
+    have hc := hpredecessorCap inputLength
+    omega
+  have hsetTape : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.set Work.tapeIndex tape.index) initialSpace afterPosition
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hafterPositionValues inputLength Work.tapeIndex
+    · exact htapeWidth
+  have hafterTapeValues : ∀ inputLength index,
+      afterTape inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.tapeIndex
+      (hafterPositionValues inputLength)
+    exact htapeWidth inputLength
+  have hafterTapeAvailable : ∀ inputLength,
+      afterTape inputLength Work.available =
+        values inputLength Work.available + effectSize inputLength := by
+    intro inputLength
+    simp [afterTape, afterPosition, afterEffect, Work.available,
+      Work.position, Work.tapeIndex]
+  have hafterTapeHorizonValue : ∀ inputLength,
+      afterTape inputLength Work.horizon =
+        values inputLength Work.horizon := by
+    intro inputLength
+    simp [afterTape, afterPosition, afterEffect, Work.available,
+      Work.position, Work.tapeIndex, Work.horizon]
+  have hafterTapeAvailablePositive : ∀ inputLength,
+      1 ≤ afterTape inputLength Work.available := by
+    intro inputLength
+    rw [hafterTapeAvailable]
+    exact (havailable inputLength).trans
+      (Nat.le_add_right (values inputLength Work.available)
+        (effectSize inputLength))
+  have hafterTapeClean : ∀ inputLength,
+      PredecessorHeadClean (afterTape inputLength) := by
+    intro inputLength
+    refine
+      { loop₀ := ?_, limit₀ := ?_, loop₁ := ?_, reference₀ := ?_,
+        reference₁ := ?_, emitCounter := ?_, copyCounter := ?_,
+        multiplyCounter := ?_, addCounter := ?_, temporary₀ := ?_,
+        temporary₃ := ?_ }
+    all_goals
+      simp [afterTape, afterPosition, afterEffect, Work.available,
+        Work.position, Work.tapeIndex, Work.limit₂] at *
+      first | exact (hclean inputLength).loop₀ |
+        exact (hclean inputLength).limit₀ | exact hloop₁ inputLength |
+        exact (hclean inputLength).reference₀ |
+        exact (hclean inputLength).reference₁ |
+        exact (hclean inputLength).emitCounter |
+        exact (hclean inputLength).copyCounter |
+        exact (hclean inputLength).multiplyCounter |
+        exact (hclean inputLength).addCounter |
+        exact (hclean inputLength).temporary₀ |
+        exact (hclean inputLength).temporary₃
+  have hafterTapeHorizon : ∀ inputLength,
+      0 < afterTape inputLength Work.horizon := by
+    intro inputLength
+    simpa [afterTape, afterPosition, afterEffect, Work.available,
+      Work.position, Work.tapeIndex, Work.horizon] using hhorizon inputLength
+  have hafterTapeTarget : ∀ inputLength,
+      afterTape inputLength Work.position ≤
+        afterTape inputLength Work.horizon := by
+    intro inputLength
+    simpa [afterTape, afterPosition, afterEffect, Work.available,
+      Work.position, Work.tapeIndex, Work.limit₂, Work.horizon] using
+        htarget inputLength
+  have hpredecessor : BinaryRoutine.SpaceBoundByWidthAt
+      (emitPredecessorHeadFormula (Fintype.card tm.Q) directionCode)
+      initialSpace afterTape width := by
+    apply emitPredecessorHeadFormula_spaceBoundByWidth
+    · exact hafterTapeClean
+    · exact hafterTapeHorizon
+    · exact hafterTapeTarget
+    · exact hafterTapeValues
+    · intro inputLength
+      have hf := hfrontier inputLength
+      rw [hafterTapeAvailable, hafterTapeHorizonValue]
+      dsimp only [effectSize]
+      omega
+    · intro inputLength
+      simpa [afterTape, afterPosition, afterEffect, Work.available,
+        Work.position, Work.tapeIndex, Work.horizon] using
+          hpredecessorCap inputLength
+  have hpredecessorTrajectory : ∀ inputLength,
+      (emitPredecessorHeadFormula (Fintype.card tm.Q) directionCode).effect
+          (afterTape inputLength) = afterPredecessor inputLength := by
+    intro inputLength
+    simpa [afterPredecessor] using emitPredecessorHeadFormula_effect
+      (Fintype.card tm.Q) directionCode (afterTape inputLength)
+      (hafterTapeClean inputLength) (hafterTapeHorizon inputLength)
+      (hafterTapeTarget inputLength)
+  have hafterPredecessorValues : ∀ inputLength index,
+      afterPredecessor inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available
+      (hafterTapeValues inputLength)
+    have hf := hfrontier inputLength
+    rw [hafterTapeAvailable, hafterTapeHorizonValue]
+    dsimp only [effectSize]
+    omega
+  have hafterPredecessorLoop : ∀ inputLength,
+      afterPredecessor inputLength Work.loop₃ = 0 := by
+    intro inputLength
+    simpa [afterPredecessor, afterTape, afterPosition, afterEffect,
+      Work.available, Work.position, Work.tapeIndex] using
+        (hclean inputLength).loop₃
+  have hafterPredecessorAvailable : ∀ inputLength,
+      afterPredecessor inputLength Work.available =
+        afterTape inputLength Work.available +
+          movedHeadPredecessorSize (afterTape inputLength Work.horizon) := by
+    intro inputLength
+    simp [afterPredecessor]
+  have hafterPredecessorHorizon : ∀ inputLength,
+      afterPredecessor inputLength Work.horizon =
+        afterTape inputLength Work.horizon := by
+    intro inputLength
+    simp [afterPredecessor, Work.available, Work.horizon]
+  have hconjunction : BinaryRoutine.SpaceBoundByWidthAt
+      emitMovedHeadConjunction initialSpace afterPredecessor width := by
+    apply emitMovedHeadConjunction_spaceBoundByWidthAt
+    · exact hafterPredecessorValues
+    · exact hafterPredecessorLoop
+    · intro inputLength
+      simpa [afterPredecessor, afterTape, afterPosition, afterEffect,
+        Work.available, Work.position, Work.tapeIndex, Work.horizon] using
+          hpolynomialCap inputLength
+    · intro inputLength
+      rw [hafterPredecessorHorizon, hafterPredecessorAvailable]
+      rw [Nat.add_comm
+        (afterTape inputLength Work.available)
+        (movedHeadPredecessorSize (afterTape inputLength Work.horizon))]
+      exact Nat.add_le_add_left (hafterTapeAvailablePositive inputLength) _
+    · intro inputLength
+      rw [hafterPredecessorAvailable]
+      exact (hafterTapeAvailablePositive inputLength).trans
+        (Nat.le_add_right (afterTape inputLength Work.available)
+          (movedHeadPredecessorSize (afterTape inputLength Work.horizon)))
+  have hconjunctionTrajectory : ∀ inputLength,
+      emitMovedHeadConjunction.effect (afterPredecessor inputLength) =
+        afterConjunction inputLength := by
+    intro inputLength
+    apply emitMovedHeadConjunction_effect_internal
+    exact (hclean inputLength).movedHeadConjunctionClean _ _ _ _
+  have hafterConjunctionValues : ∀ inputLength index,
+      afterConjunction inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available
+      (hafterPredecessorValues inputLength)
+    have hf := hfrontier inputLength
+    simpa [afterConjunction, afterPredecessor, afterTape, afterPosition,
+      afterEffect, effectSize, Work.available, Work.position,
+      Work.tapeIndex, Work.horizon] using hf
+  have hsave : BinaryRoutine.SpaceBoundByWidthAt
+      (saveMovedHeadMemberOutput save) initialSpace afterConjunction width := by
+    rw [saveMovedHeadMemberOutput]
+    apply prepareRecentReference_spaceBoundByWidth save 1
+    · exact fun inputLength =>
+        hafterConjunctionValues inputLength Work.available
+    · exact fun inputLength => hafterConjunctionValues inputLength save
+    · intro inputLength
+      simp [afterConjunction, afterPredecessor, afterTape, afterPosition,
+        afterEffect, effectSize, Work.available, Work.position,
+        Work.tapeIndex]
+  have hafterSaveValues : ∀ inputLength index,
+      afterSave inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le save
+      (hafterConjunctionValues inputLength)
+    exact (Nat.sub_le _ _).trans
+      (hafterConjunctionValues inputLength Work.available)
+  have hclearPosition : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.position) initialSpace afterSave width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.position
+      (fun inputLength => hafterSaveValues inputLength Work.position)
+  let afterPositionClear : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (afterSave inputLength) Work.position 0
+  have hafterPositionClearValues : ∀ inputLength index,
+      afterPositionClear inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.position
+      (hafterSaveValues inputLength)
+    omega
+  have hclearTape : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.tapeIndex) initialSpace afterPositionClear
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.tapeIndex
+      (fun inputLength => hafterPositionClearValues inputLength Work.tapeIndex)
+  have hcopyTrajectory : ∀ inputLength,
+      (BinaryRoutine.binaryCopy Work.limit₂ Work.position
+        Work.copyCounter).effect (afterEffect inputLength) =
+          afterPosition inputLength := by
+    intro inputLength
+    rfl
+  have hsetTapeTrajectory : ∀ inputLength,
+      (BinaryRoutine.set Work.tapeIndex tape.index).effect
+          (afterPosition inputLength) = afterTape inputLength := by
+    intro inputLength
+    simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+      BinaryRoutine.addConst, afterTape]
+  have hsaveTrajectory : ∀ inputLength,
+      (saveMovedHeadMemberOutput save).effect
+          (afterConjunction inputLength) = afterSave inputLength := by
+    intro inputLength
+    simp [saveMovedHeadMemberOutput, afterSave]
+  have hclearPositionTrajectory : ∀ inputLength,
+      (BinaryRoutine.clear Work.position).effect (afterSave inputLength) =
+        afterPositionClear inputLength := by
+    intro inputLength
+    rfl
+  rw [emitMovedHeadMember]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨heffect, ?_, ?_, ?_, ?_, ?_, ?_, ?_, trivial⟩
+  · simpa only [heffectTrajectory] using hcopy
+  · simpa only [heffectTrajectory, hcopyTrajectory] using hsetTape
+  · simpa only [heffectTrajectory, hcopyTrajectory, hsetTapeTrajectory]
+      using hpredecessor
+  · simpa only [heffectTrajectory, hcopyTrajectory, hsetTapeTrajectory,
+      hpredecessorTrajectory] using hconjunction
+  · simpa only [heffectTrajectory, hcopyTrajectory, hsetTapeTrajectory,
+      hpredecessorTrajectory, hconjunctionTrajectory] using hsave
+  · simpa only [heffectTrajectory, hcopyTrajectory, hsetTapeTrajectory,
+      hpredecessorTrajectory, hconjunctionTrajectory, hsaveTrajectory] using
+        hclearPosition
+  · simpa only [heffectTrajectory, hcopyTrajectory, hsetTapeTrajectory,
+      hpredecessorTrajectory, hconjunctionTrajectory, hsaveTrajectory,
+      hclearPositionTrajectory] using hclearTape
+
+private theorem movedHeadMemberResult_values_le
+    {values : ℕ → BinaryValues WorkCount} {effectSize width : ℕ → ℕ}
+    (save : Fin WorkCount)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + effectSize inputLength +
+          movedHeadPredecessorSize (values inputLength Work.horizon) + 1 ≤
+        width inputLength) :
+    ∀ inputLength index,
+      movedHeadMemberResult (values inputLength) save
+          (effectSize inputLength) index ≤ width inputLength := by
+  intro inputLength index
+  simp only [movedHeadMemberResult]
+  apply BinaryRoutine.values_update_le Work.tapeIndex
+  · apply BinaryRoutine.values_update_le Work.position
+    · apply BinaryRoutine.values_update_le save
+      · apply BinaryRoutine.values_update_le Work.available
+          (hvalues inputLength)
+        exact hfrontier inputLength
+      · have hf := hfrontier inputLength
+        omega
+    · omega
+  · omega
+
+private theorem emitMovedHeadFormulaSuffix_seqListSpaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 4 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      [emitConstantGate false,
+        emitSavedMovedHeadConnector Work.atomKind,
+        emitSavedMovedHeadConnector Work.direction,
+        emitSavedMovedHeadConnector Work.savedOutput,
+        BinaryRoutine.clear Work.atomKind,
+        BinaryRoutine.clear Work.direction,
+        BinaryRoutine.clear Work.savedOutput,
+        BinaryRoutine.binaryCopy Work.limit₂ Work.position Work.copyCounter,
+        BinaryRoutine.clear Work.limit₂]
+      initialSpace values width := by
+  let v₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (values inputLength) Work.available
+      (values inputLength Work.available + 1)
+  let v₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₁ inputLength) Work.available
+      (v₁ inputLength Work.available + 1)
+  let v₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₂ inputLength) Work.available
+      (v₂ inputLength Work.available + 1)
+  let v₄ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₃ inputLength) Work.available
+      (v₃ inputLength Work.available + 1)
+  let v₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₄ inputLength) Work.atomKind 0
+  let v₆ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₅ inputLength) Work.direction 0
+  let v₇ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₆ inputLength) Work.savedOutput 0
+  let v₈ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (v₇ inputLength) Work.position
+      (v₇ inputLength Work.limit₂)
+  have hs₁ : BinaryRoutine.SpaceBoundByWidthAt (emitConstantGate false)
+      initialSpace values width := by
+    apply emitConstantGate_spaceBoundByWidth false
+    · exact fun inputLength => hvalues inputLength Work.available
+    · exact fun inputLength => hvalues inputLength Work.reference₀
+  have hv₁ : ∀ inputLength index,
+      v₁ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available (hvalues inputLength)
+    have hf := hfrontier inputLength
+    omega
+  have hs₂ : BinaryRoutine.SpaceBoundByWidthAt
+      (emitSavedMovedHeadConnector Work.atomKind) initialSpace v₁ width := by
+    apply emitSavedMovedHeadConnector_spaceBoundByWidthAt Work.atomKind hv₁
+    intro inputLength
+    simp [v₁]
+  have hv₂ : ∀ inputLength index,
+      v₂ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available (hv₁ inputLength)
+    have hf := hfrontier inputLength
+    simp [v₁]
+    omega
+  have hs₃ : BinaryRoutine.SpaceBoundByWidthAt
+      (emitSavedMovedHeadConnector Work.direction) initialSpace v₂ width := by
+    apply emitSavedMovedHeadConnector_spaceBoundByWidthAt Work.direction hv₂
+    intro inputLength
+    simp [v₂]
+  have hv₃ : ∀ inputLength index,
+      v₃ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available (hv₂ inputLength)
+    have hf := hfrontier inputLength
+    simp [v₂, v₁]
+    omega
+  have hs₄ : BinaryRoutine.SpaceBoundByWidthAt
+      (emitSavedMovedHeadConnector Work.savedOutput) initialSpace v₃ width := by
+    apply emitSavedMovedHeadConnector_spaceBoundByWidthAt Work.savedOutput hv₃
+    intro inputLength
+    simp [v₃]
+  have hv₄ : ∀ inputLength index,
+      v₄ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.available (hv₃ inputLength)
+    have hf := hfrontier inputLength
+    simp [v₃, v₂, v₁]
+    omega
+  have hs₅ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.atomKind) initialSpace v₄ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.atomKind
+      (fun inputLength => hv₄ inputLength Work.atomKind)
+  have hv₅ : ∀ inputLength index,
+      v₅ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.atomKind (hv₄ inputLength)
+    omega
+  have hs₆ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.direction) initialSpace v₅ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.direction
+      (fun inputLength => hv₅ inputLength Work.direction)
+  have hv₆ : ∀ inputLength index,
+      v₆ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.direction (hv₅ inputLength)
+    omega
+  have hs₇ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.savedOutput) initialSpace v₆ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.savedOutput
+      (fun inputLength => hv₆ inputLength Work.savedOutput)
+  have hv₇ : ∀ inputLength index,
+      v₇ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.savedOutput (hv₆ inputLength)
+    omega
+  have hs₈ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryCopy Work.limit₂ Work.position Work.copyCounter)
+      initialSpace v₇ width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy
+    · exact fun inputLength => hv₇ inputLength Work.limit₂
+    · exact fun inputLength => hv₇ inputLength Work.position
+  have hv₈ : ∀ inputLength index,
+      v₈ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.position (hv₇ inputLength)
+    exact hv₇ inputLength Work.limit₂
+  have hs₉ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.limit₂) initialSpace v₈ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.limit₂
+      (fun inputLength => hv₈ inputLength Work.limit₂)
+  have he₁ : ∀ inputLength,
+      (emitConstantGate false).effect (values inputLength) = v₁ inputLength :=
+    fun inputLength => emitConstantGate_effect_internal false
+      (values inputLength)
+  have he₂ : ∀ inputLength,
+      (emitSavedMovedHeadConnector Work.atomKind).effect (v₁ inputLength) =
+        v₂ inputLength := by
+    intro inputLength
+    simpa [v₂] using emitSavedMovedHeadConnector_effect_internal
+      Work.atomKind (v₁ inputLength)
+        (by simpa [v₁] using (hclean inputLength).reference₁)
+        (by simpa [v₁] using (hclean inputLength).emitCounter)
+  have he₃ : ∀ inputLength,
+      (emitSavedMovedHeadConnector Work.direction).effect (v₂ inputLength) =
+        v₃ inputLength := by
+    intro inputLength
+    simpa [v₃] using emitSavedMovedHeadConnector_effect_internal
+      Work.direction (v₂ inputLength)
+        (by simpa [v₂, v₁] using (hclean inputLength).reference₁)
+        (by simpa [v₂, v₁] using (hclean inputLength).emitCounter)
+  have he₄ : ∀ inputLength,
+      (emitSavedMovedHeadConnector Work.savedOutput).effect (v₃ inputLength) =
+        v₄ inputLength := by
+    intro inputLength
+    simpa [v₄] using emitSavedMovedHeadConnector_effect_internal
+      Work.savedOutput (v₃ inputLength)
+        (by simpa [v₃, v₂, v₁] using
+          (hclean inputLength).reference₁)
+        (by simpa [v₃, v₂, v₁] using
+          (hclean inputLength).emitCounter)
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨hs₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, trivial⟩
+  · simpa only [he₁] using hs₂
+  · simpa only [he₁, he₂] using hs₃
+  · simpa only [he₁, he₂, he₃] using hs₄
+  · simpa only [he₁, he₂, he₃, he₄] using hs₅
+  · simpa only [he₁, he₂, he₃, he₄] using hs₆
+  · simpa only [he₁, he₂, he₃, he₄] using hs₇
+  · simpa only [he₁, he₂, he₃, he₄] using hs₈
+  · simpa only [he₁, he₂, he₃, he₄] using hs₉
+
+theorem emitMovedHeadFormula_spaceBoundByWidth_internal
+    (tm : NTM k) (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, MovedHeadFormulaClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength, 1 ≤ values inputLength Work.available)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            movedHeadFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+              (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+              4) +
+          caseReadSize (values inputLength Work.horizon) +
+          2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+            (values inputLength Work.horizon) +
+          2 * (values inputLength Work.horizon + 2) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitMovedHeadFormula tm tape)
+      initialSpace values width := by
+  let selected := movedHeadCaseSelectedAt tm tape
+  let choice := effectCaseChoiceAt tm
+  let effect₀ : ℕ → ℕ := fun inputLength =>
+    movedHeadEffectSizeAt (transitionCases tm).length k
+      (values inputLength Work.horizon) selected choice 0
+  let effect₁ : ℕ → ℕ := fun inputLength =>
+    movedHeadEffectSizeAt (transitionCases tm).length k
+      (values inputLength Work.horizon) selected choice 1
+  let effect₂ : ℕ → ℕ := fun inputLength =>
+    movedHeadEffectSizeAt (transitionCases tm).length k
+      (values inputLength Work.horizon) selected choice 2
+  let start : ℕ → BinaryValues WorkCount := fun inputLength =>
+    movedHeadStartValues (values inputLength)
+  let left : ℕ → BinaryValues WorkCount := fun inputLength =>
+    movedHeadMemberResult (start inputLength) Work.savedOutput
+      (effect₀ inputLength)
+  let right : ℕ → BinaryValues WorkCount := fun inputLength =>
+    movedHeadMemberResult (left inputLength) Work.direction
+      (effect₁ inputLength)
+  let stay : ℕ → BinaryValues WorkCount := fun inputLength =>
+    movedHeadMemberResult (right inputLength) Work.atomKind
+      (effect₂ inputLength)
+  let identity : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (stay inputLength) Work.available
+      (stay inputLength Work.available + 1)
+  let connector₀ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (identity inputLength) Work.available
+      (identity inputLength Work.available + 1)
+  let connector₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (connector₀ inputLength) Work.available
+      (connector₀ inputLength Work.available + 1)
+  let connector₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (connector₁ inputLength) Work.available
+      (connector₁ inputLength Work.available + 1)
+  have hcard : 0 < Fintype.card tm.Q :=
+    Fintype.card_pos_iff.mpr ⟨tm.qstart⟩
+  have htapeIndex : tape.index ≤ k + 1 := by
+    have hindex := tape.index.isLt
+    omega
+  have hmaster : ∀ inputLength,
+      values inputLength Work.available +
+            movedHeadFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon) selected choice +
+          transitionStateRef (values inputLength Work.configBase) 0 +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tape.index
+                (values inputLength Work.horizon + 1) +
+              tape.index + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tape.index
+                (values inputLength Work.horizon + 1) 0 +
+              (tape.index * (values inputLength Work.horizon + 2) +
+                (values inputLength Work.horizon + 1)) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tape.index + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+            (values inputLength Work.horizon) +
+          2 * (values inputLength Work.horizon + 2) +
+          values inputLength Work.horizon ≤ width inputLength := by
+    intro inputLength
+    exact hcap inputLength 0 tape.index 0
+      (values inputLength Work.horizon + 1) hcard htapeIndex (by omega)
+      (by omega)
+  have hglobalFrontier : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon) selected choice ≤
+        width inputLength := by
+    intro inputLength
+    have hc := hmaster inputLength
+    omega
+  have hpredecessorCap : ∀ inputLength,
+      transitionHeadRef (Fintype.card tm.Q)
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tape.index
+          (values inputLength Work.horizon + 1) + tape.index +
+          values inputLength Work.horizon + 1 +
+          2 * (values inputLength Work.horizon + 2) ≤
+        width inputLength := by
+    intro inputLength
+    have hc := hmaster inputLength
+    omega
+  have hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+          (values inputLength Work.horizon) ≤ width inputLength := by
+    intro inputLength
+    have hc := hmaster inputLength
+    omega
+  have hcopyStart : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryCopy Work.position Work.limit₂ Work.copyCounter)
+      initialSpace values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy
+    · exact fun inputLength => hvalues inputLength Work.position
+    · exact fun inputLength => hvalues inputLength Work.limit₂
+  let parked : ℕ → BinaryValues WorkCount := fun inputLength =>
+    Function.update (values inputLength) Work.limit₂
+      (values inputLength Work.position)
+  have hparkedValues : ∀ inputLength index,
+      parked inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.limit₂
+      (hvalues inputLength)
+    exact hvalues inputLength Work.position
+  have hclearPosition : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.position) initialSpace parked width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.position
+      (fun inputLength => hparkedValues inputLength Work.position)
+  have hstartValues : ∀ inputLength index,
+      start inputLength index ≤ width inputLength := by
+    intro inputLength index
+    apply BinaryRoutine.values_update_le Work.position
+      (hparkedValues inputLength)
+    omega
+  have hstartClean : ∀ inputLength,
+      CaseFormulaClean (start inputLength) := by
+    intro inputLength
+    exact movedHeadStartValues_caseClean (values inputLength)
+      (hclean inputLength)
+  have hstartLoop₁ : ∀ inputLength,
+      start inputLength Work.loop₁ = 0 := by
+    intro inputLength
+    simpa [start, movedHeadStartValues, Work.loop₁] using
+      (hclean inputLength).loop₁
+  have hstartHorizon : ∀ inputLength,
+      0 < start inputLength Work.horizon := by
+    intro inputLength
+    simpa [start, movedHeadStartValues, Work.horizon] using
+      hhorizon inputLength
+  have hstartTarget : ∀ inputLength,
+      start inputLength Work.limit₂ ≤ start inputLength Work.horizon := by
+    intro inputLength
+    simpa [start, movedHeadStartValues, Work.limit₂, Work.position,
+      Work.horizon] using htarget inputLength
+  have hstartAvailable : ∀ inputLength,
+      1 ≤ start inputLength Work.available := by
+    intro inputLength
+    simpa [start, movedHeadStartValues, Work.available] using
+      havailable inputLength
+  have hleftFrontier : ∀ inputLength,
+      start inputLength Work.available + effect₀ inputLength +
+          movedHeadPredecessorSize (start inputLength Work.horizon) + 1 ≤
+        width inputLength := by
+    intro inputLength
+    have hf := hglobalFrontier inputLength
+    simp [start, movedHeadStartValues, movedHeadFormulaScheduleSize,
+      movedHeadMemberSizeAt, movedHeadDirectionCount, prefixSize, effect₀,
+      selected, choice, Work.available, Work.horizon, Work.limit₂,
+      Work.position] at *
+    omega
+  have hleftEffectCap : ∀ inputLength stateIndex tapeIndex symbolIndex
+      position, stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 → position ≤ start inputLength Work.horizon →
+        start inputLength Work.available +
+            movedHeadEffectSizeAt (transitionCases tm).length k
+              (start inputLength Work.horizon) (movedHeadCaseSelectedAt tm tape)
+              (effectCaseChoiceAt tm) 0 +
+          transitionStateRef (start inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (start inputLength Work.horizon)
+                (start inputLength Work.configBase) tapeIndex position +
+              tapeIndex + start inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (start inputLength Work.horizon)
+                (start inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (start inputLength Work.horizon + 2) + position) +
+              (start inputLength Work.horizon + 2) + (k + 2) + tapeIndex + 4) +
+          caseReadSize (start inputLength Work.horizon) +
+          start inputLength Work.horizon ≤ width inputLength := by
+    intro inputLength stateIndex tapeIndex symbolIndex position hstate htape
+      hsymbol hposition
+    have hc := hcap inputLength stateIndex tapeIndex symbolIndex position
+      hstate htape hsymbol (by
+        simpa [start, movedHeadStartValues, Work.horizon] using
+          hposition.trans (Nat.le_add_right _ 1))
+    simp [start, movedHeadStartValues, movedHeadFormulaScheduleSize,
+      movedHeadMemberSizeAt, movedHeadDirectionCount, prefixSize, selected,
+      choice, Work.available, Work.horizon, Work.configBase, Work.limit₂,
+      Work.position] at *
+    omega
+  have hleft : BinaryRoutine.SpaceBoundByWidthAt
+      (emitMovedHeadMember tm tape .left 0 Work.savedOutput) initialSpace start
+      width := by
+    apply emitMovedHeadMember_spaceBoundByWidthAt tm tape .left 0
+      Work.savedOutput hstartClean hstartLoop₁ hstartHorizon hstartTarget
+      hstartAvailable hstartValues hleftFrontier hleftEffectCap
+    · intro inputLength
+      simpa [start, movedHeadStartValues, Work.horizon, Work.configBase] using
+        hpredecessorCap inputLength
+    · intro inputLength
+      simpa [start, movedHeadStartValues, Work.horizon] using
+        hpolynomialCap inputLength
+  have hleftValues : ∀ inputLength index,
+      left inputLength index ≤ width inputLength := by
+    exact movedHeadMemberResult_values_le Work.savedOutput hstartValues
+      hleftFrontier
+  have hleftClean : ∀ inputLength,
+      CaseFormulaClean (left inputLength) := by
+    intro inputLength
+    exact (hstartClean inputLength).movedHeadMemberResult Work.savedOutput
+      (effect₀ inputLength) (Or.inl rfl)
+  have hleftTrajectory : ∀ inputLength,
+      (emitMovedHeadMember tm tape .left 0 Work.savedOutput).effect
+          (start inputLength) = left inputLength := by
+    intro inputLength
+    simpa [left, effect₀, selected, choice, start, movedHeadStartValues,
+      Work.horizon] using emitMovedHeadMember_effect_internal tm tape .left 0
+        Work.savedOutput (start inputLength) (hstartClean inputLength)
+        (hstartLoop₁ inputLength) (hstartHorizon inputLength)
+        (hstartTarget inputLength) (hstartAvailable inputLength)
+  have hleftLoop₁ : ∀ inputLength,
+      left inputLength Work.loop₁ = 0 := by
+    intro inputLength
+    simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.loop₁, Work.available, Work.savedOutput, Work.position,
+      Work.tapeIndex, Work.limit₂] using (hclean inputLength).loop₁
+  have hleftHorizon : ∀ inputLength,
+      0 < left inputLength Work.horizon := by
+    intro inputLength
+    simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.horizon, Work.available, Work.savedOutput, Work.position,
+      Work.tapeIndex, Work.limit₂] using hhorizon inputLength
+  have hleftTarget : ∀ inputLength,
+      left inputLength Work.limit₂ ≤ left inputLength Work.horizon := by
+    intro inputLength
+    simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.limit₂, Work.horizon, Work.available, Work.savedOutput,
+      Work.position, Work.tapeIndex] using htarget inputLength
+  have hleftAvailable : ∀ inputLength,
+      1 ≤ left inputLength Work.available := by
+    intro inputLength
+    simp [left, start, movedHeadMemberResult, movedHeadStartValues, effect₀,
+      Work.available, Work.savedOutput, Work.position, Work.tapeIndex,
+      Work.limit₂]
+  have hrightFrontier : ∀ inputLength,
+      left inputLength Work.available + effect₁ inputLength +
+          movedHeadPredecessorSize (left inputLength Work.horizon) + 1 ≤
+        width inputLength := by
+    intro inputLength
+    have hf := hglobalFrontier inputLength
+    simp [left, start, movedHeadMemberResult, movedHeadStartValues,
+      movedHeadFormulaScheduleSize, movedHeadMemberSizeAt,
+      movedHeadDirectionCount, prefixSize, effect₀, effect₁, selected,
+      choice, Work.available, Work.horizon, Work.savedOutput, Work.position,
+      Work.tapeIndex, Work.limit₂] at *
+    omega
+  have hrightEffectCap : ∀ inputLength stateIndex tapeIndex symbolIndex
+      position, stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 → position ≤ left inputLength Work.horizon →
+        left inputLength Work.available +
+            movedHeadEffectSizeAt (transitionCases tm).length k
+              (left inputLength Work.horizon) (movedHeadCaseSelectedAt tm tape)
+              (effectCaseChoiceAt tm) 1 +
+          transitionStateRef (left inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (left inputLength Work.horizon)
+                (left inputLength Work.configBase) tapeIndex position +
+              tapeIndex + left inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (left inputLength Work.horizon)
+                (left inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (left inputLength Work.horizon + 2) + position) +
+              (left inputLength Work.horizon + 2) + (k + 2) + tapeIndex + 4) +
+          caseReadSize (left inputLength Work.horizon) +
+          left inputLength Work.horizon ≤ width inputLength := by
+    intro inputLength stateIndex tapeIndex symbolIndex position hstate htape
+      hsymbol hposition
+    have hc := hcap inputLength stateIndex tapeIndex symbolIndex position
+      hstate htape hsymbol (by
+        simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+          Work.horizon, Work.available, Work.savedOutput, Work.position,
+          Work.tapeIndex, Work.limit₂] using
+            hposition.trans (Nat.le_add_right _ 1))
+    simp [left, start, movedHeadMemberResult, movedHeadStartValues,
+      movedHeadFormulaScheduleSize, movedHeadMemberSizeAt,
+      movedHeadDirectionCount, prefixSize, effect₀, selected, choice,
+      Work.available, Work.horizon, Work.configBase, Work.savedOutput,
+      Work.position, Work.tapeIndex, Work.limit₂] at *
+    omega
+  have hright : BinaryRoutine.SpaceBoundByWidthAt
+      (emitMovedHeadMember tm tape .right 1 Work.direction) initialSpace left
+      width := by
+    apply emitMovedHeadMember_spaceBoundByWidthAt tm tape .right 1
+      Work.direction hleftClean hleftLoop₁ hleftHorizon hleftTarget
+      hleftAvailable hleftValues hrightFrontier hrightEffectCap
+    · intro inputLength
+      simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+        Work.horizon, Work.configBase, Work.available, Work.savedOutput,
+        Work.position, Work.tapeIndex, Work.limit₂] using
+          hpredecessorCap inputLength
+    · intro inputLength
+      simpa [left, start, movedHeadMemberResult, movedHeadStartValues,
+        Work.horizon, Work.available, Work.savedOutput, Work.position,
+        Work.tapeIndex, Work.limit₂] using hpolynomialCap inputLength
+  have hrightValues : ∀ inputLength index,
+      right inputLength index ≤ width inputLength := by
+    exact movedHeadMemberResult_values_le Work.direction hleftValues
+      hrightFrontier
+  have hrightClean : ∀ inputLength,
+      CaseFormulaClean (right inputLength) := by
+    intro inputLength
+    exact (hleftClean inputLength).movedHeadMemberResult Work.direction
+      (effect₁ inputLength) (Or.inr (Or.inl rfl))
+  have hrightTrajectory : ∀ inputLength,
+      (emitMovedHeadMember tm tape .right 1 Work.direction).effect
+          (left inputLength) = right inputLength := by
+    intro inputLength
+    simpa [right, effect₁, selected, choice, left, start,
+      movedHeadMemberResult, movedHeadStartValues, Work.horizon,
+      Work.available, Work.savedOutput, Work.position, Work.tapeIndex,
+      Work.limit₂] using emitMovedHeadMember_effect_internal tm tape .right
+        1 Work.direction (left inputLength) (hleftClean inputLength)
+        (hleftLoop₁ inputLength) (hleftHorizon inputLength)
+        (hleftTarget inputLength) (hleftAvailable inputLength)
+  have hrightLoop₁ : ∀ inputLength,
+      right inputLength Work.loop₁ = 0 := by
+    intro inputLength
+    simpa [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.loop₁, Work.available, Work.savedOutput, Work.direction,
+      Work.position, Work.tapeIndex, Work.limit₂] using
+        (hclean inputLength).loop₁
+  have hrightHorizon : ∀ inputLength,
+      0 < right inputLength Work.horizon := by
+    intro inputLength
+    simpa [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.horizon, Work.available, Work.savedOutput, Work.direction,
+      Work.position, Work.tapeIndex, Work.limit₂] using hhorizon inputLength
+  have hrightTarget : ∀ inputLength,
+      right inputLength Work.limit₂ ≤ right inputLength Work.horizon := by
+    intro inputLength
+    simpa [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      Work.limit₂, Work.horizon, Work.available, Work.savedOutput,
+      Work.direction, Work.position, Work.tapeIndex] using htarget inputLength
+  have hrightAvailable : ∀ inputLength,
+      1 ≤ right inputLength Work.available := by
+    intro inputLength
+    simp [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      effect₀, effect₁, Work.available, Work.savedOutput, Work.direction,
+      Work.position, Work.tapeIndex, Work.limit₂]
+  have hstayFrontier : ∀ inputLength,
+      right inputLength Work.available + effect₂ inputLength +
+          movedHeadPredecessorSize (right inputLength Work.horizon) + 1 ≤
+        width inputLength := by
+    intro inputLength
+    have hf := hglobalFrontier inputLength
+    simp [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      movedHeadFormulaScheduleSize, movedHeadMemberSizeAt,
+      movedHeadDirectionCount, prefixSize, effect₀, effect₁, effect₂,
+      selected, choice, Work.available, Work.horizon, Work.savedOutput,
+      Work.direction, Work.position, Work.tapeIndex, Work.limit₂] at *
+    omega
+  have hstayEffectCap : ∀ inputLength stateIndex tapeIndex symbolIndex
+      position, stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 → position ≤ right inputLength Work.horizon →
+        right inputLength Work.available +
+            movedHeadEffectSizeAt (transitionCases tm).length k
+              (right inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) 2 +
+          transitionStateRef (right inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (right inputLength Work.horizon)
+                (right inputLength Work.configBase) tapeIndex position +
+              tapeIndex + right inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (right inputLength Work.horizon)
+                (right inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (right inputLength Work.horizon + 2) + position) +
+              (right inputLength Work.horizon + 2) + (k + 2) + tapeIndex + 4) +
+          caseReadSize (right inputLength Work.horizon) +
+          right inputLength Work.horizon ≤ width inputLength := by
+    intro inputLength stateIndex tapeIndex symbolIndex position hstate htape
+      hsymbol hposition
+    have hc := hcap inputLength stateIndex tapeIndex symbolIndex position
+      hstate htape hsymbol (by
+        simpa [right, left, start, movedHeadMemberResult,
+          movedHeadStartValues, Work.horizon, Work.available,
+          Work.savedOutput, Work.direction, Work.position, Work.tapeIndex,
+          Work.limit₂] using hposition.trans (Nat.le_add_right _ 1))
+    simp [right, left, start, movedHeadMemberResult, movedHeadStartValues,
+      movedHeadFormulaScheduleSize, movedHeadMemberSizeAt,
+      movedHeadDirectionCount, prefixSize, effect₀, effect₁, selected,
+      choice, Work.available, Work.horizon, Work.configBase,
+      Work.savedOutput, Work.direction, Work.position, Work.tapeIndex,
+      Work.limit₂] at *
+    omega
+  have hstay : BinaryRoutine.SpaceBoundByWidthAt
+      (emitMovedHeadMember tm tape .stay 2 Work.atomKind) initialSpace right
+      width := by
+    apply emitMovedHeadMember_spaceBoundByWidthAt tm tape .stay 2 Work.atomKind
+      hrightClean hrightLoop₁ hrightHorizon hrightTarget hrightAvailable
+      hrightValues hstayFrontier hstayEffectCap
+    · intro inputLength
+      simpa [right, left, start, movedHeadMemberResult,
+        movedHeadStartValues, Work.horizon, Work.configBase, Work.available,
+        Work.savedOutput, Work.direction, Work.position, Work.tapeIndex,
+        Work.limit₂] using hpredecessorCap inputLength
+    · intro inputLength
+      simpa [right, left, start, movedHeadMemberResult,
+        movedHeadStartValues, Work.horizon, Work.available, Work.savedOutput,
+        Work.direction, Work.position, Work.tapeIndex, Work.limit₂] using
+          hpolynomialCap inputLength
+  have hstayValues : ∀ inputLength index,
+      stay inputLength index ≤ width inputLength := by
+    exact movedHeadMemberResult_values_le Work.atomKind hrightValues
+      hstayFrontier
+  have hstayClean : ∀ inputLength,
+      CaseFormulaClean (stay inputLength) := by
+    intro inputLength
+    exact (hrightClean inputLength).movedHeadMemberResult Work.atomKind
+      (effect₂ inputLength) (Or.inr (Or.inr rfl))
+  have hstayTrajectory : ∀ inputLength,
+      (emitMovedHeadMember tm tape .stay 2 Work.atomKind).effect
+          (right inputLength) = stay inputLength := by
+    intro inputLength
+    simpa [stay, effect₂, selected, choice, right, left, start,
+      movedHeadMemberResult, movedHeadStartValues, Work.horizon,
+      Work.available, Work.savedOutput, Work.direction, Work.position,
+      Work.tapeIndex, Work.limit₂] using
+        emitMovedHeadMember_effect_internal tm tape .stay 2 Work.atomKind
+          (right inputLength) (hrightClean inputLength)
+          (hrightLoop₁ inputLength) (hrightHorizon inputLength)
+          (hrightTarget inputLength) (hrightAvailable inputLength)
+  have hparkedTrajectory : ∀ inputLength,
+      (BinaryRoutine.binaryCopy Work.position Work.limit₂
+        Work.copyCounter).effect (values inputLength) = parked inputLength := by
+    intro inputLength
+    rfl
+  have hstartTrajectory : ∀ inputLength,
+      (BinaryRoutine.clear Work.position).effect (parked inputLength) =
+        start inputLength := by
+    intro inputLength
+    rfl
+  have hsuffixFrontier : ∀ inputLength,
+      stay inputLength Work.available + 4 ≤ width inputLength := by
+    intro inputLength
+    have hf := hglobalFrontier inputLength
+    simp [stay, right, left, start, movedHeadMemberResult,
+      movedHeadStartValues, movedHeadFormulaScheduleSize,
+      movedHeadMemberSizeAt, movedHeadDirectionCount, prefixSize, effect₀,
+      effect₁, effect₂, selected, choice, Work.available, Work.horizon,
+      Work.savedOutput, Work.direction, Work.atomKind, Work.position,
+      Work.tapeIndex, Work.limit₂] at *
+    omega
+  have hsuffix := emitMovedHeadFormulaSuffix_seqListSpaceBoundByWidthAt
+    (initialSpace := initialSpace) hstayClean hstayValues hsuffixFrontier
+  rw [emitMovedHeadFormula]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨hcopyStart, ?_, ?_, ?_, ?_, ?_⟩
+  · simpa only [hparkedTrajectory] using hclearPosition
+  · simpa only [hparkedTrajectory, hstartTrajectory] using hleft
+  · simpa only [hparkedTrajectory, hstartTrajectory, hleftTrajectory] using
+      hright
+  · simpa only [hparkedTrajectory, hstartTrajectory, hleftTrajectory,
+      hrightTrajectory] using hstay
+  · simpa only [hparkedTrajectory, hstartTrajectory, hleftTrajectory,
+      hrightTrajectory, hstayTrajectory] using hsuffix
+
 end DirectGenerator
 
 end Serializer

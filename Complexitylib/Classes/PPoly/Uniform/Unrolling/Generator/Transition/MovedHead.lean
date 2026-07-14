@@ -27,6 +27,50 @@ theorem emitMovedHeadFormula_sound (tm : NTM k) (tape : TapeSlot k) :
     (emitMovedHeadFormula tm tape).Sound :=
   emitMovedHeadFormula_sound_internal tm tape
 
+/-- Complete moved-head emission has an all-prefix width certificate under one
+bounded-selector envelope. The full schedule covers every member frontier;
+the remaining visible terms cover nested case references, predecessor-head
+references and controller slack, and the conjunction's polynomial evaluator. -/
+theorem emitMovedHeadFormula_spaceBoundByWidth
+    (tm : NTM k) (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, MovedHeadFormulaClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength, 1 ≤ values inputLength Work.available)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            movedHeadFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+              (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+              4) +
+          caseReadSize (values inputLength Work.horizon) +
+          2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+            (values inputLength Work.horizon) +
+          2 * (values inputLength Work.horizon + 2) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitMovedHeadFormula tm tape)
+      initialSpace values width :=
+  emitMovedHeadFormula_spaceBoundByWidth_internal tm tape hclean hhorizon
+    htarget havailable hvalues hcap
+
 /-- Clean owned scratch, a positive horizon, an in-range target, and a valid
 wire frontier suffice for complete moved-head formula generation. -/
 theorem emitMovedHeadFormula_requires (tm : NTM k) (tape : TapeSlot k)
