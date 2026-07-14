@@ -56,6 +56,8 @@ def headlineTheorems : List Name := [
   -- Structural containments
   `Complexity.P_subset_NP,
   `Complexity.P_subset_PSPACE,
+  `Complexity.P_subset_UniformPPoly,
+  `Complexity.UniformPPoly_eq_P,
   `Complexity.RP_subset_NP,
   `Complexity.BPP_subset_PP,
   -- Circuit lower and upper bounds

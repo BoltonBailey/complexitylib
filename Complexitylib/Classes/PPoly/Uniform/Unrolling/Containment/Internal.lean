@@ -5,14 +5,16 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Classes.P.NormalForm
 import Complexitylib.Classes.PPoly.Uniform
+import Complexitylib.Classes.PPoly.Uniform.Containment
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Tableau
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
 
 /-!
 # Deterministic unrolling into uniform P/poly -- proof internals
 
-This module packages the direct deterministic unrolling family once its exact
-code map is known to belong to `FL`. The actual streaming-generator
-construction remains separate.
+This module packages the direct deterministic unrolling family first through
+conditional `FL` seams and then through the verified canonical padded
+serializer, yielding the unconditional machines-to-circuits containment.
 -/
 
 namespace Complexity
@@ -90,5 +92,45 @@ theorem P_subset_UniformPPoly_of_paddedDirectUnrollingCode_mem_FL_internal
     mem_P_iff_decidesInTime_polynomial.mp hL
   exact hdec.mem_UniformPPoly_of_paddedDirectUnrollingCode_mem_FL_internal
     q (hgen tm q)
+
+namespace TM
+
+open CircuitUnrolling.Serializer.DirectGenerator in
+/-- Internal `FL` witness for the regularly padded serializer at the
+normalized polynomial horizon. -/
+theorem paddedDirectUnrollingCode_mem_FL_internal (tm : TM k)
+    (q : Polynomial ℕ) :
+    (fun input : List Bool => tm.paddedDirectUnrollingCode
+      (directSerializerHorizonPolynomial q).eval input.length) ∈ FL := by
+  refine ⟨WorkCount,
+    BinaryRoutine.afterInputLength Work.inputLength
+      (paddedDirectUnrollingProgram tm q),
+    BinaryRoutine.afterInputLengthSpace Work.inputLength
+      (paddedDirectUnrollingProgram tm q), ?_, ?_⟩
+  · exact paddedDirectUnrollingGenerator_computesInSpace tm q
+  · exact paddedDirectUnrollingGenerator_space_bigO_log tm q
+
+/-- Internal unconditional packaging of one polynomial-time decider as a
+logspace-uniform polynomial-size circuit family. -/
+theorem DecidesInTime.mem_UniformPPoly_internal
+    {tm : TM k} {L : Language} (q : Polynomial ℕ)
+    (hdec : tm.DecidesInTime L q.eval) : L ∈ UniformPPoly := by
+  have hnormalized := hdec.directSerializerHorizon q
+  exact hnormalized.mem_UniformPPoly_of_paddedDirectUnrollingCode_mem_FL_internal
+    (directSerializerHorizonPolynomial q)
+    (tm.paddedDirectUnrollingCode_mem_FL_internal q)
+
+end TM
+
+/-- Internal machines-to-uniform-circuits containment. -/
+theorem P_subset_UniformPPoly_internal : P ⊆ UniformPPoly := by
+  intro L hL
+  obtain ⟨k, tm, q, hdec⟩ := mem_P_iff_decidesInTime_polynomial.mp hL
+  exact hdec.mem_UniformPPoly_internal q
+
+/-- Internal logspace-uniform circuit characterization of deterministic
+polynomial time. -/
+theorem UniformPPoly_eq_P_internal : UniformPPoly = P :=
+  Set.Subset.antisymm UniformPPoly_subset_P P_subset_UniformPPoly_internal
 
 end Complexity

@@ -10,9 +10,9 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Tableau.Internal
 # Verified direct-tableau generator
 
 This module exposes the complete append-only generator for the regularly
-padded direct-unrolling family. Its concrete binary routine is sound and emits
-exactly the family's tagged circuit code, including the separate zero-length
-member.
+padded direct-unrolling family. Its concrete binary routine is sound, emits
+exactly the family's tagged circuit code (including the separate zero-length
+member), and has a verified logarithmic all-prefix auxiliary-space bound.
 -/
 
 namespace Complexity
@@ -124,6 +124,16 @@ theorem paddedDirectUnrollingGenerator_computesInSpace
         (BinaryRoutine.afterInputLengthSpace Work.inputLength
           (paddedDirectUnrollingProgram tm q)) :=
   paddedDirectUnrollingGenerator_computesInSpace_internal tm q
+
+/-- The complete fresh-input serializer uses logarithmic auxiliary space.
+Its output may have polynomial length, but the one-way output tape is never
+charged as reusable workspace. -/
+theorem paddedDirectUnrollingGenerator_space_bigO_log
+    (tm : TM k) (q : Polynomial ℕ) :
+    BinaryRoutine.afterInputLengthSpace Work.inputLength
+        (paddedDirectUnrollingProgram tm q) =O
+      (fun n => Nat.log 2 n) :=
+  paddedDirectUnrollingGenerator_space_bigO_log_internal tm q
 
 end DirectGenerator
 

@@ -587,7 +587,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     semantic correctness (output bit = acceptance) and a `poly(T(n))` size bound
     (`TM.unrollingCircuitFamily`, with `P_subset_PPoly` as the nonuniform class
     theorem).
-  - [ ] Prove the tableau-circuit emitter is computable in log space (in `FL`) — the
+  - [x] Prove the tableau-circuit emitter is computable in log space (in `FL`) — the
     regular tableau structure makes the connection function log-space computable —
     giving logspace-uniformity, and conclude `P ⊆ UniformPPoly`. (The emitter being
     in `FL` rather than merely `FP` is the extra cost of matching Arora–Barak, and is
@@ -605,7 +605,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       semantically dead constant gates and one final copy of the original acceptance
       wire. The padded raw list is well formed, has exact size `B(n) + 1`, computes
       the same bounded trace bit, and eliminates a preliminary gate-counting pass
-      from the future log-space generator.
+      from the log-space generator.
     - [x] Expose the exact stack-free raw compilation order for the variable-length
       right folds used by transition formulas: children stream forward, one identity
       constant follows, and connector gates stream in reverse child order with
@@ -669,17 +669,17 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [x] Package the canonical-entry domain through compact semantic preconditions
       and obtain a total fresh-input `ComputesInSpace` theorem for the exact
       once-normalized padded-code function.
-    - [~] Prove the serializer's explicit all-prefix space bound is logarithmic,
+    - [x] Prove the serializer's explicit all-prefix space bound is logarithmic,
       conclude that its code function is in `FL`, package `P_subset_UniformPPoly`,
       and combine both directions. *Decomposed:*
       - [x] Give every serializer primitive and the complete transition-step
         routine a compositional width certificate. The step theorem follows the
         exact formula and delayed-copy trajectories through every nested loop and
         bounds the advertised auxiliary space at every routine prefix.
-      - [ ] Construct one explicit polynomial envelope for every reachable
+      - [x] Construct one explicit polynomial envelope for every reachable
         transition-loop entry, lift the local certificate through the whole
         tableau program, and derive the logarithmic `ComputesInSpace` theorem.
-      - [ ] Package the exact padded-code function in `FL`, prove
+      - [x] Package the exact padded-code function in `FL`, prove
         `P_subset_UniformPPoly`, and combine both containments.
 
 **Definitions for the headline.** [x] The `UniformPPoly` class is defined
@@ -691,7 +691,9 @@ decided by a logspace-uniform polynomial-size family. The trivial containment
 `UniformPPoly = P` (Arora–Barak Theorem 6.7). The Cook–Levin tableau infrastructure
 already in the library (`SAT` reduction emitters) is related but is a CNF
 *satisfiability* encoding, not a deterministic output-computing circuit. The
-dedicated functional unrolling is now complete; its logspace emitter remains open.
+dedicated functional unrolling and its log-space emitter are now complete:
+`TM.paddedDirectUnrollingCode_mem_FL`, `P_subset_UniformPPoly`, and
+`UniformPPoly_eq_P` package the exact normalized code map and both containments.
 
 **Prerequisites.** The N1 list/`BitString` bridge, the existing typed
 `Circuit.eval` semantics, and stable machine composition/time accounting from
@@ -720,12 +722,13 @@ The reverse uniformity path now has a syntax-stable target as well:
 `TM.directUnrollingCircuitFamily` reuses primary wire zero for the choice inputs
 ignored by `tm.toNTM`, reconstructs the positive member directly from
 `acceptanceRawCircuit`, and proves that its tagged serialization is exactly
-`TM.directUnrollingCode`. This removes typed prefix hardwiring from the future
+`TM.directUnrollingCode`. This removes typed prefix hardwiring from the
 log-space emitter without changing deterministic trace semantics or the cubic
 size estimate. Its positive raw circuit is now also flattened into initialization,
 canonical fixed-size transition fragments with closed-form wire bases, and the
-final acceptance gate. This is an exact stream specification for the emitter,
-not yet an `FL` implementation of that stream.
+final acceptance gate. The canonical append-only binary routine realizes that
+stream exactly, including the zero-length tag, and its all-prefix polynomial
+width certificate packages the resulting code function in `FL`.
 Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
@@ -762,23 +765,15 @@ The forward uniform circuit bridge is now complete: a reusable unary-length
 transducer and computed-value/input fanout combinator build
 `pair (gen (unaryList |x|)) x` in `FP`; preimage closure then applies the verified
 quadratic serialized evaluator and yields `UniformPPoly_subset_P`.
-The library also has the canonical binary count-up substrate for the reverse
-emitter, with exact comparison/iteration timing, generic loop and
-all-prefix space certificates, and transducer closure. Its first circuit-code
-consumer now emits a preserved binary value as terminated-unary `NatCode`, then
-restores its zero scratch and complete input/work frame within
-`emitNatCodeTime value`; every reachable configuration stays within
-`initialSpace + 2 * value.size + 5`, and output is structurally one-way. Loading
-successive values and fixed-polynomial binary arithmetic remain open. Canonical
-binary addition has now landed with a literal destination-update frame and an
-all-prefix bound controlled by the source and final-destination widths, giving
-the forthcoming polynomial evaluator a verified repeated-addition core. The
-nested binary multiply-add wrapper now preserves both operands and restores both
-counters while retaining a width-based all-prefix bound. Complete
-raw gates can now be emitted from two preserved binary references with the same
-framed, all-prefix-space, and one-way-output guarantees; the concrete append-only
-direct-unrolling schedule remains open, and the deferred rose-tree lowering is
-not on this dependency path.
+The reverse emitter's binary substrate is complete: canonical count-up loops,
+addition, multiply-add, predecessor, copying, fixed-polynomial evaluation,
+terminated-unary natural codes, and raw-gate emission all have exact effects,
+reusable scratch frames, all-prefix space certificates, and transducer closure.
+The concrete direct-unrolling controller composes those pieces through
+initialization, every packed transition layer, finalization, and the zero/positive
+branch. A single explicit polynomial bounds every reachable work value; binary
+width then gives the logarithmic-space theorem. The deferred rose-tree lowering
+was not needed on this dependency path.
 Independently, `BPP_subset_PAdvice` follows from the existing
 `BPP_subset_PPoly` theorem.
 
@@ -830,7 +825,7 @@ preserved by serialized encodings and uniform generators.
   `PAdvice_subset_PPoly`, `PPoly_subset_PAdvice`, and `PAdvice_eq_PPoly` complete
   both directions. The reverse direction reuses the serialized circuit-evaluator
   DTM rather than introducing a second evaluator.
-- [ ] Implement the tableau-circuit code emitter in `FL`, prove
+- [x] Implement the tableau-circuit code emitter in `FL`, prove
   `P_subset_UniformPPoly`, and combine it with `UniformPPoly_subset_P` for the
   logspace-uniform equality.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.

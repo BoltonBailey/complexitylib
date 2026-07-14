@@ -6,12 +6,12 @@ Authors: Samuel Schlesinger
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Containment.Internal
 
 /-!
-# Conditional deterministic unrolling into uniform P/poly
+# Deterministic unrolling into uniform P/poly
 
-This module exposes the final packaging seam for the machines-to-circuits
-direction of uniform P/poly. It deliberately assumes that an exact direct or
-regularly padded unrolling code map belongs to `FL`; the streaming serializer
-must discharge that hypothesis separately.
+This module packages the verified log-space tableau serializer into the
+machines-to-circuits direction of uniform P/poly. The conditional seams remain
+available for alternate serializers, while the canonical padded serializer
+discharges them unconditionally.
 
 ## Main results
 
@@ -21,6 +21,7 @@ must discharge that hypothesis separately.
   conditional class containment.
 - The corresponding `paddedDirectUnrollingCode` theorems target the regular
   family whose gate-count header is known before gate emission begins.
+- `P_subset_UniformPPoly` and `UniformPPoly_eq_P` are the completed headline.
 -/
 
 namespace Complexity
@@ -66,5 +67,32 @@ theorem P_subset_UniformPPoly_of_paddedDirectUnrollingCode_mem_FL
         tm.paddedDirectUnrollingCode q.eval x.length) ∈ FL) :
     P ⊆ UniformPPoly :=
   P_subset_UniformPPoly_of_paddedDirectUnrollingCode_mem_FL_internal hgen
+
+namespace TM
+
+/-- The canonical streaming transducer computes every regularly padded direct
+unrolling code at the normalized polynomial horizon in logarithmic space. -/
+theorem paddedDirectUnrollingCode_mem_FL (tm : TM k) (q : Polynomial ℕ) :
+    (fun input : List Bool => tm.paddedDirectUnrollingCode
+      (directSerializerHorizonPolynomial q).eval input.length) ∈ FL :=
+  tm.paddedDirectUnrollingCode_mem_FL_internal q
+
+/-- Every language decided by a deterministic machine within a polynomial
+time bound has a logspace-uniform polynomial-size circuit family. -/
+theorem DecidesInTime.mem_UniformPPoly
+    {tm : TM k} {L : Language} (q : Polynomial ℕ)
+    (hdec : tm.DecidesInTime L q.eval) : L ∈ UniformPPoly :=
+  hdec.mem_UniformPPoly_internal q
+
+end TM
+
+/-- Deterministic polynomial time is contained in logspace-uniform P/poly. -/
+theorem P_subset_UniformPPoly : P ⊆ UniformPPoly :=
+  P_subset_UniformPPoly_internal
+
+/-- Logspace-uniform polynomial-size circuits characterize deterministic
+polynomial time. -/
+theorem UniformPPoly_eq_P : UniformPPoly = P :=
+  UniformPPoly_eq_P_internal
 
 end Complexity
