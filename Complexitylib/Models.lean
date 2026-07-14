@@ -14,6 +14,7 @@ import Complexitylib.Models.TuringMachine.Experimental.Routine
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
@@ -53,7 +54,7 @@ Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, time- and
 space-aware Hoare specifications, experimental first-order routine lowering,
 reusable read-only-input loops, binary count-up loops, binary successor,
-binary predecessor and length, canonical binary addition and multiply-add,
+binary predecessor and length, canonical binary addition, copying, and multiply-add,
 framed work-tape clearing, unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
 the universal machine, and the logarithmic-cost random access machine
