@@ -596,6 +596,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       tableau gate list. `TM.directUnrollingCircuitFamily_encodeAt` identifies the
       complete tagged family code with `TM.directUnrollingCode`, avoiding the repeated
       typed hardwiring transformation while retaining exact semantics and cubic size.
+    - [x] Flatten the positive direct-unrolling raw circuit into an initialization
+      fragment, a canonical layer-ordered stream of base-independent fixed-size step
+      fragments, and one final acceptance gate. The closed forms for every layer's
+      configuration base, first unused wire, and gate count give the append-only
+      serializer an exact numeric schedule without replaying proof-level trace state.
     - [x] Add compositional all-reachable space contracts. `TM.HoareSpace` and
       `TM.HoareTimeSpace` now compose through `seqTM`, preserve the transducer
       discipline, and package fresh-start contracts as `TM.ComputesInSpace` without
@@ -677,7 +682,10 @@ ignored by `tm.toNTM`, reconstructs the positive member directly from
 `acceptanceRawCircuit`, and proves that its tagged serialization is exactly
 `TM.directUnrollingCode`. This removes typed prefix hardwiring from the future
 log-space emitter without changing deterministic trace semantics or the cubic
-size estimate.
+size estimate. Its positive raw circuit is now also flattened into initialization,
+canonical fixed-size transition fragments with closed-form wire bases, and the
+final acceptance gate. This is an exact stream specification for the emitter,
+not yet an `FL` implementation of that stream.
 Polynomial advice now has an explicit self-delimiting input convention,
 pointwise polynomial-length predicate, advised decision semantics, and a
 hardwired family construction. `PAdvice_subset_PPoly` proves the
