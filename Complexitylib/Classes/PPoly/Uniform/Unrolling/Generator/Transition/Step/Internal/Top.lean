@@ -746,7 +746,7 @@ theorem emitStep_emitted_internal (tm : TM k)
     (afterBase Work.gateBound)
   have hcleanCount : StepClean afterCount :=
     hcleanBase.updateOuter_forEffect_internal afterBase Work.gateCount
-      (afterBase Work.gateBound) (Or.inr (Or.inr rfl))
+      (afterBase Work.gateBound) (Or.inr (Or.inr (Or.inl rfl)))
   have hgateCount : afterCount Work.gateCount = values Work.available := by
     simp [afterCount, afterBase, afterFormulas, afterBound, Work.gateCount,
       Work.configBase, Work.available, Work.gateBound]

@@ -18,7 +18,7 @@ namespace Complexity
 
 namespace TM
 
-private theorem directUnrollingRawCircuit_length_le_gateBound
+theorem directUnrollingRawCircuit_length_le_gateBound_internal
     (tm : TM k) (f : ℕ → ℕ) (n : ℕ) [NeZero n] :
     (tm.directUnrollingRawCircuit f n).length ≤
       tm.directUnrollingGateBound f n := by
@@ -29,7 +29,7 @@ theorem paddedDirectUnrollingRawCircuit_length_internal
     (tm : TM k) (f : ℕ → ℕ) (n : ℕ) [NeZero n] :
     (tm.paddedDirectUnrollingRawCircuit f n).length =
       tm.directUnrollingGateBound f n + 1 := by
-  have hbound := directUnrollingRawCircuit_length_le_gateBound tm f n
+  have hbound := directUnrollingRawCircuit_length_le_gateBound_internal tm f n
   simp only [paddedDirectUnrollingRawCircuit, List.length_append,
     List.length_replicate, List.length_singleton]
   omega

@@ -614,7 +614,7 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       `TM.HoareTimeSpace` now compose through `seqTM`, preserve the transducer
       discipline, and package fresh-start contracts as `TM.ComputesInSpace` without
       mistaking a terminal head bound for a whole-run space proof.
-    - [ ] Add the binary-counter and fixed-polynomial arithmetic substrate needed to
+    - [x] Add the binary-counter and fixed-polynomial arithmetic substrate needed to
       enumerate polynomially many gates and unary-coded wire references in logarithmic
       auxiliary space. *Decomposed:*
       - [x] Add canonical fixed-width little-endian natural-number encodings with exact
@@ -664,8 +664,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         Horner evaluation now has exact framed semantics and an honest logarithmic
         all-prefix space bound; the initialization block is also exposed as an exact
         natural-index schedule with no run-time formula or configuration syntax.
-    - [ ] Implement the append-only raw-tableau serializer, prove its code function is
-      in `FL`, package `P_subset_UniformPPoly`, and combine both directions.
+    - [x] Implement the append-only raw-tableau serializer and prove that the sound
+      routine's pure output is exactly the padded direct-unrolling code at every length.
+    - [ ] Package the canonical-entry domain and all-prefix logarithmic space proof,
+      prove the serializer's code function is in `FL`, package
+      `P_subset_UniformPPoly`, and combine both directions.
 
 **Definitions for the headline.** [x] The `UniformPPoly` class is defined
 (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F` asks the tagged

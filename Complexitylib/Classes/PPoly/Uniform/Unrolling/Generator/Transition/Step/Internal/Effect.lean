@@ -55,9 +55,9 @@ private theorem MovedHeadFormulaClean.updateOuter_forEffect_internal
     (values : BinaryValues WorkCount) (hclean : MovedHeadFormulaClean values)
     (idx : Fin WorkCount) (value : ℕ)
     (hidx : idx = Work.gateBound ∨ idx = Work.configBase ∨
-      idx = Work.gateCount) :
+      idx = Work.gateCount ∨ idx = Work.loop₂) :
     MovedHeadFormulaClean (Function.update values idx value) := by
-  rcases hidx with rfl | rfl | rfl <;>
+  rcases hidx with rfl | rfl | rfl | rfl <;>
     refine
       { caseClean := ?_
         limit₂ := ?_
@@ -70,78 +70,80 @@ private theorem MovedHeadFormulaClean.updateOuter_forEffect_internal
     | exact
         { toReadFormulaClean :=
             { position := by simp [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position]
+                Work.gateCount, Work.loop₂, Work.position]
               loop₀ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.loop₀] using
+                Work.gateCount, Work.loop₂, Work.position, Work.loop₀] using
                   hclean.caseClean.loop₀
               limit₀ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.limit₀] using
+                Work.gateCount, Work.loop₂, Work.position, Work.limit₀] using
                   hclean.caseClean.limit₀
               reference₀ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.reference₀] using
+                Work.gateCount, Work.loop₂, Work.position, Work.reference₀] using
                   hclean.caseClean.reference₀
               reference₁ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.reference₁] using
+                Work.gateCount, Work.loop₂, Work.position, Work.reference₁] using
                   hclean.caseClean.reference₁
               emitCounter := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.emitCounter] using
+                Work.gateCount, Work.loop₂, Work.position, Work.emitCounter] using
                   hclean.caseClean.emitCounter
               copyCounter := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.copyCounter] using
+                Work.gateCount, Work.loop₂, Work.position, Work.copyCounter] using
                   hclean.caseClean.copyCounter
               multiplyCounter := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.multiplyCounter] using
+                Work.gateCount, Work.loop₂, Work.position, Work.multiplyCounter] using
                   hclean.caseClean.multiplyCounter
               addCounter := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.addCounter] using
+                Work.gateCount, Work.loop₂, Work.position, Work.addCounter] using
                   hclean.caseClean.addCounter
               temporary₀ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.temporary₀] using
+                Work.gateCount, Work.loop₂, Work.position, Work.temporary₀] using
                   hclean.caseClean.temporary₀
               temporary₁ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.temporary₁] using
+                Work.gateCount, Work.loop₂, Work.position, Work.temporary₁] using
                   hclean.caseClean.temporary₁
               temporary₂ := by simpa [Work.gateBound, Work.configBase,
-                Work.gateCount, Work.position, Work.temporary₂] using
+                Work.gateCount, Work.loop₂, Work.position, Work.temporary₂] using
                   hclean.caseClean.temporary₂ }
-          loop₃ := by simpa [Work.gateBound, Work.configBase, Work.gateCount,
+          loop₃ := by simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂,
               Work.position, Work.loop₃] using hclean.caseClean.loop₃
           temporary₃ := by simpa [Work.gateBound, Work.configBase,
-              Work.gateCount, Work.position, Work.temporary₃] using
+              Work.gateCount, Work.loop₂, Work.position, Work.temporary₃] using
                 hclean.caseClean.temporary₃
           polynomialScratch := by simpa [Work.gateBound, Work.configBase,
-              Work.gateCount, Work.position, Work.polynomialScratch] using
+              Work.gateCount, Work.loop₂, Work.position, Work.polynomialScratch] using
                 hclean.caseClean.polynomialScratch
           tapeIndex := by simpa [Work.gateBound, Work.configBase,
-              Work.gateCount, Work.position, Work.tapeIndex] using
+              Work.gateCount, Work.loop₂, Work.position, Work.tapeIndex] using
                 hclean.caseClean.tapeIndex
           symbolIndex := by simpa [Work.gateBound, Work.configBase,
-              Work.gateCount, Work.position, Work.symbolIndex] using
+              Work.gateCount, Work.loop₂, Work.position, Work.symbolIndex] using
                 hclean.caseClean.symbolIndex }
-    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.limit₂]
+    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂, Work.limit₂]
         using hclean.limit₂
-    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₁]
+    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂, Work.loop₁]
         using hclean.loop₁
-    | simpa [Work.gateBound, Work.configBase, Work.gateCount,
+    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂,
         Work.savedOutput] using hclean.savedOutput
-    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.direction]
+    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂, Work.direction]
         using hclean.direction
-    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.atomKind]
+    | simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂, Work.atomKind]
         using hclean.atomKind
 
 theorem StepClean.updateOuter_forEffect_internal
     (values : BinaryValues WorkCount) (hclean : StepClean values)
     (idx : Fin WorkCount) (value : ℕ)
     (hidx : idx = Work.gateBound ∨ idx = Work.configBase ∨
-      idx = Work.gateCount) :
+      idx = Work.gateCount ∨ idx = Work.loop₂) :
     StepClean (Function.update values idx value) :=
   { movedHeadClean := hclean.movedHeadClean.updateOuter_forEffect_internal values idx
       value hidx
-    position := by rcases hidx with rfl | rfl | rfl <;>
-      simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.position]
+    position := by rcases hidx with rfl | rfl | rfl | rfl <;>
+      simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂,
+        Work.position]
         using hclean.position
-    limit₁ := by rcases hidx with rfl | rfl | rfl <;>
-      simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.limit₁]
+    limit₁ := by rcases hidx with rfl | rfl | rfl | rfl <;>
+      simpa [Work.gateBound, Work.configBase, Work.gateCount, Work.loop₂,
+        Work.limit₁]
         using hclean.limit₁ }
 
 private theorem StepPhaseCleanInternal.movedHeadClean_atPosition_internal
@@ -2111,7 +2113,7 @@ theorem emitStep_effect_explicit_internal (tm : TM k)
     (afterBase Work.gateBound)
   have hcleanCount : StepClean afterCount :=
     hcleanBase.updateOuter_forEffect_internal afterBase Work.gateCount
-      (afterBase Work.gateBound) (Or.inr (Or.inr rfl))
+      (afterBase Work.gateBound) (Or.inr (Or.inr (Or.inl rfl)))
   have hpackedEffect := emitStepPackedCopies_effect_internal tm.toNTM
     afterCount hcleanCount
   simp only [emitStep, BinaryRoutine.seqList, BinaryRoutine.seq]
@@ -2222,7 +2224,7 @@ theorem emitStep_effect_stepClean_internal (tm : TM k)
   have hboundClean : StepClean afterBound :=
     hbaseClean.updateOuter_forEffect_internal afterBase Work.gateBound 0 (Or.inl rfl)
   exact hboundClean.updateOuter_forEffect_internal afterBound Work.gateCount 0
-    (Or.inr (Or.inr rfl))
+    (Or.inr (Or.inr (Or.inl rfl)))
 end DirectGenerator
 
 end Serializer

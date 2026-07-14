@@ -34,8 +34,8 @@ noncomputable def emitTransitionSteps (tm : TM k) : BinaryRoutine WorkCount :=
 
 /-- Complete positive-length tableau body, excluding the tagged header. -/
 noncomputable def positiveTableauBody (tm : TM k) : BinaryRoutine WorkCount :=
-  BinaryRoutine.seqList
-    [initialization tm, emitTransitionSteps tm, finalization tm]
+  BinaryRoutine.seq (initialization tm)
+    (BinaryRoutine.seq (emitTransitionSteps tm) (finalization tm))
 
 /-- Complete zero/positive generator for the padded direct-unrolling code. -/
 noncomputable def paddedDirectUnrollingProgram

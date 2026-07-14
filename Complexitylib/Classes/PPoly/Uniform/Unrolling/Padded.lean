@@ -28,6 +28,13 @@ namespace Complexity
 
 namespace TM
 
+/-- The unpadded positive tableau fits within its closed padding budget. -/
+theorem directUnrollingRawCircuit_length_le_gateBound
+    (tm : TM k) (f : ℕ → ℕ) (n : ℕ) [NeZero n] :
+    (tm.directUnrollingRawCircuit f n).length ≤
+      tm.directUnrollingGateBound f n :=
+  tm.directUnrollingRawCircuit_length_le_gateBound_internal f n
+
 /-- Every positive padded member has exactly the closed tableau bound plus its
 terminal output-copy gate. -/
 @[simp] theorem paddedDirectUnrollingRawCircuit_length
