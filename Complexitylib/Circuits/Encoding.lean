@@ -7,6 +7,7 @@ import Complexitylib.Circuits.Encoding.Defs
 import Complexitylib.Circuits.Encoding.Fragment
 import Complexitylib.Circuits.Encoding.Formula
 import Complexitylib.Circuits.Encoding.Formula.Batch
+import Complexitylib.Circuits.Encoding.Formula.Stream
 import Complexitylib.Circuits.Encoding.Internal
 import Complexitylib.Circuits.Encoding.Threshold
 import Complexitylib.Circuits.Encoding.ToCircuit
@@ -29,6 +30,8 @@ This module exposes the machine-facing representation of
 - `RawCircuit.evalAux?_append`: compose appendable raw fragments.
 - `BoolFormula.compileRaw`: compile formulas into appendable raw fragments.
 - `BoolFormula.compileRawBatch`: compile many formulas and pack their outputs.
+- `BoolFormula.compileRawRightFold`: expose finite folds as forward members,
+  one identity gate, and reverse connectors.
 - `Threshold.compileRaw`: append a unary dynamic-programming threshold test.
 
 ## Main results

@@ -601,6 +601,10 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       fragments, and one final acceptance gate. The closed forms for every layer's
       configuration base, first unused wire, and gate count give the append-only
       serializer an exact numeric schedule without replaying proof-level trace state.
+    - [x] Expose the exact stack-free raw compilation order for the variable-length
+      right folds used by transition formulas: children stream forward, one identity
+      constant follows, and connector gates stream in reverse child order with
+      explicit wire references. This removes the need to store a linear formula stack.
     - [x] Add compositional all-reachable space contracts. `TM.HoareSpace` and
       `TM.HoareTimeSpace` now compose through `seqTM`, preserve the transducer
       discipline, and package fresh-start contracts as `TM.ComputesInSpace` without
