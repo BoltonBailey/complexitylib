@@ -30,6 +30,52 @@ theorem emitCaseFormula_sound
   emitCaseFormula_sound_internal stateCount workCount stateIndex
     inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt
 
+/-- Complete fixed-case emission has an all-prefix width certificate under
+one bounded-selector arithmetic envelope. The symbol-selector hypotheses are
+the semantic ranges of transition-table data; the cap simultaneously covers
+the wire frontier, absolute references, and the read-size arithmetic scratch. -/
+theorem emitCaseFormula_spaceBoundByWidth
+    (stateCount workCount stateIndex inputSymbolIndex outputSymbolIndex : ℕ)
+    (choiceValue : Bool) (workSymbolIndexAt : ℕ → ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hinputSymbol : inputSymbolIndex < 4)
+    (houtputSymbol : outputSymbolIndex < 4)
+    (hworkSymbols : ∀ index, index < workCount →
+      workSymbolIndexAt index < 4)
+    (hcap : ∀ inputLength tapeIndex symbolIndex position,
+      tapeIndex ≤ workCount + 1 → symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            caseFormulaScheduleSize workCount
+              (values inputLength Work.horizon) choiceValue +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef stateCount
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef stateCount (workCount + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (workCount + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitCaseFormula stateCount workCount stateIndex inputSymbolIndex
+        outputSymbolIndex choiceValue workSymbolIndexAt)
+      initialSpace values width :=
+  emitCaseFormula_spaceBoundByWidth_internal stateCount workCount stateIndex
+    inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt hclean
+    hvalues hinputSymbol houtputSymbol hworkSymbols hcap
+
 /-- A clean case-formula entry state satisfies every framed arithmetic,
 reference, and gate-emission precondition of the complete emitter. -/
 theorem emitCaseFormula_requires
