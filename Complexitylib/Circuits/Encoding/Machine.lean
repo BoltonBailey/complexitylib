@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Circuits.Encoding.Machine.Defs
 import Complexitylib.Circuits.Encoding.Machine.Core
 import Complexitylib.Circuits.Encoding.Machine.Internal.FrontEnd
+import Complexitylib.Circuits.Encoding.Machine.GateStream
 import Complexitylib.Circuits.Encoding.Machine.NatCode
 import Complexitylib.Circuits.Encoding.Machine.RawGate
 
@@ -32,6 +33,8 @@ its final verdict.
   from binary work tapes with reusable scratch and an all-prefix space bound.
 - `Machine.emitRawGateTM_hoareTimeSpace` emits complete raw-gate codes from
   two preserved binary wire references.
+- `Machine.emitRawGateStepTM_hoareTimeSpace` additionally advances the
+  first-unused-wire counter after one emitted gate.
 -/
 
 namespace Complexity
