@@ -215,7 +215,7 @@ theorem compileRaw_nextFormula_eq_schedule
 
 /-- The syntax-tree size of every next atom equals its selected numeric
 schedule count. -/
-@[simp] theorem size_nextFormula_eq_scheduleSize
+theorem size_nextFormula_eq_scheduleSize
     (tm : NTM k) (T configBase choiceWire : ℕ)
     (atom : ConfigAtom tm T) :
     (nextFormula tm T configBase choiceWire atom).size =

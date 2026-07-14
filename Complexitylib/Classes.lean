@@ -26,6 +26,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.PackedCopy
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Case
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds

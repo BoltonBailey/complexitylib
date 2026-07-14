@@ -136,7 +136,7 @@ theorem stepFragment_eq_stepSchedule
   stepFragment_eq_stepSchedule_internal tm T configBase choiceWire available
 
 /-- The existing packed fragment size is exactly the numeric schedule count. -/
-@[simp] theorem stepFragmentSize_eq_stepScheduleSize
+theorem stepFragmentSize_eq_stepScheduleSize
     (tm : NTM k) (T configBase choiceWire : ℕ) :
     stepFragmentSize tm T configBase choiceWire =
       stepScheduleSize (transitionCases tm).length (Fintype.card tm.Q) k T
