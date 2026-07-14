@@ -601,6 +601,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
       fragments, and one final acceptance gate. The closed forms for every layer's
       configuration base, first unused wire, and gate count give the append-only
       serializer an exact numeric schedule without replaying proof-level trace state.
+    - [x] Regularize the positive family to a closed cubic gate count by appending
+      semantically dead constant gates and one final copy of the original acceptance
+      wire. The padded raw list is well formed, has exact size `B(n) + 1`, computes
+      the same bounded trace bit, and eliminates a preliminary gate-counting pass
+      from the future log-space generator.
     - [x] Expose the exact stack-free raw compilation order for the variable-length
       right folds used by transition formulas: children stream forward, one identity
       constant follows, and connector gates stream in reverse child order with
