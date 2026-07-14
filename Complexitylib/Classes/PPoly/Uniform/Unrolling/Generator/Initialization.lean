@@ -9,8 +9,9 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization.In
 /-!
 # Verified direct-unrolling initialization generator
 
-This module exposes soundness, exact pure effects, exact raw-gate emission,
-and the positive-input entry contract for the direct initialization phase.
+This module exposes soundness, logarithmic all-prefix space, exact pure
+effects, exact raw-gate emission, and the positive-input entry contract for
+the direct initialization phase.
 -/
 
 namespace Complexity
@@ -63,6 +64,15 @@ theorem emitBlankTape_sound : emitBlankTape.Sound :=
 theorem initialization_sound (tm : TM k) :
     (initialization tm).Sound :=
   initialization_sound_internal tm
+
+/-- Direct initialization uses logarithmic all-prefix space after the positive
+polynomial preamble has prepared its numeric work-vector entry state. -/
+theorem initialization_space_bigO_log (tm : TM k) (q : Polynomial ℕ) :
+    BinaryRoutine.SpaceBoundInLogAt (initialization tm)
+      TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength)) :=
+  initialization_space_bigO_log_internal tm q
 
 /-- Exact work-vector effect of initialization on its natural value-level
 domain. In particular, `loop₀` is restored and `limit₀` is cleared. -/

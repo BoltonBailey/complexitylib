@@ -4,12 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 
 /-!
 # Direct-unrolling initialization generator -- proof internals
@@ -1199,6 +1200,1031 @@ theorem initialization_limit_restored_preambleValues_internal
       Work.limit₀ = 0 := by
   rw [initialization_effect_preambleValues_internal]
   simp [Work.available, Work.limit₀]
+
+private noncomputable def initializationSpaceWidthPolynomial
+    (tm : TM k) (q : Polynomial ℕ) : Polynomial ℕ :=
+  let horizon := TM.directSerializerHorizonPolynomial q
+  Polynomial.X + Polynomial.C (Fintype.card tm.Q) +
+    (horizon + Polynomial.C 1) * Polynomial.C (k + 2) +
+    Polynomial.C 4 + Polynomial.C 4 * (horizon + Polynomial.C 1) +
+    (Polynomial.C 4 + Polynomial.C 4 * (horizon + Polynomial.C 1)) *
+      Polynomial.C (k + 1) +
+    horizon + Polynomial.C 2
+
+private theorem initializationSpaceWidthPolynomial_eval
+    (tm : TM k) (q : Polynomial ℕ) (inputLength : ℕ) :
+    (initializationSpaceWidthPolynomial tm q).eval inputLength =
+      inputLength + Fintype.card tm.Q +
+        ((TM.directSerializerHorizonPolynomial q).eval inputLength + 1) *
+          (k + 2) +
+        4 + 4 *
+          ((TM.directSerializerHorizonPolynomial q).eval inputLength + 1) +
+        (4 + 4 *
+          ((TM.directSerializerHorizonPolynomial q).eval inputLength + 1)) *
+          (k + 1) +
+        (TM.directSerializerHorizonPolynomial q).eval inputLength + 2 := by
+  simp [initializationSpaceWidthPolynomial, Polynomial.eval_add,
+    Polynomial.eval_mul]
+
+private theorem emitConstantGate_space_le
+    (value : Bool) (initialSpace width : ℕ)
+    (values : BinaryValues WorkCount)
+    (havailable : values Work.available ≤ width)
+    (hreference : values Work.reference₀ ≤ width) :
+    (emitConstantGate value).spaceBound initialSpace values ≤
+      initialSpace + 8 * width.size + 8 := by
+  have havailableSize := Nat.size_le_size havailable
+  have hreferenceSize := Nat.size_le_size hreference
+  have hsucc := TM.binarySuccTime_le (values Work.available)
+  simp only [emitConstantGate, BinaryRoutine.emitRawGateStep,
+    CircuitCode.Machine.emitRawGateStepSpace,
+    CircuitCode.Machine.emitRawGateSpace, max_self]
+  apply max_le
+  · omega
+  · omega
+
+private theorem emitCopyGate_space_le
+    (reference : Fin WorkCount) (negated : Bool)
+    (initialSpace width : ℕ) (values : BinaryValues WorkCount)
+    (havailable : values Work.available ≤ width)
+    (hreference : values reference ≤ width) :
+    (emitCopyGate reference negated).spaceBound initialSpace values ≤
+      initialSpace + 8 * width.size + 8 := by
+  have havailableSize := Nat.size_le_size havailable
+  have hreferenceSize := Nat.size_le_size hreference
+  have hsucc := TM.binarySuccTime_le (values Work.available)
+  simp only [emitCopyGate, BinaryRoutine.emitRawGateStep,
+    CircuitCode.Machine.emitRawGateStepSpace,
+    CircuitCode.Machine.emitRawGateSpace, max_self]
+  apply max_le
+  · omega
+  · omega
+
+private theorem emitStartCell_space_le
+    (initialSpace width : ℕ) (values : BinaryValues WorkCount)
+    (havailable : values Work.available + 4 ≤ width)
+    (hreference : values Work.reference₀ ≤ width) :
+    emitStartCell.spaceBound initialSpace values ≤
+      initialSpace + 32 * width.size + 32 := by
+  simp only [emitStartCell, BinaryRoutine.seqList, BinaryRoutine.seq,
+    BinaryRoutine.identity, BinaryRoutine.emitBits, max_le_iff]
+  refine ⟨?_, ?_, ?_, ?_, by simp; omega⟩
+  all_goals
+    refine (emitConstantGate_space_le _ initialSpace width _ ?_ ?_).trans
+      (by omega)
+    · simp [emitConstantGate_effect_internal, Work.available] at *
+      omega
+    · simpa [emitConstantGate_effect_internal,
+        Work.available, Work.reference₀] using hreference
+
+private theorem emitBlankCell_space_le
+    (initialSpace width : ℕ) (values : BinaryValues WorkCount)
+    (havailable : values Work.available + 4 ≤ width)
+    (hreference : values Work.reference₀ ≤ width) :
+    emitBlankCell.spaceBound initialSpace values ≤
+      initialSpace + 32 * width.size + 32 := by
+  simpa [emitBlankCell, emitStartCell, emitConstantGate] using
+    emitStartCell_space_le initialSpace width values havailable hreference
+
+private theorem emitInputDataCell_space_le
+    (initialSpace width : ℕ) (values : BinaryValues WorkCount)
+    (havailable : values Work.available + 4 ≤ width)
+    (hloop : values Work.loop₀ ≤ width)
+    (hreference : values Work.reference₀ ≤ width) :
+    emitInputDataCell.spaceBound initialSpace values ≤
+      initialSpace + 32 * width.size + 32 := by
+  simp only [emitInputDataCell, BinaryRoutine.seqList, BinaryRoutine.seq,
+    BinaryRoutine.identity, BinaryRoutine.emitBits, max_le_iff]
+  refine ⟨?_, ?_, ?_, ?_, by simp; omega⟩
+  · refine (emitCopyGate_space_le Work.loop₀ true initialSpace width _
+      ?_ ?_).trans (by omega)
+    · omega
+    · exact hloop
+  · refine (emitCopyGate_space_le Work.loop₀ false initialSpace width _
+      ?_ ?_).trans (by omega)
+    · simp [emitCopyGate_effect_internal, Work.available] at *
+      omega
+    · simpa [emitCopyGate_effect_internal, Work.available, Work.loop₀]
+        using hloop
+  · refine (emitConstantGate_space_le false initialSpace width _
+      ?_ ?_).trans (by omega)
+    · simp [emitCopyGate_effect_internal, Work.available] at *
+      omega
+    · simpa [emitCopyGate_effect_internal, Work.available,
+        Work.reference₀] using hreference
+  · refine (emitConstantGate_space_le false initialSpace width _
+      ?_ ?_).trans (by omega)
+    · simp [emitCopyGate_effect_internal,
+        emitConstantGate_effect_internal, Work.available] at *
+      omega
+    · simpa [emitCopyGate_effect_internal,
+        emitConstantGate_effect_internal, Work.available, Work.reference₀]
+        using hreference
+
+private theorem emitHeadPosition_space_le
+    (initialSpace width : ℕ) (values : BinaryValues WorkCount)
+    (havailable : values Work.available + 1 ≤ width)
+    (hreference : values Work.reference₀ ≤ width) :
+    emitHeadPosition.spaceBound initialSpace values ≤
+      initialSpace + 16 * width.size + 16 := by
+  simp only [emitHeadPosition, BinaryRoutine.branchZero, max_le_iff]
+  constructor
+  · exact (emitConstantGate_space_le true initialSpace width values
+      (by omega) hreference).trans (by omega)
+  · exact (emitConstantGate_space_le false initialSpace width values
+      (by omega) hreference).trans (by omega)
+
+private theorem binaryFor_emitHeadPosition_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.limit₀ - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitHeadPosition Work.loop₀ Work.limit₀)
+      initialSpace values width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_envelope 32
+  intro inputLength
+  refine
+    { compareSpace := ?_
+      initialSpace_le := by omega
+      bodySpace := ?_
+      successorSpace := ?_ }
+  · have hsize := Nat.size_le_size (hlimit inputLength)
+    simp only [TM.binaryForCompareTime]
+    omega
+  · intro count hcount
+    rw [emitHeadPosition_binaryForValues]
+    have havailable :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.available + 1 ≤ width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have havailableBound := havailable inputLength
+      simp only [Work.available, Work.limit₀, Work.loop₀] at havailableBound
+      simp [Work.available, Work.loop₀]
+      omega
+    have hreferenceCurrent :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.reference₀ ≤ width inputLength := by
+      simpa [Work.available, Work.loop₀, Work.reference₀] using
+        hreference inputLength
+    exact (emitHeadPosition_space_le _ _ _ havailable
+      hreferenceCurrent).trans (by omega)
+  · intro count hcount
+    rw [emitHeadPosition_binaryForValues]
+    have hcounter : values inputLength Work.loop₀ + count ≤
+        width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have hlimitBound := hlimit inputLength
+      simp only [Work.limit₀, Work.loop₀] at hlimitBound ⊢
+      omega
+    have hcounterSize := Nat.size_le_size hcounter
+    have hsucc := TM.binarySuccTime_le
+      (values inputLength Work.loop₀ + count)
+    simp only [Work.loop₀] at hcounterSize hsucc
+    simp [Work.available, Work.loop₀]
+    omega
+
+private theorem binaryFor_emitBlankCell_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 4 *
+          (values inputLength Work.limit₀ - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitBlankCell Work.loop₀ Work.limit₀)
+      initialSpace values width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_envelope 48
+  intro inputLength
+  refine
+    { compareSpace := ?_
+      initialSpace_le := by omega
+      bodySpace := ?_
+      successorSpace := ?_ }
+  · have hsize := Nat.size_le_size (hlimit inputLength)
+    simp only [TM.binaryForCompareTime]
+    omega
+  · intro count hcount
+    rw [emitBlankCell_binaryForValues]
+    have havailable :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 4 * count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.available + 4 ≤ width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have havailableBound := havailable inputLength
+      simp only [Work.available, Work.limit₀, Work.loop₀] at havailableBound
+      simp [Work.available, Work.loop₀]
+      omega
+    have hreferenceCurrent :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 4 * count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.reference₀ ≤ width inputLength := by
+      simpa [Work.available, Work.loop₀, Work.reference₀] using
+        hreference inputLength
+    exact (emitBlankCell_space_le _ _ _ havailable
+      hreferenceCurrent).trans (by omega)
+  · intro count hcount
+    rw [emitBlankCell_binaryForValues]
+    have hcounter : values inputLength Work.loop₀ + count ≤
+        width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have hlimitBound := hlimit inputLength
+      simp only [Work.limit₀, Work.loop₀] at hlimitBound ⊢
+      omega
+    have hcounterSize := Nat.size_le_size hcounter
+    have hsucc := TM.binarySuccTime_le
+      (values inputLength Work.loop₀ + count)
+    simp only [Work.loop₀] at hcounterSize hsucc
+    simp [Work.available, Work.loop₀]
+    omega
+
+private theorem binaryFor_emitInputDataCell_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 4 *
+          (values inputLength Work.limit₀ - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitInputDataCell Work.loop₀ Work.limit₀)
+      initialSpace values width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_envelope 48
+  intro inputLength
+  refine
+    { compareSpace := ?_
+      initialSpace_le := by omega
+      bodySpace := ?_
+      successorSpace := ?_ }
+  · have hsize := Nat.size_le_size (hlimit inputLength)
+    simp only [TM.binaryForCompareTime]
+    omega
+  · intro count hcount
+    rw [emitInputDataCell_binaryForValues]
+    have havailable :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 4 * count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.available + 4 ≤ width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have havailableBound := havailable inputLength
+      simp only [Work.available, Work.limit₀, Work.loop₀] at havailableBound
+      simp [Work.available, Work.loop₀]
+      omega
+    have hloopCurrent :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 4 * count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.loop₀ ≤ width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have hlimitBound := hlimit inputLength
+      simp only [Work.limit₀, Work.loop₀] at hlimitBound ⊢
+      simp [Work.available]
+      omega
+    have hreferenceCurrent :
+        (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 4 * count))
+            Work.loop₀ (values inputLength Work.loop₀ + count))
+            Work.reference₀ ≤ width inputLength := by
+      simpa [Work.available, Work.loop₀, Work.reference₀] using
+        hreference inputLength
+    exact (emitInputDataCell_space_le _ _ _ havailable hloopCurrent
+      hreferenceCurrent).trans (by omega)
+  · intro count hcount
+    rw [emitInputDataCell_binaryForValues]
+    have hcounter : values inputLength Work.loop₀ + count ≤
+        width inputLength := by
+      simp only [BinaryRoutine.binaryForCount, Work.limit₀, Work.loop₀]
+        at hcount
+      have hlimitBound := hlimit inputLength
+      simp only [Work.limit₀, Work.loop₀] at hlimitBound ⊢
+      omega
+    have hcounterSize := Nat.size_le_size hcounter
+    have hsucc := TM.binarySuccTime_le
+      (values inputLength Work.loop₀ + count)
+    simp only [Work.loop₀] at hcounterSize hsucc
+    simp [Work.available, Work.loop₀]
+    omega
+
+private theorem seqList_emitConstantGate_spaceBoundByWidthAt
+    (bits : List Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + bits.length ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.seqList (bits.map emitConstantGate)) initialSpace values
+      width := by
+  induction bits generalizing values with
+  | nil =>
+      simpa [BinaryRoutine.seqList] using
+        (BinaryRoutine.SpaceBoundByWidthAt.identity
+          (initialSpace := initialSpace) (values := values) (width := width))
+  | cons bit bits ih =>
+      rw [List.map_cons, BinaryRoutine.seqList]
+      apply BinaryRoutine.SpaceBoundByWidthAt.seq
+      · refine ⟨8, fun inputLength => ?_⟩
+        apply emitConstantGate_space_le
+        · have hbound := havailable inputLength
+          simp only [List.length_cons] at hbound
+          omega
+        · exact hreference inputLength
+      · apply ih
+        · intro inputLength
+          rw [emitConstantGate_effect_internal]
+          have hbound := havailable inputLength
+          simp only [List.length_cons, Work.available] at hbound
+          simp [Work.available]
+          omega
+        · intro inputLength
+          rw [emitConstantGate_effect_internal]
+          simpa [Work.available, Work.reference₀] using
+            hreference inputLength
+
+private theorem emitInitialStates_spaceBoundByWidthAt
+    (tm : TM k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + Fintype.card tm.Q ≤
+        width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitInitialStates tm) initialSpace
+      values width := by
+  have havailable' : ∀ inputLength,
+      values inputLength Work.available +
+          (List.ofFn fun index : Fin (Fintype.card tm.Q) =>
+            decide (tm.qstart = (Fintype.equivFin tm.Q).symm index)).length ≤
+        width inputLength := by
+    intro inputLength
+    simpa using havailable inputLength
+  simpa [emitInitialStates] using
+    seqList_emitConstantGate_spaceBoundByWidthAt
+      (List.ofFn fun index : Fin (Fintype.card tm.Q) =>
+        decide (tm.qstart = (Fintype.equivFin tm.Q).symm index))
+      havailable' hreference
+
+private theorem setHorizonLimit_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt setHorizonLimit initialSpace values
+      width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seq
+  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy
+    · intro inputLength
+      exact (Nat.le_add_right _ 1).trans (hhorizon inputLength)
+    · exact hlimit
+  · apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro inputLength
+    simp [BinaryRoutine.binaryCopy, Work.horizon, Work.limit₀]
+    exact hhorizon inputLength
+
+private theorem setInputLimit_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hinput : ∀ inputLength,
+      values inputLength Work.inputLength ≤ width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt setInputLimit initialSpace values
+      width := by
+  exact BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.inputLength
+    Work.limit₀ Work.copyCounter hinput hlimit
+
+private theorem emitHeadTape_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hcounterLimit : ∀ inputLength,
+      values inputLength Work.loop₀ ≤ values inputLength Work.limit₀)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.limit₀ - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitHeadTape initialSpace values
+      width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seq
+  · exact binaryFor_emitHeadPosition_spaceBoundByWidthAt havailable hlimit
+      hreference
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    change BinaryRoutine.binaryForValues emitHeadPosition Work.loop₀
+        (values inputLength)
+          (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (values inputLength)) Work.loop₀ ≤ width inputLength
+    rw [binaryForValues_counter]
+    simp only [BinaryRoutine.binaryForCount]
+    exact (Nat.add_sub_of_le (hcounterLimit inputLength)).le.trans
+      (hlimit inputLength)
+
+private theorem emitBlankTape_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hcounterZero : ∀ inputLength,
+      values inputLength Work.loop₀ = 0)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 4 +
+          4 * values inputLength Work.limit₀ ≤ width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitBlankTape initialSpace values
+      width := by
+  rw [emitBlankTape]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨?_, ?_, ?_, trivial⟩
+  · refine ⟨32, fun inputLength => ?_⟩
+    apply emitStartCell_space_le
+    · have hbound := havailable inputLength
+      omega
+    · exact hreference inputLength
+  · apply binaryFor_emitBlankCell_spaceBoundByWidthAt
+    · intro inputLength
+      rw [emitStartCell_effect_internal]
+      have hbound := havailable inputLength
+      have hzero := hcounterZero inputLength
+      simp only [Work.available, Work.limit₀, Work.loop₀] at hbound hzero ⊢
+      simp
+      omega
+    · intro inputLength
+      rw [emitStartCell_effect_internal]
+      simpa [Work.available, Work.limit₀] using hlimit inputLength
+    · intro inputLength
+      rw [emitStartCell_effect_internal]
+      simpa [Work.available, Work.reference₀] using hreference inputLength
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    change BinaryRoutine.binaryForValues emitBlankCell Work.loop₀
+        (emitStartCell.effect (values inputLength))
+          (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (emitStartCell.effect (values inputLength))) Work.loop₀ ≤
+      width inputLength
+    rw [binaryForValues_counter, emitStartCell_effect_internal]
+    have hzero := hcounterZero inputLength
+    have hlimitBound := hlimit inputLength
+    simp only [BinaryRoutine.binaryForCount, Work.available, Work.limit₀,
+      Work.loop₀] at hzero hlimitBound ⊢
+    simp
+    omega
+
+private theorem emitInputCells_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hcounterZero : ∀ inputLength,
+      values inputLength Work.loop₀ = 0)
+    (hinputHorizon : ∀ inputLength,
+      values inputLength Work.inputLength ≤
+        values inputLength Work.horizon + 1)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 4 +
+          4 * (values inputLength Work.horizon + 1) ≤
+        width inputLength)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitInputCells initialSpace values
+      width := by
+  let afterStart := fun inputLength =>
+    emitStartCell.effect (values inputLength)
+  let afterInputLimit := fun inputLength =>
+    setInputLimit.effect (afterStart inputLength)
+  let afterData := fun inputLength =>
+    (BinaryRoutine.binaryFor emitInputDataCell Work.loop₀ Work.limit₀).effect
+      (afterInputLimit inputLength)
+  let afterHorizon := fun inputLength =>
+    setHorizonLimit.effect (afterData inputLength)
+  let afterBlank := fun inputLength =>
+    (BinaryRoutine.binaryFor emitBlankCell Work.loop₀ Work.limit₀).effect
+      (afterHorizon inputLength)
+  have hstart : BinaryRoutine.SpaceBoundByWidthAt emitStartCell initialSpace
+      values width := by
+    refine ⟨32, fun inputLength => ?_⟩
+    apply emitStartCell_space_le
+    · have hbound := havailable inputLength
+      omega
+    · exact hreference inputLength
+  have hsetInput : BinaryRoutine.SpaceBoundByWidthAt setInputLimit
+      initialSpace afterStart width := by
+    apply setInputLimit_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterStart]
+      rw [emitStartCell_effect_internal]
+      have hbound := hinputHorizon inputLength
+      have hhorizonBound := hhorizon inputLength
+      simpa [Work.available, Work.inputLength] using
+        hbound.trans hhorizonBound
+    · intro inputLength
+      dsimp only [afterStart]
+      rw [emitStartCell_effect_internal]
+      simpa [Work.available, Work.limit₀] using hlimit inputLength
+  have hdata : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitInputDataCell Work.loop₀ Work.limit₀)
+      initialSpace afterInputLimit width := by
+    apply binaryFor_emitInputDataCell_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterInputLimit, afterStart]
+      rw [setInputLimit_effect_internal, emitStartCell_effect_internal]
+      have hbound := havailable inputLength
+      have hinputBound := hinputHorizon inputLength
+      have hzero := hcounterZero inputLength
+      simp only [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] at hbound hinputBound hzero ⊢
+      simp
+      omega
+    · intro inputLength
+      dsimp only [afterInputLimit, afterStart]
+      rw [setInputLimit_effect_internal, emitStartCell_effect_internal]
+      have hinputBound := hinputHorizon inputLength
+      have hhorizonBound := hhorizon inputLength
+      simp only [Work.inputLength, Work.horizon, Work.available, Work.limit₀]
+        at hinputBound hhorizonBound ⊢
+      simp
+      omega
+    · intro inputLength
+      dsimp only [afterInputLimit, afterStart]
+      rw [setInputLimit_effect_internal, emitStartCell_effect_internal]
+      simpa [Work.available, Work.limit₀, Work.reference₀] using
+        hreference inputLength
+  have hsetHorizon : BinaryRoutine.SpaceBoundByWidthAt setHorizonLimit
+      initialSpace afterData width := by
+    apply setHorizonLimit_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterData, afterInputLimit, afterStart]
+      rw [binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      simpa [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] using hhorizon inputLength
+    · intro inputLength
+      dsimp only [afterData, afterInputLimit, afterStart]
+      rw [binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      have hinputBound := hinputHorizon inputLength
+      have hhorizonBound := hhorizon inputLength
+      simp only [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] at hinputBound hhorizonBound ⊢
+      simp
+      omega
+  have hblank : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitBlankCell Work.loop₀ Work.limit₀)
+      initialSpace afterHorizon width := by
+    apply binaryFor_emitBlankCell_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterHorizon, afterData, afterInputLimit, afterStart]
+      rw [setHorizonLimit_effect_internal,
+        binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      have hbound := havailable inputLength
+      have hinputBound := hinputHorizon inputLength
+      have hzero := hcounterZero inputLength
+      simp only [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] at hbound hinputBound hzero ⊢
+      simp
+      omega
+    · intro inputLength
+      dsimp only [afterHorizon, afterData, afterInputLimit, afterStart]
+      rw [setHorizonLimit_effect_internal,
+        binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      simpa [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] using hhorizon inputLength
+    · intro inputLength
+      dsimp only [afterHorizon, afterData, afterInputLimit, afterStart]
+      rw [setHorizonLimit_effect_internal,
+        binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      simpa [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀, Work.reference₀] using hreference inputLength
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.loop₀) initialSpace afterBlank width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    dsimp only [afterBlank]
+    change BinaryRoutine.binaryForValues emitBlankCell Work.loop₀
+        (afterHorizon inputLength)
+          (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (afterHorizon inputLength)) Work.loop₀ ≤ width inputLength
+    rw [binaryForValues_counter]
+    have hcounterLimit : afterHorizon inputLength Work.loop₀ ≤
+        afterHorizon inputLength Work.limit₀ := by
+      dsimp only [afterHorizon, afterData, afterInputLimit, afterStart]
+      rw [setHorizonLimit_effect_internal,
+        binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      have hinputBound := hinputHorizon inputLength
+      have hzero := hcounterZero inputLength
+      simp only [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] at hinputBound hzero ⊢
+      simp
+      omega
+    have hlimitBound : afterHorizon inputLength Work.limit₀ ≤
+        width inputLength := by
+      dsimp only [afterHorizon, afterData, afterInputLimit, afterStart]
+      rw [setHorizonLimit_effect_internal,
+        binaryFor_emitInputDataCell_effect, setInputLimit_effect_internal,
+        emitStartCell_effect_internal]
+      simpa [Work.inputLength, Work.horizon, Work.available, Work.limit₀,
+        Work.loop₀] using hhorizon inputLength
+    simp only [BinaryRoutine.binaryForCount]
+    exact (Nat.add_sub_of_le hcounterLimit).le.trans hlimitBound
+  rw [emitInputCells]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  exact ⟨hstart, hsetInput, hdata, hsetHorizon, hblank, hclear, trivial⟩
+
+private theorem repeatEmitHeadTape_spaceBoundByWidthAt
+    (count : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcounterZero : ∀ inputLength,
+      values inputLength Work.loop₀ = 0)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          values inputLength Work.limit₀ * count ≤ width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine count emitHeadTape) initialSpace values
+      width := by
+  induction count generalizing values with
+  | zero =>
+      simpa [BinaryRoutine.repeatRoutine, BinaryRoutine.seqList] using
+        (BinaryRoutine.SpaceBoundByWidthAt.identity
+          (initialSpace := initialSpace) (values := values) (width := width))
+  | succ count ih =>
+      rw [BinaryRoutine.repeatRoutine, List.replicate_succ,
+        BinaryRoutine.seqList]
+      apply BinaryRoutine.SpaceBoundByWidthAt.seq
+      · apply emitHeadTape_spaceBoundByWidthAt
+        · intro inputLength
+          rw [hcounterZero inputLength]
+          exact Nat.zero_le _
+        · intro inputLength
+          have hbound := havailable inputLength
+          have hzero := hcounterZero inputLength
+          simp only [Nat.mul_succ] at hbound
+          omega
+        · exact hlimit
+        · exact hreference
+      · apply ih
+        · intro inputLength
+          rw [emitHeadTape_effect_internal]
+          simp [Work.available, Work.loop₀]
+        · intro inputLength
+          rw [emitHeadTape_effect_internal]
+          have hbound := havailable inputLength
+          have hzero := hcounterZero inputLength
+          simp only [Nat.mul_succ] at hbound
+          simp only [Work.available, Work.limit₀] at hbound
+          simp only [Work.available, Work.limit₀, Work.loop₀] at hzero ⊢
+          simp
+          omega
+        · intro inputLength
+          rw [emitHeadTape_effect_internal]
+          simpa [Work.available, Work.loop₀, Work.limit₀] using
+            hlimit inputLength
+        · intro inputLength
+          rw [emitHeadTape_effect_internal]
+          simpa [Work.available, Work.loop₀, Work.reference₀] using
+            hreference inputLength
+
+private theorem repeatEmitBlankTape_spaceBoundByWidthAt
+    (count : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcounterZero : ∀ inputLength,
+      values inputLength Work.loop₀ = 0)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (4 + 4 * values inputLength Work.limit₀) * count ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine count emitBlankTape) initialSpace values
+      width := by
+  induction count generalizing values with
+  | zero =>
+      simpa [BinaryRoutine.repeatRoutine, BinaryRoutine.seqList] using
+        (BinaryRoutine.SpaceBoundByWidthAt.identity
+          (initialSpace := initialSpace) (values := values) (width := width))
+  | succ count ih =>
+      rw [BinaryRoutine.repeatRoutine, List.replicate_succ,
+        BinaryRoutine.seqList]
+      apply BinaryRoutine.SpaceBoundByWidthAt.seq
+      · apply emitBlankTape_spaceBoundByWidthAt
+        · exact hcounterZero
+        · intro inputLength
+          have hbound := havailable inputLength
+          simp only [Nat.mul_succ] at hbound
+          omega
+        · exact hlimit
+        · exact hreference
+      · apply ih
+        · intro inputLength
+          rw [emitBlankTape_effect_internal _ (hcounterZero inputLength)]
+          simpa [Work.available, Work.loop₀] using
+            hcounterZero inputLength
+        · intro inputLength
+          rw [emitBlankTape_effect_internal _ (hcounterZero inputLength)]
+          have hbound := havailable inputLength
+          simp only [Nat.mul_succ] at hbound
+          simp only [Work.available, Work.limit₀] at hbound ⊢
+          simp
+          omega
+        · intro inputLength
+          rw [emitBlankTape_effect_internal _ (hcounterZero inputLength)]
+          simpa [Work.available, Work.limit₀] using hlimit inputLength
+        · intro inputLength
+          rw [emitBlankTape_effect_internal _ (hcounterZero inputLength)]
+          simpa [Work.available, Work.reference₀] using
+            hreference inputLength
+
+theorem initialization_space_bigO_log_internal
+    (tm : TM k) (q : Polynomial ℕ) :
+    BinaryRoutine.SpaceBoundInLogAt (initialization tm)
+      TM.binaryLengthSpace
+      (fun inputLength => preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength inputLength)) := by
+  let entry := fun inputLength => preambleValues tm q
+    (BinaryRoutine.inputLengthValues Work.inputLength inputLength)
+  let afterStates := fun inputLength =>
+    (emitInitialStates tm).effect (entry inputLength)
+  let afterLimit := fun inputLength =>
+    setHorizonLimit.effect (afterStates inputLength)
+  let afterHeads := fun inputLength =>
+    (BinaryRoutine.repeatRoutine (k + 2) emitHeadTape).effect
+      (afterLimit inputLength)
+  let afterInput := fun inputLength =>
+    emitInputCells.effect (afterHeads inputLength)
+  let afterBlanks := fun inputLength =>
+    (BinaryRoutine.repeatRoutine (k + 1) emitBlankTape).effect
+      (afterInput inputLength)
+  let width := (initializationSpaceWidthPolynomial tm q).eval
+  have hentryReference : ∀ inputLength,
+      entry inputLength Work.reference₀ = 0 := by
+    intro inputLength
+    simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+      Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+      Work.available, Work.configBase, Work.reference₀]
+  have hentryLoop : ∀ inputLength,
+      entry inputLength Work.loop₀ = 0 := by
+    intro inputLength
+    simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+      Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+      Work.available, Work.configBase, Work.loop₀]
+  have hstates : BinaryRoutine.SpaceBoundByWidthAt (emitInitialStates tm)
+      TM.binaryLengthSpace entry width := by
+    apply emitInitialStates_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase]
+      omega
+    · intro inputLength
+      exact (hentryReference inputLength).le.trans (Nat.zero_le _)
+  have hsetLimit : BinaryRoutine.SpaceBoundByWidthAt setHorizonLimit
+      TM.binaryLengthSpace afterStates width := by
+    apply setHorizonLimit_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterStates]
+      rw [emitInitialStates_effect_internal]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase]
+      omega
+    · intro inputLength
+      dsimp only [afterStates]
+      rw [emitInitialStates_effect_internal]
+      simp [entry, width, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+  have hheads : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine (k + 2) emitHeadTape)
+      TM.binaryLengthSpace afterLimit width := by
+    apply repeatEmitHeadTape_spaceBoundByWidthAt
+    · intro inputLength
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀, Work.loop₀]
+    · intro inputLength
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+      omega
+    · intro inputLength
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+      omega
+    · intro inputLength
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      simp [entry, width, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀, Work.reference₀]
+  have hinvariantLimit : ∀ inputLength,
+      tapeInvariant ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+        (afterLimit inputLength) := by
+    intro inputLength
+    exact initialHeadTapeInvariant tm (entry inputLength)
+      (hentryReference inputLength) (hentryLoop inputLength)
+  have hafterHeads : ∀ inputLength,
+      afterHeads inputLength =
+        Function.update (afterLimit inputLength) Work.available
+          (afterLimit inputLength Work.available +
+            ((TM.directSerializerHorizonPolynomial q).eval inputLength + 1) *
+              (k + 2)) := by
+    intro inputLength
+    exact repeatEmitHeadTape_effect_internal (k + 2)
+      ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+      (afterLimit inputLength) (hinvariantLimit inputLength)
+  have hheadsInput : ∀ inputLength,
+      afterHeads inputLength Work.inputLength ≤
+        afterHeads inputLength Work.horizon + 1 := by
+    intro inputLength
+    rw [hafterHeads inputLength]
+    dsimp only [afterLimit, afterStates]
+    rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+    have hbound := TM.directSerializerHorizonPolynomial_input_le q inputLength
+    simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+      Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+      Work.available, Work.configBase, Work.limit₀]
+    omega
+  have hinput : BinaryRoutine.SpaceBoundByWidthAt emitInputCells
+      TM.binaryLengthSpace afterHeads width := by
+    apply emitInputCells_spaceBoundByWidthAt
+    · intro inputLength
+      exact (repeatHeadTape_preservesInvariant (k + 2)
+        ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+        (afterLimit inputLength) (hinvariantLimit inputLength)).2.1
+    · exact hheadsInput
+    · intro inputLength
+      rw [hafterHeads inputLength]
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+      omega
+    · intro inputLength
+      rw [hafterHeads inputLength]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+      omega
+    · intro inputLength
+      rw [hafterHeads inputLength]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      exact (hinvariantLimit inputLength).2.2.1.le.trans (by
+        simp
+        omega)
+    · intro inputLength
+      rw [hafterHeads inputLength]
+      have href := (hinvariantLimit inputLength).1
+      simpa [Work.available, Work.reference₀] using
+        href.le.trans (Nat.zero_le _)
+  have hinvariantHeads : ∀ inputLength,
+      tapeInvariant ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+        (afterHeads inputLength) := by
+    intro inputLength
+    exact repeatHeadTape_preservesInvariant (k + 2)
+      ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+      (afterLimit inputLength) (hinvariantLimit inputLength)
+  have hafterInput : ∀ inputLength,
+      afterInput inputLength =
+        Function.update
+          (Function.update (afterHeads inputLength) Work.available
+            (afterHeads inputLength Work.available + 4 +
+              4 * (afterHeads inputLength Work.horizon + 1)))
+          Work.limit₀ (afterHeads inputLength Work.horizon + 1) := by
+    intro inputLength
+    exact emitInputCells_effect_internal (afterHeads inputLength)
+      (hinvariantHeads inputLength).2.1 (hheadsInput inputLength)
+  have hinvariantInput : ∀ inputLength,
+      tapeInvariant ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+        (afterInput inputLength) := by
+    intro inputLength
+    exact emitInputCells_preservesInvariant
+      ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+      (afterHeads inputLength) (hinvariantHeads inputLength)
+      (hheadsInput inputLength)
+  have hblanks : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine (k + 1) emitBlankTape)
+      TM.binaryLengthSpace afterInput width := by
+    apply repeatEmitBlankTape_spaceBoundByWidthAt
+    · intro inputLength
+      exact (hinvariantInput inputLength).2.1
+    · intro inputLength
+      rw [hafterInput inputLength, hafterHeads inputLength]
+      dsimp only [afterLimit, afterStates]
+      rw [setHorizonLimit_effect_internal, emitInitialStates_effect_internal]
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp [entry, preambleValues, BinaryRoutine.inputLengthValues,
+        Work.inputLength, Work.horizon, Work.frontier, Work.gateCount,
+        Work.available, Work.configBase, Work.limit₀]
+      omega
+    · intro inputLength
+      exact (hinvariantInput inputLength).2.2.1.le.trans (by
+        dsimp only [width]
+        rw [initializationSpaceWidthPolynomial_eval]
+        simp
+        omega)
+    · intro inputLength
+      exact (hinvariantInput inputLength).1.le.trans (Nat.zero_le _)
+  have hinvariantBlanks : ∀ inputLength,
+      tapeInvariant ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+        (afterBlanks inputLength) := by
+    intro inputLength
+    exact repeatBlankTape_preservesInvariant (k + 1)
+      ((TM.directSerializerHorizonPolynomial q).eval inputLength)
+      (afterInput inputLength) (hinvariantInput inputLength)
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.limit₀) TM.binaryLengthSpace afterBlanks
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    exact (hinvariantBlanks inputLength).2.2.1.le.trans (by
+      dsimp only [width]
+      rw [initializationSpaceWidthPolynomial_eval]
+      simp
+      omega)
+  have hwidth : BinaryRoutine.SpaceBoundByWidthAt (initialization tm)
+      TM.binaryLengthSpace entry width := by
+    rw [initialization]
+    apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+    exact ⟨hstates, hsetLimit, hheads, hinput, hblanks, hclear, trivial⟩
+  change BinaryRoutine.SpaceBoundInLogAt (initialization tm)
+    TM.binaryLengthSpace entry
+  exact hwidth.to_log TM.binaryLengthSpace_bigO_log
+    (initializationSpaceWidthPolynomial tm q) (fun _ => le_rfl)
 
 theorem emitConstantGate_requires_internal (value : Bool)
     (values : BinaryValues WorkCount)
