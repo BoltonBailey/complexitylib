@@ -26,6 +26,62 @@ theorem emitReadFormula_sound (stateCount tapeCount : ℕ) :
     (emitReadFormula stateCount tapeCount).Sound :=
   emitReadFormula_sound_internal stateCount tapeCount
 
+/-- One reverse-fold connector has a pointwise width certificate when its
+frontier and both reference registers fit the shared width. -/
+theorem emitReadConnector_spaceBoundByWidth
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitReadConnector initialSpace values
+      width :=
+  emitReadConnector_spaceBoundByWidth_internal havailable havailablePositive
+    hreference₀ hreference₁
+
+/-- Complete read-formula emission has a pointwise width certificate when the
+wire frontier and every head- and cell-reference intermediate fit the shared
+width. -/
+theorem emitReadFormula_spaceBoundByWidth
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, ReadFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          (4 * (values inputLength Work.horizon + 1) + 1) ≤
+        width inputLength)
+    (hheadCap : ∀ inputLength position,
+      position ≤ values inputLength Work.horizon →
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength)
+    (hcellCap : ∀ inputLength position,
+      position ≤ values inputLength Work.horizon →
+      transitionCellRef stateCount tapeCount
+            (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position
+            (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) + position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitReadFormula stateCount tapeCount) initialSpace values width :=
+  emitReadFormula_spaceBoundByWidth_internal stateCount tapeCount hclean
+    hvalues hfrontier hheadCap hcellCap
+
 /-- The clean-entry contract suffices for every arithmetic, loop, reference,
 and raw-gate leaf in complete read-formula emission. -/
 theorem emitReadFormula_requires (stateCount tapeCount : ℕ)

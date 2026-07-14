@@ -9,6 +9,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Mathlib.Data.Nat.Pairing
 
 /-!
 # Direct-unrolling read-formula generator -- proof internals
@@ -203,6 +204,149 @@ theorem emitReadMember_requires_internal (stateCount tapeCount : ℕ)
     exact ⟨hcopyCell, by omega, by omega, hemitCell⟩
   exact ⟨hhead, hcell, hrecent, trivial⟩
 
+private theorem emitReadMember_spaceBoundByWidthAt
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 2 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength)
+    (hcellCap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) +
+              values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitReadMember stateCount tapeCount) initialSpace values width := by
+  let head := emitHeadReference stateCount false
+  let cell := emitCellReference stateCount tapeCount false
+  let recent := emitRecentGate .and false false 2 1
+  let afterHead : ℕ → BinaryValues WorkCount := fun inputLength =>
+    head.effect (values inputLength)
+  let afterCell : ℕ → BinaryValues WorkCount := fun inputLength =>
+    cell.effect (afterHead inputLength)
+  have hhead : BinaryRoutine.SpaceBoundByWidthAt head initialSpace values
+      width :=
+    emitHeadReference_spaceBoundByWidth stateCount false hvalues hheadCap
+  have hafterHeadValues : ∀ inputLength index,
+      afterHead inputLength index ≤ width inputLength := by
+    intro inputLength index
+    rw [show afterHead inputLength = head.effect (values inputLength) by rfl,
+      show head = emitHeadReference stateCount false by rfl,
+      emitHeadReference_effect]
+    by_cases htemporary : index = Work.temporary₀
+    · subst index
+      simp [Work.temporary₀, Work.available, Work.reference₀]
+    by_cases havailableIndex : index = Work.available
+    · subst index
+      simp [Work.temporary₀, Work.available, Work.reference₀]
+      have havailableBound := havailable inputLength
+      simp only [Work.available] at havailableBound
+      omega
+    by_cases hreference : index = Work.reference₀
+    · subst index
+      simp [Work.temporary₀, Work.available, Work.reference₀]
+    · simpa [Function.update_apply, htemporary, havailableIndex,
+        hreference] using hvalues inputLength index
+  have hafterHeadCellCap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (afterHead inputLength Work.horizon)
+          (afterHead inputLength Work.configBase)
+          (afterHead inputLength Work.tapeIndex)
+          (afterHead inputLength Work.position)
+          (afterHead inputLength Work.symbolIndex) +
+          (afterHead inputLength Work.tapeIndex *
+                (afterHead inputLength Work.horizon + 2) +
+              afterHead inputLength Work.position) +
+          (afterHead inputLength Work.horizon + 2) + tapeCount +
+          afterHead inputLength Work.tapeIndex + 4 ≤
+        width inputLength := by
+    intro inputLength
+    rw [show afterHead inputLength = head.effect (values inputLength) by rfl,
+      show head = emitHeadReference stateCount false by rfl,
+      emitHeadReference_effect]
+    simpa [Work.temporary₀, Work.available, Work.reference₀,
+      Work.configBase, Work.horizon, Work.tapeIndex, Work.position,
+      Work.symbolIndex] using hcellCap inputLength
+  have hcell : BinaryRoutine.SpaceBoundByWidthAt cell initialSpace afterHead
+      width :=
+    emitCellReference_spaceBoundByWidth stateCount tapeCount false
+      hafterHeadValues hafterHeadCellCap
+  have hafterCellValues : ∀ inputLength index,
+      afterCell inputLength index ≤ width inputLength := by
+    intro inputLength index
+    rw [show afterCell inputLength = cell.effect (afterHead inputLength) by rfl,
+      show cell = emitCellReference stateCount tapeCount false by rfl,
+      emitCellReference_effect]
+    by_cases htemporary₂ : index = Work.temporary₂
+    · subst index
+      simp [Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.available, Work.reference₀]
+    by_cases htemporary₁ : index = Work.temporary₁
+    · subst index
+      simp [Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.available, Work.reference₀]
+    by_cases htemporary₀ : index = Work.temporary₀
+    · subst index
+      simp [Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.available, Work.reference₀]
+    by_cases havailableIndex : index = Work.available
+    · subst index
+      rw [show afterHead inputLength = head.effect (values inputLength) by rfl,
+        show head = emitHeadReference stateCount false by rfl,
+        emitHeadReference_effect]
+      simp [Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.available, Work.reference₀]
+      have havailableBound := havailable inputLength
+      simp only [Work.available] at havailableBound
+      omega
+    by_cases hreference : index = Work.reference₀
+    · subst index
+      simp [Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.available, Work.reference₀]
+    · simpa [Function.update_apply, htemporary₂, htemporary₁,
+        htemporary₀, havailableIndex, hreference] using
+        hafterHeadValues inputLength index
+  have hrecent : BinaryRoutine.SpaceBoundByWidthAt recent initialSpace
+      afterCell width := by
+    apply emitRecentGate_spaceBoundByWidth .and false false 2 1
+    · exact fun inputLength => hafterCellValues inputLength Work.available
+    · exact fun inputLength => hafterCellValues inputLength Work.reference₀
+    · exact fun inputLength => hafterCellValues inputLength Work.reference₁
+    · intro inputLength
+      simp [afterCell, afterHead, cell, head, emitCellReference_effect,
+        emitHeadReference_effect, Work.temporary₀, Work.temporary₁,
+        Work.temporary₂, Work.available, Work.reference₀]
+    · intro inputLength
+      simp [afterCell, afterHead, cell, head, emitCellReference_effect,
+        emitHeadReference_effect, Work.temporary₀, Work.temporary₁,
+        Work.temporary₂, Work.available, Work.reference₀]
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace (fun inputLength => recent.effect (afterCell inputLength))
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hhead
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hcell
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hrecent hid))
+  simpa [emitReadMember, BinaryRoutine.seqList, head, cell, recent, afterHead,
+    afterCell] using hroutine
+
 theorem setReadFormulaLimit_effect_internal
     (values : BinaryValues WorkCount) :
     setReadFormulaLimit.effect values =
@@ -224,6 +368,31 @@ theorem setReadFormulaLimit_requires_internal
   simp [setReadFormulaLimit, BinaryRoutine.seq, BinaryRoutine.binaryCopy,
     BinaryRoutine.addConst, hcopy', Work.horizon, Work.limit₀,
     Work.copyCounter]
+
+private theorem setReadFormulaLimit_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt setReadFormulaLimit initialSpace values
+      width := by
+  let copy := BinaryRoutine.binaryCopy Work.horizon Work.limit₀
+    Work.copyCounter
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.horizon Work.limit₀
+      Work.copyCounter (fun inputLength => hvalues inputLength Work.horizon)
+      (fun inputLength => hvalues inputLength Work.limit₀)
+  have hadd : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.addConst Work.limit₀ 1) initialSpace
+      (fun inputLength => copy.effect (values inputLength)) width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro inputLength
+    simpa [copy, BinaryRoutine.binaryCopy] using hhorizon inputLength
+  simpa [setReadFormulaLimit, copy] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hcopy hadd)
 
 theorem emitReadIdentity_effect_internal
     (values : BinaryValues WorkCount) :
@@ -293,6 +462,131 @@ theorem emitReadConnector_requires_internal
   rw [prepareRecentReference_effect]
   simpa [Work.reference₁, Work.emitCounter] using hemit
 
+theorem emitReadConnector_spaceBoundByWidth_internal
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitReadConnector initialSpace values
+      width := by
+  let prepare := prepareRecentReference Work.reference₁ 1
+  let emit := BinaryRoutine.emitRawGateStep .or false false
+    Work.emitCounter Work.available Work.reference₀ Work.reference₁
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare.effect (values inputLength)
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emit.effect (values₁ inputLength)
+  have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+      values width := by
+    apply prepareRecentReference_spaceBoundByWidth Work.reference₁ 1
+    · exact havailable
+    · exact hreference₁
+    · exact havailablePositive
+  have hvalues₁Available : ∀ inputLength,
+      values₁ inputLength Work.available ≤ width inputLength := by
+    intro inputLength
+    simpa [values₁, prepare, prepareRecentReference_effect,
+      Work.available, Work.reference₁] using
+        havailable inputLength
+  have hvalues₁Reference₀ : ∀ inputLength,
+      values₁ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    simpa [values₁, prepare, prepareRecentReference_effect,
+      Work.reference₀, Work.reference₁] using
+        hreference₀ inputLength
+  have hvalues₁Reference₁ : ∀ inputLength,
+      values₁ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simp [values₁, prepare, prepareRecentReference_effect,
+      Work.reference₁]
+    have := havailable inputLength
+    omega
+  have hemit : BinaryRoutine.SpaceBoundByWidthAt emit initialSpace values₁
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .or false false
+      Work.emitCounter Work.available Work.reference₀ Work.reference₁
+      hvalues₁Available hvalues₁Reference₀ hvalues₁Reference₁
+  have hvalues₂Reference₁ : ∀ inputLength,
+      values₂ inputLength Work.reference₁ ≤ width inputLength := by
+    intro inputLength
+    simpa [values₂, emit, BinaryRoutine.emitRawGateStep,
+      Work.available, Work.reference₁] using
+        hvalues₁Reference₁ inputLength
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₁) initialSpace values₂ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₁
+      hvalues₂Reference₁
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace
+      (fun inputLength =>
+        (BinaryRoutine.clear Work.reference₁).effect
+          (values₂ inputLength)) width :=
+    BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hprepare
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hemit
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hclear hid))
+  simpa [emitReadConnector, BinaryRoutine.seqList, prepare, emit, values₁,
+    values₂] using hroutine
+
+private theorem repeatReadReferencePred_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hwidthPositive : ∀ inputLength, 1 ≤ width inputLength)
+    (hreferenceUpper : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.repeatRoutine 3
+        (BinaryRoutine.binaryPred Work.reference₀))
+      initialSpace values width := by
+  let pred := BinaryRoutine.binaryPred Work.reference₀
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    pred.effect (values inputLength)
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    pred.effect (values₁ inputLength)
+  let values₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    pred.effect (values₂ inputLength)
+  have hpred₀ : BinaryRoutine.SpaceBoundByWidthAt pred initialSpace values
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro inputLength
+    have hupper := hreferenceUpper inputLength
+    have hpositive := hwidthPositive inputLength
+    change values inputLength Work.reference₀ - 1 + 1 ≤
+      width inputLength
+    omega
+  have hpred₁ : BinaryRoutine.SpaceBoundByWidthAt pred initialSpace values₁
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro inputLength
+    have hupper := hreferenceUpper inputLength
+    have hpositive := hwidthPositive inputLength
+    simp only [values₁, pred, BinaryRoutine.binaryPred,
+      Function.update_self]
+    omega
+  have hpred₂ : BinaryRoutine.SpaceBoundByWidthAt pred initialSpace values₂
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro inputLength
+    have hupper := hreferenceUpper inputLength
+    have hpositive := hwidthPositive inputLength
+    simp only [values₂, values₁, pred, BinaryRoutine.binaryPred,
+      Function.update_self]
+    omega
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace values₃ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hpred₀
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hpred₁
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hpred₂ hid))
+  simpa [BinaryRoutine.repeatRoutine, BinaryRoutine.seqList, pred, values₁,
+    values₂, values₃] using hroutine
+
 private theorem repeatReadReferencePred_effect
     (values : BinaryValues WorkCount) :
     (BinaryRoutine.repeatRoutine 3
@@ -305,6 +599,59 @@ private theorem repeatReadReferencePred_effect
   funext i
   simp only [Function.update_apply]
   split_ifs <;> omega
+
+private theorem emitReadNextConnector_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (hreferenceUpper : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitReadNextConnector initialSpace values
+      width := by
+  let repetition := BinaryRoutine.repeatRoutine 3
+    (BinaryRoutine.binaryPred Work.reference₀)
+  let repeated : ℕ → BinaryValues WorkCount := fun inputLength =>
+    repetition.effect (values inputLength)
+  have hrepeat : BinaryRoutine.SpaceBoundByWidthAt repetition initialSpace values
+      width := by
+    apply repeatReadReferencePred_spaceBoundByWidthAt
+    · intro inputLength
+      exact (havailablePositive inputLength).trans
+        (havailable inputLength)
+    · exact hreferenceUpper
+  have hconnector : BinaryRoutine.SpaceBoundByWidthAt emitReadConnector
+      initialSpace repeated width := by
+    apply emitReadConnector_spaceBoundByWidth_internal
+    · intro inputLength
+      rw [show repeated inputLength = Function.update (values inputLength)
+          Work.reference₀ (values inputLength Work.reference₀ - 3) by
+        exact repeatReadReferencePred_effect (values inputLength)]
+      simpa [Work.available, Work.reference₀] using havailable inputLength
+    · intro inputLength
+      rw [show repeated inputLength = Function.update (values inputLength)
+          Work.reference₀ (values inputLength Work.reference₀ - 3) by
+        exact repeatReadReferencePred_effect (values inputLength)]
+      simpa [Work.available, Work.reference₀] using
+        havailablePositive inputLength
+    · intro inputLength
+      rw [show repeated inputLength = Function.update (values inputLength)
+          Work.reference₀ (values inputLength Work.reference₀ - 3) by
+        exact repeatReadReferencePred_effect (values inputLength)]
+      simp only [Function.update_self]
+      exact (Nat.sub_le _ _).trans (hreferenceUpper inputLength)
+    · intro inputLength
+      rw [show repeated inputLength = Function.update (values inputLength)
+          Work.reference₀ (values inputLength Work.reference₀ - 3) by
+        exact repeatReadReferencePred_effect (values inputLength)]
+      simpa [Work.reference₀, Work.reference₁] using
+        hreference₁ inputLength
+  simpa [emitReadNextConnector, repetition, repeated] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hrepeat hconnector)
 
 private theorem repeatReadReferencePred_emitted
     (values : BinaryValues WorkCount) :
@@ -504,6 +851,184 @@ private theorem emitReadMember_binaryForValues
       simp [Function.update_apply, Work.available, Work.position,
         Nat.mul_succ]
       split_ifs <;> omega
+
+private theorem emitReadMembers_spaceBoundByWidthAt
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hinvariant : ∀ inputLength, ReadMemberInvariant (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position < values inputLength Work.limit₀)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+            3 * (values inputLength Work.limit₀ -
+              values inputLength Work.position) +
+          2 ≤
+        width inputLength)
+    (hheadCap : ∀ inputLength position,
+      values inputLength Work.position ≤ position →
+      position < values inputLength Work.limit₀ →
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength)
+    (hcellCap : ∀ inputLength position,
+      values inputLength Work.position ≤ position →
+      position < values inputLength Work.limit₀ →
+      transitionCellRef stateCount tapeCount
+            (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position
+            (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) + position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitReadMembers stateCount tapeCount) initialSpace values width := by
+  let body := emitReadMember stateCount tapeCount
+  let loopCount : ℕ → ℕ := fun inputLength =>
+    BinaryRoutine.binaryForCount Work.position Work.limit₀
+      (values inputLength)
+  let pairedInput : ℕ → ℕ := fun code => code.unpair.1
+  let pairedCount : ℕ → ℕ := fun code =>
+    min code.unpair.2 (loopCount (pairedInput code) - 1)
+  let pairedValues : ℕ → BinaryValues WorkCount := fun code =>
+    BinaryRoutine.binaryForValues body Work.position
+      (values (pairedInput code)) (pairedCount code)
+  let pairedInitialSpace : ℕ → ℕ := fun code =>
+    initialSpace (pairedInput code)
+  let pairedWidth : ℕ → ℕ := fun code =>
+    width (pairedInput code)
+  have hpairedCount (code : ℕ) :
+      pairedCount code ≤ loopCount (pairedInput code) := by
+    have := Nat.min_le_right code.unpair.2
+      (loopCount (pairedInput code) - 1)
+    simp only [pairedCount]
+    omega
+  have hpairedPosition (code : ℕ) :
+      values (pairedInput code) Work.position + pairedCount code <
+        values (pairedInput code) Work.limit₀ := by
+    have hcount := Nat.min_le_right code.unpair.2
+      (loopCount (pairedInput code) - 1)
+    have hstart := hposition (pairedInput code)
+    simp only [pairedCount, loopCount, BinaryRoutine.binaryForCount]
+    simp only [loopCount, BinaryRoutine.binaryForCount] at hcount
+    omega
+  have hpairedValues : ∀ code index,
+      pairedValues code index ≤ pairedWidth code := by
+    intro code index
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues body Work.position
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      show body = emitReadMember stateCount tapeCount by rfl,
+      emitReadMember_binaryForValues stateCount tapeCount _
+        (hinvariant (pairedInput code))]
+    by_cases hpositionIndex : index = Work.position
+    · subst index
+      simp [pairedWidth, Work.available, Work.position]
+      exact (hpairedPosition code).le.trans
+        (hvalues (pairedInput code) Work.limit₀)
+    by_cases havailableIndex : index = Work.available
+    · subst index
+      simp [pairedWidth, Work.available, Work.position]
+      have hcount := hpairedCount code
+      have havailableBound := havailable (pairedInput code)
+      simp only [loopCount, BinaryRoutine.binaryForCount] at hcount
+      simp only [Work.available, Work.limit₀, Work.position] at havailableBound
+      simp only [Work.limit₀, Work.position] at hcount
+      omega
+    · have hpositionIndex' : Work.position ≠ index :=
+        Ne.symm hpositionIndex
+      have havailableIndex' : Work.available ≠ index :=
+        Ne.symm havailableIndex
+      simpa [pairedWidth, Function.update_apply, hpositionIndex,
+        havailableIndex, hpositionIndex', havailableIndex'] using
+          hvalues (pairedInput code) index
+  have hpairedAvailable : ∀ code,
+      pairedValues code Work.available + 2 ≤ pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues body Work.position
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      show body = emitReadMember stateCount tapeCount by rfl,
+      emitReadMember_binaryForValues stateCount tapeCount _
+        (hinvariant (pairedInput code))]
+    simp [pairedWidth, Work.available, Work.position]
+    have hcount := hpairedCount code
+    have havailableBound := havailable (pairedInput code)
+    simp only [loopCount, BinaryRoutine.binaryForCount] at hcount
+    simp only [Work.available, Work.limit₀, Work.position] at havailableBound
+    simp only [Work.limit₀, Work.position] at hcount
+    omega
+  have hpairedHeadCap : ∀ code,
+      transitionHeadRef stateCount (pairedValues code Work.horizon)
+            (pairedValues code Work.configBase)
+            (pairedValues code Work.tapeIndex)
+            (pairedValues code Work.position) +
+          pairedValues code Work.tapeIndex +
+          pairedValues code Work.horizon + 1 ≤
+        pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues body Work.position
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      show body = emitReadMember stateCount tapeCount by rfl,
+      emitReadMember_binaryForValues stateCount tapeCount _
+        (hinvariant (pairedInput code))]
+    simpa [pairedWidth, Work.available, Work.position, Work.horizon,
+      Work.configBase, Work.tapeIndex] using
+        hheadCap (pairedInput code)
+          (values (pairedInput code) Work.position + pairedCount code)
+          (by omega) (hpairedPosition code)
+  have hpairedCellCap : ∀ code,
+      transitionCellRef stateCount tapeCount
+            (pairedValues code Work.horizon)
+            (pairedValues code Work.configBase)
+            (pairedValues code Work.tapeIndex)
+            (pairedValues code Work.position)
+            (pairedValues code Work.symbolIndex) +
+          (pairedValues code Work.tapeIndex *
+                (pairedValues code Work.horizon + 2) +
+              pairedValues code Work.position) +
+          (pairedValues code Work.horizon + 2) + tapeCount +
+          pairedValues code Work.tapeIndex + 4 ≤
+        pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues body Work.position
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      show body = emitReadMember stateCount tapeCount by rfl,
+      emitReadMember_binaryForValues stateCount tapeCount _
+        (hinvariant (pairedInput code))]
+    simpa [pairedWidth, Work.available, Work.position, Work.horizon,
+      Work.configBase, Work.tapeIndex, Work.symbolIndex] using
+        hcellCap (pairedInput code)
+          (values (pairedInput code) Work.position + pairedCount code)
+          (by omega) (hpairedPosition code)
+  have hbody := emitReadMember_spaceBoundByWidthAt stateCount tapeCount
+      (initialSpace := pairedInitialSpace) (values := pairedValues)
+      (width := pairedWidth) hpairedValues hpairedAvailable hpairedHeadCap
+      hpairedCellCap
+  rw [emitReadMembers]
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_clamped_body
+  · exact fun inputLength => hvalues inputLength Work.limit₀
+  · intro inputLength count hcount
+    rw [emitReadMember_binaryForValues stateCount tapeCount _
+        (hinvariant inputLength)]
+    simp [Work.available, Work.position]
+    have hlimit := hvalues inputLength Work.limit₀
+    have hstart := hposition inputLength
+    simp only [BinaryRoutine.binaryForCount] at hcount
+    simp only [Work.limit₀, Work.position] at hcount hlimit hstart
+    omega
+  · simpa [pairedInitialSpace, pairedWidth, pairedValues, pairedInput,
+      pairedCount, loopCount, body,
+      BinaryRoutine.binaryForClampedValues] using hbody
 
 private theorem emitReadMembers_effect_of_invariant
     (stateCount tapeCount : ℕ) (values : BinaryValues WorkCount)
@@ -742,6 +1267,111 @@ private theorem emitReadNextConnector_binaryForValues_invariant
   exact ReadConnectorInvariant.updateLoop₀ _ _
     (ReadConnectorInvariant.updateReference₀ _ _
       (ReadConnectorInvariant.updateAvailable _ _ hinvariant))
+
+private theorem emitReadNextConnectors_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hinvariant : ∀ inputLength,
+      ReadConnectorInvariant (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hloop : ∀ inputLength,
+      values inputLength Work.loop₀ ≤ values inputLength Work.limit₀)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.limit₀ -
+            values inputLength Work.loop₀) ≤
+        width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitReadNextConnector Work.loop₀ Work.limit₀)
+      initialSpace values width := by
+  let loopCount : ℕ → ℕ := fun inputLength =>
+    BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+      (values inputLength)
+  let pairedInput : ℕ → ℕ := fun code => code.unpair.1
+  let pairedCount : ℕ → ℕ := fun code =>
+    min code.unpair.2 (loopCount (pairedInput code) - 1)
+  let pairedValues : ℕ → BinaryValues WorkCount := fun code =>
+    BinaryRoutine.binaryForValues emitReadNextConnector Work.loop₀
+      (values (pairedInput code)) (pairedCount code)
+  let pairedInitialSpace : ℕ → ℕ := fun code =>
+    initialSpace (pairedInput code)
+  let pairedWidth : ℕ → ℕ := fun code =>
+    width (pairedInput code)
+  have hpairedCount (code : ℕ) :
+      pairedCount code ≤ loopCount (pairedInput code) := by
+    have := Nat.min_le_right code.unpair.2
+      (loopCount (pairedInput code) - 1)
+    simp only [pairedCount]
+    omega
+  have hpairedAvailable : ∀ code,
+      pairedValues code Work.available ≤ pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues emitReadNextConnector Work.loop₀
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      emitReadNextConnector_binaryForValues _
+        (hinvariant (pairedInput code))]
+    simp [pairedWidth, Work.available, Work.reference₀, Work.loop₀]
+    have hcount := hpairedCount code
+    have havailableBound := havailable (pairedInput code)
+    simp only [loopCount, BinaryRoutine.binaryForCount] at hcount
+    simp only [Work.limit₀, Work.loop₀] at hcount
+    simp only [Work.available, Work.limit₀, Work.loop₀] at havailableBound
+    omega
+  have hpairedAvailablePositive : ∀ code,
+      1 ≤ pairedValues code Work.available := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues emitReadNextConnector Work.loop₀
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      emitReadNextConnector_binaryForValues _
+        (hinvariant (pairedInput code))]
+    simp [Work.available, Work.reference₀, Work.loop₀]
+    have hpositive := havailablePositive (pairedInput code)
+    simp only [Work.available] at hpositive
+    omega
+  have hpairedReference₀ : ∀ code,
+      pairedValues code Work.reference₀ ≤ pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues emitReadNextConnector Work.loop₀
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      emitReadNextConnector_binaryForValues _
+        (hinvariant (pairedInput code))]
+    simp [pairedWidth, Work.available, Work.reference₀, Work.loop₀]
+    have hupper := hvalues (pairedInput code) Work.reference₀
+    simp only [Work.reference₀] at hupper
+    omega
+  have hpairedReference₁ : ∀ code,
+      pairedValues code Work.reference₁ ≤ pairedWidth code := by
+    intro code
+    rw [show pairedValues code =
+        BinaryRoutine.binaryForValues emitReadNextConnector Work.loop₀
+          (values (pairedInput code)) (pairedCount code) by rfl,
+      emitReadNextConnector_binaryForValues _
+        (hinvariant (pairedInput code))]
+    simpa [pairedWidth, Work.available, Work.reference₀, Work.reference₁,
+      Work.loop₀] using hvalues (pairedInput code) Work.reference₁
+  have hbody := emitReadNextConnector_spaceBoundByWidthAt
+    (initialSpace := pairedInitialSpace) (values := pairedValues)
+    (width := pairedWidth) hpairedAvailable hpairedAvailablePositive
+    hpairedReference₀ hpairedReference₁
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_clamped_body
+  · exact fun inputLength => hvalues inputLength Work.limit₀
+  · intro inputLength count hcount
+    rw [emitReadNextConnector_binaryForValues _ (hinvariant inputLength)]
+    simp [Work.available, Work.reference₀, Work.loop₀]
+    have hlimit := hvalues inputLength Work.limit₀
+    have hstart := hloop inputLength
+    simp only [BinaryRoutine.binaryForCount] at hcount
+    simp only [Work.limit₀, Work.loop₀] at hcount hlimit hstart
+    omega
+  · simpa [pairedInitialSpace, pairedWidth, pairedValues, pairedInput,
+      pairedCount, loopCount, BinaryRoutine.binaryForClampedValues] using
+      hbody
 
 private theorem emitReadNextConnector_preserves_loop₀
     (values : BinaryValues WorkCount)
@@ -1191,6 +1821,398 @@ private theorem readFormula_connectorTail_emitted
     (by simp [readConnectorStartValues, Work.horizon, Work.available,
       Work.reference₀, Work.loop₀, Work.limit₀]) (by omega)
   simpa using htail
+
+theorem emitReadFormula_spaceBoundByWidth_internal
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, ReadFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          (4 * (values inputLength Work.horizon + 1) + 1) ≤
+        width inputLength)
+    (hheadCap : ∀ inputLength position,
+      position ≤ values inputLength Work.horizon →
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength)
+    (hcellCap : ∀ inputLength position,
+      position ≤ values inputLength Work.horizon →
+      transitionCellRef stateCount tapeCount
+            (values inputLength Work.horizon)
+            (values inputLength Work.configBase)
+            (values inputLength Work.tapeIndex) position
+            (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) + position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitReadFormula stateCount tapeCount) initialSpace values width := by
+  have hhorizonOne : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength := by
+    intro inputLength
+    have hcap := hcellCap inputLength 0 (Nat.zero_le _)
+    omega
+  have hfour : ∀ inputLength, 4 ≤ width inputLength := by
+    intro inputLength
+    have hcap := hcellCap inputLength 0 (Nat.zero_le _)
+    omega
+  let r₁ := setReadFormulaLimit
+  let r₂ := emitReadMembers stateCount tapeCount
+  let r₃ := BinaryRoutine.clear Work.position
+  let r₄ := emitReadIdentity
+  let r₅ := prepareRecentReference Work.reference₀ 2
+  let r₆ := emitReadConnector
+  let r₇ := BinaryRoutine.set Work.loop₀ 1
+  let r₈ := BinaryRoutine.binaryFor emitReadNextConnector Work.loop₀
+    Work.limit₀
+  let r₉ := BinaryRoutine.clear Work.loop₀
+  let r₁₀ := BinaryRoutine.clear Work.limit₀
+  let r₁₁ := BinaryRoutine.clear Work.reference₀
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₁.effect (values inputLength)
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₂.effect (values₁ inputLength)
+  let values₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₃.effect (values₂ inputLength)
+  let values₄ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₄.effect (values₃ inputLength)
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₅.effect (values₄ inputLength)
+  let values₆ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₆.effect (values₅ inputLength)
+  let values₇ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₇.effect (values₆ inputLength)
+  let values₈ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₈.effect (values₇ inputLength)
+  let values₉ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₉.effect (values₈ inputLength)
+  let values₁₀ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₁₀.effect (values₉ inputLength)
+  let values₁₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    r₁₁.effect (values₁₀ inputLength)
+  have h₁ : BinaryRoutine.SpaceBoundByWidthAt r₁ initialSpace values
+      width :=
+    setReadFormulaLimit_spaceBoundByWidthAt hvalues hhorizonOne
+  have hvalues₁ : ∀ inputLength index,
+      values₁ inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal]
+    exact BinaryRoutine.values_update_le Work.limit₀
+      (hvalues inputLength) (hhorizonOne inputLength)
+  have hinvariant₁ : ∀ inputLength,
+      ReadMemberInvariant (values₁ inputLength) := by
+    intro inputLength
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal]
+    exact ReadMemberInvariant.updateLimit₀ _ _
+      (ReadMemberInvariant.ofReadFormulaClean _ (hclean inputLength))
+  have hposition₁ : ∀ inputLength,
+      values₁ inputLength Work.position < values₁ inputLength Work.limit₀ := by
+    intro inputLength
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal]
+    have hposition := (hclean inputLength).position
+    simp [Work.horizon, Work.limit₀, Work.position]
+    change values inputLength Work.position ≤
+      values inputLength Work.horizon
+    rw [hposition]
+    exact Nat.zero_le _
+  have havailable₁ : ∀ inputLength,
+      values₁ inputLength Work.available +
+            3 * (values₁ inputLength Work.limit₀ -
+              values₁ inputLength Work.position) +
+          2 ≤
+        width inputLength := by
+    intro inputLength
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal]
+    have hposition := (hclean inputLength).position
+    have hbound := hfrontier inputLength
+    simp only [Work.position] at hposition
+    simp [Work.horizon, Work.available, Work.limit₀, Work.position]
+      at hbound ⊢
+    omega
+  have hheadCap₁ : ∀ inputLength position,
+      values₁ inputLength Work.position ≤ position →
+      position < values₁ inputLength Work.limit₀ →
+      transitionHeadRef stateCount (values₁ inputLength Work.horizon)
+            (values₁ inputLength Work.configBase)
+            (values₁ inputLength Work.tapeIndex) position +
+          values₁ inputLength Work.tapeIndex +
+          values₁ inputLength Work.horizon + 1 ≤
+        width inputLength := by
+    intro inputLength position _ hposition
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal] at hposition ⊢
+    have hposition' : position ≤ values inputLength Work.horizon := by
+      simpa [Work.horizon, Work.limit₀] using hposition
+    simpa [Work.horizon, Work.limit₀, Work.configBase, Work.tapeIndex,
+      Work.position] using hheadCap inputLength position hposition'
+  have hcellCap₁ : ∀ inputLength position,
+      values₁ inputLength Work.position ≤ position →
+      position < values₁ inputLength Work.limit₀ →
+      transitionCellRef stateCount tapeCount
+            (values₁ inputLength Work.horizon)
+            (values₁ inputLength Work.configBase)
+            (values₁ inputLength Work.tapeIndex) position
+            (values₁ inputLength Work.symbolIndex) +
+          (values₁ inputLength Work.tapeIndex *
+                (values₁ inputLength Work.horizon + 2) + position) +
+          (values₁ inputLength Work.horizon + 2) + tapeCount +
+          values₁ inputLength Work.tapeIndex + 4 ≤
+        width inputLength := by
+    intro inputLength position _ hposition
+    rw [show values₁ inputLength = r₁.effect (values inputLength) by rfl,
+      show r₁ = setReadFormulaLimit by rfl,
+      setReadFormulaLimit_effect_internal] at hposition ⊢
+    have hposition' : position ≤ values inputLength Work.horizon := by
+      simpa [Work.horizon, Work.limit₀] using hposition
+    simpa [Work.horizon, Work.limit₀, Work.configBase, Work.tapeIndex,
+      Work.position, Work.symbolIndex] using
+        hcellCap inputLength position hposition'
+  have h₂ : BinaryRoutine.SpaceBoundByWidthAt r₂ initialSpace values₁
+      width :=
+    emitReadMembers_spaceBoundByWidthAt stateCount tapeCount hinvariant₁
+      hvalues₁ hposition₁ havailable₁ hheadCap₁ hcellCap₁
+  have hposition₂ : ∀ inputLength,
+      values₂ inputLength Work.position ≤ width inputLength := by
+    intro inputLength
+    rw [show values₂ inputLength = r₂.effect (values₁ inputLength) by rfl,
+      show r₂ = emitReadMembers stateCount tapeCount by rfl,
+      emitReadMembers_effect_of_invariant stateCount tapeCount _
+        (hinvariant₁ inputLength)]
+    simp only [Function.update_self]
+    rw [Nat.add_sub_of_le (Nat.le_of_lt (hposition₁ inputLength))]
+    exact hvalues₁ inputLength Work.limit₀
+  have h₃ : BinaryRoutine.SpaceBoundByWidthAt r₃ initialSpace values₂
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.position hposition₂
+  have hvalues₃ (inputLength : ℕ) :
+      values₃ inputLength = readMembersDoneValues (values inputLength) := by
+    exact readMembersDone_effect stateCount tapeCount (values inputLength)
+      (hclean inputLength)
+  have h₄ : BinaryRoutine.SpaceBoundByWidthAt r₄ initialSpace values₃
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .and false true
+      Work.emitCounter Work.available Work.reference₀ Work.reference₀
+    · intro inputLength
+      rw [hvalues₃]
+      have hbound := hfrontier inputLength
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.limit₀] at hbound ⊢
+      omega
+    · intro inputLength
+      rw [hvalues₃]
+      simpa [readMembersDoneValues, Work.limit₀, Work.available,
+        Work.reference₀] using hvalues inputLength Work.reference₀
+    · intro inputLength
+      rw [hvalues₃]
+      simpa [readMembersDoneValues, Work.limit₀, Work.available,
+        Work.reference₀] using hvalues inputLength Work.reference₀
+  have h₅ : BinaryRoutine.SpaceBoundByWidthAt r₅ initialSpace values₄
+      width := by
+    apply prepareRecentReference_spaceBoundByWidth Work.reference₀ 2
+    · intro inputLength
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      have hbound := hfrontier inputLength
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.limit₀] at hbound ⊢
+      omega
+    · intro inputLength
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      simpa [readMembersDoneValues, Work.limit₀, Work.available,
+        Work.reference₀] using hvalues inputLength Work.reference₀
+    · intro inputLength
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.limit₀]
+      omega
+  have h₆ : BinaryRoutine.SpaceBoundByWidthAt r₆ initialSpace values₅
+      width := by
+    apply emitReadConnector_spaceBoundByWidth_internal
+    · intro inputLength
+      simp only [values₅, r₅, prepareRecentReference_effect]
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      have hbound := hfrontier inputLength
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.reference₀, Work.limit₀] at hbound ⊢
+      omega
+    · intro inputLength
+      simp only [values₅, r₅, prepareRecentReference_effect]
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.reference₀, Work.limit₀]
+    · intro inputLength
+      simp only [values₅, r₅, prepareRecentReference_effect]
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      have hbound := hfrontier inputLength
+      simp [readMembersDoneValues, Work.horizon, Work.available,
+        Work.reference₀, Work.limit₀] at hbound ⊢
+      omega
+    · intro inputLength
+      simp only [values₅, r₅, prepareRecentReference_effect]
+      simp only [values₄, r₄, emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      simpa [readMembersDoneValues, Work.limit₀, Work.available,
+        Work.reference₀, Work.reference₁] using
+          hvalues inputLength Work.reference₁
+  have h₇ : BinaryRoutine.SpaceBoundByWidthAt r₇ initialSpace values₆
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set Work.loop₀ 1
+    · intro inputLength
+      simp [values₆, r₆, emitReadConnector_effect_internal, values₅,
+        r₅, prepareRecentReference_effect, values₄, r₄,
+        emitReadIdentity_effect_internal]
+      rw [hvalues₃]
+      simpa [readMembersDoneValues, Work.limit₀, Work.available,
+        Work.reference₀, Work.reference₁, Work.loop₀] using
+          hvalues inputLength Work.loop₀
+    · exact fun inputLength => (hfour inputLength).trans' (by omega)
+  have hvalues₇ (inputLength : ℕ) :
+      values₇ inputLength = readConnectorStartValues (values inputLength) := by
+    exact readFormula_prefix_effect stateCount tapeCount (values inputLength)
+      (hclean inputLength)
+  have hinvariant₇ : ∀ inputLength,
+      ReadConnectorInvariant (values₇ inputLength) := by
+    intro inputLength
+    rw [hvalues₇]
+    exact readConnectorStartValues_invariant _ (hclean inputLength)
+  have hallValues₇ : ∀ inputLength index,
+      values₇ inputLength index ≤ width inputLength := by
+    intro inputLength index
+    rw [hvalues₇]
+    have hlimit := hhorizonOne inputLength
+    have havailable : values inputLength Work.available +
+          3 * (values inputLength Work.horizon + 1) + 2 ≤
+        width inputLength := by
+      have hbound := hfrontier inputLength
+      omega
+    have hreference : values inputLength Work.available +
+          3 * (values inputLength Work.horizon + 1) - 1 ≤
+        width inputLength := by
+      have hpre : values inputLength Work.available +
+            3 * (values inputLength Work.horizon + 1) ≤
+          width inputLength := by
+        have hbound := hfrontier inputLength
+        omega
+      exact (Nat.sub_le _ _).trans hpre
+    have hlimitValues := BinaryRoutine.values_update_le Work.limit₀
+      (hvalues inputLength) hlimit
+    have havailableValues := BinaryRoutine.values_update_le Work.available
+      hlimitValues havailable
+    have hreferenceValues := BinaryRoutine.values_update_le Work.reference₀
+      havailableValues hreference
+    have hone : 1 ≤ width inputLength := by
+      have := hfour inputLength
+      omega
+    have hloopValues := BinaryRoutine.values_update_le Work.loop₀
+      hreferenceValues hone
+    exact hloopValues index
+  have hloop₇ : ∀ inputLength,
+      values₇ inputLength Work.loop₀ ≤ values₇ inputLength Work.limit₀ := by
+    intro inputLength
+    rw [hvalues₇]
+    simp [readConnectorStartValues, Work.horizon, Work.available,
+      Work.reference₀, Work.loop₀, Work.limit₀]
+  have havailable₇ : ∀ inputLength,
+      values₇ inputLength Work.available +
+          (values₇ inputLength Work.limit₀ -
+            values₇ inputLength Work.loop₀) ≤
+        width inputLength := by
+    intro inputLength
+    rw [hvalues₇]
+    have hbound := hfrontier inputLength
+    simp [readConnectorStartValues, Work.horizon, Work.available,
+      Work.reference₀, Work.loop₀, Work.limit₀] at hbound ⊢
+    omega
+  have havailablePositive₇ : ∀ inputLength,
+      1 ≤ values₇ inputLength Work.available := by
+    intro inputLength
+    rw [hvalues₇]
+    simp [readConnectorStartValues, Work.horizon, Work.available,
+      Work.reference₀, Work.loop₀, Work.limit₀]
+  have h₈ : BinaryRoutine.SpaceBoundByWidthAt r₈ initialSpace values₇
+      width :=
+    emitReadNextConnectors_spaceBoundByWidthAt hinvariant₇ hallValues₇
+      hloop₇ havailable₇ havailablePositive₇
+  have hloop₈ : ∀ inputLength,
+      values₈ inputLength Work.loop₀ ≤ width inputLength := by
+    intro inputLength
+    rw [show values₈ inputLength = r₈.effect (values₇ inputLength) by rfl,
+      show r₈ = BinaryRoutine.binaryFor emitReadNextConnector Work.loop₀
+        Work.limit₀ by rfl,
+      emitReadNextConnectors_effect_of_invariant _
+        (hinvariant₇ inputLength)]
+    simp only [Function.update_self]
+    rw [Nat.add_sub_of_le (hloop₇ inputLength)]
+    exact hallValues₇ inputLength Work.limit₀
+  have h₉ : BinaryRoutine.SpaceBoundByWidthAt r₉ initialSpace values₈
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.loop₀ hloop₈
+  have hlimit₉ : ∀ inputLength,
+      values₉ inputLength Work.limit₀ ≤ width inputLength := by
+    intro inputLength
+    simp [values₉, r₉, BinaryRoutine.clear, Work.loop₀, Work.limit₀]
+    rw [show values₈ inputLength = r₈.effect (values₇ inputLength) by rfl,
+      show r₈ = BinaryRoutine.binaryFor emitReadNextConnector Work.loop₀
+        Work.limit₀ by rfl,
+      emitReadNextConnectors_effect_of_invariant _
+        (hinvariant₇ inputLength)]
+    simp [Work.available, Work.reference₀, Work.loop₀]
+    exact hallValues₇ inputLength Work.limit₀
+  have h₁₀ : BinaryRoutine.SpaceBoundByWidthAt r₁₀ initialSpace values₉
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.limit₀ hlimit₉
+  have hreference₈ : ∀ inputLength,
+      values₈ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    rw [show values₈ inputLength = r₈.effect (values₇ inputLength) by rfl,
+      show r₈ = BinaryRoutine.binaryFor emitReadNextConnector Work.loop₀
+        Work.limit₀ by rfl,
+      emitReadNextConnectors_effect_of_invariant _
+        (hinvariant₇ inputLength)]
+    have hsub : values₇ inputLength Work.reference₀ -
+          3 * (values₇ inputLength Work.limit₀ -
+            values₇ inputLength Work.loop₀) ≤
+        width inputLength :=
+      (Nat.sub_le _ _).trans
+        (hallValues₇ inputLength Work.reference₀)
+    simpa [Work.available, Work.reference₀, Work.loop₀] using hsub
+  have hreference₁₀ : ∀ inputLength,
+      values₁₀ inputLength Work.reference₀ ≤ width inputLength := by
+    intro inputLength
+    have hreference₉ :
+        values₉ inputLength Work.reference₀ ≤ width inputLength := by
+      simpa [values₉, r₉, BinaryRoutine.clear, Work.loop₀,
+        Work.reference₀] using hreference₈ inputLength
+    simpa [values₁₀, r₁₀, BinaryRoutine.clear, Work.limit₀,
+      Work.reference₀] using hreference₉
+  have h₁₁ : BinaryRoutine.SpaceBoundByWidthAt r₁₁ initialSpace values₁₀
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₀ hreference₁₀
+  rw [emitReadFormula]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨h₁, h₂, h₃, h₄, h₅, h₆, h₇, h₈, h₉, h₁₀, h₁₁, trivial⟩
 
 theorem emitReadFormula_requires_internal (stateCount tapeCount : ℕ)
     (values : BinaryValues WorkCount)
