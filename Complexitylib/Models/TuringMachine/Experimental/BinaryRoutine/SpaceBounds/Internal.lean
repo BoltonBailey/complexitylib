@@ -488,6 +488,60 @@ theorem SpaceBoundByWidthAt.binaryFor_of_envelope_internal
   refine ⟨constant, fun inputLength => ?_⟩
   exact (henvelope inputLength).spaceBound_le_internal
 
+theorem SpaceBoundByWidthAt.binaryFor_of_clamped_body_internal
+    {body : BinaryRoutine n} {counterIdx limitIdx : Fin n}
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hlimit : ∀ inputLength,
+      values inputLength limitIdx ≤ width inputLength)
+    (hcounter : ∀ inputLength count,
+      count < binaryForCount counterIdx limitIdx (values inputLength) →
+        (binaryForValues body counterIdx (values inputLength) count)
+            counterIdx ≤ width inputLength)
+    (hbody : SpaceBoundByWidthAt body
+      (fun code => initialSpace (Nat.unpair code).1)
+      (binaryForClampedValues body counterIdx limitIdx values)
+      (fun code => width (Nat.unpair code).1)) :
+    SpaceBoundByWidthAt (binaryFor body counterIdx limitIdx) initialSpace
+      values width := by
+  rcases hbody with ⟨constant, hbody⟩
+  apply SpaceBoundByWidthAt.binaryFor_of_envelope_internal (constant + 2)
+  intro inputLength
+  refine
+    { compareSpace := ?_
+      initialSpace_le := by omega
+      bodySpace := ?_
+      successorSpace := ?_ }
+  · have hsize := Nat.size_le_size (hlimit inputLength)
+    have htwice := Nat.mul_le_mul_left 2 hsize
+    have hcoefficient : 2 ≤ constant + 2 := by omega
+    have hscaled := Nat.mul_le_mul_right (width inputLength).size
+      hcoefficient
+    simp only [TM.binaryForCompareTime]
+    omega
+  · intro count hcount
+    have hcountLe : count ≤
+        binaryForCount counterIdx limitIdx (values inputLength) - 1 := by
+      omega
+    have hbound := hbody (Nat.pair inputLength count)
+    simp only [binaryForClampedValues, Nat.unpair_pair, hcountLe,
+      min_eq_left] at hbound
+    have hcoefficient : constant ≤ constant + 2 := by omega
+    have hscaled := Nat.mul_le_mul_right (width inputLength).size
+      hcoefficient
+    exact hbound.trans (by omega)
+  · intro count hcount
+    have hcurrent := hcounter inputLength count hcount
+    have hsize := Nat.size_le_size hcurrent
+    have htime := TM.binarySuccTime_le
+      ((binaryForValues body counterIdx (values inputLength) count)
+        counterIdx)
+    have htwice := Nat.mul_le_mul_left 2 hsize
+    have hcoefficient : 2 ≤ constant + 2 := by omega
+    have hscaled := Nat.mul_le_mul_right (width inputLength).size
+      hcoefficient
+    omega
+
 end BinaryRoutine
 
 end Complexity

@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Asymptotics
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
+import Mathlib.Data.Nat.Pairing
 
 /-!
 # Compositional width bounds for binary routines -- definitions
@@ -70,6 +71,19 @@ structure BinaryForSpaceEnvelope (body : BinaryRoutine n)
     count < binaryForCount counterIdx limitIdx initial →
       let current := binaryForValues body counterIdx initial count
       initialSpace + TM.binarySuccTime (current counterIdx) ≤ bound
+
+/-- A single input-indexed trajectory containing every reachable body-entry
+state of a binary loop. Pairing the input index with an arbitrary iteration
+index lets one `SpaceBoundByWidthAt` certificate expose a constant uniform in
+both parameters. Out-of-range iterations are clamped to the last valid index;
+the zero-iteration case is harmless because no body state is then queried. -/
+def binaryForClampedValues (body : BinaryRoutine n)
+    (counterIdx limitIdx : Fin n) (values : ℕ → BinaryValues n)
+    (code : ℕ) : BinaryValues n :=
+  let inputLength := (Nat.unpair code).1
+  let total := binaryForCount counterIdx limitIdx (values inputLength)
+  binaryForValues body counterIdx (values inputLength)
+    (min (Nat.unpair code).2 (total - 1))
 
 end BinaryRoutine
 

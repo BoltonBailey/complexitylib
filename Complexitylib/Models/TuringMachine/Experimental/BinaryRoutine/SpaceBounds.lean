@@ -359,6 +359,28 @@ theorem SpaceBoundByWidthAt.binaryFor_of_envelope
       values width :=
   SpaceBoundByWidthAt.binaryFor_of_envelope_internal constant henvelope
 
+/-- A width certificate over the canonical paired-and-clamped body trajectory
+lifts to the complete binary loop. The limit and every reachable counter value
+must fit the same width; the resulting constant is uniform in both the input
+index and the loop iteration. -/
+theorem SpaceBoundByWidthAt.binaryFor_of_clamped_body
+    {body : BinaryRoutine n} {counterIdx limitIdx : Fin n}
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hlimit : ∀ inputLength,
+      values inputLength limitIdx ≤ width inputLength)
+    (hcounter : ∀ inputLength count,
+      count < binaryForCount counterIdx limitIdx (values inputLength) →
+        (binaryForValues body counterIdx (values inputLength) count)
+            counterIdx ≤ width inputLength)
+    (hbody : SpaceBoundByWidthAt body
+      (fun code => initialSpace (Nat.unpair code).1)
+      (binaryForClampedValues body counterIdx limitIdx values)
+      (fun code => width (Nat.unpair code).1)) :
+    SpaceBoundByWidthAt (binaryFor body counterIdx limitIdx) initialSpace
+      values width :=
+  SpaceBoundByWidthAt.binaryFor_of_clamped_body_internal hlimit hcounter hbody
+
 /-- A pointwise envelope bounds the recursive maximum over all reachable
 iterations. -/
 theorem BinaryForSpaceEnvelope.iterationSpaceMax_le
