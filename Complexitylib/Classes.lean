@@ -19,6 +19,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Containment
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
