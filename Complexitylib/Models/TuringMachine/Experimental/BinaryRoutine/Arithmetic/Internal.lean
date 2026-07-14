@@ -123,6 +123,10 @@ theorem addConst_sound_internal (idx : Fin n) (constant : ℕ) :
     simpa [addConst, CanonicalPred, work₀, work₁, nextValues] using hrun
   · exact TM.binaryAddConstTM_isTransducer idx constant
 
+theorem set_sound_internal (idx : Fin n) (value : ℕ) :
+    (set idx value).Sound :=
+  (clear_sound_internal idx).seq (addConst_sound_internal idx value)
+
 theorem add_sound_internal (srcIdx dstIdx counterIdx : Fin n) :
     (add srcIdx dstIdx counterIdx).Sound := by
   constructor

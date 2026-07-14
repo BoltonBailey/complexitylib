@@ -45,6 +45,10 @@ def addConst (idx : Fin n) (constant : ℕ) : BinaryRoutine n where
   spaceBound := fun initialSpace values =>
     TM.binaryAddConstSpace initialSpace constant (values idx)
 
+/-- Replace one canonical binary value by a hardwired natural. -/
+def set (idx : Fin n) (value : ℕ) : BinaryRoutine n :=
+  seq (clear idx) (addConst idx value)
+
 /-- Add a preserved source into a destination and restore a private counter. -/
 def add (srcIdx dstIdx counterIdx : Fin n) : BinaryRoutine n where
   machine := TM.binaryAddIntoTM srcIdx dstIdx counterIdx

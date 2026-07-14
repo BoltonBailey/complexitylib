@@ -16,8 +16,8 @@ word, time bound, and all-prefix space bound to its concrete Turing machine.
 
 ## Main results
 
-- `clear_sound`, `addConst_sound`, `add_sound`, and `mulAdd_sound` cover basic
-  arithmetic leaves.
+- `clear_sound`, `addConst_sound`, `set_sound`, `add_sound`, and `mulAdd_sound`
+  cover basic arithmetic leaves.
 - `evalPolynomial_sound` covers fixed natural-polynomial evaluation.
 - `emitNatCode_sound` and `emitRawGate_sound` cover the two encoding leaves.
 -/
@@ -37,6 +37,11 @@ theorem clear_sound (idx : Fin n) :
 theorem addConst_sound (idx : Fin n) (constant : ℕ) :
     (addConst idx constant).Sound :=
   addConst_sound_internal idx constant
+
+/-- Replacing one canonical binary value by a hardwired natural is sound. -/
+theorem set_sound (idx : Fin n) (value : ℕ) :
+    (set idx value).Sound :=
+  set_sound_internal idx value
 
 /-- Preserved-source binary addition is sound on its explicit distinct-index
 and zero-counter domain. -/
