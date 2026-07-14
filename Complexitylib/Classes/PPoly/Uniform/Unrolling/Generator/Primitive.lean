@@ -255,6 +255,66 @@ theorem emitCellReference_sound (stateCount tapeCount : ℕ)
     (emitCellReference stateCount tapeCount negated).Sound :=
   emitCellReference_sound_internal stateCount tapeCount negated
 
+/-- State-reference emission has a pointwise width certificate when every
+incoming register and the resulting absolute reference fit the width. -/
+theorem emitStateReference_spaceBoundByWidth
+    (stateIndex : ℕ) (negated : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase) stateIndex ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitStateReference stateIndex negated) initialSpace values width :=
+  emitStateReference_spaceBoundByWidth_internal stateIndex negated hvalues hcap
+
+/-- Head-reference emission has a pointwise width certificate under one
+envelope covering all arithmetic intermediates. -/
+theorem emitHeadReference_spaceBoundByWidth
+    (stateCount : ℕ) (negated : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitHeadReference stateCount negated) initialSpace values width :=
+  emitHeadReference_spaceBoundByWidth_internal stateCount negated hvalues hcap
+
+/-- Cell-reference emission has a pointwise width certificate under one
+envelope covering its base, offset, and final-reference arithmetic. -/
+theorem emitCellReference_spaceBoundByWidth
+    (stateCount tapeCount : ℕ) (negated : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) +
+              values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitCellReference stateCount tapeCount negated) initialSpace values
+      width :=
+  emitCellReference_spaceBoundByWidth_internal stateCount tapeCount negated
+    hvalues hcap
+
 /-- Zero addition and emission counters discharge state-reference emission. -/
 theorem emitStateReference_requires (stateIndex : ℕ) (negated : Bool)
     (values : BinaryValues WorkCount)

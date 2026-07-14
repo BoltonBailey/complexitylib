@@ -20,6 +20,61 @@ namespace Serializer
 
 namespace DirectGenerator
 
+/-- Arithmetic consequences of the single head-reference width envelope. -/
+private structure HeadReferenceWidthBounds (stateCount configBase horizon
+    tapeIndex position width : ℕ) : Prop where
+  stateCount_le : stateCount ≤ width
+  stateBase_le : stateCount + configBase ≤ width
+  one_le : 1 ≤ width
+  horizonOne_le : horizon + 1 ≤ width
+  multiplyIntermediate_le :
+    stateCount + configBase + tapeIndex * (horizon + 1) + tapeIndex ≤ width
+  finalReference_le :
+    stateCount + configBase + tapeIndex * (horizon + 1) + position ≤ width
+
+private theorem HeadReferenceWidthBounds.of_cap
+    (stateCount configBase horizon tapeIndex position width : ℕ)
+    (hcap : configBase + stateCount + tapeIndex * (horizon + 1) +
+        tapeIndex + position + horizon + 1 ≤ width) :
+    HeadReferenceWidthBounds stateCount configBase horizon tapeIndex position
+      width := by
+  constructor <;> nlinarith
+
+/-- Arithmetic consequences of the single cell-reference width envelope. -/
+private structure CellReferenceWidthBounds (stateCount tapeCount configBase
+    horizon tapeIndex position symbolIndex width : ℕ) : Prop where
+  stateCount_le : stateCount ≤ width
+  stateBase_le : stateCount + configBase ≤ width
+  one_le : 1 ≤ width
+  horizonOne_le : horizon + 1 ≤ width
+  tapeCount_le : tapeCount ≤ width
+  baseMultiplyIntermediate_le :
+    stateCount + configBase + (horizon + 1) * tapeCount +
+      (horizon + 1) ≤ width
+  horizonTwo_le : horizon + 2 ≤ width
+  offsetMultiplyIntermediate_le :
+    tapeIndex * (horizon + 2) + tapeIndex ≤ width
+  offset_le : tapeIndex * (horizon + 2) + position ≤ width
+  four_le : 4 ≤ width
+  finalMultiplyIntermediate_le :
+    stateCount + configBase + tapeCount * (horizon + 1) +
+        (tapeIndex * (horizon + 2) + position) * 4 +
+      (tapeIndex * (horizon + 2) + position) ≤ width
+  finalReference_le :
+    stateCount + configBase + tapeCount * (horizon + 1) +
+        (tapeIndex * (horizon + 2) + position) * 4 + symbolIndex ≤ width
+
+private theorem CellReferenceWidthBounds.of_cap
+    (stateCount tapeCount configBase horizon tapeIndex position symbolIndex
+      width : ℕ)
+    (hcap : configBase + stateCount + tapeCount * (horizon + 1) +
+        (tapeIndex * (horizon + 2) + position) * 4 +
+        (tapeIndex * (horizon + 2) + position) + symbolIndex +
+        (horizon + 2) + tapeCount + tapeIndex + 4 ≤ width) :
+    CellReferenceWidthBounds stateCount tapeCount configBase horizon tapeIndex
+      position symbolIndex width := by
+  constructor <;> nlinarith
+
 private theorem repeatBinaryPred_effect (reference : Fin WorkCount) :
     ∀ offset values,
       (BinaryRoutine.repeatRoutine offset
@@ -445,6 +500,33 @@ theorem prepareStateReference_emitted_internal (stateIndex : ℕ)
   simp [prepareStateReference, BinaryRoutine.seq, BinaryRoutine.set,
     BinaryRoutine.clear, BinaryRoutine.addConst, BinaryRoutine.add]
 
+theorem prepareStateReference_spaceBoundByWidth_internal
+    (stateIndex : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase) stateIndex ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (prepareStateReference stateIndex)
+      initialSpace values width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seq
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hvalues inputLength Work.reference₀
+    · intro inputLength
+      have := hcap inputLength
+      simp only [transitionStateRef] at this
+      omega
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase] using
+          hvalues inputLength Work.configBase
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase,
+        transitionStateRef, Nat.add_comm] using hcap inputLength
+
 theorem prepareHeadReference_sound_internal (stateCount : ℕ) :
     (prepareHeadReference stateCount).Sound := by
   apply BinaryRoutine.seqList_sound
@@ -518,6 +600,106 @@ theorem prepareHeadReference_emitted_internal (stateCount : ℕ)
     BinaryRoutine.set, BinaryRoutine.clear, BinaryRoutine.addConst,
     BinaryRoutine.add, BinaryRoutine.mulAdd, BinaryRoutine.identity,
     BinaryRoutine.emitBits]
+
+theorem prepareHeadReference_spaceBoundByWidth_internal
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (prepareHeadReference stateCount)
+      initialSpace values width := by
+  have hbounds (inputLength : ℕ) := HeadReferenceWidthBounds.of_cap
+    stateCount (values inputLength Work.configBase)
+    (values inputLength Work.horizon) (values inputLength Work.tapeIndex)
+    (values inputLength Work.position) (width inputLength)
+    (by simpa [transitionHeadRef, Nat.add_comm, Nat.add_left_comm,
+      Nat.add_assoc] using hcap inputLength)
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hvalues inputLength Work.reference₀
+    · exact fun inputLength => (hbounds inputLength).stateCount_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase] using
+          hvalues inputLength Work.configBase
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase] using
+          (hbounds inputLength).stateBase_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀] using
+          hvalues inputLength Work.temporary₀
+    · exact fun inputLength => (hbounds inputLength).one_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon] using
+          hvalues inputLength Work.horizon
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon, Nat.add_comm] using
+          (hbounds inputLength).horizonOne_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.mulAdd
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon,
+        Work.tapeIndex] using hvalues inputLength Work.tapeIndex
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon,
+        Work.tapeIndex, Nat.add_comm] using
+          (hbounds inputLength).horizonOne_le
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon,
+        Work.tapeIndex, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+          (hbounds inputLength).multiplyIntermediate_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, BinaryRoutine.mulAdd,
+        Work.reference₀, Work.configBase, Work.temporary₀, Work.horizon,
+        Work.tapeIndex, Work.position] using
+          hvalues inputLength Work.position
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, BinaryRoutine.mulAdd,
+        Work.reference₀, Work.configBase, Work.temporary₀, Work.horizon,
+        Work.tapeIndex, Work.position, Nat.add_comm, Nat.add_left_comm,
+        Nat.add_assoc] using (hbounds inputLength).finalReference_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+      BinaryRoutine.addConst, BinaryRoutine.add, BinaryRoutine.mulAdd,
+      Work.reference₀, Work.configBase, Work.temporary₀, Work.horizon,
+      Work.tapeIndex, Work.position, Nat.add_comm] using
+        (hbounds inputLength).horizonOne_le
+  · trivial
 
 private theorem prepareCellReferenceBase_sound (stateCount tapeCount : ℕ) :
     (prepareCellReferenceBase stateCount tapeCount).Sound := by
@@ -741,6 +923,258 @@ private theorem finishCellReference_emitted (values : BinaryValues WorkCount) :
     BinaryRoutine.add, BinaryRoutine.mulAdd, BinaryRoutine.identity,
     BinaryRoutine.emitBits]
 
+private theorem prepareCellReferenceBase_spaceBoundByWidth
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hbounds : ∀ inputLength,
+      CellReferenceWidthBounds stateCount tapeCount
+        (values inputLength Work.configBase)
+        (values inputLength Work.horizon)
+        (values inputLength Work.tapeIndex)
+        (values inputLength Work.position)
+        (values inputLength Work.symbolIndex) (width inputLength)) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (prepareCellReferenceBase stateCount tapeCount) initialSpace values
+      width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hvalues inputLength Work.reference₀
+    · exact fun inputLength => (hbounds inputLength).stateCount_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase] using
+          hvalues inputLength Work.configBase
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, Work.reference₀, Work.configBase] using
+          (hbounds inputLength).stateBase_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀] using
+          hvalues inputLength Work.temporary₀
+    · exact fun inputLength => (hbounds inputLength).one_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon] using
+          hvalues inputLength Work.horizon
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.horizon, Nat.add_comm] using
+          (hbounds inputLength).horizonOne_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.temporary₁,
+        Work.horizon] using hvalues inputLength Work.temporary₁
+    · exact fun inputLength => (hbounds inputLength).tapeCount_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.mulAdd
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.temporary₁,
+        Work.horizon, Nat.add_comm] using
+          (hbounds inputLength).horizonOne_le
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.temporary₁,
+        Work.horizon] using (hbounds inputLength).tapeCount_le
+    · intro inputLength
+      simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst, BinaryRoutine.add, Work.reference₀,
+        Work.configBase, Work.temporary₀, Work.temporary₁,
+        Work.horizon, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc,
+        Nat.mul_comm] using
+          (hbounds inputLength).baseMultiplyIntermediate_le
+  · trivial
+
+private theorem prepareCellPositionOffset_spaceBoundByWidth
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hbounds : ∀ inputLength,
+      CellReferenceWidthBounds stateCount tapeCount
+        (values inputLength Work.configBase)
+        (values inputLength Work.horizon)
+        (values inputLength Work.tapeIndex)
+        (values inputLength Work.position)
+        (values inputLength Work.symbolIndex) (width inputLength)) :
+    BinaryRoutine.SpaceBoundByWidthAt prepareCellPositionOffset initialSpace
+      (fun inputLength =>
+        (prepareCellReferenceBase stateCount tapeCount).effect
+          (values inputLength)) width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro inputLength
+    simpa [prepareCellReferenceBase_effect, Work.temporary₀,
+      Work.temporary₁, Nat.add_assoc] using
+        (hbounds inputLength).horizonTwo_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        Work.reference₀, Work.temporary₀, Work.temporary₁,
+        Work.tapeIndex] using hvalues inputLength Work.tapeIndex
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        Work.reference₀, Work.temporary₀, Work.temporary₁,
+        Work.tapeIndex] using (hbounds inputLength).tapeCount_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+      BinaryRoutine.binaryCopy, Work.reference₀, Work.temporary₀,
+      Work.temporary₁, Work.temporary₂, Work.tapeIndex] using
+        hvalues inputLength Work.temporary₂
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.mulAdd
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        BinaryRoutine.binaryCopy, BinaryRoutine.clear, Work.reference₀,
+        Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.tapeIndex] using hvalues inputLength Work.tapeIndex
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        BinaryRoutine.binaryCopy, BinaryRoutine.clear, Work.reference₀,
+        Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.tapeIndex, Nat.add_assoc] using
+          (hbounds inputLength).horizonTwo_le
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        BinaryRoutine.binaryCopy, BinaryRoutine.clear, Work.reference₀,
+        Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.tapeIndex, Nat.add_assoc] using
+          (hbounds inputLength).offsetMultiplyIntermediate_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        BinaryRoutine.binaryCopy, BinaryRoutine.clear, BinaryRoutine.mulAdd,
+        Work.reference₀, Work.temporary₀, Work.temporary₁,
+        Work.temporary₂, Work.tapeIndex, Work.position] using
+          hvalues inputLength Work.position
+    · intro inputLength
+      simpa [prepareCellReferenceBase_effect, BinaryRoutine.addConst,
+        BinaryRoutine.binaryCopy, BinaryRoutine.clear, BinaryRoutine.mulAdd,
+        Work.reference₀, Work.temporary₀, Work.temporary₁,
+        Work.temporary₂, Work.tapeIndex, Work.position, Nat.add_assoc] using
+          (hbounds inputLength).offset_le
+  · trivial
+
+private theorem finishCellReference_spaceBoundByWidth
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hbounds : ∀ inputLength,
+      CellReferenceWidthBounds stateCount tapeCount
+        (values inputLength Work.configBase)
+        (values inputLength Work.horizon)
+        (values inputLength Work.tapeIndex)
+        (values inputLength Work.position)
+        (values inputLength Work.symbolIndex) (width inputLength)) :
+    BinaryRoutine.SpaceBoundByWidthAt finishCellReference initialSpace
+      (fun inputLength => prepareCellPositionOffset.effect
+        ((prepareCellReferenceBase stateCount tapeCount).effect
+          (values inputLength))) width := by
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, Work.reference₀, Work.temporary₀,
+        Work.temporary₁, Work.temporary₂, Work.tapeIndex] using
+          hvalues inputLength Work.tapeIndex
+    · exact fun inputLength => (hbounds inputLength).four_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.mulAdd
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, BinaryRoutine.set, Work.reference₀,
+        Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.tapeIndex, Work.position] using
+          (hbounds inputLength).offset_le
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, BinaryRoutine.set, Work.reference₀,
+        Work.temporary₀, Work.temporary₁, Work.temporary₂,
+        Work.tapeIndex, Work.position] using
+          (hbounds inputLength).four_le
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, BinaryRoutine.set,
+        BinaryRoutine.seq, BinaryRoutine.clear, BinaryRoutine.addConst,
+        Work.reference₀, Work.temporary₀, Work.temporary₁,
+        Work.temporary₂, Work.tapeIndex, Work.position, Nat.add_comm,
+        Nat.add_left_comm, Nat.add_assoc, Nat.mul_comm] using
+          (hbounds inputLength).finalMultiplyIntermediate_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.add
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, BinaryRoutine.set,
+        BinaryRoutine.mulAdd, Work.reference₀, Work.temporary₀,
+        Work.temporary₁, Work.temporary₂, Work.tapeIndex,
+        Work.position, Work.symbolIndex] using
+          hvalues inputLength Work.symbolIndex
+    · intro inputLength
+      simpa [prepareCellPositionOffset_effect,
+        prepareCellReferenceBase_effect, BinaryRoutine.set,
+        BinaryRoutine.seq, BinaryRoutine.clear, BinaryRoutine.addConst,
+        BinaryRoutine.mulAdd, Work.reference₀, Work.temporary₀,
+        Work.temporary₁, Work.temporary₂, Work.tapeIndex,
+        Work.position, Work.symbolIndex, Nat.add_comm, Nat.add_left_comm,
+        Nat.add_assoc, Nat.mul_comm] using
+          (hbounds inputLength).finalReference_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [prepareCellPositionOffset_effect,
+      prepareCellReferenceBase_effect, BinaryRoutine.set,
+      BinaryRoutine.mulAdd, BinaryRoutine.add, Work.reference₀,
+      Work.temporary₀, Work.temporary₁, Work.temporary₂,
+      Work.tapeIndex, Work.position, Work.symbolIndex, Nat.add_assoc] using
+        (hbounds inputLength).horizonTwo_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [prepareCellPositionOffset_effect,
+      prepareCellReferenceBase_effect, BinaryRoutine.set,
+      BinaryRoutine.mulAdd, BinaryRoutine.add, BinaryRoutine.clear,
+      Work.reference₀, Work.temporary₀, Work.temporary₁,
+      Work.temporary₂, Work.tapeIndex, Work.position,
+      Work.symbolIndex] using (hbounds inputLength).four_le
+  constructor
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [prepareCellPositionOffset_effect,
+      prepareCellReferenceBase_effect, BinaryRoutine.set,
+      BinaryRoutine.mulAdd, BinaryRoutine.add, BinaryRoutine.clear,
+      Work.reference₀, Work.temporary₀, Work.temporary₁,
+      Work.temporary₂, Work.tapeIndex, Work.position,
+      Work.symbolIndex] using (hbounds inputLength).offset_le
+  · trivial
+
 theorem prepareCellReference_requires_internal (stateCount tapeCount : ℕ)
     (values : BinaryValues WorkCount)
     (hcopy : values Work.copyCounter = 0)
@@ -795,6 +1229,42 @@ theorem prepareCellReference_emitted_internal (stateCount tapeCount : ℕ)
     prepareCellReferenceBase_emitted, prepareCellPositionOffset_emitted,
     finishCellReference_emitted,
     BinaryRoutine.identity, BinaryRoutine.emitBits]
+
+theorem prepareCellReference_spaceBoundByWidth_internal
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) +
+              values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (prepareCellReference stateCount tapeCount) initialSpace values width := by
+  have hbounds (inputLength : ℕ) := CellReferenceWidthBounds.of_cap
+    stateCount tapeCount (values inputLength Work.configBase)
+    (values inputLength Work.horizon) (values inputLength Work.tapeIndex)
+    (values inputLength Work.position) (values inputLength Work.symbolIndex)
+    (width inputLength) (by
+      simpa [transitionCellRef, Nat.add_comm, Nat.add_left_comm,
+        Nat.add_assoc] using hcap inputLength)
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨prepareCellReferenceBase_spaceBoundByWidth stateCount tapeCount
+      hvalues hbounds,
+    prepareCellPositionOffset_spaceBoundByWidth stateCount tapeCount hvalues
+      hbounds,
+    finishCellReference_spaceBoundByWidth stateCount tapeCount hvalues hbounds,
+    trivial⟩
 
 theorem emitPreparedReference_sound_internal
     {prepare : BinaryRoutine WorkCount} (hprepare : prepare.Sound)
@@ -851,6 +1321,32 @@ private theorem emitPreparedReference_emitted
     BinaryRoutine.emitRawGateStep, BinaryRoutine.clear,
     BinaryRoutine.identity, BinaryRoutine.emitBits, CircuitCode.RawGate.copy]
 
+private theorem emitPreparedReference_spaceBoundByWidth
+    (prepare : BinaryRoutine WorkCount) (negated : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace values
+      width)
+    (havailable : ∀ inputLength,
+      prepare.effect (values inputLength) Work.available ≤
+        width inputLength)
+    (hreference : ∀ inputLength,
+      prepare.effect (values inputLength) Work.reference₀ ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPreparedReference prepare negated) initialSpace values width := by
+  rw [emitPreparedReference]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨hprepare, ?_, ?_, trivial⟩
+  · exact BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .and negated
+      negated Work.emitCounter Work.available Work.reference₀ Work.reference₀
+      havailable hreference hreference
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro inputLength
+    simpa [BinaryRoutine.emitRawGateStep, Work.available, Work.reference₀]
+      using hreference inputLength
+
 theorem emitStateReference_sound_internal (stateIndex : ℕ)
     (negated : Bool) :
     (emitStateReference stateIndex negated).Sound :=
@@ -868,6 +1364,108 @@ theorem emitCellReference_sound_internal (stateCount tapeCount : ℕ)
     (emitCellReference stateCount tapeCount negated).Sound :=
   emitPreparedReference_sound_internal
     (prepareCellReference_sound_internal stateCount tapeCount) negated
+
+theorem emitStateReference_spaceBoundByWidth_internal
+    (stateIndex : ℕ) (negated : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase) stateIndex ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitStateReference stateIndex negated) initialSpace values width := by
+  rw [emitStateReference]
+  apply emitPreparedReference_spaceBoundByWidth
+  · exact prepareStateReference_spaceBoundByWidth_internal stateIndex
+      hvalues hcap
+  · intro inputLength
+    rw [prepareStateReference_effect_internal]
+    simpa [Work.available, Work.reference₀] using
+      hvalues inputLength Work.available
+  · intro inputLength
+    rw [prepareStateReference_effect_internal]
+    simpa using hcap inputLength
+
+theorem emitHeadReference_spaceBoundByWidth_internal
+    (stateCount : ℕ) (negated : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitHeadReference stateCount negated) initialSpace values width := by
+  have hbounds (inputLength : ℕ) := HeadReferenceWidthBounds.of_cap
+    stateCount (values inputLength Work.configBase)
+    (values inputLength Work.horizon) (values inputLength Work.tapeIndex)
+    (values inputLength Work.position) (width inputLength)
+    (by simpa [transitionHeadRef, Nat.add_comm, Nat.add_left_comm,
+      Nat.add_assoc] using hcap inputLength)
+  rw [emitHeadReference]
+  apply emitPreparedReference_spaceBoundByWidth
+  · exact prepareHeadReference_spaceBoundByWidth_internal stateCount
+      hvalues hcap
+  · intro inputLength
+    rw [prepareHeadReference_effect_internal]
+    simpa [Work.available, Work.reference₀, Work.temporary₀] using
+      hvalues inputLength Work.available
+  · intro inputLength
+    rw [prepareHeadReference_effect_internal]
+    simpa [transitionHeadRef, Work.reference₀, Work.temporary₀,
+      Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
+        (hbounds inputLength).finalReference_le
+
+theorem emitCellReference_spaceBoundByWidth_internal
+    (stateCount tapeCount : ℕ) (negated : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+                (values inputLength Work.horizon + 2) +
+              values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitCellReference stateCount tapeCount negated) initialSpace values
+      width := by
+  have hbounds (inputLength : ℕ) := CellReferenceWidthBounds.of_cap
+    stateCount tapeCount (values inputLength Work.configBase)
+    (values inputLength Work.horizon) (values inputLength Work.tapeIndex)
+    (values inputLength Work.position) (values inputLength Work.symbolIndex)
+    (width inputLength) (by
+      simpa [transitionCellRef, Nat.add_comm, Nat.add_left_comm,
+        Nat.add_assoc] using hcap inputLength)
+  rw [emitCellReference]
+  apply emitPreparedReference_spaceBoundByWidth
+  · exact prepareCellReference_spaceBoundByWidth_internal stateCount
+      tapeCount hvalues hcap
+  · intro inputLength
+    rw [prepareCellReference_effect_internal]
+    simpa [Work.available, Work.reference₀, Work.temporary₀,
+      Work.temporary₁, Work.temporary₂] using
+        hvalues inputLength Work.available
+  · intro inputLength
+    rw [prepareCellReference_effect_internal]
+    simpa [transitionCellRef, Work.reference₀, Work.temporary₀,
+      Work.temporary₁, Work.temporary₂, Nat.add_comm,
+      Nat.add_left_comm, Nat.add_assoc] using
+        (hbounds inputLength).finalReference_le
 
 theorem emitStateReference_requires_internal (stateIndex : ℕ)
     (negated : Bool) (values : BinaryValues WorkCount)
