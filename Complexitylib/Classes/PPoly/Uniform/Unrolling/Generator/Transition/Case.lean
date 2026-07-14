@@ -30,6 +30,50 @@ theorem emitCaseFormula_sound
   emitCaseFormula_sound_internal stateCount workCount stateIndex
     inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt
 
+/-- A clean case-formula entry state satisfies every framed arithmetic,
+reference, and gate-emission precondition of the complete emitter. -/
+theorem emitCaseFormula_requires
+    (stateCount workCount stateIndex inputSymbolIndex outputSymbolIndex : ℕ)
+    (choiceValue : Bool) (workSymbolIndexAt : ℕ → ℕ)
+    (values : BinaryValues WorkCount) (hclean : CaseFormulaClean values) :
+    (emitCaseFormula stateCount workCount stateIndex inputSymbolIndex
+      outputSymbolIndex choiceValue workSymbolIndexAt).requires values :=
+  emitCaseFormula_requires_internal stateCount workCount stateIndex
+    inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt values
+    hclean
+
+/-- Complete case emission restores every owned scratch register and advances
+the wire frontier by exactly the canonical case-schedule size. -/
+@[simp] theorem emitCaseFormula_effect
+    (stateCount workCount stateIndex inputSymbolIndex outputSymbolIndex : ℕ)
+    (choiceValue : Bool) (workSymbolIndexAt : ℕ → ℕ)
+    (values : BinaryValues WorkCount) (hclean : CaseFormulaClean values) :
+    (emitCaseFormula stateCount workCount stateIndex inputSymbolIndex
+      outputSymbolIndex choiceValue workSymbolIndexAt).effect values =
+      Function.update values Work.available
+        (values Work.available +
+          caseFormulaScheduleSize workCount (values Work.horizon)
+            choiceValue) :=
+  emitCaseFormula_effect_internal stateCount workCount stateIndex
+    inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt values
+    hclean
+
+/-- Complete case emission is byte-for-byte the canonical numeric transition
+case schedule, not merely a circuit with the same gate count. -/
+@[simp] theorem emitCaseFormula_emitted
+    (stateCount workCount stateIndex inputSymbolIndex outputSymbolIndex : ℕ)
+    (choiceValue : Bool) (workSymbolIndexAt : ℕ → ℕ)
+    (values : BinaryValues WorkCount) (hclean : CaseFormulaClean values) :
+    (emitCaseFormula stateCount workCount stateIndex inputSymbolIndex
+      outputSymbolIndex choiceValue workSymbolIndexAt).emitted values =
+      (caseFormulaSchedule stateCount workCount (values Work.horizon)
+        (values Work.configBase) (values Work.reference₀)
+        (values Work.available) stateIndex inputSymbolIndex outputSymbolIndex
+        choiceValue workSymbolIndexAt).flatMap CircuitCode.RawGate.encode :=
+  emitCaseFormula_emitted_internal stateCount workCount stateIndex
+    inputSymbolIndex outputSymbolIndex choiceValue workSymbolIndexAt values
+    hclean
+
 /-- The clean-entry contract suffices for the forward member stream. -/
 theorem emitCaseMembers_requires
     (stateCount workCount stateIndex inputSymbolIndex outputSymbolIndex : ℕ)

@@ -113,6 +113,13 @@ def emitPreviousCaseChoiceConnector : BinaryRoutine WorkCount :=
   BinaryRoutine.seq (BinaryRoutine.binaryPred Work.reference₀)
     emitCaseConnector
 
+/-- Emit a fixed number of equal-width predecessor-member connectors. -/
+def emitPreviousCaseReadConnectors : ℕ → BinaryRoutine WorkCount
+  | 0 => BinaryRoutine.identity
+  | count + 1 =>
+      BinaryRoutine.seq emitPreviousCaseReadConnector
+        (emitPreviousCaseReadConnectors count)
+
 /-- Emit one complete fixed transition-case schedule. The sole lasting effect
 under `CaseFormulaClean` is the advance of `available`. -/
 def emitCaseFormula
@@ -126,8 +133,7 @@ def emitCaseFormula
       prepareCaseReadSize,
       prepareRecentReference Work.reference₀ 2,
       emitCaseConnector,
-      BinaryRoutine.repeatRoutine (workCount + 2)
-        emitPreviousCaseReadConnector,
+      emitPreviousCaseReadConnectors (workCount + 2),
       emitPreviousCaseChoiceConnector,
       BinaryRoutine.clear Work.reference₀,
       BinaryRoutine.clear Work.temporary₃,
