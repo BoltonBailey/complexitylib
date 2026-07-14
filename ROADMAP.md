@@ -633,6 +633,10 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         literal-frame endpoint, width-based all-prefix space bound, and reusable
         one-way-output contract. This permits repeated-addition multiplication
         without using unary work counters.
+      - [x] Build canonical binary multiply-add as a nested count-up loop over
+        binary addition. It preserves both operands, updates only the accumulator,
+        restores both private counters literally, and proves an all-prefix bound
+        controlled by operand and final-accumulator widths.
       - [x] Validate that loop at the circuit-code boundary: from a preserved
         canonical binary value and a distinct zero scratch counter,
         `CircuitCode.Machine.emitNatCodeTM` appends its terminated-unary
@@ -741,7 +745,9 @@ restores its zero scratch and complete input/work frame within
 successive values and fixed-polynomial binary arithmetic remain open. Canonical
 binary addition has now landed with a literal destination-update frame and an
 all-prefix bound controlled by the source and final-destination widths, giving
-the forthcoming polynomial evaluator a verified repeated-addition core. Complete
+the forthcoming polynomial evaluator a verified repeated-addition core. The
+nested binary multiply-add wrapper now preserves both operands and restores both
+counters while retaining a width-based all-prefix bound. Complete
 raw gates can now be emitted from two preserved binary references with the same
 framed, all-prefix-space, and one-way-output guarantees; the concrete append-only
 direct-unrolling schedule remains open, and the deferred rose-tree lowering is
