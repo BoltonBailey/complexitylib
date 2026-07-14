@@ -28,6 +28,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Atomic
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Case
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Effect
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 import Complexitylib.Classes.PPoly.Uniform.Preprocessing
 import Complexitylib.Classes.PPoly.Uniform.Containment
