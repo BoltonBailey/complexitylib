@@ -27,6 +27,45 @@ theorem emitEffectFormula_sound (tm : NTM k)
     (emitEffectFormula tm selects).Sound :=
   emitEffectFormula_sound_internal tm selects
 
+/-- Complete transition-effect emission has an all-prefix width certificate
+under one global bounded-selector envelope. The cap covers the complete wire
+frontier together with every state, head, cell, and read-size intermediate
+that any machine-selected case can use. -/
+theorem emitEffectFormula_spaceBoundByWidth
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            effectFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitEffectFormula tm selects)
+      initialSpace values width :=
+  emitEffectFormula_spaceBoundByWidth_internal tm selects hclean hvalues hcap
+
 /-- Clean scratch together with a positive wire frontier suffices for every
 leaf routine in complete transition-effect emission. -/
 theorem emitEffectFormula_requires (tm : NTM k)

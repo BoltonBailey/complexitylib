@@ -1517,6 +1517,1098 @@ theorem emitEffectFormula_emitted_internal (tm : NTM k)
     List.flatMap_singleton]
   simp [List.append_assoc]
 
+/-! ## Pointwise all-prefix width certificates -/
+
+/-- One global arithmetic envelope for every machine-selected case and every
+bounded read selector used by complete effect-formula emission. -/
+private def EffectFormulaWidthCap (tm : NTM k)
+    (selects : TransitionEffect tm → Bool)
+    (values : ℕ → BinaryValues WorkCount) (width : ℕ → ℕ) : Prop :=
+  ∀ inputLength stateIndex tapeIndex symbolIndex position,
+    stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+    symbolIndex < 4 → position ≤ values inputLength Work.horizon →
+      values inputLength Work.available +
+          effectFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm) +
+        transitionStateRef (values inputLength Work.configBase) stateIndex +
+        (transitionHeadRef (Fintype.card tm.Q)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position +
+            tapeIndex + values inputLength Work.horizon + 1) +
+        (transitionCellRef (Fintype.card tm.Q) (k + 2)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position
+              symbolIndex +
+            (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+            (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+            4) +
+        caseReadSize (values inputLength Work.horizon) +
+        values inputLength Work.horizon ≤ width inputLength
+
+private theorem EffectFormulaWidthCap.frontier
+    {tm : NTM k} {selects : TransitionEffect tm → Bool}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcap : EffectFormulaWidthCap tm selects values width) :
+    ∀ inputLength,
+      values inputLength Work.available +
+          effectFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm) ≤
+        width inputLength := by
+  intro inputLength
+  have hstate : stateIndex tm tm.qstart < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qstart).isLt
+  have hbound := hcap inputLength (stateIndex tm tm.qstart) 0 0 0
+    hstate (by omega) (by omega) (Nat.zero_le _)
+  omega
+
+private theorem effectCaseStateIndexAt_lt (tm : NTM k) (caseIndex : ℕ)
+    (hcase : caseIndex < (transitionCases tm).length) :
+    effectCaseStateIndexAt tm caseIndex < Fintype.card tm.Q := by
+  rw [effectCaseStateIndexAt, dif_pos hcase]
+  exact (Fintype.equivFin tm.Q _).isLt
+
+private theorem effectCaseInputSymbolIndexAt_lt (tm : NTM k)
+    (caseIndex : ℕ) (hcase : caseIndex < (transitionCases tm).length) :
+    effectCaseInputSymbolIndexAt tm caseIndex < 4 := by
+  rw [effectCaseInputSymbolIndexAt, dif_pos hcase]
+  exact (symbolIndex _).isLt
+
+private theorem effectCaseOutputSymbolIndexAt_lt (tm : NTM k)
+    (caseIndex : ℕ) (hcase : caseIndex < (transitionCases tm).length) :
+    effectCaseOutputSymbolIndexAt tm caseIndex < 4 := by
+  rw [effectCaseOutputSymbolIndexAt, dif_pos hcase]
+  exact (symbolIndex _).isLt
+
+private theorem effectCaseWorkSymbolIndexAt_lt (tm : NTM k)
+    (caseIndex workIndex : ℕ)
+    (hcase : caseIndex < (transitionCases tm).length)
+    (hwork : workIndex < k) :
+    effectCaseWorkSymbolIndexAt tm caseIndex workIndex < 4 := by
+  rw [effectCaseWorkSymbolIndexAt, dif_pos hcase, dif_pos hwork]
+  exact (symbolIndex _).isLt
+
+private theorem prefixSize_mono_effect
+    (sizeAt : ℕ → ℕ) {first second : ℕ} (hle : first ≤ second) :
+    prefixSize sizeAt first ≤ prefixSize sizeAt second := by
+  induction second with
+  | zero => simp_all
+  | succ second ih =>
+      by_cases heq : first = second + 1
+      · subst first
+        exact Nat.le_refl _
+      · have hfirst : first ≤ second := by omega
+        exact (ih hfirst).trans (by rw [prefixSize_succ]; omega)
+
+private theorem EffectFormulaWidthCap.caseSize
+    {tm : NTM k} {selects : TransitionEffect tm → Bool}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcap : EffectFormulaWidthCap tm selects values width)
+    (inputLength caseIndex : ℕ)
+    (hcase : caseIndex < (transitionCases tm).length) :
+    effectFormulaCaseSize k (values inputLength Work.horizon)
+          (effectCaseSelectedAt tm selects caseIndex)
+          (effectCaseChoiceAt tm caseIndex) +
+        values inputLength Work.horizon ≤
+      width inputLength := by
+  let sizeAt := effectFormulaSizeAt (transitionCases tm).length k
+    (values inputLength Work.horizon) (effectCaseSelectedAt tm selects)
+    (effectCaseChoiceAt tm)
+  have hsizeAt : sizeAt caseIndex =
+      effectFormulaCaseSize k (values inputLength Work.horizon)
+        (effectCaseSelectedAt tm selects caseIndex)
+        (effectCaseChoiceAt tm caseIndex) := by
+    simp [sizeAt, effectFormulaSizeAt, hcase]
+  have hprefix := prefixSize_mono_effect sizeAt
+    (show caseIndex + 1 ≤ (transitionCases tm).length by omega)
+  rw [prefixSize_succ, hsizeAt] at hprefix
+  have hstate : stateIndex tm tm.qstart < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qstart).isLt
+  have hbound := hcap inputLength (stateIndex tm tm.qstart) 0 0 0
+    hstate (by omega) (by omega) (Nat.zero_le _)
+  simp only [effectFormulaScheduleSize] at hbound
+  change _ ≤ _ at hprefix
+  dsimp only [sizeAt] at hprefix
+  omega
+
+private theorem emitEffectCaseAt_spaceBoundByWidthAt
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    (caseIndex : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcase : caseIndex < (transitionCases tm).length)
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength tapeIndex symbolIndex position,
+      tapeIndex ≤ k + 1 → symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            effectFormulaCaseSize k (values inputLength Work.horizon)
+              (effectCaseSelectedAt tm selects caseIndex)
+              (effectCaseChoiceAt tm caseIndex) +
+          transitionStateRef (values inputLength Work.configBase)
+            (effectCaseStateIndexAt tm caseIndex) +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitEffectCaseAt tm selects caseIndex)
+      initialSpace values width := by
+  rw [emitEffectCaseAt]
+  by_cases hselected : effectCaseSelectedAt tm selects caseIndex
+  · rw [if_pos hselected]
+    apply emitCaseFormula_spaceBoundByWidth
+    · exact hclean
+    · exact hvalues
+    · exact effectCaseInputSymbolIndexAt_lt tm caseIndex hcase
+    · exact effectCaseOutputSymbolIndexAt_lt tm caseIndex hcase
+    · exact fun index hindex =>
+        effectCaseWorkSymbolIndexAt_lt tm caseIndex index hcase hindex
+    · intro inputLength tapeIndex symbolIndex position htape hsymbol
+        hposition
+      have hbound := hcap inputLength tapeIndex symbolIndex position htape
+        hsymbol hposition
+      simpa [effectFormulaCaseSize, hselected] using hbound
+  · rw [if_neg hselected]
+    exact emitConstantGate_spaceBoundByWidth false
+      (fun inputLength => hvalues inputLength Work.available)
+      (fun inputLength => hvalues inputLength Work.reference₀)
+
+private theorem emitEffectMembersFrom_spaceBoundByWidthAt
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    (start count : ℕ) {initialSpace : ℕ → ℕ}
+    {source values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hbound : start + count ≤ (transitionCases tm).length)
+    (hsourceClean : ∀ inputLength,
+      CaseFormulaClean (source inputLength))
+    (hsourceValues : ∀ inputLength index,
+      source inputLength index ≤ width inputLength)
+    (htrajectory : ∀ inputLength,
+      values inputLength =
+        Function.update (source inputLength) Work.available
+          (source inputLength Work.available +
+            prefixSize
+              (effectFormulaSizeAt (transitionCases tm).length k
+                (source inputLength Work.horizon)
+                (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+              start))
+    (hcap : EffectFormulaWidthCap tm selects source width) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitEffectMembersFrom tm selects start count)
+      initialSpace values width := by
+  induction count generalizing start values with
+  | zero =>
+      simpa [emitEffectMembersFrom] using
+        (BinaryRoutine.SpaceBoundByWidthAt.identity (n := WorkCount)
+          (initialSpace := initialSpace) (values := values) (width := width))
+  | succ count ih =>
+      have hcase : start < (transitionCases tm).length := by omega
+      have hcurrentClean : ∀ inputLength,
+          CaseFormulaClean (values inputLength) := by
+        intro inputLength
+        rw [htrajectory inputLength]
+        exact CaseFormulaClean.updateAvailable (source inputLength)
+          (hsourceClean inputLength) _
+      have hcurrentValues : ∀ inputLength index,
+          values inputLength index ≤ width inputLength := by
+        intro inputLength
+        rw [htrajectory inputLength]
+        apply BinaryRoutine.values_update_le Work.available
+          (hsourceValues inputLength)
+        have hprefix := prefixSize_mono_effect
+          (effectFormulaSizeAt (transitionCases tm).length k
+            (source inputLength Work.horizon)
+            (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+          (show start ≤ (transitionCases tm).length by omega)
+        have hfrontier := hcap.frontier inputLength
+        simp only [effectFormulaScheduleSize] at hfrontier
+        omega
+      have hlocalCap : ∀ inputLength tapeIndex symbolIndex position,
+          tapeIndex ≤ k + 1 → symbolIndex < 4 →
+          position ≤ values inputLength Work.horizon →
+            values inputLength Work.available +
+                effectFormulaCaseSize k
+                  (values inputLength Work.horizon)
+                  (effectCaseSelectedAt tm selects start)
+                  (effectCaseChoiceAt tm start) +
+              transitionStateRef (values inputLength Work.configBase)
+                (effectCaseStateIndexAt tm start) +
+              (transitionHeadRef (Fintype.card tm.Q)
+                    (values inputLength Work.horizon)
+                    (values inputLength Work.configBase) tapeIndex position +
+                  tapeIndex + values inputLength Work.horizon + 1) +
+              (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                    (values inputLength Work.horizon)
+                    (values inputLength Work.configBase) tapeIndex position
+                    symbolIndex +
+                  (tapeIndex * (values inputLength Work.horizon + 2) +
+                    position) +
+                  (values inputLength Work.horizon + 2) + (k + 2) +
+                  tapeIndex + 4) +
+              caseReadSize (values inputLength Work.horizon) +
+              values inputLength Work.horizon ≤ width inputLength := by
+        intro inputLength tapeIndex symbolIndex position htape hsymbol
+          hposition
+        let sizeAt := effectFormulaSizeAt (transitionCases tm).length k
+          (source inputLength Work.horizon)
+          (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm)
+        have hpositionSource :
+            position ≤ source inputLength Work.horizon := by
+          rw [htrajectory inputLength] at hposition
+          simpa [Work.available, Work.horizon] using hposition
+        have hglobal := hcap inputLength
+          (effectCaseStateIndexAt tm start) tapeIndex symbolIndex position
+          (effectCaseStateIndexAt_lt tm start hcase) htape hsymbol
+          hpositionSource
+        have hprefix := prefixSize_mono_effect sizeAt
+          (show start + 1 ≤ (transitionCases tm).length by omega)
+        rw [prefixSize_succ] at hprefix
+        have hsizeAt : sizeAt start =
+            effectFormulaCaseSize k (source inputLength Work.horizon)
+              (effectCaseSelectedAt tm selects start)
+              (effectCaseChoiceAt tm start) := by
+          simp [sizeAt, effectFormulaSizeAt, hcase]
+        rw [hsizeAt] at hprefix
+        simp only [effectFormulaScheduleSize] at hglobal
+        rw [htrajectory inputLength]
+        dsimp only [sizeAt] at hprefix
+        simp [Work.available, Work.horizon, Work.configBase]
+          at hglobal hprefix ⊢
+        omega
+      have hhead : BinaryRoutine.SpaceBoundByWidthAt
+          (emitEffectCaseAt tm selects start) initialSpace values width :=
+        emitEffectCaseAt_spaceBoundByWidthAt tm selects start hcase
+          hcurrentClean hcurrentValues hlocalCap
+      let nextValues : ℕ → BinaryValues WorkCount := fun inputLength =>
+        (emitEffectCaseAt tm selects start).effect (values inputLength)
+      have hnextTrajectory : ∀ inputLength,
+          nextValues inputLength =
+            Function.update (source inputLength) Work.available
+              (source inputLength Work.available +
+                prefixSize
+                  (effectFormulaSizeAt (transitionCases tm).length k
+                    (source inputLength Work.horizon)
+                    (effectCaseSelectedAt tm selects)
+                    (effectCaseChoiceAt tm))
+                  (start + 1)) := by
+        intro inputLength
+        dsimp only [nextValues]
+        rw [emitEffectCaseAt_effect_internal tm selects start _
+          (hcurrentClean inputLength), htrajectory inputLength]
+        funext index
+        by_cases hindex : index = Work.available
+        · subst index
+          simp [prefixSize_succ, effectFormulaSizeAt, hcase,
+            Work.available, Work.horizon, Nat.add_assoc]
+        · simp [Function.update_apply, hindex]
+      have htail : BinaryRoutine.SpaceBoundByWidthAt
+          (emitEffectMembersFrom tm selects (start + 1) count)
+          initialSpace nextValues width :=
+        ih (start + 1) (values := nextValues) (by omega) hnextTrajectory
+      have hseq := BinaryRoutine.SpaceBoundByWidthAt.seq hhead htail
+      simpa [emitEffectMembersFrom, nextValues] using hseq
+
+private theorem emitEffectMembers_spaceBoundByWidthAt
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : EffectFormulaWidthCap tm selects values width) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitEffectMembers tm selects)
+      initialSpace values width := by
+  apply emitEffectMembersFrom_spaceBoundByWidthAt tm selects 0
+    (transitionCases tm).length (by omega) hclean hvalues
+  · intro inputLength
+    funext index
+    by_cases hindex : index = Work.available
+    · subst index
+      simp [prefixSize, Work.available]
+    · simp [prefixSize, hindex]
+  · exact hcap
+
+private theorem prepareEffectCaseSize_spaceBoundByWidthAt
+    (workCount : ℕ) (selected choiceValue : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      effectFormulaCaseSize workCount (values inputLength Work.horizon)
+            selected choiceValue +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (prepareEffectCaseSize workCount selected choiceValue)
+      initialSpace values width := by
+  cases selected with
+  | false =>
+      simpa [prepareEffectCaseSize] using
+        (BinaryRoutine.SpaceBoundByWidthAt.set Work.temporary₃ 1
+          (fun inputLength => hvalues inputLength Work.temporary₃)
+          (fun inputLength => by
+            have := hcap inputLength
+            simp [effectFormulaCaseSize] at this
+            omega))
+  | true =>
+      have hsize (T : ℕ) :
+          effectFormulaCaseSize workCount T true choiceValue =
+            (6 * workCount + 16 + caseChoiceLiteralSize choiceValue) +
+              T * (4 * (workCount + 2)) := by
+        simp [effectFormulaCaseSize, caseFormulaScheduleSize,
+          caseFormulaMembersSize, caseFormulaMemberCount, caseReadSize]
+        ring
+      have htotal : ∀ inputLength,
+          (6 * workCount + 16 + caseChoiceLiteralSize choiceValue) +
+                values inputLength Work.horizon * (4 * (workCount + 2)) +
+              values inputLength Work.horizon ≤
+            width inputLength := by
+        intro inputLength
+        rw [← hsize]
+        exact hcap inputLength
+      have hconstant : ∀ inputLength,
+          6 * workCount + 16 + caseChoiceLiteralSize choiceValue ≤
+            width inputLength := by
+        intro inputLength
+        have := htotal inputLength
+        omega
+      have hfactor : ∀ inputLength,
+          4 * (workCount + 2) ≤ width inputLength := by
+        intro inputLength
+        have hconstantBound := hconstant inputLength
+        omega
+      apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+      simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+      constructor
+      · apply BinaryRoutine.SpaceBoundByWidthAt.set
+        · exact fun inputLength => hvalues inputLength Work.temporary₃
+        · exact hconstant
+      constructor
+      · apply BinaryRoutine.SpaceBoundByWidthAt.set
+        · intro inputLength
+          simpa [BinaryRoutine.set, BinaryRoutine.seq,
+            BinaryRoutine.clear, BinaryRoutine.addConst, Work.temporary₂,
+            Work.temporary₃] using hvalues inputLength Work.temporary₂
+        · exact hfactor
+      constructor
+      · apply BinaryRoutine.SpaceBoundByWidthAt.mulAdd
+        · intro inputLength
+          simpa [BinaryRoutine.set, BinaryRoutine.seq,
+            BinaryRoutine.clear, BinaryRoutine.addConst, Work.horizon,
+            Work.temporary₂, Work.temporary₃] using
+              hvalues inputLength Work.horizon
+        · intro inputLength
+          simpa [BinaryRoutine.set, BinaryRoutine.seq,
+            BinaryRoutine.clear, BinaryRoutine.addConst, Work.temporary₂,
+            Work.temporary₃] using hfactor inputLength
+        · intro inputLength
+          simpa [BinaryRoutine.set, BinaryRoutine.seq,
+            BinaryRoutine.clear, BinaryRoutine.addConst, Work.horizon,
+            Work.temporary₂, Work.temporary₃, Nat.add_comm,
+            Nat.add_left_comm, Nat.add_assoc, Nat.mul_comm] using
+              htotal inputLength
+      constructor
+      · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+        intro inputLength
+        simpa [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+          BinaryRoutine.addConst, BinaryRoutine.mulAdd, Work.horizon,
+          Work.temporary₂, Work.temporary₃] using hfactor inputLength
+      · trivial
+
+private theorem emitPreviousEffectConnector_spaceBoundByWidthAt
+    (workCount : ℕ) (selected choiceValue : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, EffectConnectorClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      effectFormulaCaseSize workCount (values inputLength Work.horizon)
+            selected choiceValue +
+          values inputLength Work.horizon ≤ width inputLength)
+    (hfit : ∀ inputLength,
+      effectFormulaCaseSize workCount (values inputLength Work.horizon)
+          selected choiceValue ≤ values inputLength Work.reference₀)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + 1 ≤ width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPreviousEffectConnector workCount selected choiceValue)
+      initialSpace values width := by
+  let prepare := prepareEffectCaseSize workCount selected choiceValue
+  let decrement := decrementReferenceBy Work.reference₀ Work.temporary₃
+    Work.loop₃
+  let prepared : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare.effect (values inputLength)
+  let decremented : ℕ → BinaryValues WorkCount := fun inputLength =>
+    decrement.effect (prepared inputLength)
+  let connected : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emitReadConnector.effect (decremented inputLength)
+  have hsize : ∀ inputLength,
+      effectFormulaCaseSize workCount (values inputLength Work.horizon)
+          selected choiceValue ≤ width inputLength := by
+    intro inputLength
+    exact (Nat.le_add_right _ _).trans (hcap inputLength)
+  have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+      values width :=
+    prepareEffectCaseSize_spaceBoundByWidthAt workCount selected choiceValue
+      hvalues hcap
+  have hpreparedEffect : ∀ inputLength,
+      prepared inputLength =
+        Function.update
+          (Function.update (values inputLength) Work.temporary₃
+            (effectFormulaCaseSize workCount
+              (values inputLength Work.horizon) selected choiceValue))
+          Work.temporary₂ 0 := by
+    intro inputLength
+    exact prepareEffectCaseSize_effect_internal workCount selected choiceValue
+      (values inputLength) (hclean inputLength).temporary₂
+  have hpreparedValues : ∀ inputLength index,
+      prepared inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hpreparedEffect inputLength]
+    exact BinaryRoutine.values_update_le Work.temporary₂
+      (BinaryRoutine.values_update_le Work.temporary₃
+        (hvalues inputLength) (hsize inputLength)) (Nat.zero_le _)
+  have hpreparedLoop : ∀ inputLength,
+      prepared inputLength Work.loop₃ = 0 := by
+    intro inputLength
+    rw [hpreparedEffect inputLength]
+    simpa [Work.temporary₃, Work.temporary₂, Work.loop₃] using
+      (hclean inputLength).loop₃
+  have hdecrement : BinaryRoutine.SpaceBoundByWidthAt decrement initialSpace
+      prepared width := by
+    apply decrementReferenceBy_spaceBoundByWidth Work.reference₀
+      Work.temporary₃ Work.loop₃ ⟨by decide, by decide, by decide⟩
+    · intro inputLength
+      rw [hpreparedLoop inputLength]
+      omega
+    · intro inputLength
+      rw [hpreparedLoop inputLength, hpreparedEffect inputLength]
+      simpa [Work.temporary₃, Work.temporary₂, Work.reference₀]
+        using hfit inputLength
+    · exact fun inputLength => hpreparedValues inputLength Work.reference₀
+    · exact fun inputLength => hpreparedValues inputLength Work.temporary₃
+  have hdecrementedEffect : ∀ inputLength,
+      decremented inputLength =
+        Function.update
+          (Function.update (prepared inputLength) Work.reference₀
+            (prepared inputLength Work.reference₀ -
+              prepared inputLength Work.temporary₃))
+          Work.loop₃ 0 := by
+    intro inputLength
+    exact decrementReferenceBy_effect Work.reference₀ Work.temporary₃
+      Work.loop₃ (prepared inputLength) ⟨by decide, by decide, by decide⟩
+        (hpreparedLoop inputLength)
+  have hdecrementedValues : ∀ inputLength index,
+      decremented inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hdecrementedEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.loop₃
+    · apply BinaryRoutine.values_update_le Work.reference₀
+        (hpreparedValues inputLength)
+      exact (Nat.sub_le _ _).trans
+        (hpreparedValues inputLength Work.reference₀)
+    · exact Nat.zero_le _
+  have hconnector : BinaryRoutine.SpaceBoundByWidthAt emitReadConnector
+      initialSpace decremented width := by
+    apply emitReadConnector_spaceBoundByWidth
+    · exact fun inputLength =>
+        hdecrementedValues inputLength Work.available
+    · intro inputLength
+      rw [hdecrementedEffect inputLength, hpreparedEffect inputLength]
+      simpa [Work.reference₀, Work.loop₃, Work.temporary₃,
+        Work.temporary₂, Work.available] using
+          havailablePositive inputLength
+    · exact fun inputLength =>
+        hdecrementedValues inputLength Work.reference₀
+    · exact fun inputLength =>
+        hdecrementedValues inputLength Work.reference₁
+  have hconnectedValues : ∀ inputLength index,
+      connected inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [show connected inputLength =
+        emitReadConnector.effect (decremented inputLength) by rfl,
+      emitReadConnector_effect_internal]
+    apply BinaryRoutine.values_update_le Work.reference₁
+    · apply BinaryRoutine.values_update_le Work.available
+        (hdecrementedValues inputLength)
+      rw [hdecrementedEffect inputLength, hpreparedEffect inputLength]
+      simpa [Work.reference₀, Work.loop₃, Work.temporary₃,
+        Work.temporary₂, Work.available] using havailable inputLength
+    · exact Nat.zero_le _
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.temporary₃) initialSpace connected width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.temporary₃
+      (fun inputLength => hconnectedValues inputLength Work.temporary₃)
+  have hid : BinaryRoutine.SpaceBoundByWidthAt BinaryRoutine.identity
+      initialSpace
+      (fun inputLength =>
+        (BinaryRoutine.clear Work.temporary₃).effect
+          (connected inputLength)) width :=
+    BinaryRoutine.SpaceBoundByWidthAt.identity
+  have hroutine := BinaryRoutine.SpaceBoundByWidthAt.seq hprepare
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hdecrement
+      (BinaryRoutine.SpaceBoundByWidthAt.seq hconnector
+        (BinaryRoutine.SpaceBoundByWidthAt.seq hclear hid)))
+  simpa [emitPreviousEffectConnector, BinaryRoutine.seqList, prepare,
+    decrement, prepared, decremented, connected] using hroutine
+
+private theorem emitPreviousEffectConnectorsCount_spaceBoundByWidthAt
+    (tm : NTM k) (selects : TransitionEffect tm → Bool) (count : ℕ)
+    (base horizon : ℕ → ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, EffectConnectorClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcount : count + 1 ≤ (transitionCases tm).length)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon = horizon inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ =
+        base inputLength +
+          prefixSize
+            (effectFormulaSizeAt (transitionCases tm).length k
+              (horizon inputLength) (effectCaseSelectedAt tm selects)
+              (effectCaseChoiceAt tm))
+            (count + 1) -
+          1)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + count ≤ width inputLength)
+    (havailablePositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (hcaseCap : ∀ inputLength caseIndex,
+      caseIndex < (transitionCases tm).length →
+        effectFormulaCaseSize k (horizon inputLength)
+              (effectCaseSelectedAt tm selects caseIndex)
+              (effectCaseChoiceAt tm caseIndex) +
+            horizon inputLength ≤
+          width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+        (emitPreviousEffectConnectorsCount tm selects count)
+        initialSpace values width ∧
+      ∀ inputLength index,
+        (emitPreviousEffectConnectorsCount tm selects count).effect
+            (values inputLength) index ≤
+          width inputLength := by
+  induction count generalizing values with
+  | zero =>
+      constructor
+      · simpa [emitPreviousEffectConnectorsCount] using
+          (BinaryRoutine.SpaceBoundByWidthAt.identity (n := WorkCount)
+            (initialSpace := initialSpace) (values := values)
+            (width := width))
+      · intro inputLength index
+        simpa [emitPreviousEffectConnectorsCount, BinaryRoutine.identity]
+          using hvalues inputLength index
+  | succ count ih =>
+      let selected := effectCaseSelectedAt tm selects (count + 1)
+      let choiceValue := effectCaseChoiceAt tm (count + 1)
+      have hindex : count + 1 < (transitionCases tm).length := by omega
+      have hfit : ∀ inputLength,
+          effectFormulaCaseSize k (values inputLength Work.horizon)
+              selected choiceValue ≤
+            values inputLength Work.reference₀ := by
+        intro inputLength
+        let sizeAt := effectFormulaSizeAt (transitionCases tm).length k
+          (horizon inputLength) (effectCaseSelectedAt tm selects)
+          (effectCaseChoiceAt tm)
+        have hsizeAt : sizeAt (count + 1) =
+            effectFormulaCaseSize k (horizon inputLength) selected
+              choiceValue := by
+          simp [sizeAt, effectFormulaSizeAt, selected, choiceValue, hindex]
+        have hsizeZero : 1 ≤ sizeAt 0 := by
+          have hzero : 0 < (transitionCases tm).length := by omega
+          rw [show sizeAt 0 =
+            effectFormulaCaseSize k (horizon inputLength)
+              (effectCaseSelectedAt tm selects 0)
+              (effectCaseChoiceAt tm 0) by
+                simp [sizeAt, effectFormulaSizeAt, hzero]]
+          exact effectFormulaCaseSize_pos k (horizon inputLength) _ _
+        have hprefixPositive :
+            1 ≤ prefixSize sizeAt (count + 1) := by
+          calc
+            1 ≤ prefixSize sizeAt 1 := by
+              simpa [prefixSize] using hsizeZero
+            _ ≤ prefixSize sizeAt (count + 1) :=
+              prefixSize_mono_effect sizeAt (by omega)
+        have hprefix : prefixSize sizeAt (count + 2) =
+            prefixSize sizeAt (count + 1) + sizeAt (count + 1) := by
+          rw [show count + 2 = (count + 1) + 1 by omega,
+            prefixSize_succ]
+        rw [hhorizon inputLength, hreference inputLength]
+        change _ ≤ base inputLength + prefixSize sizeAt (count + 2) - 1
+        rw [hprefix, hsizeAt]
+        omega
+      have hhead : BinaryRoutine.SpaceBoundByWidthAt
+          (emitPreviousEffectConnector k selected choiceValue)
+          initialSpace values width := by
+        apply emitPreviousEffectConnector_spaceBoundByWidthAt k selected
+          choiceValue hclean hvalues
+        · intro inputLength
+          rw [hhorizon inputLength]
+          exact hcaseCap inputLength (count + 1) hindex
+        · exact hfit
+        · intro inputLength
+          have hbound := havailable inputLength
+          omega
+        · exact havailablePositive
+      let current : ℕ → BinaryValues WorkCount := fun inputLength =>
+        (emitPreviousEffectConnector k selected choiceValue).effect
+          (values inputLength)
+      have hcurrentEffect : ∀ inputLength,
+          current inputLength =
+            Function.update
+              (Function.update (values inputLength) Work.reference₀
+                (values inputLength Work.reference₀ -
+                  effectFormulaCaseSize k
+                    (values inputLength Work.horizon) selected choiceValue))
+              Work.available (values inputLength Work.available + 1) := by
+        intro inputLength
+        exact emitPreviousEffectConnector_effect_internal k selected
+          choiceValue (values inputLength) (hclean inputLength)
+      have hcurrentClean : ∀ inputLength,
+          EffectConnectorClean (current inputLength) := by
+        intro inputLength
+        exact EffectConnectorClean.afterPrevious k selected choiceValue
+          (values inputLength) (hclean inputLength)
+      have hcurrentValues : ∀ inputLength index,
+          current inputLength index ≤ width inputLength := by
+        intro inputLength
+        rw [hcurrentEffect inputLength]
+        apply BinaryRoutine.values_update_le Work.available
+        · apply BinaryRoutine.values_update_le Work.reference₀
+              (hvalues inputLength)
+          exact (Nat.sub_le _ _).trans
+            (hvalues inputLength Work.reference₀)
+        · have hbound := havailable inputLength
+          omega
+      have hcurrentHorizon : ∀ inputLength,
+          current inputLength Work.horizon = horizon inputLength := by
+        intro inputLength
+        rw [hcurrentEffect inputLength]
+        simpa [Work.reference₀, Work.available, Work.horizon] using
+          hhorizon inputLength
+      have hcurrentReference : ∀ inputLength,
+          current inputLength Work.reference₀ =
+            base inputLength +
+              prefixSize
+                (effectFormulaSizeAt (transitionCases tm).length k
+                  (horizon inputLength) (effectCaseSelectedAt tm selects)
+                  (effectCaseChoiceAt tm))
+                (count + 1) -
+              1 := by
+        intro inputLength
+        let sizeAt := effectFormulaSizeAt (transitionCases tm).length k
+          (horizon inputLength) (effectCaseSelectedAt tm selects)
+          (effectCaseChoiceAt tm)
+        have hsizeAt : sizeAt (count + 1) =
+            effectFormulaCaseSize k (horizon inputLength) selected
+              choiceValue := by
+          simp [sizeAt, effectFormulaSizeAt, selected, choiceValue, hindex]
+        have hprefix : prefixSize sizeAt (count + 2) =
+            prefixSize sizeAt (count + 1) + sizeAt (count + 1) := by
+          rw [show count + 2 = (count + 1) + 1 by omega,
+            prefixSize_succ]
+        have hsizeZero : 1 ≤ sizeAt 0 := by
+          have hzero : 0 < (transitionCases tm).length := by omega
+          rw [show sizeAt 0 =
+            effectFormulaCaseSize k (horizon inputLength)
+              (effectCaseSelectedAt tm selects 0)
+              (effectCaseChoiceAt tm 0) by
+                simp [sizeAt, effectFormulaSizeAt, hzero]]
+          exact effectFormulaCaseSize_pos k (horizon inputLength) _ _
+        have hprefixPositive :
+            1 ≤ prefixSize sizeAt (count + 1) := by
+          calc
+            1 ≤ prefixSize sizeAt 1 := by
+              simpa [prefixSize] using hsizeZero
+            _ ≤ prefixSize sizeAt (count + 1) :=
+              prefixSize_mono_effect sizeAt (by omega)
+        rw [hcurrentEffect inputLength]
+        simp only [Function.update_apply, Work.reference₀, Work.available]
+        rw [if_neg (by decide), if_pos True.intro]
+        change values inputLength Work.reference₀ - _ = _
+        rw [hreference inputLength, hhorizon inputLength]
+        change (base inputLength + prefixSize sizeAt (count + 2) - 1) -
+            _ = _
+        rw [hprefix, hsizeAt]
+        rw [← Nat.add_assoc,
+          Nat.sub_add_comm (show 1 ≤
+            base inputLength + prefixSize sizeAt (count + 1) by omega),
+          Nat.add_sub_cancel]
+      have hcurrentAvailable : ∀ inputLength,
+          current inputLength Work.available + count ≤
+            width inputLength := by
+        intro inputLength
+        rw [hcurrentEffect inputLength]
+        simp [Work.reference₀, Work.available]
+        have hbound := havailable inputLength
+        simp only [Work.available] at hbound
+        omega
+      have hcurrentAvailablePositive : ∀ inputLength,
+          1 ≤ current inputLength Work.available := by
+        intro inputLength
+        rw [hcurrentEffect inputLength]
+        simp [Work.reference₀, Work.available]
+      obtain ⟨htail, htailValues⟩ :=
+        ih (values := current) hcurrentClean hcurrentValues (by omega)
+          hcurrentHorizon hcurrentReference hcurrentAvailable
+          hcurrentAvailablePositive
+      constructor
+      · have hseq := BinaryRoutine.SpaceBoundByWidthAt.seq hhead htail
+        simpa [emitPreviousEffectConnectorsCount, current] using hseq
+      · intro inputLength index
+        simpa [emitPreviousEffectConnectorsCount, BinaryRoutine.seq, current]
+          using htailValues inputLength index
+
+private theorem emitEffectConnectors_spaceBoundByWidthAt
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    {initialSpace : ℕ → ℕ}
+    {source values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hsourceClean : ∀ inputLength,
+      CaseFormulaClean (source inputLength))
+    (hsourceValues : ∀ inputLength index,
+      source inputLength index ≤ width inputLength)
+    (htrajectory : ∀ inputLength,
+      values inputLength =
+        Function.update (source inputLength) Work.available
+          (source inputLength Work.available +
+            prefixSize
+              (effectFormulaSizeAt (transitionCases tm).length k
+                (source inputLength Work.horizon)
+                (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+              (transitionCases tm).length +
+            1))
+    (hcap : EffectFormulaWidthCap tm selects source width) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitEffectConnectors tm selects)
+        initialSpace values width ∧
+      ∀ inputLength index,
+        (emitEffectConnectors tm selects).effect (values inputLength) index ≤
+          width inputLength := by
+  have hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [htrajectory inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hsourceValues inputLength)
+    have hfrontier := hcap.frontier inputLength
+    simp only [effectFormulaScheduleSize] at hfrontier
+    omega
+  have hclean : ∀ inputLength,
+      CaseFormulaClean (values inputLength) := by
+    intro inputLength
+    rw [htrajectory inputLength]
+    exact CaseFormulaClean.updateAvailable (source inputLength)
+      (hsourceClean inputLength) _
+  rw [emitEffectConnectors]
+  split_ifs with hempty
+  · constructor
+    · exact BinaryRoutine.SpaceBoundByWidthAt.identity
+    · intro inputLength index
+      simpa [BinaryRoutine.identity] using hvalues inputLength index
+  · have hlength : (transitionCases tm).length ≠ 0 := by
+      intro hzero
+      exact hempty (List.isEmpty_iff_length_eq_zero.mpr hzero)
+    have hlengthPositive : 0 < (transitionCases tm).length := by omega
+    have hprefixPositive : ∀ inputLength,
+        1 ≤ prefixSize
+          (effectFormulaSizeAt (transitionCases tm).length k
+            (source inputLength Work.horizon)
+            (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+          (transitionCases tm).length := by
+      intro inputLength
+      let sizeAt := effectFormulaSizeAt (transitionCases tm).length k
+        (source inputLength Work.horizon)
+        (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm)
+      have hsizeZero : 1 ≤ sizeAt 0 := by
+        rw [show sizeAt 0 =
+          effectFormulaCaseSize k (source inputLength Work.horizon)
+            (effectCaseSelectedAt tm selects 0)
+            (effectCaseChoiceAt tm 0) by
+              simp [sizeAt, effectFormulaSizeAt, hlengthPositive]]
+        exact effectFormulaCaseSize_pos k
+          (source inputLength Work.horizon) _ _
+      calc
+        1 ≤ prefixSize sizeAt 1 := by
+          simpa [prefixSize] using hsizeZero
+        _ ≤ prefixSize sizeAt (transitionCases tm).length :=
+          prefixSize_mono_effect sizeAt hlengthPositive
+    have havailableTwo : ∀ inputLength,
+        2 ≤ values inputLength Work.available := by
+      intro inputLength
+      rw [htrajectory inputLength]
+      simp [Work.available]
+      have hprefix := hprefixPositive inputLength
+      omega
+    let prepare := prepareRecentReference Work.reference₀ 2
+    let prepared : ℕ → BinaryValues WorkCount := fun inputLength =>
+      prepare.effect (values inputLength)
+    have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+        values width := by
+      apply prepareRecentReference_spaceBoundByWidth Work.reference₀ 2
+      · exact fun inputLength => hvalues inputLength Work.available
+      · exact fun inputLength => hvalues inputLength Work.reference₀
+      · exact havailableTwo
+    have hpreparedEffect : ∀ inputLength,
+        prepared inputLength =
+          Function.update (values inputLength) Work.reference₀
+            (values inputLength Work.available - 2) := by
+      intro inputLength
+      exact prepareRecentReference_effect Work.reference₀ 2
+        (values inputLength)
+    have hpreparedValues : ∀ inputLength index,
+        prepared inputLength index ≤ width inputLength := by
+      intro inputLength
+      rw [hpreparedEffect inputLength]
+      exact BinaryRoutine.values_update_le Work.reference₀
+        (hvalues inputLength)
+        ((Nat.sub_le _ _).trans (hvalues inputLength Work.available))
+    have hpreparedClean : ∀ inputLength,
+        EffectConnectorClean (prepared inputLength) := by
+      intro inputLength
+      rw [hpreparedEffect inputLength]
+      exact EffectConnectorClean.updateReference₀ (values inputLength)
+        (hclean inputLength).effectConnectorClean _
+    have hinitial : BinaryRoutine.SpaceBoundByWidthAt emitReadConnector
+        initialSpace prepared width := by
+      apply emitReadConnector_spaceBoundByWidth
+      · exact fun inputLength =>
+          hpreparedValues inputLength Work.available
+      · exact fun inputLength => (havailableTwo inputLength).trans'
+          (by omega)
+      · exact fun inputLength =>
+          hpreparedValues inputLength Work.reference₀
+      · exact fun inputLength =>
+          hpreparedValues inputLength Work.reference₁
+    let connected : ℕ → BinaryValues WorkCount := fun inputLength =>
+      emitReadConnector.effect (prepared inputLength)
+    have hconnectedEffect : ∀ inputLength,
+        connected inputLength =
+          Function.update
+            (Function.update (prepared inputLength) Work.available
+              (prepared inputLength Work.available + 1))
+            Work.reference₁ 0 := by
+      intro inputLength
+      exact emitReadConnector_effect_internal (prepared inputLength)
+    have havailableNext : ∀ inputLength,
+        prepared inputLength Work.available + 1 ≤ width inputLength := by
+      intro inputLength
+      rw [hpreparedEffect inputLength, htrajectory inputLength]
+      simp [Work.reference₀, Work.available]
+      have hfrontier := hcap.frontier inputLength
+      simp only [effectFormulaScheduleSize] at hfrontier
+      simp only [Work.available] at hfrontier
+      omega
+    have hconnectedValues : ∀ inputLength index,
+        connected inputLength index ≤ width inputLength := by
+      intro inputLength
+      rw [hconnectedEffect inputLength]
+      exact BinaryRoutine.values_update_le Work.reference₁
+        (BinaryRoutine.values_update_le Work.available
+          (hpreparedValues inputLength) (havailableNext inputLength))
+        (Nat.zero_le _)
+    have hconnectedClean : ∀ inputLength,
+        EffectConnectorClean (connected inputLength) := by
+      intro inputLength
+      exact EffectConnectorClean.afterReadConnector (prepared inputLength)
+        (hpreparedClean inputLength)
+    have hconnectedHorizon : ∀ inputLength,
+        connected inputLength Work.horizon =
+          source inputLength Work.horizon := by
+      intro inputLength
+      rw [hconnectedEffect inputLength, hpreparedEffect inputLength,
+        htrajectory inputLength]
+      simp [Work.reference₀, Work.reference₁, Work.available,
+        Work.horizon]
+    have hconnectedReference : ∀ inputLength,
+        connected inputLength Work.reference₀ =
+          source inputLength Work.available +
+              prefixSize
+                (effectFormulaSizeAt (transitionCases tm).length k
+                  (source inputLength Work.horizon)
+                  (effectCaseSelectedAt tm selects)
+                  (effectCaseChoiceAt tm))
+                (transitionCases tm).length -
+            1 := by
+      intro inputLength
+      rw [hconnectedEffect inputLength, hpreparedEffect inputLength,
+        htrajectory inputLength]
+      simp [Work.reference₀, Work.reference₁, Work.available]
+    have hconnectedAvailable : ∀ inputLength,
+        connected inputLength Work.available +
+            ((transitionCases tm).length - 1) ≤
+          width inputLength := by
+      intro inputLength
+      rw [hconnectedEffect inputLength, hpreparedEffect inputLength,
+        htrajectory inputLength]
+      simp [Work.reference₀, Work.reference₁, Work.available]
+      have hfrontier := hcap.frontier inputLength
+      simp only [effectFormulaScheduleSize] at hfrontier
+      simp only [Work.available] at hfrontier
+      omega
+    have hconnectedAvailablePositive : ∀ inputLength,
+        1 ≤ connected inputLength Work.available := by
+      intro inputLength
+      rw [hconnectedEffect inputLength]
+      simp [Work.reference₁, Work.available]
+    obtain ⟨hprevious, hpreviousValues⟩ :=
+      emitPreviousEffectConnectorsCount_spaceBoundByWidthAt tm selects
+        ((transitionCases tm).length - 1)
+        (fun inputLength => source inputLength Work.available)
+        (fun inputLength => source inputLength Work.horizon)
+        hconnectedClean hconnectedValues (by omega) hconnectedHorizon
+        (by
+          intro inputLength
+          rw [show (transitionCases tm).length - 1 + 1 =
+            (transitionCases tm).length by omega]
+          exact hconnectedReference inputLength)
+        hconnectedAvailable hconnectedAvailablePositive
+        (fun inputLength caseIndex hcase => hcap.caseSize inputLength
+          caseIndex hcase)
+    let afterPrevious : ℕ → BinaryValues WorkCount :=
+      fun inputLength =>
+        (emitPreviousEffectConnectorsCount tm selects
+          ((transitionCases tm).length - 1)).effect
+            (connected inputLength)
+    have hclear : BinaryRoutine.SpaceBoundByWidthAt
+        (BinaryRoutine.clear Work.reference₀) initialSpace afterPrevious
+        width :=
+      BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₀
+        (fun inputLength => hpreviousValues inputLength Work.reference₀)
+    have hfinalValues : ∀ inputLength index,
+        (BinaryRoutine.clear Work.reference₀).effect
+            (afterPrevious inputLength) index ≤
+          width inputLength := by
+      intro inputLength
+      exact BinaryRoutine.values_update_le Work.reference₀
+        (hpreviousValues inputLength) (Nat.zero_le _)
+    constructor
+    · apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+      simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+      exact ⟨hprepare, hinitial, hprevious, hclear, trivial⟩
+    · intro inputLength index
+      simpa [BinaryRoutine.seqList, BinaryRoutine.seq, prepare, prepared,
+        connected, afterPrevious] using hfinalValues inputLength index
+
+theorem emitEffectFormula_spaceBoundByWidth_internal
+    (tm : NTM k) (selects : TransitionEffect tm → Bool)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            effectFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitEffectFormula tm selects)
+      initialSpace values width := by
+  have hwidthCap : EffectFormulaWidthCap tm selects values width := hcap
+  let members := emitEffectMembers tm selects
+  let afterMembers : ℕ → BinaryValues WorkCount := fun inputLength =>
+    members.effect (values inputLength)
+  have hmembers : BinaryRoutine.SpaceBoundByWidthAt members initialSpace
+      values width :=
+    emitEffectMembers_spaceBoundByWidthAt tm selects hclean hvalues hwidthCap
+  have hafterMembersEffect : ∀ inputLength,
+      afterMembers inputLength =
+        Function.update (values inputLength) Work.available
+          (values inputLength Work.available +
+            prefixSize
+              (effectFormulaSizeAt (transitionCases tm).length k
+                (values inputLength Work.horizon)
+                (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+              (transitionCases tm).length) := by
+    intro inputLength
+    exact emitEffectMembers_effect_internal tm selects (values inputLength)
+      (hclean inputLength)
+  have hafterMembersValues : ∀ inputLength index,
+      afterMembers inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hafterMembersEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hvalues inputLength)
+    have hfrontier := hwidthCap.frontier inputLength
+    simp only [effectFormulaScheduleSize] at hfrontier
+    omega
+  have hafterMembersClean : ∀ inputLength,
+      CaseFormulaClean (afterMembers inputLength) := by
+    intro inputLength
+    rw [hafterMembersEffect inputLength]
+    exact CaseFormulaClean.updateAvailable (values inputLength)
+      (hclean inputLength) _
+  let identityGate := emitConstantGate false
+  let afterIdentity : ℕ → BinaryValues WorkCount :=
+    fun inputLength => identityGate.effect (afterMembers inputLength)
+  have hidentity : BinaryRoutine.SpaceBoundByWidthAt identityGate
+      initialSpace afterMembers width := by
+    apply emitConstantGate_spaceBoundByWidth false
+    · exact fun inputLength =>
+        hafterMembersValues inputLength Work.available
+    · exact fun inputLength =>
+        hafterMembersValues inputLength Work.reference₀
+  have hafterIdentityTrajectory : ∀ inputLength,
+      afterIdentity inputLength =
+        Function.update (values inputLength) Work.available
+          (values inputLength Work.available +
+            prefixSize
+              (effectFormulaSizeAt (transitionCases tm).length k
+                (values inputLength Work.horizon)
+                (effectCaseSelectedAt tm selects) (effectCaseChoiceAt tm))
+              (transitionCases tm).length +
+            1) := by
+    intro inputLength
+    dsimp only [afterIdentity, identityGate]
+    rw [emitConstantGate_effect_internal false,
+      hafterMembersEffect inputLength]
+    funext index
+    by_cases hindex : index = Work.available
+    · subst index
+      simp [Work.available]
+    · simp [hindex]
+  obtain ⟨hconnectors, _hfinalValues⟩ :=
+    emitEffectConnectors_spaceBoundByWidthAt tm selects hclean hvalues
+      hafterIdentityTrajectory hwidthCap
+  rw [emitEffectFormula]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hmembers, hidentity, hconnectors, trivial⟩
+
 end DirectGenerator
 
 end Serializer
