@@ -37,6 +37,16 @@ theorem emitTransitionSteps_requires (tm : TM k)
     (emitTransitionSteps tm).requires values :=
   emitTransitionSteps_requires_internal tm values hclean hloop hhorizon
 
+/-- The compact transition-layer wrapper is sound. -/
+theorem tableauTransitionSteps_sound (tm : TM k) :
+    (tableauTransitionSteps tm).Sound :=
+  tableauTransitionSteps_sound_internal tm
+
+/-- The compact finalization wrapper is sound. -/
+theorem tableauFinalization_sound (tm : TM k) :
+    (tableauFinalization tm).Sound :=
+  tableauFinalization_sound_internal tm
+
 /-- From the canonical initial configuration base and frontier, the complete
 transition loop emits exactly the canonical flattened step stream. -/
 theorem emitTransitionSteps_emitted (tm : TM k)
@@ -58,6 +68,15 @@ theorem positiveTableauBody_sound (tm : TM k) :
     (positiveTableauBody tm).Sound :=
   positiveTableauBody_sound_internal tm
 
+/-- Every positive canonical input-length vector satisfies the tableau body's
+compact entry contract after the polynomial/header preamble. -/
+theorem positiveTableauBody_requires (tm : TM k) (q : Polynomial ℕ)
+    (n : ℕ) (hn : 0 < n) :
+    (positiveTableauBody tm).requires
+      (preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength n)) :=
+  positiveTableauBody_requires_internal tm q n hn
+
 /-- On a positive input length, the tableau body emits exactly the encoded raw
 gate stream of the padded direct-unrolling member. -/
 theorem positiveTableauBody_emitted (tm : TM k) (q : Polynomial ℕ)
@@ -75,6 +94,14 @@ theorem paddedDirectUnrollingProgram_sound (tm : TM k)
     (q : Polynomial ℕ) : (paddedDirectUnrollingProgram tm q).Sound :=
   paddedDirectUnrollingProgram_sound_internal tm q
 
+/-- The complete program's compact domain holds on every canonical
+input-length vector, including length zero. -/
+theorem paddedDirectUnrollingProgram_requires_inputLengthValues
+    (tm : TM k) (q : Polynomial ℕ) (n : ℕ) :
+    (paddedDirectUnrollingProgram tm q).requires
+      (BinaryRoutine.inputLengthValues Work.inputLength n) :=
+  paddedDirectUnrollingProgram_requires_inputLengthValues_internal tm q n
+
 /-- The complete generator emits exactly the regularly padded direct family
 code at every input length. -/
 theorem paddedDirectUnrollingProgram_emitted (tm : TM k)
@@ -84,6 +111,19 @@ theorem paddedDirectUnrollingProgram_emitted (tm : TM k)
       tm.paddedDirectUnrollingCode
         (TM.directSerializerHorizonPolynomial q).eval n :=
   paddedDirectUnrollingProgram_emitted_internal tm q n
+
+/-- Counting the fresh input length and running the verified serializer gives
+a total transducer for the once-normalized padded code map, with the exact
+compositional all-prefix space bound. -/
+theorem paddedDirectUnrollingGenerator_computesInSpace
+    (tm : TM k) (q : Polynomial ℕ) :
+    (BinaryRoutine.afterInputLength Work.inputLength
+      (paddedDirectUnrollingProgram tm q)).ComputesInSpace
+        (fun input => tm.paddedDirectUnrollingCode
+          (TM.directSerializerHorizonPolynomial q).eval input.length)
+        (BinaryRoutine.afterInputLengthSpace Work.inputLength
+          (paddedDirectUnrollingProgram tm q)) :=
+  paddedDirectUnrollingGenerator_computesInSpace_internal tm q
 
 end DirectGenerator
 

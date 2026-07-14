@@ -130,6 +130,17 @@ theorem Sound.afterInputLength_computesInSpace_internal
     exact hsound.afterInputLength_hoareTimeSpace_internal lengthIdx input
       (hrequires input.length)
 
+theorem afterInputLengthSpace_bigO_log_internal
+    (lengthIdx : Fin n) (routine : BinaryRoutine n)
+    (hroutine : (fun length =>
+      routine.spaceBound (TM.binaryLengthSpace length)
+        (inputLengthValues lengthIdx length)) =O
+          (fun length => Nat.log 2 length)) :
+    afterInputLengthSpace lengthIdx routine =O
+      (fun length => Nat.log 2 length) := by
+  unfold afterInputLengthSpace
+  exact BigO.max_same TM.binaryLengthSpace_bigO_log hroutine
+
 end BinaryRoutine
 
 end Complexity

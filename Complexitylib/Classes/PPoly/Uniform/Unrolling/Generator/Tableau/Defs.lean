@@ -32,10 +32,44 @@ noncomputable def emitTransitionSteps (tm : TM k) : BinaryRoutine WorkCount :=
     (BinaryRoutine.binaryFor (emitStep tm) Work.loop₂ Work.horizon)
     (BinaryRoutine.clear Work.loop₂)
 
+/-- Compact semantic entry contract for the complete transition-layer loop. -/
+structure TransitionEntry (tm : TM k)
+    (values : BinaryValues WorkCount) : Prop where
+  /-- All reusable transition scratch starts clean. -/
+  clean : StepClean values
+  /-- Layer enumeration starts at zero. -/
+  loop₂ : values Work.loop₂ = 0
+  /-- At least one represented configuration layer exists. -/
+  horizon : 0 < values Work.horizon
+
+/-- Transition-layer loop with its compact semantic precondition exposed
+without changing the concrete machine or any behavioral/resource field. -/
+noncomputable def tableauTransitionSteps (tm : TM k) :
+    BinaryRoutine WorkCount :=
+  (emitTransitionSteps tm).restrict (TransitionEntry tm)
+
+/-- Compact semantic entry contract for final acceptance, padding, and copy. -/
+structure FinalizationEntry (values : BinaryValues WorkCount) : Prop where
+  /-- Raw-gate emission scratch is clear. -/
+  emitCounter : values Work.emitCounter = 0
+  /-- Binary-copy scratch is clear. -/
+  copyCounter : values Work.copyCounter = 0
+  /-- Addition scratch is clear. -/
+  addCounter : values Work.addCounter = 0
+  /-- Multiplication scratch is clear. -/
+  multiplyCounter : values Work.multiplyCounter = 0
+  /-- The acceptance gate fits before the closed padding frontier. -/
+  available : values Work.available + 1 ≤ values Work.frontier
+
+/-- Finalization phase with its compact semantic precondition exposed without
+changing the concrete machine or any behavioral/resource field. -/
+noncomputable def tableauFinalization (tm : TM k) : BinaryRoutine WorkCount :=
+  (finalization tm).restrict FinalizationEntry
+
 /-- Complete positive-length tableau body, excluding the tagged header. -/
 noncomputable def positiveTableauBody (tm : TM k) : BinaryRoutine WorkCount :=
   BinaryRoutine.seq (initialization tm)
-    (BinaryRoutine.seq (emitTransitionSteps tm) (finalization tm))
+    (BinaryRoutine.seq (tableauTransitionSteps tm) (tableauFinalization tm))
 
 /-- Complete zero/positive generator for the padded direct-unrolling code. -/
 noncomputable def paddedDirectUnrollingProgram

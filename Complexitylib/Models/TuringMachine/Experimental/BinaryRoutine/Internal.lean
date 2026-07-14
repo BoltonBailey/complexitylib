@@ -115,6 +115,17 @@ theorem Sound.seq_internal {first second : BinaryRoutine n}
     simpa [seq, CanonicalPred, List.append_assoc] using hseq
   · exact hfirst.isTransducer.seqTM hsecond.isTransducer
 
+theorem Sound.restrict_internal {routine : BinaryRoutine n}
+    (hsound : routine.Sound) (requires : BinaryValues n → Prop)
+    (hrequires : ∀ values, requires values → routine.requires values) :
+    (routine.restrict requires).Sound := by
+  constructor
+  · intro values inp₀ ys inputLength initialSpace hrestricted hinp
+      hinitialSpace hinputSpace
+    exact hsound.hoareTimeSpace values inp₀ ys inputLength initialSpace
+      (hrequires values hrestricted) hinp hinitialSpace hinputSpace
+  · exact hsound.isTransducer
+
 theorem emitBits_sound_internal (word : List Bool) :
     (emitBits (n := n) word).Sound := by
   constructor

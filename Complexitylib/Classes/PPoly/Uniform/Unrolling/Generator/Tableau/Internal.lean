@@ -11,6 +11,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 
 /-!
 # Complete direct-unrolling generator -- proof internals
@@ -376,6 +377,19 @@ theorem emitTransitionSteps_requires_internal (tm : TM k)
         Work.horizon]
   · trivial
 
+theorem tableauTransitionSteps_sound_internal (tm : TM k) :
+    (tableauTransitionSteps tm).Sound :=
+  (emitTransitionSteps_sound_internal tm).restrict (TransitionEntry tm)
+    fun values hentry =>
+      emitTransitionSteps_requires_internal tm values hentry.clean
+        hentry.loop₂ hentry.horizon
+
+theorem tableauFinalization_sound_internal (tm : TM k) :
+    (tableauFinalization tm).Sound :=
+  (finalization_sound tm).restrict FinalizationEntry fun values hentry =>
+    finalization_requires tm values hentry.emitCounter hentry.copyCounter
+      hentry.addCounter hentry.multiplyCounter hentry.available
+
 theorem emitTransitionSteps_effect_internal (tm : TM k)
     (values : BinaryValues WorkCount) :
     (emitTransitionSteps tm).effect values =
@@ -445,7 +459,71 @@ theorem emitTransitionSteps_emitted_exact_internal (tm : TM k)
 theorem positiveTableauBody_sound_internal (tm : TM k) :
     (positiveTableauBody tm).Sound :=
   (initialization_sound tm).seq
-    ((emitTransitionSteps_sound_internal tm).seq (finalization_sound tm))
+    ((tableauTransitionSteps_sound_internal tm).seq
+      (tableauFinalization_sound_internal tm))
+
+set_option maxHeartbeats 2000000 in
+theorem positiveTableauBody_requires_internal (tm : TM k)
+    (q : Polynomial ℕ) (n : ℕ) (hn : 0 < n) :
+    (positiveTableauBody tm).requires
+      (preambleValues tm q
+        (BinaryRoutine.inputLengthValues Work.inputLength n)) := by
+  let entry := preambleValues tm q
+    (BinaryRoutine.inputLengthValues Work.inputLength n)
+  let afterInit := (initialization tm).effect entry
+  let afterSteps := (emitTransitionSteps tm).effect afterInit
+  let T := (TM.directSerializerHorizonPolynomial q).eval n
+  let f := (TM.directSerializerHorizonPolynomial q).eval
+  have hinit : StepClean afterInit ∧ afterInit Work.horizon = T ∧
+      afterInit Work.loop₂ = 0 ∧
+      afterInit Work.frontier = n + tm.directUnrollingGateBound f n ∧
+      afterInit Work.configBase = n ∧
+      afterInit Work.available = n + configWidth tm.toNTM T := by
+    simpa only [afterInit, entry, T, f] using initializationEndpoint tm q n
+  have hhorizon : 0 < afterInit Work.horizon := by
+    have hinputBound := TM.directSerializerHorizonPolynomial_input_le q n
+    rw [hinit.2.1]
+    omega
+  have hinitAvailable : afterInit Work.available =
+      n + configWidth tm.toNTM (afterInit Work.horizon) := by
+    rw [hinit.2.1]
+    exact hinit.2.2.2.2.2
+  have hstepsRaw := emitTransitionSteps_endpoint_internal tm afterInit hinit.1
+    hhorizon n hinit.2.2.1 hinit.2.2.2.2.1 hinitAvailable
+  have hsteps : StepClean afterSteps ∧
+      afterSteps Work.horizon = afterInit Work.horizon ∧
+      afterSteps Work.loop₂ = 0 ∧
+      afterSteps Work.frontier = afterInit Work.frontier ∧
+      afterSteps Work.configBase = n + afterInit Work.horizon *
+        directStepSize tm.toNTM (afterInit Work.horizon) ∧
+      afterSteps Work.available =
+        n + configWidth tm.toNTM (afterInit Work.horizon) +
+          afterInit Work.horizon *
+            directStepSize tm.toNTM (afterInit Work.horizon) := by
+    simpa only [afterSteps] using hstepsRaw
+  haveI : NeZero n := ⟨Nat.ne_of_gt hn⟩
+  have hrawBound := tm.directUnrollingRawCircuit_length_le_gateBound f n
+  rw [directUnrollingRawCircuit_length_eq_original] at hrawBound
+  have hfinalBound : afterSteps Work.available + 1 ≤
+      afterSteps Work.frontier := by
+    rw [hsteps.2.2.2.2.2, hsteps.2.2.2.1, hinit.2.2.2.1,
+      hinit.2.1]
+    unfold directOriginalRawGateCount at hrawBound
+    dsimp only [f, T] at hrawBound ⊢
+    omega
+  have htransition : TransitionEntry tm afterInit :=
+    ⟨hinit.1, hinit.2.2.1, hhorizon⟩
+  have hfinal : FinalizationEntry afterSteps :=
+    ⟨hsteps.1.movedHeadClean.caseClean.toReadFormulaClean.emitCounter,
+      hsteps.1.movedHeadClean.caseClean.toReadFormulaClean.copyCounter,
+      hsteps.1.movedHeadClean.caseClean.toReadFormulaClean.addCounter,
+      hsteps.1.movedHeadClean.caseClean.toReadFormulaClean.multiplyCounter,
+      hfinalBound⟩
+  have hinitRequires : (initialization tm).requires entry :=
+    initialization_requires_preambleValues tm q n hn
+  unfold positiveTableauBody tableauTransitionSteps tableauFinalization
+    BinaryRoutine.restrict
+  exact ⟨hinitRequires, htransition, hfinal⟩
 
 set_option maxHeartbeats 2000000 in
 theorem positiveTableauBody_emitted_internal (tm : TM k)
@@ -516,7 +594,8 @@ theorem positiveTableauBody_emitted_internal (tm : TM k)
   have hinputBound := TM.directSerializerHorizonPolynomial_input_le q n
   have hschedule := paddedDirectUnrollingRawCircuit_eq_numericSchedule tm f n
     hinputBound
-  simp only [positiveTableauBody, BinaryRoutine.seq]
+  simp only [positiveTableauBody, tableauTransitionSteps,
+    tableauFinalization, BinaryRoutine.restrict, BinaryRoutine.seq]
   rw [hinitEmitted, hstepsEmitted, hfinalEmitted, hschedule]
   dsimp only [entry, T, f, original, bound] at *
   simp only [List.flatMap_append, List.flatMap_singleton]
@@ -525,6 +604,14 @@ theorem positiveTableauBody_emitted_internal (tm : TM k)
 theorem paddedDirectUnrollingProgram_sound_internal (tm : TM k)
     (q : Polynomial ℕ) : (paddedDirectUnrollingProgram tm q).Sound :=
   program_sound tm q (positiveTableauBody_sound_internal tm)
+
+theorem paddedDirectUnrollingProgram_requires_inputLengthValues_internal
+    (tm : TM k) (q : Polynomial ℕ) (n : ℕ) :
+    (paddedDirectUnrollingProgram tm q).requires
+      (BinaryRoutine.inputLengthValues Work.inputLength n) := by
+  apply program_requires_inputLengthValues tm q (positiveTableauBody tm)
+  intro length hlength
+  exact positiveTableauBody_requires_internal tm q length hlength
 
 theorem paddedDirectUnrollingProgram_emitted_internal (tm : TM k)
     (q : Polynomial ℕ) (n : ℕ) :
@@ -551,6 +638,22 @@ theorem paddedDirectUnrollingProgram_emitted_internal (tm : TM k)
       simp [TM.paddedDirectUnrollingCode, CircuitCode.RawCircuit.encode,
         TM.directSerializerGateCountPolynomial_eval,
         tm.paddedDirectUnrollingRawCircuit_length]
+
+theorem paddedDirectUnrollingGenerator_computesInSpace_internal
+    (tm : TM k) (q : Polynomial ℕ) :
+    (BinaryRoutine.afterInputLength Work.inputLength
+      (paddedDirectUnrollingProgram tm q)).ComputesInSpace
+        (fun input => tm.paddedDirectUnrollingCode
+          (TM.directSerializerHorizonPolynomial q).eval input.length)
+        (BinaryRoutine.afterInputLengthSpace Work.inputLength
+          (paddedDirectUnrollingProgram tm q)) := by
+  have hcomputes := BinaryRoutine.Sound.afterInputLength_computesInSpace
+    (paddedDirectUnrollingProgram_sound_internal tm q) Work.inputLength
+    (paddedDirectUnrollingProgram_requires_inputLengthValues_internal tm q)
+  convert hcomputes using 1
+  funext input
+  simpa only [BinaryRoutine.afterInputLengthFunction] using
+    (paddedDirectUnrollingProgram_emitted_internal tm q input.length).symm
 
 end DirectGenerator
 

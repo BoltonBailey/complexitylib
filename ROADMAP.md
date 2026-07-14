@@ -666,9 +666,12 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         natural-index schedule with no run-time formula or configuration syntax.
     - [x] Implement the append-only raw-tableau serializer and prove that the sound
       routine's pure output is exactly the padded direct-unrolling code at every length.
-    - [ ] Package the canonical-entry domain and all-prefix logarithmic space proof,
-      prove the serializer's code function is in `FL`, package
-      `P_subset_UniformPPoly`, and combine both directions.
+    - [x] Package the canonical-entry domain through compact semantic preconditions
+      and obtain a total fresh-input `ComputesInSpace` theorem for the exact
+      once-normalized padded-code function.
+    - [ ] Prove the serializer's explicit all-prefix space bound is logarithmic,
+      conclude that its code function is in `FL`, package `P_subset_UniformPPoly`,
+      and combine both directions.
 
 **Definitions for the headline.** [x] The `UniformPPoly` class is defined
 (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F` asks the tagged

@@ -106,6 +106,13 @@ def seq (first second : BinaryRoutine n) : BinaryRoutine n where
     max (first.spaceBound initialSpace values)
       (second.spaceBound initialSpace (first.effect values))
 
+/-- Replace a routine's public pure precondition while preserving its concrete
+machine, effect, emitted word, and resource bounds exactly. Soundness requires
+the replacement precondition to imply the original one. -/
+def restrict (routine : BinaryRoutine n)
+    (requires : BinaryValues n → Prop) : BinaryRoutine n :=
+  { routine with requires := requires }
+
 /-- Increment one canonical binary work value. -/
 def binarySucc (idx : Fin n) : BinaryRoutine n where
   machine := TM.binarySuccTM idx

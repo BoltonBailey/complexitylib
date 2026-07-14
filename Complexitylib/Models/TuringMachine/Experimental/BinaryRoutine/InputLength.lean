@@ -55,6 +55,18 @@ theorem Sound.afterInputLength_computesInSpace
       (afterInputLengthSpace lengthIdx routine) :=
   hsound.afterInputLength_computesInSpace_internal lengthIdx hrequires
 
+/-- A logarithmic bound for the routine phase, measured from the binary-length
+counter's own budget, lifts to the complete fresh-input composition. -/
+theorem afterInputLengthSpace_bigO_log
+    (lengthIdx : Fin n) (routine : BinaryRoutine n)
+    (hroutine : (fun length =>
+      routine.spaceBound (TM.binaryLengthSpace length)
+        (inputLengthValues lengthIdx length)) =O
+          (fun length => Nat.log 2 length)) :
+    afterInputLengthSpace lengthIdx routine =O
+      (fun length => Nat.log 2 length) :=
+  afterInputLengthSpace_bigO_log_internal lengthIdx routine hroutine
+
 end BinaryRoutine
 
 end Complexity

@@ -72,6 +72,14 @@ theorem Sound.seq {first second : BinaryRoutine n}
     (seq first second).Sound :=
   hfirst.seq_internal hsecond
 
+/-- Strengthening a routine's pure precondition preserves soundness without
+changing its concrete behavior or resource bounds. -/
+theorem Sound.restrict {routine : BinaryRoutine n}
+    (hsound : routine.Sound) (requires : BinaryValues n → Prop)
+    (hrequires : ∀ values, requires values → routine.requires values) :
+    (routine.restrict requires).Sound :=
+  hsound.restrict_internal requires hrequires
+
 /-- Fixed-word emission is sound; its all-prefix bound is obtained honestly
 from its exact running time. -/
 theorem emitBits_sound (word : List Bool) :
