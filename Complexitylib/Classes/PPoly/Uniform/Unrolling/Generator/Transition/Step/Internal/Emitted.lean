@@ -541,6 +541,18 @@ private theorem stepFormulaSizeAtSpecialized_internal_state (tm : NTM k) (T : �
   · unfold stepAtomCount
     omega
 
+/-- The specialized numeric size oracle agrees with the state-formula
+polynomial at every canonical state index. -/
+theorem stepFormulaSizeAtSpecialized_state_forSpace_internal (tm : NTM k)
+    (T : ℕ) (index : Fin (Fintype.card tm.Q)) :
+    stepFormulaSizeAtSpecializedInternal tm T index.val =
+      nextStateFormulaScheduleSize (transitionCases tm).length k T
+        (effectCaseSelectedAt tm fun effect =>
+          decide (effect.nextState =
+            (Fintype.equivFin tm.Q).symm index))
+        (effectCaseChoiceAt tm) :=
+  stepFormulaSizeAtSpecialized_internal_state tm T index
+
 private theorem stepFormulaBlockSpecialized_internal_state (tm : NTM k)
     (T configBase available : ℕ) (index : Fin (Fintype.card tm.Q)) :
     stepFormulaBlockSpecializedInternal tm T configBase available index.val =

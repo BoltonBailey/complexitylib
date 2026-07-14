@@ -11,6 +11,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.I
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Packed
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Requires
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Sound
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Space
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Top
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Step
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic

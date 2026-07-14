@@ -40,8 +40,35 @@ private theorem StepClean.phaseClean_internal
   { movedHeadClean := hclean.movedHeadClean
     position := hclean.position }
 
+/-- Restrict the full step-clean invariant to the scratch invariant used by
+the step-space proof while an outer position limit is active. -/
+theorem StepClean.phaseClean_forSpace_internal
+    {values : BinaryValues WorkCount} (hclean : StepClean values) :
+    StepPhaseCleanInternal values :=
+  hclean.phaseClean_internal
+
 private theorem StepClean.caseFormulaClean_forEffect
     {values : BinaryValues WorkCount} (hclean : StepClean values) :
+    CaseFormulaClean values := by
+  have hupdate : Function.update values Work.position 0 = values := by
+    funext i
+    by_cases hi : i = Work.position
+    · subst i
+      simp [hclean.position]
+    · simp [hi]
+  simpa [hupdate] using hclean.movedHeadClean.caseClean
+
+/-- Recover case-formula scratch cleanliness from a fully clean step entry for
+the internal step-space proof. -/
+theorem StepClean.caseFormulaClean_forSpace_internal
+    {values : BinaryValues WorkCount} (hclean : StepClean values) :
+    CaseFormulaClean values :=
+  hclean.caseFormulaClean_forEffect
+
+/-- Recover case-formula scratch cleanliness while an outer step position
+limit is active. -/
+theorem StepPhaseCleanInternal.caseFormulaClean_forSpace_internal
+    {values : BinaryValues WorkCount} (hclean : StepPhaseCleanInternal values) :
     CaseFormulaClean values := by
   have hupdate : Function.update values Work.position 0 = values := by
     funext i
@@ -172,6 +199,14 @@ private theorem StepPhaseCleanInternal.movedHeadClean_atPosition_internal
       hclean.movedHeadClean.direction
   · simpa [Work.position, Work.atomKind] using hclean.movedHeadClean.atomKind
 
+/-- Recover moved-head scratch cleanliness at a position selected by an outer
+step loop. -/
+theorem StepPhaseCleanInternal.movedHeadClean_atPosition_forSpace_internal
+    {values : BinaryValues WorkCount} (hclean : StepPhaseCleanInternal values)
+    (position : ℕ) :
+    MovedHeadFormulaClean (Function.update values Work.position position) :=
+  hclean.movedHeadClean_atPosition_internal position
+
 private theorem update_available_preserves_caseClean
     {values : BinaryValues WorkCount} (hclean : CaseFormulaClean values)
     (value : ℕ) :
@@ -290,6 +325,14 @@ private theorem update_available_preserves_phaseClean
       hclean.movedHeadClean value
     position := by
       simpa [Work.available, Work.position] using hclean.position }
+
+/-- Advancing the formula frontier preserves the scratch invariant used by the
+step-space proof. -/
+theorem update_available_preserves_phaseClean_forSpace_internal
+    {values : BinaryValues WorkCount} (hclean : StepPhaseCleanInternal values)
+    (value : ℕ) :
+    StepPhaseCleanInternal (Function.update values Work.available value) :=
+  update_available_preserves_phaseClean hclean value
 
 private theorem update_limit₁_preserves_caseClean
     {values : BinaryValues WorkCount} (hclean : CaseFormulaClean values)
@@ -706,6 +749,22 @@ private theorem headFormula_binaryForValues_effect
           simp [current, hposition, havailable, Work.position, Work.available,
             Work.horizon]
 
+/-- Exact trajectory of a prefix of one tape's head-formula loop, exposed only
+for the internal step-space proof. -/
+theorem headFormula_binaryForValues_effect_forSpace_internal
+    (tm : NTM k) (tape : TapeSlot k) (values : BinaryValues WorkCount)
+    (hclean : StepPhaseCleanInternal values) (hhorizon : 0 < values Work.horizon)
+    (count : ℕ) (hcount : count ≤ values Work.horizon + 1) :
+    BinaryRoutine.binaryForValues (emitNextHeadFormula tm tape) Work.position
+        values count =
+      Function.update
+        (Function.update values Work.position count) Work.available
+        (values Work.available + count *
+          nextHeadFormulaScheduleSize (transitionCases tm).length k
+            (values Work.horizon) (movedHeadCaseSelectedAt tm tape)
+            (effectCaseChoiceAt tm)) :=
+  headFormula_binaryForValues_effect tm tape values hclean hhorizon count hcount
+
 /-- Exact effect of the complete head-position loop for one tape. -/
 theorem emitStepHeadTapeFormulas_effect_internal (tm : NTM k)
     (tape : TapeSlot k) (values : BinaryValues WorkCount)
@@ -855,6 +914,23 @@ private theorem cellFormula_binaryForValues_effect
   simpa [Work.position, Work.horizon, Work.available] using
     cellFormulaBody_effect tm tape current hcurrent
 
+/-- Exact trajectory of a prefix of one tape's cell-formula loop, exposed only
+for the internal step-space proof. -/
+theorem cellFormula_binaryForValues_effect_forSpace_internal
+    (tm : NTM k) (tape : TapeSlot k) (values : BinaryValues WorkCount)
+    (hclean : StepPhaseCleanInternal values) (count : ℕ) :
+    BinaryRoutine.binaryForValues
+        (match tape with
+          | .input => emitStepImmutableCellPosition tm .input
+          | .work index => emitStepWritableCellPosition tm (.work index)
+          | .output => emitStepWritableCellPosition tm .output)
+        Work.position values count =
+      Function.update
+        (Function.update values Work.position count) Work.available
+        (values Work.available + prefixSize
+          (stepCellPositionEffectSizeInternal tm tape (values Work.horizon)) count) :=
+  cellFormula_binaryForValues_effect tm tape values hclean count
+
 private theorem clearPosition_after_position_available
     (values : BinaryValues WorkCount) (positionValue availableValue : ℕ)
     (hposition : values Work.position = 0) :
@@ -999,6 +1075,24 @@ private theorem seqList_headTapeFormulas_effect
       · simp [Work.available] at hi
         simp [Work.available, Work.horizon, hi]
 
+/-- Exact endpoint of a finite head-tape formula prefix, exposed to the
+step-space proof without duplicating its phase-invariant induction. -/
+theorem seqList_headTapeFormulas_effect_forSpace_internal
+    (tm : NTM k) (tapes : List (TapeSlot k))
+    (values : BinaryValues WorkCount) (hclean : StepPhaseCleanInternal values)
+    (hhorizon : 0 < values Work.horizon)
+    (hlimit : values Work.limit₁ = values Work.horizon + 1) :
+    (BinaryRoutine.seqList (tapes.map (emitStepHeadTapeFormulas tm))).effect
+        values =
+      Function.update values Work.available
+        (values Work.available +
+          (tapes.map fun tape =>
+            (values Work.horizon + 1) *
+              nextHeadFormulaScheduleSize (transitionCases tm).length k
+                (values Work.horizon) (movedHeadCaseSelectedAt tm tape)
+                (effectCaseChoiceAt tm)).sum) :=
+  seqList_headTapeFormulas_effect tm tapes values hclean hhorizon hlimit
+
 private theorem seqList_cellTapeFormulas_effect
     (tm : NTM k) (tapes : List (TapeSlot k))
     (values : BinaryValues WorkCount) (hclean : StepPhaseCleanInternal values)
@@ -1036,6 +1130,23 @@ private theorem seqList_cellTapeFormulas_effect
         omega
       · simp [Work.available] at hi
         simp [Work.available, Work.horizon, hi]
+
+/-- Exact endpoint of a finite cell-tape formula prefix, exposed to the
+step-space proof without duplicating its phase-invariant induction. -/
+theorem seqList_cellTapeFormulas_effect_forSpace_internal
+    (tm : NTM k) (tapes : List (TapeSlot k))
+    (values : BinaryValues WorkCount) (hclean : StepPhaseCleanInternal values)
+    (hlimit : values Work.limit₁ = values Work.horizon + 2) :
+    (BinaryRoutine.seqList (tapes.map (emitStepCellTapeFormulas tm))).effect
+        values =
+      Function.update values Work.available
+        (values Work.available +
+          (tapes.map fun tape =>
+            prefixSize
+              (stepCellPositionEffectSizeInternal tm tape
+                (values Work.horizon))
+              (values Work.horizon + 2)).sum) :=
+  seqList_cellTapeFormulas_effect tm tapes values hclean hlimit
 
 theorem setStepPositionLimit_effect_local_internal (extra : ℕ)
     (values : BinaryValues WorkCount) :
@@ -1507,6 +1618,37 @@ private theorem binaryForValues_copy_succ_effect
                 simp [current, prefixSize, hposition, hgateCount, havailable,
                   hreference, htemporary, Work.position, Work.gateCount,
                   Work.available, Work.reference₀, Work.temporary₃]
+
+/-- Exact trajectory of a nonempty packed-copy loop prefix, exposed only for
+the internal step-space proof. -/
+theorem binaryForValues_copy_succ_effect_forSpace_internal
+    (body : BinaryRoutine WorkCount) (sizeAt : ℕ → ℕ) (outputCount : ℕ)
+    (values : BinaryValues WorkCount)
+    (hbody : ∀ current : BinaryValues WorkCount,
+      current Work.horizon = values Work.horizon →
+      body.effect current =
+        Function.update
+          (Function.update
+            (Function.update
+              (Function.update current Work.gateCount
+                (current Work.gateCount + sizeAt (current Work.position)))
+              Work.available (current Work.available + outputCount))
+          Work.reference₀ 0) Work.temporary₃ 0)
+    (hpositionZero : values Work.position = 0)
+    (count : ℕ) :
+    BinaryRoutine.binaryForValues body Work.position values (count + 1) =
+      Function.update
+        (Function.update
+          (Function.update
+            (Function.update
+              (Function.update values Work.position (count + 1))
+              Work.gateCount
+                (values Work.gateCount + prefixSize sizeAt (count + 1)))
+            Work.available
+              (values Work.available + outputCount * (count + 1)))
+          Work.reference₀ 0) Work.temporary₃ 0 :=
+  binaryForValues_copy_succ_effect body sizeAt outputCount values hbody
+    hpositionZero count
 
 private theorem prefixSize_const (size count : ℕ) :
     prefixSize (fun _ => size) count = count * size := by

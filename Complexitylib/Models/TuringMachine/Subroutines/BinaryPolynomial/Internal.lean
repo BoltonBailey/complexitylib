@@ -355,6 +355,14 @@ private theorem binaryHornerFold_le (x : ℕ) :
         _ = (acc + (coeff + coeffs.sum)) *
               ((x + 1) ^ coeffs.length * (x + 1)) := by ring
 
+theorem binaryPolynomial_eval_le_valueCap_internal
+    (p : Polynomial ℕ) (x : ℕ) :
+    p.eval x ≤ binaryPolynomialValueCap p x := by
+  rw [← binaryHornerFold_polyCoeffs_internal]
+  unfold binaryPolynomialValueCap
+  have h := binaryHornerFold_le x (binaryPolynomialCoeffs p) 0
+  exact le_trans h (Nat.mul_le_mul_right _ (by omega))
+
 private theorem binaryHornerFold_take_le
     (x : ℕ) (coeffs : List ℕ) (k : ℕ) :
     binaryHornerFold x (coeffs.take k) 0 ≤

@@ -669,9 +669,18 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
     - [x] Package the canonical-entry domain through compact semantic preconditions
       and obtain a total fresh-input `ComputesInSpace` theorem for the exact
       once-normalized padded-code function.
-    - [ ] Prove the serializer's explicit all-prefix space bound is logarithmic,
+    - [~] Prove the serializer's explicit all-prefix space bound is logarithmic,
       conclude that its code function is in `FL`, package `P_subset_UniformPPoly`,
-      and combine both directions.
+      and combine both directions. *Decomposed:*
+      - [x] Give every serializer primitive and the complete transition-step
+        routine a compositional width certificate. The step theorem follows the
+        exact formula and delayed-copy trajectories through every nested loop and
+        bounds the advertised auxiliary space at every routine prefix.
+      - [ ] Construct one explicit polynomial envelope for every reachable
+        transition-loop entry, lift the local certificate through the whole
+        tableau program, and derive the logarithmic `ComputesInSpace` theorem.
+      - [ ] Package the exact padded-code function in `FL`, prove
+        `P_subset_UniformPPoly`, and combine both containments.
 
 **Definitions for the headline.** [x] The `UniformPPoly` class is defined
 (`Complexitylib.Classes.PPoly.Uniform`): `CircuitFamily.Uniform F` asks the tagged

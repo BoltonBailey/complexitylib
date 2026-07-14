@@ -43,6 +43,31 @@ theorem prefixSize_eq_sum_range_internal (sizeAt : ℕ → ℕ) (count : ℕ) :
   | succ count ih =>
       rw [prefixSize_succ_internal, ih, List.sum_range_succ]
 
+theorem prefixSize_eq_sum_ofFn_internal (sizeAt : ℕ → ℕ)
+    (count : ℕ) :
+    prefixSize sizeAt count =
+      (List.ofFn fun index : Fin count => sizeAt index.val).sum := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [prefixSize_succ_internal, List.ofFn_succ_last, List.sum_append, ih]
+      simp
+
+theorem prefixSize_mono_internal (sizeAt : ℕ → ℕ)
+    {first second : ℕ} (hbound : first ≤ second) :
+    prefixSize sizeAt first ≤ prefixSize sizeAt second := by
+  induction second with
+  | zero =>
+      have hfirst : first = 0 := by omega
+      subst first
+      exact le_rfl
+  | succ second ih =>
+      by_cases heq : first = second + 1
+      · subst first
+        exact le_rfl
+      · have hle : first ≤ second := by omega
+        exact (ih hle).trans (by rw [prefixSize_succ_internal]; omega)
+
 theorem reverseMember_lt_internal {count rank : ℕ} (hrank : rank < count) :
     reverseMember count rank < count := by
   simp only [reverseMember]

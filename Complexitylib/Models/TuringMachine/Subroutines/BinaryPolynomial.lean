@@ -60,6 +60,13 @@ theorem binaryHornerFold_polyCoeffs (p : Polynomial ℕ) (x : ℕ) :
     binaryHornerFold x (binaryPolynomialCoeffs p) 0 = p.eval x :=
   binaryHornerFold_polyCoeffs_internal p x
 
+/-- Ordinary polynomial evaluation is bounded by the explicit cap used for
+every intermediate value of the compiled Horner routine. -/
+theorem binaryPolynomial_eval_le_valueCap
+    (p : Polynomial ℕ) (x : ℕ) :
+    p.eval x ≤ binaryPolynomialValueCap p x :=
+  binaryPolynomial_eval_le_valueCap_internal p x
+
 /-- Evaluating a fixed polynomial changes only the result tape. The input is
 preserved literally, and the scratch accumulator and both internal counters
 are restored to their initial canonical-zero tapes. -/

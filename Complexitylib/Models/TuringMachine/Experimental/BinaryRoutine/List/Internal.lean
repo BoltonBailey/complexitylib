@@ -33,6 +33,41 @@ theorem repeatRoutine_sound_internal (count : ℕ) (routine : BinaryRoutine n)
   rcases hnext with ⟨_, rfl⟩
   exact hsound
 
+theorem seqList_append_effect_internal
+    (first second : List (BinaryRoutine n)) (values : BinaryValues n) :
+    (seqList (first ++ second)).effect values =
+      (seqList second).effect ((seqList first).effect values) := by
+  induction first generalizing values with
+  | nil => rfl
+  | cons routine routines ih =>
+      simp only [List.cons_append, seqList, seq]
+      exact ih (routine.effect values)
+
+theorem seqList_ofFn_effect_eq_trajectory_internal
+    (count : ℕ) (routineAt : Fin count → BinaryRoutine n)
+    (initial : BinaryValues n) (trajectory : ℕ → BinaryValues n)
+    (hzero : trajectory 0 = initial)
+    (hstep : ∀ index : Fin count,
+      (routineAt index).effect (trajectory index.val) =
+        trajectory (index.val + 1)) :
+    (seqList (List.ofFn routineAt)).effect initial = trajectory count := by
+  induction count generalizing initial trajectory with
+  | zero =>
+      simpa [seqList, identity, emitBits] using hzero.symm
+  | succ count ih =>
+      rw [← hzero, List.ofFn_succ]
+      change
+        (seqList (List.ofFn fun index => routineAt index.succ)).effect
+            ((routineAt 0).effect (trajectory 0)) = trajectory (count + 1)
+      have hstepZero := hstep 0
+      simp only [Fin.val_zero] at hstepZero
+      rw [hstepZero]
+      apply ih (fun index => routineAt index.succ) (trajectory 1)
+        (fun index => trajectory (index + 1))
+      · rfl
+      · intro index
+        simpa [Nat.add_assoc] using hstep index.succ
+
 end BinaryRoutine
 
 end Complexity

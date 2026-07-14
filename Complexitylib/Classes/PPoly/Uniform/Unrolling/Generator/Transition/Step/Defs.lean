@@ -38,6 +38,57 @@ structure StepClean (values : BinaryValues WorkCount) : Prop where
   /-- The explicit atom-position limit starts clear. -/
   limit₁ : values Work.limit₁ = 0
 
+/-- One shared numeric envelope for every prefix of a packed transition step.
+The first field retains arbitrary incoming registers. The second dominates the
+complete output frontier together with every absolute reference and polynomial
+evaluator that can be live inside a nested next-formula or delayed-copy phase. -/
+structure StepWidthEnvelope (tm : NTM k) (values : BinaryValues WorkCount)
+    (width : ℕ) : Prop where
+  /-- Every incoming register fits the common width. -/
+  values_le : ∀ index, values index ≤ width
+  /-- The complete step frontier and every nested arithmetic quantity fit
+  simultaneously. -/
+  cap : ∀ (state : tm.Q) (headTape : TapeSlot k)
+      (writtenTape : WritableSlot k) (symbol : Γ)
+      (stateIndex tapeIndex symbolIndex position : ℕ),
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 → position ≤ values Work.horizon + 1 →
+        values Work.available +
+              stepScheduleSize (transitionCases tm).length
+                (Fintype.card tm.Q) k (values Work.horizon)
+                (stepAtomKindAt tm (values Work.horizon))
+                (stepAtomEffectSelectedAt tm (values Work.horizon))
+                (effectCaseChoiceAt tm) +
+            transitionStateRef (values Work.configBase) stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q) (values Work.horizon)
+                (values Work.configBase) tapeIndex position +
+              tapeIndex + values Work.horizon + 1) +
+        (transitionCellRef (Fintype.card tm.Q) (k + 2)
+              (values Work.horizon) (values Work.configBase) tapeIndex
+              position symbolIndex +
+            (tapeIndex * (values Work.horizon + 2) + position) +
+          (values Work.horizon + 2) + (k + 2) + tapeIndex + 4) +
+        caseReadSize (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+          (values Work.horizon) +
+        2 * (values Work.horizon + 2) + values Work.horizon +
+        2 * TM.binaryPolynomialValueCap (stateNextChildPolynomial tm state)
+          (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap
+          (headNextChildPolynomial tm headTape) (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap
+          (writtenNextChildPolynomial tm writtenTape symbol)
+          (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap
+          (stateNextFormulaPolynomial tm state) (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap
+          (headNextFormulaPolynomial tm headTape) (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap
+          (writtenNextFormulaPolynomial tm writtenTape symbol)
+          (values Work.horizon) +
+        2 * TM.binaryPolynomialValueCap (Polynomial.C 1)
+          (values Work.horizon) ≤ width
+
 /-- Replace the outer position limit by `horizon + extra`. -/
 def setStepPositionLimit (extra : ℕ) : BinaryRoutine WorkCount :=
   BinaryRoutine.seq

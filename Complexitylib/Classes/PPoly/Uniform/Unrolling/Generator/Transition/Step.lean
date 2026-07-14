@@ -68,6 +68,18 @@ theorem emitStep_preserves_clean (tm : TM k)
     StepClean ((emitStep tm).effect values) :=
   emitStep_effect_stepClean_internal tm values hclean hhorizon
 
+/-- A complete deterministic transition layer has an advertised all-prefix
+auxiliary-space bound controlled by one shared numeric width envelope. -/
+theorem emitStep_spaceBoundByWidth (tm : TM k)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, StepClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (henvelope : ∀ inputLength,
+      StepWidthEnvelope tm.toNTM (values inputLength) (width inputLength)) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitStep tm) initialSpace values width :=
+  emitStep_spaceBoundByWidth_internal tm hclean hhorizon henvelope
+
 /-- The emitted word is exactly the encoded canonical packed transition
 fragment, with deterministic choice wire zero. -/
 @[simp] theorem emitStep_emitted (tm : TM k)

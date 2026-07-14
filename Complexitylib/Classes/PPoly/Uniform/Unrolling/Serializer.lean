@@ -53,6 +53,18 @@ theorem prefixSize_eq_sum_range (sizeAt : ℕ → ℕ) (count : ℕ) :
     prefixSize sizeAt count = ((List.range count).map sizeAt).sum :=
   prefixSize_eq_sum_range_internal sizeAt count
 
+/-- A numeric schedule prefix is the sum over its canonical finite index. -/
+theorem prefixSize_eq_sum_ofFn (sizeAt : ℕ → ℕ) (count : ℕ) :
+    prefixSize sizeAt count =
+      (List.ofFn fun index : Fin count => sizeAt index.val).sum :=
+  prefixSize_eq_sum_ofFn_internal sizeAt count
+
+/-- Extending a numeric schedule can only increase its accumulated size. -/
+theorem prefixSize_mono (sizeAt : ℕ → ℕ) {first second : ℕ}
+    (hbound : first ≤ second) :
+    prefixSize sizeAt first ≤ prefixSize sizeAt second :=
+  prefixSize_mono_internal sizeAt hbound
+
 /-- An in-range reverse rank selects an in-range source member. -/
 theorem reverseMember_lt {count rank : ℕ} (hrank : rank < count) :
     reverseMember count rank < count :=

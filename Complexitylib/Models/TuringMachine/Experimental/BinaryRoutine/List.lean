@@ -31,6 +31,26 @@ theorem repeatRoutine_sound (count : ℕ) (routine : BinaryRoutine n)
     (repeatRoutine count routine).Sound :=
   repeatRoutine_sound_internal count routine hsound
 
+/-- Sequential-list effects distribute over list append. -/
+theorem seqList_append_effect
+    (first second : List (BinaryRoutine n)) (values : BinaryValues n) :
+    (seqList (first ++ second)).effect values =
+      (seqList second).effect ((seqList first).effect values) :=
+  seqList_append_effect_internal first second values
+
+/-- The effect of a finite routine family follows any supplied one-step
+trajectory from its stated initial value to the family endpoint. -/
+theorem seqList_ofFn_effect_eq_trajectory
+    (count : ℕ) (routineAt : Fin count → BinaryRoutine n)
+    (initial : BinaryValues n) (trajectory : ℕ → BinaryValues n)
+    (hzero : trajectory 0 = initial)
+    (hstep : ∀ index : Fin count,
+      (routineAt index).effect (trajectory index.val) =
+        trajectory (index.val + 1)) :
+    (seqList (List.ofFn routineAt)).effect initial = trajectory count :=
+  seqList_ofFn_effect_eq_trajectory_internal count routineAt initial
+    trajectory hzero hstep
+
 end BinaryRoutine
 
 end Complexity
