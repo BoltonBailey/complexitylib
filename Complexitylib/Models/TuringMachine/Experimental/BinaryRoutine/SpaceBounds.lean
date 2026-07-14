@@ -21,6 +21,18 @@ namespace Complexity
 
 namespace BinaryRoutine
 
+/-- Updating one binary register preserves a common pointwise upper bound
+when both the old vector and the replacement value satisfy that bound. -/
+theorem values_update_le {values : BinaryValues n} {width value : ℕ}
+    (index : Fin n) (hvalues : ∀ current, values current ≤ width)
+    (hvalue : value ≤ width) :
+    ∀ current, Function.update values index value current ≤ width := by
+  intro current
+  by_cases hcurrent : current = index
+  · subst current
+    simp [hvalue]
+  · simpa [hcurrent] using hvalues current
+
 /-- A pointwise logarithmic envelope proves logarithmic routine space along a
 fixed input-indexed trajectory. -/
 theorem SpaceBoundInLogAt.of_le
