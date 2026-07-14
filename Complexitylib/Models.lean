@@ -17,6 +17,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
@@ -52,8 +53,8 @@ Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, time- and
 space-aware Hoare specifications, experimental first-order routine lowering,
 reusable read-only-input loops, binary count-up loops, binary successor,
-binary length, canonical binary addition and multiply-add, framed work-tape
-clearing, unary length, and pair-emission subroutines,
+binary predecessor and length, canonical binary addition and multiply-add,
+framed work-tape clearing, unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
 the universal machine, and the logarithmic-cost random access machine
 (`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules

@@ -637,6 +637,10 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         binary addition. It preserves both operands, updates only the accumulator,
         restores both private counters literally, and proves an all-prefix bound
         controlled by operand and final-accumulator widths.
+      - [x] Add canonical positive binary predecessor with exact ripple-borrow
+        semantics, including high-bit erasure at powers of two, a literal frame,
+        and a width-based all-prefix bound. This supplies reverse connector
+        countdowns without storing formula spines.
       - [x] Validate that loop at the circuit-code boundary: from a preserved
         canonical binary value and a distinct zero scratch counter,
         `CircuitCode.Machine.emitNatCodeTM` appends its terminated-unary
