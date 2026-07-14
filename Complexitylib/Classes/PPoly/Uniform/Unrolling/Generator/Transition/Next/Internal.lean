@@ -34,6 +34,21 @@ private def advanceAvailableValues (values : BinaryValues WorkCount)
   funext i
   simp [advanceAvailableValues]
 
+private theorem advanceAvailableValues_le
+    {values : ℕ → BinaryValues WorkCount} {width amount : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available + amount inputLength ≤
+        width inputLength) :
+    ∀ inputLength index,
+      advanceAvailableValues (values inputLength) (amount inputLength) index ≤
+        width inputLength := by
+  intro inputLength index
+  apply BinaryRoutine.values_update_le Work.available
+    (hvalues inputLength)
+  exact havailable inputLength
+
 private theorem seqListEight_requires
     (routine₀ routine₁ routine₂ routine₃ routine₄ routine₅ routine₆
       routine₇ : BinaryRoutine n) (values : BinaryValues n) :
@@ -490,6 +505,208 @@ theorem emitOldCellValue_effect_internal
     BinaryRoutine.identity, BinaryRoutine.emitBits, Work.tapeIndex,
     Work.symbolIndex, Work.horizon, Work.configBase, Work.position]
 
+private theorem emitOldStateValue_spaceBoundByWidthAt
+    (stateIndex : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase) stateIndex ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitOldStateValue stateIndex)
+      initialSpace values width := by
+  simpa [emitOldStateValue] using
+    (emitStateReference_spaceBoundByWidth stateIndex false hvalues hcap)
+
+private theorem emitOldHeadValue_spaceBoundByWidthAt
+    (stateCount tapeIndex : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) + tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitOldHeadValue stateCount tapeIndex) initialSpace values width := by
+  let setTape := BinaryRoutine.set Work.tapeIndex tapeIndex
+  let selected : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setTape.effect (values inputLength)
+  let head := emitHeadReference stateCount
+  let afterHead : ℕ → BinaryValues WorkCount := fun inputLength =>
+    head.effect (selected inputLength)
+  have hset : BinaryRoutine.SpaceBoundByWidthAt setTape initialSpace values
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hvalues inputLength Work.tapeIndex
+    · exact htapeIndex
+  have hselectedValues : ∀ inputLength index,
+      selected inputLength index ≤ width inputLength := by
+    intro inputLength index
+    simpa [selected, setTape, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+        (BinaryRoutine.values_update_le Work.tapeIndex
+          (hvalues inputLength) (htapeIndex inputLength) index)
+  have hhead : BinaryRoutine.SpaceBoundByWidthAt head initialSpace selected
+      width := by
+    apply emitHeadReference_spaceBoundByWidth stateCount false
+      hselectedValues
+    intro inputLength
+    simpa [selected, setTape, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst, BinaryRoutine.identity,
+      BinaryRoutine.emitBits, Work.tapeIndex, Work.horizon, Work.configBase,
+      Work.position] using hcap inputLength
+  have hafterHeadTape : ∀ inputLength,
+      afterHead inputLength Work.tapeIndex ≤ width inputLength := by
+    intro inputLength
+    simp [afterHead, head, selected, setTape, BinaryRoutine.set,
+      BinaryRoutine.seq, BinaryRoutine.clear, BinaryRoutine.addConst,
+      emitHeadReference_effect, Work.tapeIndex, Work.temporary₀,
+      Work.available, Work.reference₀]
+    exact htapeIndex inputLength
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.tapeIndex) initialSpace afterHead width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.tapeIndex hafterHeadTape
+  rw [emitOldHeadValue]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hset, hhead, hclear, trivial⟩
+
+private theorem emitOldCellValue_spaceBoundByWidthAt
+    (stateCount tapeCount tapeIndex symbolIndex : ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength)
+    (hsymbolIndex : ∀ inputLength, symbolIndex ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) symbolIndex +
+          (tapeIndex * (values inputLength Work.horizon + 2) +
+            values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount + tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitOldCellValue stateCount tapeCount tapeIndex symbolIndex)
+      initialSpace values width := by
+  let setTape := BinaryRoutine.set Work.tapeIndex tapeIndex
+  let afterTape : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setTape.effect (values inputLength)
+  let setSymbol := BinaryRoutine.set Work.symbolIndex symbolIndex
+  let selected : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setSymbol.effect (afterTape inputLength)
+  let cell := emitCellReference stateCount tapeCount
+  let afterCell : ℕ → BinaryValues WorkCount := fun inputLength =>
+    cell.effect (selected inputLength)
+  let afterTapeClear : ℕ → BinaryValues WorkCount :=
+    fun inputLength =>
+      (BinaryRoutine.clear Work.tapeIndex).effect (afterCell inputLength)
+  have hsetTape : BinaryRoutine.SpaceBoundByWidthAt setTape initialSpace
+      values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hvalues inputLength Work.tapeIndex
+    · exact htapeIndex
+  have hafterTapeValues : ∀ inputLength index,
+      afterTape inputLength index ≤ width inputLength := by
+    intro inputLength index
+    simpa [afterTape, setTape, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+        (BinaryRoutine.values_update_le Work.tapeIndex
+          (hvalues inputLength) (htapeIndex inputLength) index)
+  have hsetSymbol : BinaryRoutine.SpaceBoundByWidthAt setSymbol initialSpace
+      afterTape width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set
+    · exact fun inputLength => hafterTapeValues inputLength Work.symbolIndex
+    · exact hsymbolIndex
+  have hselectedValues : ∀ inputLength index,
+      selected inputLength index ≤ width inputLength := by
+    intro inputLength index
+    simpa [selected, setSymbol, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+        (BinaryRoutine.values_update_le Work.symbolIndex
+          (hafterTapeValues inputLength) (hsymbolIndex inputLength) index)
+  have hcell : BinaryRoutine.SpaceBoundByWidthAt cell initialSpace selected
+      width := by
+    apply emitCellReference_spaceBoundByWidth stateCount tapeCount false
+      hselectedValues
+    intro inputLength
+    simpa [selected, setSymbol, afterTape, setTape, BinaryRoutine.set,
+      BinaryRoutine.seq, BinaryRoutine.clear, BinaryRoutine.addConst,
+      BinaryRoutine.identity, BinaryRoutine.emitBits, Work.tapeIndex,
+      Work.symbolIndex, Work.horizon, Work.configBase, Work.position] using
+      hcap inputLength
+  have hafterCellTape : ∀ inputLength,
+      afterCell inputLength Work.tapeIndex ≤ width inputLength := by
+    intro inputLength
+    simp [afterCell, cell, selected, setSymbol, afterTape, setTape,
+      emitCellReference_effect, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst, Work.tapeIndex,
+      Work.symbolIndex, Work.temporary₀, Work.temporary₁,
+      Work.temporary₂, Work.available, Work.reference₀]
+    exact htapeIndex inputLength
+  have hafterCellSymbol : ∀ inputLength,
+      afterCell inputLength Work.symbolIndex ≤ width inputLength := by
+    intro inputLength
+    simp [afterCell, cell, selected, setSymbol, afterTape, setTape,
+      emitCellReference_effect, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst, Work.tapeIndex,
+      Work.symbolIndex, Work.temporary₀, Work.temporary₁,
+      Work.temporary₂, Work.available, Work.reference₀]
+    exact hsymbolIndex inputLength
+  have hclearTape : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.tapeIndex) initialSpace afterCell width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.tapeIndex
+      hafterCellTape
+  have hafterTapeClearSymbol : ∀ inputLength,
+      afterTapeClear inputLength Work.symbolIndex ≤ width inputLength := by
+    intro inputLength
+    simpa [afterTapeClear, BinaryRoutine.clear, BinaryRoutine.identity,
+      BinaryRoutine.emitBits, Work.tapeIndex, Work.symbolIndex] using
+      hafterCellSymbol inputLength
+  have hclearSymbol : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.symbolIndex) initialSpace afterTapeClear width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.symbolIndex
+      hafterTapeClearSymbol
+  have hsetTapeTrajectory : ∀ inputLength,
+      setTape.effect (values inputLength) = afterTape inputLength := by
+    intro inputLength
+    rfl
+  have hsetSymbolTrajectory : ∀ inputLength,
+      setSymbol.effect (afterTape inputLength) = selected inputLength := by
+    intro inputLength
+    rfl
+  have hcellTrajectory : ∀ inputLength,
+      cell.effect (selected inputLength) = afterCell inputLength := by
+    intro inputLength
+    rfl
+  have hclearTapeTrajectory : ∀ inputLength,
+      (BinaryRoutine.clear Work.tapeIndex).effect (afterCell inputLength) =
+        afterTapeClear inputLength := by
+    intro inputLength
+    rfl
+  have hfullTrajectory :
+      (fun inputLength =>
+        (BinaryRoutine.clear Work.tapeIndex).effect
+          (cell.effect
+            (setSymbol.effect (setTape.effect (values inputLength))))) =
+        afterTapeClear := by
+    rfl
+  rw [emitOldCellValue]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨hsetTape, ?_, ?_, ?_, ?_, trivial⟩
+  · simpa only [hsetTapeTrajectory] using hsetSymbol
+  · simpa only [hsetTapeTrajectory, hsetSymbolTrajectory] using hcell
+  · simpa only [hsetTapeTrajectory, hsetSymbolTrajectory,
+      hcellTrajectory] using hclearTape
+  · rw [hfullTrajectory]
+    exact hclearSymbol
+
 theorem emitNextCellCopy_sound_internal
     (stateCount tapeCount tapeIndex symbolIndex : ℕ) :
     (emitNextCellCopy stateCount tapeCount tapeIndex symbolIndex).Sound :=
@@ -530,6 +747,249 @@ theorem emitNextCellCopy_emitted_internal
         symbolIndex).flatMap CircuitCode.RawGate.encode := by
   simp [emitNextCellCopy, nextCellCopySchedule,
     emitOldCellValue_emitted_internal]
+
+theorem emitNextCellCopy_spaceBoundByWidth_internal
+    (stateCount tapeCount tapeIndex symbolIndex : ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) symbolIndex +
+          (tapeIndex * (values inputLength Work.horizon + 2) +
+            values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount + tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitNextCellCopy stateCount tapeCount tapeIndex symbolIndex)
+      initialSpace values width := by
+  have htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength
+    omega
+  have hsymbolIndex : ∀ inputLength, symbolIndex ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength
+    simp only [transitionCellRef] at hc
+    omega
+  simpa [emitNextCellCopy] using
+    (emitOldCellValue_spaceBoundByWidthAt stateCount tapeCount tapeIndex
+      symbolIndex hvalues htapeIndex hsymbolIndex hcap)
+
+private theorem emitHaltedOrFormula_spaceBoundByWidthAt
+    (haltStateIndex : ℕ) (childSize : Polynomial ℕ)
+    (oldValue nextValue : BinaryRoutine WorkCount)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      HaltedOrFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          childSize.eval (values inputLength Work.horizon) + 7 ≤
+        width inputLength)
+    (hhaltCap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase)
+          haltStateIndex ≤ width inputLength)
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap childSize
+          (values inputLength Work.horizon) ≤ width inputLength)
+    (holdSpace : BinaryRoutine.SpaceBoundByWidthAt oldValue initialSpace
+      (fun inputLength => advanceAvailableValues (values inputLength) 1)
+      width)
+    (holdEffect : ∀ inputLength,
+      oldValue.effect (advanceAvailableValues (values inputLength) 1) =
+        advanceAvailableValues (values inputLength) 2)
+    (hnextSpace : BinaryRoutine.SpaceBoundByWidthAt nextValue initialSpace
+      (fun inputLength => advanceAvailableValues (values inputLength) 5)
+      width)
+    (hnextEffect : ∀ inputLength,
+      nextValue.effect (advanceAvailableValues (values inputLength) 5) =
+        advanceAvailableValues (values inputLength)
+          (5 + childSize.eval (values inputLength Work.horizon))) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitHaltedOrFormula haltStateIndex childSize oldValue nextValue)
+      initialSpace values width := by
+  let childCount : ℕ → ℕ := fun inputLength =>
+    childSize.eval (values inputLength Work.horizon)
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 1
+  let values₂ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 2
+  let values₃ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 3
+  let values₄ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 4
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  let values₆ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) (5 + childCount inputLength)
+  let values₇ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength)
+      ((5 + childCount inputLength) + 1)
+  have hvalues₂ : ∀ inputLength index,
+      values₂ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hf := hfrontier inputLength
+    omega
+  have hvalues₃ : ∀ inputLength index,
+      values₃ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hf := hfrontier inputLength
+    omega
+  have hvalues₄ : ∀ inputLength index,
+      values₄ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hf := hfrontier inputLength
+    omega
+  have hvalues₆ : ∀ inputLength index,
+      values₆ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hf := hfrontier inputLength
+    dsimp only [childCount]
+    omega
+  have hvalues₇ : ∀ inputLength index,
+      values₇ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hf := hfrontier inputLength
+    dsimp only [childCount]
+    omega
+  have hhalt₀ : BinaryRoutine.SpaceBoundByWidthAt
+      (emitStateReference haltStateIndex) initialSpace values width :=
+    emitStateReference_spaceBoundByWidth haltStateIndex false hvalues
+      hhaltCap
+  have hleft : BinaryRoutine.SpaceBoundByWidthAt
+      (emitRecentGate .and false false 2 1) initialSpace values₂ width := by
+    apply emitRecentGate_spaceBoundByWidth .and false false 2 1
+    · exact fun inputLength => hvalues₂ inputLength Work.available
+    · exact fun inputLength => hvalues₂ inputLength Work.reference₀
+    · exact fun inputLength => hvalues₂ inputLength Work.reference₁
+    · intro inputLength
+      simp [values₂, advanceAvailableValues, Work.available]
+    · intro inputLength
+      simp [values₂, advanceAvailableValues, Work.available]
+  have hhalt₁ : BinaryRoutine.SpaceBoundByWidthAt
+      (emitStateReference haltStateIndex) initialSpace values₃ width := by
+    apply emitStateReference_spaceBoundByWidth haltStateIndex false hvalues₃
+    intro inputLength
+    simpa [values₃, advanceAvailableValues, Work.available,
+      Work.configBase] using hhaltCap inputLength
+  have hnegated : BinaryRoutine.SpaceBoundByWidthAt
+      (emitRecentGate .and true true 1 1) initialSpace values₄ width := by
+    apply emitRecentGate_spaceBoundByWidth .and true true 1 1
+    · exact fun inputLength => hvalues₄ inputLength Work.available
+    · exact fun inputLength => hvalues₄ inputLength Work.reference₀
+    · exact fun inputLength => hvalues₄ inputLength Work.reference₁
+    · intro inputLength
+      simp [values₄, advanceAvailableValues, Work.available]
+    · intro inputLength
+      simp [values₄, advanceAvailableValues, Work.available]
+  have hright : BinaryRoutine.SpaceBoundByWidthAt
+      (emitPolynomialRecentGate childSize 1 .and false false 1)
+      initialSpace values₆ width := by
+    apply emitPolynomialRecentGate_spaceBoundByWidth
+    · intro inputLength
+      simpa [values₆, advanceAvailableValues, Work.available,
+        Work.horizon] using hpolynomialCap inputLength
+    · exact fun inputLength => hvalues₆ inputLength Work.available
+    · exact fun inputLength => hvalues₆ inputLength Work.reference₀
+    · exact fun inputLength => hvalues₆ inputLength Work.reference₁
+    · intro inputLength
+      simpa [values₆, advanceAvailableValues, Work.available,
+        Work.loop₃] using (hclean inputLength).loop₃
+    · intro inputLength
+      simp [values₆, childCount, advanceAvailableValues, Work.available,
+        Work.horizon]
+      omega
+    · intro inputLength
+      simp [values₆, advanceAvailableValues, Work.available]
+      omega
+  have hfinal : BinaryRoutine.SpaceBoundByWidthAt
+      (emitPolynomialRecentGate childSize 4 .or false false 1)
+      initialSpace values₇ width := by
+    apply emitPolynomialRecentGate_spaceBoundByWidth
+    · intro inputLength
+      simpa [values₇, advanceAvailableValues, Work.available,
+        Work.horizon] using hpolynomialCap inputLength
+    · exact fun inputLength => hvalues₇ inputLength Work.available
+    · exact fun inputLength => hvalues₇ inputLength Work.reference₀
+    · exact fun inputLength => hvalues₇ inputLength Work.reference₁
+    · intro inputLength
+      simpa [values₇, advanceAvailableValues, Work.available,
+        Work.loop₃] using (hclean inputLength).loop₃
+    · intro inputLength
+      simp [values₇, childCount, advanceAvailableValues, Work.available,
+        Work.horizon]
+      omega
+    · intro inputLength
+      simp [values₇, advanceAvailableValues, Work.available]
+      omega
+  have hhalt₀Effect : ∀ inputLength,
+      (emitStateReference haltStateIndex).effect (values inputLength) =
+        values₁ inputLength := by
+    intro inputLength
+    simpa [values₁] using
+      (emitStateReference_effect_advanceAvailable haltStateIndex 0
+        (values inputLength) (hclean inputLength))
+  have holdTrajectory : ∀ inputLength,
+      oldValue.effect (values₁ inputLength) = values₂ inputLength := by
+    intro inputLength
+    exact holdEffect inputLength
+  have hleftEffect : ∀ inputLength,
+      (emitRecentGate .and false false 2 1).effect
+          (values₂ inputLength) = values₃ inputLength := by
+    intro inputLength
+    exact emitRecentGate_effect_advanceAvailable .and false false 2 1 2
+      (values inputLength) (hclean inputLength)
+  have hhalt₁Effect : ∀ inputLength,
+      (emitStateReference haltStateIndex).effect (values₃ inputLength) =
+        values₄ inputLength := by
+    intro inputLength
+    exact emitStateReference_effect_advanceAvailable haltStateIndex 3
+      (values inputLength) (hclean inputLength)
+  have hnegatedEffect : ∀ inputLength,
+      (emitRecentGate .and true true 1 1).effect
+          (values₄ inputLength) = values₅ inputLength := by
+    intro inputLength
+    exact emitRecentGate_effect_advanceAvailable .and true true 1 1 4
+      (values inputLength) (hclean inputLength)
+  have hnextTrajectory : ∀ inputLength,
+      nextValue.effect (values₅ inputLength) = values₆ inputLength := by
+    intro inputLength
+    exact hnextEffect inputLength
+  have hrightEffect : ∀ inputLength,
+      (emitPolynomialRecentGate childSize 1 .and false false 1).effect
+          (values₆ inputLength) = values₇ inputLength := by
+    intro inputLength
+    simpa [values₆, values₇, childCount] using
+        (emitPolynomialRecentGate_effect_advanceAvailable childSize 1 .and
+          false false 1 (5 + childCount inputLength) (values inputLength)
+            (hclean inputLength))
+  rw [emitHaltedOrFormula]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  refine ⟨hhalt₀, ?_, ?_, ?_, ?_, ?_, ?_, ?_, trivial⟩
+  · simpa only [hhalt₀Effect] using holdSpace
+  · simpa only [hhalt₀Effect, holdTrajectory] using hleft
+  · simpa only [hhalt₀Effect, holdTrajectory, hleftEffect] using hhalt₁
+  · simpa only [hhalt₀Effect, holdTrajectory, hleftEffect,
+      hhalt₁Effect] using hnegated
+  · simpa only [hhalt₀Effect, holdTrajectory, hleftEffect,
+      hhalt₁Effect, hnegatedEffect] using hnextSpace
+  · simpa only [hhalt₀Effect, holdTrajectory, hleftEffect,
+      hhalt₁Effect, hnegatedEffect, hnextTrajectory] using hright
+  · simpa only [hhalt₀Effect, holdTrajectory, hleftEffect,
+      hhalt₁Effect, hnegatedEffect, hnextTrajectory, hrightEffect] using
+        hfinal
 
 theorem emitHaltedOrFormula_sound_internal (haltStateIndex : ℕ)
     (childSize : Polynomial ℕ) (oldValue nextValue : BinaryRoutine WorkCount)
@@ -961,6 +1421,165 @@ theorem emitNextStateFormula_emitted_internal (tm : NTM k)
   simpa [emitNextStateFormula, nextStateFormulaSchedule,
     nextSchedule, nextFormulaChildAvailable] using hresult
 
+theorem emitNextStateFormula_spaceBoundByWidth_internal (tm : NTM k)
+    (state : tm.Q) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            nextStateFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (effectCaseSelectedAt tm fun effect =>
+                decide (effect.nextState = state))
+              (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap
+            (stateNextChildPolynomial tm state)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitNextStateFormula tm state)
+      initialSpace values width := by
+  let child := emitStateNextChild tm state
+  let childSize := stateNextChildPolynomial tm state
+  let old := emitOldStateValue (stateIndex tm state)
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 1
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  have hstate : stateIndex tm state < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q state).isLt
+  have hhalt : stateIndex tm tm.qhalt < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qhalt).isLt
+  have hcapBase : ∀ inputLength,
+      values inputLength Work.available +
+          nextStateFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (effectCaseSelectedAt tm fun effect =>
+              decide (effect.nextState = state))
+            (effectCaseChoiceAt tm) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength (stateIndex tm state) 0 0 0 hstate
+      (by omega) (by omega) (Nat.zero_le _)
+    omega
+  have hvalues₁ : ∀ inputLength index,
+      values₁ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextStateFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hvalues₅ : ∀ inputLength index,
+      values₅ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextStateFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          childSize.eval (values inputLength Work.horizon) + 7 ≤
+        width inputLength := by
+    intro inputLength
+    simpa [childSize, stateNextChildPolynomial,
+      nextStateFormulaScheduleSize, nextHaltedOrScheduleSize] using
+      hcapBase inputLength
+  have hhaltCap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase)
+          (stateIndex tm tm.qhalt) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength (stateIndex tm tm.qhalt) 0 0 0 hhalt
+      (by omega) (by omega) (Nat.zero_le _)
+    omega
+  have hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap childSize
+          (values inputLength Work.horizon) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength (stateIndex tm state) 0 0 0 hstate
+      (by omega) (by omega) (Nat.zero_le _)
+    simpa [childSize] using (show
+      2 * TM.binaryPolynomialValueCap (stateNextChildPolynomial tm state)
+          (values inputLength Work.horizon) ≤ width inputLength by omega)
+  have holdSpace : BinaryRoutine.SpaceBoundByWidthAt old initialSpace
+      values₁ width := by
+    apply emitOldStateValue_spaceBoundByWidthAt
+    · exact hvalues₁
+    · intro inputLength
+      have hc := hcap inputLength (stateIndex tm state) 0 0 0 hstate
+        (by omega) (by omega) (Nat.zero_le _)
+      simpa [values₁, advanceAvailableValues, Work.available,
+        Work.configBase] using (show
+          transitionStateRef (values inputLength Work.configBase)
+              (stateIndex tm state) ≤ width inputLength by omega)
+  have holdEffect : ∀ inputLength,
+      old.effect (values₁ inputLength) =
+        advanceAvailableValues (values inputLength) 2 := by
+    intro inputLength
+    have hreference :
+        values₁ inputLength Work.reference₀ = 0 := by
+      simpa [values₁, advanceAvailableValues, Work.available,
+        Work.reference₀] using (hclean inputLength).reference₀
+    simpa [old, values₁, advanceAvailableValues, Nat.add_assoc,
+      Work.available] using
+        (emitOldStateValue_effect_internal (stateIndex tm state)
+          (values₁ inputLength) hreference)
+  have hchildClean : ∀ inputLength,
+      CaseFormulaClean (values₅ inputLength) := by
+    intro inputLength
+    exact (hclean inputLength).advanceAvailable (values inputLength) 5
+  have hchildSpace : BinaryRoutine.SpaceBoundByWidthAt child initialSpace
+      values₅ width := by
+    dsimp only [child]
+    apply emitEffectFormula_spaceBoundByWidth
+    · exact hchildClean
+    · exact hvalues₅
+    · intro inputLength selectedState tapeIndex symbolIndex position
+        hselectedState htape hsymbol hposition
+      have hc := hcap inputLength selectedState tapeIndex symbolIndex
+        position hselectedState htape hsymbol
+        (by simpa [values₅, advanceAvailableValues, Work.available,
+          Work.horizon] using hposition)
+      simp [values₅, advanceAvailableValues, Work.available,
+        Work.horizon, Work.configBase, childSize, stateNextChildPolynomial,
+        nextStateFormulaScheduleSize, nextHaltedOrScheduleSize] at *
+      omega
+  have hchildEffect : ∀ inputLength,
+      child.effect (values₅ inputLength) =
+        advanceAvailableValues (values inputLength)
+          (5 + childSize.eval (values inputLength Work.horizon)) := by
+    intro inputLength
+    dsimp only [child, emitStateNextChild]
+    rw [emitEffectFormula_effect]
+    · simp [values₅, childSize, advanceAvailableValues,
+        stateNextChildPolynomial, Nat.add_assoc, Work.available,
+        Work.horizon]
+    · exact hchildClean inputLength
+    · simp [values₅, advanceAvailableValues, Work.available]
+  have hresult := emitHaltedOrFormula_spaceBoundByWidthAt
+    (stateIndex tm tm.qhalt) childSize old child
+      (fun inputLength => (hclean inputLength).haltedOrClean) hvalues hfrontier
+      hhaltCap hpolynomialCap holdSpace holdEffect hchildSpace hchildEffect
+  simpa [emitNextStateFormula, old, child, childSize] using hresult
+
 theorem emitNextHeadFormula_sound_internal (tm : NTM k)
     (tape : TapeSlot k) :
     (emitNextHeadFormula tm tape).Sound :=
@@ -1145,6 +1764,303 @@ theorem emitNextHeadFormula_emitted_internal (tm : NTM k)
     hnextEffect holdEmitted hnextEmitted hsize
   simpa [emitNextHeadFormula, nextHeadFormulaSchedule, nextSchedule,
     nextFormulaChildAvailable] using hresult
+
+private structure NextHeadFormulaWidthCap (tm : NTM k)
+    (tape : TapeSlot k) (values : ℕ → BinaryValues WorkCount)
+    (width : ℕ → ℕ) : Prop where
+  bound : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+    stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+    symbolIndex < 4 →
+    position ≤ values inputLength Work.horizon + 1 →
+      values inputLength Work.available +
+          nextHeadFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) +
+        transitionStateRef (values inputLength Work.configBase) stateIndex +
+        (transitionHeadRef (Fintype.card tm.Q)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position +
+            tapeIndex + values inputLength Work.horizon + 1) +
+        (transitionCellRef (Fintype.card tm.Q) (k + 2)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position
+              symbolIndex +
+            (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+            (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+            4) +
+        caseReadSize (values inputLength Work.horizon) +
+        2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+          (values inputLength Work.horizon) +
+        2 * (values inputLength Work.horizon + 2) +
+        values inputLength Work.horizon +
+        2 * TM.binaryPolynomialValueCap (headNextChildPolynomial tm tape)
+          (values inputLength Work.horizon) ≤ width inputLength
+
+private theorem emitNextHeadOldValue_spaceAndEffect
+    (tm : NTM k) (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      MovedHeadFormulaClean (values inputLength))
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues₁ : ∀ inputLength index,
+      advanceAvailableValues (values inputLength) 1 index ≤
+        width inputLength)
+    (hcap : NextHeadFormulaWidthCap tm tape values width) :
+    BinaryRoutine.SpaceBoundByWidthAt
+        (emitOldHeadValue (Fintype.card tm.Q) tape.index) initialSpace
+        (fun inputLength => advanceAvailableValues (values inputLength) 1)
+        width ∧
+      ∀ inputLength,
+        (emitOldHeadValue (Fintype.card tm.Q) tape.index).effect
+            (advanceAvailableValues (values inputLength) 1) =
+          advanceAvailableValues (values inputLength) 2 := by
+  have hcard : 0 < Fintype.card tm.Q :=
+    Fintype.card_pos_iff.mpr ⟨tm.qstart⟩
+  have htapeIndex : tape.index ≤ k + 1 := by
+    have hindex := tape.index.isLt
+    omega
+  have htapeWidth : ∀ inputLength, tape.index ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap.bound inputLength 0 tape.index 0
+      (values inputLength Work.horizon + 1) hcard htapeIndex (by omega)
+      (by omega)
+    omega
+  constructor
+  · apply emitOldHeadValue_spaceBoundByWidthAt
+    · exact hvalues₁
+    · exact htapeWidth
+    · intro inputLength
+      have hc := hcap.bound inputLength 0 tape.index 0
+        (values inputLength Work.position) hcard htapeIndex (by omega)
+        (by have ht := htarget inputLength; omega)
+      simpa [advanceAvailableValues, Work.available, Work.horizon,
+        Work.configBase, Work.position] using (show
+          transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tape.index
+                (values inputLength Work.position) +
+              tape.index + values inputLength Work.horizon + 1 ≤
+            width inputLength by omega)
+  · intro inputLength
+    let hcase := (hclean inputLength).caseClean
+    have htape :
+        advanceAvailableValues (values inputLength) 1 Work.tapeIndex = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.tapeIndex] using hcase.tapeIndex
+    have htemporary :
+        advanceAvailableValues (values inputLength) 1 Work.temporary₀ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.temporary₀] using hcase.temporary₀
+    have hreference :
+        advanceAvailableValues (values inputLength) 1 Work.reference₀ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.reference₀] using hcase.reference₀
+    simpa [advanceAvailableValues, Nat.add_assoc, Work.available] using
+      (emitOldHeadValue_effect_internal (Fintype.card tm.Q) tape.index
+        (advanceAvailableValues (values inputLength) 1) htape htemporary
+        hreference)
+
+private theorem emitNextHeadChild_spaceAndEffect
+    (tm : NTM k) (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      MovedHeadFormulaClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues₅ : ∀ inputLength index,
+      advanceAvailableValues (values inputLength) 5 index ≤
+        width inputLength)
+    (hcap : NextHeadFormulaWidthCap tm tape values width) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitMovedHeadFormula tm tape)
+        initialSpace
+        (fun inputLength => advanceAvailableValues (values inputLength) 5)
+        width ∧
+      ∀ inputLength,
+        (emitMovedHeadFormula tm tape).effect
+            (advanceAvailableValues (values inputLength) 5) =
+          advanceAvailableValues (values inputLength)
+            (5 + (headNextChildPolynomial tm tape).eval
+              (values inputLength Work.horizon)) := by
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  have hchildClean : ∀ inputLength,
+      MovedHeadFormulaClean (values₅ inputLength) := by
+    intro inputLength
+    exact (hclean inputLength).advanceAvailable (values inputLength) 5
+  have hchildHorizon : ∀ inputLength,
+      0 < values₅ inputLength Work.horizon := by
+    intro inputLength
+    simpa [values₅, advanceAvailableValues, Work.available,
+      Work.horizon] using hhorizon inputLength
+  have hchildTarget : ∀ inputLength,
+      values₅ inputLength Work.position ≤
+        values₅ inputLength Work.horizon := by
+    intro inputLength
+    simpa [values₅, advanceAvailableValues, Work.available,
+      Work.position, Work.horizon] using htarget inputLength
+  have hchildAvailable : ∀ inputLength,
+      1 ≤ values₅ inputLength Work.available := by
+    intro inputLength
+    simp [values₅, advanceAvailableValues, Work.available]
+  constructor
+  · apply emitMovedHeadFormula_spaceBoundByWidth
+    · exact hchildClean
+    · exact hchildHorizon
+    · exact hchildTarget
+    · exact hchildAvailable
+    · exact hvalues₅
+    · intro inputLength selectedState tapeIndex symbolIndex position
+        hselectedState htape hsymbol hposition
+      have hc := hcap.bound inputLength selectedState tapeIndex symbolIndex
+        position hselectedState htape hsymbol
+        (by simpa [values₅, advanceAvailableValues, Work.available,
+          Work.horizon] using hposition)
+      simp [advanceAvailableValues, Work.available,
+        Work.horizon, Work.configBase] at ⊢
+      rw [nextHeadFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+      simp only [Work.available, Work.horizon, Work.configBase] at hc
+      omega
+  · intro inputLength
+    rw [emitMovedHeadFormula_effect]
+    · simp [advanceAvailableValues, headNextChildPolynomial,
+        Nat.add_assoc, Work.available, Work.horizon]
+    · exact hchildClean inputLength
+    · exact hchildHorizon inputLength
+    · exact hchildTarget inputLength
+    · exact hchildAvailable inputLength
+
+theorem emitNextHeadFormula_spaceBoundByWidth_internal (tm : NTM k)
+    (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      MovedHeadFormulaClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            nextHeadFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+            (values inputLength Work.horizon) +
+          2 * (values inputLength Work.horizon + 2) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap (headNextChildPolynomial tm tape)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitNextHeadFormula tm tape)
+      initialSpace values width := by
+  let childSize := headNextChildPolynomial tm tape
+  have hwidthCap : NextHeadFormulaWidthCap tm tape values width := ⟨hcap⟩
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 1
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  have hcard : 0 < Fintype.card tm.Q :=
+    Fintype.card_pos_iff.mpr ⟨tm.qstart⟩
+  have htapeIndex : tape.index ≤ k + 1 := by
+    have hindex := tape.index.isLt
+    omega
+  have hhalt : stateIndex tm tm.qhalt < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qhalt).isLt
+  have hcapBase : ∀ inputLength,
+      values inputLength Work.available +
+          nextHeadFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) ≤
+        width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength 0 tape.index 0
+      (values inputLength Work.horizon + 1) hcard htapeIndex (by omega)
+      (by omega)
+    omega
+  have hvalues₁ : ∀ inputLength index,
+      values₁ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextHeadFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hvalues₅ : ∀ inputLength index,
+      values₅ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextHeadFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          childSize.eval (values inputLength Work.horizon) + 7 ≤
+        width inputLength := by
+    intro inputLength
+    simpa [childSize, headNextChildPolynomial,
+      nextHeadFormulaScheduleSize, nextHaltedOrScheduleSize] using
+      hcapBase inputLength
+  have hhaltCap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase)
+          (stateIndex tm tm.qhalt) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength (stateIndex tm tm.qhalt) tape.index 0
+      (values inputLength Work.horizon + 1) hhalt htapeIndex (by omega)
+      (by omega)
+    omega
+  have hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap childSize
+          (values inputLength Work.horizon) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength 0 tape.index 0
+      (values inputLength Work.horizon + 1) hcard htapeIndex (by omega)
+      (by omega)
+    simpa [childSize] using (show
+      2 * TM.binaryPolynomialValueCap (headNextChildPolynomial tm tape)
+          (values inputLength Work.horizon) ≤ width inputLength by omega)
+  have hhaltedClean : ∀ inputLength,
+      HaltedOrFormulaClean (values inputLength) := by
+    intro inputLength
+    exact parkedCase_haltedOrClean (hclean inputLength).caseClean
+  have holdCertificate := emitNextHeadOldValue_spaceAndEffect
+    (initialSpace := initialSpace) tm tape hclean htarget
+    (by simpa only [values₁] using hvalues₁) hwidthCap
+  have hchildCertificate := emitNextHeadChild_spaceAndEffect
+    (initialSpace := initialSpace) tm tape hclean hhorizon htarget
+    (by simpa only [values₅] using hvalues₅) hwidthCap
+  have hresult : BinaryRoutine.SpaceBoundByWidthAt
+      (emitHaltedOrFormula (stateIndex tm tm.qhalt)
+        (headNextChildPolynomial tm tape)
+        (emitOldHeadValue (Fintype.card tm.Q) tape.index)
+        (emitMovedHeadFormula tm tape)) initialSpace values width :=
+    emitHaltedOrFormula_spaceBoundByWidthAt
+      (initialSpace := initialSpace) (values := values) (width := width)
+      (stateIndex tm tm.qhalt) (headNextChildPolynomial tm tape)
+      (emitOldHeadValue (Fintype.card tm.Q) tape.index)
+      (emitMovedHeadFormula tm tape) hhaltedClean hvalues
+      (by simpa only [childSize] using hfrontier) hhaltCap
+      (by simpa only [childSize] using hpolynomialCap) holdCertificate.1
+      holdCertificate.2 hchildCertificate.1 hchildCertificate.2
+  rw [emitNextHeadFormula]
+  exact hresult
 
 theorem emitNextWrittenCellFormula_sound_internal (tm : NTM k)
     (tape : WritableSlot k) (symbol : Γ) :
@@ -1355,6 +2271,334 @@ theorem emitNextWrittenCellFormula_emitted_internal (tm : NTM k)
     hnextEffect holdEmitted hnextEmitted hsize
   simpa [emitNextWrittenCellFormula, nextWrittenCellFormulaSchedule,
     nextSchedule, nextFormulaChildAvailable] using hresult
+
+private structure NextWrittenCellFormulaWidthCap (tm : NTM k)
+    (tape : WritableSlot k) (symbol : Γ)
+    (values : ℕ → BinaryValues WorkCount) (width : ℕ → ℕ) : Prop where
+  bound : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+    stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+    symbolIndex < 4 →
+    position ≤ values inputLength Work.horizon + 1 →
+      values inputLength Work.available +
+          nextWrittenCellFormulaScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (writtenCellEffectSelectedAt tm tape symbol)
+            (effectCaseChoiceAt tm) +
+        transitionStateRef (values inputLength Work.configBase) stateIndex +
+        (transitionHeadRef (Fintype.card tm.Q)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position +
+            tapeIndex + values inputLength Work.horizon + 1) +
+        (transitionCellRef (Fintype.card tm.Q) (k + 2)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position
+              symbolIndex +
+            (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+            (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+            4) +
+        caseReadSize (values inputLength Work.horizon) +
+        values inputLength Work.horizon +
+        2 * TM.binaryPolynomialValueCap
+          (writtenNextChildPolynomial tm tape symbol)
+          (values inputLength Work.horizon) ≤ width inputLength
+
+private theorem emitNextWrittenCellOldValue_spaceAndEffect
+    (tm : NTM k) (tape : WritableSlot k) (symbol : Γ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hvalues₁ : ∀ inputLength index,
+      advanceAvailableValues (values inputLength) 1 index ≤
+        width inputLength)
+    (hcap : NextWrittenCellFormulaWidthCap tm tape symbol values width) :
+    BinaryRoutine.SpaceBoundByWidthAt
+        (emitOldCellValue (Fintype.card tm.Q) (k + 2)
+          tape.toTapeSlot.index.val
+          (CircuitUnrolling.symbolIndex symbol).val) initialSpace
+        (fun inputLength => advanceAvailableValues (values inputLength) 1)
+        width ∧
+      ∀ inputLength,
+        (emitOldCellValue (Fintype.card tm.Q) (k + 2)
+            tape.toTapeSlot.index.val
+            (CircuitUnrolling.symbolIndex symbol).val).effect
+            (advanceAvailableValues (values inputLength) 1) =
+          advanceAvailableValues (values inputLength) 2 := by
+  let tapeIndex := tape.toTapeSlot.index.val
+  let symbolIndex := (CircuitUnrolling.symbolIndex symbol).val
+  have hcard : 0 < Fintype.card tm.Q :=
+    Fintype.card_pos_iff.mpr ⟨tm.qstart⟩
+  have htapeIndex : tapeIndex ≤ k + 1 := by
+    have hindex := tape.toTapeSlot.index.isLt
+    dsimp only [tapeIndex]
+    omega
+  have hsymbolIndex : symbolIndex < 4 := by
+    dsimp only [symbolIndex]
+    exact (CircuitUnrolling.symbolIndex symbol).isLt
+  have htapeWidth : ∀ inputLength, tapeIndex ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap.bound inputLength 0 tapeIndex symbolIndex
+      (values inputLength Work.horizon + 1) hcard htapeIndex hsymbolIndex
+      (by omega)
+    omega
+  have hsymbolWidth : ∀ inputLength,
+      symbolIndex ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap.bound inputLength 0 tapeIndex symbolIndex
+      (values inputLength Work.horizon + 1) hcard htapeIndex hsymbolIndex
+      (by omega)
+    omega
+  constructor
+  · apply emitOldCellValue_spaceBoundByWidthAt
+    · exact hvalues₁
+    · exact htapeWidth
+    · exact hsymbolWidth
+    · intro inputLength
+      have hc := hcap.bound inputLength 0 tapeIndex symbolIndex
+        (values inputLength Work.position) hcard htapeIndex hsymbolIndex
+        (hposition inputLength)
+      simpa [advanceAvailableValues, Work.available, Work.horizon,
+        Work.configBase, Work.position, tapeIndex, symbolIndex] using (show
+          transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex
+                (values inputLength Work.position) symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                values inputLength Work.position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4 ≤ width inputLength by omega)
+  · intro inputLength
+    let hcase := (hclean inputLength).caseClean
+    have htape :
+        advanceAvailableValues (values inputLength) 1 Work.tapeIndex = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.tapeIndex] using hcase.tapeIndex
+    have hsymbol :
+        advanceAvailableValues (values inputLength) 1 Work.symbolIndex = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.symbolIndex] using hcase.symbolIndex
+    have htemporary₀ :
+        advanceAvailableValues (values inputLength) 1 Work.temporary₀ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.temporary₀] using hcase.temporary₀
+    have htemporary₁ :
+        advanceAvailableValues (values inputLength) 1 Work.temporary₁ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.temporary₁] using hcase.temporary₁
+    have htemporary₂ :
+        advanceAvailableValues (values inputLength) 1 Work.temporary₂ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.temporary₂] using hcase.temporary₂
+    have hreference :
+        advanceAvailableValues (values inputLength) 1 Work.reference₀ = 0 := by
+      simpa [advanceAvailableValues, Work.available, Work.position,
+        Work.reference₀] using hcase.reference₀
+    simpa [advanceAvailableValues, Nat.add_assoc, Work.available,
+      tapeIndex, symbolIndex] using
+        (emitOldCellValue_effect_internal (Fintype.card tm.Q) (k + 2)
+          tapeIndex symbolIndex
+          (advanceAvailableValues (values inputLength) 1) htape hsymbol
+          htemporary₀ htemporary₁ htemporary₂ hreference)
+
+private theorem emitNextWrittenCellChild_spaceAndEffect
+    (tm : NTM k) (tape : WritableSlot k) (symbol : Γ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hvalues₅ : ∀ inputLength index,
+      advanceAvailableValues (values inputLength) 5 index ≤
+        width inputLength)
+    (hcap : NextWrittenCellFormulaWidthCap tm tape symbol values width) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitWrittenCellFormula tm tape symbol)
+        initialSpace
+        (fun inputLength => advanceAvailableValues (values inputLength) 5)
+        width ∧
+      ∀ inputLength,
+        (emitWrittenCellFormula tm tape symbol).effect
+            (advanceAvailableValues (values inputLength) 5) =
+          advanceAvailableValues (values inputLength)
+            (5 + (writtenNextChildPolynomial tm tape symbol).eval
+              (values inputLength Work.horizon)) := by
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  have hchildClean : ∀ inputLength,
+      WrittenCellFormulaClean (values₅ inputLength) := by
+    intro inputLength
+    exact (hclean inputLength).advanceAvailable (values inputLength) 5
+  have hchildPosition : ∀ inputLength,
+      values₅ inputLength Work.position ≤
+        values₅ inputLength Work.horizon + 1 := by
+    intro inputLength
+    simpa [values₅, advanceAvailableValues, Work.available,
+      Work.position, Work.horizon] using hposition inputLength
+  constructor
+  · apply emitWrittenCellFormula_spaceBoundByWidth
+    · exact hchildClean
+    · exact hvalues₅
+    · exact hchildPosition
+    · intro inputLength selectedState selectedTape selectedSymbol
+        position hselectedState hselectedTape hselectedSymbol
+        hselectedPosition
+      have hc := hcap.bound inputLength selectedState selectedTape
+        selectedSymbol position hselectedState hselectedTape hselectedSymbol
+        (by simpa [values₅, advanceAvailableValues, Work.available,
+          Work.horizon] using hselectedPosition)
+      simp [advanceAvailableValues, Work.available,
+        Work.horizon, Work.configBase] at ⊢
+      rw [nextWrittenCellFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+      simp only [Work.available, Work.horizon, Work.configBase] at hc
+      omega
+  · intro inputLength
+    rw [emitWrittenCellFormula_effect]
+    · simp [advanceAvailableValues,
+        writtenNextChildPolynomial, Nat.add_assoc, Work.available,
+        Work.horizon]
+    · exact hchildClean inputLength
+
+theorem emitNextWrittenCellFormula_spaceBoundByWidth_internal (tm : NTM k)
+    (tape : WritableSlot k) (symbol : Γ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            nextWrittenCellFormulaScheduleSize
+              (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (writtenCellEffectSelectedAt tm tape symbol)
+              (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap
+            (writtenNextChildPolynomial tm tape symbol)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitNextWrittenCellFormula tm tape symbol) initialSpace values width := by
+  let child := emitWrittenCellFormula tm tape symbol
+  let childSize := writtenNextChildPolynomial tm tape symbol
+  have hwidthCap : NextWrittenCellFormulaWidthCap tm tape symbol values width :=
+    ⟨hcap⟩
+  let tapeIndex := tape.toTapeSlot.index.val
+  let symbolIndex := (CircuitUnrolling.symbolIndex symbol).val
+  let old := emitOldCellValue (Fintype.card tm.Q) (k + 2) tapeIndex
+    symbolIndex
+  let values₁ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 1
+  let values₅ : ℕ → BinaryValues WorkCount := fun inputLength =>
+    advanceAvailableValues (values inputLength) 5
+  have hcard : 0 < Fintype.card tm.Q :=
+    Fintype.card_pos_iff.mpr ⟨tm.qstart⟩
+  have htapeIndex : tapeIndex ≤ k + 1 := by
+    have hindex := tape.toTapeSlot.index.isLt
+    dsimp only [tapeIndex]
+    omega
+  have hsymbolIndex : symbolIndex < 4 := by
+    dsimp only [symbolIndex]
+    exact (CircuitUnrolling.symbolIndex symbol).isLt
+  have hhalt : stateIndex tm tm.qhalt < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qhalt).isLt
+  have hcapBase : ∀ inputLength,
+      values inputLength Work.available +
+          nextWrittenCellFormulaScheduleSize
+            (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (writtenCellEffectSelectedAt tm tape symbol)
+            (effectCaseChoiceAt tm) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength 0 tapeIndex symbolIndex
+      (values inputLength Work.horizon + 1) hcard htapeIndex hsymbolIndex
+      (by omega)
+    omega
+  have hvalues₁ : ∀ inputLength index,
+      values₁ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextWrittenCellFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hvalues₅ : ∀ inputLength index,
+      values₅ inputLength index ≤ width inputLength := by
+    apply advanceAvailableValues_le hvalues
+    intro inputLength
+    have hc := hcapBase inputLength
+    simp [nextWrittenCellFormulaScheduleSize, nextHaltedOrScheduleSize] at hc
+    omega
+  have hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          childSize.eval (values inputLength Work.horizon) + 7 ≤
+        width inputLength := by
+    intro inputLength
+    simpa [childSize, writtenNextChildPolynomial,
+      nextWrittenCellFormulaScheduleSize, nextHaltedOrScheduleSize] using
+      hcapBase inputLength
+  have hhaltCap : ∀ inputLength,
+      transitionStateRef (values inputLength Work.configBase)
+          (stateIndex tm tm.qhalt) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength (stateIndex tm tm.qhalt) tapeIndex
+      symbolIndex (values inputLength Work.horizon + 1) hhalt htapeIndex
+      hsymbolIndex (by omega)
+    omega
+  have hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap childSize
+          (values inputLength Work.horizon) ≤ width inputLength := by
+    intro inputLength
+    have hc := hcap inputLength 0 tapeIndex symbolIndex
+      (values inputLength Work.horizon + 1) hcard htapeIndex hsymbolIndex
+      (by omega)
+    simpa [childSize] using (show
+      2 * TM.binaryPolynomialValueCap
+          (writtenNextChildPolynomial tm tape symbol)
+          (values inputLength Work.horizon) ≤ width inputLength by omega)
+  have hhaltedClean : ∀ inputLength,
+      HaltedOrFormulaClean (values inputLength) := by
+    intro inputLength
+    exact parkedCase_haltedOrClean (hclean inputLength).caseClean
+  have holdCertificate := emitNextWrittenCellOldValue_spaceAndEffect
+    (initialSpace := initialSpace) tm tape symbol hclean hposition
+    (by simpa only [values₁] using hvalues₁) hwidthCap
+  have hchildCertificate := emitNextWrittenCellChild_spaceAndEffect
+    (initialSpace := initialSpace) tm tape symbol hclean hposition
+    (by simpa only [values₅] using hvalues₅) hwidthCap
+  have hresult : BinaryRoutine.SpaceBoundByWidthAt
+      (emitHaltedOrFormula (stateIndex tm tm.qhalt) childSize old child)
+      initialSpace values width :=
+    emitHaltedOrFormula_spaceBoundByWidthAt
+      (initialSpace := initialSpace) (values := values) (width := width)
+      (stateIndex tm tm.qhalt) childSize old child hhaltedClean hvalues
+      hfrontier hhaltCap hpolynomialCap holdCertificate.1 holdCertificate.2
+      hchildCertificate.1 hchildCertificate.2
+  simpa only [emitNextWrittenCellFormula, old, child, childSize, tapeIndex,
+    symbolIndex] using hresult
 
 theorem stateNextChildPolynomial_eval_internal (tm : NTM k)
     (state : tm.Q) (T : ℕ) :

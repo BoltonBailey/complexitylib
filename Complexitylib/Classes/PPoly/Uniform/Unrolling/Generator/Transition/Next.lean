@@ -44,6 +44,29 @@ theorem emitNextCellCopy_requires
   emitNextCellCopy_requires_internal stateCount tapeCount tapeIndex symbolIndex
     values hcopy hadd hmultiply hemit
 
+/-- An immutable-cell copy has an all-prefix width certificate when its fixed
+selectors and the complete absolute-reference arithmetic fit one width. -/
+theorem emitNextCellCopy_spaceBoundByWidth
+    (stateCount tapeCount tapeIndex symbolIndex : ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) symbolIndex +
+          (tapeIndex * (values inputLength Work.horizon + 2) +
+            values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount + tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitNextCellCopy stateCount tapeCount tapeIndex symbolIndex)
+      initialSpace values width :=
+  emitNextCellCopy_spaceBoundByWidth_internal stateCount tapeCount tapeIndex
+    symbolIndex hvalues hcap
+
 /-- An immutable-cell copy restores its scratch and advances the frontier by
 exactly one gate. -/
 @[simp] theorem emitNextCellCopy_effect
@@ -82,6 +105,50 @@ theorem emitNextStateFormula_requires (tm : NTM k) (state : tm.Q)
     (values : BinaryValues WorkCount) (hclean : CaseFormulaClean values) :
     (emitNextStateFormula tm state).requires values :=
   emitNextStateFormula_requires_internal tm state values hclean
+
+/-- Complete state-atom generation has an all-prefix width certificate under
+one envelope covering its frontier, nested selected-effect references, and
+the fixed child-size polynomial evaluator. -/
+theorem emitNextStateFormula_spaceBoundByWidth (tm : NTM k)
+    (state : tm.Q) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon →
+        values inputLength Work.available +
+            nextStateFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (effectCaseSelectedAt tm fun effect =>
+                decide (effect.nextState = state))
+              (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap
+            (stateNextChildPolynomial tm state)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitNextStateFormula tm state)
+      initialSpace values width :=
+  emitNextStateFormula_spaceBoundByWidth_internal tm state hclean hvalues
+    hcap
 
 /-- State-atom generation restores every owned register and advances only the
 wire frontier by its exact schedule size. -/
@@ -129,6 +196,53 @@ theorem emitNextHeadFormula_requires (tm : NTM k) (tape : TapeSlot k)
     (htarget : values Work.position ≤ values Work.horizon) :
     (emitNextHeadFormula tm tape).requires values :=
   emitNextHeadFormula_requires_internal tm tape values hclean hhorizon htarget
+
+/-- Complete head-atom generation has an all-prefix width certificate under
+one envelope covering the moved-head child, predecessor arithmetic, both
+polynomial evaluators, and every absolute configuration reference. -/
+theorem emitNextHeadFormula_spaceBoundByWidth (tm : NTM k)
+    (tape : TapeSlot k) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      MovedHeadFormulaClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            nextHeadFormulaScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (movedHeadCaseSelectedAt tm tape) (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          2 * TM.binaryPolynomialValueCap predecessorHeadSchedulePolynomial
+            (values inputLength Work.horizon) +
+          2 * (values inputLength Work.horizon + 2) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap (headNextChildPolynomial tm tape)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitNextHeadFormula tm tape)
+      initialSpace values width :=
+  emitNextHeadFormula_spaceBoundByWidth_internal tm tape hclean hhorizon
+    htarget hvalues hcap
 
 /-- Head-atom generation restores every owned register and advances only the
 wire frontier by its exact schedule size. -/
@@ -180,6 +294,53 @@ theorem emitNextWrittenCellFormula_requires (tm : NTM k)
     (emitNextWrittenCellFormula tm tape symbol).requires values :=
   emitNextWrittenCellFormula_requires_internal tm tape symbol values hclean
     hposition
+
+/-- Complete writable-cell generation has an all-prefix width certificate
+under one envelope covering its halted wrapper, nested selected-write child,
+absolute references, and child-size polynomial evaluator. -/
+theorem emitNextWrittenCellFormula_spaceBoundByWidth (tm : NTM k)
+    (tape : WritableSlot k) (symbol : Γ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            nextWrittenCellFormulaScheduleSize
+              (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (writtenCellEffectSelectedAt tm tape symbol)
+              (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon +
+          2 * TM.binaryPolynomialValueCap
+            (writtenNextChildPolynomial tm tape symbol)
+            (values inputLength Work.horizon) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitNextWrittenCellFormula tm tape symbol) initialSpace values width :=
+  emitNextWrittenCellFormula_spaceBoundByWidth_internal tm tape symbol hclean
+    hposition hvalues hcap
 
 /-- Writable-cell generation restores every owned register and advances only
 the wire frontier by its exact schedule size. -/
