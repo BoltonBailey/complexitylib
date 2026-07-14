@@ -33,6 +33,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Case
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Effect
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Step
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 import Complexitylib.Classes.PPoly.Uniform.Preprocessing
