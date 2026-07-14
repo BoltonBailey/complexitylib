@@ -26,6 +26,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.PackedCopy
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read
