@@ -811,30 +811,28 @@ theorem binaryPolynomialEvalTM_isTransducer_internal
   · exact binaryHornerLayersTM_isTransducer inputIdx scratchIdx resultIdx
       mulCounterIdx addCounterIdx (binaryPolynomialCoeffs p)
 
+theorem binaryPolynomialSpaceWidthPolynomial_eval_internal
+    (p : Polynomial ℕ) (inputValue : ℕ) :
+    (binaryPolynomialSpaceWidthPolynomial p).eval inputValue =
+      2 * binaryPolynomialValueCap p inputValue := by
+  simp only [binaryPolynomialSpaceWidthPolynomial, Polynomial.eval_mul,
+    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_add,
+    Polynomial.eval_X]
+  dsimp only [binaryPolynomialValueCap]
+  exact Nat.mul_assoc _ _ _
+
 theorem binaryPolynomialSpace_bigO_internal
     (initialSpace : ℕ) (p : Polynomial ℕ) :
     (fun inputValue => binaryPolynomialSpace initialSpace p inputValue) =O
       (fun inputValue => Nat.log 2 inputValue) := by
-  let coefficient : ℕ := 2 * ((binaryPolynomialCoeffs p).sum + 1)
-  let degree : ℕ := (binaryPolynomialCoeffs p).length
-  let q : Polynomial ℕ :=
-    Polynomial.C coefficient *
-      (Polynomial.X + Polynomial.C (1 : ℕ)) ^
-        degree
-  have heval : ∀ inputValue,
-      q.eval inputValue = 2 * binaryPolynomialValueCap p inputValue := by
-    intro inputValue
-    simp only [q, Polynomial.eval_mul, Polynomial.eval_C,
-      Polynomial.eval_pow, Polynomial.eval_add, Polynomial.eval_X]
-    dsimp only [coefficient, degree, binaryPolynomialValueCap]
-    exact Nat.mul_assoc _ _ _
   have hwidth :
       (fun inputValue => (2 * binaryPolynomialValueCap p inputValue).size) =O
         (fun inputValue => Nat.log 2 inputValue) := by
-    have h := BigO.natSize_polynomial_eval q
+    have h := BigO.natSize_polynomial_eval
+      (binaryPolynomialSpaceWidthPolynomial p)
     convert h using 1
     funext inputValue
-    rw [heval]
+    rw [binaryPolynomialSpaceWidthPolynomial_eval_internal]
   have hscaled := BigO.const_mul_left 10 hwidth
   have hconst := BigO.const_le_logTwo (initialSpace + 17)
   have hsum := BigO.add hconst hscaled

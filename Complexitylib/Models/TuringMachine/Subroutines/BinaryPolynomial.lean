@@ -134,6 +134,14 @@ theorem binaryPolynomialSpace_bigO (initialSpace : ℕ) (p : Polynomial ℕ) :
       (fun inputValue => Nat.log 2 inputValue) :=
   binaryPolynomialSpace_bigO_internal initialSpace p
 
+/-- Evaluation of the explicit width polynomial is exactly twice the
+Horner-prefix value cap. -/
+@[simp] theorem binaryPolynomialSpaceWidthPolynomial_eval
+    (p : Polynomial ℕ) (inputValue : ℕ) :
+    (binaryPolynomialSpaceWidthPolynomial p).eval inputValue =
+      2 * binaryPolynomialValueCap p inputValue :=
+  binaryPolynomialSpaceWidthPolynomial_eval_internal p inputValue
+
 /-- Fixed-polynomial evaluation never moves its output head left. -/
 theorem binaryPolynomialEvalTM_isTransducer
     (inputIdx resultIdx scratchIdx mulCounterIdx addCounterIdx : Fin n)

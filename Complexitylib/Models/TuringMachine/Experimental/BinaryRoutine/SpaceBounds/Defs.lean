@@ -7,13 +7,12 @@ import Complexitylib.Asymptotics
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
 
 /-!
-# Pointwise envelopes for binary-loop space bounds -- definitions
+# Compositional width bounds for binary routines -- definitions
 
-`BinaryRoutine.binaryForSpace` stores an input-dependent maximum over every
-loop iteration. To prove an asymptotic bound, clients should not expand or
-sum that recurrence: it is enough to exhibit one pointwise envelope covering
-the comparison scan, the initial configuration, and both phases of every
-reachable iteration.
+`SpaceBoundByWidthAt` separates exact all-prefix resource accounting from the
+final asymptotic argument. Its certificates compose along pure value effects,
+while `BinaryForSpaceEnvelope` bounds an input-dependent loop by one envelope
+covering every reachable comparison, body invocation, and successor.
 -/
 
 namespace Complexity
@@ -27,6 +26,29 @@ def SpaceBoundInLogAt (routine : BinaryRoutine n)
   (fun inputLength =>
     routine.spaceBound (initialSpace inputLength) (values inputLength)) =O
       (fun inputLength => Nat.log 2 inputLength)
+
+/-- A routine's advertised all-prefix space is bounded by one fixed multiple
+of the binary width of an input-indexed value, in addition to the incoming
+space budget. This pointwise certificate composes before any asymptotic
+reasoning is required. -/
+def SpaceBoundByWidthAt (routine : BinaryRoutine n)
+    (initialSpace : ℕ → ℕ) (values : ℕ → BinaryValues n)
+    (width : ℕ → ℕ) : Prop :=
+  ∃ constant, ∀ inputLength,
+    routine.spaceBound (initialSpace inputLength) (values inputLength) ≤
+      initialSpace inputLength + constant * (width inputLength).size +
+        constant
+
+/-- Pointwise width certificates for a list of routines, following the exact
+pure effect after every prefix. -/
+def SeqListSpaceBoundByWidthAt {n : ℕ} :
+    List (BinaryRoutine n) → (ℕ → ℕ) → (ℕ → BinaryValues n) →
+      (ℕ → ℕ) → Prop
+  | [], _, _, _ => True
+  | routine :: routines, initialSpace, values, width =>
+      SpaceBoundByWidthAt routine initialSpace values width ∧
+        SeqListSpaceBoundByWidthAt routines initialSpace
+          (fun inputLength => routine.effect (values inputLength)) width
 
 /-- A single pointwise upper bound for every component of one binary
 count-up loop's advertised auxiliary-space budget. -/

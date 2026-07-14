@@ -113,6 +113,13 @@ def binaryPolynomialValueCap (p : Polynomial ℕ) (inputValue : ℕ) : ℕ :=
   ((binaryPolynomialCoeffs p).sum + 1) *
     (inputValue + 1) ^ (binaryPolynomialCoeffs p).length
 
+/-- A natural polynomial whose value is exactly twice the Horner-prefix cap
+used by `binaryPolynomialSpace`. -/
+noncomputable def binaryPolynomialSpaceWidthPolynomial
+    (p : Polynomial ℕ) : Polynomial ℕ :=
+  Polynomial.C (2 * ((binaryPolynomialCoeffs p).sum + 1)) *
+    (Polynomial.X + Polynomial.C 1) ^ (binaryPolynomialCoeffs p).length
+
 /-- Public width-based all-prefix space bound for polynomial evaluation. -/
 def binaryPolynomialSpace
     (initialSpace : ℕ) (p : Polynomial ℕ) (inputValue : ℕ) : ℕ :=

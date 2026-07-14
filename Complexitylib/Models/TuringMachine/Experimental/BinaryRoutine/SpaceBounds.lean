@@ -7,11 +7,14 @@ import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds.Internal
 
 /-!
-# Pointwise envelopes for binary-loop space bounds
+# Compositional width bounds for binary routines
 
-This module collapses the recursive maximum in `binaryForSpace` to four
-local pointwise obligations. In particular, the number of loop iterations
-does not appear additively in the resulting space bound.
+This module exposes pointwise width certificates for routine leaves,
+sequential composition, fixed repetition, branches, and binary loops. Loop
+certificates collapse the recursive maximum in `binaryForSpace` to four local
+obligations, so the number of iterations does not appear additively in the
+resulting auxiliary-space bound. A final polynomial width bound converts the
+composed certificate to logarithmic space.
 -/
 
 namespace Complexity
@@ -72,6 +75,289 @@ theorem SpaceBoundInLogAt.binaryFor_of_envelope
     SpaceBoundInLogAt (binaryFor body counterIdx limitIdx) initialSpace
       values :=
   SpaceBoundInLogAt.binaryFor_of_envelope_internal henvelope hbound
+
+/-- Enlarging the controlling value preserves a pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.mono
+    {routine : BinaryRoutine n} {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width width' : ℕ → ℕ}
+    (hspace : SpaceBoundByWidthAt routine initialSpace values width)
+    (hle : ∀ inputLength, width inputLength ≤ width' inputLength) :
+    SpaceBoundByWidthAt routine initialSpace values width' :=
+  hspace.mono_internal hle
+
+/-- Strengthening a precondition preserves a pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.restrict
+    {routine : BinaryRoutine n} {requires : BinaryValues n → Prop}
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hspace : SpaceBoundByWidthAt routine initialSpace values width) :
+    SpaceBoundByWidthAt (routine.restrict requires) initialSpace values
+      width :=
+  hspace.restrict_internal
+
+/-- Fixed-word emission has a pointwise width certificate for every input
+trajectory. -/
+theorem SpaceBoundByWidthAt.emitBits
+    (word : List Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ} :
+    SpaceBoundByWidthAt (emitBits word) initialSpace values width :=
+  SpaceBoundByWidthAt.emitBits_internal word
+
+/-- The routine identity has a pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.identity
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ} :
+    SpaceBoundByWidthAt identity initialSpace values width :=
+  SpaceBoundByWidthAt.identity_internal
+
+/-- Clearing a value bounded by the controlling width has a pointwise width
+certificate. -/
+theorem SpaceBoundByWidthAt.clear
+    (idx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength, values inputLength idx ≤ width inputLength) :
+    SpaceBoundByWidthAt (clear idx) initialSpace values width :=
+  SpaceBoundByWidthAt.clear_internal idx hvalue
+
+/-- Successor on a value bounded by the controlling width has a pointwise
+width certificate. -/
+theorem SpaceBoundByWidthAt.binarySucc
+    (idx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength, values inputLength idx ≤ width inputLength) :
+    SpaceBoundByWidthAt (binarySucc idx) initialSpace values width :=
+  SpaceBoundByWidthAt.binarySucc_internal idx hvalue
+
+/-- Predecessor has a pointwise width certificate when its exact positive
+space argument is bounded by the controlling value. -/
+theorem SpaceBoundByWidthAt.binaryPred
+    (idx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength,
+      values inputLength idx - 1 + 1 ≤ width inputLength) :
+    SpaceBoundByWidthAt (binaryPred idx) initialSpace values width :=
+  SpaceBoundByWidthAt.binaryPred_internal idx hvalue
+
+/-- Copying two width-bounded values has a pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.binaryCopy
+    (srcIdx dstIdx counterIdx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hsrc : ∀ inputLength,
+      values inputLength srcIdx ≤ width inputLength)
+    (hdst : ∀ inputLength,
+      values inputLength dstIdx ≤ width inputLength) :
+    SpaceBoundByWidthAt (binaryCopy srcIdx dstIdx counterIdx) initialSpace
+      values width :=
+  SpaceBoundByWidthAt.binaryCopy_internal srcIdx dstIdx counterIdx hsrc hdst
+
+/-- Fixed addition has a pointwise width certificate when its result is
+bounded by the controlling value. -/
+theorem SpaceBoundByWidthAt.addConst
+    (idx : Fin n) (constant : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength,
+      values inputLength idx + constant ≤ width inputLength) :
+    SpaceBoundByWidthAt (addConst idx constant) initialSpace values width :=
+  SpaceBoundByWidthAt.addConst_internal idx constant hvalue
+
+/-- Setting a width-bounded value to another width-bounded value has a
+pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.set
+    (idx : Fin n) (value : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hcurrent : ∀ inputLength,
+      values inputLength idx ≤ width inputLength)
+    (hvalue : ∀ inputLength, value ≤ width inputLength) :
+    SpaceBoundByWidthAt (set idx value) initialSpace values width :=
+  SpaceBoundByWidthAt.set_internal idx value hcurrent hvalue
+
+/-- Preserved-source addition has a pointwise width certificate when its
+source and result are bounded by the controlling value. -/
+theorem SpaceBoundByWidthAt.add
+    (srcIdx dstIdx counterIdx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hsrc : ∀ inputLength,
+      values inputLength srcIdx ≤ width inputLength)
+    (hsum : ∀ inputLength,
+      values inputLength dstIdx + values inputLength srcIdx ≤
+        width inputLength) :
+    SpaceBoundByWidthAt (add srcIdx dstIdx counterIdx) initialSpace values
+      width :=
+  SpaceBoundByWidthAt.add_internal srcIdx dstIdx counterIdx hsrc hsum
+
+/-- Multiply-add has a pointwise width certificate when both factors and the
+largest addition intermediate are width-bounded. -/
+theorem SpaceBoundByWidthAt.mulAdd
+    (leftIdx rightIdx accIdx mulCounterIdx addCounterIdx : Fin n)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hleft : ∀ inputLength,
+      values inputLength leftIdx ≤ width inputLength)
+    (hright : ∀ inputLength,
+      values inputLength rightIdx ≤ width inputLength)
+    (htotal : ∀ inputLength,
+      values inputLength accIdx +
+          values inputLength leftIdx * values inputLength rightIdx +
+        values inputLength leftIdx ≤ width inputLength) :
+    SpaceBoundByWidthAt
+      (mulAdd leftIdx rightIdx accIdx mulCounterIdx addCounterIdx)
+      initialSpace values width :=
+  SpaceBoundByWidthAt.mulAdd_internal leftIdx rightIdx accIdx mulCounterIdx
+    addCounterIdx hleft hright htotal
+
+/-- Fixed-polynomial evaluation has a pointwise width certificate when its
+explicit Horner-prefix cap is width-bounded. -/
+theorem SpaceBoundByWidthAt.evalPolynomial
+    (inputIdx resultIdx scratchIdx mulCounterIdx addCounterIdx : Fin n)
+    (p : Polynomial ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap p (values inputLength inputIdx) ≤
+        width inputLength) :
+    SpaceBoundByWidthAt
+      (evalPolynomial inputIdx resultIdx scratchIdx mulCounterIdx
+        addCounterIdx p) initialSpace values width :=
+  SpaceBoundByWidthAt.evalPolynomial_internal inputIdx resultIdx scratchIdx
+    mulCounterIdx addCounterIdx p hvalue
+
+/-- Natural-code emission of a width-bounded value has a pointwise width
+certificate. -/
+theorem SpaceBoundByWidthAt.emitNatCode
+    (counterIdx valueIdx : Fin n) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalue : ∀ inputLength,
+      values inputLength valueIdx ≤ width inputLength) :
+    SpaceBoundByWidthAt (emitNatCode counterIdx valueIdx) initialSpace values
+      width :=
+  SpaceBoundByWidthAt.emitNatCode_internal counterIdx valueIdx hvalue
+
+/-- Raw-gate emission from two width-bounded references has a pointwise width
+certificate. -/
+theorem SpaceBoundByWidthAt.emitRawGate
+    (op : AndOrOp) (negated₀ negated₁ : Bool)
+    (emitCounterIdx input₀Idx input₁Idx : Fin n)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hinput₀ : ∀ inputLength,
+      values inputLength input₀Idx ≤ width inputLength)
+    (hinput₁ : ∀ inputLength,
+      values inputLength input₁Idx ≤ width inputLength) :
+    SpaceBoundByWidthAt
+      (emitRawGate op negated₀ negated₁ emitCounterIdx input₀Idx input₁Idx)
+      initialSpace values width :=
+  SpaceBoundByWidthAt.emitRawGate_internal op negated₀ negated₁
+    emitCounterIdx input₀Idx input₁Idx hinput₀ hinput₁
+
+/-- Emitting and advancing one gate from width-bounded references and a
+width-bounded frontier has a pointwise width certificate. -/
+theorem SpaceBoundByWidthAt.emitRawGateStep
+    (op : AndOrOp) (negated₀ negated₁ : Bool)
+    (emitCounterIdx availableIdx input₀Idx input₁Idx : Fin n)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength availableIdx ≤ width inputLength)
+    (hinput₀ : ∀ inputLength,
+      values inputLength input₀Idx ≤ width inputLength)
+    (hinput₁ : ∀ inputLength,
+      values inputLength input₁Idx ≤ width inputLength) :
+    SpaceBoundByWidthAt
+      (emitRawGateStep op negated₀ negated₁ emitCounterIdx availableIdx
+        input₀Idx input₁Idx) initialSpace values width :=
+  SpaceBoundByWidthAt.emitRawGateStep_internal op negated₀ negated₁
+    emitCounterIdx availableIdx input₀Idx input₁Idx havailable hinput₀ hinput₁
+
+/-- Sequential pointwise width certificates compose along the first phase's
+exact pure effect. -/
+theorem SpaceBoundByWidthAt.seq
+    {first second : BinaryRoutine n} {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hfirst : SpaceBoundByWidthAt first initialSpace values width)
+    (hsecond : SpaceBoundByWidthAt second initialSpace
+      (fun inputLength => first.effect (values inputLength)) width) :
+    SpaceBoundByWidthAt (seq first second) initialSpace values width :=
+  hfirst.seq_internal hsecond
+
+/-- A list of pointwise width certificates composes along its exact pure
+prefix effects. -/
+theorem SpaceBoundByWidthAt.seqList
+    (routines : List (BinaryRoutine n)) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hspace : SeqListSpaceBoundByWidthAt routines initialSpace values width) :
+    SpaceBoundByWidthAt (seqList routines) initialSpace values width :=
+  SpaceBoundByWidthAt.seqList_internal routines hspace
+
+/-- Fixed repetition has a pointwise width certificate when one invariant
+both supplies the body certificate and is preserved by its pure effect. -/
+theorem SpaceBoundByWidthAt.repeatRoutine_of_invariant
+    (count : ℕ) (routine : BinaryRoutine n)
+    (invariant : BinaryValues n → Prop) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength, invariant (values inputLength))
+    (hspace : ∀ trajectory : ℕ → BinaryValues n,
+      (∀ inputLength, invariant (trajectory inputLength)) →
+        SpaceBoundByWidthAt routine initialSpace trajectory width)
+    (heffect : ∀ current, invariant current →
+      invariant (routine.effect current)) :
+    SpaceBoundByWidthAt (repeatRoutine count routine) initialSpace values
+      width :=
+  SpaceBoundByWidthAt.repeatRoutine_of_invariant_internal count routine
+    invariant hvalues hspace heffect
+
+/-- Pointwise width certificates for both branches certify a zero branch. -/
+theorem SpaceBoundByWidthAt.branchZero
+    {onZero onPositive : BinaryRoutine n} (idx : Fin n)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hzero : SpaceBoundByWidthAt onZero initialSpace values width)
+    (hpositive : SpaceBoundByWidthAt onPositive initialSpace values width) :
+    SpaceBoundByWidthAt (branchZero idx onZero onPositive) initialSpace values
+      width :=
+  SpaceBoundByWidthAt.branchZero_internal idx hzero hpositive
+
+/-- A polynomial upper bound on the controlling value turns a pointwise width
+certificate into logarithmic space. -/
+theorem SpaceBoundByWidthAt.to_log
+    {routine : BinaryRoutine n} {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n} {width : ℕ → ℕ}
+    (hspace : SpaceBoundByWidthAt routine initialSpace values width)
+    (hinitial : initialSpace =O (fun inputLength => Nat.log 2 inputLength))
+    (p : Polynomial ℕ) (hwidth : ∀ inputLength,
+      width inputLength ≤ p.eval inputLength) :
+    SpaceBoundInLogAt routine initialSpace values :=
+  hspace.to_log_internal hinitial p hwidth
+
+/-- Fixed-word emission preserves logarithmic incoming space. -/
+theorem SpaceBoundInLogAt.emitBits
+    (word : List Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues n}
+    (hinitial : initialSpace =O
+      (fun inputLength => Nat.log 2 inputLength)) :
+    SpaceBoundInLogAt (emitBits word) initialSpace values :=
+  SpaceBoundInLogAt.emitBits_internal word hinitial
+
+/-- The routine identity preserves logarithmic incoming space. -/
+theorem SpaceBoundInLogAt.identity
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    (hinitial : initialSpace =O
+      (fun inputLength => Nat.log 2 inputLength)) :
+    SpaceBoundInLogAt identity initialSpace values :=
+  SpaceBoundInLogAt.identity_internal hinitial
+
+/-- A pointwise loop envelope of the standard width-controlled form certifies
+the complete binary loop without exposing its recursive maximum. -/
+theorem SpaceBoundByWidthAt.binaryFor_of_envelope
+    {body : BinaryRoutine n} {counterIdx limitIdx : Fin n}
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ} (constant : ℕ)
+    (henvelope : ∀ inputLength,
+      BinaryForSpaceEnvelope body counterIdx limitIdx
+        (initialSpace inputLength) (values inputLength)
+        (initialSpace inputLength + constant * (width inputLength).size +
+          constant)) :
+    SpaceBoundByWidthAt (binaryFor body counterIdx limitIdx) initialSpace
+      values width :=
+  SpaceBoundByWidthAt.binaryFor_of_envelope_internal constant henvelope
 
 /-- A pointwise envelope bounds the recursive maximum over all reachable
 iterations. -/
