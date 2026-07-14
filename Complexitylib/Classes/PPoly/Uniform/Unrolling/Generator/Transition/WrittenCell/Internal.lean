@@ -1828,28 +1828,6 @@ private theorem WrittenCellFormulaWidthCap.frontier
     hstate (by omega) (by omega) (Nat.zero_le _)
   omega
 
-private theorem seqListSpaceBoundByWidthAt_append_for_writtenCell
-    (first second : List (BinaryRoutine n))
-    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
-    {width : ℕ → ℕ}
-    (hfirst : BinaryRoutine.SeqListSpaceBoundByWidthAt first initialSpace
-      values width)
-    (hsecond : BinaryRoutine.SeqListSpaceBoundByWidthAt second initialSpace
-      (fun inputLength =>
-        (BinaryRoutine.seqList first).effect (values inputLength)) width) :
-    BinaryRoutine.SeqListSpaceBoundByWidthAt (first ++ second) initialSpace
-      values width := by
-  induction first generalizing values with
-  | nil =>
-      simpa [BinaryRoutine.SeqListSpaceBoundByWidthAt,
-        BinaryRoutine.seqList, BinaryRoutine.identity,
-        BinaryRoutine.emitBits] using hsecond
-  | cons routine routines ih =>
-      rcases hfirst with ⟨hroutine, hroutines⟩
-      refine ⟨hroutine, ?_⟩
-      apply ih hroutines
-      simpa [BinaryRoutine.seqList, BinaryRoutine.seq] using hsecond
-
 private theorem emitHeadAtCurrentCell_spaceBoundByWidthAt
     (stateCount : ℕ) {initialSpace : ℕ → ℕ}
     {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
@@ -2817,7 +2795,7 @@ private theorem writtenCellFinishSuffixRoutines_spaceBoundByWidthAt
         exact hrefAvailable inputLength]
       exact hfrontier inputLength
   rw [writtenCellFinishSuffixRoutines_eq_append]
-  exact seqListSpaceBoundByWidthAt_append_for_writtenCell _ _ href
+  exact BinaryRoutine.SeqListSpaceBoundByWidthAt.append _ _ href
     hconnectors
 
 private theorem writtenCellFinishRoutines_spaceBoundByWidthAt
@@ -2969,7 +2947,7 @@ private theorem writtenCellFinishRoutines_spaceBoundByWidthAt
       simpa [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex,
         Work.horizon, Work.configBase] using hcellCap inputLength)
   rw [writtenCellFinishRoutines_eq_append]
-  exact seqListSpaceBoundByWidthAt_append_for_writtenCell _ _ hleft hsuffix
+  exact BinaryRoutine.SeqListSpaceBoundByWidthAt.append _ _ hleft hsuffix
 
 private theorem writtenCellEffectStartValues_values_le
     {values : BinaryValues WorkCount} {width : ℕ}
@@ -3163,7 +3141,7 @@ theorem emitWrittenCellFormula_spaceBoundByWidth_internal
   have hcore : BinaryRoutine.SeqListSpaceBoundByWidthAt coreRoutines
       initialSpace values width := by
     dsimp only [coreRoutines]
-    exact seqListSpaceBoundByWidthAt_append_for_writtenCell
+    exact BinaryRoutine.SeqListSpaceBoundByWidthAt.append
       prefixRoutines [effectRoutine] hprefix heffectList
   let afterEffect : ℕ → BinaryValues WorkCount := fun inputLength =>
     (BinaryRoutine.seqList coreRoutines).effect (values inputLength)
@@ -3306,7 +3284,7 @@ theorem emitWrittenCellFormula_spaceBoundByWidth_internal
       hfinishHorizon hfinishFrontier hfinishHeadCap hfinishCellCap
   have htotal : BinaryRoutine.SeqListSpaceBoundByWidthAt
       (coreRoutines ++ finishRoutines) initialSpace values width :=
-    seqListSpaceBoundByWidthAt_append_for_writtenCell coreRoutines
+    BinaryRoutine.SeqListSpaceBoundByWidthAt.append coreRoutines
       finishRoutines hcore hfinish
   rw [emitWrittenCellFormula_eq_seqList]
   apply BinaryRoutine.SpaceBoundByWidthAt.seqList

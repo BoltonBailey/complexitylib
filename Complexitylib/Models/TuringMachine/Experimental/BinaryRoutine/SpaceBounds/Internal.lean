@@ -322,6 +322,24 @@ theorem SpaceBoundByWidthAt.seqList_internal
       simp only [seqList]
       exact SpaceBoundByWidthAt.seq_internal hspace.1 (ih hspace.2)
 
+theorem SeqListSpaceBoundByWidthAt.append_internal
+    (first second : List (BinaryRoutine n))
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hfirst : SeqListSpaceBoundByWidthAt first initialSpace values width)
+    (hsecond : SeqListSpaceBoundByWidthAt second initialSpace
+      (fun inputLength => (seqList first).effect (values inputLength)) width) :
+    SeqListSpaceBoundByWidthAt (first ++ second) initialSpace values width := by
+  induction first generalizing values with
+  | nil =>
+      simpa [SeqListSpaceBoundByWidthAt, seqList, identity, emitBits] using
+        hsecond
+  | cons routine routines ih =>
+      rcases hfirst with ⟨hroutine, hroutines⟩
+      refine ⟨hroutine, ?_⟩
+      apply ih hroutines
+      simpa [seqList, seq] using hsecond
+
 theorem SpaceBoundByWidthAt.repeatRoutine_of_invariant_internal
     (count : ℕ) (routine : BinaryRoutine n)
     (invariant : BinaryValues n → Prop) {initialSpace : ℕ → ℕ}

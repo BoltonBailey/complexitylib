@@ -299,6 +299,18 @@ theorem SpaceBoundByWidthAt.seqList
     SpaceBoundByWidthAt (seqList routines) initialSpace values width :=
   SpaceBoundByWidthAt.seqList_internal routines hspace
 
+/-- Width certificates for two routine lists compose when the second list is
+certified along the first list's exact pure effect. -/
+theorem SeqListSpaceBoundByWidthAt.append
+    (first second : List (BinaryRoutine n))
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hfirst : SeqListSpaceBoundByWidthAt first initialSpace values width)
+    (hsecond : SeqListSpaceBoundByWidthAt second initialSpace
+      (fun inputLength => (seqList first).effect (values inputLength)) width) :
+    SeqListSpaceBoundByWidthAt (first ++ second) initialSpace values width :=
+  SeqListSpaceBoundByWidthAt.append_internal first second hfirst hsecond
+
 /-- Fixed repetition has a pointwise width certificate when one invariant
 both supplies the body certificate and is preserved by its pure effect. -/
 theorem SpaceBoundByWidthAt.repeatRoutine_of_invariant
