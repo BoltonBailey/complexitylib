@@ -151,6 +151,67 @@ private theorem emitConstantFalse_binaryForEmitted
       simp only [List.flatMap_append]
       rfl
 
+private theorem binaryFor_emitConstantFalse_spaceBoundByWidthAt
+    (limitIdx : Fin WorkCount) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength limitIdx - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength limitIdx ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor (emitConstantGate false) Work.loop₀
+        limitIdx) initialSpace values width := by
+  let familyValues : ℕ → BinaryValues WorkCount :=
+    BinaryRoutine.binaryForClampedValues (emitConstantGate false) Work.loop₀
+      limitIdx values
+  have hfamilyAvailable : ∀ code,
+      familyValues code Work.available ≤
+        width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues (emitConstantGate false) Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ limitIdx
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitConstantFalse_binaryForValues]
+    have havailable := havailable (Nat.unpair code).1
+    simp only [Work.available, Work.loop₀] at havailable
+    simp [Work.available, Work.loop₀, BinaryRoutine.binaryForCount]
+    omega
+  have hfamilyReference : ∀ code,
+      familyValues code Work.reference₀ ≤
+        width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues (emitConstantGate false) Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ limitIdx
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitConstantFalse_binaryForValues]
+    simpa [Work.available, Work.loop₀, Work.reference₀] using
+      hreference (Nat.unpair code).1
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_clamped_body hlimit
+  · intro inputLength count hcount
+    rw [emitConstantFalse_binaryForValues]
+    have hlimitBound := hlimit inputLength
+    have hcount' : count < values inputLength limitIdx -
+        values inputLength Work.loop₀ := by
+      simpa only [BinaryRoutine.binaryForCount] using hcount
+    have hcounterLt : values inputLength Work.loop₀ + count <
+        values inputLength limitIdx :=
+      Nat.lt_sub_iff_add_lt'.mp hcount'
+    simpa [Work.available, Work.loop₀] using
+      hcounterLt.le.trans hlimitBound
+  · simpa [familyValues] using
+      (emitConstantGate_spaceBoundByWidth false hfamilyAvailable
+        hfamilyReference)
+
 theorem setPredecessorHorizonLimit_sound_internal :
     setPredecessorHorizonLimit.Sound :=
   (BinaryRoutine.binaryCopy_sound Work.horizon Work.limit₀
@@ -2983,6 +3044,1972 @@ theorem emitPredecessorHeadFormula_requires_internal
       PredecessorHeadClean values ∧ 0 < values Work.horizon ∧
         values Work.position ≤ values Work.horizon := by
   rfl
+
+/-! ## Pointwise all-prefix width certificates -/
+
+private theorem setPredecessorHorizonLimit_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt setPredecessorHorizonLimit
+      initialSpace values width := by
+  let copy := BinaryRoutine.binaryCopy Work.horizon Work.limit₀
+    Work.copyCounter
+  let copied : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (values inputLength)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.horizon Work.limit₀
+      Work.copyCounter (fun inputLength => hvalues inputLength Work.horizon)
+      (fun inputLength => hvalues inputLength Work.limit₀)
+  have hadd : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.addConst Work.limit₀ 1) initialSpace copied width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro inputLength
+    simpa [copied, copy, BinaryRoutine.binaryCopy] using
+      hhorizon inputLength
+  simpa [setPredecessorHorizonLimit, copy, copied] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hcopy hadd)
+
+private theorem emitPredecessorFalseRange_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.limit₀ - values inputLength Work.loop₀) ≤
+        width inputLength)
+    (hlimit : ∀ inputLength,
+      values inputLength Work.limit₀ ≤ width inputLength)
+    (hcounterLimit : ∀ inputLength,
+      values inputLength Work.loop₀ ≤ values inputLength Work.limit₀)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitPredecessorFalseRange initialSpace
+      values width := by
+  let loop := BinaryRoutine.binaryFor (emitConstantGate false) Work.loop₀
+    Work.limit₀
+  let looped : ℕ → BinaryValues WorkCount := fun inputLength =>
+    loop.effect (values inputLength)
+  have hloop : BinaryRoutine.SpaceBoundByWidthAt loop initialSpace values
+      width :=
+    binaryFor_emitConstantFalse_spaceBoundByWidthAt Work.limit₀ havailable hlimit
+      hreference
+  have hloopedCounter : ∀ inputLength,
+      looped inputLength Work.loop₀ ≤ width inputLength := by
+    intro inputLength
+    change (BinaryRoutine.binaryForValues (emitConstantGate false) Work.loop₀
+      (values inputLength)
+      (values inputLength Work.limit₀ - values inputLength Work.loop₀))
+        Work.loop₀ ≤ width inputLength
+    rw [emitConstantFalse_binaryForValues]
+    have hcounterBound := hcounterLimit inputLength
+    have hlimitBound := hlimit inputLength
+    simp only [Work.loop₀, Work.limit₀] at hcounterBound hlimitBound
+    simp only [Work.available, Work.loop₀, Function.update_apply]
+    simp only [ite_true]
+    simp only [Work.limit₀]
+    rw [Nat.add_sub_of_le hcounterBound]
+    exact hlimitBound
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.loop₀) initialSpace looped width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.loop₀ hloopedCounter
+  simpa [emitPredecessorFalseRange, loop, looped] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hloop hclear)
+
+private theorem preparePredecessorHorizonGap_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hloopPosition : ∀ inputLength,
+      values inputLength Work.loop₀ ≤ values inputLength Work.position)
+    (hpositionHorizon : ∀ inputLength,
+      values inputLength Work.position - values inputLength Work.loop₀ ≤
+        values inputLength Work.horizon) :
+    BinaryRoutine.SpaceBoundByWidthAt preparePredecessorHorizonGap
+      initialSpace values width := by
+  let copy := BinaryRoutine.binaryCopy Work.horizon Work.temporary₃
+    Work.copyCounter
+  let copied : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (values inputLength)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.horizon Work.temporary₃
+      Work.copyCounter (fun inputLength => hvalues inputLength Work.horizon)
+      (fun inputLength => hvalues inputLength Work.temporary₃)
+  have hdecrement : BinaryRoutine.SpaceBoundByWidthAt
+      (decrementReferenceBy Work.temporary₃ Work.position Work.loop₀)
+      initialSpace copied width := by
+    apply decrementReferenceBy_spaceBoundByWidth Work.temporary₃ Work.position
+      Work.loop₀ predecessorGapDistinct
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy, Work.horizon,
+        Work.temporary₃, Work.position, Work.loop₀] using
+        hloopPosition inputLength
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy, Work.horizon,
+        Work.temporary₃, Work.position, Work.loop₀] using
+        hpositionHorizon inputLength
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy] using
+        hvalues inputLength Work.horizon
+    · intro inputLength
+      simpa [copied, copy, BinaryRoutine.binaryCopy, Work.horizon,
+        Work.temporary₃, Work.position] using
+        hvalues inputLength Work.position
+  simpa [preparePredecessorHorizonGap, copy, copied] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hcopy hdecrement)
+
+private theorem emitPredecessorHeadConnector_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hloop₁ : ∀ inputLength, values inputLength Work.loop₁ = 0)
+    (hoffset : ∀ inputLength,
+      values inputLength Work.temporary₃ ≤
+        values inputLength Work.available)
+    (hpositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (htemporary : ∀ inputLength,
+      values inputLength Work.temporary₃ + 2 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitPredecessorHeadConnector
+      initialSpace values width := by
+  let gate := emitDynamicRecentGate .or false false Work.temporary₃
+    Work.loop₁ 1
+  let gated : ℕ → BinaryValues WorkCount := fun inputLength =>
+    gate.effect (values inputLength)
+  have hgate : BinaryRoutine.SpaceBoundByWidthAt gate initialSpace values
+      width := by
+    apply emitDynamicRecentGate_spaceBoundByWidth .or false false
+      Work.temporary₃ Work.loop₁ 1 predecessorConnectorDistinct
+    · exact havailable
+    · exact hreference₀
+    · exact hreference₁
+    · exact hloop₁
+    · exact hoffset
+    · exact hpositive
+  have hadd : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.addConst Work.temporary₃ 2) initialSpace gated width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro inputLength
+    rw [show gated inputLength = gate.effect (values inputLength) by rfl,
+      show gate = emitDynamicRecentGate .or false false Work.temporary₃
+        Work.loop₁ 1 by rfl,
+      emitDynamicRecentGate_effect .or false false Work.temporary₃
+        Work.loop₁ 1 (values inputLength) predecessorConnectorDistinct
+        (hloop₁ inputLength)]
+    simpa [Work.loop₁, Work.available, Work.reference₀,
+      Work.reference₁, Work.temporary₃] using htemporary inputLength
+  simpa [emitPredecessorHeadConnector, gate, gated] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hgate hadd)
+
+private theorem transitionHeadRef_cap_of_position_le
+    (stateCount : ℕ) {values : BinaryValues WorkCount} {width : ℕ}
+    (hposition : values Work.position ≤ values Work.horizon + 1)
+    (hcap : transitionHeadRef stateCount (values Work.horizon)
+          (values Work.configBase) (values Work.tapeIndex)
+          (values Work.horizon + 1) + values Work.tapeIndex +
+          values Work.horizon + 1 ≤ width) :
+    transitionHeadRef stateCount (values Work.horizon)
+        (values Work.configBase) (values Work.tapeIndex)
+        (values Work.position) + values Work.tapeIndex +
+        values Work.horizon + 1 ≤ width := by
+  simp only [transitionHeadRef] at hcap ⊢
+  omega
+
+private theorem emitHeadReference_spaceBoundByWidthAt_of_envelope
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitHeadReference stateCount false)
+      initialSpace values width := by
+  apply emitHeadReference_spaceBoundByWidth stateCount false hvalues
+  intro inputLength
+  exact transitionHeadRef_cap_of_position_le stateCount
+    (hposition inputLength) (hcap inputLength)
+
+private theorem emitHeadReference_effect_values_le
+    (stateCount : ℕ) {values : BinaryValues WorkCount} {width : ℕ}
+    (hvalues : ∀ index, values index ≤ width)
+    (havailable : values Work.available + 1 ≤ width) :
+    ∀ index, (emitHeadReference stateCount false).effect values index ≤
+      width := by
+  rw [emitHeadReference_effect]
+  apply BinaryRoutine.values_update_le Work.reference₀
+  · apply BinaryRoutine.values_update_le Work.available
+    · exact BinaryRoutine.values_update_le Work.temporary₀ hvalues (by omega)
+    · exact havailable
+  · omega
+
+private theorem emitStayPredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.horizon + 1) ≤ width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitStayPredecessorMembers stateCount) initialSpace values width := by
+  let copyLimit := BinaryRoutine.binaryCopy Work.position Work.limit₀
+    Work.copyCounter
+  let afterLimit : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copyLimit.effect (values inputLength)
+  let afterPrefix : ℕ → BinaryValues WorkCount := fun inputLength =>
+    emitPredecessorFalseRange.effect (afterLimit inputLength)
+  let head := emitHeadReference stateCount false
+  let afterHead : ℕ → BinaryValues WorkCount := fun inputLength =>
+    head.effect (afterPrefix inputLength)
+  let copyLoop := BinaryRoutine.binaryCopy Work.position Work.loop₀
+    Work.copyCounter
+  let afterLoopCopy : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copyLoop.effect (afterHead inputLength)
+  let succLoop := BinaryRoutine.addConst Work.loop₀ 1
+  let afterLoopSucc : ℕ → BinaryValues WorkCount := fun inputLength =>
+    succLoop.effect (afterLoopCopy inputLength)
+  let afterHorizon : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setPredecessorHorizonLimit.effect (afterLoopSucc inputLength)
+  have hcopyLimit : BinaryRoutine.SpaceBoundByWidthAt copyLimit initialSpace
+      values width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.limit₀
+      Work.copyCounter (fun n => hvalues n Work.position)
+      (fun n => hvalues n Work.limit₀)
+  have hafterLimitValues : ∀ n i,
+      afterLimit n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.limit₀ (hvalues n)
+      (hvalues n Work.position)
+  have hprefix : BinaryRoutine.SpaceBoundByWidthAt
+      emitPredecessorFalseRange initialSpace afterLimit width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      simp [afterLimit, copyLimit, BinaryRoutine.binaryCopy,
+        Work.available, Work.position, Work.loop₀, Work.limit₀]
+      have ha := havailable n
+      have ht := htarget n
+      have hl := (hclean n).loop₀
+      simp only [Work.available, Work.horizon, Work.position, Work.loop₀]
+        at ha ht hl
+      omega
+    · exact fun n => hafterLimitValues n Work.limit₀
+    · intro n
+      have hl := (hclean n).loop₀
+      simp only [Work.loop₀] at hl
+      simp [afterLimit, copyLimit, BinaryRoutine.binaryCopy,
+        Work.position, Work.loop₀, Work.limit₀, hl]
+    · exact fun n => hafterLimitValues n Work.reference₀
+  have hafterPrefixValues : ∀ n i,
+      afterPrefix n i ≤ width n := by
+    intro n
+    rw [show afterPrefix n =
+      Function.update
+        (Function.update (afterLimit n) Work.available
+          (afterLimit n Work.available +
+            (afterLimit n Work.limit₀ - afterLimit n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (afterLimit n)]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · apply BinaryRoutine.values_update_le Work.available
+        (hafterLimitValues n)
+      simp [afterLimit, copyLimit, BinaryRoutine.binaryCopy,
+        Work.available, Work.position, Work.loop₀, Work.limit₀]
+      have ha := havailable n
+      have ht := htarget n
+      have hl := (hclean n).loop₀
+      simp only [Work.available, Work.horizon, Work.position, Work.loop₀]
+        at ha ht hl
+      omega
+    · omega
+  have hheadSpace : BinaryRoutine.SpaceBoundByWidthAt head initialSpace
+      afterPrefix width := by
+    apply emitHeadReference_spaceBoundByWidthAt_of_envelope stateCount
+      hafterPrefixValues
+    · intro n
+      simp [afterPrefix, afterLimit, copyLimit,
+        emitPredecessorFalseRange_effect_internal, BinaryRoutine.binaryCopy,
+        Work.available, Work.position, Work.loop₀, Work.limit₀]
+      exact (htarget n).trans (Nat.le_add_right _ 1)
+    · intro n
+      simpa [afterPrefix, afterLimit, copyLimit,
+        emitPredecessorFalseRange_effect_internal, BinaryRoutine.binaryCopy,
+        Work.available, Work.horizon, Work.configBase, Work.tapeIndex,
+        Work.position, Work.loop₀, Work.limit₀] using hhead n
+  have hafterHeadValues : ∀ n i, afterHead n i ≤ width n := by
+    intro n
+    rw [show afterHead n = head.effect (afterPrefix n) by rfl,
+      show head = emitHeadReference stateCount false by rfl,
+      emitHeadReference_effect]
+    apply BinaryRoutine.values_update_le Work.reference₀
+    · apply BinaryRoutine.values_update_le Work.available
+      · exact BinaryRoutine.values_update_le Work.temporary₀
+          (hafterPrefixValues n) (by omega)
+      · simp [afterPrefix, afterLimit, copyLimit,
+          emitPredecessorFalseRange_effect_internal,
+          BinaryRoutine.binaryCopy, Work.available, Work.position,
+          Work.loop₀, Work.limit₀]
+        have ha := havailable n
+        have ht := htarget n
+        have hl := (hclean n).loop₀
+        simp only [Work.available, Work.horizon, Work.position, Work.loop₀]
+          at ha ht hl
+        omega
+    · omega
+  have hcopyLoop : BinaryRoutine.SpaceBoundByWidthAt copyLoop initialSpace
+      afterHead width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.loop₀
+      Work.copyCounter (fun n => hafterHeadValues n Work.position)
+      (fun n => hafterHeadValues n Work.loop₀)
+  have hafterHeadPosition : ∀ n,
+      afterHead n Work.position = values n Work.position := by
+    intro n
+    simp [afterHead, head, emitHeadReference_effect, afterPrefix, afterLimit,
+      copyLimit, emitPredecessorFalseRange_effect_internal,
+      BinaryRoutine.binaryCopy, Work.available, Work.position, Work.loop₀,
+      Work.limit₀, Work.temporary₀, Work.reference₀]
+  have hafterHeadHorizon : ∀ n,
+      afterHead n Work.horizon = values n Work.horizon := by
+    intro n
+    simp [afterHead, head, emitHeadReference_effect, afterPrefix, afterLimit,
+      copyLimit, emitPredecessorFalseRange_effect_internal,
+      BinaryRoutine.binaryCopy, Work.available, Work.horizon, Work.position,
+      Work.loop₀, Work.limit₀, Work.temporary₀, Work.reference₀]
+  have hafterHeadAvailable : ∀ n,
+      afterHead n Work.available = values n Work.available +
+        values n Work.position + 1 := by
+    intro n
+    have hl := (hclean n).loop₀
+    simp only [Work.loop₀] at hl
+    simp [afterHead, head, emitHeadReference_effect, afterPrefix, afterLimit,
+      copyLimit, emitPredecessorFalseRange_effect_internal,
+      BinaryRoutine.binaryCopy, Work.available, Work.position, Work.loop₀,
+      Work.limit₀, Work.temporary₀, Work.reference₀, hl]
+  have hsuccLoop : BinaryRoutine.SpaceBoundByWidthAt succLoop initialSpace
+      afterLoopCopy width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro n
+    change afterHead n Work.position + 1 ≤ width n
+    rw [hafterHeadPosition]
+    have ha := havailable n
+    have ht := htarget n
+    omega
+  have hafterLoopSuccValues : ∀ n i,
+      afterLoopSucc n i ≤ width n := by
+    intro n
+    dsimp [afterLoopSucc, succLoop, afterLoopCopy, copyLoop]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · exact BinaryRoutine.values_update_le Work.loop₀
+        (hafterHeadValues n) (hafterHeadValues n Work.position)
+    · change afterHead n Work.position + 1 ≤ width n
+      rw [hafterHeadPosition]
+      have ha := havailable n
+      have ht := htarget n
+      omega
+  have hhorizonSpace : BinaryRoutine.SpaceBoundByWidthAt
+      setPredecessorHorizonLimit initialSpace afterLoopSucc width := by
+    apply setPredecessorHorizonLimit_spaceBoundByWidthAt hafterLoopSuccValues
+    intro n
+    have ha := havailable n
+    have hh : values n Work.horizon + 1 ≤ width n := by omega
+    change afterHead n Work.horizon + 1 ≤ width n
+    rw [hafterHeadHorizon]
+    exact hh
+  have hafterLoopSuccAvailable : ∀ n,
+      afterLoopSucc n Work.available = values n Work.available +
+        values n Work.position + 1 := by
+    intro n
+    simpa [afterLoopSucc, succLoop, afterLoopCopy, copyLoop,
+      BinaryRoutine.binaryCopy, BinaryRoutine.addConst, Work.available,
+      Work.position, Work.loop₀] using hafterHeadAvailable n
+  have hafterLoopSuccHorizon : ∀ n,
+      afterLoopSucc n Work.horizon = values n Work.horizon := by
+    intro n
+    simpa [afterLoopSucc, succLoop, afterLoopCopy, copyLoop,
+      BinaryRoutine.binaryCopy, BinaryRoutine.addConst, Work.horizon,
+      Work.position, Work.loop₀] using hafterHeadHorizon n
+  have hafterLoopSuccPosition : ∀ n,
+      afterLoopSucc n Work.position = values n Work.position := by
+    intro n
+    simpa [afterLoopSucc, succLoop, afterLoopCopy, copyLoop,
+      BinaryRoutine.binaryCopy, BinaryRoutine.addConst, Work.position,
+      Work.loop₀] using hafterHeadPosition n
+  have hafterLoopSuccLoop : ∀ n,
+      afterLoopSucc n Work.loop₀ = values n Work.position + 1 := by
+    intro n
+    change afterHead n Work.position + 1 = values n Work.position + 1
+    rw [hafterHeadPosition]
+  have hafterHorizonAvailable : ∀ n,
+      afterHorizon n Work.available = values n Work.available +
+        values n Work.position + 1 := by
+    intro n
+    simpa [afterHorizon, setPredecessorHorizonLimit_effect_internal,
+      Work.available, Work.limit₀] using hafterLoopSuccAvailable n
+  have hafterHorizonHorizon : ∀ n,
+      afterHorizon n Work.horizon = values n Work.horizon := by
+    intro n
+    simpa [afterHorizon, setPredecessorHorizonLimit_effect_internal,
+      Work.horizon, Work.limit₀] using hafterLoopSuccHorizon n
+  have hafterHorizonPosition : ∀ n,
+      afterHorizon n Work.position = values n Work.position := by
+    intro n
+    simpa [afterHorizon, setPredecessorHorizonLimit_effect_internal,
+      Work.position, Work.limit₀] using hafterLoopSuccPosition n
+  have hafterHorizonLoop : ∀ n,
+      afterHorizon n Work.loop₀ = values n Work.position + 1 := by
+    intro n
+    simpa [afterHorizon, setPredecessorHorizonLimit_effect_internal,
+      Work.loop₀, Work.limit₀] using hafterLoopSuccLoop n
+  have hafterHorizonLimit : ∀ n,
+      afterHorizon n Work.limit₀ = values n Work.horizon + 1 := by
+    intro n
+    simp [afterHorizon, setPredecessorHorizonLimit_effect_internal,
+      hafterLoopSuccHorizon]
+  have hsuffix : BinaryRoutine.SpaceBoundByWidthAt
+      emitPredecessorFalseRange initialSpace afterHorizon width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      rw [hafterHorizonAvailable, hafterHorizonLimit, hafterHorizonLoop]
+      have ha := havailable n
+      have ht := htarget n
+      omega
+    · intro n
+      rw [hafterHorizonLimit]
+      have ha := havailable n
+      omega
+    · intro n
+      rw [hafterHorizonLoop, hafterHorizonLimit]
+      have ht := htarget n
+      omega
+    · intro n
+      simpa [afterHorizon, afterLoopSucc, succLoop, afterLoopCopy, copyLoop,
+        setPredecessorHorizonLimit_effect_internal, BinaryRoutine.binaryCopy,
+        BinaryRoutine.addConst, Work.horizon, Work.available, Work.position,
+        Work.loop₀, Work.limit₀, Work.reference₀] using
+        hafterHeadValues n Work.reference₀
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  exact ⟨hcopyLimit, hprefix, hheadSpace, hcopyLoop, hsuccLoop,
+    hhorizonSpace, hsuffix, trivial⟩
+
+private theorem emitRightZeroPredecessorMembers_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.horizon + 1) ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitRightZeroPredecessorMembers
+      initialSpace values width := by
+  let afterLimit : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setPredecessorHorizonLimit.effect (values inputLength)
+  have hhorizon : ∀ n, values n Work.horizon + 1 ≤ width n := by
+    intro n
+    have ha := havailable n
+    omega
+  have hlimit : BinaryRoutine.SpaceBoundByWidthAt
+      setPredecessorHorizonLimit initialSpace values width :=
+    setPredecessorHorizonLimit_spaceBoundByWidthAt hvalues hhorizon
+  have hfalse : BinaryRoutine.SpaceBoundByWidthAt
+      emitPredecessorFalseRange initialSpace afterLimit width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      rw [show afterLimit n = Function.update (values n) Work.limit₀
+          (values n Work.horizon + 1) by
+        exact setPredecessorHorizonLimit_effect_internal (values n)]
+      have hl := (hclean n).loop₀
+      have ha := havailable n
+      simp only [Work.available, Work.horizon, Work.loop₀, Work.limit₀]
+        at hl ha ⊢
+      simp [hl]
+      exact ha
+    · intro n
+      simp [afterLimit, setPredecessorHorizonLimit_effect_internal]
+      exact hhorizon n
+    · intro n
+      rw [show afterLimit n = Function.update (values n) Work.limit₀
+          (values n Work.horizon + 1) by
+        exact setPredecessorHorizonLimit_effect_internal (values n)]
+      have hl := (hclean n).loop₀
+      simp only [Work.horizon, Work.loop₀, Work.limit₀] at hl ⊢
+      simp [hl]
+    · intro n
+      simpa [afterLimit, setPredecessorHorizonLimit_effect_internal,
+        Work.limit₀, Work.reference₀] using hvalues n Work.reference₀
+  simpa [emitRightZeroPredecessorMembers, afterLimit] using
+    (BinaryRoutine.SpaceBoundByWidthAt.seq hlimit hfalse)
+
+private theorem emitLeftZeroPredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.horizon + 1) ≤ width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitLeftZeroPredecessorMembers stateCount) initialSpace values width := by
+  let head := emitHeadReference stateCount false
+  let afterHead₀ : ℕ → BinaryValues WorkCount := fun n =>
+    head.effect (values n)
+  let positionSucc := BinaryRoutine.addConst Work.position 1
+  let afterPositionSucc : ℕ → BinaryValues WorkCount := fun n =>
+    positionSucc.effect (afterHead₀ n)
+  let afterHead₁ : ℕ → BinaryValues WorkCount := fun n =>
+    head.effect (afterPositionSucc n)
+  let positionPred := BinaryRoutine.binaryPred Work.position
+  let afterPositionPred : ℕ → BinaryValues WorkCount := fun n =>
+    positionPred.effect (afterHead₁ n)
+  let setLoop := BinaryRoutine.set Work.loop₀ 2
+  let afterLoop : ℕ → BinaryValues WorkCount := fun n =>
+    setLoop.effect (afterPositionPred n)
+  let afterLimit : ℕ → BinaryValues WorkCount := fun n =>
+    setPredecessorHorizonLimit.effect (afterLoop n)
+  have hhead₀ : BinaryRoutine.SpaceBoundByWidthAt head initialSpace values
+      width := by
+    apply emitHeadReference_spaceBoundByWidthAt_of_envelope stateCount hvalues
+    · exact fun n => (htarget n).trans (Nat.le_add_right _ 1)
+    · exact hhead
+  have hafterHead₀Values : ∀ n i, afterHead₀ n i ≤ width n := by
+    intro n
+    apply emitHeadReference_effect_values_le stateCount (hvalues n)
+    have ha := havailable n
+    omega
+  have hpositionSucc : BinaryRoutine.SpaceBoundByWidthAt positionSucc
+      initialSpace afterHead₀ width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro n
+    change values n Work.position + 1 ≤ width n
+    have ha := havailable n
+    have ht := htarget n
+    omega
+  have hafterPositionSuccValues : ∀ n i,
+      afterPositionSucc n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position
+      (hafterHead₀Values n)
+    change afterHead₀ n Work.position + 1 ≤ width n
+    rw [show afterHead₀ n Work.position = values n Work.position by
+      simp [afterHead₀, head, emitHeadReference_effect, Work.available,
+        Work.position, Work.temporary₀, Work.reference₀]]
+    have ha := havailable n
+    have ht := htarget n
+    omega
+  have hhead₁ : BinaryRoutine.SpaceBoundByWidthAt head initialSpace
+      afterPositionSucc width := by
+    apply emitHeadReference_spaceBoundByWidthAt_of_envelope stateCount
+      hafterPositionSuccValues
+    · intro n
+      simp [afterPositionSucc, positionSucc, afterHead₀, head,
+        BinaryRoutine.addConst, emitHeadReference_effect, Work.horizon,
+        Work.available, Work.position, Work.temporary₀, Work.reference₀]
+      have ht := htarget n
+      simp only [Work.position, Work.horizon] at ht
+      omega
+    · intro n
+      simpa [afterPositionSucc, positionSucc, afterHead₀, head,
+        BinaryRoutine.addConst, emitHeadReference_effect, Work.horizon,
+        Work.configBase, Work.available, Work.tapeIndex, Work.position,
+        Work.temporary₀, Work.reference₀] using hhead n
+  have hafterHead₁Values : ∀ n i,
+      afterHead₁ n i ≤ width n := by
+    intro n
+    apply emitHeadReference_effect_values_le stateCount
+      (hafterPositionSuccValues n)
+    change values n Work.available + 1 + 1 ≤ width n
+    have ha := havailable n
+    have hh := hhorizon n
+    omega
+  have hpositionPred : BinaryRoutine.SpaceBoundByWidthAt positionPred
+      initialSpace afterHead₁ width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro n
+    change (values n Work.position + 1) - 1 + 1 ≤ width n
+    have ha := havailable n
+    have ht := htarget n
+    omega
+  have hafterPositionPredValues : ∀ n i,
+      afterPositionPred n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position
+      (hafterHead₁Values n)
+    exact (Nat.sub_le _ _).trans (hafterHead₁Values n Work.position)
+  have hsetLoop : BinaryRoutine.SpaceBoundByWidthAt setLoop initialSpace
+      afterPositionPred width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set Work.loop₀ 2
+    · exact fun n => hafterPositionPredValues n Work.loop₀
+    · intro n
+      have ha := havailable n
+      have hh := hhorizon n
+      omega
+  have hafterLoopValues : ∀ n i, afterLoop n i ≤ width n := by
+    intro n
+    dsimp [afterLoop, setLoop]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · exact BinaryRoutine.values_update_le Work.loop₀
+        (hafterPositionPredValues n) (by omega)
+    · simp [BinaryRoutine.clear]
+      have ha := havailable n
+      have hh := hhorizon n
+      omega
+  have hlimit : BinaryRoutine.SpaceBoundByWidthAt
+      setPredecessorHorizonLimit initialSpace afterLoop width := by
+    apply setPredecessorHorizonLimit_spaceBoundByWidthAt hafterLoopValues
+    intro n
+    change values n Work.horizon + 1 ≤ width n
+    have ha := havailable n
+    omega
+  have hfalse : BinaryRoutine.SpaceBoundByWidthAt
+      emitPredecessorFalseRange initialSpace afterLimit width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      change values n Work.available + 2 +
+          ((values n Work.horizon + 1) - 2) ≤ width n
+      have ha := havailable n
+      have hh := hhorizon n
+      omega
+    · intro n
+      change values n Work.horizon + 1 ≤ width n
+      have ha := havailable n
+      omega
+    · intro n
+      change 2 ≤ values n Work.horizon + 1
+      have hh := hhorizon n
+      omega
+    · intro n
+      change 0 ≤ width n
+      omega
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  exact ⟨hhead₀, hpositionSucc, hhead₁, hpositionPred, hsetLoop,
+    hlimit, hfalse, trivial⟩
+
+private theorem emitRightPositivePredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          (values inputLength Work.horizon + 1) ≤ width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitRightPositivePredecessorMembers stateCount) initialSpace values
+      width := by
+  let copyLimit := BinaryRoutine.binaryCopy Work.position Work.limit₀
+    Work.copyCounter
+  let v₁ : ℕ → BinaryValues WorkCount := fun n =>
+    copyLimit.effect (values n)
+  let predLimit := BinaryRoutine.binaryPred Work.limit₀
+  let v₂ : ℕ → BinaryValues WorkCount := fun n => predLimit.effect (v₁ n)
+  let v₃ : ℕ → BinaryValues WorkCount := fun n =>
+    emitPredecessorFalseRange.effect (v₂ n)
+  let predPosition := BinaryRoutine.binaryPred Work.position
+  let v₄ : ℕ → BinaryValues WorkCount := fun n => predPosition.effect (v₃ n)
+  let head := emitHeadReference stateCount false
+  let v₅ : ℕ → BinaryValues WorkCount := fun n => head.effect (v₄ n)
+  let succPosition := BinaryRoutine.addConst Work.position 1
+  let v₆ : ℕ → BinaryValues WorkCount := fun n => succPosition.effect (v₅ n)
+  let copyLoop := BinaryRoutine.binaryCopy Work.position Work.loop₀
+    Work.copyCounter
+  let v₇ : ℕ → BinaryValues WorkCount := fun n => copyLoop.effect (v₆ n)
+  let v₈ : ℕ → BinaryValues WorkCount := fun n =>
+    setPredecessorHorizonLimit.effect (v₇ n)
+  have hv₂Available : ∀ n,
+      v₂ n Work.available = values n Work.available := by
+    intro n
+    simp [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+      BinaryRoutine.binaryPred, Work.available, Work.position, Work.limit₀]
+  have hv₂Limit : ∀ n,
+      v₂ n Work.limit₀ = values n Work.position - 1 := by
+    intro n
+    simp [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+      BinaryRoutine.binaryPred]
+  have hv₂Loop : ∀ n, v₂ n Work.loop₀ = 0 := by
+    intro n
+    have hl := (hclean n).loop₀
+    simp only [Work.loop₀] at hl
+    simp [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+      BinaryRoutine.binaryPred, Work.position, Work.loop₀, Work.limit₀,
+      hl]
+  have hv₃Available : ∀ n,
+      v₃ n Work.available = values n Work.available +
+        (values n Work.position - 1) := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    change v₂ n Work.available +
+      (v₂ n Work.limit₀ - v₂ n Work.loop₀) = _
+    rw [hv₂Available, hv₂Limit, hv₂Loop]
+    simp
+  have hv₃Position : ∀ n,
+      v₃ n Work.position = values n Work.position := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    simp [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+      BinaryRoutine.binaryPred, Work.available, Work.position, Work.loop₀,
+      Work.limit₀]
+  have hv₃Horizon : ∀ n,
+      v₃ n Work.horizon = values n Work.horizon := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    simp [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+      BinaryRoutine.binaryPred, Work.horizon, Work.available, Work.position,
+      Work.loop₀, Work.limit₀]
+  have hv₄Position : ∀ n,
+      v₄ n Work.position = values n Work.position - 1 := by
+    intro n
+    simp [v₄, predPosition, BinaryRoutine.binaryPred, hv₃Position]
+  have hv₄Available : ∀ n,
+      v₄ n Work.available = values n Work.available +
+        (values n Work.position - 1) := by
+    intro n
+    simpa [v₄, predPosition, BinaryRoutine.binaryPred, Work.available,
+      Work.position] using hv₃Available n
+  have hv₄Horizon : ∀ n,
+      v₄ n Work.horizon = values n Work.horizon := by
+    intro n
+    simpa [v₄, predPosition, BinaryRoutine.binaryPred, Work.horizon,
+      Work.position] using hv₃Horizon n
+  have hv₅Position : ∀ n,
+      v₅ n Work.position = values n Work.position - 1 := by
+    intro n
+    simpa [v₅, head, emitHeadReference_effect, Work.available,
+      Work.position, Work.temporary₀, Work.reference₀] using hv₄Position n
+  have hv₅Available : ∀ n,
+      v₅ n Work.available = values n Work.available +
+        (values n Work.position - 1) + 1 := by
+    intro n
+    rw [show v₅ n = Function.update
+        (Function.update
+          (Function.update (v₄ n) Work.temporary₀ 0) Work.available
+            (v₄ n Work.available + 1)) Work.reference₀ 0 by
+      exact emitHeadReference_effect stateCount false (v₄ n)]
+    change v₄ n Work.available + 1 = _
+    rw [hv₄Available]
+  have hv₆Position : ∀ n,
+      v₆ n Work.position = (values n Work.position - 1) + 1 := by
+    intro n
+    simp [v₆, succPosition, BinaryRoutine.addConst, hv₅Position]
+  have hv₆Available : ∀ n,
+      v₆ n Work.available = values n Work.available +
+        (values n Work.position - 1) + 1 := by
+    intro n
+    simpa [v₆, succPosition, BinaryRoutine.addConst, Work.available,
+      Work.position] using hv₅Available n
+  have hv₆Horizon : ∀ n,
+      v₆ n Work.horizon = values n Work.horizon := by
+    intro n
+    change v₅ n Work.horizon = values n Work.horizon
+    rw [show v₅ n = Function.update
+        (Function.update
+          (Function.update (v₄ n) Work.temporary₀ 0) Work.available
+            (v₄ n Work.available + 1)) Work.reference₀ 0 by
+      exact emitHeadReference_effect stateCount false (v₄ n)]
+    simpa [Work.horizon, Work.available, Work.temporary₀,
+      Work.reference₀] using hv₄Horizon n
+  have hv₈Available : ∀ n,
+      v₈ n Work.available = values n Work.available +
+        (values n Work.position - 1) + 1 := by
+    intro n
+    rw [show v₈ n = Function.update (v₇ n) Work.limit₀
+        (v₇ n Work.horizon + 1) by
+      exact setPredecessorHorizonLimit_effect_internal (v₇ n)]
+    change v₇ n Work.available = _
+    change v₆ n Work.available = _
+    exact hv₆Available n
+  have hv₈Limit : ∀ n,
+      v₈ n Work.limit₀ = values n Work.horizon + 1 := by
+    intro n
+    rw [show v₈ n = Function.update (v₇ n) Work.limit₀
+        (v₇ n Work.horizon + 1) by
+      exact setPredecessorHorizonLimit_effect_internal (v₇ n)]
+    change v₇ n Work.horizon + 1 = _
+    change v₆ n Work.horizon + 1 = _
+    rw [hv₆Horizon]
+  have hv₈Loop : ∀ n,
+      v₈ n Work.loop₀ = (values n Work.position - 1) + 1 := by
+    intro n
+    rw [show v₈ n = Function.update (v₇ n) Work.limit₀
+        (v₇ n Work.horizon + 1) by
+      exact setPredecessorHorizonLimit_effect_internal (v₇ n)]
+    change v₇ n Work.loop₀ = _
+    change v₆ n Work.position = _
+    exact hv₆Position n
+  have hs₁ : BinaryRoutine.SpaceBoundByWidthAt copyLimit initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.limit₀
+      Work.copyCounter (fun n => hvalues n Work.position)
+      (fun n => hvalues n Work.limit₀)
+  have hv₁ : ∀ n i, v₁ n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.limit₀ (hvalues n)
+      (hvalues n Work.position)
+  have hs₂ : BinaryRoutine.SpaceBoundByWidthAt predLimit initialSpace v₁
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro n
+    change values n Work.position - 1 + 1 ≤ width n
+    have hp := hvalues n Work.position
+    have ha := havailable n
+    have hh := hhorizon n
+    omega
+  have hv₂ : ∀ n i, v₂ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.limit₀ (hv₁ n)
+    exact (Nat.sub_le _ _).trans (hv₁ n Work.limit₀)
+  have hs₃ : BinaryRoutine.SpaceBoundByWidthAt emitPredecessorFalseRange
+      initialSpace v₂ width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      rw [hv₂Available, hv₂Limit, hv₂Loop]
+      have ha := havailable n
+      have ht := htarget n
+      omega
+    · intro n
+      rw [hv₂Limit]
+      exact (Nat.sub_le _ _).trans (hvalues n Work.position)
+    · intro n
+      rw [hv₂Loop, hv₂Limit]
+      omega
+    · intro n
+      simpa [v₂, predLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+        BinaryRoutine.binaryPred, Work.available, Work.position, Work.loop₀,
+        Work.limit₀, Work.reference₀] using hvalues n Work.reference₀
+  have hv₃ : ∀ n i, v₃ n i ≤ width n := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · apply BinaryRoutine.values_update_le Work.available (hv₂ n)
+      rw [hv₂Available, hv₂Limit, hv₂Loop]
+      have ha := havailable n
+      have ht := htarget n
+      omega
+    · omega
+  have hs₄ : BinaryRoutine.SpaceBoundByWidthAt predPosition initialSpace v₃
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro n
+    rw [hv₃Position]
+    have hp := hvalues n Work.position
+    have ha := havailable n
+    have hh := hhorizon n
+    omega
+  have hv₄ : ∀ n i, v₄ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position (hv₃ n)
+    exact (Nat.sub_le _ _).trans (hv₃ n Work.position)
+  have hs₅ : BinaryRoutine.SpaceBoundByWidthAt head initialSpace v₄
+      width := by
+    apply emitHeadReference_spaceBoundByWidthAt_of_envelope stateCount hv₄
+    · intro n
+      rw [hv₄Position, hv₄Horizon]
+      exact (Nat.sub_le _ _).trans
+        ((htarget n).trans (Nat.le_add_right _ 1))
+    · intro n
+      simpa [v₄, predPosition, v₃, v₂, predLimit, v₁, copyLimit,
+        BinaryRoutine.binaryPred, emitPredecessorFalseRange_effect_internal,
+        BinaryRoutine.binaryCopy, Work.horizon, Work.configBase,
+        Work.available, Work.tapeIndex, Work.position, Work.loop₀,
+        Work.limit₀] using hhead n
+  have hv₅ : ∀ n i, v₅ n i ≤ width n := by
+    intro n
+    apply emitHeadReference_effect_values_le stateCount (hv₄ n)
+    rw [hv₄Available]
+    have ha := havailable n
+    have ht := htarget n
+    omega
+  have hs₆ : BinaryRoutine.SpaceBoundByWidthAt succPosition initialSpace v₅
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro n
+    rw [hv₅Position]
+    have hp := hvalues n Work.position
+    have ha := havailable n
+    have hh := hhorizon n
+    omega
+  have hv₆ : ∀ n i, v₆ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position (hv₅ n)
+    rw [hv₅Position]
+    have hp := hvalues n Work.position
+    have ha := havailable n
+    have hh := hhorizon n
+    omega
+  have hs₇ : BinaryRoutine.SpaceBoundByWidthAt copyLoop initialSpace v₆
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.loop₀
+      Work.copyCounter (fun n => hv₆ n Work.position)
+      (fun n => hv₆ n Work.loop₀)
+  have hv₇ : ∀ n i, v₇ n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.loop₀ (hv₆ n)
+      (hv₆ n Work.position)
+  have hs₈ : BinaryRoutine.SpaceBoundByWidthAt setPredecessorHorizonLimit
+      initialSpace v₇ width := by
+    apply setPredecessorHorizonLimit_spaceBoundByWidthAt hv₇
+    intro n
+    change v₆ n Work.horizon + 1 ≤ width n
+    rw [hv₆Horizon]
+    have ha := havailable n
+    omega
+  have hs₉ : BinaryRoutine.SpaceBoundByWidthAt emitPredecessorFalseRange
+      initialSpace v₈ width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      rw [hv₈Available, hv₈Limit, hv₈Loop]
+      have ha := havailable n
+      have ht := htarget n
+      omega
+    · intro n
+      rw [hv₈Limit]
+      have ha := havailable n
+      omega
+    · intro n
+      rw [hv₈Loop, hv₈Limit]
+      have ht := htarget n
+      omega
+    · intro n
+      change 0 ≤ width n
+      exact Nat.zero_le _
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  exact ⟨hs₁, hs₂, hs₃, hs₄, hs₅, hs₆, hs₇, hs₈, hs₉,
+    trivial⟩
+
+private theorem emitLeftPositivePredecessorTail_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hloop : ∀ inputLength, values inputLength Work.loop₀ = 0)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position + 1 ≤
+        values inputLength Work.horizon + 1)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          values inputLength Work.temporary₃ + 1 ≤ width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitLeftPositivePredecessorTail stateCount) initialSpace values width := by
+  let succPosition := BinaryRoutine.addConst Work.position 1
+  let v₁ : ℕ → BinaryValues WorkCount := fun n => succPosition.effect (values n)
+  let head := emitHeadReference stateCount false
+  let v₂ : ℕ → BinaryValues WorkCount := fun n => head.effect (v₁ n)
+  let predPosition := BinaryRoutine.binaryPred Work.position
+  let v₃ : ℕ → BinaryValues WorkCount := fun n => predPosition.effect (v₂ n)
+  let predGap := BinaryRoutine.binaryPred Work.temporary₃
+  let v₄ : ℕ → BinaryValues WorkCount := fun n => predGap.effect (v₃ n)
+  let falseLoop := BinaryRoutine.binaryFor (emitConstantGate false) Work.loop₀
+    Work.temporary₃
+  let v₅ : ℕ → BinaryValues WorkCount := fun n => falseLoop.effect (v₄ n)
+  let clearLoop := BinaryRoutine.clear Work.loop₀
+  let v₆ : ℕ → BinaryValues WorkCount := fun n => clearLoop.effect (v₅ n)
+  have hzero : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.temporary₃) initialSpace values width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.temporary₃
+      (fun n => hvalues n Work.temporary₃)
+  have hv₁Values : ∀ n i, v₁ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position (hvalues n)
+    have hp := hposition n
+    exact hp.trans (hhorizon n)
+  have hs₁ : BinaryRoutine.SpaceBoundByWidthAt succPosition initialSpace
+      values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro n
+    have hp := hposition n
+    exact hp.trans (hhorizon n)
+  have hs₂ : BinaryRoutine.SpaceBoundByWidthAt head initialSpace v₁ width := by
+    apply emitHeadReference_spaceBoundByWidthAt_of_envelope stateCount hv₁Values
+    · intro n
+      change values n Work.position + 1 ≤ values n Work.horizon + 1
+      exact hposition n
+    · intro n
+      simpa [v₁, succPosition, BinaryRoutine.addConst, Work.horizon,
+        Work.configBase, Work.tapeIndex, Work.position] using hhead n
+  have hv₂Values : ∀ n i, v₂ n i ≤ width n := by
+    intro n
+    apply emitHeadReference_effect_values_le stateCount (hv₁Values n)
+    change values n Work.available + 1 ≤ width n
+    have ha := havailable n
+    omega
+  have hs₃ : BinaryRoutine.SpaceBoundByWidthAt predPosition initialSpace v₂
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro n
+    change (values n Work.position + 1) - 1 + 1 ≤ width n
+    have hp := hposition n
+    have hh := hhorizon n
+    omega
+  have hv₃Values : ∀ n i, v₃ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.position (hv₂Values n)
+    exact (Nat.sub_le _ _).trans (hv₂Values n Work.position)
+  have hs₄ : BinaryRoutine.SpaceBoundByWidthAt predGap initialSpace v₃
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryPred
+    intro n
+    change values n Work.temporary₃ - 1 + 1 ≤ width n
+    have ht := hvalues n Work.temporary₃
+    have ha := havailable n
+    omega
+  have hv₄Values : ∀ n i, v₄ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.temporary₃ (hv₃Values n)
+    exact (Nat.sub_le _ _).trans (hv₃Values n Work.temporary₃)
+  have hs₅ : BinaryRoutine.SpaceBoundByWidthAt falseLoop initialSpace v₄
+      width := by
+    apply binaryFor_emitConstantFalse_spaceBoundByWidthAt Work.temporary₃
+    · intro n
+      change values n Work.available + 1 +
+          ((values n Work.temporary₃ - 1) - values n Work.loop₀) ≤
+        width n
+      rw [hloop n]
+      have ha := havailable n
+      omega
+    · intro n
+      change values n Work.temporary₃ - 1 ≤ width n
+      exact (Nat.sub_le _ _).trans (hvalues n Work.temporary₃)
+    · intro n
+      change 0 ≤ width n
+      exact Nat.zero_le _
+  have hv₅Loop : ∀ n, v₅ n Work.loop₀ ≤ width n := by
+    intro n
+    change (BinaryRoutine.binaryForValues (emitConstantGate false) Work.loop₀
+      (v₄ n) (v₄ n Work.temporary₃ - v₄ n Work.loop₀))
+        Work.loop₀ ≤ width n
+    rw [emitConstantFalse_binaryForValues]
+    have htemp := hv₄Values n Work.temporary₃
+    have hloopCurrent : v₄ n Work.loop₀ = 0 := by
+      simpa [v₄, predGap, v₃, predPosition, v₂, head, v₁,
+        succPosition, BinaryRoutine.binaryPred, emitHeadReference_effect,
+        BinaryRoutine.addConst, Work.available, Work.position, Work.loop₀,
+        Work.temporary₀, Work.temporary₃, Work.reference₀] using hloop n
+    change v₄ n Work.loop₀ +
+      (v₄ n Work.temporary₃ - v₄ n Work.loop₀) ≤ width n
+    rw [hloopCurrent]
+    simp
+    exact htemp
+  have hs₆ : BinaryRoutine.SpaceBoundByWidthAt clearLoop initialSpace v₅
+      width := BinaryRoutine.SpaceBoundByWidthAt.clear Work.loop₀ hv₅Loop
+  have hs₇ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.temporary₃) initialSpace v₆ width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.clear Work.temporary₃
+    intro n
+    change v₅ n Work.temporary₃ ≤ width n
+    change (BinaryRoutine.binaryForValues (emitConstantGate false) Work.loop₀
+      (v₄ n) (v₄ n Work.temporary₃ - v₄ n Work.loop₀))
+        Work.temporary₃ ≤ width n
+    rw [emitConstantFalse_binaryForValues]
+    simpa [Work.available, Work.loop₀, Work.temporary₃] using
+      hv₄Values n Work.temporary₃
+  have hpositive : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.seqList
+        [succPosition, head, predPosition, predGap, falseLoop, clearLoop,
+          BinaryRoutine.clear Work.temporary₃]) initialSpace values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+    exact ⟨hs₁, hs₂, hs₃, hs₄, hs₅, hs₆, hs₇, trivial⟩
+  simpa [emitLeftPositivePredecessorTail, succPosition, head, predPosition,
+    predGap, falseLoop, clearLoop] using
+    (BinaryRoutine.SpaceBoundByWidthAt.branchZero Work.temporary₃ hzero
+      hpositive)
+
+private theorem emitLeftPositivePredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitLeftPositivePredecessorMembers stateCount) initialSpace values
+      width := by
+  let copyLimit := BinaryRoutine.binaryCopy Work.position Work.limit₀
+    Work.copyCounter
+  let v₁ : ℕ → BinaryValues WorkCount := fun n => copyLimit.effect (values n)
+  let succLimit := BinaryRoutine.addConst Work.limit₀ 1
+  let v₂ : ℕ → BinaryValues WorkCount := fun n => succLimit.effect (v₁ n)
+  let v₃ : ℕ → BinaryValues WorkCount := fun n =>
+    emitPredecessorFalseRange.effect (v₂ n)
+  let v₄ : ℕ → BinaryValues WorkCount := fun n =>
+    preparePredecessorHorizonGap.effect (v₃ n)
+  let tail := emitLeftPositivePredecessorTail stateCount
+  let v₅ : ℕ → BinaryValues WorkCount := fun n => tail.effect (v₄ n)
+  have hv₁Limit : ∀ n, v₁ n Work.limit₀ = values n Work.position := by
+    intro n
+    simp [v₁, copyLimit, BinaryRoutine.binaryCopy]
+  have hv₂Available : ∀ n,
+      v₂ n Work.available = values n Work.available := by
+    intro n
+    simp [v₂, succLimit, v₁, copyLimit, BinaryRoutine.addConst,
+      BinaryRoutine.binaryCopy, Work.available, Work.position, Work.limit₀]
+  have hv₂Limit : ∀ n,
+      v₂ n Work.limit₀ = values n Work.position + 1 := by
+    intro n
+    simp [v₂, succLimit, hv₁Limit, BinaryRoutine.addConst]
+  have hv₂Loop : ∀ n, v₂ n Work.loop₀ = 0 := by
+    intro n
+    have hl := (hclean n).loop₀
+    simp only [Work.loop₀] at hl
+    simp [v₂, succLimit, v₁, copyLimit, BinaryRoutine.addConst,
+      BinaryRoutine.binaryCopy, Work.position, Work.loop₀, Work.limit₀, hl]
+  have hv₃Available : ∀ n,
+      v₃ n Work.available = values n Work.available +
+        (values n Work.position + 1) := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    change v₂ n Work.available +
+      (v₂ n Work.limit₀ - v₂ n Work.loop₀) = _
+    rw [hv₂Available, hv₂Limit, hv₂Loop]
+    simp
+  have hv₃Loop : ∀ n, v₃ n Work.loop₀ = 0 := by
+    intro n
+    simp [v₃, emitPredecessorFalseRange_effect_internal]
+  have hv₃Position : ∀ n,
+      v₃ n Work.position = values n Work.position := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    simp [v₂, succLimit, v₁, copyLimit, BinaryRoutine.addConst,
+      BinaryRoutine.binaryCopy, Work.available, Work.position, Work.loop₀,
+      Work.limit₀]
+  have hv₃Horizon : ∀ n,
+      v₃ n Work.horizon = values n Work.horizon := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    simp [v₂, succLimit, v₁, copyLimit, BinaryRoutine.addConst,
+      BinaryRoutine.binaryCopy, Work.horizon, Work.available, Work.position,
+      Work.loop₀, Work.limit₀]
+  have hv₄Loop : ∀ n, v₄ n Work.loop₀ = 0 := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (hv₃Loop n)]
+    simp
+  have hv₄Available : ∀ n,
+      v₄ n Work.available = values n Work.available +
+        (values n Work.position + 1) := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (hv₃Loop n)]
+    simpa [Work.available, Work.loop₀, Work.temporary₃] using
+      hv₃Available n
+  have hv₄Position : ∀ n,
+      v₄ n Work.position = values n Work.position := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (hv₃Loop n)]
+    simpa [Work.position, Work.loop₀, Work.temporary₃] using hv₃Position n
+  have hv₄Horizon : ∀ n,
+      v₄ n Work.horizon = values n Work.horizon := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (hv₃Loop n)]
+    simpa [Work.horizon, Work.loop₀, Work.temporary₃] using hv₃Horizon n
+  have hv₄Temporary : ∀ n,
+      v₄ n Work.temporary₃ = values n Work.horizon - values n Work.position := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (hv₃Loop n)]
+    simp [hv₃Horizon, hv₃Position, Work.loop₀, Work.temporary₃]
+  have hs₁ : BinaryRoutine.SpaceBoundByWidthAt copyLimit initialSpace values
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.limit₀
+      Work.copyCounter (fun n => hvalues n Work.position)
+      (fun n => hvalues n Work.limit₀)
+  have hv₁Values : ∀ n i, v₁ n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.limit₀ (hvalues n)
+      (hvalues n Work.position)
+  have hs₂ : BinaryRoutine.SpaceBoundByWidthAt succLimit initialSpace v₁
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst
+    intro n
+    change values n Work.position + 1 ≤ width n
+    have ha := havailable n
+    have ht := htarget n
+    simp only [movedHeadPredecessorSize] at ha
+    omega
+  have hv₂Values : ∀ n i, v₂ n i ≤ width n := by
+    intro n
+    apply BinaryRoutine.values_update_le Work.limit₀ (hv₁Values n)
+    rw [hv₁Limit]
+    have ha := havailable n
+    have ht := htarget n
+    simp only [movedHeadPredecessorSize] at ha
+    omega
+  have hs₃ : BinaryRoutine.SpaceBoundByWidthAt emitPredecessorFalseRange
+      initialSpace v₂ width := by
+    apply emitPredecessorFalseRange_spaceBoundByWidthAt
+    · intro n
+      rw [hv₂Available, hv₂Limit, hv₂Loop]
+      have ha := havailable n
+      have ht := htarget n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · intro n
+      rw [hv₂Limit]
+      have ha := havailable n
+      have ht := htarget n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · intro n
+      rw [hv₂Loop, hv₂Limit]
+      omega
+    · intro n
+      simpa [v₂, succLimit, v₁, copyLimit, BinaryRoutine.binaryCopy,
+        BinaryRoutine.addConst, Work.available, Work.position, Work.loop₀,
+        Work.limit₀, Work.reference₀] using hvalues n Work.reference₀
+  have hv₃Values : ∀ n i, v₃ n i ≤ width n := by
+    intro n
+    rw [show v₃ n = Function.update
+        (Function.update (v₂ n) Work.available
+          (v₂ n Work.available +
+            (v₂ n Work.limit₀ - v₂ n Work.loop₀)))
+        Work.loop₀ 0 by
+      exact emitPredecessorFalseRange_effect_internal (v₂ n)]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · apply BinaryRoutine.values_update_le Work.available (hv₂Values n)
+      rw [hv₂Available, hv₂Limit, hv₂Loop]
+      have ha := havailable n
+      have ht := htarget n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · omega
+  have hs₄ : BinaryRoutine.SpaceBoundByWidthAt preparePredecessorHorizonGap
+      initialSpace v₃ width := by
+    apply preparePredecessorHorizonGap_spaceBoundByWidthAt hv₃Values
+    · intro n
+      rw [hv₃Loop, hv₃Position]
+      exact Nat.zero_le _
+    · intro n
+      rw [hv₃Loop, hv₃Position, hv₃Horizon]
+      simpa using htarget n
+  have hv₄Values : ∀ n i, v₄ n i ≤ width n := by
+    intro n
+    rw [show v₄ n = Function.update
+        (Function.update (v₃ n) Work.temporary₃
+          (v₃ n Work.horizon - v₃ n Work.position)) Work.loop₀ 0 by
+      exact preparePredecessorHorizonGap_effect_internal (v₃ n) (by
+        exact hv₃Loop n)]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · apply BinaryRoutine.values_update_le Work.temporary₃ (hv₃Values n)
+      exact (Nat.sub_le _ _).trans (hv₃Values n Work.horizon)
+    · omega
+  have hs₅ : BinaryRoutine.SpaceBoundByWidthAt tail initialSpace v₄ width := by
+    apply emitLeftPositivePredecessorTail_spaceBoundByWidthAt stateCount
+      hv₄Values
+    · exact hv₄Loop
+    · intro n
+      rw [hv₄Position, hv₄Horizon]
+      exact Nat.add_le_add_right (htarget n) 1
+    · intro n
+      rw [hv₄Horizon]
+      have ha := havailable n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · intro n
+      rw [hv₄Available, hv₄Temporary]
+      have ha := havailable n
+      have ht := htarget n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · intro n
+      simpa [v₄, v₃, v₂, succLimit, v₁, copyLimit,
+        preparePredecessorHorizonGap_effect_internal,
+        emitPredecessorFalseRange_effect_internal, BinaryRoutine.binaryCopy,
+        BinaryRoutine.addConst, Work.horizon, Work.configBase, Work.available,
+        Work.tapeIndex, Work.position, Work.loop₀, Work.limit₀,
+        Work.temporary₃] using hhead n
+  have hv₄Temporary₀ : ∀ n, v₄ n Work.temporary₀ = 0 := by
+    intro n
+    simpa [v₄, v₃, v₂, succLimit, v₁, copyLimit,
+      preparePredecessorHorizonGap_effect_internal,
+      emitPredecessorFalseRange_effect_internal, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.available, Work.position, Work.loop₀,
+      Work.limit₀, Work.temporary₀, Work.temporary₃] using
+        (hclean n).temporary₀
+  have hv₄Reference₀ : ∀ n, v₄ n Work.reference₀ = 0 := by
+    intro n
+    simpa [v₄, v₃, v₂, succLimit, v₁, copyLimit,
+      preparePredecessorHorizonGap_effect_internal,
+      emitPredecessorFalseRange_effect_internal, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.available, Work.position, Work.loop₀,
+      Work.limit₀, Work.reference₀, Work.temporary₃] using
+        (hclean n).reference₀
+  have hv₅Effect : ∀ n, v₅ n = Function.update
+      (Function.update (v₄ n) Work.available
+        (v₄ n Work.available + v₄ n Work.temporary₃))
+      Work.temporary₃ 0 := by
+    intro n
+    exact emitLeftPositivePredecessorTail_effect_internal stateCount (v₄ n)
+      (hv₄Loop n) (hv₄Temporary₀ n) (hv₄Reference₀ n)
+  have hv₅Values : ∀ n i, v₅ n i ≤ width n := by
+    intro n
+    rw [hv₅Effect]
+    apply BinaryRoutine.values_update_le Work.temporary₃
+    · apply BinaryRoutine.values_update_le Work.available (hv₄Values n)
+      rw [hv₄Available, hv₄Temporary]
+      have ha := havailable n
+      have ht := htarget n
+      simp only [movedHeadPredecessorSize] at ha
+      omega
+    · omega
+  have hv₅Horizon : ∀ n, v₅ n Work.horizon = values n Work.horizon := by
+    intro n
+    rw [hv₅Effect]
+    simpa [Work.horizon, Work.available, Work.temporary₃] using hv₄Horizon n
+  have hs₆ : BinaryRoutine.SpaceBoundByWidthAt setPredecessorHorizonLimit
+      initialSpace v₅ width := by
+    apply setPredecessorHorizonLimit_spaceBoundByWidthAt hv₅Values
+    intro n
+    rw [hv₅Horizon]
+    have ha := havailable n
+    simp only [movedHeadPredecessorSize] at ha
+    omega
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  exact ⟨hs₁, hs₂, hs₃, hs₄, hs₅, hs₆, trivial⟩
+
+private theorem binaryFor_emitPredecessorHeadConnector_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (htotal : ∀ inputLength,
+      0 < BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+        (values inputLength))
+    (hloop₁ : ∀ inputLength, values inputLength Work.loop₁ = 0)
+    (hreference₀ : ∀ inputLength, values inputLength Work.reference₀ = 0)
+    (hreference₁ : ∀ inputLength, values inputLength Work.reference₁ = 0)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (values inputLength) ≤ width inputLength)
+    (htemporary : ∀ inputLength,
+      values inputLength Work.temporary₃ +
+          2 * BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (values inputLength) ≤ width inputLength)
+    (hoffset : ∀ inputLength count,
+      count < BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+          (values inputLength) →
+        values inputLength Work.temporary₃ + 2 * count ≤
+          values inputLength Work.available + count)
+    (hpositive : ∀ inputLength,
+      1 ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.binaryFor emitPredecessorHeadConnector Work.loop₀
+        Work.limit₀) initialSpace values width := by
+  let familyValues : ℕ → BinaryValues WorkCount :=
+    BinaryRoutine.binaryForClampedValues emitPredecessorHeadConnector
+      Work.loop₀ Work.limit₀ values
+  have hclampedLt : ∀ code,
+      min (Nat.unpair code).2
+          (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+            (values (Nat.unpair code).1) - 1) <
+        BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+          (values (Nat.unpair code).1) := by
+    intro code
+    have ht := htotal (Nat.unpair code).1
+    omega
+  have hfamilyAvailable : ∀ code,
+      familyValues code Work.available ≤ width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    have ha := havailable (Nat.unpair code).1
+    have hc := hclampedLt code
+    simp [Work.available, Work.temporary₃, Work.loop₀, Work.limit₀] at ha hc ⊢
+    omega
+  have hfamilyReference₀ : ∀ code,
+      familyValues code Work.reference₀ ≤ width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    simpa [Work.available, Work.reference₀, Work.temporary₃, Work.loop₀]
+      using hvalues (Nat.unpair code).1 Work.reference₀
+  have hfamilyReference₁ : ∀ code,
+      familyValues code Work.reference₁ ≤ width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    simpa [Work.available, Work.reference₁, Work.temporary₃, Work.loop₀]
+      using hvalues (Nat.unpair code).1 Work.reference₁
+  have hfamilyLoop₁ : ∀ code, familyValues code Work.loop₁ = 0 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    simpa [Work.available, Work.temporary₃, Work.loop₀, Work.loop₁]
+      using hloop₁ (Nat.unpair code).1
+  have hfamilyOffset : ∀ code,
+      familyValues code Work.temporary₃ ≤
+        familyValues code Work.available := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    simpa [Work.available, Work.temporary₃, Work.loop₀] using
+      hoffset (Nat.unpair code).1 _ (hclampedLt code)
+  have hfamilyPositive : ∀ code,
+      1 ≤ familyValues code Work.available := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    simp [Work.available, Work.temporary₃, Work.loop₀]
+    exact (hpositive (Nat.unpair code).1).trans
+      (Nat.le_add_right _ _)
+  have hfamilyTemporary : ∀ code,
+      familyValues code Work.temporary₃ + 2 ≤
+        width (Nat.unpair code).1 := by
+    intro code
+    rw [show familyValues code =
+        BinaryRoutine.binaryForValues emitPredecessorHeadConnector Work.loop₀
+          (values (Nat.unpair code).1)
+          (min (Nat.unpair code).2
+            (BinaryRoutine.binaryForCount Work.loop₀ Work.limit₀
+              (values (Nat.unpair code).1) - 1)) by rfl,
+      emitPredecessorHeadConnector_binaryForValues _
+        (hloop₁ (Nat.unpair code).1) (hreference₀ (Nat.unpair code).1)
+        (hreference₁ (Nat.unpair code).1)]
+    have ht := htemporary (Nat.unpair code).1
+    have hc := hclampedLt code
+    simp [Work.available, Work.temporary₃, Work.loop₀, Work.limit₀] at ht hc ⊢
+    omega
+  have hbody : BinaryRoutine.SpaceBoundByWidthAt emitPredecessorHeadConnector
+      (fun code => initialSpace (Nat.unpair code).1) familyValues
+      (fun code => width (Nat.unpair code).1) :=
+    emitPredecessorHeadConnector_spaceBoundByWidthAt hfamilyAvailable
+      hfamilyReference₀ hfamilyReference₁ hfamilyLoop₁ hfamilyOffset
+      hfamilyPositive hfamilyTemporary
+  apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_clamped_body
+    (fun n => hvalues n Work.limit₀)
+  · intro n count hcount
+    rw [emitPredecessorHeadConnector_binaryForValues _ (hloop₁ n)
+      (hreference₀ n) (hreference₁ n)]
+    have hl := hvalues n Work.limit₀
+    simp only [BinaryRoutine.binaryForCount, Work.loop₀, Work.limit₀] at hcount
+    simp [Work.available, Work.temporary₃, Work.loop₀, Work.limit₀] at hl ⊢
+    omega
+  · simpa [familyValues] using hbody
+
+private theorem emitRightPredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitRightPredecessorMembers stateCount)
+      initialSpace values width := by
+  have hmemberAvailable : ∀ n,
+      values n Work.available + (values n Work.horizon + 1) ≤ width n := by
+    intro n
+    have ha := havailable n
+    simp only [movedHeadPredecessorSize] at ha
+    omega
+  exact BinaryRoutine.SpaceBoundByWidthAt.branchZero Work.position
+    (emitRightZeroPredecessorMembers_spaceBoundByWidthAt hclean hvalues
+      hmemberAvailable)
+    (emitRightPositivePredecessorMembers_spaceBoundByWidthAt stateCount hclean
+      hvalues hhorizon htarget hmemberAvailable hhead)
+
+private theorem emitLeftPredecessorMembers_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitLeftPredecessorMembers stateCount)
+      initialSpace values width := by
+  have hmemberAvailable : ∀ n,
+      values n Work.available + (values n Work.horizon + 1) ≤ width n := by
+    intro n
+    have ha := havailable n
+    simp only [movedHeadPredecessorSize] at ha
+    omega
+  exact BinaryRoutine.SpaceBoundByWidthAt.branchZero Work.position
+    (emitLeftZeroPredecessorMembers_spaceBoundByWidthAt stateCount hvalues
+      hhorizon htarget hmemberAvailable hhead)
+    (emitLeftPositivePredecessorMembers_spaceBoundByWidthAt stateCount hclean
+      hvalues htarget havailable hhead)
+
+private theorem emitPredecessorHeadMembers_spaceBoundByWidthAt
+    (stateCount directionCode : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hhead : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPredecessorHeadMembers stateCount directionCode) initialSpace values
+      width := by
+  by_cases hleft : directionCode = 0
+  · simp only [emitPredecessorHeadMembers, hleft, ↓reduceIte]
+    exact emitLeftPredecessorMembers_spaceBoundByWidthAt stateCount hclean
+      hvalues hhorizon htarget havailable hhead
+  · by_cases hright : directionCode = 1
+    · simp only [emitPredecessorHeadMembers, hright, ↓reduceIte]
+      exact emitRightPredecessorMembers_spaceBoundByWidthAt stateCount hclean
+        hvalues hhorizon htarget havailable hhead
+    · simp only [emitPredecessorHeadMembers, hleft, hright, ↓reduceIte]
+      have hmemberAvailable : ∀ n,
+          values n Work.available + (values n Work.horizon + 1) ≤ width n := by
+        intro n
+        have ha := havailable n
+        simp only [movedHeadPredecessorSize] at ha
+        omega
+      exact emitStayPredecessorMembers_spaceBoundByWidthAt stateCount hclean
+        hvalues htarget hmemberAvailable hhead
+
+theorem emitPredecessorHeadFormula_spaceBoundByWidth_internal
+    (stateCount directionCode : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 +
+          2 * (values inputLength Work.horizon + 2) ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPredecessorHeadFormula stateCount directionCode) initialSpace
+      values width := by
+  let members := emitPredecessorHeadMembers stateCount directionCode
+  let v₁ : ℕ → BinaryValues WorkCount := fun n => members.effect (values n)
+  let identityGate := emitConstantGate false
+  let v₂ : ℕ → BinaryValues WorkCount := fun n => identityGate.effect (v₁ n)
+  let v₃ : ℕ → BinaryValues WorkCount := fun n =>
+    setPredecessorHorizonLimit.effect (v₂ n)
+  let setOffset := BinaryRoutine.set Work.temporary₃ 2
+  let v₄ : ℕ → BinaryValues WorkCount := fun n => setOffset.effect (v₃ n)
+  let connectors := BinaryRoutine.binaryFor emitPredecessorHeadConnector
+    Work.loop₀ Work.limit₀
+  let v₅ : ℕ → BinaryValues WorkCount := fun n => connectors.effect (v₄ n)
+  let clearLoop := BinaryRoutine.clear Work.loop₀
+  let v₆ : ℕ → BinaryValues WorkCount := fun n => clearLoop.effect (v₅ n)
+  let clearLimit := BinaryRoutine.clear Work.limit₀
+  let v₇ : ℕ → BinaryValues WorkCount := fun n => clearLimit.effect (v₆ n)
+  have hhead : ∀ n,
+      transitionHeadRef stateCount (values n Work.horizon)
+          (values n Work.configBase) (values n Work.tapeIndex)
+          (values n Work.horizon + 1) + values n Work.tapeIndex +
+          values n Work.horizon + 1 ≤ width n := by
+    intro n
+    have hc := hcap n
+    omega
+  have hs₁ : BinaryRoutine.SpaceBoundByWidthAt members initialSpace values
+      width := emitPredecessorHeadMembers_spaceBoundByWidthAt stateCount
+    directionCode hclean hvalues hhorizon htarget hfrontier hhead
+  have hv₁Effect : ∀ n, v₁ n =
+      Function.update
+        (Function.update (values n) Work.available
+          (values n Work.available + (values n Work.horizon + 1)))
+        Work.limit₀ (values n Work.horizon + 1) := by
+    intro n
+    exact emitPredecessorHeadMembers_effect_internal stateCount directionCode
+      (values n) (hclean n) (hhorizon n) (htarget n)
+  have hv₁Values : ∀ n i, v₁ n i ≤ width n := by
+    intro n
+    rw [hv₁Effect]
+    apply BinaryRoutine.values_update_le Work.limit₀
+    · apply BinaryRoutine.values_update_le Work.available (hvalues n)
+      have hf := hfrontier n
+      simp only [movedHeadPredecessorSize] at hf
+      omega
+    · have hf := hfrontier n
+      simp only [movedHeadPredecessorSize] at hf
+      omega
+  have hs₂ : BinaryRoutine.SpaceBoundByWidthAt identityGate initialSpace v₁
+      width := by
+    apply emitConstantGate_spaceBoundByWidth false
+    · intro n
+      rw [hv₁Effect]
+      have hf := hfrontier n
+      simp [Work.horizon, Work.available, Work.limit₀,
+        movedHeadPredecessorSize] at hf ⊢
+      omega
+    · intro n
+      rw [hv₁Effect]
+      simpa [Work.available, Work.limit₀, Work.reference₀] using
+        hvalues n Work.reference₀
+  have hv₂Effect : ∀ n, v₂ n = Function.update (v₁ n)
+      Work.available (v₁ n Work.available + 1) := by
+    intro n
+    exact emitConstantFalse_effect (v₁ n)
+  have hv₂Values : ∀ n i, v₂ n i ≤ width n := by
+    intro n
+    rw [hv₂Effect]
+    apply BinaryRoutine.values_update_le Work.available (hv₁Values n)
+    rw [hv₁Effect]
+    have hf := hfrontier n
+    simp [Work.horizon, Work.available, Work.limit₀,
+      movedHeadPredecessorSize] at hf ⊢
+    omega
+  have hs₃ : BinaryRoutine.SpaceBoundByWidthAt setPredecessorHorizonLimit
+      initialSpace v₂ width := by
+    apply setPredecessorHorizonLimit_spaceBoundByWidthAt hv₂Values
+    intro n
+    rw [hv₂Effect, hv₁Effect]
+    have hf := hfrontier n
+    simp [Work.horizon, Work.available, Work.limit₀,
+      movedHeadPredecessorSize] at hf ⊢
+    omega
+  have hv₃Effect : ∀ n, v₃ n = Function.update (v₂ n) Work.limit₀
+      (v₂ n Work.horizon + 1) := by
+    intro n
+    exact setPredecessorHorizonLimit_effect_internal (v₂ n)
+  have hv₃Values : ∀ n i, v₃ n i ≤ width n := by
+    intro n
+    rw [hv₃Effect]
+    apply BinaryRoutine.values_update_le Work.limit₀ (hv₂Values n)
+    rw [hv₂Effect, hv₁Effect]
+    have hf := hfrontier n
+    simp [Work.horizon, Work.available, Work.limit₀,
+      movedHeadPredecessorSize] at hf ⊢
+    omega
+  have hs₄ : BinaryRoutine.SpaceBoundByWidthAt setOffset initialSpace v₃
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set Work.temporary₃ 2
+    · exact fun n => hv₃Values n Work.temporary₃
+    · intro n
+      have hc := hcap n
+      omega
+  have hv₄Effect : ∀ n, v₄ n = Function.update (v₃ n) Work.temporary₃ 2 := by
+    intro n
+    dsimp [v₄, setOffset]
+    funext i
+    simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+      BinaryRoutine.addConst, Function.update_apply]
+  have hv₄Values : ∀ n i, v₄ n i ≤ width n := by
+    intro n
+    rw [hv₄Effect]
+    apply BinaryRoutine.values_update_le Work.temporary₃ (hv₃Values n)
+    have hc := hcap n
+    omega
+  have hv₄Loop : ∀ n, v₄ n Work.loop₀ = 0 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simpa [Work.horizon, Work.available, Work.loop₀, Work.limit₀,
+      Work.temporary₃] using (hclean n).loop₀
+  have hv₄Limit : ∀ n,
+      v₄ n Work.limit₀ = values n Work.horizon + 1 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
+  have hv₄Available : ∀ n,
+      v₄ n Work.available = values n Work.available +
+        values n Work.horizon + 2 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
+    omega
+  have hv₄Temporary : ∀ n, v₄ n Work.temporary₃ = 2 := by
+    intro n
+    rw [hv₄Effect]
+    simp
+  have hv₄Loop₁ : ∀ n, v₄ n Work.loop₁ = 0 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simpa [Work.horizon, Work.available, Work.loop₁, Work.limit₀,
+      Work.temporary₃] using (hclean n).loop₁
+  have hv₄Reference₀ : ∀ n, v₄ n Work.reference₀ = 0 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simpa [Work.horizon, Work.available, Work.reference₀, Work.limit₀,
+      Work.temporary₃] using (hclean n).reference₀
+  have hv₄Reference₁ : ∀ n, v₄ n Work.reference₁ = 0 := by
+    intro n
+    rw [hv₄Effect, hv₃Effect, hv₂Effect, hv₁Effect]
+    simpa [Work.horizon, Work.available, Work.reference₁, Work.limit₀,
+      Work.temporary₃] using (hclean n).reference₁
+  have hs₅ : BinaryRoutine.SpaceBoundByWidthAt connectors initialSpace v₄
+      width := by
+    apply binaryFor_emitPredecessorHeadConnector_spaceBoundByWidthAt hv₄Values
+    · intro n
+      simp only [BinaryRoutine.binaryForCount]
+      rw [hv₄Loop, hv₄Limit]
+      omega
+    · exact hv₄Loop₁
+    · exact hv₄Reference₀
+    · exact hv₄Reference₁
+    · intro n
+      simp only [BinaryRoutine.binaryForCount]
+      rw [hv₄Available, hv₄Limit, hv₄Loop]
+      have hf := hfrontier n
+      simp only [movedHeadPredecessorSize] at hf
+      omega
+    · intro n
+      simp only [BinaryRoutine.binaryForCount]
+      rw [hv₄Temporary, hv₄Limit, hv₄Loop]
+      have hc := hcap n
+      omega
+    · intro n count hcount
+      simp only [BinaryRoutine.binaryForCount] at hcount
+      rw [hv₄Limit, hv₄Loop] at hcount
+      rw [hv₄Temporary, hv₄Available]
+      omega
+    · intro n
+      rw [hv₄Available]
+      omega
+  have hv₅Effect : ∀ n, v₅ n =
+      Function.update
+        (Function.update
+          (Function.update (v₄ n) Work.available
+            (v₄ n Work.available +
+              (v₄ n Work.limit₀ - v₄ n Work.loop₀)))
+          Work.temporary₃
+            (v₄ n Work.temporary₃ +
+              2 * (v₄ n Work.limit₀ - v₄ n Work.loop₀)))
+        Work.loop₀
+          (v₄ n Work.loop₀ +
+            (v₄ n Work.limit₀ - v₄ n Work.loop₀)) := by
+    intro n
+    exact emitPredecessorHeadConnectors_effect_internal (v₄ n)
+      (hv₄Loop₁ n) (hv₄Reference₀ n) (hv₄Reference₁ n)
+  have hv₅Values : ∀ n i, v₅ n i ≤ width n := by
+    intro n
+    rw [hv₅Effect]
+    apply BinaryRoutine.values_update_le Work.loop₀
+    · apply BinaryRoutine.values_update_le Work.temporary₃
+      · apply BinaryRoutine.values_update_le Work.available (hv₄Values n)
+        rw [hv₄Available, hv₄Limit, hv₄Loop]
+        have hf := hfrontier n
+        simp only [movedHeadPredecessorSize] at hf
+        omega
+      · rw [hv₄Temporary, hv₄Limit, hv₄Loop]
+        have hc := hcap n
+        omega
+    · rw [hv₄Loop, hv₄Limit]
+      have hf := hfrontier n
+      simp only [movedHeadPredecessorSize] at hf
+      omega
+  have hs₆ : BinaryRoutine.SpaceBoundByWidthAt clearLoop initialSpace v₅
+      width := BinaryRoutine.SpaceBoundByWidthAt.clear Work.loop₀
+    (fun n => hv₅Values n Work.loop₀)
+  have hv₆Values : ∀ n i, v₆ n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.loop₀ (hv₅Values n) (by omega)
+  have hs₇ : BinaryRoutine.SpaceBoundByWidthAt clearLimit initialSpace v₆
+      width := BinaryRoutine.SpaceBoundByWidthAt.clear Work.limit₀
+    (fun n => hv₆Values n Work.limit₀)
+  have hv₇Values : ∀ n i, v₇ n i ≤ width n := by
+    intro n
+    exact BinaryRoutine.values_update_le Work.limit₀ (hv₆Values n) (by omega)
+  have hs₈ : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.temporary₃) initialSpace v₇ width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.temporary₃
+      (fun n => hv₇Values n Work.temporary₃)
+  have hroutine : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.seqList
+        [members, identityGate, setPredecessorHorizonLimit, setOffset,
+          connectors, clearLoop, clearLimit,
+          BinaryRoutine.clear Work.temporary₃]) initialSpace values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+    exact ⟨hs₁, hs₂, hs₃, hs₄, hs₅, hs₆, hs₇, hs₈,
+      trivial⟩
+  simpa [emitPredecessorHeadFormula, members, identityGate, setOffset,
+    connectors, clearLoop, clearLimit] using hroutine.restrict
 
 private theorem predecessor_sound_with_stronger_requires
     (routine : BinaryRoutine WorkCount)

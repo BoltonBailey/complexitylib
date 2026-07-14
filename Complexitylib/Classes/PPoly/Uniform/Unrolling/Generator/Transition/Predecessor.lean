@@ -37,6 +37,38 @@ theorem emitPredecessorHeadFormula_requires
         values Work.position ≤ values Work.horizon :=
   emitPredecessorHeadFormula_requires_internal stateCount directionCode values
 
+/-- Complete predecessor-head emission has an all-prefix pointwise width
+certificate on its natural clean domain. The frontier premise covers every
+emitted wire; the single arithmetic cap covers both absolute head references
+and the dynamic reverse-fold offset. -/
+theorem emitPredecessorHeadFormula_spaceBoundByWidth
+    (stateCount directionCode : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, PredecessorHeadClean (values inputLength))
+    (hhorizon : ∀ inputLength, 0 < values inputLength Work.horizon)
+    (htarget : ∀ inputLength,
+      values inputLength Work.position ≤ values inputLength Work.horizon)
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available +
+          movedHeadPredecessorSize (values inputLength Work.horizon) ≤
+        width inputLength)
+    (hcap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.horizon + 1) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 +
+          2 * (values inputLength Work.horizon + 2) ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPredecessorHeadFormula stateCount directionCode) initialSpace
+      values width :=
+  emitPredecessorHeadFormula_spaceBoundByWidth_internal stateCount
+    directionCode hclean hhorizon htarget hvalues hfrontier hcap
+
 /-- The generator restores every owned scratch register and advances the wire
 frontier by exactly the predecessor-head schedule size. -/
 theorem emitPredecessorHeadFormula_effect
