@@ -21,6 +21,7 @@ import Complexitylib.Classes.PPoly.Uniform.Unrolling.Containment
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
 import Complexitylib.Classes.PPoly.Uniform.Preprocessing
