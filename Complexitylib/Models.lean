@@ -17,6 +17,7 @@ import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
