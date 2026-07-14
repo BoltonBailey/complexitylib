@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Asymptotics
 import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
 
 /-!
@@ -18,6 +19,14 @@ reachable iteration.
 namespace Complexity
 
 namespace BinaryRoutine
+
+/-- A routine's advertised all-prefix space bound is logarithmic along one
+input-indexed initial-space and pure-value trajectory. -/
+def SpaceBoundInLogAt (routine : BinaryRoutine n)
+    (initialSpace : ℕ → ℕ) (values : ℕ → BinaryValues n) : Prop :=
+  (fun inputLength =>
+    routine.spaceBound (initialSpace inputLength) (values inputLength)) =O
+      (fun inputLength => Nat.log 2 inputLength)
 
 /-- A single pointwise upper bound for every component of one binary
 count-up loop's advertised auxiliary-space budget. -/
