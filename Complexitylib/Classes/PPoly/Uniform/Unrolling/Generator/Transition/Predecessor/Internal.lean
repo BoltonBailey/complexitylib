@@ -24,6 +24,31 @@ namespace Serializer
 
 namespace DirectGenerator
 
+private theorem binaryCopy_emitted
+    (srcIdx dstIdx counterIdx : Fin n) (values : BinaryValues n) :
+    (BinaryRoutine.binaryCopy srcIdx dstIdx counterIdx).emitted values = [] :=
+  rfl
+
+private theorem binaryPred_emitted
+    (idx : Fin n) (values : BinaryValues n) :
+    (BinaryRoutine.binaryPred idx).emitted values = [] :=
+  rfl
+
+private theorem clear_emitted
+    (idx : Fin n) (values : BinaryValues n) :
+    (BinaryRoutine.clear idx).emitted values = [] :=
+  rfl
+
+private theorem addConst_emitted
+    (idx : Fin n) (constant : ℕ) (values : BinaryValues n) :
+    (BinaryRoutine.addConst idx constant).emitted values = [] :=
+  rfl
+
+private theorem set_emitted
+    (idx : Fin n) (value : ℕ) (values : BinaryValues n) :
+    (BinaryRoutine.set idx value).emitted values = [] := by
+  simp [BinaryRoutine.set, BinaryRoutine.seq, clear_emitted, addConst_emitted]
+
 private theorem binaryForValues_addsAvailable
     (body : BinaryRoutine n) (counterIdx availableIdx : Fin n)
     (step : ℕ)
@@ -411,8 +436,7 @@ theorem emitStayPredecessorMembers_effect_internal
     setPredecessorHorizonLimit_effect_internal afterLoopSucc
   have hloop' : values 14 = 0 := by
     simpa [Work.loop₀] using hclean.loop₀
-  have htarget' : values 30 ≤ values 1 := by
-    simpa [Work.position, Work.horizon] using htarget
+  change values 30 ≤ values 1 at htarget
   have htemporary₃' : values 25 = 0 := by
     simpa [Work.temporary₃] using hclean.temporary₃
   rw [emitStayPredecessorMembers]
@@ -615,6 +639,8 @@ theorem emitRightPositivePredecessorMembers_effect_internal
     simpa [Work.position] using hpositive
   have htarget' : values 30 ≤ values 1 := by
     simpa [Work.position, Work.horizon] using htarget
+  have htemporary₃' : values 25 = 0 := by
+    simpa [Work.temporary₃] using hclean.temporary₃
   simp [BinaryRoutine.seqList, BinaryRoutine.seq,
     emitPredecessorFalseRange_effect_internal,
     setPredecessorHorizonLimit_effect_internal, emitHeadReference_effect,
@@ -731,11 +757,13 @@ theorem emitLeftPositivePredecessorMembers_effect_internal
     simpa [Work.loop₀] using hclean.loop₀
   have htarget' : values 30 ≤ values 1 := by
     simpa [Work.position, Work.horizon] using htarget
+  have htemporary₃' : values 25 = 0 := by
+    simpa [Work.temporary₃] using hclean.temporary₃
   funext i
-  simp only [Work.horizon, Work.available, Work.position, Work.loop₀,
-    Work.limit₀, Work.temporary₃, Function.update_apply]
-  split_ifs
-  all_goals (try simp_all)
+  fin_cases i <;>
+    simp_all [Work.horizon, Work.available, Work.position, Work.loop₀,
+      Work.limit₀, Work.temporary₀, Work.temporary₃, WorkCount,
+      Function.update_apply]
   all_goals omega
 
 theorem emitRightPredecessorMembers_effect_internal
@@ -864,21 +892,24 @@ theorem emitStayPredecessorMembers_emitted_internal
   rw [emitStayPredecessorMembers]
   simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
     BinaryRoutine.identity, BinaryRoutine.emitBits]
-  change emitPredecessorFalseRange.emitted afterLimit ++
-      (emitHeadReference stateCount).emitted afterPrefix ++
-      emitPredecessorFalseRange.emitted afterHorizon = _
+  simp only [binaryCopy_emitted, addConst_emitted,
+    setPredecessorHorizonLimit_emitted_internal, List.nil_append,
+    List.append_nil]
   rw [hprefixEmission, emitHeadReference_emitted, hsuffixEmission]
   rw [hafterHorizon, hafterLoopSucc, hafterLoopCopy, hafterHead,
     hafterPrefix, hafterLimit]
   have hloop' : values 14 = 0 := by
     simpa [Work.loop₀] using hclean.loop₀
-  have htarget' : values 30 ≤ values 1 := by
-    simpa [Work.position, Work.horizon] using htarget
+  change values 30 ≤ values 1 at htarget
   simp only [Work.horizon, Work.configBase, Work.available, Work.tapeIndex,
     Work.position, Work.loop₀, Work.limit₀, Work.temporary₀,
     Work.reference₀, Function.update_apply]
   split_ifs
-  all_goals (simp_all [List.flatMap_append]; omega)
+  all_goals simp_all [List.flatMap_append]
+  all_goals simp_all [Work.horizon, Work.position]
+  all_goals simp [emitPredecessorFalseRange_effect_internal,
+    BinaryRoutine.binaryCopy, directInitConstant, Work.available,
+    Work.loop₀, Work.limit₀, hloop']
 
 theorem emitRightZeroPredecessorMembers_emitted_internal
     (values : BinaryValues WorkCount)
@@ -981,29 +1012,34 @@ theorem emitRightPositivePredecessorMembers_emitted_internal
   rw [emitRightPositivePredecessorMembers]
   simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
     BinaryRoutine.identity, BinaryRoutine.emitBits]
-  change emitPredecessorFalseRange.emitted afterLimitPred ++
-      (emitHeadReference stateCount).emitted afterPositionPred ++
-      emitPredecessorFalseRange.emitted afterHorizon = _
+  simp only [binaryCopy_emitted, binaryPred_emitted, addConst_emitted,
+    setPredecessorHorizonLimit_emitted_internal, List.nil_append,
+    List.append_nil]
   rw [hprefixEmission, emitHeadReference_emitted, hsuffixEmission]
   rw [hafterHorizon, hafterLoopCopy, hafterPositionSucc, hafterHead,
     hafterPositionPred, hafterPrefix, hafterLimitPred, hafterLimit]
   have hloop' : values 14 = 0 := by
     simpa [Work.loop₀] using hclean.loop₀
-  have hpositive' : 0 < values 30 := by
-    simpa [Work.position] using hpositive
-  have htarget' : values 30 ≤ values 1 := by
-    simpa [Work.position, Work.horizon] using htarget
+  change 0 < values 30 at hpositive
+  change values 30 ≤ values 1 at htarget
   simp only [Work.horizon, Work.configBase, Work.available, Work.tapeIndex,
     Work.position, Work.loop₀, Work.limit₀, Work.temporary₀,
     Work.reference₀, Function.update_apply]
-  split_ifs
-  all_goals (simp_all [List.flatMap_append]; omega)
+  simp [emitPredecessorFalseRange_effect_internal,
+    BinaryRoutine.binaryCopy, BinaryRoutine.binaryPred,
+    directInitConstant, Work.available, Work.loop₀, Work.limit₀,
+    hloop', List.flatMap_append]
+  obtain ⟨gap, hgap⟩ := Nat.exists_eq_add_of_le htarget
+  have htargetNe : values 30 ≠ 0 := Nat.ne_of_gt hpositive
+  obtain ⟨target, htargetValue⟩ :=
+    Nat.exists_eq_succ_of_ne_zero htargetNe
+  simp [hgap, htargetValue]
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 1200000 in
 theorem emitLeftZeroPredecessorMembers_emitted_internal
     (stateCount : ℕ) (values : BinaryValues WorkCount)
-    (hclean : PredecessorHeadClean values)
+    (_hclean : PredecessorHeadClean values)
     (hposition : values Work.position = 0)
     (hhorizon : 0 < values Work.horizon) :
     (emitLeftZeroPredecessorMembers stateCount).emitted values =
@@ -1045,9 +1081,10 @@ theorem emitLeftZeroPredecessorMembers_emitted_internal
         (afterHead₁ Work.position - 1) := rfl
   have hafterLoop : afterLoop =
       Function.update afterPositionPred Work.loop₀ 2 := by
+    dsimp [afterLoop]
     funext i
     simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
-      BinaryRoutine.addConst]
+      BinaryRoutine.addConst, Function.update_apply]
   have hafterHorizon : afterHorizon =
       Function.update afterLoop Work.limit₀
         (afterLoop Work.horizon + 1) :=
@@ -1059,21 +1096,25 @@ theorem emitLeftZeroPredecessorMembers_emitted_internal
   have hsuffixEmission :=
     emitPredecessorFalseRange_emitted_internal afterHorizon hrefHorizon
   rw [emitLeftZeroPredecessorMembers]
-  change (emitHeadReference stateCount).emitted values ++
-      (emitHeadReference stateCount).emitted afterPositionSucc ++
-      emitPredecessorFalseRange.emitted afterHorizon = _
+  simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
+    BinaryRoutine.identity, BinaryRoutine.emitBits]
+  simp only [addConst_emitted, binaryPred_emitted, set_emitted,
+    setPredecessorHorizonLimit_emitted_internal, List.nil_append,
+    List.append_nil]
   rw [emitHeadReference_emitted, emitHeadReference_emitted,
     hsuffixEmission, hafterHorizon, hafterLoop, hafterPositionPred,
     hafterHead₁, hafterPositionSucc, hafterHead₀]
-  have hposition' : values 30 = 0 := by
-    simpa [Work.position] using hposition
-  have hhorizon' : 0 < values 1 := by
-    simpa [Work.horizon] using hhorizon
+  change values 30 = 0 at hposition
+  change 0 < values 1 at hhorizon
   simp only [Work.horizon, Work.configBase, Work.available, Work.tapeIndex,
     Work.position, Work.loop₀, Work.limit₀, Work.temporary₀,
     Work.reference₀, Function.update_apply]
-  split_ifs
-  all_goals (simp_all [List.flatMap_append]; omega)
+  simp [BinaryRoutine.addConst, emitHeadReference_effect,
+    directInitConstant, Work.available, Work.temporary₀,
+    Work.reference₀]
+  have hhorizonNe : values 1 ≠ 0 := Nat.ne_of_gt hhorizon
+  obtain ⟨T, hT⟩ := Nat.exists_eq_succ_of_ne_zero hhorizonNe
+  simp [hT, hposition]
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 1200000 in
@@ -1124,23 +1165,26 @@ theorem emitLeftPositivePredecessorTail_emitted_internal
     simp only [BinaryRoutine.branchZero, hgap, ↓reduceIte]
     simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
       BinaryRoutine.identity, BinaryRoutine.emitBits]
-    change (emitHeadReference stateCount).emitted afterPositionSucc ++
+    simp only [addConst_emitted, binaryPred_emitted, clear_emitted,
+      List.nil_append, List.append_nil]
+    rw [emitHeadReference_emitted]
+    change CircuitCode.RawGate.encode _ ++
         BinaryRoutine.binaryForEmitted (emitConstantGate false) Work.loop₀
           afterGapPred
             (afterGapPred Work.temporary₃ - afterGapPred Work.loop₀) = _
-    rw [emitHeadReference_emitted,
-      emitConstantFalse_binaryForEmitted afterGapPred hrefGapPred]
+    rw [emitConstantFalse_binaryForEmitted afterGapPred hrefGapPred]
     rw [hafterGapPred, hafterPositionPred, hafterHead,
       hafterPositionSucc]
     have hloop' : values 14 = 0 := by
       simpa [Work.loop₀] using hloop
-    have hgap' : values 25 ≠ 0 := by
-      simpa [Work.temporary₃] using hgap
+    change values 25 ≠ 0 at hgap
     simp only [Work.horizon, Work.configBase, Work.available,
       Work.tapeIndex, Work.position, Work.loop₀, Work.temporary₀,
       Work.temporary₃, Work.reference₀, Function.update_apply]
-    split_ifs
-    all_goals (simp_all [List.flatMap_append]; omega)
+    simp [BinaryRoutine.addConst, directInitConstant]
+    have hgapNe : values 25 ≠ 0 := hgap
+    obtain ⟨gap, hgapValue⟩ := Nat.exists_eq_succ_of_ne_zero hgapNe
+    simp [hgapValue, hloop']
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 1800000 in
@@ -1202,9 +1246,9 @@ theorem emitLeftPositivePredecessorMembers_emitted_internal
   rw [emitLeftPositivePredecessorMembers]
   simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
     BinaryRoutine.identity, BinaryRoutine.emitBits]
-  change emitPredecessorFalseRange.emitted afterLimitSucc ++
-      preparePredecessorHorizonGap.emitted afterPrefix ++
-      (emitLeftPositivePredecessorTail stateCount).emitted afterGap = _
+  simp only [binaryCopy_emitted, addConst_emitted,
+    setPredecessorHorizonLimit_emitted_internal, List.nil_append,
+    List.append_nil]
   rw [hprefixEmission, preparePredecessorHorizonGap_emitted_internal,
     htailEmission, hafterGap, hafterPrefix, hafterLimitSucc, hafterLimit]
   have hloop' : values 14 = 0 := by
@@ -1214,8 +1258,14 @@ theorem emitLeftPositivePredecessorMembers_emitted_internal
   simp only [Work.horizon, Work.configBase, Work.available, Work.tapeIndex,
     Work.position, Work.loop₀, Work.limit₀, Work.temporary₃,
     Function.update_apply]
-  split_ifs
-  all_goals (simp_all [List.flatMap_append]; omega)
+  obtain ⟨gap, hgap⟩ := Nat.exists_eq_add_of_le htarget'
+  by_cases hgapZero : gap = 0
+  · subst gap
+    simp [hgap, hloop', directInitConstant]
+  · have hgapNe : gap ≠ 0 := hgapZero
+    obtain ⟨remaining, hremaining⟩ :=
+      Nat.exists_eq_succ_of_ne_zero hgapNe
+    simp [hgap, hremaining, hloop', directInitConstant]
 
 private theorem getElem_indexedSingletonBlocks
     (count : ℕ) (gateAt : ℕ → CircuitCode.RawGate)
@@ -1268,6 +1318,29 @@ private theorem stayPredecessorMemberStream_eq
           omega
         · simp [length_indexedGateBlocks]
           omega
+      · simp [length_indexedGateBlocks]
+        omega
+    · by_cases hat : index = target
+      · subst index
+        have hprefixLength :
+            (indexedGateBlocks target fun _ =>
+              [CircuitCode.RawGate.constant 0 false]).length = target := by
+          simp [length_indexedGateBlocks]
+        rw [List.getElem_append_left (by simp [hprefixLength])]
+        rw [List.getElem_append_right (by simp [hprefixLength])]
+        simp [hprefixLength, predecessorHeadMemberGate,
+          movedHeadPositionCode]
+      · rw [List.getElem_append_right]
+        · simp only [List.length_append, length_indexedGateBlocks,
+            List.length_singleton, Nat.mul_one]
+          have htail : index - (target + 1) < T - target := by omega
+          rw [getElem_indexedSingletonBlocks (T - target)
+            (fun _ => CircuitCode.RawGate.constant 0 false)
+            (index - (target + 1)) htail]
+          simp [predecessorHeadMemberGate, movedHeadPositionCode]
+          omega
+        · simp [length_indexedGateBlocks]
+          omega
 
 private theorem rightZeroPredecessorMemberStream_eq
     (stateCount T configBase tapeIndex : ℕ) :
@@ -1301,13 +1374,13 @@ private theorem rightPositivePredecessorMemberStream_eq
   · intro index hleft hright
     have hsource : index < T + 1 := by
       simpa [length_predecessorHeadMemberGates] using hright
+    rw [getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
+      target 1 index hsource]
     by_cases hbefore : index < target - 1
     · rw [List.getElem_append_left]
       · rw [List.getElem_append_left]
         · rw [getElem_indexedSingletonBlocks (target - 1)
-            (fun _ => CircuitCode.RawGate.constant 0 false) index hbefore,
-          getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
-            target 1 index hsource]
+            (fun _ => CircuitCode.RawGate.constant 0 false) index hbefore]
           simp [predecessorHeadMemberGate, movedHeadPositionCode]
           omega
         · simp [length_indexedGateBlocks]
@@ -1316,21 +1389,24 @@ private theorem rightPositivePredecessorMemberStream_eq
         omega
     · by_cases hat : index = target - 1
       · subst index
-        rw [List.getElem_append_left]
-        · rw [List.getElem_append_right]
-          all_goals simp [length_indexedGateBlocks,
-            getElem_predecessorHeadMemberGates,
-            predecessorHeadMemberGate, movedHeadPositionCode]
-          omega
-        · simp [length_indexedGateBlocks]
-          omega
+        have hsourceCode : target - 1 + 1 = target := by omega
+        have hprefixLength :
+            (indexedGateBlocks (target - 1) fun _ =>
+              [CircuitCode.RawGate.constant 0 false]).length = target - 1 := by
+          simp [length_indexedGateBlocks]
+        rw [List.getElem_append_left (by simp [hprefixLength])]
+        rw [List.getElem_append_right (by simp [hprefixLength])]
+        simp [hprefixLength, predecessorHeadMemberGate,
+          movedHeadPositionCode, hsourceCode]
       · rw [List.getElem_append_right]
-        · have htail : index - target < T + 1 - target := by omega
+        · simp only [List.length_append, length_indexedGateBlocks,
+            List.length_singleton, Nat.mul_one]
+          have hprefix : target - 1 + 1 = target := by omega
+          simp only [hprefix]
+          have htail : index - target < T + 1 - target := by omega
           rw [getElem_indexedSingletonBlocks (T + 1 - target)
             (fun _ => CircuitCode.RawGate.constant 0 false)
-            (index - target) htail,
-            getElem_predecessorHeadMemberGates stateCount T configBase
-              tapeIndex target 1 index hsource]
+            (index - target) htail]
           simp [predecessorHeadMemberGate, movedHeadPositionCode]
           omega
         · simp [length_indexedGateBlocks]
@@ -1351,20 +1427,20 @@ private theorem leftZeroPredecessorMemberStream_eq
   · intro index hleft hright
     have hsource : index < T + 1 := by
       simpa [length_predecessorHeadMemberGates] using hright
+    rw [getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
+      0 0 index hsource]
     by_cases hprefix : index < 2
     · rw [List.getElem_append_left]
-      · rw [getElem_predecessorHeadMemberGates stateCount T configBase
-          tapeIndex 0 0 index hsource]
-        interval_cases index <;>
+      · have hindex : index = 0 ∨ index = 1 := by omega
+        rcases hindex with rfl | rfl <;>
           simp [predecessorHeadMemberGate, movedHeadPositionCode]
       · simp
         omega
     · rw [List.getElem_append_right]
-      · have htail : index - 2 < T - 1 := by omega
+      · simp only [List.length_cons, List.length_nil, Nat.reduceAdd]
+        have htail : index - 2 < T - 1 := by omega
         rw [getElem_indexedSingletonBlocks (T - 1)
-          (fun _ => CircuitCode.RawGate.constant 0 false) (index - 2) htail,
-          getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
-            0 0 index hsource]
+          (fun _ => CircuitCode.RawGate.constant 0 false) (index - 2) htail]
         simp [predecessorHeadMemberGate, movedHeadPositionCode]
         omega
       · simp
@@ -1404,12 +1480,12 @@ private theorem leftPositivePredecessorMemberStream_eq
     · intro index hleft hright
       have hsource : index < T + 1 := by
         simpa [length_predecessorHeadMemberGates] using hright
+      rw [getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
+        target 0 index hsource]
       by_cases hbefore : index < target + 1
       · rw [List.getElem_append_left]
         · rw [getElem_indexedSingletonBlocks (target + 1)
-            (fun _ => CircuitCode.RawGate.constant 0 false) index hbefore,
-          getElem_predecessorHeadMemberGates stateCount T configBase tapeIndex
-            target 0 index hsource]
+            (fun _ => CircuitCode.RawGate.constant 0 false) index hbefore]
           simp [predecessorHeadMemberGate, movedHeadPositionCode]
           omega
         · simp [length_indexedGateBlocks]
@@ -1418,19 +1494,18 @@ private theorem leftPositivePredecessorMemberStream_eq
         · subst index
           rw [List.getElem_append_right]
           · rw [List.getElem_append_left]
-            · rw [getElem_predecessorHeadMemberGates stateCount T configBase
-                tapeIndex target 0 (target + 1) (by omega)]
-              simp [predecessorHeadMemberGate, movedHeadPositionCode]
+            · simp [predecessorHeadMemberGate, movedHeadPositionCode]
             · simp
           · simp [length_indexedGateBlocks]
         · rw [List.getElem_append_right]
-          · rw [List.getElem_append_right]
-            · have htail : index - (target + 2) < T - target - 1 := by omega
+          · simp only [length_indexedGateBlocks]
+            rw [List.getElem_append_right]
+            · simp only [List.length_singleton, Nat.mul_one]
+              have htail : index - (target + 1) - 1 <
+                  T - target - 1 := by omega
               rw [getElem_indexedSingletonBlocks (T - target - 1)
                 (fun _ => CircuitCode.RawGate.constant 0 false)
-                (index - (target + 2)) htail,
-                getElem_predecessorHeadMemberGates stateCount T configBase
-                  tapeIndex target 0 index hsource]
+                (index - (target + 1) - 1) htail]
               simp [predecessorHeadMemberGate, movedHeadPositionCode]
               omega
             · simp
@@ -1451,9 +1526,8 @@ theorem emitRightPredecessorMembers_emitted_internal
     simp only [BinaryRoutine.branchZero, hzero, ↓reduceIte]
     rw [emitRightZeroPredecessorMembers_emitted_internal values hclean.loop₀
       hclean.reference₀]
-    congr 1
-    simpa [hzero] using rightZeroPredecessorMemberStream_eq stateCount
-      (values Work.horizon) (values Work.configBase) (values Work.tapeIndex)
+    rw [rightZeroPredecessorMemberStream_eq stateCount
+      (values Work.horizon) (values Work.configBase) (values Work.tapeIndex)]
   · rw [emitRightPredecessorMembers]
     simp only [BinaryRoutine.branchZero, hzero, ↓reduceIte]
     have hpositive := Nat.pos_of_ne_zero hzero
@@ -1632,12 +1706,12 @@ private theorem emitPredecessorHeadConnector_binaryForValues
         omega
       by_cases hitemporary : i = Work.temporary₃
       · subst i
-        simp [hiloop, Work.available, Work.reference₀, Work.reference₁,
+        simp [Work.available, Work.reference₀, Work.reference₁,
           Work.loop₀, Work.loop₁, Work.temporary₃, Nat.mul_succ]
         omega
       by_cases hiavailable : i = Work.available
       · subst i
-        simp [hiloop, hitemporary, Work.available, Work.reference₀,
+        simp [Work.available, Work.reference₀,
           Work.reference₁, Work.loop₀, Work.loop₁, Work.temporary₃]
         omega
       by_cases hiloop₁ : i = Work.loop₁
@@ -1732,7 +1806,40 @@ private theorem indexedPredecessorConnector_eq
     prefixSize_fixedWidthSizeAt_of_le count 1 (count - rank) (by omega),
     prefixSize_fixedWidthSizeAt_of_le count 1 count (by omega)]
   simp only [Nat.one_mul]
-  congr <;> omega
+  simp only [CircuitCode.RawGate.mk.injEq, true_and]
+  constructor
+  · have hcountMember :
+        count = (count - rank - 1) + rank + 1 := by
+      omega
+    have hsplit :
+        available + count + 1 + rank =
+          (available + (count - rank - 1)) + (2 + 2 * rank) := by
+      conv_lhs => rw [hcountMember]
+      ring
+    have hone : 1 ≤ count - rank := by
+      exact Nat.sub_pos_of_lt hrank
+    have hshift :
+        available + (count - rank) - 1 =
+          available + (count - rank - 1) :=
+      Nat.add_sub_assoc hone available
+    calc
+      available + count + 1 + rank - (2 + 2 * rank) =
+          ((available + (count - rank - 1)) + (2 + 2 * rank)) -
+            (2 + 2 * rank) :=
+        congrArg (fun n => n - (2 + 2 * rank)) hsplit
+      _ = available + (count - rank - 1) := Nat.add_sub_cancel _ _
+      _ = available + (count - rank) - 1 := hshift.symm
+  · have hsplit :
+        available + count + 1 + rank =
+          (available + count + rank) + 1 := by
+      ring
+    constructor
+    · calc
+        available + count + 1 + rank - 1 =
+            ((available + count + rank) + 1) - 1 :=
+          congrArg (fun n => n - 1) hsplit
+        _ = available + count + rank := Nat.add_sub_cancel _ _
+    · trivial
 
 private theorem predecessorConnectorBlocks_eq
     (available count : ℕ) :
@@ -1798,7 +1905,7 @@ theorem emitPredecessorHeadConnectors_emitted_internal
       hreference₁]
   rw [havailable, htemporary]
   have hblocks := predecessorConnectorBlocks_eq available count
-  simpa only [hblocks]
+  simp only [hblocks]
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 1800000 in
@@ -1837,9 +1944,10 @@ theorem emitPredecessorHeadFormula_effect_internal
     setPredecessorHorizonLimit_effect_internal afterIdentity
   have hafterTemporary : afterTemporary =
       Function.update afterLimit Work.temporary₃ 2 := by
+    dsimp [afterTemporary]
     funext i
     simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
-      BinaryRoutine.addConst]
+      BinaryRoutine.addConst, Function.update_apply]
   have hloop₁Temporary : afterTemporary Work.loop₁ = 0 := by
     rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
     simpa [Work.horizon, Work.available, Work.limit₀, Work.loop₁,
@@ -1932,9 +2040,10 @@ theorem emitPredecessorHeadFormula_emitted_internal
     setPredecessorHorizonLimit_effect_internal afterIdentity
   have hafterTemporary : afterTemporary =
       Function.update afterLimit Work.temporary₃ 2 := by
+    dsimp [afterTemporary]
     funext i
     simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
-      BinaryRoutine.addConst]
+      BinaryRoutine.addConst, Function.update_apply]
   have hrefMembers : afterMembers Work.reference₀ = 0 := by
     rw [hafterMembers]
     simpa [Work.available, Work.limit₀, Work.reference₀] using
@@ -1945,8 +2054,8 @@ theorem emitPredecessorHeadFormula_emitted_internal
       Work.temporary₃] using hclean.loop₀
   have hlimitTemporary :
       afterTemporary Work.limit₀ = values Work.horizon + 1 := by
-    rw [hafterTemporary, hafterLimit]
-    simp [Work.horizon, Work.limit₀, Work.temporary₃]
+    rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
+    simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
   have hloop₁Temporary : afterTemporary Work.loop₁ = 0 := by
     rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
     simpa [Work.horizon, Work.available, Work.limit₀, Work.loop₁,
@@ -1967,10 +2076,10 @@ theorem emitPredecessorHeadFormula_emitted_internal
     rw [hafterTemporary]
     simp
   rw [emitPredecessorHeadFormula]
-  change (emitPredecessorHeadMembers stateCount directionCode).emitted values ++
-      (emitConstantGate false).emitted afterMembers ++
-      (BinaryRoutine.binaryFor emitPredecessorHeadConnector Work.loop₀
-        Work.limit₀).emitted afterTemporary = _
+  simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
+    BinaryRoutine.identity, BinaryRoutine.emitBits]
+  simp only [setPredecessorHorizonLimit_emitted_internal, set_emitted,
+    clear_emitted, List.nil_append, List.append_nil]
   rw [emitPredecessorHeadMembers_emitted_internal stateCount directionCode
       values hclean hhorizon htarget,
     emitConstantFalse_emitted afterMembers hrefMembers,
@@ -1978,7 +2087,8 @@ theorem emitPredecessorHeadFormula_emitted_internal
       (values Work.available) (values Work.horizon + 1) hloop₀Temporary
       hlimitTemporary hloop₁Temporary href₀Temporary href₁Temporary
       havailableTemporary htemporaryTemporary]
-  simp [predecessorHeadFormulaSchedule, List.flatMap_append]
+  simp [predecessorHeadFormulaSchedule, List.flatMap_append,
+    directInitConstant]
 
 theorem setPredecessorHorizonLimit_requires_internal
     (values : BinaryValues WorkCount)
@@ -2077,8 +2187,8 @@ private theorem emitPredecessorHeadConnectors_requires_internal
     change 1 ≤ (BinaryRoutine.binaryForValues emitPredecessorHeadConnector
       Work.loop₀ values count) Work.available
     rw [hcurrent]
-    simp [Work.available, Work.temporary₃, Work.loop₀]
-    omega
+    simpa [Work.available, Work.temporary₃, Work.loop₀] using
+      le_trans havailable (Nat.le_add_right (values Work.available) count)
   have hoffsetCurrent : current Work.temporary₃ ≤ current Work.available := by
     change (BinaryRoutine.binaryForValues emitPredecessorHeadConnector
         Work.loop₀ values count) Work.temporary₃ ≤
@@ -2430,7 +2540,11 @@ theorem emitLeftZeroPredecessorMembers_requires_internal
       Function.update afterHead₁ Work.position
         (afterHead₁ Work.position - 1) := rfl
   have hafterLoop : afterLoop =
-      Function.update afterPositionPred Work.loop₀ 2 := rfl
+      Function.update afterPositionPred Work.loop₀ 2 := by
+    dsimp [afterLoop]
+    funext i
+    simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+      BinaryRoutine.addConst, Function.update_apply]
   have hafterHorizon : afterHorizon =
       Function.update afterLoop Work.limit₀
         (afterLoop Work.horizon + 1) :=
@@ -2484,7 +2598,8 @@ theorem emitLeftZeroPredecessorMembers_requires_internal
       emitHeadReference_requires stateCount false afterPositionSucc
         haddPositionSucc hmultiplyPositionSucc hemitPositionSucc,
       hpositionPositive,
-      trivial,
+      (by simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst]),
       setPredecessorHorizonLimit_requires_internal afterLoop hcopyLoop,
       emitPredecessorFalseRange_requires_internal afterHorizon hsuffixLe
         hemitHorizon,
@@ -2504,6 +2619,8 @@ private theorem emitConstantFalseTemporaryFor_requires
     Work.loop₀ values count
   have hcurrent := emitConstantFalse_binaryForValues values count
   have hemitCurrent : current Work.emitCounter = 0 := by
+    change (BinaryRoutine.binaryForValues (emitConstantGate false)
+      Work.loop₀ values count) Work.emitCounter = 0
     rw [hcurrent]
     simpa [Work.available, Work.loop₀, Work.emitCounter] using hemit
   constructor
@@ -2731,7 +2848,7 @@ theorem emitPredecessorHeadMembers_requires_internal
     exact emitLeftPredecessorMembers_requires_internal stateCount values
       hclean hhorizon htarget
   · by_cases hright : directionCode = 1
-    · simp only [emitPredecessorHeadMembers, hleft, hright, ↓reduceIte]
+    · simp only [emitPredecessorHeadMembers, hright, ↓reduceIte]
       exact emitRightPredecessorMembers_requires_internal stateCount values
         hclean htarget
     · simp only [emitPredecessorHeadMembers, hleft, hright, ↓reduceIte]
@@ -2777,7 +2894,11 @@ private theorem predecessorHeadRoutine_requires
         (afterIdentity Work.horizon + 1) :=
     setPredecessorHorizonLimit_effect_internal afterIdentity
   have hafterTemporary : afterTemporary =
-      Function.update afterLimit Work.temporary₃ 2 := rfl
+      Function.update afterLimit Work.temporary₃ 2 := by
+    dsimp [afterTemporary]
+    funext i
+    simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+      BinaryRoutine.addConst, Function.update_apply]
   have hemitMembers : afterMembers Work.emitCounter = 0 := by
     rw [hafterMembers]
     simpa [Work.available, Work.limit₀, Work.emitCounter] using
@@ -2798,8 +2919,8 @@ private theorem predecessorHeadRoutine_requires
       Work.temporary₃] using hclean.loop₀
   have hlimitTemporary :
       afterTemporary Work.limit₀ = values Work.horizon + 1 := by
-    rw [hafterTemporary, hafterLimit]
-    simp [Work.horizon, Work.limit₀, Work.temporary₃]
+    rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
+    simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
   have hloop₁Temporary : afterTemporary Work.loop₁ = 0 := by
     rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
     simpa [Work.horizon, Work.available, Work.limit₀, Work.loop₁,
@@ -2822,6 +2943,13 @@ private theorem predecessorHeadRoutine_requires
   have havailableTemporary : 1 ≤ afterTemporary Work.available := by
     rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
     simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
+  have havailableValue : afterTemporary Work.available =
+      values Work.available + (values Work.horizon + 1) + 1 := by
+    rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
+    simp [Work.horizon, Work.available, Work.limit₀, Work.temporary₃]
+  have htemporaryTemporary : afterTemporary Work.temporary₃ = 2 := by
+    rw [hafterTemporary]
+    simp
   have hloopLe : afterTemporary Work.loop₀ ≤ afterTemporary Work.limit₀ := by
     rw [hloop₀Temporary, hlimitTemporary]
     omega
@@ -2830,12 +2958,9 @@ private theorem predecessorHeadRoutine_requires
         afterTemporary Work.temporary₃ + 2 * count ≤
           afterTemporary Work.available + count := by
     intro count hcount
-    rw [hafterTemporary, hafterLimit, hafterIdentity, hafterMembers]
-    have hloop' : values 14 = 0 := by
-      simpa [Work.loop₀] using hclean.loop₀
-    simp only [Work.horizon, Work.available, Work.loop₀, Work.limit₀,
-      Work.temporary₃, Function.update_apply]
-    simp [hloop'] at hcount ⊢
+    rw [hlimitTemporary, hloop₀Temporary] at hcount
+    rw [htemporaryTemporary, havailableValue]
+    simp only [Nat.sub_zero] at hcount
     omega
   simp only [BinaryRoutine.seqList, BinaryRoutine.seq,
     BinaryRoutine.identity, BinaryRoutine.emitBits]
@@ -2845,7 +2970,8 @@ private theorem predecessorHeadRoutine_requires
       hconstant,
       setPredecessorHorizonLimit_requires_internal afterIdentity
         hcopyIdentity,
-      trivial,
+      (by simp [BinaryRoutine.set, BinaryRoutine.seq, BinaryRoutine.clear,
+        BinaryRoutine.addConst]),
       emitPredecessorHeadConnectors_requires_internal afterTemporary hloopLe
         hloop₁Temporary href₀Temporary href₁Temporary hcopyTemporary
         hemitTemporary havailableTemporary hoffset,
