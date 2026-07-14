@@ -30,6 +30,34 @@ theorem emitCopyGate_sound (reference : Fin WorkCount) (negated : Bool) :
     (emitCopyGate reference negated).Sound :=
   emitCopyGate_sound_internal reference negated
 
+/-- Emitting a constant gate has a pointwise width certificate when the
+first-unused-wire frontier and the shared constant reference fit the width. -/
+theorem emitConstantGate_spaceBoundByWidth
+    (value : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitConstantGate value)
+      initialSpace values width :=
+  emitConstantGate_spaceBoundByWidth_internal value havailable hreference
+
+/-- Emitting a copy gate has a pointwise width certificate when the
+first-unused-wire frontier and copied reference fit the width. -/
+theorem emitCopyGate_spaceBoundByWidth
+    (reference : Fin WorkCount) (negated : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitCopyGate reference negated)
+      initialSpace values width :=
+  emitCopyGate_spaceBoundByWidth_internal reference negated havailable
+    hreference
+
 theorem emitStartCell_sound : emitStartCell.Sound :=
   emitStartCell_sound_internal
 

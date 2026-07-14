@@ -26,6 +26,32 @@ theorem emitPackedFormulaCopy_sound (sizePolynomial : Polynomial ℕ) :
     (emitPackedFormulaCopy sizePolynomial).Sound :=
   emitPackedFormulaCopy_sound_internal sizePolynomial
 
+/-- A delayed packed-formula copy has a pointwise width certificate when the
+evaluator cap, advanced cursor, wire frontier, and old reference fit the
+shared width, and the formula block is explicitly nonempty. The cursor-result
+bound also bounds the evaluated formula size. -/
+theorem emitPackedFormulaCopy_spaceBoundByWidth
+    (sizePolynomial : Polynomial ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap sizePolynomial
+          (values inputLength Work.horizon) ≤ width inputLength)
+    (hcursorResult : ∀ inputLength,
+      values inputLength Work.gateCount +
+          sizePolynomial.eval (values inputLength Work.horizon) ≤
+        width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hpositive : ∀ inputLength,
+      0 < sizePolynomial.eval (values inputLength Work.horizon)) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPackedFormulaCopy sizePolynomial) initialSpace values width :=
+  emitPackedFormulaCopy_spaceBoundByWidth_internal sizePolynomial
+    hpolynomialCap hcursorResult havailable hreference₀ hpositive
+
 /-- Exact zero-scratch and positive-formula-size domain. -/
 theorem emitPackedFormulaCopy_requires (sizePolynomial : Polynomial ℕ)
     (values : BinaryValues WorkCount) :

@@ -51,6 +51,24 @@ theorem preparePolynomialOffset_requires (polynomial : Polynomial ℕ)
     (preparePolynomialOffset polynomial extra).emitted values = [] :=
   preparePolynomialOffset_emitted_internal polynomial extra values
 
+/-- Fixed-polynomial offset preparation has a pointwise width certificate
+when both its explicit Horner-prefix cap and final evaluated offset fit the
+shared width. -/
+theorem preparePolynomialOffset_spaceBoundByWidth
+    (polynomial : Polynomial ℕ) (extra : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap polynomial
+          (values inputLength Work.horizon) ≤ width inputLength)
+    (hoffset : ∀ inputLength,
+      polynomial.eval (values inputLength Work.horizon) + extra ≤
+        width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (preparePolynomialOffset polynomial extra) initialSpace values width :=
+  preparePolynomialOffset_spaceBoundByWidth_internal polynomial extra
+    hpolynomialCap hoffset
+
 /-- Polynomial recent-gate emission is sound. -/
 theorem emitPolynomialRecentGate_sound (polynomial : Polynomial ℕ)
     (extra : ℕ) (op : AndOrOp) (negated₀ negated₁ : Bool)
@@ -59,6 +77,36 @@ theorem emitPolynomialRecentGate_sound (polynomial : Polynomial ℕ)
         fixedOffset₁).Sound :=
   emitPolynomialRecentGate_sound_internal polynomial extra op negated₀
     negated₁ fixedOffset₁
+
+/-- Polynomial recent-gate emission has a pointwise width certificate when
+the evaluator cap, width-bounded wire frontier and old references, zero loop
+controller, and both valid offsets are supplied explicitly. -/
+theorem emitPolynomialRecentGate_spaceBoundByWidth
+    (polynomial : Polynomial ℕ) (extra : ℕ) (op : AndOrOp)
+    (negated₀ negated₁ : Bool) (fixedOffset₁ : ℕ)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hpolynomialCap : ∀ inputLength,
+      2 * TM.binaryPolynomialValueCap polynomial
+          (values inputLength Work.horizon) ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference₀ : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength)
+    (hreference₁ : ∀ inputLength,
+      values inputLength Work.reference₁ ≤ width inputLength)
+    (hloop : ∀ inputLength, values inputLength Work.loop₃ = 0)
+    (hoffsetAvailable : ∀ inputLength,
+      polynomial.eval (values inputLength Work.horizon) + extra ≤
+        values inputLength Work.available)
+    (hfixedOffset₁ : ∀ inputLength,
+      fixedOffset₁ ≤ values inputLength Work.available) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitPolynomialRecentGate polynomial extra op negated₀ negated₁
+        fixedOffset₁) initialSpace values width :=
+  emitPolynomialRecentGate_spaceBoundByWidth_internal polynomial extra op
+    negated₀ negated₁ fixedOffset₁ hpolynomialCap havailable hreference₀
+    hreference₁ hloop hoffsetAvailable hfixedOffset₁
 
 /-- Exact zero-scratch and valid-offset domain for polynomial recent-gate
 emission. -/

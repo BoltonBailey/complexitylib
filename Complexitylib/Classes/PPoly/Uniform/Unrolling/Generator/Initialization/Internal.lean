@@ -35,6 +35,36 @@ theorem emitCopyGate_sound_internal (reference : Fin WorkCount)
   BinaryRoutine.emitRawGateStep_sound .and negated negated Work.emitCounter
     Work.available reference reference
 
+theorem emitConstantGate_spaceBoundByWidth_internal
+    (value : Bool) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitConstantGate value)
+      initialSpace values width := by
+  simpa only [emitConstantGate] using
+    (BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep
+      (if value then .or else .and) false true Work.emitCounter
+      Work.available Work.reference₀ Work.reference₀ havailable
+      hreference hreference)
+
+theorem emitCopyGate_spaceBoundByWidth_internal
+    (reference : Fin WorkCount) (negated : Bool)
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (havailable : ∀ inputLength,
+      values inputLength Work.available ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength reference ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitCopyGate reference negated)
+      initialSpace values width := by
+  simpa only [emitCopyGate] using
+    (BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .and negated negated
+      Work.emitCounter Work.available reference reference havailable
+      hreference hreference)
+
 theorem emitStartCell_sound_internal :
     emitStartCell.Sound := by
   apply BinaryRoutine.seqList_sound
