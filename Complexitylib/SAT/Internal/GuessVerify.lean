@@ -9,6 +9,7 @@ import Complexitylib.Classes.NP.Internal.PairBuildTM
 import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
+import Complexitylib.Models.TuringMachine.Trace
 
 /-!
 # SAT-specialized guess-and-verify NTM
@@ -616,21 +617,13 @@ theorem satVerifyPhaseTM_pair_cells_ne_start_trace (M : TM k) :
       ∀ j, j ≥ 1 →
         ((((satVerifyPhaseTM M).toNTM).trace T choices c).work
           (satPairIdx k)).cells j ≠ Γ.start := by
-  intro T
-  induction T with
-  | zero =>
-      intro choices c hclean
-      simpa [NTM.trace] using hclean
-  | succ T ih =>
-      intro choices c hclean
-      let verifyNTM := (satVerifyPhaseTM M).toNTM
-      let choicesTail : Fin T → Bool := fun i => choices ⟨i.val + 1, by omega⟩
-      let c1 : Cfg (k + 3) M.Q :=
-        verifyNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      rw [NTM.trace_succ verifyNTM T choices c]
-      exact ih choicesTail c1
-        (satVerifyPhaseTM_pair_cells_ne_start_trace_one M
-          (choices ⟨0, by omega⟩) c hclean)
+  intro T choices c hclean
+  apply ((satVerifyPhaseTM M).toNTM).trace_invariant T choices c
+    (fun _ current => ∀ j, j ≥ 1 →
+      (current.work (satPairIdx k)).cells j ≠ Γ.start) hclean
+  intro time htime current hcurrent
+  exact satVerifyPhaseTM_pair_cells_ne_start_trace_one M
+    (choices ⟨time, htime⟩) current hcurrent
 
 /-- A clean SAT pair tape supplies the structural guard needed by the verifier
     projection: if the pair head is away from cell zero, it cannot be reading a
@@ -867,15 +860,15 @@ theorem satGuessVerify_counter_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_counter_trace_prefix M T counterChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satCounterWrap M c)
+    NTM.trace_snoc (satGuessVerifyNTM M) T choices (satCounterWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
-          (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satCounterWrap M c) =
+          (fun i => choices i.castSucc) (satCounterWrap M c) =
         satCounterWrap M cT := by
-    simpa [counterNTM, counterChoices, cT, Fin.castLE] using hprefix
+    simpa [counterNTM, counterChoices, cT] using hprefix
   rw [hsplit, hprefix']
   change (satGuessVerifyNTM M).trace 1
-      (fun i => choices (Fin.natAdd T i)) (satCounterWrap M cT) =
+      (fun _ => choices (Fin.last T)) (satCounterWrap M cT) =
     satRewindInputWrap M
       { state := TM.RewindPhase.moveLeft,
         input := satBoundaryInput cT.input,
@@ -895,18 +888,12 @@ private theorem satCounter_trace_preserves_started_blank_other_work
     (hwork : c.work i = (Tape.init []).move Dir3.right) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace T choices c).work i =
       (Tape.init []).move Dir3.right := by
-  induction T generalizing c with
-  | zero =>
-      simpa [NTM.trace] using hwork
-  | succ T ih =>
-      let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
-      let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
-        counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      have h1 : c1.work i = (Tape.init []).move Dir3.right := by
-        exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_other_work
-          (satCounterIdx k) (choices ⟨0, by omega⟩) c i hi hwork
-      rw [NTM.trace_succ counterNTM T choices c]
-      exact ih (fun j => choices ⟨j.val + 1, by omega⟩) c1 h1
+  apply ((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace_invariant
+    T choices c (fun _ current =>
+      current.work i = (Tape.init []).move Dir3.right) hwork
+  intro time htime current hcurrent
+  exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_other_work
+    (satCounterIdx k) (choices ⟨time, htime⟩) current i hi hcurrent
 
 private theorem satCounter_trace_succ_initializes_blank_other_work
     (T : ℕ) (choices : Fin (T + 1) → Bool)
@@ -932,18 +919,12 @@ private theorem satCounter_trace_preserves_started_blank_output
     (houtput : c.output = (Tape.init []).move Dir3.right) :
     (((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace T choices c).output =
       (Tape.init []).move Dir3.right := by
-  induction T generalizing c with
-  | zero =>
-      simpa [NTM.trace] using houtput
-  | succ T ih =>
-      let counterNTM := (TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM
-      let c1 : Cfg (k + 3) TM.LinearCounterPhase :=
-        counterNTM.trace 1 (fun _ => choices ⟨0, by omega⟩) c
-      have h1 : c1.output = (Tape.init []).move Dir3.right := by
-        exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
-          (satCounterIdx k) (choices ⟨0, by omega⟩) c houtput
-      rw [NTM.trace_succ counterNTM T choices c]
-      exact ih (fun j => choices ⟨j.val + 1, by omega⟩) c1 h1
+  apply ((TM.inputLengthPlusOneCounterTM (satCounterIdx k)).toNTM).trace_invariant
+    T choices c (fun _ current =>
+      current.output = (Tape.init []).move Dir3.right) houtput
+  intro time htime current hcurrent
+  exact TM.inputLengthPlusOneCounterTM_toNTM_trace_one_preserves_started_blank_output
+    (satCounterIdx k) (choices ⟨time, htime⟩) current hcurrent
 
 private theorem satCounter_trace_succ_initializes_blank_output
     (T : ℕ) (choices : Fin (T + 1) → Bool)
@@ -1271,15 +1252,15 @@ theorem satGuessVerify_rewindInput_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_rewindInput_trace_prefix M T rewindChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satRewindInputWrap M c)
+    NTM.trace_snoc (satGuessVerifyNTM M) T choices (satRewindInputWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
-          (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satRewindInputWrap M c) =
+          (fun i => choices i.castSucc) (satRewindInputWrap M c) =
         satRewindInputWrap M cT := by
-    simpa [rewindNTM, rewindChoices, cT, Fin.castLE] using hprefix
+    simpa [rewindNTM, rewindChoices, cT] using hprefix
   rw [hsplit, hprefix']
   change (satGuessVerifyNTM M).trace 1
-      (fun i => choices (Fin.natAdd T i)) (satRewindInputWrap M cT) =
+      (fun _ => choices (Fin.last T)) (satRewindInputWrap M cT) =
     satGuessWrap M
       { state := NTM.GuessBoundedPhase.choose,
         input := satBoundaryInput cT.input,
@@ -1616,15 +1597,15 @@ theorem satGuessVerify_guess_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_guess_trace_prefix M T guessChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satGuessWrap M c)
+    NTM.trace_snoc (satGuessVerifyNTM M) T choices (satGuessWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
-          (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satGuessWrap M c) =
+          (fun i => choices i.castSucc) (satGuessWrap M c) =
         satGuessWrap M cT := by
-    simpa [guessNTM, guessChoices, cT, Fin.castLE] using hprefix
+    simpa [guessNTM, guessChoices, cT] using hprefix
   rw [hsplit, hprefix']
   change (satGuessVerifyNTM M).trace 1
-      (fun i => choices (Fin.natAdd T i)) (satGuessWrap M cT) =
+      (fun _ => choices (Fin.last T)) (satGuessWrap M cT) =
     satPairWrap M
       { state := TM.PairBuildPhase.init,
         input := satBoundaryInput cT.input,
@@ -2667,15 +2648,15 @@ theorem satGuessVerify_pair_trace_exit (M : TM k) (T : ℕ)
   have hprefix :=
     satGuessVerify_pair_trace_prefix M T pairChoices c hprefixHyp
   have hsplit :=
-    NTM.trace_add (satGuessVerifyNTM M) T 1 choices (satPairWrap M c)
+    NTM.trace_snoc (satGuessVerifyNTM M) T choices (satPairWrap M c)
   have hprefix' :
       (satGuessVerifyNTM M).trace T
-          (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i)) (satPairWrap M c) =
+          (fun i => choices i.castSucc) (satPairWrap M c) =
         satPairWrap M cT := by
-    simpa [pairNTM, pairChoices, cT, Fin.castLE] using hprefix
+    simpa [pairNTM, pairChoices, cT] using hprefix
   rw [hsplit, hprefix']
   change (satGuessVerifyNTM M).trace 1
-      (fun i => choices (Fin.natAdd T i)) (satPairWrap M cT) =
+      (fun _ => choices (Fin.last T)) (satPairWrap M cT) =
     satVerifyWrap M
       { state := verifierStartedState M,
         input := satBoundaryInput cT.input,

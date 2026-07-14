@@ -1,7 +1,9 @@
 # N0 — Higher-level machine authoring
 
-**Status:** external evaluation complete; proof-level TM-indexed named-tape
-endpoint/effect composition is the active local experiment. Rose-tree
+**Status:** external evaluation and the first cross-construction mechanics
+audit are complete. Canonical NTM trace splitting/invariant rules and the
+existing binary-loop space contract now remove duplicated proof plumbing;
+stable phase-boundary routing is the next small contract candidate. Rose-tree
 frontend/lowering is deferred and optional. No external dependency has been
 adopted.
 
@@ -150,6 +152,53 @@ transducer safety. Those properties must remain explicit until a future
 contract carries and proves them. Before adding effects to the routine syntax
 or generating controller phases, test this proof-level vocabulary in a separate
 construction where it removes material plumbing.
+
+## Cross-construction proof-mechanics audit
+
+The dependency-ordered N0 audit compared four proof shapes rather than
+starting from a proposed language:
+
+- UTM straight-line composition (`PairSelf`, `ClockConstructible`, and
+  `ClockedUtm`);
+- fixed-schedule NTM repetition and rewind;
+- the serialized circuit evaluator and Tseitin controller;
+- the direct-unrolling binary serializer and its nested count-up loops.
+
+The audit found two distinct kinds of repetition. Stable `seqTM` boundaries
+repeatedly prove that input/work/output transition maps are identities before
+transporting an endpoint predicate. The UTM `PairSelf` proof is the clearest
+case: five ordinary stable seams are surrounded by one genuinely special
+left-marker bounce that must remain explicit. This motivates one small
+read-stable boundary-routing lemma as the next experiment, not a generated
+controller language. A separate evaluator/Tseitin pattern existentially
+packages bounded intermediate runs; a transparent bounded-reachability wrapper
+may help there, but exact-cost theorems should continue to expose
+`reachesIn` directly.
+
+The first promoted result addresses finite NTM traces. The public
+`NTM.trace_snoc` rule splits off the final choice with `Fin.last`/`castSucc`,
+and `NTM.trace_invariant` owns all dependent prefix reindexing for an indexed
+one-step invariant. The latter replaced parallel hand-written inductions in
+the independent `GuessBounded`, `PairSplit`, and `PairBuild` subroutines plus
+SAT verifier/counter preservation proofs. The former also simplified final-step
+stitching in repetition and four SAT guess-and-verify phase exits.
+
+The serializer audit found a different issue: the complete tableau loop had
+locally reconstructed the already-public
+`SpaceBoundByWidthAt.binaryFor_of_clamped_body` theorem. Reusing that contract
+deleted two one-off wrappers and reduced `Tableau/Internal.lean` by 108 net
+lines while preserving the same pointwise polynomial envelope and logarithmic
+space theorem.
+
+Before documentation, this audit's Lean diff adds 240 lines and deletes 305,
+for a net reduction of 65 lines. More importantly, the
+remaining bespoke obligations are now classified: special left-marker bounces,
+branch meaning, underpowered child frames, and construction-specific arithmetic
+stay visible. The audit rejects a combined mega-contract carrying soundness,
+domains, emitted semantics, space, frames, and routing; it would obscure those
+honest distinctions. `Routine`, evaluator-local `TapeAction`, and the
+serializer-local effect/space pairing therefore remain experimental or local
+until independent consumers justify promotion.
 
 ## Optional rose-tree revisit
 

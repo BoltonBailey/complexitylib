@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine.Combinators
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 import Complexitylib.Models.TuringMachine.Hoare.Defs
+import Complexitylib.Models.TuringMachine.Trace
 import Complexitylib.Classes.Pairing
 
 /-!
@@ -2184,20 +2185,14 @@ theorem pairBuildTM_trace_preserves_output
     (hread : c.output.read ≠ Γ.start) :
     ((((pairBuildTM yIdx pIdx).toNTM).trace T choices c).output) =
       c.output := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-      rw [NTM.trace_succ ((pairBuildTM yIdx pIdx).toNTM) T choices c]
-      have hfirst := pairBuildTM_trace_one_preserves_output yIdx pIdx
-        (choices ⟨0, by omega⟩) c hread
-      have hread' :
-          ((((pairBuildTM yIdx pIdx).toNTM).trace 1
-            (fun _ => choices ⟨0, by omega⟩) c).output).read ≠ Γ.start := by
-        rw [hfirst]
-        exact hread
-      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-        (((pairBuildTM yIdx pIdx).toNTM).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply ((pairBuildTM yIdx pIdx).toNTM).trace_invariant T choices c
+    (fun _ current => current.output = c.output) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : current.output.read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (pairBuildTM_trace_one_preserves_output yIdx pIdx
+    (choices ⟨time, htime⟩) current hreadCurrent).trans hcurrent
 
 /-- One pair-builder step preserves a non-active work tape once that tape's
     head is past the start marker. -/
@@ -2239,20 +2234,14 @@ theorem pairBuildTM_trace_preserves_other_work
     (hread : (c.work otherIdx).read ≠ Γ.start) :
     ((((pairBuildTM yIdx pIdx).toNTM).trace T choices c).work otherIdx) =
       c.work otherIdx := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-      rw [NTM.trace_succ ((pairBuildTM yIdx pIdx).toNTM) T choices c]
-      have hfirst := pairBuildTM_trace_one_preserves_other_work yIdx pIdx otherIdx
-        (choices ⟨0, by omega⟩) c hy hp hread
-      have hread' :
-          (((((pairBuildTM yIdx pIdx).toNTM).trace 1
-            (fun _ => choices ⟨0, by omega⟩) c).work otherIdx)).read ≠ Γ.start := by
-        rw [hfirst]
-        exact hread
-      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-        (((pairBuildTM yIdx pIdx).toNTM).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply ((pairBuildTM yIdx pIdx).toNTM).trace_invariant T choices c
+    (fun _ current => current.work otherIdx = c.work otherIdx) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : (current.work otherIdx).read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (pairBuildTM_trace_one_preserves_other_work yIdx pIdx otherIdx
+    (choices ⟨time, htime⟩) current hy hp hreadCurrent).trans hcurrent
 
 /-- A compact corollary of `pairBuildTM_hoareTime`: the pair tape satisfies
     the standard `Tape.HasOutput` predicate for `pair x y`. -/

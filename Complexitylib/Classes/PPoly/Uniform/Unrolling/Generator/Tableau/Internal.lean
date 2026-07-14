@@ -1098,131 +1098,6 @@ theorem emitTransitionSteps_requires_internal (tm : TM k)
         Work.horizon]
   · trivial
 
-/-- A uniform pointwise bound for one packed-step invocation lifts through
-the complete outer transition loop. The proof uses one envelope for every
-reachable iteration, so the number of emitted layers never appears
-additively in the auxiliary-space bound. -/
-theorem emitTransitionSteps_spaceBoundByWidth_internal
-    (tm : TM k) {initialSpace width base : ℕ → ℕ}
-    {values : ℕ → BinaryValues WorkCount}
-    (hclean : ∀ inputLength, StepClean (values inputLength))
-    (hhorizon : ∀ inputLength,
-      0 < values inputLength Work.horizon)
-    (hloop : ∀ inputLength, values inputLength Work.loop₂ = 0)
-    (hconfigBase : ∀ inputLength,
-      values inputLength Work.configBase = base inputLength)
-    (havailable : ∀ inputLength,
-      values inputLength Work.available =
-        base inputLength +
-          configWidth tm.toNTM (values inputLength Work.horizon))
-    (hwidth : ∀ inputLength,
-      values inputLength Work.horizon ≤ width inputLength)
-    (stepConstant : ℕ)
-    (hstep : ∀ inputLength count,
-      count < values inputLength Work.horizon →
-        (emitStep tm).spaceBound (initialSpace inputLength)
-            (BinaryRoutine.binaryForValues (emitStep tm) Work.loop₂
-              (values inputLength) count) ≤
-          initialSpace inputLength +
-            stepConstant * (width inputLength).size + stepConstant) :
-    BinaryRoutine.SpaceBoundByWidthAt (emitTransitionSteps tm)
-      initialSpace values width := by
-  unfold emitTransitionSteps
-  apply BinaryRoutine.SpaceBoundByWidthAt.seq_internal
-  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_envelope_internal
-      (stepConstant + 2)
-    intro inputLength
-    have hcount : BinaryRoutine.binaryForCount Work.loop₂ Work.horizon
-        (values inputLength) = values inputLength Work.horizon := by
-      simp [BinaryRoutine.binaryForCount, hloop inputLength]
-    have hhorizonWidth : values inputLength Work.horizon ≤
-        width inputLength := hwidth inputLength
-    have hhorizonSize := Nat.size_le_size hhorizonWidth
-    refine
-      { compareSpace := ?_
-        initialSpace_le := by omega
-        bodySpace := ?_
-        successorSpace := ?_ }
-    · simp only [TM.binaryForCompareTime, Nat.add_mul]
-      omega
-    · intro count hcountLt
-      have hcountLtHorizon : count < values inputLength Work.horizon := by
-        simpa only [hcount] using hcountLt
-      exact (hstep inputLength count hcountLtHorizon).trans (by
-        simp only [Nat.add_mul]
-        omega)
-    · intro count hcountLt
-      let current := BinaryRoutine.binaryForValues (emitStep tm) Work.loop₂
-        (values inputLength) count
-      have hcountLtHorizon : count < values inputLength Work.horizon := by
-        simpa only [hcount] using hcountLt
-      have hinvariant := stepLoopValues_numeric_invariant tm
-        (values inputLength)
-        (hclean inputLength) (hhorizon inputLength) (base inputLength) count
-        (hloop inputLength) (hconfigBase inputLength)
-        (havailable inputLength)
-      have hcurrentLoop : current Work.loop₂ = count := hinvariant.2.2.1
-      have hcurrentWidth : current Work.loop₂ ≤ width inputLength := by
-        rw [hcurrentLoop]
-        exact (Nat.le_of_lt hcountLtHorizon).trans (hwidth inputLength)
-      have hcurrentSize := Nat.size_le_size hcurrentWidth
-      have hsucc := TM.binarySuccTime_le (current Work.loop₂)
-      change initialSpace inputLength +
-          TM.binarySuccTime (current Work.loop₂) ≤
-        initialSpace inputLength +
-          (stepConstant + 2) * (width inputLength).size +
-            (stepConstant + 2)
-      simp only [Nat.add_mul]
-      omega
-  · apply BinaryRoutine.SpaceBoundByWidthAt.clear_internal
-    intro inputLength
-    have hcount : BinaryRoutine.binaryForCount Work.loop₂ Work.horizon
-        (values inputLength) = values inputLength Work.horizon := by
-      simp [BinaryRoutine.binaryForCount, hloop inputLength]
-    have hinvariant := stepLoopValues_numeric_invariant tm
-      (values inputLength) (hclean inputLength) (hhorizon inputLength)
-      (base inputLength) (values inputLength Work.horizon)
-      (hloop inputLength) (hconfigBase inputLength) (havailable inputLength)
-    change
-      BinaryRoutine.binaryForValues (emitStep tm) Work.loop₂
-          (values inputLength)
-          (BinaryRoutine.binaryForCount Work.loop₂ Work.horizon
-            (values inputLength)) Work.loop₂ ≤
-        width inputLength
-    rw [hcount, hinvariant.2.2.1]
-    exact hwidth inputLength
-
-/-- Restricting the transition loop to its compact semantic entry contract
-preserves the same pointwise width certificate. -/
-theorem tableauTransitionSteps_spaceBoundByWidth_internal
-    (tm : TM k) {initialSpace width base : ℕ → ℕ}
-    {values : ℕ → BinaryValues WorkCount}
-    (hclean : ∀ inputLength, StepClean (values inputLength))
-    (hhorizon : ∀ inputLength,
-      0 < values inputLength Work.horizon)
-    (hloop : ∀ inputLength, values inputLength Work.loop₂ = 0)
-    (hconfigBase : ∀ inputLength,
-      values inputLength Work.configBase = base inputLength)
-    (havailable : ∀ inputLength,
-      values inputLength Work.available =
-        base inputLength +
-          configWidth tm.toNTM (values inputLength Work.horizon))
-    (hwidth : ∀ inputLength,
-      values inputLength Work.horizon ≤ width inputLength)
-    (stepConstant : ℕ)
-    (hstep : ∀ inputLength count,
-      count < values inputLength Work.horizon →
-        (emitStep tm).spaceBound (initialSpace inputLength)
-            (BinaryRoutine.binaryForValues (emitStep tm) Work.loop₂
-              (values inputLength) count) ≤
-          initialSpace inputLength +
-            stepConstant * (width inputLength).size + stepConstant) :
-    BinaryRoutine.SpaceBoundByWidthAt (tableauTransitionSteps tm)
-      initialSpace values width :=
-  BinaryRoutine.SpaceBoundByWidthAt.restrict_internal
-    (emitTransitionSteps_spaceBoundByWidth_internal tm hclean hhorizon hloop
-      hconfigBase havailable hwidth stepConstant hstep)
-
 theorem tableauTransitionSteps_spaceBoundByPolynomial_internal
     (tm : TM k) (q : Polynomial ℕ) {initialSpace : ℕ → ℕ} :
     BinaryRoutine.SpaceBoundByWidthAt (tableauTransitionSteps tm)
@@ -1337,19 +1212,36 @@ theorem tableauTransitionSteps_spaceBoundByPolynomial_internal
       (fun code => width (Nat.unpair code).1) :=
     emitStep_spaceBoundByWidth tm hclampedClean hclampedHorizon
       hclampedEnvelope
-  obtain ⟨constant, hbody⟩ := hbody
   change BinaryRoutine.SpaceBoundByWidthAt (tableauTransitionSteps tm)
     initialSpace values width
-  apply tableauTransitionSteps_spaceBoundByWidth_internal tm hclean hhorizon
-    hloop hconfigBase havailable hwidth constant
-  intro n count hcount
-  have hcountLe : count ≤
-      BinaryRoutine.binaryForCount Work.loop₂ Work.horizon (values n) - 1 := by
-    simp only [BinaryRoutine.binaryForCount, hloop]
-    omega
-  have hbound := hbody (Nat.pair n count)
-  simpa only [BinaryRoutine.binaryForClampedValues, Nat.unpair_pair,
-    hcountLe, min_eq_left] using hbound
+  apply BinaryRoutine.SpaceBoundByWidthAt.restrict
+  unfold emitTransitionSteps
+  apply BinaryRoutine.SpaceBoundByWidthAt.seq
+  · apply BinaryRoutine.SpaceBoundByWidthAt.binaryFor_of_clamped_body
+    · exact hwidth
+    · intro n count hcount
+      have hcountHorizon : count < values n Work.horizon := by
+        simpa [BinaryRoutine.binaryForCount, hloop n] using hcount
+      have hinvariant := stepLoopValues_numeric_invariant tm (values n)
+        (hclean n) (hhorizon n) n count (hloop n) (hconfigBase n)
+        (havailable n)
+      rw [hinvariant.2.2.1]
+      exact (Nat.le_of_lt hcountHorizon).trans (hwidth n)
+    · exact hbody
+  · apply BinaryRoutine.SpaceBoundByWidthAt.clear
+    intro n
+    have hcount : BinaryRoutine.binaryForCount Work.loop₂ Work.horizon
+        (values n) = values n Work.horizon := by
+      simp [BinaryRoutine.binaryForCount, hloop n]
+    have hinvariant := stepLoopValues_numeric_invariant tm (values n)
+      (hclean n) (hhorizon n) n (values n Work.horizon) (hloop n)
+      (hconfigBase n) (havailable n)
+    change
+      BinaryRoutine.binaryForValues (emitStep tm) Work.loop₂ (values n)
+          (BinaryRoutine.binaryForCount Work.loop₂ Work.horizon (values n))
+          Work.loop₂ ≤ width n
+    rw [hcount, hinvariant.2.2.1]
+    exact hwidth n
 
 theorem tableauTransitionSteps_space_bigO_log_internal
     (tm : TM k) (q : Polynomial ℕ) :

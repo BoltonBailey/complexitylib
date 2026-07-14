@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Encoding.Pairing
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Trace
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit.Defs
 import Mathlib.Tactic.Ring
 
@@ -1175,21 +1175,14 @@ theorem pairSplitCoreTM_toNTM_trace_preserves_output_internal
     (c : Cfg k (pairSplitCoreTM xIdx yIdx).Q)
     (hread : c.output.read ≠ Γ.start) :
     (((pairSplitCoreTM xIdx yIdx).toNTM).trace T choices c).output = c.output := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-      rw [NTM.trace_succ ((pairSplitCoreTM xIdx yIdx).toNTM) T choices c]
-      have hfirst :=
-        pairSplitCoreTM_toNTM_trace_one_preserves_output
-          xIdx yIdx (choices ⟨0, by omega⟩) c hread
-      have hread' :
-          ((((pairSplitCoreTM xIdx yIdx).toNTM).trace 1
-            (fun _ => choices ⟨0, by omega⟩) c).output).read ≠ Γ.start := by
-        rw [hfirst]
-        exact hread
-      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-        (((pairSplitCoreTM xIdx yIdx).toNTM).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply ((pairSplitCoreTM xIdx yIdx).toNTM).trace_invariant T choices c
+    (fun _ current => current.output = c.output) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : current.output.read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (pairSplitCoreTM_toNTM_trace_one_preserves_output xIdx yIdx
+    (choices ⟨time, htime⟩) current hreadCurrent).trans hcurrent
 
 /-- Every lifted pair-split trace preserves an off-start work tape other than
 the two destination tapes. -/
@@ -1200,21 +1193,15 @@ theorem pairSplitCoreTM_toNTM_trace_preserves_other_work_internal
     (hread : (c.work otherIdx).read ≠ Γ.start) :
     (((pairSplitCoreTM xIdx yIdx).toNTM).trace T choices c).work otherIdx =
       c.work otherIdx := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-      rw [NTM.trace_succ ((pairSplitCoreTM xIdx yIdx).toNTM) T choices c]
-      have hfirst :=
-        pairSplitCoreTM_toNTM_trace_one_preserves_other_work
-          xIdx yIdx otherIdx (choices ⟨0, by omega⟩) c hx hy hread
-      have hread' :
-          (((((pairSplitCoreTM xIdx yIdx).toNTM).trace 1
-            (fun _ => choices ⟨0, by omega⟩) c).work otherIdx).read ≠ Γ.start) := by
-        rw [hfirst]
-        exact hread
-      rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-        (((pairSplitCoreTM xIdx yIdx).toNTM).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply ((pairSplitCoreTM xIdx yIdx).toNTM).trace_invariant T choices c
+    (fun _ current => current.work otherIdx = c.work otherIdx) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : (current.work otherIdx).read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (pairSplitCoreTM_toNTM_trace_one_preserves_other_work xIdx yIdx
+    otherIdx (choices ⟨time, htime⟩) current hx hy hreadCurrent).trans
+      hcurrent
 
 -- ════════════════════════════════════════════════
 -- Exact endpoint from the genuine initial configuration

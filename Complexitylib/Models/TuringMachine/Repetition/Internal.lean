@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Repetition.Defs
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Trace
 
 /-!
 # Correctness internals for fixed-time repetition
@@ -439,11 +439,11 @@ theorem repeatAtTime_trace_run_prefix (tm : NTM n) (hT : 0 < T)
       let c' := tm.trace 1 (fun _ => g m) c
       let C' := (repeatAtTime tm k T).trace 1 (fun _ => g m) C
       have hc_split : tm.trace (m + 1) (fun i => g i.val) c₀ = c' := by
-        simpa [c, c'] using tm.trace_add_fun m 1 g c₀
+        simpa [c, c'] using tm.trace_snoc m (fun i => g i.val) c₀
       have hC_split :
           (repeatAtTime tm k T).trace (m + 1) (fun i => g i.val) C₀ = C' := by
         simpa [C, C'] using
-          (repeatAtTime tm k T).trace_add_fun m 1 g C₀
+          (repeatAtTime tm k T).trace_snoc m (fun i => g i.val) C₀
       have hinv' := (repeatAtTime tm k T).trace_startInvariant 1
         (fun _ => g m) C hprefix.2.2.1 hprefix.2.2.2.1 hprefix.2.2.2.2
       by_cases hhalt : c.state = tm.qhalt
@@ -500,7 +500,7 @@ theorem repeatAtTime_trace_run (tm : NTM n) (hT : 0 < T)
   let C' := (repeatAtTime tm k T).trace 1 (fun _ => g m) C
   have hc_split : tm.trace T (fun i => g i.val) c₀ = c' := by
     rw [show T = m + 1 by omega]
-    simpa [c, c'] using tm.trace_add_fun m 1 g c₀
+    simpa [c, c'] using tm.trace_snoc m (fun i => g i.val) c₀
   have hC_split :
       (repeatAtTime tm k T).trace T (fun i => g i.val) C₀ = C' := by
     calc
@@ -508,7 +508,8 @@ theorem repeatAtTime_trace_run (tm : NTM n) (hT : 0 < T)
         simpa using (repeatAtTime tm k T).trace_cast
           (show T = m + 1 by omega) (fun i => g i.val) C₀
       _ = C' := by
-        simpa [C, C'] using (repeatAtTime tm k T).trace_add_fun m 1 g C₀
+        simpa [C, C'] using
+          (repeatAtTime tm k T).trace_snoc m (fun i => g i.val) C₀
   have hlast : ¬m + 1 < T := by omega
   have hinv' := (repeatAtTime tm k T).trace_startInvariant 1
     (fun _ => g m) C hprefix.2.2.1 hprefix.2.2.2.1 hprefix.2.2.2.2

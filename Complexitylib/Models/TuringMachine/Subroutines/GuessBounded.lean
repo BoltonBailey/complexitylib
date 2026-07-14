@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Subroutines.Counter
 import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Trace
 
 /-!
 # Nondeterministic TM subroutines
@@ -230,20 +231,14 @@ theorem guessBoundedNTM_trace_preserves_input
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hread : c.input.read ≠ Γ.start) :
     ((guessBoundedNTM witnessIdx counterIdx).trace T choices c).input = c.input := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
-    have hfirst := guessBoundedNTM_trace_one_input_eq witnessIdx counterIdx
-      (choices ⟨0, by omega⟩) c hread
-    have hread' :
-        (((guessBoundedNTM witnessIdx counterIdx).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c).input).read ≠ Γ.start := by
-      rw [hfirst]
-      exact hread
-    rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-      ((guessBoundedNTM witnessIdx counterIdx).trace 1
-        (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply (guessBoundedNTM witnessIdx counterIdx).trace_invariant T choices c
+    (fun _ current => current.input = c.input) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : current.input.read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (guessBoundedNTM_trace_one_input_eq witnessIdx counterIdx
+    (choices ⟨time, htime⟩) current hreadCurrent).trans hcurrent
 
 /-- One step of `guessBoundedNTM` leaves the output tape unchanged, provided
     the output head is not on the `▷` marker. -/
@@ -275,20 +270,14 @@ theorem guessBoundedNTM_trace_preserves_output
     (c : Cfg n (guessBoundedNTM witnessIdx counterIdx).Q)
     (hread : c.output.read ≠ Γ.start) :
     ((guessBoundedNTM witnessIdx counterIdx).trace T choices c).output = c.output := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
-    have hfirst := guessBoundedNTM_trace_one_output_eq witnessIdx counterIdx
-      (choices ⟨0, by omega⟩) c hread
-    have hread' :
-        (((guessBoundedNTM witnessIdx counterIdx).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c).output).read ≠ Γ.start := by
-      rw [hfirst]
-      exact hread
-    rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-      ((guessBoundedNTM witnessIdx counterIdx).trace 1
-        (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply (guessBoundedNTM witnessIdx counterIdx).trace_invariant T choices c
+    (fun _ current => current.output = c.output) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : current.output.read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (guessBoundedNTM_trace_one_output_eq witnessIdx counterIdx
+    (choices ⟨time, htime⟩) current hreadCurrent).trans hcurrent
 
 /-- One step of `guessBoundedNTM` leaves any work tape other than the witness
     and counter tapes unchanged, provided its head is not on `▷`. -/
@@ -331,20 +320,15 @@ theorem guessBoundedNTM_trace_preserves_other_work
     (hread : (c.work otherIdx).read ≠ Γ.start) :
     (((guessBoundedNTM witnessIdx counterIdx).trace T choices c).work otherIdx) =
       c.work otherIdx := by
-  induction T generalizing c with
-  | zero => rfl
-  | succ T ih =>
-    rw [trace_succ (guessBoundedNTM witnessIdx counterIdx) T choices c]
-    have hfirst := guessBoundedNTM_trace_one_preserves_other_work witnessIdx counterIdx
-      otherIdx (choices ⟨0, by omega⟩) c hwitness hcounter hread
-    have hread' :
-        (((guessBoundedNTM witnessIdx counterIdx).trace 1
-          (fun _ => choices ⟨0, by omega⟩) c).work otherIdx).read ≠ Γ.start := by
-      rw [hfirst]
-      exact hread
-    rw [ih (fun i => choices ⟨i.val + 1, by omega⟩)
-      ((guessBoundedNTM witnessIdx counterIdx).trace 1
-        (fun _ => choices ⟨0, by omega⟩) c) hread', hfirst]
+  apply (guessBoundedNTM witnessIdx counterIdx).trace_invariant T choices c
+    (fun _ current => current.work otherIdx = c.work otherIdx) rfl
+  intro time htime current hcurrent
+  have hreadCurrent : (current.work otherIdx).read ≠ Γ.start := by
+    rw [hcurrent]
+    exact hread
+  exact (guessBoundedNTM_trace_one_preserves_other_work witnessIdx counterIdx
+    otherIdx (choices ⟨time, htime⟩) current hwitness hcounter
+    hreadCurrent).trans hcurrent
 
 -- ════════════════════════════════════════════════════════════════════════
 -- One-step transition API

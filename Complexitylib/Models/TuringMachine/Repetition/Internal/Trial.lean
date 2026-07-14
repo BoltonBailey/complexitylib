@@ -103,7 +103,8 @@ theorem RepeatFrame.trace_run (tm : NTM n) (hT : 0 < T)
         simpa using (repeatAtTime tm k T).trace_cast
           (show T = m + 1 by omega) (fun i => g i.val) C₀
       _ = C' := by
-        simpa [C, C'] using (repeatAtTime tm k T).trace_add_fun m 1 g C₀
+        simpa [C, C'] using
+          (repeatAtTime tm k T).trace_snoc m (fun i => g i.val) C₀
   rw [hsplit]
   exact RepeatFrame.run tm hprefixFrame hCstate _
 

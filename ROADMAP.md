@@ -106,8 +106,9 @@ from stable public modules so later work does not duplicate local lemmas.
 `Tape.ext`, initialized/started-tape cell and read lemmas, `Tape.move_cells`,
 `Tape.write_head`, canonical `readBackWrite` no-op/move facts, canonical
 register-cell facts, and DTM time-bound monotonicity. NTM traces now expose
-left-end-marker preservation on every tape, as well as internal
-input/work/output head-growth bounds. Several large consumers have been
+left-end-marker preservation on every tape, canonical final-step splitting,
+and indexed invariant induction without dependent prefix-cast plumbing, as
+well as internal input/work/output head-growth bounds. Several large consumers have been
 migrated away from private copies; endpoint/run lemmas and a few older local
 tape helpers remain. The first serialized-evaluator boundary now composes the
 public validator, frame-preserving rewind, and canonical pair splitter under one
@@ -150,12 +151,18 @@ frame facts instead of hiding them in another controller-local proof.
     deferred and optional, not implemented. It is not a dependency of the
     named-tape/effect work; revisit only when a real construction needs recursive
     Data-valued syntax and the bounded slice can meet all promotion gates.
-- [ ] Audit proof-engineering mechanics across representative machine and circuit
+- [x] Audit proof-engineering mechanics across representative machine and circuit
   constructions: inventory repeated state/tape/wire bookkeeping, run or trace
   stitching, semantic transport, and resource accounting, then prototype the
   smallest reusable lemma, combinator, tactic, or typed DSL layer that removes
   the duplication. Validate each proposed abstraction on at least two independent
-  constructions before making it a shared interface.
+  constructions before making it a shared interface. The completed audit is
+  recorded in `docs/N0-MachineAuthoring.md`: `NTM.trace_snoc` and
+  `NTM.trace_invariant` now serve repetition, SAT phase exits, `GuessBounded`,
+  `PairSplit`, `PairBuild`, and SAT verifier/counter invariants; the tableau loop
+  now reuses the generic paired-and-clamped width theorem instead of two local
+  wrappers. Stable phase-boundary routing is the next small candidate; a combined
+  stage DSL was explicitly rejected.
 - [ ] Standardize the low-level contracts that make those larger abstractions
   compositional: reusable tape-shape predicates, explicit preservation frames,
   appendable endpoints, and exact-time sequential/loop rules. Treat an attractive

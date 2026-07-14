@@ -269,13 +269,12 @@ theorem repeatAtTime_trace_rewind_prefix (tm : NTM n)
   induction m with
   | zero => rfl
   | succ m ih =>
-    rw [(repeatAtTime tm k T).trace_add m 1 choices]
-    rw [ih (by omega)
-      (fun i => choices (Fin.castLE (Nat.le_add_right m 1) i))]
+    rw [(repeatAtTime tm k T).trace_snoc m choices]
+    rw [ih (by omega) (fun i => choices i.castSucc)]
     rw [repeatAtTime_trace_one_rewind tm j ⟨m, by omega⟩ q votes
       (repeatRewindSnapshotIter j m S)
       (repeatRewindSnapshotIter_wellFormed j m S hS)
-      (fun i => choices (Fin.natAdd m i))]
+      (fun _ => choices (Fin.last m))]
     simp only [dif_pos hm]
     rw [repeatRewindSnapshotIter_succ_snoc]
 
@@ -289,13 +288,13 @@ theorem repeatAtTime_trace_rewind_snapshot (tm : NTM n)
         (repeatRewindCfg tm j ⟨0, by omega⟩ q votes S) =
       repeatFinishCfg tm j q votes
         (repeatRewindSnapshotIter j (T + 1) S) := by
-  rw [(repeatAtTime tm k T).trace_add T 1 choices]
+  rw [(repeatAtTime tm k T).trace_snoc T choices]
   rw [repeatAtTime_trace_rewind_prefix tm j q votes S hS T (by omega)
-    (fun i => choices (Fin.castLE (Nat.le_add_right T 1) i))]
+    (fun i => choices i.castSucc)]
   rw [repeatAtTime_trace_one_rewind tm j ⟨T, by omega⟩ q votes
     (repeatRewindSnapshotIter j T S)
     (repeatRewindSnapshotIter_wellFormed j T S hS)
-    (fun i => choices (Fin.natAdd T i))]
+    (fun _ => choices (Fin.last T))]
   rw [dif_neg (by omega : ¬(T + 1 < T + 1))]
   rw [repeatRewindSnapshotIter_succ_snoc]
 
