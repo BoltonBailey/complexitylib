@@ -6,7 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Offset
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect.Internal
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.WrittenCell.Defs
 import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
@@ -1779,6 +1779,1539 @@ theorem emitWrittenCellFormula_emitted_internal (tm : NTM k)
     writtenCellEffectStartValues, effectSize, Work.available,
     Work.savedOutput, Work.limit₂, Work.position, Work.tapeIndex,
     Work.symbolIndex, Work.horizon, Work.configBase, List.append_assoc]
+
+/-! ## Pointwise all-prefix width certificates -/
+
+/-- One global arithmetic envelope covering the nested selected-write effect
+and both fixed written-cell wrapper phases. -/
+private def WrittenCellFormulaWidthCap (tm : NTM k)
+    (tape : WritableSlot k) (symbol : Γ)
+    (values : ℕ → BinaryValues WorkCount) (width : ℕ → ℕ) : Prop :=
+  ∀ inputLength stateIndex tapeIndex symbolIndex position,
+    stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+    symbolIndex < 4 →
+    position ≤ values inputLength Work.horizon + 1 →
+      values inputLength Work.available +
+          writtenCellScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (writtenCellEffectSelectedAt tm tape symbol)
+            (effectCaseChoiceAt tm) +
+        transitionStateRef (values inputLength Work.configBase) stateIndex +
+        (transitionHeadRef (Fintype.card tm.Q)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position +
+            tapeIndex + values inputLength Work.horizon + 1) +
+        (transitionCellRef (Fintype.card tm.Q) (k + 2)
+              (values inputLength Work.horizon)
+              (values inputLength Work.configBase) tapeIndex position
+              symbolIndex +
+            (tapeIndex * (values inputLength Work.horizon + 2) + position) +
+            (values inputLength Work.horizon + 2) + (k + 2) + tapeIndex +
+            4) +
+        caseReadSize (values inputLength Work.horizon) +
+        values inputLength Work.horizon ≤ width inputLength
+
+private theorem WrittenCellFormulaWidthCap.frontier
+    {tm : NTM k} {tape : WritableSlot k} {symbol : Γ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hcap : WrittenCellFormulaWidthCap tm tape symbol values width) :
+    ∀ inputLength,
+      values inputLength Work.available +
+          writtenCellScheduleSize (transitionCases tm).length k
+            (values inputLength Work.horizon)
+            (writtenCellEffectSelectedAt tm tape symbol)
+            (effectCaseChoiceAt tm) ≤ width inputLength := by
+  intro inputLength
+  have hstate : stateIndex tm tm.qstart < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qstart).isLt
+  have hbound := hcap inputLength (stateIndex tm tm.qstart) 0 0 0
+    hstate (by omega) (by omega) (Nat.zero_le _)
+  omega
+
+private theorem seqListSpaceBoundByWidthAt_append_for_writtenCell
+    (first second : List (BinaryRoutine n))
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues n}
+    {width : ℕ → ℕ}
+    (hfirst : BinaryRoutine.SeqListSpaceBoundByWidthAt first initialSpace
+      values width)
+    (hsecond : BinaryRoutine.SeqListSpaceBoundByWidthAt second initialSpace
+      (fun inputLength =>
+        (BinaryRoutine.seqList first).effect (values inputLength)) width) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt (first ++ second) initialSpace
+      values width := by
+  induction first generalizing values with
+  | nil =>
+      simpa [BinaryRoutine.SeqListSpaceBoundByWidthAt,
+        BinaryRoutine.seqList, BinaryRoutine.identity,
+        BinaryRoutine.emitBits] using hsecond
+  | cons routine routines ih =>
+      rcases hfirst with ⟨hroutine, hroutines⟩
+      refine ⟨hroutine, ?_⟩
+      apply ih hroutines
+      simpa [BinaryRoutine.seqList, BinaryRoutine.seq] using hsecond
+
+private theorem emitHeadAtCurrentCell_spaceBoundByWidthAt
+    (stateCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      HeadAtCurrentCellClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 1 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt (emitHeadAtCurrentCell stateCount)
+      initialSpace values width := by
+  let copy := BinaryRoutine.binaryCopy Work.horizon Work.temporary₃
+    Work.copyCounter
+  let afterCopy : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (values inputLength)
+  let succ := BinaryRoutine.addConst Work.temporary₃ 1
+  let afterSucc : ℕ → BinaryValues WorkCount := fun inputLength =>
+    succ.effect (afterCopy inputLength)
+  let gap := decrementReferenceBy Work.temporary₃ Work.position Work.loop₃
+  let afterGap : ℕ → BinaryValues WorkCount := fun inputLength =>
+    gap.effect (afterSucc inputLength)
+  let gate := emitHeadAtCurrentCellGate stateCount
+  let afterGate : ℕ → BinaryValues WorkCount := fun inputLength =>
+    gate.effect (afterGap inputLength)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace values
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.horizon
+      Work.temporary₃ Work.copyCounter
+    · exact fun inputLength => hvalues inputLength Work.horizon
+    · exact fun inputLength => hvalues inputLength Work.temporary₃
+  have hafterCopyValues : ∀ inputLength index,
+      afterCopy inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.temporary₃
+      (hvalues inputLength)
+    exact hvalues inputLength Work.horizon
+  have hsucc : BinaryRoutine.SpaceBoundByWidthAt succ initialSpace afterCopy
+      width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.addConst Work.temporary₃ 1
+    intro inputLength
+    simpa [succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      Work.temporary₃, Work.horizon] using hhorizon inputLength
+  have hafterSuccValues : ∀ inputLength index,
+      afterSucc inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.temporary₃
+      (hafterCopyValues inputLength)
+    simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.temporary₃, Work.horizon] using
+      hhorizon inputLength
+  have hdistinct : DecrementReferenceDistinct Work.temporary₃ Work.position
+      Work.loop₃ :=
+    { reference_ne_offset := by decide
+      reference_ne_counter := by decide
+      offset_ne_counter := by decide }
+  have hloopSucc : ∀ inputLength,
+      afterSucc inputLength Work.loop₃ = 0 := by
+    intro inputLength
+    simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.temporary₃, Work.loop₃,
+      Work.horizon] using (hclean inputLength).loop₃
+  have hgap : BinaryRoutine.SpaceBoundByWidthAt gap initialSpace afterSucc
+      width := by
+    apply decrementReferenceBy_spaceBoundByWidth Work.temporary₃
+      Work.position Work.loop₃ hdistinct
+    · intro inputLength
+      rw [hloopSucc inputLength]
+      exact Nat.zero_le _
+    · intro inputLength
+      rw [hloopSucc inputLength, Nat.sub_zero]
+      simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+        BinaryRoutine.addConst, Work.temporary₃, Work.position,
+        Work.horizon] using hposition inputLength
+    · exact fun inputLength =>
+        hafterSuccValues inputLength Work.temporary₃
+    · exact fun inputLength => hafterSuccValues inputLength Work.position
+  have hgapEffect : ∀ inputLength,
+      afterGap inputLength =
+        Function.update
+          (Function.update (afterSucc inputLength) Work.temporary₃
+            (afterSucc inputLength Work.temporary₃ -
+              afterSucc inputLength Work.position)) Work.loop₃ 0 := by
+    intro inputLength
+    exact decrementReferenceBy_effect Work.temporary₃ Work.position
+      Work.loop₃ (afterSucc inputLength) hdistinct
+        (hloopSucc inputLength)
+  have hafterGapValues : ∀ inputLength index,
+      afterGap inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hgapEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.loop₃
+    · apply BinaryRoutine.values_update_le Work.temporary₃
+        (hafterSuccValues inputLength)
+      exact le_trans (Nat.sub_le _ _) (hafterSuccValues inputLength _)
+    · exact Nat.zero_le _
+  have hconstant : BinaryRoutine.SpaceBoundByWidthAt (emitConstantGate false)
+      initialSpace afterGap width :=
+    emitConstantGate_spaceBoundByWidth false
+      (fun inputLength => hafterGapValues inputLength Work.available)
+      (fun inputLength => hafterGapValues inputLength Work.reference₀)
+  have hhead : BinaryRoutine.SpaceBoundByWidthAt
+      (emitHeadReference stateCount) initialSpace afterGap width := by
+    apply emitHeadReference_spaceBoundByWidth stateCount false hafterGapValues
+    intro inputLength
+    rw [hgapEffect inputLength]
+    simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.temporary₃, Work.position, Work.loop₃,
+      Work.horizon, Work.configBase, Work.tapeIndex] using
+      hheadCap inputLength
+  have hgate : BinaryRoutine.SpaceBoundByWidthAt gate initialSpace afterGap
+      width := by
+    simpa [gate, emitHeadAtCurrentCellGate] using
+      (BinaryRoutine.SpaceBoundByWidthAt.branchZero Work.temporary₃
+        hconstant hhead)
+  have htemporaryGap : ∀ inputLength,
+      afterGap inputLength Work.temporary₀ = 0 := by
+    intro inputLength
+    rw [hgapEffect inputLength]
+    simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.temporary₃, Work.position, Work.loop₃,
+      Work.temporary₀, Work.horizon] using
+      (hclean inputLength).temporary₀
+  have hreferenceGap : ∀ inputLength,
+      afterGap inputLength Work.reference₀ = 0 := by
+    intro inputLength
+    rw [hgapEffect inputLength]
+    simpa [afterSucc, succ, afterCopy, copy, BinaryRoutine.binaryCopy,
+      BinaryRoutine.addConst, Work.temporary₃, Work.position, Work.loop₃,
+      Work.reference₀, Work.horizon] using (hclean inputLength).reference₀
+  have hgateEffect : ∀ inputLength,
+      afterGate inputLength =
+        Function.update (afterGap inputLength) Work.available
+          (afterGap inputLength Work.available + 1) := by
+    intro inputLength
+    exact emitHeadAtCurrentCellGate_effect_internal stateCount
+      (afterGap inputLength) (htemporaryGap inputLength)
+        (hreferenceGap inputLength)
+  have hafterGateValues : ∀ inputLength index,
+      afterGate inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hgateEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hafterGapValues inputLength)
+    simpa [hgapEffect inputLength, afterSucc, succ, afterCopy, copy,
+      BinaryRoutine.binaryCopy, BinaryRoutine.addConst, Work.temporary₃,
+      Work.position, Work.loop₃, Work.available, Work.horizon] using
+      hfrontier inputLength
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.temporary₃) initialSpace afterGate width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.temporary₃
+      (fun inputLength => hafterGateValues inputLength Work.temporary₃)
+  rw [emitHeadAtCurrentCell]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hcopy, hsucc, hgap, hgate, hclear, trivial⟩
+
+private theorem writtenCellPrefixRoutines_spaceBoundByWidthAt
+    (stateCount tapeIndex symbolIndex : ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength)
+    (hsymbolIndex : ∀ inputLength, symbolIndex ≤ width inputLength)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 1 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) + tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellPrefixRoutines stateCount tapeIndex symbolIndex)
+      initialSpace values width := by
+  let setTape := BinaryRoutine.set Work.tapeIndex tapeIndex
+  let afterTape : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setTape.effect (values inputLength)
+  let setSymbol := BinaryRoutine.set Work.symbolIndex symbolIndex
+  let selected : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setSymbol.effect (afterTape inputLength)
+  let head := emitHeadAtCurrentCell stateCount
+  let afterHead : ℕ → BinaryValues WorkCount := fun inputLength =>
+    head.effect (selected inputLength)
+  let prepare := prepareRecentReference Work.savedOutput 1
+  let afterPrepare : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare.effect (afterHead inputLength)
+  let copy := BinaryRoutine.binaryCopy Work.position Work.limit₂
+    Work.copyCounter
+  let afterCopy : ℕ → BinaryValues WorkCount := fun inputLength =>
+    copy.effect (afterPrepare inputLength)
+  let clearPosition := BinaryRoutine.clear Work.position
+  let afterPosition : ℕ → BinaryValues WorkCount := fun inputLength =>
+    clearPosition.effect (afterCopy inputLength)
+  let clearTape := BinaryRoutine.clear Work.tapeIndex
+  let afterTapeClear : ℕ → BinaryValues WorkCount := fun inputLength =>
+    clearTape.effect (afterPosition inputLength)
+  have hsetTape : BinaryRoutine.SpaceBoundByWidthAt setTape initialSpace
+      values width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set Work.tapeIndex tapeIndex
+    · exact fun inputLength => hvalues inputLength Work.tapeIndex
+    · exact htapeIndex
+  have hafterTapeValues : ∀ inputLength index,
+      afterTape inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [afterTape, setTape, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+      (BinaryRoutine.values_update_le Work.tapeIndex
+        (hvalues inputLength) (htapeIndex inputLength))
+  have hsetSymbol : BinaryRoutine.SpaceBoundByWidthAt setSymbol initialSpace
+      afterTape width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.set Work.symbolIndex symbolIndex
+    · exact fun inputLength => hafterTapeValues inputLength Work.symbolIndex
+    · exact hsymbolIndex
+  have hselectedValues : ∀ inputLength index,
+      selected inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [selected, setSymbol, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+      (BinaryRoutine.values_update_le Work.symbolIndex
+        (hafterTapeValues inputLength) (hsymbolIndex inputLength))
+  have hselected : ∀ inputLength,
+      selected inputLength =
+        writtenCellSelectedValues (values inputLength) tapeIndex
+          symbolIndex := by
+    intro inputLength
+    symm
+    exact writtenCellSelectedValues_eq_effect (values inputLength) tapeIndex
+      symbolIndex
+  have hheadClean : ∀ inputLength,
+      HeadAtCurrentCellClean (selected inputLength) := by
+    intro inputLength
+    rw [hselected inputLength]
+    exact HeadAtCurrentCellClean.writtenCellSelectedValues
+      (values inputLength) tapeIndex symbolIndex
+      (hclean inputLength).headAtCurrentCellClean_internal
+  have hheadSpace : BinaryRoutine.SpaceBoundByWidthAt head initialSpace
+      selected width := by
+    apply emitHeadAtCurrentCell_spaceBoundByWidthAt stateCount hheadClean
+      hselectedValues
+    · intro inputLength
+      rw [hselected inputLength]
+      simpa [writtenCellSelectedValues, Work.tapeIndex, Work.symbolIndex,
+        Work.position, Work.horizon] using hposition inputLength
+    · intro inputLength
+      rw [hselected inputLength]
+      simpa [writtenCellSelectedValues, Work.tapeIndex, Work.symbolIndex,
+        Work.horizon] using hhorizon inputLength
+    · intro inputLength
+      rw [hselected inputLength]
+      simpa [writtenCellSelectedValues, Work.tapeIndex, Work.symbolIndex,
+        Work.available] using hfrontier inputLength
+    · intro inputLength
+      rw [hselected inputLength]
+      simpa [writtenCellSelectedValues, Work.tapeIndex, Work.symbolIndex,
+        Work.horizon, Work.configBase, Work.position] using
+        hheadCap inputLength
+  have hheadEffect : ∀ inputLength,
+      afterHead inputLength =
+        Function.update (selected inputLength) Work.available
+          (selected inputLength Work.available + 1) := by
+    intro inputLength
+    exact emitHeadAtCurrentCell_effect_internal stateCount
+      (selected inputLength) (hheadClean inputLength)
+  have hafterHeadValues : ∀ inputLength index,
+      afterHead inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hheadEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hselectedValues inputLength)
+    rw [hselected inputLength]
+    simpa [writtenCellSelectedValues, Work.tapeIndex, Work.symbolIndex,
+      Work.available] using hfrontier inputLength
+  have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+      afterHead width := by
+    apply prepareRecentReference_spaceBoundByWidth Work.savedOutput 1
+    · exact fun inputLength => hafterHeadValues inputLength Work.available
+    · exact fun inputLength => hafterHeadValues inputLength Work.savedOutput
+    · intro inputLength
+      rw [hheadEffect inputLength]
+      simp [Work.available]
+  have hafterPrepareValues : ∀ inputLength index,
+      afterPrepare inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [show afterPrepare inputLength =
+        Function.update (afterHead inputLength) Work.savedOutput
+          (afterHead inputLength Work.available - 1) by
+      exact prepareRecentReference_effect Work.savedOutput 1
+        (afterHead inputLength)]
+    apply BinaryRoutine.values_update_le Work.savedOutput
+      (hafterHeadValues inputLength)
+    exact le_trans (Nat.sub_le _ _) (hafterHeadValues inputLength _)
+  have hcopy : BinaryRoutine.SpaceBoundByWidthAt copy initialSpace
+      afterPrepare width := by
+    apply BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.position Work.limit₂
+      Work.copyCounter
+    · exact fun inputLength => hafterPrepareValues inputLength Work.position
+    · exact fun inputLength => hafterPrepareValues inputLength Work.limit₂
+  have hafterCopyValues : ∀ inputLength index,
+      afterCopy inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.limit₂
+      (hafterPrepareValues inputLength)
+    exact hafterPrepareValues inputLength Work.position
+  have hclearPosition : BinaryRoutine.SpaceBoundByWidthAt clearPosition
+      initialSpace afterCopy width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.position
+      (fun inputLength => hafterCopyValues inputLength Work.position)
+  have hafterPositionValues : ∀ inputLength index,
+      afterPosition inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.position
+      (hafterCopyValues inputLength)
+    exact Nat.zero_le _
+  have hclearTape : BinaryRoutine.SpaceBoundByWidthAt clearTape initialSpace
+      afterPosition width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.tapeIndex
+      (fun inputLength => hafterPositionValues inputLength Work.tapeIndex)
+  have hafterTapeClearValues : ∀ inputLength index,
+      afterTapeClear inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.tapeIndex
+      (hafterPositionValues inputLength)
+    exact Nat.zero_le _
+  have hclearSymbol : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.symbolIndex) initialSpace afterTapeClear
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.symbolIndex
+      (fun inputLength => hafterTapeClearValues inputLength Work.symbolIndex)
+  simp only [writtenCellPrefixRoutines,
+    BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hsetTape, hsetSymbol, hheadSpace, hprepare, hcopy,
+    hclearPosition, hclearTape, hclearSymbol, trivial⟩
+
+private def writtenCellFinishLeftRoutines
+    (tapeIndex symbolIndex : ℕ) : List (BinaryRoutine WorkCount) :=
+  [BinaryRoutine.binaryCopy Work.limit₂ Work.position Work.copyCounter,
+    BinaryRoutine.set Work.tapeIndex tapeIndex,
+    BinaryRoutine.set Work.symbolIndex symbolIndex,
+    prepareRecentReference Work.reference₁ 1,
+    BinaryRoutine.emitRawGateStep .and false false Work.emitCounter
+      Work.available Work.savedOutput Work.reference₁,
+    BinaryRoutine.clear Work.reference₁]
+
+private def writtenCellFinishSuffixRoutines
+    (stateCount tapeCount : ℕ) : List (BinaryRoutine WorkCount) :=
+  [emitHeadAtCurrentCell stateCount,
+    emitRecentGate .and true true 1 1,
+    emitCellReference stateCount tapeCount,
+    emitRecentGate .and false false 2 1,
+    emitRecentGate .or false false 5 1,
+    BinaryRoutine.clear Work.savedOutput,
+    BinaryRoutine.clear Work.limit₂,
+    BinaryRoutine.clear Work.tapeIndex,
+    BinaryRoutine.clear Work.symbolIndex]
+
+private def writtenCellFinishReferenceRoutines
+    (stateCount tapeCount : ℕ) : List (BinaryRoutine WorkCount) :=
+  [emitHeadAtCurrentCell stateCount,
+    emitRecentGate .and true true 1 1,
+    emitCellReference stateCount tapeCount]
+
+private def writtenCellFinishConnectorRoutines :
+    List (BinaryRoutine WorkCount) :=
+  [emitRecentGate .and false false 2 1,
+    emitRecentGate .or false false 5 1,
+    BinaryRoutine.clear Work.savedOutput,
+    BinaryRoutine.clear Work.limit₂,
+    BinaryRoutine.clear Work.tapeIndex,
+    BinaryRoutine.clear Work.symbolIndex]
+
+private theorem writtenCellFinishSuffixRoutines_eq_append
+    (stateCount tapeCount : ℕ) :
+    writtenCellFinishSuffixRoutines stateCount tapeCount =
+      writtenCellFinishReferenceRoutines stateCount tapeCount ++
+        writtenCellFinishConnectorRoutines := rfl
+
+private theorem writtenCellFinishRoutines_eq_append
+    (stateCount tapeCount tapeIndex symbolIndex : ℕ) :
+    writtenCellFinishRoutines stateCount tapeCount tapeIndex symbolIndex =
+      writtenCellFinishLeftRoutines tapeIndex symbolIndex ++
+        writtenCellFinishSuffixRoutines stateCount tapeCount := rfl
+
+private theorem writtenCellFinishLeftRoutines_spaceBoundByWidthAt
+    (tapeIndex symbolIndex : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength)
+    (hsymbolIndex : ∀ inputLength, symbolIndex ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 1 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellFinishLeftRoutines tapeIndex symbolIndex)
+      initialSpace values width := by
+  let restore := BinaryRoutine.binaryCopy Work.limit₂ Work.position
+    Work.copyCounter
+  let restored : ℕ → BinaryValues WorkCount := fun inputLength =>
+    restore.effect (values inputLength)
+  let setTape := BinaryRoutine.set Work.tapeIndex tapeIndex
+  let afterTape : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setTape.effect (restored inputLength)
+  let setSymbol := BinaryRoutine.set Work.symbolIndex symbolIndex
+  let selected : ℕ → BinaryValues WorkCount := fun inputLength =>
+    setSymbol.effect (afterTape inputLength)
+  let prepare := prepareRecentReference Work.reference₁ 1
+  let prepared : ℕ → BinaryValues WorkCount := fun inputLength =>
+    prepare.effect (selected inputLength)
+  let raw := BinaryRoutine.emitRawGateStep .and false false Work.emitCounter
+    Work.available Work.savedOutput Work.reference₁
+  let afterRaw : ℕ → BinaryValues WorkCount := fun inputLength =>
+    raw.effect (prepared inputLength)
+  have hrestore : BinaryRoutine.SpaceBoundByWidthAt restore initialSpace
+      values width :=
+    BinaryRoutine.SpaceBoundByWidthAt.binaryCopy Work.limit₂ Work.position
+      Work.copyCounter (fun inputLength => hvalues inputLength Work.limit₂)
+      (fun inputLength => hvalues inputLength Work.position)
+  have hrestoredValues : ∀ inputLength index,
+      restored inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [restored, restore, BinaryRoutine.binaryCopy] using
+      (BinaryRoutine.values_update_le Work.position (hvalues inputLength)
+        (hvalues inputLength Work.limit₂))
+  have hsetTape : BinaryRoutine.SpaceBoundByWidthAt setTape initialSpace
+      restored width :=
+    BinaryRoutine.SpaceBoundByWidthAt.set Work.tapeIndex tapeIndex
+      (fun inputLength => hrestoredValues inputLength Work.tapeIndex)
+      htapeIndex
+  have hafterTapeValues : ∀ inputLength index,
+      afterTape inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [afterTape, setTape, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+      (BinaryRoutine.values_update_le Work.tapeIndex
+        (hrestoredValues inputLength) (htapeIndex inputLength))
+  have hsetSymbol : BinaryRoutine.SpaceBoundByWidthAt setSymbol initialSpace
+      afterTape width :=
+    BinaryRoutine.SpaceBoundByWidthAt.set Work.symbolIndex symbolIndex
+      (fun inputLength => hafterTapeValues inputLength Work.symbolIndex)
+      hsymbolIndex
+  have hselectedValues : ∀ inputLength index,
+      selected inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [selected, setSymbol, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst] using
+      (BinaryRoutine.values_update_le Work.symbolIndex
+        (hafterTapeValues inputLength) (hsymbolIndex inputLength))
+  have hreference₁ : ∀ inputLength,
+      selected inputLength Work.reference₁ = 0 := by
+    intro inputLength
+    simpa [selected, setSymbol, afterTape, setTape, restored, restore,
+      BinaryRoutine.binaryCopy, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst, Work.position,
+      Work.tapeIndex, Work.symbolIndex, Work.reference₁] using
+      (hclean inputLength).reference₁
+  have hprepare : BinaryRoutine.SpaceBoundByWidthAt prepare initialSpace
+      selected width :=
+    prepareRecentReference_spaceBoundByWidth Work.reference₁ 1
+      (fun inputLength => hselectedValues inputLength Work.available)
+      (fun inputLength => hselectedValues inputLength Work.reference₁)
+      (by
+        intro inputLength
+        simpa [selected, setSymbol, afterTape, setTape, restored, restore,
+          BinaryRoutine.binaryCopy, BinaryRoutine.set, BinaryRoutine.seq,
+          BinaryRoutine.clear, BinaryRoutine.addConst, Work.available,
+          Work.position, Work.tapeIndex, Work.symbolIndex] using
+          havailable inputLength)
+  have hpreparedValues : ∀ inputLength index,
+      prepared inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [show prepared inputLength =
+        Function.update (selected inputLength) Work.reference₁
+          (selected inputLength Work.available - 1) by
+      exact prepareRecentReference_effect Work.reference₁ 1
+        (selected inputLength)]
+    exact BinaryRoutine.values_update_le Work.reference₁
+      (hselectedValues inputLength)
+      (le_trans (Nat.sub_le (selected inputLength Work.available) 1)
+        (hselectedValues inputLength Work.available))
+  have hraw : BinaryRoutine.SpaceBoundByWidthAt raw initialSpace prepared
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.emitRawGateStep .and false false
+      Work.emitCounter Work.available Work.savedOutput Work.reference₁
+      (fun inputLength => hpreparedValues inputLength Work.available)
+      (fun inputLength => hpreparedValues inputLength Work.savedOutput)
+      (fun inputLength => hpreparedValues inputLength Work.reference₁)
+  have hafterRawValues : ∀ inputLength index,
+      afterRaw inputLength index ≤ width inputLength := by
+    intro inputLength
+    apply BinaryRoutine.values_update_le Work.available
+      (hpreparedValues inputLength)
+    have hbound := hfrontier inputLength
+    simp [prepared, prepare, selected, setSymbol, afterTape, setTape,
+      restored, restore, prepareRecentReference_effect,
+      BinaryRoutine.binaryCopy, BinaryRoutine.set, BinaryRoutine.seq,
+      BinaryRoutine.clear, BinaryRoutine.addConst, Work.available,
+      Work.reference₁, Work.position, Work.tapeIndex, Work.symbolIndex]
+      at *
+    omega
+  have hclear : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.reference₁) initialSpace afterRaw width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.reference₁
+      (fun inputLength => hafterRawValues inputLength Work.reference₁)
+  simp only [writtenCellFinishLeftRoutines,
+    BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hrestore, hsetTape, hsetSymbol, hprepare, hraw, hclear, trivial⟩
+
+private theorem writtenCellFinishReferenceRoutines_spaceBoundByWidthAt
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      HeadAtCurrentCellClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 3 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hcellCap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+              (values inputLength Work.horizon + 2) +
+            values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellFinishReferenceRoutines stateCount tapeCount)
+      initialSpace values width := by
+  let head := emitHeadAtCurrentCell stateCount
+  let afterHead : ℕ → BinaryValues WorkCount := fun inputLength =>
+    head.effect (values inputLength)
+  let negated := emitRecentGate .and true true 1 1
+  let afterNegated : ℕ → BinaryValues WorkCount := fun inputLength =>
+    negated.effect (afterHead inputLength)
+  let cell := emitCellReference stateCount tapeCount
+  have hhead : BinaryRoutine.SpaceBoundByWidthAt head initialSpace values
+      width := emitHeadAtCurrentCell_spaceBoundByWidthAt stateCount hclean
+        hvalues hposition hhorizon
+        (fun inputLength => by
+          have := hfrontier inputLength
+          omega)
+        hheadCap
+  have hheadEffect : ∀ inputLength,
+      afterHead inputLength =
+        Function.update (values inputLength) Work.available
+          (values inputLength Work.available + 1) := fun inputLength =>
+    emitHeadAtCurrentCell_effect_internal stateCount (values inputLength)
+      (hclean inputLength)
+  have hafterHeadValues : ∀ inputLength index,
+      afterHead inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hheadEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hvalues inputLength)
+    have := hfrontier inputLength
+    omega
+  have hnegated : BinaryRoutine.SpaceBoundByWidthAt negated initialSpace
+      afterHead width := by
+    apply emitRecentGate_spaceBoundByWidth .and true true 1 1
+    · exact fun inputLength => hafterHeadValues inputLength Work.available
+    · exact fun inputLength => hafterHeadValues inputLength Work.reference₀
+    · exact fun inputLength => hafterHeadValues inputLength Work.reference₁
+    all_goals
+      intro inputLength
+      rw [hheadEffect inputLength]
+      simp only [Function.update_self]
+      omega
+  have hafterNegatedValues : ∀ inputLength index,
+      afterNegated inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [show afterNegated inputLength =
+        Function.update
+          (Function.update
+            (Function.update (afterHead inputLength) Work.available
+              (afterHead inputLength Work.available + 1))
+            Work.reference₀ 0) Work.reference₁ 0 by
+      exact emitRecentGate_effect .and true true 1 1
+        (afterHead inputLength)]
+    apply BinaryRoutine.values_update_le Work.reference₁
+    · apply BinaryRoutine.values_update_le Work.reference₀
+      · apply BinaryRoutine.values_update_le Work.available
+          (hafterHeadValues inputLength)
+        rw [hheadEffect inputLength]
+        have := hfrontier inputLength
+        simp only [Function.update_self]
+        omega
+      · exact Nat.zero_le _
+    · exact Nat.zero_le _
+  have hcell : BinaryRoutine.SpaceBoundByWidthAt cell initialSpace
+      afterNegated width := by
+    apply emitCellReference_spaceBoundByWidth stateCount tapeCount false
+      hafterNegatedValues
+    intro inputLength
+    simpa [afterNegated, negated, emitRecentGate_effect,
+      hheadEffect inputLength, Work.available, Work.reference₀,
+      Work.reference₁, Work.horizon, Work.configBase, Work.tapeIndex,
+      Work.position, Work.symbolIndex] using hcellCap inputLength
+  simp only [writtenCellFinishReferenceRoutines,
+    BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hhead, hnegated, hcell, trivial⟩
+
+private theorem writtenCellFinishReferenceRoutines_effect
+    (stateCount tapeCount : ℕ) (values : BinaryValues WorkCount) :
+    (BinaryRoutine.seqList
+      (writtenCellFinishReferenceRoutines stateCount tapeCount)).effect values =
+      (emitCellReference stateCount tapeCount).effect
+        ((emitRecentGate .and true true 1 1).effect
+          ((emitHeadAtCurrentCell stateCount).effect values)) := by
+  rw [show writtenCellFinishReferenceRoutines stateCount tapeCount =
+      [emitHeadAtCurrentCell stateCount] ++
+        ([emitRecentGate .and true true 1 1] ++
+          [emitCellReference stateCount tapeCount]) by rfl]
+  rw [seqList_append_effect_for_writtenCell]
+  rw [seqList_append_effect_for_writtenCell]
+  simp only [seqList_singleton_effect_for_writtenCell]
+
+private theorem emitHeadAtCurrentCell_effect_values_le_for_writtenCell
+    (stateCount : ℕ) {values : BinaryValues WorkCount} {width : ℕ}
+    (hclean : HeadAtCurrentCellClean values)
+    (hvalues : ∀ index, values index ≤ width)
+    (havailable : values Work.available + 1 ≤ width) :
+    ∀ index,
+      (emitHeadAtCurrentCell stateCount).effect values index ≤ width := by
+  rw [emitHeadAtCurrentCell_effect_internal stateCount values hclean]
+  exact BinaryRoutine.values_update_le Work.available hvalues havailable
+
+private theorem emitRecentGate_effect_values_le_for_writtenCell
+    (op : AndOrOp) (negated₀ negated₁ : Bool) (offset₀ offset₁ : ℕ)
+    {values : BinaryValues WorkCount} {width : ℕ}
+    (hvalues : ∀ index, values index ≤ width)
+    (havailable : values Work.available + 1 ≤ width) :
+    ∀ index,
+      (emitRecentGate op negated₀ negated₁ offset₀ offset₁).effect
+          values index ≤ width := by
+  rw [emitRecentGate_effect]
+  apply BinaryRoutine.values_update_le Work.reference₁
+  · apply BinaryRoutine.values_update_le Work.reference₀
+    · exact BinaryRoutine.values_update_le Work.available hvalues havailable
+    · exact Nat.zero_le _
+  · exact Nat.zero_le _
+
+private theorem emitCellReference_effect_values_le_for_writtenCell
+    (stateCount tapeCount : ℕ) {values : BinaryValues WorkCount} {width : ℕ}
+    (hvalues : ∀ index, values index ≤ width)
+    (havailable : values Work.available + 1 ≤ width) :
+    ∀ index,
+      (emitCellReference stateCount tapeCount).effect values index ≤ width := by
+  rw [emitCellReference_effect]
+  apply BinaryRoutine.values_update_le Work.reference₀
+  · apply BinaryRoutine.values_update_le Work.available
+    · apply BinaryRoutine.values_update_le Work.temporary₂
+      · apply BinaryRoutine.values_update_le Work.temporary₁
+        · exact BinaryRoutine.values_update_le Work.temporary₀ hvalues
+            (Nat.zero_le _)
+        · exact Nat.zero_le _
+      · exact Nat.zero_le _
+    · exact havailable
+  · exact Nat.zero_le _
+
+private theorem writtenCellFinishReferenceRoutines_values_le
+    (stateCount tapeCount : ℕ)
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      HeadAtCurrentCellClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 3 ≤ width inputLength) :
+    ∀ inputLength index,
+      (BinaryRoutine.seqList
+        (writtenCellFinishReferenceRoutines stateCount tapeCount)).effect
+          (values inputLength) index ≤ width inputLength := by
+  intro inputLength index
+  have hheadAvailable :
+      (emitHeadAtCurrentCell stateCount).effect
+          (values inputLength) Work.available =
+        values inputLength Work.available + 1 := by
+    rw [emitHeadAtCurrentCell_effect_internal stateCount
+      (values inputLength) (hclean inputLength)]
+    simp only [Function.update_self]
+  have hrecentAvailable :
+      (emitRecentGate .and true true 1 1).effect
+          ((emitHeadAtCurrentCell stateCount).effect (values inputLength))
+          Work.available = values inputLength Work.available + 2 := by
+    rw [emitRecentGate_effect]
+    simp [Work.available, Work.reference₀, Work.reference₁]
+    simpa [Work.available] using hheadAvailable
+  rw [writtenCellFinishReferenceRoutines_effect]
+  apply emitCellReference_effect_values_le_for_writtenCell
+  · apply emitRecentGate_effect_values_le_for_writtenCell
+    · apply emitHeadAtCurrentCell_effect_values_le_for_writtenCell
+        stateCount (hclean inputLength) (hvalues inputLength)
+      have := hfrontier inputLength
+      omega
+    · rw [hheadAvailable]
+      have := hfrontier inputLength
+      omega
+  · rw [hrecentAvailable]
+    exact hfrontier inputLength
+
+private theorem writtenCellFinishReferenceRoutines_available
+    (stateCount tapeCount : ℕ)
+    {values : ℕ → BinaryValues WorkCount}
+    (hclean : ∀ inputLength,
+      HeadAtCurrentCellClean (values inputLength)) :
+    ∀ inputLength,
+      (BinaryRoutine.seqList
+        (writtenCellFinishReferenceRoutines stateCount tapeCount)).effect
+          (values inputLength) Work.available =
+        values inputLength Work.available + 3 := by
+  intro inputLength
+  rw [writtenCellFinishReferenceRoutines_effect]
+  rw [emitHeadAtCurrentCell_effect_internal stateCount (values inputLength)
+    (hclean inputLength)]
+  simp [emitRecentGate_effect, emitCellReference_effect, Work.available,
+    Work.reference₀, Work.reference₁, Work.temporary₀,
+    Work.temporary₁, Work.temporary₂]
+
+private theorem writtenCellFinishConnectorRoutines_spaceBoundByWidthAt
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (havailable : ∀ inputLength,
+      4 ≤ values inputLength Work.available)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 2 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      writtenCellFinishConnectorRoutines initialSpace values width := by
+  let right := emitRecentGate .and false false 2 1
+  let afterRight : ℕ → BinaryValues WorkCount := fun inputLength =>
+    right.effect (values inputLength)
+  let final := emitRecentGate .or false false 5 1
+  let afterFinal : ℕ → BinaryValues WorkCount := fun inputLength =>
+    final.effect (afterRight inputLength)
+  let clearSaved := BinaryRoutine.clear Work.savedOutput
+  let afterSaved : ℕ → BinaryValues WorkCount := fun inputLength =>
+    clearSaved.effect (afterFinal inputLength)
+  let clearLimit := BinaryRoutine.clear Work.limit₂
+  let afterLimit : ℕ → BinaryValues WorkCount := fun inputLength =>
+    clearLimit.effect (afterSaved inputLength)
+  let clearTape := BinaryRoutine.clear Work.tapeIndex
+  let afterTapeClear : ℕ → BinaryValues WorkCount := fun inputLength =>
+    clearTape.effect (afterLimit inputLength)
+  have hright : BinaryRoutine.SpaceBoundByWidthAt right initialSpace values
+      width := by
+    apply emitRecentGate_spaceBoundByWidth .and false false 2 1
+    · exact fun inputLength => hvalues inputLength Work.available
+    · exact fun inputLength => hvalues inputLength Work.reference₀
+    · exact fun inputLength => hvalues inputLength Work.reference₁
+    · intro inputLength
+      exact le_trans (by omega) (havailable inputLength)
+    · intro inputLength
+      exact le_trans (by omega) (havailable inputLength)
+  have hrightEffect : ∀ inputLength,
+      afterRight inputLength =
+        Function.update
+          (Function.update
+            (Function.update (values inputLength) Work.available
+              (values inputLength Work.available + 1)) Work.reference₀ 0)
+          Work.reference₁ 0 := fun inputLength =>
+    emitRecentGate_effect .and false false 2 1 (values inputLength)
+  have hafterRightValues : ∀ inputLength index,
+      afterRight inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hrightEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.reference₁
+    · apply BinaryRoutine.values_update_le Work.reference₀
+      · apply BinaryRoutine.values_update_le Work.available
+          (hvalues inputLength)
+        have := hfrontier inputLength
+        omega
+      · exact Nat.zero_le _
+    · exact Nat.zero_le _
+  have hrightAvailable : ∀ inputLength,
+      afterRight inputLength Work.available =
+        values inputLength Work.available + 1 := by
+    intro inputLength
+    rw [hrightEffect inputLength]
+    simp [Work.available, Work.reference₀, Work.reference₁]
+  have hfinal : BinaryRoutine.SpaceBoundByWidthAt final initialSpace
+      afterRight width := by
+    apply emitRecentGate_spaceBoundByWidth .or false false 5 1
+    · exact fun inputLength => hafterRightValues inputLength Work.available
+    · exact fun inputLength => hafterRightValues inputLength Work.reference₀
+    · exact fun inputLength => hafterRightValues inputLength Work.reference₁
+    · intro inputLength
+      rw [hrightAvailable inputLength]
+      have := havailable inputLength
+      omega
+    · intro inputLength
+      rw [hrightAvailable inputLength]
+      omega
+  have hfinalEffect : ∀ inputLength,
+      afterFinal inputLength =
+        Function.update
+          (Function.update
+            (Function.update (afterRight inputLength) Work.available
+              (afterRight inputLength Work.available + 1)) Work.reference₀ 0)
+          Work.reference₁ 0 := fun inputLength =>
+    emitRecentGate_effect .or false false 5 1 (afterRight inputLength)
+  have hafterFinalValues : ∀ inputLength index,
+      afterFinal inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hfinalEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.reference₁
+    · apply BinaryRoutine.values_update_le Work.reference₀
+      · apply BinaryRoutine.values_update_le Work.available
+          (hafterRightValues inputLength)
+        rw [hrightAvailable inputLength]
+        exact hfrontier inputLength
+      · exact Nat.zero_le _
+    · exact Nat.zero_le _
+  have hclearSaved : BinaryRoutine.SpaceBoundByWidthAt clearSaved initialSpace
+      afterFinal width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.savedOutput
+      (fun inputLength => hafterFinalValues inputLength Work.savedOutput)
+  have hafterSavedValues : ∀ inputLength index,
+      afterSaved inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [afterSaved, clearSaved, BinaryRoutine.clear] using
+      (BinaryRoutine.values_update_le Work.savedOutput
+        (hafterFinalValues inputLength) (Nat.zero_le _))
+  have hclearLimit : BinaryRoutine.SpaceBoundByWidthAt clearLimit initialSpace
+      afterSaved width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.limit₂
+      (fun inputLength => hafterSavedValues inputLength Work.limit₂)
+  have hafterLimitValues : ∀ inputLength index,
+      afterLimit inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [afterLimit, clearLimit, BinaryRoutine.clear] using
+      (BinaryRoutine.values_update_le Work.limit₂
+        (hafterSavedValues inputLength) (Nat.zero_le _))
+  have hclearTape : BinaryRoutine.SpaceBoundByWidthAt clearTape initialSpace
+      afterLimit width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.tapeIndex
+      (fun inputLength => hafterLimitValues inputLength Work.tapeIndex)
+  have hafterTapeClearValues : ∀ inputLength index,
+      afterTapeClear inputLength index ≤ width inputLength := by
+    intro inputLength
+    simpa [afterTapeClear, clearTape, BinaryRoutine.clear] using
+      (BinaryRoutine.values_update_le Work.tapeIndex
+        (hafterLimitValues inputLength) (Nat.zero_le _))
+  have hclearSymbol : BinaryRoutine.SpaceBoundByWidthAt
+      (BinaryRoutine.clear Work.symbolIndex) initialSpace afterTapeClear
+      width :=
+    BinaryRoutine.SpaceBoundByWidthAt.clear Work.symbolIndex
+      (fun inputLength => hafterTapeClearValues inputLength Work.symbolIndex)
+  simp only [writtenCellFinishConnectorRoutines,
+    BinaryRoutine.SeqListSpaceBoundByWidthAt]
+  exact ⟨hright, hfinal, hclearSaved, hclearLimit, hclearTape,
+    hclearSymbol, trivial⟩
+
+private theorem writtenCellFinishSuffixRoutines_spaceBoundByWidthAt
+    (stateCount tapeCount : ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      HeadAtCurrentCellClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (havailable : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 5 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position) +
+          values inputLength Work.tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hcellCap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase)
+          (values inputLength Work.tapeIndex)
+          (values inputLength Work.position)
+          (values inputLength Work.symbolIndex) +
+          (values inputLength Work.tapeIndex *
+              (values inputLength Work.horizon + 2) +
+            values inputLength Work.position) +
+          (values inputLength Work.horizon + 2) + tapeCount +
+          values inputLength Work.tapeIndex + 4 ≤ width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellFinishSuffixRoutines stateCount tapeCount)
+      initialSpace values width := by
+  let references := writtenCellFinishReferenceRoutines stateCount tapeCount
+  let afterReferences : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.seqList references).effect (values inputLength)
+  have href : BinaryRoutine.SeqListSpaceBoundByWidthAt references
+      initialSpace values width :=
+    writtenCellFinishReferenceRoutines_spaceBoundByWidthAt
+      stateCount tapeCount (initialSpace := initialSpace) hclean hvalues
+      hposition hhorizon
+        (fun inputLength => by
+          have := hfrontier inputLength
+          omega)
+        hheadCap hcellCap
+  have hrefValues : ∀ inputLength index,
+      afterReferences inputLength index ≤ width inputLength :=
+    writtenCellFinishReferenceRoutines_values_le stateCount tapeCount hclean
+      hvalues (fun inputLength => by
+        have := hfrontier inputLength
+        omega)
+  have hrefAvailable : ∀ inputLength,
+      afterReferences inputLength Work.available =
+        values inputLength Work.available + 3 :=
+    writtenCellFinishReferenceRoutines_available stateCount tapeCount hclean
+  have hconnectors : BinaryRoutine.SeqListSpaceBoundByWidthAt
+      writtenCellFinishConnectorRoutines initialSpace afterReferences
+      width := by
+    apply writtenCellFinishConnectorRoutines_spaceBoundByWidthAt
+    · intro inputLength index
+      exact hrefValues inputLength index
+    · intro inputLength
+      have hpositive := havailable inputLength
+      rw [show afterReferences inputLength Work.available =
+          values inputLength Work.available + 3 by
+        exact hrefAvailable inputLength]
+      omega
+    · intro inputLength
+      rw [show afterReferences inputLength Work.available =
+          values inputLength Work.available + 3 by
+        exact hrefAvailable inputLength]
+      exact hfrontier inputLength
+  rw [writtenCellFinishSuffixRoutines_eq_append]
+  exact seqListSpaceBoundByWidthAt_append_for_writtenCell _ _ href
+    hconnectors
+
+private theorem writtenCellFinishRoutines_spaceBoundByWidthAt
+    (stateCount tapeCount tapeIndex symbolIndex : ℕ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength, CaseFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.limit₂ ≤
+        values inputLength Work.horizon + 1)
+    (havailable : ∀ inputLength,
+      1 ≤ values inputLength Work.available)
+    (htapeIndex : ∀ inputLength, tapeIndex ≤ width inputLength)
+    (hsymbolIndex : ∀ inputLength, symbolIndex ≤ width inputLength)
+    (hhorizon : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.available + 6 ≤ width inputLength)
+    (hheadCap : ∀ inputLength,
+      transitionHeadRef stateCount (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.limit₂) + tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength)
+    (hcellCap : ∀ inputLength,
+      transitionCellRef stateCount tapeCount
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.limit₂) symbolIndex +
+          (tapeIndex * (values inputLength Work.horizon + 2) +
+            values inputLength Work.limit₂) +
+          (values inputLength Work.horizon + 2) + tapeCount + tapeIndex + 4 ≤
+        width inputLength) :
+    BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellFinishRoutines stateCount tapeCount tapeIndex symbolIndex)
+      initialSpace values width := by
+  let left := writtenCellFinishLeftRoutines tapeIndex symbolIndex
+  let afterLeft : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.seqList left).effect (values inputLength)
+  have hleft : BinaryRoutine.SeqListSpaceBoundByWidthAt left initialSpace
+      values width :=
+    writtenCellFinishLeftRoutines_spaceBoundByWidthAt tapeIndex
+    symbolIndex (initialSpace := initialSpace) hclean hvalues havailable
+      htapeIndex hsymbolIndex
+      (fun inputLength => by
+        have := hfrontier inputLength
+        omega)
+  have hleftEffect : ∀ inputLength,
+      afterLeft inputLength =
+        Function.update
+          (Function.update
+            (Function.update
+              (Function.update (values inputLength) Work.position
+                (values inputLength Work.limit₂)) Work.tapeIndex tapeIndex)
+            Work.symbolIndex symbolIndex) Work.available
+          (values inputLength Work.available + 1) := by
+    intro inputLength
+    let selected :=
+      Function.update
+        (Function.update
+          (Function.update (values inputLength) Work.position
+            (values inputLength Work.limit₂)) Work.tapeIndex tapeIndex)
+        Work.symbolIndex symbolIndex
+    have hreference₁ : selected Work.reference₁ = 0 := by
+      simpa [selected, Work.position, Work.tapeIndex, Work.symbolIndex,
+        Work.reference₁] using (hclean inputLength).reference₁
+    have hselected :
+        (BinaryRoutine.set Work.symbolIndex symbolIndex).effect
+            ((BinaryRoutine.set Work.tapeIndex tapeIndex).effect
+              ((BinaryRoutine.binaryCopy Work.limit₂ Work.position
+                Work.copyCounter).effect (values inputLength))) =
+          selected := by
+      simp [selected, BinaryRoutine.binaryCopy, BinaryRoutine.set,
+        BinaryRoutine.seq, BinaryRoutine.clear, BinaryRoutine.addConst]
+    simp only [afterLeft, left, writtenCellFinishLeftRoutines,
+      BinaryRoutine.seqList, BinaryRoutine.seq, BinaryRoutine.identity,
+      BinaryRoutine.emitBits]
+    simp only [id_eq]
+    rw [hselected]
+    rw [writtenCellLeftAnd_effect selected hreference₁]
+    simp [selected, Work.available, Work.position, Work.tapeIndex,
+      Work.symbolIndex]
+  have hafterLeftValues : ∀ inputLength index,
+      afterLeft inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hleftEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+    · apply BinaryRoutine.values_update_le Work.symbolIndex
+      · apply BinaryRoutine.values_update_le Work.tapeIndex
+        · apply BinaryRoutine.values_update_le Work.position
+            (hvalues inputLength)
+          exact hvalues inputLength Work.limit₂
+        · exact htapeIndex inputLength
+      · exact hsymbolIndex inputLength
+    · have := hfrontier inputLength
+      omega
+  have hafterLeftClean : ∀ inputLength,
+      HeadAtCurrentCellClean (afterLeft inputLength) := by
+    intro inputLength
+    rw [hleftEffect inputLength]
+    refine
+      { loop₃ := ?_
+        temporary₃ := ?_
+        reference₀ := ?_
+        emitCounter := ?_
+        copyCounter := ?_
+        multiplyCounter := ?_
+        addCounter := ?_
+        temporary₀ := ?_ }
+    all_goals
+      simp [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex]
+      first | exact (hclean inputLength).loop₃ |
+        exact (hclean inputLength).temporary₃ |
+        exact (hclean inputLength).reference₀ |
+        exact (hclean inputLength).emitCounter |
+        exact (hclean inputLength).copyCounter |
+        exact (hclean inputLength).multiplyCounter |
+        exact (hclean inputLength).addCounter |
+        exact (hclean inputLength).temporary₀
+  have hsuffix : BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (writtenCellFinishSuffixRoutines stateCount tapeCount)
+      initialSpace afterLeft width :=
+    writtenCellFinishSuffixRoutines_spaceBoundByWidthAt
+    stateCount tapeCount (initialSpace := initialSpace) hafterLeftClean
+      hafterLeftValues
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      simpa [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex]
+        using hposition inputLength)
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      simp [Work.available])
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      simpa [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex,
+        Work.horizon] using hhorizon inputLength)
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      have := hfrontier inputLength
+      simp only [Function.update_self]
+      omega)
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      simpa [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex,
+        Work.horizon, Work.configBase] using hheadCap inputLength)
+    (fun inputLength => by
+      rw [hleftEffect inputLength]
+      simpa [Work.available, Work.position, Work.tapeIndex, Work.symbolIndex,
+        Work.horizon, Work.configBase] using hcellCap inputLength)
+  rw [writtenCellFinishRoutines_eq_append]
+  exact seqListSpaceBoundByWidthAt_append_for_writtenCell _ _ hleft hsuffix
+
+private theorem writtenCellEffectStartValues_values_le
+    {values : BinaryValues WorkCount} {width : ℕ}
+    (hvalues : ∀ index, values index ≤ width)
+    (havailable : values Work.available + 1 ≤ width) :
+    ∀ index, writtenCellEffectStartValues values index ≤ width := by
+  unfold writtenCellEffectStartValues
+  apply BinaryRoutine.values_update_le Work.symbolIndex
+  · apply BinaryRoutine.values_update_le Work.tapeIndex
+    · apply BinaryRoutine.values_update_le Work.position
+      · apply BinaryRoutine.values_update_le Work.limit₂
+        · apply BinaryRoutine.values_update_le Work.savedOutput
+          · exact BinaryRoutine.values_update_le Work.available hvalues
+              havailable
+          · exact hvalues Work.available
+        · exact hvalues Work.position
+      · exact Nat.zero_le _
+    · exact Nat.zero_le _
+  · exact Nat.zero_le _
+
+theorem emitWrittenCellFormula_spaceBoundByWidth_internal
+    (tm : NTM k) (tape : WritableSlot k) (symbol : Γ)
+    {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount} {width : ℕ → ℕ}
+    (hclean : ∀ inputLength,
+      WrittenCellFormulaClean (values inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ width inputLength)
+    (hposition : ∀ inputLength,
+      values inputLength Work.position ≤
+        values inputLength Work.horizon + 1)
+    (hcap : ∀ inputLength stateIndex tapeIndex symbolIndex position,
+      stateIndex < Fintype.card tm.Q → tapeIndex ≤ k + 1 →
+      symbolIndex < 4 →
+      position ≤ values inputLength Work.horizon + 1 →
+        values inputLength Work.available +
+            writtenCellScheduleSize (transitionCases tm).length k
+              (values inputLength Work.horizon)
+              (writtenCellEffectSelectedAt tm tape symbol)
+              (effectCaseChoiceAt tm) +
+          transitionStateRef (values inputLength Work.configBase)
+            stateIndex +
+          (transitionHeadRef (Fintype.card tm.Q)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position +
+              tapeIndex + values inputLength Work.horizon + 1) +
+          (transitionCellRef (Fintype.card tm.Q) (k + 2)
+                (values inputLength Work.horizon)
+                (values inputLength Work.configBase) tapeIndex position
+                symbolIndex +
+              (tapeIndex * (values inputLength Work.horizon + 2) +
+                position) +
+              (values inputLength Work.horizon + 2) + (k + 2) +
+              tapeIndex + 4) +
+          caseReadSize (values inputLength Work.horizon) +
+          values inputLength Work.horizon ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt
+      (emitWrittenCellFormula tm tape symbol) initialSpace values width := by
+  have hwidthCap : WrittenCellFormulaWidthCap tm tape symbol values width :=
+    hcap
+  let tapeIndex := tape.toTapeSlot.index.val
+  let symbolIndex := (CircuitUnrolling.symbolIndex symbol).val
+  let prefixRoutines := writtenCellPrefixRoutines (Fintype.card tm.Q) tapeIndex
+    symbolIndex
+  let afterPrefix : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.seqList prefixRoutines).effect (values inputLength)
+  have hstateRange : stateIndex tm tm.qstart < Fintype.card tm.Q :=
+    (Fintype.equivFin tm.Q tm.qstart).isLt
+  have htapeRange : tapeIndex ≤ k + 1 := by
+    have hindex := tape.toTapeSlot.index.isLt
+    dsimp only [tapeIndex]
+    omega
+  have hsymbolRange : symbolIndex < 4 := by
+    exact (CircuitUnrolling.symbolIndex symbol).isLt
+  let fixedCap := fun inputLength =>
+    hwidthCap inputLength (stateIndex tm tm.qstart) tapeIndex symbolIndex
+      (values inputLength Work.position) hstateRange htapeRange hsymbolRange
+      (hposition inputLength)
+  have htapeWidth : ∀ inputLength,
+      tapeIndex ≤ width inputLength := by
+    intro inputLength
+    have hbound := fixedCap inputLength
+    omega
+  have hsymbolWidth : ∀ inputLength,
+      symbolIndex ≤ width inputLength := by
+    intro inputLength
+    have hbound := fixedCap inputLength
+    omega
+  have hhorizonWidth : ∀ inputLength,
+      values inputLength Work.horizon + 1 ≤ width inputLength := by
+    intro inputLength
+    have hbound := fixedCap inputLength
+    omega
+  have hprefixFrontier : ∀ inputLength,
+      values inputLength Work.available + 1 ≤ width inputLength := by
+    intro inputLength
+    have hbound := fixedCap inputLength
+    omega
+  have hprefixHeadCap : ∀ inputLength,
+      transitionHeadRef (Fintype.card tm.Q)
+          (values inputLength Work.horizon)
+          (values inputLength Work.configBase) tapeIndex
+          (values inputLength Work.position) + tapeIndex +
+          values inputLength Work.horizon + 1 ≤ width inputLength := by
+    intro inputLength
+    have hbound := fixedCap inputLength
+    omega
+  have hprefix : BinaryRoutine.SeqListSpaceBoundByWidthAt prefixRoutines
+      initialSpace values width :=
+    writtenCellPrefixRoutines_spaceBoundByWidthAt
+      (Fintype.card tm.Q) tapeIndex symbolIndex
+      (initialSpace := initialSpace) hclean hvalues hposition htapeWidth
+      hsymbolWidth hhorizonWidth hprefixFrontier hprefixHeadCap
+  have hafterPrefixEffect : ∀ inputLength,
+      afterPrefix inputLength =
+        writtenCellEffectStartValues (values inputLength) := by
+    intro inputLength
+    dsimp only [afterPrefix, prefixRoutines]
+    rw [← emitWrittenCellPrefix_eq_seqList]
+    exact emitWrittenCellPrefix_effect (Fintype.card tm.Q) tapeIndex
+      symbolIndex (values inputLength) (hclean inputLength)
+  have hafterPrefixValues : ∀ inputLength index,
+      afterPrefix inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    exact writtenCellEffectStartValues_values_le (hvalues inputLength)
+      (hprefixFrontier inputLength)
+  have hafterPrefixClean : ∀ inputLength,
+      CaseFormulaClean (afterPrefix inputLength) := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    exact writtenCellEffectStartValues_caseClean (values inputLength)
+      (hclean inputLength)
+  have hafterPrefixAvailable : ∀ inputLength,
+      afterPrefix inputLength Work.available =
+        values inputLength Work.available + 1 := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    simp [writtenCellEffectStartValues, Work.available, Work.savedOutput,
+      Work.limit₂, Work.position, Work.tapeIndex, Work.symbolIndex]
+  have hafterPrefixHorizon : ∀ inputLength,
+      afterPrefix inputLength Work.horizon =
+        values inputLength Work.horizon := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    simp [writtenCellEffectStartValues, Work.available, Work.savedOutput,
+      Work.limit₂, Work.position, Work.tapeIndex, Work.symbolIndex,
+      Work.horizon]
+  have hafterPrefixConfigBase : ∀ inputLength,
+      afterPrefix inputLength Work.configBase =
+        values inputLength Work.configBase := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    simp [writtenCellEffectStartValues, Work.available, Work.savedOutput,
+      Work.limit₂, Work.position, Work.tapeIndex, Work.symbolIndex,
+      Work.configBase]
+  have hafterPrefixLimit₂ : ∀ inputLength,
+      afterPrefix inputLength Work.limit₂ =
+        values inputLength Work.position := by
+    intro inputLength
+    rw [hafterPrefixEffect inputLength]
+    simp [writtenCellEffectStartValues, Work.available, Work.savedOutput,
+      Work.limit₂, Work.position, Work.tapeIndex, Work.symbolIndex]
+  let effectRoutine := emitWrittenCellEffect tm tape symbol
+  have heffect : BinaryRoutine.SpaceBoundByWidthAt effectRoutine initialSpace
+      afterPrefix width := by
+    dsimp only [effectRoutine, emitWrittenCellEffect]
+    apply emitEffectFormula_spaceBoundByWidth tm
+      (fun effect => decide ((effect.write tape).toΓ = symbol))
+      hafterPrefixClean hafterPrefixValues
+    intro inputLength stateIndex' tapeIndex' symbolIndex' position'
+      hstateIndex' htapeIndex' hsymbolIndex' hposition'
+    have hpositionOriginal :
+        position' ≤ values inputLength Work.horizon + 1 := by
+      rw [hafterPrefixHorizon inputLength] at hposition'
+      omega
+    have hbound := hwidthCap inputLength stateIndex' tapeIndex'
+      symbolIndex' position' hstateIndex' htapeIndex' hsymbolIndex'
+      hpositionOriginal
+    rw [hafterPrefixAvailable inputLength,
+      hafterPrefixHorizon inputLength,
+      hafterPrefixConfigBase inputLength]
+    simp only [writtenCellScheduleSize, writtenCellEffectSize,
+      writtenCellEffectSelectedAt] at hbound
+    omega
+  have heffectList : BinaryRoutine.SeqListSpaceBoundByWidthAt
+      [effectRoutine] initialSpace afterPrefix width := by
+    simp only [BinaryRoutine.SeqListSpaceBoundByWidthAt]
+    exact ⟨heffect, trivial⟩
+  let coreRoutines := prefixRoutines ++ [effectRoutine]
+  have hcore : BinaryRoutine.SeqListSpaceBoundByWidthAt coreRoutines
+      initialSpace values width := by
+    dsimp only [coreRoutines]
+    exact seqListSpaceBoundByWidthAt_append_for_writtenCell
+      prefixRoutines [effectRoutine] hprefix heffectList
+  let afterEffect : ℕ → BinaryValues WorkCount := fun inputLength =>
+    (BinaryRoutine.seqList coreRoutines).effect (values inputLength)
+  have hafterEffectDecompose : ∀ inputLength,
+      afterEffect inputLength =
+        effectRoutine.effect (afterPrefix inputLength) := by
+    intro inputLength
+    dsimp only [afterEffect, coreRoutines]
+    rw [seqList_append_effect_for_writtenCell]
+    rw [seqList_singleton_effect_for_writtenCell]
+  have hafterPrefixPositive : ∀ inputLength,
+      1 ≤ afterPrefix inputLength Work.available := by
+    intro inputLength
+    rw [hafterPrefixAvailable inputLength]
+    omega
+  have hafterEffectEffect : ∀ inputLength,
+      afterEffect inputLength =
+        Function.update (afterPrefix inputLength) Work.available
+          (afterPrefix inputLength Work.available +
+            writtenCellEffectSize (transitionCases tm).length k
+              (afterPrefix inputLength Work.horizon)
+              (writtenCellEffectSelectedAt tm tape symbol)
+              (effectCaseChoiceAt tm)) := by
+    intro inputLength
+    rw [hafterEffectDecompose inputLength]
+    dsimp only [effectRoutine]
+    exact emitWrittenCellEffect_effect_internal tm tape symbol
+      (afterPrefix inputLength) (hafterPrefixClean inputLength)
+      (hafterPrefixPositive inputLength)
+  have hafterEffectValues : ∀ inputLength index,
+      afterEffect inputLength index ≤ width inputLength := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    apply BinaryRoutine.values_update_le Work.available
+      (hafterPrefixValues inputLength)
+    have hfrontier := hwidthCap.frontier inputLength
+    rw [hafterPrefixAvailable inputLength,
+      hafterPrefixHorizon inputLength]
+    simp only [writtenCellScheduleSize] at hfrontier
+    omega
+  have hafterEffectClean : ∀ inputLength,
+      CaseFormulaClean (afterEffect inputLength) := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    exact CaseFormulaClean.updateAvailable_for_writtenCell
+      (afterPrefix inputLength) (hafterPrefixClean inputLength) _
+  have hafterEffectAvailable : ∀ inputLength,
+      afterEffect inputLength Work.available =
+        afterPrefix inputLength Work.available +
+          writtenCellEffectSize (transitionCases tm).length k
+            (afterPrefix inputLength Work.horizon)
+            (writtenCellEffectSelectedAt tm tape symbol)
+            (effectCaseChoiceAt tm) := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    simp only [Function.update_self]
+  have hafterEffectHorizon : ∀ inputLength,
+      afterEffect inputLength Work.horizon =
+        values inputLength Work.horizon := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    simpa [Work.available, Work.horizon] using
+      hafterPrefixHorizon inputLength
+  have hafterEffectConfigBase : ∀ inputLength,
+      afterEffect inputLength Work.configBase =
+        values inputLength Work.configBase := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    simpa [Work.available, Work.configBase] using
+      hafterPrefixConfigBase inputLength
+  have hafterEffectLimit₂ : ∀ inputLength,
+      afterEffect inputLength Work.limit₂ =
+        values inputLength Work.position := by
+    intro inputLength
+    rw [hafterEffectEffect inputLength]
+    simpa [Work.available, Work.limit₂] using
+      hafterPrefixLimit₂ inputLength
+  have hfinishPosition : ∀ inputLength,
+      afterEffect inputLength Work.limit₂ ≤
+        afterEffect inputLength Work.horizon + 1 := by
+    intro inputLength
+    rw [hafterEffectLimit₂ inputLength,
+      hafterEffectHorizon inputLength]
+    exact hposition inputLength
+  have hfinishAvailable : ∀ inputLength,
+      1 ≤ afterEffect inputLength Work.available := by
+    intro inputLength
+    rw [hafterEffectAvailable inputLength,
+      hafterPrefixAvailable inputLength]
+    omega
+  have hfinishHorizon : ∀ inputLength,
+      afterEffect inputLength Work.horizon + 1 ≤ width inputLength := by
+    intro inputLength
+    rw [hafterEffectHorizon inputLength]
+    exact hhorizonWidth inputLength
+  have hfinishFrontier : ∀ inputLength,
+      afterEffect inputLength Work.available + 6 ≤ width inputLength := by
+    intro inputLength
+    rw [hafterEffectAvailable inputLength,
+      hafterPrefixAvailable inputLength,
+      hafterPrefixHorizon inputLength]
+    have hfrontier := hwidthCap.frontier inputLength
+    simp only [writtenCellScheduleSize] at hfrontier
+    omega
+  have hfinishHeadCap : ∀ inputLength,
+      transitionHeadRef (Fintype.card tm.Q)
+          (afterEffect inputLength Work.horizon)
+          (afterEffect inputLength Work.configBase) tapeIndex
+          (afterEffect inputLength Work.limit₂) + tapeIndex +
+          afterEffect inputLength Work.horizon + 1 ≤ width inputLength := by
+    intro inputLength
+    rw [hafterEffectHorizon inputLength,
+      hafterEffectConfigBase inputLength,
+      hafterEffectLimit₂ inputLength]
+    have hbound := fixedCap inputLength
+    omega
+  have hfinishCellCap : ∀ inputLength,
+      transitionCellRef (Fintype.card tm.Q) (k + 2)
+          (afterEffect inputLength Work.horizon)
+          (afterEffect inputLength Work.configBase) tapeIndex
+          (afterEffect inputLength Work.limit₂) symbolIndex +
+          (tapeIndex * (afterEffect inputLength Work.horizon + 2) +
+            afterEffect inputLength Work.limit₂) +
+          (afterEffect inputLength Work.horizon + 2) + (k + 2) +
+          tapeIndex + 4 ≤ width inputLength := by
+    intro inputLength
+    rw [hafterEffectHorizon inputLength,
+      hafterEffectConfigBase inputLength,
+      hafterEffectLimit₂ inputLength]
+    have hbound := fixedCap inputLength
+    omega
+  let finishRoutines := writtenCellFinishRoutines (Fintype.card tm.Q)
+    (k + 2) tapeIndex symbolIndex
+  have hfinish : BinaryRoutine.SeqListSpaceBoundByWidthAt finishRoutines
+      initialSpace afterEffect width :=
+    writtenCellFinishRoutines_spaceBoundByWidthAt
+      (Fintype.card tm.Q) (k + 2) tapeIndex symbolIndex
+      (initialSpace := initialSpace) hafterEffectClean hafterEffectValues
+      hfinishPosition hfinishAvailable htapeWidth hsymbolWidth
+      hfinishHorizon hfinishFrontier hfinishHeadCap hfinishCellCap
+  have htotal : BinaryRoutine.SeqListSpaceBoundByWidthAt
+      (coreRoutines ++ finishRoutines) initialSpace values width :=
+    seqListSpaceBoundByWidthAt_append_for_writtenCell coreRoutines
+      finishRoutines hcore hfinish
+  rw [emitWrittenCellFormula_eq_seqList]
+  apply BinaryRoutine.SpaceBoundByWidthAt.seqList
+  simpa [coreRoutines, finishRoutines, prefixRoutines, effectRoutine,
+    tapeIndex, symbolIndex, List.append_assoc] using htotal
 
 end DirectGenerator
 
