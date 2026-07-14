@@ -12,6 +12,7 @@ import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Experimental.Routine
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
@@ -56,7 +57,7 @@ import Complexitylib.Models.RandomAccessMachine
 Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, time- and
 space-aware Hoare specifications, direct work-symbol branching, experimental
-first-order routine lowering,
+first-order routine lowering and proof-carrying binary stream routines,
 reusable read-only-input loops, binary count-up loops, binary successor,
 binary predecessor and length, canonical binary addition, fixed-constant addition,
 copying, multiply-add, and fixed-polynomial evaluation, framed work-tape clearing,
