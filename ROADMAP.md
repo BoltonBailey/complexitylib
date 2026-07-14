@@ -624,6 +624,11 @@ weaker P-uniformity, so the same notion scales down to `NC`/`AC` later.
         comparison/rewind timing, exact iteration certificates, all-prefix
         auxiliary-space accounting, and structural one-way-output closure. This
         lands the reusable loop layer, not the direct-unrolling serializer.
+      - [x] Build canonical binary addition from that loop: a preserved source,
+        updated destination, and distinct zeroed scratch counter now have an exact
+        literal-frame endpoint, width-based all-prefix space bound, and reusable
+        one-way-output contract. This permits repeated-addition multiplication
+        without using unary work counters.
       - [x] Validate that loop at the circuit-code boundary: from a preserved
         canonical binary value and a distinct zero scratch counter,
         `CircuitCode.Machine.emitNatCodeTM` appends its terminated-unary
@@ -729,7 +734,10 @@ consumer now emits a preserved binary value as terminated-unary `NatCode`, then
 restores its zero scratch and complete input/work frame within
 `emitNatCodeTime value`; every reachable configuration stays within
 `initialSpace + 2 * value.size + 5`, and output is structurally one-way. Loading
-successive values and fixed-polynomial binary arithmetic remain open. Complete
+successive values and fixed-polynomial binary arithmetic remain open. Canonical
+binary addition has now landed with a literal destination-update frame and an
+all-prefix bound controlled by the source and final-destination widths, giving
+the forthcoming polynomial evaluator a verified repeated-addition core. Complete
 raw gates can now be emitted from two preserved binary references with the same
 framed, all-prefix-space, and one-way-output guarantees; the concrete append-only
 direct-unrolling schedule remains open, and the deferred rose-tree lowering is
