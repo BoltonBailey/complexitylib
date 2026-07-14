@@ -87,6 +87,19 @@ theorem emitPadding_requires (values : BinaryValues WorkCount)
     emitPadding.requires values :=
   emitPadding_requires_internal values hle hemit
 
+/-- Padding retains a fixed-width pointwise space certificate whenever its
+closed frontier and preserved zero reference fit that width. The number of
+emitted dead gates does not contribute additively to auxiliary space. -/
+theorem emitPadding_spaceBoundByWidth
+    {initialSpace : ℕ → ℕ} {values : ℕ → BinaryValues WorkCount}
+    {width : ℕ → ℕ}
+    (hfrontier : ∀ inputLength,
+      values inputLength Work.frontier ≤ width inputLength)
+    (hreference : ∀ inputLength,
+      values inputLength Work.reference₀ ≤ width inputLength) :
+    BinaryRoutine.SpaceBoundByWidthAt emitPadding initialSpace values width :=
+  emitPadding_spaceBoundByWidth_internal hfrontier hreference
+
 /-- From a zero reference, padding emits exactly the closed-frontier
 shortfall as constant-false raw gates. -/
 theorem emitPadding_emitted (values : BinaryValues WorkCount)
@@ -124,6 +137,32 @@ theorem finalization_requires (tm : TM k)
     (hle : values Work.available + 1 ≤ values Work.frontier) :
     (finalization tm).requires values :=
   finalization_requires_internal tm values hemit hcopy hadd hmultiply hle
+
+/-- If every incoming work value is bounded by one fixed polynomial, then
+the full acceptance, padding, terminal-copy, and cleanup phase has a
+pointwise polynomial-width auxiliary-space certificate. -/
+theorem finalization_spaceBoundByPolynomial
+    (tm : TM k) (p : Polynomial ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount}
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ p.eval inputLength) :
+    ∃ width : Polynomial ℕ,
+      BinaryRoutine.SpaceBoundByWidthAt (finalization tm) initialSpace values
+        width.eval :=
+  finalization_spaceBoundByPolynomial_internal tm p hvalues
+
+/-- Polynomially bounded incoming work values make the complete finalization
+phase logarithmic-space, provided the incoming auxiliary-space budget is
+already logarithmic. -/
+theorem finalization_space_bigO_log
+    (tm : TM k) (p : Polynomial ℕ) {initialSpace : ℕ → ℕ}
+    {values : ℕ → BinaryValues WorkCount}
+    (hinitial : initialSpace =O
+      (fun inputLength => Nat.log 2 inputLength))
+    (hvalues : ∀ inputLength index,
+      values inputLength index ≤ p.eval inputLength) :
+    BinaryRoutine.SpaceBoundInLogAt (finalization tm) initialSpace values :=
+  finalization_space_bigO_log_internal tm p hinitial hvalues
 
 /-- Exact acceptance, padding, and terminal-copy word from an arbitrary pure
 entry vector. -/
