@@ -56,6 +56,9 @@ import Complexitylib.Models.TuringMachine.UTM.ClockedUtm
 import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 import Complexitylib.Models.TuringMachine.UTM.Diagonal
 import Complexitylib.Models.RandomAccessMachine
+import Complexitylib.Models.RoseTreeMachine.Data
+import Complexitylib.Models.RoseTreeMachine.DataEncode
+import Complexitylib.Models.RoseTreeMachine.Prog
 
 /-!
 # Computation models
