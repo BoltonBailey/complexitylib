@@ -10,6 +10,8 @@ import
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Sem
 import
+Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.BoundsInternal
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Source
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Hoare.RetargetOutput
@@ -158,6 +160,18 @@ theorem entryUpdateTM_prefix_withinAuxSpace {n : ℕ}
     current.WithinAuxSpace inputLength
       (initialSpace + entryUpdateTime tapes store address newValue) :=
   (hinitial.reachesIn hreach).mono le_rfl (by omega)
+
+/-- A complete sparse update is charged by the entries actually traversed and
+the query, replacement, and remaining-count widths reserved at each iteration.
+This avoids the former product of entry count with a squared run-wide width. -/
+theorem entryUpdateTime_le_encoded {n : ℕ}
+    (tapes : EntryUpdateTapes n) (store : Store)
+    (address newValue : ℕ) :
+    entryUpdateTime tapes store address newValue ≤
+      1000 * (encodedStoreLength store +
+        (store.length + 1) *
+          (bitlen address + bitlen newValue + bitlen store.length + 1) + 1) :=
+  entryUpdateTime_le_encoded_internal tapes store address newValue
 
 end Machine
 

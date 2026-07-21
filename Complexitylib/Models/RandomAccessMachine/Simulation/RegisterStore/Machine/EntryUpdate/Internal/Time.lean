@@ -86,22 +86,48 @@ theorem entryMissCleanupTime_eq_entryUpdateReadyCleanupTime_internal
   unfold entryMissCleanupTime entryUpdateReadyCleanupTime
   rw [hquery, hreset]
 
-private theorem readable_other_cleanup_target_head_eq_one
-    (tapes : EntryMatchTapes n) (entry : Entry) (rest queryBits : List Bool)
+private theorem readable_other_cleanup_target_head
+    (tapes : EntryUpdateTapes n) (entry : Entry) (rest queryBits : List Bool)
     (initialWork matchedWork : Fin n → Tape)
-    (hmatch : ReadableEntryMatch tapes entry rest queryBits initialWork
-      matchedWork) (i : Fin n) (hi : i ∈ entryMissTargets tapes)
-    (haddress : i ≠ tapes.address) (hvalue : i ≠ tapes.value) :
-    (matchedWork i).head = 1 := by
+    (hmatch : ReadableEntryMatch tapes.entry entry rest queryBits initialWork
+      matchedWork) (i : Fin n) (hi : i ∈ entryMissTargets tapes.entry)
+    (haddress : i ≠ tapes.entry.address)
+    (hvalue : i ≠ tapes.entry.value) :
+    (matchedWork i).head = entryUpdatePostEmitHead tapes entry i := by
   obtain ⟨slot, rfl⟩ := List.mem_ofFn.mp hi
   fin_cases slot
   · simp at haddress
   · simp at hvalue
-  · exact hmatch.addressCounter.2.1
-  · exact hmatch.addressWidth.2.1
-  · exact hmatch.valueCounter.2.1
-  · exact hmatch.valueWidth.2.1
-  · exact hmatch.result.1
+  · simpa [entryUpdatePostEmitHead, EntryMatchTapes.address,
+      EntryMatchTapes.value, EntryMatchTapes.addressCounter,
+      EntryMatchTapes.addressWidth, EntryMatchTapes.valueCounter,
+      EntryMatchTapes.valueWidth, EntryMatchTapes.result,
+      tapes.entry.injective.eq_iff] using
+      hmatch.addressCounter.1
+  · simpa [entryUpdatePostEmitHead, EntryMatchTapes.address,
+      EntryMatchTapes.value, EntryMatchTapes.addressCounter,
+      EntryMatchTapes.addressWidth, EntryMatchTapes.valueCounter,
+      EntryMatchTapes.valueWidth, EntryMatchTapes.result,
+      tapes.entry.injective.eq_iff] using
+      hmatch.addressWidth.2.1
+  · simpa [entryUpdatePostEmitHead, EntryMatchTapes.address,
+      EntryMatchTapes.value, EntryMatchTapes.addressCounter,
+      EntryMatchTapes.addressWidth, EntryMatchTapes.valueCounter,
+      EntryMatchTapes.valueWidth, EntryMatchTapes.result,
+      tapes.entry.injective.eq_iff] using
+      hmatch.valueCounter.1
+  · simpa [entryUpdatePostEmitHead, EntryMatchTapes.address,
+      EntryMatchTapes.value, EntryMatchTapes.addressCounter,
+      EntryMatchTapes.addressWidth, EntryMatchTapes.valueCounter,
+      EntryMatchTapes.valueWidth, EntryMatchTapes.result,
+      tapes.entry.injective.eq_iff] using
+      hmatch.valueWidth.2.1
+  · simpa [entryUpdatePostEmitHead, EntryMatchTapes.address,
+      EntryMatchTapes.value, EntryMatchTapes.addressCounter,
+      EntryMatchTapes.addressWidth, EntryMatchTapes.valueCounter,
+      EntryMatchTapes.valueWidth, EntryMatchTapes.result,
+      tapes.entry.injective.eq_iff] using
+      hmatch.result.1
 
 private theorem entryMissCopiedWork_target_head
     (tapes : EntryUpdateTapes n) (entry : Entry) (rest queryBits : List Bool)
@@ -118,9 +144,9 @@ private theorem entryMissCopiedWork_target_head
   · by_cases hvalue : i = tapes.entry.value
     · subst i
       simp [entryMissCopiedWork, entryUpdatePostEmitHead, haddress]
-    · simp [entryMissCopiedWork, entryUpdatePostEmitHead, haddress, hvalue,
-        readable_other_cleanup_target_head_eq_one tapes.entry entry rest
-          queryBits initialWork matchedWork hmatch i hi haddress hvalue]
+    · simp only [entryMissCopiedWork, haddress, hvalue, if_false]
+      exact readable_other_cleanup_target_head tapes entry rest queryBits
+        initialWork matchedWork hmatch i hi haddress hvalue
 
 private theorem entryReplaceReadyWork_target_head
     (tapes : EntryUpdateTapes n) (entry : Entry) (rest queryBits : List Bool)
@@ -138,9 +164,11 @@ private theorem entryReplaceReadyWork_target_head
     · subst i
       simpa [entryReplaceReadyWork, entryUpdatePostEmitHead, haddress] using
         hmatch.value.1
-    · simp [entryReplaceReadyWork, entryUpdatePostEmitHead, haddress, hvalue,
-        readable_other_cleanup_target_head_eq_one tapes.entry entry rest
-          queryBits initialWork matchedWork hmatch i hi haddress hvalue]
+    · have haddress' : i ≠ tapes.replace.entry.address := by
+        simpa using haddress
+      rw [entryReplaceReadyWork, if_neg haddress']
+      exact readable_other_cleanup_target_head tapes entry rest queryBits
+        initialWork matchedWork hmatch i hi haddress hvalue
 
 private theorem entryMissCleanupTime_postEmit_le
     (tapes : EntryUpdateTapes n) (entry : Entry) (address : ℕ)

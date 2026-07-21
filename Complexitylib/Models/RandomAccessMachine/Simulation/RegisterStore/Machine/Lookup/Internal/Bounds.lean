@@ -70,7 +70,7 @@ theorem entryLookupEntryValueWidth_le_internal
 
 theorem entryLookupEntryAddressCounterWidth_le_internal
     (entry : Entry) (address : ℕ) :
-    (bitlen entry.1).bits.length ≤ entryLookupEntryWidth entry address := by
+    bitlen entry.1 ≤ entryLookupEntryWidth entry address := by
   simp only [entryLookupEntryWidth]
   exact le_trans (le_max_left _ _)
     (le_trans (le_max_right _ _)
@@ -78,7 +78,7 @@ theorem entryLookupEntryAddressCounterWidth_le_internal
 
 theorem entryLookupEntryValueCounterWidth_le_internal
     (entry : Entry) (address : ℕ) :
-    (bitlen entry.2).bits.length ≤ entryLookupEntryWidth entry address := by
+    bitlen entry.2 ≤ entryLookupEntryWidth entry address := by
   simp only [entryLookupEntryWidth]
   exact le_trans (le_max_left _ _)
     (le_trans (le_max_right _ _)

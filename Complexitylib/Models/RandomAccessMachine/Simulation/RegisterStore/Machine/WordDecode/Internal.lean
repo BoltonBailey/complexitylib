@@ -8,6 +8,7 @@ import Complexitylib.Models.TuringMachine.Combinators.ForWorkOnes.Internal
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 import Complexitylib.Models.TuringMachine.Subroutines.Internal
+import Mathlib.Tactic.Linarith
 
 /-!
 # RAM snapshot word-width decoder — proof internals
@@ -1410,6 +1411,54 @@ theorem wordDecodeTM_reachesIn_frame_internal {n : ℕ}
     change payloadDone.work i = work₀ i
     rw [hpayloadFrame i his hit hic hiw,
       hseparatorFrame i his, hwidthFrame i his hiw]
+
+private theorem forWorkOnesLoopTime_succ_le_size
+    (limit value count : ℕ) (hsum : value + count ≤ limit) :
+    TM.forWorkOnesLoopTime TM.binarySuccTime value count ≤
+      1 + count * (2 * limit.size + 4) := by
+  induction count generalizing value with
+  | zero => simp [TM.forWorkOnesLoopTime]
+  | succ count ih =>
+      rw [TM.forWorkOnesLoopTime]
+      have hvalue : value ≤ limit := by omega
+      have hsize : value.size ≤ limit.size := Nat.size_le_size hvalue
+      have hsucc := TM.binarySuccTime_le value
+      have htail := ih (value + 1) (by omega)
+      rw [Nat.succ_mul]
+      omega
+
+private theorem binaryForLoopTime_one_le_size
+    (limit value count : ℕ) (hsum : value + count ≤ limit) :
+    TM.binaryForLoopTime (fun _ => 1) limit value count ≤
+      (count + 1) * (4 * limit.size + 8) := by
+  induction count generalizing value with
+  | zero =>
+      simp only [TM.binaryForLoopTime, TM.binaryForCompareTime]
+      omega
+  | succ count ih =>
+      rw [TM.binaryForLoopTime]
+      have hvalue : value ≤ limit := by omega
+      have hsize : value.size ≤ limit.size := Nat.size_le_size hvalue
+      have hsucc := TM.binarySuccTime_le value
+      have htail := ih (value + 1) (by omega)
+      simp only [TM.binaryForCompareTime, TM.binaryForIterationTime]
+      nlinarith
+
+theorem wordDecodeTime_le_size_internal (width : ℕ) :
+    wordDecodeTime width ≤
+      8 * (width + 1) * (width.size + 2) := by
+  have hwidthLoop := forWorkOnesLoopTime_succ_le_size width 0 width (by omega)
+  have hpayloadLoop := binaryForLoopTime_one_le_size width 0 width (by omega)
+  have hwidth : wordWidthTime width ≤
+      (width + 1) * (2 * width.size + 4) := by
+    unfold wordWidthTime
+    nlinarith
+  have hpayload : wordPayloadTime width ≤
+      (width + 1) * (4 * width.size + 8) := by
+    unfold wordPayloadTime
+    simpa only [Nat.zero_add] using hpayloadLoop
+  unfold wordDecodeTime
+  nlinarith
 
 theorem wordWidthTM_isTransducer_internal {n : ℕ}
     (sourceIdx widthIdx : Fin n) :

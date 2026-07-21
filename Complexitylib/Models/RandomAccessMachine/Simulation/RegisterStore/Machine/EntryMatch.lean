@@ -59,10 +59,14 @@ theorem entryMatchTM_reachesIn_frame {n : ℕ}
       (c'.work tapes.address).cells 0 = Γ.start ∧
       (c'.work tapes.value).HasBinaryPrefix entry.2.bits ∧
       (c'.work tapes.value).cells 0 = Γ.start ∧
-      (c'.work tapes.addressCounter).HasBinaryNat (bitlen entry.1) ∧
-      (c'.work tapes.addressWidth).HasBinaryNat (bitlen entry.1) ∧
-      (c'.work tapes.valueCounter).HasBinaryNat (bitlen entry.2) ∧
-      (c'.work tapes.valueWidth).HasBinaryNat (bitlen entry.2) ∧
+      (c'.work tapes.addressCounter).HasBinaryPrefix
+        (List.replicate (bitlen entry.1) true) ∧
+      (c'.work tapes.addressCounter).cells 0 = Γ.start ∧
+      (c'.work tapes.addressWidth).HasBinaryNat 0 ∧
+      (c'.work tapes.valueCounter).HasBinaryPrefix
+        (List.replicate (bitlen entry.2) true) ∧
+      (c'.work tapes.valueCounter).cells 0 = Γ.start ∧
+      (c'.work tapes.valueWidth).HasBinaryNat 0 ∧
       (c'.work tapes.query).HasBinaryContent queryBits ∧
       1 ≤ (c'.work tapes.query).head ∧
       (c'.work tapes.query).cells 0 = Γ.start ∧
@@ -136,6 +140,22 @@ theorem ReadableEntryMatch.result_read_eq_one_iff {n : ℕ}
   by_cases heq : entry.1.bits = queryBits <;>
     simp [h.result_read, heq, Γ.ofBool]
 
+/-- Exact closed form for the readable unary-marker entry-match runtime. -/
+theorem entryMatchReadTime_eq (entry : Entry) (queryBits : List Bool) :
+    entryMatchReadTime entry queryBits =
+      4 * entry.1.bits.length + 3 * entry.2.bits.length +
+        max entry.1.bits.length queryBits.length + 18 :=
+  entryMatchReadTime_eq_internal entry queryBits
+
+/-- One readable entry match is linear in the serialized entry and query
+widths. -/
+theorem entryMatchReadTime_le_linear (entry : Entry)
+    (queryBits : List Bool) :
+    entryMatchReadTime entry queryBits ≤
+      5 * entry.1.bits.length + 3 * entry.2.bits.length +
+        queryBits.length + 18 :=
+  entryMatchReadTime_le_linear_internal entry queryBits
+
 /-- Coarse all-prefix auxiliary-space envelope for one entry match. -/
 theorem entryMatchTM_prefix_withinAuxSpace {n : ℕ}
     (tapes : EntryMatchTapes n) (entry : Entry) (queryBits : List Bool)
@@ -152,7 +172,7 @@ theorem entryMatchTM_prefix_withinAuxSpace {n : ℕ}
 theorem entryMatchTM_isTransducer {n : ℕ} (tapes : EntryMatchTapes n) :
     (entryMatchTM tapes).IsTransducer := by
   unfold entryMatchTM
-  exact (entryDecodeTM_isTransducer tapes.decode).seqTM
+  exact (entryDecodeLinearTM_isTransducer tapes.decode).seqTM
     (decodedAddressEqTM_isTransducer tapes.address tapes.query tapes.result)
 
 /-- Readable entry matching preserves one-way output safety. -/

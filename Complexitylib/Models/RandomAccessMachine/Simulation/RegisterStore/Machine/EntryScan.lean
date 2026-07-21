@@ -7,6 +7,8 @@ import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Defs
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Internal.Sem
+import
+Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Internal.Bounds
 import Complexitylib.Models.TuringMachine.Hoare.Space
 
 /-!
@@ -75,6 +77,27 @@ theorem entryScanTM_prefix_withinAuxSpace {n : ℕ}
     current.WithinAuxSpace inputLength
       (initialSpace + entryScanTime tapes queryBits store) :=
   (hinitial.reachesIn hreach).mono le_rfl (by omega)
+
+/-- One invariant-preserving entry iteration is linear in the two serialized
+words and the query width. -/
+theorem entryScanOneTime_le_linear {n : ℕ}
+    (tapes : EntryScanTapes n) (entry : Entry)
+    (queryBits : List Bool) :
+    entryScanOneTime tapes entry queryBits ≤
+      400 * (entry.1.bits.length + entry.2.bits.length +
+        queryBits.length + 1) :=
+  entryScanOneTime_le_linear_internal tapes entry queryBits
+
+/-- A complete sparse scan is charged by the serialized entries actually
+traversed, the repeated query width, and the binary remaining-count overhead.
+In particular, it no longer multiplies every entry by a run-wide square-width
+envelope. -/
+theorem entryScanTime_le_encoded {n : ℕ}
+    (tapes : EntryScanTapes n) (queryBits : List Bool) (store : Store) :
+    entryScanTime tapes queryBits store ≤
+      1000 * (encodedStoreLength store +
+        store.length * (queryBits.length + bitlen store.length + 2) + 1) :=
+  entryScanTime_le_encoded_internal tapes queryBits store
 
 end Machine
 

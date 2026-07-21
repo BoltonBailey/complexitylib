@@ -82,10 +82,10 @@ private theorem readableEntryMatch_rebase_after_copy
   have hvalueContent :
       (copiedWork tapes.value).HasBinaryContent entry.2.bits := by
     simpa only [Tape.HasBinaryContent, hvalueCells] using hmatch.value.2
-  refine ⟨?_, haddressContent, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_⟩
+  constructor
   · rw [hframe tapes.source hsourceNeAddress hsourceNeValue]
     exact hmatch.source
+  · exact haddressContent
   · rw [haddressCells]
     exact hmatch.addressStart
   · exact ⟨hvalueHead, hvalueContent⟩
@@ -94,12 +94,18 @@ private theorem readableEntryMatch_rebase_after_copy
   · rw [hframe tapes.addressCounter (tapes.ne (by decide))
       (tapes.ne (by decide))]
     exact hmatch.addressCounter
+  · rw [hframe tapes.addressCounter (tapes.ne (by decide))
+      (tapes.ne (by decide))]
+    exact hmatch.addressCounterStart
   · rw [hframe tapes.addressWidth (tapes.ne (by decide))
       (tapes.ne (by decide))]
     exact hmatch.addressWidth
   · rw [hframe tapes.valueCounter (tapes.ne (by decide))
       (tapes.ne (by decide))]
     exact hmatch.valueCounter
+  · rw [hframe tapes.valueCounter (tapes.ne (by decide))
+      (tapes.ne (by decide))]
+    exact hmatch.valueCounterStart
   · rw [hframe tapes.valueWidth (tapes.ne (by decide))
       (tapes.ne (by decide))]
     exact hmatch.valueWidth

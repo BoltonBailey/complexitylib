@@ -47,10 +47,10 @@ private theorem readableEntryMatch_rebase_after_address_emit
   have haddressContent :
       (readyWork tapes.entry.address).HasBinaryContent entry.1.bits := by
     simpa only [Tape.HasBinaryContent, haddressCells] using hmatch.address
-  refine ⟨?_, haddressContent, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_⟩
+  constructor
   · rw [hframe tapes.entry.source (tapes.entry.ne (by decide))]
     exact hmatch.source
+  · exact haddressContent
   · rw [haddressCells]
     exact hmatch.addressStart
   · rw [hframe tapes.entry.value (tapes.entry.ne (by decide))]
@@ -59,10 +59,14 @@ private theorem readableEntryMatch_rebase_after_address_emit
     exact hmatch.valueStart
   · rw [hframe tapes.entry.addressCounter (tapes.entry.ne (by decide))]
     exact hmatch.addressCounter
+  · rw [hframe tapes.entry.addressCounter (tapes.entry.ne (by decide))]
+    exact hmatch.addressCounterStart
   · rw [hframe tapes.entry.addressWidth (tapes.entry.ne (by decide))]
     exact hmatch.addressWidth
   · rw [hframe tapes.entry.valueCounter (tapes.entry.ne (by decide))]
     exact hmatch.valueCounter
+  · rw [hframe tapes.entry.valueCounter (tapes.entry.ne (by decide))]
+    exact hmatch.valueCounterStart
   · rw [hframe tapes.entry.valueWidth (tapes.entry.ne (by decide))]
     exact hmatch.valueWidth
   · rw [hframe tapes.entry.query (tapes.entry.ne (by decide))]

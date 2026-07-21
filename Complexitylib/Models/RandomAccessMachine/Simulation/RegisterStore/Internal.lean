@@ -712,6 +712,185 @@ theorem Entry.encode_length_internal (entry : Entry) :
     WordCode.encode_length_internal, WordCode.encode_length_internal]
   omega
 
+theorem encodedStoreLength_write_le_internal (store : Store)
+    (address value : ℕ) :
+    encodedStoreLength (write store address value) ≤
+      encodedStoreLength store + (Entry.encode (address, value)).length := by
+  induction store with
+  | nil =>
+      by_cases hvalue : value = 0 <;>
+        simp [encodedStoreLength, write, hvalue]
+  | cons entry rest ih =>
+      rcases entry with ⟨storedAddress, storedValue⟩
+      by_cases haddress : address = storedAddress
+      · subst address
+        by_cases hvalue : value = 0
+        · subst value
+          simp only [write, ↓reduceIte, encodedStoreLength,
+            List.flatMap_cons, List.length_append]
+          exact le_trans (Nat.le_add_left _ _)
+            (Nat.le_add_right _ _)
+        · simp only [write, hvalue, ↓reduceIte, encodedStoreLength,
+            List.flatMap_cons, List.length_append]
+          calc
+            (Entry.encode (storedAddress, value)).length +
+                (List.flatMap Entry.encode rest).length =
+              (List.flatMap Entry.encode rest).length +
+                (Entry.encode (storedAddress, value)).length := by omega
+            _ ≤ ((Entry.encode (storedAddress, storedValue)).length +
+                  (List.flatMap Entry.encode rest).length) +
+                (Entry.encode (storedAddress, value)).length :=
+              Nat.add_le_add_right (Nat.le_add_left _ _) _
+      · unfold encodedStoreLength at ih
+        simp only [write, haddress, ↓reduceIte, encodedStoreLength,
+          List.flatMap_cons, List.length_append]
+        simpa only [Nat.add_assoc] using
+          Nat.add_le_add_left ih
+            (Entry.encode (storedAddress, storedValue)).length
+
+private theorem encodedStoreLength_stepInstr_le (instruction : Instr)
+    (snapshot : Snapshot) :
+    encodedStoreLength (Snapshot.stepInstr instruction snapshot).store ≤
+      encodedStoreLength snapshot.store +
+        4 * (RegisterStore.Instr.staticWidth instruction +
+          instruction.logCost snapshot.decode + 1) := by
+  cases instruction with
+  | imm destination value =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        destination value
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost]
+      omega
+  | add destination source₀ source₁ =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        destination
+        (read snapshot.store source₀ + read snapshot.store source₁)
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost,
+        Snapshot.decode, RegisterStore.decode]
+      omega
+  | sub destination source₀ source₁ =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        destination
+        (read snapshot.store source₀ - read snapshot.store source₁)
+      have hsub : bitlen
+          (read snapshot.store source₀ - read snapshot.store source₁) ≤
+          bitlen (read snapshot.store source₀) :=
+        Nat.size_le_size (Nat.sub_le _ _)
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost,
+        Snapshot.decode, RegisterStore.decode]
+      omega
+  | mul destination source₀ source₁ =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        destination
+        (read snapshot.store source₀ * read snapshot.store source₁)
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost,
+        Snapshot.decode, RegisterStore.decode]
+      omega
+  | load destination addressRegister =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        destination (read snapshot.store (read snapshot.store addressRegister))
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost,
+        Snapshot.decode, RegisterStore.decode]
+      omega
+  | store addressRegister source =>
+      have hwrite := encodedStoreLength_write_le_internal snapshot.store
+        (read snapshot.store addressRegister) (read snapshot.store source)
+      apply le_trans hwrite
+      rw [Entry.encode_length_internal]
+      simp only [RegisterStore.Instr.staticWidth, Instr.logCost,
+        Snapshot.decode, RegisterStore.decode]
+      omega
+  | jz source target =>
+      simp only [Snapshot.stepInstr]
+      split <;> simp [encodedStoreLength]
+  | jmp target => simp [Snapshot.stepInstr]
+  | halt => simp [Snapshot.stepInstr]
+
+private theorem encodedStoreLength_step_le (program : Program)
+    (snapshot : Snapshot) :
+    encodedStoreLength (snapshot.step program).store ≤
+      encodedStoreLength snapshot.store +
+        4 * (programStaticWidth program +
+          RAM.stepLogCost program snapshot.decode + 1) := by
+  have hstep := encodedStoreLength_stepInstr_le
+    (snapshot.curInstr program) snapshot
+  have hstatic : RegisterStore.Instr.staticWidth
+      (snapshot.curInstr program) ≤ programStaticWidth program := by
+    simpa only [Snapshot.curInstr] using
+      staticWidth_curInstr_le program snapshot.pc
+  apply le_trans hstep
+  apply Nat.add_le_add_left
+  have hcost : (snapshot.curInstr program).logCost snapshot.decode =
+      RAM.stepLogCost program snapshot.decode := rfl
+  rw [hcost]
+  exact Nat.mul_le_mul_left 4
+    (Nat.add_le_add_right
+      (Nat.add_le_add_right hstatic _) 1)
+
+theorem Snapshot.encodedStoreLength_run_le_internal (program : Program)
+    (fuel : ℕ) (snapshot : Snapshot)
+    (hcanonical : Canonical snapshot.store) :
+    encodedStoreLength (snapshot.run program fuel).store ≤
+      encodedStoreLength snapshot.store +
+        4 * (RAM.unitTimeUpto program fuel snapshot.decode *
+          (programStaticWidth program + 1) +
+          RAM.logTimeUpto program fuel snapshot.decode) := by
+  induction fuel generalizing snapshot with
+  | zero => simp [Snapshot.run, RAM.unitTimeUpto, RAM.logTimeUpto]
+  | succ fuel ih =>
+      rw [Snapshot.run]
+      by_cases hhalt : snapshot.Halted program
+      · have hramHalted :=
+          (Snapshot.halted_decode_iff_internal program snapshot).mpr hhalt
+        simp only [hhalt, hramHalted, if_true, RAM.unitTimeUpto,
+          RAM.logTimeUpto]
+        simp
+      · have hramNotHalted : ¬RAM.Halted program snapshot.decode :=
+          mt (Snapshot.halted_decode_iff_internal program snapshot).mp hhalt
+        rw [if_neg hhalt]
+        simp only [RAM.unitTimeUpto, RAM.logTimeUpto, hramNotHalted,
+          if_false]
+        have hstep := encodedStoreLength_step_le program snapshot
+        have hnextCanonical :=
+          Snapshot.step_canonical_internal program snapshot hcanonical
+        have htail := ih (snapshot.step program) hnextCanonical
+        have hdecode := Snapshot.decode_step_internal program snapshot hcanonical
+        rw [hdecode] at htail
+        calc
+          encodedStoreLength
+                (Snapshot.run program fuel (snapshot.step program)).store ≤
+              encodedStoreLength (snapshot.step program).store +
+                4 * (RAM.unitTimeUpto program fuel
+                    (RAM.step program snapshot.decode) *
+                    (programStaticWidth program + 1) +
+                  RAM.logTimeUpto program fuel
+                    (RAM.step program snapshot.decode)) := htail
+          _ ≤ (encodedStoreLength snapshot.store +
+                4 * (programStaticWidth program +
+                  RAM.stepLogCost program snapshot.decode + 1)) +
+              4 * (RAM.unitTimeUpto program fuel
+                    (RAM.step program snapshot.decode) *
+                    (programStaticWidth program + 1) +
+                  RAM.logTimeUpto program fuel
+                    (RAM.step program snapshot.decode)) :=
+            Nat.add_le_add_right hstep _
+          _ = encodedStoreLength snapshot.store +
+              4 * ((1 + RAM.unitTimeUpto program fuel
+                    (RAM.step program snapshot.decode)) *
+                    (programStaticWidth program + 1) +
+                  (RAM.stepLogCost program snapshot.decode +
+                    RAM.logTimeUpto program fuel
+                      (RAM.step program snapshot.decode))) := by ring
+
 private theorem entries_encode_length_le (store : Store) (width : ℕ)
     (hwidth : ∀ entry ∈ store,
       bitlen entry.1 ≤ width ∧ bitlen entry.2 ≤ width) :
@@ -791,6 +970,27 @@ private theorem bitlen_le_maxWidth (store : Store) (entry : Entry)
         le_trans (le_max_right _ _) (le_max_right _ _)
       exact ⟨le_trans hrest.1 htail, le_trans hrest.2 htail⟩
 
+theorem encodedStoreLength_initial_le_internal (input : List Bool) :
+    encodedStoreLength (initialStore input) ≤
+      (input.length + 1) * (4 * bitlen (input.length + 1) + 2) := by
+  have hlength := initialStore_length_le_internal input
+  have hsnapshotWidth := Snapshot.initial_width_le_internal input
+  have hstoreWidth : ∀ entry ∈ initialStore input,
+      bitlen entry.1 ≤ bitlen (input.length + 1) ∧
+        bitlen entry.2 ≤ bitlen (input.length + 1) := by
+    intro entry hentry
+    have hentryWidth := bitlen_le_maxWidth (initialStore input) entry hentry
+    have hmaxWidth : maxWidth (initialStore input) ≤
+        (Snapshot.initial input).width := by
+      exact le_trans (le_max_right _ _) (le_max_right _ _)
+    exact ⟨le_trans hentryWidth.1 (le_trans hmaxWidth hsnapshotWidth),
+      le_trans hentryWidth.2 (le_trans hmaxWidth hsnapshotWidth)⟩
+  have hentries := entries_encode_length_le (initialStore input)
+    (bitlen (input.length + 1)) hstoreWidth
+  unfold encodedStoreLength
+  exact le_trans hentries
+    (Nat.mul_le_mul_right (4 * bitlen (input.length + 1) + 2) hlength)
+
 theorem Snapshot.encode_length_le_sizeBound_internal (snapshot : Snapshot) :
     snapshot.encode.length ≤ snapshot.sizeBound := by
   apply Snapshot.encode_length_le_internal snapshot snapshot.width
@@ -800,6 +1000,85 @@ theorem Snapshot.encode_length_le_sizeBound_internal (snapshot : Snapshot) :
     have hwidth := bitlen_le_maxWidth snapshot.store entry hentry
     exact ⟨le_trans hwidth.1 (le_trans (le_max_right _ _) (le_max_right _ _)),
       le_trans hwidth.2 (le_trans (le_max_right _ _) (le_max_right _ _))⟩
+
+theorem Snapshot.encode_length_le_encodedStore_internal (snapshot : Snapshot) :
+    snapshot.encode.length ≤
+      encodedStoreLength snapshot.store + 4 * snapshot.width + 2 := by
+  have hpc : bitlen snapshot.pc ≤ snapshot.width := le_max_left _ _
+  have hcount : bitlen snapshot.store.length ≤ snapshot.width :=
+    le_trans (le_max_left _ _) (le_max_right _ _)
+  simp only [Snapshot.encode, List.length_append, encodedStoreLength]
+  rw [WordCode.encode_length_internal, WordCode.encode_length_internal]
+  omega
+
+theorem Snapshot.encode_run_length_le_amortized_internal
+    (program : Program) (fuel : ℕ) (snapshot : Snapshot)
+    (hcanonical : Canonical snapshot.store) :
+    (snapshot.run program fuel).encode.length ≤
+      encodedStoreLength snapshot.store + 4 * snapshot.width +
+        8 * (RAM.unitTimeUpto program fuel snapshot.decode *
+          (programStaticWidth program + 1) +
+          RAM.logTimeUpto program fuel snapshot.decode) + 2 := by
+  let growth := RAM.unitTimeUpto program fuel snapshot.decode *
+      (programStaticWidth program + 1) +
+      RAM.logTimeUpto program fuel snapshot.decode
+  have hcode := Snapshot.encode_length_le_encodedStore_internal
+    (snapshot.run program fuel)
+  have hentries := Snapshot.encodedStoreLength_run_le_internal
+    program fuel snapshot hcanonical
+  have hwidth := Snapshot.width_run_le_internal
+    program fuel snapshot hcanonical
+  calc
+    (snapshot.run program fuel).encode.length ≤
+        encodedStoreLength (snapshot.run program fuel).store +
+          4 * (snapshot.run program fuel).width + 2 := hcode
+    _ ≤ (encodedStoreLength snapshot.store + 4 * growth) +
+          4 * (snapshot.width + growth) + 2 := by
+      simpa only [growth, Nat.add_assoc] using Nat.add_le_add_right
+        (Nat.add_le_add hentries (Nat.mul_le_mul_left 4 hwidth)) 2
+    _ = encodedStoreLength snapshot.store + 4 * snapshot.width +
+          8 * growth + 2 := by ring
+
+theorem Snapshot.encode_initial_run_length_le_amortized_internal
+    (program : Program) (fuel : ℕ) (input : List Bool) :
+    ((Snapshot.initial input).run program fuel).encode.length ≤
+      (input.length + 1) * (4 * bitlen (input.length + 1) + 2) +
+        4 * bitlen (input.length + 1) +
+        8 * (RAM.logTimeUpto program fuel (RAM.initCfg input) *
+          (programStaticWidth program + 2)) + 2 := by
+  have hinitial := Snapshot.initial_represents_internal input
+  have hrun := Snapshot.encode_run_length_le_amortized_internal
+    program fuel (Snapshot.initial input) hinitial.1
+  rw [hinitial.2] at hrun
+  have hentries := encodedStoreLength_initial_le_internal input
+  have hentries' : encodedStoreLength (Snapshot.initial input).store ≤
+      (input.length + 1) * (4 * bitlen (input.length + 1) + 2) := by
+    simpa only [Snapshot.initial] using hentries
+  have hwidth := Snapshot.initial_width_le_internal input
+  have hunit := RAM.unitTimeUpto_le_logTimeUpto program fuel
+    (RAM.initCfg input)
+  have hgrowth :
+      RAM.unitTimeUpto program fuel (RAM.initCfg input) *
+            (programStaticWidth program + 1) +
+          RAM.logTimeUpto program fuel (RAM.initCfg input) ≤
+        RAM.logTimeUpto program fuel (RAM.initCfg input) *
+          (programStaticWidth program + 2) := by
+    calc
+      RAM.unitTimeUpto program fuel (RAM.initCfg input) *
+              (programStaticWidth program + 1) +
+            RAM.logTimeUpto program fuel (RAM.initCfg input) ≤
+          RAM.logTimeUpto program fuel (RAM.initCfg input) *
+              (programStaticWidth program + 1) +
+            RAM.logTimeUpto program fuel (RAM.initCfg input) :=
+        Nat.add_le_add_right
+          (Nat.mul_le_mul_right (programStaticWidth program + 1) hunit) _
+      _ = RAM.logTimeUpto program fuel (RAM.initCfg input) *
+          (programStaticWidth program + 2) := by ring
+  have hentriesWidth := Nat.add_le_add hentries'
+    (Nat.mul_le_mul_left 4 hwidth)
+  have hgrowth' := Nat.mul_le_mul_left 8 hgrowth
+  exact le_trans hrun
+    (Nat.add_le_add_right (Nat.add_le_add hentriesWidth hgrowth') 2)
 
 theorem Snapshot.encode_run_length_le_internal (program : Program) (fuel : ℕ)
     (snapshot : Snapshot) (hcanonical : Canonical snapshot.store) :

@@ -327,7 +327,7 @@ theorem ReadableEntryMatch.markFound_internal
     Ne.symm (tapes.found_ne_entry 7)
   have hresult : tapes.entry.result ≠ tapes.found :=
     Ne.symm (tapes.found_ne_entry 8)
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  constructor
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ hsource]
     exact h.source
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ haddress]
@@ -340,10 +340,14 @@ theorem ReadableEntryMatch.markFound_internal
     exact h.valueStart
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ haddressCounter]
     exact h.addressCounter
+  · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ haddressCounter]
+    exact h.addressCounterStart
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ haddressWidth]
     exact h.addressWidth
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ hvalueCounter]
     exact h.valueCounter
+  · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ hvalueCounter]
+    exact h.valueCounterStart
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ hvalueWidth]
     exact h.valueWidth
   · rw [entryUpdateMarkFoundWork_apply_ne_internal _ _ _ hquery]

@@ -210,14 +210,7 @@ private theorem entryMatchReadTime_le (entry : Entry)
     (hvalue : entry.2.bits.length ≤ bound)
     (hquery : queryBits.length ≤ bound) :
     entryMatchReadTime entry queryBits ≤ 100 * (bound + 1) ^ 2 := by
-  have haddressDecode := wordDecodeTime_le (bitlen entry.1) bound (by
-    simpa [bitlen, Nat.size_eq_bits_len] using haddress)
-  have hvalueDecode := wordDecodeTime_le (bitlen entry.2) bound (by
-    simpa [bitlen, Nat.size_eq_bits_len] using hvalue)
-  have hmax : max entry.1.bits.length queryBits.length ≤ bound :=
-    max_le haddress hquery
-  unfold entryMatchReadTime entryMatchTime entryDecodeTime
-    decodedAddressEqTime TM.binaryEqTime
+  have hlinear := entryMatchReadTime_le_linear entry queryBits
   have hboundSq : bound ≤ (bound + 1) ^ 2 := by nlinarith
   have honeSq : 1 ≤ (bound + 1) ^ 2 := by nlinarith
   omega
@@ -229,16 +222,14 @@ private theorem entryMissBits_length_le {m : ℕ}
     (haddress : entry.1.bits.length ≤ bound)
     (hvalue : entry.2.bits.length ≤ bound) (i : Fin m) :
     (entryMissBits tapes entry queryBits i).length ≤ bound := by
-  have haddressWidth : (bitlen entry.1).bits.length ≤ bound := by
-    rw [Nat.size_eq_bits_len (bitlen entry.1)]
-    exact le_trans (size_le_self (bitlen entry.1)) (by
-      simpa [bitlen, Nat.size_eq_bits_len] using haddress)
-  have hvalueWidth : (bitlen entry.2).bits.length ≤ bound := by
-    rw [Nat.size_eq_bits_len (bitlen entry.2)]
-    exact le_trans (size_le_self (bitlen entry.2)) (by
-      simpa [bitlen, Nat.size_eq_bits_len] using hvalue)
+  have haddressWidth : bitlen entry.1 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using haddress
+  have hvalueWidth : bitlen entry.2 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using hvalue
   unfold entryMissBits
-  split_ifs <;> simp_all
+  split_ifs <;>
+    (try simp only [List.length_nil, List.length_replicate,
+      List.length_singleton]) <;> omega
 
 private theorem entryMissCleanupTime_canonical_le {m : ℕ}
     (tapes : EntryMatchTapes m) (entry : Entry)
@@ -363,6 +354,68 @@ private theorem entryScanTime_le_cube {m : ℕ}
       exact Nat.mul_le_mul_right _ (Nat.mul_le_mul_left 1300 hfactor)
     _ = 1300 * (bound + 1) ^ 3 := by ring
 
+private theorem encodedStoreLength_le_uniform (store : Store) (bound : ℕ)
+    (hentries : ∀ entry ∈ store,
+      entry.1.bits.length ≤ bound ∧ entry.2.bits.length ≤ bound) :
+    encodedStoreLength store ≤ store.length * (4 * bound + 2) := by
+  induction store with
+  | nil => simp [encodedStoreLength]
+  | cons entry rest ih =>
+      have hentry := hentries entry (by simp)
+      have hrest : ∀ current ∈ rest,
+          current.1.bits.length ≤ bound ∧
+            current.2.bits.length ≤ bound := by
+        intro current hcurrent
+        exact hentries current (by simp [hcurrent])
+      have htail := ih hrest
+      have hhead : (Entry.encode entry).length ≤ 4 * bound + 2 := by
+        rw [Entry.encode_length]
+        have haddressWidth : bitlen entry.1 ≤ bound := by
+          simpa only [bitlen, Nat.size_eq_bits_len] using hentry.1
+        have hvalueWidth : bitlen entry.2 ≤ bound := by
+          simpa only [bitlen, Nat.size_eq_bits_len] using hentry.2
+        omega
+      unfold encodedStoreLength at htail ⊢
+      simp only [List.flatMap_cons, List.length_append, List.length_cons,
+        Nat.succ_mul]
+      ring_nf at htail ⊢
+      omega
+
+private theorem entryScanTime_le_square {m : ℕ}
+    (tapes : EntryScanTapes m) (queryBits : List Bool)
+    (store : Store) (bound : ℕ)
+    (hbound : 1 ≤ bound) (hstoreLength : store.length ≤ bound)
+    (hentries : ∀ entry ∈ store,
+      entry.1.bits.length ≤ bound ∧ entry.2.bits.length ≤ bound)
+    (hquery : queryBits.length ≤ bound) :
+    entryScanTime tapes queryBits store ≤ 7000 * (bound + 1) ^ 2 := by
+  have hscan := entryScanTime_le_encoded tapes queryBits store
+  have hencoded := encodedStoreLength_le_uniform store bound hentries
+  have hcount : bitlen store.length ≤ bound := by
+    unfold bitlen
+    exact le_trans (size_le_self store.length) hstoreLength
+  have hfactor : queryBits.length + bitlen store.length + 2 ≤
+      2 * bound + 2 := by omega
+  have hencoded' : encodedStoreLength store ≤
+      bound * (4 * bound + 2) :=
+    le_trans hencoded (Nat.mul_le_mul_right _ hstoreLength)
+  have hqueryTerm : store.length *
+      (queryBits.length + bitlen store.length + 2) ≤
+      bound * (2 * bound + 2) :=
+    Nat.mul_le_mul hstoreLength hfactor
+  have hinside : encodedStoreLength store +
+        store.length * (queryBits.length + bitlen store.length + 2) + 1 ≤
+      7 * (bound + 1) ^ 2 := by
+    nlinarith
+  exact le_trans hscan (by
+    calc
+      1000 * (encodedStoreLength store +
+            store.length *
+              (queryBits.length + bitlen store.length + 2) + 1)
+          ≤ 1000 * (7 * (bound + 1) ^ 2) :=
+        Nat.mul_le_mul_left 1000 hinside
+      _ = 7000 * (bound + 1) ^ 2 := by ring)
+
 private theorem read_bits_length_le (store : Store) (address bound : ℕ)
     (hentries : ∀ entry ∈ store, entry.2.bits.length ≤ bound) :
     (RegisterStore.read store address).bits.length ≤ bound := by
@@ -385,14 +438,10 @@ private theorem entryLookupEntryWidth_le (entry : Entry)
     (hentryAddress : entry.1.bits.length ≤ bound)
     (hentryValue : entry.2.bits.length ≤ bound) :
     entryLookupEntryWidth entry address ≤ bound := by
-  have haddressWidth : (bitlen entry.1).bits.length ≤ bound := by
-    rw [Nat.size_eq_bits_len (bitlen entry.1)]
-    exact le_trans (size_le_self (bitlen entry.1)) (by
-      simpa [bitlen, Nat.size_eq_bits_len] using hentryAddress)
-  have hvalueWidth : (bitlen entry.2).bits.length ≤ bound := by
-    rw [Nat.size_eq_bits_len (bitlen entry.2)]
-    exact le_trans (size_le_self (bitlen entry.2)) (by
-      simpa [bitlen, Nat.size_eq_bits_len] using hentryValue)
+  have haddressWidth : bitlen entry.1 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using hentryAddress
+  have hvalueWidth : bitlen entry.2 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using hentryValue
   unfold entryLookupEntryWidth
   omega
 
@@ -513,6 +562,10 @@ private theorem entryUpdatePostEmitHead_le {m : ℕ}
     (bound : ℕ) (haddress : entry.1.bits.length ≤ bound)
     (hvalue : entry.2.bits.length ≤ bound) :
     entryUpdatePostEmitHead tapes entry i ≤ bound + 1 := by
+  have haddressWidth : bitlen entry.1 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using haddress
+  have hvalueWidth : bitlen entry.2 ≤ bound := by
+    simpa only [bitlen, Nat.size_eq_bits_len] using hvalue
   unfold entryUpdatePostEmitHead
   split_ifs <;> omega
 

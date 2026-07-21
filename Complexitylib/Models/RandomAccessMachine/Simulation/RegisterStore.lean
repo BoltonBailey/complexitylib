@@ -89,6 +89,14 @@ theorem encode_length (entry : Entry) :
 
 end Entry
 
+/-- One sparse write increases the actual encoded store by at most the code of
+the address/value pair being written. Replacement and deletion can only make
+this estimate smaller. -/
+theorem encodedStoreLength_write_le (store : Store) (address value : ℕ) :
+    encodedStoreLength (write store address value) ≤
+      encodedStoreLength store + (Entry.encode (address, value)).length :=
+  encodedStoreLength_write_le_internal store address value
+
 namespace Snapshot
 
 /-- The explicit finite public-input snapshot decodes to `RAM.initCfg`. -/
@@ -178,6 +186,20 @@ theorem width_run_le (program : Program) (fuel : ℕ) (snapshot : Snapshot)
         RAM.logTimeUpto program fuel snapshot.decode :=
   width_run_le_internal program fuel snapshot hcanonical
 
+/-- The live sparse-store code has amortized growth controlled by the resources actually
+charged by the RAM run. In particular, this avoids the spurious product of the
+number of entries and the maximum entry width: each executed instruction pays
+once for its fixed destination width and for the operand/result bits in its
+logarithmic cost. -/
+theorem encodedStoreLength_run_le (program : Program) (fuel : ℕ)
+    (snapshot : Snapshot) (hcanonical : Canonical snapshot.store) :
+    encodedStoreLength (snapshot.run program fuel).store ≤
+      encodedStoreLength snapshot.store +
+        4 * (RAM.unitTimeUpto program fuel snapshot.decode *
+          (programStaticWidth program + 1) +
+          RAM.logTimeUpto program fuel snapshot.decode) :=
+  encodedStoreLength_run_le_internal program fuel snapshot hcanonical
+
 /-- Canonical snapshot serialization round-trips exactly. -/
 theorem decode?_encode (snapshot : Snapshot) :
     decode? snapshot.encode = some snapshot :=
@@ -198,6 +220,47 @@ envelope, without external side conditions. -/
 theorem encode_length_le_sizeBound (snapshot : Snapshot) :
     snapshot.encode.length ≤ snapshot.sizeBound :=
   encode_length_le_sizeBound_internal snapshot
+
+/-- A snapshot code is bounded by its actual live-entry encoding plus the two
+header words. This is the width-sensitive alternative to the product envelope
+`Snapshot.sizeBound`. -/
+theorem encode_length_le_encodedStore (snapshot : Snapshot) :
+    snapshot.encode.length ≤
+      encodedStoreLength snapshot.store + 4 * snapshot.width + 2 :=
+  encode_length_le_encodedStore_internal snapshot
+
+/-- Combining the actual live-store charge with the width invariant gives a
+linear-in-accumulated-cost representation bound for every canonical sparse
+run, relative to the initial sparse encoding. -/
+theorem encode_run_length_le_amortized (program : Program) (fuel : ℕ)
+    (snapshot : Snapshot) (hcanonical : Canonical snapshot.store) :
+    (snapshot.run program fuel).encode.length ≤
+      encodedStoreLength snapshot.store + 4 * snapshot.width +
+        8 * (RAM.unitTimeUpto program fuel snapshot.decode *
+          (programStaticWidth program + 1) +
+          RAM.logTimeUpto program fuel snapshot.decode) + 2 :=
+  encode_run_length_le_amortized_internal program fuel snapshot hcanonical
+
+/-- The materialized public-input store occupies at most one fixed-width entry
+per initialized register. This records the current ABI's explicit
+`O(n log n)` initialization term. -/
+theorem encodedStoreLength_initial_le (input : List Bool) :
+    encodedStoreLength (initialStore input) ≤
+      (input.length + 1) * (4 * bitlen (input.length + 1) + 2) :=
+  encodedStoreLength_initial_le_internal input
+
+/-- Public-input specialization of the amortized live-representation bound.
+The accumulated part is linear in charged RAM time; the separate
+`n * bitlen n` term comes from eagerly materializing all nonzero input
+registers in the current snapshot ABI. -/
+theorem encode_initial_run_length_le_amortized
+    (program : Program) (fuel : ℕ) (input : List Bool) :
+    ((initial input).run program fuel).encode.length ≤
+      (input.length + 1) * (4 * bitlen (input.length + 1) + 2) +
+        4 * bitlen (input.length + 1) +
+        8 * (RAM.logTimeUpto program fuel (RAM.initCfg input) *
+          (programStaticWidth program + 2)) + 2 :=
+  encode_initial_run_length_le_amortized_internal program fuel input
 
 /-- The canonical code of every reachable snapshot has an explicit product
 bound: entry count grows by at most one per step, while width grows only with

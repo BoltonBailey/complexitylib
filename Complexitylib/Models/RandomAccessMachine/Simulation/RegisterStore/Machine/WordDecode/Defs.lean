@@ -175,6 +175,186 @@ sequential-composition seams. -/
 def wordDecodeTime (width : ℕ) : ℕ :=
   wordWidthTime width + 1 + (1 + 1 + wordPayloadTime width)
 
+/-! ## Linear unary-marker decoder -/
+
+/-- Pairwise-distinct source, target, and unary-marker tapes for the optimized
+word decoder. -/
+structure LinearWordDistinct {n : ℕ}
+    (sourceIdx targetIdx markerIdx : Fin n) : Prop where
+  /-- Source and target tapes are distinct. -/
+  source_target : sourceIdx ≠ targetIdx
+  /-- Source and marker tapes are distinct. -/
+  source_marker : sourceIdx ≠ markerIdx
+  /-- Target and marker tapes are distinct. -/
+  target_marker : targetIdx ≠ markerIdx
+
+/-- Control phases of the optimized self-delimiting word decoder. -/
+inductive LinearWordPhase where
+  /-- Copy the unary width prefix to the marker tape. -/
+  | mark
+  /-- Rewind the copied unary marker while parking the payload cursor. -/
+  | rewind
+  /-- Consume one marker and copy one payload bit per transition. -/
+  | copy
+  /-- Halt after the marker is exhausted. -/
+  | done
+  deriving DecidableEq
+
+/-- `LinearWordPhase` has exactly four states. -/
+instance instFintypeLinearWordPhase : Fintype LinearWordPhase where
+  elems := {.mark, .rewind, .copy, .done}
+  complete := fun phase => by cases phase <;> simp
+
+/-- Decode one unary-width/fixed-payload word in a single linear pass.
+
+The prefix pass copies one unary marker per width bit. After rewinding that
+marker tape, the payload pass advances source, target, and marker together.
+This removes the old payload loop's repeated full binary-counter comparison.
+The marker tape starts as an empty appendable prefix and finishes containing
+`width` ones with its head on the following blank. -/
+def wordDecodeLinearTM {n : ℕ}
+    (sourceIdx targetIdx markerIdx : Fin n) : TM n where
+  Q := LinearWordPhase
+  qstart := .mark
+  qhalt := .done
+  δ := fun phase iHead wHeads oHead =>
+    match phase with
+    | .mark =>
+        match wHeads sourceIdx with
+        | .one =>
+            (.mark,
+              fun i =>
+                if i = markerIdx then Γw.one else TM.readBackWrite (wHeads i),
+              TM.readBackWrite oHead,
+              TM.idleDir iHead,
+              fun i =>
+                if i = sourceIdx then Dir3.right
+                else if i = markerIdx then Dir3.right
+                else TM.idleDir (wHeads i),
+              TM.idleDir oHead)
+        | .zero =>
+            (.rewind, fun i => TM.readBackWrite (wHeads i),
+              TM.readBackWrite oHead, TM.idleDir iHead,
+              fun i =>
+                if i = sourceIdx then Dir3.right
+                else if i = markerIdx then TM.moveLeftDir (wHeads i)
+                else TM.idleDir (wHeads i),
+              TM.idleDir oHead)
+        | .blank => TM.allReadBack .done iHead wHeads oHead
+        | .start => TM.allIdle .mark iHead wHeads oHead
+    | .rewind =>
+        if wHeads markerIdx = Γ.start then
+          (.copy, fun i => TM.readBackWrite (wHeads i),
+            TM.readBackWrite oHead, TM.idleDir iHead,
+            fun i =>
+              if i = markerIdx then Dir3.right else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
+        else
+          (.rewind, fun i => TM.readBackWrite (wHeads i),
+            TM.readBackWrite oHead, TM.idleDir iHead,
+            fun i =>
+              if i = markerIdx then TM.moveLeftDir (wHeads i)
+              else TM.idleDir (wHeads i),
+            TM.idleDir oHead)
+    | .copy =>
+        match wHeads markerIdx with
+        | .one =>
+            match wHeads sourceIdx with
+            | .zero | .one =>
+                (.copy,
+                  fun i =>
+                    if i = targetIdx then
+                      Γw.ofBool (wHeads sourceIdx = Γ.one)
+                    else TM.readBackWrite (wHeads i),
+                  TM.readBackWrite oHead, TM.idleDir iHead,
+                  fun i =>
+                    if i = sourceIdx then Dir3.right
+                    else if i = targetIdx then Dir3.right
+                    else if i = markerIdx then Dir3.right
+                    else TM.idleDir (wHeads i),
+                  TM.idleDir oHead)
+            | .blank | .start => TM.allReadBack .done iHead wHeads oHead
+        | .start =>
+            (.copy, fun i => TM.readBackWrite (wHeads i),
+              TM.readBackWrite oHead, TM.idleDir iHead,
+              fun i =>
+                if i = markerIdx then Dir3.right else TM.idleDir (wHeads i),
+              TM.idleDir oHead)
+        | .zero | .blank => TM.allReadBack .done iHead wHeads oHead
+    | .done => TM.allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro phase iHead wHeads oHead
+    cases phase with
+    | mark =>
+        cases hsource : wHeads sourceIdx with
+        | one =>
+            refine ⟨TM.idleDir_right_of_start, ?_,
+              TM.idleDir_right_of_start⟩
+            intro i hi
+            by_cases his : i = sourceIdx
+            · simp [his]
+            · by_cases him : i = markerIdx
+              · simp [him]
+              · simp [his, him, TM.idleDir_right_of_start hi]
+        | zero =>
+            refine ⟨TM.idleDir_right_of_start, ?_,
+              TM.idleDir_right_of_start⟩
+            intro i hi
+            by_cases his : i = sourceIdx
+            · simp [his]
+            · by_cases him : i = markerIdx
+              · subst i
+                simp [his, TM.moveLeftDir_right_of_start hi]
+              · simp [his, him, TM.idleDir_right_of_start hi]
+        | blank => exact TM.rightOfStart_allReadBack iHead wHeads oHead
+        | start => exact TM.rightOfStart_allIdle iHead wHeads oHead
+    | rewind =>
+        dsimp only
+        split
+        · refine ⟨TM.idleDir_right_of_start, ?_,
+            TM.idleDir_right_of_start⟩
+          intro i hi
+          by_cases him : i = markerIdx
+          · simp [him]
+          · simp [him, TM.idleDir_right_of_start hi]
+        · refine ⟨TM.idleDir_right_of_start, ?_,
+            TM.idleDir_right_of_start⟩
+          intro i hi
+          by_cases him : i = markerIdx
+          · subst i
+            simpa only [if_pos] using TM.moveLeftDir_right_of_start hi
+          · simp [him, TM.idleDir_right_of_start hi]
+    | copy =>
+        cases hmarker : wHeads markerIdx with
+        | one =>
+            cases hsource : wHeads sourceIdx with
+            | zero | one =>
+                refine ⟨TM.idleDir_right_of_start, ?_,
+                  TM.idleDir_right_of_start⟩
+                intro i hi
+                by_cases his : i = sourceIdx
+                · simp [his]
+                · by_cases hit : i = targetIdx
+                  · simp [hit]
+                  · by_cases him : i = markerIdx
+                    · simp [him]
+                    · simp [his, hit, him, TM.idleDir_right_of_start hi]
+            | blank | start => exact TM.rightOfStart_allReadBack iHead wHeads oHead
+        | start =>
+            refine ⟨TM.idleDir_right_of_start, ?_,
+              TM.idleDir_right_of_start⟩
+            intro i hi
+            by_cases him : i = markerIdx
+            · simp [him]
+            · simp [him, TM.idleDir_right_of_start hi]
+        | zero | blank => exact TM.rightOfStart_allReadBack iHead wHeads oHead
+    | done => exact TM.rightOfStart_allIdle iHead wHeads oHead
+
+/-- Exact transition count of the optimized decoder on a well-formed width
+`width` word. -/
+def wordDecodeLinearTime (width : ℕ) : ℕ :=
+  3 * width + 3
+
 end Machine
 
 end RegisterStore

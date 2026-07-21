@@ -62,6 +62,16 @@ theorem valueDistinct {n : ℕ} (tapes : EntryDecodeTapes n) :
   exact ⟨tapes.ne (by decide), tapes.ne (by decide), tapes.ne (by decide),
     tapes.ne (by decide), tapes.ne (by decide), tapes.ne (by decide)⟩
 
+/-- Source, address target, and address marker are pairwise distinct. -/
+theorem addressLinearDistinct {n : ℕ} (tapes : EntryDecodeTapes n) :
+    LinearWordDistinct tapes.source tapes.address tapes.addressCounter := by
+  exact ⟨tapes.ne (by decide), tapes.ne (by decide), tapes.ne (by decide)⟩
+
+/-- Source, value target, and value marker are pairwise distinct. -/
+theorem valueLinearDistinct {n : ℕ} (tapes : EntryDecodeTapes n) :
+    LinearWordDistinct tapes.source tapes.value tapes.valueCounter := by
+  exact ⟨tapes.ne (by decide), tapes.ne (by decide), tapes.ne (by decide)⟩
+
 end EntryDecodeTapes
 
 /-- Decode the address word and then the value word of one sparse entry. -/
@@ -74,6 +84,20 @@ def entryDecodeTM {n : ℕ} (tapes : EntryDecodeTapes n) : TM n :=
 /-- Exact runtime for decoding both words, including the composition seam. -/
 def entryDecodeTime (address value : ℕ) : ℕ :=
   wordDecodeTime (bitlen address) + 1 + wordDecodeTime (bitlen value)
+
+/-- Decode both entry words with unary markers. The former counter tapes serve
+as address and value markers; the two width tapes are left untouched so this
+machine can replace `entryDecodeTM` inside the established seven-tape ABI. -/
+def entryDecodeLinearTM {n : ℕ} (tapes : EntryDecodeTapes n) : TM n :=
+  TM.seqTM
+    (wordDecodeLinearTM tapes.source tapes.address tapes.addressCounter)
+    (wordDecodeLinearTM tapes.source tapes.value tapes.valueCounter)
+
+/-- Exact runtime of the optimized two-word decoder, including its composition
+seam. -/
+def entryDecodeLinearTime (address value : ℕ) : ℕ :=
+  wordDecodeLinearTime (bitlen address) + 1 +
+    wordDecodeLinearTime (bitlen value)
 
 end Machine
 

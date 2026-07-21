@@ -113,6 +113,8 @@ def entryUpdatePostEmitHead {n : ℕ} (tapes : EntryUpdateTapes n)
     (entry : Entry) (i : Fin n) : ℕ :=
   if i = tapes.entry.address then entry.1.bits.length + 1
   else if i = tapes.entry.value then entry.2.bits.length + 1
+  else if i = tapes.entry.addressCounter then bitlen entry.1 + 1
+  else if i = tapes.entry.valueCounter then bitlen entry.2 + 1
   else 1
 
 /-- Work-independent cleanup bound when deletion emits no entry. -/

@@ -95,15 +95,16 @@ theorem binaryEqDistinct {n : ℕ} (tapes : EntryMatchTapes n) :
 
 end EntryMatchTapes
 
-/-- Decode one sparse entry and compare its address with the preserved query. -/
+/-- Decode one sparse entry with unary markers and compare its address with the
+preserved query. -/
 def entryMatchTM {n : ℕ} (tapes : EntryMatchTapes n) : TM n :=
-  TM.seqTM (entryDecodeTM tapes.decode)
+  TM.seqTM (entryDecodeLinearTM tapes.decode)
     (decodedAddressEqTM tapes.address tapes.query tapes.result)
 
 /-- Runtime bound for decoding and matching one sparse entry, including the
 composition seam. -/
 def entryMatchTime (entry : Entry) (queryBits : List Bool) : ℕ :=
-  entryDecodeTime entry.1 entry.2 + 1 +
+  entryDecodeLinearTime entry.1 entry.2 + 1 +
     decodedAddressEqTime entry.1.bits queryBits
 
 /-- Decode and compare one sparse entry, then rewind the one-bit result to its
@@ -127,13 +128,15 @@ structure ReadableEntryMatch {n : ℕ} (tapes : EntryMatchTapes n)
   addressStart : (finalWork tapes.address).cells 0 = Γ.start
   value : (finalWork tapes.value).HasBinaryPrefix entry.2.bits
   valueStart : (finalWork tapes.value).cells 0 = Γ.start
-  addressCounter :
-    (finalWork tapes.addressCounter).HasBinaryNat (bitlen entry.1)
-  addressWidth :
-    (finalWork tapes.addressWidth).HasBinaryNat (bitlen entry.1)
-  valueCounter :
-    (finalWork tapes.valueCounter).HasBinaryNat (bitlen entry.2)
-  valueWidth : (finalWork tapes.valueWidth).HasBinaryNat (bitlen entry.2)
+  addressCounter : (finalWork tapes.addressCounter).HasBinaryPrefix
+    (List.replicate (bitlen entry.1) true)
+  addressCounterStart :
+    (finalWork tapes.addressCounter).cells 0 = Γ.start
+  addressWidth : (finalWork tapes.addressWidth).HasBinaryNat 0
+  valueCounter : (finalWork tapes.valueCounter).HasBinaryPrefix
+    (List.replicate (bitlen entry.2) true)
+  valueCounterStart : (finalWork tapes.valueCounter).cells 0 = Γ.start
+  valueWidth : (finalWork tapes.valueWidth).HasBinaryNat 0
   query : (finalWork tapes.query).HasBinaryContent queryBits
   queryStart : (finalWork tapes.query).cells 0 = Γ.start
   result : (finalWork tapes.result).HasBinaryString

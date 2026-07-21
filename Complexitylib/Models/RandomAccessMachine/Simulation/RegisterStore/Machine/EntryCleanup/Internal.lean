@@ -73,21 +73,36 @@ private theorem readable_target_content
       EntryMatchTapes.addressCounter, EntryMatchTapes.addressWidth,
       EntryMatchTapes.valueCounter, EntryMatchTapes.valueWidth,
       EntryMatchTapes.result, tapes.injective.eq_iff] using hmatch.value.2
-  · simpa [entryMissBits, EntryMatchTapes.address, EntryMatchTapes.value,
-      EntryMatchTapes.addressCounter, EntryMatchTapes.addressWidth,
-      EntryMatchTapes.valueCounter, EntryMatchTapes.valueWidth,
-      EntryMatchTapes.result, tapes.injective.eq_iff] using
-      hmatch.addressCounter.2.hasBinaryContent
+  · dsimp only [EntryMatchTapes.cleanupIdx]
+    change (matchedWork tapes.addressCounter).HasBinaryContent
+      (entryMissBits tapes entry queryBits tapes.addressCounter)
+    unfold entryMissBits
+    have haddress : tapes.addressCounter ≠ tapes.address :=
+      tapes.ne (show (3 : Fin 9) ≠ 1 by decide)
+    have hvalue : tapes.addressCounter ≠ tapes.value :=
+      tapes.ne (show (3 : Fin 9) ≠ 2 by decide)
+    rw [if_neg haddress, if_neg hvalue, if_pos rfl]
+    exact hmatch.addressCounter.2
   · simpa [entryMissBits, EntryMatchTapes.address, EntryMatchTapes.value,
       EntryMatchTapes.addressCounter, EntryMatchTapes.addressWidth,
       EntryMatchTapes.valueCounter, EntryMatchTapes.valueWidth,
       EntryMatchTapes.result, tapes.injective.eq_iff] using
       hmatch.addressWidth.2.hasBinaryContent
-  · simpa [entryMissBits, EntryMatchTapes.address, EntryMatchTapes.value,
-      EntryMatchTapes.addressCounter, EntryMatchTapes.addressWidth,
-      EntryMatchTapes.valueCounter, EntryMatchTapes.valueWidth,
-      EntryMatchTapes.result, tapes.injective.eq_iff] using
-      hmatch.valueCounter.2.hasBinaryContent
+  · dsimp only [EntryMatchTapes.cleanupIdx]
+    change (matchedWork tapes.valueCounter).HasBinaryContent
+      (entryMissBits tapes entry queryBits tapes.valueCounter)
+    unfold entryMissBits
+    have haddress : tapes.valueCounter ≠ tapes.address :=
+      tapes.ne (show (5 : Fin 9) ≠ 1 by decide)
+    have hvalue : tapes.valueCounter ≠ tapes.value :=
+      tapes.ne (show (5 : Fin 9) ≠ 2 by decide)
+    have haddressCounter : tapes.valueCounter ≠ tapes.addressCounter :=
+      tapes.ne (show (5 : Fin 9) ≠ 3 by decide)
+    have haddressWidth : tapes.valueCounter ≠ tapes.addressWidth :=
+      tapes.ne (show (5 : Fin 9) ≠ 4 by decide)
+    rw [if_neg haddress, if_neg hvalue, if_neg haddressCounter,
+      if_neg haddressWidth, if_pos rfl]
+    exact hmatch.valueCounter.2
   · simpa [entryMissBits, EntryMatchTapes.address, EntryMatchTapes.value,
       EntryMatchTapes.addressCounter, EntryMatchTapes.addressWidth,
       EntryMatchTapes.valueCounter, EntryMatchTapes.valueWidth,
@@ -109,9 +124,9 @@ private theorem readable_target_start
   fin_cases slot
   · exact hmatch.addressStart
   · exact hmatch.valueStart
-  · exact hmatch.addressCounter.1
+  · exact hmatch.addressCounterStart
   · exact hmatch.addressWidth.1
-  · exact hmatch.valueCounter.1
+  · exact hmatch.valueCounterStart
   · exact hmatch.valueWidth.1
   · exact hmatch.resultStart
 

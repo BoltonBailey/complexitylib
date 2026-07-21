@@ -76,10 +76,10 @@ def entryMissBits {n : ℕ} (tapes : EntryMatchTapes n)
     (entry : Entry) (queryBits : List Bool) (i : Fin n) : List Bool :=
   if i = tapes.address then entry.1.bits
   else if i = tapes.value then entry.2.bits
-  else if i = tapes.addressCounter then (bitlen entry.1).bits
-  else if i = tapes.addressWidth then (bitlen entry.1).bits
-  else if i = tapes.valueCounter then (bitlen entry.2).bits
-  else if i = tapes.valueWidth then (bitlen entry.2).bits
+  else if i = tapes.addressCounter then List.replicate (bitlen entry.1) true
+  else if i = tapes.addressWidth then []
+  else if i = tapes.valueCounter then List.replicate (bitlen entry.2) true
+  else if i = tapes.valueWidth then []
   else if i = tapes.result then [decide (entry.1.bits = queryBits)]
   else []
 

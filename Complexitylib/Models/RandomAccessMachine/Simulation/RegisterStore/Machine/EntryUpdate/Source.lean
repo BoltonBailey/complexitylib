@@ -265,6 +265,42 @@ private theorem entryDecodeTM_source_readOnly (tapes : EntryDecodeTapes n) :
       (tapes.ne (by decide)) (tapes.ne (by decide))
       (tapes.ne (by decide)))
 
+private theorem wordDecodeLinearTM_source_readOnly
+    (source target marker : Fin n) (hsourceTarget : source ≠ target)
+    (hsourceMarker : source ≠ marker) :
+    (wordDecodeLinearTM source target marker).WorkReadOnly source := by
+  intro phase inputHead workHeads outputHead hphase
+  cases phase with
+  | mark =>
+      cases hsource : workHeads source <;>
+        simp [wordDecodeLinearTM, hsource, hsourceMarker, TM.allReadBack,
+          TM.allIdle, TM.readBackWrite]
+  | rewind =>
+      by_cases hmarker : workHeads marker = Γ.start <;>
+        simp [wordDecodeLinearTM, hmarker]
+  | copy =>
+      cases hmarker : workHeads marker with
+      | one =>
+          cases hsource : workHeads source <;>
+            simp [wordDecodeLinearTM, hmarker, hsource, hsourceTarget,
+              TM.allReadBack]
+      | zero | blank =>
+          simp [wordDecodeLinearTM, hmarker, TM.allReadBack]
+      | start =>
+          simp [wordDecodeLinearTM, hmarker]
+  | done => exact (hphase rfl).elim
+
+private theorem entryDecodeLinearTM_source_readOnly
+    (tapes : EntryDecodeTapes n) :
+    (entryDecodeLinearTM tapes).WorkReadOnly tapes.source := by
+  unfold entryDecodeLinearTM
+  exact
+    (wordDecodeLinearTM_source_readOnly tapes.source tapes.address
+      tapes.addressCounter (tapes.ne (by decide))
+      (tapes.ne (by decide))).seqTM
+    (wordDecodeLinearTM_source_readOnly tapes.source tapes.value
+      tapes.valueCounter (tapes.ne (by decide)) (tapes.ne (by decide)))
+
 private theorem decodedAddressEqTM_readOnly_of_ne_result
     (address query result other : Fin n) (hne : other ≠ result) :
     (decodedAddressEqTM address query result).WorkReadOnly other := by
@@ -275,8 +311,8 @@ private theorem decodedAddressEqTM_readOnly_of_ne_result
 private theorem entryMatchReadTM_source_readOnly (tapes : EntryMatchTapes n) :
     (entryMatchReadTM tapes).WorkReadOnly tapes.source := by
   have hdecode :
-      (entryDecodeTM tapes.decode).WorkReadOnly tapes.source :=
-    entryDecodeTM_source_readOnly tapes.decode
+      (entryDecodeLinearTM tapes.decode).WorkReadOnly tapes.source :=
+    entryDecodeLinearTM_source_readOnly tapes.decode
   have heq :
       (decodedAddressEqTM tapes.address tapes.query tapes.result).WorkReadOnly
         tapes.source :=

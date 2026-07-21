@@ -1137,16 +1137,18 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `barrington_poly_of_log_depth` — the **concrete `NC¹ ⟹` poly-size** statement: a
   formula of depth `≤ log₂ n` compiles to a width-`5` program of length `≤ n⁵` (via
   `17^{log₂ n} ≤ n⁵`). All 0 custom axioms. Remaining: the tight base `4 ^ depth`
-  (vs `17 ^ depth`), and a *uniform family-level* class statement (`FormulaFamily`
-  / poly-size-BP-family definitions) rather than the per-formula bound proved
-  here.)
-- [~] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
-  of constant-size permutation transition matrices/functions. (Forward direction at
-  the family level **done**: `Circuits/BarringtonFamily.lean`
+  (vs `17 ^ depth`); the nonuniform family equality is completed below, while a
+  uniform version remains a separate refinement.)
+- [x] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
+  of constant-size permutation transition matrices/functions. (Forward direction:
+  `Circuits/BarringtonFamily.lean`
   `FormulaFamily.logDepth_polyLength_bp` — a logarithmic-depth (`NC¹`) formula family
   is computed formula-by-formula by a family of width-`5` branching programs of
-  polynomial length `C·(n+1)^p`, 0 custom axioms. The converse — poly-size width-`5`
-  BPs give `NC¹` formulas by balanced composition — remains.)
+  polynomial length `C·(n+1)^p`. Converse and equality:
+  `Circuits/BarringtonConverse.lean` — `BP.reachesFormula` composes two half-programs
+  through the five possible intermediate states, `BP.depth_decisionFormula_le`
+  bounds decision depth by `6·⌈log₂ length⌉ + 2`, and
+  `barrington_equivalence` proves `FormulaNC1 = Width5BP`. All 0 custom axioms.)
 - [ ] Add a uniform version only after instruction-generation uniformity is
   formalized.
 
@@ -1165,11 +1167,12 @@ without an unjustified formula-size claim.
 - [x] Encode a program instruction and prove evaluation is invariant under a
   semantics-preserving rename of input variables (`BPInstr.rename`, `BP.rename`,
   `BP.eval_rename` in `Complexitylib.Circuits.BranchingProgram`).
-- [M] Search for and verify concrete `S_5` permutations with the required
-  commutator identity, initially by `native_decide` if appropriate.
-- [M] Implement literal and NOT programs with exact length bounds.
-- [M] Prove balanced product evaluation has logarithmic circuit depth for fixed
-  width.
+- [x] Verify concrete `S_5` permutations with the required commutator identity
+      (`exists_fiveCycle_commutator`, kernel `decide`, no `native_decide`).
+- [x] Implement literal and NOT programs with exact length bounds
+      (`Computes_var`, `Computes_not`, `Computes_formula_len`).
+- [x] Prove balanced product evaluation has logarithmic formula depth for fixed
+      width (`BP.depth_reachesFormula_le`, `BP.depth_decisionFormula_le`).
 
 ### M4. Space complexity, alternation, and QBF
 
@@ -1387,7 +1390,12 @@ the first matching decoded value, or rewinds the query, clears all seven scratch
 tapes, decrements the count, and continues. Its public contract certifies either
 the first match or absence from the whole store, preserves every tape outside
 the ten-tape assignment exactly, and supplies explicit time and all-prefix
-space envelopes. The lookup seam is now closed:
+space envelopes. The optimized decoder path is now integrated rather than only
+bounded abstractly: `wordDecodeLinearTM` makes three unary-marker passes in
+exactly `3w + 3` transitions, `entryMatchReadTime_eq` gives the resulting closed
+linear match cost, and `entryScanTime_le_encoded` charges a complete scan by the
+actual live entry encoding, repeated query width, and remaining-count term. The
+lookup seam is now closed:
 `entryLookupTM_hoareTime_frame` identifies the final
 decoded-value tape with `RegisterStore.read`, including the default-zero miss
 case, while retaining the scanner's exact external frame. Encoded update is the
@@ -1533,6 +1541,43 @@ deliberately uses the proved coarser polynomial envelope.
 - [ ] Sharpen the concrete reverse runtime to the textbook `O(T(n)^2)` bound and
   package the parametric `RAM.DTIME(T) ⊆ DTIME(T²)` containment under explicit
   input-length domination hypotheses.
+  - [x] Replace the current product of entry count and maximum entry width with
+    an amortized bound on the total live sparse-store encoding in terms of the
+    public input and accumulated logarithmic RAM cost.
+  - [~] Tighten the word decoder, entry match, and update accounting so a store
+    scan is charged by the encoded data actually traversed; redesign any
+    genuinely quadratic per-entry controller that prevents the target bound.
+    - [x] Prove the existing checked word decoder is
+      `O(w * bitlen w)`, replacing the former coarse `O(w²)` charge.
+    - [x] Replace its repeated full-width binary comparison with a unary-marker
+      payload pass so decoding is linear in the self-delimiting word code;
+      thread it through entry matching, cleanup, lookup, update, and complete
+      program execution, and expose an encoded-length scan theorem.
+  - [~] Split the dense public-input bank from the mutable sparse overlay (or
+    provide an equivalent lazy input ABI). The current eager snapshot code has
+    a checked `O(n * bitlen n)` initialization term, which cannot be rescanned
+    on every RAM step in a genuinely quadratic simulation under only `n ≤ T(n)`.
+    - [x] Define and verify the pure positive-tag overlay semantics, including
+      the one-entry initial snapshot, preservation under every instruction, and
+      linear live-overlay growth over a run.
+    - [x] Implement the concrete immutable-input fallback. A binary countdown
+      scan returns `RAM.initRegs input address` in at most
+      `n * (2 * bitlen address + 9) + 1` steps; the complete wrapper restores
+      the input head and scratch tapes. `denseOverlayLookupTM` composes this
+      fallback with sparse tagged lookup and proves exact `DenseOverlay.read`
+      semantics at the existing reusable fourteen-tape boundary.
+    - [ ] Replace instruction-kernel reads with `denseOverlayLookupTM`, tag every
+      update value with successor, and replace eager initialization by the lone
+      `R₀` overlay entry.
+  - [ ] State a width-sensitive one-step simulation theorem using the selected
+    instruction's actual charged operand widths, rather than assigning every
+    instruction the run-wide maximum scale.
+  - [ ] Sum the per-step charges over a complete run to obtain an
+    `O((n + T(n))^2)` public-ABI bound, then use the explicit input-domination
+    hypothesis to specialize it to `O(T(n)^2)`.
+  - [ ] Keep the checked fourth-degree envelope as the simple fallback theorem
+    while exposing the optimized bound through the fixed twenty-work-tape
+    simulator and the parametric time-class API.
 - [x] Conclude `RAM.P = P`.
 - [ ] Add the space simulations and conclude RAM/TM polynomial-space
   equivalence.

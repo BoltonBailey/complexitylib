@@ -5,6 +5,8 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode.Defs
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode.Internal
+import
+Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode.LinearInternal
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Defs
 import Complexitylib.Models.TuringMachine.Hoare.Space
 
@@ -281,11 +283,104 @@ theorem wordDecodeTM_reachesIn_frame_encode {n : ℕ}
     hframe, houtput'⟩
   simpa [bitlen, Nat.toBitsLE_size] using htarget'
 
+/-- The existing checked decoder is quasi-linear in the decoded word width.
+This tightens the former quadratic charging by retaining the bit-width of the
+binary loop limit instead of replacing it by the limit's numeric value. -/
+theorem wordDecodeTime_le_size (width : ℕ) :
+    wordDecodeTime width ≤
+      8 * (width + 1) * (width.size + 2) :=
+  wordDecodeTime_le_size_internal width
+
 /-- Complete word decoding preserves one-way-output safety. -/
 theorem wordDecodeTM_isTransducer {n : ℕ}
     (sourceIdx targetIdx counterIdx widthIdx : Fin n) :
     (wordDecodeTM sourceIdx targetIdx counterIdx widthIdx).IsTransducer :=
   wordDecodeTM_isTransducer_internal sourceIdx targetIdx counterIdx widthIdx
+
+/-! ## Linear unary-marker decoder -/
+
+/-- Exact framed execution of the optimized decoder. It uses one unary marker
+instead of a binary width/counter pair and takes exactly `3 * width + 3`
+transitions. -/
+theorem wordDecodeLinearTM_reachesIn_frame {n : ℕ}
+    (sourceIdx targetIdx markerIdx : Fin n)
+    (hdistinct : LinearWordDistinct sourceIdx targetIdx markerIdx)
+    (payload rest : List Bool) (width : ℕ) (hwidth : payload.length = width)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hsource : (work₀ sourceIdx).HasBinarySuffix
+      (List.replicate width true ++ false :: (payload ++ rest)))
+    (htarget : (work₀ targetIdx).HasBinaryPrefix [])
+    (hmarker : (work₀ markerIdx).HasBinaryPrefix [])
+    (hmarkerStart : (work₀ markerIdx).cells 0 = Γ.start)
+    (hinput : inp₀.read ≠ Γ.start)
+    (hreads : ∀ i, (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start) :
+    ∃ c',
+      (wordDecodeLinearTM sourceIdx targetIdx markerIdx).reachesIn
+        (wordDecodeLinearTime width)
+        { state := (wordDecodeLinearTM sourceIdx targetIdx markerIdx).qstart
+          input := inp₀
+          work := work₀
+          output := out₀ } c' ∧
+      (wordDecodeLinearTM sourceIdx targetIdx markerIdx).halted c' ∧
+      c'.input = inp₀ ∧
+      (c'.work sourceIdx).HasBinarySuffix rest ∧
+      (c'.work targetIdx).HasBinaryPrefix payload ∧
+      (c'.work markerIdx).HasBinaryPrefix (List.replicate width true) ∧
+      (∀ i, i ≠ sourceIdx → i ≠ targetIdx → i ≠ markerIdx →
+        c'.work i = work₀ i) ∧
+      c'.output = out₀ :=
+  wordDecodeLinearTM_reachesIn_frame_internal sourceIdx targetIdx markerIdx
+    hdistinct payload rest width hwidth inp₀ work₀ out₀ hsource htarget
+      hmarker hmarkerStart hinput hreads houtput
+
+/-- The optimized decoder handles a canonical natural-number word in time
+linear in the encoded word width. -/
+theorem wordDecodeLinearTM_reachesIn_frame_encode {n : ℕ}
+    (sourceIdx targetIdx markerIdx : Fin n)
+    (hdistinct : LinearWordDistinct sourceIdx targetIdx markerIdx)
+    (value : ℕ) (rest : List Bool)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hsource : (work₀ sourceIdx).HasBinarySuffix (WordCode.encode value ++ rest))
+    (htarget : (work₀ targetIdx).HasBinaryPrefix [])
+    (hmarker : (work₀ markerIdx).HasBinaryPrefix [])
+    (hmarkerStart : (work₀ markerIdx).cells 0 = Γ.start)
+    (hinput : inp₀.read ≠ Γ.start)
+    (hreads : ∀ i, (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start) :
+    ∃ c',
+      (wordDecodeLinearTM sourceIdx targetIdx markerIdx).reachesIn
+        (wordDecodeLinearTime (bitlen value))
+        { state := (wordDecodeLinearTM sourceIdx targetIdx markerIdx).qstart
+          input := inp₀
+          work := work₀
+          output := out₀ } c' ∧
+      (wordDecodeLinearTM sourceIdx targetIdx markerIdx).halted c' ∧
+      c'.input = inp₀ ∧
+      (c'.work sourceIdx).HasBinarySuffix rest ∧
+      (c'.work targetIdx).HasBinaryPrefix value.bits ∧
+      (c'.work markerIdx).HasBinaryPrefix
+        (List.replicate (bitlen value) true) ∧
+      (∀ i, i ≠ sourceIdx → i ≠ targetIdx → i ≠ markerIdx →
+        c'.work i = work₀ i) ∧
+      c'.output = out₀ := by
+  have hsource' : (work₀ sourceIdx).HasBinarySuffix
+      (List.replicate (bitlen value) true ++
+        false :: (Nat.toBitsLE (bitlen value) value ++ rest)) := by
+    simpa [WordCode.encode, List.append_assoc] using hsource
+  obtain ⟨c', hreach, hhalt, hinput', hsource'', htarget', hmarker',
+      hframe, houtput'⟩ :=
+    wordDecodeLinearTM_reachesIn_frame sourceIdx targetIdx markerIdx hdistinct
+      (Nat.toBitsLE (bitlen value) value) rest (bitlen value) (by simp)
+      inp₀ work₀ out₀ hsource' htarget hmarker hmarkerStart hinput hreads houtput
+  refine ⟨c', hreach, hhalt, hinput', hsource'', ?_, hmarker', hframe, houtput'⟩
+  simpa [bitlen, Nat.toBitsLE_size] using htarget'
+
+/-- The optimized decoder never moves the output head left. -/
+theorem wordDecodeLinearTM_isTransducer {n : ℕ}
+    (sourceIdx targetIdx markerIdx : Fin n) :
+    (wordDecodeLinearTM sourceIdx targetIdx markerIdx).IsTransducer :=
+  wordDecodeLinearTM_isTransducer_internal sourceIdx targetIdx markerIdx
 
 end Machine
 

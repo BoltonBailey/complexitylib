@@ -58,7 +58,7 @@ private theorem found_reset_content
       (entryLookupFoundBits tapes matched (rest.length + 1) address
         tapes.scan.entry.addressCounter)
     simpa only [entryLookupFoundBits_two] using
-      hreadable.addressCounter.2.hasBinaryContent
+      hreadable.addressCounter.2
   · change (finalWork tapes.scan.entry.addressWidth).HasBinaryContent
       (entryLookupFoundBits tapes matched (rest.length + 1) address
         tapes.scan.entry.addressWidth)
@@ -68,7 +68,7 @@ private theorem found_reset_content
       (entryLookupFoundBits tapes matched (rest.length + 1) address
         tapes.scan.entry.valueCounter)
     simpa only [entryLookupFoundBits_four] using
-      hreadable.valueCounter.2.hasBinaryContent
+      hreadable.valueCounter.2
   · change (finalWork tapes.scan.entry.valueWidth).HasBinaryContent
       (entryLookupFoundBits tapes matched (rest.length + 1) address
         tapes.scan.entry.valueWidth)
@@ -104,9 +104,9 @@ private theorem found_reset_start
   fin_cases slot
   · exact hreadable.addressStart
   · exact hreadable.valueStart
-  · exact hreadable.addressCounter.1
+  · exact hreadable.addressCounterStart
   · exact hreadable.addressWidth.1
-  · exact hreadable.valueCounter.1
+  · exact hreadable.valueCounterStart
   · exact hreadable.valueWidth.1
   · exact hreadable.resultStart
   · exact hreadable.queryStart
@@ -141,23 +141,21 @@ private theorem found_reset_width
   · change (entryLookupFoundBits tapes matched (rest.length + 1) address
       tapes.scan.entry.addressCounter).length ≤ _
     rw [entryLookupFoundBits_two]
-    exact le_trans
+    simpa using le_trans
       (entryLookupEntryAddressCounterWidth_le_internal matched address) hentry
   · change (entryLookupFoundBits tapes matched (rest.length + 1) address
       tapes.scan.entry.addressWidth).length ≤ _
     rw [entryLookupFoundBits_three]
-    exact le_trans
-      (entryLookupEntryAddressCounterWidth_le_internal matched address) hentry
+    simp
   · change (entryLookupFoundBits tapes matched (rest.length + 1) address
       tapes.scan.entry.valueCounter).length ≤ _
     rw [entryLookupFoundBits_four]
-    exact le_trans
+    simpa using le_trans
       (entryLookupEntryValueCounterWidth_le_internal matched address) hentry
   · change (entryLookupFoundBits tapes matched (rest.length + 1) address
       tapes.scan.entry.valueWidth).length ≤ _
     rw [entryLookupFoundBits_five]
-    exact le_trans
-      (entryLookupEntryValueCounterWidth_le_internal matched address) hentry
+    simp
   · change (entryLookupFoundBits tapes matched (rest.length + 1) address
       tapes.scan.entry.result).length ≤ _
     rw [entryLookupFoundBits_six]

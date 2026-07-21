@@ -5,6 +5,10 @@ Authors: Samuel Schlesinger
 -/
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryLookup.Defs
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.DenseInputLookup.Defs
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.DenseOverlay.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary.Defs
@@ -184,8 +188,8 @@ def entryLookupEntryWidth (entry : Entry) (address : ℕ) : ℕ :=
   max address.bits.length
     (max entry.1.bits.length
       (max entry.2.bits.length
-        (max (bitlen entry.1).bits.length
-          (max (bitlen entry.2).bits.length 1))))
+        (max (bitlen entry.1)
+          (max (bitlen entry.2) 1))))
 
 /-- Width envelope contributed by possible hit entries in a complete store. -/
 def entryLookupStoreWidth (address : ℕ) : Store → ℕ
@@ -244,7 +248,7 @@ set_option linter.unusedSimpArgs false
     (remaining address : ℕ) :
     entryLookupFoundBits tapes entry remaining address
       tapes.scan.entry.addressCounter =
-      (bitlen entry.1).bits := by
+      List.replicate (bitlen entry.1) true := by
   simp [entryLookupFoundBits, entryMissBits, EntryLookupRestoreTapes.resetIdx,
     EntryLookupRestoreTapes.resetSlot, EntryMatchTapes.address,
     EntryMatchTapes.value, EntryMatchTapes.addressCounter,
@@ -257,7 +261,7 @@ set_option linter.unusedSimpArgs false
     (remaining address : ℕ) :
     entryLookupFoundBits tapes entry remaining address
       tapes.scan.entry.addressWidth =
-      (bitlen entry.1).bits := by
+      [] := by
   simp [entryLookupFoundBits, entryMissBits, EntryLookupRestoreTapes.resetIdx,
     EntryLookupRestoreTapes.resetSlot, EntryMatchTapes.address,
     EntryMatchTapes.value, EntryMatchTapes.addressCounter,
@@ -270,7 +274,7 @@ set_option linter.unusedSimpArgs false
     (remaining address : ℕ) :
     entryLookupFoundBits tapes entry remaining address
       tapes.scan.entry.valueCounter =
-      (bitlen entry.2).bits := by
+      List.replicate (bitlen entry.2) true := by
   simp [entryLookupFoundBits, entryMissBits, EntryLookupRestoreTapes.resetIdx,
     EntryLookupRestoreTapes.resetSlot, EntryMatchTapes.address,
     EntryMatchTapes.value, EntryMatchTapes.addressCounter,
@@ -283,7 +287,7 @@ set_option linter.unusedSimpArgs false
     (remaining address : ℕ) :
     entryLookupFoundBits tapes entry remaining address
       tapes.scan.entry.valueWidth =
-      (bitlen entry.2).bits := by
+      [] := by
   simp [entryLookupFoundBits, entryMissBits, EntryLookupRestoreTapes.resetIdx,
     EntryLookupRestoreTapes.resetSlot, EntryMatchTapes.address,
     EntryMatchTapes.value, EntryMatchTapes.addressCounter,
@@ -445,6 +449,22 @@ def entryLookupLoadedTime {n : ℕ}
     (tapes : EntryLookupRestoreTapes n) (store : Store) (address : ℕ) : ℕ :=
   TM.binaryCopyTime address 0 + 1 +
     entryLookupCopyRestoreTime tapes store address
+
+/-- Read a positive-tag sparse overlay and either decode the tag or fall back
+to the immutable public-input bank on a sparse miss. -/
+def denseOverlayLookupTM {n : ℕ} (tapes : EntryLookupRestoreTapes n) : TM n :=
+  TM.seqTM (entryLookupLoadedTM tapes)
+    (TM.branchWorkBlankTM tapes.destination
+      (denseInputLookupTM tapes.querySource tapes.scan.entry.address
+        tapes.destination tapes.copyScratch)
+      (TM.binaryPredTM tapes.destination))
+
+/-- Complete reusable dense-overlay lookup budget. -/
+def denseOverlayLookupTime {n : ℕ} (tapes : EntryLookupRestoreTapes n)
+    (inputLength : ℕ) (overlay : Store) (address : ℕ) : ℕ :=
+  entryLookupLoadedTime tapes overlay address + 1 +
+    TM.branchWorkBlankTime (denseInputLookupTime inputLength address)
+      (TM.binaryPredTime (RegisterStore.read overlay address - 1))
 
 /-- Load one fixed address from canonical zero, run a reusable lookup, then
 clear the fixed-address source back to zero. -/
@@ -668,6 +688,28 @@ structure EntryLookupRestoreResult {n : ℕ}
   querySource : finalWork tapes.querySource = initialWork tapes.querySource
   value : (finalWork tapes.destination).HasBinaryNat
     (RegisterStore.read store address)
+  copyScratch : (finalWork tapes.copyScratch).HasBinaryNat 0
+  parked : ∀ i, TM.Parked (finalWork i)
+  frame : ∀ i, (∀ slot, i ≠ tapes.idx slot) →
+    finalWork i = initialWork i
+
+/-- Reusable endpoint after reading through a tagged mutable overlay into the
+immutable public-input bank. -/
+structure DenseOverlayLookupResult {n : ℕ}
+    (tapes : EntryLookupRestoreTapes n) (input : List Bool)
+    (overlay : Store) (address : ℕ)
+    (initialWork finalWork : Fin n → Tape) : Prop where
+  scanner : EntryScanReady tapes.scan.entry (overlay.flatMap Entry.encode) []
+    finalWork finalWork
+  sourceCells : (finalWork tapes.scan.entry.source).cells =
+    (initialWork tapes.scan.entry.source).cells
+  sourceStart : (finalWork tapes.scan.entry.source).cells 0 = Γ.start
+  sourceHead : (finalWork tapes.scan.entry.source).head = 1
+  count : (finalWork tapes.scan.count).HasBinaryNat overlay.length
+  countSource : finalWork tapes.countSource = initialWork tapes.countSource
+  querySource : finalWork tapes.querySource = initialWork tapes.querySource
+  value : (finalWork tapes.destination).HasBinaryNat
+    (DenseOverlay.read input overlay address)
   copyScratch : (finalWork tapes.copyScratch).HasBinaryNat 0
   parked : ∀ i, TM.Parked (finalWork i)
   frame : ∀ i, (∀ slot, i ≠ tapes.idx slot) →

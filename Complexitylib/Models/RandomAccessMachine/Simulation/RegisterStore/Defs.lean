@@ -160,6 +160,13 @@ def decodePrefix? (bits : List Bool) : Option (Entry × List Bool) := do
 
 end Entry
 
+/-- Number of tape cells occupied by the concatenated self-delimiting codes of
+the live sparse-store entries. Unlike `Snapshot.sizeBound`, this charges the
+actual width of every entry instead of multiplying the entry count by one
+run-wide maximum width. -/
+def encodedStoreLength (store : Store) : ℕ :=
+  (store.flatMap Entry.encode).length
+
 /-- Parse exactly `count` sparse entries and return the unconsumed suffix. -/
 def decodeEntries? : ℕ → List Bool → Option (Store × List Bool)
   | 0, bits => some ([], bits)

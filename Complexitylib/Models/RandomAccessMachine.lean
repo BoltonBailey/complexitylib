@@ -13,6 +13,10 @@ import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step
 import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI
 import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Containment
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.DenseOverlay
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.DenseInputLookup
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Containment
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.AddressEq
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryAppend
