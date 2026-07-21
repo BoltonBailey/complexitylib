@@ -15,6 +15,7 @@ import Complexitylib.Circuits.BarringtonBridge
 import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonFamily
+import Complexitylib.Circuits.BarringtonConverse
 import Complexitylib.Circuits.MultilinearExtension
 import Complexitylib.Circuits.NormalForm
 import Complexitylib.Circuits.AndOrNot
@@ -81,6 +82,10 @@ convention.
   one can remove a set of at most `r · S / k` edges so that the remaining
   digraph has depth at most `2^k / 2^r`.
 
+* **Barrington's theorem** (`barrington_equivalence`):
+  Logarithmic-depth Boolean formula families are exactly polynomial-length
+  width-`5` permutation branching-program families.
+
 ## Module structure
 
 Public modules (definitions a reviewer should read):
@@ -91,6 +96,8 @@ Public modules (definitions a reviewer should read):
   and `List Bool`
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
   size/depth bounds, and the polynomial-size characterization
+* `Complexitylib.Circuits.BarringtonConverse` — balanced branching-program
+  evaluation and the nonuniform Barrington equivalence
 * `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,
   and iterative evaluation of fan-in-two AND/OR circuits
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at

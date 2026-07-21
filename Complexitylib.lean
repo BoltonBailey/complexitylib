@@ -60,4 +60,8 @@ hardwiring and its advice corollary live in
 (`Circuit.card_essentialInputs_le_mul_size`), Schnorr's XOR bound
 (`Complexity.sizeComplexity_xorBool_ge`), and Valiant's depth reduction
 (`Complexity.Valiant.depth_reduction`).
+
+**Barrington's theorem.** `Complexity.barrington_equivalence` identifies
+logarithmic-depth Boolean formula families with polynomial-length width-`5`
+permutation branching-program families.
 -/
