@@ -137,8 +137,11 @@ theorem SpaceBoundByWidthAt.binaryCopy_internal
   refine ⟨16, fun inputLength => ?_⟩
   have hsrcSize := Nat.size_le_size (hsrc inputLength)
   have hdstSize := Nat.size_le_size (hdst inputLength)
-  simp only [binaryCopy, TM.binaryCopySpace, TM.binaryAddSpace,
-    TM.binaryAddLoopSpace, TM.clearWorkTimeBound, zero_add, max_le_iff]
+  have hadd := TM.binaryRippleAddTime_le
+    (values inputLength srcIdx) 0
+  simp only [binaryCopy, TM.binaryCopySpace, TM.clearWorkTimeBound,
+    max_le_iff]
+  simp only [Nat.size_zero, Nat.add_zero] at hadd
   omega
 
 theorem SpaceBoundByWidthAt.addConst_internal

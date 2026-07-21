@@ -153,6 +153,49 @@ contract carries and proves them. Before adding effects to the routine syntax
 or generating controller phases, test this proof-level vocabulary in a separate
 construction where it removes material plumbing.
 
+## Third local benchmark: a sound-by-construction binary syntax
+
+The completed uniform-circuit serializer provides a stronger data point than
+the earlier generic `Routine` slice. Its `BinaryRoutine` API already presents
+canonical binary work tapes as a pure natural-number vector and carries an exact
+effect, emitted stream, domain, time bound, all-prefix space bound, and concrete
+`TM`. Sequencing, finite composition, branching, and binary count-up loops all
+preserve one `Sound` contract. This API was sufficient to construct the full
+append-only tableau serializer and prove the resulting code function lies in
+`FL`; it is therefore a successful domain-specific authoring layer, not merely
+a toy frontend.
+
+A bounded follow-up tested whether those routines should themselves be hidden
+behind a general source syntax. The prototype had constructors for every
+verified binary primitive plus sequence, zero branch, and count-up loop. Its
+structural lowering and one induction established the complete `Sound` contract
+for every source program in about two hundred lines. On the initialization
+serializer, this reduced the parallel structural soundness block by roughly
+half.
+
+The integration gate nevertheless failed. Defining the established routines as
+compiled source terms left opaque compiler applications in projections such as
+`effect`, `emitted`, `requires`, and `spaceBound`. Existing proofs that had
+previously reduced transparent `BinaryRoutine.seqList` expressions with `simp`,
+`change`, or compositional space lemmas then required compiler-specific rewrites.
+Keeping the old transparent routine definitions beside the source programs
+avoided that regression only by duplicating each program, erasing the measured
+proof reduction. The prototype was therefore removed rather than promoted.
+
+The resulting architecture decision is narrower and more useful:
+
+- retain concrete `TM` as the semantic and resource foundation;
+- use proof-carrying, domain-specific routine records when they replace real
+  machine bookkeeping, as `BinaryRoutine` demonstrably does;
+- do not add a generic syntax/compiler merely to make the program expression
+  look more language-like;
+- require projection-level normalization for pure effects and resource fields,
+  plus a net reduction across two consumers, before reconsidering such syntax.
+
+This preserves the successful abstraction boundary while avoiding another
+layer whose compiler theorem is small but whose compiled terms make downstream
+mathematical proofs less transparent.
+
 ## Cross-construction proof-mechanics audit
 
 The dependency-ordered N0 audit compared four proof shapes rather than

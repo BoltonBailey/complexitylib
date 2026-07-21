@@ -71,7 +71,8 @@ private theorem lastBit_fold :
     | cons c cs =>
       simp [List.getLast?_cons, ← hxs]
 
-private theorem lastBit_fold_none (x : List Bool) :
+/-- The last-bit scanner fold from `none` is exactly `List.getLast?`. -/
+theorem lastBit_fold_eq_getLast? (x : List Bool) :
     x.foldl (fun _ b => some b) none = x.getLast? := by
   rw [lastBit_fold]
   cases x.getLast? <;> simp
@@ -89,7 +90,7 @@ theorem lastBitZero_in_DTIME :
     (L := Language.lastBitZero)
     (fun x => by
       show (x.getLast? = some false) ↔ (decide (x.foldl _ none = some false) = true)
-      rw [lastBit_fold_none, decide_eq_true_iff])
+      rw [lastBit_fold_eq_getLast?, decide_eq_true_iff])
 
 /-- **`lastBitOne ∈ DTIME(n + 2)`**. -/
 theorem lastBitOne_in_DTIME :
@@ -100,7 +101,7 @@ theorem lastBitOne_in_DTIME :
     (L := Language.lastBitOne)
     (fun x => by
       show (x.getLast? = some true) ↔ (decide (x.foldl _ none = some true) = true)
-      rw [lastBit_fold_none, decide_eq_true_iff])
+      rw [lastBit_fold_eq_getLast?, decide_eq_true_iff])
 
 -- ════════════════════════════════════════════════════════════════════════
 -- P memberships

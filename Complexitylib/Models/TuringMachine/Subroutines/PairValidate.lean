@@ -55,6 +55,12 @@ theorem not_mem_validPairEncoding_iff (bits : List Bool) :
 
 namespace TM
 
+/-- The pair-validator fold accepts exactly when the canonical decoder succeeds. -/
+theorem pairValidateAccept_fold_eq_true_iff (bits : List Bool) :
+    pairValidateAccept (bits.foldl pairValidateStep .next) = true ↔
+      (unpair? bits).isSome = true :=
+  pairValidateAccept_fold_eq_true_iff_internal bits
+
 /-- The finite-state pair validator decides `validPairEncoding` in linear time. -/
 theorem pairValidateTM_decidesInTime :
     pairValidateTM.DecidesInTime validPairEncoding (fun n => n + 2) :=

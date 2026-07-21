@@ -149,6 +149,119 @@ another controller-local proof.
     calls, sequencing, and input iteration. The indexed `ForInputLoopSpec` and
     `ForInputLoopSpaceSpec` certificates recover exact execution and all-reachable
     space for `Experimental.binaryLengthRoutine = forInput (call binarySuccTM)`.
+  - [x] Add a minimal structured imperative frontend for the logarithmic-cost RAM,
+    compile sequencing, conditionals, and loops to absolute RAM jumps, and prove
+    exact semantic/time/space preservation. The Hamming-weight vertical slice has
+    an independent source proof, an exact transition formula, explicit
+    logarithmic-time and peak-space budgets, quasilinear asymptotic corollaries,
+    and a concrete compiled-RAM performance theorem. Generic internal resource
+    certificates now handle finite register envelopes, real `finsum` space, and
+    compositional sequencing, branching, and loops; the benchmark retains only
+    its algorithm-specific invariant and arithmetic. That loop invariant bundles
+    semantic facts with the register envelope, and straight-line command lists do
+    not introduce a proof-only terminal `skip`. Its reserved-register input layout
+    also exposes the raw RAM input ABI's lack of a uniform scratch region.
+  - [x] Reimplement the existing finite-state `pairValidateTM` as a table-driven
+    structured RAM program. The first direct implementation had exact `17 + 9n`
+    transitions and explicit quasilinear logarithmic-time and peak-space bounds,
+    but was a negative ergonomics result: its benchmark-specific files totaled
+    882 lines versus 320 for the TM consumer, because transition-table address
+    preservation remained bespoke while the TM version already used `scannerTM`.
+  - [x] Extract a generic finite-state scanner compiler and certificate, then add
+    a typed `FinEnum` interface so consumers never write numeric transition tables
+    or state-refinement folds. The reusable layer proves exact source and
+    compiled-RAM correctness, `9 + 3k + 9n` transitions for a `k`-state scanner,
+    explicit logarithmic-time and peak-space bounds, and quasilinear asymptotics.
+    PairValidate's benchmark-specific files shrink from 882 to 208 lines, below
+    the 320-line TM consumer; its exact dense-table count is `24 + 9n` rather than
+    the hand-specialized `17 + 9n`. Independent typed instances now cover the
+    three-state LastBit scanner (`18 + 9n`) and the existing 27-state exact-3-CNF
+    syntax automaton (`90 + 9n`) with direct language agreement. The 1,273-line
+    shared layer is therefore validated across small, medium, and substantially
+    larger finite controls, although sparse table initialization remains a useful
+    constant-factor optimization rather than a correctness or asymptotic blocker.
+  - [x] Add the first non-regular structured-RAM parser component for the serialized
+    circuit evaluator: a terminated-unary cursor decoder with distinct success and
+    exhaustion exits, exact transition counts (`10k + 16` through a terminator and
+    `10n + 11` on truncation), explicit logarithmic-cost time/space, quasilinear
+    asymptotics, and end-to-end compilation preserving the decoded value and suffix
+    cursor. This isolates nested early-exit control before adding indirect memo
+    reads and writes to the evaluator.
+  - [x] Verify the decoded-gate mutable-data kernel for that evaluator. The
+    branch-free 20-instruction program performs two indirect memo reads and one
+    indirect append, preserves every existing wire, and carries exact transitions,
+    logarithmic-cost time, peak space, and Boolean correctness through compilation.
+    Grouping its straight-line code at six semantic boundaries avoids expansion of
+    a twenty-update store term; the reusable `exec_basics_exists` lemma also lets
+    semantic proofs establish exact execution before choosing resource envelopes.
+    Before composition, the unary decoder and gate kernel totaled 1,976 lines
+    versus 5,635 lines in the complete TM evaluator core. This was promising but
+    not yet an end-to-end comparison because the RAM side still lacked a parser.
+  - [x] Compose the cursor decoder and mutable-data kernel into one fixed
+    serialized-gate step. The source and compiled correctness and resource chains
+    are now checked:
+    it retains the three fixed header bits, invokes the same unary loop twice,
+    discovers the memo base at runtime, evaluates and appends the gate, preserves
+    every old wire, and takes exactly `10(input₀ + input₁) + 67` transitions. The
+    composition test exposed and fixed a real API defect: cursor offset and unary
+    accumulator had been conflated because they coincide for only the first field.
+    `CursorReady` now separates them and frames high data; `GateEval.ReadyAt`
+    similarly supports an arbitrary memo base. The generic routine now also has an
+    arbitrary-base envelope theorem: twenty steps cost at most eighty word widths
+    and preserve the caller's bounded store while appending one memo cell. The
+    complete serialized-gate slice transfers the explicit bounds
+    `512(n + 1)(bitlen(n + 8) + 1)` for time and
+    `(n + 8)(2 bitlen(n + 8))` for peak space to concrete RAM execution, where
+    `n` is the gate-code-plus-memo length. It is now on the public RAM surface.
+    Unary decode, generic gate evaluation, and their composition total 4,195 lines
+    (419 definitions, 3,404 internals, and 372 surface), still below the 5,635-line
+    complete TM evaluator core. This is encouraging rather than a final size win:
+    the RAM slice handles one valid serialized gate but still lacks the outer gate-
+    count loop, malformed-input controller, and final verdict. A layout audit found
+    the precise prerequisite for an honest next comparison: this benchmark step
+    infers its memo base from the end of the current gate, which is correct for
+    `gate.encode ++ wires` but points at the *next gate* in a multi-gate stream.
+  - [x] Run the bounded iterable-layout admission test before writing the outer
+    controller. `GateStreamStep` now gives the routine separate code-cursor and
+    memo-base inputs, uses two fixed continuation cells between control and memo,
+    consumes a canonical gate followed by an arbitrary unread tail, appends its
+    Boolean value, restores the exact next cursor and tail length, increments the
+    memo count, and preserves both old wires and unread code. Structural lowering
+    transfers the exact `10(input₀ + input₁) + 80` transitions and the source
+    logarithmic cost/space measurements to the concrete RAM. The fixed region was
+    materially better than the first dynamic-spill attempt, whose store-update
+    proof exploded, and the experiment strengthened `GateEval` with a genuine
+    caller-frame contract.
+
+    The admission result is nevertheless negative for this register-level IR as
+    a replacement for direct TM authoring. The checked iterable slice is 1,362
+    lines. Retaining it beside the compact benchmark makes unary decode, gate
+    evaluation, and both compositions 5,638 lines, already matching the 5,635-line
+    complete TM evaluator core before an outer loop, malformed-input controller,
+    final verdict, or closed iterable resource bounds. Replacing rather than
+    retaining the compact composition leaves 4,373 lines, only a 22% reduction
+    before those missing layers, far short of the factor-of-two marginal payoff
+    required to justify more tangent work. Do not implement the outer evaluator in
+    this IR. Keep the structured compiler and amortized scanner API available, but
+    require a higher-level language with typed memory regions, procedures, and
+    loop contracts before reopening the circuit-evaluator comparison.
+  - [x] Test the next seemingly cheaper alternative before designing typed RAM
+    regions: a sound-by-construction syntax over the already successful
+    `BinaryRoutine` API. The prototype covered every verified binary primitive,
+    sequencing, zero branching, and count-up loops; a roughly 200-line lowering
+    and structural induction recovered the full pure-effect, emitted-stream,
+    concrete-time, all-prefix-space, and transducer contract. It cut the
+    initialization serializer's parallel structural soundness plumbing by about
+    half, but failed the integration gate: compiling the established transparent
+    routine definitions left opaque source-lowering terms in `effect`, `emitted`,
+    `requires`, and `spaceBound`, disrupting downstream `simp`, `change`, and
+    compositional space proofs. Retaining both source and routine expressions
+    merely duplicated programs and erased the saving, so the prototype was
+    removed. The positive result is the existing domain-specific `BinaryRoutine`
+    boundary itself: it already powered the complete `FL` tableau serializer while
+    retaining a concrete `TM` in every routine. Prefer such proof-carrying APIs to
+    a universal frontend; reconsider syntax only when lowering has projection-
+    level normalization and gives a net reduction on two consumers.
   - [x] Close the formerly scheduled rose-tree `Data`/`InPlace` lowering as
     deferred and optional, not implemented. It is not a dependency of the
     named-tape/effect work; revisit only when a real construction needs recursive
@@ -1157,14 +1270,171 @@ N0 run/time-accounting lemmas, and the multi-tape → single-tape simulation.
 `add`/`sub`/`mul`, indirect `load`/`store`, and jumps; an executable step and
 fuel-bounded run; a **logarithmic-cost** time measure charging each instruction
 the bit-length of the numbers it manipulates; a matching space measure; and the
-classes `RAM.DTIME`, `RAM.DSPACE` over the shared `Language` interface. The
+classes `RAM.DTIME`, `RAM.DSPACE`, and `RAM.P` over the shared `Language`
+interface. The
 operational metatheory (run/cost additivity, stationarity after halt, monotonic
 cost, step count `≤` log time, finite register support) is proved. The **cost
 convention is justified by a theorem**, `RAM.logGap_squaring`: the squaring
 program family runs in unit time `k + 1` but logarithmic time at least `2 ^ k`,
 so a unit-cost measure would make the RAM super-polynomially stronger than a
 Turing machine. This settles the model, its resource conventions, and its
-soundness; the simulations below are the remaining work.
+soundness. A minimal structured imperative frontend now compiles source-level
+sequencing, conditionals, and loops to flat RAM code with exact semantic,
+logarithmic-time, and peak-space preservation; its verified Hamming-weight
+program is the first end-to-end algorithm benchmark, with exact step count and
+explicit quasilinear logarithmic-time and peak-space bounds. Reusable internal
+resource certificates discharge finite-store, basic-instruction, branch, and
+loop accounting without enlarging the public trusted surface. The machine-model
+simulation now has its first representation layer: `RAM.TMConfig` assigns
+explicit contiguous state, named-head, and bounded-cell register blocks, uses
+zero for blank cells, proves exact field lookup and decode-after-encode for
+configurations blank beyond the chosen window, and proves every register beyond
+the layout is zero. The next fixed-block layers are also checked: a decrementing
+finite numeric switch selects a branch with exact source/compiled steps and
+explicit cost/space envelopes, and the generated transition prelude preserves
+the represented configuration while loading its state and all named head
+symbols exactly. The statically selected transition action is now also checked:
+its generated straight-line operations preserve the scratch frame, implement
+the input/work/output head moves and writes exactly, and re-establish the full
+configuration representation for the TM successor. The nested state-and-symbol
+dispatch, common logarithmic-cost/space envelope, and compiled-RAM transfer are
+now composed as well: the complete dense structured block has an exact source
+execution count, compiles with concrete resource bounds, represents the TM
+successor, and decodes to it when the successor fits the chosen window.
+
+An important uniformity audit found that this dense block is a bounded program
+family: its register layout and generated program depend on the tape window.
+It is therefore a useful end-to-end compiler validation but cannot directly
+witness `RAM.DTIME`, whose existential program must be fixed independently of
+the input and resource bound. The uniform replacement has now begun with a
+fixed sparse interleaved layout. Its complete unbounded representation and
+decode/encode theorem are checked, and a program depending only on the TM now
+computes current-cell addresses at runtime and loads the state and every named
+head symbol exactly. The sparse selected actions and nested dispatch are now
+checked as well, including exact transfer to concrete compiled RAM execution.
+A fixed loop controller then follows any exact `TM.reachesIn` halting run,
+preserves the complete sparse representation, reaches the compiler's terminal
+halt instruction, and decodes to the exact halted TM configuration. The program
+depends only on the TM, not on the input or its time bound. The public-ABI layer
+is now checked end to end as well. Its finite branch tree remembers the six raw
+input bits occupying scratch registers; its backward loop converts public bit
+codes `0/1` to sparse symbol codes `1/2`, relocates every input cell, and records
+visited captured destinations without a second marker tape; its conditional
+repair distinguishes captured zero bits from positions beyond the input; and
+its initialization establishes the complete sparse `tm.initCfg`. The fixed
+decision program then follows any exact halting run and converts the halted
+output symbol back to the public `R₀` verdict `0/1`, with exact source-to-
+compiled register, logarithmic-cost, and peak-space preservation. Concrete and
+asymptotic resource envelopes are now checked for the sparse simulation core:
+one common store envelope survives every load, dispatch, write, continuation,
+and loop iteration; a `t`-step run has cost at most
+`(t + 1) * C_tm * wordWidth(tm, base + t)`; and `wordWidth` is formally
+`O(log bound)`. Extending that envelope through the public marshaller and
+verdict extractor is now checked as well: the fixed `compiledDecision` has a
+single concrete cost bound depending only on the TM, input length, and simulated
+step count, plus an explicit peak sparse-store bound, from raw public input to
+the final `R₀` verdict. The transfer is now packaged at the class level:
+`RAM.TMConfig.Sparse.P_subset_RAM_P` proves `P ⊆ RAM.P` by combining the
+fixed simulator with the library's polynomial-time normal form and a checked
+polynomial envelope for every ABI and simulation resource bound. The sharper
+parametric `DTIME(T)` containment remains open because the public input
+marshaller costs `O(n · log n)` and therefore needs an explicit hypothesis
+relating input length to `T(n)`. Constructing the reverse RAM-to-TM simulation
+has now begun at its representation boundary. `RAM.RegisterStore` materializes
+every finite-support register file as a canonical list of nonzero address/value
+pairs, gives words a self-delimiting binary tape code, proves exact codec
+round trips, and bounds an `m`-entry width-`w` snapshot by
+`(m + 1) * (4w + 2)` cells. Its finite sparse interpreter preserves
+canonicality and decodes exactly to every RAM instruction and complete
+fuel-bounded run. Entry count grows by at most the actual RAM step count, while
+snapshot width grows only with fixed program literals and charged logarithmic
+RAM time. Since actual step count is at most log time,
+`RAM.RegisterStore.Snapshot.encode_run_length_le_logTime` gives an explicit
+quadratic reachable-code envelope. The public ABI is included:
+`Snapshot.initial_represents` gives a canonical sparse form of `RAM.initCfg`,
+and `encode_initial_run_length_le_logTime` specializes the envelope to input
+length and charged time. Concrete realization has now crossed its first machine
+boundary: `RegisterStore.Machine.wordWidthTM` scans a word's unary width prefix,
+stops on the zero separator, and produces the exact canonical binary width with
+an exact framed runtime theorem; `payloadBitTM` consumes and appends one payload
+bit in one proved transition. `wordPayloadTM` composes that leaf with the
+canonical binary count-up driver. `wordDecodeTM` now composes the width scan,
+separator step, and payload loop into a complete decoder: its canonical theorem
+consumes one `WordCode.encode` prefix exactly, leaves the following stream
+untouched, and supplies both an exact runtime and a coarse all-prefix
+auxiliary-space envelope. The decoder deliberately leaves the target head at
+its append position; `wordTargetRewind_reachesIn_frame` now converts that
+payload to the canonical cell-one read convention in linear time while
+preserving every framed tape. `TM.binaryEqTM` now compares two canonical binary
+strings in linear time, writes the equality bit to a dedicated work tape, and
+preserves the public output and every unrelated tape. `entryDecodeTM` now
+composes two word decoders over seven pairwise-distinct tapes, consumes one
+canonical `Entry.encode` prefix in exact time, recovers both address and value,
+leaves the following entry stream untouched, and has an all-prefix auxiliary-
+space envelope. `entryMatchTM` now composes the entry decoder and decoded-
+address comparator over nine pairwise-distinct tapes, consuming one entry and
+exposing its value and Boolean match flag with a parked frame and an explicit
+time/space envelope. `entryMatchReadTM` rewinds that flag to cell one for direct
+controller inspection while retaining every decoded scratch contract and an
+explicit per-tape head bound.
+`TM.resetBinaryWorkTM` now provides the reusable miss-reset leaf: from any
+bounded positive cursor over canonical binary contents it rewinds and clears to
+the standard blank tape with a literal frame and explicit time/space envelope.
+`TM.resetBinaryWorkManyTM` composes that leaf across a fixed injective tape list.
+The complete `entryScanTM` is now checked: one fixed controller reads a runtime
+canonical binary entry count, decodes and compares entries in order, halts with
+the first matching decoded value, or rewinds the query, clears all seven scratch
+tapes, decrements the count, and continues. Its public contract certifies either
+the first match or absence from the whole store, preserves every tape outside
+the ten-tape assignment exactly, and supplies explicit time and all-prefix
+space envelopes. The lookup seam is now closed:
+`entryLookupTM_hoareTime_frame` identifies the final
+decoded-value tape with `RegisterStore.read`, including the default-zero miss
+case, while retaining the scanner's exact external frame. Encoded update is the
+next seam. Its reverse serialization dependency is now checked:
+`wordEncodeTM` emits the exact self-delimiting word codec in two passes, and
+`rewindEntryEncodeTM` rewinds arbitrary bounded decoded address/value cursors
+and emits `Entry.encode` with explicit time, space, and literal frames.
+`entryMissCopyTM` now appends one unmatched entry and restores the next-entry
+scratch invariant with a deterministic intermediate work state.
+`entryReplaceCleanupTM` now emits a matched address with a distinct canonical
+new-value source, restores that source exactly, and clears the old decoded
+entry. `entryAppendRestoreTM` handles the absent-address endpoint, emitting the
+fresh entry and restoring both query and new-value sources exactly.
+`entryUpdateTM` now closes the update seam: one fixed thirteen-tape controller
+iterates comparison, miss-copy, replacement, deletion, absent-address append,
+and both runtime counts. Its public contract realizes `RegisterStore.write`
+with exact external frames and explicit time/all-prefix space envelopes.
+The encoded source is also certified read-only and preserved literally across
+lookup and update, with an arbitrary-start head-displacement bound available
+for later cursor restoration. Width-efficient addition, truncated subtraction,
+and multiplication now share one concrete arithmetic instruction ABI and feed
+their result directly into the update replacement tape. The composed theorem
+realizes the corresponding sparse-store write with an exact runtime and can
+redirect the updated encoding to a fresh work tape while leaving the public
+output blank. Reusable operand loading is now checked end to end as well:
+`entryLookupLoadedTM` copies a canonical query into scanner storage, performs
+the bounded lookup, rewinds and copies out the semantic value, resets all nine
+scanner-owned binary tapes, rewinds the read-only encoded source, restores the
+runtime entry count, and returns to the same blank-query ABI. Its public theorem
+gives the exact sparse-store `read`, complete external frame, composed runtime,
+transducer certificate, and all-prefix space envelope. The complete concrete
+instruction simulator is now checked too: immediate, direct arithmetic,
+indirect load/store, conditional and unconditional jumps, and halt share one
+buffered endpoint; a canonical PC copy drives a fixed decrementing finite
+dispatch tree; and `programInstructionTM_hoareTime_frame` realizes the exact
+selected sparse snapshot step with an explicit runtime, transducer certificate,
+and all-prefix space envelope. The reverse simulation is now complete at
+polynomial-class granularity. A fixed twenty-work-tape machine marshals the
+public input into the sparse snapshot ABI, iterates the exact instruction
+simulator through the first halt, performs all cleanup and buffer swaps, and
+extracts the RAM verdict. Its checked fourth-degree envelope depends only on
+input length and charged RAM logarithmic time. Minimal halting fuel equals unit
+time and is bounded by logarithmic cost, yielding
+`RAM.RegisterStore.Machine.RAM_P_subset_P`; with the fixed sparse forward
+simulator, `RAM.RegisterStore.Machine.RAM_P_eq_P` proves `RAM.P = P`. The sharp
+parametric `O(T(n)^2)` reverse bound remains open; the current class transfer
+deliberately uses the proved coarser polynomial envelope.
 
 **Settled conventions.**
 
@@ -1183,12 +1453,89 @@ soundness; the simulations below are the remaining work.
 - [x] Prove the run/cost algebra, halting stationarity, and finite support.
 - [x] Prove the unit-vs-logarithmic gap theorem justifying logarithmic cost.
 - [x] Define `RAM.DTIME`/`RAM.DSPACE` and prove monotonicity in the bound.
-- [ ] Simulate a `T(n)`-time multi-tape Turing machine by a RAM in logarithmic
-  time `O(T(n) · log T(n))`, giving `DTIME(T) ⊆ RAM.DTIME(T · log T)` and
-  `P ⊆ RAM-P`.
-- [ ] Simulate a `T(n)`-time logarithmic-cost RAM by a multi-tape Turing machine
-  in time `O(T(n)²)`, giving `RAM.DTIME(T) ⊆ DTIME(T²)` and `RAM-P ⊆ P`.
-- [ ] Conclude `RAM-P = P` and, with the space simulations, `RAM-PSPACE = PSPACE`.
+- [x] Use one fixed sparse RAM program to simulate every polynomial-time
+  multi-tape Turing decider, giving `P ⊆ RAM.P`.
+- [ ] State and prove the sharper parametric forward containment, with the
+  input-length domination hypothesis needed to absorb the ABI's
+  `O(n · log n)` marshalling cost into `O(T(n) · log T(n))`.
+- [x] Simulate every polynomial logarithmic-cost RAM decider by one fixed
+  multi-tape Turing machine with an explicit polynomial envelope, giving
+  `RAM.P ⊆ P`.
+  - [x] Define the canonical finite address/value representation, binary tape
+    codec, concrete length envelope, and semantics-preserving sparse
+    instruction/run interpreter.
+  - [x] Implement the exact unary-width scanner and framed one-bit payload-copy
+    leaf for the concrete self-delimiting word decoder.
+  - [x] Compose the payload leaf with a canonical binary counter and preserved
+    width into an exact fixed-width payload loop.
+  - [x] Compose the width and payload phases into a complete concrete word
+    decoder with an explicit time/space bound.
+  - [x] Establish a framed linear-time target rewind/read convention for
+    decoded words.
+  - [x] Implement a framed linear-time binary address comparator whose result
+    lives on a work tape.
+  - [x] Compose two complete word decoders into an exact framed sparse-entry
+    decoder with an explicit time/space bound.
+  - [x] Compose decoded-address rewind and work-tape equality with explicit
+    time/space and left-marker preservation.
+  - [x] Implement a framed rewind-and-clear primitive for resetting arbitrary
+    canonical binary cursors after a lookup miss.
+  - [x] Compose the entry decoder and decoded-address comparator into one
+    framed decode-and-match unit with explicit time/space bounds and parked
+    endpoint heads.
+  - [x] Rewind the one-bit match result to a readable cell-one endpoint while
+    preserving decoded scratch contracts and a per-tape head bound.
+  - [x] Implement bounded sparse lookup/update on the encoded register-store
+    tape.
+    - [x] Implement the fixed runtime-count entry scanner, including direct
+      hit branching, miss cleanup, first-match/absence semantics, exact frames,
+      and explicit time/all-prefix space bounds.
+    - [x] Package the scanner as lookup and prove its value tape equals the pure
+      sparse-store `read`, including the default-zero miss case.
+    - [x] Build encoded update behavior over the checked scanner endpoint.
+      - [x] Emit exact self-delimiting words and entries from canonical or
+        arbitrary bounded decoded cursors, with time/space and literal frames.
+      - [x] Compose decoded-entry emission with scratch cleanup into an exact
+        framed miss-copy branch that appends one unmatched entry and restores
+        the next-entry invariant.
+      - [x] Compose matched-address replacement emission, restoration of the
+        external new-value source, and scratch cleanup with exact global frame.
+      - [x] Emit a final absent-address entry from the query/new-value tapes and
+        restore both source cursors exactly.
+      - [x] Compose comparison, deletion, and runtime-count control around the
+        checked copy/replacement/append branches.
+  - [x] Compile the remaining sparse interpreter operations to a concrete
+    multi-tape TM and prove the per-instruction scan and binary-arithmetic
+    bounds.
+    - [x] Add a finite-state ripple-carry machine for canonical addition that
+      preserves both operands, writes a fresh sum, restores all three heads,
+      and proves an exact framed runtime plus a linear bit-width envelope.
+    - [x] Replace canonical copying's hidden value-counted addition with the
+      width-linear ripple adder, and add an exact binary-work-tape loop with
+      all-prefix space and transducer certificates for bit-driven algorithms.
+    - [x] Add width-efficient truncated subtraction and multiplication.
+    - [x] Compose the three arithmetic operations directly with encoded sparse
+      update under one concrete tape ABI, exact framed runtime, source
+      preservation, and redirected-output contract.
+    - [x] Build a reusable loaded-operand lookup that restores scanner scratch,
+      the encoded-source cursor, and the runtime entry count before returning.
+    - [x] Compose arithmetic, lookup/update, control flow, and the one-step
+      snapshot ABI into one concrete instruction simulator.
+  - [x] Add exact cleanup and buffer-swap phases between simulated instructions.
+  - [x] Marshal the public input into an initial sparse snapshot and extract the
+    halted verdict through the public output ABI.
+  - [x] Iterate the fixed instruction simulator through an arbitrary exact
+    halting RAM run.
+  - [x] Bound the complete simulator by a checked fourth-degree envelope in
+    input length and charged RAM logarithmic time.
+  - [x] Use least halting fuel to transfer polynomial RAM deciders to polynomial
+    Turing deciders.
+- [ ] Sharpen the concrete reverse runtime to the textbook `O(T(n)^2)` bound and
+  package the parametric `RAM.DTIME(T) ⊆ DTIME(T²)` containment under explicit
+  input-length domination hypotheses.
+- [x] Conclude `RAM.P = P`.
+- [ ] Add the space simulations and conclude RAM/TM polynomial-space
+  equivalence.
 - [ ] Add register-machine and Boolean-program variants and relate them by
   explicit simulations rather than as disconnected class definitions.
 
@@ -1206,8 +1553,35 @@ so that the simulation's own workspace is charged.
   Hoare lemmas for common gadgets (copy, conditional set, counter).
 - [M] Encode a Turing-machine configuration in RAM registers with a decode
   function and prove one TM step is simulated by a fixed RAM program block.
-- [M] Encode a RAM configuration on a Turing tape with size accounting and prove
+  - [x] Fix the state/head/cell register layout and prove bounded
+    decode-after-encode plus the zero frame outside the layout.
+  - [x] Verify finite numeric branch selection and the fixed block's state/head-
+    symbol loading phase, including compositional scratch framing.
+  - [x] Prove every statically selected transition action produces the exact
+    represented TM successor.
+  - [x] Compose the nested state/symbol dispatch with the selected action and
+    prove exact source execution plus the decoded successor.
+  - [x] Add the common envelope, advertised logarithmic-cost bound, and
+    compiled-RAM transfer for the complete one-step block.
+  - [x] Audit uniformity, replace the bound-dependent layout with a fixed sparse
+    interleaving, and prove complete decode/encode plus runtime address/loading
+    correctness for a program determined solely by the TM.
+  - [x] Prove sparse selected-action and nested-dispatch correctness and add a
+    fixed iteration controller with exact source/compiled halting-run semantics.
+  - [x] Marshal the public RAM input ABI into the sparse layout and copy the
+    halted output symbol back to verdict register `R₀`.
+  - [x] Derive the repeated sparse simulation core's concrete envelope and
+    asymptotic `O(t log t)` logarithmic-time bound.
+  - [x] Extend the concrete resource bound through the public input marshaller,
+    captured-position repair, initialization, and verdict extractor.
+  - [x] Package the checked end-to-end theorem as the TM-to-RAM class-level
+    containment.
+- [x] Encode a RAM configuration on a Turing tape with size accounting and prove
   one RAM step is simulated within a polynomial number of TM steps.
+  - [x] Define and bound the canonical sparse snapshot codec.
+  - [x] Implement exact lookup, update, arithmetic, and instruction dispatch.
+  - [x] Compose one-step correctness into a fixed halt-aware decision loop.
+  - [x] Package the complete simulator as `RAM.P ⊆ P` and hence `RAM.P = P`.
 
 ## Long-term tracks
 

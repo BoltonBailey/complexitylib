@@ -57,6 +57,36 @@ theorem skipTM_hoareTime (inp₀ : Tape) (work₀ : Fin n → Tape) (ys : List B
     · exact hout.parked.writeAndMove_readBack_idle
   exact ⟨_, 1, le_refl 1, .step hstep .zero, rfl, rfl, rfl, hout⟩
 
+/-- `skipTM` preserves an arbitrary fully parked tape frame exactly. -/
+theorem skipTM_hoareTime_frame (inp₀ : Tape) (work₀ : Fin n → Tape)
+    (out₀ : Tape) (hinput : Parked inp₀) (hwork : ∀ i, Parked (work₀ i))
+    (houtput : Parked out₀) :
+    (skipTM (n := n)).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      1 := by
+  rintro inp work out ⟨hinp, hworkEq, hout⟩
+  subst inp
+  subst work
+  subst out
+  let c' : Cfg n (skipTM (n := n)).Q :=
+    { state := (skipTM (n := n)).qhalt
+      input := inp₀
+      work := work₀
+      output := out₀ }
+  have hstep : (skipTM (n := n)).step
+      { state := (skipTM (n := n)).qstart
+        input := inp₀
+        work := work₀
+        output := out₀ } = some c' := by
+    simp only [TM.step, skipTM, reduceCtorEq, ↓reduceIte, c']
+    refine congrArg some ((Cfg.mk.injEq ..).mpr ⟨rfl, ?_, ?_, ?_⟩)
+    · exact hinput.move_idle
+    · funext i
+      exact (hwork i).writeAndMove_readBack_idle
+    · exact houtput.writeAndMove_readBack_idle
+  exact ⟨c', 1, le_rfl, .step hstep .zero, rfl, rfl, rfl, rfl⟩
+
 -- ════════════════════════════════════════════════════════════════════════
 -- incRegTM: append one mark to a register
 -- ════════════════════════════════════════════════════════════════════════

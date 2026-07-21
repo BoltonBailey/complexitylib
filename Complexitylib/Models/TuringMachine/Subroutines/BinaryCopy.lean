@@ -10,13 +10,14 @@ import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy.Internal
 # Copying canonical binary naturals
 
 This module exposes a literal-frame copy operation assembled from work-tape
-clearing and binary addition. The source is preserved, the destination becomes
-an exact copy, and the private addition counter is restored to canonical zero.
+clearing and width-linear ripple addition. The source is preserved, the
+destination becomes an exact copy, and the zero scratch is restored literally.
 
 ## Main results
 
 - `TM.binaryCopyIntoTM_hoareTime_frame` gives the literal endpoint and time bound.
 - `TM.binaryCopyIntoTM_hoareTimeSpace_frame` adds an all-prefix width bound.
+- `TM.binaryCopyTime_le` exposes the linear operand-width envelope.
 - `TM.binaryCopyIntoTM_isTransducer` proves append-only-output safety.
 -/
 
@@ -25,6 +26,13 @@ namespace Complexity
 namespace TM
 
 variable {n : ℕ}
+
+/-- Canonical binary copying is linear in the source and old-destination
+widths. -/
+theorem binaryCopyTime_le (srcValue dstValue : ℕ) :
+    binaryCopyTime srcValue dstValue ≤
+      3 * srcValue.size + 2 * dstValue.size + 20 :=
+  binaryCopyTime_le_internal srcValue dstValue
 
 /-- Binary copying changes only the destination tape. The source, zero
 counter, input, output, and every unrelated work tape are preserved literally. -/
@@ -54,7 +62,8 @@ theorem binaryCopyIntoTM_hoareTime_frame
     hsrc hdst hcounter hinp hother hout
 
 /-- Time-and-space form of canonical binary copying. Every reachable
-configuration stays within the maximum of the clearing and addition bounds. -/
+configuration stays within the maximum of the clearing and ripple-addition
+bounds. -/
 theorem binaryCopyIntoTM_hoareTimeSpace_frame
     (srcIdx dstIdx counterIdx : Fin n)
     (hsrcDst : srcIdx ≠ dstIdx) (hsrcCounter : srcIdx ≠ counterIdx)

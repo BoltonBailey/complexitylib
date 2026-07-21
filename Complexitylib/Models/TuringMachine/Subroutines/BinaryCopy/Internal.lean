@@ -4,16 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 
 /-!
 # Copying canonical binary naturals -- proof internals
 
-The copy machine first clears its destination and then invokes canonical
-binary addition from the preserved source. These proofs compose the public
-literal-frame and all-prefix resource contracts of those two phases.
+The copy machine first clears its destination and then invokes width-linear
+ripple addition with the source and zero counter as preserved operands. These
+proofs compose the public literal-frame and all-prefix contracts of both
+phases, then recover the original literal copy frame from canonicality.
 -/
 
 namespace Complexity
@@ -89,6 +90,52 @@ private theorem binaryCopyFrame_transition
   funext i
   exact (hwork i).transitionTape_eq_self
 
+private theorem binaryCopyDistinct
+    (srcIdx dstIdx counterIdx : Fin n)
+    (hsrcDst : srcIdx ≠ dstIdx) (hsrcCounter : srcIdx ≠ counterIdx)
+    (hdstCounter : dstIdx ≠ counterIdx) :
+    BinaryRippleAddDistinct srcIdx counterIdx dstIdx :=
+  ⟨hsrcCounter, hsrcDst, hdstCounter.symm⟩
+
+private theorem binaryCopyRipplePost_eq
+    (srcIdx dstIdx counterIdx : Fin n)
+    (hsrcDst : srcIdx ≠ dstIdx) (hdstCounter : dstIdx ≠ counterIdx)
+    (srcValue : ℕ) (work₀ work : Fin n → Tape)
+    (hsrc₀ : (work₀ srcIdx).HasBinaryNat srcValue)
+    (hcounter₀ : (work₀ counterIdx).HasBinaryNat 0)
+    (hsrc : (work srcIdx).HasBinaryNat srcValue)
+    (hcounter : (work counterIdx).HasBinaryNat 0)
+    (hdst : (work dstIdx).HasBinaryNat srcValue)
+    (hother : ∀ i, i ≠ srcIdx → i ≠ counterIdx → i ≠ dstIdx →
+      work i = binaryCopyMidWork work₀ dstIdx i) :
+    work = Function.update work₀ dstIdx (binaryCopyNatTape srcValue) := by
+  funext i
+  by_cases hdstIdx : i = dstIdx
+  · subst i
+    rw [Function.update_self]
+    simpa [binaryCopyNatTape] using hdst.eq_init_move_right
+  by_cases hsrcIdx : i = srcIdx
+  · subst i
+    rw [Function.update_of_ne hsrcDst]
+    exact hsrc.eq_init_move_right.trans hsrc₀.eq_init_move_right.symm
+  by_cases hcounterIdx : i = counterIdx
+  · subst i
+    rw [Function.update_of_ne hdstCounter.symm]
+    exact hcounter.eq_init_move_right.trans hcounter₀.eq_init_move_right.symm
+  rw [Function.update_of_ne hdstIdx]
+  simpa [binaryCopyMidWork, hdstIdx] using
+    hother i hsrcIdx hcounterIdx hdstIdx
+
+theorem binaryCopyTime_le_internal (srcValue dstValue : ℕ) :
+    binaryCopyTime srcValue dstValue ≤
+      3 * srcValue.size + 2 * dstValue.size + 20 := by
+  have hadd := binaryRippleAddTime_le srcValue 0
+  have hadd' : binaryRippleAddTime srcValue 0 ≤
+      3 * srcValue.size + 14 := by
+    simpa using hadd
+  simp only [binaryCopyTime, clearWorkTimeBound]
+  omega
+
 theorem binaryCopyIntoTM_hoareTime_frame_internal
     (srcIdx dstIdx counterIdx : Fin n)
     (hsrcDst : srcIdx ≠ dstIdx) (hsrcCounter : srcIdx ≠ counterIdx)
@@ -130,16 +177,27 @@ theorem binaryCopyIntoTM_hoareTime_frame_internal
       binaryCopyNatTape_hasBinaryNat 0
   have hmidCounter : (midWork counterIdx).HasBinaryNat 0 := by
     simpa [midWork, binaryCopyMidWork, hdstCounter.symm] using hcounter
-  have hadd := binaryAddIntoTM_hoareTime_frame srcIdx dstIdx counterIdx
-    hsrcDst hsrcCounter hdstCounter srcValue 0 inp₀ midWork out₀
-    hmidSrc hmidDst hmidCounter hinp
-    (fun i hiSrc hiDst hiCounter => hmidWork i) hout
+  have hdistinct := binaryCopyDistinct srcIdx dstIdx counterIdx
+    hsrcDst hsrcCounter hdstCounter
+  have hadd := binaryRippleAddTM_hoareTime_frame
+    srcIdx counterIdx dstIdx hdistinct srcValue 0 inp₀ midWork out₀
+    hmidSrc hmidCounter hmidDst hinp
+    (fun i _ _ _ => hmidWork i) hout
   have hseq := seqTM_hoareTime (clearWorkTM dstIdx)
-    (binaryAddIntoTM srcIdx dstIdx counterIdx) hclear'
+    (binaryRippleAddTM srcIdx counterIdx dstIdx) hclear'
     (binaryCopyFrame_transition inp₀ midWork out₀ hinp hmidWork hout)
     hadd
-  simpa [binaryCopyIntoTM, binaryCopyTime, midWork, binaryCopyMidWork,
-    binaryCopyNatTape, Nat.size_eq_bits_len] using hseq
+  apply hseq.consequence (b' := binaryCopyTime srcValue dstValue)
+  · intro _inp _work _out hpre
+    exact hpre
+  · rintro inp work out ⟨hinput, hfinalSrc, hfinalCounter, hfinalDst,
+      hfinalOther, houtput⟩
+    exact ⟨hinput, binaryCopyRipplePost_eq srcIdx dstIdx counterIdx
+      hsrcDst hdstCounter srcValue work₀ work hsrc hcounter
+      hfinalSrc hfinalCounter (by simpa using hfinalDst) (by
+        intro i hiSrc hiCounter hiDst
+        exact hfinalOther i hiSrc hiCounter hiDst), houtput⟩
+  · simp [binaryCopyTime]
 
 theorem binaryCopyIntoTM_hoareTimeSpace_frame_internal
     (srcIdx dstIdx counterIdx : Fin n)
@@ -205,23 +263,46 @@ theorem binaryCopyIntoTM_hoareTimeSpace_frame_internal
       simpa [midWork, binaryCopyMidWork, binaryCopyNatTape, Tape.move]
         using hone
     · simpa [midWork, binaryCopyMidWork, hi] using hworkSpace i
-  have hadd := binaryAddIntoTM_hoareTimeSpace_frame
-    srcIdx dstIdx counterIdx hsrcDst hsrcCounter hdstCounter srcValue 0
-    inputLength initialSpace inp₀ midWork out₀ hmidSrc hmidDst
-    hmidCounter hinp (fun i _ _ _ => hmidWork i) hout hmidWorkSpace
-    hinputSpace
+  have hdistinct := binaryCopyDistinct srcIdx dstIdx counterIdx
+    hsrcDst hsrcCounter hdstCounter
+  have haddInitial :
+      ({ state := (binaryRippleAddTM srcIdx counterIdx dstIdx).qstart
+         input := inp₀
+         work := midWork
+         output := out₀ } :
+        Cfg n (binaryRippleAddTM srcIdx counterIdx dstIdx).Q).WithinAuxSpace
+          inputLength initialSpace :=
+    ⟨hmidWorkSpace, hinputSpace⟩
+  have hadd := binaryRippleAddTM_hoareTimeSpace_frame
+    srcIdx counterIdx dstIdx hdistinct srcValue 0 inputLength initialSpace
+    inp₀ midWork out₀ hmidSrc hmidCounter hmidDst hinp
+    (fun i _ _ _ => hmidWork i) hout haddInitial
   have hseq := seqTM_hoareTimeSpace (clearWorkTM dstIdx)
-    (binaryAddIntoTM srcIdx dstIdx counterIdx) hclear'
+    (binaryRippleAddTM srcIdx counterIdx dstIdx) hclear'
     (binaryCopyFrame_transition inp₀ midWork out₀ hinp hmidWork hout)
     hadd
-  simpa [binaryCopyIntoTM, binaryCopyTime, binaryCopySpace, midWork,
-    binaryCopyMidWork, binaryCopyNatTape, Nat.size_eq_bits_len] using hseq
+  apply hseq.consequence
+    (time' := binaryCopyTime srcValue dstValue)
+    (inputLength' := inputLength)
+    (space' := binaryCopySpace initialSpace srcValue dstValue)
+  · intro _inp _work _out hpre
+    exact hpre
+  · rintro inp work out ⟨hfinalInput, hfinalSrc, hfinalCounter,
+      hfinalDst, hfinalOther, hfinalOutput⟩
+    exact ⟨hfinalInput, binaryCopyRipplePost_eq srcIdx dstIdx counterIdx
+      hsrcDst hdstCounter srcValue work₀ work hsrc hcounter
+      hfinalSrc hfinalCounter (by simpa using hfinalDst) (by
+        intro i hiSrc hiCounter hiDst
+        exact hfinalOther i hiSrc hiCounter hiDst), hfinalOutput⟩
+  · simp [binaryCopyTime]
+  · exact le_rfl
+  · simp [binaryCopySpace]
 
 theorem binaryCopyIntoTM_isTransducer_internal
     (srcIdx dstIdx counterIdx : Fin n) :
     (binaryCopyIntoTM srcIdx dstIdx counterIdx).IsTransducer := by
   exact (clearWorkTM_isTransducer dstIdx).seqTM
-    (binaryAddIntoTM_isTransducer srcIdx dstIdx counterIdx)
+    (binaryRippleAddTM_isTransducer srcIdx counterIdx dstIdx)
 
 end TM
 

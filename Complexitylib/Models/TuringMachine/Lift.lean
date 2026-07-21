@@ -488,6 +488,13 @@ private theorem retargetOutput_reachesIn_retargetCfg (tm : TM n) {t : ℕ}
   | step hstep _ ih =>
     exact .step (by rw [retargetOutput_step_retargetCfg, hstep]; rfl) ih
 
+/-- Redirecting output to a fresh work tape preserves every exact run through
+the canonical configuration embedding. -/
+theorem retargetOutput_reachesIn_retargetCfg_frame (tm : TM n) {t : ℕ}
+    {c c' : Cfg n tm.Q} (h : tm.reachesIn t c c') :
+    (tm.retargetOutput).reachesIn t (tm.retargetCfg c) (tm.retargetCfg c') :=
+  retargetOutput_reachesIn_retargetCfg tm h
+
 /-- Multi-step simulation from the initial configuration: the retargeted
     run tracks `tm`'s run in the same number of steps, with work tape `n`
     holding `tm`'s output tape. -/
@@ -560,6 +567,22 @@ theorem retargetOutput_computesInTime_boundary (tm : TM n)
     exact hhalt
   · rw [hwork]
     exact hout
+
+/-- Padding by unused work tapes preserves one-way output behavior. -/
+theorem IsTransducer.liftTM {tm : TM n} (h : tm.IsTransducer) (m : ℕ) :
+    (tm.liftTM m).IsTransducer := by
+  intro q iHead wHeads oHead
+  simpa only [liftTM] using h q iHead
+    (fun i => wHeads (Fin.castAdd m i)) oHead
+
+/-- Redirecting output to a work tape leaves the real output direction idle,
+so the resulting machine is always a one-way-output transducer. -/
+theorem retargetOutput_isTransducer (tm : TM n) :
+    tm.retargetOutput.IsTransducer := by
+  intro q iHead wHeads oHead
+  simp only [retargetOutput]
+  unfold idleDir
+  split <;> decide
 
 end TM
 

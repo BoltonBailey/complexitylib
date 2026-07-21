@@ -5,7 +5,57 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.RandomAccessMachine.Internal
 import Complexitylib.Models.RandomAccessMachine.Soundness
+import Complexitylib.Models.RandomAccessMachine.Classes
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Containment
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Containment
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.AddressEq
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryAppend
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryDecode
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryEncode
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryCleanup
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryLookup
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryLookupRestore
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMissCopy
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryReplace
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScanStep
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Dispatch
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Initialization
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Decision
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordEncode
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul
+import Complexitylib.Models.RandomAccessMachine.Structured
+import Complexitylib.Models.RandomAccessMachine.Structured.Switch.Compiled
+import Complexitylib.Models.RandomAccessMachine.Structured.Hamming
+import Complexitylib.Models.RandomAccessMachine.Structured.GateEval
+import Complexitylib.Models.RandomAccessMachine.Structured.GateStep
+import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep
+import Complexitylib.Models.RandomAccessMachine.Structured.Scanner
+import Complexitylib.Models.RandomAccessMachine.Structured.PairValidate
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
+import Complexitylib.Models.RandomAccessMachine.Structured.LastBit
+import Complexitylib.Models.RandomAccessMachine.Structured.ThreeSATSyntax
+import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode
 import Complexitylib.Asymptotics
+import Complexitylib.Classes.Time
 
 /-!
 # Random access machines (surface)
@@ -23,7 +73,7 @@ proved in `…/Internal`; the soundness of the cost convention is established in
 - `RAM.Instr`, `RAM.Program`, `RAM.Cfg`, `RAM.step`, `RAM.run` — the model
 - `RAM.logTimeUpto`, `RAM.unitTimeUpto`, `RAM.spaceUpto` — the resource measures
 - `RAM.Program.DecidesInTime`, `RAM.Program.DecidesInSpace` — deciding a language
-- `RAM.DTIME`, `RAM.DSPACE` — the RAM time/space classes, over the same
+- `RAM.DTIME`, `RAM.DSPACE`, `RAM.P` — the RAM time/space classes, over the same
   `Language = Set (List Bool)` interface as the Turing-machine classes `DTIME`,
   `DSPACE`, so the two families are directly comparable
 
@@ -39,6 +89,150 @@ proved in `…/Internal`; the soundness of the cost convention is established in
 - `RAM.Program.DecidesInTime.mono` — deciding is monotone in the time bound.
 - `RAM.run_initCfg_finiteSupport` — the register file keeps finite support
   along any run, so the space measure `RAM.Cfg.space` is a genuine finite sum.
+- `RAM.TMConfig.decode_encode` — the explicit bounded TM-configuration layout
+  in RAM registers decodes exactly; registers beyond the state/head/cell blocks
+  are zero.
+- `RAM.TMConfig.Step.compiled_encode_decodes` — the complete bounded dense
+  transition block compiles to concrete RAM code and decodes to the exact TM
+  successor with explicit logarithmic-time and peak-space bounds.
+- `RAM.TMConfig.Sparse.decode_encode` — the fixed interleaved layout represents
+  and decodes every tape cell without a bound baked into the representation.
+- `RAM.TMConfig.Sparse.loadOps_correct` — the fixed uniform transition prelude
+  computes runtime cell addresses, preserves the complete representation, and
+  loads the state and all named head symbols exactly.
+- `RAM.TMConfig.Sparse.compiledUntilHalt_correct` — one concrete RAM program,
+  determined solely by the TM, follows any exact halting TM run and decodes to
+  its halted configuration with exact compiled cost and space preservation.
+- `RAM.TMConfig.Sparse.compiledDecision_correct` — the fixed sparse simulator
+  includes the public input/output ABI, follows any exact halting TM run, and
+  returns the Boolean verdict in `R₀` with exact compiled cost and space.
+- `RAM.TMConfig.Sparse.compiledDecision_resourceBound` — the same fixed program
+  has a concrete end-to-end logarithmic-cost and sparse-store bound depending
+  only on the TM, public input length, and simulated halting-run length.
+- `RAM.TMConfig.Sparse.P_subset_RAM_P` — every polynomial-time Turing language
+  is decided in polynomial logarithmic-cost RAM time by the fixed sparse
+  simulator.
+- `RAM.RegisterStore.Snapshot.decode_run` — a finite sparse address/value
+  snapshot interpreter preserves canonicality and decodes exactly to the RAM
+  run; its self-delimiting binary tape codec round-trips with a concrete
+  quadratic-size envelope.
+- `RAM.RegisterStore.Snapshot.encode_run_length_le_logTime` — every reachable
+  encoded snapshot has an explicit quadratic envelope in initial store size,
+  fixed program literals, and charged RAM logarithmic time.
+- `RAM.RegisterStore.Snapshot.encode_initial_run_length_le_logTime` — the same
+  envelope starts from the public `RAM.initCfg` ABI with explicit input-length
+  dependence.
+- `RAM.RegisterStore.Machine.wordWidthTM_reachesIn_frame` — the first concrete
+  reverse-simulation parser phase scans a self-delimiting word's unary width
+  prefix in exact time, stops on its separator, and produces the width on a
+  canonical binary work tape.
+- `RAM.RegisterStore.Machine.payloadBitTM_reachesIn_frame` — the concrete
+  payload leaf consumes and appends one fixed-width payload bit while preserving
+  every unrelated tape.
+- `RAM.RegisterStore.Machine.wordPayloadTM_reachesIn_frame` — a canonical
+  binary counter and preserved width drive that leaf for exactly the payload
+  length, leaving the source at the next encoded word with an exact runtime.
+- `RAM.RegisterStore.Machine.wordDecodeTM_reachesIn_frame_encode` — the complete
+  decoder consumes one canonical `WordCode.encode` prefix, recovers its payload,
+  and leaves the following encoded stream untouched; the companion
+  `wordDecodeTM_prefix_withinAuxSpace` bounds every run prefix's auxiliary
+  space.
+- `RAM.RegisterStore.Machine.wordTargetRewind_reachesIn_frame` — a decoded
+  append-position payload rewinds to the canonical cell-one read convention in
+  linear time while preserving every framed tape.
+- `TM.binaryEqTM_reachesIn_frame` — two canonical binary work tapes are compared
+  in linear time, with the equality bit written to a dedicated work tape and
+  every framed tape preserved.
+- `TM.binaryRippleAddTM_reachesIn_frame` — two canonical binary operands are
+  preserved while their sum is written to a fresh result tape in time linear in
+  their bit widths, with a literal external frame and all-prefix space bound.
+- `RAM.RegisterStore.Machine.entryDecodeTM_reachesIn_frame` — one canonical
+  sparse address/value entry is decoded in exact time, leaving the following
+  entry stream untouched; `entryDecodeTM_prefix_withinAuxSpace` bounds every
+  run prefix's auxiliary space.
+- `RAM.RegisterStore.Machine.decodedAddressEqTM_reachesIn_frame` — the decoded
+  address is rewound and compared with a canonical query in linear time, with
+  both left markers and every framed tape preserved.
+- `RAM.RegisterStore.Machine.entryMatchTM_reachesIn_frame` — one concrete
+  decode-and-compare unit consumes an encoded sparse entry, exposes its value
+  and equality flag, preserves a parked frame, and has explicit time/space
+  bounds ready for bounded iteration.
+- `RAM.RegisterStore.Machine.entryMatchReadTM_reachesIn_frame` — the match flag
+  is rewound to cell one for direct controller inspection while preserving all
+  decoded scratch contracts and an explicit per-tape head bound.
+- `RAM.RegisterStore.Machine.entryScanTM_hoareTime_frame` — one fixed bounded
+  scanner uses a runtime binary entry count, returns the first matching decoded
+  value or certifies a miss, and preserves every tape outside its ten-tape
+  assignment with explicit time and all-prefix space envelopes.
+- `RAM.RegisterStore.Machine.entryLookupTM_hoareTime_frame` — the same concrete
+  scan is packaged as a sparse lookup whose decoded-value tape equals the pure
+  `RegisterStore.read` result, including the default-zero miss case.
+- `RAM.RegisterStore.Machine.entryUpdateTM_hoareTime_frame` — one fixed
+  runtime-counted controller realizes the pure sparse-store `write`, including
+  copy, replacement, deletion, absent-address append, exact frames, and an
+  explicit time/all-prefix space envelope.
+- `RAM.RegisterStore.Machine.binaryInstructionUpdateTM_hoareTime_frame` —
+  width-efficient addition, truncated subtraction, or multiplication feeds its
+  canonical result directly into sparse update, with no hidden value-counted
+  copy between phases and with an exact framed runtime.
+- `RAM.RegisterStore.Machine.binaryInstructionUpdateTM_retargetOutput_hoareTime_frame`
+  — the same arithmetic/update kernel can place the updated encoded store on a
+  fresh work tape while keeping the public output blank and parked.
+- `RAM.RegisterStore.Machine.programInstructionTM_hoareTime_frame` — one fixed
+  finite-control dispatch machine selects the RAM instruction named by the
+  canonical program counter and realizes its exact sparse snapshot step in a
+  fresh next-store buffer.
+- `RAM.RegisterStore.Machine.programDecisionTM_hoareTime_ramRun` — one fixed
+  twenty-work-tape machine marshals the public input, iterates exact sparse RAM
+  steps through the first halt, and writes the RAM verdict to the public output.
+- `RAM.RegisterStore.Machine.programDecisionTime_le_envelope` — the complete
+  simulator has a checked fourth-degree runtime envelope in input length and
+  charged RAM logarithmic time.
+- `RAM.RegisterStore.Machine.RAM_P_eq_P` — logarithmic-cost RAM polynomial time
+  and deterministic multitape Turing polynomial time define the same class.
+- `RAM.RegisterStore.Machine.wordEncodeTM_hoareTime_frame` and
+  `rewindEntryEncodeTM_hoareTime_frame` — canonical or arbitrarily positioned
+  decoded words and entries are re-emitted in the exact self-delimiting store
+  codec, with explicit time, space, and external-frame contracts.
+- `TM.resetBinaryWorkTM_hoareTime_frame` — an arbitrary cursor over canonical
+  binary contents is rewound and cleared to the standard blank tape with an
+  explicit time/space envelope and literal external frame.
+- `RAM.Structured.Switch.select_compiled` — finite numeric case dispatch has an
+  exact selected-branch transition count and transfers explicit logarithmic
+  cost and space envelopes to concrete RAM code.
+- `RAM.TMConfig.Step.loadOps_correct` — the fixed TM-transition block's loading
+  phase preserves the represented configuration while recovering the finite
+  state and all named head symbols exactly.
+- `RAM.Structured.Exec.compile_correct` — structured source execution compiles
+  with exact register, logarithmic-time, and peak-space preservation.
+- `RAM.Structured.Hamming.compiled_performance` — a verified imperative
+  Hamming-weight program with an exact transition count, explicit logarithmic
+  time and peak-space bounds, and end-to-end source-to-RAM resource transfer.
+- `RAM.Structured.Hamming.timeBound_bigO_quasilinear` and
+  `spaceBound_bigO_quasilinear` — both explicit budgets are `O(n · bitlen n)`.
+- `RAM.Structured.Scanner.compiled_performance` — a reusable verified compiler
+  from numeric finite-state scanners to concrete logarithmic-cost RAM programs.
+- `RAM.Structured.PairValidate.compiled_performance` — a table-driven
+  reimplementation of `TM.pairValidateTM`, with exact steps, explicit
+  logarithmic time/space, and agreement with `validPairEncoding`.
+- `RAM.Structured.LastBit.compiled_performance` — a second typed-scanner
+  instance, agreeing with the existing last-bit languages.
+- `RAM.Structured.ThreeSATSyntax.compiled_performance` — the existing 27-state
+  exact-3-CNF syntax automaton compiled with exact steps and language agreement.
+- `RAM.Structured.UnaryDecode.compiled_performance` — a non-regular cursor
+  decoder for terminated-unary circuit fields, including successful and
+  truncated-input exits, exact steps, and the decoded suffix position.
+- `RAM.Structured.GateEval.compiled_performance` — a branch-free twenty-step
+  decoded-gate kernel with indirect memo reads and append, exact logarithmic
+  cost, explicit peak space, and preservation of all existing wire entries.
+- `RAM.Structured.GateStep.compiled_performance` — one fixed serialized-gate
+  program composing two unary cursor calls with the decoded-gate kernel at a
+  runtime-discovered memo base, with exact transitions and concrete transferred
+  time/space bounds.
+- `RAM.Structured.GateStreamStep.compiled_correct` — the bounded split-layout
+  admission test: one routine consumes a gate from an arbitrary unread stream,
+  advances a separate memo, preserves the tail, and transfers its exact source
+  execution and resource measurements to concrete RAM execution.
 
 ## Relationship to the Turing-machine models
 
@@ -59,43 +253,40 @@ polynomial-time class: `RAM-P = P`. Under the **unit-cost** measure the
 RAM → TM direction fails — `RAM.logGap_squaring` exhibits a program whose
 unit-time is linear but whose output already needs exponentially many Turing
 steps to write — which is precisely why the model is defined with logarithmic
-cost. These simulations are the next milestone for this model (see `ROADMAP.md`,
-track *M6. Random access machines and machine-model robustness*); this module
-fixes the definitions, resource conventions, and the soundness theorem they
-build on, and does not assert the simulations as proved.
+cost. The bounded dense transition block is proved end to end, including
+selected actions, nested dispatch, concrete compilation, and explicit resource
+bounds. That block is a bounded program family: its register layout depends on
+the tape window, so it cannot by itself witness `RAM.DTIME`, whose program must
+be fixed. The uniform replacement now has a fixed sparse interleaved
+representation, checked runtime address/loading and action/dispatch layers, a
+fixed compiled loop that follows an arbitrary exact halting TM run, and a
+checked public-ABI marshaller and verdict extractor. The remaining TM-to-RAM
+work is now narrower: the repeated sparse core and complete public
+marshaller/extractor share a concrete envelope, a linear-times-word-width cost
+theorem, and a checked logarithmic word-width bound. The fixed compiled program
+now transfers `TM.DecidesInTime` to `RAM.Program.DecidesInTime`, packages the
+result in `RAM.DTIME` at its explicit transformed bound, and proves the class
+theorem `P ⊆ RAM.P`. The sharper parametric `DTIME(T)` statement still
+requires an explicit input-length domination hypothesis: the public marshaller
+necessarily costs `O(n · log n)`, while an arbitrary stated time bound `T` need
+not dominate `n`. The reverse simulation is now checked end to end.
+Finite-support register functions have canonical sparse snapshots whose binary
+tape codec round-trips with an explicit length bound. Fixed lookup, update,
+binary-arithmetic, control, cleanup, initialization, iteration, and output
+machines realize every RAM instruction and complete halting run on twenty work
+tapes. Their composed runtime is bounded by an explicit fourth-degree envelope
+in public input length and charged RAM logarithmic time. Choosing the least
+halting fuel identifies the iteration count with unit time, which is bounded by
+logarithmic cost, and therefore transfers every `RAM.P` decider to `P`. Together
+with the fixed sparse forward simulator this proves
+`RAM.RegisterStore.Machine.RAM_P_eq_P`. The sharp textbook parametric
+`O(T(n)^2)` reverse bound remains future work; the class equivalence currently
+uses the checked coarser polynomial envelope.
 -/
 
 namespace Complexity
 
 namespace RAM
-
-/-- `RAM.DTIME(T)` is the class of languages decided by a RAM in logarithmic
-    time `O(T(n))`. Defined over the same `Language` interface as the
-    Turing-machine class `DTIME(T)`, so the two are directly comparable; they
-    coincide up to the polynomial simulation overhead documented above. -/
-def DTIME (T : ℕ → ℕ) : Set Language :=
-  {L | ∃ (P : Program) (f : ℕ → ℕ), P.DecidesInTime L f ∧ f =O T}
-
-/-- `RAM.DSPACE(S)` is the class of languages decided by a RAM in logarithmic
-    space `O(S(n))`, over the same `Language` interface as the Turing-machine
-    class `DSPACE(S)`. -/
-def DSPACE (S : ℕ → ℕ) : Set Language :=
-  {L | ∃ (P : Program) (f : ℕ → ℕ), P.DecidesInSpace L f ∧ f =O S}
-
-/-- Deciding in logarithmic time is monotone in the time bound. Mirrors
-    `TM.DecidesInTime.mono`. -/
-theorem Program.DecidesInTime.mono {P : Program} {L : Language} {T T' : ℕ → ℕ}
-    (hle : ∀ m, T m ≤ T' m) (h : P.DecidesInTime L T) : P.DecidesInTime L T' := by
-  intro x
-  obtain ⟨fuel, hhalt, hcost, hyes, hno⟩ := h x
-  exact ⟨fuel, hhalt, hcost.trans (hle x.length), hyes, hno⟩
-
-/-- Deciding in logarithmic space is monotone in the space bound. -/
-theorem Program.DecidesInSpace.mono {P : Program} {L : Language} {S S' : ℕ → ℕ}
-    (hle : ∀ m, S m ≤ S' m) (h : P.DecidesInSpace L S) : P.DecidesInSpace L S' := by
-  intro x
-  obtain ⟨fuel, hhalt, hspace, hyes, hno⟩ := h x
-  exact ⟨fuel, hhalt, hspace.trans (hle x.length), hyes, hno⟩
 
 /-! ### A worked decider
 

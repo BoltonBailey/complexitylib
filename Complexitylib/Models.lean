@@ -7,9 +7,12 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Trace
 import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
 import Complexitylib.Models.TuringMachine.Combinators.ForInput
+import Complexitylib.Models.TuringMachine.Combinators.ForWorkOnes
 import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
 import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
+import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
 import Complexitylib.Models.TuringMachine.Hoare
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Experimental.Routine
@@ -24,6 +27,10 @@ import Complexitylib.Models.TuringMachine.Subroutines
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPolynomial
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
@@ -37,6 +44,8 @@ import Complexitylib.Models.TuringMachine.Subroutines.PairEmit
 import Complexitylib.Models.TuringMachine.Subroutines.PairValidate
 import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
 import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.SpaceTime
@@ -67,13 +76,19 @@ Aggregation module for the machine models: the core Turing-machine
 semantics, the single-tape simulation, machine combinators, time- and
 space-aware Hoare specifications, direct work-symbol branching, experimental
 first-order routine lowering and proof-carrying binary stream routines,
-reusable read-only-input loops, binary count-up loops, binary successor,
-binary predecessor and length, canonical binary addition, fixed-constant addition,
-copying, multiply-add, and fixed-polynomial evaluation, framed work-tape clearing,
+reusable read-only-input and binary-work-tape loops, binary count-up loops,
+binary successor,
+binary predecessor and length, value-iterating and width-linear canonical binary
+addition, fixed-constant addition, copying, multiply-add, and fixed-polynomial
+evaluation, framed work-tape clearing,
 unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
 the universal machine, and the logarithmic-cost random access machine
-(`Complexitylib.Models.RandomAccessMachine`). Proof-internal modules
+(`Complexitylib.Models.RandomAccessMachine`), including its verified structured
+imperative frontend and Hamming-weight benchmark with exact steps and explicit
+quasilinear logarithmic-time and peak-space bounds, plus a generic verified
+typed finite-state scanner compiler with pair-validation, last-bit, and
+exact-3-CNF syntax instances. Proof-internal modules
 (`…/Internal/…`, register machinery, emitter plumbing) are deliberately not
 imported here — they stay in the build through the surface modules and theorem
 files that need them.

@@ -365,6 +365,16 @@ private theorem output_cell0_step {tm : TM n} {c c' : Cfg n tm.Q}
   simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs; subst hs
   exact tape_cell0_preserved _ _ _ h0
 
+/-- Work-tape cell 0 is preserved by one TM step. -/
+private theorem work_cell0_step {tm : TM n} {c c' : Cfg n tm.Q}
+    (idx : Fin n) (hs : tm.step c = some c')
+    (h0 : (c.work idx).cells 0 = Γ.start) :
+    (c'.work idx).cells 0 = Γ.start := by
+  have hne := state_ne_qhalt_of_step hs
+  simp only [step, hne, ↓reduceIte, Option.some.injEq] at hs
+  subst hs
+  exact tape_cell0_preserved _ _ _ h0
+
 /-- Output cells ≥ 1 ≠ Γ.start is preserved by one TM step. -/
 private theorem output_noStart_step {tm : TM n} {c c' : Cfg n tm.Q}
     (hs : tm.step c = some c') (hno : ∀ i, i ≥ 1 → c.output.cells i ≠ Γ.start) :
@@ -379,6 +389,16 @@ theorem output_cells_zero_eq_start_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : 
   induction h with
   | zero => exact h0
   | step hs _ ih => exact ih (output_cell0_step hs h0)
+
+/-- Cell zero of any named work tape remains the left-end marker throughout a
+deterministic run. -/
+theorem work_cells_zero_eq_start_of_reachesIn {tm : TM n} {t : ℕ}
+    {c₀ c : Cfg n tm.Q} (idx : Fin n) (h : tm.reachesIn t c₀ c)
+    (h0 : (c₀.work idx).cells 0 = Γ.start) :
+    (c.work idx).cells 0 = Γ.start := by
+  induction h with
+  | zero => exact h0
+  | step hs _ ih => exact ih (work_cell0_step idx hs h0)
 
 theorem output_cells_ne_start_of_reachesIn {tm : TM n} {t : ℕ} {c₀ c : Cfg n tm.Q}
     (h : tm.reachesIn t c₀ c)
@@ -423,26 +443,32 @@ private theorem step_head_bound (tm : TM n) (c c' : Cfg n tm.Q)
       simp only [Tape.write_head] at hm
       exact hm
 
+/-- A tape head moves at most one cell per step, relative to an arbitrary
+starting configuration. -/
+theorem head_le_start_add_of_reachesIn (tm : TM n)
+    {t : ℕ} {c₀ c : Cfg n tm.Q}
+    (hreach : tm.reachesIn t c₀ c) :
+    c.input.head ≤ c₀.input.head + t ∧
+    c.output.head ≤ c₀.output.head + t ∧
+    ∀ i, (c.work i).head ≤ (c₀.work i).head + t := by
+  induction hreach with
+  | zero => simp
+  | step hstep _ ih =>
+    obtain ⟨ih_in, ih_out, ih_work⟩ := ih
+    obtain ⟨hs_in, hs_out, hs_work⟩ := step_head_bound tm _ _ hstep
+    exact ⟨by omega, by omega, fun i => by
+      have := hs_work i
+      have := ih_work i
+      omega⟩
+
 /-- A tape head moves at most 1 cell per step. After `t` steps starting
     from `initCfg`, the head is at position ≤ `t`. -/
 theorem head_le_of_reachesIn (tm : TM n)
     {t : ℕ} {c : Cfg n tm.Q}
     (hreach : tm.reachesIn t (tm.initCfg x) c) :
     c.input.head ≤ t ∧ c.output.head ≤ t ∧ ∀ i, (c.work i).head ≤ t := by
-  suffices gen : ∀ (t : ℕ) (c₀ c : Cfg n tm.Q), tm.reachesIn t c₀ c →
-      c.input.head ≤ c₀.input.head + t ∧
-      c.output.head ≤ c₀.output.head + t ∧
-      ∀ i, (c.work i).head ≤ (c₀.work i).head + t by
-    have h := gen t (tm.initCfg x) c hreach
-    simp [Tape.init] at h
-    exact h
-  intro t c₀ c hreach
-  induction hreach with
-  | zero => simp
-  | step hstep _ ih =>
-    obtain ⟨ih_in, ih_out, ih_work⟩ := ih
-    obtain ⟨hs_in, hs_out, hs_work⟩ := step_head_bound tm _ _ hstep
-    exact ⟨by omega, by omega, fun i => by have := hs_work i; have := ih_work i; omega⟩
+  have h := head_le_start_add_of_reachesIn tm hreach
+  simpa [Tape.init] using h
 end TM
 
 /-- The invariant is preserved across one DTM step, on every tape. -/
