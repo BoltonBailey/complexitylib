@@ -34,6 +34,13 @@ Complexitylib modules for dependencies beyond Lean's three standard axioms,
 and CI enforces it — along with Mathlib's style and environment linters — on
 every push.
 
+**AI-assisted development.** This project uses AI coding assistants for proof
+development, refactoring, documentation, and research exploration. AI-assisted
+changes are held to the same standards as every other contribution: the public
+statements must be auditable, Lean's kernel must check the proofs, and the full
+build, linter, validation, and axiom-audit gates must pass. No mathematical
+claim is accepted on the authority of an AI system.
+
 ## How to read the library
 
 Everything lives in the `Complexity` root namespace and splits into areas,
