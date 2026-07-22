@@ -213,6 +213,32 @@ theorem BinaryForSegmentSpec.reachesIn {body : TM n}
         (spec.scanCfg value) spec.doneCfg :=
   spec.reachesIn_internal count value hstart hlimit
 
+/-- Derive phase-local segment space safety from bounds on each canonical
+phase entry plus enough reserve for the corresponding concrete runtime.
+
+This is the standard adapter when the segment's configurations are explicit:
+callers bound only scanner and iteration entries, while head-growth along
+every reachable prefix is discharged generically. -/
+theorem BinaryForSegmentSpaceSpec.ofInitialBounds
+    {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue inputLength spaceBound : ℕ}
+    (spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue)
+    (testInitialSpace iterationInitialSpace : ℕ → ℕ)
+    (testInitial : ∀ value, startValue ≤ value → value ≤ limitValue →
+      (spec.scanCfg value).WithinAuxSpace inputLength
+        (testInitialSpace value))
+    (iterationInitial : ∀ value, startValue ≤ value → value < limitValue →
+      (spec.iterationStartCfg value).WithinAuxSpace inputLength
+        (iterationInitialSpace value))
+    (testBound : ∀ value, startValue ≤ value → value ≤ limitValue →
+      testInitialSpace value + binaryForCompareTime limitValue ≤ spaceBound)
+    (iterationBound : ∀ value, startValue ≤ value → value < limitValue →
+      iterationInitialSpace value + spec.iterationTime value ≤ spaceBound) :
+    BinaryForSegmentSpaceSpec spec inputLength spaceBound :=
+  BinaryForSegmentSpaceSpec.ofInitialBounds_internal spec testInitialSpace
+    iterationInitialSpace testInitial iterationInitial testBound iterationBound
+
 /-- Phase-local segment bounds cover every reachable prefix of the whole
 count-up loop, including iterations that halt before their advertised bound. -/
 theorem BinaryForSegmentSpaceSpec.prefix_withinAuxSpace

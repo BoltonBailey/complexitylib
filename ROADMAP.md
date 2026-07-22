@@ -1306,7 +1306,10 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   API, so source-dependent probe runtimes can be selected existentially per
   address while remaining under one advertised loop bound. Its canonical
   witness adapter now packages those existential Hoare runs without repeated
-  choice plumbing. `OutputProbeScan` performs the concrete machine wiring:
+  choice plumbing. The matching initial-bound adapter now turns canonical
+  comparison/iteration entry bounds plus runtime reserve into the full
+  all-prefix `BinaryForSegmentSpaceSpec`, without replaying phase semantics.
+  `OutputProbeScan` performs the concrete machine wiring:
   it embeds address and limit registers behind the probe frame, queries and
   resets the latch, runs the selected continuation, increments the address,
   and preserves one-way output safety through the complete bounded scan.

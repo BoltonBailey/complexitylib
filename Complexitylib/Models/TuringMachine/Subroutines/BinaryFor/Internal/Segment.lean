@@ -110,6 +110,68 @@ theorem BinaryForSegmentSpec.reachesIn_internal {body : TM n}
       rw [binaryForLoopTime]
       omega
 
+theorem BinaryForSegmentSpaceSpec.ofInitialBounds_internal
+    {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue inputLength spaceBound : ℕ}
+    (spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue)
+    (testInitialSpace iterationInitialSpace : ℕ → ℕ)
+    (testInitial : ∀ value, startValue ≤ value → value ≤ limitValue →
+      (spec.scanCfg value).WithinAuxSpace inputLength
+        (testInitialSpace value))
+    (iterationInitial : ∀ value, startValue ≤ value → value < limitValue →
+      (spec.iterationStartCfg value).WithinAuxSpace inputLength
+        (iterationInitialSpace value))
+    (testBound : ∀ value, startValue ≤ value → value ≤ limitValue →
+      testInitialSpace value + binaryForCompareTime limitValue ≤ spaceBound)
+    (iterationBound : ∀ value, startValue ≤ value → value < limitValue →
+      iterationInitialSpace value + spec.iterationTime value ≤ spaceBound) :
+    BinaryForSegmentSpaceSpec spec inputLength spaceBound where
+  testPrefixWithin value time cfg hstart hvalue htime hreach := by
+    have hinitial := testInitial value hstart hvalue
+    have hspace : cfg.WithinAuxSpace inputLength
+        (testInitialSpace value + time) := by
+      constructor
+      · intro i
+        exact le_trans ((binaryForTM body counterIdx limitIdx)
+          |>.work_head_reachesIn_bound hreach i)
+          (Nat.add_le_add_right (hinitial.1 i) time)
+      · calc
+          cfg.input.head ≤ (spec.scanCfg value).input.head + time :=
+            (binaryForTM body counterIdx limitIdx).input_head_reachesIn_bound
+              hreach
+          _ ≤ inputLength + (testInitialSpace value + time) + 1 := by
+            have hinput := hinitial.2
+            omega
+    have hbudget : testInitialSpace value + time ≤ spaceBound :=
+      le_trans (Nat.add_le_add_left htime (testInitialSpace value))
+        (testBound value hstart hvalue)
+    exact ⟨fun i => le_trans (hspace.1 i) hbudget, by
+      have hinput := hspace.2
+      omega⟩
+  iterationPrefixWithin value time cfg hstart hvalue htime hreach := by
+    have hinitial := iterationInitial value hstart hvalue
+    have hspace : cfg.WithinAuxSpace inputLength
+        (iterationInitialSpace value + time) := by
+      constructor
+      · intro i
+        exact le_trans ((binaryForTM body counterIdx limitIdx)
+          |>.work_head_reachesIn_bound hreach i)
+          (Nat.add_le_add_right (hinitial.1 i) time)
+      · calc
+          cfg.input.head ≤ (spec.iterationStartCfg value).input.head + time :=
+            (binaryForTM body counterIdx limitIdx).input_head_reachesIn_bound
+              hreach
+          _ ≤ inputLength + (iterationInitialSpace value + time) + 1 := by
+            have hinput := hinitial.2
+            omega
+    have hbudget : iterationInitialSpace value + time ≤ spaceBound :=
+      le_trans (Nat.add_le_add_left htime (iterationInitialSpace value))
+        (iterationBound value hstart hvalue)
+    exact ⟨fun i => le_trans (hspace.1 i) hbudget, by
+      have hinput := hspace.2
+      omega⟩
+
 theorem BinaryForSegmentSpaceSpec.prefix_withinAuxSpace_internal
     {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
     {startValue limitValue inputLength spaceBound : ℕ}
