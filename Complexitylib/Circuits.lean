@@ -29,6 +29,7 @@ import Complexitylib.Circuits.BarringtonBitSerializer
 import Complexitylib.Circuits.BarringtonProbeQuery
 import Complexitylib.Circuits.BarringtonProbeSerializer
 import Complexitylib.Circuits.BranchingProgramEncoding
+import Complexitylib.Circuits.BranchingProgramEncoding.Machine
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.BarringtonConverse
@@ -164,6 +165,8 @@ Public modules (definitions a reviewer should read):
   through restartable position-indexed formula-code probes
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
+* `Complexitylib.Circuits.BranchingProgramEncoding.Machine` — framed,
+  one-way machine emission of canonical instruction codes from binary registers
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level
   formula-code-to-program-code reference for promised log-depth `FL` generation
 * `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,

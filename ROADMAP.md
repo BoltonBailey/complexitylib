@@ -1367,8 +1367,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   complete loop between canonical initialized and final latch frames.
   `ComputesInSpace.outputProbeDecodeTokenVar_hoareTime` now transports the
   normalized post-tag frame into that canonical unary start frame and certifies
-  the concrete variable continuation. The next local seam is to route fixed
-  tags directly to serialization.
+  the concrete variable continuation. `BranchingProgramEncoding/Machine` now
+  supplies the serializer leaf itself: it emits a dynamic terminated-unary
+  variable field followed by two finite-control permutation ranks, restores the
+  complete input/work frame, and carries explicit time, all-prefix space, and
+  one-way-output contracts. Constant and variable Barrington instructions are
+  exposed as direct specializations. The next local seam is to compose the
+  normalized `.var` and `.tru` branches with those emitters (`.fls` emits
+  nothing), before wiring the recursive connective branches.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
