@@ -61,6 +61,21 @@ def next (cursor : OutputCursor) (write : Γw) (direction : Dir3) :
 def advanced (direction : Dir3) : Bool :=
   direction == Dir3.right
 
+/-- Numeric contribution of one output move to the append-only frontier. -/
+def advanceCount : Dir3 → ℕ
+  | .right => 1
+  | .left | .stay => 0
+
+/-- Observable output effect of one source transition. `finalized` is present
+exactly when a right move leaves an ordinary output cell, at which point the
+written symbol can no longer be changed by an append-only transducer. -/
+structure Event where
+  /-- Zero-or-one frontier contribution of the output direction. -/
+  advance : ℕ
+  /-- Symbol finalized by leaving an ordinary cell to the right. -/
+  finalized : Option Γw
+  deriving DecidableEq
+
 end OutputCursor
 
 end TM
@@ -118,6 +133,41 @@ def cursorStep (tm : TM n) (cfg : CursorCfg n tm.Q) :
           (cfg.work i).writeAndMove (workWrites i) (workDirs i)
         output := cfg.output.next outputWrite outputDir }
 
+/-- Output direction selected by the source transition visible from a cursor
+configuration. It is observed only when `cursorStep` succeeds. -/
+def cursorOutputDirection (tm : TM n) (cfg : CursorCfg n tm.Q) : Dir3 :=
+  let (_, _, _, _, _, outputDir) :=
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read
+  outputDir
+
+/-- Output symbol selected by the source transition visible from a cursor
+configuration. -/
+def cursorOutputWrite (tm : TM n) (cfg : CursorCfg n tm.Q) : Γw :=
+  let (_, _, outputWrite, _, _, _) :=
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read
+  outputWrite
+
+/-- Complete observable output event selected at a cursor configuration. -/
+def cursorOutputEvent (tm : TM n) (cfg : CursorCfg n tm.Q) :
+    OutputCursor.Event :=
+  let direction := tm.cursorOutputDirection cfg
+  { advance := OutputCursor.advanceCount direction
+    finalized :=
+      if direction = Dir3.right then
+        match cfg.output with
+        | .start => none
+        | .cell _ => some (tm.cursorOutputWrite cfg)
+      else none }
+
+/-- One cursor step paired with the number of newly crossed output cells.
+For a transducer this is exactly zero or one. -/
+def cursorStepObserved (tm : TM n) (cfg : CursorCfg n tm.Q) :
+    Option (CursorCfg n tm.Q × OutputCursor.Event) :=
+  (tm.cursorStep cfg).map fun next =>
+    (next, tm.cursorOutputEvent cfg)
+
 /-- Execute an exact number of pure cursor steps, failing if the simulated
 source machine halts before the requested horizon. -/
 def cursorTrace (tm : TM n) : ℕ → CursorCfg n tm.Q →
@@ -126,6 +176,15 @@ def cursorTrace (tm : TM n) : ℕ → CursorCfg n tm.Q →
   | steps + 1, cfg => do
       let cfg ← tm.cursorStep cfg
       tm.cursorTrace steps cfg
+
+/-- Execute an exact cursor run while counting output-frontier advances. -/
+def cursorTraceObserved (tm : TM n) : ℕ → CursorCfg n tm.Q →
+    Option (CursorCfg n tm.Q × ℕ)
+  | 0, cfg => some (cfg, 0)
+  | steps + 1, cfg => do
+      let (next, event) ← tm.cursorStepObserved cfg
+      let (final, later) ← tm.cursorTraceObserved steps next
+      pure (final, event.advance + later)
 
 /-- Finite-control states of the output-suppressing realization. The left
 summand carries the simulated source state and output cursor; the right

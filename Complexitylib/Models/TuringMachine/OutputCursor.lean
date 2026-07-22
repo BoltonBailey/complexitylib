@@ -22,8 +22,12 @@ output string on work tape.
 - `Tape.outputCursor_writeAndMove` -- exact cursor update for a non-left move.
 - `TM.IsTransducer.cursorStep_commute` -- cursor stepping commutes with a
   concrete transducer step.
+- `TM.IsTransducer.cursorStepObserved_commute` -- the same step exposes its
+  zero-or-one output-frontier advance.
 - `TM.IsTransducer.cursorTrace_commute` -- the quotient simulates a complete
   exact-step run.
+- `TM.IsTransducer.cursorTraceObserved_initCfg` -- from an initial
+  configuration, accumulated advances equal the final output-head position.
 - `TM.IsTransducer.cursorTrace_initCfg` -- initial runs need no manual frontier
   hypotheses.
 - `TM.suppressOutputTM_isTransducer` -- the concrete realization remains an
@@ -89,6 +93,18 @@ theorem IsTransducer.cursorStep_commute {tm : TM n}
     tm.cursorStep (.ofCfg cfg) = some (.ofCfg cfg') :=
   htrans.cursorStep_commute_internal hstart hblank hstep
 
+/-- The observed cursor step commutes with a concrete transducer step. Its
+numeric event is the selected output direction's zero-or-one frontier
+contribution. -/
+theorem IsTransducer.cursorStepObserved_commute {tm : TM n}
+    (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
+    (hstart : cfg.output.StartInvariant)
+    (hblank : cfg.output.BlankAfterHead)
+    (hstep : tm.step cfg = some cfg') :
+    tm.cursorStepObserved (.ofCfg cfg) =
+      some (.ofCfg cfg', tm.cursorOutputEvent (.ofCfg cfg)) :=
+  htrans.cursorStepObserved_commute_internal hstart hblank hstep
+
 /-- Quotienting the output tape commutes with an entire exact-step transducer
 run. The cursor trace retains the source state, input, and work tapes exactly
 while replacing the potentially polynomial output prefix by one finite cursor.
@@ -100,6 +116,31 @@ theorem IsTransducer.cursorTrace_commute {tm : TM n}
     (hblank : cfg.output.BlankAfterHead) :
     tm.cursorTrace steps (.ofCfg cfg) = some (.ofCfg cfg') :=
   htrans.cursorTrace_commute_internal hreach hstart hblank
+
+/-- An observed exact cursor run counts precisely how far the physical output
+head advanced. The statement is relative to the starting head, so it also
+applies to subruns. -/
+theorem IsTransducer.cursorTraceObserved_commute {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg')
+    (hstart : cfg.output.StartInvariant)
+    (hblank : cfg.output.BlankAfterHead) :
+    ∃ advances,
+      tm.cursorTraceObserved steps (.ofCfg cfg) =
+        some (.ofCfg cfg', advances) ∧
+      cfg'.output.head = cfg.output.head + advances :=
+  htrans.cursorTraceObserved_commute_internal hreach hstart hblank
+
+/-- From the canonical initial configuration, the observed cursor count is
+exactly the final physical output-head position. This is the accounting fact
+used by binary output-position probes. -/
+theorem IsTransducer.cursorTraceObserved_initCfg {tm : TM n}
+    (htrans : tm.IsTransducer) {input : List Bool} {steps : ℕ}
+    {cfg : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps (tm.initCfg input) cfg) :
+    tm.cursorTraceObserved steps (.ofCfg (tm.initCfg input)) =
+      some (.ofCfg cfg, cfg.output.head) :=
+  htrans.cursorTraceObserved_initCfg_internal hreach
 
 /-- Specialized complete-run simulation from an ordinary initial
 configuration. The start-marker and blank-frontier obligations are discharged

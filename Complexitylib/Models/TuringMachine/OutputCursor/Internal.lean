@@ -107,6 +107,61 @@ theorem IsTransducer.cursorStep_commute_internal {tm : TM n}
     exact (Tape.outputCursor_writeAndMove_internal hblank outputWrite
       outputDir hnoleft).symm
 
+private theorem writeAndMove_head_eq_add_advanceCount
+    (tape : Tape) (write : Γw) (direction : Dir3)
+    (hnoleft : direction ≠ Dir3.left) :
+    (tape.writeAndMove write direction).head =
+      tape.head + OutputCursor.advanceCount direction := by
+  cases direction with
+  | left => exact (hnoleft rfl).elim
+  | right =>
+      simp [Tape.writeAndMove, Tape.move, Tape.write_head,
+        OutputCursor.advanceCount]
+  | stay =>
+      simp [Tape.writeAndMove, Tape.move, Tape.write_head,
+        OutputCursor.advanceCount]
+
+theorem IsTransducer.cursorStepObserved_commute_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
+    (hstart : cfg.output.StartInvariant)
+    (hblank : cfg.output.BlankAfterHead)
+    (hstep : tm.step cfg = some cfg') :
+    tm.cursorStepObserved (.ofCfg cfg) =
+      some (.ofCfg cfg', tm.cursorOutputEvent (.ofCfg cfg)) := by
+  rw [cursorStepObserved,
+    htrans.cursorStep_commute_internal hstart hblank hstep]
+  rfl
+
+theorem IsTransducer.cursorStepObserved_head_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
+    (hstart : cfg.output.StartInvariant)
+    (hstep : tm.step cfg = some cfg') :
+    cfg'.output.head = cfg.output.head +
+      (tm.cursorOutputEvent (.ofCfg cfg)).advance := by
+  have hread : cfg.output.outputCursor.read = cfg.output.read :=
+    OutputCursor.read_outputCursor_internal hstart
+  generalize htransition :
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read = transition
+  obtain ⟨state, workWrites, outputWrite, inputDir, workDirs,
+    outputDir⟩ := transition
+  have hnoleft : outputDir ≠ Dir3.left := by
+    have := htrans cfg.state cfg.input.read
+      (fun i => (cfg.work i).read) cfg.output.read
+    rw [htransition] at this
+    exact this
+  have hdir : tm.cursorOutputDirection (.ofCfg cfg) = outputDir := by
+    unfold cursorOutputDirection CursorCfg.ofCfg
+    rw [hread, htransition]
+  simp only [TM.step, htransition] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    subst cfg'
+    simp only [cursorOutputEvent, hdir]
+    exact writeAndMove_head_eq_add_advanceCount cfg.output outputWrite
+      outputDir hnoleft
+
 theorem IsTransducer.cursorTrace_commute_internal {tm : TM n}
     (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
     (hreach : tm.reachesIn steps cfg cfg')
@@ -122,6 +177,45 @@ theorem IsTransducer.cursorTrace_commute_internal {tm : TM n}
       have hblank' := htrans.output_blankAfterHead_step hblank hstep
       simp only [cursorTrace, hcursor]
       exact ih hstart' hblank'
+
+theorem IsTransducer.cursorTraceObserved_commute_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg')
+    (hstart : cfg.output.StartInvariant)
+    (hblank : cfg.output.BlankAfterHead) :
+    ∃ advances,
+      tm.cursorTraceObserved steps (.ofCfg cfg) =
+        some (.ofCfg cfg', advances) ∧
+      cfg'.output.head = cfg.output.head + advances := by
+  induction hreach with
+  | zero =>
+      exact ⟨0, rfl, by simp⟩
+  | @step source next remaining final hstep hrest ih =>
+      have hobserved := htrans.cursorStepObserved_commute_internal
+        hstart hblank hstep
+      have hhead := htrans.cursorStepObserved_head_internal hstart hstep
+      have hstart' := output_startInvariant_step_internal hstart hstep
+      have hblank' := htrans.output_blankAfterHead_step hblank hstep
+      obtain ⟨later, hlater, hfinalHead⟩ := ih hstart' hblank'
+      let advanced := (tm.cursorOutputEvent (.ofCfg source)).advance
+      refine ⟨advanced + later, ?_, ?_⟩
+      · simp only [cursorTraceObserved, hobserved, hlater,
+          Option.bind_eq_bind, Option.bind_some, pure, advanced]
+      · rw [hfinalHead, hhead]
+        omega
+
+theorem IsTransducer.cursorTraceObserved_initCfg_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {input : List Bool} {steps : ℕ}
+    {cfg : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps (tm.initCfg input) cfg) :
+    tm.cursorTraceObserved steps (.ofCfg (tm.initCfg input)) =
+      some (.ofCfg cfg, cfg.output.head) := by
+  obtain ⟨advances, htrace, hhead⟩ :=
+    htrans.cursorTraceObserved_commute_internal hreach
+      Tape.StartInvariant.init_nil Tape.BlankAfterHead.init_nil
+  have hadvances : advances = cfg.output.head := by
+    simpa using hhead.symm
+  simpa only [hadvances] using htrace
 
 theorem IsTransducer.cursorTrace_initCfg_internal {tm : TM n}
     (htrans : tm.IsTransducer) {input : List Bool} {steps : ℕ}

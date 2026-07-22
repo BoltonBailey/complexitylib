@@ -49,6 +49,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.OutputCursor
+import Complexitylib.Models.TuringMachine.OutputProbe
 import Complexitylib.Models.TuringMachine.SpaceTime
 import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Composition

@@ -1193,9 +1193,16 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   prefix to finite control, exact step and run commutation are proved, and the
   executable `suppressOutputTM` retains the source input/work behavior while
   keeping its physical output empty. Its bounded-time computation theorem
-  includes the final normalization seam. The next layer is the binary
-  position/capture controller that reruns this kernel to answer one requested
-  output bit without materializing the generated string.
+  includes the final normalization seam. Observed cursor runs now count output
+  advances exactly, including the theorem that the accumulated count from an
+  initial configuration equals the final physical output-head position.
+  `Models/TuringMachine/OutputProbe` adds the executable binary
+  position/capture controller: non-right source steps preserve its extra
+  countdown tape, right steps invoke the verified little-endian predecessor,
+  zero selects the finalized source bit, and the capture phase halts with that
+  one-bit physical output. The remaining probe work is the whole-run theorem
+  and all-prefix logarithmic-space bound, followed by the Barrington-specific
+  streaming traversal that calls the probe.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
