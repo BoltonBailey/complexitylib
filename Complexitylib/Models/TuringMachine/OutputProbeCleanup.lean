@@ -10,8 +10,8 @@ import Complexitylib.Models.TuringMachine.OutputProbeCleanup.Internal
 # Restartable output-probe cleanup
 
 This module exposes the full-frame cleanup phase used between output-probe
-queries. It rewinds the shared input and restores every source scratch and
-captured-bit tape under one reusable logarithmic-space bound.
+queries. It rewinds the shared input and restores every probe-owned work tape
+under one reusable logarithmic-space bound.
 -/
 
 namespace Complexity
@@ -29,6 +29,10 @@ theorem outputProbeCleanupSourceIdx_mem {n : ℕ} (idx : Fin n) :
 theorem outputProbeCleanupCaptureIdx_mem (n : ℕ) :
     outputProbeCleanupCaptureIdx n ∈ outputProbeCleanupTargets n :=
   outputProbeCleanupCaptureIdx_mem_internal n
+
+theorem outputProbeCleanupCountdownIdx_mem (n : ℕ) :
+    outputProbeCleanupCountdownIdx n ∈ outputProbeCleanupTargets n :=
+  outputProbeCleanupCountdownIdx_mem_internal n
 
 /-- The complete cleanup phase preserves its frame and has an explicit
 all-prefix auxiliary-space envelope. -/

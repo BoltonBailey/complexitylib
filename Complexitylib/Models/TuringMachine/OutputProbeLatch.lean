@@ -91,6 +91,58 @@ theorem ComputesInSpace.outputProbeLatchTM_hoareTimeSpace
     hcleanupLimit hlimit controllerTapes outerExtras outerFrameSpace
     houterRead houterFrame
 
+/-- Every numeric output query restores its complete query frame and stores
+the selected Boolean as canonical binary zero or one in the reusable cleanup
+counter, while preserving every outer serializer tape. -/
+theorem ComputesInSpace.outputProbeLatchTM_index_halts_hoareTimeSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (outerFrameSpace : ℕ)
+    (houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start)
+    (houterFrame : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace) :
+    ∃ bit latchTime,
+      (outputProbeLatchTM tm controllerTapes).HoareTimeSpace
+        (placeWorkPred (outputProbeLatchInnerTM tm) 0 controllerTapes
+          outerExtras
+          (fun inp work out =>
+            inp = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).input ∧
+            work = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).work ∧
+            out = output))
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input
+          output extras bit)
+        latchTime input.length
+          (max
+            (outputProbeConsumeSpace n (max 1 (space input.length)) index
+              frameSpace limit
+              (outputProbeLatchContinuationSpace bit frameSpace))
+            outerFrameSpace) :=
+  hcomp.outputProbeLatchTM_index_halts_hoareTimeSpace_internal input index
+    output houtput extras frameSpace limit hextras hframe hcleanupCounter
+    hcleanupLimit hlimit controllerTapes outerExtras outerFrameSpace
+    houterRead houterFrame
+
 /-- The latched query is one-way-output safe. -/
 theorem outputProbeLatchTM_isTransducer (tm : TM n) (controllerTapes : ℕ) :
     (outputProbeLatchTM tm controllerTapes).IsTransducer :=

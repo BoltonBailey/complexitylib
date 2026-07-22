@@ -1270,9 +1270,10 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   the canonical zero tape, including after restart, output retargeting, and
   placement in a larger controller frame, and give an exact blank-support bound
   for every query-owned tape. `OutputProbeCleanup` combines an exact-space input
-  rewind with the fixed-list reset to restore the source and capture tapes while
-  preserving the controller frame. `OutputProbeConsume` now supplies the
-  concrete restartable controller step: it reads the captured bit before
+  rewind with the fixed-list reset to restore the source, countdown, and
+  capture tapes while preserving the controller frame. `OutputProbeConsume`
+  now supplies the concrete restartable controller step: it reads the captured
+  bit before
   cleanup, restores the exact canonical frame, dispatches to the matching
   continuation, and carries an explicit all-prefix space maximum through the
   whole query-consume-reset sequence. `OutputProbeLatch` now turns that
@@ -1282,7 +1283,10 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   source run is split into crossed, final-frontier, and beyond-frontier cases,
   blank or absent positions emit canonical zero, and every branch retains the
   source-space-plus-binary-index all-prefix bound. Valid indices keep the
-  stronger theorem identifying the emitted bit with the source function.
+  stronger theorem identifying the emitted bit with the source function. This
+  totality now passes through arbitrary real-output and controller frames,
+  consume/reset, and the persistent canonical bit latch, so bounded serializer
+  loops no longer need a valid-index side condition at each oracle query.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

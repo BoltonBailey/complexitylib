@@ -437,6 +437,7 @@ theorem ComputesInSpace.outputProbeTM_index_halts_withinAuxSpace
           (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
       (outputProbeTM tm).halted done ∧
       (∃ bit, done.output.HasOutput [bit]) ∧
+      done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeTM tm).reachesIn elapsed
           (outputProbeCfg tm (.ofCfg (tm.initCfg input))
@@ -445,6 +446,100 @@ theorem ComputesInSpace.outputProbeTM_index_halts_withinAuxSpace
           (outputProbeCaptureSpace (max 1 (space input.length))
             (index + 1)) :=
   hcomp.outputProbeTM_index_halts_withinAuxSpace_internal input index
+
+/-- The canonical post-sentinel probe is total at every numeric output
+position and preserves the complete all-prefix space certificate. -/
+theorem ComputesInSpace.outputProbeStartedTM_index_halts_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) :
+    ∃ probeSteps done,
+      (outputProbeStartedTM tm).reachesIn probeSteps
+        (outputProbeStartedCfg tm input
+          (outputProbeCounterTape (index + 1))) done ∧
+      (outputProbeStartedTM tm).halted done ∧
+      (∃ bit, done.output.HasOutput [bit]) ∧
+      done.output.head = 2 ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeStartedTM tm).reachesIn elapsed
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1))) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeStartedTM_index_halts_withinAuxSpace_internal input index
+
+/-- Retargeting a total restartable query exposes one Boolean on a fresh work
+tape, preserves a blank-support envelope for cleanup, and keeps the real output
+parked. -/
+theorem
+    ComputesInSpace.outputProbeStartedRetargetTM_index_halts_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) :
+    ∃ probeSteps done,
+      ((outputProbeStartedTM tm).retargetOutput).reachesIn probeSteps
+        ((outputProbeStartedTM tm).retargetCfg
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1)))) done ∧
+      ((outputProbeStartedTM tm).retargetOutput).halted done ∧
+      (∃ bit, (done.work (Fin.last (n + 1))).HasOutput [bit]) ∧
+      (∀ i, (done.work i).BlankAfter
+        (outputProbeCaptureSpace (max 1 (space input.length))
+          (index + 1))) ∧
+      done.output = (Tape.init []).move Dir3.right ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
+          ((outputProbeStartedTM tm).retargetCfg
+            (outputProbeStartedCfg tm input
+              (outputProbeCounterTape (index + 1)))) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeStartedRetargetTM_index_halts_withinAuxSpace_internal
+    input index
+
+/-- A total retargeted query preserves its Boolean result and cleanup support
+when placed inside an arbitrary stable controller frame. -/
+theorem
+    ComputesInSpace.placeOutputProbeStartedRetargetTM_index_halts_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (pre post : ℕ)
+    (input : List Bool) (index : ℕ)
+    (extras : Fin (pre + (n + 2) + post) → Tape)
+    {frameSpace : ℕ}
+    (hextra : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).head ≤ frameSpace) :
+    let queryTM := (outputProbeStartedTM tm).retargetOutput
+    let start := (outputProbeStartedTM tm).retargetCfg
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1)))
+    ∃ probeSteps done,
+      (placeWorkTM pre post queryTM).reachesIn probeSteps
+        (placeWorkCfg queryTM pre post extras start)
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (placeWorkTM pre post queryTM).halted
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (∃ bit, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput [bit]) ∧
+      (∀ i, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post i)).BlankAfter
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1))) ∧
+      (placeWorkCfg queryTM pre post extras done).output =
+        (Tape.init []).move Dir3.right ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (placeWorkTM pre post queryTM).reachesIn elapsed
+          (placeWorkCfg queryTM pre post extras start) cfg →
+        cfg.WithinAuxSpace input.length
+          (max
+            (outputProbeCaptureSpace (max 1 (space input.length))
+              (index + 1))
+            frameSpace) :=
+  hcomp.placeOutputProbeStartedRetargetTM_index_halts_withinAuxSpace_internal
+    pre post input index extras hextra hframe
 
 /-- Every valid output index of a space-bounded transducer can be queried from
 the canonical post-sentinel frame. This removes the one compulsory source

@@ -259,6 +259,113 @@ theorem ComputesInSpace.outputProbeLatchTM_hoareTimeSpace_internal
     outputProbeLatchFramePost, outputProbeLatchContinuationSpace,
     cleanSpace] using hlatch
 
+theorem
+    ComputesInSpace.outputProbeLatchTM_index_halts_hoareTimeSpace_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (outerFrameSpace : ℕ)
+    (houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start)
+    (houterFrame : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace) :
+    ∃ bit latchTime,
+      (outputProbeLatchTM tm controllerTapes).HoareTimeSpace
+        (placeWorkPred (outputProbeLatchInnerTM tm) 0 controllerTapes
+          outerExtras
+          (fun inp work out =>
+            inp = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).input ∧
+            work = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).work ∧
+            out = output))
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input
+          output extras bit)
+        latchTime input.length
+          (max
+            (outputProbeConsumeSpace n (max 1 (space input.length)) index
+              frameSpace limit
+              (outputProbeLatchContinuationSpace bit frameSpace))
+            outerFrameSpace) := by
+  let cleanCfg := outputProbePlacedFrameCfg tm input
+    (outputProbeCounterTape 0) output extras
+  let cleanSpace := outputProbeLatchCleanSpace frameSpace
+  have hinputParked : Parked cleanCfg.input := by
+    exact outputProbeLatchCleanInputParked tm input output extras
+  have hworkParked : ∀ i, Parked (cleanCfg.work i) := by
+    exact outputProbeLatchCleanWorkParked tm input output extras hextras
+  have hcounter :
+      (cleanCfg.work (outputProbeCleanupCounterIdx n)).HasBinaryNat 0 := by
+    exact outputProbeLatchCleanCounter tm input output extras 0 hcleanupCounter
+  have hwithin :
+      Cfg.WithinAuxSpace
+        (⟨(outputProbeLatchZeroTM n).qstart, cleanCfg.input,
+          cleanCfg.work, output⟩ :
+        Cfg (outputProbeControllerTapes n) (outputProbeLatchZeroTM n).Q)
+        input.length cleanSpace := by
+    exact outputProbeLatchCleanWithin tm input output extras frameSpace hframe
+  have hzeroTime := skipTM_hoareTime_frame cleanCfg.input cleanCfg.work output
+    hinputParked hworkParked houtput
+  have hzeroBase := hzeroTime.toHoareTimeSpace (inputLength := input.length)
+    (initialSpace := cleanSpace) (by
+      rintro inp work out ⟨rfl, rfl, rfl⟩
+      exact hwithin)
+  have hzero : (outputProbeLatchZeroTM n).HoareTimeSpace
+      (fun inp work out =>
+        inp = cleanCfg.input ∧ work = cleanCfg.work ∧ out = output)
+      (outputProbeLatchPost tm input output extras false)
+      1 input.length (cleanSpace + 1) := by
+    apply hzeroBase.consequence (fun _ _ _ h => h) _ le_rfl le_rfl le_rfl
+    rintro inp work out ⟨rfl, rfl, rfl⟩
+    exact ⟨rfl, fun _ _ => rfl, by simpa using hcounter, rfl⟩
+  have hwithinOne :
+      Cfg.WithinAuxSpace
+        (⟨(outputProbeLatchOneTM n).qstart, cleanCfg.input,
+          cleanCfg.work, output⟩ :
+        Cfg (outputProbeControllerTapes n) (outputProbeLatchOneTM n).Q)
+        input.length cleanSpace := by
+    simpa [outputProbeLatchZeroTM, outputProbeLatchOneTM] using hwithin
+  have honeBase := binarySuccTM_hoareTimeSpace_frame
+    (outputProbeCleanupCounterIdx n) 0 input.length cleanSpace
+    cleanCfg.input cleanCfg.work output hcounter hinputParked.read_ne_start
+    (fun i _ => (hworkParked i).read_ne_start) houtput.read_ne_start
+    hwithinOne
+  have hone : (outputProbeLatchOneTM n).HoareTimeSpace
+      (fun inp work out =>
+        inp = cleanCfg.input ∧ work = cleanCfg.work ∧ out = output)
+      (outputProbeLatchPost tm input output extras true)
+      (binarySuccTime 0) input.length (cleanSpace + binarySuccTime 0) := by
+    apply honeBase.consequence (fun _ _ _ h => h) _ le_rfl le_rfl le_rfl
+    rintro inp work out ⟨rfl, hother, hone, rfl⟩
+    exact ⟨rfl, hother, by simpa using hone, rfl⟩
+  obtain ⟨bit, latchTime, hlatch⟩ :=
+    hcomp.outputProbeConsumeTM_index_halts_hoareTimeSpace_frame_internal
+      (outputProbeLatchZeroTM n) (outputProbeLatchOneTM n)
+      input index output houtput extras frameSpace limit hextras hframe
+      hcleanupCounter hcleanupLimit hlimit hzero hone controllerTapes
+      outerExtras outerFrameSpace houterRead houterFrame
+  refine ⟨bit, latchTime, ?_⟩
+  simpa [outputProbeLatchTM, outputProbeLatchInnerTM,
+    outputProbeLatchFramePost, outputProbeLatchContinuationSpace,
+    cleanSpace] using hlatch
+
 theorem outputProbeLatchTM_isTransducer_internal
     (tm : TM n) (controllerTapes : ℕ) :
     (outputProbeLatchTM tm controllerTapes).IsTransducer := by

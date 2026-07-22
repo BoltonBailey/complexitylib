@@ -25,14 +25,15 @@ theorem outputProbeCleanupTargets_nodup_internal (n : ℕ) :
     (outputProbeCleanupTargets n).Nodup := by
   rw [outputProbeCleanupTargets, List.nodup_append]
   refine ⟨List.nodup_ofFn_ofInjective
-    outputProbeCleanupSourceIdx_injective_internal, by simp, ?_⟩
-  intro idx hsource capture hcapture heq
+    outputProbeCleanupSourceIdx_injective_internal, ?_, ?_⟩
+  · simp [outputProbeCleanupCountdownIdx, outputProbeCleanupCaptureIdx]
+  intro idx hsource target htarget heq
   obtain ⟨source, rfl⟩ := List.mem_ofFn.mp hsource
-  simp only [List.mem_singleton] at hcapture
-  have hbad := heq.trans hcapture
-  apply congrArg Fin.val at hbad
-  simp [outputProbeCleanupSourceIdx, outputProbeCleanupCaptureIdx] at hbad
-  omega
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at htarget
+  rcases htarget with rfl | rfl <;>
+    apply congrArg Fin.val at heq <;>
+    simp [outputProbeCleanupSourceIdx, outputProbeCleanupCountdownIdx,
+      outputProbeCleanupCaptureIdx] at heq <;> omega
 
 theorem outputProbeCleanupSourceIdx_mem_internal {n : ℕ} (idx : Fin n) :
     outputProbeCleanupSourceIdx idx ∈ outputProbeCleanupTargets n := by
@@ -42,19 +43,24 @@ theorem outputProbeCleanupCaptureIdx_mem_internal (n : ℕ) :
     outputProbeCleanupCaptureIdx n ∈ outputProbeCleanupTargets n := by
   simp [outputProbeCleanupTargets]
 
+theorem outputProbeCleanupCountdownIdx_mem_internal (n : ℕ) :
+    outputProbeCleanupCountdownIdx n ∈ outputProbeCleanupTargets n := by
+  simp [outputProbeCleanupTargets]
+
 theorem outputProbeCleanupTarget_lt_counter_internal {n : ℕ}
     {idx : Fin (outputProbeControllerTapes n)}
     (hidx : idx ∈ outputProbeCleanupTargets n) :
     idx.val < (outputProbeCleanupCounterIdx n).val := by
   rw [outputProbeCleanupTargets, List.mem_append] at hidx
-  rcases hidx with hsource | hcapture
+  rcases hidx with hsource | htail
   · obtain ⟨source, rfl⟩ := List.mem_ofFn.mp hsource
     simp only [outputProbeCleanupSourceIdx, outputProbeCleanupCounterIdx,
       Fin.val_mk]
     omega
-  · simp only [List.mem_singleton] at hcapture
-    subst idx
-    simp [outputProbeCleanupCaptureIdx, outputProbeCleanupCounterIdx]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at htail
+    rcases htail with rfl | rfl <;>
+      simp [outputProbeCleanupCountdownIdx, outputProbeCleanupCaptureIdx,
+        outputProbeCleanupCounterIdx]
 
 theorem outputProbeCleanupTarget_distinct_internal {n : ℕ}
     {idx : Fin (outputProbeControllerTapes n)}

@@ -83,22 +83,19 @@ private theorem outputProbeCleanupTarget_middle {n : ℕ}
     (hidx : idx ∈ outputProbeCleanupTargets n) :
     placeWorkInMiddle 0 (n + 2) idx := by
   rw [outputProbeCleanupTargets, List.mem_append] at hidx
-  rcases hidx with hsource | hcapture
+  rcases hidx with hsource | htail
   · obtain ⟨source, rfl⟩ := List.mem_ofFn.mp hsource
     simp [placeWorkInMiddle, outputProbeCleanupSourceIdx]
     omega
-  · simp only [List.mem_singleton] at hcapture
-    subst idx
-    simp [placeWorkInMiddle, outputProbeCleanupCaptureIdx]
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at htail
+    rcases htail with rfl | rfl <;>
+      simp [placeWorkInMiddle, outputProbeCleanupCountdownIdx,
+        outputProbeCleanupCaptureIdx]
 
 theorem outputProbeCleanupResult_eq_frame_internal
     (tm : TM n) (input : List Bool) (output : Tape)
     (extras : Fin (outputProbeControllerTapes n) → Tape)
     (queryDone : Cfg (n + 2) ((outputProbeStartedTM tm).retargetOutput).Q)
-    (hcountdown :
-      (placeWorkCfg ((outputProbeStartedTM tm).retargetOutput) 0 2
-        extras queryDone).work (outputProbeCleanupCountdownIdx n) =
-        outputProbeCounterTape 0)
     (hinvariant : ∀ i, i ∈ outputProbeCleanupTargets n →
       (outputProbeCaptureRewoundWork
         (placeWorkCfg ((outputProbeStartedTM tm).retargetOutput) 0 2
@@ -124,7 +121,7 @@ theorem outputProbeCleanupResult_eq_frame_internal
       rewoundWork (outputProbeCleanupTargets n)
       (outputProbeCleanupTargets_nodup n) hinvariant hblank idx htarget]
     rw [outputProbeCleanupTargets, List.mem_append] at htarget
-    rcases htarget with hsource | hcapture
+    rcases htarget with hsource | htail
     · obtain ⟨source, hidx⟩ := List.mem_ofFn.mp hsource
       subst idx
       let sourceIdx : Fin (n + 2) := ⟨source.val, by omega⟩
@@ -142,20 +139,38 @@ theorem outputProbeCleanupResult_eq_frame_internal
           dsimp only [sourceIdx]
           omega)]
         simp [outputProbeStartedCfg, sourceIdx]]
-    · simp only [List.mem_singleton] at hcapture
-      subst idx
-      have hphysical : outputProbeCleanupCaptureIdx n =
-          placeWorkIdx 0 2 (Fin.last (n + 1)) := by
-        apply Fin.ext
-        simp [outputProbeCleanupCaptureIdx]
-      rw [show (outputProbePlacedFrameCfg tm input
-        (outputProbeCounterTape 0) output extras).work
-          (outputProbeCleanupCaptureIdx n) =
-          (Tape.init []).move Dir3.right by
-        rw [hphysical, outputProbePlacedFrameCfg,
-          placeWorkCfg_work_middle]
-        rw [retargetCfgFrame_work_last]
-        simp [outputProbeStartedCfg]]
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at htail
+      rcases htail with hcountdown | hcapture
+      · subst idx
+        let countdownIdx : Fin (n + 2) := ⟨n, by omega⟩
+        have hphysical : outputProbeCleanupCountdownIdx n =
+            placeWorkIdx 0 2 countdownIdx := by
+          apply Fin.ext
+          simp [outputProbeCleanupCountdownIdx, countdownIdx]
+        rw [show (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape 0) output extras).work
+            (outputProbeCleanupCountdownIdx n) =
+            (Tape.init []).move Dir3.right by
+          rw [hphysical, outputProbePlacedFrameCfg,
+            placeWorkCfg_work_middle]
+          rw [retargetCfgFrame_work_lt _ _ _ countdownIdx (by
+            dsimp only [countdownIdx]
+            omega)]
+          simp [outputProbeStartedCfg, countdownIdx,
+            outputProbeCounterTape]]
+      · subst idx
+        have hphysical : outputProbeCleanupCaptureIdx n =
+            placeWorkIdx 0 2 (Fin.last (n + 1)) := by
+          apply Fin.ext
+          simp [outputProbeCleanupCaptureIdx]
+        rw [show (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape 0) output extras).work
+            (outputProbeCleanupCaptureIdx n) =
+            (Tape.init []).move Dir3.right by
+          rw [hphysical, outputProbePlacedFrameCfg,
+            placeWorkCfg_work_middle]
+          rw [retargetCfgFrame_work_last]
+          simp [outputProbeStartedCfg]]
   · rw [rewindBlankWorkPrefixManyResult_eq_of_not_mem limit rewoundWork
       (outputProbeCleanupTargets n) idx htarget]
     by_cases hmiddle : placeWorkInMiddle 0 (n + 2) idx
@@ -174,7 +189,8 @@ theorem outputProbeCleanupResult_eq_frame_internal
           apply htarget
           rw [outputProbeCleanupTargets, List.mem_append]
           right
-          simp only [List.mem_singleton]
+          simp only [List.mem_cons, List.not_mem_nil, or_false]
+          right
           apply Fin.ext
           simp [outputProbeCleanupCaptureIdx, heq]
         apply Fin.ext
@@ -182,30 +198,7 @@ theorem outputProbeCleanupResult_eq_frame_internal
         simp [placeWorkInMiddle] at hmiddle
         omega
       subst idx
-      dsimp only [rewoundWork]
-      rw [outputProbeCaptureRewoundWork_ne_internal queriedWork
-        (outputProbeCleanupCountdownIdx n)]
-      · dsimp only [queriedWork]
-        rw [show (outputProbePlacedFrameCfg tm input
-          (outputProbeCounterTape 0) output extras).work
-            (outputProbeCleanupCountdownIdx n) =
-              outputProbeCounterTape 0 by
-          let countdownIdx : Fin (n + 2) := ⟨n, by omega⟩
-          have hphysical : outputProbeCleanupCountdownIdx n =
-              placeWorkIdx 0 2 countdownIdx := by
-            apply Fin.ext
-            simp [outputProbeCleanupCountdownIdx, countdownIdx]
-          rw [outputProbePlacedFrameCfg, hphysical,
-            placeWorkCfg_work_middle]
-          rw [retargetCfgFrame_work_lt _ _ _ countdownIdx (by
-            dsimp only [countdownIdx]
-            omega)]
-          simp [outputProbeStartedCfg, countdownIdx]]
-        exact hcountdown
-      · intro heq
-        apply congrArg Fin.val at heq
-        simp [outputProbeCleanupCountdownIdx,
-          outputProbeCleanupCaptureIdx] at heq
+      exact (htarget (outputProbeCleanupCountdownIdx_mem_internal n)).elim
     · have hrewound : rewoundWork idx = queriedWork idx := by
         apply outputProbeCaptureRewoundWork_ne_internal
         intro heq
@@ -254,8 +247,6 @@ theorem ComputesInSpace.outputProbePlacedTM_hoareTimeSpace_frame_internal
       ((placeWorkCfg queryTM 0 2 extras done).work
         (outputProbeCleanupCaptureIdx n)).HasOutput
           [(f input)[index]'hindex] ∧
-      (placeWorkCfg queryTM 0 2 extras done).work
-          (outputProbeCleanupCountdownIdx n) = outputProbeCounterTape 0 ∧
       (∀ i, (done.work i).BlankAfter
         (outputProbeCaptureSpace (max 1 (space input.length))
           (index + 1))) ∧
@@ -271,7 +262,7 @@ theorem ComputesInSpace.outputProbePlacedTM_hoareTimeSpace_frame_internal
   let queryTM := (outputProbeStartedTM tm).retargetOutput
   let querySpace := outputProbeConsumeQuerySpace
     (max 1 (space input.length)) index frameSpace
-  obtain ⟨probeSteps, done, hreach, hhalt, hcaptured, hcountdown,
+  obtain ⟨probeSteps, done, hreach, hhalt, hcaptured, _hcountdown,
       hblank, houtputDone, hinputParked, hinputInvariant, hworkParked,
       hworkInvariant, hprefix⟩ :=
     hcomp.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace_frame
@@ -312,7 +303,7 @@ theorem ComputesInSpace.outputProbePlacedTM_hoareTimeSpace_frame_internal
       simpa [outputProbePlacedTM, outputProbePlacedFrameCfg, queryTM,
         querySpace, outputProbeConsumeQuerySpace] using
         hprefix elapsed current helapsed hcurrentRun
-  refine ⟨probeSteps, done, ?_, ?_, ?_, hblankDone, hinputParked,
+  refine ⟨probeSteps, done, ?_, ?_, hblankDone, hinputParked,
     hinputInvariant, hworkParked, hworkInvariant, ?_, ?_⟩
   · simpa only [placedDone] using hquery
   · have hphysical : outputProbeCleanupCaptureIdx n =
@@ -321,25 +312,118 @@ theorem ComputesInSpace.outputProbePlacedTM_hoareTimeSpace_frame_internal
       simp [outputProbeCleanupCaptureIdx]
     rw [hphysical]
     exact hcaptured
-  · have hphysical : outputProbeCleanupCountdownIdx n =
-        placeWorkIdx 0 2 ⟨n, by omega⟩ := by
-      apply Fin.ext
-      simp [outputProbeCleanupCountdownIdx]
-    rw [hphysical]
-    exact hcountdown
   · simpa using houtputDone
   · exact input_cells_eq_of_reachesIn hreach'
 
-theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
+theorem
+    ComputesInSpace.outputProbePlacedTM_index_halts_hoareTimeSpace_frame_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace : ℕ)
+    (hextra : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace) :
+    let queryTM := (outputProbeStartedTM tm).retargetOutput
+    let querySpace := outputProbeConsumeQuerySpace
+      (max 1 (space input.length)) index frameSpace
+    ∃ probeSteps done bit,
+      (outputProbePlacedTM tm).HoareTimeSpace
+        (fun inp work out =>
+          inp = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).input ∧
+          work = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).work ∧
+          out = output)
+        (fun inp work out =>
+          inp = (placeWorkCfg queryTM 0 2 extras done).input ∧
+          work = (placeWorkCfg queryTM 0 2 extras done).work ∧
+          out = output)
+        probeSteps input.length querySpace ∧
+      ((placeWorkCfg queryTM 0 2 extras done).work
+        (outputProbeCleanupCaptureIdx n)).HasOutput [bit] ∧
+      (∀ i, (done.work i).BlankAfter
+        (outputProbeCaptureSpace (max 1 (space input.length))
+          (index + 1))) ∧
+      Parked done.input ∧
+      done.input.StartInvariant ∧
+      (∀ i, Parked (done.work i)) ∧
+      (∀ i, (done.work i).StartInvariant) ∧
+      done.output = output ∧
+      (placeWorkCfg queryTM 0 2 extras done).input.cells =
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras).input.cells := by
+  dsimp only
+  let queryTM := (outputProbeStartedTM tm).retargetOutput
+  let querySpace := outputProbeConsumeQuerySpace
+    (max 1 (space input.length)) index frameSpace
+  obtain ⟨probeSteps, done, hreach, hhalt, hcaptured, hblank,
+      houtputDone, hinputParked, hinputInvariant, hworkParked,
+      hworkInvariant, hprefix⟩ :=
+    hcomp.placeOutputProbeStartedRetargetTM_index_halts_withinAuxSpace_frame
+      0 2 input index output houtput extras hextra hframe
+  obtain ⟨bit, hbit⟩ := hcaptured
+  let placedDone := placeWorkCfg queryTM 0 2 extras done
+  have hreach' : (outputProbePlacedTM tm).reachesIn probeSteps
+      (outputProbePlacedFrameCfg tm input
+        (outputProbeCounterTape (index + 1)) output extras) placedDone := by
+    simpa [outputProbePlacedTM, outputProbePlacedFrameCfg, queryTM] using
+      hreach
+  have hhalt' : (outputProbePlacedTM tm).halted placedDone := by
+    simpa [placedDone, outputProbePlacedTM, queryTM] using hhalt
+  have hblankDone : ∀ i, (done.work i).BlankAfter
+      (outputProbeCaptureSpace (max 1 (space input.length))
+        (index + 1)) := by
+    intro i
+    simpa [placedDone] using hblank i
+  have hquery : (outputProbePlacedTM tm).HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras).work ∧
+        out = output)
+      (fun inp work out =>
+        inp = placedDone.input ∧ work = placedDone.work ∧ out = output)
+      probeSteps input.length querySpace := by
+    constructor
+    · rintro inp work out ⟨rfl, rfl, rfl⟩
+      exact ⟨placedDone, probeSteps, le_rfl, hreach', hhalt', rfl, rfl,
+        by simpa [placedDone] using houtputDone⟩
+    · rintro inp work out ⟨rfl, rfl, rfl⟩ current hcurrent
+      obtain ⟨elapsed, hcurrentRun⟩ :=
+        (outputProbePlacedTM tm).reaches_to_reachesIn hcurrent
+      have helapsed : elapsed ≤ probeSteps :=
+        (outputProbePlacedTM tm).reachesIn_le_halt hcurrentRun hreach'
+          hhalt'
+      simpa [outputProbePlacedTM, outputProbePlacedFrameCfg, queryTM,
+        querySpace, outputProbeConsumeQuerySpace] using
+        hprefix elapsed current helapsed hcurrentRun
+  refine ⟨probeSteps, done, bit, ?_, ?_, hblankDone, hinputParked,
+    hinputInvariant, hworkParked, hworkInvariant, ?_, ?_⟩
+  · simpa only [placedDone] using hquery
+  · have hphysical : outputProbeCleanupCaptureIdx n =
+        placeWorkIdx 0 2 (Fin.last (n + 1)) := by
+      apply Fin.ext
+      simp [outputProbeCleanupCaptureIdx]
+    rw [hphysical]
+    exact hbit
+  · simpa using houtputDone
+  · exact input_cells_eq_of_reachesIn hreach'
+
+theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_bit_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (_hcomp : tm.ComputesInSpace f space)
     (onZero onOne : TM (outputProbeControllerTapes n))
-    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (input : List Bool) (index : ℕ) (bit : Bool)
     (output : Tape) (houtput : Parked output)
     (extras : Fin (outputProbeControllerTapes n) → Tape)
     (frameSpace limit : ℕ)
     (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
-    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+    (_hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
       (extras i).head ≤ frameSpace)
     (hcleanupCounter :
       (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
@@ -347,6 +431,36 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
       (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
     (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
       (index + 1) ≤ limit)
+    (hqueryResult :
+      let queryTM := (outputProbeStartedTM tm).retargetOutput
+      let querySpace := outputProbeConsumeQuerySpace
+        (max 1 (space input.length)) index frameSpace
+      ∃ probeSteps done,
+        (outputProbePlacedTM tm).HoareTimeSpace
+          (fun inp work out =>
+            inp = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).input ∧
+            work = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).work ∧
+            out = output)
+          (fun inp work out =>
+            inp = (placeWorkCfg queryTM 0 2 extras done).input ∧
+            work = (placeWorkCfg queryTM 0 2 extras done).work ∧
+            out = output)
+          probeSteps input.length querySpace ∧
+        ((placeWorkCfg queryTM 0 2 extras done).work
+          (outputProbeCleanupCaptureIdx n)).HasOutput [bit] ∧
+        (∀ i, (done.work i).BlankAfter
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1))) ∧
+        Parked done.input ∧
+        done.input.StartInvariant ∧
+        (∀ i, Parked (done.work i)) ∧
+        (∀ i, (done.work i).StartInvariant) ∧
+        done.output = output ∧
+        (placeWorkCfg queryTM 0 2 extras done).input.cells =
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras).input.cells)
     {post : Bool → TapePred (outputProbeControllerTapes n)}
     {zeroTime oneTime zeroSpace oneSpace : ℕ}
     (hzero : onZero.HoareTimeSpace
@@ -373,11 +487,10 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
           work = (outputProbePlacedFrameCfg tm input
               (outputProbeCounterTape (index + 1)) output extras).work ∧
           out = output)
-        (post ((f input)[index]'hindex)) consumeTime input.length
+        (post bit) consumeTime input.length
           (outputProbeConsumeSpace n (max 1 (space input.length)) index
             frameSpace limit
-            (if (f input)[index]'hindex then oneSpace else zeroSpace)) := by
-  let bit := (f input)[index]'hindex
+            (if bit then oneSpace else zeroSpace)) := by
   let sourceSpace := max 1 (space input.length)
   let budget := outputProbeCaptureSpace sourceSpace (index + 1)
   let querySpace := outputProbeConsumeQuerySpace sourceSpace index frameSpace
@@ -390,11 +503,11 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
       (extras i).read ≠ Γ.start := by
     intro i hi
     exact (hextras i hi).read_ne_start
-  obtain ⟨probeSteps, done, hquery, hcaptured, hcountdown, hblank,
+  dsimp only at hqueryResult
+  obtain ⟨probeSteps, done, hquery, hcaptured, hblank,
       hinputParked, hinputInvariant, hworkParked, hworkInvariant,
       hdoneOutput, hinputCells⟩ :=
-    hcomp.outputProbePlacedTM_hoareTimeSpace_frame_internal input index
-      hindex output houtput extras frameSpace hextraRead hframe
+    hqueryResult
   let placedDone := placeWorkCfg queryTM 0 2 extras done
   let readyWork := outputProbeCaptureRewoundWork placedDone.work
   let cleanCfg := outputProbePlacedFrameCfg tm input
@@ -631,7 +744,7 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
   have hcleanWork : rewindBlankWorkPrefixManyResult limit readyWork
       (outputProbeCleanupTargets n) = cleanCfg.work := by
     have hresult := outputProbeCleanupResult_eq_frame_internal tm input
-      output extras done hcountdown hreadyTargetInvariant hreadyTargetBlank
+      output extras done hreadyTargetInvariant hreadyTargetBlank
     simpa [readyWork, placedDone, queryTM, cleanCfg] using hresult
   have hcleanupRaw := outputProbeCleanupTM_hoareTimeSpace_frame n
     (input.length + querySpace + 1) limit input.length rewindSpace
@@ -692,7 +805,7 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
     have hcell := hcaptured.1 0 (by simp)
     dsimp only [readyWork]
     rw [outputProbeCaptureRewoundWork_capture_internal]
-    simpa [Tape.read, bit] using hcell
+    simpa [Tape.read] using hcell
   have hreadyTransition : ∀ inp work out,
       (inp = placedDone.input ∧ work = readyWork ∧ out = output) →
       transitionInput inp = placedDone.input ∧
@@ -752,7 +865,7 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
       refine ⟨probeSteps + 1 + (querySpace + 2 + 1 +
         (outputProbeCleanupTime n (input.length + querySpace + 1) limit
           (fun _ => querySpace) + 1 + zeroTime + 1)), ?_⟩
-      simpa [outputProbeConsumeTM, outputProbeConsumeSpace, bit, hbit,
+      simpa [outputProbeConsumeTM, outputProbeConsumeSpace, hbit,
         querySpace, rewindSpace, cleanupSpace, continuationSpace] using hall
   | true =>
       have hequal : ∀ inp work out,
@@ -791,8 +904,200 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
       refine ⟨probeSteps + 1 + (querySpace + 2 + 1 +
         (outputProbeCleanupTime n (input.length + querySpace + 1) limit
           (fun _ => querySpace) + 1 + oneTime + 1)), ?_⟩
-      simpa [outputProbeConsumeTM, outputProbeConsumeSpace, bit, hbit,
+      simpa [outputProbeConsumeTM, outputProbeConsumeSpace, hbit,
         querySpace, rewindSpace, cleanupSpace, continuationSpace] using hall
+
+theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (onZero onOne : TM (outputProbeControllerTapes n))
+    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    {post : Bool → TapePred (outputProbeControllerTapes n)}
+    {zeroTime oneTime zeroSpace oneSpace : ℕ}
+    (hzero : onZero.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post false) zeroTime input.length zeroSpace)
+    (hone : onOne.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post true) oneTime input.length oneSpace) :
+    ∃ consumeTime,
+      (outputProbeConsumeTM tm onZero onOne).HoareTimeSpace
+        (fun inp work out =>
+          inp = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).input ∧
+          work = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).work ∧
+          out = output)
+        (post ((f input)[index]'hindex)) consumeTime input.length
+          (outputProbeConsumeSpace n (max 1 (space input.length)) index
+            frameSpace limit
+            (if (f input)[index]'hindex then oneSpace else zeroSpace)) := by
+  have hextraRead : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).read ≠ Γ.start := by
+    intro i hi
+    exact (hextras i hi).read_ne_start
+  have hqueryResult :=
+    hcomp.outputProbePlacedTM_hoareTimeSpace_frame_internal input index
+      hindex output houtput extras frameSpace hextraRead hframe
+  exact hcomp.outputProbeConsumeTM_hoareTimeSpace_bit_internal onZero onOne
+    input index ((f input)[index]'hindex) output houtput extras frameSpace
+    limit hextras hframe hcleanupCounter hcleanupLimit hlimit hqueryResult
+    hzero hone
+
+theorem
+    ComputesInSpace.outputProbeConsumeTM_index_halts_hoareTimeSpace_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (onZero onOne : TM (outputProbeControllerTapes n))
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    {post : Bool → TapePred (outputProbeControllerTapes n)}
+    {zeroTime oneTime zeroSpace oneSpace : ℕ}
+    (hzero : onZero.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post false) zeroTime input.length zeroSpace)
+    (hone : onOne.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post true) oneTime input.length oneSpace) :
+    ∃ bit consumeTime,
+      (outputProbeConsumeTM tm onZero onOne).HoareTimeSpace
+        (fun inp work out =>
+          inp = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).input ∧
+          work = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).work ∧
+          out = output)
+        (post bit) consumeTime input.length
+          (outputProbeConsumeSpace n (max 1 (space input.length)) index
+            frameSpace limit (if bit then oneSpace else zeroSpace)) := by
+  have hextraRead : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).read ≠ Γ.start := by
+    intro i hi
+    exact (hextras i hi).read_ne_start
+  obtain ⟨probeSteps, done, bit, hquery⟩ :=
+    hcomp.outputProbePlacedTM_index_halts_hoareTimeSpace_frame_internal
+      input index output houtput extras frameSpace hextraRead hframe
+  obtain ⟨consumeTime, hconsume⟩ :=
+    hcomp.outputProbeConsumeTM_hoareTimeSpace_bit_internal onZero onOne
+      input index bit output houtput extras frameSpace limit hextras hframe
+      hcleanupCounter hcleanupLimit hlimit ⟨probeSteps, done, hquery⟩ hzero hone
+  exact ⟨bit, consumeTime, hconsume⟩
+
+theorem
+    ComputesInSpace.outputProbeConsumeTM_index_halts_hoareTimeSpace_frame_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (onZero onOne : TM (outputProbeControllerTapes n))
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    {post : Bool → TapePred (outputProbeControllerTapes n)}
+    {zeroTime oneTime zeroSpace oneSpace : ℕ}
+    (hzero : onZero.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post false) zeroTime input.length zeroSpace)
+    (hone : onOne.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post true) oneTime input.length oneSpace)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (outerFrameSpace : ℕ)
+    (houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start)
+    (houterFrame : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace) :
+    ∃ bit consumeTime,
+      (placeWorkTM 0 controllerTapes
+        (outputProbeConsumeTM tm onZero onOne)).HoareTimeSpace
+        (placeWorkPred (outputProbeConsumeTM tm onZero onOne) 0
+          controllerTapes outerExtras
+          (fun inp work out =>
+            inp = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).input ∧
+            work = (outputProbePlacedFrameCfg tm input
+                (outputProbeCounterTape (index + 1)) output extras).work ∧
+            out = output))
+        (placeWorkPred (outputProbeConsumeTM tm onZero onOne) 0
+          controllerTapes outerExtras (post bit))
+        consumeTime input.length
+          (max
+            (outputProbeConsumeSpace n (max 1 (space input.length)) index
+              frameSpace limit (if bit then oneSpace else zeroSpace))
+            outerFrameSpace) := by
+  obtain ⟨bit, consumeTime, hconsume⟩ :=
+    hcomp.outputProbeConsumeTM_index_halts_hoareTimeSpace_internal
+      onZero onOne input index output houtput extras frameSpace limit hextras
+      hframe hcleanupCounter hcleanupLimit hlimit hzero hone
+  refine ⟨bit, consumeTime, ?_⟩
+  exact placeWorkTM_hoareTimeSpace_frame_internal
+    (outputProbeConsumeTM tm onZero onOne) 0 controllerTapes outerExtras
+    hconsume houterRead houterFrame
 
 theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_frame_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}

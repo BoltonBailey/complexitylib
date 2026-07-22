@@ -11,7 +11,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.BlankWorkPrefixMany.Defs
 
 The retargeted probe owns `n` source scratch tapes, one query countdown, and
 one captured-bit tape. Cleanup adds one reusable zero counter and one preserved
-binary limit, rewinds the input, and blanks the source scratch/capture tapes.
+binary limit, rewinds the input, and blanks every probe-owned tape.
 -/
 
 namespace Complexity
@@ -49,10 +49,11 @@ def outputProbeCleanupLimitIdx (n : ℕ) :
     Fin (outputProbeControllerTapes n) :=
   ⟨n + 3, by dsimp only [outputProbeControllerTapes]; omega⟩
 
-/-- Source scratch tapes followed by the captured-bit tape. -/
+/-- Source scratch tapes followed by the countdown and captured-bit tapes. -/
 def outputProbeCleanupTargets (n : ℕ) :
     List (Fin (outputProbeControllerTapes n)) :=
-  List.ofFn outputProbeCleanupSourceIdx ++ [outputProbeCleanupCaptureIdx n]
+  List.ofFn outputProbeCleanupSourceIdx ++
+    [outputProbeCleanupCountdownIdx n, outputProbeCleanupCaptureIdx n]
 
 /-- Literal input tape after rewinding to the first ordinary cell. -/
 def outputProbeRewoundInput (tape : Tape) : Tape where

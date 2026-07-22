@@ -70,6 +70,59 @@ theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace
     index hindex output houtput extras frameSpace limit hextras hframe
     hcleanupCounter hcleanupLimit hlimit hzero hone
 
+/-- A restartable output probe also consumes every numeric query position,
+selects a Boolean continuation, and restores the same reusable frame and
+space envelope. -/
+theorem ComputesInSpace.outputProbeConsumeTM_index_halts_hoareTimeSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (onZero onOne : TM (outputProbeControllerTapes n))
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    {post : Bool → TapePred (outputProbeControllerTapes n)}
+    {zeroTime oneTime zeroSpace oneSpace : ℕ}
+    (hzero : onZero.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post false) zeroTime input.length zeroSpace)
+    (hone : onOne.HoareTimeSpace
+      (fun inp work out =>
+        inp = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).input ∧
+        work = (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape 0) output extras).work ∧
+        out = output)
+      (post true) oneTime input.length oneSpace) :
+    ∃ bit consumeTime,
+      (outputProbeConsumeTM tm onZero onOne).HoareTimeSpace
+        (fun inp work out =>
+          inp = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).input ∧
+          work = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).work ∧
+          out = output)
+        (post bit) consumeTime input.length
+          (outputProbeConsumeSpace n (max 1 (space input.length)) index
+            frameSpace limit (if bit then oneSpace else zeroSpace)) :=
+  hcomp.outputProbeConsumeTM_index_halts_hoareTimeSpace_internal
+    onZero onOne input index output houtput extras frameSpace limit hextras
+    hframe hcleanupCounter hcleanupLimit hlimit hzero hone
+
 /-- The complete consume/reset step may occupy a middle work block while an
 arbitrary stable serializer frame is preserved around it. -/
 theorem ComputesInSpace.outputProbeConsumeTM_hoareTimeSpace_frame

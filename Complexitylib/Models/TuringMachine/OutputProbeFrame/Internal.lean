@@ -204,6 +204,184 @@ private theorem outputProbeTM_halted_reachesIn_parked_internal (tm : TM n)
       exact outputProbeTM_step_halted_parked_internal tm hstep hhalt
         hbeforeInput hbeforeWork
 
+theorem
+    ComputesInSpace.outputProbeStartedRetargetTM_index_halts_withinAuxSpace_frame_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (output : Tape) (houtput : Parked output) :
+    ∃ probeSteps done,
+      ((outputProbeStartedTM tm).retargetOutput).reachesIn probeSteps
+        ((outputProbeStartedTM tm).retargetCfgFrame
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1))) output) done ∧
+      ((outputProbeStartedTM tm).retargetOutput).halted done ∧
+      (∃ bit, (done.work (Fin.last (n + 1))).HasOutput [bit]) ∧
+      (∀ i, (done.work i).BlankAfter
+        (outputProbeCaptureSpace (max 1 (space input.length))
+          (index + 1))) ∧
+      done.output = output ∧
+      Parked done.input ∧
+      done.input.StartInvariant ∧
+      (∀ i, Parked (done.work i)) ∧
+      (∀ i, (done.work i).StartInvariant) ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
+          ((outputProbeStartedTM tm).retargetCfgFrame
+            (outputProbeStartedCfg tm input
+              (outputProbeCounterTape (index + 1))) output) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) := by
+  obtain ⟨probeSteps, sourceDone, hsourceRun, hhalt, hout,
+      hhead, hsourcePrefix⟩ :=
+    hcomp.outputProbeStartedTM_index_halts_withinAuxSpace input index
+  let sourceTM := outputProbeStartedTM tm
+  let budget := outputProbeCaptureSpace (max 1 (space input.length))
+    (index + 1)
+  have hsourceTrans : sourceTM.IsTransducer :=
+    (outputProbeTM_isTransducer tm).startedTM
+  have hstartInput :
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1))).input.StartInvariant := by
+    simpa [outputProbeStartedCfg] using
+      (Tape.StartInvariant.init_ofBool input).move Dir3.right
+  have hstartWork : ∀ i,
+      ((outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1))).work i).StartInvariant := by
+    intro i
+    simp only [outputProbeStartedCfg]
+    split
+    · exact Tape.StartInvariant.init_nil.move Dir3.right
+    · simpa [outputProbeCounterTape] using
+        (Tape.StartInvariant.init_ofBool (index + 1).bits).move Dir3.right
+  have hstartOutput :
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1))).output.StartInvariant := by
+    simpa [outputProbeStartedCfg] using
+      Tape.StartInvariant.init_nil.move Dir3.right
+  have hsourceRunRaw :=
+    (outputProbeTM tm).source_reachesIn_of_startedTM hsourceRun
+  have hsourceStartState :
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1))).state ≠
+        (outputProbeTM tm).qhalt := by
+    have hprobeStart :
+        (outputProbeTM tm).qstart ≠ (outputProbeTM tm).qhalt := by
+      simp [outputProbeTM]
+    rw [outputProbeStartedCfg,
+      startedTM_qstart_eq_startedState (outputProbeTM tm) hprobeStart]
+    intro hdone
+    have hcases := outputProbeNext_done_cases tm
+      (outputProbeTM tm).qstart Γ.start (fun _ => Γ.start) Γ.start
+      (by simpa [startedState] using hdone)
+    rcases hcases with hmissing | ⟨bit, hcapture, _⟩ | hhalted <;>
+      simp [outputProbeTM] at *
+  have hsourceParked :=
+    outputProbeTM_halted_reachesIn_parked_internal tm hsourceRunRaw
+      hhalt hsourceStartState hstartInput hstartWork hstartOutput
+  have hsourceInvariants :=
+    startInvariant_reachesIn_internal (outputProbeTM tm) hsourceRunRaw
+      hstartInput hstartWork hstartOutput
+  have hsourceOutputParked : Parked sourceDone.output := by
+    refine ⟨?_, hsourceInvariants.2.2.2⟩
+    rw [hhead]
+    omega
+  have hdoneOutput : sourceDone.output.head ≤ budget := by
+    rw [hhead]
+    dsimp only [budget, outputProbeCaptureSpace, outputProbeReplaySpace,
+      outputProbePositiveSpace, binaryPredSpace]
+    omega
+  obtain ⟨hretargetRun, hretargetPrefix⟩ :=
+    hsourceTrans.retargetOutput_reachesIn_retargetCfgFrame_withinAuxSpace
+      output houtput hsourceRun hsourcePrefix hdoneOutput
+  have hblankParked : ((Tape.init []).move Dir3.right).BlankAfter budget := by
+    simpa only [Tape.BlankAfter, Tape.move_cells] using
+      Tape.BlankAfter.init_nil budget
+  have hstartBlank : ∀ i,
+      ((sourceTM.retargetCfgFrame
+        (outputProbeStartedCfg tm input
+          (outputProbeCounterTape (index + 1))) output).work i).BlankAfter
+        budget := by
+    intro i
+    by_cases hi : i.val < n + 1
+    · rw [retargetCfgFrame_work_lt sourceTM _ output i hi]
+      by_cases hsource : i.val < n
+      · simpa [outputProbeStartedCfg, hsource] using hblankParked
+      · have hilast : (⟨i.val, hi⟩ : Fin (n + 1)) = Fin.last n := by
+          apply Fin.ext
+          simp only [Fin.val_last]
+          omega
+        rw [hilast]
+        have hcounterBlank :
+            (outputProbeCounterTape (index + 1)).BlankAfter budget := by
+          have hcounterNat :
+              (outputProbeCounterTape (index + 1)).HasBinaryNat
+                (index + 1) := by
+            simpa [outputProbeCounterTape] using
+              Tape.init_move_right_hasBinaryNat (index + 1)
+          have hcontent : (outputProbeCounterTape
+              (index + 1)).HasBinaryContent (index + 1).bits :=
+            hcounterNat.2.2
+          apply hcontent.blankAfter_of_length_le
+          rw [Nat.size_eq_bits_len]
+          have hsize := Nat.size_le_size
+            (show index + 1 ≤ index + 1 + 1 by omega)
+          dsimp only [budget, outputProbeCaptureSpace,
+            outputProbeReplaySpace, outputProbePositiveSpace, binaryPredSpace]
+          omega
+        simpa [outputProbeStartedCfg] using hcounterBlank
+    · have hilast : i = Fin.last (n + 1) := by
+        apply Fin.ext
+        simp only [Fin.val_last]
+        omega
+      subst i
+      rw [retargetCfgFrame_work_last]
+      simpa [outputProbeStartedCfg] using hblankParked
+  let done := sourceTM.retargetCfgFrame sourceDone output
+  have hdoneInputParked : Parked done.input := by
+    simpa only [done, retargetCfgFrame_input] using hsourceParked.1
+  have hdoneInputInvariant : done.input.StartInvariant := by
+    simpa only [done, retargetCfgFrame_input] using hsourceInvariants.1
+  have hdoneWorkParked : ∀ i, Parked (done.work i) := by
+    intro i
+    dsimp only [done]
+    by_cases hi : i.val < n + 1
+    · rw [retargetCfgFrame_work_lt sourceTM sourceDone output i hi]
+      exact hsourceParked.2 ⟨i.val, hi⟩
+    · have hilast : i = Fin.last (n + 1) := by
+        apply Fin.ext
+        simp only [Fin.val_last]
+        omega
+      subst i
+      rw [retargetCfgFrame_work_last]
+      exact hsourceOutputParked
+  have hdoneWorkInvariant : ∀ i, (done.work i).StartInvariant := by
+    intro i
+    dsimp only [done]
+    by_cases hi : i.val < n + 1
+    · rw [retargetCfgFrame_work_lt sourceTM sourceDone output i hi]
+      exact hsourceInvariants.2.1 ⟨i.val, hi⟩
+    · have hilast : i = Fin.last (n + 1) := by
+        apply Fin.ext
+        simp only [Fin.val_last]
+        omega
+      subst i
+      rw [retargetCfgFrame_work_last]
+      exact hsourceInvariants.2.2
+  refine ⟨probeSteps, done, hretargetRun, ?_, ?_, ?_, rfl,
+    hdoneInputParked, hdoneInputInvariant, hdoneWorkParked, hdoneWorkInvariant,
+    hretargetPrefix⟩
+  · simpa only [done, retargetOutput_halted_retargetCfgFrame] using hhalt
+  · obtain ⟨bit, hbit⟩ := hout
+    refine ⟨bit, ?_⟩
+    dsimp only [done]
+    rw [retargetCfgFrame_work_last]
+    exact hbit
+  · intro i
+    dsimp only [done]
+    exact work_blankAfter_reachesIn i (hstartBlank i) hretargetRun
+      hretargetPrefix
+
 theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_frame_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space) (input : List Bool)
@@ -384,6 +562,68 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_fram
     dsimp only [done]
     exact work_blankAfter_reachesIn i (hstartBlank i) hretargetRun
       hretargetPrefix
+
+theorem
+    ComputesInSpace.placeOutputProbeStartedRetargetTM_index_halts_withinAuxSpace_frame_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (pre post : ℕ)
+    (input : List Bool) (index : ℕ)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (pre + (n + 2) + post) → Tape)
+    {frameSpace : ℕ}
+    (hextra : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).head ≤ frameSpace) :
+    let queryTM := (outputProbeStartedTM tm).retargetOutput
+    let start := (outputProbeStartedTM tm).retargetCfgFrame
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1))) output
+    ∃ probeSteps done,
+      (placeWorkTM pre post queryTM).reachesIn probeSteps
+        (placeWorkCfg queryTM pre post extras start)
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (placeWorkTM pre post queryTM).halted
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (∃ bit, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput [bit]) ∧
+      (∀ i, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post i)).BlankAfter
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1))) ∧
+      (placeWorkCfg queryTM pre post extras done).output = output ∧
+      Parked done.input ∧
+      done.input.StartInvariant ∧
+      (∀ i, Parked (done.work i)) ∧
+      (∀ i, (done.work i).StartInvariant) ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (placeWorkTM pre post queryTM).reachesIn elapsed
+          (placeWorkCfg queryTM pre post extras start) cfg →
+        cfg.WithinAuxSpace input.length
+          (max
+            (outputProbeCaptureSpace (max 1 (space input.length))
+              (index + 1))
+            frameSpace) := by
+  dsimp only
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, hblank,
+      houtputDone, hinputParked, hinputInvariant, hworkParked,
+      hworkInvariant, hprefix⟩ :=
+    hcomp.outputProbeStartedRetargetTM_index_halts_withinAuxSpace_frame_internal
+      input index output houtput
+  obtain ⟨hplaced, hplacedPrefix⟩ :=
+    placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace
+      ((outputProbeStartedTM tm).retargetOutput) pre post extras hreach
+      hextra hprefix hframe
+  refine ⟨probeSteps, done, hplaced, hhalt, ?_, ?_, ?_, hinputParked,
+    hinputInvariant, hworkParked, hworkInvariant, hplacedPrefix⟩
+  · obtain ⟨bit, hbit⟩ := hout
+    refine ⟨bit, ?_⟩
+    rw [placeWorkCfg_work_middle]
+    exact hbit
+  · intro i
+    rw [placeWorkCfg_work_middle]
+    exact hblank i
+  · simpa only [placeWorkCfg_output] using houtputDone
 
 theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace_frame_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
