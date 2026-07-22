@@ -377,6 +377,103 @@ theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime
     hcursor hscratch htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj
     onDisj onInvalid hvar htru hfls hneg hconj hdisj hinvalid
 
+/-- The concrete variable continuation starts from the normalized post-tag
+frame, decodes the following terminated-unary field, and ends in the exact
+fuel-bounded semantic decoder frame. -/
+theorem ComputesInSpace.outputProbeDecodeTokenVar_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (htag₀Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (hvalue :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.valueIdx))
+        |>.HasBinaryNat 0)
+    (hactive :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.activeIdx))
+        |>.HasBinaryNat 1)
+    (hloop :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.loopIdx))
+        |>.HasBinaryNat 0)
+    (fuelValue : ℕ)
+    (hfuel :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).active = true →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).cursor <
+          (f input).length)
+    (hqueryLimit : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input)
+          (outputProbeDecodeTokenVarInitial cursor) value).cursor + 1) ≤
+            cleanupLimit) :
+    ∃ bodyTime : ℕ → ℕ,
+      (outputProbeDecodeNatTM tm controllerTapes layout.natLayout.cursorIdx
+        layout.natLayout.scratchIdx layout.natLayout.valueIdx
+        layout.natLayout.activeIdx layout.natLayout.loopIdx
+        layout.natLayout.fuelIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+            tag₀ tag₁ tag₂)
+          input output extras false)
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.natLayout.cursorIdx
+            layout.natLayout.valueIdx layout.natLayout.activeIdx
+            layout.natLayout.loopIdx
+            (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+              tag₀ tag₁ tag₂)
+            (outputProbeDecodeNatStateAt (f input)
+              (outputProbeDecodeTokenVarInitial cursor) fuelValue)
+            fuelValue)
+          input output extras false)
+        (binaryForLoopTime bodyTime fuelValue 0 fuelValue) := by
+  simpa [outputProbeDecodeTokenVarInitial] using
+    hcomp.outputProbeDecodeTokenVar_hoareTime_internal input output houtput
+      extras hextras hcleanupCounter cleanupLimit hcleanupLimit
+      controllerTapes layout outerExtras houter cursor tag₀ tag₁ tag₂
+      hscratch htag₀Zero htag₁Zero htag₂Zero hvalue hactive hloop
+      fuelValue hfuel
+      (by simpa [outputProbeDecodeTokenVarInitial] using hqueryValid)
+      (by simpa [outputProbeDecodeTokenVarInitial] using hqueryLimit)
+
 /-- Retained-tag cleanup preserves the append-only output discipline. -/
 theorem outputProbeDecodeTokenClearTagsTM_isTransducer
     (n controllerTapes : ℕ)

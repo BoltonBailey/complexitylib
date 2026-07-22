@@ -144,6 +144,31 @@ theorem outputProbeDecodeNatLoopOuterExtras_loop
     activeIdx loopIdx hloopCursor hloopValue hloopActive outerExtras state
     iteration
 
+/-- If the cursor, value, active flag, and loop counter already contain their
+canonical values, rebuilding that decoder frame changes no tape. -/
+theorem outputProbeDecodeNatLoopOuterExtras_eq_self
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ)
+    (hcursor :
+      (outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat state.cursor)
+    (hvalue :
+      (outerExtras (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat state.value)
+    (hactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat (if state.active then 1 else 0))
+    (hloop :
+      (outerExtras (outputProbeIndexedControllerIdx n loopIdx))
+        |>.HasBinaryNat iteration) :
+    outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx loopIdx
+      outerExtras state iteration = outerExtras :=
+  outputProbeDecodeNatLoopOuterExtras_eq_self_internal n cursorIdx valueIdx
+    activeIdx loopIdx outerExtras state iteration hcursor hvalue hactive hloop
+
 /-- On a zero terminator, the concrete selected continuation clears the
 active flag and advances the cursor exactly once. -/
 theorem outputProbeDecodeNatZeroTM_hoareTime

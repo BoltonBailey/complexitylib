@@ -280,6 +280,47 @@ theorem outputProbeDecodeNatLoopOuterExtras_loop_internal
   rw [Function.update_self]
   exact Tape.init_move_right_hasBinaryNat iteration
 
+/-- Canonical decoder-register contents make the loop-frame normalization a
+literal no-op. -/
+theorem outputProbeDecodeNatLoopOuterExtras_eq_self_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ)
+    (hcursor :
+      (outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat state.cursor)
+    (hvalue :
+      (outerExtras (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat state.value)
+    (hactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat (if state.active then 1 else 0))
+    (hloop :
+      (outerExtras (outputProbeIndexedControllerIdx n loopIdx))
+        |>.HasBinaryNat iteration) :
+    outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx loopIdx
+      outerExtras state iteration = outerExtras := by
+  have hcursorEq : outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx) =
+      outputProbeCounterTape state.cursor := by
+    simpa [outputProbeCounterTape] using hcursor.eq_init_move_right
+  have hvalueEq : outerExtras (outputProbeDecodeNatValueIdx n valueIdx) =
+      outputProbeCounterTape state.value := by
+    simpa [outputProbeCounterTape] using hvalue.eq_init_move_right
+  have hactiveEq : outerExtras (outputProbeDecodeNatActiveIdx n activeIdx) =
+      outputProbeCounterTape (if state.active then 1 else 0) := by
+    simpa [outputProbeCounterTape] using hactive.eq_init_move_right
+  have hloopEq : outerExtras (outputProbeIndexedControllerIdx n loopIdx) =
+      outputProbeCounterTape iteration := by
+    simpa [outputProbeCounterTape] using hloop.eq_init_move_right
+  rw [outputProbeDecodeNatLoopOuterExtras,
+    outputProbeDecodeNatStateOuterExtras]
+  rw [← hloopEq, Function.update_eq_self]
+  rw [← hcursorEq, Function.update_eq_self]
+  rw [← hvalueEq, Function.update_eq_self]
+  rw [← hactiveEq, Function.update_eq_self]
+
 private theorem outputProbeDecodeNatCounterTape_parked_internal
     (value : ℕ) : Parked (outputProbeCounterTape value) := by
   have h : (outputProbeCounterTape value).HasBinaryNat value := by

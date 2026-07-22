@@ -147,6 +147,12 @@ def outputProbeDecodeTokenOuterExtrasAfter (n : ℕ)
     (outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout outerExtras
       cursor tag₀ tag₁ tag₂)
 
+/-- Pure terminated-unary decoder state selected after consuming a complete
+three-bit variable tag. -/
+def outputProbeDecodeTokenVarInitial (cursor : ℕ) :
+    OutputProbeDecodeNatState :=
+  { cursor := cursor + 3, value := 0, active := true }
+
 /-- Complete token controller with the variable branch instantiated by the
 bounded terminated-unary decoder from the shared layout. -/
 def outputProbeDecodeTokenWithNatTM (tm : TM n) (controllerTapes : ℕ)

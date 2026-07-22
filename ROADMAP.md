@@ -1364,9 +1364,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   the bounded terminated-unary machine through the shared layout. The generic
   `BinaryForSegmentSpec.hoareTime` adapter and the source-derived
   `ComputesInSpace.outputProbeDecodeNatTM_hoareTime` theorem now expose that
-  complete loop between canonical initialized and final latch frames. Its
-  remaining local seam is to transport the normalized post-tag frame into the
-  canonical unary start frame, while fixed tags route directly to serialization.
+  complete loop between canonical initialized and final latch frames.
+  `ComputesInSpace.outputProbeDecodeTokenVar_hoareTime` now transports the
+  normalized post-tag frame into that canonical unary start frame and certifies
+  the concrete variable continuation. The next local seam is to route fixed
+  tags directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

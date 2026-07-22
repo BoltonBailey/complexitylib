@@ -77,6 +77,145 @@ theorem outputProbeDecodeTokenClearedTagExtras_eq_of_ne_internal
       outerExtras idx := by
   simp [outputProbeDecodeTokenClearedTagExtras, htag₀, htag₁, htag₂]
 
+/-- Every controller register other than the shared cursor and retained tag
+bits is unchanged by complete tag probing and cleanup. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_other_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) (idx : Fin controllerTapes)
+    (hcursor : idx ≠ layout.tagLayout.cursorIdx)
+    (htag₀ : idx ≠ layout.tagLayout.tag₀Idx)
+    (htag₁ : idx ≠ layout.tagLayout.tag₁Idx)
+    (htag₂ : idx ≠ layout.tagLayout.tag₂Idx) :
+    outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor tag₀
+        tag₁ tag₂ (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) := by
+  rw [outputProbeDecodeTokenOuterExtrasAfter]
+  rw [outputProbeDecodeTokenClearedTagExtras_eq_of_ne_internal n layout _ _
+    (fun heq => htag₀ (outputProbeIndexedControllerIdx_injective n heq))
+    (fun heq => htag₁ (outputProbeIndexedControllerIdx_injective n heq))
+    (fun heq => htag₂ (outputProbeIndexedControllerIdx_injective n heq))]
+  rw [outputProbeDecodeTagOuterExtrasAfter]
+  rw [outputProbeDecodeTagBitOuterExtrasAfter_other_internal n
+    layout.tagLayout layout.tagLayout.tag₂Idx idx hcursor htag₂]
+  rw [outputProbeDecodeTagBitOuterExtrasAfter_other_internal n
+    layout.tagLayout layout.tagLayout.tag₁Idx idx hcursor htag₁]
+  rw [outputProbeDecodeTagBitOuterExtrasAfter_other_internal n
+    layout.tagLayout layout.tagLayout.tag₀Idx idx hcursor htag₀]
+
+/-- Complete tag probing and cleanup leave the shared cursor canonically
+advanced by three positions. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_cursor_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) :
+    (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor tag₀
+      tag₁ tag₂ (outputProbeDecodeTagCursorIdx n layout.tagLayout))
+        |>.HasBinaryNat (cursor + 3) := by
+  have hcursorTag₀ :
+      layout.tagLayout.cursorIdx ≠ layout.tagLayout.tag₀Idx :=
+    layout.tagLayout.roles.injective.ne (by decide)
+  have hcursorTag₁ :
+      layout.tagLayout.cursorIdx ≠ layout.tagLayout.tag₁Idx :=
+    layout.tagLayout.roles.injective.ne (by decide)
+  have hcursorTag₂ :
+      layout.tagLayout.cursorIdx ≠ layout.tagLayout.tag₂Idx :=
+    layout.tagLayout.roles.injective.ne (by decide)
+  rw [outputProbeDecodeTokenOuterExtrasAfter]
+  change (outputProbeDecodeTokenClearedTagExtras n layout
+    (outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout outerExtras
+      cursor tag₀ tag₁ tag₂)
+    (outputProbeIndexedControllerIdx n layout.tagLayout.cursorIdx))
+      |>.HasBinaryNat (cursor + 3)
+  rw [outputProbeDecodeTokenClearedTagExtras_eq_of_ne_internal n layout _ _
+    (fun heq => hcursorTag₀
+      (outputProbeIndexedControllerIdx_injective n heq))
+    (fun heq => hcursorTag₁
+      (outputProbeIndexedControllerIdx_injective n heq))
+    (fun heq => hcursorTag₂
+      (outputProbeIndexedControllerIdx_injective n heq))]
+  simpa [outputProbeDecodeTagOuterExtrasAfter, Nat.add_assoc] using
+    outputProbeDecodeTagBitOuterExtrasAfter_cursor_internal n
+      layout.tagLayout layout.tagLayout.tag₂Idx
+      (outputProbeDecodeTagBitOuterExtrasAfter n layout.tagLayout
+        layout.tagLayout.tag₁Idx
+        (outputProbeDecodeTagBitOuterExtrasAfter n layout.tagLayout
+          layout.tagLayout.tag₀Idx outerExtras cursor tag₀)
+        (cursor + 1) tag₁)
+      (cursor + 2) tag₂
+
+/-- Complete tag probing followed by canonical cleanup preserves the parked
+outer-frame invariant. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_parked_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (htag₀Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+        cursor tag₀ tag₁ tag₂ i) := by
+  have hzeroParked : Parked (outputProbeCounterTape 0) := by
+    have hzero : (outputProbeCounterTape 0).HasBinaryNat 0 := by
+      simpa [outputProbeCounterTape] using
+        Tape.init_move_right_hasBinaryNat 0
+    refine ⟨by rw [hzero.2.1], ?_⟩
+    exact Tape.HasBinaryContent.cells_ne_start hzero.2.2
+  have updateParked : ∀
+      (base : Fin (0 + outputProbeControllerTapes n +
+        controllerTapes) → Tape),
+      (∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (base i)) →
+      ∀ idx i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (Function.update base idx (outputProbeCounterTape 0) i) := by
+    intro base hbase idx i hi
+    by_cases heq : i = idx
+    · subst i
+      rw [Function.update_self]
+      exact hzeroParked
+    · rw [Function.update_of_ne heq]
+      exact hbase i hi
+  let after := outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout
+    outerExtras cursor tag₀ tag₁ tag₂
+  obtain ⟨hafter, _htag₀, _htag₁, _htag₂⟩ :=
+    outputProbeDecodeTagOuterExtrasAfter_invariant_internal n
+      layout.tagLayout outerExtras houter cursor tag₀ tag₁ tag₂
+      htag₀Zero htag₁Zero htag₂Zero
+  let idx₀ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx
+  let idx₁ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx
+  let idx₂ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx
+  have houter₀ := updateParked after hafter idx₀
+  have houter₁ := updateParked
+    (Function.update after idx₀ (outputProbeCounterTape 0))
+    houter₀ idx₁
+  have houter₂ := updateParked
+    (Function.update
+      (Function.update after idx₀ (outputProbeCounterTape 0)) idx₁
+      (outputProbeCounterTape 0))
+    houter₁ idx₂
+  simpa [outputProbeDecodeTokenOuterExtrasAfter,
+    outputProbeDecodeTokenClearedTagExtras, after, idx₀, idx₁, idx₂]
+    using houter₂
+
 theorem outputProbeDecodeTokenClearedTagExtras_tag₀_internal
     (n : ℕ) {controllerTapes : ℕ}
     (layout : OutputProbeDecodeTokenLayout controllerTapes)
@@ -623,6 +762,195 @@ theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime_internal
     (by simpa [after, tag₀, tag₁, tag₂] using hdecode) hseam hdispatch
   refine ⟨bound₀, bound₁, bound₂, pre, hpre, ?_⟩
   simpa [outputProbeDecodeTokenTM, after, tag₀, tag₁, tag₂] using hfull
+
+/-- Internal Hoare contract for the concrete variable continuation after a
+complete tag probe and cleanup. -/
+theorem ComputesInSpace.outputProbeDecodeTokenVar_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (htag₀Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (hvalue :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.valueIdx))
+        |>.HasBinaryNat 0)
+    (hactive :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.activeIdx))
+        |>.HasBinaryNat 1)
+    (hloop :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.loopIdx))
+        |>.HasBinaryNat 0)
+    (fuelValue : ℕ)
+    (hfuel :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.natLayout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        { cursor := cursor + 3, value := 0, active := true } value).active =
+          true →
+      (outputProbeDecodeNatStateAt (f input)
+        { cursor := cursor + 3, value := 0, active := true } value).cursor <
+          (f input).length)
+    (hqueryLimit : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        { cursor := cursor + 3, value := 0, active := true } value).active =
+          true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input)
+          { cursor := cursor + 3, value := 0, active := true } value).cursor +
+            1) ≤ cleanupLimit) :
+    ∃ bodyTime : ℕ → ℕ,
+      (outputProbeDecodeNatTM tm controllerTapes layout.natLayout.cursorIdx
+        layout.natLayout.scratchIdx layout.natLayout.valueIdx
+        layout.natLayout.activeIdx layout.natLayout.loopIdx
+        layout.natLayout.fuelIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+            tag₀ tag₁ tag₂)
+          input output extras false)
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.natLayout.cursorIdx
+            layout.natLayout.valueIdx layout.natLayout.activeIdx
+            layout.natLayout.loopIdx
+            (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+              tag₀ tag₁ tag₂)
+            (outputProbeDecodeNatStateAt (f input)
+              { cursor := cursor + 3, value := 0, active := true } fuelValue)
+            fuelValue)
+          input output extras false)
+        (binaryForLoopTime bodyTime fuelValue 0 fuelValue) := by
+  let after := outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+    cursor tag₀ tag₁ tag₂
+  let initial : OutputProbeDecodeNatState :=
+    { cursor := cursor + 3, value := 0, active := true }
+  have hafter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (after i) := by
+    simpa [after] using outputProbeDecodeTokenOuterExtrasAfter_parked_internal
+      n layout outerExtras houter cursor tag₀ tag₁ tag₂ htag₀Zero
+      htag₁Zero htag₂Zero
+  have hcursorAfter :
+      (after (outputProbeDecodeNatCursorIdx n
+        layout.natLayout.cursorIdx)).HasBinaryNat (cursor + 3) := by
+    simpa [after] using
+      outputProbeDecodeTokenOuterExtrasAfter_cursor_internal n layout
+        outerExtras cursor tag₀ tag₁ tag₂
+  have hscratchAfter :
+      (after (outputProbeIndexedControllerIdx n
+        layout.natLayout.scratchIdx)).HasBinaryNat 0 := by
+    change (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+      tag₀ tag₁ tag₂ (outputProbeIndexedControllerIdx n
+        layout.natLayout.scratchIdx)).HasBinaryNat 0
+    rw [outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout
+      outerExtras cursor tag₀ tag₁ tag₂ layout.natLayout.scratchIdx
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))]
+    exact hscratch
+  have hvalueAfter :
+      (after (outputProbeDecodeNatValueIdx n
+        layout.natLayout.valueIdx)).HasBinaryNat 0 := by
+    change (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+      tag₀ tag₁ tag₂ (outputProbeIndexedControllerIdx n
+        layout.natLayout.valueIdx)).HasBinaryNat 0
+    rw [outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout
+      outerExtras cursor tag₀ tag₁ tag₂ layout.natLayout.valueIdx
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))]
+    exact hvalue
+  have hactiveAfter :
+      (after (outputProbeDecodeNatActiveIdx n
+        layout.natLayout.activeIdx)).HasBinaryNat 1 := by
+    change (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+      tag₀ tag₁ tag₂ (outputProbeIndexedControllerIdx n
+        layout.natLayout.activeIdx)).HasBinaryNat 1
+    rw [outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout
+      outerExtras cursor tag₀ tag₁ tag₂ layout.natLayout.activeIdx
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))]
+    exact hactive
+  have hloopAfter :
+      (after (outputProbeIndexedControllerIdx n
+        layout.natLayout.loopIdx)).HasBinaryNat 0 := by
+    change (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+      tag₀ tag₁ tag₂ (outputProbeIndexedControllerIdx n
+        layout.natLayout.loopIdx)).HasBinaryNat 0
+    rw [outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout
+      outerExtras cursor tag₀ tag₁ tag₂ layout.natLayout.loopIdx
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))]
+    exact hloop
+  have hfuelAfter :
+      (after (outputProbeIndexedControllerIdx n
+        layout.natLayout.fuelIdx)).HasBinaryNat fuelValue := by
+    change (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor
+      tag₀ tag₁ tag₂ (outputProbeIndexedControllerIdx n
+        layout.natLayout.fuelIdx)).HasBinaryNat fuelValue
+    rw [outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout
+      outerExtras cursor tag₀ tag₁ tag₂ layout.natLayout.fuelIdx
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))
+      (layout.roles.injective.ne (by decide))]
+    exact hfuel
+  have hinitial : outputProbeDecodeNatLoopOuterExtras n
+      layout.natLayout.cursorIdx layout.natLayout.valueIdx
+      layout.natLayout.activeIdx layout.natLayout.loopIdx after initial 0 =
+        after :=
+    outputProbeDecodeNatLoopOuterExtras_eq_self_internal n
+      layout.natLayout.cursorIdx layout.natLayout.valueIdx
+      layout.natLayout.activeIdx layout.natLayout.loopIdx after initial 0
+      hcursorAfter hvalueAfter hactiveAfter hloopAfter
+  obtain ⟨bodyTime, hdecode⟩ :=
+    hcomp.outputProbeDecodeNatTM_hoareTime_internal input output houtput
+      extras hextras hcleanupCounter cleanupLimit hcleanupLimit
+      controllerTapes layout.natLayout after hafter initial hscratchAfter 0
+      fuelValue (Nat.zero_le fuelValue) hfuelAfter
+      (fun value _hzero hvalue => hqueryValid value hvalue)
+      (fun value _hzero hvalue => hqueryLimit value hvalue)
+  refine ⟨bodyTime, ?_⟩
+  simpa [after, initial, outputProbeDecodeNatStateAt,
+    outputProbeDecodeNatRun, hinitial] using hdecode
 
 theorem outputProbeDecodeTokenClearTagsTM_isTransducer_internal
     (n controllerTapes : ℕ)
