@@ -58,6 +58,7 @@ import Complexitylib.Models.TuringMachine.OutputProbeConsume
 import Complexitylib.Models.TuringMachine.OutputProbeCountOnes
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeNat
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeTag
+import Complexitylib.Models.TuringMachine.OutputProbeDecodeToken
 import Complexitylib.Models.TuringMachine.OutputProbeDispatch
 import Complexitylib.Models.TuringMachine.OutputProbeLatch
 import Complexitylib.Models.TuringMachine.OutputProbeIndexed
