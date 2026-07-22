@@ -90,6 +90,17 @@ def outputProbeCounterIdx (n : ℕ) : Fin (n + 1) :=
 def outputProbeCounterTape (value : ℕ) : Tape :=
   (Tape.init (value.bits.map Γ.ofBool)).move Dir3.right
 
+/-- All-prefix auxiliary-space budget for one positive countdown invocation.
+The source/counter configuration starts inside `initialSpace`; the three probe
+seams plus binary predecessor add only the represented binary width. -/
+def outputProbePositiveSpace (initialSpace value : ℕ) : ℕ :=
+  binaryPredSpace initialSpace value + 3
+
+/-- Uniform auxiliary-space budget for replay while the countdown never
+exceeds `maxCounter`. -/
+def outputProbeReplaySpace (sourceSpace maxCounter : ℕ) : ℕ :=
+  outputProbePositiveSpace sourceSpace maxCounter
+
 /-- Read the source machine's work heads from the prefix of the probe layout. -/
 def outputProbeSourceHeads {n : ℕ} (workHeads : Fin (n + 1) → Γ) :
     Fin n → Γ :=

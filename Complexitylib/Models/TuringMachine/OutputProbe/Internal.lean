@@ -543,6 +543,27 @@ theorem outputProbeTM_reachesIn_source_positive_internal (tm : TM n)
   rw [← htime]
   simpa [nextOutput] using hrun
 
+/-- Every prefix of one positive-countdown source invocation stays within the
+explicit binary-width budget. This formulation is independent of the exact
+phase reached by the prefix, so it composes directly across observed runs. -/
+theorem outputProbeTM_source_positive_prefix_withinAuxSpace_internal
+    (tm : TM n) {value inputLength initialSpace elapsed : ℕ}
+    {before : CursorCfg n tm.Q} (counter output : Tape)
+    {cfg : Cfg (n + 1) (outputProbeTM tm).Q}
+    (hinitial :
+      (outputProbeCfg tm before counter output).WithinAuxSpace
+        inputLength initialSpace)
+    (hprefix : elapsed ≤ binaryPredTime value + 3)
+    (hreach : (outputProbeTM tm).reachesIn elapsed
+      (outputProbeCfg tm before counter output) cfg) :
+    cfg.WithinAuxSpace inputLength
+      (outputProbePositiveSpace initialSpace value) := by
+  have hspace := hinitial.reachesIn hreach
+  apply hspace.mono le_rfl
+  have htime := binaryPredTime_le value
+  simp only [outputProbePositiveSpace, binaryPredSpace]
+  omega
+
 private theorem cursorStep_startInvariant_internal (tm : TM n)
     {before after : CursorCfg n tm.Q}
     (hstep : tm.cursorStep before = some after)
@@ -577,6 +598,21 @@ private theorem suppressOutputTapeStep_read_ne_start_internal {output : Tape}
 private theorem outputProbeCounterTape_hasBinaryNat_internal (value : ℕ) :
     (outputProbeCounterTape value).HasBinaryNat value := by
   simpa [outputProbeCounterTape] using Tape.init_move_right_hasBinaryNat value
+
+private theorem outputProbeCfg_withinAuxSpace_internal (tm : TM n)
+    {cfg : CursorCfg n tm.Q} {counter output : Tape}
+    {inputLength sourceSpace : ℕ}
+    (hwork : ∀ i, (cfg.work i).head ≤ sourceSpace)
+    (hinput : cfg.input.head ≤ inputLength + sourceSpace + 1)
+    (hcounter : counter.head ≤ sourceSpace) :
+    (outputProbeCfg tm cfg counter output).WithinAuxSpace
+      inputLength sourceSpace := by
+  constructor
+  · intro i
+    by_cases hi : i.val < n
+    · simpa [outputProbeCfg, hi] using hwork ⟨i.val, hi⟩
+    · simpa [outputProbeCfg, hi] using hcounter
+  · simpa [outputProbeCfg] using hinput
 
 /-- Simulate an entire observed cursor run while retaining `remaining`
 uncrossed output cells in the countdown. The starting counter represents the
@@ -674,6 +710,201 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_internal (tm : TM n)
                 simpa [suppressOutputTapeTrace] using
                   (outputProbeTM tm).reachesIn_trans hsource hlaterRun
 
+/-- Replay an observed run with a uniform all-prefix auxiliary-space bound.
+The abstract predicate `Inv` packages any source-machine invariant that is
+preserved by cursor steps and bounds the source input/work heads. The extra
+probe tape then costs only the binary width of `maxCounter`. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_withinAuxSpace_internal
+    (tm : TM n) (Inv : CursorCfg n tm.Q → Prop)
+    {steps advances remaining maxCounter inputLength sourceSpace : ℕ}
+    {before after : CursorCfg n tm.Q} (counter output : Tape)
+    (htrace : tm.cursorTraceObserved steps before = some (after, advances))
+    (hinv : Inv before)
+    (hinvStep : ∀ {cfg next}, Inv cfg →
+      tm.cursorStep cfg = some next → Inv next)
+    (hinvSpace : ∀ cfg, Inv cfg →
+      (∀ i, (cfg.work i).head ≤ sourceSpace) ∧
+      cfg.input.head ≤ inputLength + sourceSpace + 1)
+    (hsourceSpace : 1 ≤ sourceSpace)
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat (remaining + advances))
+    (houtput : output.StartInvariant)
+    (hmax : remaining + advances ≤ maxCounter) :
+    ∃ probeSteps,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter output)
+        (outputProbeCfg tm after (outputProbeCounterTape remaining)
+          (suppressOutputTapeTrace steps output)) ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeTM tm).reachesIn elapsed
+          (outputProbeCfg tm before counter output) cfg →
+        cfg.WithinAuxSpace inputLength
+          (outputProbeReplaySpace sourceSpace maxCounter) := by
+  induction steps generalizing before counter output advances with
+  | zero =>
+      simp only [cursorTraceObserved, Option.some.injEq,
+        Prod.mk.injEq] at htrace
+      obtain ⟨rfl, rfl⟩ := htrace
+      have hcounterHead : counter.head ≤ sourceSpace := by
+        rw [hcounter.2.1]
+        exact hsourceSpace
+      have hinitial := outputProbeCfg_withinAuxSpace_internal
+        (output := output) tm
+        (hinvSpace before hinv).1 (hinvSpace before hinv).2 hcounterHead
+      refine ⟨0, ?_, ?_⟩
+      · have hcounterEq := hcounter.eq_init_move_right
+        simpa [outputProbeCounterTape, hcounterEq] using
+          (TM.reachesIn.zero :
+            (outputProbeTM tm).reachesIn 0
+              (outputProbeCfg tm before counter output)
+              (outputProbeCfg tm before counter output))
+      · intro elapsed cfg helapsed hreach
+        have helapsedZero : elapsed = 0 := by omega
+        subst elapsed
+        have hcfg : cfg = outputProbeCfg tm before counter output :=
+          (outputProbeTM tm).reachesIn_right_unique hreach .zero
+        subst cfg
+        exact hinitial.mono le_rfl (by
+          simp [outputProbeReplaySpace, outputProbePositiveSpace,
+            binaryPredSpace]
+          omega)
+  | succ steps ih =>
+      cases hfirst : tm.cursorStep before with
+      | none =>
+          simp [cursorTraceObserved, cursorStepObserved, hfirst] at htrace
+      | some next =>
+          cases hlater : tm.cursorTraceObserved steps next with
+          | none =>
+              simp [cursorTraceObserved, cursorStepObserved, hfirst,
+                hlater] at htrace
+          | some result =>
+              obtain ⟨final, later⟩ := result
+              simp [cursorTraceObserved, cursorStepObserved, hfirst,
+                hlater] at htrace
+              obtain ⟨hfinal, hadvances⟩ := htrace
+              subst after
+              subst advances
+              have hnextInv := hinvStep hinv hfirst
+              obtain ⟨hnextInput, hnextWork⟩ :=
+                cursorStep_startInvariant_internal tm hfirst hinput hwork
+              have hnextOutputInv :=
+                suppressOutputTapeStep_startInvariant_internal houtput
+              have hnextOutputRead :=
+                suppressOutputTapeStep_read_ne_start_internal houtput
+              have hcounterHead : counter.head ≤ sourceSpace := by
+                rw [hcounter.2.1]
+                exact hsourceSpace
+              have hinitial := outputProbeCfg_withinAuxSpace_internal
+                (output := output) tm
+                (hinvSpace before hinv).1 (hinvSpace before hinv).2
+                hcounterHead
+              by_cases hdir :
+                  tm.cursorOutputDirection before = Dir3.right
+              · have hadvance :
+                    (tm.cursorOutputEvent before).advance = 1 := by
+                  cases hdirection : tm.cursorOutputDirection before <;>
+                    simp_all [cursorOutputEvent, OutputCursor.advanceCount]
+                have hcounterPositive : counter.HasBinaryNat
+                    ((remaining + later) + 1) := by
+                  convert hcounter using 1
+                  simp [hadvance]
+                  omega
+                have hvalueMax : remaining + later ≤ maxCounter := by
+                  simp [hadvance] at hmax
+                  omega
+                have hsource :=
+                  outputProbeTM_reachesIn_source_positive_internal tm
+                    counter output hfirst hdir hcounterPositive hnextInput
+                    hnextWork hnextOutputRead
+                obtain ⟨laterSteps, hlaterRun, hlaterSpace⟩ := ih
+                  (outputProbeCounterTape (remaining + later))
+                  (suppressOutputTapeStep output) hlater hnextInv
+                  hnextInput hnextWork
+                  (outputProbeCounterTape_hasBinaryNat_internal
+                    (remaining + later)) hnextOutputInv hvalueMax
+                let firstSteps := binaryPredTime (remaining + later) + 3
+                refine ⟨firstSteps + laterSteps, ?_, ?_⟩
+                · simpa [firstSteps, suppressOutputTapeTrace] using
+                    (outputProbeTM tm).reachesIn_trans hsource hlaterRun
+                · intro elapsed cfg helapsed hreach
+                  by_cases hwithinFirst : elapsed ≤ firstSteps
+                  · have hlocal :=
+                      outputProbeTM_source_positive_prefix_withinAuxSpace_internal
+                        tm counter output hinitial (by
+                          simpa [firstSteps] using hwithinFirst) hreach
+                    apply hlocal.mono le_rfl
+                    have hsize := Nat.size_le_size
+                      (Nat.add_le_add_right hvalueMax 1)
+                    simp only [outputProbeReplaySpace,
+                      outputProbePositiveSpace, binaryPredSpace]
+                    omega
+                  · have hfirstLe : firstSteps ≤ elapsed := by omega
+                    let tailSteps := elapsed - firstSteps
+                    have htime : firstSteps + tailSteps = elapsed := by
+                      dsimp only [tailSteps]
+                      omega
+                    rw [← htime] at hreach
+                    obtain ⟨middle, hprefix, htail⟩ :=
+                      reachesIn_split_internal hreach
+                    have hmiddle : middle =
+                        outputProbeCfg tm next
+                          (outputProbeCounterTape (remaining + later))
+                          (suppressOutputTapeStep output) :=
+                      (outputProbeTM tm).reachesIn_right_unique hprefix
+                        (by simpa [firstSteps] using hsource)
+                    subst middle
+                    apply hlaterSpace tailSteps cfg
+                    · dsimp only [tailSteps]
+                      omega
+                    · exact htail
+              · have hadvance :
+                    (tm.cursorOutputEvent before).advance = 0 := by
+                  cases hdirection : tm.cursorOutputDirection before <;>
+                    simp_all [cursorOutputEvent, OutputCursor.advanceCount]
+                have hcounterSame :
+                    counter.HasBinaryNat (remaining + later) := by
+                  simpa [hadvance] using hcounter
+                have hcounterRead : counter.read ≠ Γ.start := by
+                  rw [Tape.read, hcounterSame.2.1]
+                  exact Tape.cells_ne_start_of_hasBinaryString
+                    hcounterSame.2 1 le_rfl
+                have hlaterMax : remaining + later ≤ maxCounter := by
+                  simpa [hadvance] using hmax
+                have hsource :=
+                  outputProbeTM_reachesIn_source_not_right_internal tm
+                    counter output hfirst hdir hcounterRead
+                obtain ⟨laterSteps, hlaterRun, hlaterSpace⟩ := ih counter
+                  (suppressOutputTapeStep output) hlater hnextInv
+                  hnextInput hnextWork hcounterSame
+                  hnextOutputInv hlaterMax
+                refine ⟨1 + laterSteps, ?_, ?_⟩
+                · simpa [suppressOutputTapeTrace] using
+                    (outputProbeTM tm).reachesIn_trans hsource hlaterRun
+                · intro elapsed cfg helapsed hreach
+                  by_cases hwithinFirst : elapsed ≤ 1
+                  · have hlocal := hinitial.reachesIn hreach
+                    apply hlocal.mono le_rfl
+                    simp [outputProbeReplaySpace,
+                      outputProbePositiveSpace, binaryPredSpace]
+                    omega
+                  · have honeLe : 1 ≤ elapsed := by omega
+                    let tailSteps := elapsed - 1
+                    have htime : 1 + tailSteps = elapsed := by
+                      dsimp only [tailSteps]
+                      omega
+                    rw [← htime] at hreach
+                    obtain ⟨middle, hprefix, htail⟩ :=
+                      reachesIn_split_internal hreach
+                    have hmiddle : middle =
+                        outputProbeCfg tm next counter
+                          (suppressOutputTapeStep output) :=
+                      (outputProbeTM tm).reachesIn_right_unique hprefix hsource
+                    subst middle
+                    apply hlaterSpace tailSteps cfg
+                    · dsimp only [tailSteps]
+                      omega
+                    · exact htail
 theorem outputProbeTM_step_halt_capture_internal (tm : TM n)
     (cfg : CursorCfg n tm.Q) (counter output : Tape) (bit : Bool)
     (hhalt : cfg.state = tm.qhalt)
@@ -777,6 +1008,69 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_capture_internal
   let done := outputProbeDoneCfg tm bit captureInput captureWork finalOutput
   have htoCapture :=
     (outputProbeTM tm).reachesIn_snoc hsourceRun hhaltStep'
+  have hrun := (outputProbeTM tm).reachesIn_trans htoCapture hcaptureRun
+  refine ⟨sourceSteps + 2, done, ?_, ?_, ?_⟩
+  · simpa [done, finalOutput, Nat.add_assoc] using hrun
+  · simpa [done] using hdoneHalt
+  · simpa [done] using hdoneOutput
+
+/-- End-to-end capture when the next source step finalizes the selected
+Boolean cell by moving right. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_internal
+    (tm : TM n) {steps advances : ℕ}
+    {before selected next : CursorCfg n tm.Q}
+    (counter output : Tape) (bit : Bool) (symbol : Γ)
+    (htrace : tm.cursorTraceObserved steps before =
+      some (selected, advances))
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat advances)
+    (houtput : output.StartInvariant)
+    (hnext : tm.cursorStep selected = some next)
+    (hcursor : selected.output = .cell symbol)
+    (hdir : tm.cursorOutputDirection selected = Dir3.right)
+    (hwrite : tm.cursorOutputWrite selected =
+      if bit then Γw.one else Γw.zero)
+    (hphysicalHead : (suppressOutputTapeTrace steps output).head = 1)
+    (hphysicalCells : (suppressOutputTapeTrace steps output).cells =
+      (Tape.init []).cells) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter output) done ∧
+      (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] := by
+  obtain ⟨sourceSteps, hsourceRun⟩ :=
+    outputProbeTM_reachesIn_cursorTraceObserved_internal
+      (remaining := 0) tm counter output htrace hinput hwork
+      (by simpa using hcounter) houtput
+  let finalOutput := suppressOutputTapeTrace steps output
+  have hzero := outputProbeCounterTape_hasBinaryNat_internal 0
+  have hzeroRead : (outputProbeCounterTape 0).read ≠ Γ.start := by
+    rw [Tape.read, hzero.2.1]
+    exact Tape.cells_ne_start_of_hasBinaryString hzero.2 1 le_rfl
+  have hsourceStep := outputProbeTM_step_source_internal tm
+    (outputProbeCounterTape 0) finalOutput hzeroRead hnext
+  have hsourceCapture := outputProbeSourceResultCfg_capture_internal tm
+    selected next (outputProbeCounterTape 0)
+      (suppressOutputTapeStep finalOutput) bit symbol hcursor hdir hwrite hzero
+  have hfinalRead : finalOutput.read ≠ Γ.start := by
+    rw [Tape.read, hphysicalHead]
+    intro hstart
+    rw [hphysicalCells] at hstart
+    simp [Tape.init] at hstart
+  have hfinalStable : suppressOutputTapeStep finalOutput = finalOutput := by
+    simpa [suppressOutputTapeStep, outputProbeNormalizeTape] using
+      outputProbeNormalizeTape_eq_self_internal hfinalRead
+  rw [hsourceCapture, hfinalStable] at hsourceStep
+  let captureWork : Fin (n + 1) → Tape := fun i =>
+    if h : i.val < n then next.work ⟨i.val, h⟩
+    else outputProbeCounterTape 0
+  obtain ⟨hcaptureRun, hdoneHalt, hdoneOutput⟩ :=
+    outputProbeTM_capture_hasOutput_internal tm bit next.input captureWork
+      finalOutput hphysicalHead hphysicalCells
+  let done := outputProbeDoneCfg tm bit next.input captureWork finalOutput
+  have htoCapture :=
+    (outputProbeTM tm).reachesIn_snoc hsourceRun (by
+      simpa [captureWork, finalOutput] using hsourceStep)
   have hrun := (outputProbeTM tm).reachesIn_trans htoCapture hcaptureRun
   refine ⟨sourceSteps + 2, done, ?_, ?_, ?_⟩
   · simpa [done, finalOutput, Nat.add_assoc] using hrun

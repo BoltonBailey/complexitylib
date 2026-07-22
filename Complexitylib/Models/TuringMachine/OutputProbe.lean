@@ -28,12 +28,18 @@ the requested position occupies only its binary width.
   preserves the countdown.
 - `TM.outputProbeTM_reachesIn_source_positive` -- a right source step followed
   by verified binary predecessor decrements a positive countdown.
+- `TM.outputProbeTM_source_positive_prefix_withinAuxSpace` -- every prefix of
+  that countdown invocation uses only the represented binary width.
 - `TM.outputProbeTM_reachesIn_cursorTraceObserved` -- an entire observed
   source run consumes exactly its counted output advances.
+- `TM.outputProbeTM_reachesIn_cursorTraceObserved_withinAuxSpace` -- the
+  entire replay has an all-prefix source-space-plus-binary-width bound.
 - `TM.outputProbeTM_step_halt_capture` -- zero countdown at a halted Boolean
   cursor selects that bit for physical output.
 - `TM.outputProbeTM_reachesIn_cursorTraceObserved_capture` -- end-to-end
   replay and one-bit output when the selected frontier cell is final.
+- `TM.outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture` -- the
+  corresponding end-to-end theorem for a cell finalized before source halt.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
   countdown selects the finalized bit for capture.
 - `TM.outputProbeTM_capture_hasOutput` -- capture reaches the unique halt state
@@ -95,6 +101,24 @@ theorem outputProbeTM_reachesIn_source_positive (tm : TM n)
   outputProbeTM_reachesIn_source_positive_internal tm counter output
     hcursor hdir hcounter hinput hwork houtput
 
+/-- Every prefix of one positive-countdown source invocation stays inside the
+initial auxiliary-space budget plus the represented counter's binary width
+and a constant seam allowance. -/
+theorem outputProbeTM_source_positive_prefix_withinAuxSpace
+    (tm : TM n) {value inputLength initialSpace elapsed : ℕ}
+    {before : CursorCfg n tm.Q} (counter output : Tape)
+    {cfg : Cfg (n + 1) (outputProbeTM tm).Q}
+    (hinitial :
+      (outputProbeCfg tm before counter output).WithinAuxSpace
+        inputLength initialSpace)
+    (hprefix : elapsed ≤ binaryPredTime value + 3)
+    (hreach : (outputProbeTM tm).reachesIn elapsed
+      (outputProbeCfg tm before counter output) cfg) :
+    cfg.WithinAuxSpace inputLength
+      (outputProbePositiveSpace initialSpace value) :=
+  outputProbeTM_source_positive_prefix_withinAuxSpace_internal tm
+    counter output hinitial hprefix hreach
+
 /-- When the countdown is canonical zero, leaving an ordinary source-output
 cell to the right selects the just-written Boolean symbol for capture. -/
 theorem outputProbeSourceResultCfg_capture (tm : TM n)
@@ -132,6 +156,40 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved (tm : TM n)
           (suppressOutputTapeTrace steps output)) :=
   outputProbeTM_reachesIn_cursorTraceObserved_internal tm counter output
     htrace hinput hwork hcounter houtput
+
+/-- Replay an observed source run with an all-prefix auxiliary-space bound.
+`Inv` may be any source invariant preserved by cursor steps whose input and
+work heads stay inside `sourceSpace`. The probe adds only the binary width of
+the initial countdown, independently of the number of predecessor calls. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_withinAuxSpace
+    (tm : TM n) (Inv : CursorCfg n tm.Q → Prop)
+    {steps advances remaining inputLength sourceSpace : ℕ}
+    {before after : CursorCfg n tm.Q} (counter output : Tape)
+    (htrace : tm.cursorTraceObserved steps before = some (after, advances))
+    (hinv : Inv before)
+    (hinvStep : ∀ {cfg next}, Inv cfg →
+      tm.cursorStep cfg = some next → Inv next)
+    (hinvSpace : ∀ cfg, Inv cfg →
+      (∀ i, (cfg.work i).head ≤ sourceSpace) ∧
+      cfg.input.head ≤ inputLength + sourceSpace + 1)
+    (hsourceSpace : 1 ≤ sourceSpace)
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat (remaining + advances))
+    (houtput : output.StartInvariant) :
+    ∃ probeSteps,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter output)
+        (outputProbeCfg tm after (outputProbeCounterTape remaining)
+          (suppressOutputTapeTrace steps output)) ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeTM tm).reachesIn elapsed
+          (outputProbeCfg tm before counter output) cfg →
+        cfg.WithinAuxSpace inputLength
+          (outputProbeReplaySpace sourceSpace (remaining + advances)) :=
+  outputProbeTM_reachesIn_cursorTraceObserved_withinAuxSpace_internal tm
+    Inv counter output htrace hinv hinvStep hinvSpace hsourceSpace hinput
+    hwork hcounter houtput le_rfl
 
 /-- At a halted source state, a canonical zero countdown and Boolean cursor
 select that cursor bit for capture. The normalization action is explicit so
@@ -191,6 +249,37 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_capture (tm : TM n)
   outputProbeTM_reachesIn_cursorTraceObserved_capture_internal tm counter
     output bit htrace hinput hwork hcounter houtput hhalt hcursor
     hphysicalHead hphysicalCells
+
+/-- Replay an observed source prefix and emit the bit finalized by its next
+right output move. This is the earlier-cell counterpart of
+`outputProbeTM_reachesIn_cursorTraceObserved_capture`: together the two
+theorems cover capture either when a cell is left or when the source halts on
+the selected frontier cell. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture
+    (tm : TM n) {steps advances : ℕ}
+    {before selected next : CursorCfg n tm.Q}
+    (counter output : Tape) (bit : Bool) (symbol : Γ)
+    (htrace : tm.cursorTraceObserved steps before =
+      some (selected, advances))
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat advances)
+    (houtput : output.StartInvariant)
+    (hnext : tm.cursorStep selected = some next)
+    (hcursor : selected.output = .cell symbol)
+    (hdir : tm.cursorOutputDirection selected = Dir3.right)
+    (hwrite : tm.cursorOutputWrite selected =
+      if bit then Γw.one else Γw.zero)
+    (hphysicalHead : (suppressOutputTapeTrace steps output).head = 1)
+    (hphysicalCells : (suppressOutputTapeTrace steps output).cells =
+      (Tape.init []).cells) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter output) done ∧
+      (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] :=
+  outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_internal tm
+    counter output bit symbol htrace hinput hwork hcounter houtput hnext
+    hcursor hdir hwrite hphysicalHead hphysicalCells
 
 end TM
 

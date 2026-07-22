@@ -1203,9 +1203,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   heads parked on `▷` around that subroutine. Whole observed cursor runs now
   consume exactly their counted output advances, and a halted source on the
   selected Boolean frontier cell reaches the probe halt state with that
-  one-bit physical output. The remaining probe work is the earlier-finalized
-  cell case and all-prefix logarithmic-space bound, followed by the
-  Barrington-specific streaming traversal that calls the probe.
+  one-bit physical output. The companion theorem covers cells finalized by an
+  earlier right move, so the semantic capture cases are complete. Every prefix
+  of a complete replay now stays within the source invariant's space plus the
+  largest countdown's binary width, without accumulating predecessor costs.
+  The remaining construction is the Barrington-specific streaming traversal
+  that calls the probe.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
