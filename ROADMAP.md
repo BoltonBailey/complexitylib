@@ -1249,9 +1249,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   the complete two-pass output algorithm: scan all `4^D` addresses to obtain
   the exact instruction count, then erase empty addresses and emit the canonical
   program code; under the promised depth bound its output is byte-for-byte the
-  executable Barrington compiler's code. The remaining construction is the
-  concrete machine that composes restartable source-code probes to implement
-  these scans, together with its all-prefix logarithmic-space proof.
+  executable Barrington compiler's code. `FormulaEncoding/ProbeNavigation`
+  replaces the in-memory code by a position-indexed bit oracle with total
+  finite-fuel decoders and exact token/subtree/child-span correctness.
+  `BarringtonProbeQuery` then proves that first/last occupancy and every direct
+  fixed-address instruction query through that oracle agree with the reference
+  compiler. The remaining construction is the concrete machine that composes
+  restartable source-code probes to realize these verified oracle recurrences
+  and serializer scans, together with its all-prefix logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation

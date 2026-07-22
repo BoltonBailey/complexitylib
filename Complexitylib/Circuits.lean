@@ -10,6 +10,7 @@ import Complexitylib.Circuits.Formula
 import Complexitylib.Circuits.FormulaEncoding
 import Complexitylib.Circuits.FormulaEncoding.Navigation
 import Complexitylib.Circuits.FormulaEncoding.BitNavigation
+import Complexitylib.Circuits.FormulaEncoding.ProbeNavigation
 import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
 import Complexitylib.Circuits.BranchingProgram
@@ -25,6 +26,7 @@ import Complexitylib.Circuits.BarringtonSlotQuery
 import Complexitylib.Circuits.BarringtonTokenQuery
 import Complexitylib.Circuits.BarringtonBitQuery
 import Complexitylib.Circuits.BarringtonBitSerializer
+import Complexitylib.Circuits.BarringtonProbeQuery
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
@@ -116,8 +118,10 @@ convention.
   while `barringtonCompileTokensSlot?_eq_instruction?` carries that query over
   canonical postfix tokens using stack-free child-span recovery, and
   `barringtonCompileBitsSlot?_eq_instruction?` performs the same query directly
-  over canonical encoded formula bits. `barringtonCompileBitsCode_eq` then
-  proves the fixed-address two-pass serializer emits the exact canonical code.
+  over canonical encoded formula bits. `barringtonCompileProbeSlot?_eq_instruction?`
+  further replaces the complete bit list by a position-indexed source oracle,
+  with explicit finite decoding fuel. `barringtonCompileBitsCode_eq` then proves
+  the fixed-address two-pass serializer emits the exact canonical code.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -133,6 +137,8 @@ Public modules (definitions a reviewer should read):
   fan-in-two circuit DAGs to Boolean formulas, with a factor-two depth bound
 * `Complexitylib.Circuits.FormulaEncoding` — canonical iterative postfix formula
   codec with exact round trips and code length
+* `Complexitylib.Circuits.FormulaEncoding.ProbeNavigation` — exact token,
+  subtree, and child-span navigation through a position-indexed bit oracle
 * `Complexitylib.Circuits.CircuitFormula.Family` — family-level unfolding and
   the typed-`NC1` bridge to width-`5` branching programs
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
@@ -153,6 +159,8 @@ Public modules (definitions a reviewer should read):
   over canonical encoded formula bits, with bit-level child-span recovery
 * `Complexitylib.Circuits.BarringtonBitSerializer` — exact two-pass canonical
   serialization by scanning the fixed encoded-bit address schedule
+* `Complexitylib.Circuits.BarringtonProbeQuery` — exact fixed-address queries
+  through restartable position-indexed formula-code probes
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level
