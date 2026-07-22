@@ -1199,10 +1199,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `Models/TuringMachine/OutputProbe` adds the executable binary
   position/capture controller: non-right source steps preserve its extra
   countdown tape, right steps invoke the verified little-endian predecessor,
-  zero selects the finalized source bit, and the capture phase halts with that
-  one-bit physical output. The remaining probe work is the whole-run theorem
-  and all-prefix logarithmic-space bound, followed by the Barrington-specific
-  streaming traversal that calls the probe.
+  and a finite start-marker mask normalizes and exactly restores any source
+  heads parked on `▷` around that subroutine. Whole observed cursor runs now
+  consume exactly their counted output advances, and a halted source on the
+  selected Boolean frontier cell reaches the probe halt state with that
+  one-bit physical output. The remaining probe work is the earlier-finalized
+  cell case and all-prefix logarithmic-space bound, followed by the
+  Barrington-specific streaming traversal that calls the probe.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
