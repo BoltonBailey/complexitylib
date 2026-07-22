@@ -1096,11 +1096,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
 
 **Staged milestones.**
 
-- [~] Define Boolean formulas with literals, depth, evaluation, and compilation
+- [x] Define Boolean formulas with literals, depth, evaluation, and compilation
   from a selected circuit output by recursively unfolding its DAG. (`BoolFormula`
-  now has variables/constants, literal helpers, evaluation, size, leaves, depth,
-  variable locality, and circuit-fragment compilation; the selected-output DAG
-  unfolding theorem remains.)
+  has variables/constants, literal helpers, evaluation, size, leaves, depth, and
+  variable locality. `Circuit.outputFormula` recursively unfolds one selected
+  fan-in-two output; `Circuit.eval_outputFormula` proves exact semantics, and
+  `Circuit.depth_outputFormula_le_outputDepth` bounds its formula depth by twice
+  the selected circuit-output depth. DAG sharing is intentionally duplicated, so
+  no formula-size bound is claimed.)
 - [x] Define width-`w` permutation branching programs: instructions selected by
   one input bit, ordered product semantics, length, and acceptance convention.
   (`Circuits/BranchingProgram.lean`: `BPInstr`, `BP`, `eval`, `eval_append`,

@@ -7,6 +7,7 @@ import Complexitylib.Circuits.Basic
 import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.DecisionTree
 import Complexitylib.Circuits.Formula
+import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
 import Complexitylib.Circuits.BranchingProgram
 import Complexitylib.Circuits.Barrington
@@ -97,6 +98,8 @@ Public modules (definitions a reviewer should read):
   `CompleteBasis`, `sizeComplexity`, `wireDepth`, `depth`
 * `Complexitylib.Circuits.BitString` — canonical bridges between `BitString n`
   and `List Bool`
+* `Complexitylib.Circuits.CircuitFormula` — exact selected-output unfolding from
+  fan-in-two circuit DAGs to Boolean formulas, with a factor-two depth bound
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
   size/depth bounds, and the polynomial-size characterization
 * `Complexitylib.Circuits.BarringtonConverse` — balanced branching-program
