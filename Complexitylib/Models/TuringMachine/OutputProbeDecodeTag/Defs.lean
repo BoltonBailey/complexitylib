@@ -117,6 +117,21 @@ def outputProbeDecodeTagBitOuterExtrasAfter (n : ℕ)
     (outputProbeDecodeTagCursorIdx n layout)
     (outputProbeCounterTape (cursor + 1))
 
+/-- Canonical controller frame after all three tag bits have been retained. -/
+def outputProbeDecodeTagOuterExtrasAfter (n : ℕ)
+    {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  outputProbeDecodeTagBitOuterExtrasAfter n layout layout.tag₂Idx
+    (outputProbeDecodeTagBitOuterExtrasAfter n layout layout.tag₁Idx
+      (outputProbeDecodeTagBitOuterExtrasAfter n layout layout.tag₀Idx
+        outerExtras cursor tag₀)
+      (cursor + 1) tag₁)
+    (cursor + 2) tag₂
+
 /-- Query, reset the shared latch, retain one selected tag bit, and advance the
 source cursor. The selected bit register must initially contain zero. -/
 def outputProbeDecodeTagBitTM (tm : TM n) (controllerTapes : ℕ)

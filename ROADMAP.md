@@ -1347,9 +1347,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   whose final registers are the pure decoder state at the fuel bound.
   `OutputProbeDecodeTag` now supplies the next controller layer's six-way pure
   classifier, a concrete three-probe machine, one-way-output safety, and an
-  exact source-derived contract for each query/reset/retain/cursor step. The
-  remaining local seam is to compose those three steps into one literal final
-  tag frame before dispatching variable tags into the unary-field controller.
+  exact source-derived contract for each query/reset/retain/cursor step. Those
+  three contracts now compose into one exact run whose literal final frame
+  retains all three source bits and advances the cursor by exactly three. The
+  next local seam is to dispatch that tag frame, routing variable tags into the
+  terminated-unary field controller and fixed tags directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
