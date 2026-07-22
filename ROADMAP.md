@@ -1330,7 +1330,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   runtimes assemble a complete exact-prefix segment certificate. The remaining
   first-pass resource proof is specifically to attach an all-prefix segment-
   space certificate with a bound suitable for the final logarithmic asymptotic
-  argument.
+  argument. `OutputProbeDecodeNat` now starts the Barrington-specific formula
+  query controller: it gives terminated-unary headers and variable fields a
+  concrete bounded probe loop with cursor, accumulator, fuel, and persistent
+  success registers. Its pure controller is proved exactly equal to the
+  established oracle decoder, including fuel exhaustion, and the complete
+  concrete machine is one-way-output safe. The next controller seam is the
+  exact register-frame execution theorem for this loop, followed by the
+  fixed-three-bit token-tag decoder.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
