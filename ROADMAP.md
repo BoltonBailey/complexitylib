@@ -1188,6 +1188,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   (including terminated-unary variable fields) is polynomially bounded with
   logarithmic-width cursors. Thus the remaining construction may use
   recomputation and binary output positions without hiding a space blowup.
+  `Models/TuringMachine/OutputCursor` now supplies the machine-level simulation
+  kernel for that construction: `OutputCursor` quotients an append-only output
+  prefix to finite control, exact step and run commutation are proved, and the
+  executable `suppressOutputTM` retains the source input/work behavior while
+  keeping its physical output empty. Its bounded-time computation theorem
+  includes the final normalization seam. The next layer is the binary
+  position/capture controller that reruns this kernel to answer one requested
+  output bit without materializing the generated string.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
