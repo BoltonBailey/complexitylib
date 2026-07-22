@@ -2132,6 +2132,102 @@ noncomputable def
   simp only [binaryForIterationTime]
   omega
 
+/-- Internal initialized-frame Hoare adapter for the complete bounded decoder.
+The selected body-time function is inherited from the source-dependent segment
+certificate. -/
+theorem ComputesInSpace.outputProbeDecodeNatTM_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeNatLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (initial : OutputProbeDecodeNatState)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue fuelValue : ℕ) (hstartFuel : startValue ≤ fuelValue)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      (outputProbeDecodeNatStateAt (f input) initial value).cursor <
+        (f input).length)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input) initial value).cursor + 1) ≤
+          cleanupLimit) :
+    ∃ bodyTime : ℕ → ℕ,
+      (outputProbeDecodeNatTM tm controllerTapes layout.cursorIdx
+        layout.scratchIdx layout.valueIdx layout.activeIdx layout.loopIdx
+        layout.fuelIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx
+            layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+            (outputProbeDecodeNatStateAt (f input) initial startValue)
+            startValue)
+          input output extras false)
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx
+            layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+            (outputProbeDecodeNatStateAt (f input) initial fuelValue)
+            fuelValue)
+          input output extras false)
+        (binaryForLoopTime bodyTime fuelValue startValue
+          (fuelValue - startValue)) := by
+  classical
+  let packed := hcomp.outputProbeDecodeNatSegmentSpecInternal input output
+    houtput extras hextras hcleanupCounter cleanupLimit hcleanupLimit
+    controllerTapes layout outerExtras houter initial hscratch startValue
+    fuelValue hfuel hqueryValid hqueryLimit
+  let bodyTime := packed.1
+  let spec := packed.2
+  refine ⟨bodyTime, ?_⟩
+  have hscanState :
+      (spec.scanCfg startValue).state =
+        (outputProbeDecodeNatTM tm controllerTapes layout.cursorIdx
+          layout.scratchIdx layout.valueIdx layout.activeIdx layout.loopIdx
+          layout.fuelIdx).qstart := by
+    simp [spec, packed,
+      ComputesInSpace.outputProbeDecodeNatSegmentSpecInternal,
+      outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal,
+      BinaryForSegmentSpec.ofWitnessesInternal, outputProbeDecodeNatScanCfg,
+      outputProbeDecodeNatTM, binaryForTM]
+  have hsegment := spec.hoareTime_internal hstartFuel hscanState
+  apply hsegment.consequence
+  · intro inp work out hpre
+    have heq := outputProbeLatchFramePost_eq_frameCfg_internal tm
+      controllerTapes _ input output extras false inp work out hpre
+    simpa [spec, packed,
+      ComputesInSpace.outputProbeDecodeNatSegmentSpecInternal,
+      outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal,
+      BinaryForSegmentSpec.ofWitnessesInternal, outputProbeDecodeNatScanCfg,
+      outputProbeDecodeNatFrameCfg] using heq
+  · intro inp work out hpost
+    rcases hpost with ⟨hinp, hwork, hout⟩
+    rw [hinp, hwork, hout]
+    simpa [spec, packed,
+      ComputesInSpace.outputProbeDecodeNatSegmentSpecInternal,
+      outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal,
+      BinaryForSegmentSpec.ofWitnessesInternal, outputProbeDecodeNatDoneCfg]
+      using outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes
+        layout.cursorIdx layout.valueIdx layout.activeIdx layout.loopIdx
+        outerExtras (f input) input output extras initial fuelValue
+  · exact le_rfl
+
 private theorem skipTM_isTransducer_internal {n : ℕ} :
     (skipTM (n := n)).IsTransducer := by
   intro state _iHead _wHeads oHead

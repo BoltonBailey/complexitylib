@@ -1361,10 +1361,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   in that same cleanup contract. The source-derived token theorem now composes
   all three probes, tag retention, canonical cleanup, and selected dispatch in
   one exact machine run. The variable branch is now instantiated concretely by
-  the bounded terminated-unary machine through the shared layout. Its remaining
-  proof seam is to turn the existing unary `BinaryForSegmentSpec` into the
-  selected branch's initialized-frame Hoare contract, while fixed tags route
-  directly to serialization.
+  the bounded terminated-unary machine through the shared layout. The generic
+  `BinaryForSegmentSpec.hoareTime` adapter and the source-derived
+  `ComputesInSpace.outputProbeDecodeNatTM_hoareTime` theorem now expose that
+  complete loop between canonical initialized and final latch frames. Its
+  remaining local seam is to transport the normalized post-tag frame into the
+  canonical unary start frame, while fixed tags route directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

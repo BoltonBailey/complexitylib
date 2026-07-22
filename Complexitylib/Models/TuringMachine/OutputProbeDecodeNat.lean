@@ -641,6 +641,67 @@ noncomputable def ComputesInSpace.outputProbeDecodeNatSegmentSpec
     outerExtras houter initial hscratch startValue fuelValue hfuel hqueryValid
     hqueryLimit
 
+/-- A complete source-derived decoder run gives a bounded Hoare contract
+between its canonical start and final latch frames. The existential body-time
+function records the selected runtimes of the restartable source probes. -/
+theorem ComputesInSpace.outputProbeDecodeNatTM_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeNatLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (initial : OutputProbeDecodeNatState)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue fuelValue : ℕ) (hstartFuel : startValue ≤ fuelValue)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      (outputProbeDecodeNatStateAt (f input) initial value).cursor <
+        (f input).length)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input) initial value).cursor + 1) ≤
+          cleanupLimit) :
+    ∃ bodyTime : ℕ → ℕ,
+      (outputProbeDecodeNatTM tm controllerTapes layout.cursorIdx
+        layout.scratchIdx layout.valueIdx layout.activeIdx layout.loopIdx
+        layout.fuelIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx
+            layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+            (outputProbeDecodeNatStateAt (f input) initial startValue)
+            startValue)
+          input output extras false)
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx
+            layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+            (outputProbeDecodeNatStateAt (f input) initial fuelValue)
+            fuelValue)
+          input output extras false)
+        (binaryForLoopTime bodyTime fuelValue startValue
+          (fuelValue - startValue)) :=
+  hcomp.outputProbeDecodeNatTM_hoareTime_internal input output houtput extras
+    hextras hcleanupCounter cleanupLimit hcleanupLimit controllerTapes layout
+    outerExtras houter initial hscratch startValue fuelValue hstartFuel hfuel
+    hqueryValid hqueryLimit
+
 /-- The complete bounded decoder preserves the append-only output discipline. -/
 theorem outputProbeDecodeNatTM_isTransducer
     (tm : TM n) (controllerTapes : ℕ)
