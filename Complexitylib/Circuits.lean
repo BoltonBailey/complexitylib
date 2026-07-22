@@ -8,6 +8,7 @@ import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.DecisionTree
 import Complexitylib.Circuits.Formula
 import Complexitylib.Circuits.FormulaEncoding
+import Complexitylib.Circuits.FormulaEncoding.Navigation
 import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
 import Complexitylib.Circuits.BranchingProgram
@@ -17,6 +18,7 @@ import Complexitylib.Circuits.BarringtonBridge
 import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonCompiler
+import Complexitylib.Circuits.BarringtonStreaming
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
@@ -101,6 +103,10 @@ convention.
   format needed by the remaining log-space uniformity proof.
   `barringtonCompileCode_spec` then connects canonical formula bits to canonical
   program bits, exact semantics, and a serialized output-size bound.
+  `barringtonCompileStream_instruction?` gives the corresponding exact
+  random-access instruction view without constructing the complete program,
+  while `FormulaCode.subtreeWidth?_tokens_root` anchors stack-free postfix
+  subtree navigation.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -124,6 +130,8 @@ Public modules (definitions a reviewer should read):
   evaluation and the nonuniform Barrington equivalence
 * `Complexitylib.Circuits.BarringtonCompiler` — executable finite `S₅` search
   and formula-to-program compilation with the `4 ^ depth` bound
+* `Complexitylib.Circuits.BarringtonStreaming` — random-access compilation by
+  instruction index without materializing the complete recursive program
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level

@@ -1207,8 +1207,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   earlier right move, so the semantic capture cases are complete. Every prefix
   of a complete replay now stays within the source invariant's space plus the
   largest countdown's binary width, without accumulating predecessor costs.
-  The remaining construction is the Barrington-specific streaming traversal
-  that calls the probe.
+  `Circuits/BarringtonStreaming` now replaces complete program construction by
+  a target-independent exact instruction-count recurrence and random-access
+  instruction stream, with every query proved equal to the reference compiler.
+  `FormulaEncoding/Navigation` supplies its stack-free postfix tree primitive:
+  a backwards owed-subtree scan recovers exact child spans using one cursor and
+  one counter. The remaining construction is the concrete controller that
+  realizes this traversal through repeated output probes and serializes each
+  selected instruction.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
