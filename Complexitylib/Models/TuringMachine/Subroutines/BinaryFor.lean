@@ -28,6 +28,8 @@ limit, or tape frames. Clients record those endpoint facts in
 - `BinaryForLoopSpec.reachesIn` composes a certified loop exactly.
 - `BinaryForLoopSpaceSpec.prefix_withinAuxSpace` covers every run prefix.
 - `BinaryForSegmentSpec.reachesIn` accepts bounded actual iteration times.
+- `BinaryForSegmentSpec.hoareTime` exposes exact segment endpoints as a Hoare
+  contract.
 - `BinaryForSegmentSpaceSpec.prefix_withinAuxSpace` covers segment prefixes.
 - `IsTransducer.binaryForTM` preserves one-way output safety.
 -/
@@ -212,6 +214,31 @@ theorem BinaryForSegmentSpec.reachesIn {body : TM n}
       (binaryForTM body counterIdx limitIdx).reachesIn time
         (spec.scanCfg value) spec.doneCfg :=
   spec.reachesIn_internal count value hstart hlimit
+
+/-- A bounded reachable segment beginning in the driver's start state gives
+a time-bounded Hoare triple from its exact initial tapes to its exact final
+tapes. -/
+theorem BinaryForSegmentSpec.hoareTime {body : TM n}
+    {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue : ℕ}
+    (spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue)
+    (hstartLimit : startValue ≤ limitValue)
+    (hscanState :
+      (spec.scanCfg startValue).state =
+        (binaryForTM body counterIdx limitIdx).qstart) :
+    (binaryForTM body counterIdx limitIdx).HoareTime
+      (fun inp work out =>
+        inp = (spec.scanCfg startValue).input ∧
+        work = (spec.scanCfg startValue).work ∧
+        out = (spec.scanCfg startValue).output)
+      (fun inp work out =>
+        inp = spec.doneCfg.input ∧
+        work = spec.doneCfg.work ∧
+        out = spec.doneCfg.output)
+      (binaryForLoopTime bodyTime limitValue startValue
+        (limitValue - startValue)) :=
+  spec.hoareTime_internal hstartLimit hscanState
 
 /-- Derive phase-local segment space safety from bounds on each canonical
 phase entry plus enough reserve for the corresponding concrete runtime.

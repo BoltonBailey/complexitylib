@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Hoare.Defs
 import Complexitylib.Models.TuringMachine.SpaceTime.Internal.Reachability
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Defs
 
@@ -109,6 +110,50 @@ theorem BinaryForSegmentSpec.reachesIn_internal {body : TM n}
         (iterationTime + (1 + tailTime)), ?_, hreach⟩
       rw [binaryForLoopTime]
       omega
+
+/-- Convert a bounded segment certificate whose initial scanner state is the
+driver start state into a time-bounded Hoare triple on its exact endpoint
+tapes. -/
+theorem BinaryForSegmentSpec.hoareTime_internal {body : TM n}
+    {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue : ℕ}
+    (spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue)
+    (hstartLimit : startValue ≤ limitValue)
+    (hscanState :
+      (spec.scanCfg startValue).state =
+        (binaryForTM body counterIdx limitIdx).qstart) :
+    (binaryForTM body counterIdx limitIdx).HoareTime
+      (fun inp work out =>
+        inp = (spec.scanCfg startValue).input ∧
+        work = (spec.scanCfg startValue).work ∧
+        out = (spec.scanCfg startValue).output)
+      (fun inp work out =>
+        inp = spec.doneCfg.input ∧
+        work = spec.doneCfg.work ∧
+        out = spec.doneCfg.output)
+      (binaryForLoopTime bodyTime limitValue startValue
+        (limitValue - startValue)) := by
+  intro inp work out hpre
+  have hsum : startValue + (limitValue - startValue) = limitValue :=
+    Nat.add_sub_of_le hstartLimit
+  obtain ⟨time, htime, hrun⟩ :=
+    spec.reachesIn_internal (limitValue - startValue) startValue le_rfl hsum
+  rcases hpre with ⟨rfl, rfl, rfl⟩
+  refine ⟨spec.doneCfg, time, htime, ?_, spec.doneHalted, rfl, rfl, rfl⟩
+  have hinitial :
+      { state := (binaryForTM body counterIdx limitIdx).qstart
+        input := (spec.scanCfg startValue).input
+        work := (spec.scanCfg startValue).work
+        output := (spec.scanCfg startValue).output } =
+        spec.scanCfg startValue := by
+    cases hcfg : spec.scanCfg startValue with
+    | mk state input work output =>
+        simp only [hcfg] at hscanState ⊢
+        subst state
+        rfl
+  rw [hinitial]
+  exact hrun
 
 theorem BinaryForSegmentSpaceSpec.ofInitialBounds_internal
     {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
