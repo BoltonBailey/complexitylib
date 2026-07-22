@@ -102,6 +102,11 @@ exceeds `maxCounter`. -/
 def outputProbeReplaySpace (sourceSpace maxCounter : ℕ) : ℕ :=
   outputProbePositiveSpace sourceSpace maxCounter
 
+/-- All-prefix auxiliary-space budget for a successful replay followed by the
+two transitions that select and emit the captured bit. -/
+def outputProbeCaptureSpace (sourceSpace maxCounter : ℕ) : ℕ :=
+  outputProbeReplaySpace sourceSpace maxCounter + 2
+
 /-- Read the source machine's work heads from the prefix of the probe layout. -/
 def outputProbeSourceHeads {n : ℕ} (workHeads : Fin (n + 1) → Γ) :
     Fin n → Γ :=

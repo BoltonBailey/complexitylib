@@ -1216,7 +1216,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   countdown, and physical-output tapes all enter parked at cell one. The
   output-retargeted form places the captured bit on a fresh work tape while
   preserving a parked blank real output, so repeated queries can compose
-  without replaying the enclosing machine's sentinel transition.
+  without replaying the enclosing machine's sentinel transition. Successful
+  valid-index queries now carry the replay bound through the two capture
+  transitions, the restart wrapper, and output retargeting, including the
+  fresh work tape that stores the selected bit; the controller can therefore
+  cite one all-prefix space certificate for each complete query phase.
   `Circuits/BarringtonStreaming` now replaces complete program construction by
   a target-independent exact instruction-count recurrence and random-access
   instruction stream, with every query proved equal to the reference compiler.

@@ -48,10 +48,16 @@ the requested position occupies only its binary width.
   of a successful concrete transducer run can be captured.
 - `TM.ComputesInSpace.outputProbeTM_getElem` -- the same valid-index interface
   for an abstract space-bounded function computation.
+- `TM.ComputesInSpace.outputProbeTM_getElem_withinAuxSpace` -- the valid-index
+  query with an all-prefix space certificate through capture.
 - `TM.ComputesInSpace.outputProbeStartedTM_getElem` -- the valid-index query
   from the canonical post-sentinel frame used by phase composition.
+- `TM.ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace` -- the
+  restartable query with the same all-prefix certificate.
 - `TM.ComputesInSpace.outputProbeStartedRetargetTM_getElem` -- the same query
   with the captured bit redirected to a fresh work tape.
+- `TM.ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace` --
+  the retargeted query with all physical work tapes covered by the bound.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
   countdown selects the finalized bit for capture.
 - `TM.outputProbeTM_capture_hasOutput` -- capture reaches the unique halt state
@@ -388,6 +394,28 @@ theorem ComputesInSpace.outputProbeTM_getElem
       done.output.HasOutput [(f input)[index]'hindex] :=
   hcomp.outputProbeTM_getElem_internal input index hindex
 
+/-- Every prefix of a valid output-bit query stays within the source space
+plus the binary index width and the constant capture seam. -/
+theorem ComputesInSpace.outputProbeTM_getElem_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.output.head = 2 ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeTM tm).reachesIn elapsed
+          (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+            (outputProbeCounterTape (index + 1)) (Tape.init [])) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeTM_getElem_withinAuxSpace_internal input index hindex
+
 /-- Every valid output index of a space-bounded transducer can be queried from
 the canonical post-sentinel frame. This removes the one compulsory source
 transition that a caller has already paid at the enclosing machine boundary. -/
@@ -402,6 +430,29 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem
       (outputProbeStartedTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] :=
   hcomp.outputProbeStartedTM_getElem_internal input index hindex
+
+/-- The post-sentinel valid-index query retains the complete all-prefix
+auxiliary-space certificate. -/
+theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      (outputProbeStartedTM tm).reachesIn probeSteps
+        (outputProbeStartedCfg tm input
+          (outputProbeCounterTape (index + 1))) done ∧
+      (outputProbeStartedTM tm).halted done ∧
+      done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.output.head = 2 ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeStartedTM tm).reachesIn elapsed
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1))) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeStartedTM_getElem_withinAuxSpace_internal
+    input index hindex
 
 /-- Redirecting the restartable query writes its captured bit on the fresh
 last work tape and leaves the enclosing machine's real output parked blank. -/
@@ -419,6 +470,33 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem
         [(f input)[index]'hindex] ∧
       done.output = (Tape.init []).move Dir3.right :=
   hcomp.outputProbeStartedRetargetTM_getElem_internal input index hindex
+
+/-- Redirecting a restartable valid-index query to a fresh work tape covers
+that tape, all source tapes, and every intermediate configuration with the
+same explicit auxiliary-space budget. -/
+theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      ((outputProbeStartedTM tm).retargetOutput).reachesIn probeSteps
+        ((outputProbeStartedTM tm).retargetCfg
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1)))) done ∧
+      ((outputProbeStartedTM tm).retargetOutput).halted done ∧
+      (done.work (Fin.last (n + 1))).HasOutput
+        [(f input)[index]'hindex] ∧
+      done.output = (Tape.init []).move Dir3.right ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
+          ((outputProbeStartedTM tm).retargetCfg
+            (outputProbeStartedCfg tm input
+              (outputProbeCounterTape (index + 1)))) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
+    input index hindex
 
 end TM
 
