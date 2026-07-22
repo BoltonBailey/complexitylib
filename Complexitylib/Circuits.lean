@@ -21,6 +21,7 @@ import Complexitylib.Circuits.BarringtonCompiler
 import Complexitylib.Circuits.BarringtonStreaming
 import Complexitylib.Circuits.BarringtonSlots
 import Complexitylib.Circuits.BarringtonSlotQuery
+import Complexitylib.Circuits.BarringtonTokenQuery
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
@@ -109,8 +110,8 @@ convention.
   random-access instruction view without constructing the complete program,
   while `barringtonCompileSlot?_eq_instruction?` follows one branch of the
   fixed `4^D` address schedule and returns exactly its selected instruction,
-  and `FormulaCode.subtreeWidth?_tokens_root` anchors stack-free postfix
-  subtree navigation.
+  while `barringtonCompileTokensSlot?_eq_instruction?` carries that query over
+  canonical postfix tokens using stack-free child-span recovery.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -140,6 +141,8 @@ Public modules (definitions a reviewer should read):
   instructions in a depth-bounded fixed-address schedule
 * `Complexitylib.Circuits.BarringtonSlotQuery` — structural first/last occupied
   addresses and exact direct lookup in that fixed schedule
+* `Complexitylib.Circuits.BarringtonTokenQuery` — the same exact fixed-slot
+  query over canonical postfix token streams, without reconstructing a formula
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level

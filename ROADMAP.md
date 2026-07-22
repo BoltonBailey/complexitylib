@@ -1237,9 +1237,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   conjunction, and disjunction.
   `FormulaEncoding/Navigation` supplies its stack-free postfix tree primitive:
   a backwards owed-subtree scan recovers exact child spans using one cursor and
-  one counter. The remaining construction is the concrete controller that
-  composes the restartable probes to realize this traversal and serializes each
-  selected instruction, together with its all-prefix logarithmic-space proof.
+  one counter. `Circuits/BarringtonTokenQuery` now lifts the direct fixed-slot
+  recurrence from inductive formulas to canonical postfix token streams:
+  binary child spans are recovered by that backwards scan, and every token-
+  stream query is proved equal to the reference compiler's selected
+  instruction. The remaining construction is the concrete bit-level controller
+  that composes restartable probes to realize this traversal and serializes
+  each selected instruction, together with its all-prefix logarithmic-space
+  proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
