@@ -84,7 +84,10 @@ convention.
 
 * **Barrington's theorem** (`barrington_equivalence`):
   Logarithmic-depth Boolean formula families are exactly polynomial-length
-  width-`5` permutation branching-program families.
+  width-`5` permutation branching-program families. The finite forward theorem
+  `barrington_representation_depth_four` gives the textbook length bound
+  `4 ^ depth`, and `barrington_quadratic_of_log_depth` specializes it to `n²`
+  at depth at most `log₂ n`.
 
 ## Module structure
 

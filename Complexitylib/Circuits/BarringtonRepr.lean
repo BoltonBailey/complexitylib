@@ -28,9 +28,10 @@ The recursion follows the connectives directly:
 composed of `AND` and negation. Each step preserves representation through a
 genuine `5`-cycle, which is what the commutator-trick `AND` requires.
 
-What is *not* yet established here is the `4^d` length bound (which needs the
-explicit — rather than existential — construction and a size recurrence) and the
-lift to nonuniform `NC¹`. Those remain open (roadmap track M3).
+The length bookkeeping lives in `Circuits/BarringtonLength.lean`, where
+length-preserving pointwise conjugation and compact negation sharpen this
+semantic recursion to the textbook `4^d` bound. The nonuniform family lift and
+converse live in `BarringtonFamily.lean` and `BarringtonConverse.lean`.
 
 ## Main results
 

@@ -9,9 +9,10 @@ import Mathlib.Data.Nat.Log
 /-!
 # Barrington at the family level: `NC¹ ⊆` polynomial-size width-`5` branching programs
 
-`Circuits/BarringtonLength.lean` proves the per-formula bound `barrington_representation_depth`
-(a formula of depth `d` compiles to a width-`5` program of length `≤ 17^d`). This
-module lifts that to *families*: a family of formulas of logarithmic depth
+`Circuits/BarringtonLength.lean` proves the textbook per-formula bound
+`barrington_representation_depth_four` (a formula of depth `d` compiles to a
+width-`5` program of length `≤ 4^d`). This module lifts that to *families*: a
+family of formulas of logarithmic depth
 (`NC¹`) is computed, formula by formula, by a family of width-`5` permutation
 branching programs of **polynomial** length. That is the class-level polynomial-size
 direction of Barrington's characterization, in the nonuniform (per-length) setting.
@@ -19,7 +20,7 @@ direction of Barrington's characterization, in the nonuniform (per-length) setti
 The families here range over the same `ℕ → Bool` assignments the Barrington
 development already uses, so `FormulaFamily.logDepth_polyLength_bp` follows by
 applying the per-formula bound pointwise, together with the arithmetic fact that
-`17^{c·log₂ n + c}` is bounded by a polynomial in `n`.
+`4^{c·log₂ n + c}` is bounded by a polynomial in `n`.
 
 ## Main definitions and results
 
@@ -32,24 +33,22 @@ open Equiv
 
 namespace Complexity
 
-/-- `17^{c·log₂ n + c} ≤ 17^c · (n+1)^{5c}`: the construction length for a
+/-- `4^{c·log₂ n + c} ≤ 4^c · (n+1)^{2c}`: the construction length for a
     depth-`(c·log₂ n + c)` formula is polynomial in `n`. -/
-private theorem pow17_poly (c n : ℕ) :
-    17 ^ (c * Nat.log 2 n + c) ≤ 17 ^ c * (n + 1) ^ (5 * c) := by
-  have hlog : 17 ^ Nat.log 2 n ≤ (n + 1) ^ 5 := by
+private theorem pow4_poly (c n : ℕ) :
+    4 ^ (c * Nat.log 2 n + c) ≤ 4 ^ c * (n + 1) ^ (2 * c) := by
+  have hlog : 4 ^ Nat.log 2 n ≤ (n + 1) ^ 2 := by
     rcases Nat.eq_zero_or_pos n with hn | hn
     · subst hn; simp
-    · calc 17 ^ Nat.log 2 n
-          ≤ 32 ^ Nat.log 2 n := Nat.pow_le_pow_left (by omega) _
-        _ = (2 ^ Nat.log 2 n) ^ 5 := by
-            rw [show (32 : ℕ) = 2 ^ 5 from rfl, ← pow_mul, ← pow_mul, Nat.mul_comm]
-        _ ≤ n ^ 5 := Nat.pow_le_pow_left (Nat.pow_log_le_self 2 (by omega)) 5
-        _ ≤ (n + 1) ^ 5 := Nat.pow_le_pow_left (by omega) 5
-  calc 17 ^ (c * Nat.log 2 n + c)
-      = (17 ^ Nat.log 2 n) ^ c * 17 ^ c := by
+    · calc 4 ^ Nat.log 2 n
+          ≤ n ^ 2 := pow_four_log_le n (by omega)
+        _ ≤ (n + 1) ^ 2 := Nat.pow_le_pow_left (by omega) 2
+  calc 4 ^ (c * Nat.log 2 n + c)
+      = (4 ^ Nat.log 2 n) ^ c * 4 ^ c := by
         rw [pow_add, mul_comm c (Nat.log 2 n), pow_mul]
-    _ ≤ ((n + 1) ^ 5) ^ c * 17 ^ c := Nat.mul_le_mul_right _ (Nat.pow_le_pow_left hlog c)
-    _ = 17 ^ c * (n + 1) ^ (5 * c) := by rw [← pow_mul]; ring
+    _ ≤ ((n + 1) ^ 2) ^ c * 4 ^ c :=
+      Nat.mul_le_mul_right _ (Nat.pow_le_pow_left hlog c)
+    _ = 4 ^ c * (n + 1) ^ (2 * c) := by rw [← pow_mul]; ring
 
 /-- A family of Boolean formulas, one per input length. -/
 def FormulaFamily := ℕ → BoolFormula
@@ -70,11 +69,13 @@ theorem FormulaFamily.logDepth_polyLength_bp (F : FormulaFamily) (hF : F.LogDept
       (∀ n α, BP.eval α (R n) = if BoolFormula.eval α (F n) then S n else 1) ∧
       (∀ n, (R n).length ≤ C * (n + 1) ^ p) := by
   obtain ⟨c, hc⟩ := hF
-  choose R S hS hev hlen using fun n => barrington_representation_depth (F n)
-  refine ⟨R, S, 17 ^ c, 5 * c, hS, hev, fun n => ?_⟩
-  calc (R n).length ≤ 17 ^ (F n).depth := hlen n
-    _ ≤ 17 ^ (c * Nat.log 2 n + c) := Nat.pow_le_pow_right (by omega) (hc n)
-    _ ≤ 17 ^ c * (n + 1) ^ (5 * c) := pow17_poly c n
+  choose R S hS hev hlen using fun n =>
+    barrington_representation_depth_four (F n)
+  refine ⟨R, S, 4 ^ c, 2 * c, hS, hev, fun n => ?_⟩
+  calc (R n).length ≤ 4 ^ (F n).depth := hlen n
+    _ ≤ 4 ^ (c * Nat.log 2 n + c) :=
+      Nat.pow_le_pow_right (by omega) (hc n)
+    _ ≤ 4 ^ c * (n + 1) ^ (2 * c) := pow4_poly c n
 
 /-- **Family-level Barrington, Boolean-decision form.** A logarithmic-depth formula
     family is *decided* by a family of polynomial-length width-`5` branching

@@ -1096,13 +1096,16 @@ programs by log-depth circuits and a clearly stated uniformity convention.
 
 **Staged milestones.**
 
-- [ ] Define Boolean formulas with literals, depth, evaluation, and compilation
-  from a selected circuit output by recursively unfolding its DAG.
+- [~] Define Boolean formulas with literals, depth, evaluation, and compilation
+  from a selected circuit output by recursively unfolding its DAG. (`BoolFormula`
+  now has variables/constants, literal helpers, evaluation, size, leaves, depth,
+  variable locality, and circuit-fragment compilation; the selected-output DAG
+  unfolding theorem remains.)
 - [x] Define width-`w` permutation branching programs: instructions selected by
   one input bit, ordered product semantics, length, and acceptance convention.
   (`Circuits/BranchingProgram.lean`: `BPInstr`, `BP`, `eval`, `eval_append`,
   `eval_cons`, `eval_rename`.)
-- [~] Specialize to permutations of `Fin 5` and prove the explicit conjugation and
+- [x] Specialize to permutations of `Fin 5` and prove the explicit conjugation and
   commutator identities used by Barrington's induction. (Abstract core done in
   `Circuits/Barrington.lean`: `BP.inverse`/`eval_inverse`, the representation
   predicate `BP.Computes`, and the closure lemmas `Computes_conj`,
@@ -1114,8 +1117,8 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `every_fiveCycle_is_commutator` upgrades this to *every* `5`-cycle via the
   single-conjugacy-class fact (`isConj_iff_cycleType_eq`) plus conjugation
   distributing over `⁅·,·⁆`. So the full `S₅` target-cycle freedom Barrington's
-  induction consumes is proven. What remains is threading it through the
-  formula→BP induction with the `4^d` length bookkeeping.)
+  induction consumes is proven. `BPInstr.conjugate` and `BP.conjugate` now realize
+  conjugation pointwise, preserving program length exactly.)
 - [x] Compile literals and negation, then the AND/OR induction, tracking target
   cycles and a length bound. (The abstract move-set is functionally complete in
   `Circuits/Barrington.lean`: base cases `Computes_false`, `Computes_true`,
@@ -1124,27 +1127,25 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `S₅` algebra: `BP.Computes_retarget` re-aims a program to any target `5`-cycle,
   and `BP.Computes_and5` gives the `AND` gate with full target-cycle freedom. The
   full formula recursion is done in `Circuits/BarringtonRepr.lean`
-  (`Computes_formula`). Length is now tracked in `Circuits/BarringtonLength.lean`:
-  `Computes_formula_len` + `barrington_representation_len` give a program of length
-  `≤ 13 ^ (size φ)`. The tighter textbook `4 ^ depth` constant is NOT yet
-  attained — it needs a construction avoiding the retargeting overhead.)
-- [~] State and prove the finite Barrington theorem. (Representation form
+  (`Computes_formula`). `Circuits/BarringtonLength.lean` now adds pointwise
+  length-preserving retargeting, compact negation with length `max 1`, and the
+  exact four-copy commutator recurrence; `Computes_formula_depth_four` proves the
+  tight `≤ 4 ^ depth` induction.)
+- [x] State and prove the finite Barrington theorem. (Representation form
   **proven**: `Circuits/BarringtonRepr.lean` `barrington_representation` — every
   Boolean formula is computed by a width-`5` permutation branching program (some
   nonidentity `σ ∈ S₅` with program-value `= σ ↔ φ` true).
-  `Circuits/BarringtonLength.lean` adds length bounds: `barrington_representation_len`
-  (`≤ 13 ^ size`), `barrington_representation_depth` (`≤ 17 ^ depth`), and
-  `barrington_poly_of_log_depth` — the **concrete `NC¹ ⟹` poly-size** statement: a
-  formula of depth `≤ log₂ n` compiles to a width-`5` program of length `≤ n⁵` (via
-  `17^{log₂ n} ≤ n⁵`). All 0 custom axioms. Remaining: the tight base `4 ^ depth`
-  (vs `17 ^ depth`); the nonuniform family equality is completed below, while a
-  uniform version remains a separate refinement.)
+  `Circuits/BarringtonLength.lean` adds the textbook finite theorem
+  `barrington_representation_depth_four` (`≤ 4 ^ depth`) and
+  `barrington_quadratic_of_log_depth` — a formula of depth `≤ log₂ n` compiles
+  to a width-`5` program of length `≤ n²`. The earlier `13 ^ size`, `17 ^ depth`,
+  and `n⁵` statements remain compatibility corollaries. All 0 custom axioms.)
 - [x] Lift it to nonuniform `NC^1`; then prove the converse by balanced composition
   of constant-size permutation transition matrices/functions. (Forward direction:
   `Circuits/BarringtonFamily.lean`
   `FormulaFamily.logDepth_polyLength_bp` — a logarithmic-depth (`NC¹`) formula family
   is computed formula-by-formula by a family of width-`5` branching programs of
-  polynomial length `C·(n+1)^p`. Converse and equality:
+  polynomial length `4^c·(n+1)^(2c)`. Converse and equality:
   `Circuits/BarringtonConverse.lean` — `BP.reachesFormula` composes two half-programs
   through the five possible intermediate states, `BP.depth_decisionFormula_le`
   bounds decision depth by `6·⌈log₂ length⌉ + 2`, and

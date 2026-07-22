@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.BranchingProgram
 import Mathlib.Algebra.Group.Commutator
+import Mathlib.Data.List.ModifyLast
 
 /-!
 # Toward Barrington's theorem: the group-theoretic core
@@ -20,9 +21,12 @@ Boolean function `f` through the permutation `σ`, meaning it evaluates to `σ`
 exactly when `f` holds and to `1` (the identity) otherwise. The closure lemmas
 proved here are the moves in Barrington's inductive construction:
 
-- **conjugation** changes the representing permutation (`Computes_conj`);
-- **negation** flips the function while inverting the permutation
-  (`Computes_not`);
+- **conjugation** changes the representing permutation, either by wrapping the
+  program (`Computes_conj`) or pointwise with no length overhead
+  (`Computes_conjugate`);
+- **negation** flips the function while inverting the permutation, either by
+  appending a constant (`Computes_not`) or by folding that constant into the
+  final instruction (`Computes_not_compact`);
 - the **commutator trick** (`Computes_and`) represents `f ∧ g` through the
   commutator `⁅σ, τ⁆` — choosing `σ, τ` to be `5`-cycles in `S₅` whose
   commutator is again a `5`-cycle is exactly what makes the `AND` gate work.
@@ -32,7 +36,12 @@ proved here are the moves in Barrington's inductive construction:
 - `BPInstr.inverse`, `BP.inverse`, `BP.eval_inverse` — inverting a program
   inverts the permutation it evaluates to.
 - `BPInstr.const`, `BPInstr.eval_const` — constant instructions.
-- `BP.Computes`, `BP.Computes_conj`, `BP.Computes_not`, `BP.Computes_and`.
+- `BPInstr.conjugate`, `BP.conjugate`, `BP.eval_conjugate` — length-preserving
+  pointwise conjugation.
+- `BPInstr.postMul`, `BP.postMul`, `BP.eval_postMul` — fold a final constant
+  into the last instruction, adding an instruction only to the empty program.
+- `BP.Computes`, `BP.Computes_conj`, `BP.Computes_not`,
+  `BP.Computes_not_compact`, `BP.Computes_and`.
 -/
 
 open scoped commutatorElement
@@ -59,6 +68,83 @@ def BPInstr.const {w : ℕ} (c : Equiv.Perm (Fin w)) : BPInstr w :=
     BPInstr.eval α (BPInstr.const c) = c := by
   simp only [BPInstr.eval, BPInstr.const]
   cases α 0 <;> rfl
+
+/-- Conjugate both branches of an instruction by the same permutation. -/
+def BPInstr.conjugate {w : ℕ} (τ : Equiv.Perm (Fin w))
+    (ins : BPInstr w) : BPInstr w :=
+  { ins with
+    perm0 := τ * ins.perm0 * τ⁻¹
+    perm1 := τ * ins.perm1 * τ⁻¹ }
+
+/-- Pointwise instruction conjugation realizes group conjugation. -/
+@[simp] theorem BPInstr.eval_conjugate {w : ℕ} (α : ℕ → Bool)
+    (τ : Equiv.Perm (Fin w)) (ins : BPInstr w) :
+    BPInstr.eval α (BPInstr.conjugate τ ins) =
+      τ * BPInstr.eval α ins * τ⁻¹ := by
+  simp only [BPInstr.eval, BPInstr.conjugate]
+  cases α ins.var <;> rfl
+
+/-- Right-multiply both branches of an instruction by a fixed permutation. -/
+def BPInstr.postMul {w : ℕ} (ins : BPInstr w)
+    (c : Equiv.Perm (Fin w)) : BPInstr w :=
+  { ins with perm0 := ins.perm0 * c, perm1 := ins.perm1 * c }
+
+/-- Right-multiplication commutes with selecting an instruction branch. -/
+@[simp] theorem BPInstr.eval_postMul {w : ℕ} (α : ℕ → Bool)
+    (ins : BPInstr w) (c : Equiv.Perm (Fin w)) :
+    BPInstr.eval α (BPInstr.postMul ins c) = BPInstr.eval α ins * c := by
+  simp only [BPInstr.eval, BPInstr.postMul]
+  cases α ins.var <;> rfl
+
+/-- Conjugate every instruction of a branching program. Unlike wrapping with
+constant instructions, this operation preserves length exactly. -/
+def BP.conjugate {w : ℕ} (τ : Equiv.Perm (Fin w)) (p : BP w) : BP w :=
+  p.map (BPInstr.conjugate τ)
+
+/-- Pointwise conjugation conjugates the value of the whole program. -/
+theorem BP.eval_conjugate {w : ℕ} (α : ℕ → Bool)
+    (τ : Equiv.Perm (Fin w)) (p : BP w) :
+    BP.eval α (BP.conjugate τ p) = τ * BP.eval α p * τ⁻¹ := by
+  induction p with
+  | nil => simp [BP.conjugate, BP.eval]
+  | cons ins p ih =>
+      rw [show BP.conjugate τ (ins :: p) =
+        BPInstr.conjugate τ ins :: BP.conjugate τ p from rfl]
+      rw [BP.eval_cons, BPInstr.eval_conjugate, ih, BP.eval_cons]
+      simp only [mul_assoc, inv_mul_cancel_left]
+
+/-- Pointwise conjugation preserves program length exactly. -/
+@[simp] theorem BP.length_conjugate {w : ℕ}
+    (τ : Equiv.Perm (Fin w)) (p : BP w) :
+    (BP.conjugate τ p).length = p.length := by
+  simp [BP.conjugate]
+
+/-- Fold a final constant multiplication into the last instruction. The empty
+program has no last instruction, so it becomes a singleton constant program. -/
+def BP.postMul {w : ℕ} (p : BP w) (c : Equiv.Perm (Fin w)) : BP w :=
+  if p = [] then [BPInstr.const c]
+  else p.modifyLast fun ins => BPInstr.postMul ins c
+
+/-- Folding a final constant into the last instruction right-multiplies the
+program value. -/
+theorem BP.eval_postMul {w : ℕ} (α : ℕ → Bool) (p : BP w)
+    (c : Equiv.Perm (Fin w)) :
+    BP.eval α (BP.postMul p c) = BP.eval α p * c := by
+  induction p using List.reverseRecOn with
+  | nil => simp [BP.postMul, BP.eval_singleton]
+  | append_singleton p ins ih =>
+      simp [BP.postMul, List.modifyLast_concat, BP.eval_append,
+        BP.eval_singleton, mul_assoc]
+
+/-- Folding a final constant uses the original length, except that an empty
+program needs one instruction. -/
+theorem BP.length_postMul {w : ℕ} (p : BP w)
+    (c : Equiv.Perm (Fin w)) :
+    (BP.postMul p c).length = max 1 p.length := by
+  induction p using List.reverseRecOn with
+  | nil => simp [BP.postMul]
+  | append_singleton p ins ih =>
+      simp [BP.postMul, List.modifyLast_concat]
 
 /-- Invert a branching program: reverse the instruction list and invert each
     instruction. -/
@@ -91,6 +177,16 @@ theorem BP.Computes_conj {w : ℕ} {σ : Equiv.Perm (Fin w)} {p : BP w}
   simp only [BP.eval_append, BP.eval_singleton, BPInstr.eval_const, h α]
   rcases Bool.eq_false_or_eq_true (f α) with hf | hf <;> simp [hf]
 
+/-- **Length-preserving conjugation.** Conjugating every instruction changes
+the representing permutation without adding constant instructions. -/
+theorem BP.Computes_conjugate {w : ℕ} {σ : Equiv.Perm (Fin w)} {p : BP w}
+    {f : (ℕ → Bool) → Bool} (h : BP.Computes σ p f)
+    (τ : Equiv.Perm (Fin w)) :
+    BP.Computes (τ * σ * τ⁻¹) (BP.conjugate τ p) f := by
+  intro α
+  rw [BP.eval_conjugate, h α]
+  rcases Bool.eq_false_or_eq_true (f α) with hf | hf <;> simp [hf]
+
 /-- **Negation.** Appending a constant `σ⁻¹` to a program that represents `f`
     through `σ` yields a program representing `¬f` through `σ⁻¹`. -/
 theorem BP.Computes_not {w : ℕ} {σ : Equiv.Perm (Fin w)} {p : BP w}
@@ -98,6 +194,16 @@ theorem BP.Computes_not {w : ℕ} {σ : Equiv.Perm (Fin w)} {p : BP w}
     BP.Computes σ⁻¹ (p ++ [BPInstr.const σ⁻¹]) (fun α => !f α) := by
   intro α
   simp only [BP.eval_append, BP.eval_singleton, BPInstr.eval_const, h α]
+  rcases Bool.eq_false_or_eq_true (f α) with hf | hf <;> simp [hf]
+
+/-- **Compact negation.** Multiplying the final selected permutation by `σ⁻¹`
+represents `¬f` through `σ⁻¹`. The multiplication is folded into the last
+instruction, so the length becomes only `max 1 p.length`. -/
+theorem BP.Computes_not_compact {w : ℕ} {σ : Equiv.Perm (Fin w)} {p : BP w}
+    {f : (ℕ → Bool) → Bool} (h : BP.Computes σ p f) :
+    BP.Computes σ⁻¹ (BP.postMul p σ⁻¹) (fun α => !f α) := by
+  intro α
+  rw [BP.eval_postMul, h α]
   rcases Bool.eq_false_or_eq_true (f α) with hf | hf <;> simp [hf]
 
 /-- **The commutator trick** (Barrington's `AND` gate). If `p` represents `f`
