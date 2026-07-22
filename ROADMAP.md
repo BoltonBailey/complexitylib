@@ -1207,6 +1207,8 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   earlier right move, so the semantic capture cases are complete. Every prefix
   of a complete replay now stays within the source invariant's space plus the
   largest countdown's binary width, without accumulating predecessor costs.
+  Canonical blank-output specializations also discharge the probe's physical
+  head-and-cells premises after every positive-length replay.
   `Circuits/BarringtonStreaming` now replaces complete program construction by
   a target-independent exact instruction-count recurrence and random-access
   instruction stream, with every query proved equal to the reference compiler.

@@ -33,6 +33,8 @@ output string on work tape.
 - `TM.suppressOutputTM_isTransducer` -- the concrete realization remains an
   append-only transducer.
 - `TM.suppressOutputTM_step` -- one concrete step implements one cursor step.
+- `TM.suppressOutputTapeTrace_succ_init` -- canonical suppressed output is
+  parked blank at cell one after every positive-length trace.
 - `TM.IsTransducer.suppressOutputTM_reachesIn` -- complete source runs lift to
   the concrete output-suppressing machine.
 - `TM.IsTransducer.suppressOutputTM_reachesIn_halt` -- source halting runs lift
@@ -204,6 +206,28 @@ steps still represents the empty output string. -/
 theorem suppressOutputTapeTrace_init_hasOutput_nil (steps : ℕ) :
     (suppressOutputTapeTrace steps (Tape.init [])).HasOutput [] :=
   suppressOutputTapeTrace_init_hasOutput_nil_internal steps
+
+/-- Once a suppressed trace from the canonical blank output takes one step,
+its physical output is exactly the same blank tape parked at cell one. -/
+theorem suppressOutputTapeTrace_succ_init (steps : ℕ) :
+    suppressOutputTapeTrace (steps + 1) (Tape.init []) =
+      (Tape.init []).move Dir3.right :=
+  suppressOutputTapeTrace_succ_init_internal steps
+
+/-- Every positive-length suppressed trace from canonical blank output has
+physical head one. -/
+theorem suppressOutputTapeTrace_succ_init_head (steps : ℕ) :
+    (suppressOutputTapeTrace (steps + 1) (Tape.init [])).head = 1 := by
+  rw [suppressOutputTapeTrace_succ_init]
+  simp [Tape.move]
+
+/-- Every positive-length suppressed trace preserves the canonical blank
+physical cells exactly. -/
+theorem suppressOutputTapeTrace_succ_init_cells (steps : ℕ) :
+    (suppressOutputTapeTrace (steps + 1) (Tape.init [])).cells =
+      (Tape.init []).cells := by
+  rw [suppressOutputTapeTrace_succ_init]
+  simp [Tape.move]
 
 /-- Suppressing the output of a bounded-time function transducer yields a
 genuine machine computation of the empty string. The simulator retains the

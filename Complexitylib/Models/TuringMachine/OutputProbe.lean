@@ -38,6 +38,8 @@ the requested position occupies only its binary width.
   cursor selects that bit for physical output.
 - `TM.outputProbeTM_reachesIn_cursorTraceObserved_capture` -- end-to-end
   replay and one-bit output when the selected frontier cell is final.
+- `TM.outputProbeTM_reachesIn_cursorTraceObserved_capture_init` -- the same
+  theorem from canonical blank physical output, with no tape-shape premises.
 - `TM.outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture` -- the
   corresponding end-to-end theorem for a cell finalized before source halt.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
@@ -250,6 +252,30 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_capture (tm : TM n)
     output bit htrace hinput hwork hcounter houtput hhalt hcursor
     hphysicalHead hphysicalCells
 
+/-- Positive-length specialization of
+`outputProbeTM_reachesIn_cursorTraceObserved_capture` from canonical blank
+physical output. Suppressed execution parks that output at cell one and leaves
+its cells unchanged, so callers need no physical-tape side conditions. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_capture_init (tm : TM n)
+    {steps advances : ℕ}
+    {before after : CursorCfg n tm.Q} (counter : Tape) (bit : Bool)
+    (htrace : tm.cursorTraceObserved (steps + 1) before =
+      some (after, advances))
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat advances)
+    (hhalt : after.state = tm.qhalt)
+    (hcursor : after.output = .cell (Γ.ofBool bit)) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] :=
+  outputProbeTM_reachesIn_cursorTraceObserved_capture tm counter
+    (Tape.init []) bit htrace hinput hwork hcounter
+    Tape.StartInvariant.init_nil hhalt hcursor
+    (suppressOutputTapeTrace_succ_init_head steps)
+    (suppressOutputTapeTrace_succ_init_cells steps)
+
 /-- Replay an observed source prefix and emit the bit finalized by its next
 right output move. This is the earlier-cell counterpart of
 `outputProbeTM_reachesIn_cursorTraceObserved_capture`: together the two
@@ -280,6 +306,32 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture
   outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_internal tm
     counter output bit symbol htrace hinput hwork hcounter houtput hnext
     hcursor hdir hwrite hphysicalHead hphysicalCells
+
+/-- Positive-length specialization of the earlier-finalized-cell theorem from
+canonical blank physical output. -/
+theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_init
+    (tm : TM n) {steps advances : ℕ}
+    {before selected next : CursorCfg n tm.Q}
+    (counter : Tape) (bit : Bool) (symbol : Γ)
+    (htrace : tm.cursorTraceObserved (steps + 1) before =
+      some (selected, advances))
+    (hinput : before.input.StartInvariant)
+    (hwork : ∀ i, (before.work i).StartInvariant)
+    (hcounter : counter.HasBinaryNat advances)
+    (hnext : tm.cursorStep selected = some next)
+    (hcursor : selected.output = .cell symbol)
+    (hdir : tm.cursorOutputDirection selected = Dir3.right)
+    (hwrite : tm.cursorOutputWrite selected =
+      if bit then Γw.one else Γw.zero) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm before counter (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] :=
+  outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture tm counter
+    (Tape.init []) bit symbol htrace hinput hwork hcounter
+    Tape.StartInvariant.init_nil hnext hcursor hdir hwrite
+    (suppressOutputTapeTrace_succ_init_head steps)
+    (suppressOutputTapeTrace_succ_init_cells steps)
 
 end TM
 

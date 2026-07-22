@@ -338,6 +338,34 @@ theorem suppressOutputTapeTrace_cells_internal (steps : ℕ) {tape : Tape}
             (suppressOutputTapeStep tape).cells := ih hstart'
         _ = tape.cells := suppressOutputTapeStep_cells_internal hstart
 
+private theorem suppressOutputTapeStep_eq_self_internal {tape : Tape}
+    (hread : tape.read ≠ Γ.start) :
+    suppressOutputTapeStep tape = tape := by
+  rw [suppressOutputTapeStep]
+  rw [writeAndMove_readBack tape hread]
+  simp [idleDir, hread, Tape.move]
+
+theorem suppressOutputTapeTrace_eq_self_internal (steps : ℕ) {tape : Tape}
+    (hread : tape.read ≠ Γ.start) :
+    suppressOutputTapeTrace steps tape = tape := by
+  induction steps with
+  | zero => rfl
+  | succ steps ih =>
+      rw [suppressOutputTapeTrace,
+        suppressOutputTapeStep_eq_self_internal hread, ih]
+
+theorem suppressOutputTapeTrace_succ_init_internal (steps : ℕ) :
+    suppressOutputTapeTrace (steps + 1) (Tape.init []) =
+      (Tape.init []).move Dir3.right := by
+  rw [suppressOutputTapeTrace]
+  have hfirst : suppressOutputTapeStep (Tape.init []) =
+      (Tape.init []).move Dir3.right := by
+    simp [suppressOutputTapeStep, Tape.writeAndMove, Tape.write,
+      Tape.read, Tape.move, Tape.init, idleDir]
+  rw [hfirst]
+  apply suppressOutputTapeTrace_eq_self_internal
+  simp [Tape.read, Tape.move, Tape.init]
+
 private theorem suppressOutputTapeTrace_startInvariant_internal
     (steps : ℕ) {tape : Tape} (hstart : tape.StartInvariant) :
     (suppressOutputTapeTrace steps tape).StartInvariant := by
