@@ -19,6 +19,7 @@ import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonCompiler
 import Complexitylib.Circuits.BarringtonStreaming
+import Complexitylib.Circuits.BarringtonSlots
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily

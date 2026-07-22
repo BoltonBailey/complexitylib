@@ -1220,6 +1220,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `Circuits/BarringtonStreaming` now replaces complete program construction by
   a target-independent exact instruction-count recurrence and random-access
   instruction stream, with every query proved equal to the reference compiler.
+  `Circuits/BarringtonSlots` schedules that same exact program inside `4^D`
+  optional fixed-address slots for any promised depth bound `D`: erasing empty
+  slots recovers the reference compiler byte-for-byte, and counting occupied
+  slots recovers its exact instruction count. This removes recursive child-
+  length arithmetic from the machine controller while keeping its output
+  unchanged.
   `FormulaEncoding/Navigation` supplies its stack-free postfix tree primitive:
   a backwards owed-subtree scan recovers exact child spans using one cursor and
   one counter. The remaining construction is the concrete controller that
