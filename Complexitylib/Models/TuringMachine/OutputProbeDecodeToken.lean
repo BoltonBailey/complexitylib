@@ -170,6 +170,85 @@ theorem outputProbeDecodeTokenClearTagsTM_hoareTime
     layout outerExtras input output extras tag₀ tag₁ tag₂ hextras houter
     houtput htag₀ htag₁ htag₂
 
+/-- Dispatch a retained tag after restoring the same canonical zero-tag frame
+for every legal and invalid continuation. -/
+theorem outputProbeDecodeTokenDispatchTM_hoareTime
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : Option OutputProbeTokenTag →
+      TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ}
+    (hvar : onVar.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .var)) varTime)
+    (htru : onTru.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .tru)) truTime)
+    (hfls : onFls.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .fls)) flsTime)
+    (hneg : onNeg.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .neg)) negTime)
+    (hconj : onConj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .conj)) conjTime)
+    (hdisj : onDisj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .disj)) disjTime)
+    (hinvalid : onInvalid.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post none) invalidTime) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (post (outputProbeTokenTag? tag₀ tag₁ tag₂))
+        (outputProbeDecodeTokenDispatchTime tag₀ tag₁ tag₂ varTime
+          truTime flsTime negTime conjTime disjTime invalidTime) :=
+  outputProbeDecodeTokenDispatchTM_hoareTime_internal tm controllerTapes
+    layout outerExtras input output extras tag₀ tag₁ tag₂ hextras houter
+    houtput htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj onDisj
+    onInvalid hvar htru hfls hneg hconj hdisj hinvalid
+
 /-- Retained-tag cleanup preserves the append-only output discipline. -/
 theorem outputProbeDecodeTokenClearTagsTM_isTransducer
     (n controllerTapes : ℕ)
@@ -178,6 +257,21 @@ theorem outputProbeDecodeTokenClearTagsTM_isTransducer
       layout).IsTransducer :=
   outputProbeDecodeTokenClearTagsTM_isTransducer_internal n controllerTapes
     layout
+
+/-- Invariant-restoring token dispatch preserves append-only output whenever
+all selected continuations do. -/
+theorem IsTransducer.outputProbeDecodeTokenDispatchTM
+    {onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (hvar : onVar.IsTransducer) (htru : onTru.IsTransducer)
+    (hfls : onFls.IsTransducer) (hneg : onNeg.IsTransducer)
+    (hconj : onConj.IsTransducer) (hdisj : onDisj.IsTransducer)
+    (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).IsTransducer :=
+  hvar.outputProbeDecodeTokenDispatchTM_internal htru hfls hneg hconj hdisj
+    hinvalid layout
 
 end TM
 

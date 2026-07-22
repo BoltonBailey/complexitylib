@@ -98,6 +98,31 @@ def outputProbeDecodeTokenClearTagsTime (tag₀ tag₁ tag₂ : Bool) : ℕ :=
     (clearWorkTimeBound (if tag₁ then 1 else 0).bits.length + 1 +
       clearWorkTimeBound (if tag₂ then 1 else 0).bits.length)
 
+/-- Dispatch a retained tag after wrapping every selected continuation in the
+same three-register cleanup phase. -/
+def outputProbeDecodeTokenDispatchTM (n controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  let clearTags := outputProbeDecodeTokenClearTagsTM n controllerTapes layout
+  outputProbeDecodeTagDispatchTM n controllerTapes layout.tagLayout
+    (seqTM clearTags onVar) (seqTM clearTags onTru)
+    (seqTM clearTags onFls) (seqTM clearTags onNeg)
+    (seqTM clearTags onConj) (seqTM clearTags onDisj)
+    (seqTM clearTags onInvalid)
+
+/-- Exact selected runtime of invariant-restoring token dispatch. -/
+def outputProbeDecodeTokenDispatchTime (tag₀ tag₁ tag₂ : Bool)
+    (varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ) :
+    ℕ :=
+  let clearTime := outputProbeDecodeTokenClearTagsTime tag₀ tag₁ tag₂
+  outputProbeDecodeTagDispatchTime tag₀ tag₁ tag₂
+    (clearTime + 1 + varTime) (clearTime + 1 + truTime)
+    (clearTime + 1 + flsTime) (clearTime + 1 + negTime)
+    (clearTime + 1 + conjTime) (clearTime + 1 + disjTime)
+    (clearTime + 1 + invalidTime)
+
 end TM
 
 end Complexity

@@ -317,6 +317,148 @@ theorem outputProbeDecodeTokenClearTagsTM_hoareTime_internal
     outputProbeDecodeTokenClearTagsTime, outer₁, outer₂, idx₀, idx₁,
     idx₂] using hfull
 
+theorem outputProbeDecodeTokenDispatchTM_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : Option OutputProbeTokenTag →
+      TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ}
+    (hvar : onVar.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .var)) varTime)
+    (htru : onTru.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .tru)) truTime)
+    (hfls : onFls.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .fls)) flsTime)
+    (hneg : onNeg.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .neg)) negTime)
+    (hconj : onConj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .conj)) conjTime)
+    (hdisj : onDisj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post (some .disj)) disjTime)
+    (hinvalid : onInvalid.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+        input output extras false)
+      (post none) invalidTime) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (post (outputProbeTokenTag? tag₀ tag₁ tag₂))
+        (outputProbeDecodeTokenDispatchTime tag₀ tag₁ tag₂ varTime
+          truTime flsTime negTime conjTime disjTime invalidTime) := by
+  let cleared := outputProbeDecodeTokenClearedTagExtras n layout outerExtras
+  let idx₀ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx
+  let idx₁ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx
+  let idx₂ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx
+  let outer₁ := Function.update outerExtras idx₀ (outputProbeCounterTape 0)
+  let outer₂ := Function.update outer₁ idx₁ (outputProbeCounterTape 0)
+  have houter₁ : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outer₁ i) :=
+    outputProbeDecodeToken_update_parked_internal outerExtras
+      (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+      houter idx₀
+  have houter₂ : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outer₂ i) :=
+    outputProbeDecodeToken_update_parked_internal outer₁
+      (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+      houter₁ idx₁
+  have hcleared : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (cleared i) := by
+    simpa [cleared, outputProbeDecodeTokenClearedTagExtras, outer₁, outer₂,
+      idx₀, idx₁, idx₂] using
+      outputProbeDecodeToken_update_parked_internal outer₂
+        (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+        houter₂ idx₂
+  have hclear := outputProbeDecodeTokenClearTagsTM_hoareTime_internal tm
+    controllerTapes layout outerExtras input output extras tag₀ tag₁ tag₂
+    hextras houter houtput htag₀ htag₁ htag₂
+  have hseam := outputProbeDecodeTokenFramePost_to_pre_internal tm
+    controllerTapes cleared input output extras hextras hcleared houtput
+  have hvar' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onVar hclear
+    hseam hvar
+  have htru' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onTru hclear
+    hseam htru
+  have hfls' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onFls hclear
+    hseam hfls
+  have hneg' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onNeg hclear
+    hseam hneg
+  have hconj' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onConj hclear
+    hseam hconj
+  have hdisj' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onDisj hclear
+    hseam hdisj
+  have hinvalid' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onInvalid
+    hclear hseam hinvalid
+  have hdispatch := outputProbeDecodeTagDispatchTM_hoareTime_internal tm
+    controllerTapes layout.tagLayout outerExtras input output extras tag₀ tag₁
+    tag₂ hextras houter houtput htag₀ htag₁ htag₂
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onVar)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onTru)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onFls)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onNeg)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onConj)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onDisj)
+    (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout)
+      onInvalid)
+    (post := post) (by simpa [cleared] using hvar')
+      (by simpa [cleared] using htru') (by simpa [cleared] using hfls')
+      (by simpa [cleared] using hneg') (by simpa [cleared] using hconj')
+      (by simpa [cleared] using hdisj') (by simpa [cleared] using hinvalid')
+  simpa [outputProbeDecodeTokenDispatchTM,
+    outputProbeDecodeTokenDispatchTime] using hdispatch
+
 theorem outputProbeDecodeTokenClearTagsTM_isTransducer_internal
     (n controllerTapes : ℕ)
     (layout : OutputProbeDecodeTokenLayout controllerTapes) :
@@ -325,6 +467,27 @@ theorem outputProbeDecodeTokenClearTagsTM_isTransducer_internal
   apply IsTransducer.seqTM
   · exact clearWorkTM_isTransducer _
   · apply IsTransducer.seqTM <;> exact clearWorkTM_isTransducer _
+
+theorem IsTransducer.outputProbeDecodeTokenDispatchTM_internal
+    {onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (hvar : onVar.IsTransducer) (htru : onTru.IsTransducer)
+    (hfls : onFls.IsTransducer) (hneg : onNeg.IsTransducer)
+    (hconj : onConj.IsTransducer) (hdisj : onDisj.IsTransducer)
+    (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).IsTransducer := by
+  let hclear := outputProbeDecodeTokenClearTagsTM_isTransducer_internal n
+    controllerTapes layout
+  apply IsTransducer.outputProbeDecodeTagDispatchTM_internal
+  · exact hclear.seqTM hvar
+  · exact hclear.seqTM htru
+  · exact hclear.seqTM hfls
+  · exact hclear.seqTM hneg
+  · exact hclear.seqTM hconj
+  · exact hclear.seqTM hdisj
+  · exact hclear.seqTM hinvalid
 
 end TM
 

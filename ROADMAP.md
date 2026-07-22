@@ -1356,10 +1356,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   run. `OutputProbeDecodeToken` now gives the tag and terminated-unary layers
   one injective nine-role controller layout with definitionally shared cursor
   and scratch registers. Its exact cleanup phase resets all three retained tag
-  bits to a canonical zero frame without changing any other controller tape.
-  The next local seam is to instantiate the variable continuation with the
-  terminated-unary controller while routing fixed tags directly to
-  serialization.
+  bits to a canonical zero frame without changing any other controller tape;
+  invariant-restoring dispatch now wraps every legal and invalid continuation
+  in that same cleanup contract. The next local seam is to instantiate the
+  variable continuation with the terminated-unary controller while routing
+  fixed tags directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
