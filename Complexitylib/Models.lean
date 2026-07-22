@@ -7,6 +7,7 @@ import Complexitylib.Models.TuringMachine
 import Complexitylib.Models.TuringMachine.Trace
 import Complexitylib.Models.TuringMachine.SingleTape
 import Complexitylib.Models.TuringMachine.Combinators
+import Complexitylib.Models.TuringMachine.Combinators.Started
 import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
 import Complexitylib.Models.TuringMachine.Combinators.ForInput
 import Complexitylib.Models.TuringMachine.Combinators.ForWorkOnes

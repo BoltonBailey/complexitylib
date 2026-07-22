@@ -1211,15 +1211,20 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   head-and-cells premises after every positive-length replay.
   Output-frontier monotonicity and exact crossing now combine those two capture
   cases into one machine theorem for every valid index of a completed
-  space-bounded transducer output.
+  space-bounded transducer output. A generic post-sentinel wrapper now turns
+  that result into a restartable query interface whose input, scratch,
+  countdown, and physical-output tapes all enter parked at cell one. The
+  output-retargeted form places the captured bit on a fresh work tape while
+  preserving a parked blank real output, so repeated queries can compose
+  without replaying the enclosing machine's sentinel transition.
   `Circuits/BarringtonStreaming` now replaces complete program construction by
   a target-independent exact instruction-count recurrence and random-access
   instruction stream, with every query proved equal to the reference compiler.
   `FormulaEncoding/Navigation` supplies its stack-free postfix tree primitive:
   a backwards owed-subtree scan recovers exact child spans using one cursor and
   one counter. The remaining construction is the concrete controller that
-  realizes this traversal through repeated output probes and serializes each
-  selected instruction.
+  composes the restartable probes to realize this traversal and serializes each
+  selected instruction, together with its all-prefix logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation

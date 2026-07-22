@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.OutputCursor
+import Complexitylib.Models.TuringMachine.Combinators.Started
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred.Defs
 
 /-!
@@ -370,6 +371,22 @@ def outputProbeTM (tm : TM n) : TM (n + 1) :=
           exact rightOfStart_allReadBack inputHead workHeads outputHead
       | .done =>
           exact rightOfStart_allIdle inputHead workHeads outputHead }
+
+/-- The output probe resumed after its compulsory first source/sentinel
+transition. This form can be invoked repeatedly from parked tape frames. -/
+abbrev outputProbeStartedTM (tm : TM n) : TM (n + 1) :=
+  (outputProbeTM tm).startedTM
+
+/-- Canonical restartable probe entry: source input and scratch tapes are
+parked at cell one, the caller supplies a parked binary countdown, and the
+physical one-bit output is blank and parked. -/
+def outputProbeStartedCfg (tm : TM n) (input : List Bool)
+    (counter : Tape) : Cfg (n + 1) (outputProbeStartedTM tm).Q where
+  state := (outputProbeStartedTM tm).qstart
+  input := (Tape.init (input.map Γ.ofBool)).move Dir3.right
+  work := fun i =>
+    if i.val < n then (Tape.init []).move Dir3.right else counter
+  output := (Tape.init []).move Dir3.right
 
 /-- Embed a source cursor configuration, a physical binary countdown, and an
 independent real output tape into the source-simulation phase of the probe. -/

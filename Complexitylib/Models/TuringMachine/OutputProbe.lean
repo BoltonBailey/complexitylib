@@ -23,6 +23,8 @@ the requested position occupies only its binary width.
 ## Main results
 
 - `TM.outputProbeTM_isTransducer` -- the probe retains append-only output.
+- `TM.IsTransducer.outputProbeTM_step_startedCfg` -- the compulsory first
+  probe transition reaches the canonical restartable entry configuration.
 - `TM.outputProbeTM_step_source` -- exact simulation of one source step.
 - `TM.outputProbeTM_reachesIn_source_not_right` -- a non-right source step
   preserves the countdown.
@@ -46,6 +48,10 @@ the requested position occupies only its binary width.
   of a successful concrete transducer run can be captured.
 - `TM.ComputesInSpace.outputProbeTM_getElem` -- the same valid-index interface
   for an abstract space-bounded function computation.
+- `TM.ComputesInSpace.outputProbeStartedTM_getElem` -- the valid-index query
+  from the canonical post-sentinel frame used by phase composition.
+- `TM.ComputesInSpace.outputProbeStartedRetargetTM_getElem` -- the same query
+  with the captured bit redirected to a fresh work tape.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
   countdown selects the finalized bit for capture.
 - `TM.outputProbeTM_capture_hasOutput` -- capture reaches the unique halt state
@@ -60,6 +66,18 @@ namespace TM
 theorem outputProbeTM_isTransducer (tm : TM n) :
     (outputProbeTM tm).IsTransducer :=
   outputProbeTM_isTransducer_internal tm
+
+/-- The compulsory first probe transition reaches the canonical restartable
+entry configuration, with every owned tape parked at cell one. -/
+theorem IsTransducer.outputProbeTM_step_startedCfg
+    {tm : TM n} (htrans : tm.IsTransducer) (input : List Bool)
+    (value : ℕ) (hne : tm.qstart ≠ tm.qhalt) :
+    (outputProbeTM tm).step
+      (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+        (outputProbeCounterTape value) (Tape.init [])) =
+      some (outputProbeStartedCfg tm input
+        (outputProbeCounterTape value)) :=
+  htrans.outputProbeTM_step_startedCfg_internal input value hne
 
 /-- One probe source-phase step implements one finite-cursor source step. The
 source input/work actions are exact, the countdown is preserved during this
@@ -369,6 +387,38 @@ theorem ComputesInSpace.outputProbeTM_getElem
       (outputProbeTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] :=
   hcomp.outputProbeTM_getElem_internal input index hindex
+
+/-- Every valid output index of a space-bounded transducer can be queried from
+the canonical post-sentinel frame. This removes the one compulsory source
+transition that a caller has already paid at the enclosing machine boundary. -/
+theorem ComputesInSpace.outputProbeStartedTM_getElem
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      (outputProbeStartedTM tm).reachesIn probeSteps
+        (outputProbeStartedCfg tm input
+          (outputProbeCounterTape (index + 1))) done ∧
+      (outputProbeStartedTM tm).halted done ∧
+      done.output.HasOutput [(f input)[index]'hindex] :=
+  hcomp.outputProbeStartedTM_getElem_internal input index hindex
+
+/-- Redirecting the restartable query writes its captured bit on the fresh
+last work tape and leaves the enclosing machine's real output parked blank. -/
+theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      ((outputProbeStartedTM tm).retargetOutput).reachesIn probeSteps
+        ((outputProbeStartedTM tm).retargetCfg
+          (outputProbeStartedCfg tm input
+            (outputProbeCounterTape (index + 1)))) done ∧
+      ((outputProbeStartedTM tm).retargetOutput).halted done ∧
+      (done.work (Fin.last (n + 1))).HasOutput
+        [(f input)[index]'hindex] ∧
+      done.output = (Tape.init []).move Dir3.right :=
+  hcomp.outputProbeStartedRetargetTM_getElem_internal input index hindex
 
 end TM
 
