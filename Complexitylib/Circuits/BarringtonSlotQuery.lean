@@ -30,6 +30,9 @@ permutation, so they are suitable for a finite-state machine controller.
 - `BarringtonSlotCursor.localSlot_succ` and `localSlot_descend` -- the current
   base-four digit selects one of four child blocks, while inverse blocks are
   tracked by one reflection bit and the original numeric slot remains fixed.
+- `BarringtonSlotCursor.selectsRight_eq_rawLowBit` and
+  `selectsInverse_eq_rawHighBit` -- those two finite branch decisions are the
+  corresponding binary address bits, xor the reflection flag.
 -/
 
 namespace Complexity
@@ -74,6 +77,43 @@ theorem BarringtonSlotCursor.digit_lt
     (cursor : BarringtonSlotCursor) (fuel : ℕ) :
     cursor.digit fuel < 4 :=
   BarringtonSlotCursor.digit_lt_internal cursor fuel
+
+/-- The low bit of the current base-four digit is the binary slot bit at
+position `2 * fuel`. -/
+theorem BarringtonSlotCursor.rawLowBit_eq_testBit
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawLowBit fuel = (cursor.rawDigit fuel).testBit 0 :=
+  BarringtonSlotCursor.rawLowBit_eq_testBit_internal cursor fuel
+
+/-- The high bit of the current base-four digit is the binary slot bit at
+position `2 * fuel + 1`. -/
+theorem BarringtonSlotCursor.rawHighBit_eq_testBit
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawHighBit fuel = (cursor.rawDigit fuel).testBit 1 :=
+  BarringtonSlotCursor.rawHighBit_eq_testBit_internal cursor fuel
+
+/-- Right-child selection needs only the low raw address bit and the finite
+reflection flag. -/
+theorem BarringtonSlotCursor.selectsRight_eq_rawLowBit
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.selectsRight fuel =
+      (cursor.rawLowBit fuel != cursor.reversed) :=
+  BarringtonSlotCursor.selectsRight_eq_rawLowBit_internal cursor fuel
+
+/-- Inverse-block selection needs only the high raw address bit and the finite
+reflection flag. -/
+theorem BarringtonSlotCursor.selectsInverse_eq_rawHighBit
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.selectsInverse fuel =
+      (cursor.rawHighBit fuel != cursor.reversed) :=
+  BarringtonSlotCursor.selectsInverse_eq_rawHighBit_internal cursor fuel
+
+/-- After descending, the next reflection flag is exactly the raw high bit of
+the block just selected; no reflection stack is required. -/
+theorem BarringtonSlotCursor.descend_reversed
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    (cursor.descend fuel).reversed = cursor.rawHighBit fuel :=
+  BarringtonSlotCursor.descend_reversed_internal cursor fuel
 
 /-- The represented local address always fits in the remaining base-four
 block. -/

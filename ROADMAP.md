@@ -1396,9 +1396,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `.disj`. Its numeric state is now stack-free: `BarringtonSlotCursor` keeps the
   original fixed address plus one reflection bit, splits each effective address
   into its current base-four block and remaining local slot, and toggles only
-  that bit when descent enters an inverse block. The next machine layer reads
-  the corresponding two address bits and turns that cursor invariant into the
-  concrete recursive connective dispatcher.
+  that bit when descent enters an inverse block. Its branch equations identify
+  right-child and inverse-block selection with the two corresponding binary
+  address bits xor that reflection flag. The next machine layer probes those
+  two bits and turns the cursor invariant into the concrete recursive
+  connective dispatcher.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

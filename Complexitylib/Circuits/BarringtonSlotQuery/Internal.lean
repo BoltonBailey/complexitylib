@@ -669,12 +669,78 @@ theorem BarringtonSlotCursor.rawDigit_lt_internal
     cursor.rawDigit fuel < 4 := by
   exact Nat.mod_lt _ (by omega)
 
+private theorem four_pow_eq_two_pow_two_mul_internal (fuel : ℕ) :
+    4 ^ fuel = 2 ^ (2 * fuel) := by
+  calc
+    4 ^ fuel = (2 ^ 2) ^ fuel := by norm_num
+    _ = 2 ^ (2 * fuel) := by rw [pow_mul]
+
+theorem BarringtonSlotCursor.rawLowBit_eq_testBit_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawLowBit fuel = (cursor.rawDigit fuel).testBit 0 := by
+  rw [BarringtonSlotCursor.rawLowBit, BarringtonSlotCursor.rawDigit,
+    four_pow_eq_two_pow_two_mul_internal]
+  calc
+    cursor.slot.testBit (2 * fuel) =
+        (cursor.slot / 2 ^ (2 * fuel)).testBit 0 := by
+      simpa using
+        (Nat.testBit_div_two_pow (n := 2 * fuel) cursor.slot 0).symm
+    _ = (cursor.slot / 2 ^ (2 * fuel) % 4).testBit 0 := by simp
+
+theorem BarringtonSlotCursor.rawHighBit_eq_testBit_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawHighBit fuel = (cursor.rawDigit fuel).testBit 1 := by
+  rw [BarringtonSlotCursor.rawHighBit, BarringtonSlotCursor.rawDigit,
+    four_pow_eq_two_pow_two_mul_internal]
+  calc
+    cursor.slot.testBit (2 * fuel + 1) =
+        (cursor.slot / 2 ^ (2 * fuel)).testBit 1 := by
+      simpa [Nat.add_comm] using
+        (Nat.testBit_div_two_pow (n := 2 * fuel) cursor.slot 1).symm
+    _ = (cursor.slot / 2 ^ (2 * fuel) % 4).testBit 1 := by
+      simpa using
+        (Nat.testBit_mod_two_pow (cursor.slot / 2 ^ (2 * fuel)) 2 1).symm
+
 theorem BarringtonSlotCursor.digit_lt_internal
     (cursor : BarringtonSlotCursor) (fuel : ℕ) :
     cursor.digit fuel < 4 := by
   have hraw := cursor.rawDigit_lt_internal fuel
   cases hrev : cursor.reversed <;>
     simp [BarringtonSlotCursor.digit, hrev] <;> omega
+
+theorem BarringtonSlotCursor.selectsRight_eq_rawLowBit_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.selectsRight fuel = (cursor.rawLowBit fuel != cursor.reversed) := by
+  have hraw := cursor.rawDigit_lt_internal fuel
+  have hbit := cursor.rawLowBit_eq_testBit_internal fuel
+  have hdigit : cursor.rawDigit fuel = 0 ∨ cursor.rawDigit fuel = 1 ∨
+      cursor.rawDigit fuel = 2 ∨ cursor.rawDigit fuel = 3 := by
+    omega
+  rcases hdigit with hdigit | hdigit | hdigit | hdigit <;>
+    cases hrev : cursor.reversed <;>
+      simp [BarringtonSlotCursor.selectsRight, BarringtonSlotCursor.digit,
+        hrev, hbit, hdigit]
+
+theorem BarringtonSlotCursor.selectsInverse_eq_rawHighBit_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.selectsInverse fuel = (cursor.rawHighBit fuel != cursor.reversed) := by
+  have hraw := cursor.rawDigit_lt_internal fuel
+  have hbit := cursor.rawHighBit_eq_testBit_internal fuel
+  have hdigit : cursor.rawDigit fuel = 0 ∨ cursor.rawDigit fuel = 1 ∨
+      cursor.rawDigit fuel = 2 ∨ cursor.rawDigit fuel = 3 := by
+    omega
+  rcases hdigit with hdigit | hdigit | hdigit | hdigit <;>
+    cases hrev : cursor.reversed <;>
+      simp [BarringtonSlotCursor.selectsInverse, BarringtonSlotCursor.digit,
+        hrev, hbit, hdigit] <;>
+      norm_num [Nat.testBit_eq_decide_div_mod_eq]
+
+theorem BarringtonSlotCursor.descend_reversed_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    (cursor.descend fuel).reversed = cursor.rawHighBit fuel := by
+  rw [BarringtonSlotCursor.descend,
+    cursor.selectsInverse_eq_rawHighBit_internal fuel]
+  cases cursor.rawHighBit fuel <;> cases cursor.reversed <;> rfl
 
 theorem BarringtonSlotCursor.localSlot_lt_internal
     (cursor : BarringtonSlotCursor) (fuel : ℕ) :

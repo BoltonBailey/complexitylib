@@ -115,6 +115,18 @@ def BarringtonSlotCursor.rawDigit (cursor : BarringtonSlotCursor)
     (fuel : ℕ) : ℕ :=
   cursor.slot / 4 ^ fuel % 4
 
+/-- Low bit of the current raw base-four digit, read directly from the binary
+slot address. -/
+def BarringtonSlotCursor.rawLowBit (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : Bool :=
+  cursor.slot.testBit (2 * fuel)
+
+/-- High bit of the current raw base-four digit, read directly from the binary
+slot address. -/
+def BarringtonSlotCursor.rawHighBit (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : Bool :=
+  cursor.slot.testBit (2 * fuel + 1)
+
 /-- Effective current base-four digit after accounting for a pending address
 reflection. -/
 def BarringtonSlotCursor.digit (cursor : BarringtonSlotCursor)
