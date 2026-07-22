@@ -180,12 +180,238 @@ theorem ComputesInSpace.outputProbeDecodeTagTM_hoareTime
     hlimit₀ hlimit₁ hlimit₂ controllerTapes layout outerExtras houter
     hcursor hscratch htag₀ htag₁ htag₂
 
+/-- Dispatch a literal retained tag frame to the corresponding legal-token
+continuation, or to the invalid continuation for a reserved tag. -/
+theorem outputProbeDecodeTagDispatchTM_hoareTime
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : Option OutputProbeTokenTag →
+      TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ}
+    (hvar : onVar.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .var)) varTime)
+    (htru : onTru.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .tru)) truTime)
+    (hfls : onFls.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .fls)) flsTime)
+    (hneg : onNeg.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .neg)) negTime)
+    (hconj : onConj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .conj)) conjTime)
+    (hdisj : onDisj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post (some .disj)) disjTime)
+    (hinvalid : onInvalid.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (post none) invalidTime) :
+    (outputProbeDecodeTagDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (post (outputProbeTokenTag? tag₀ tag₁ tag₂))
+        (outputProbeDecodeTagDispatchTime tag₀ tag₁ tag₂ varTime
+          truTime flsTime negTime conjTime disjTime invalidTime) :=
+  outputProbeDecodeTagDispatchTM_hoareTime_internal tm controllerTapes layout
+    outerExtras input output extras tag₀ tag₁ tag₂ hextras houter houtput
+    htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj onDisj onInvalid
+    hvar htru hfls hneg hconj hdisj hinvalid
+
+/-- Probe all three fixed tag bits and immediately run the selected legal or
+invalid continuation. The result combines the exact source-derived probe
+runtimes, the sequential seam, and the exact two- or three-step dispatch
+cost. -/
+theorem ComputesInSpace.outputProbeDecodeTagAndDispatchTM_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor + 2 < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit₀ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (hlimit₁ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 2) ≤ cleanupLimit)
+    (hlimit₂ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 3) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (hcursor :
+      (outerExtras (outputProbeDecodeTagCursorIdx n layout)).HasBinaryNat
+        cursor)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.scratchIdx)).HasBinaryNat
+          0)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : Option OutputProbeTokenTag →
+      TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ}
+    (hvar : onVar.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .var)) varTime)
+    (htru : onTru.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .tru)) truTime)
+    (hfls : onFls.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .fls)) flsTime)
+    (hneg : onNeg.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .neg)) negTime)
+    (hconj : onConj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .conj)) conjTime)
+    (hdisj : onDisj.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post (some .disj)) disjTime)
+    (hinvalid : onInvalid.HoareTime
+      (outputProbeLatchFramePost tm controllerTapes
+        (outputProbeDecodeTagOuterExtrasAfter n layout outerExtras cursor
+          ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        input output extras false)
+      (post none) invalidTime) :
+    ∃ (bound₀ bound₁ bound₂ : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeTagAndDispatchTM tm controllerTapes layout onVar
+        onTru onFls onNeg onConj onDisj onInvalid).HoareTime pre
+          (post (outputProbeTokenTag? ((f input)[cursor])
+            ((f input)[cursor + 1]) ((f input)[cursor + 2])))
+          (((bound₀ + 1 + binarySuccTime cursor) + 1 +
+            ((bound₁ + 1 + binarySuccTime (cursor + 1)) + 1 +
+              (bound₂ + 1 + binarySuccTime (cursor + 2)))) + 1 +
+            outputProbeDecodeTagDispatchTime ((f input)[cursor])
+              ((f input)[cursor + 1]) ((f input)[cursor + 2]) varTime
+              truTime flsTime negTime conjTime disjTime invalidTime) :=
+  hcomp.outputProbeDecodeTagAndDispatchTM_hoareTime_internal input cursor
+    hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+    hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes layout outerExtras
+    houter hcursor hscratch htag₀ htag₁ htag₂ onVar onTru onFls onNeg
+    onConj onDisj onInvalid hvar htru hfls hneg hconj hdisj hinvalid
+
 /-- The complete fixed-width tag decoder preserves append-only output. -/
 theorem outputProbeDecodeTagTM_isTransducer
     (tm : TM n) (controllerTapes : ℕ)
     (layout : OutputProbeDecodeTagLayout controllerTapes) :
     (outputProbeDecodeTagTM tm controllerTapes layout).IsTransducer :=
   outputProbeDecodeTagTM_isTransducer_internal tm controllerTapes layout
+
+/-- Retained tag dispatch preserves append-only output whenever every legal
+and invalid continuation does. -/
+theorem IsTransducer.outputProbeDecodeTagDispatchTM
+    {onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (hvar : onVar.IsTransducer) (htru : onTru.IsTransducer)
+    (hfls : onFls.IsTransducer) (hneg : onNeg.IsTransducer)
+    (hconj : onConj.IsTransducer) (hdisj : onDisj.IsTransducer)
+    (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTagLayout controllerTapes) :
+    (outputProbeDecodeTagDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).IsTransducer :=
+  hvar.outputProbeDecodeTagDispatchTM_internal htru hfls hneg hconj hdisj
+    hinvalid layout
+
+/-- Complete tag probing and selected dispatch preserve append-only output
+whenever every continuation does. -/
+theorem IsTransducer.outputProbeDecodeTagAndDispatchTM
+    {tm : TM n}
+    {onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (hvar : onVar.IsTransducer) (htru : onTru.IsTransducer)
+    (hfls : onFls.IsTransducer) (hneg : onNeg.IsTransducer)
+    (hconj : onConj.IsTransducer) (hdisj : onDisj.IsTransducer)
+    (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTagLayout controllerTapes) :
+    (outputProbeDecodeTagAndDispatchTM tm controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).IsTransducer :=
+  hvar.outputProbeDecodeTagAndDispatchTM_internal htru hfls hneg hconj
+    hdisj hinvalid layout
 
 end TM
 

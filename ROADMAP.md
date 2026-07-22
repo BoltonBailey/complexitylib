@@ -1349,9 +1349,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   classifier, a concrete three-probe machine, one-way-output safety, and an
   exact source-derived contract for each query/reset/retain/cursor step. Those
   three contracts now compose into one exact run whose literal final frame
-  retains all three source bits and advances the cursor by exactly three. The
-  next local seam is to dispatch that tag frame, routing variable tags into the
-  terminated-unary field controller and fixed tags directly to serialization.
+  retains all three source bits and advances the cursor by exactly three. A
+  direct controller-symbol tree now dispatches that frame to all six legal
+  continuations or the reserved-tag failure branch, and the combined theorem
+  composes source-derived probing and exact two- or three-step dispatch in one
+  run. The next local seam is to normalize the three tag registers and
+  instantiate the variable continuation with the terminated-unary controller,
+  while routing fixed tags directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.FormulaEncoding.ProbeNavigation.Defs
+import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch.Defs
 import Complexitylib.Models.TuringMachine.OutputProbeCountOnes.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc.Defs
 
@@ -152,6 +153,50 @@ def outputProbeDecodeTagTM (tm : TM n) (controllerTapes : ℕ)
     (seqTM
       (outputProbeDecodeTagBitTM tm controllerTapes layout layout.tag₁Idx)
       (outputProbeDecodeTagBitTM tm controllerTapes layout layout.tag₂Idx))
+
+/-- Dispatch a retained three-bit tag to one of the six legal token
+continuations, or to `onInvalid` for the two reserved prefixes. The retained
+registers are inspected without changing the controller frame. -/
+def outputProbeDecodeTagDispatchTM (n controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₀Idx) Γ.one
+    (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx) Γ.one
+      onInvalid
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₂Idx)
+        Γ.one onDisj onConj))
+    (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx) Γ.one
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₂Idx)
+        Γ.one onNeg onFls)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₂Idx)
+        Γ.one onTru onVar))
+
+/-- Exact selected runtime of retained three-bit tag dispatch. Legal tags pay
+three branch steps, while either reserved `11_` prefix pays only two. -/
+def outputProbeDecodeTagDispatchTime (tag₀ tag₁ tag₂ : Bool)
+    (varTime truTime flsTime negTime conjTime disjTime invalidTime : ℕ) :
+    ℕ :=
+  match tag₀, tag₁, tag₂ with
+  | false, false, false => varTime + 3
+  | false, false, true => truTime + 3
+  | false, true, false => flsTime + 3
+  | false, true, true => negTime + 3
+  | true, false, false => conjTime + 3
+  | true, false, true => disjTime + 3
+  | true, true, _ => invalidTime + 2
+
+/-- Probe a complete fixed-width tag and immediately enter its selected legal
+or invalid continuation. -/
+def outputProbeDecodeTagAndDispatchTM (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  seqTM (outputProbeDecodeTagTM tm controllerTapes layout)
+    (outputProbeDecodeTagDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid)
 
 end TM
 
