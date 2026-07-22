@@ -192,7 +192,7 @@ theorem outputProbeDecodeTagBitOuterExtrasAfter_other_internal
   · simp [outputProbeCountOnesOuterExtrasAfter, hbitValue, hbitPhysical]
   · simp [outputProbeCountOnesOuterExtrasAfter, hbitValue]
 
-private theorem outputProbeDecodeTagOuterExtrasAfter_invariant_internal
+theorem outputProbeDecodeTagOuterExtrasAfter_invariant_internal
     (n : ℕ) {controllerTapes : ℕ}
     (layout : OutputProbeDecodeTagLayout controllerTapes)
     (outerExtras : Fin (0 + outputProbeControllerTapes n +

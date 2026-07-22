@@ -375,6 +375,39 @@ theorem ComputesInSpace.outputProbeDecodeTagAndDispatchTM_hoareTime
     houter hcursor hscratch htag₀ htag₁ htag₂ onVar onTru onFls onNeg
     onConj onDisj onInvalid hvar htru hfls hneg hconj hdisj hinvalid
 
+/-- The literal final tag frame is parked wherever the initial outer frame was
+parked, and its three retained registers contain exactly the supplied bits. -/
+theorem outputProbeDecodeTagOuterExtrasAfter_invariant
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₂Idx))
+        |>.HasBinaryNat 0) :
+    let after := outputProbeDecodeTagOuterExtrasAfter n layout outerExtras
+      cursor tag₀ tag₁ tag₂
+    (∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (after i)) ∧
+    (after (outputProbeDecodeTagBitIdx n layout.tag₀Idx)).HasBinaryNat
+      (if tag₀ then 1 else 0) ∧
+    (after (outputProbeDecodeTagBitIdx n layout.tag₁Idx)).HasBinaryNat
+      (if tag₁ then 1 else 0) ∧
+    (after (outputProbeDecodeTagBitIdx n layout.tag₂Idx)).HasBinaryNat
+      (if tag₂ then 1 else 0) :=
+  outputProbeDecodeTagOuterExtrasAfter_invariant_internal n layout outerExtras
+    houter cursor tag₀ tag₁ tag₂ htag₀ htag₁ htag₂
+
 /-- The complete fixed-width tag decoder preserves append-only output. -/
 theorem outputProbeDecodeTagTM_isTransducer
     (tm : TM n) (controllerTapes : ℕ)

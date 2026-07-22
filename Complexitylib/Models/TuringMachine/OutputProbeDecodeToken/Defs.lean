@@ -123,6 +123,30 @@ def outputProbeDecodeTokenDispatchTime (tag₀ tag₁ tag₂ : Bool)
     (clearTime + 1 + conjTime) (clearTime + 1 + disjTime)
     (clearTime + 1 + invalidTime)
 
+/-- Probe a complete fixed-width tag and dispatch from a normalized token
+frame to its selected continuation. -/
+def outputProbeDecodeTokenTM (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  seqTM (outputProbeDecodeTagTM tm controllerTapes layout.tagLayout)
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid)
+
+/-- Canonical normalized controller frame after retaining and then clearing a
+complete fixed-width tag. The cursor remains advanced by three. -/
+def outputProbeDecodeTokenOuterExtrasAfter (n : ℕ)
+    {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  outputProbeDecodeTokenClearedTagExtras n layout
+    (outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout outerExtras
+      cursor tag₀ tag₁ tag₂)
+
 end TM
 
 end Complexity
