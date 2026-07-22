@@ -16,6 +16,7 @@ import Complexitylib.Circuits.BarringtonBridge
 import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonCompiler
+import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.BarringtonConverse
 import Complexitylib.Circuits.CircuitFormula.Family
@@ -94,6 +95,8 @@ convention.
   at depth at most `log₂ n`.
   `barringtonCompile_representation` supplies the same finite theorem through
   an explicit executable compiler rather than an existential choice.
+  `BPCode.Program.decode?_encode` verifies the canonical serialized output
+  format needed by the remaining log-space uniformity proof.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -115,6 +118,8 @@ Public modules (definitions a reviewer should read):
   evaluation and the nonuniform Barrington equivalence
 * `Complexitylib.Circuits.BarringtonCompiler` — executable finite `S₅` search
   and formula-to-program compilation with the `4 ^ depth` bound
+* `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
+  permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,
   and iterative evaluation of fan-in-two AND/OR circuits
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at

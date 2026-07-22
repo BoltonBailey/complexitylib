@@ -1165,8 +1165,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   formalized. The extraction prerequisite is now complete:
   `Circuits/BarringtonCompiler` replaces proof-level conjugator choices by a
   computable enumeration of `S₅` and exposes an explicit recursive
-  `barringtonCompile` with exact semantics and length `≤ 4 ^ depth`. A canonical
-  branching-program codec and an `FL` instruction/code generator theorem remain.
+  `barringtonCompile` with exact semantics and length `≤ 4 ^ depth`.
+  `Circuits/BranchingProgramEncoding` now supplies the canonical machine-facing
+  codec: fixed seven-bit `S₅` ranks, self-delimiting instructions/programs,
+  exact decoding, injectivity, and explicit code-length bounds. The remaining
+  step is an `FL` instruction/code generator theorem targeting this format.
 
 **Formalization hazards.** Permutation multiplication order differs between texts
 and libraries; fix it with executable examples before proving the induction.
