@@ -1372,9 +1372,15 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   variable field followed by two finite-control permutation ranks, restores the
   complete input/work frame, and carries explicit time, all-prefix space, and
   one-way-output contracts. Constant and variable Barrington instructions are
-  exposed as direct specializations. The next local seam is to compose the
-  normalized `.var` and `.tru` branches with those emitters (`.fls` emits
-  nothing), before wiring the recursive connective branches.
+  exposed as direct specializations. A restored-latch adapter now transports
+  those emitters through the complete restartable-query frame, and
+  `outputProbeDecodeVarInstrTM_hoareTime` certifies the whole normalized
+  `.var` continuation from bounded payload decoding through exact instruction
+  emission. The leaf dispatcher is concrete as well: `.tru` uses the constant
+  emitter, `.fls` uses the certified no-output frame adapter, and only the
+  recursive connective continuations remain parameters. The next local seam is
+  to certify that combined six-way leaf dispatch before implementing the
+  recursive address/navigation controller.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

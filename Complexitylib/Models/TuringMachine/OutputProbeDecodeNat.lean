@@ -169,6 +169,41 @@ theorem outputProbeDecodeNatLoopOuterExtras_eq_self
   outputProbeDecodeNatLoopOuterExtras_eq_self_internal n cursorIdx valueIdx
     activeIdx loopIdx outerExtras state iteration hcursor hvalue hactive hloop
 
+/-- Rebuilding a decoder loop frame preserves the parked outer-frame
+invariant. -/
+theorem outputProbeDecodeNatLoopOuterExtras_parked
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx
+        activeIdx loopIdx outerExtras state iteration i) :=
+  outputProbeDecodeNatLoopOuterExtras_parked_internal n cursorIdx valueIdx
+    activeIdx loopIdx outerExtras houter state iteration
+
+/-- A decoder loop frame leaves every unrelated controller register literally
+unchanged. -/
+theorem outputProbeDecodeNatLoopOuterExtras_other
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx idx : Fin controllerTapes)
+    (hcursor : idx ≠ cursorIdx) (hvalue : idx ≠ valueIdx)
+    (hactive : idx ≠ activeIdx) (hloop : idx ≠ loopIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+        loopIdx outerExtras state iteration
+        (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) :=
+  outputProbeDecodeNatLoopOuterExtras_other_internal n cursorIdx valueIdx
+    activeIdx loopIdx idx hcursor hvalue hactive hloop outerExtras state
+    iteration
+
 /-- On a zero terminator, the concrete selected continuation clears the
 active flag and advances the cursor exactly once. -/
 theorem outputProbeDecodeNatZeroTM_hoareTime

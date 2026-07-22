@@ -81,6 +81,67 @@ theorem OutputProbeDecodeTokenLayout.natLayout_fuelIdx
     layout.natLayout.fuelIdx = layout.roles 8 :=
   layout.natLayout_fuelIdx_internal
 
+/-- Complete tag probing and cleanup leave every unrelated controller register
+literally unchanged. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_other
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) (idx : Fin controllerTapes)
+    (hcursor : idx ≠ layout.tagLayout.cursorIdx)
+    (htag₀ : idx ≠ layout.tagLayout.tag₀Idx)
+    (htag₁ : idx ≠ layout.tagLayout.tag₁Idx)
+    (htag₂ : idx ≠ layout.tagLayout.tag₂Idx) :
+    outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor tag₀
+        tag₁ tag₂ (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) :=
+  outputProbeDecodeTokenOuterExtrasAfter_other_internal n layout outerExtras
+    cursor tag₀ tag₁ tag₂ idx hcursor htag₀ htag₁ htag₂
+
+/-- Complete tag probing and cleanup advance the shared cursor by exactly
+three positions. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_cursor
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool) :
+    (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras cursor tag₀
+      tag₁ tag₂ (outputProbeDecodeTagCursorIdx n layout.tagLayout))
+        |>.HasBinaryNat (cursor + 3) :=
+  outputProbeDecodeTokenOuterExtrasAfter_cursor_internal n layout outerExtras
+    cursor tag₀ tag₁ tag₂
+
+/-- Complete tag probing and cleanup preserve the parked outer-frame
+invariant. -/
+theorem outputProbeDecodeTokenOuterExtrasAfter_parked
+    (n : ℕ) {controllerTapes : ℕ}
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (htag₀Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂Zero :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+        cursor tag₀ tag₁ tag₂ i) :=
+  outputProbeDecodeTokenOuterExtrasAfter_parked_internal n layout outerExtras
+    houter cursor tag₀ tag₁ tag₂ htag₀Zero htag₁Zero htag₂Zero
+
 /-- Clearing retained tags preserves every other physical controller tape. -/
 theorem outputProbeDecodeTokenClearedTagExtras_eq_of_ne
     (n : ℕ) {controllerTapes : ℕ}
