@@ -1344,8 +1344,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   recurrence. The exact `BinaryFor` lift is now complete as well: an injective
   six-role controller layout supplies canonical comparison, iteration, and
   halted frames; source-derived per-query runtimes assemble a complete segment
-  whose final registers are the pure decoder state at the fuel bound. The next
-  controller layer is the fixed-three-bit token-tag decoder.
+  whose final registers are the pure decoder state at the fuel bound.
+  `OutputProbeDecodeTag` now supplies the next controller layer's six-way pure
+  classifier, a concrete three-probe machine, one-way-output safety, and an
+  exact source-derived contract for each query/reset/retain/cursor step. The
+  remaining local seam is to compose those three steps into one literal final
+  tag frame before dispatching variable tags into the unary-field controller.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
