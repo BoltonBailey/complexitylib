@@ -1338,9 +1338,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   concrete machine is one-way-output safe. Its selected zero/one continuations
   now have literal restored-frame contracts, and a valid source address plus
   `ComputesInSpace` derives the complete active query/reset/update step without
-  caller-supplied replay witnesses. The next controller seam is the outer
-  active-flag branch and exact bounded-loop invariant, followed by the fixed-
-  three-bit token-tag decoder.
+  caller-supplied replay witnesses. The outer active-flag branch is now
+  certified in both states and exposed through one source-derived body theorem
+  whose post-frame follows the same finite-list bit as the pure decoder
+  recurrence. Only the exact `BinaryFor` segment lift remains for the unary-
+  field controller itself, followed by the fixed-three-bit token-tag decoder.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

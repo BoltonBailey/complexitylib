@@ -61,6 +61,10 @@ def OutputProbeDecodeNatState.result?
     (state : OutputProbeDecodeNatState) : Option (ℕ × ℕ) :=
   if state.active then none else some (state.value, state.cursor)
 
+/-- Total Boolean view of one finite source-output position. -/
+def outputProbeDecodeNatSourceBit (bits : List Bool) (cursor : ℕ) : Bool :=
+  (bits[cursor]?).getD false
+
 /-- Physical controller tape holding the cursor. -/
 def outputProbeDecodeNatCursorIdx (n : ℕ) {controllerTapes : ℕ}
     (cursorIdx : Fin controllerTapes) :
@@ -121,6 +125,24 @@ def outputProbeDecodeNatOuterExtrasAfter (n : ℕ)
   else
     outputProbeDecodeNatZeroOuterExtras n cursorIdx activeIdx outerExtras
       cursor
+
+/-- Stable controller frame after one semantic decoder-body iteration.
+
+Inactive states preserve the complete frame. Active states consume the
+supplied bit through the same zero/one register updates as the executable
+branch continuations. -/
+def outputProbeDecodeNatOuterExtrasStep (n : ℕ)
+    {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (bit : Bool) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  if state.active then
+    outputProbeDecodeNatOuterExtrasAfter n cursorIdx valueIdx activeIdx
+      outerExtras state.cursor state.value bit
+  else
+    outerExtras
 
 /-- Consume a zero terminator: clear `active`, then advance the cursor. -/
 def outputProbeDecodeNatZeroTM (n controllerTapes : ℕ)
