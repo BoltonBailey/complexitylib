@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeNat.Defs
 import Complexitylib.Models.TuringMachine.OutputProbeDispatch
+import Complexitylib.Models.TuringMachine.OutputProbeScan.Internal
 import Complexitylib.Models.TuringMachine.Registers.RegisterOps
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
@@ -18,6 +19,12 @@ import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 namespace Complexity
 
 namespace TM
+
+private theorem OutputProbeDecodeNatLayout.roles_ne_internal
+    (layout : OutputProbeDecodeNatLayout controllerTapes)
+    {i j : Fin 6} (hne : i ≠ j) : layout.roles i ≠ layout.roles j := by
+  intro heq
+  exact hne (layout.roles.injective heq)
 
 private theorem outputProbeDecodeNatRun_inactive_internal
     (query : FormulaCode.BitOracle) (fuel cursor value : ℕ) :
@@ -72,6 +79,207 @@ theorem outputProbeDecodeNatStep_ofList_internal
       List.getElem?_eq_getElem hbound]
   · simp [outputProbeDecodeNatStep, hactive]
 
+theorem outputProbeDecodeNatStep_ofList_eq_afterBit_internal
+    (bits : List Bool) (state : OutputProbeDecodeNatState)
+    (hcursor : state.active = true → state.cursor < bits.length) :
+    outputProbeDecodeNatStep (FormulaCode.BitOracle.ofList bits) state =
+      outputProbeDecodeNatStateAfterBit state
+        (outputProbeDecodeNatSourceBit bits state.cursor) := by
+  rw [outputProbeDecodeNatStep_ofList_internal bits state hcursor]
+  rfl
+
+theorem outputProbeDecodeNatOuterExtrasStep_state_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (bit : Bool) :
+    outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+        (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+          outerExtras state)
+        state bit =
+      outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+        outerExtras (outputProbeDecodeNatStateAfterBit state bit) := by
+  have hcursorValuePhysical :
+      outputProbeDecodeNatCursorIdx n cursorIdx ≠
+        outputProbeDecodeNatValueIdx n valueIdx := by
+    intro heq
+    exact hcursorValue (outputProbeIndexedControllerIdx_injective n heq)
+  have hcursorActivePhysical :
+      outputProbeDecodeNatCursorIdx n cursorIdx ≠
+        outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hcursorActive (outputProbeIndexedControllerIdx_injective n heq)
+  have hvalueActivePhysical :
+      outputProbeDecodeNatValueIdx n valueIdx ≠
+        outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hvalueActive (outputProbeIndexedControllerIdx_injective n heq)
+  by_cases hactiveState : state.active
+  · cases bit with
+    | false =>
+        funext i
+        simp only [outputProbeDecodeNatOuterExtrasStep, hactiveState, if_true,
+          outputProbeDecodeNatOuterExtrasAfter,
+          outputProbeDecodeNatZeroOuterExtras,
+          outputProbeDecodeNatStateOuterExtras,
+          outputProbeDecodeNatStateAfterBit, Bool.false_eq_true, if_false]
+        by_cases hcursor :
+            i = outputProbeDecodeNatCursorIdx n cursorIdx
+        · subst i
+          simp [hcursorActivePhysical, hcursorValuePhysical]
+        · by_cases hvalue :
+              i = outputProbeDecodeNatValueIdx n valueIdx
+          · subst i
+            simp [hcursor, hvalueActivePhysical]
+          · by_cases hactive :
+                i = outputProbeDecodeNatActiveIdx n activeIdx
+            · subst i
+              simp [hcursor]
+            · simp [hcursor, hvalue, hactive]
+    | true =>
+        funext i
+        simp only [outputProbeDecodeNatOuterExtrasStep, hactiveState, if_true,
+          outputProbeDecodeNatOuterExtrasAfter,
+          outputProbeDecodeNatOneOuterExtras,
+          outputProbeDecodeNatStateOuterExtras,
+          outputProbeDecodeNatStateAfterBit]
+        by_cases hcursor :
+            i = outputProbeDecodeNatCursorIdx n cursorIdx
+        · subst i
+          simp [hcursorActivePhysical, hcursorValuePhysical]
+        · by_cases hvalue :
+              i = outputProbeDecodeNatValueIdx n valueIdx
+          · subst i
+            simp [hcursor, hvalueActivePhysical]
+          · by_cases hactive :
+                i = outputProbeDecodeNatActiveIdx n activeIdx
+            · subst i
+              simp [hcursor, hvalue]
+            · simp [hcursor, hvalue, hactive]
+  · simp [outputProbeDecodeNatOuterExtrasStep,
+      outputProbeDecodeNatStateAfterBit, hactiveState]
+
+theorem outputProbeDecodeNatRun_succ_internal
+    (query : FormulaCode.BitOracle) (fuel : ℕ)
+    (state : OutputProbeDecodeNatState) :
+    outputProbeDecodeNatRun query (fuel + 1) state =
+      outputProbeDecodeNatStep query
+        (outputProbeDecodeNatRun query fuel state) := by
+  induction fuel generalizing state with
+  | zero => rfl
+  | succ fuel ih =>
+      simpa [outputProbeDecodeNatRun] using
+        ih (outputProbeDecodeNatStep query state)
+
+private theorem outputProbeDecodeNatCounterTape_hasBinaryNat_internal
+    (value : ℕ) : (outputProbeCounterTape value).HasBinaryNat value := by
+  simpa [outputProbeCounterTape] using
+    Tape.init_move_right_hasBinaryNat value
+
+theorem outputProbeDecodeNatStateOuterExtras_cursor_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat state.cursor := by
+  have hcursorValuePhysical :
+      outputProbeDecodeNatCursorIdx n cursorIdx ≠
+        outputProbeDecodeNatValueIdx n valueIdx := by
+    intro heq
+    exact hcursorValue (outputProbeIndexedControllerIdx_injective n heq)
+  have hcursorActivePhysical :
+      outputProbeDecodeNatCursorIdx n cursorIdx ≠
+        outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hcursorActive (outputProbeIndexedControllerIdx_injective n heq)
+  simpa [outputProbeDecodeNatStateOuterExtras, hcursorValuePhysical,
+    hcursorActivePhysical] using
+    outputProbeDecodeNatCounterTape_hasBinaryNat_internal state.cursor
+
+theorem outputProbeDecodeNatStateOuterExtras_value_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat state.value := by
+  have hvalueActivePhysical :
+      outputProbeDecodeNatValueIdx n valueIdx ≠
+        outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hvalueActive (outputProbeIndexedControllerIdx_injective n heq)
+  simpa [outputProbeDecodeNatStateOuterExtras, hvalueActivePhysical] using
+    outputProbeDecodeNatCounterTape_hasBinaryNat_internal state.value
+
+theorem outputProbeDecodeNatStateOuterExtras_active_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat (if state.active then 1 else 0) := by
+  simpa [outputProbeDecodeNatStateOuterExtras] using
+    outputProbeDecodeNatCounterTape_hasBinaryNat_internal
+      (if state.active then 1 else 0)
+
+theorem outputProbeDecodeNatStateOuterExtras_other_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx idx : Fin controllerTapes)
+    (hcursor : idx ≠ cursorIdx) (hvalue : idx ≠ valueIdx)
+    (hactive : idx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+        outerExtras state (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) := by
+  have hcursorPhysical : outputProbeIndexedControllerIdx n idx ≠
+      outputProbeDecodeNatCursorIdx n cursorIdx := by
+    intro heq
+    exact hcursor (outputProbeIndexedControllerIdx_injective n heq)
+  have hvaluePhysical : outputProbeIndexedControllerIdx n idx ≠
+      outputProbeDecodeNatValueIdx n valueIdx := by
+    intro heq
+    exact hvalue (outputProbeIndexedControllerIdx_injective n heq)
+  have hactivePhysical : outputProbeIndexedControllerIdx n idx ≠
+      outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hactive (outputProbeIndexedControllerIdx_injective n heq)
+  simp [outputProbeDecodeNatStateOuterExtras, hcursorPhysical,
+    hvaluePhysical, hactivePhysical]
+
+theorem outputProbeDecodeNatLoopOuterExtras_loop_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+      loopIdx outerExtras state iteration
+      (outputProbeIndexedControllerIdx n loopIdx)).HasBinaryNat iteration := by
+  rw [outputProbeDecodeNatLoopOuterExtras,
+    outputProbeDecodeNatStateOuterExtras_other_internal n cursorIdx valueIdx
+      activeIdx loopIdx hloopCursor hloopValue hloopActive]
+  rw [Function.update_self]
+  exact Tape.init_move_right_hasBinaryNat iteration
+
 private theorem outputProbeDecodeNatCounterTape_parked_internal
     (value : ℕ) : Parked (outputProbeCounterTape value) := by
   have h : (outputProbeCounterTape value).HasBinaryNat value := by
@@ -99,6 +307,354 @@ private theorem outputProbeDecodeNatUpdateOuter_parked_internal
     exact outputProbeDecodeNatCounterTape_parked_internal value
   · rw [Function.update_of_ne heq]
     exact houter i hi
+
+theorem outputProbeDecodeNatStateOuterExtras_parked_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (state : OutputProbeDecodeNatState) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx
+        activeIdx outerExtras state i) := by
+  have hcursor := outputProbeDecodeNatUpdateOuter_parked_internal n
+    outerExtras houter cursorIdx state.cursor
+  have hvalue := outputProbeDecodeNatUpdateOuter_parked_internal n
+    (Function.update outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx)
+      (outputProbeCounterTape state.cursor)) hcursor valueIdx state.value
+  have hactive := outputProbeDecodeNatUpdateOuter_parked_internal n
+    (Function.update
+      (Function.update outerExtras
+        (outputProbeDecodeNatCursorIdx n cursorIdx)
+        (outputProbeCounterTape state.cursor))
+      (outputProbeDecodeNatValueIdx n valueIdx)
+      (outputProbeCounterTape state.value)) hvalue activeIdx
+    (if state.active then 1 else 0)
+  simpa [outputProbeDecodeNatStateOuterExtras,
+    outputProbeDecodeNatCursorIdx, outputProbeDecodeNatValueIdx,
+    outputProbeDecodeNatActiveIdx] using hactive
+
+theorem outputProbeDecodeNatLoopOuterExtras_parked_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx
+        activeIdx loopIdx outerExtras state iteration i) := by
+  have hloop := outputProbeDecodeNatUpdateOuter_parked_internal n
+    outerExtras houter loopIdx iteration
+  exact outputProbeDecodeNatStateOuterExtras_parked_internal n cursorIdx
+    valueIdx activeIdx
+    (Function.update outerExtras (outputProbeIndexedControllerIdx n loopIdx)
+      (outputProbeCounterTape iteration)) hloop state
+
+theorem outputProbeDecodeNatLoopOuterExtras_other_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx idx : Fin controllerTapes)
+    (hcursor : idx ≠ cursorIdx) (hvalue : idx ≠ valueIdx)
+    (hactive : idx ≠ activeIdx) (hloop : idx ≠ loopIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+        loopIdx outerExtras state iteration
+        (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) := by
+  rw [outputProbeDecodeNatLoopOuterExtras,
+    outputProbeDecodeNatStateOuterExtras_other_internal n cursorIdx valueIdx
+      activeIdx idx hcursor hvalue hactive]
+  rw [Function.update_of_ne]
+  intro heq
+  exact hloop (outputProbeIndexedControllerIdx_injective n heq)
+
+theorem outputProbeDecodeNatFrameCfg_post_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    outputProbeLatchFramePost tm controllerTapes
+      (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+        loopIdx outerExtras
+        (outputProbeDecodeNatStateAt bits initial iteration) iteration)
+      input output extras false
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).input
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).work
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).output := by
+  exact outputProbeLatchFrameCfg_post tm controllerTapes _ input output extras
+    false
+
+theorem outputProbeDecodeNatFrameCfg_parked_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houtput : Parked output)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Parked (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+      activeIdx loopIdx outerExtras bits input output extras initial
+      iteration).input ∧
+      (∀ i, Parked
+        ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+          activeIdx loopIdx outerExtras bits input output extras initial
+          iteration).work i)) ∧
+      Parked (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).output := by
+  exact outputProbeLatchFramePost_parked tm controllerTapes _ input output
+    extras false hextras
+    (outputProbeDecodeNatLoopOuterExtras_parked_internal n cursorIdx valueIdx
+      activeIdx loopIdx outerExtras houter
+      (outputProbeDecodeNatStateAt bits initial iteration) iteration)
+    houtput _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+
+theorem outputProbeDecodeNatFrameCfg_cursor_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+      activeIdx loopIdx outerExtras bits input output extras initial
+      iteration).work (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat
+          (outputProbeDecodeNatStateAt bits initial iteration).cursor := by
+  change ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+    activeIdx loopIdx outerExtras bits input output extras initial
+    iteration).work (outputProbeIndexedControllerIdx n cursorIdx))
+      |>.HasBinaryNat
+        (outputProbeDecodeNatStateAt bits initial iteration).cursor
+  rw [outputProbeLatchFramePost_controller tm controllerTapes _ input output
+    extras false _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+    cursorIdx]
+  exact outputProbeDecodeNatStateOuterExtras_cursor_internal n cursorIdx
+    valueIdx activeIdx hcursorValue hcursorActive _ _
+
+theorem outputProbeDecodeNatFrameCfg_value_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+      activeIdx loopIdx outerExtras bits input output extras initial
+      iteration).work (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat
+          (outputProbeDecodeNatStateAt bits initial iteration).value := by
+  change ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+    activeIdx loopIdx outerExtras bits input output extras initial
+    iteration).work (outputProbeIndexedControllerIdx n valueIdx))
+      |>.HasBinaryNat
+        (outputProbeDecodeNatStateAt bits initial iteration).value
+  rw [outputProbeLatchFramePost_controller tm controllerTapes _ input output
+    extras false _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+    valueIdx]
+  exact outputProbeDecodeNatStateOuterExtras_value_internal n cursorIdx
+    valueIdx activeIdx hvalueActive _ _
+
+theorem outputProbeDecodeNatFrameCfg_active_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+      activeIdx loopIdx outerExtras bits input output extras initial
+      iteration).work (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat
+          (if (outputProbeDecodeNatStateAt bits initial iteration).active then
+            1 else 0) := by
+  change ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+    activeIdx loopIdx outerExtras bits input output extras initial
+    iteration).work (outputProbeIndexedControllerIdx n activeIdx))
+      |>.HasBinaryNat
+        (if (outputProbeDecodeNatStateAt bits initial iteration).active then
+          1 else 0)
+  rw [outputProbeLatchFramePost_controller tm controllerTapes _ input output
+    extras false _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+    activeIdx]
+  exact outputProbeDecodeNatStateOuterExtras_active_internal n cursorIdx
+    valueIdx activeIdx _ _
+
+theorem outputProbeDecodeNatFrameCfg_loop_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    ((outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+      activeIdx loopIdx outerExtras bits input output extras initial
+      iteration).work (outputProbeIndexedControllerIdx n loopIdx))
+        |>.HasBinaryNat iteration := by
+  rw [outputProbeLatchFramePost_controller tm controllerTapes _ input output
+    extras false _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+    loopIdx]
+  exact outputProbeDecodeNatLoopOuterExtras_loop_internal n cursorIdx valueIdx
+    activeIdx loopIdx hloopCursor hloopValue hloopActive outerExtras _ iteration
+
+theorem outputProbeDecodeNatFrameCfg_other_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx idx : Fin controllerTapes)
+    (hcursor : idx ≠ cursorIdx) (hvalue : idx ≠ valueIdx)
+    (hactive : idx ≠ activeIdx) (hloop : idx ≠ loopIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).work (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) := by
+  rw [outputProbeLatchFramePost_controller tm controllerTapes _ input output
+    extras false _ _ _
+    (outputProbeDecodeNatFrameCfg_post_internal tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      iteration)
+    idx]
+  exact outputProbeDecodeNatLoopOuterExtras_other_internal n cursorIdx valueIdx
+    activeIdx loopIdx idx hcursor hvalue hactive hloop outerExtras _ iteration
+
+theorem outputProbeDecodeNatStateAt_succ_internal
+    (bits : List Bool) (initial : OutputProbeDecodeNatState) (iteration : ℕ)
+    (hcursor : (outputProbeDecodeNatStateAt bits initial iteration).active =
+      true →
+      (outputProbeDecodeNatStateAt bits initial iteration).cursor <
+        bits.length) :
+    outputProbeDecodeNatStateAt bits initial (iteration + 1) =
+      outputProbeDecodeNatStateAfterBit
+        (outputProbeDecodeNatStateAt bits initial iteration)
+        (outputProbeDecodeNatSourceBit bits
+          (outputProbeDecodeNatStateAt bits initial iteration).cursor) := by
+  rw [outputProbeDecodeNatStateAt, outputProbeDecodeNatRun_succ_internal]
+  exact outputProbeDecodeNatStep_ofList_eq_afterBit_internal bits _ hcursor
+
+theorem outputProbeDecodeNatLoopOuterExtras_step_internal
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) (bit : Bool) :
+    Function.update
+        (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+          (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+            loopIdx outerExtras state iteration)
+          state bit)
+        (outputProbeIndexedControllerIdx n loopIdx)
+        (outputProbeCounterTape (iteration + 1)) =
+      outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+        loopIdx outerExtras (outputProbeDecodeNatStateAfterBit state bit)
+        (iteration + 1) := by
+  rw [outputProbeDecodeNatLoopOuterExtras,
+    outputProbeDecodeNatOuterExtrasStep_state_internal n cursorIdx valueIdx
+      activeIdx hcursorValue hcursorActive hvalueActive]
+  funext i
+  have hloopCursorPhysical : outputProbeIndexedControllerIdx n loopIdx ≠
+      outputProbeDecodeNatCursorIdx n cursorIdx := by
+    intro heq
+    exact hloopCursor (outputProbeIndexedControllerIdx_injective n heq)
+  have hloopValuePhysical : outputProbeIndexedControllerIdx n loopIdx ≠
+      outputProbeDecodeNatValueIdx n valueIdx := by
+    intro heq
+    exact hloopValue (outputProbeIndexedControllerIdx_injective n heq)
+  have hloopActivePhysical : outputProbeIndexedControllerIdx n loopIdx ≠
+      outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hloopActive (outputProbeIndexedControllerIdx_injective n heq)
+  have hcursorValuePhysical : outputProbeDecodeNatCursorIdx n cursorIdx ≠
+      outputProbeDecodeNatValueIdx n valueIdx := by
+    intro heq
+    exact hcursorValue (outputProbeIndexedControllerIdx_injective n heq)
+  have hcursorActivePhysical : outputProbeDecodeNatCursorIdx n cursorIdx ≠
+      outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hcursorActive (outputProbeIndexedControllerIdx_injective n heq)
+  have hvalueActivePhysical : outputProbeDecodeNatValueIdx n valueIdx ≠
+      outputProbeDecodeNatActiveIdx n activeIdx := by
+    intro heq
+    exact hvalueActive (outputProbeIndexedControllerIdx_injective n heq)
+  by_cases hloop : i = outputProbeIndexedControllerIdx n loopIdx
+  · subst i
+    simp [outputProbeDecodeNatLoopOuterExtras,
+      outputProbeDecodeNatStateOuterExtras, hloopCursorPhysical,
+      hloopValuePhysical, hloopActivePhysical]
+  · by_cases hcursor : i = outputProbeDecodeNatCursorIdx n cursorIdx
+    · subst i
+      rw [Function.update_of_ne hloop]
+      simp [outputProbeDecodeNatLoopOuterExtras,
+        outputProbeDecodeNatStateOuterExtras,
+        hcursorValuePhysical, hcursorActivePhysical]
+    · by_cases hvalue : i = outputProbeDecodeNatValueIdx n valueIdx
+      · subst i
+        rw [Function.update_of_ne hloop]
+        simp [outputProbeDecodeNatLoopOuterExtras,
+          outputProbeDecodeNatStateOuterExtras,
+          hvalueActivePhysical]
+      · by_cases hactive : i = outputProbeDecodeNatActiveIdx n activeIdx
+        · subst i
+          rw [Function.update_of_ne hloop]
+          simp [outputProbeDecodeNatLoopOuterExtras,
+            outputProbeDecodeNatStateOuterExtras]
+        · simp [outputProbeDecodeNatLoopOuterExtras,
+            outputProbeDecodeNatStateOuterExtras, hloop, hcursor, hvalue,
+            hactive]
 
 private theorem outputProbeDecodeNatSucc_hoareTime_internal
     (tm : TM n) (controllerTapes : ℕ)
@@ -934,6 +1490,647 @@ theorem ComputesInSpace.outputProbeDecodeNatBodyTM_hoareTime_internal
     · exact hpre
     · simpa [pre, outputProbeDecodeNatOuterExtrasStep, hactiveState] using
         hbody
+
+private theorem outputProbeDecodeNatBinarySuccCanonical_reachesIn_internal
+    (idx : Fin n) (value : ℕ)
+    (inp : Tape) (work : Fin n → Tape) (out : Tape)
+    (hvalue : (work idx).HasBinaryNat value)
+    (hinp : Parked inp) (hwork : ∀ i, Parked (work i))
+    (hout : Parked out) :
+    (binarySuccTM idx).reachesIn (binarySuccTime value)
+      { state := (binarySuccTM idx).qstart
+        input := inp
+        work := work
+        output := out }
+      { state := (binarySuccTM idx).qhalt
+        input := inp
+        work := Function.update work idx
+          (outputProbeCounterTape (value + 1))
+        output := out } := by
+  obtain ⟨done, hreach, hhalt, hinput, hother, htarget, houtput⟩ :=
+    binarySuccTM_reachesIn_frame idx value inp work out hvalue
+      hinp.read_ne_start (fun i _ => (hwork i).read_ne_start)
+      hout.read_ne_start
+  have hworkEq : done.work = Function.update work idx
+      (outputProbeCounterTape (value + 1)) := by
+    funext i
+    by_cases hi : i = idx
+    · subst i
+      simp only [Function.update_self]
+      simpa [outputProbeCounterTape] using htarget.eq_init_move_right
+    · rw [Function.update_of_ne hi, hother i hi]
+  have hdone : done =
+      { state := (binarySuccTM idx).qhalt
+        input := inp
+        work := Function.update work idx
+          (outputProbeCounterTape (value + 1))
+        output := out } :=
+    Cfg.ext hhalt hinput hworkEq houtput
+  simpa [hdone] using hreach
+
+theorem outputProbeDecodeNatBodyTM_reachesIn_frame_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (bit : Bool)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    {pre : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {bodyBound : ℕ}
+    (hpre : pre
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).input
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).output)
+    (hbody : (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+      scratchIdx valueIdx activeIdx).HoareTime pre
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+            outerExtras state bit)
+          input output extras false)
+        bodyBound) :
+    ∃ time, time ≤ bodyBound ∧
+      (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+        valueIdx activeIdx).reachesIn time
+        { state := (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+              scratchIdx valueIdx activeIdx).qstart
+          input := (outputProbeLatchFrameCfg tm controllerTapes outerExtras
+            input output extras false).input
+          work := (outputProbeLatchFrameCfg tm controllerTapes outerExtras
+            input output extras false).work
+          output := (outputProbeLatchFrameCfg tm controllerTapes outerExtras
+            input output extras false).output }
+        { state := (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+              scratchIdx valueIdx activeIdx).qhalt
+          input := (outputProbeLatchFrameCfg tm controllerTapes
+            (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+              outerExtras state bit)
+            input output extras false).input
+          work := (outputProbeLatchFrameCfg tm controllerTapes
+            (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+              outerExtras state bit)
+            input output extras false).work
+          output := (outputProbeLatchFrameCfg tm controllerTapes
+            (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+              outerExtras state bit)
+            input output extras false).output } := by
+  obtain ⟨done, time, htime, hreach, hhalt, hpost⟩ := hbody _ _ _ hpre
+  obtain ⟨hinput, hwork, houtput⟩ :=
+    outputProbeLatchFramePost_eq_frameCfg tm controllerTapes
+      (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+        outerExtras state bit)
+      input output extras false done.input done.work done.output hpost
+  have hdone : done =
+      { state := (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+            scratchIdx valueIdx activeIdx).qhalt
+        input := (outputProbeLatchFrameCfg tm controllerTapes
+          (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+            outerExtras state bit)
+          input output extras false).input
+        work := (outputProbeLatchFrameCfg tm controllerTapes
+          (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+            outerExtras state bit)
+          input output extras false).work
+        output := (outputProbeLatchFrameCfg tm controllerTapes
+          (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+            outerExtras state bit)
+          input output extras false).output } :=
+    Cfg.ext hhalt hinput hwork houtput
+  exact ⟨time, htime, hdone ▸ hreach⟩
+
+theorem outputProbeDecodeNatIteration_reachesIn_of_body_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ)
+    (hcursorBound :
+      (outputProbeDecodeNatStateAt bits initial iteration).active = true →
+      (outputProbeDecodeNatStateAt bits initial iteration).cursor <
+        bits.length)
+    {pre : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {bodyBound : ℕ}
+    (hpre : pre
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).input
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).work
+      (outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx valueIdx
+        activeIdx loopIdx outerExtras bits input output extras initial
+        iteration).output)
+    (hbody : (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+      scratchIdx valueIdx activeIdx).HoareTime pre
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+            (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+              loopIdx outerExtras
+              (outputProbeDecodeNatStateAt bits initial iteration) iteration)
+            (outputProbeDecodeNatStateAt bits initial iteration)
+            (outputProbeDecodeNatSourceBit bits
+              (outputProbeDecodeNatStateAt bits initial iteration).cursor))
+          input output extras false)
+        bodyBound) :
+    ∃ time, time ≤ bodyBound + 1 + binarySuccTime iteration ∧
+      (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx valueIdx
+        activeIdx loopIdx fuelIdx).reachesIn time
+        (outputProbeDecodeNatIterationStartCfg tm controllerTapes cursorIdx
+          scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits input
+          output extras initial iteration)
+        (outputProbeDecodeNatIterationDoneCfg tm controllerTapes cursorIdx
+          scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits input
+          output extras initial iteration) := by
+  let state := outputProbeDecodeNatStateAt bits initial iteration
+  let currentOuter := outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx
+    activeIdx loopIdx outerExtras state iteration
+  let bit := outputProbeDecodeNatSourceBit bits state.cursor
+  let afterOuter := outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx
+    activeIdx currentOuter state bit
+  let body := outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+    scratchIdx valueIdx activeIdx
+  let counter := outputProbeIndexedControllerIdx n loopIdx
+  let limit := outputProbeIndexedControllerIdx n fuelIdx
+  let currentFrame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+    iteration
+  let afterFrame := outputProbeLatchFrameCfg tm controllerTapes afterOuter
+    input output extras false
+  let nextFrame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+    (iteration + 1)
+  obtain ⟨bodySteps, hbodySteps, hbodyRun⟩ :=
+    outputProbeDecodeNatBodyTM_reachesIn_frame_internal tm controllerTapes
+      cursorIdx scratchIdx valueIdx activeIdx currentOuter state bit input
+      output extras hpre hbody
+  have hcurrentOuterParked : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (currentOuter i) :=
+    outputProbeDecodeNatLoopOuterExtras_parked_internal n cursorIdx valueIdx
+      activeIdx loopIdx outerExtras houter state iteration
+  have hafterOuterEq : afterOuter =
+      outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+        (Function.update outerExtras counter
+          (outputProbeCounterTape iteration))
+        (outputProbeDecodeNatStateAfterBit state bit) := by
+    exact outputProbeDecodeNatOuterExtrasStep_state_internal n cursorIdx
+      valueIdx activeIdx hcursorValue hcursorActive hvalueActive _ state bit
+  have hloopBaseParked : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked ((Function.update outerExtras counter
+          (outputProbeCounterTape iteration)) i) :=
+    outputProbeDecodeNatUpdateOuter_parked_internal n outerExtras houter
+      loopIdx iteration
+  have hafterOuterParked : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (afterOuter i) := by
+    rw [hafterOuterEq]
+    exact outputProbeDecodeNatStateOuterExtras_parked_internal n cursorIdx
+      valueIdx activeIdx _ hloopBaseParked _
+  have hafterPost := outputProbeLatchFrameCfg_post tm controllerTapes
+    afterOuter input output extras false
+  have hafterParked := outputProbeLatchFramePost_parked tm controllerTapes
+    afterOuter input output extras false hextras hafterOuterParked houtput
+    afterFrame.input afterFrame.work afterFrame.output hafterPost
+  have hafterLoop : (afterFrame.work counter).HasBinaryNat iteration := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes afterOuter
+      input output extras false afterFrame.input afterFrame.work
+      afterFrame.output hafterPost loopIdx, hafterOuterEq,
+      outputProbeDecodeNatStateOuterExtras_other_internal n cursorIdx valueIdx
+        activeIdx loopIdx hloopCursor hloopValue hloopActive,
+      Function.update_self]
+    exact Tape.init_move_right_hasBinaryNat iteration
+  have hsucc := outputProbeDecodeNatBinarySuccCanonical_reachesIn_internal
+    counter iteration afterFrame.input afterFrame.work afterFrame.output
+    hafterLoop hafterParked.1 hafterParked.2.1 hafterParked.2.2
+  let updatedOuter := Function.update afterOuter counter
+    (outputProbeCounterTape (iteration + 1))
+  have hupdatedPost : outputProbeLatchFramePost tm controllerTapes
+      updatedOuter input output extras false afterFrame.input
+      (Function.update afterFrame.work counter
+        (outputProbeCounterTape (iteration + 1)))
+      afterFrame.output := by
+    exact outputProbeLatchFramePost_updateController tm controllerTapes
+      afterOuter input output extras false afterFrame.input afterFrame.work
+      afterFrame.output hafterPost loopIdx
+      (outputProbeCounterTape (iteration + 1))
+  have hupdatedEq := outputProbeLatchFramePost_eq_frameCfg tm controllerTapes
+    updatedOuter input output extras false afterFrame.input
+    (Function.update afterFrame.work counter
+      (outputProbeCounterTape (iteration + 1)))
+    afterFrame.output hupdatedPost
+  have hnextState : outputProbeDecodeNatStateAt bits initial (iteration + 1) =
+      outputProbeDecodeNatStateAfterBit state bit := by
+    exact outputProbeDecodeNatStateAt_succ_internal bits initial iteration
+      hcursorBound
+  have hupdatedOuter : updatedOuter =
+      outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+        loopIdx outerExtras
+        (outputProbeDecodeNatStateAt bits initial (iteration + 1))
+        (iteration + 1) := by
+    rw [hnextState]
+    exact outputProbeDecodeNatLoopOuterExtras_step_internal n cursorIdx
+      valueIdx activeIdx loopIdx hcursorValue hcursorActive hvalueActive
+      hloopCursor hloopValue hloopActive outerExtras state iteration bit
+  have hnextInput : afterFrame.input = nextFrame.input := by
+    simpa [updatedOuter, hupdatedOuter, nextFrame,
+      outputProbeDecodeNatFrameCfg] using hupdatedEq.1
+  have hnextWork : Function.update afterFrame.work counter
+      (outputProbeCounterTape (iteration + 1)) = nextFrame.work := by
+    simpa [updatedOuter, hupdatedOuter, nextFrame,
+      outputProbeDecodeNatFrameCfg] using hupdatedEq.2.1
+  have hnextOutput : afterFrame.output = nextFrame.output := by
+    simpa [updatedOuter, hupdatedOuter, nextFrame,
+      outputProbeDecodeNatFrameCfg] using hupdatedEq.2.2
+  have hsuccNext : (binarySuccTM counter).reachesIn
+      (binarySuccTime iteration)
+      { state := (binarySuccTM counter).qstart
+        input := afterFrame.input
+        work := afterFrame.work
+        output := afterFrame.output }
+      { state := (binarySuccTM counter).qhalt
+        input := nextFrame.input
+        work := nextFrame.work
+        output := nextFrame.output } := by
+    have hend :
+        ({ state := (binarySuccTM counter).qhalt
+           input := afterFrame.input
+           work := Function.update afterFrame.work counter
+             (outputProbeCounterTape (iteration + 1))
+           output := afterFrame.output } :
+          Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+            (binarySuccTM counter).Q) =
+        { state := (binarySuccTM counter).qhalt
+          input := nextFrame.input
+          work := nextFrame.work
+          output := nextFrame.output } :=
+      Cfg.ext rfl hnextInput hnextWork hnextOutput
+    exact hend ▸ hsucc
+  have hinpTransition : transitionInput afterFrame.input = afterFrame.input :=
+    hafterParked.1.transitionInput_eq_self
+  have hworkTransition :
+      (fun i => transitionTape (afterFrame.work i)) = afterFrame.work := by
+    funext i
+    exact (hafterParked.2.1 i).transitionTape_eq_self
+  have houtTransition : transitionTape afterFrame.output = afterFrame.output :=
+    hafterParked.2.2.transitionTape_eq_self
+  have hsuccNext' : (binarySuccTM counter).reachesIn
+      (binarySuccTime iteration)
+      { state := (binarySuccTM counter).qstart
+        input := transitionInput afterFrame.input
+        work := fun i => transitionTape (afterFrame.work i)
+        output := transitionTape afterFrame.output }
+      { state := (binarySuccTM counter).qhalt
+        input := nextFrame.input
+        work := nextFrame.work
+        output := nextFrame.output } := by
+    rw [hinpTransition, hworkTransition, houtTransition]
+    exact hsuccNext
+  have hseq := seqTM_reachesIn_of_reachesIn body (binarySuccTM counter)
+    hbodyRun rfl hsuccNext'
+  have hlift := binaryForTM_iteration_reachesIn_internal body counter limit
+    hseq
+  refine ⟨bodySteps + 1 + binarySuccTime iteration, ?_, ?_⟩
+  · omega
+  · simpa [body, counter, limit, state, bit, currentOuter, afterOuter,
+      currentFrame, afterFrame, nextFrame, outputProbeDecodeNatTM,
+      outputProbeDecodeNatIterationStartCfg,
+      outputProbeDecodeNatIterationDoneCfg, binaryForIterationWrap,
+      binaryForIterationTM, phase1Wrap, phase2Wrap] using hlift
+
+/-- Internal constructor for the exact bounded decoder segment invariant. -/
+noncomputable def outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (hloopFuel : loopIdx ≠ fuelIdx)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (hfuelCursor : fuelIdx ≠ cursorIdx)
+    (hfuelValue : fuelIdx ≠ valueIdx)
+    (hfuelActive : fuelIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (initial : OutputProbeDecodeNatState)
+    (bodyTime : ℕ → ℕ) (startValue fuelValue : ℕ)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n fuelIdx)).HasBinaryNat
+        fuelValue)
+    (iterationWitness : ∀ value, startValue ≤ value → value < fuelValue →
+      ∃ time, time ≤ binaryForIterationTime bodyTime value ∧
+        (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx
+          valueIdx activeIdx loopIdx fuelIdx).reachesIn time
+          (outputProbeDecodeNatIterationStartCfg tm controllerTapes cursorIdx
+            scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits
+            input output extras initial value)
+          (outputProbeDecodeNatIterationDoneCfg tm controllerTapes cursorIdx
+            scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits
+            input output extras initial value)) :
+    BinaryForSegmentSpec
+      (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+        valueIdx activeIdx)
+      (outputProbeIndexedControllerIdx n loopIdx)
+      (outputProbeIndexedControllerIdx n fuelIdx)
+      bodyTime startValue fuelValue := by
+  let body := outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx
+    scratchIdx valueIdx activeIdx
+  let counter := outputProbeIndexedControllerIdx n loopIdx
+  let limit := outputProbeIndexedControllerIdx n fuelIdx
+  let scanCfg := outputProbeDecodeNatScanCfg tm controllerTapes cursorIdx
+    scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits input output
+    extras initial
+  let iterationStartCfg := outputProbeDecodeNatIterationStartCfg tm
+    controllerTapes cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx
+    outerExtras bits input output extras initial
+  let iterationDoneCfg := outputProbeDecodeNatIterationDoneCfg tm
+    controllerTapes cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx
+    outerExtras bits input output extras initial
+  let doneCfg := outputProbeDecodeNatDoneCfg tm controllerTapes cursorIdx
+    scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits input output
+    extras initial fuelValue
+  apply BinaryForSegmentSpec.ofWitnessesInternal
+    (outputProbeScan_address_ne_limit_internal n hloopFuel)
+    scanCfg iterationStartCfg iterationDoneCfg doneCfg
+  · intro value _hstart hvalue
+    let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      value
+    have hparked := outputProbeDecodeNatFrameCfg_parked_internal tm
+      controllerTapes cursorIdx valueIdx activeIdx loopIdx outerExtras houter
+      bits input output extras hextras houtput initial value
+    have hcounter := outputProbeDecodeNatFrameCfg_loop_internal tm
+      controllerTapes cursorIdx valueIdx activeIdx loopIdx hloopCursor
+      hloopValue hloopActive outerExtras bits input output extras initial value
+    have hlimitFrame : (frame.work limit).HasBinaryNat fuelValue := by
+      rw [outputProbeDecodeNatFrameCfg_other_internal tm controllerTapes
+        cursorIdx valueIdx activeIdx loopIdx fuelIdx hfuelCursor hfuelValue
+        hfuelActive (Ne.symm hloopFuel) outerExtras bits input output extras
+        initial value]
+      exact hfuel
+    have hrun := binaryForTM_compare_reachesIn_frame_of_lt_internal body
+      counter limit (outputProbeScan_address_ne_limit_internal n hloopFuel)
+      value fuelValue hvalue frame.input frame.work frame.output hcounter
+      hlimitFrame hparked.1.read_ne_start
+      (fun i _ _ => (hparked.2.1 i).read_ne_start)
+      hparked.2.2.read_ne_start
+    simpa [body, counter, limit, scanCfg, iterationStartCfg,
+      outputProbeDecodeNatTM, outputProbeDecodeNatScanCfg,
+      outputProbeDecodeNatIterationStartCfg, frame] using hrun
+  · intro value hstart hvalue
+    simpa [scanCfg, iterationStartCfg, iterationDoneCfg,
+      outputProbeDecodeNatTM] using iterationWitness value hstart hvalue
+  · intro value _hstart _hvalue
+    let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      (value + 1)
+    let c : Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+        (binaryForIterationTM body counter).Q :=
+      { state := (binaryForIterationTM body counter).qhalt
+        input := frame.input
+        work := frame.work
+        output := frame.output }
+    have hparked := outputProbeDecodeNatFrameCfg_parked_internal tm
+      controllerTapes cursorIdx valueIdx activeIdx loopIdx outerExtras houter
+      bits input output extras hextras houtput initial (value + 1)
+    have hstep := binaryForTM_step_iteration_halt_internal body counter limit c
+      rfl hparked.1.read_ne_start
+      (fun i => (hparked.2.1 i).read_ne_start) hparked.2.2.read_ne_start
+    simpa [body, counter, limit, iterationDoneCfg, scanCfg,
+      outputProbeDecodeNatTM, outputProbeDecodeNatIterationDoneCfg,
+      outputProbeDecodeNatScanCfg, binaryForIterationWrap, c, frame] using hstep
+  · let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+      valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+      fuelValue
+    have hparked := outputProbeDecodeNatFrameCfg_parked_internal tm
+      controllerTapes cursorIdx valueIdx activeIdx loopIdx outerExtras houter
+      bits input output extras hextras houtput initial fuelValue
+    have hcounter := outputProbeDecodeNatFrameCfg_loop_internal tm
+      controllerTapes cursorIdx valueIdx activeIdx loopIdx hloopCursor
+      hloopValue hloopActive outerExtras bits input output extras initial
+      fuelValue
+    have hlimitFrame : (frame.work limit).HasBinaryNat fuelValue := by
+      rw [outputProbeDecodeNatFrameCfg_other_internal tm controllerTapes
+        cursorIdx valueIdx activeIdx loopIdx fuelIdx hfuelCursor hfuelValue
+        hfuelActive (Ne.symm hloopFuel) outerExtras bits input output extras
+        initial fuelValue]
+      exact hfuel
+    have hrun := binaryForTM_compare_reachesIn_frame_of_eq_internal body
+      counter limit (outputProbeScan_address_ne_limit_internal n hloopFuel)
+      fuelValue frame.input frame.work frame.output hcounter hlimitFrame
+      hparked.1.read_ne_start
+      (fun i _ _ => (hparked.2.1 i).read_ne_start)
+      hparked.2.2.read_ne_start
+    simpa [body, counter, limit, scanCfg, doneCfg, outputProbeDecodeNatTM,
+      outputProbeDecodeNatScanCfg, outputProbeDecodeNatDoneCfg, frame] using
+      hrun
+  · simp [doneCfg, outputProbeDecodeNatDoneCfg, outputProbeDecodeNatTM,
+      binaryForTM]
+
+/-- Internal constructor selecting every source-dependent decoder-body
+runtime and assembling the complete bounded loop certificate. -/
+noncomputable def
+    ComputesInSpace.outputProbeDecodeNatSegmentSpecInternal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeNatLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (initial : OutputProbeDecodeNatState)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue fuelValue : ℕ)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      (outputProbeDecodeNatStateAt (f input) initial value).cursor <
+        (f input).length)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input) initial value).cursor + 1) ≤
+          cleanupLimit) :
+    Σ bodyTime : ℕ → ℕ,
+      BinaryForSegmentSpec
+        (outputProbeDecodeNatBodyTM tm controllerTapes layout.cursorIdx
+          layout.scratchIdx layout.valueIdx layout.activeIdx)
+        (outputProbeIndexedControllerIdx n layout.loopIdx)
+        (outputProbeIndexedControllerIdx n layout.fuelIdx)
+        bodyTime startValue fuelValue := by
+  classical
+  have hcursorScratch : layout.cursorIdx ≠ layout.scratchIdx :=
+    layout.roles_ne_internal (by decide)
+  have hcursorValue : layout.cursorIdx ≠ layout.valueIdx :=
+    layout.roles_ne_internal (by decide)
+  have hcursorActive : layout.cursorIdx ≠ layout.activeIdx :=
+    layout.roles_ne_internal (by decide)
+  have hvalueActive : layout.valueIdx ≠ layout.activeIdx :=
+    layout.roles_ne_internal (by decide)
+  have hloopFuel : layout.loopIdx ≠ layout.fuelIdx :=
+    layout.roles_ne_internal (by decide)
+  have hloopCursor : layout.loopIdx ≠ layout.cursorIdx :=
+    layout.roles_ne_internal (by decide)
+  have hloopValue : layout.loopIdx ≠ layout.valueIdx :=
+    layout.roles_ne_internal (by decide)
+  have hloopActive : layout.loopIdx ≠ layout.activeIdx :=
+    layout.roles_ne_internal (by decide)
+  have hfuelCursor : layout.fuelIdx ≠ layout.cursorIdx :=
+    layout.roles_ne_internal (by decide)
+  have hfuelValue : layout.fuelIdx ≠ layout.valueIdx :=
+    layout.roles_ne_internal (by decide)
+  have hfuelActive : layout.fuelIdx ≠ layout.activeIdx :=
+    layout.roles_ne_internal (by decide)
+  have hscratchValue : layout.scratchIdx ≠ layout.valueIdx :=
+    layout.roles_ne_internal (by decide)
+  have hscratchActive : layout.scratchIdx ≠ layout.activeIdx :=
+    layout.roles_ne_internal (by decide)
+  have hscratchLoop : layout.scratchIdx ≠ layout.loopIdx :=
+    layout.roles_ne_internal (by decide)
+  let state (value : ℕ) :=
+    outputProbeDecodeNatStateAt (f input) initial value
+  let currentOuter (value : ℕ) :=
+    outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx layout.valueIdx
+      layout.activeIdx layout.loopIdx outerExtras (state value) value
+  have bodyExists : ∀ value, ∃ bodyBound : ℕ,
+      ∀ (hstart : startValue ≤ value) (hvalue : value < fuelValue),
+        ∃ pre : TapePred
+            (0 + outputProbeControllerTapes n + controllerTapes),
+          pre
+            (outputProbeDecodeNatFrameCfg tm controllerTapes layout.cursorIdx
+              layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+              (f input) input output extras initial value).input
+            (outputProbeDecodeNatFrameCfg tm controllerTapes layout.cursorIdx
+              layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+              (f input) input output extras initial value).work
+            (outputProbeDecodeNatFrameCfg tm controllerTapes layout.cursorIdx
+              layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+              (f input) input output extras initial value).output ∧
+          (outputProbeDecodeNatBodyTM tm controllerTapes layout.cursorIdx
+            layout.scratchIdx layout.valueIdx layout.activeIdx).HoareTime pre
+              (outputProbeLatchFramePost tm controllerTapes
+                (outputProbeDecodeNatOuterExtrasStep n layout.cursorIdx
+                  layout.valueIdx layout.activeIdx (currentOuter value)
+                  (state value)
+                  (outputProbeDecodeNatSourceBit (f input)
+                    (state value).cursor))
+                input output extras false)
+              bodyBound := by
+    intro value
+    by_cases hrange : startValue ≤ value ∧ value < fuelValue
+    · have hcurrentParked : ∀ i,
+          ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+            Parked (currentOuter value i) :=
+        outputProbeDecodeNatLoopOuterExtras_parked_internal n
+          layout.cursorIdx layout.valueIdx layout.activeIdx layout.loopIdx
+          outerExtras houter (state value) value
+      have hcursorCurrent :
+          (currentOuter value
+            (outputProbeDecodeNatCursorIdx n layout.cursorIdx))
+              |>.HasBinaryNat (state value).cursor :=
+        outputProbeDecodeNatStateOuterExtras_cursor_internal n
+          layout.cursorIdx layout.valueIdx layout.activeIdx hcursorValue
+          hcursorActive _ _
+      have hscratchCurrent :
+          (currentOuter value
+            (outputProbeIndexedControllerIdx n layout.scratchIdx))
+              |>.HasBinaryNat 0 := by
+        change (outputProbeDecodeNatLoopOuterExtras n layout.cursorIdx
+          layout.valueIdx layout.activeIdx layout.loopIdx outerExtras
+          (state value) value
+          (outputProbeIndexedControllerIdx n layout.scratchIdx))
+            |>.HasBinaryNat 0
+        rw [outputProbeDecodeNatLoopOuterExtras_other_internal n
+          layout.cursorIdx layout.valueIdx layout.activeIdx layout.loopIdx
+          layout.scratchIdx (Ne.symm hcursorScratch) hscratchValue
+          hscratchActive hscratchLoop outerExtras (state value) value]
+        exact hscratch
+      have hvalueCurrent :
+          (currentOuter value
+            (outputProbeDecodeNatValueIdx n layout.valueIdx))
+              |>.HasBinaryNat (state value).value :=
+        outputProbeDecodeNatStateOuterExtras_value_internal n
+          layout.cursorIdx layout.valueIdx layout.activeIdx hvalueActive _ _
+      have hactiveCurrent :
+          (currentOuter value
+            (outputProbeDecodeNatActiveIdx n layout.activeIdx))
+              |>.HasBinaryNat (if (state value).active then 1 else 0) :=
+        outputProbeDecodeNatStateOuterExtras_active_internal n
+          layout.cursorIdx layout.valueIdx layout.activeIdx _ _
+      obtain ⟨bodyBound, pre, hpre, hbody⟩ :=
+        hcomp.outputProbeDecodeNatBodyTM_hoareTime_internal input
+          (state value) (hqueryValid value hrange.1 hrange.2) output houtput
+          extras hextras hcleanupCounter cleanupLimit hcleanupLimit
+          (hqueryLimit value hrange.1 hrange.2) controllerTapes
+          (currentOuter value) hcurrentParked layout.cursorIdx
+          layout.scratchIdx layout.valueIdx layout.activeIdx hcursorScratch
+          hcursorValue hcursorActive hcursorCurrent hscratchCurrent
+          hvalueCurrent hactiveCurrent
+      refine ⟨bodyBound, ?_⟩
+      intro _hstart _hvalue
+      refine ⟨pre, ?_, hbody⟩
+      simpa [currentOuter, state, outputProbeDecodeNatFrameCfg] using hpre
+    · refine ⟨0, ?_⟩
+      intro hstart hvalue
+      exact (hrange ⟨hstart, hvalue⟩).elim
+  choose bodyTime hbody using bodyExists
+  refine ⟨bodyTime,
+    outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal tm
+      controllerTapes layout.cursorIdx layout.scratchIdx layout.valueIdx
+      layout.activeIdx layout.loopIdx layout.fuelIdx hloopFuel hloopCursor
+      hloopValue hloopActive hfuelCursor hfuelValue hfuelActive outerExtras
+      (f input) input output extras hextras houter houtput initial bodyTime
+      startValue fuelValue hfuel ?_⟩
+  intro value hstart hvalue
+  obtain ⟨pre, hpre, hhoare⟩ := hbody value hstart hvalue
+  obtain ⟨time, htime, hrun⟩ :=
+    outputProbeDecodeNatIteration_reachesIn_of_body_internal tm
+      controllerTapes layout.cursorIdx layout.scratchIdx layout.valueIdx
+      layout.activeIdx layout.loopIdx layout.fuelIdx hcursorValue
+      hcursorActive hvalueActive hloopCursor hloopValue hloopActive
+      outerExtras (f input) input output extras hextras houter houtput initial
+      value (hqueryValid value hstart hvalue) hpre hhoare
+  refine ⟨time, ?_, hrun⟩
+  simp only [binaryForIterationTime]
+  omega
 
 private theorem skipTM_isTransducer_internal {n : ℕ} :
     (skipTM (n := n)).IsTransducer := by

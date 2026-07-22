@@ -45,6 +45,105 @@ theorem outputProbeDecodeNatStep_ofList
         state :=
   outputProbeDecodeNatStep_ofList_internal bits state hcursor
 
+/-- Compact form of `outputProbeDecodeNatStep_ofList`: the finite source bit
+drives the shared pure state transition. -/
+theorem outputProbeDecodeNatStep_ofList_eq_afterBit
+    (bits : List Bool) (state : OutputProbeDecodeNatState)
+    (hcursor : state.active = true → state.cursor < bits.length) :
+    outputProbeDecodeNatStep (FormulaCode.BitOracle.ofList bits) state =
+      outputProbeDecodeNatStateAfterBit state
+        (outputProbeDecodeNatSourceBit bits state.cursor) :=
+  outputProbeDecodeNatStep_ofList_eq_afterBit_internal bits state hcursor
+
+/-- The concrete controller-frame updates for one decoder bit are literally
+the canonical frame of the corresponding pure next state. -/
+theorem outputProbeDecodeNatOuterExtrasStep_state
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (bit : Bool) :
+    outputProbeDecodeNatOuterExtrasStep n cursorIdx valueIdx activeIdx
+        (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+          outerExtras state)
+        state bit =
+      outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+        outerExtras (outputProbeDecodeNatStateAfterBit state bit) :=
+  outputProbeDecodeNatOuterExtrasStep_state_internal n cursorIdx valueIdx
+    activeIdx hcursorValue hcursorActive hvalueActive outerExtras state bit
+
+/-- Running one more pure decoder iteration is the same as stepping the state
+obtained after the previous iterations. -/
+theorem outputProbeDecodeNatRun_succ
+    (query : FormulaCode.BitOracle) (fuel : ℕ)
+    (state : OutputProbeDecodeNatState) :
+    outputProbeDecodeNatRun query (fuel + 1) state =
+      outputProbeDecodeNatStep query
+        (outputProbeDecodeNatRun query fuel state) :=
+  outputProbeDecodeNatRun_succ_internal query fuel state
+
+/-- The canonical decoder frame exposes its cursor register. -/
+theorem outputProbeDecodeNatStateOuterExtras_cursor
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat state.cursor :=
+  outputProbeDecodeNatStateOuterExtras_cursor_internal n cursorIdx valueIdx
+    activeIdx hcursorValue hcursorActive outerExtras state
+
+/-- The canonical decoder frame exposes its accumulated value register. -/
+theorem outputProbeDecodeNatStateOuterExtras_value
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (hvalueActive : valueIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat state.value :=
+  outputProbeDecodeNatStateOuterExtras_value_internal n cursorIdx valueIdx
+    activeIdx hvalueActive outerExtras state
+
+/-- The canonical decoder frame exposes its zero-or-one active register. -/
+theorem outputProbeDecodeNatStateOuterExtras_active
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    (outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+      outerExtras state (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat (if state.active then 1 else 0) :=
+  outputProbeDecodeNatStateOuterExtras_active_internal n cursorIdx valueIdx
+    activeIdx outerExtras state
+
+/-- The canonical loop frame exposes its exact binary iteration counter. -/
+theorem outputProbeDecodeNatLoopOuterExtras_loop
+    (n : ℕ) {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+      loopIdx outerExtras state iteration
+      (outputProbeIndexedControllerIdx n loopIdx)).HasBinaryNat iteration :=
+  outputProbeDecodeNatLoopOuterExtras_loop_internal n cursorIdx valueIdx
+    activeIdx loopIdx hloopCursor hloopValue hloopActive outerExtras state
+    iteration
+
 /-- On a zero terminator, the concrete selected continuation clears the
 active flag and advances the cursor exactly once. -/
 theorem outputProbeDecodeNatZeroTM_hoareTime
@@ -437,6 +536,110 @@ theorem ComputesInSpace.outputProbeDecodeNatBodyTM_hoareTime
     hlimit controllerTapes outerExtras houter cursorIdx scratchIdx valueIdx
     activeIdx hcursorScratch hcursorValue hcursorActive hcursor hscratch
     hvalue hactive
+
+/-- Package exact decoder-iteration witnesses into a complete bounded-loop
+certificate whose configurations expose the pure decoder state after every
+iteration. -/
+noncomputable def outputProbeDecodeNatSegmentSpecOfIterationWitnesses
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (hloopFuel : loopIdx ≠ fuelIdx)
+    (hloopCursor : loopIdx ≠ cursorIdx)
+    (hloopValue : loopIdx ≠ valueIdx)
+    (hloopActive : loopIdx ≠ activeIdx)
+    (hfuelCursor : fuelIdx ≠ cursorIdx)
+    (hfuelValue : fuelIdx ≠ valueIdx)
+    (hfuelActive : fuelIdx ≠ activeIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (initial : OutputProbeDecodeNatState)
+    (bodyTime : ℕ → ℕ) (startValue fuelValue : ℕ)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n fuelIdx)).HasBinaryNat
+        fuelValue)
+    (iterationWitness : ∀ value, startValue ≤ value → value < fuelValue →
+      ∃ time, time ≤ binaryForIterationTime bodyTime value ∧
+        (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx
+          valueIdx activeIdx loopIdx fuelIdx).reachesIn time
+          (outputProbeDecodeNatIterationStartCfg tm controllerTapes cursorIdx
+            scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits
+            input output extras initial value)
+          (outputProbeDecodeNatIterationDoneCfg tm controllerTapes cursorIdx
+            scratchIdx valueIdx activeIdx loopIdx fuelIdx outerExtras bits
+            input output extras initial value)) :
+    BinaryForSegmentSpec
+      (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+        valueIdx activeIdx)
+      (outputProbeIndexedControllerIdx n loopIdx)
+      (outputProbeIndexedControllerIdx n fuelIdx)
+      bodyTime startValue fuelValue :=
+  outputProbeDecodeNatSegmentSpecOfIterationWitnessesInternal tm
+    controllerTapes cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx
+    hloopFuel hloopCursor hloopValue hloopActive hfuelCursor hfuelValue
+    hfuelActive outerExtras bits input output extras hextras houter houtput
+    initial bodyTime startValue fuelValue hfuel iterationWitness
+
+/-- Derive the complete exact bounded decoder loop from a source transducer's
+`ComputesInSpace` contract.
+
+The returned body-time function noncomputably selects the actual deterministic
+runtime of each replayed source query. The register layout structurally keeps
+all six controller roles distinct, and the segment's final frame stores
+`outputProbeDecodeNatStateAt (f input) initial fuelValue`. -/
+noncomputable def ComputesInSpace.outputProbeDecodeNatSegmentSpec
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeNatLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (initial : OutputProbeDecodeNatState)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue fuelValue : ℕ)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n layout.fuelIdx))
+        |>.HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      (outputProbeDecodeNatStateAt (f input) initial value).cursor <
+        (f input).length)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input) initial value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input) initial value).cursor + 1) ≤
+          cleanupLimit) :
+    Σ bodyTime : ℕ → ℕ,
+      BinaryForSegmentSpec
+        (outputProbeDecodeNatBodyTM tm controllerTapes layout.cursorIdx
+          layout.scratchIdx layout.valueIdx layout.activeIdx)
+        (outputProbeIndexedControllerIdx n layout.loopIdx)
+        (outputProbeIndexedControllerIdx n layout.fuelIdx)
+        bodyTime startValue fuelValue :=
+  hcomp.outputProbeDecodeNatSegmentSpecInternal input output houtput extras
+    hextras hcleanupCounter cleanupLimit hcleanupLimit controllerTapes layout
+    outerExtras houter initial hscratch startValue fuelValue hfuel hqueryValid
+    hqueryLimit
 
 /-- The complete bounded decoder preserves the append-only output discipline. -/
 theorem outputProbeDecodeNatTM_isTransducer

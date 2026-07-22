@@ -1341,8 +1341,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   caller-supplied replay witnesses. The outer active-flag branch is now
   certified in both states and exposed through one source-derived body theorem
   whose post-frame follows the same finite-list bit as the pure decoder
-  recurrence. Only the exact `BinaryFor` segment lift remains for the unary-
-  field controller itself, followed by the fixed-three-bit token-tag decoder.
+  recurrence. The exact `BinaryFor` lift is now complete as well: an injective
+  six-role controller layout supplies canonical comparison, iteration, and
+  halted frames; source-derived per-query runtimes assemble a complete segment
+  whose final registers are the pure decoder state at the fuel bound. The next
+  controller layer is the fixed-three-bit token-tag decoder.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

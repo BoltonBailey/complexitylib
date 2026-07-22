@@ -31,6 +31,51 @@ structure OutputProbeDecodeNatState where
   active : Bool
   deriving DecidableEq
 
+/-- Six distinct controller registers used by the concrete bounded decoder.
+
+The role order is cursor, query scratch, value, active flag, loop counter, and
+fuel. Packaging the roles as an embedding makes every non-aliasing invariant
+structural. -/
+structure OutputProbeDecodeNatLayout (controllerTapes : ℕ) where
+  /-- Injective assignment of the six logical roles to controller tapes. -/
+  roles : Fin 6 ↪ Fin controllerTapes
+
+/-- Cursor register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.cursorIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 0
+
+/-- Query scratch register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.scratchIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 1
+
+/-- Unary value register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.valueIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 2
+
+/-- Active-flag register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.activeIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 3
+
+/-- Loop-counter register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.loopIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 4
+
+/-- Preserved fuel register selected by a decoder layout. -/
+def OutputProbeDecodeNatLayout.fuelIdx
+    (layout : OutputProbeDecodeNatLayout controllerTapes) :
+    Fin controllerTapes :=
+  layout.roles 5
+
 /-- One semantic decoder iteration against a position-indexed bit oracle.
 
 An unavailable position leaves the decoder active, hence makes the final
@@ -64,6 +109,16 @@ def OutputProbeDecodeNatState.result?
 /-- Total Boolean view of one finite source-output position. -/
 def outputProbeDecodeNatSourceBit (bits : List Bool) (cursor : ℕ) : Bool :=
   (bits[cursor]?).getD false
+
+/-- Pure decoder state after consuming one supplied bit. -/
+def outputProbeDecodeNatStateAfterBit (state : OutputProbeDecodeNatState)
+    (bit : Bool) : OutputProbeDecodeNatState :=
+  if state.active then
+    { cursor := state.cursor + 1
+      value := state.value + if bit then 1 else 0
+      active := bit }
+  else
+    state
 
 /-- Physical controller tape holding the cursor. -/
 def outputProbeDecodeNatCursorIdx (n : ℕ) {controllerTapes : ℕ}
@@ -144,6 +199,44 @@ def outputProbeDecodeNatOuterExtrasStep (n : ℕ)
   else
     outerExtras
 
+/-- Canonical cursor/value/active registers for one semantic decoder state. -/
+def outputProbeDecodeNatStateOuterExtras (n : ℕ)
+    {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  Function.update
+    (Function.update
+      (Function.update outerExtras
+        (outputProbeDecodeNatCursorIdx n cursorIdx)
+        (outputProbeCounterTape state.cursor))
+      (outputProbeDecodeNatValueIdx n valueIdx)
+      (outputProbeCounterTape state.value))
+    (outputProbeDecodeNatActiveIdx n activeIdx)
+    (outputProbeCounterTape (if state.active then 1 else 0))
+
+/-- Semantic decoder state after exactly `iteration` bounded body steps. -/
+def outputProbeDecodeNatStateAt (bits : List Bool)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    OutputProbeDecodeNatState :=
+  outputProbeDecodeNatRun (FormulaCode.BitOracle.ofList bits) iteration initial
+
+/-- Canonical loop-counter plus decoder-register frame at one iteration. -/
+def outputProbeDecodeNatLoopOuterExtras (n : ℕ)
+    {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  outputProbeDecodeNatStateOuterExtras n cursorIdx valueIdx activeIdx
+    (Function.update outerExtras
+      (outputProbeIndexedControllerIdx n loopIdx)
+      (outputProbeCounterTape iteration))
+    state
+
 /-- Consume a zero terminator: clear `active`, then advance the cursor. -/
 def outputProbeDecodeNatZeroTM (n controllerTapes : ℕ)
     (cursorIdx activeIdx : Fin controllerTapes) :
@@ -196,6 +289,113 @@ def outputProbeDecodeNatTM (tm : TM n) (controllerTapes : ℕ)
       valueIdx activeIdx)
     (outputProbeIndexedControllerIdx n loopIdx)
     (outputProbeIndexedControllerIdx n fuelIdx)
+
+/-- Canonical restored latch frame after exactly `iteration` decoder-body
+steps. -/
+def outputProbeDecodeNatFrameCfg (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx valueIdx activeIdx loopIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeLatchTM tm controllerTapes).Q :=
+  outputProbeLatchFrameCfg tm controllerTapes
+    (outputProbeDecodeNatLoopOuterExtras n cursorIdx valueIdx activeIdx
+      loopIdx outerExtras
+      (outputProbeDecodeNatStateAt bits initial iteration) iteration)
+    input output extras false
+
+/-- Canonical outer-loop comparison configuration at one decoder iteration. -/
+def outputProbeDecodeNatScanCfg (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx valueIdx
+        activeIdx loopIdx fuelIdx).Q :=
+  let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+    iteration
+  { state := .inl (.scan true)
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical entry to the decoder body at one bounded iteration. -/
+def outputProbeDecodeNatIterationStartCfg (tm : TM n)
+    (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx valueIdx
+        activeIdx loopIdx fuelIdx).Q :=
+  let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+    iteration
+  { state := .inr
+      (binaryForIterationTM
+        (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+          valueIdx activeIdx)
+        (outputProbeIndexedControllerIdx n loopIdx)).qstart
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical iteration endpoint after the body and loop successor have
+established the next pure decoder state. -/
+def outputProbeDecodeNatIterationDoneCfg (tm : TM n)
+    (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (iteration : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx valueIdx
+        activeIdx loopIdx fuelIdx).Q :=
+  let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial
+    (iteration + 1)
+  { state := .inr
+      (binaryForIterationTM
+        (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+          valueIdx activeIdx)
+        (outputProbeIndexedControllerIdx n loopIdx)).qhalt
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical halted decoder configuration after exhausting the fuel loop. -/
+def outputProbeDecodeNatDoneCfg (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx loopIdx fuelIdx :
+      Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (initial : OutputProbeDecodeNatState) (fuel : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeDecodeNatTM tm controllerTapes cursorIdx scratchIdx valueIdx
+        activeIdx loopIdx fuelIdx).Q :=
+  let frame := outputProbeDecodeNatFrameCfg tm controllerTapes cursorIdx
+    valueIdx activeIdx loopIdx outerExtras bits input output extras initial fuel
+  { state := .inl .done
+    input := frame.input
+    work := frame.work
+    output := frame.output }
 
 end TM
 
