@@ -19,6 +19,28 @@ namespace Complexity
 
 namespace TM
 
+/-- The canonical zero-latch frame is exactly the dynamic-query entry frame
+with only its private countdown overwritten by canonical zero. This reusable
+identity is the tape-level seam between successive indexed probe clients. -/
+theorem outputProbeLatchFrameCfg_work_eq_queryUpdate
+    (tm : TM n) (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (controllerTapes value : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape) :
+    (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work =
+      Function.update
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (value + 1)) output extras)).work
+        (outputProbeIndexedCountdownIdx n controllerTapes)
+        (outputProbeCounterTape 0) :=
+  outputProbeLatchFrameCfg_work_eq_queryUpdate_internal tm input output
+    extras hcleanupCounter controllerTapes value outerExtras
+
 /-- Controller-local indices embed injectively after the complete probe frame. -/
 theorem outputProbeIndexedControllerIdx_injective
     (n : ℕ) {controllerTapes : ℕ} :

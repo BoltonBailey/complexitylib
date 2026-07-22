@@ -107,6 +107,21 @@ def outputProbeDecodeNatOneOuterExtras (n : ℕ)
     (outputProbeDecodeNatCursorIdx n cursorIdx)
     (outputProbeCounterTape (cursor + 1))
 
+/-- Stable controller frame after consuming the selected decoder bit. -/
+def outputProbeDecodeNatOuterExtrasAfter (n : ℕ)
+    {controllerTapes : ℕ}
+    (cursorIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (cursor value : ℕ) (bit : Bool) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  if bit then
+    outputProbeDecodeNatOneOuterExtras n cursorIdx valueIdx outerExtras
+      cursor value
+  else
+    outputProbeDecodeNatZeroOuterExtras n cursorIdx activeIdx outerExtras
+      cursor
+
 /-- Consume a zero terminator: clear `active`, then advance the cursor. -/
 def outputProbeDecodeNatZeroTM (n controllerTapes : ℕ)
     (cursorIdx activeIdx : Fin controllerTapes) :

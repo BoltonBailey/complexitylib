@@ -20,6 +20,121 @@ private theorem outputProbeIndexed_hasBinaryNat_parked {tape : Tape}
   refine ⟨by rw [hvalue.2.1], ?_⟩
   exact Tape.HasBinaryContent.cells_ne_start hvalue.2.2
 
+theorem outputProbeLatchFrameCfg_work_eq_queryUpdate_internal
+    (tm : TM n) (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (controllerTapes value : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape) :
+    (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work =
+      Function.update
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (value + 1)) output extras)).work
+        (outputProbeIndexedCountdownIdx n controllerTapes)
+        (outputProbeCounterTape 0) := by
+  have hcleanupCounterEq : extras (outputProbeCleanupCounterIdx n) =
+      outputProbeCounterTape 0 := by
+    simpa [outputProbeCounterTape] using hcleanupCounter.eq_init_move_right
+  funext i
+  by_cases houterMiddle :
+      placeWorkInMiddle 0 (outputProbeControllerTapes n) i
+  · generalize hcoord :
+      placeWorkCoord 0 (outputProbeControllerTapes n) i houterMiddle = coord
+    have hphysical : placeWorkIdx 0 controllerTapes coord = i := by
+      rw [← hcoord]
+      exact placeWorkIdx_placeWorkCoord i houterMiddle
+    rw [← hphysical]
+    rw [outputProbeLatchFrameCfg, placeWorkCfg_work_middle,
+      outputProbeIndexedCountdownIdx]
+    change
+      (outputProbeLatchInnerFrameCfg tm input output extras false).work coord =
+        Function.update
+          (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+            (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (value + 1)) output extras)).work
+          (placeWorkIdx 0 controllerTapes
+            (outputProbeCleanupCountdownIdx n))
+          (outputProbeCounterTape 0) (placeWorkIdx 0 controllerTapes coord)
+    by_cases hcountdown : coord = outputProbeCleanupCountdownIdx n
+    · try rw [hcoord]
+      rw [hcountdown]
+      rw [Function.update_self]
+      simp only [outputProbeLatchInnerFrameCfg, Bool.false_eq_true, if_false]
+      rw [Function.update_of_ne]
+      · let countdownIdx : Fin (n + 2) := ⟨n, by omega⟩
+        have hcountdownPhysical : outputProbeCleanupCountdownIdx n =
+            placeWorkIdx 0 2 countdownIdx := by
+          apply Fin.ext
+          simp [outputProbeCleanupCountdownIdx, countdownIdx]
+        rw [hcountdownPhysical, outputProbePlacedFrameCfg,
+          placeWorkCfg_work_middle]
+        rw [retargetCfgFrame_work_lt _ _ _ countdownIdx (by
+          dsimp only [countdownIdx]
+          omega)]
+        simp [outputProbeStartedCfg, countdownIdx, outputProbeCounterTape]
+      · intro heq
+        have hval := congrArg Fin.val heq
+        simp [outputProbeCleanupCountdownIdx, outputProbeCleanupCounterIdx]
+          at hval
+    · rw [Function.update_of_ne]
+      · rw [placeWorkCfg_work_middle]
+        simp only [outputProbeLatchInnerFrameCfg, Bool.false_eq_true, if_false]
+        by_cases hcounter : coord = outputProbeCleanupCounterIdx n
+        · try rw [hcoord]
+          rw [hcounter]
+          rw [Function.update_self]
+          rw [outputProbePlacedFrameCfg, placeWorkCfg_work_extra]
+          · exact hcleanupCounterEq.symm
+          · simp [placeWorkInMiddle, outputProbeCleanupCounterIdx]
+        · rw [Function.update_of_ne hcounter]
+          rw [outputProbePlacedFrameCfg, outputProbePlacedFrameCfg]
+          by_cases hinnerMiddle : placeWorkInMiddle 0 (n + 2) coord
+          · generalize hsourceCoord :
+              placeWorkCoord 0 (n + 2) coord hinnerMiddle = source
+            have hsourcePhysical : placeWorkIdx 0 2 source = coord := by
+              rw [← hsourceCoord]
+              exact placeWorkIdx_placeWorkCoord coord hinnerMiddle
+            rw [← hsourcePhysical, placeWorkCfg_work_middle,
+              placeWorkCfg_work_middle]
+            by_cases hsource : source.val < n + 1
+            · rw [retargetCfgFrame_work_lt _ _ _ source hsource,
+                retargetCfgFrame_work_lt _ _ _ source hsource]
+              have hsourceWork : source.val < n := by
+                by_contra hnot
+                have hsourceEq : source.val = n := by omega
+                apply hcountdown
+                apply Fin.ext
+                rw [← hsourcePhysical]
+                simpa [outputProbeCleanupCountdownIdx, placeWorkIdx] using
+                  hsourceEq
+              simp [outputProbeStartedCfg, hsourceWork]
+            · have hlast : source = Fin.last (n + 1) := by
+                apply Fin.ext
+                simp only [Fin.last]
+                omega
+              rw [hlast, retargetCfgFrame_work_last,
+                retargetCfgFrame_work_last]
+              simp [outputProbeStartedCfg]
+          · rw [placeWorkCfg_work_extra _ _ _ extras _ coord hinnerMiddle,
+              placeWorkCfg_work_extra _ _ _ extras _ coord hinnerMiddle]
+      · intro heq
+        exact hcountdown (placeWorkIdx_injective 0 controllerTapes heq)
+  · rw [outputProbeLatchFrameCfg,
+      placeWorkCfg_work_extra _ _ _ outerExtras _ i houterMiddle]
+    rw [Function.update_of_ne]
+    · rw [placeWorkCfg_work_extra _ _ _ outerExtras _ i houterMiddle]
+    · intro heq
+      subst i
+      apply houterMiddle
+      simp [outputProbeIndexedCountdownIdx, placeWorkInMiddle, placeWorkIdx,
+        outputProbeCleanupCountdownIdx]
+      dsimp only [outputProbeControllerTapes]
+      omega
+
 theorem outputProbeIndexedControllerIdx_injective_internal
     (n : ℕ) {controllerTapes : ℕ} :
     Function.Injective

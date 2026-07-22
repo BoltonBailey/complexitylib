@@ -1335,9 +1335,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   concrete bounded probe loop with cursor, accumulator, fuel, and persistent
   success registers. Its pure controller is proved exactly equal to the
   established oracle decoder, including fuel exhaustion, and the complete
-  concrete machine is one-way-output safe. The next controller seam is the
-  exact register-frame execution theorem for this loop, followed by the
-  fixed-three-bit token-tag decoder.
+  concrete machine is one-way-output safe. Its selected zero/one continuations
+  now have literal restored-frame contracts, and a valid source address plus
+  `ComputesInSpace` derives the complete active query/reset/update step without
+  caller-supplied replay witnesses. The next controller seam is the outer
+  active-flag branch and exact bounded-loop invariant, followed by the fixed-
+  three-bit token-tag decoder.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
