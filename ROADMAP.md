@@ -1254,7 +1254,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   finite-fuel decoders and exact token/subtree/child-span correctness.
   `BarringtonProbeQuery` then proves that first/last occupancy and every direct
   fixed-address instruction query through that oracle agree with the reference
-  compiler. `Models/TuringMachine/Subroutines/BlankWorkPrefix` now supplies the
+  compiler. Its machine-facing query has now also been factored through a
+  target-free Boolean occupancy kernel: bounded scans over exactly `4^D`
+  addresses recover the first and last occupied slots, and substituting those
+  scans into every postmultiplication site preserves each queried instruction
+  exactly. This removes nested recursive first/last evaluation from the
+  serializer controller.
+  `Models/TuringMachine/Subroutines/BlankWorkPrefix` now supplies the
   missing replay-reset primitive: it blanks an arbitrary sparse work prefix
   bounded by a preserved binary limit, rewinds the target from an arbitrary
   in-bound head position, restores its scratch counter, and proves exact time

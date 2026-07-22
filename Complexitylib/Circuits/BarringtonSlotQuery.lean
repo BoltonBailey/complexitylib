@@ -18,6 +18,10 @@ permutation, so they are suitable for a finite-state machine controller.
 
 - `barringtonFirstOccupiedSlot?_eq` -- the structural first address is exact.
 - `barringtonLastOccupiedSlot?_eq` -- the structural last address is exact.
+- `barringtonCompileSlotsNonempty_eq` -- the small nonemptiness recurrence is
+  exact.
+- `barringtonCompileSlotOccupied_eq` -- the target-free Boolean slot query is
+  exact.
 - `barringtonCompileSlot?_eq_instruction?` -- every direct query agrees with
   the list-valued fixed-slot compiler.
 -/
@@ -41,6 +45,26 @@ theorem barringtonLastOccupiedSlot?_eq (fuel : ℕ)
       BPSlots.lastOccupiedSlot?
         (barringtonCompileSlots fuel formula target) :=
   (barringtonOccupiedSlots_correct_internal fuel formula target).2
+
+/-- The target-independent nonemptiness recurrence agrees with either
+structural extreme-address query. -/
+theorem barringtonCompileSlotsNonempty_eq (fuel : ℕ)
+    (formula : BoolFormula) :
+    barringtonCompileSlotsNonempty fuel formula =
+        (barringtonFirstOccupiedSlot? fuel formula).isSome ∧
+      barringtonCompileSlotsNonempty fuel formula =
+        (barringtonLastOccupiedSlot? fuel formula).isSome :=
+  barringtonCompileSlotsNonempty_correct_internal fuel formula
+
+/-- The target-free Boolean occupancy query agrees with the instruction query
+at every fixed address. -/
+theorem barringtonCompileSlotOccupied_eq (fuel : ℕ)
+    (formula : BoolFormula) (target : Equiv.Perm (Fin 5)) (slot : ℕ) :
+    barringtonCompileSlotOccupied fuel formula slot =
+      (BPSlots.instruction?
+        (barringtonCompileSlots fuel formula target) slot).isSome := by
+  rw [barringtonCompileSlotOccupied_correct_internal]
+  rw [barringtonCompileSlot?_correct_internal]
 
 /-- Every direct fixed-address query agrees with the corresponding query into
 the list-valued fixed schedule. -/

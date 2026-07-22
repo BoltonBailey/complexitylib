@@ -252,6 +252,69 @@ theorem placeWorkTM_computesInTime_internal (tm : TM n) (pre post : ℕ)
   · rw [houtput]
     exact hout
 
+/-- A stable placed frame lifts a source time-and-space Hoare contract without
+time overhead and charges only the maximum source/frame space. -/
+theorem placeWorkTM_hoareTimeSpace_frame_internal (tm : TM n)
+    (pre post : ℕ) (extras : Fin (pre + n + post) → Tape)
+    {sourcePre sourcePost : TapePred n}
+    {time inputLength sourceSpace frameSpace : ℕ}
+    (hsource : tm.HoareTimeSpace sourcePre sourcePost time inputLength
+      sourceSpace)
+    (hextras : ∀ i, ¬placeWorkInMiddle pre n i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre n i →
+      (extras i).head ≤ frameSpace) :
+    (placeWorkTM pre post tm).HoareTimeSpace
+      (placeWorkPred tm pre post extras sourcePre)
+      (placeWorkPred tm pre post extras sourcePost)
+      time inputLength (max sourceSpace frameSpace) := by
+  constructor
+  · rintro inp work out ⟨sourceWork, hpre, rfl⟩
+    obtain ⟨done, elapsed, helapsed, hreach, hhalt, hpost⟩ :=
+      hsource.1 inp sourceWork out hpre
+    let sourceStart : Cfg n tm.Q :=
+      { state := tm.qstart,
+        input := inp,
+        work := sourceWork,
+        output := out }
+    let placedDone := placeWorkCfg tm pre post extras done
+    have hplaced : (placeWorkTM pre post tm).reachesIn elapsed
+        (placeWorkCfg tm pre post extras sourceStart) placedDone := by
+      exact placeWorkTM_reachesIn_placeWorkCfg_stable_internal tm pre post
+        extras hreach hextras
+    refine ⟨placedDone, elapsed, helapsed, ?_, ?_, ?_⟩
+    · simpa only [sourceStart] using hplaced
+    · exact hhalt
+    · refine ⟨done.work, ?_, rfl⟩
+      simpa only [placedDone, placeWorkCfg_input, placeWorkCfg_output] using
+        hpost
+  · rintro inp work out ⟨sourceWork, hpre, rfl⟩ current hcurrent
+    obtain ⟨done, elapsed, _helapsed, hreach, hhalt, _hpost⟩ :=
+      hsource.1 inp sourceWork out hpre
+    let sourceStart : Cfg n tm.Q :=
+      { state := tm.qstart,
+        input := inp,
+        work := sourceWork,
+        output := out }
+    have hsourcePrefix : ∀ steps cfg, steps ≤ elapsed →
+        tm.reachesIn steps sourceStart cfg →
+        cfg.WithinAuxSpace inputLength sourceSpace := by
+      intro steps cfg _hsteps hprefix
+      exact hsource.2 inp sourceWork out hpre cfg
+        (tm.reaches_of_reachesIn hprefix)
+    have hplaced :=
+      placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
+        tm pre post extras hreach hextras hsourcePrefix hframe
+    obtain ⟨currentTime, hcurrentRun⟩ :=
+      (placeWorkTM pre post tm).reaches_to_reachesIn hcurrent
+    have hdoneHalted : (placeWorkTM pre post tm).halted
+        (placeWorkCfg tm pre post extras done) :=
+      hhalt
+    have hcurrentTime : currentTime ≤ elapsed :=
+      (placeWorkTM pre post tm).reachesIn_le_halt hcurrentRun hplaced.1
+        hdoneHalted
+    exact hplaced.2 currentTime current hcurrentTime hcurrentRun
+
 theorem IsTransducer.placeWorkTM_internal {tm : TM n}
     (htrans : tm.IsTransducer) (pre post : ℕ) :
     (placeWorkTM pre post tm).IsTransducer := by

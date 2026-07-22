@@ -99,6 +99,102 @@ def barringtonLastOccupiedSlot? : ℕ → BoolFormula → Option ℕ
         (barringtonFirstOccupiedSlot? fuel right).getD 0
       some (3 * blockSize + (blockSize - 1 - firstRight))
 
+/-- Whether the fixed-address compilation has any occupied slot. This
+target-independent recurrence is smaller than computing either extreme
+address: negation and disjunction are automatically nonempty after their
+postmultiplications, while conjunction is nonempty exactly when one child is. -/
+def barringtonCompileSlotsNonempty : ℕ → BoolFormula → Bool
+  | _, .var _ | _, .tru => true
+  | _, .fls => false
+  | 0, .neg _ | 0, .conj _ _ | 0, .disj _ _ => false
+  | _ + 1, .neg _ | _ + 1, .disj _ _ => true
+  | fuel + 1, .conj left right =>
+      barringtonCompileSlotsNonempty fuel left ||
+        barringtonCompileSlotsNonempty fuel right
+
+/-- Occupancy after a fixed-schedule postmultiplication. An empty source gains
+a constant instruction at address zero; a nonempty source retains exactly its
+occupied addresses. -/
+def barringtonPostMulSlotOccupied (nonempty : Bool)
+    (occupied : ℕ → Bool) (slot : ℕ) : Bool :=
+  if nonempty then occupied slot else slot == 0
+
+/-- Occupancy of a reversed fixed-size block. Instruction inversion does not
+affect occupancy. -/
+def barringtonInverseSlotOccupied (blockSize : ℕ)
+    (occupied : ℕ → Bool) (slot : ℕ) : Bool :=
+  if slot < blockSize then occupied (blockSize - 1 - slot) else false
+
+/-- First true address below a fixed bound, queried without materializing the
+Boolean list. Recursive calls shift the query so the result remains local. -/
+def firstTrueSlot? : ℕ → (ℕ → Bool) → Option ℕ
+  | 0, _ => none
+  | bound + 1, occupied =>
+      if occupied 0 then some 0
+      else (firstTrueSlot? bound fun slot => occupied (slot + 1)).map Nat.succ
+
+/-- Last true address below a fixed bound, queried without materializing the
+Boolean list. -/
+def lastTrueSlot? : ℕ → (ℕ → Bool) → Option ℕ
+  | 0, _ => none
+  | bound + 1, occupied =>
+      match lastTrueSlot? bound fun slot => occupied (slot + 1) with
+      | some slot => some (slot + 1)
+      | none => if occupied 0 then some 0 else none
+
+/-- Query only whether one fixed Barrington address is occupied. Unlike the
+instruction query below, this recurrence carries no permutation and performs
+no first/last-address query. It is therefore the small Boolean kernel used by
+the eventual scanning controller. -/
+def barringtonCompileSlotOccupied : ℕ → BoolFormula → ℕ → Bool
+  | _, .var _, slot | _, .tru, slot => slot == 0
+  | _, .fls, _ => false
+  | 0, .neg _, _ | 0, .conj _ _, _ | 0, .disj _ _, _ => false
+  | fuel + 1, .neg formula, slot =>
+      let blockSize := 4 ^ fuel
+      if slot < blockSize then
+        barringtonPostMulSlotOccupied
+          (barringtonCompileSlotsNonempty fuel formula)
+          (barringtonCompileSlotOccupied fuel formula) slot
+      else
+        false
+  | fuel + 1, .conj left right, slot =>
+      let blockSize := 4 ^ fuel
+      let leftOccupied := barringtonCompileSlotOccupied fuel left
+      let rightOccupied := barringtonCompileSlotOccupied fuel right
+      if slot < blockSize then
+        leftOccupied slot
+      else if slot < 2 * blockSize then
+        rightOccupied (slot - blockSize)
+      else if slot < 3 * blockSize then
+        barringtonInverseSlotOccupied blockSize leftOccupied
+          (slot - 2 * blockSize)
+      else if slot < 4 * blockSize then
+        barringtonInverseSlotOccupied blockSize rightOccupied
+          (slot - 3 * blockSize)
+      else
+        false
+  | fuel + 1, .disj left right, slot =>
+      let blockSize := 4 ^ fuel
+      let leftOccupied := barringtonPostMulSlotOccupied
+        (barringtonCompileSlotsNonempty fuel left)
+        (barringtonCompileSlotOccupied fuel left)
+      let rightOccupied := barringtonPostMulSlotOccupied
+        (barringtonCompileSlotsNonempty fuel right)
+        (barringtonCompileSlotOccupied fuel right)
+      if slot < blockSize then
+        leftOccupied slot
+      else if slot < 2 * blockSize then
+        rightOccupied (slot - blockSize)
+      else if slot < 3 * blockSize then
+        barringtonInverseSlotOccupied blockSize leftOccupied
+          (slot - 2 * blockSize)
+      else if slot < 4 * blockSize then
+        barringtonInverseSlotOccupied blockSize rightOccupied
+          (slot - 3 * blockSize)
+      else
+        false
+
 /-- Directly query one fixed-address compilation slot. This follows only the
 selected base-four block. The finite permutation data and pending instruction
 transformations can therefore live in a concrete controller's finite state. -/

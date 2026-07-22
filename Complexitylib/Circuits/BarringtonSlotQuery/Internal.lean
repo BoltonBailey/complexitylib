@@ -591,6 +591,45 @@ theorem instruction?_fourBlocks_internal
       rw [if_neg hthree, if_neg hfour]
       rfl
 
+theorem firstTrueSlot?_instruction_internal (slots : BPSlots w) :
+    firstTrueSlot? slots.length
+        (fun slot => (instruction? slots slot).isSome) =
+      firstOccupiedSlot? slots := by
+  induction slots with
+  | nil => simp [firstTrueSlot?, firstOccupiedSlot?]
+  | cons head slots ih =>
+      cases head with
+      | none =>
+          simp only [firstTrueSlot?, instruction?, List.getElem?_cons_zero,
+            firstOccupiedSlot?]
+          simpa only [instruction?] using congrArg (Option.map Nat.succ) ih
+      | some instruction =>
+          simp [firstTrueSlot?, firstOccupiedSlot?, instruction?]
+
+theorem lastTrueSlot?_instruction_internal (slots : BPSlots w) :
+    lastTrueSlot? slots.length
+        (fun slot => (instruction? slots slot).isSome) =
+      lastOccupiedSlot? slots := by
+  induction slots with
+  | nil => simp [lastTrueSlot?, lastOccupiedSlot?]
+  | cons head slots ih =>
+      cases head with
+      | none =>
+          simp only [lastTrueSlot?, instruction?, List.getElem?_cons_zero,
+            Option.isSome_none, Bool.false_eq, lastOccupiedSlot?]
+          simpa only [instruction?] using congrArg
+            (fun result => match result with
+              | some slot => some (slot + 1)
+              | none => none) ih
+      | some instruction =>
+          simp only [lastTrueSlot?, instruction?,
+            List.getElem?_cons_zero, Option.join_some, Option.isSome_some,
+            lastOccupiedSlot?]
+          simpa only [instruction?] using congrArg
+            (fun result => match result with
+              | some slot => some (slot + 1)
+              | none => some 0) ih
+
 end BPSlots
 
 private theorem barringtonCompileSlots_ne_nil_query_internal
@@ -603,6 +642,222 @@ private theorem barringtonCompileSlots_ne_nil_query_internal
   have hpositive : 0 < 4 ^ fuel := pow_pos (by omega) fuel
   simp at hlength
   omega
+
+/-- The small nonemptiness recurrence agrees with both structural extreme
+queries. -/
+theorem barringtonCompileSlotsNonempty_correct_internal (fuel : ℕ)
+    (formula : BoolFormula) :
+    barringtonCompileSlotsNonempty fuel formula =
+        (barringtonFirstOccupiedSlot? fuel formula).isSome ∧
+      barringtonCompileSlotsNonempty fuel formula =
+        (barringtonLastOccupiedSlot? fuel formula).isSome := by
+  induction fuel generalizing formula with
+  | zero =>
+      cases formula <;>
+        simp [barringtonCompileSlotsNonempty,
+          barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+  | succ fuel ih =>
+      cases formula with
+      | conj left right =>
+          obtain ⟨hleftFirst, _hleftLast⟩ := ih left
+          obtain ⟨hrightFirst, _hrightLast⟩ := ih right
+          simp only [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?,
+            hleftFirst, hrightFirst]
+          cases barringtonFirstOccupiedSlot? fuel left <;>
+            cases barringtonFirstOccupiedSlot? fuel right <;> simp
+      | var index =>
+          simp [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+      | tru =>
+          simp [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+      | fls =>
+          simp [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+      | neg formula =>
+          simp [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+      | disj left right =>
+          simp [barringtonCompileSlotsNonempty,
+            barringtonFirstOccupiedSlot?, barringtonLastOccupiedSlot?]
+
+private theorem optionMap_isSome_internal {A B : Type}
+    (f : A → B) (value : Option A) :
+    (value.map f).isSome = value.isSome := by
+  cases value <;> rfl
+
+private theorem barringtonPostMulSlotOccupied_correct_internal
+    (nonempty : Bool) (occupied : ℕ → Bool)
+    (query : ℕ → Option (BPInstr 5)) (lastOccupied : Option ℕ)
+    (permutation : Equiv.Perm (Fin 5))
+    (hnonempty : nonempty = lastOccupied.isSome)
+    (hquery : ∀ slot, occupied slot = (query slot).isSome) (slot : ℕ) :
+    barringtonPostMulSlotOccupied nonempty occupied slot =
+      (barringtonPostMulSlot? query lastOccupied permutation slot).isSome := by
+  rw [hnonempty]
+  cases lastOccupied with
+  | none =>
+      by_cases hslot : slot = 0 <;>
+        simp [barringtonPostMulSlotOccupied, barringtonPostMulSlot?, hslot]
+  | some last =>
+      simp [barringtonPostMulSlotOccupied, barringtonPostMulSlot?, hquery]
+
+private theorem barringtonInverseSlotOccupied_correct_internal
+    (blockSize : ℕ) (occupied : ℕ → Bool)
+    (query : ℕ → Option (BPInstr 5))
+    (hquery : ∀ slot, occupied slot = (query slot).isSome) (slot : ℕ) :
+    barringtonInverseSlotOccupied blockSize occupied slot =
+      (barringtonInverseSlot? blockSize query slot).isSome := by
+  by_cases hslot : slot < blockSize <;>
+    simp [barringtonInverseSlotOccupied, barringtonInverseSlot?, hslot,
+      hquery]
+
+/-- The target-independent Boolean occupancy query is exactly the `isSome`
+projection of the instruction query. -/
+theorem barringtonCompileSlotOccupied_correct_internal (fuel : ℕ)
+    (formula : BoolFormula) (target : Equiv.Perm (Fin 5)) (slot : ℕ) :
+    barringtonCompileSlotOccupied fuel formula slot =
+      (barringtonCompileSlot? fuel formula target slot).isSome := by
+  induction fuel generalizing formula target slot with
+  | zero =>
+      cases formula <;>
+        simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?] <;>
+        first | rfl | (split <;> simp_all)
+  | succ fuel ih =>
+      cases formula with
+      | var index =>
+          simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?]
+          split <;> simp_all
+      | tru =>
+          simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?]
+          split <;> simp_all
+      | fls =>
+          rfl
+      | neg formula =>
+          have hnonempty :=
+            (barringtonCompileSlotsNonempty_correct_internal fuel formula).2
+          simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?]
+          by_cases hslot : slot < 4 ^ fuel
+          · rw [if_pos hslot, if_pos hslot]
+            exact barringtonPostMulSlotOccupied_correct_internal
+              (barringtonCompileSlotsNonempty fuel formula)
+              (barringtonCompileSlotOccupied fuel formula)
+              (barringtonCompileSlot? fuel formula target⁻¹)
+              (barringtonLastOccupiedSlot? fuel formula) target hnonempty
+              (fun localSlot => ih formula target⁻¹ localSlot) slot
+          · rw [if_neg hslot, if_neg hslot]
+            rfl
+      | conj left right =>
+          simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?]
+          by_cases hone : slot < 4 ^ fuel
+          · rw [if_pos hone, if_pos hone]
+            exact ih left (barringtonLeft target) slot
+          · rw [if_neg hone, if_neg hone]
+            by_cases htwo : slot < 2 * 4 ^ fuel
+            · rw [if_pos htwo, if_pos htwo]
+              exact ih right (barringtonRight target) (slot - 4 ^ fuel)
+            · rw [if_neg htwo, if_neg htwo]
+              by_cases hthree : slot < 3 * 4 ^ fuel
+              · rw [if_pos hthree, if_pos hthree]
+                exact barringtonInverseSlotOccupied_correct_internal
+                  (4 ^ fuel) (barringtonCompileSlotOccupied fuel left)
+                  (barringtonCompileSlot? fuel left (barringtonLeft target))
+                  (fun localSlot =>
+                    ih left (barringtonLeft target) localSlot)
+                  (slot - 2 * 4 ^ fuel)
+              · rw [if_neg hthree, if_neg hthree]
+                by_cases hfour : slot < 4 * 4 ^ fuel
+                · rw [if_pos hfour, if_pos hfour]
+                  exact barringtonInverseSlotOccupied_correct_internal
+                    (4 ^ fuel) (barringtonCompileSlotOccupied fuel right)
+                    (barringtonCompileSlot? fuel right
+                      (barringtonRight target))
+                    (fun localSlot =>
+                      ih right (barringtonRight target) localSlot)
+                    (slot - 3 * 4 ^ fuel)
+                · rw [if_neg hfour, if_neg hfour]
+                  rfl
+      | disj left right =>
+          have hleftNonempty :=
+            (barringtonCompileSlotsNonempty_correct_internal fuel left).2
+          have hrightNonempty :=
+            (barringtonCompileSlotsNonempty_correct_internal fuel right).2
+          let innerTarget := target⁻¹
+          let leftTarget := barringtonLeft innerTarget
+          let rightTarget := barringtonRight innerTarget
+          let leftOccupied := barringtonPostMulSlotOccupied
+            (barringtonCompileSlotsNonempty fuel left)
+            (barringtonCompileSlotOccupied fuel left)
+          let rightOccupied := barringtonPostMulSlotOccupied
+            (barringtonCompileSlotsNonempty fuel right)
+            (barringtonCompileSlotOccupied fuel right)
+          let leftQuery := barringtonPostMulSlot?
+            (barringtonCompileSlot? fuel left leftTarget⁻¹)
+            (barringtonLastOccupiedSlot? fuel left) leftTarget
+          let rightQuery := barringtonPostMulSlot?
+            (barringtonCompileSlot? fuel right rightTarget⁻¹)
+            (barringtonLastOccupiedSlot? fuel right) rightTarget
+          have hleft : ∀ localSlot,
+              leftOccupied localSlot = (leftQuery localSlot).isSome := by
+            intro localSlot
+            exact barringtonPostMulSlotOccupied_correct_internal
+              (barringtonCompileSlotsNonempty fuel left)
+              (barringtonCompileSlotOccupied fuel left)
+              (barringtonCompileSlot? fuel left leftTarget⁻¹)
+              (barringtonLastOccupiedSlot? fuel left) leftTarget
+              hleftNonempty
+              (fun childSlot => ih left leftTarget⁻¹ childSlot)
+              localSlot
+          have hright : ∀ localSlot,
+              rightOccupied localSlot = (rightQuery localSlot).isSome := by
+            intro localSlot
+            exact barringtonPostMulSlotOccupied_correct_internal
+              (barringtonCompileSlotsNonempty fuel right)
+              (barringtonCompileSlotOccupied fuel right)
+              (barringtonCompileSlot? fuel right rightTarget⁻¹)
+              (barringtonLastOccupiedSlot? fuel right) rightTarget
+              hrightNonempty
+              (fun childSlot => ih right rightTarget⁻¹ childSlot)
+              localSlot
+          simp only [barringtonCompileSlotOccupied, barringtonCompileSlot?]
+          change (if slot < 4 ^ fuel then leftOccupied slot
+              else if slot < 2 * 4 ^ fuel then
+                rightOccupied (slot - 4 ^ fuel)
+              else if slot < 3 * 4 ^ fuel then
+                barringtonInverseSlotOccupied (4 ^ fuel) leftOccupied
+                  (slot - 2 * 4 ^ fuel)
+              else if slot < 4 * 4 ^ fuel then
+                barringtonInverseSlotOccupied (4 ^ fuel) rightOccupied
+                  (slot - 3 * 4 ^ fuel)
+              else false) = _
+          simp only [barringtonPostMulSlot?]
+          by_cases hone : slot < 4 ^ fuel
+          · rw [if_pos hone, if_pos hone]
+            rw [optionMap_isSome_internal]
+            simpa only [leftOccupied, leftQuery] using hleft slot
+          · rw [if_neg hone, if_neg hone]
+            by_cases htwo : slot < 2 * 4 ^ fuel
+            · rw [if_pos htwo, if_pos htwo]
+              rw [optionMap_isSome_internal]
+              simpa only [rightOccupied, rightQuery] using
+                hright (slot - 4 ^ fuel)
+            · rw [if_neg htwo, if_neg htwo]
+              by_cases hthree : slot < 3 * 4 ^ fuel
+              · rw [if_pos hthree, if_pos hthree]
+                rw [optionMap_isSome_internal]
+                exact barringtonInverseSlotOccupied_correct_internal
+                  (4 ^ fuel) leftOccupied leftQuery hleft
+                  (slot - 2 * 4 ^ fuel)
+              · rw [if_neg hthree, if_neg hthree]
+                by_cases hfour : slot < 4 * 4 ^ fuel
+                · rw [if_pos hfour, if_pos hfour]
+                  rw [optionMap_isSome_internal]
+                  exact barringtonInverseSlotOccupied_correct_internal
+                    (4 ^ fuel) rightOccupied rightQuery hright
+                    (slot - 3 * 4 ^ fuel)
+                · rw [if_neg hfour, if_neg hfour]
+                  rfl
 
 /-- The structural first/last recurrences identify the exact occupied
 extremes of the list-valued fixed-slot compiler. -/
