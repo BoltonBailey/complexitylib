@@ -1310,6 +1310,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   it embeds address and limit registers behind the probe frame, queries and
   resets the latch, runs the selected continuation, increments the address,
   and preserves one-way output safety through the complete bounded scan.
+  `OutputProbeCountOnes` now supplies the serializer's first-pass branch body:
+  a zero probe preserves the complete reset-latch frame, while a one probe
+  increments exactly one canonical binary count register. The composed
+  query-reset-count step has an explicit time/space contract and the enclosing
+  count-up scan remains one-way-output safe.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

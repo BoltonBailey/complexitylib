@@ -46,6 +46,52 @@ theorem outputProbeIndexedControllerIdx_ne_countdown
       outputProbeIndexedCountdownIdx n controllerTapes :=
   outputProbeIndexedControllerIdx_ne_countdown_internal n idx
 
+/-- A controller-local tape remains exactly equal to its stable outer-frame
+value after a latched query. -/
+theorem outputProbeLatchFramePost_controller
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (idx : Fin controllerTapes) :
+    work (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) :=
+  outputProbeLatchFramePost_controller_internal tm controllerTapes
+    outerExtras input output extras bit inp work out hpost idx
+
+/-- Updating one controller-local tape after a latched query is represented by
+the same update to the stable outer frame; the complete query-owned frame is
+unchanged. -/
+theorem outputProbeLatchFramePost_updateController
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (idx : Fin controllerTapes) (tape : Tape) :
+    outputProbeLatchFramePost tm controllerTapes
+      (Function.update outerExtras
+        (outputProbeIndexedControllerIdx n idx) tape)
+      input output extras bit inp
+      (Function.update work
+        (outputProbeIndexedControllerIdx n idx) tape)
+      out :=
+  outputProbeLatchFramePost_updateController_internal tm controllerTapes
+    outerExtras input output extras bit inp work out hpost idx tape
+
 /-- The physical private countdown in a doubly framed query contains the
 declared one-based query value. -/
 theorem outputProbeIndexedFrameCountdown

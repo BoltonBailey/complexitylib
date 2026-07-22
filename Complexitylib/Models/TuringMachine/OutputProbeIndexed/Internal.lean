@@ -55,6 +55,63 @@ theorem outputProbeIndexedControllerIdx_ne_countdown_internal
   rw [← heq] at hmiddle
   exact outputProbeIndexedControllerIdx_not_middle_internal n idx hmiddle
 
+theorem outputProbeLatchFramePost_controller_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (idx : Fin controllerTapes) :
+    work (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) := by
+  obtain ⟨sourceWork, _hsource, hwork⟩ := hpost
+  rw [hwork, placeWorkCfg_work_extra]
+  exact outputProbeIndexedControllerIdx_not_middle_internal n idx
+
+theorem outputProbeLatchFramePost_updateController_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (idx : Fin controllerTapes) (tape : Tape) :
+    outputProbeLatchFramePost tm controllerTapes
+      (Function.update outerExtras
+        (outputProbeIndexedControllerIdx n idx) tape)
+      input output extras bit inp
+      (Function.update work
+        (outputProbeIndexedControllerIdx n idx) tape)
+      out := by
+  obtain ⟨sourceWork, hsource, hwork⟩ := hpost
+  refine ⟨sourceWork, hsource, ?_⟩
+  rw [hwork]
+  funext i
+  by_cases hi : i = outputProbeIndexedControllerIdx n idx
+  · subst i
+    rw [Function.update_self, placeWorkCfg_work_extra]
+    · simp only [Function.update_self]
+    · exact outputProbeIndexedControllerIdx_not_middle_internal n idx
+  · rw [Function.update_of_ne hi]
+    by_cases hmiddle : placeWorkInMiddle 0 (outputProbeControllerTapes n) i
+    · simp only [placeWorkCfg, hmiddle, dite_true]
+    · rw [placeWorkCfg_work_extra _ _ _ outerExtras _ i hmiddle]
+      rw [placeWorkCfg_work_extra _ _ _
+        (Function.update outerExtras
+          (outputProbeIndexedControllerIdx n idx) tape) _ i hmiddle]
+      rw [Function.update_of_ne hi]
+
 theorem outputProbeIndexedFrameCountdown_internal
     (tm : TM n) (controllerTapes value : ℕ)
     (input : List Bool) (output : Tape)
