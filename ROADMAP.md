@@ -1161,8 +1161,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` unfolds any `NC1` circuit
   family output with at most a factor-two depth increase and applies the
   Barrington equivalence. No formula-size claim is used.)
-- [ ] Add a uniform version only after instruction-generation uniformity is
-  formalized.
+- [~] Add a uniform version only after instruction-generation uniformity is
+  formalized. The extraction prerequisite is now complete:
+  `Circuits/BarringtonCompiler` replaces proof-level conjugator choices by a
+  computable enumeration of `S₅` and exposes an explicit recursive
+  `barringtonCompile` with exact semantics and length `≤ 4 ^ depth`. A canonical
+  branching-program codec and an `FL` instruction/code generator theorem remain.
 
 **Formalization hazards.** Permutation multiplication order differs between texts
 and libraries; fix it with executable examples before proving the induction.
