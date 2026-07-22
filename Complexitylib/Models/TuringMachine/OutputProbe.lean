@@ -493,6 +493,9 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
       done.work ⟨n, by omega⟩ = outputProbeCounterTape 0 ∧
+      (∀ i, (done.work i).BlankAfter
+        (outputProbeCaptureSpace (max 1 (space input.length))
+          (index + 1))) ∧
       done.output = (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
@@ -535,6 +538,10 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
       (placeWorkCfg queryTM pre post extras done).work
           (placeWorkIdx pre post ⟨n, by omega⟩) =
         outputProbeCounterTape 0 ∧
+      (∀ i, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post i)).BlankAfter
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1))) ∧
       (placeWorkCfg queryTM pre post extras done).output =
         (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →

@@ -39,6 +39,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 import Complexitylib.Models.TuringMachine.Subroutines.BlankWorkPrefix
+import Complexitylib.Models.TuringMachine.Subroutines.BlankWorkPrefixMany
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
@@ -48,11 +49,14 @@ import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
 import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
 import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
 import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
+import Complexitylib.Models.TuringMachine.Subroutines.RewindInputSpace
 import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.OutputCursor
 import Complexitylib.Models.TuringMachine.OutputProbe
+import Complexitylib.Models.TuringMachine.OutputProbeCleanup
 import Complexitylib.Models.TuringMachine.SpaceTime
+import Complexitylib.Models.TuringMachine.SpaceTime.WorkSupport
 import Complexitylib.Models.TuringMachine.Placement
 import Complexitylib.Models.TuringMachine.Composition
 import Complexitylib.Models.TuringMachine.Composition.PairWithInput

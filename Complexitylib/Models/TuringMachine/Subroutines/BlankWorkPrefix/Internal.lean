@@ -74,6 +74,27 @@ theorem blankPrefixTape_startInvariant_internal (tape : Tape)
     · decide
     · exact hinvariant.2 index hindex
 
+theorem blankPrefixResultTape_eq_parkedBlank_internal (tape : Tape)
+    (limit : ℕ) (hinvariant : tape.StartInvariant)
+    (hblank : ∀ index, limit < index → tape.cells index = Γ.blank) :
+    blankPrefixResultTape tape limit =
+      (Tape.init []).move Dir3.right := by
+  apply Tape.ext
+  · simp [blankPrefixResultTape, Tape.init, Tape.move]
+  · funext index
+    change blankPrefixCells tape.cells limit index =
+      (if index = 0 then Γ.start else Γ.blank)
+    by_cases hzero : index = 0
+    · subst index
+      simp [blankPrefixCells, hinvariant.1]
+    · have hpositive : 1 ≤ index := by omega
+      by_cases hprefix : index ≤ limit
+      · simp [blankPrefixCells, hpositive, hprefix, hzero]
+      · rw [show blankPrefixCells tape.cells limit index = tape.cells index by
+          simp [blankPrefixCells, hpositive, hprefix]]
+        rw [hblank index (by omega)]
+        simp [hzero]
+
 theorem blankWorkCellTM_isTransducer_internal {n : ℕ}
     (targetIdx : Fin n) :
     (blankWorkCellTM targetIdx).IsTransducer := by

@@ -1258,12 +1258,17 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   missing replay-reset primitive: it blanks an arbitrary sparse work prefix
   bounded by a preserved binary limit, rewinds the target from an arbitrary
   in-bound head position, restores its scratch counter, and proves exact time
-  plus an all-prefix space envelope. Successful output probes now also expose
-  that their countdown ends as the canonical zero tape, including after restart,
-  output retargeting, and placement in a larger controller frame. The remaining
-  construction is the concrete machine that composes restartable source-code
-  probes with that reset to realize these verified oracle recurrences and
-  serializer scans, together with its all-prefix logarithmic-space proof.
+  plus an all-prefix space envelope. `BlankWorkPrefixMany` serially applies that
+  primitive to a fixed sparse tape list without multiplying the peak-space
+  bound. Successful output probes now also expose that their countdown ends as
+  the canonical zero tape, including after restart, output retargeting, and
+  placement in a larger controller frame, and give an exact blank-support bound
+  for every query-owned tape. `OutputProbeCleanup` combines an exact-space input
+  rewind with the fixed-list reset to restore the source and capture tapes while
+  preserving the controller frame. The remaining construction is the concrete
+  controller that reads each captured bit before cleanup and iterates these
+  verified oracle recurrences through the two serializer scans, together with
+  its all-prefix logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation

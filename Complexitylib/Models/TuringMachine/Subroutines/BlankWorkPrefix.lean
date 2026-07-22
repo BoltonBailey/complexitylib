@@ -32,6 +32,15 @@ theorem blankPrefixCells_succ (cells : ℕ → Γ) (count : ℕ) :
       blankPrefixCells cells (count + 1) :=
   blankPrefixCells_succ_internal cells count
 
+/-- Blanking through a complete support bound returns the literal canonical
+parked blank tape. -/
+theorem blankPrefixResultTape_eq_parkedBlank (tape : Tape)
+    (limit : ℕ) (hinvariant : tape.StartInvariant)
+    (hblank : ∀ index, limit < index → tape.cells index = Γ.blank) :
+    blankPrefixResultTape tape limit =
+      (Tape.init []).move Dir3.right :=
+  blankPrefixResultTape_eq_parkedBlank_internal tape limit hinvariant hblank
+
 /-- A binary-bounded prefix reset preserves the complete external frame,
 changes only the selected target cells, and restores the scratch counter. -/
 theorem blankWorkPrefixTM_hoareTime_frame {n : ℕ}

@@ -9,6 +9,7 @@ import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Lift
 import Complexitylib.Models.TuringMachine.Placement.Internal
+import Complexitylib.Models.TuringMachine.SpaceTime.WorkSupport
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 
@@ -1818,6 +1819,9 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
       done.work ⟨n, by omega⟩ = outputProbeCounterTape 0 ∧
+      (∀ i, (done.work i).BlankAfter
+        (outputProbeCaptureSpace (max 1 (space input.length))
+          (index + 1))) ∧
       done.output = (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
@@ -1836,14 +1840,14 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
     (index + 1)
   have hsourceTrans : sourceTM.IsTransducer :=
     (outputProbeTM_isTransducer_internal tm).startedTM_internal
-  refine ⟨probeSteps, sourceTM.retargetCfg sourceDone,
-    retargetOutput_reachesIn_retargetCfg_frame sourceTM hsourceRun,
-    hhalt, ?_, ?_, rfl, ?_⟩
-  · rw [retargetCfg_work_last]
-    exact hout
-  · rw [retargetCfg_work_lt]
-    exact hcounter
-  · intro elapsed cfg helapsed hretarget
+  have hretargetRun :=
+    retargetOutput_reachesIn_retargetCfg_frame sourceTM hsourceRun
+  have hretargetPrefix : ∀ elapsed cfg, elapsed ≤ probeSteps →
+      sourceTM.retargetOutput.reachesIn elapsed
+        (sourceTM.retargetCfg (outputProbeStartedCfg tm input
+          (outputProbeCounterTape (index + 1)))) cfg →
+      cfg.WithinAuxSpace input.length budget := by
+    intro elapsed cfg helapsed hretarget
     let remaining := probeSteps - elapsed
     have htime : elapsed + remaining = probeSteps := by
       dsimp only [remaining]
@@ -1874,9 +1878,55 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
         subst i
         rw [retargetCfg_work_last]
         apply le_trans hmidOutput
-        simp [outputProbeCaptureSpace, outputProbeReplaySpace,
-          outputProbePositiveSpace, binaryPredSpace]
+        dsimp only [budget, outputProbeCaptureSpace,
+          outputProbeReplaySpace, outputProbePositiveSpace, binaryPredSpace]
+        omega
     · simpa only [retargetCfg_input] using hmidSpace.2
+  have hblankParked : ((Tape.init []).move Dir3.right).BlankAfter budget := by
+    simpa only [Tape.BlankAfter, Tape.move_cells] using
+      Tape.BlankAfter.init_nil budget
+  have hstartBlank : ∀ i,
+      ((sourceTM.retargetCfg (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1)))).work i).BlankAfter budget := by
+    intro i
+    by_cases hi : i.val < n + 1
+    · rw [retargetCfg_work_lt sourceTM _ i hi]
+      by_cases hsource : i.val < n
+      · simpa [outputProbeStartedCfg, hsource] using hblankParked
+      · have hilast : (⟨i.val, hi⟩ : Fin (n + 1)) = Fin.last n := by
+          apply Fin.ext
+          simp only [Fin.val_last]
+          omega
+        rw [hilast]
+        have hcounterBlank :
+            (outputProbeCounterTape (index + 1)).BlankAfter budget := by
+          have hcontent : (outputProbeCounterTape
+              (index + 1)).HasBinaryContent (index + 1).bits :=
+            (outputProbeCounterTape_hasBinaryNat_internal (index + 1)).2.2
+          apply hcontent.blankAfter_of_length_le
+          rw [Nat.size_eq_bits_len]
+          have hsize := Nat.size_le_size
+            (show index + 1 ≤ index + 1 + 1 by omega)
+          dsimp only [budget, outputProbeCaptureSpace,
+            outputProbeReplaySpace, outputProbePositiveSpace, binaryPredSpace]
+          omega
+        simpa [outputProbeStartedCfg] using hcounterBlank
+    · have hilast : i = Fin.last (n + 1) := by
+        apply Fin.ext
+        simp only [Fin.val_last]
+        omega
+      subst i
+      rw [retargetCfg_work_last]
+      simpa [outputProbeStartedCfg] using hblankParked
+  refine ⟨probeSteps, sourceTM.retargetCfg sourceDone, hretargetRun,
+    hhalt, ?_, ?_, ?_, rfl, hretargetPrefix⟩
+  · rw [retargetCfg_work_last]
+    exact hout
+  · rw [retargetCfg_work_lt]
+    exact hcounter
+  · intro i
+    exact work_blankAfter_reachesIn i (hstartBlank i) hretargetRun
+      hretargetPrefix
 
 /-- Redirect the restartable probe's captured output bit to a fresh work tape,
 leaving the enclosing machine's real output parked and blank. -/
@@ -1893,8 +1943,8 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_internal
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
       done.output = (Tape.init []).move Dir3.right := by
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hcounter, houtput,
-      _hspace⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hcounter, _hblank,
+      houtput, _hspace⟩ :=
     hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
       input index hindex
   exact ⟨probeSteps, done, hreach, hhalt, hout, houtput⟩
@@ -1929,6 +1979,10 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
       (placeWorkCfg queryTM pre post extras done).work
           (placeWorkIdx pre post ⟨n, by omega⟩) =
         outputProbeCounterTape 0 ∧
+      (∀ i, ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post i)).BlankAfter
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1))) ∧
       (placeWorkCfg queryTM pre post extras done).output =
         (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
@@ -1940,20 +1994,23 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
               (index + 1))
             frameSpace) := by
   dsimp only
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, hcounter, houtput,
-      hprefix⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, hcounter, hblank,
+      houtput, hprefix⟩ :=
     hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
       input index hindex
   obtain ⟨hplaced, hplacedPrefix⟩ :=
     placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
       ((outputProbeStartedTM tm).retargetOutput) pre post extras hreach
       hextra hprefix hframe
-  refine ⟨probeSteps, done, hplaced, ?_, ?_, ?_, ?_, hplacedPrefix⟩
+  refine ⟨probeSteps, done, hplaced, ?_, ?_, ?_, ?_, ?_, hplacedPrefix⟩
   · exact hhalt
   · rw [placeWorkCfg_work_middle]
     exact hout
   · rw [placeWorkCfg_work_middle]
     exact hcounter
+  · intro i
+    rw [placeWorkCfg_work_middle]
+    exact hblank i
   · simpa only [placeWorkCfg_output] using houtput
 
 end TM
