@@ -100,11 +100,32 @@ def advanceSlotDigitTM {n : ℕ} (sourceIdx : Fin n) : TM n where
         · simp [his, TM.idleDir_right_of_start hi]
     | done => exact TM.rightOfStart_allIdle iHead wHeads oHead
 
+/-- Binary count-up loop that advances the source head across one base-four
+digit per iteration. -/
+def positionSlotLoopTM {n : ℕ}
+    (sourceIdx counterIdx limitIdx : Fin n) : TM n :=
+  TM.binaryForTM (advanceSlotDigitTM sourceIdx) counterIdx limitIdx
+
 /-- Runtime slot positioner: advance two cells per binary loop iteration, then
 one more cell to land on bit `2 * fuel + 1`. -/
 def positionSlotTM {n : ℕ} (sourceIdx counterIdx limitIdx : Fin n) : TM n :=
-  TM.seqTM (TM.binaryForTM (advanceSlotDigitTM sourceIdx) counterIdx limitIdx)
+  TM.seqTM (positionSlotLoopTM sourceIdx counterIdx limitIdx)
     (moveSlotRightTM sourceIdx)
+
+/-- Exact time of the binary loop that advances across `fuel` base-four
+digits. -/
+def positionSlotLoopTime (fuel : ℕ) : ℕ :=
+  TM.binaryForLoopTime (fun _ => 2) fuel 0 fuel
+
+/-- Exact time bound of loop positioning followed by the final one-cell move. -/
+def positionSlotTime (fuel : ℕ) : ℕ :=
+  positionSlotLoopTime fuel + 1 + 1
+
+/-- Shared all-prefix space budget for positioning from a frame bounded by
+`initialSpace`. The linear `2 * fuel` term is the address-head displacement;
+the smaller `Nat.size` term covers the binary loop controller. -/
+def positionSlotSpace (initialSpace fuel : ℕ) : ℕ :=
+  initialSpace + 2 * fuel + 2 * fuel.size + 6
 
 end Machine
 

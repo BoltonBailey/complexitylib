@@ -21,6 +21,27 @@ namespace Machine
 
 open TM
 
+/-- A positioned tape with the cells of a canonical binary tape exposes the
+corresponding `Nat.testBit`, including implicit false high bits. -/
+theorem slotBitAtHead_eq_testBit_of_cells
+    (tape original : Tape) (value offset : ℕ)
+    (hvalue : original.HasBinaryNat value)
+    (hcells : tape.cells = original.cells)
+    (hhead : tape.head = offset + 1) :
+    slotBitAtHead tape = value.testBit offset :=
+  slotBitAtHead_eq_testBit_of_cells_internal tape original value offset hvalue
+    hcells hhead
+
+/-- A canonical binary tape positioned on bit `offset` exposes exactly
+`Nat.testBit value offset`; positions beyond the canonical bit string read as
+false through the terminating blank. -/
+theorem slotBitAtHead_eq_testBit
+    (tape : Tape) (value offset : ℕ)
+    (hvalue : tape.HasBinaryNat value)
+    (hhead : tape.head = offset + 1) :
+    slotBitAtHead tape = value.testBit offset :=
+  slotBitAtHead_eq_testBit_internal tape value offset hvalue hhead
+
 /-- One positioned source symbol becomes a canonical Boolean controller tape;
 the source may simultaneously move one cell left. -/
 theorem captureSlotBitTM_hoareTime

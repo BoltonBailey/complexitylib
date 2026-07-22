@@ -1411,10 +1411,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   way on output. The runtime positioner is now concrete as a canonical binary
   count-up loop whose certified two-transition body advances one base-four
   digit, followed by a certified one-transition move onto the current high bit;
-  all movement bodies carry all-prefix space and one-way-output contracts. The
-  next proof seam is the loop invariant identifying iteration `v` with head
-  offset `2 * v`, then wiring the positioned capture and branch into the three
-  recursive connective cases.
+  its exact loop invariant identifies iteration `v` with head offset `2 * v`.
+  The complete positioner lands on bit `2 * fuel + 1`, preserves the address
+  cells, advances its canonical counter exactly to `fuel`, and carries the
+  all-prefix bound `initialSpace + 2 * fuel + 2 * fuel.size + 6` rather than a
+  time-derived quadratic bound. Positioned canonical cells are also proved to
+  expose exactly `Nat.testBit`, including implicit blank high bits. The next
+  machine seam is to compose positioning, capture, and the four-way branch,
+  then wire that controller into the three recursive connective cases.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

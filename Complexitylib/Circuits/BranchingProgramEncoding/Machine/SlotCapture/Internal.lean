@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotCapture.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+import Mathlib.Data.Nat.Bitwise
 
 /-!
 # Barrington slot-bit capture -- internals
@@ -17,6 +18,30 @@ namespace BPCode
 namespace Machine
 
 open TM
+
+theorem slotBitAtHead_eq_testBit_of_cells_internal
+    (tape original : Tape) (value offset : ℕ)
+    (hvalue : original.HasBinaryNat value)
+    (hcells : tape.cells = original.cells)
+    (hhead : tape.head = offset + 1) :
+    slotBitAtHead tape = value.testBit offset := by
+  rw [slotBitAtHead, Nat.testBit_eq_inth]
+  by_cases hi : offset < value.bits.length
+  · rw [Tape.read, hhead, hcells, hvalue.2.2.1 offset hi,
+      List.getI_eq_getElem (l := value.bits) hi]
+    cases value.bits[offset] <;> rfl
+  · have hle : value.bits.length ≤ offset := Nat.le_of_not_gt hi
+    rw [Tape.read, hhead, hcells, hvalue.2.2.2 offset hle,
+      List.getI_eq_default (l := value.bits) hle]
+    rfl
+
+theorem slotBitAtHead_eq_testBit_internal
+    (tape : Tape) (value offset : ℕ)
+    (hvalue : tape.HasBinaryNat value)
+    (hhead : tape.head = offset + 1) :
+    slotBitAtHead tape = value.testBit offset :=
+  slotBitAtHead_eq_testBit_of_cells_internal tape tape value offset hvalue rfl
+    hhead
 
 private theorem captureSlotBitTM_step
     (sourceIdx targetIdx : Fin n) (hne : sourceIdx ≠ targetIdx)

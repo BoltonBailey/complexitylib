@@ -53,6 +53,69 @@ theorem advanceSlotDigitTM_hoareTime
   advanceSlotDigitTM_hoareTime_internal sourceIdx inp₀ work₀ out₀ hinput
     hsourceNext hwork houtput
 
+/-- The runtime binary loop places a canonical slot-address head on bit
+`2 * fuel + 1`, preserving its cells and every unrelated tape. -/
+theorem positionSlotTM_hoareTime
+    (sourceIdx counterIdx limitIdx : Fin n)
+    (hsc : sourceIdx ≠ counterIdx) (hcl : counterIdx ≠ limitIdx)
+    (hsl : sourceIdx ≠ limitIdx)
+    (slotValue fuel : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hinput : inp₀.read ≠ Γ.start)
+    (hslot : (work₀ sourceIdx).HasBinaryNat slotValue)
+    (hcounter : (work₀ counterIdx).HasBinaryNat 0)
+    (hlimit : (work₀ limitIdx).HasBinaryNat fuel)
+    (hwork : ∀ i, (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start) :
+    (positionSlotTM sourceIdx counterIdx limitIdx).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work sourceIdx).head = (work₀ sourceIdx).head + 2 * fuel + 1 ∧
+        (work sourceIdx).cells = (work₀ sourceIdx).cells ∧
+        (work counterIdx).HasBinaryNat fuel ∧
+        work limitIdx = work₀ limitIdx ∧
+        (∀ i, i ≠ sourceIdx → i ≠ counterIdx → i ≠ limitIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (positionSlotTime fuel) :=
+  positionSlotTM_hoareTime_internal sourceIdx counterIdx limitIdx hsc hcl hsl
+    slotValue fuel inp₀ work₀ out₀ hinput hslot hcounter hlimit hwork houtput
+
+/-- Runtime positioning has a linear-in-`fuel` all-prefix space bound: the
+main term is the `2 * fuel` source-head displacement, while binary-loop control
+uses only the bit width of `fuel`. -/
+theorem positionSlotTM_hoareTimeSpace
+    (sourceIdx counterIdx limitIdx : Fin n)
+    (hsc : sourceIdx ≠ counterIdx) (hcl : counterIdx ≠ limitIdx)
+    (hsl : sourceIdx ≠ limitIdx)
+    (slotValue fuel inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hinput : inp₀.read ≠ Γ.start)
+    (hslot : (work₀ sourceIdx).HasBinaryNat slotValue)
+    (hcounter : (work₀ counterIdx).HasBinaryNat 0)
+    (hlimit : (work₀ limitIdx).HasBinaryNat fuel)
+    (hwork : ∀ i, (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start)
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace : inp₀.head ≤ inputLength + initialSpace + 1) :
+    (positionSlotTM sourceIdx counterIdx limitIdx).HoareTimeSpace
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work sourceIdx).head = (work₀ sourceIdx).head + 2 * fuel + 1 ∧
+        (work sourceIdx).cells = (work₀ sourceIdx).cells ∧
+        (work counterIdx).HasBinaryNat fuel ∧
+        work limitIdx = work₀ limitIdx ∧
+        (∀ i, i ≠ sourceIdx → i ≠ counterIdx → i ≠ limitIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (positionSlotTime fuel) inputLength
+      (positionSlotSpace initialSpace fuel) :=
+  positionSlotTM_hoareTimeSpace_internal sourceIdx counterIdx limitIdx hsc hcl
+    hsl slotValue fuel inputLength initialSpace inp₀ work₀ out₀ hinput hslot
+    hcounter hlimit hwork houtput hworkSpace hinputSpace
+
 /-- One rightward positioning step adds at most one cell to the starting
 all-prefix auxiliary-space budget. -/
 theorem moveSlotRightTM_hoareTimeSpace
