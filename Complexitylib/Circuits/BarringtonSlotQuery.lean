@@ -24,9 +24,41 @@ permutation, so they are suitable for a finite-state machine controller.
   exact.
 - `barringtonCompileSlot?_eq_instruction?` -- every direct query agrees with
   the list-valued fixed-slot compiler.
+- `BPInstrTransform.apply_invertOutput` and `apply_postMulOutput` -- the finite
+  pending-transform state realizes the two instruction wrappers used during
+  recursive descent.
 -/
 
 namespace Complexity
+
+/-- The identity finite-control transformation leaves an instruction fixed. -/
+@[simp] theorem BPInstrTransform.apply_identity (instruction : BPInstr 5) :
+    BPInstrTransform.identity.apply instruction = instruction :=
+  BPInstrTransform.apply_identity_internal instruction
+
+/-- Updating finite control for an inverse block is exactly instruction
+inversion after the previously accumulated transformation. -/
+@[simp] theorem BPInstrTransform.apply_invertOutput
+    (transform : BPInstrTransform) (instruction : BPInstr 5) :
+    transform.invertOutput.apply instruction =
+      (transform.apply instruction).inverse :=
+  BPInstrTransform.apply_invertOutput_internal transform instruction
+
+/-- Updating finite control at the last occupied slot is exactly
+postmultiplication after the previously accumulated transformation. -/
+@[simp] theorem BPInstrTransform.apply_postMulOutput
+    (transform : BPInstrTransform) (instruction : BPInstr 5)
+    (permutation : Equiv.Perm (Fin 5)) :
+    (transform.postMulOutput permutation).apply instruction =
+      (transform.apply instruction).postMul permutation :=
+  BPInstrTransform.apply_postMulOutput_internal transform instruction
+    permutation
+
+/-- Pending permutation transformations never change the queried variable. -/
+@[simp] theorem BPInstrTransform.apply_var
+    (transform : BPInstrTransform) (instruction : BPInstr 5) :
+    (transform.apply instruction).var = instruction.var :=
+  BPInstrTransform.apply_var_internal transform instruction
 
 /-- The structural first-address recurrence finds the first occupied slot of
 the list-valued fixed schedule. -/

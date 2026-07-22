@@ -1259,7 +1259,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   addresses recover the first and last occupied slots, and substituting those
   scans into every postmultiplication site preserves each queried instruction
   exactly. This removes nested recursive first/last evaluation from the
-  serializer controller.
+  serializer controller. `BPInstrTransform` now packages every pending inverse
+  and postmultiplication of a selected instruction as an explicit finite type:
+  both permutation branches undergo one shared `left * p^(±1) * right` map,
+  while the unbounded variable index is preserved. Thus recursive descent need
+  not store a transformation stack on work tapes.
   `Models/TuringMachine/Subroutines/BlankWorkPrefix` now supplies the
   missing replay-reset primitive: it blanks an arbitrary sparse work prefix
   bounded by a preserved binary limit, rewinds the target from an arbitrary
@@ -1381,9 +1385,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `.var` continuation from bounded payload decoding through exact instruction
   emission. The leaf dispatcher is concrete as well: `.tru` uses the constant
   emitter, `.fls` uses the certified no-output frame adapter, and only the
-  recursive connective continuations remain parameters. Its three source-level
-  leaf contracts are now certified end to end: `.var` alone assumes and decodes
-  a bounded terminated-unary payload before appending the exact dynamic
+  recursive connective continuations remain parameters. A generic selected-
+  branch contract exposes that exact machine boundary without demanding proofs
+  for unreachable leaf or recursive branches. Its three source-level leaf
+  contracts are now certified end to end: `.var` alone assumes and decodes a
+  bounded terminated-unary payload before appending the exact dynamic
   instruction, `.tru` appends the exact constant instruction without a payload
   assumption, and `.fls` preserves the accumulator unchanged. The next local
   seam is the recursive address/navigation controller for `.neg`, `.conj`, and

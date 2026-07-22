@@ -118,6 +118,98 @@ theorem outputProbeDecodeVarInstrTM_hoareTime
     htag₀Zero htag₁Zero htag₂Zero hvalue hactive hloop fuelValue hfuel
     hqueryValid hqueryLimit target
 
+/-- Probe a complete source token and enter only its selected concrete leaf or
+caller-supplied recursive continuation. -/
+theorem outputProbeDecodeLeafInstrTM_selected_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor + 2 < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit₀ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (hlimit₁ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 2) ≤ cleanupLimit)
+    (hlimit₂ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 3) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (hcursor :
+      (outerExtras
+        (outputProbeDecodeTagCursorIdx n layout.tagLayout)).HasBinaryNat
+          cursor)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.tagLayout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (target : Equiv.Perm (Fin 5))
+    (onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        (outputProbeDecodeVarInstrTM tm controllerTapes layout target)
+        (emitConstInstrTM
+          (outputProbeIndexedControllerIdx n layout.natLayout.scratchIdx)
+          (outputProbeIndexedControllerIdx n layout.natLayout.valueIdx)
+          target)
+        skipTM onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+              cursor ((f input)[cursor]) ((f input)[cursor + 1])
+              ((f input)[cursor + 2]))
+            input output extras false)
+          post selectedTime) :
+    ∃ (bound₀ bound₁ bound₂ : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeLeafInstrTM tm controllerTapes layout target onNeg
+        onConj onDisj onInvalid).HoareTime pre post
+          (((bound₀ + 1 + binarySuccTime cursor) + 1 +
+            ((bound₁ + 1 + binarySuccTime (cursor + 1)) + 1 +
+              (bound₂ + 1 + binarySuccTime (cursor + 2)))) + 1 +
+            outputProbeDecodeTokenSelectedDispatchTime ((f input)[cursor])
+              ((f input)[cursor + 1]) ((f input)[cursor + 2]) selectedTime) :=
+  outputProbeDecodeLeafInstrTM_selected_hoareTime_internal hcomp input cursor
+    hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+    hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes layout outerExtras
+    houter hcursor hscratch htag₀ htag₁ htag₂ target onNeg onConj onDisj
+    onInvalid hselected
+
 /-- Decode a complete `true` leaf from the source and append exactly its
 canonical Barrington constant instruction. -/
 theorem outputProbeDecodeLeafInstrTM_true_hoareTime

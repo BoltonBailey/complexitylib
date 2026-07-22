@@ -40,6 +40,65 @@ def lastOccupiedSlot? : BPSlots w → Option ℕ
 
 end BPSlots
 
+/-- Finite-control transformation accumulated while a direct Barrington query
+descends through inverse blocks and postmultiplication wrappers.
+
+Both branches of an instruction undergo the same map
+`p ↦ left * p^(±1) * right`; the variable index is unchanged. Since every
+field is finite at width five, the complete transformation can live in a
+Turing machine's finite state. -/
+structure BPInstrTransform where
+  /-- Whether to invert the selected permutation before multiplying. -/
+  inverted : Bool
+  /-- Fixed permutation multiplied on the left. -/
+  left : Equiv.Perm (Fin 5)
+  /-- Fixed permutation multiplied on the right. -/
+  right : Equiv.Perm (Fin 5)
+  deriving DecidableEq
+
+instance : Fintype BPInstrTransform :=
+  Fintype.ofEquiv
+    (Bool × Equiv.Perm (Fin 5) × Equiv.Perm (Fin 5))
+    { toFun := fun data =>
+        { inverted := data.1, left := data.2.1, right := data.2.2 }
+      invFun := fun transform =>
+        (transform.inverted, transform.left, transform.right)
+      left_inv := fun data => by cases data; rfl
+      right_inv := fun transform => by cases transform; rfl }
+
+/-- Apply a pending finite-control transformation to one permutation. -/
+def BPInstrTransform.applyPerm (transform : BPInstrTransform)
+    (permutation : Equiv.Perm (Fin 5)) : Equiv.Perm (Fin 5) :=
+  transform.left *
+    (if transform.inverted then permutation⁻¹ else permutation) *
+    transform.right
+
+/-- Apply a pending finite-control transformation to both instruction
+branches while preserving its variable index. -/
+def BPInstrTransform.apply (transform : BPInstrTransform)
+    (instruction : BPInstr 5) : BPInstr 5 :=
+  { instruction with
+    perm0 := transform.applyPerm instruction.perm0
+    perm1 := transform.applyPerm instruction.perm1 }
+
+/-- Identity pending transformation. -/
+def BPInstrTransform.identity : BPInstrTransform :=
+  { inverted := false, left := 1, right := 1 }
+
+/-- Update a pending transformation when the enclosing block inverts the
+instruction selected below it. -/
+def BPInstrTransform.invertOutput (transform : BPInstrTransform) :
+    BPInstrTransform :=
+  { inverted := !transform.inverted
+    left := transform.right⁻¹
+    right := transform.left⁻¹ }
+
+/-- Update a pending transformation when the selected instruction is the last
+occupied slot of a postmultiplication wrapper. -/
+def BPInstrTransform.postMulOutput (transform : BPInstrTransform)
+    (permutation : Equiv.Perm (Fin 5)) : BPInstrTransform :=
+  { transform with right := transform.right * permutation }
+
 /-- Apply fixed-schedule `postMul` to one direct slot query. A missing last
 occupied address means the underlying schedule is empty, so the wrapper places
 its constant instruction in slot zero. -/

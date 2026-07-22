@@ -632,6 +632,38 @@ theorem lastTrueSlot?_instruction_internal (slots : BPSlots w) :
 
 end BPSlots
 
+theorem BPInstrTransform.apply_identity_internal
+    (instruction : BPInstr 5) :
+    BPInstrTransform.identity.apply instruction = instruction := by
+  cases instruction
+  simp [BPInstrTransform.apply, BPInstrTransform.applyPerm,
+    BPInstrTransform.identity]
+
+theorem BPInstrTransform.apply_invertOutput_internal
+    (transform : BPInstrTransform) (instruction : BPInstr 5) :
+    transform.invertOutput.apply instruction =
+      (transform.apply instruction).inverse := by
+  cases transform with
+  | mk inverted left right =>
+      cases inverted <;> cases instruction <;>
+        simp [BPInstrTransform.invertOutput, BPInstrTransform.apply,
+          BPInstrTransform.applyPerm, BPInstr.inverse, mul_assoc]
+
+theorem BPInstrTransform.apply_postMulOutput_internal
+    (transform : BPInstrTransform) (instruction : BPInstr 5)
+    (permutation : Equiv.Perm (Fin 5)) :
+    (transform.postMulOutput permutation).apply instruction =
+      (transform.apply instruction).postMul permutation := by
+  cases transform
+  cases instruction
+  simp [BPInstrTransform.postMulOutput, BPInstrTransform.apply,
+    BPInstrTransform.applyPerm, BPInstr.postMul, mul_assoc]
+
+theorem BPInstrTransform.apply_var_internal
+    (transform : BPInstrTransform) (instruction : BPInstr 5) :
+    (transform.apply instruction).var = instruction.var :=
+  rfl
+
 private theorem barringtonCompileSlots_ne_nil_query_internal
     (fuel : ℕ) (formula : BoolFormula)
     (target : Equiv.Perm (Fin 5)) :
