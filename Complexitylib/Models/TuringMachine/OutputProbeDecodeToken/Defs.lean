@@ -147,6 +147,20 @@ def outputProbeDecodeTokenOuterExtrasAfter (n : ℕ)
     (outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout outerExtras
       cursor tag₀ tag₁ tag₂)
 
+/-- Complete token controller with the variable branch instantiated by the
+bounded terminated-unary decoder from the shared layout. -/
+def outputProbeDecodeTokenWithNatTM (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  outputProbeDecodeTokenTM tm controllerTapes layout
+    (outputProbeDecodeNatTM tm controllerTapes layout.natLayout.cursorIdx
+      layout.natLayout.scratchIdx layout.natLayout.valueIdx
+      layout.natLayout.activeIdx layout.natLayout.loopIdx
+      layout.natLayout.fuelIdx)
+    onTru onFls onNeg onConj onDisj onInvalid
+
 end TM
 
 end Complexity

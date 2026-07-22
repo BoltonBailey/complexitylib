@@ -1360,8 +1360,10 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   invariant-restoring dispatch now wraps every legal and invalid continuation
   in that same cleanup contract. The source-derived token theorem now composes
   all three probes, tag retention, canonical cleanup, and selected dispatch in
-  one exact machine run. The next local seam is to instantiate the variable
-  continuation with the terminated-unary controller while routing fixed tags
+  one exact machine run. The variable branch is now instantiated concretely by
+  the bounded terminated-unary machine through the shared layout. Its remaining
+  proof seam is to turn the existing unary `BinaryForSegmentSpec` into the
+  selected branch's initialized-frame Hoare contract, while fixed tags route
   directly to serialization.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final

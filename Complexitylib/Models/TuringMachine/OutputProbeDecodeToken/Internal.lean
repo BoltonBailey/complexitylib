@@ -3,6 +3,7 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
+import Complexitylib.Models.TuringMachine.OutputProbeDecodeNat
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeTag
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeToken.Defs
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
@@ -669,6 +670,28 @@ theorem IsTransducer.outputProbeDecodeTokenTM_internal
       layout.tagLayout
   · exact hvar.outputProbeDecodeTokenDispatchTM_internal htru hfls hneg
       hconj hdisj hinvalid layout
+
+theorem IsTransducer.outputProbeDecodeTokenWithNatTM_internal
+    {tm : TM n}
+    {onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (htru : onTru.IsTransducer) (hfls : onFls.IsTransducer)
+    (hneg : onNeg.IsTransducer) (hconj : onConj.IsTransducer)
+    (hdisj : onDisj.IsTransducer) (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes) :
+    (outputProbeDecodeTokenWithNatTM tm controllerTapes layout onTru onFls
+      onNeg onConj onDisj onInvalid).IsTransducer := by
+  apply IsTransducer.outputProbeDecodeTokenTM_internal
+  · exact outputProbeDecodeNatTM_isTransducer_internal tm controllerTapes
+      layout.natLayout.cursorIdx layout.natLayout.scratchIdx
+      layout.natLayout.valueIdx layout.natLayout.activeIdx
+      layout.natLayout.loopIdx layout.natLayout.fuelIdx
+  · exact htru
+  · exact hfls
+  · exact hneg
+  · exact hconj
+  · exact hdisj
+  · exact hinvalid
 
 end TM
 

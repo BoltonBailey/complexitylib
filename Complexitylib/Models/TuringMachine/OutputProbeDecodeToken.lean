@@ -417,6 +417,21 @@ theorem IsTransducer.outputProbeDecodeTokenTM
   hvar.outputProbeDecodeTokenTM_internal htru hfls hneg hconj hdisj hinvalid
     layout
 
+/-- The token controller with concrete terminated-unary variable decoding is
+append-only whenever all fixed-token and invalid continuations are. -/
+theorem IsTransducer.outputProbeDecodeTokenWithNatTM
+    {tm : TM n}
+    {onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes)}
+    (htru : onTru.IsTransducer) (hfls : onFls.IsTransducer)
+    (hneg : onNeg.IsTransducer) (hconj : onConj.IsTransducer)
+    (hdisj : onDisj.IsTransducer) (hinvalid : onInvalid.IsTransducer)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes) :
+    (outputProbeDecodeTokenWithNatTM tm controllerTapes layout onTru onFls
+      onNeg onConj onDisj onInvalid).IsTransducer :=
+  htru.outputProbeDecodeTokenWithNatTM_internal hfls hneg hconj hdisj
+    hinvalid layout
+
 end TM
 
 end Complexity
