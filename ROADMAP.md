@@ -1287,6 +1287,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   totality now passes through arbitrary real-output and controller frames,
   consume/reset, and the persistent canonical bit latch, so bounded serializer
   loops no longer need a valid-index side condition at each oracle query.
+  `OutputProbeIndexed` now bridges the remaining ghost-index boundary: it
+  copies a preserved zero-based controller register into the private probe
+  countdown, increments to the probe's one-based convention, and composes that
+  preparation with the total framed latch. The public contract preserves every
+  non-countdown tape exactly and carries the combined all-prefix space bound,
+  so `BinaryFor` clients can use a concrete machine register as their query
+  address.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
