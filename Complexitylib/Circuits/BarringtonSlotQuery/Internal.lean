@@ -664,6 +664,67 @@ theorem BPInstrTransform.apply_var_internal
     (transform.apply instruction).var = instruction.var :=
   rfl
 
+theorem BarringtonSlotCursor.rawDigit_lt_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawDigit fuel < 4 := by
+  exact Nat.mod_lt _ (by omega)
+
+theorem BarringtonSlotCursor.digit_lt_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.digit fuel < 4 := by
+  have hraw := cursor.rawDigit_lt_internal fuel
+  cases hrev : cursor.reversed <;>
+    simp [BarringtonSlotCursor.digit, hrev] <;> omega
+
+theorem BarringtonSlotCursor.localSlot_lt_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.localSlot fuel < 4 ^ fuel := by
+  have hpositive : 0 < 4 ^ fuel := pow_pos (by omega) fuel
+  have hraw : cursor.slot % 4 ^ fuel < 4 ^ fuel :=
+    Nat.mod_lt _ hpositive
+  cases hrev : cursor.reversed <;>
+    simp [BarringtonSlotCursor.localSlot, hrev] <;> omega
+
+theorem BarringtonSlotCursor.localSlot_succ_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.localSlot (fuel + 1) =
+      cursor.digit fuel * 4 ^ fuel + cursor.localSlot fuel := by
+  have hpositive : 0 < 4 ^ fuel := pow_pos (by omega) fuel
+  have hraw : cursor.rawDigit fuel < 4 := cursor.rawDigit_lt_internal fuel
+  have hlow : cursor.slot % 4 ^ fuel < 4 ^ fuel :=
+    Nat.mod_lt _ hpositive
+  simp only [BarringtonSlotCursor.localSlot]
+  rw [show 4 ^ (fuel + 1) = 4 ^ fuel * 4 by simp [pow_succ]]
+  rw [Nat.mod_mul]
+  cases hrev : cursor.reversed
+  · simp [BarringtonSlotCursor.digit, BarringtonSlotCursor.rawDigit,
+      hrev, Nat.add_comm, Nat.mul_comm]
+  · simp only [BarringtonSlotCursor.digit,
+      BarringtonSlotCursor.rawDigit, hrev, ite_true]
+    have hdigit : cursor.slot / 4 ^ fuel % 4 = 0 ∨
+        cursor.slot / 4 ^ fuel % 4 = 1 ∨
+        cursor.slot / 4 ^ fuel % 4 = 2 ∨
+        cursor.slot / 4 ^ fuel % 4 = 3 := by
+      omega
+    rcases hdigit with hdigit | hdigit | hdigit | hdigit <;>
+      simp only [hdigit] <;> omega
+
+theorem BarringtonSlotCursor.localSlot_descend_internal
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    (cursor.descend fuel).localSlot fuel =
+      if cursor.selectsInverse fuel then
+        4 ^ fuel - 1 - cursor.localSlot fuel
+      else
+        cursor.localSlot fuel := by
+  have hpositive : 0 < 4 ^ fuel := pow_pos (by omega) fuel
+  have hraw : cursor.slot % 4 ^ fuel < 4 ^ fuel :=
+    Nat.mod_lt _ hpositive
+  cases hrev : cursor.reversed <;>
+    cases hinverse : cursor.selectsInverse fuel <;>
+      simp [BarringtonSlotCursor.descend, BarringtonSlotCursor.localSlot,
+        hrev, hinverse]
+  all_goals omega
+
 private theorem barringtonCompileSlots_ne_nil_query_internal
     (fuel : ℕ) (formula : BoolFormula)
     (target : Equiv.Perm (Fin 5)) :

@@ -1393,7 +1393,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   instruction, `.tru` appends the exact constant instruction without a payload
   assumption, and `.fls` preserves the accumulator unchanged. The next local
   seam is the recursive address/navigation controller for `.neg`, `.conj`, and
-  `.disj`.
+  `.disj`. Its numeric state is now stack-free: `BarringtonSlotCursor` keeps the
+  original fixed address plus one reflection bit, splits each effective address
+  into its current base-four block and remaining local slot, and toggles only
+  that bit when descent enters an inverse block. The next machine layer reads
+  the corresponding two address bits and turns that cursor invariant into the
+  concrete recursive connective dispatcher.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

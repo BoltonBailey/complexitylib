@@ -27,6 +27,9 @@ permutation, so they are suitable for a finite-state machine controller.
 - `BPInstrTransform.apply_invertOutput` and `apply_postMulOutput` -- the finite
   pending-transform state realizes the two instruction wrappers used during
   recursive descent.
+- `BarringtonSlotCursor.localSlot_succ` and `localSlot_descend` -- the current
+  base-four digit selects one of four child blocks, while inverse blocks are
+  tracked by one reflection bit and the original numeric slot remains fixed.
 -/
 
 namespace Complexity
@@ -59,6 +62,44 @@ postmultiplication after the previously accumulated transformation. -/
     (transform : BPInstrTransform) (instruction : BPInstr 5) :
     (transform.apply instruction).var = instruction.var :=
   BPInstrTransform.apply_var_internal transform instruction
+
+/-- Every raw base-four address digit lies in its four-element alphabet. -/
+theorem BarringtonSlotCursor.rawDigit_lt
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.rawDigit fuel < 4 :=
+  BarringtonSlotCursor.rawDigit_lt_internal cursor fuel
+
+/-- Reflection preserves the four-element range of the current digit. -/
+theorem BarringtonSlotCursor.digit_lt
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.digit fuel < 4 :=
+  BarringtonSlotCursor.digit_lt_internal cursor fuel
+
+/-- The represented local address always fits in the remaining base-four
+block. -/
+theorem BarringtonSlotCursor.localSlot_lt
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.localSlot fuel < 4 ^ fuel :=
+  BarringtonSlotCursor.localSlot_lt_internal cursor fuel
+
+/-- The effective address splits exactly into its current base-four block and
+the remaining local address. -/
+theorem BarringtonSlotCursor.localSlot_succ
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    cursor.localSlot (fuel + 1) =
+      cursor.digit fuel * 4 ^ fuel + cursor.localSlot fuel :=
+  BarringtonSlotCursor.localSlot_succ_internal cursor fuel
+
+/-- Descending preserves the original stored address and toggles reflection
+exactly when the selected child block is inverse. -/
+theorem BarringtonSlotCursor.localSlot_descend
+    (cursor : BarringtonSlotCursor) (fuel : ℕ) :
+    (cursor.descend fuel).localSlot fuel =
+      if cursor.selectsInverse fuel then
+        4 ^ fuel - 1 - cursor.localSlot fuel
+      else
+        cursor.localSlot fuel :=
+  BarringtonSlotCursor.localSlot_descend_internal cursor fuel
 
 /-- The structural first-address recurrence finds the first occupied slot of
 the list-valued fixed schedule. -/

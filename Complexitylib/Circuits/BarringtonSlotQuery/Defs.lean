@@ -99,6 +99,53 @@ def BPInstrTransform.postMulOutput (transform : BPInstrTransform)
     (permutation : Equiv.Perm (Fin 5)) : BPInstrTransform :=
   { transform with right := transform.right * permutation }
 
+/-- Stack-free address state for direct Barrington descent. The original slot
+stays fixed; `reversed` records whether the remaining low base-four digits are
+read in reverse order because the path entered an inverse block. -/
+structure BarringtonSlotCursor where
+  /-- Original fixed-schedule slot address. -/
+  slot : ℕ
+  /-- Whether the remaining local address is reflected. -/
+  reversed : Bool
+  deriving DecidableEq
+
+/-- Raw base-four digit at the boundary between `fuel` lower digits and the
+current digit. -/
+def BarringtonSlotCursor.rawDigit (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : ℕ :=
+  cursor.slot / 4 ^ fuel % 4
+
+/-- Effective current base-four digit after accounting for a pending address
+reflection. -/
+def BarringtonSlotCursor.digit (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : ℕ :=
+  if cursor.reversed then 3 - cursor.rawDigit fuel else cursor.rawDigit fuel
+
+/-- Whether the current block selects the right child. Digits zero and two
+select the left child; digits one and three select the right child. -/
+def BarringtonSlotCursor.selectsRight (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : Bool :=
+  cursor.digit fuel % 2 == 1
+
+/-- Whether the selected child block is inverted. -/
+def BarringtonSlotCursor.selectsInverse (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : Bool :=
+  decide (2 ≤ cursor.digit fuel)
+
+/-- Descend one base-four level without modifying the stored address. Entering
+an inverse block toggles the reflection flag. -/
+def BarringtonSlotCursor.descend (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : BarringtonSlotCursor :=
+  { slot := cursor.slot
+    reversed := cursor.reversed != cursor.selectsInverse fuel }
+
+/-- Effective local address represented by the lowest `fuel` base-four digits. -/
+def BarringtonSlotCursor.localSlot (cursor : BarringtonSlotCursor)
+    (fuel : ℕ) : ℕ :=
+  let blockSize := 4 ^ fuel
+  let raw := cursor.slot % blockSize
+  if cursor.reversed then blockSize - 1 - raw else raw
+
 /-- Apply fixed-schedule `postMul` to one direct slot query. A missing last
 occupied address means the underlying schedule is empty, so the wrapper places
 its constant instruction in slot zero. -/
