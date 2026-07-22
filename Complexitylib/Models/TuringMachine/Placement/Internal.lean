@@ -20,6 +20,30 @@ namespace Complexity
 
 namespace TM
 
+theorem placeWorkCfg_work_update_internal (tm : TM n) (pre post : ℕ)
+    (extras : Fin (pre + n + post) → Tape) (c : Cfg n tm.Q)
+    (idx : Fin n) (tape : Tape) :
+    Function.update (placeWorkCfg tm pre post extras c).work
+        (placeWorkIdx pre post idx) tape =
+      (placeWorkCfg tm pre post extras
+        { c with work := Function.update c.work idx tape }).work := by
+  funext i
+  by_cases hphysical : i = placeWorkIdx pre post idx
+  · subst i
+    simp
+  · rw [Function.update_of_ne hphysical]
+    by_cases hmiddle : placeWorkInMiddle pre n i
+    · dsimp only [placeWorkCfg]
+      simp only [hmiddle, dite_true]
+      rw [Function.update_of_ne]
+      intro hcoord
+      apply hphysical
+      rw [← hcoord]
+      exact (placeWorkIdx_placeWorkCoord i hmiddle).symm
+    · rw [placeWorkCfg_work_extra tm pre post extras c i hmiddle]
+      rw [placeWorkCfg_work_extra tm pre post extras
+        { c with work := Function.update c.work idx tape } i hmiddle]
+
 variable {n pre post : ℕ}
 
 /-- The idle extra-tape action is the identity away from the left-end marker. -/

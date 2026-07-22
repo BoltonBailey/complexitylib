@@ -27,6 +27,7 @@ import Complexitylib.Circuits.BarringtonTokenQuery
 import Complexitylib.Circuits.BarringtonBitQuery
 import Complexitylib.Circuits.BarringtonBitSerializer
 import Complexitylib.Circuits.BarringtonProbeQuery
+import Complexitylib.Circuits.BarringtonProbeSerializer
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily

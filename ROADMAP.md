@@ -1275,9 +1275,15 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   concrete restartable controller step: it reads the captured bit before
   cleanup, restores the exact canonical frame, dispatches to the matching
   continuation, and carries an explicit all-prefix space maximum through the
-  whole query-consume-reset sequence. The remaining construction is to iterate
-  these verified controller steps through the oracle recurrences and the two
-  serializer scans, together with the resulting logarithmic-space proof.
+  whole query-consume-reset sequence. `OutputProbeLatch` now turns that
+  finite-control result into a reusable canonical binary zero-or-one latch
+  after cleanup while preserving an arbitrary outer serializer frame.
+  `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
+  and proves that its counted header, filtered instruction stream, and final
+  code agree byte-for-byte with the executable compiler. The remaining
+  construction is to iterate these latched controller steps through the oracle
+  recurrences and the two serializer scans, together with the resulting
+  logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation

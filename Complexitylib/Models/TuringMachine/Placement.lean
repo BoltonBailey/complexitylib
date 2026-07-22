@@ -30,6 +30,17 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Updating one physical tape in a placed machine's middle block is exactly
+the placement of the corresponding source-work update. -/
+theorem placeWorkCfg_work_update (tm : TM n) (pre post : ℕ)
+    (extras : Fin (pre + n + post) → Tape) (c : Cfg n tm.Q)
+    (idx : Fin n) (tape : Tape) :
+    Function.update (placeWorkCfg tm pre post extras c).work
+        (placeWorkIdx pre post idx) tape =
+      (placeWorkCfg tm pre post extras
+        { c with work := Function.update c.work idx tape }).work :=
+  placeWorkCfg_work_update_internal tm pre post extras c idx tape
+
 /-- A placed step simulates one source step while applying the prescribed idle
 action to the arbitrary physical extra-tape frame. -/
 theorem placeWorkTM_step_placeWorkCfg (tm : TM n) (pre post : ℕ)
