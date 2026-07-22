@@ -318,36 +318,36 @@ theorem dispatchProgramTM_hoareTime_of_execute_internal
         hdispatch.consequence (fun _ _ _ h => h)
           (fun _ _ _ h => h.elim id id) le_rfl
 
-/-- The buffered instruction endpoint is restored to the reusable clean ABI. -/
-theorem instructionCleanupTM_hoareTime_frame_internal
-    (tapes : ControlInstructionTapes n) (instruction : Instr)
-    (pcValue : ℕ) (store : Store) (sourceHeadBound : ℕ)
+/-- Any buffered representation endpoint is restored to the reusable clean ABI. -/
+theorem bufferedCleanupTM_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (nextPC : ℕ) (cleanupValues : Fin 5 → ℕ) (remainingValue : ℕ)
+    (sourceHeadBound : ℕ)
     (initialWork : Fin (n + 1) → Tape) (inp₀ out₀ : Tape)
-    (hready : InstructionCleanupReady tapes instruction pcValue store
-      sourceHeadBound initialWork)
+    (hready : BufferedCleanupReady tapes oldStore nextStore nextPC
+      cleanupValues remainingValue sourceHeadBound initialWork)
     (hinput : TM.Parked inp₀) (houtput : TM.Parked out₀) :
     (instructionCleanupTM tapes).HoareTime
       (fun inp work out =>
         inp = inp₀ ∧ work = initialWork ∧ out = out₀)
       (fun inp work out =>
         inp = inp₀ ∧
-        InstructionExecutionReady tapes
-          (instructionStore instruction pcValue store)
-          (instructionPC instruction pcValue store) work ∧
+        InstructionExecutionReady tapes nextStore nextPC work ∧
         out = out₀)
-      (instructionCleanupTime tapes instruction pcValue store
-        sourceHeadBound) := by
-  let nextStore := instructionStore instruction pcValue store
+      (bufferedCleanupTime tapes oldStore nextStore cleanupValues
+        remainingValue sourceHeadBound) := by
   let nextBits := nextStore.flatMap Entry.encode
   let targets := instructionCleanupResetTargets tapes
-  let resetBits := instructionCleanupResetBitsAt tapes instruction store
+  let resetBits := bufferedCleanupResetBitsAt tapes cleanupValues
+    remainingValue oldStore
   let resetHeads :=
     instructionCleanupResetHeadBoundAt tapes sourceHeadBound
   let resetWork := TM.resetBinaryWorkManyResult initialWork targets
   let nextTape := (Tape.init (nextBits.map Γ.ofBool)).move Dir3.right
   have hresetContentIndexed : ∀ slot,
       (initialWork (instructionCleanupResetTape tapes slot)).HasBinaryContent
-        (instructionCleanupResetBits instruction store slot) := by
+        (bufferedCleanupResetBits cleanupValues remainingValue oldStore
+          slot) := by
     intro slot
     fin_cases slot
     · exact (hready.result.cleanup 0).2.hasBinaryContent
@@ -390,9 +390,9 @@ theorem instructionCleanupTM_hoareTime_frame_internal
       intro i hi
       obtain ⟨slot, rfl⟩ := List.mem_ofFn.mp hi
       change (initialWork (instructionCleanupResetTape tapes slot)).HasBinaryContent
-        (instructionCleanupResetBitsAt tapes instruction store
+        (bufferedCleanupResetBitsAt tapes cleanupValues remainingValue oldStore
           (instructionCleanupResetTape tapes slot))
-      rw [instructionCleanupResetBitsAt,
+      rw [bufferedCleanupResetBitsAt,
         (instructionCleanupResetTape_injective tapes).extend_apply]
       exact hresetContentIndexed slot)
     (by
@@ -658,7 +658,7 @@ theorem instructionCleanupTM_hoareTime_frame_internal
     rw [hsourceReadyOutside _ (tapes.lifted.data.ne (by decide))
       (tapes.liftedData_ne_buffer 12),
       hresetDataOutside 12 (by intro slot; fin_cases slot <;> decide)]
-    simpa [nextStore] using hready.result.resultCount
+    exact hready.result.resultCount
   have hremainingZero :
       (sourceReadyWork tapes.lifted.data.update.remaining).HasBinaryNat 0 := by
     change (sourceReadyWork (tapes.lifted.data.idx 9)).HasBinaryNat 0
@@ -896,12 +896,9 @@ theorem instructionCleanupTM_hoareTime_frame_internal
         parked := hfinalParked
         frame := by intro i _ _ _ _ _ _ _ _ _; rfl }
   have hfinalReady : InstructionExecutionReady tapes nextStore
-      (instructionPC instruction pcValue store) finalWork := by
+      nextPC finalWork := by
     refine
-      { canonical := by
-          simpa [nextStore, instructionStore] using
-            Snapshot.stepInstr_canonical instruction
-              { pc := pcValue, store := store } hready.canonical
+      { canonical := hready.nextCanonical
         control :=
           { lookup :=
               { scanner := by simpa [nextBits] using hfinalLookupScanner
@@ -922,7 +919,7 @@ theorem instructionCleanupTM_hoareTime_frame_internal
                   change (finalWork (tapes.lifted.data.idx 12)).HasBinaryNat _
                   rw [hfinalPreservedData 12 (by decide) (by decide)
                     (by intro slot; fin_cases slot <;> decide)]
-                  simpa [nextStore] using hready.result.resultCount
+                  exact hready.result.resultCount
                 querySource := by
                   change (finalWork (tapes.lifted.data.idx 15)).HasBinaryNat 0
                   rw [hfinalPreservedData 15 (by decide) (by decide)
@@ -971,8 +968,7 @@ theorem instructionCleanupTM_hoareTime_frame_internal
         inp = inp₀ ∧ work = sourceReadyWork ∧ out = out₀)
       (fun inp work out =>
         inp = inp₀ ∧
-        InstructionExecutionReady tapes nextStore
-          (instructionPC instruction pcValue store) work ∧
+        InstructionExecutionReady tapes nextStore nextPC work ∧
         out = out₀)
       (TM.binaryCopyTime nextStore.length 0) :=
     hcountCopy.strengthen_post (by
@@ -1031,8 +1027,61 @@ theorem instructionCleanupTM_hoareTime_frame_internal
               tapes.lifted.data.update.remaining
               tapes.lifted.data.update.found)))))
     hreset (hseam resetWork hresetParked) htail₃
-  simpa only [instructionCleanupTM, instructionCleanupTime, nextStore,
+  simpa only [instructionCleanupTM, bufferedCleanupTime,
     nextBits, targets, resetBits, resetHeads] using hall
+
+/-- The ordinary sparse instruction endpoint is an instance of generic
+buffered cleanup. -/
+theorem instructionCleanupTM_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (instruction : Instr)
+    (pcValue : ℕ) (store : Store) (sourceHeadBound : ℕ)
+    (initialWork : Fin (n + 1) → Tape) (inp₀ out₀ : Tape)
+    (hready : InstructionCleanupReady tapes instruction pcValue store
+      sourceHeadBound initialWork)
+    (hinput : TM.Parked inp₀) (houtput : TM.Parked out₀) :
+    (instructionCleanupTM tapes).HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧ work = initialWork ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        InstructionExecutionReady tapes
+          (instructionStore instruction pcValue store)
+          (instructionPC instruction pcValue store) work ∧
+        out = out₀)
+      (instructionCleanupTime tapes instruction pcValue store
+        sourceHeadBound) := by
+  let nextStore := instructionStore instruction pcValue store
+  let nextPC := instructionPC instruction pcValue store
+  let cleanupValues := instructionCleanupValue instruction store
+  let remainingValue := instructionRemainingValue instruction store
+  have hgenericReady : BufferedCleanupReady tapes store nextStore nextPC
+      cleanupValues remainingValue sourceHeadBound initialWork :=
+    { nextCanonical := by
+        simpa [nextStore, instructionStore] using
+          Snapshot.stepInstr_canonical instruction
+            { pc := pcValue, store := store } hready.canonical
+      result :=
+        { buffer := hready.result.buffer
+          pc := hready.result.pc
+          resultCount := hready.result.resultCount
+          sourceContent := hready.result.sourceContent
+          cleanup := hready.result.cleanup
+          remaining := hready.result.remaining
+          scanner := hready.result.scanner
+          shift := hready.result.shift
+          tmp := hready.result.tmp
+          dbl := hready.result.dbl
+          parked := hready.result.parked }
+      sourceStart := hready.sourceStart
+      bufferStart := hready.bufferStart
+      sourceHead := hready.sourceHead }
+  have hgeneric := bufferedCleanupTM_hoareTime_frame_internal tapes store
+    nextStore nextPC cleanupValues remainingValue sourceHeadBound initialWork
+    inp₀ out₀ hgenericReady hinput houtput
+  simpa only [nextStore, nextPC, cleanupValues, remainingValue,
+    instructionCleanupTime, bufferedCleanupTime,
+    instructionCleanupResetBitsAt, bufferedCleanupResetBitsAt,
+    instructionCleanupResetBits, bufferedCleanupResetBits] using hgeneric
 
 /-- One selected instruction followed by cleanup realizes the next reusable
 sparse-snapshot boundary. -/

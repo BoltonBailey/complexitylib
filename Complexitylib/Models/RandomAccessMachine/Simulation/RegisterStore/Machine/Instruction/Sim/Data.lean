@@ -40,7 +40,7 @@ private theorem hasBinaryPrefix_parked {t : Tape} {bits : List Bool}
     decide
 
 /-- Restrict the lifted clean lookup ABI to the original data-tape family. -/
-private theorem instructionExecutionReady_baseLookup
+theorem instructionExecutionReady_baseLookup_internal
     (tapes : ControlInstructionTapes n) (store : Store) (pcValue : ℕ)
     (work : Fin (n + 1) → Tape)
     (hready : InstructionExecutionReady tapes store pcValue work) :
@@ -168,11 +168,12 @@ private theorem entryScanReady_lifted {m : ℕ}
 
 /-- Increment the PC after a redirected data kernel satisfying the common
 pre-successor boundary. -/
-private theorem finishDataInstructionTM_hoareTime_frame_internal
-    (tapes : ControlInstructionTapes n) (instruction : Instr)
-    (store : Store) (pcValue : ℕ) (initialWork : Fin (n + 1) → Tape)
+theorem finishBufferedDataTM_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (nextPC pcValue : ℕ) (cleanupValues : Fin 5 → ℕ)
+    (remainingValue : ℕ) (initialWork : Fin (n + 1) → Tape)
     (inp₀ : Tape) (dataTM : TM n) (dataTime : ℕ)
-    (hpcNext : instructionPC instruction pcValue store = pcValue + 1)
+    (hpcNext : nextPC = pcValue + 1)
     (hinput : TM.Parked inp₀)
     (hdata : dataTM.retargetOutput.HoareTime
       (fun inp work out =>
@@ -181,19 +182,19 @@ private theorem finishDataInstructionTM_hoareTime_frame_internal
       (fun inp work out =>
         inp = inp₀ ∧
         (work tapes.buffer).HasBinaryPrefix
-          ((instructionStore instruction pcValue store).flatMap Entry.encode) ∧
+          (nextStore.flatMap Entry.encode) ∧
         (work tapes.liftedPC).HasBinaryNat pcValue ∧
         (work tapes.lifted.data.update.resultCount).HasBinaryNat
-          (instructionStore instruction pcValue store).length ∧
+          nextStore.length ∧
         (work tapes.liftedSource).HasBinaryContent
-          (store.flatMap Entry.encode) ∧
+          (oldStore.flatMap Entry.encode) ∧
         (∀ slot,
           (work (instructionCleanupTape tapes slot)).HasBinaryNat
-            (instructionCleanupValue instruction store slot)) ∧
+            (cleanupValues slot)) ∧
         (work tapes.lifted.data.update.remaining).HasBinaryNat
-          (instructionRemainingValue instruction store) ∧
+          remainingValue ∧
         EntryScanReady tapes.lifted.data.update.entry []
-          (instructionCleanupValue instruction store 0).bits work work ∧
+          (cleanupValues 0).bits work work ∧
         (work tapes.lifted.data.shift).HasBinaryNat 0 ∧
         (work tapes.lifted.data.tmp).HasBinaryNat 0 ∧
         (work tapes.lifted.data.dbl).HasBinaryNat 0 ∧
@@ -207,7 +208,8 @@ private theorem finishDataInstructionTM_hoareTime_frame_internal
         out = (Tape.init []).move Dir3.right)
       (fun inp work out =>
         inp = inp₀ ∧
-        InstructionExecutionResult tapes instruction pcValue store work ∧
+        BufferedInstructionResult tapes oldStore nextStore nextPC
+          cleanupValues remainingValue work ∧
         out = (Tape.init []).move Dir3.right)
       (dataTime + 1 + TM.binarySuccTime pcValue) := by
   let out₀ := (Tape.init []).move Dir3.right
@@ -217,26 +219,27 @@ private theorem finishDataInstructionTM_hoareTime_frame_internal
       (fun inp work out =>
         inp = inp₀ ∧
         (work tapes.buffer).HasBinaryPrefix
-          ((instructionStore instruction pcValue store).flatMap Entry.encode) ∧
+          (nextStore.flatMap Entry.encode) ∧
         (work tapes.liftedPC).HasBinaryNat pcValue ∧
         (work tapes.lifted.data.update.resultCount).HasBinaryNat
-          (instructionStore instruction pcValue store).length ∧
+          nextStore.length ∧
         (work tapes.liftedSource).HasBinaryContent
-          (store.flatMap Entry.encode) ∧
+          (oldStore.flatMap Entry.encode) ∧
         (∀ slot,
           (work (instructionCleanupTape tapes slot)).HasBinaryNat
-            (instructionCleanupValue instruction store slot)) ∧
+            (cleanupValues slot)) ∧
         (work tapes.lifted.data.update.remaining).HasBinaryNat
-          (instructionRemainingValue instruction store) ∧
+          remainingValue ∧
         EntryScanReady tapes.lifted.data.update.entry []
-          (instructionCleanupValue instruction store 0).bits work work ∧
+          (cleanupValues 0).bits work work ∧
         (work tapes.lifted.data.shift).HasBinaryNat 0 ∧
         (work tapes.lifted.data.tmp).HasBinaryNat 0 ∧
         (work tapes.lifted.data.dbl).HasBinaryNat 0 ∧
         (∀ i, TM.Parked (work i)) ∧ out = out₀)
       (fun inp work out =>
         inp = inp₀ ∧
-        InstructionExecutionResult tapes instruction pcValue store work ∧
+        BufferedInstructionResult tapes oldStore nextStore nextPC
+          cleanupValues remainingValue work ∧
         out = out₀)
       (TM.binarySuccTime pcValue) := by
     rintro inp work out
@@ -321,8 +324,159 @@ private theorem finishDataInstructionTM_hoareTime_frame_internal
     hsucc
   simpa only [out₀] using hseq
 
+/-- Sparse-instruction specialization of buffered data finalization. -/
+private theorem finishDataInstructionTM_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (instruction : Instr)
+    (store : Store) (pcValue : ℕ) (initialWork : Fin (n + 1) → Tape)
+    (inp₀ : Tape) (dataTM : TM n) (dataTime : ℕ)
+    (hpcNext : instructionPC instruction pcValue store = pcValue + 1)
+    (hinput : TM.Parked inp₀)
+    (hdata : dataTM.retargetOutput.HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧ work = initialWork ∧
+        out = (Tape.init []).move Dir3.right)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work tapes.buffer).HasBinaryPrefix
+          ((instructionStore instruction pcValue store).flatMap Entry.encode) ∧
+        (work tapes.liftedPC).HasBinaryNat pcValue ∧
+        (work tapes.lifted.data.update.resultCount).HasBinaryNat
+          (instructionStore instruction pcValue store).length ∧
+        (work tapes.liftedSource).HasBinaryContent
+          (store.flatMap Entry.encode) ∧
+        (∀ slot,
+          (work (instructionCleanupTape tapes slot)).HasBinaryNat
+            (instructionCleanupValue instruction store slot)) ∧
+        (work tapes.lifted.data.update.remaining).HasBinaryNat
+          (instructionRemainingValue instruction store) ∧
+        EntryScanReady tapes.lifted.data.update.entry []
+          (instructionCleanupValue instruction store 0).bits work work ∧
+        (work tapes.lifted.data.shift).HasBinaryNat 0 ∧
+        (work tapes.lifted.data.tmp).HasBinaryNat 0 ∧
+        (work tapes.lifted.data.dbl).HasBinaryNat 0 ∧
+        (∀ i, TM.Parked (work i)) ∧
+        out = (Tape.init []).move Dir3.right)
+      dataTime) :
+    (TM.seqTM dataTM.retargetOutput
+      (TM.binarySuccTM tapes.liftedPC)).HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧ work = initialWork ∧
+        out = (Tape.init []).move Dir3.right)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        InstructionExecutionResult tapes instruction pcValue store work ∧
+        out = (Tape.init []).move Dir3.right)
+      (dataTime + 1 + TM.binarySuccTime pcValue) := by
+  have hrun := finishBufferedDataTM_hoareTime_frame_internal tapes store
+    (instructionStore instruction pcValue store)
+    (instructionPC instruction pcValue store) pcValue
+    (instructionCleanupValue instruction store)
+    (instructionRemainingValue instruction store) initialWork inp₀ dataTM
+    dataTime hpcNext hinput hdata
+  exact hrun.strengthen_post (by
+    rintro inp work out ⟨hinp, hresult, hout⟩
+    exact ⟨hinp,
+      { buffer := hresult.buffer
+        pc := hresult.pc
+        resultCount := hresult.resultCount
+        sourceContent := hresult.sourceContent
+        cleanup := hresult.cleanup
+        remaining := hresult.remaining
+        scanner := hresult.scanner
+        shift := hresult.shift
+        tmp := hresult.tmp
+        dbl := hresult.dbl
+        parked := hresult.parked },
+      hout⟩)
+
 /-- Lift a base data-kernel contract through output redirection once its
 semantic result exposes PC framing, the next-store count, and parked heads. -/
+theorem retargetBufferedDataKernel_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (cleanupValues : Fin 5 → ℕ) (remainingValue pcValue : ℕ)
+    (initialWork : Fin (n + 1) → Tape)
+    (inp₀ : Tape) (dataTM : TM n) (dataTime : ℕ)
+    (Result : (Fin n → Tape) → Prop)
+    (hready : InstructionExecutionReady tapes oldStore pcValue initialWork)
+    (hbase : dataTM.HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧
+        work = (fun i => initialWork (Fin.castSucc i)) ∧
+        out = initialWork tapes.buffer)
+      (fun inp work out =>
+        inp = inp₀ ∧ Result work ∧
+        out.HasBinaryPrefix
+          (nextStore.flatMap Entry.encode))
+      dataTime)
+    (hresult : ∀ work, Result work →
+      work tapes.pc = initialWork (Fin.castSucc tapes.pc) ∧
+      (work tapes.data.update.resultCount).HasBinaryNat
+        nextStore.length ∧
+      (work tapes.data.update.entry.source).HasBinaryContent
+        (oldStore.flatMap Entry.encode) ∧
+      (∀ slot,
+        (work (tapes.data.idx (instructionCleanupParentSlot slot))).HasBinaryNat
+          (cleanupValues slot)) ∧
+      (work tapes.data.update.remaining).HasBinaryNat
+        remainingValue ∧
+      EntryScanReady tapes.data.update.entry []
+        (cleanupValues 0).bits work work ∧
+      (work tapes.data.shift).HasBinaryNat 0 ∧
+      (work tapes.data.tmp).HasBinaryNat 0 ∧
+      (work tapes.data.dbl).HasBinaryNat 0 ∧
+      ∀ i, TM.Parked (work i)) :
+    dataTM.retargetOutput.HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧ work = initialWork ∧
+        out = (Tape.init []).move Dir3.right)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work tapes.buffer).HasBinaryPrefix
+          (nextStore.flatMap Entry.encode) ∧
+        (work tapes.liftedPC).HasBinaryNat pcValue ∧
+        (work tapes.lifted.data.update.resultCount).HasBinaryNat
+          nextStore.length ∧
+        (work tapes.liftedSource).HasBinaryContent
+          (oldStore.flatMap Entry.encode) ∧
+        (∀ slot,
+          (work (instructionCleanupTape tapes slot)).HasBinaryNat
+            (cleanupValues slot)) ∧
+        (work tapes.lifted.data.update.remaining).HasBinaryNat
+          remainingValue ∧
+        EntryScanReady tapes.lifted.data.update.entry []
+          (cleanupValues 0).bits work work ∧
+        (work tapes.lifted.data.shift).HasBinaryNat 0 ∧
+        (work tapes.lifted.data.tmp).HasBinaryNat 0 ∧
+        (work tapes.lifted.data.dbl).HasBinaryNat 0 ∧
+        (∀ i, TM.Parked (work i)) ∧
+        out = (Tape.init []).move Dir3.right)
+      dataTime := by
+  have hlift := TM.retargetOutput_hoareTime dataTM hbase
+  apply hlift.consequence
+  · rintro inp work out ⟨hinp, hwork, hout⟩
+    subst work
+    exact ⟨⟨hinp, rfl, rfl⟩, hout⟩
+  · rintro inp work out ⟨⟨hinp, hsemantic, hbuffer⟩, hout⟩
+    obtain ⟨hpcEq, hcount, hsourceContent, hcleanup, hremaining, hscanner,
+      hshift, htmp, hdbl, hparkedBase⟩ :=
+      hresult _ hsemantic
+    have hpc : (work tapes.liftedPC).HasBinaryNat pcValue := by
+      change (work (Fin.castSucc tapes.pc)).HasBinaryNat pcValue
+      rw [hpcEq]
+      exact hready.control.pc
+    have hparked : ∀ i, TM.Parked (work i) := by
+      intro i
+      exact Fin.lastCases (hasBinaryPrefix_parked hbuffer)
+        (fun j => hparkedBase j) i
+    exact ⟨hinp, hbuffer, hpc, hcount, hsourceContent, hcleanup,
+      hremaining, by
+        simpa [ControlInstructionTapes.lifted] using
+          entryScanReady_lifted tapes.data.update.entry _ _ work hscanner
+            hparked,
+      hshift, htmp, hdbl, hparked, hout⟩
+  · exact le_rfl
+
+/-- Sparse specialization of representation-independent output retargeting. -/
 private theorem retargetDataKernel_hoareTime_frame_internal
     (tapes : ControlInstructionTapes n) (instruction : Instr)
     (store : Store) (pcValue : ℕ) (initialWork : Fin (n + 1) → Tape)
@@ -381,31 +535,12 @@ private theorem retargetDataKernel_hoareTime_frame_internal
         (work tapes.lifted.data.dbl).HasBinaryNat 0 ∧
         (∀ i, TM.Parked (work i)) ∧
         out = (Tape.init []).move Dir3.right)
-      dataTime := by
-  have hlift := TM.retargetOutput_hoareTime dataTM hbase
-  apply hlift.consequence
-  · rintro inp work out ⟨hinp, hwork, hout⟩
-    subst work
-    exact ⟨⟨hinp, rfl, rfl⟩, hout⟩
-  · rintro inp work out ⟨⟨hinp, hsemantic, hbuffer⟩, hout⟩
-    obtain ⟨hpcEq, hcount, hsourceContent, hcleanup, hremaining, hscanner,
-      hshift, htmp, hdbl, hparkedBase⟩ :=
-      hresult _ hsemantic
-    have hpc : (work tapes.liftedPC).HasBinaryNat pcValue := by
-      change (work (Fin.castSucc tapes.pc)).HasBinaryNat pcValue
-      rw [hpcEq]
-      exact hready.control.pc
-    have hparked : ∀ i, TM.Parked (work i) := by
-      intro i
-      exact Fin.lastCases (hasBinaryPrefix_parked hbuffer)
-        (fun j => hparkedBase j) i
-    exact ⟨hinp, hbuffer, hpc, hcount, hsourceContent, hcleanup,
-      hremaining, by
-        simpa [ControlInstructionTapes.lifted] using
-          entryScanReady_lifted tapes.data.update.entry _ _ work hscanner
-            hparked,
-      hshift, htmp, hdbl, hparked, hout⟩
-  · exact le_rfl
+      dataTime :=
+  retargetBufferedDataKernel_hoareTime_frame_internal tapes store
+    (instructionStore instruction pcValue store)
+    (instructionCleanupValue instruction store)
+    (instructionRemainingValue instruction store) pcValue initialWork inp₀
+    dataTM dataTime Result hready hbase hresult
 
 /-- Instruction constructor corresponding to a direct arithmetic kernel. -/
 private def directInstruction (op : BinaryInstrOp) (destination source₀
@@ -435,7 +570,8 @@ theorem executeInstructionTM_imm_hoareTime_frame
       (executeInstructionTime tapes (.imm destination value) pcValue store) := by
   let baseWork : Fin n → Tape := fun i => initialWork (Fin.castSucc i)
   have hlookup : EntryLookupStaticReady tapes.data.lhsLookup store baseWork := by
-    exact instructionExecutionReady_baseLookup tapes store pcValue initialWork
+    exact instructionExecutionReady_baseLookup_internal tapes store pcValue
+      initialWork
       hready
   have hreplacement :
       (baseWork tapes.data.update.replacement).HasBinaryNat 0 := by
@@ -653,7 +789,8 @@ theorem executeInstructionTM_direct_hoareTime_frame
         (directInstruction op destination source₀ source₁) pcValue store) := by
   let baseWork : Fin n → Tape := fun i => initialWork (Fin.castSucc i)
   have hlookup : EntryLookupStaticReady tapes.data.lhsLookup store baseWork :=
-    instructionExecutionReady_baseLookup tapes store pcValue initialWork hready
+    instructionExecutionReady_baseLookup_internal tapes store pcValue
+      initialWork hready
   have hrhs : (baseWork tapes.data.rhs).HasBinaryNat 0 := hready.rhs
   have hreplacement :
       (baseWork tapes.data.update.replacement).HasBinaryNat 0 :=
@@ -908,7 +1045,8 @@ theorem executeInstructionTM_load_hoareTime_frame
         pcValue store) := by
   let baseWork : Fin n → Tape := fun i => initialWork (Fin.castSucc i)
   have hlookup : EntryLookupStaticReady tapes.data.lhsLookup store baseWork :=
-    instructionExecutionReady_baseLookup tapes store pcValue initialWork hready
+    instructionExecutionReady_baseLookup_internal tapes store pcValue
+      initialWork hready
   have hreplacement :
       (baseWork tapes.data.update.replacement).HasBinaryNat 0 :=
     hready.replacement
@@ -1095,7 +1233,8 @@ theorem executeInstructionTM_store_hoareTime_frame
         pcValue store) := by
   let baseWork : Fin n → Tape := fun i => initialWork (Fin.castSucc i)
   have hlookup : EntryLookupStaticReady tapes.data.lhsLookup store baseWork :=
-    instructionExecutionReady_baseLookup tapes store pcValue initialWork hready
+    instructionExecutionReady_baseLookup_internal tapes store pcValue
+      initialWork hready
   have hrhs : (baseWork tapes.data.rhs).HasBinaryNat 0 := hready.rhs
   have hreplacement :
       (baseWork tapes.data.update.replacement).HasBinaryNat 0 :=

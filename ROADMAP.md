@@ -1441,8 +1441,14 @@ input length and charged RAM logarithmic time. Minimal halting fuel equals unit
 time and is bounded by logarithmic cost, yielding
 `RAM.RegisterStore.Machine.RAM_P_subset_P`; with the fixed sparse forward
 simulator, `RAM.RegisterStore.Machine.RAM_P_eq_P` proves `RAM.P = P`. The sharp
-parametric `O(T(n)^2)` reverse bound remains open; the current class transfer
-deliberately uses the proved coarser polynomial envelope.
+parametric reverse bound is now checked as well: the optimized fixed machine
+keeps the public input immutable, stores only a positive-tagged sparse mutable
+overlay, charges each step by its selected instruction width, and sums those
+charges with a decreasing square potential. This yields an explicit
+`O((n + T(n))²)` public-ABI envelope and
+`RAM.RegisterStore.Machine.RAM_DTIME_subset_DTIME_sq` under the necessary
+input-domination hypothesis `n + 1 = O(T(n))`. The original fourth-degree
+envelope remains available as the simpler fallback theorem.
 
 **Settled conventions.**
 
@@ -1538,13 +1544,13 @@ deliberately uses the proved coarser polynomial envelope.
     input length and charged RAM logarithmic time.
   - [x] Use least halting fuel to transfer polynomial RAM deciders to polynomial
     Turing deciders.
-- [ ] Sharpen the concrete reverse runtime to the textbook `O(T(n)^2)` bound and
+- [x] Sharpen the concrete reverse runtime to the textbook `O(T(n)^2)` bound and
   package the parametric `RAM.DTIME(T) ⊆ DTIME(T²)` containment under explicit
   input-length domination hypotheses.
   - [x] Replace the current product of entry count and maximum entry width with
     an amortized bound on the total live sparse-store encoding in terms of the
     public input and accumulated logarithmic RAM cost.
-  - [~] Tighten the word decoder, entry match, and update accounting so a store
+  - [x] Tighten the word decoder, entry match, and update accounting so a store
     scan is charged by the encoded data actually traversed; redesign any
     genuinely quadratic per-entry controller that prevents the target bound.
     - [x] Prove the existing checked word decoder is
@@ -1553,7 +1559,7 @@ deliberately uses the proved coarser polynomial envelope.
       payload pass so decoding is linear in the self-delimiting word code;
       thread it through entry matching, cleanup, lookup, update, and complete
       program execution, and expose an encoded-length scan theorem.
-  - [~] Split the dense public-input bank from the mutable sparse overlay (or
+  - [x] Split the dense public-input bank from the mutable sparse overlay (or
     provide an equivalent lazy input ABI). The current eager snapshot code has
     a checked `O(n * bitlen n)` initialization term, which cannot be rescanned
     on every RAM step in a genuinely quadratic simulation under only `n ≤ T(n)`.
@@ -1566,16 +1572,21 @@ deliberately uses the proved coarser polynomial envelope.
       the input head and scratch tapes. `denseOverlayLookupTM` composes this
       fallback with sparse tagged lookup and proves exact `DenseOverlay.read`
       semantics at the existing reusable fourteen-tape boundary.
-    - [ ] Replace instruction-kernel reads with `denseOverlayLookupTM`, tag every
-      update value with successor, and replace eager initialization by the lone
-      `R₀` overlay entry.
-  - [ ] State a width-sensitive one-step simulation theorem using the selected
+    - [x] Replace every instruction-kernel read with the dense-overlay lookup
+      and successor-tag every data-instruction update value. Exact Hoare/time
+      contracts now cover immediate, direct arithmetic, indirect load/store,
+      and conditional-jump kernels while retaining the sparse fallback path.
+    - [x] Replace eager initialization by the lone tagged `R₀` overlay entry,
+      retaining and rewinding the immutable public input bank.
+    - [x] Connect the dense instruction kernels through fixed-program dispatch,
+      cleanup, looping, and final output.
+  - [x] State a width-sensitive one-step simulation theorem using the selected
     instruction's actual charged operand widths, rather than assigning every
     instruction the run-wide maximum scale.
-  - [ ] Sum the per-step charges over a complete run to obtain an
+  - [x] Sum the per-step charges over a complete run to obtain an
     `O((n + T(n))^2)` public-ABI bound, then use the explicit input-domination
     hypothesis to specialize it to `O(T(n)^2)`.
-  - [ ] Keep the checked fourth-degree envelope as the simple fallback theorem
+  - [x] Keep the checked fourth-degree envelope as the simple fallback theorem
     while exposing the optimized bound through the fixed twenty-work-tape
     simulator and the parametric time-class API.
 - [x] Conclude `RAM.P = P`.

@@ -42,7 +42,7 @@ private theorem phaseTransition_of_parked
   TM.phaseTransition_eq_self_of_reads_ne_start hinput.read_ne_start
     (fun i => (hwork i).read_ne_start) houtput.read_ne_start
 
-private theorem immediateUpdate_ready
+theorem immediateUpdate_ready_internal
     (tapes : BinaryInstructionTapes n) (store : Store)
     (destination value : ℕ) (initialWork : Fin n → Tape)
     (hinitial : EntryLookupStaticReady tapes.lhsLookup store initialWork) :
@@ -282,7 +282,7 @@ theorem immediateInstructionTM_hoareTime_frame_internal
             hinitial.scanner.parked i)
       houtputParked
     simpa only [updateWork, zero_add] using hrun
-  have hready := immediateUpdate_ready tapes store destination value initialWork
+  have hready := immediateUpdate_ready_internal tapes store destination value initialWork
     hinitial
   have hupdate := entryUpdateTM_hoareTime_frame tapes.update store destination
     value emittedBits updateWork inp₀ out₀ hcanonical hready.1 hready.2.1

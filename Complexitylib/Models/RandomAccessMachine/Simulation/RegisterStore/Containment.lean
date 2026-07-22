@@ -11,9 +11,11 @@ import
 /-!
 # RAM-to-TM time-class containment
 
-The fixed twenty-work-tape sparse simulator transfers logarithmic-cost RAM
-deciders to deterministic Turing deciders. Together with the sparse TM-to-RAM
-compiler, this establishes machine-model robustness of polynomial time.
+The fixed twenty-work-tape simulators transfer logarithmic-cost RAM deciders to
+deterministic Turing deciders. The sparse fallback gives the original quartic
+polynomial envelope; the dense-input overlay gives the sharp quadratic
+parametric containment. Together with the sparse TM-to-RAM compiler, these
+establish machine-model robustness of polynomial time.
 -/
 
 namespace Complexity
@@ -41,6 +43,24 @@ theorem programDecision_decidesInTime
       (fun inputLength =>
         programDecisionEnvelope program inputLength (T inputLength)) :=
   programDecision_decidesInTime_internal program hdecides
+
+/-- Every RAM decider transfers to the optimized fixed dense-input simulator
+with an explicit quadratic envelope in input length plus RAM time. -/
+theorem denseProgramDecision_decidesInTime
+    {L : Language} {T : ℕ → ℕ} (program : Program)
+    (hdecides : program.DecidesInTime L T) :
+    (denseProgramDecisionTM standardControlInstructionTapes program).DecidesInTime L
+      (fun inputLength =>
+        denseProgramDecisionEnvelope program inputLength (T inputLength)) :=
+  denseProgramDecision_decidesInTime_internal program hdecides
+
+/-- Under the standard assumption that the RAM time bound dominates reading
+the input, logarithmic-cost RAM time `T` is contained in deterministic Turing
+time `T²`. -/
+theorem RAM_DTIME_subset_DTIME_sq (T : ℕ → ℕ)
+    (hinput : (fun inputLength => inputLength + 1) =O T) :
+    RAM.DTIME T ⊆ Complexity.DTIME (fun inputLength => (T inputLength) ^ 2) :=
+  DTIME_subset_DTIME_sq_internal T hinput
 
 /-- Every polynomial logarithmic-cost RAM language is in deterministic
 polynomial Turing time. -/

@@ -64,6 +64,26 @@ theorem denseOverlayLookupTM_hoareTime_frame {n : ℕ}
   denseOverlayLookupTM_hoareTime_internal tapes input overlay address
     initialWork out₀ hvalid hready houtput
 
+/-- A fixed-address dense-overlay lookup synthesizes and clears its query,
+while returning the decoded register value at the reusable scanner boundary. -/
+theorem denseOverlayLookupStaticTM_hoareTime_frame {n : ℕ}
+    (tapes : EntryLookupRestoreTapes n) (input : List Bool)
+    (overlay : Store) (address : ℕ) (initialWork : Fin n → Tape)
+    (out₀ : Tape) (hvalid : DenseOverlay.Valid overlay)
+    (hready : EntryLookupStaticReady tapes overlay initialWork)
+    (houtput : TM.Parked out₀) :
+    (denseOverlayLookupStaticTM tapes address).HoareTime
+      (fun inp work out =>
+        inp = (Tape.init (input.map Γ.ofBool)).move Dir3.right ∧
+        work = initialWork ∧ out = out₀)
+      (fun inp work out =>
+        inp = (Tape.init (input.map Γ.ofBool)).move Dir3.right ∧
+        DenseOverlayLookupStaticResult tapes input overlay address initialWork
+          work ∧ out = out₀)
+      (denseOverlayLookupStaticTime tapes input.length overlay address) :=
+  denseOverlayLookupStaticTM_hoareTime_internal tapes input overlay address
+    initialWork out₀ hvalid hready houtput
+
 /-- Reusable sparse-register lookup never moves the output head left. -/
 theorem entryLookupLoadedTM_isTransducer {n : ℕ}
     (tapes : EntryLookupRestoreTapes n) :

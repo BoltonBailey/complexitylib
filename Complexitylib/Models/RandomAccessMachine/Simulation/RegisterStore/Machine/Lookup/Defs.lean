@@ -466,6 +466,22 @@ def denseOverlayLookupTime {n : ℕ} (tapes : EntryLookupRestoreTapes n)
     TM.branchWorkBlankTime (denseInputLookupTime inputLength address)
       (TM.binaryPredTime (RegisterStore.read overlay address - 1))
 
+/-- Load one fixed address from canonical zero, read through the dense input
+and sparse overlay, then clear the fixed-address source back to zero. -/
+def denseOverlayLookupStaticTM {n : ℕ}
+    (tapes : EntryLookupRestoreTapes n) (address : ℕ) : TM n :=
+  TM.seqTM (TM.binaryAddConstTM tapes.querySource address)
+    (TM.seqTM (denseOverlayLookupTM tapes)
+      (TM.resetBinaryWorkTM tapes.querySource))
+
+/-- Complete fixed-address dense-overlay lookup budget. -/
+def denseOverlayLookupStaticTime {n : ℕ}
+    (tapes : EntryLookupRestoreTapes n) (inputLength : ℕ)
+    (overlay : Store) (address : ℕ) : ℕ :=
+  TM.binaryAddConstTime address 0 + 1 +
+    (denseOverlayLookupTime tapes inputLength overlay address + 1 +
+      TM.resetBinaryWorkTime 1 address.bits.length)
+
 /-- Load one fixed address from canonical zero, run a reusable lookup, then
 clear the fixed-address source back to zero. -/
 def entryLookupStaticTM {n : ℕ} (tapes : EntryLookupRestoreTapes n)
@@ -709,6 +725,28 @@ structure DenseOverlayLookupResult {n : ℕ}
   countSource : finalWork tapes.countSource = initialWork tapes.countSource
   querySource : finalWork tapes.querySource = initialWork tapes.querySource
   value : (finalWork tapes.destination).HasBinaryNat
+    (DenseOverlay.read input overlay address)
+  copyScratch : (finalWork tapes.copyScratch).HasBinaryNat 0
+  parked : ∀ i, TM.Parked (finalWork i)
+  frame : ∀ i, (∀ slot, i ≠ tapes.idx slot) →
+    finalWork i = initialWork i
+
+/-- Reusable fixed-address dense-overlay endpoint. The destination contains
+the decoded register value and the temporary query source is zero again. -/
+structure DenseOverlayLookupStaticResult {n : ℕ}
+    (tapes : EntryLookupRestoreTapes n) (input : List Bool)
+    (overlay : Store) (address : ℕ)
+    (initialWork finalWork : Fin n → Tape) : Prop where
+  scanner : EntryScanReady tapes.scan.entry (overlay.flatMap Entry.encode) []
+    finalWork finalWork
+  sourceCells : (finalWork tapes.scan.entry.source).cells =
+    (initialWork tapes.scan.entry.source).cells
+  sourceStart : (finalWork tapes.scan.entry.source).cells 0 = Γ.start
+  sourceHead : (finalWork tapes.scan.entry.source).head = 1
+  count : (finalWork tapes.scan.count).HasBinaryNat overlay.length
+  countSource : finalWork tapes.countSource = initialWork tapes.countSource
+  querySource : (finalWork tapes.querySource).HasBinaryNat 0
+  destination : (finalWork tapes.destination).HasBinaryNat
     (DenseOverlay.read input overlay address)
   copyScratch : (finalWork tapes.copyScratch).HasBinaryNat 0
   parked : ∀ i, TM.Parked (finalWork i)

@@ -91,7 +91,7 @@ theorem rhsReady_of_lhs_internal
   rw [hcountSource]
   simpa using hinitial.countSource
 
-private theorem scanner_updateQuery
+theorem scanner_updateQuery_internal
     (tapes : BinaryInstructionTapes n) (store : Store) (destination : ℕ)
     (work : Fin n → Tape)
     (hscanner : EntryScanReady tapes.rhsLookup.scan.entry
@@ -237,7 +237,7 @@ private theorem directAddress_ready
       tapes.update.resultCount ≠ tapes.update.entry.query :=
     tapes.update.ne (by decide)
   refine
-    { scanner := scanner_updateQuery tapes store destination operandsWork
+    { scanner := scanner_updateQuery_internal tapes store destination operandsWork
         hrhs.scanner
       lhs := ?_
       rhs := ?_
@@ -259,7 +259,7 @@ private theorem directAddress_ready
   · simpa only [Function.update_of_ne hqueryNeRemaining] using hrhs.count
   · simpa only [Function.update_of_ne hqueryNeFound] using hrhs.copyScratch
   · simpa only [Function.update_of_ne hqueryNeResultCount] using hresultCount
-  · exact (scanner_updateQuery tapes store destination operandsWork
+  · exact (scanner_updateQuery_internal tapes store destination operandsWork
       hrhs.scanner).parked
 
 private theorem hasBinaryPrefix_parked {t : Tape} {bits : List Bool}

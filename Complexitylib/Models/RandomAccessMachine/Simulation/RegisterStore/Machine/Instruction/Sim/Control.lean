@@ -330,6 +330,53 @@ private theorem finishControlInstructionTM_hoareTime_frame_internal
     hcopy
   simpa only [finishControlInstructionTM, bits, source, buffer] using hseq
 
+/-- Representation-independent form of the control-instruction finisher.
+Control instructions preserve the encoded store, leave zero on every cleanup
+role, and retain the old entry count for the generic cleanup pass. -/
+theorem finishBufferedControlInstructionTM_hoareTime_frame_internal
+    (tapes : ControlInstructionTapes n) (store : Store)
+    (pcValue newPC : ℕ) (initialWork : Fin (n + 1) → Tape)
+    (inp₀ out₀ : Tape) (control : TM (n + 1)) (controlTime : ℕ)
+    (hready : InstructionExecutionReady tapes store pcValue initialWork)
+    (hinput : TM.Parked inp₀) (houtput : TM.Parked out₀)
+    (hcontrol : control.HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = initialWork ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        ControlInstructionResult tapes.lifted store newPC initialWork work ∧
+        out = out₀)
+      controlTime) :
+    (finishControlInstructionTM tapes control).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = initialWork ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        BufferedInstructionResult tapes store store newPC (fun _ => 0)
+          store.length work ∧
+        out = out₀)
+      (controlTime + 1 + (store.flatMap Entry.encode).length + 1) := by
+  have hfinish := finishControlInstructionTM_hoareTime_frame_internal tapes
+    store pcValue newPC initialWork inp₀ out₀ control controlTime hready
+    hinput houtput hcontrol
+  apply hfinish.consequence
+  · exact fun _ _ _ h => h
+  · rintro inp work out
+      ⟨hinp, hbuffer, hpc, hcount, hsourceContent, hcleanup, hremaining,
+        hscanner, hshift, htmp, hdbl, hparked, hout⟩
+    exact ⟨hinp,
+      { buffer := hbuffer
+        pc := hpc
+        resultCount := hcount
+        sourceContent := hsourceContent
+        cleanup := hcleanup
+        remaining := hremaining
+        scanner := hscanner
+        shift := hshift
+        tmp := htmp
+        dbl := hdbl
+        parked := hparked },
+      hout⟩
+  · exact le_rfl
+
 /-- Conditional-zero execution has the common one-buffer instruction
 contract. -/
 theorem executeInstructionTM_jz_hoareTime_frame

@@ -454,7 +454,7 @@ theorem programOutputTM_hoareTime_internal
     hverdict
   simpa only [programOutputTM, programOutputTime, mid, blank] using hseq
 
-private theorem registerVerdictTM_hoareTime_haltOutput_internal
+theorem registerVerdictTM_hoareTime_haltOutput_internal
     (idx : Fin n) (value : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (hvalue : (work₀ idx).HasBinaryNat value)
     (hinput : TM.Parked inp₀) (hwork : ∀ i, TM.Parked (work₀ i)) :
@@ -627,7 +627,7 @@ private theorem phaseTransition_of_parked
     (fun i => (hwork i).read_ne_start) houtput.read_ne_start
 
 /-- The loop's fixed three-step rewind/check tail preserves every tape exactly. -/
-private theorem programLoop_rewind_check (tmBody tmTest : TM n)
+theorem programLoop_rewind_check_internal (tmBody tmTest : TM n)
     (c : Complexity.Cfg n (TM.LoopQ tmBody.Q tmTest.Q))
     (hstate : c.state = Sum.inr (Sum.inl TM.LoopPhase.rewindOut))
     (hin : c.input.read ≠ Γ.start)
@@ -1178,7 +1178,7 @@ theorem programLoopTM_iteration_internal
     (TM.loopTM_test_to_rewind body test htestHalt).trans
       (congrArg some htestTransition)
   obtain ⟨ctail, htailReach, htailState, htailInput, htailWork,
-      htailOutput⟩ := programLoop_rewind_check body test
+      htailOutput⟩ := programLoop_rewind_check_internal body test
       ⟨Sum.inr (Sum.inl TM.LoopPhase.rewindOut), inp₀,
         cbody.work, ctest.output⟩ rfl hinput.read_ne_start
       (fun i => (hbodyWorkParked i).read_ne_start)

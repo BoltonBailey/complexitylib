@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Assemble
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Static
 import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.DenseInputLookup.Internal
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
@@ -353,6 +353,228 @@ theorem denseOverlayLookupTM_hoareTime_internal
     hlookup htransition hbranch
   simpa [denseOverlayLookupTM, denseOverlayLookupTime, inp₀, lookupPost,
     finalPost] using hall
+
+private theorem denseStaticReset_result
+    (tapes : EntryLookupRestoreTapes n) (input : List Bool)
+    (overlay : Store) (address : ℕ)
+    (initialWork loadedWork : Fin n → Tape)
+    (hloaded : DenseOverlayLookupResult tapes input overlay address
+      (Function.update initialWork tapes.querySource
+        ((Tape.init (address.bits.map Γ.ofBool)).move Dir3.right))
+      loadedWork) :
+    DenseOverlayLookupStaticResult tapes input overlay address initialWork
+      (Function.update loadedWork tapes.querySource
+        ((Tape.init []).move Dir3.right)) := by
+  let finalWork := Function.update loadedWork tapes.querySource
+    ((Tape.init []).move Dir3.right)
+  have hsource : tapes.scan.entry.source ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have haddress : tapes.scan.entry.address ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hvalue : tapes.scan.entry.value ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have haddressCounter :
+      tapes.scan.entry.addressCounter ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have haddressWidth : tapes.scan.entry.addressWidth ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hvalueCounter : tapes.scan.entry.valueCounter ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hvalueWidth : tapes.scan.entry.valueWidth ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hquery : tapes.scan.entry.query ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hresult : tapes.scan.entry.result ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hcount : tapes.scan.count ≠ tapes.querySource :=
+    tapes.ne (by decide)
+  have hcountSource : tapes.countSource ≠ tapes.querySource :=
+    tapes.countSource_ne_querySource
+  have hdestination : tapes.destination ≠ tapes.querySource :=
+    tapes.querySource_ne_destination.symm
+  have hcopyScratch : tapes.copyScratch ≠ tapes.querySource :=
+    tapes.querySource_ne_copyScratch.symm
+  have hzero : ((Tape.init []).move Dir3.right).HasBinaryNat 0 := by
+    simpa using Tape.init_move_right_hasBinaryNat 0
+  have hscanner : EntryScanReady tapes.scan.entry
+      (overlay.flatMap Entry.encode) [] finalWork finalWork := by
+    refine
+      { source := ?_
+        address := ?_
+        addressStart := ?_
+        value := ?_
+        valueStart := ?_
+        addressCounter := ?_
+        addressWidth := ?_
+        valueCounter := ?_
+        valueWidth := ?_
+        query := ?_
+        queryStart := ?_
+        result := ?_
+        resultStart := ?_
+        parked := ?_
+        frame := by intro i _ _ _ _ _ _ _ _ _; rfl }
+    · simpa only [finalWork, Function.update_of_ne hsource] using
+        hloaded.scanner.source
+    · simpa only [finalWork, Function.update_of_ne haddress] using
+        hloaded.scanner.address
+    · simpa only [finalWork, Function.update_of_ne haddress] using
+        hloaded.scanner.addressStart
+    · simpa only [finalWork, Function.update_of_ne hvalue] using
+        hloaded.scanner.value
+    · simpa only [finalWork, Function.update_of_ne hvalue] using
+        hloaded.scanner.valueStart
+    · simpa only [finalWork, Function.update_of_ne haddressCounter] using
+        hloaded.scanner.addressCounter
+    · simpa only [finalWork, Function.update_of_ne haddressWidth] using
+        hloaded.scanner.addressWidth
+    · simpa only [finalWork, Function.update_of_ne hvalueCounter] using
+        hloaded.scanner.valueCounter
+    · simpa only [finalWork, Function.update_of_ne hvalueWidth] using
+        hloaded.scanner.valueWidth
+    · simpa only [finalWork, Function.update_of_ne hquery] using
+        hloaded.scanner.query
+    · simpa only [finalWork, Function.update_of_ne hquery] using
+        hloaded.scanner.queryStart
+    · simpa only [finalWork, Function.update_of_ne hresult] using
+        hloaded.scanner.result
+    · simpa only [finalWork, Function.update_of_ne hresult] using
+        hloaded.scanner.resultStart
+    · intro i
+      by_cases hi : i = tapes.querySource
+      · subst i
+        exact ⟨by
+            simpa only [finalWork, Function.update_self] using
+              (show 1 ≤ ((Tape.init []).move Dir3.right).head by
+                rw [hzero.2.1]),
+          by simpa only [finalWork, Function.update_self] using
+            hzero.2.hasBinaryContent.cells_ne_start⟩
+      · simpa only [finalWork, Function.update_of_ne hi] using hloaded.parked i
+  refine
+    { scanner := hscanner
+      sourceCells := ?_
+      sourceStart := ?_
+      sourceHead := ?_
+      count := ?_
+      countSource := ?_
+      querySource := ?_
+      destination := ?_
+      copyScratch := ?_
+      parked := hscanner.parked
+      frame := ?_ }
+  · simpa only [finalWork, Function.update_of_ne hsource] using
+      hloaded.sourceCells
+  · simpa only [finalWork, Function.update_of_ne hsource] using
+      hloaded.sourceStart
+  · simpa only [finalWork, Function.update_of_ne hsource] using
+      hloaded.sourceHead
+  · simpa only [finalWork, Function.update_of_ne hcount] using hloaded.count
+  · simp only [hloaded.countSource, Function.update_of_ne hcountSource]
+  · simpa only [finalWork, Function.update_self] using hzero
+  · simpa only [finalWork, Function.update_of_ne hdestination] using
+      hloaded.value
+  · simpa only [finalWork, Function.update_of_ne hcopyScratch] using
+      hloaded.copyScratch
+  · intro i hi
+    have hquerySource : i ≠ tapes.querySource := hi 11
+    rw [Function.update_of_ne hquerySource]
+    rw [hloaded.frame i hi]
+    exact Function.update_of_ne hquerySource _ initialWork
+
+theorem denseOverlayLookupStaticTM_hoareTime_internal
+    (tapes : EntryLookupRestoreTapes n) (input : List Bool)
+    (overlay : Store) (address : ℕ) (initialWork : Fin n → Tape)
+    (out₀ : Tape) (hvalid : DenseOverlay.Valid overlay)
+    (hready : EntryLookupStaticReady tapes overlay initialWork)
+    (houtput : TM.Parked out₀) :
+    (denseOverlayLookupStaticTM tapes address).HoareTime
+      (fun inp work out =>
+        inp = (Tape.init (input.map Γ.ofBool)).move Dir3.right ∧
+        work = initialWork ∧ out = out₀)
+      (fun inp work out =>
+        inp = (Tape.init (input.map Γ.ofBool)).move Dir3.right ∧
+        DenseOverlayLookupStaticResult tapes input overlay address initialWork
+          work ∧ out = out₀)
+      (denseOverlayLookupStaticTime tapes input.length overlay address) := by
+  let inp₀ := (Tape.init (input.map Γ.ofBool)).move Dir3.right
+  let loadedInitial := Function.update initialWork tapes.querySource
+    ((Tape.init (address.bits.map Γ.ofBool)).move Dir3.right)
+  have hinput : TM.Parked inp₀ := by
+    refine ⟨by simp [inp₀, Tape.move], ?_⟩
+    simpa [inp₀] using Tape.init_ofBool_move_right_cells_ne_start input
+  have hadd := TM.binaryAddConstTM_hoareTime_frame tapes.querySource address 0
+    inp₀ initialWork out₀ hready.querySource hinput
+    (fun i _ => hready.scanner.parked i) houtput
+  have hadd' : (TM.binaryAddConstTM tapes.querySource address).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = initialWork ∧ out = out₀)
+      (fun inp work out => inp = inp₀ ∧ work = loadedInitial ∧ out = out₀)
+      (TM.binaryAddConstTime address 0) := by
+    simpa only [loadedInitial, zero_add] using hadd
+  have hloadedReady :
+      EntryLookupRestoreReady tapes overlay address loadedInitial := by
+    simpa only [loadedInitial, zero_add] using
+      staticAdd_ready_internal tapes overlay address initialWork hready
+  have hloaded := denseOverlayLookupTM_hoareTime_internal tapes input overlay
+    address loadedInitial out₀ hvalid hloadedReady houtput
+  have hreset : (TM.resetBinaryWorkTM tapes.querySource).HoareTime
+      (fun inp work out =>
+        inp = inp₀ ∧
+        DenseOverlayLookupResult tapes input overlay address loadedInitial work ∧
+        out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        DenseOverlayLookupStaticResult tapes input overlay address initialWork
+          work ∧ out = out₀)
+      (TM.resetBinaryWorkTime 1 address.bits.length) := by
+    rintro inp work out ⟨hinp, hlookup, hout⟩
+    have hqueryNat : (work tapes.querySource).HasBinaryNat address := by
+      rw [hlookup.querySource]
+      simpa only [loadedInitial, Function.update_self] using
+        Tape.init_move_right_hasBinaryNat address
+    have hrun := TM.resetBinaryWorkTM_hoareTime_frame tapes.querySource
+      address.bits 1 inp work out hqueryNat.2.hasBinaryContent hqueryNat.1
+      ⟨by rw [hqueryNat.2.1], by rw [hqueryNat.2.1]⟩
+      (by simpa [hinp] using hinput)
+      (fun i _ => hlookup.parked i)
+      (by simpa [hout] using houtput)
+    obtain ⟨final, time, htime, hreach, hhalt, hfinalInput,
+        hfinalWork, hfinalOutput⟩ :=
+      hrun inp work out ⟨rfl, rfl, rfl⟩
+    exact ⟨final, time, htime, hreach, hhalt, hfinalInput.trans hinp,
+      (by
+        rw [hfinalWork]
+        exact denseStaticReset_result tapes input overlay address initialWork
+          work hlookup),
+      hfinalOutput.trans hout⟩
+  have hloadedReset := TM.seqTM_hoareTime (denseOverlayLookupTM tapes)
+    (TM.resetBinaryWorkTM tapes.querySource) hloaded
+    (by
+      rintro inp work out ⟨hinp, hlookup, hout⟩
+      subst inp
+      subst out
+      obtain ⟨hi, hw, ho⟩ := TM.phaseTransition_eq_self_of_reads_ne_start
+        hinput.read_ne_start (fun i => (hlookup.parked i).read_ne_start)
+        houtput.read_ne_start
+      rw [hi, hw, ho]
+      exact ⟨rfl, hlookup, rfl⟩)
+    hreset
+  have hall := TM.seqTM_hoareTime
+    (TM.binaryAddConstTM tapes.querySource address)
+    (TM.seqTM (denseOverlayLookupTM tapes)
+      (TM.resetBinaryWorkTM tapes.querySource)) hadd'
+    (by
+      rintro inp work out ⟨hinp, hwork, hout⟩
+      subst work
+      obtain ⟨hi, hw, ho⟩ := TM.phaseTransition_eq_self_of_reads_ne_start
+        (inp := inp) (work := loadedInitial) (out := out)
+        (by simpa [hinp] using hinput.read_ne_start)
+        (fun i => (hloadedReady.scanner.parked i).read_ne_start)
+        (by simpa [hout] using houtput.read_ne_start)
+      rw [hi, hw, ho]
+      exact ⟨hinp, rfl, hout⟩)
+    hloadedReset
+  simpa [denseOverlayLookupStaticTM, denseOverlayLookupStaticTime, inp₀,
+    loadedInitial] using hall
 
 end Machine
 end RegisterStore

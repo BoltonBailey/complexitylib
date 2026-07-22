@@ -1136,6 +1136,7 @@ theorem initialSetupTM_hoareTime_internal
         work = (fun _ => Tape.init []) ∧ out = Tape.init [])
       (fun inp work out =>
         inp.HasBinarySuffix input ∧
+        inp = (Tape.init (input.map Γ.ofBool)).move Dir3.right ∧
         InitialLoopReady tapes 1 0 [] work ∧
         out = TM.resetBinaryBlank)
       (1 + 1 + (TM.binarySuccTime 0 + 1 + TM.binarySuccTime 0)) := by
@@ -1298,9 +1299,12 @@ theorem initialSetupTM_hoareTime_internal
     unfold initialSetupTM
     rw [TM.phase2Wrap_halted_iff]
     exact htailHalt
-  · refine ⟨?_, ?_, ?_⟩
+  · refine ⟨?_, ?_, ?_, ?_⟩
     · change rhsDone.input.HasBinarySuffix input
       exact hrhsInputSuffix
+    · change rhsDone.input =
+          (Tape.init (input.map Γ.ofBool)).move Dir3.right
+      rw [hrhsInput, hlhsInput]
     · refine
         { address := ?_
           value := ?_
@@ -2153,7 +2157,7 @@ theorem programInitTM_hoareTime_internal
   subst out
   have hsetup := initialSetupTM_hoareTime_internal tapes input
   obtain ⟨setupDone, setupTime, hsetupTime, hsetupReach, hsetupHalt,
-      hsetupInput, hsetupReady, hsetupOutput⟩ :=
+      hsetupInput, _hsetupInputEq, hsetupReady, hsetupOutput⟩ :=
     hsetup _ _ _ ⟨rfl, rfl, rfl⟩
   have hsetupBufferStart :
       (setupDone.work tapes.buffer).cells 0 = Γ.start := by

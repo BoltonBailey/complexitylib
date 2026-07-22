@@ -148,6 +148,17 @@ def executeInstructionTM {n : ℕ} (tapes : ControlInstructionTapes n) :
   | .halt =>
       finishControlInstructionTM tapes (haltInstructionTM (n := n + 1))
 
+/-- Representation-independent finite branch tree for any family of static
+instruction executors sharing the standard decrementing selector tape. -/
+def dispatchWithTM {n : ℕ} (tapes : ControlInstructionTapes n)
+    (execute : Instr → TM (n + 1)) : Program → TM (n + 1)
+  | [] => TM.seqTM (TM.resetBinaryWorkTM tapes.liftedLhs) (execute .halt)
+  | instruction :: program =>
+      TM.branchWorkBlankTM tapes.liftedLhs
+        (execute instruction)
+        (TM.seqTM (TM.binaryPredTM tapes.liftedLhs)
+          (dispatchWithTM tapes execute program))
+
 /-- Finite branch tree selected by a decrementing canonical PC copy. -/
 def dispatchProgramTM {n : ℕ} (tapes : ControlInstructionTapes n) :
     Program → TM (n + 1)
@@ -331,6 +342,32 @@ structure InstructionExecutionResult {n : ℕ}
   /-- Every work head is parked at the instruction/cleanup boundary. -/
   parked : ∀ i, TM.Parked (work i)
 
+/-- Instruction-independent buffered endpoint. This is the semantic interface
+needed by physical cleanup; sparse and dense register representations provide
+their own next-store, next-PC, and scratch-value witnesses. -/
+structure BufferedInstructionResult {n : ℕ}
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (nextPC : ℕ) (cleanupValues : Fin 5 → ℕ) (remainingValue : ℕ)
+    (work : Fin (n + 1) → Tape) : Prop where
+  buffer : (work tapes.buffer).HasBinaryPrefix
+    (nextStore.flatMap Entry.encode)
+  pc : (work tapes.liftedPC).HasBinaryNat nextPC
+  resultCount :
+    (work tapes.lifted.data.update.resultCount).HasBinaryNat nextStore.length
+  sourceContent : (work tapes.liftedSource).HasBinaryContent
+    (oldStore.flatMap Entry.encode)
+  cleanup : ∀ slot,
+    (work (instructionCleanupTape tapes slot)).HasBinaryNat
+      (cleanupValues slot)
+  remaining : (work tapes.lifted.data.update.remaining).HasBinaryNat
+    remainingValue
+  scanner : EntryScanReady tapes.lifted.data.update.entry []
+    (cleanupValues 0).bits work work
+  shift : (work tapes.lifted.data.shift).HasBinaryNat 0
+  tmp : (work tapes.lifted.data.tmp).HasBinaryNat 0
+  dbl : (work tapes.lifted.data.dbl).HasBinaryNat 0
+  parked : ∀ i, TM.Parked (work i)
+
 /-- Parent roles reset before the buffered successor store is installed. The
 first five are instruction-specific data, followed by the old remaining count
 and the old encoded source. -/
@@ -393,6 +430,25 @@ noncomputable def instructionCleanupResetHeadBoundAt {n : ℕ}
   Function.extend (instructionCleanupResetTape tapes)
     (instructionCleanupResetHeadBound sourceHeadBound) (fun _ => 0)
 
+/-- Binary contents reset by representation-independent buffered cleanup. -/
+def bufferedCleanupResetBits (cleanupValues : Fin 5 → ℕ)
+    (remainingValue : ℕ) (oldStore : Store) : Fin 7 → List Bool
+  | 0 => (cleanupValues 0).bits
+  | 1 => (cleanupValues 1).bits
+  | 2 => (cleanupValues 2).bits
+  | 3 => (cleanupValues 3).bits
+  | 4 => (cleanupValues 4).bits
+  | 5 => remainingValue.bits
+  | _ => oldStore.flatMap Entry.encode
+
+/-- Extend generic buffered-cleanup contents to all physical work tapes. -/
+noncomputable def bufferedCleanupResetBitsAt {n : ℕ}
+    (tapes : ControlInstructionTapes n) (cleanupValues : Fin 5 → ℕ)
+    (remainingValue : ℕ) (oldStore : Store) : Fin (n + 1) → List Bool :=
+  Function.extend (instructionCleanupResetTape tapes)
+    (bufferedCleanupResetBits cleanupValues remainingValue oldStore)
+    (fun _ => [])
+
 /-- Canonical tape with `bits` and its head immediately after the payload. -/
 def instructionCleanupPrefixTape (bits : List Bool) : Tape where
   head := bits.length + 1
@@ -406,6 +462,18 @@ structure InstructionCleanupReady {n : ℕ}
     (work : Fin (n + 1) → Tape) : Prop where
   canonical : Canonical store
   result : InstructionExecutionResult tapes instruction pcValue store work
+  sourceStart : (work tapes.liftedSource).cells 0 = Γ.start
+  bufferStart : (work tapes.buffer).cells 0 = Γ.start
+  sourceHead : (work tapes.liftedSource).head ≤ sourceHeadBound
+
+/-- Representation-independent input boundary for the physical cleanup pass. -/
+structure BufferedCleanupReady {n : ℕ}
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (nextPC : ℕ) (cleanupValues : Fin 5 → ℕ) (remainingValue : ℕ)
+    (sourceHeadBound : ℕ) (work : Fin (n + 1) → Tape) : Prop where
+  nextCanonical : Canonical nextStore
+  result : BufferedInstructionResult tapes oldStore nextStore nextPC
+    cleanupValues remainingValue work
   sourceStart : (work tapes.liftedSource).cells 0 = Γ.start
   bufferStart : (work tapes.buffer).cells 0 = Γ.start
   sourceHead : (work tapes.liftedSource).head ≤ sourceHeadBound
@@ -433,6 +501,22 @@ noncomputable def instructionCleanupTime {n : ℕ}
   let nextBits := nextStore.flatMap Entry.encode
   TM.resetBinaryWorkManyTime
       (instructionCleanupResetBitsAt tapes instruction store)
+      (instructionCleanupResetHeadBoundAt tapes sourceHeadBound)
+      (instructionCleanupResetTargets tapes) + 1 +
+    ((nextBits.length + 1 + 2) + 1 +
+      ((nextBits.length + 1) + 1 +
+        (TM.resetBinaryWorkTime (nextBits.length + 1) nextBits.length + 1 +
+          ((nextBits.length + 1 + 2) + 1 +
+            TM.binaryCopyTime nextStore.length 0))))
+
+/-- Exact cleanup budget expressed only through the buffered representation
+boundary, independent of the instruction semantics that produced it. -/
+noncomputable def bufferedCleanupTime {n : ℕ}
+    (tapes : ControlInstructionTapes n) (oldStore nextStore : Store)
+    (cleanupValues : Fin 5 → ℕ) (remainingValue sourceHeadBound : ℕ) : ℕ :=
+  let nextBits := nextStore.flatMap Entry.encode
+  TM.resetBinaryWorkManyTime
+      (bufferedCleanupResetBitsAt tapes cleanupValues remainingValue oldStore)
       (instructionCleanupResetHeadBoundAt tapes sourceHeadBound)
       (instructionCleanupResetTargets tapes) + 1 +
     ((nextBits.length + 1 + 2) + 1 +
@@ -472,6 +556,18 @@ def executeInstructionTime {n : ℕ} (tapes : ControlInstructionTapes n)
         (store.flatMap Entry.encode).length + 1
   | .halt =>
       haltInstructionTime + 1 + (store.flatMap Entry.encode).length + 1
+
+/-- Representation-independent path-sensitive branch-tree time. Unlike the
+coarse branch combinator bound, this charges only the instruction selected by
+the represented selector. -/
+def dispatchWithTime {n : ℕ} (tapes : ControlInstructionTapes n)
+    (executeTime : Instr → ℕ) : Program → ℕ → ℕ
+  | [], selector =>
+      TM.resetBinaryWorkTime 1 selector.bits.length + 1 + executeTime .halt
+  | instruction :: _, 0 => executeTime instruction + 1
+  | _ :: program, selector + 1 =>
+      TM.binaryPredTime selector + 1 +
+        dispatchWithTime tapes executeTime program selector + 1
 
 /-- Branch-tree bound for a selector currently represented by `selector`. -/
 def dispatchProgramTime {n : ℕ} (tapes : ControlInstructionTapes n)

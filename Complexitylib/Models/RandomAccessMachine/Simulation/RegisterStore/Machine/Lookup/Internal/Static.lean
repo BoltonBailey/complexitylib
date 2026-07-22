@@ -42,7 +42,7 @@ private theorem staticBlank_hasBinaryNat :
     ((Tape.init []).move Dir3.right).HasBinaryNat 0 := by
   simpa using Tape.init_move_right_hasBinaryNat 0
 
-private theorem staticAdd_ready
+theorem staticAdd_ready_internal
     (tapes : EntryLookupRestoreTapes n) (store : Store) (address : ℕ)
     (initialWork : Fin n → Tape)
     (hready : EntryLookupStaticReady tapes store initialWork) :
@@ -309,7 +309,7 @@ theorem entryLookupStatic_hoareTime_internal
     simpa only [loadedInitial, zero_add] using hadd
   have hloadedReady : EntryLookupRestoreReady tapes store address loadedInitial := by
     simpa only [loadedInitial, zero_add] using
-      staticAdd_ready tapes store address initialWork hready
+      staticAdd_ready_internal tapes store address initialWork hready
   have hloaded := entryLookupLoaded_hoareTime_internal tapes store address
     loadedInitial inp₀ out₀ hloadedReady hinput houtput
   have hreset : (TM.resetBinaryWorkTM tapes.querySource).HoareTime

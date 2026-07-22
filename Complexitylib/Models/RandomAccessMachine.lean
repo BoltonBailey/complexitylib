@@ -31,6 +31,8 @@ import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScanStep
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Dense
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Dispatch
@@ -38,6 +40,12 @@ import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Initialization
+import
+Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.DenseInit
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.DenseDecision
+import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.DenseBounds
 import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Decision
 import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode
@@ -192,6 +200,15 @@ proved in `…/Internal`; the soundness of the cost convention is established in
 - `RAM.RegisterStore.Machine.programDecisionTime_le_envelope` — the complete
   simulator has a checked fourth-degree runtime envelope in input length and
   charged RAM logarithmic time.
+- `RAM.RegisterStore.Machine.denseProgramDecisionTM_hoareTime_ramRun` — the
+  optimized fixed twenty-work-tape machine keeps the public input immutable and
+  stores only a sparse tagged mutable overlay while realizing the same RAM run.
+- `RAM.RegisterStore.Machine.denseProgramDecisionTime_le_envelope` — the
+  optimized complete simulator has a checked quadratic envelope in input length
+  plus charged RAM logarithmic time.
+- `RAM.RegisterStore.Machine.RAM_DTIME_subset_DTIME_sq` — whenever `T`
+  asymptotically dominates `n + 1`, logarithmic-cost `RAM.DTIME(T)` is contained
+  in multitape `DTIME(T²)`.
 - `RAM.RegisterStore.Machine.RAM_P_eq_P` — logarithmic-cost RAM polynomial time
   and deterministic multitape Turing polynomial time define the same class.
 - `RAM.RegisterStore.Machine.wordEncodeTM_hoareTime_frame` and
@@ -278,14 +295,15 @@ Finite-support register functions have canonical sparse snapshots whose binary
 tape codec round-trips with an explicit length bound. Fixed lookup, update,
 binary-arithmetic, control, cleanup, initialization, iteration, and output
 machines realize every RAM instruction and complete halting run on twenty work
-tapes. Their composed runtime is bounded by an explicit fourth-degree envelope
-in public input length and charged RAM logarithmic time. Choosing the least
-halting fuel identifies the iteration count with unit time, which is bounded by
-logarithmic cost, and therefore transfers every `RAM.P` decider to `P`. Together
-with the fixed sparse forward simulator this proves
-`RAM.RegisterStore.Machine.RAM_P_eq_P`. The sharp textbook parametric
-`O(T(n)^2)` reverse bound remains future work; the class equivalence currently
-uses the checked coarser polynomial envelope.
+tapes. The original sparse public-input ABI retains an explicit fourth-degree
+envelope as a simple fallback. The optimized machine instead leaves the dense
+public input on its read-only tape and maintains a positive-tagged sparse
+mutable overlay. Selected-width step accounting and a decreasing square
+potential give a checked `O((n + T(n))²)` public-ABI bound. Consequently,
+`RAM_DTIME_subset_DTIME_sq` gives the textbook `RAM.DTIME(T) ⊆ DTIME(T²)` under
+the explicit hypothesis `n + 1 = O(T(n))`. Choosing the least halting fuel also
+transfers every `RAM.P` decider to `P`; together with the fixed sparse forward
+simulator this proves `RAM.RegisterStore.Machine.RAM_P_eq_P`.
 -/
 
 namespace Complexity

@@ -80,7 +80,7 @@ private theorem indirectLoaded_ready
         exact hreplacement
       copyScratch := by simpa using haddress.copyScratch }
 
-private theorem scanner_updateQuery_of_indirect
+theorem scanner_updateQuery_of_indirect_internal
     (tapes : BinaryInstructionTapes n) (store : Store) (destination : ℕ)
     (work : Fin n → Tape)
     (hscanner : EntryScanReady tapes.indirectLoadLookup.scan.entry
@@ -304,7 +304,7 @@ theorem indirectLoadInstructionTM_hoareTime_frame_internal
     subst work
     let updateWork := Function.update loadedWork tapes.update.entry.query
       ((Tape.init (destination.bits.map Γ.ofBool)).move Dir3.right)
-    have hscanner := scanner_updateQuery_of_indirect tapes store destination
+    have hscanner := scanner_updateQuery_of_indirect_internal tapes store destination
       loadedWork hloadedResult.scanner
     have hreplacementNe :
         tapes.update.replacement ≠ tapes.update.entry.query :=
@@ -363,7 +363,7 @@ theorem indirectLoadInstructionTM_hoareTime_frame_internal
       rintro inp work out ⟨hinp, ⟨addressWork, loadedWork, haddressResult,
         hloadedResult, hwork⟩, hout⟩
       subst work
-      have hparked := (scanner_updateQuery_of_indirect tapes store destination
+      have hparked := (scanner_updateQuery_of_indirect_internal tapes store destination
         loadedWork hloadedResult.scanner).parked
       obtain ⟨hi, hw, ho⟩ := phaseTransition_of_parked
         (inp := inp) (work := Function.update loadedWork
