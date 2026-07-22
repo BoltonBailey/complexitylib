@@ -38,6 +38,7 @@ import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+import Complexitylib.Models.TuringMachine.Subroutines.BlankWorkPrefix
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
@@ -83,7 +84,7 @@ reusable read-only-input and binary-work-tape loops, binary count-up loops,
 binary successor,
 binary predecessor and length, value-iterating and width-linear canonical binary
 addition, fixed-constant addition, copying, multiply-add, and fixed-polynomial
-evaluation, framed work-tape clearing,
+evaluation, framed work-tape clearing and binary-bounded sparse-prefix reset,
 unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
 the universal machine, and the logarithmic-cost random access machine

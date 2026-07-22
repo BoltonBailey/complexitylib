@@ -1254,9 +1254,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   finite-fuel decoders and exact token/subtree/child-span correctness.
   `BarringtonProbeQuery` then proves that first/last occupancy and every direct
   fixed-address instruction query through that oracle agree with the reference
-  compiler. The remaining construction is the concrete machine that composes
-  restartable source-code probes to realize these verified oracle recurrences
-  and serializer scans, together with its all-prefix logarithmic-space proof.
+  compiler. `Models/TuringMachine/Subroutines/BlankWorkPrefix` now supplies the
+  missing replay-reset primitive: it blanks an arbitrary sparse work prefix
+  bounded by a preserved binary limit, rewinds the target, restores its scratch
+  counter, and proves exact time plus an all-prefix space envelope. The remaining
+  construction is the concrete machine that composes restartable source-code
+  probes with that reset to realize these verified oracle recurrences and
+  serializer scans, together with its all-prefix logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
