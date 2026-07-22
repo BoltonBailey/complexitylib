@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeNat.Defs
 import Complexitylib.Models.TuringMachine.OutputProbeDispatch
+import Complexitylib.Models.TuringMachine.Registers.RegisterOps
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
@@ -459,6 +460,13 @@ theorem ComputesInSpace.outputProbeDecodeNatActiveTM_hoareTime_internal
     ∃ (bodyBound : ℕ)
       (pre : TapePred
         (0 + outputProbeControllerTapes n + controllerTapes)),
+      (∀ inp work out, pre inp work out →
+        inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).input ∧
+        work = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).work ∧
+        out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).output) ∧
       pre
         (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
           extras false).input
@@ -639,9 +647,181 @@ theorem ComputesInSpace.outputProbeDecodeNatActiveTM_hoareTime_internal
       hcursorActive outerExtras input output extras
       ((f input)[cursor]'hcursorBound) hextras houter houtput cursor value
       hcursor hvalue hactive hlatch hclearInitial hzeroInitial honeInitial
-  refine ⟨bodyBound, pre, ?_, ?_⟩
+  refine ⟨bodyBound, pre, ?_, ?_, ?_⟩
+  · intro inp work out hpre
+    exact ⟨hpre.1.trans hqueryInput, hpre.2.1,
+      hpre.2.2.trans hqueryOutput.symm⟩
   · exact ⟨hqueryInput.symm, rfl, hqueryOutput⟩
   · simpa [bodyBound] using hbody.1
+
+theorem ComputesInSpace.outputProbeDecodeNatBodyTM_active_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursorIdx scratchIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorScratch : cursorIdx ≠ scratchIdx)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hcursor :
+      (outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat cursor)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (value : ℕ)
+    (hvalue :
+      (outerExtras (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat value)
+    (hactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat 1) :
+    ∃ (bodyBound : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+        valueIdx activeIdx).HoareTime pre
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeNatOuterExtrasAfter n cursorIdx valueIdx
+              activeIdx outerExtras cursor value
+              ((f input)[cursor]'hcursorBound))
+            input output extras false)
+          bodyBound := by
+  obtain ⟨activeBound, pre, hpreExact, hpre, hactiveRun⟩ :=
+    hcomp.outputProbeDecodeNatActiveTM_hoareTime_internal input cursor
+      hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+      hcleanupLimit hlimit controllerTapes outerExtras houter cursorIdx
+      scratchIdx valueIdx activeIdx hcursorScratch hcursorValue hcursorActive
+      hcursor hscratch value hvalue hactive
+  let frame := outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+    output extras false
+  have hframePost := outputProbeLatchFrameCfg_post tm controllerTapes
+    outerExtras input output extras false
+  have hparked := outputProbeLatchFramePost_parked tm controllerTapes
+    outerExtras input output extras false hextras houter houtput frame.input
+    frame.work frame.output hframePost
+  let activePhysical := outputProbeDecodeNatActiveIdx n activeIdx
+  have hactiveFrame : (frame.work activePhysical).HasBinaryNat 1 := by
+    dsimp only [activePhysical, outputProbeDecodeNatActiveIdx]
+    rw [outputProbeLatchFramePost_controller tm controllerTapes outerExtras
+      input output extras false frame.input frame.work frame.output hframePost
+      activeIdx]
+    exact hactive
+  have hactiveRead : (frame.work activePhysical).read = Γ.one := by
+    rw [hactiveFrame.eq_init_move_right]
+    rfl
+  have hbody := branchWorkSymbolTM_hoareTime_equal activePhysical Γ.one
+    (outputProbeDecodeNatActiveTM tm controllerTapes cursorIdx scratchIdx
+      valueIdx activeIdx)
+    skipTM
+    (fun inp work out hp => by
+      rw [(hpreExact inp work out hp).2.1]
+      exact hactiveRead)
+    (fun inp work out hp => by
+      rw [(hpreExact inp work out hp).1]
+      exact hparked.1.read_ne_start)
+    (fun inp work out hp i => by
+      rw [(hpreExact inp work out hp).2.1]
+      exact (hparked.2.1 i).read_ne_start)
+    (fun inp work out hp => by
+      rw [(hpreExact inp work out hp).2.2]
+      exact hparked.2.2.read_ne_start)
+    hactiveRun
+  refine ⟨activeBound + 1, pre, hpre, ?_⟩
+  simpa [outputProbeDecodeNatBodyTM, activePhysical] using hbody
+
+theorem outputProbeDecodeNatBodyTM_inactive_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hinactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat 0) :
+    (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+      valueIdx activeIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        2 := by
+  let activePhysical := outputProbeDecodeNatActiveIdx n activeIdx
+  have hinactiveController :
+      (outerExtras (outputProbeIndexedControllerIdx n activeIdx))
+        |>.HasBinaryNat 0 := by
+    simpa [outputProbeDecodeNatActiveIdx] using hinactive
+  have hskip : (skipTM (n := 0 + outputProbeControllerTapes n +
+      controllerTapes)).HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      1 := by
+    intro inp work out hpost
+    obtain ⟨hinput, hwork, hout⟩ := outputProbeLatchFramePost_parked tm
+      controllerTapes outerExtras input output extras false hextras houter
+      houtput inp work out hpost
+    obtain ⟨done, elapsed, helapsed, hreach, hhalt, hinputDone, hworkDone,
+        houtputDone⟩ :=
+      skipTM_hoareTime_frame inp work out hinput hwork hout inp work out
+        ⟨rfl, rfl, rfl⟩
+    refine ⟨done, elapsed, helapsed, hreach, hhalt, ?_⟩
+    simpa [hinputDone, hworkDone, houtputDone] using hpost
+  have hbody := branchWorkSymbolTM_hoareTime_different activePhysical Γ.one
+    (outputProbeDecodeNatActiveTM tm controllerTapes cursorIdx scratchIdx
+      valueIdx activeIdx)
+    skipTM
+    (fun inp work out hpost => by
+      have hcontroller := outputProbeLatchFramePost_controller tm
+        controllerTapes outerExtras input output extras false inp work out
+        hpost activeIdx
+      dsimp only [activePhysical, outputProbeDecodeNatActiveIdx]
+      rw [hcontroller, hinactiveController.eq_init_move_right]
+      decide)
+    (fun inp work out hpost =>
+      (outputProbeLatchFramePost_parked tm controllerTapes outerExtras input
+        output extras false hextras houter houtput inp work out hpost).1
+        |>.read_ne_start)
+    (fun inp work out hpost i =>
+      ((outputProbeLatchFramePost_parked tm controllerTapes outerExtras input
+        output extras false hextras houter houtput inp work out hpost).2.1 i)
+        |>.read_ne_start)
+    (fun inp work out hpost =>
+      (outputProbeLatchFramePost_parked tm controllerTapes outerExtras input
+        output extras false hextras houter houtput inp work out hpost).2.2
+        |>.read_ne_start)
+    hskip
+  simpa [outputProbeDecodeNatBodyTM, activePhysical] using hbody
 
 private theorem skipTM_isTransducer_internal {n : ℕ} :
     (skipTM (n := n)).IsTransducer := by

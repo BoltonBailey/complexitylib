@@ -236,6 +236,13 @@ theorem ComputesInSpace.outputProbeDecodeNatActiveTM_hoareTime
     ∃ (bodyBound : ℕ)
       (pre : TapePred
         (0 + outputProbeControllerTapes n + controllerTapes)),
+      (∀ inp work out, pre inp work out →
+        inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).input ∧
+        work = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).work ∧
+        out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).output) ∧
       pre
         (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
           extras false).input
@@ -256,6 +263,98 @@ theorem ComputesInSpace.outputProbeDecodeNatActiveTM_hoareTime
     hcleanupLimit hlimit controllerTapes outerExtras houter cursorIdx
     scratchIdx valueIdx activeIdx hcursorScratch hcursorValue hcursorActive
     hcursor hscratch value hvalue hactive
+
+/-- Lift a source-derived active query step through the concrete decoder's
+outer active-flag dispatch. -/
+theorem ComputesInSpace.outputProbeDecodeNatBodyTM_active_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursorIdx scratchIdx valueIdx activeIdx : Fin controllerTapes)
+    (hcursorScratch : cursorIdx ≠ scratchIdx)
+    (hcursorValue : cursorIdx ≠ valueIdx)
+    (hcursorActive : cursorIdx ≠ activeIdx)
+    (hcursor :
+      (outerExtras (outputProbeDecodeNatCursorIdx n cursorIdx))
+        |>.HasBinaryNat cursor)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (value : ℕ)
+    (hvalue :
+      (outerExtras (outputProbeDecodeNatValueIdx n valueIdx))
+        |>.HasBinaryNat value)
+    (hactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat 1) :
+    ∃ (bodyBound : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+        valueIdx activeIdx).HoareTime pre
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeNatOuterExtrasAfter n cursorIdx valueIdx
+              activeIdx outerExtras cursor value
+              ((f input)[cursor]'hcursorBound))
+            input output extras false)
+          bodyBound :=
+  hcomp.outputProbeDecodeNatBodyTM_active_hoareTime_internal input cursor
+    hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+    hcleanupLimit hlimit controllerTapes outerExtras houter cursorIdx
+    scratchIdx valueIdx activeIdx hcursorScratch hcursorValue hcursorActive
+    hcursor hscratch value hvalue hactive
+
+/-- Once the terminator has cleared the active register, one decoder-body
+iteration is exactly a no-op over the restored probe frame. -/
+theorem outputProbeDecodeNatBodyTM_inactive_hoareTime
+    (tm : TM n) (controllerTapes : ℕ)
+    (cursorIdx scratchIdx valueIdx activeIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hinactive :
+      (outerExtras (outputProbeDecodeNatActiveIdx n activeIdx))
+        |>.HasBinaryNat 0) :
+    (outputProbeDecodeNatBodyTM tm controllerTapes cursorIdx scratchIdx
+      valueIdx activeIdx).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        2 :=
+  outputProbeDecodeNatBodyTM_inactive_hoareTime_internal tm controllerTapes
+    cursorIdx scratchIdx valueIdx activeIdx outerExtras input output extras
+    hextras houter houtput hinactive
 
 /-- The complete bounded decoder preserves the append-only output discipline. -/
 theorem outputProbeDecodeNatTM_isTransducer

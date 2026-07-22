@@ -226,6 +226,58 @@ theorem branchWorkSymbolTM_reachesIn_different_frame_internal
   exact (workSymbolDifferentWrap_halted_iff idx symbol onEqual onDifferent
     c').2 hhalt
 
+theorem branchWorkSymbolTM_hoareTime_equal_internal
+    (idx : Fin n) (symbol : Γ) (onEqual onDifferent : TM n)
+    {pre post : TapePred n} {time : ℕ}
+    (hequal : ∀ inp work out, pre inp work out →
+      (work idx).read = symbol)
+    (hinput : ∀ inp work out, pre inp work out →
+      inp.read ≠ Γ.start)
+    (hwork : ∀ inp work out, pre inp work out →
+      ∀ i, (work i).read ≠ Γ.start)
+    (houtput : ∀ inp work out, pre inp work out →
+      out.read ≠ Γ.start)
+    (hbranch : onEqual.HoareTime pre post time) :
+    (branchWorkSymbolTM idx symbol onEqual onDifferent).HoareTime
+      pre post (time + 1) := by
+  intro inp work out hpre
+  obtain ⟨done, branchSteps, hsteps, hreach, hhalt, hpost⟩ :=
+    hbranch inp work out hpre
+  obtain ⟨wrapped, hwrapped, hwrappedHalt, hwrappedInput,
+      hwrappedWork, hwrappedOutput⟩ :=
+    branchWorkSymbolTM_reachesIn_equal_frame_internal idx symbol onEqual
+      onDifferent inp work out (hequal inp work out hpre)
+      (hinput inp work out hpre) (hwork inp work out hpre)
+      (houtput inp work out hpre) hreach hhalt
+  refine ⟨wrapped, branchSteps + 1, by omega, hwrapped, hwrappedHalt, ?_⟩
+  simpa only [hwrappedInput, hwrappedWork, hwrappedOutput] using hpost
+
+theorem branchWorkSymbolTM_hoareTime_different_internal
+    (idx : Fin n) (symbol : Γ) (onEqual onDifferent : TM n)
+    {pre post : TapePred n} {time : ℕ}
+    (hdifferent : ∀ inp work out, pre inp work out →
+      (work idx).read ≠ symbol)
+    (hinput : ∀ inp work out, pre inp work out →
+      inp.read ≠ Γ.start)
+    (hwork : ∀ inp work out, pre inp work out →
+      ∀ i, (work i).read ≠ Γ.start)
+    (houtput : ∀ inp work out, pre inp work out →
+      out.read ≠ Γ.start)
+    (hbranch : onDifferent.HoareTime pre post time) :
+    (branchWorkSymbolTM idx symbol onEqual onDifferent).HoareTime
+      pre post (time + 1) := by
+  intro inp work out hpre
+  obtain ⟨done, branchSteps, hsteps, hreach, hhalt, hpost⟩ :=
+    hbranch inp work out hpre
+  obtain ⟨wrapped, hwrapped, hwrappedHalt, hwrappedInput,
+      hwrappedWork, hwrappedOutput⟩ :=
+    branchWorkSymbolTM_reachesIn_different_frame_internal idx symbol onEqual
+      onDifferent inp work out (hdifferent inp work out hpre)
+      (hinput inp work out hpre) (hwork inp work out hpre)
+      (houtput inp work out hpre) hreach hhalt
+  refine ⟨wrapped, branchSteps + 1, by omega, hwrapped, hwrappedHalt, ?_⟩
+  simpa only [hwrappedInput, hwrappedWork, hwrappedOutput] using hpost
+
 theorem branchWorkSymbolTM_hoareTimeSpace_equal_internal
     (idx : Fin n) (symbol : Γ) (onEqual onDifferent : TM n)
     {pre post : TapePred n} {time inputLength space : ℕ}
