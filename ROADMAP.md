@@ -1314,7 +1314,15 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   a zero probe preserves the complete reset-latch frame, while a one probe
   increments exactly one canonical binary count register. The composed
   query-reset-count step has an explicit time/space contract and the enclosing
-  count-up scan remains one-way-output safe.
+  count-up scan remains one-way-output safe. Its exact outer-loop invariant is
+  now formalized as well: after address `k`, the count register contains the
+  number of true bits in the first `k` source positions. Canonical restored
+  latch frames make Hoare endpoints literal loop configurations, and bounded
+  per-address body witnesses now package into a complete
+  `BinaryForSegmentSpec`; the halted frame exposes `List.count true` when the
+  scan limit is the full bit length. The remaining first-pass proof is to
+  instantiate those body witnesses from the concrete indexed-latch contract
+  and attach the all-prefix segment-space certificate.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

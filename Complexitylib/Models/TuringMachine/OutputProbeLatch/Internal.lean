@@ -152,6 +152,70 @@ theorem outputProbeLatchFramePost_latch_internal
   rw [hwork, outputProbeLatchIdx, placeWorkCfg_work_middle]
   exact hsource.2.2.1
 
+theorem outputProbeLatchFrameCfg_post_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool) :
+    outputProbeLatchFramePost tm controllerTapes outerExtras input output
+      extras bit
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).input
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).work
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).output := by
+  refine ⟨(outputProbeLatchInnerFrameCfg tm input output extras bit).work,
+    ?_, rfl⟩
+  refine ⟨rfl, ?_, ?_, rfl⟩
+  · intro i hi
+    simp [outputProbeLatchInnerFrameCfg, Function.update_of_ne hi]
+  · simp only [outputProbeLatchInnerFrameCfg, Function.update_self]
+    exact Tape.init_move_right_hasBinaryNat _
+
+theorem outputProbeLatchFramePost_eq_frameCfg_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out) :
+    inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).input ∧
+      work = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+        output extras bit).work ∧
+      out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+        output extras bit).output := by
+  obtain ⟨sourceWork, hsource, hwork⟩ := hpost
+  let cleanCfg := outputProbePlacedFrameCfg tm input
+    (outputProbeCounterTape 0) output extras
+  have hsourceWork :
+      sourceWork =
+        (outputProbeLatchInnerFrameCfg tm input output extras bit).work := by
+    funext i
+    by_cases hi : i = outputProbeCleanupCounterIdx n
+    · subst i
+      rw [hsource.2.2.1.eq_init_move_right]
+      simp [outputProbeLatchInnerFrameCfg, outputProbeCounterTape]
+    · simpa [outputProbeLatchInnerFrameCfg, cleanCfg,
+        Function.update_of_ne hi] using hsource.2.1 i hi
+  refine ⟨?_, ?_, ?_⟩
+  · simpa [outputProbeLatchFrameCfg, outputProbeLatchInnerFrameCfg, cleanCfg]
+      using hsource.1
+  · rw [hwork]
+    rw [hsourceWork]
+    funext i
+    by_cases hi : placeWorkInMiddle 0 (outputProbeControllerTapes n) i
+    · simp [outputProbeLatchFrameCfg, placeWorkCfg, hi]
+    · simp [outputProbeLatchFrameCfg, placeWorkCfg, hi]
+  · simpa [outputProbeLatchFrameCfg, outputProbeLatchInnerFrameCfg, cleanCfg]
+      using hsource.2.2.2
+
 theorem ComputesInSpace.outputProbeLatchTM_hoareTimeSpace_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space)

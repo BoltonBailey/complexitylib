@@ -20,6 +20,10 @@ namespace Complexity
 
 namespace TM
 
+/-- Number of true bits in the first `count` source positions. -/
+def outputProbePrefixOnes (bits : List Bool) (count : ℕ) : ℕ :=
+  (bits.take count).count true
+
 /-- Stable outer controller frame after processing one queried bit. -/
 def outputProbeCountOnesOuterExtrasAfter (n : ℕ)
     {controllerTapes : ℕ} (countIdx : Fin controllerTapes)
@@ -33,6 +37,21 @@ def outputProbeCountOnesOuterExtrasAfter (n : ℕ)
       (outputProbeCounterTape (count + 1))
   else
     outerExtras
+
+/-- Canonical address/count controller frame after processing exactly
+`address` source positions. -/
+def outputProbeCountOnesOuterExtrasAt (n : ℕ)
+    {controllerTapes : ℕ} (addressIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) :
+    Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape :=
+  Function.update
+    (Function.update outerExtras
+      (outputProbeIndexedControllerIdx n addressIdx)
+      (outputProbeCounterTape address))
+    (outputProbeIndexedControllerIdx n countIdx)
+    (outputProbeCounterTape (outputProbePrefixOnes bits address))
 
 /-- One occupancy-counting iteration before the enclosing loop increments its
 address: query, reset the latch, and conditionally increment the count. -/
@@ -52,6 +71,101 @@ def outputProbeCountOnesTM (tm : TM n) (controllerTapes : ℕ)
       countIdx)
     (outputProbeIndexedControllerIdx n addressIdx)
     (outputProbeIndexedControllerIdx n limitIdx)
+
+/-- Canonical restored latch frame after exactly `address` source bits have
+been counted. -/
+def outputProbeCountOnesFrameCfg (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (address : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeLatchTM tm controllerTapes).Q :=
+  outputProbeLatchFrameCfg tm controllerTapes
+    (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+      address)
+    input output extras false
+
+/-- Canonical outer-loop comparison configuration after counting a prefix. -/
+def outputProbeCountOnesScanCfg (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (address : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeCountOnesTM tm controllerTapes addressIdx scratchIdx
+        limitIdx countIdx).Q :=
+  let frame := outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+    countIdx outerExtras bits input output extras address
+  { state := .inl (.scan true)
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical entry to the query/count body at one source address. -/
+def outputProbeCountOnesIterationStartCfg (tm : TM n)
+    (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (address : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeCountOnesTM tm controllerTapes addressIdx scratchIdx
+        limitIdx countIdx).Q :=
+  let frame := outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+    countIdx outerExtras bits input output extras address
+  { state := .inr
+      (binaryForIterationTM
+        (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+          countIdx)
+        (outputProbeIndexedControllerIdx n addressIdx)).qstart
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical iteration endpoint after the body and address successor have
+established the next prefix-count invariant. -/
+def outputProbeCountOnesIterationDoneCfg (tm : TM n)
+    (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (address : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeCountOnesTM tm controllerTapes addressIdx scratchIdx
+        limitIdx countIdx).Q :=
+  let frame := outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+    countIdx outerExtras bits input output extras (address + 1)
+  { state := .inr
+      (binaryForIterationTM
+        (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+          countIdx)
+        (outputProbeIndexedControllerIdx n addressIdx)).qhalt
+    input := frame.input
+    work := frame.work
+    output := frame.output }
+
+/-- Canonical halted scan configuration after the entire source prefix has
+been counted. -/
+def outputProbeCountOnesDoneCfg (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (limit : ℕ) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeCountOnesTM tm controllerTapes addressIdx scratchIdx
+        limitIdx countIdx).Q :=
+  let frame := outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+    countIdx outerExtras bits input output extras limit
+  { state := .inl .done
+    input := frame.input
+    work := frame.work
+    output := frame.output }
 
 end TM
 

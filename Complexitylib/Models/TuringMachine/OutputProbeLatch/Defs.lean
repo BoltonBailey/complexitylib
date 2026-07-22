@@ -72,6 +72,30 @@ def outputProbeLatchFramePost (tm : TM n) (controllerTapes : ℕ)
   placeWorkPred (outputProbeLatchInnerTM tm) 0 controllerTapes outerExtras
     (outputProbeLatchPost tm input output extras bit)
 
+/-- Canonical restored inner query frame with an explicit zero-or-one latch. -/
+def outputProbeLatchInnerFrameCfg (tm : TM n) (input : List Bool)
+    (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool) :
+    Cfg (outputProbeControllerTapes n) (outputProbeLatchInnerTM tm).Q :=
+  let cleanCfg := outputProbePlacedFrameCfg tm input
+    (outputProbeCounterTape 0) output extras
+  { state := (outputProbeLatchInnerTM tm).qstart
+    input := cleanCfg.input
+    work := Function.update cleanCfg.work (outputProbeCleanupCounterIdx n)
+      (outputProbeCounterTape (if bit then 1 else 0))
+    output := output }
+
+/-- Canonical restored query frame placed before arbitrary controller tapes. -/
+def outputProbeLatchFrameCfg (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool) :
+    Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+      (outputProbeLatchTM tm controllerTapes).Q :=
+  placeWorkCfg (outputProbeLatchInnerTM tm) 0 controllerTapes outerExtras
+    (outputProbeLatchInnerFrameCfg tm input output extras bit)
+
 /-- Auxiliary-space budget of the restored inner query frame. -/
 def outputProbeLatchCleanSpace (frameSpace : ℕ) : ℕ :=
   max 1 frameSpace

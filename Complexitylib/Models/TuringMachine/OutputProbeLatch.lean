@@ -19,6 +19,47 @@ namespace Complexity
 
 namespace TM
 
+/-- The canonical restored query frame satisfies the stable outer-frame
+predicate with its explicit zero-or-one latch. -/
+theorem outputProbeLatchFrameCfg_post
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool) :
+    outputProbeLatchFramePost tm controllerTapes outerExtras input output
+      extras bit
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).input
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).work
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).output :=
+  outputProbeLatchFrameCfg_post_internal tm controllerTapes outerExtras input
+    output extras bit
+
+/-- The restored latch-frame predicate determines the canonical physical
+input, work, and output tapes uniquely. -/
+theorem outputProbeLatchFramePost_eq_frameCfg
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out) :
+    inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras bit).input ∧
+      work = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+        output extras bit).work ∧
+      out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+        output extras bit).output :=
+  outputProbeLatchFramePost_eq_frameCfg_internal tm controllerTapes
+    outerExtras input output extras bit inp work out hpost
+
 /-- The physical latch selected by the placed frame predicate contains exactly
 the queried Boolean as canonical binary zero or one. -/
 theorem outputProbeLatchFramePost_latch

@@ -19,6 +19,264 @@ namespace Complexity
 
 namespace TM
 
+/-- Extending a valid prefix by one position adds exactly the queried bit to
+the running one count. -/
+theorem outputProbePrefixOnes_succ (bits : List Bool)
+    (address : ℕ) (haddress : address < bits.length) :
+    outputProbePrefixOnes bits (address + 1) =
+      outputProbePrefixOnes bits address +
+        if bits[address]'haddress then 1 else 0 :=
+  outputProbePrefixOnes_succ_internal bits address haddress
+
+/-- Taking the full prefix recovers the total number of true bits. -/
+theorem outputProbePrefixOnes_all (bits : List Bool) :
+    outputProbePrefixOnes bits bits.length = bits.count true :=
+  outputProbePrefixOnes_all_internal bits
+
+/-- Controller registers other than the address and count retain their base
+outer-frame tapes throughout the prefix-count invariant. -/
+theorem outputProbeCountOnesOuterExtrasAt_other
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx idx : Fin controllerTapes}
+    (haddress : idx ≠ addressIdx) (hcount : idx ≠ countIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) :
+    outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+        address (outputProbeIndexedControllerIdx n idx) =
+      outerExtras (outputProbeIndexedControllerIdx n idx) :=
+  outputProbeCountOnesOuterExtrasAt_other_internal n haddress hcount
+    outerExtras bits address
+
+/-- Updating the canonical address and prefix-count registers preserves a
+parked outer controller frame. -/
+theorem outputProbeCountOnesOuterExtrasAt_parked
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx : Fin controllerTapes}
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (bits : List Bool) (address : ℕ) :
+    ∀ i, ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+      Parked (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx
+        outerExtras bits address i) :=
+  outputProbeCountOnesOuterExtrasAt_parked_internal n outerExtras houter bits
+    address
+
+/-- The canonical count-ones frame realizes its exact restored latch and
+prefix-count tape predicate. -/
+theorem outputProbeCountOnesFrameCfg_post
+    (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (address : ℕ) :
+    outputProbeLatchFramePost tm controllerTapes
+      (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+        address)
+      input output extras false
+      (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+        outerExtras bits input output extras address).input
+      (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+        outerExtras bits input output extras address).work
+      (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+        outerExtras bits input output extras address).output :=
+  outputProbeCountOnesFrameCfg_post_internal tm controllerTapes addressIdx
+    countIdx outerExtras bits input output extras address
+
+/-- The halted canonical scan frame exposes the exact one count of the
+processed prefix in the designated count register. -/
+theorem outputProbeCountOnesDoneCfg_count
+    (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (limitValue : ℕ) :
+    ((outputProbeCountOnesDoneCfg tm controllerTapes addressIdx scratchIdx
+      limitIdx countIdx outerExtras bits input output extras limitValue).work
+      (outputProbeIndexedControllerIdx n countIdx)).HasBinaryNat
+        (outputProbePrefixOnes bits limitValue) :=
+  outputProbeCountOnesDoneCfg_count_internal tm controllerTapes addressIdx
+    scratchIdx limitIdx countIdx outerExtras bits input output extras
+    limitValue
+
+/-- The canonical scan frame stores the running prefix count in the designated
+controller register. -/
+theorem outputProbeCountOnesOuterExtrasAt_count
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx : Fin controllerTapes}
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) :
+    (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+      address
+      (outputProbeIndexedControllerIdx n countIdx)).HasBinaryNat
+        (outputProbePrefixOnes bits address) :=
+  outputProbeCountOnesOuterExtrasAt_count_internal n outerExtras bits address
+
+/-- The canonical scan frame stores the current address in the designated
+controller register. -/
+theorem outputProbeCountOnesOuterExtrasAt_address
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx : Fin controllerTapes}
+    (hne : addressIdx ≠ countIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) :
+    (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+      address
+      (outputProbeIndexedControllerIdx n addressIdx)).HasBinaryNat address :=
+  outputProbeCountOnesOuterExtrasAt_address_internal n hne outerExtras bits
+    address
+
+/-- Conditional count dispatch updates the outer frame to the next prefix
+count while leaving the current address unchanged. -/
+theorem outputProbeCountOnesOuterExtrasAfter_eq
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx : Fin controllerTapes}
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) (haddress : address < bits.length) :
+    outputProbeCountOnesOuterExtrasAfter n countIdx
+        (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras
+          bits address)
+        (outputProbePrefixOnes bits address) (bits[address]'haddress) =
+      Function.update
+        (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras
+          bits address)
+        (outputProbeIndexedControllerIdx n countIdx)
+        (outputProbeCounterTape (outputProbePrefixOnes bits (address + 1))) :=
+  outputProbeCountOnesOuterExtrasAfter_eq_internal n outerExtras bits address
+    haddress
+
+/-- After count dispatch and the loop's address successor, the complete outer
+frame is exactly the canonical next-prefix frame. -/
+theorem outputProbeCountOnesOuterExtrasAt_succ
+    (n : ℕ) {controllerTapes : ℕ}
+    {addressIdx countIdx : Fin controllerTapes}
+    (hne : addressIdx ≠ countIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits : List Bool) (address : ℕ) (haddress : address < bits.length) :
+    Function.update
+        (outputProbeCountOnesOuterExtrasAfter n countIdx
+          (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras
+            bits address)
+          (outputProbePrefixOnes bits address) (bits[address]'haddress))
+        (outputProbeIndexedControllerIdx n addressIdx)
+        (outputProbeCounterTape (address + 1)) =
+      outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras bits
+        (address + 1) :=
+  outputProbeCountOnesOuterExtrasAt_succ_internal n hne outerExtras bits
+    address haddress
+
+/-- Package bounded composite-iteration witnesses into a count-ones scan
+certificate whose configurations expose the exact prefix-count invariant.
+
+The comparison, loopback, and final equality phases are discharged here;
+clients only provide the source-dependent query/count iterations. -/
+noncomputable def outputProbeCountOnesSegmentSpecOfIterationWitnesses
+    (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (haddressLimit : addressIdx ≠ limitIdx)
+    (haddressCount : addressIdx ≠ countIdx)
+    (hcountLimit : countIdx ≠ limitIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (bodyTime : ℕ → ℕ) (startValue limitValue : ℕ)
+    (hlimit :
+      (outerExtras (outputProbeIndexedControllerIdx n limitIdx)).HasBinaryNat
+        limitValue)
+    (iterationWitness : ∀ value, startValue ≤ value → value < limitValue →
+      ∃ time, time ≤ binaryForIterationTime bodyTime value ∧
+        (outputProbeCountOnesTM tm controllerTapes addressIdx scratchIdx
+          limitIdx countIdx).reachesIn time
+          (outputProbeCountOnesIterationStartCfg tm controllerTapes addressIdx
+            scratchIdx limitIdx countIdx outerExtras bits input output extras
+            value)
+          (outputProbeCountOnesIterationDoneCfg tm controllerTapes addressIdx
+            scratchIdx limitIdx countIdx outerExtras bits input output extras
+            value)) :
+    BinaryForSegmentSpec
+      (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+        countIdx)
+      (outputProbeIndexedControllerIdx n addressIdx)
+      (outputProbeIndexedControllerIdx n limitIdx)
+      bodyTime startValue limitValue :=
+  outputProbeCountOnesSegmentSpecOfIterationWitnessesInternal tm
+    controllerTapes addressIdx scratchIdx limitIdx countIdx haddressLimit
+    haddressCount hcountLimit outerExtras bits input output extras hextras
+    houter houtput bodyTime startValue limitValue hlimit iterationWitness
+
+/-- Build the same exact prefix-count scan certificate from bounded Hoare
+witnesses for the query/count body.
+
+This constructor closes the body-to-successor seam and leaves clients only
+the source-specific task of supplying each valid-address body contract. -/
+noncomputable def outputProbeCountOnesSegmentSpecOfBodyWitnesses
+    (tm : TM n) (controllerTapes : ℕ)
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (haddressLimit : addressIdx ≠ limitIdx)
+    (haddressCount : addressIdx ≠ countIdx)
+    (hcountLimit : countIdx ≠ limitIdx)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (bits input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (bodyTime : ℕ → ℕ) (startValue limitValue : ℕ)
+    (hlimitBits : limitValue ≤ bits.length)
+    (hlimit :
+      (outerExtras (outputProbeIndexedControllerIdx n limitIdx)).HasBinaryNat
+        limitValue)
+    (bodyWitness : ∀ value, startValue ≤ value → value < limitValue →
+      (hvalueBits : value < bits.length) →
+      ∃ (bodyBound : ℕ)
+        (pre : TapePred
+          (0 + outputProbeControllerTapes n + controllerTapes)),
+        bodyBound ≤ bodyTime value ∧
+        pre
+          (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+            outerExtras bits input output extras value).input
+          (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+            outerExtras bits input output extras value).work
+          (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx countIdx
+            outerExtras bits input output extras value).output ∧
+        (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+          countIdx).HoareTime pre
+            (outputProbeLatchFramePost tm controllerTapes
+              (outputProbeCountOnesOuterExtrasAfter n countIdx
+                (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx
+                  outerExtras bits value)
+                (outputProbePrefixOnes bits value) (bits[value]'hvalueBits))
+              input output extras false)
+            bodyBound) :
+    BinaryForSegmentSpec
+      (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+        countIdx)
+      (outputProbeIndexedControllerIdx n addressIdx)
+      (outputProbeIndexedControllerIdx n limitIdx)
+      bodyTime startValue limitValue :=
+  outputProbeCountOnesSegmentSpecOfBodyWitnessesInternal tm
+    controllerTapes addressIdx scratchIdx limitIdx countIdx haddressLimit
+    haddressCount hcountLimit outerExtras bits input output extras hextras
+    houter houtput bodyTime startValue limitValue hlimitBits hlimit bodyWitness
+
 /-- The zero continuation preserves the complete reset-latch controller frame. -/
 theorem outputProbeCountOnes_zero_hoareTimeSpace
     (tm : TM n) (controllerTapes : ℕ)
