@@ -313,7 +313,11 @@ def outputProbeTM (tm : TM n) : TM (n + 1) :=
               if bit then .one else .zero, idleDir inputHead,
               fun i => idleDir (workHeads i), .right)
       | .missing =>
-          allReadBack .done inputHead workHeads outputHead
+          if outputHead = Γ.start then
+            allReadBack .missing inputHead workHeads outputHead
+          else
+            (.done, fun i => readBackWrite (workHeads i), .zero,
+              idleDir inputHead, fun i => idleDir (workHeads i), .right)
       | .done =>
           allIdle .done inputHead workHeads outputHead
     δ_right_of_start := by
@@ -373,7 +377,12 @@ def outputProbeTM (tm : TM n) : TM (n + 1) :=
             exact ⟨idleDir_right_of_start, fun i hi =>
               idleDir_right_of_start hi, fun _ => rfl⟩
       | .missing =>
-          exact rightOfStart_allReadBack inputHead workHeads outputHead
+          dsimp only
+          split
+          · exact rightOfStart_allReadBack inputHead workHeads outputHead
+          · next houtput =>
+            exact ⟨idleDir_right_of_start, fun i hi =>
+              idleDir_right_of_start hi, fun _ => rfl⟩
       | .done =>
           exact rightOfStart_allIdle inputHead workHeads outputHead }
 
@@ -466,6 +475,26 @@ def outputProbeCaptureCfg (tm : TM n) (bit : Bool)
   input := input
   work := work
   output := output
+
+/-- Configuration reached when a requested output position is absent. -/
+def outputProbeMissingCfg (tm : TM n) (input : Tape)
+    (work : Fin (n + 1) → Tape) (output : Tape) :
+    Cfg (n + 1) (outputProbeTM tm).Q where
+  state := .missing
+  input := input
+  work := work
+  output := output
+
+/-- Halted configuration after an absent-position result. -/
+def outputProbeMissingDoneCfg (tm : TM n) (input : Tape)
+    (work : Fin (n + 1) → Tape) (output : Tape) :
+    Cfg (n + 1) (outputProbeTM tm).Q where
+  state := .done
+  input := input.move (idleDir input.read)
+  work := fun i =>
+    (work i).writeAndMove (readBackWrite (work i).read)
+      (idleDir (work i).read)
+  output := output.writeAndMove Γw.zero Dir3.right
 
 /-- Halted configuration after emitting a captured bit from an off-marker
 physical output head. -/

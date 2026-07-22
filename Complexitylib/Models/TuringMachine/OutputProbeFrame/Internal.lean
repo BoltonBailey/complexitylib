@@ -142,7 +142,10 @@ private theorem outputProbeTM_step_halted_parked_internal (tm : TM n)
       (fun i => (work i).read) output.read hdone with
     hmissing | hcapture | hdonePhase
   · subst phase
-    simp [TM.step, outputProbeTM, allReadBack] at hstep
+    have houtput : output.read ≠ Γ.start := by
+      intro hstart
+      simp [outputProbeTM, hstart, allReadBack] at hdone
+    simp [TM.step, outputProbeTM, houtput] at hstep
     subst after
     exact ⟨startInvariant_move_idle_parked input hinput,
       fun i => startInvariant_writeAndMove_readBack_idle_parked

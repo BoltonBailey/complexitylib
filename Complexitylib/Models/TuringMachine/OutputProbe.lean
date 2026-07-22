@@ -50,6 +50,9 @@ the requested position occupies only its binary width.
   for an abstract space-bounded function computation.
 - `TM.ComputesInSpace.outputProbeTM_getElem_withinAuxSpace` -- the valid-index
   query with an all-prefix space certificate through capture.
+- `TM.ComputesInSpace.outputProbeTM_index_halts_withinAuxSpace` -- every
+  positive-position query terminates with a Boolean result and the same
+  all-prefix bound, including blank and beyond-frontier positions.
 - `TM.ComputesInSpace.outputProbeStartedTM_getElem` -- the valid-index query
   from the canonical post-sentinel frame used by phase composition.
 - `TM.ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace` -- the
@@ -419,6 +422,29 @@ theorem ComputesInSpace.outputProbeTM_getElem_withinAuxSpace
           (outputProbeCaptureSpace (max 1 (space input.length))
             (index + 1)) :=
   hcomp.outputProbeTM_getElem_withinAuxSpace_internal input index hindex
+
+/-- Every output-position query terminates with one Boolean result. Valid
+indices retain the stronger exact theorem above; blank cells and positions
+beyond the source frontier return zero. Every execution prefix satisfies the
+same source-space-plus-binary-index bound. -/
+theorem ComputesInSpace.outputProbeTM_index_halts_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      (∃ bit, done.output.HasOutput [bit]) ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (outputProbeTM tm).reachesIn elapsed
+          (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+            (outputProbeCounterTape (index + 1)) (Tape.init [])) cfg →
+        cfg.WithinAuxSpace input.length
+          (outputProbeCaptureSpace (max 1 (space input.length))
+            (index + 1)) :=
+  hcomp.outputProbeTM_index_halts_withinAuxSpace_internal input index
 
 /-- Every valid output index of a space-bounded transducer can be queried from
 the canonical post-sentinel frame. This removes the one compulsory source

@@ -1278,6 +1278,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   whole query-consume-reset sequence. `OutputProbeLatch` now turns that
   finite-control result into a reusable canonical binary zero-or-one latch
   after cleanup while preserving an arbitrary outer serializer frame.
+  Output probes are now total at every positive numeric position: the complete
+  source run is split into crossed, final-frontier, and beyond-frontier cases,
+  blank or absent positions emit canonical zero, and every branch retains the
+  source-space-plus-binary-index all-prefix bound. Valid indices keep the
+  stronger theorem identifying the emitted bit with the source function.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
