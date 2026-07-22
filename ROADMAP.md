@@ -954,8 +954,12 @@ preserved by serialized encodings and uniform generators.
   `P_subset_UniformPPoly`, and combine it with `UniformPPoly_subset_P` for the
   logspace-uniform equality.
 - [x] Introduce `SIZE` and `PPoly` (`P/poly`) using the stable family conventions.
-- [ ] Introduce `DEPTH`, `NC^i`, and `AC^i` after uniformity and zero-length
+- [x] Introduce `DEPTH`, `NC^i`, and `AC^i` after uniformity and zero-length
   conventions have been propagated through the existing `AC0` definition.
+  (`Circuits/DepthClasses` uses total `CircuitFamily` semantics, polynomial
+  size, and the explicit envelope `c·(log₂ n + 1)^i`; `NC0`, `NC1`, and the
+  repaired `AC0` are specializations, and both hierarchies are monotone in
+  `i`. These names are explicitly nonuniform.)
 
 **Formalization hazards.**
 
@@ -1152,7 +1156,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `Circuits/BarringtonConverse.lean` — `BP.reachesFormula` composes two half-programs
   through the five possible intermediate states, `BP.depth_decisionFormula_le`
   bounds decision depth by `6·⌈log₂ length⌉ + 2`, and
-  `barrington_equivalence` proves `FormulaNC1 = Width5BP`. All 0 custom axioms.)
+  `barrington_equivalence` proves `FormulaNC1 = Width5BP`. All 0 custom axioms.
+  The typed-family bridge is also complete:
+  `BoolFunFamily.onTotalAssignments_mem_Width5BP` unfolds any `NC1` circuit
+  family output with at most a factor-two depth increase and applies the
+  Barrington equivalence. No formula-size claim is used.)
 - [ ] Add a uniform version only after instruction-generation uniformity is
   formalized.
 

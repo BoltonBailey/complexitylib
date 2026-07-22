@@ -17,6 +17,7 @@ import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.BarringtonConverse
+import Complexitylib.Circuits.CircuitFormula.Family
 import Complexitylib.Circuits.MultilinearExtension
 import Complexitylib.Circuits.NormalForm
 import Complexitylib.Circuits.AndOrNot
@@ -29,6 +30,7 @@ import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.Shannon
 import Complexitylib.Circuits.LowerBound
 import Complexitylib.Circuits.Schnorr
+import Complexitylib.Circuits.DepthClasses
 import Complexitylib.Circuits.AC0
 import Complexitylib.Circuits.Nondeterminism
 import Complexitylib.Circuits.Hardwiring
@@ -89,6 +91,8 @@ convention.
   `barrington_representation_depth_four` gives the textbook length bound
   `4 ^ depth`, and `barrington_quadratic_of_log_depth` specializes it to `n²`
   at depth at most `log₂ n`.
+  `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
+  total-assignment view of an actual typed `NC1` circuit family.
 
 ## Module structure
 
@@ -100,6 +104,8 @@ Public modules (definitions a reviewer should read):
   and `List Bool`
 * `Complexitylib.Circuits.CircuitFormula` — exact selected-output unfolding from
   fan-in-two circuit DAGs to Boolean formulas, with a factor-two depth bound
+* `Complexitylib.Circuits.CircuitFormula.Family` — family-level unfolding and
+  the typed-`NC1` bridge to width-`5` branching programs
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
   size/depth bounds, and the polynomial-size characterization
 * `Complexitylib.Circuits.BarringtonConverse` — balanced branching-program
@@ -122,7 +128,9 @@ Public modules (definitions a reviewer should read):
   (`two_pow_le_complexity_of_xorBool`)
 * `Complexitylib.Circuits.XOR` — `Schnorr.xorBool` (N-input parity)
 * `Complexitylib.Circuits.EssentialInput` — `IsEssentialInput`, `essentialInputs`
-* `Complexitylib.Circuits.AC0` — `AC0`
+* `Complexitylib.Circuits.DepthClasses` — `DEPTH`, the nonuniform `NC` and `AC`
+  hierarchies, and the aliases `NC0`, `NC1`, and `AC0`
+* `Complexitylib.Circuits.AC0` — compatibility import for `AC0`
 * `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 * `Complexitylib.Circuits.Hardwiring` — exact-size prefix hardwiring
 * `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts,
