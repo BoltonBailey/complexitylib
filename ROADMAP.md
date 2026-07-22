@@ -1181,7 +1181,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `Classes/BarringtonUniform` now formalizes the correct promise-family boundary:
   canonical `FL` generators define `FormulaFamily.Uniform` and
   `BPFamily.Uniform`, the concrete `FormulaFamily.barringtonProgram` has fixed
-  decision point zero, exact semantics, and polynomial length, and
+  decision point zero, exact semantics, and polynomial length. The machine
+  resource prerequisites now also expose that every `FL` output has a
+  pointwise polynomial length bound with logarithmic-width indices, and prove
+  that the *complete serialized code* of the concrete Barrington family
+  (including terminated-unary variable fields) is polynomially bounded with
+  logarithmic-width cursors. Thus the remaining construction may use
+  recomputation and binary output positions without hiding a space blowup.
+  Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
   `UniformBarringtonCompilation`. Proving that obligation is the remaining

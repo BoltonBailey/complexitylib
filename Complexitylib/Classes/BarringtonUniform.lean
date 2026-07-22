@@ -26,6 +26,12 @@ compiler lies in `FL` on arbitrary inputs.
 
 - `FormulaFamily.barringtonProgram_polynomialLength` -- explicit polynomial
   length.
+- `FormulaFamily.Uniform.code_polynomial_length` -- uniform source codes have
+  polynomial length.
+- `FormulaFamily.barringtonProgram_code_polynomial_length` -- the complete
+  compiled program code, including variable fields, has polynomial length.
+- `FormulaFamily.barringtonProgram_code_index_width_log` -- a binary cursor
+  into that code is logarithmic-width.
 - `FormulaFamily.barringtonProgram_decides` -- exact fixed-point semantics.
 - `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` -- reduction of the
   uniform forward theorem to the named generator obligation.
@@ -45,12 +51,43 @@ theorem uniformWidth5BP_subset_width5BP :
 
 namespace FormulaFamily
 
+/-- The canonical codes of a log-space-uniform formula family have polynomial
+length in the unary family index. -/
+theorem Uniform.code_polynomial_length
+    {family : FormulaFamily} (huniform : family.Uniform) :
+    ∃ p : Polynomial ℕ, ∀ n,
+      (FormulaCode.encode (family n)).length ≤ p.eval n :=
+  huniform.code_polynomial_length_internal
+
 /-- A log-depth formula family compiles through the executable construction to
 a concrete polynomial-length width-`5` family. -/
 theorem barringtonProgram_polynomialLength
     (family : FormulaFamily) (hdepth : family.LogDepth) :
     family.barringtonProgram.PolynomialLength :=
   family.barringtonProgram_polynomialLength_internal hdepth
+
+/-- The full canonical code of the concrete Barrington family has polynomial
+length whenever the source family is both log-depth and uniform. This bound
+includes the terminated-unary variable indices, not just the number of
+instructions. -/
+theorem barringtonProgram_code_polynomial_length
+    (family : FormulaFamily) (hdepth : family.LogDepth)
+    (huniform : family.Uniform) :
+    ∃ p : Polynomial ℕ, ∀ n,
+      (BPCode.Program.encode (family.barringtonProgram n)).length ≤
+        p.eval n :=
+  family.barringtonProgram_code_polynomial_length_internal hdepth huniform
+
+/-- A binary cursor into the complete canonical code of the concrete
+Barrington family occupies logarithmic space. This is the numeric resource
+bound needed by the remaining streaming/recomputation generator. -/
+theorem barringtonProgram_code_index_width_log
+    (family : FormulaFamily) (hdepth : family.LogDepth)
+    (huniform : family.Uniform) :
+    (fun n =>
+      (BPCode.Program.encode (family.barringtonProgram n)).length.size) =O
+        (fun n => Nat.log 2 n) :=
+  family.barringtonProgram_code_index_width_log_internal hdepth huniform
 
 /-- The concrete compiled family decides source-formula evaluation by testing
 whether the fixed point zero moves. -/
