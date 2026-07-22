@@ -7,6 +7,7 @@ import Complexitylib.Circuits.Basic
 import Complexitylib.Circuits.BitString
 import Complexitylib.Circuits.DecisionTree
 import Complexitylib.Circuits.Formula
+import Complexitylib.Circuits.FormulaEncoding
 import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
 import Complexitylib.Circuits.BranchingProgram
@@ -17,6 +18,7 @@ import Complexitylib.Circuits.BarringtonRepr
 import Complexitylib.Circuits.BarringtonLength
 import Complexitylib.Circuits.BarringtonCompiler
 import Complexitylib.Circuits.BranchingProgramEncoding
+import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.BarringtonConverse
 import Complexitylib.Circuits.CircuitFormula.Family
@@ -97,6 +99,8 @@ convention.
   an explicit executable compiler rather than an existential choice.
   `BPCode.Program.decode?_encode` verifies the canonical serialized output
   format needed by the remaining log-space uniformity proof.
+  `barringtonCompileCode_spec` then connects canonical formula bits to canonical
+  program bits, exact semantics, and a serialized output-size bound.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -110,6 +114,8 @@ Public modules (definitions a reviewer should read):
   and `List Bool`
 * `Complexitylib.Circuits.CircuitFormula` — exact selected-output unfolding from
   fan-in-two circuit DAGs to Boolean formulas, with a factor-two depth bound
+* `Complexitylib.Circuits.FormulaEncoding` — canonical iterative postfix formula
+  codec with exact round trips and code length
 * `Complexitylib.Circuits.CircuitFormula.Family` — family-level unfolding and
   the typed-`NC1` bridge to width-`5` branching programs
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
@@ -120,6 +126,8 @@ Public modules (definitions a reviewer should read):
   and formula-to-program compilation with the `4 ^ depth` bound
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
+* `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level
+  formula-code-to-program-code target for the remaining `FL` implementation
 * `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,
   and iterative evaluation of fan-in-two AND/OR circuits
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at

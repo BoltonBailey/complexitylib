@@ -1168,8 +1168,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `barringtonCompile` with exact semantics and length `≤ 4 ^ depth`.
   `Circuits/BranchingProgramEncoding` now supplies the canonical machine-facing
   codec: fixed seven-bit `S₅` ranks, self-delimiting instructions/programs,
-  exact decoding, injectivity, and explicit code-length bounds. The remaining
-  step is an `FL` instruction/code generator theorem targeting this format.
+  exact decoding, injectivity, and explicit code-length bounds.
+  `Circuits/FormulaEncoding` supplies the corresponding iterative postfix input
+  format, and `Circuits/BarringtonCodeGenerator` fixes the total bitstring
+  transformer `barringtonCompileCode`, proving generated-code decoding, exact
+  formula semantics, the `4 ^ depth` instruction bound, and serialized length
+  at most `4^depth + 1 + 4^depth * (inputCodeLength + 15)`. The remaining steps
+  are a verified log-space transducer realizing this function and the resulting
+  uniform family-level lift.
 
 **Formalization hazards.** Permutation multiplication order differs between texts
 and libraries; fix it with executable examples before proving the induction.
