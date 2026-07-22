@@ -100,6 +100,92 @@ theorem outputProbeIndexedPrepareTM_hoareTimeSpace
     out₀ hsource hcountdown hscratch hinput hwork houtput hworkSpace
     hinputSpace
 
+/-- A valid zero-based controller index is copied into the private query
+countdown and returns the corresponding source-output bit in the persistent
+framed latch. -/
+theorem ComputesInSpace.outputProbeIndexedLatchTM_hoareTimeSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (outerFrameSpace : ℕ)
+    (houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start)
+    (houterFrame : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace)
+    (sourceIdx scratchIdx : Fin controllerTapes)
+    (hdistinct : sourceIdx ≠ scratchIdx)
+    (initialSpace : ℕ)
+    (work₀ : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (hsource :
+      (work₀ (outputProbeIndexedControllerIdx n sourceIdx)).HasBinaryNat
+        index)
+    (hcountdown :
+      (work₀ (outputProbeIndexedCountdownIdx n
+        controllerTapes)).HasBinaryNat 0)
+    (hscratch :
+      (work₀ (outputProbeIndexedControllerIdx n scratchIdx)).HasBinaryNat 0)
+    (hinput : Parked
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input)
+    (hwork : ∀ i, Parked (work₀ i))
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace :
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input.head ≤
+        input.length + initialSpace + 1)
+    (hqueryWork : ∀ i,
+      i ≠ outputProbeIndexedCountdownIdx n controllerTapes →
+      work₀ i =
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras)).work i) :
+    ∃ latchTime,
+      (outputProbeIndexedLatchTM tm controllerTapes sourceIdx
+        scratchIdx).HoareTimeSpace
+          (fun inp work out =>
+            inp =
+                (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
+                  outerExtras
+                  (outputProbePlacedFrameCfg tm input
+                    (outputProbeCounterTape (index + 1)) output extras)).input ∧
+            work = work₀ ∧ out = output)
+          (outputProbeLatchFramePost tm controllerTapes outerExtras input
+            output extras ((f input)[index]'hindex))
+          (outputProbeIndexedPrepareTime index + 1 + latchTime)
+          input.length
+          (max (outputProbeIndexedPrepareSpace initialSpace index)
+            (max
+              (outputProbeConsumeSpace n (max 1 (space input.length)) index
+                frameSpace limit
+                (outputProbeLatchContinuationSpace
+                  ((f input)[index]'hindex) frameSpace))
+              outerFrameSpace)) :=
+  hcomp.outputProbeIndexedLatchTM_hoareTimeSpace_internal input index hindex
+    output houtput extras frameSpace limit hextras hframe hcleanupCounter
+    hcleanupLimit hlimit controllerTapes outerExtras outerFrameSpace
+    houterRead houterFrame sourceIdx scratchIdx hdistinct initialSpace work₀
+    hsource hcountdown hscratch hinput hwork hworkSpace hinputSpace hqueryWork
+
 /-- A zero-based index stored in a controller register selects one arbitrary
 source-output bit. Preparation preserves the register, writes the private
 one-based countdown, and composes with the total framed latch while retaining

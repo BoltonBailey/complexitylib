@@ -55,6 +55,7 @@ import Complexitylib.Models.TuringMachine.OutputBounds
 import Complexitylib.Models.TuringMachine.OutputCursor
 import Complexitylib.Models.TuringMachine.OutputProbe
 import Complexitylib.Models.TuringMachine.OutputProbeConsume
+import Complexitylib.Models.TuringMachine.OutputProbeDispatch
 import Complexitylib.Models.TuringMachine.OutputProbeLatch
 import Complexitylib.Models.TuringMachine.OutputProbeIndexed
 import Complexitylib.Models.TuringMachine.OutputProbeCleanup

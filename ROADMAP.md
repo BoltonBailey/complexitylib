@@ -1293,7 +1293,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   preparation with the total framed latch. The public contract preserves every
   non-countdown tape exactly and carries the combined all-prefix space bound,
   so `BinaryFor` clients can use a concrete machine register as their query
-  address.
+  address. `OutputProbeDispatch` now turns that persistent latch into a direct
+  full-controller Boolean branch: valid indices select the exact source bit,
+  parked frame seams are discharged once, and arbitrary zero/one continuations
+  inherit a compositional time/space contract. This is the reusable iteration
+  body boundary for the occupancy and serializer scans.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

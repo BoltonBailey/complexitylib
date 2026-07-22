@@ -189,6 +189,205 @@ theorem outputProbeIndexedPrepareTM_hoareTimeSpace_internal
     outputProbeIndexedPrepareSpace, source, countdown, scratch, copiedWork,
     max_eq_right (Nat.le_add_right _ _)] using hseq'
 
+private theorem outputProbeIndexedLatchTM_compose_internal
+    (tm : TM n) (input : List Bool) (index : ℕ)
+    (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (sourceIdx scratchIdx : Fin controllerTapes)
+    (hdistinct : sourceIdx ≠ scratchIdx)
+    (initialSpace : ℕ)
+    (work₀ : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (hsource :
+      (work₀ (outputProbeIndexedControllerIdx n sourceIdx)).HasBinaryNat
+        index)
+    (hcountdown :
+      (work₀ (outputProbeIndexedCountdownIdx n
+        controllerTapes)).HasBinaryNat 0)
+    (hscratch :
+      (work₀ (outputProbeIndexedControllerIdx n scratchIdx)).HasBinaryNat 0)
+    (hinput : Parked
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input)
+    (hwork : ∀ i, Parked (work₀ i))
+    (houtput : Parked output)
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace :
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input.head ≤
+        input.length + initialSpace + 1)
+    (hqueryWork : ∀ i,
+      i ≠ outputProbeIndexedCountdownIdx n controllerTapes →
+      work₀ i =
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras)).work i)
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {latchTime latchSpace : ℕ}
+    (hlatch : (outputProbeLatchTM tm controllerTapes).HoareTimeSpace
+      (placeWorkPred (outputProbeLatchInnerTM tm) 0 controllerTapes
+        outerExtras
+        (fun inp work out =>
+          inp = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).input ∧
+          work = (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (index + 1)) output extras).work ∧
+          out = output))
+      post latchTime input.length latchSpace) :
+    (outputProbeIndexedLatchTM tm controllerTapes sourceIdx
+      scratchIdx).HoareTimeSpace
+        (fun inp work out =>
+          inp =
+              (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
+                outerExtras
+                (outputProbePlacedFrameCfg tm input
+                  (outputProbeCounterTape (index + 1)) output extras)).input ∧
+          work = work₀ ∧ out = output)
+        post
+        (outputProbeIndexedPrepareTime index + 1 + latchTime)
+        input.length
+        (max (outputProbeIndexedPrepareSpace initialSpace index)
+          latchSpace) := by
+  let innerCfg := outputProbePlacedFrameCfg tm input
+    (outputProbeCounterTape (index + 1)) output extras
+  let queryCfg := placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
+    outerExtras innerCfg
+  let countdown := outputProbeIndexedCountdownIdx n controllerTapes
+  have hqueryCountdown :
+      (queryCfg.work countdown).HasBinaryNat (index + 1) := by
+    simpa [queryCfg, innerCfg, countdown] using
+      outputProbeIndexedFrameCountdown_internal tm controllerTapes
+        (index + 1) input output extras outerExtras
+  have hprepare :=
+    outputProbeIndexedPrepareTM_hoareTimeSpace_internal n controllerTapes
+      sourceIdx scratchIdx hdistinct index input.length initialSpace
+      queryCfg.input work₀ output hsource hcountdown hscratch (by
+        simpa [queryCfg, innerCfg] using hinput) hwork houtput hworkSpace (by
+        simpa [queryCfg, innerCfg] using hinputSpace)
+  have hseq := seqTM_hoareTimeSpace
+    (outputProbeIndexedPrepareTM n controllerTapes sourceIdx scratchIdx)
+    (outputProbeLatchTM tm controllerTapes) hprepare (by
+      rintro inp work out ⟨hinp, hother, hvalue, hout⟩
+      have hworkEq : work = queryCfg.work := by
+        funext i
+        by_cases hi : i = countdown
+        · subst i
+          exact hvalue.eq_init_move_right.trans
+            hqueryCountdown.eq_init_move_right.symm
+        · exact (hother i hi).trans (hqueryWork i (by
+            simpa [countdown] using hi))
+      have hworkParked : ∀ i, Parked (work i) := by
+        intro i
+        by_cases hi : i = countdown
+        · subst i
+          exact outputProbeIndexed_hasBinaryNat_parked hvalue
+        · rw [hother i hi]
+          exact hwork i
+      have htransitionWork :
+          (fun i => transitionTape (work i)) = work := by
+        funext i
+        exact (hworkParked i).transitionTape_eq_self
+      rw [(show Parked inp by rw [hinp]; simpa [queryCfg, innerCfg] using
+        hinput).transitionInput_eq_self, htransitionWork,
+        (show Parked out by rw [hout]; exact houtput).transitionTape_eq_self,
+        hinp, hworkEq, hout]
+      refine ⟨innerCfg.work, ?_, ?_⟩
+      · exact ⟨by simp [queryCfg, innerCfg], rfl, rfl⟩
+      · rfl) hlatch
+  simpa [outputProbeIndexedLatchTM, queryCfg, innerCfg, countdown] using hseq
+
+theorem ComputesInSpace.outputProbeIndexedLatchTM_hoareTimeSpace_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (frameSpace limit : ℕ)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hframe : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat limit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (index + 1) ≤ limit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (outerFrameSpace : ℕ)
+    (houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start)
+    (houterFrame : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace)
+    (sourceIdx scratchIdx : Fin controllerTapes)
+    (hdistinct : sourceIdx ≠ scratchIdx)
+    (initialSpace : ℕ)
+    (work₀ : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (hsource :
+      (work₀ (outputProbeIndexedControllerIdx n sourceIdx)).HasBinaryNat
+        index)
+    (hcountdown :
+      (work₀ (outputProbeIndexedCountdownIdx n
+        controllerTapes)).HasBinaryNat 0)
+    (hscratch :
+      (work₀ (outputProbeIndexedControllerIdx n scratchIdx)).HasBinaryNat 0)
+    (hinput : Parked
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input)
+    (hwork : ∀ i, Parked (work₀ i))
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace :
+      (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+        (outputProbePlacedFrameCfg tm input
+          (outputProbeCounterTape (index + 1)) output extras)).input.head ≤
+        input.length + initialSpace + 1)
+    (hqueryWork : ∀ i,
+      i ≠ outputProbeIndexedCountdownIdx n controllerTapes →
+      work₀ i =
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (index + 1)) output extras)).work i) :
+    ∃ latchTime,
+      (outputProbeIndexedLatchTM tm controllerTapes sourceIdx
+        scratchIdx).HoareTimeSpace
+          (fun inp work out =>
+            inp =
+                (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
+                  outerExtras
+                  (outputProbePlacedFrameCfg tm input
+                    (outputProbeCounterTape (index + 1)) output extras)).input ∧
+            work = work₀ ∧ out = output)
+          (outputProbeLatchFramePost tm controllerTapes outerExtras input
+            output extras ((f input)[index]'hindex))
+          (outputProbeIndexedPrepareTime index + 1 + latchTime)
+          input.length
+          (max (outputProbeIndexedPrepareSpace initialSpace index)
+            (max
+              (outputProbeConsumeSpace n (max 1 (space input.length)) index
+                frameSpace limit
+                (outputProbeLatchContinuationSpace
+                  ((f input)[index]'hindex) frameSpace))
+              outerFrameSpace)) := by
+  obtain ⟨latchTime, hlatch⟩ :=
+    hcomp.outputProbeLatchTM_hoareTimeSpace input index hindex output houtput
+      extras frameSpace limit hextras hframe hcleanupCounter hcleanupLimit
+      hlimit controllerTapes outerExtras outerFrameSpace houterRead houterFrame
+  refine ⟨latchTime, ?_⟩
+  exact outputProbeIndexedLatchTM_compose_internal tm input index output
+    extras controllerTapes outerExtras sourceIdx scratchIdx hdistinct
+    initialSpace work₀ hsource hcountdown hscratch hinput hwork houtput
+    hworkSpace hinputSpace hqueryWork hlatch
+
 theorem
     ComputesInSpace.outputProbeIndexedLatchTM_index_halts_hoareTimeSpace_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
@@ -266,59 +465,16 @@ theorem
                 frameSpace limit
                 (outputProbeLatchContinuationSpace bit frameSpace))
               outerFrameSpace)) := by
-  let innerCfg := outputProbePlacedFrameCfg tm input
-    (outputProbeCounterTape (index + 1)) output extras
-  let queryCfg := placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
-    outerExtras innerCfg
-  let countdown := outputProbeIndexedCountdownIdx n controllerTapes
-  have hqueryCountdown :
-      (queryCfg.work countdown).HasBinaryNat (index + 1) := by
-    simpa [queryCfg, innerCfg, countdown] using
-      outputProbeIndexedFrameCountdown_internal tm controllerTapes
-        (index + 1) input output extras outerExtras
-  have hprepare :=
-    outputProbeIndexedPrepareTM_hoareTimeSpace_internal n controllerTapes
-      sourceIdx scratchIdx hdistinct index input.length initialSpace
-      queryCfg.input work₀ output hsource hcountdown hscratch (by
-        simpa [queryCfg, innerCfg] using hinput) hwork houtput hworkSpace (by
-        simpa [queryCfg, innerCfg] using hinputSpace)
   obtain ⟨bit, latchTime, hlatch⟩ :=
     hcomp.outputProbeLatchTM_index_halts_hoareTimeSpace input index output
       houtput extras frameSpace limit hextras hframe hcleanupCounter
       hcleanupLimit hlimit controllerTapes outerExtras outerFrameSpace
       houterRead houterFrame
-  have hseq := seqTM_hoareTimeSpace
-    (outputProbeIndexedPrepareTM n controllerTapes sourceIdx scratchIdx)
-    (outputProbeLatchTM tm controllerTapes) hprepare (by
-      rintro inp work out ⟨hinp, hother, hvalue, hout⟩
-      have hworkEq : work = queryCfg.work := by
-        funext i
-        by_cases hi : i = countdown
-        · subst i
-          exact hvalue.eq_init_move_right.trans
-            hqueryCountdown.eq_init_move_right.symm
-        · exact (hother i hi).trans (hqueryWork i (by
-            simpa [countdown] using hi))
-      have hworkParked : ∀ i, Parked (work i) := by
-        intro i
-        by_cases hi : i = countdown
-        · subst i
-          exact outputProbeIndexed_hasBinaryNat_parked hvalue
-        · rw [hother i hi]
-          exact hwork i
-      have htransitionWork :
-          (fun i => transitionTape (work i)) = work := by
-        funext i
-        exact (hworkParked i).transitionTape_eq_self
-      rw [(show Parked inp by rw [hinp]; simpa [queryCfg, innerCfg] using
-        hinput).transitionInput_eq_self, htransitionWork,
-        (show Parked out by rw [hout]; exact houtput).transitionTape_eq_self,
-        hinp, hworkEq, hout]
-      refine ⟨innerCfg.work, ?_, ?_⟩
-      · exact ⟨by simp [queryCfg, innerCfg], rfl, rfl⟩
-      · rfl) hlatch
   refine ⟨bit, latchTime, ?_⟩
-  simpa [outputProbeIndexedLatchTM, queryCfg, innerCfg, countdown] using hseq
+  exact outputProbeIndexedLatchTM_compose_internal tm input index output
+    extras controllerTapes outerExtras sourceIdx scratchIdx hdistinct
+    initialSpace work₀ hsource hcountdown hscratch hinput hwork houtput
+    hworkSpace hinputSpace hqueryWork hlatch
 
 theorem outputProbeIndexedPrepareTM_isTransducer_internal
     (n controllerTapes : ℕ)
