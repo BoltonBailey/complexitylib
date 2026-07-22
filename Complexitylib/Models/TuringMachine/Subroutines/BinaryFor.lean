@@ -27,6 +27,8 @@ limit, or tape frames. Clients record those endpoint facts in
 - `binaryForTM_compare_reachesIn_frame` gives the exact framed comparison.
 - `BinaryForLoopSpec.reachesIn` composes a certified loop exactly.
 - `BinaryForLoopSpaceSpec.prefix_withinAuxSpace` covers every run prefix.
+- `BinaryForSegmentSpec.reachesIn` accepts bounded actual iteration times.
+- `BinaryForSegmentSpaceSpec.prefix_withinAuxSpace` covers segment prefixes.
 - `IsTransducer.binaryForTM` preserves one-way output safety.
 -/
 
@@ -162,6 +164,40 @@ theorem BinaryForLoopSpaceSpec.prefix_withinAuxSpace
     (htime : t ≤ binaryForLoopTime bodyTime limitValue value count) :
     c.WithinAuxSpace inputLength spaceBound :=
   spaceSpec.prefix_withinAuxSpace_internal count value t c hlimit hreach htime
+
+/-- A bounded reachable-segment certificate terminates within the standard
+recursive binary-loop bound. Iteration witnesses may finish strictly before
+their advertised body-time bounds. -/
+theorem BinaryForSegmentSpec.reachesIn {body : TM n}
+    {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue : ℕ}
+    (spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue)
+    (count value : ℕ) (hstart : startValue ≤ value)
+    (hlimit : value + count = limitValue) :
+    ∃ time, time ≤ binaryForLoopTime bodyTime limitValue value count ∧
+      (binaryForTM body counterIdx limitIdx).reachesIn time
+        (spec.scanCfg value) spec.doneCfg :=
+  spec.reachesIn_internal count value hstart hlimit
+
+/-- Phase-local segment bounds cover every reachable prefix of the whole
+count-up loop, including iterations that halt before their advertised bound. -/
+theorem BinaryForSegmentSpaceSpec.prefix_withinAuxSpace
+    {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue inputLength spaceBound : ℕ}
+    {spec : BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue}
+    (spaceSpec : BinaryForSegmentSpaceSpec spec inputLength spaceBound)
+    (count value time : ℕ)
+    (cfg : Cfg n (binaryForTM body counterIdx limitIdx).Q)
+    (hstart : startValue ≤ value)
+    (hlimit : value + count = limitValue)
+    (hreach : (binaryForTM body counterIdx limitIdx).reachesIn time
+      (spec.scanCfg value) cfg)
+    (htime : time ≤ binaryForLoopTime bodyTime limitValue value count) :
+    cfg.WithinAuxSpace inputLength spaceBound :=
+  spaceSpec.prefix_withinAuxSpace_internal count value time cfg hstart
+    hlimit hreach htime
 
 /-- A binary count-up loop preserves the body's one-way-output discipline. -/
 theorem IsTransducer.binaryForTM {body : TM n}

@@ -1301,6 +1301,10 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   reuses the already-canonical zero frame; both branches therefore reestablish
   the identical restart invariant with explicit clearing cost. This is the
   reusable iteration body boundary for the occupancy and serializer scans.
+  The bounded-runtime `BinaryForSegmentSpec` and its all-prefix companion have
+  now moved from the experimental routine adapter to the public `BinaryFor`
+  API, so source-dependent probe runtimes can be selected existentially per
+  address while remaining under one advertised loop bound.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
