@@ -9,6 +9,7 @@ import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbeToken
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotBranch
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotCapture
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotPosition
+import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotStep
 
 /-!
 # Machine emission of branching-program codes

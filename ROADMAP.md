@@ -1416,9 +1416,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   cells, advances its canonical counter exactly to `fuel`, and carries the
   all-prefix bound `initialSpace + 2 * fuel + 2 * fuel.size + 6` rather than a
   time-derived quadratic bound. Positioned canonical cells are also proved to
-  expose exactly `Nat.testBit`, including implicit blank high bits. The next
-  machine seam is to compose positioning, capture, and the four-way branch,
-  then wire that controller into the three recursive connective cases.
+  expose exactly `Nat.testBit`, including implicit blank high bits. Positioning
+  and the three-transition adjacent-bit capture now compose into one public
+  exact contract, and the resulting raw bits feed the four-way dispatcher and
+  any selected continuation. The end-to-end branch retains the tight
+  positioning-plus-three all-prefix budget, adds exactly the two dispatch
+  transitions, and remains one-way on output. The next machine seam is to wire
+  that controller into the three recursive connective cases, including child-
+  span recovery and the finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
