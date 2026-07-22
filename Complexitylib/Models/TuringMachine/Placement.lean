@@ -18,6 +18,8 @@ are parked away from the left-end marker.
 
 - `TM.placeWorkTM_step_placeWorkCfg` — exact step with an evolving frame
 - `TM.placeWorkTM_reachesIn_placeWorkCfg_stable` — exact stable-frame simulation
+- `TM.placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace` — stable-frame
+  simulation preserving all-prefix space bounds
 - `TM.placeWorkTM_reachesIn_placeWorkParkedCfg` — canonical parked simulation
 - `TM.placeWorkTM_computesInTime` — same-time preservation of computation
 -/
@@ -69,6 +71,29 @@ theorem placeWorkTM_reachesIn_placeWorkCfg_stable (tm : TM n)
       (placeWorkCfg tm pre post extras c)
       (placeWorkCfg tm pre post extras c') :=
   placeWorkTM_reachesIn_placeWorkCfg_stable_internal tm pre post extras hreach hextra
+
+/-- A stable placement preserves an all-prefix source-space certificate while
+charging the surrounding controller frame only for its largest head. -/
+theorem placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace
+    (tm : TM n) (pre post : ℕ)
+    (extras : Fin (pre + n + post) → Tape)
+    {t inputLength sourceSpace frameSpace : ℕ} {c c' : Cfg n tm.Q}
+    (hreach : tm.reachesIn t c c')
+    (hextra : ∀ i, ¬placeWorkInMiddle pre n i → (extras i).read ≠ Γ.start)
+    (hsource : ∀ elapsed cfg, elapsed ≤ t →
+      tm.reachesIn elapsed c cfg →
+      cfg.WithinAuxSpace inputLength sourceSpace)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre n i →
+      (extras i).head ≤ frameSpace) :
+    (placeWorkTM pre post tm).reachesIn t
+        (placeWorkCfg tm pre post extras c)
+        (placeWorkCfg tm pre post extras c') ∧
+      ∀ elapsed cfg, elapsed ≤ t →
+        (placeWorkTM pre post tm).reachesIn elapsed
+          (placeWorkCfg tm pre post extras c) cfg →
+        cfg.WithinAuxSpace inputLength (max sourceSpace frameSpace) :=
+  placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
+    tm pre post extras hreach hextra hsource hframe
 
 /-- Start-invariant positive-head extras remain an exact frame throughout a
 bounded source run. -/

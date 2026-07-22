@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Placement.Defs
 import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.SpaceTime.Internal.Reachability
 
 /-!
 # Work-tape placement correctness internals
@@ -117,6 +118,55 @@ theorem placeWorkTM_reachesIn_placeWorkCfg_stable_internal (tm : TM n)
       rw [placeWorkTM_step_placeWorkCfg_stable_internal tm pre post extras _ hextra,
         hstep]
       rfl) ih
+
+/-- An all-prefix source-space certificate lifts through a stable placement.
+The placed source tapes use `sourceSpace`; the preserved surrounding frame
+uses `frameSpace`, so the combined machine uses their maximum. -/
+theorem placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
+    (tm : TM n) (pre post : ℕ)
+    (extras : Fin (pre + n + post) → Tape)
+    {t inputLength sourceSpace frameSpace : ℕ} {c c' : Cfg n tm.Q}
+    (hreach : tm.reachesIn t c c')
+    (hextra : ∀ i, ¬placeWorkInMiddle pre n i → (extras i).read ≠ Γ.start)
+    (hsource : ∀ elapsed cfg, elapsed ≤ t →
+      tm.reachesIn elapsed c cfg →
+      cfg.WithinAuxSpace inputLength sourceSpace)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre n i →
+      (extras i).head ≤ frameSpace) :
+    (placeWorkTM pre post tm).reachesIn t
+        (placeWorkCfg tm pre post extras c)
+        (placeWorkCfg tm pre post extras c') ∧
+      ∀ elapsed cfg, elapsed ≤ t →
+        (placeWorkTM pre post tm).reachesIn elapsed
+          (placeWorkCfg tm pre post extras c) cfg →
+        cfg.WithinAuxSpace inputLength (max sourceSpace frameSpace) := by
+  refine ⟨placeWorkTM_reachesIn_placeWorkCfg_stable_internal
+    tm pre post extras hreach hextra, ?_⟩
+  intro elapsed cfg helapsed hplaced
+  have hlength : elapsed + (t - elapsed) = t :=
+    Nat.add_sub_of_le helapsed
+  rw [← hlength] at hreach
+  obtain ⟨sourceMid, hsourceMid, _hsourceRest⟩ :=
+    reachesIn_split_internal hreach
+  have hplacedMid := placeWorkTM_reachesIn_placeWorkCfg_stable_internal
+    tm pre post extras hsourceMid hextra
+  have hcfg : cfg = placeWorkCfg tm pre post extras sourceMid :=
+    (placeWorkTM pre post tm).reachesIn_right_unique hplaced hplacedMid
+  subst cfg
+  have hmidBound := hsource elapsed sourceMid helapsed hsourceMid
+  constructor
+  · intro i
+    by_cases hmid : placeWorkInMiddle pre n i
+    · let j := placeWorkCoord pre n i hmid
+      have hindex : placeWorkIdx pre post j = i :=
+        placeWorkIdx_placeWorkCoord i hmid
+      rw [← hindex, placeWorkCfg_work_middle]
+      exact le_trans (hmidBound.1 j) (le_max_left _ _)
+    · rw [placeWorkCfg_work_extra tm pre post extras sourceMid i hmid]
+      exact le_trans (hframe i hmid) (le_max_right _ _)
+  · exact le_trans hmidBound.2 (by
+      have := le_max_left sourceSpace frameSpace
+      omega)
 
 /-- The canonical parked frame is fixed by a placed source step. -/
 theorem placeWorkTM_step_placeWorkParkedCfg_internal (tm : TM n) (pre post : ℕ)

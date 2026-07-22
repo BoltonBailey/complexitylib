@@ -58,6 +58,8 @@ the requested position occupies only its binary width.
   with the captured bit redirected to a fresh work tape.
 - `TM.ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace` --
   the retargeted query with all physical work tapes covered by the bound.
+- `TM.ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace`
+  -- the same query inside an arbitrary stable controller-tape frame.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
   countdown selects the finalized bit for capture.
 - `TM.outputProbeTM_capture_hasOutput` -- capture reaches the unique halt state
@@ -497,6 +499,46 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
             (index + 1)) :=
   hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
     input index hindex
+
+/-- Place a restartable retargeted query between persistent controller tapes.
+The stable frame is preserved exactly, its largest head is charged alongside
+the query budget, and the captured bit remains available at the corresponding
+physical work-tape index. -/
+theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (pre post : ℕ)
+    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (extras : Fin (pre + (n + 2) + post) → Tape)
+    {frameSpace : ℕ}
+    (hextra : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).head ≤ frameSpace) :
+    let queryTM := (outputProbeStartedTM tm).retargetOutput
+    let start := (outputProbeStartedTM tm).retargetCfg
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1)))
+    ∃ probeSteps done,
+      (placeWorkTM pre post queryTM).reachesIn probeSteps
+        (placeWorkCfg queryTM pre post extras start)
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (placeWorkTM pre post queryTM).halted
+        (placeWorkCfg queryTM pre post extras done) ∧
+      ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput
+          [(f input)[index]'hindex] ∧
+      (placeWorkCfg queryTM pre post extras done).output =
+        (Tape.init []).move Dir3.right ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (placeWorkTM pre post queryTM).reachesIn elapsed
+          (placeWorkCfg queryTM pre post extras start) cfg →
+        cfg.WithinAuxSpace input.length
+          (max
+            (outputProbeCaptureSpace (max 1 (space input.length))
+              (index + 1))
+            frameSpace) :=
+  hcomp.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
+    pre post input index hindex extras hextra hframe
 
 end TM
 

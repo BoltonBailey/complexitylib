@@ -8,6 +8,7 @@ import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
 import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Lift
+import Complexitylib.Models.TuringMachine.Placement.Internal
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 
@@ -1864,6 +1865,57 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_internal
     hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
       input index hindex
   exact ⟨probeSteps, done, hreach, hhalt, hout, houtput⟩
+
+/-- A restartable retargeted output query can run inside an arbitrary stable
+controller frame. The exact source endpoint is embedded back into that frame,
+the captured bit is exposed at its physical placed tape, and every prefix uses
+at most the maximum of the query and frame budgets. -/
+theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (pre post : ℕ)
+    (input : List Bool) (index : ℕ) (hindex : index < (f input).length)
+    (extras : Fin (pre + (n + 2) + post) → Tape)
+    {frameSpace : ℕ}
+    (hextra : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).read ≠ Γ.start)
+    (hframe : ∀ i, ¬placeWorkInMiddle pre (n + 2) i →
+      (extras i).head ≤ frameSpace) :
+    let queryTM := (outputProbeStartedTM tm).retargetOutput
+    let start := (outputProbeStartedTM tm).retargetCfg
+      (outputProbeStartedCfg tm input
+        (outputProbeCounterTape (index + 1)))
+    ∃ probeSteps done,
+      (placeWorkTM pre post queryTM).reachesIn probeSteps
+        (placeWorkCfg queryTM pre post extras start)
+        (placeWorkCfg queryTM pre post extras done) ∧
+      (placeWorkTM pre post queryTM).halted
+        (placeWorkCfg queryTM pre post extras done) ∧
+      ((placeWorkCfg queryTM pre post extras done).work
+        (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput
+          [(f input)[index]'hindex] ∧
+      (placeWorkCfg queryTM pre post extras done).output =
+        (Tape.init []).move Dir3.right ∧
+      ∀ elapsed cfg, elapsed ≤ probeSteps →
+        (placeWorkTM pre post queryTM).reachesIn elapsed
+          (placeWorkCfg queryTM pre post extras start) cfg →
+        cfg.WithinAuxSpace input.length
+          (max
+            (outputProbeCaptureSpace (max 1 (space input.length))
+              (index + 1))
+            frameSpace) := by
+  dsimp only
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, houtput, hprefix⟩ :=
+    hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
+      input index hindex
+  obtain ⟨hplaced, hplacedPrefix⟩ :=
+    placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
+      ((outputProbeStartedTM tm).retargetOutput) pre post extras hreach
+      hextra hprefix hframe
+  refine ⟨probeSteps, done, hplaced, ?_, ?_, ?_, hplacedPrefix⟩
+  · exact hhalt
+  · rw [placeWorkCfg_work_middle]
+    exact hout
+  · simpa only [placeWorkCfg_output] using houtput
 
 end TM
 

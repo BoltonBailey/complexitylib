@@ -1229,7 +1229,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   slots recovers the reference compiler byte-for-byte, and counting occupied
   slots recovers its exact instruction count. This removes recursive child-
   length arithmetic from the machine controller while keeping its output
-  unchanged.
+  unchanged. `Circuits/BarringtonSlotQuery` now gives target-independent
+  structural recurrences for the first and last occupied addresses and a
+  direct query that follows only the selected base-four block; every queried
+  slot is proved equal to the list-valued fixed schedule, including the
+  inverse-block and postmultiplication transformations used by negation,
+  conjunction, and disjunction.
   `FormulaEncoding/Navigation` supplies its stack-free postfix tree primitive:
   a backwards owed-subtree scan recovers exact child spans using one cursor and
   one counter. The remaining construction is the concrete controller that
