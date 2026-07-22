@@ -252,6 +252,13 @@ theorem placeWorkTM_computesInTime_internal (tm : TM n) (pre post : ℕ)
   · rw [houtput]
     exact hout
 
+theorem IsTransducer.placeWorkTM_internal {tm : TM n}
+    (htrans : tm.IsTransducer) (pre post : ℕ) :
+    (placeWorkTM pre post tm).IsTransducer := by
+  intro state inputHead workHeads outputHead
+  simpa only [placeWorkTM] using htrans state inputHead
+    (fun i => workHeads (placeWorkIdx pre post i)) outputHead
+
 end TM
 
 end Complexity

@@ -18,28 +18,40 @@ namespace Complexity
 
 namespace TM
 
+/-- Syntactic work-tape arity of a retargeted `n`-tape probe placed before its
+two cleanup tapes. This expression is propositionally equal to `n + 4`; its
+placement-normal form avoids casts in controller compositions. -/
+abbrev outputProbeControllerTapes (n : ℕ) : ℕ :=
+  0 + (n + 1 + 1) + 2
+
 /-- Embed one source work index in the full cleanup frame. -/
-def outputProbeCleanupSourceIdx {n : ℕ} (idx : Fin n) : Fin (n + 4) :=
-  ⟨idx, by omega⟩
+def outputProbeCleanupSourceIdx {n : ℕ} (idx : Fin n) :
+    Fin (outputProbeControllerTapes n) :=
+  ⟨idx, by dsimp only [outputProbeControllerTapes]; omega⟩
 
 /-- Physical query-countdown index. -/
-def outputProbeCleanupCountdownIdx (n : ℕ) : Fin (n + 4) :=
-  ⟨n, by omega⟩
+def outputProbeCleanupCountdownIdx (n : ℕ) :
+    Fin (outputProbeControllerTapes n) :=
+  ⟨n, by dsimp only [outputProbeControllerTapes]; omega⟩
 
 /-- Physical captured-bit index. -/
-def outputProbeCleanupCaptureIdx (n : ℕ) : Fin (n + 4) :=
-  ⟨n + 1, by omega⟩
+def outputProbeCleanupCaptureIdx (n : ℕ) :
+    Fin (outputProbeControllerTapes n) :=
+  ⟨n + 1, by dsimp only [outputProbeControllerTapes]; omega⟩
 
 /-- Reusable zero counter used by sparse-prefix cleanup. -/
-def outputProbeCleanupCounterIdx (n : ℕ) : Fin (n + 4) :=
-  ⟨n + 2, by omega⟩
+def outputProbeCleanupCounterIdx (n : ℕ) :
+    Fin (outputProbeControllerTapes n) :=
+  ⟨n + 2, by dsimp only [outputProbeControllerTapes]; omega⟩
 
 /-- Preserved binary cleanup limit. -/
-def outputProbeCleanupLimitIdx (n : ℕ) : Fin (n + 4) :=
-  ⟨n + 3, by omega⟩
+def outputProbeCleanupLimitIdx (n : ℕ) :
+    Fin (outputProbeControllerTapes n) :=
+  ⟨n + 3, by dsimp only [outputProbeControllerTapes]; omega⟩
 
 /-- Source scratch tapes followed by the captured-bit tape. -/
-def outputProbeCleanupTargets (n : ℕ) : List (Fin (n + 4)) :=
+def outputProbeCleanupTargets (n : ℕ) :
+    List (Fin (outputProbeControllerTapes n)) :=
   List.ofFn outputProbeCleanupSourceIdx ++ [outputProbeCleanupCaptureIdx n]
 
 /-- Literal input tape after rewinding to the first ordinary cell. -/
@@ -48,21 +60,21 @@ def outputProbeRewoundInput (tape : Tape) : Tape where
   cells := tape.cells
 
 /-- Rewind the shared input, then reset every dirty probe-owned work tape. -/
-def outputProbeCleanupTM (n : ℕ) : TM (n + 4) :=
+def outputProbeCleanupTM (n : ℕ) : TM (outputProbeControllerTapes n) :=
   seqTM rewindInputTM
     (rewindBlankWorkPrefixManyTM (outputProbeCleanupCounterIdx n)
       (outputProbeCleanupLimitIdx n) (outputProbeCleanupTargets n))
 
 /-- Exact cleanup runtime. -/
 def outputProbeCleanupTime (n inputHeadBound limit : ℕ)
-    (headBound : Fin (n + 4) → ℕ) : ℕ :=
+    (headBound : Fin (outputProbeControllerTapes n) → ℕ) : ℕ :=
   inputHeadBound + 2 + 1 +
     rewindBlankWorkPrefixManyTime headBound limit
       (outputProbeCleanupTargets n)
 
 /-- All-prefix cleanup space envelope. -/
 def outputProbeCleanupSpace (n initialSpace limit : ℕ)
-    (headBound : Fin (n + 4) → ℕ) : ℕ :=
+    (headBound : Fin (outputProbeControllerTapes n) → ℕ) : ℕ :=
   max initialSpace
     (rewindBlankWorkPrefixManySpace initialSpace headBound limit
       (outputProbeCleanupTargets n))

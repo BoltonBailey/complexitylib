@@ -34,8 +34,9 @@ theorem outputProbeCleanupCaptureIdx_mem (n : ℕ) :
 all-prefix auxiliary-space envelope. -/
 theorem outputProbeCleanupTM_hoareTimeSpace_frame
     (n inputHeadBound limit inputLength initialSpace : ℕ)
-    (headBound : Fin (n + 4) → ℕ)
-    (inp₀ : Tape) (work₀ : Fin (n + 4) → Tape) (out₀ : Tape)
+    (headBound : Fin (outputProbeControllerTapes n) → ℕ)
+    (inp₀ : Tape)
+    (work₀ : Fin (outputProbeControllerTapes n) → Tape) (out₀ : Tape)
     (hinputInvariant : inp₀.StartInvariant) (hinput : Parked inp₀)
     (hinputHead : inp₀.head ≤ inputHeadBound)
     (hwork : ∀ i, Parked (work₀ i))

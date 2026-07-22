@@ -155,6 +155,12 @@ theorem placeWorkTM_computesInTime (tm : TM n) (pre post : ℕ)
     (placeWorkTM pre post tm).ComputesInTime f T :=
   placeWorkTM_computesInTime_internal tm pre post hcomp
 
+/-- Work-tape placement leaves the source output action unchanged. -/
+theorem IsTransducer.placeWorkTM {tm : TM n} (htrans : tm.IsTransducer)
+    (pre post : ℕ) :
+    (placeWorkTM pre post tm).IsTransducer :=
+  htrans.placeWorkTM_internal pre post
+
 end TM
 
 end Complexity

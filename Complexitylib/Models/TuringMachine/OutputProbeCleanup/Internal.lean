@@ -43,7 +43,8 @@ theorem outputProbeCleanupCaptureIdx_mem_internal (n : ℕ) :
   simp [outputProbeCleanupTargets]
 
 theorem outputProbeCleanupTarget_lt_counter_internal {n : ℕ}
-    {idx : Fin (n + 4)} (hidx : idx ∈ outputProbeCleanupTargets n) :
+    {idx : Fin (outputProbeControllerTapes n)}
+    (hidx : idx ∈ outputProbeCleanupTargets n) :
     idx.val < (outputProbeCleanupCounterIdx n).val := by
   rw [outputProbeCleanupTargets, List.mem_append] at hidx
   rcases hidx with hsource | hcapture
@@ -56,7 +57,8 @@ theorem outputProbeCleanupTarget_lt_counter_internal {n : ℕ}
     simp [outputProbeCleanupCaptureIdx, outputProbeCleanupCounterIdx]
 
 theorem outputProbeCleanupTarget_distinct_internal {n : ℕ}
-    {idx : Fin (n + 4)} (hidx : idx ∈ outputProbeCleanupTargets n) :
+    {idx : Fin (outputProbeControllerTapes n)}
+    (hidx : idx ∈ outputProbeCleanupTargets n) :
     BlankWorkPrefixDistinct idx (outputProbeCleanupCounterIdx n)
       (outputProbeCleanupLimitIdx n) := by
   have hlt := outputProbeCleanupTarget_lt_counter_internal hidx
@@ -79,8 +81,9 @@ private theorem outputProbeRewoundInput_parked (tape : Tape)
 
 theorem outputProbeCleanupTM_hoareTimeSpace_frame_internal
     (n inputHeadBound limit inputLength initialSpace : ℕ)
-    (headBound : Fin (n + 4) → ℕ)
-    (inp₀ : Tape) (work₀ : Fin (n + 4) → Tape) (out₀ : Tape)
+    (headBound : Fin (outputProbeControllerTapes n) → ℕ)
+    (inp₀ : Tape)
+    (work₀ : Fin (outputProbeControllerTapes n) → Tape) (out₀ : Tape)
     (hinputInvariant : inp₀.StartInvariant) (hinput : Parked inp₀)
     (hinputHead : inp₀.head ≤ inputHeadBound)
     (hwork : ∀ i, Parked (work₀ i))
@@ -109,7 +112,8 @@ theorem outputProbeCleanupTM_hoareTimeSpace_frame_internal
   have hrewindBase := rewindInputTM_hoareTimeSpace_frame inputHeadBound
     inputLength initialSpace inp₀ work₀ out₀ hinputInvariant hinput
     hinputHead hwork houtput hworkSpace hinputSpace
-  have hrewind : (rewindInputTM (n := n + 4)).HoareTimeSpace
+  have hrewind :
+      (rewindInputTM (n := outputProbeControllerTapes n)).HoareTimeSpace
       (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
       (fun inp work out => inp = inp₁ ∧ work = work₀ ∧ out = out₀)
       (inputHeadBound + 2) inputLength initialSpace :=
@@ -129,7 +133,8 @@ theorem outputProbeCleanupTM_hoareTimeSpace_frame_internal
     (fun _ hi => outputProbeCleanupTarget_distinct_internal hi)
     htargetInvariant htargetHead hinput₁ hwork hcounter hlimit houtput
     hworkSpace (by simp [inp₁, outputProbeRewoundInput])
-  have hseq := seqTM_hoareTimeSpace (rewindInputTM (n := n + 4)) cleanup
+  have hseq := seqTM_hoareTimeSpace
+    (rewindInputTM (n := outputProbeControllerTapes n)) cleanup
     hrewind (by
       rintro inp work out ⟨rfl, rfl, rfl⟩
       exact ⟨hinput₁.transitionInput_eq_self,
@@ -141,7 +146,8 @@ theorem outputProbeCleanupTM_hoareTimeSpace_frame_internal
 theorem outputProbeCleanupTM_isTransducer_internal (n : ℕ) :
     (outputProbeCleanupTM n).IsTransducer := by
   unfold outputProbeCleanupTM
-  exact (rewindInputTM_isTransducer (n := n + 4)).seqTM
+  exact (rewindInputTM_isTransducer
+      (n := outputProbeControllerTapes n)).seqTM
     (rewindBlankWorkPrefixManyTM_isTransducer
       (outputProbeCleanupCounterIdx n) (outputProbeCleanupLimitIdx n)
       (outputProbeCleanupTargets n))

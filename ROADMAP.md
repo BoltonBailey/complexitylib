@@ -1265,10 +1265,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   placement in a larger controller frame, and give an exact blank-support bound
   for every query-owned tape. `OutputProbeCleanup` combines an exact-space input
   rewind with the fixed-list reset to restore the source and capture tapes while
-  preserving the controller frame. The remaining construction is the concrete
-  controller that reads each captured bit before cleanup and iterates these
-  verified oracle recurrences through the two serializer scans, together with
-  its all-prefix logarithmic-space proof.
+  preserving the controller frame. `OutputProbeConsume` now supplies the
+  concrete restartable controller step: it reads the captured bit before
+  cleanup, restores the exact canonical frame, dispatches to the matching
+  continuation, and carries an explicit all-prefix space maximum through the
+  whole query-consume-reset sequence. The remaining construction is to iterate
+  these verified controller steps through the oracle recurrences and the two
+  serializer scans, together with the resulting logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
