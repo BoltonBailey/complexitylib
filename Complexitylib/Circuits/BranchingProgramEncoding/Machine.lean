@@ -6,10 +6,11 @@ Authors: Samuel Schlesinger
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.Instr
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbe
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbeToken
+import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotBranch
 
 /-!
 # Machine emission of branching-program codes
 
 Concrete serializer leaves for the canonical width-five branching-program
-encoding.
+encoding, together with the two-bit recursive slot dispatcher.
 -/

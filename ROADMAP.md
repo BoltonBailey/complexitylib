@@ -1398,9 +1398,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   into its current base-four block and remaining local slot, and toggles only
   that bit when descent enters an inverse block. Its branch equations identify
   right-child and inverse-block selection with the two corresponding binary
-  address bits xor that reflection flag. The next machine layer probes those
-  two bits and turns the cursor invariant into the concrete recursive
-  connective dispatcher.
+  address bits xor that reflection flag. The four-way machine dispatcher over
+  two captured canonical bit tapes is now concrete, costs exactly two framed
+  transitions beyond its selected continuation, preserves the continuation's
+  all-prefix space budget, and is one-way on output. Its raw-bit continuation
+  is proved equal to the cursor's semantic branch. The next machine seam is to
+  position and capture those two bits from the preserved binary slot address,
+  then wire the resulting branch into the three recursive connective cases.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
