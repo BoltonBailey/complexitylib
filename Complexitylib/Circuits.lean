@@ -9,6 +9,7 @@ import Complexitylib.Circuits.DecisionTree
 import Complexitylib.Circuits.Formula
 import Complexitylib.Circuits.FormulaEncoding
 import Complexitylib.Circuits.FormulaEncoding.Navigation
+import Complexitylib.Circuits.FormulaEncoding.BitNavigation
 import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
 import Complexitylib.Circuits.BranchingProgram
@@ -22,6 +23,8 @@ import Complexitylib.Circuits.BarringtonStreaming
 import Complexitylib.Circuits.BarringtonSlots
 import Complexitylib.Circuits.BarringtonSlotQuery
 import Complexitylib.Circuits.BarringtonTokenQuery
+import Complexitylib.Circuits.BarringtonBitQuery
+import Complexitylib.Circuits.BarringtonBitSerializer
 import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
@@ -111,7 +114,10 @@ convention.
   while `barringtonCompileSlot?_eq_instruction?` follows one branch of the
   fixed `4^D` address schedule and returns exactly its selected instruction,
   while `barringtonCompileTokensSlot?_eq_instruction?` carries that query over
-  canonical postfix tokens using stack-free child-span recovery.
+  canonical postfix tokens using stack-free child-span recovery, and
+  `barringtonCompileBitsSlot?_eq_instruction?` performs the same query directly
+  over canonical encoded formula bits. `barringtonCompileBitsCode_eq` then
+  proves the fixed-address two-pass serializer emits the exact canonical code.
   `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
   total-assignment view of an actual typed `NC1` circuit family.
 
@@ -143,6 +149,10 @@ Public modules (definitions a reviewer should read):
   addresses and exact direct lookup in that fixed schedule
 * `Complexitylib.Circuits.BarringtonTokenQuery` — the same exact fixed-slot
   query over canonical postfix token streams, without reconstructing a formula
+* `Complexitylib.Circuits.BarringtonBitQuery` — the fixed-slot query directly
+  over canonical encoded formula bits, with bit-level child-span recovery
+* `Complexitylib.Circuits.BarringtonBitSerializer` — exact two-pass canonical
+  serialization by scanning the fixed encoded-bit address schedule
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level

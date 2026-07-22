@@ -1241,10 +1241,17 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   recurrence from inductive formulas to canonical postfix token streams:
   binary child spans are recovered by that backwards scan, and every token-
   stream query is proved equal to the reference compiler's selected
-  instruction. The remaining construction is the concrete bit-level controller
-  that composes restartable probes to realize this traversal and serializes
-  each selected instruction, together with its all-prefix logarithmic-space
-  proof.
+  instruction. `FormulaEncoding/BitNavigation` now implements exact random
+  access and subtree scans over the canonical framed bits themselves, including
+  child-span recovery inside arbitrary token context. `BarringtonBitQuery`
+  follows the selected base-four address directly over those bits and proves
+  every result equals the fixed-slot compiler. `BarringtonBitSerializer` fixes
+  the complete two-pass output algorithm: scan all `4^D` addresses to obtain
+  the exact instruction count, then erase empty addresses and emit the canonical
+  program code; under the promised depth bound its output is byte-for-byte the
+  executable Barrington compiler's code. The remaining construction is the
+  concrete machine that composes restartable source-code probes to implement
+  these scans, together with its all-prefix logarithmic-space proof.
   Finally,
   `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
   uniform theorem to the single named obligation
