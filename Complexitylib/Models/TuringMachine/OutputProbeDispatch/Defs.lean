@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch.Defs
 import Complexitylib.Models.TuringMachine.OutputProbeIndexed.Defs
+import Complexitylib.Models.TuringMachine.Subroutines.ClearWork.Defs
 
 /-!
 # Dynamically indexed output-probe dispatch -- definitions
@@ -35,6 +36,24 @@ def outputProbeIndexedDispatchTM (tm : TM n) (controllerTapes : ℕ)
     TM (0 + outputProbeControllerTapes n + controllerTapes) :=
   seqTM (outputProbeIndexedLatchTM tm controllerTapes sourceIdx scratchIdx)
     (outputProbeLatchDispatchTM n controllerTapes onZero onOne)
+
+/-- Dispatch on the physical latch after normalizing the selected branch to a
+canonical zero latch. The false branch is already clean; the true branch first
+clears its one-bit latch and then enters `onOne`. -/
+def outputProbeLatchResetDispatchTM (n controllerTapes : ℕ)
+    (onZero onOne : TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  outputProbeLatchDispatchTM n controllerTapes onZero
+    (seqTM (clearWorkTM (outputProbeLatchIdx n controllerTapes)) onOne)
+
+/-- Dynamically query one source-output position and enter the selected outer
+continuation with the query latch reset to canonical zero. -/
+def outputProbeIndexedResetDispatchTM (tm : TM n) (controllerTapes : ℕ)
+    (sourceIdx scratchIdx : Fin controllerTapes)
+    (onZero onOne : TM (0 + outputProbeControllerTapes n + controllerTapes)) :
+    TM (0 + outputProbeControllerTapes n + controllerTapes) :=
+  seqTM (outputProbeIndexedLatchTM tm controllerTapes sourceIdx scratchIdx)
+    (outputProbeLatchResetDispatchTM n controllerTapes onZero onOne)
 
 /-- Exact runtime of the direct latch branch and its selected continuation. -/
 def outputProbeLatchDispatchTime (bit : Bool)
