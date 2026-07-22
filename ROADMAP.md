@@ -1174,8 +1174,18 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   transformer `barringtonCompileCode`, proving generated-code decoding, exact
   formula semantics, the `4 ^ depth` instruction bound, and serialized length
   at most `4^depth + 1 + 4^depth * (inputCodeLength + 15)`. The remaining steps
-  are a verified log-space transducer realizing this function and the resulting
-  uniform family-level lift.
+  are a verified total log-space generator that agrees with this reference on
+  a promised logarithmic-depth family, plus the resulting uniform family-level
+  lift. The unbounded reference itself is not an `FL` candidate: arbitrary
+  linear-depth inputs can require exponentially long output.
+  `Classes/BarringtonUniform` now formalizes the correct promise-family boundary:
+  canonical `FL` generators define `FormulaFamily.Uniform` and
+  `BPFamily.Uniform`, the concrete `FormulaFamily.barringtonProgram` has fixed
+  decision point zero, exact semantics, and polynomial length, and
+  `uniformFormulaNC1_subset_uniformWidth5BP_of_compilation` reduces the forward
+  uniform theorem to the single named obligation
+  `UniformBarringtonCompilation`. Proving that obligation is the remaining
+  machine-level work.
 
 **Formalization hazards.** Permutation multiplication order differs between texts
 and libraries; fix it with executable examples before proving the induction.

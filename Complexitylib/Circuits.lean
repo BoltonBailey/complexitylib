@@ -127,7 +127,7 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
   permutation ranks, instruction/program codecs, and exact size bounds
 * `Complexitylib.Circuits.BarringtonCodeGenerator` — the total bitstring-level
-  formula-code-to-program-code target for the remaining `FL` implementation
+  formula-code-to-program-code reference for promised log-depth `FL` generation
 * `Complexitylib.Circuits.Encoding` — canonical proof-free encoding, validation,
   and iterative evaluation of fan-in-two AND/OR circuits
 * `Complexitylib.Circuits.Encoding.Family` — tagged encoding and evaluation at
