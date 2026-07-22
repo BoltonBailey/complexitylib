@@ -440,6 +440,120 @@ theorem outputProbeCountOnesBodyTM_of_latch_hoareTimeSpace
     extras bit hextras houter houtput count hcount hlatch hclearInitial
     hzeroInitial honeInitial
 
+/-- Build one exact query/reset/count body contract directly from a
+space-bounded source transducer and a canonical restored latch frame.
+
+All finite head maxima needed by the lower-level space contracts are chosen
+internally. The caller supplies only the stable cleanup/controller invariants
+and the cleanup limit needed for this query address. -/
+theorem ComputesInSpace.outputProbeCountOnesBodyTM_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (address : ℕ) (haddress : address < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (address + 1) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (addressIdx scratchIdx countIdx : Fin controllerTapes)
+    (haddressScratch : addressIdx ≠ scratchIdx)
+    (hsource :
+      (outerExtras (outputProbeIndexedControllerIdx n addressIdx))
+        |>.HasBinaryNat address)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (count : ℕ)
+    (hcount :
+      (outerExtras (outputProbeIndexedControllerIdx n countIdx))
+        |>.HasBinaryNat count) :
+    ∃ (bodyBound : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+        countIdx).HoareTime pre
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeCountOnesOuterExtrasAfter n countIdx outerExtras count
+              ((f input)[address]'haddress))
+            input output extras false)
+          bodyBound :=
+  hcomp.outputProbeCountOnesBodyTM_hoareTime_internal input address haddress
+    output houtput extras hextras hcleanupCounter cleanupLimit hcleanupLimit
+    hlimit controllerTapes outerExtras houter addressIdx scratchIdx countIdx
+    haddressScratch hsource hscratch count hcount
+
+/-- Derive a complete exact-prefix count scan from the source transducer's
+`ComputesInSpace` contract.
+
+Per-address runtimes are selected noncomputably from the deterministic source
+runs. The returned segment certificate fixes every comparison, iteration, and
+halted frame; no caller-supplied latch or body witnesses remain. -/
+noncomputable def ComputesInSpace.outputProbeCountOnesSegmentSpec
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (haddressLimit : addressIdx ≠ limitIdx)
+    (haddressCount : addressIdx ≠ countIdx)
+    (hcountLimit : countIdx ≠ limitIdx)
+    (haddressScratch : addressIdx ≠ scratchIdx)
+    (hscratchAddress : scratchIdx ≠ addressIdx)
+    (hscratchCount : scratchIdx ≠ countIdx)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue limitValue : ℕ)
+    (hlimitBits : limitValue ≤ (f input).length)
+    (hlimitRegister :
+      (outerExtras (outputProbeIndexedControllerIdx n limitIdx))
+        |>.HasBinaryNat limitValue)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < limitValue →
+      outputProbeCaptureSpace (max 1 (space input.length)) (value + 1) ≤
+        cleanupLimit) :
+    Σ bodyTime : ℕ → ℕ,
+      BinaryForSegmentSpec
+        (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+          countIdx)
+        (outputProbeIndexedControllerIdx n addressIdx)
+        (outputProbeIndexedControllerIdx n limitIdx)
+        bodyTime startValue limitValue :=
+  hcomp.outputProbeCountOnesSegmentSpecInternal input output houtput extras
+    hextras hcleanupCounter cleanupLimit hcleanupLimit controllerTapes
+    outerExtras houter addressIdx scratchIdx limitIdx countIdx haddressLimit
+    haddressCount hcountLimit haddressScratch hscratchAddress hscratchCount
+    hscratch startValue limitValue hlimitBits hlimitRegister hqueryLimit
+
 /-- Counting queried one bits preserves one-way output safety. -/
 theorem outputProbeCountOnesTM_isTransducer
     (tm : TM n) (controllerTapes : ℕ)

@@ -65,6 +65,118 @@ private theorem outputProbeCountOnesBinarySuccCanonical_reachesIn_internal
     Cfg.ext hhalt hinput hworkEq houtput
   simpa [hc'] using hreach
 
+private theorem outputProbeCountOnesFrameWork_eq_queryUpdate_internal
+    (tm : TM n) (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (controllerTapes value : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape) :
+    (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work =
+      Function.update
+        (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+          (outputProbePlacedFrameCfg tm input
+            (outputProbeCounterTape (value + 1)) output extras)).work
+        (outputProbeIndexedCountdownIdx n controllerTapes)
+        (outputProbeCounterTape 0) := by
+  have hcleanupCounterEq : extras (outputProbeCleanupCounterIdx n) =
+      outputProbeCounterTape 0 := by
+    simpa [outputProbeCounterTape] using hcleanupCounter.eq_init_move_right
+  funext i
+  by_cases houterMiddle :
+      placeWorkInMiddle 0 (outputProbeControllerTapes n) i
+  · generalize hcoord :
+      placeWorkCoord 0 (outputProbeControllerTapes n) i houterMiddle = coord
+    have hphysical : placeWorkIdx 0 controllerTapes coord = i := by
+      rw [← hcoord]
+      exact placeWorkIdx_placeWorkCoord i houterMiddle
+    rw [← hphysical]
+    rw [outputProbeLatchFrameCfg, placeWorkCfg_work_middle,
+      outputProbeIndexedCountdownIdx]
+    change
+      (outputProbeLatchInnerFrameCfg tm input output extras false).work coord =
+        Function.update
+          (placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes outerExtras
+            (outputProbePlacedFrameCfg tm input
+              (outputProbeCounterTape (value + 1)) output extras)).work
+          (placeWorkIdx 0 controllerTapes
+            (outputProbeCleanupCountdownIdx n))
+          (outputProbeCounterTape 0) (placeWorkIdx 0 controllerTapes coord)
+    by_cases hcountdown : coord = outputProbeCleanupCountdownIdx n
+    · try rw [hcoord]
+      rw [hcountdown]
+      rw [Function.update_self]
+      simp only [outputProbeLatchInnerFrameCfg, Bool.false_eq_true, if_false]
+      rw [Function.update_of_ne]
+      · let countdownIdx : Fin (n + 2) := ⟨n, by omega⟩
+        have hcountdownPhysical : outputProbeCleanupCountdownIdx n =
+            placeWorkIdx 0 2 countdownIdx := by
+          apply Fin.ext
+          simp [outputProbeCleanupCountdownIdx, countdownIdx]
+        rw [hcountdownPhysical, outputProbePlacedFrameCfg,
+          placeWorkCfg_work_middle]
+        rw [retargetCfgFrame_work_lt _ _ _ countdownIdx (by
+          dsimp only [countdownIdx]
+          omega)]
+        simp [outputProbeStartedCfg, countdownIdx, outputProbeCounterTape]
+      · intro heq
+        have hval := congrArg Fin.val heq
+        simp [outputProbeCleanupCountdownIdx, outputProbeCleanupCounterIdx]
+          at hval
+    · rw [Function.update_of_ne]
+      · rw [placeWorkCfg_work_middle]
+        simp only [outputProbeLatchInnerFrameCfg, Bool.false_eq_true, if_false]
+        by_cases hcounter : coord = outputProbeCleanupCounterIdx n
+        · try rw [hcoord]
+          rw [hcounter]
+          rw [Function.update_self]
+          rw [outputProbePlacedFrameCfg, placeWorkCfg_work_extra]
+          · exact hcleanupCounterEq.symm
+          · simp [placeWorkInMiddle, outputProbeCleanupCounterIdx]
+        · rw [Function.update_of_ne hcounter]
+          rw [outputProbePlacedFrameCfg, outputProbePlacedFrameCfg]
+          by_cases hinnerMiddle : placeWorkInMiddle 0 (n + 2) coord
+          · generalize hsourceCoord :
+              placeWorkCoord 0 (n + 2) coord hinnerMiddle = source
+            have hsourcePhysical : placeWorkIdx 0 2 source = coord := by
+              rw [← hsourceCoord]
+              exact placeWorkIdx_placeWorkCoord coord hinnerMiddle
+            rw [← hsourcePhysical, placeWorkCfg_work_middle,
+              placeWorkCfg_work_middle]
+            by_cases hsource : source.val < n + 1
+            · rw [retargetCfgFrame_work_lt _ _ _ source hsource,
+                retargetCfgFrame_work_lt _ _ _ source hsource]
+              have hsourceWork : source.val < n := by
+                by_contra hnot
+                have hsourceEq : source.val = n := by omega
+                apply hcountdown
+                apply Fin.ext
+                rw [← hsourcePhysical]
+                simpa [outputProbeCleanupCountdownIdx, placeWorkIdx] using
+                  hsourceEq
+              simp [outputProbeStartedCfg, hsourceWork]
+            · have hlast : source = Fin.last (n + 1) := by
+                apply Fin.ext
+                simp only [Fin.last]
+                omega
+              rw [hlast, retargetCfgFrame_work_last,
+                retargetCfgFrame_work_last]
+              simp [outputProbeStartedCfg]
+          · rw [placeWorkCfg_work_extra _ _ _ extras _ coord hinnerMiddle,
+              placeWorkCfg_work_extra _ _ _ extras _ coord hinnerMiddle]
+      · intro heq
+        exact hcountdown (placeWorkIdx_injective 0 controllerTapes heq)
+  · rw [outputProbeLatchFrameCfg,
+      placeWorkCfg_work_extra _ _ _ outerExtras _ i houterMiddle]
+    rw [Function.update_of_ne]
+    · rw [placeWorkCfg_work_extra _ _ _ outerExtras _ i houterMiddle]
+    · intro heq
+      subst i
+      exact houterMiddle
+        (outputProbeIndexedCountdownIdx_middle n controllerTapes)
+
 theorem outputProbePrefixOnes_succ_internal (bits : List Bool)
     (address : ℕ) (haddress : address < bits.length) :
     outputProbePrefixOnes bits (address + 1) =
@@ -1060,6 +1172,344 @@ theorem outputProbeCountOnesBodyTM_of_latch_hoareTimeSpace_internal
           input output extras false)
       hlatch
       hclearInitial hzero hone
+
+theorem ComputesInSpace.outputProbeCountOnesBodyTM_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (address : ℕ) (haddress : address < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit : outputProbeCaptureSpace (max 1 (space input.length))
+      (address + 1) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (addressIdx scratchIdx countIdx : Fin controllerTapes)
+    (haddressScratch : addressIdx ≠ scratchIdx)
+    (hsource :
+      (outerExtras (outputProbeIndexedControllerIdx n addressIdx))
+        |>.HasBinaryNat address)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (count : ℕ)
+    (hcount :
+      (outerExtras (outputProbeIndexedControllerIdx n countIdx))
+        |>.HasBinaryNat count) :
+    ∃ (bodyBound : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+        countIdx).HoareTime pre
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeCountOnesOuterExtrasAfter n countIdx outerExtras count
+              ((f input)[address]'haddress))
+            input output extras false)
+          bodyBound := by
+  let frame := outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+    output extras false
+  let queryFrame := placeWorkCfg (outputProbePlacedTM tm) 0 controllerTapes
+    outerExtras
+    (outputProbePlacedFrameCfg tm input
+      (outputProbeCounterTape (address + 1)) output extras)
+  let frameSpace := Finset.univ.sup fun i => (extras i).head
+  let outerFrameSpace := Finset.univ.sup fun i => (outerExtras i).head
+  let initialSpace := Finset.univ.sup fun i => (frame.work i).head
+  let pre : TapePred
+      (0 + outputProbeControllerTapes n + controllerTapes) :=
+    fun inp work out =>
+      inp = queryFrame.input ∧ work = frame.work ∧ out = output
+  have hframePost := outputProbeLatchFrameCfg_post tm controllerTapes
+    outerExtras input output extras false
+  have hparked := outputProbeLatchFramePost_parked tm controllerTapes
+    outerExtras input output extras false hextras houter houtput frame.input
+    frame.work frame.output hframePost
+  have hframeBound : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i →
+      (extras i).head ≤ frameSpace := by
+    intro i _hi
+    exact Finset.le_sup (f := fun j => (extras j).head)
+      (Finset.mem_univ i)
+  have houterRead : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).read ≠ Γ.start := by
+    intro i hi
+    exact (houter i hi).read_ne_start
+  have houterBound : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        (outerExtras i).head ≤ outerFrameSpace := by
+    intro i _hi
+    exact Finset.le_sup (f := fun j => (outerExtras j).head)
+      (Finset.mem_univ i)
+  have hworkBound : ∀ i, (frame.work i).head ≤ initialSpace := by
+    intro i
+    exact Finset.le_sup (f := fun j => (frame.work j).head)
+      (Finset.mem_univ i)
+  have hqueryInput : queryFrame.input = frame.input := by
+    rfl
+  have hqueryOutput : frame.output = output := by
+    simp [frame, outputProbeLatchFrameCfg, outputProbeLatchInnerFrameCfg,
+      outputProbePlacedFrameCfg]
+  have hsourceWork :
+      (frame.work (outputProbeIndexedControllerIdx n addressIdx))
+        |>.HasBinaryNat address := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes outerExtras
+      input output extras false frame.input frame.work frame.output hframePost
+      addressIdx]
+    exact hsource
+  have hscratchWork :
+      (frame.work (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0 := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes outerExtras
+      input output extras false frame.input frame.work frame.output hframePost
+      scratchIdx]
+    exact hscratch
+  have hframeWork : frame.work = Function.update queryFrame.work
+      (outputProbeIndexedCountdownIdx n controllerTapes)
+      (outputProbeCounterTape 0) := by
+    exact outputProbeCountOnesFrameWork_eq_queryUpdate_internal tm input
+      output extras hcleanupCounter controllerTapes address outerExtras
+  have hcountdown :
+      (frame.work (outputProbeIndexedCountdownIdx n controllerTapes))
+        |>.HasBinaryNat 0 := by
+    rw [hframeWork, Function.update_self]
+    exact Tape.init_move_right_hasBinaryNat 0
+  have hqueryWork : ∀ i,
+      i ≠ outputProbeIndexedCountdownIdx n controllerTapes →
+      frame.work i = queryFrame.work i := by
+    intro i hi
+    rw [hframeWork, Function.update_of_ne hi]
+  have hinputSpace : queryFrame.input.head ≤
+      input.length + initialSpace + 1 := by
+    simp [queryFrame, outputProbePlacedFrameCfg, outputProbeStartedCfg,
+      Tape.move]
+  obtain ⟨latchTime, hlatch⟩ :=
+    hcomp.outputProbeIndexedLatchTM_hoareTimeSpace input address haddress
+      output houtput extras frameSpace cleanupLimit hextras hframeBound
+      hcleanupCounter hcleanupLimit hlimit controllerTapes outerExtras
+      outerFrameSpace houterRead houterBound addressIdx scratchIdx
+      haddressScratch initialSpace frame.work hsourceWork hcountdown
+      hscratchWork (hqueryInput ▸ hparked.1) hparked.2.1 hworkBound hinputSpace
+      hqueryWork
+  let falseFrame := outputProbeLatchFrameCfg tm controllerTapes outerExtras
+    input output extras false
+  let trueFrame := outputProbeLatchFrameCfg tm controllerTapes outerExtras
+    input output extras true
+  let falseSpace := Finset.univ.sup fun i => (falseFrame.work i).head
+  let trueSpace := Finset.univ.sup fun i => (trueFrame.work i).head
+  have hframeInitial (bit : Bool) : ∀ inp work out,
+      outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras bit inp work out →
+      ({ state := (skipTM (n := 0 + outputProbeControllerTapes n +
+              controllerTapes)).qstart
+         input := inp
+         work := work
+         output := out } :
+        Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+          (skipTM (n := 0 + outputProbeControllerTapes n +
+            controllerTapes)).Q).WithinAuxSpace input.length
+          (Finset.univ.sup fun i =>
+            ((outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+              output extras bit).work i).head) := by
+    intro inp work out hpost
+    obtain ⟨hinp, hwork, _hout⟩ := outputProbeLatchFramePost_eq_frameCfg tm
+      controllerTapes outerExtras input output extras bit inp work out hpost
+    subst inp
+    subst work
+    constructor
+    · intro i
+      exact Finset.le_sup
+        (f := fun j =>
+          ((outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+            output extras bit).work j).head)
+        (Finset.mem_univ i)
+    · simp [outputProbeLatchFrameCfg, outputProbeLatchInnerFrameCfg,
+        outputProbePlacedFrameCfg, outputProbeStartedCfg, Tape.move]
+  have hclearInitial : ∀ inp work out,
+      outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras true inp work out →
+      ({ state := (clearWorkTM
+              (outputProbeLatchIdx n controllerTapes)).qstart
+         input := inp
+         work := work
+         output := out } :
+        Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+          (clearWorkTM (outputProbeLatchIdx n controllerTapes)).Q
+        ).WithinAuxSpace input.length trueSpace := by
+    simpa [trueSpace, trueFrame] using hframeInitial true
+  have hzeroInitial : ∀ inp work out,
+      outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false inp work out →
+      ({ state := (skipTM (n := 0 + outputProbeControllerTapes n +
+              controllerTapes)).qstart
+         input := inp
+         work := work
+         output := out } :
+        Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+          (skipTM (n := 0 + outputProbeControllerTapes n +
+            controllerTapes)).Q).WithinAuxSpace input.length falseSpace := by
+    simpa [falseSpace, falseFrame] using hframeInitial false
+  have honeInitial : ∀ inp work out,
+      outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false inp work out →
+      ({ state := (binarySuccTM
+              (outputProbeIndexedControllerIdx n countIdx)).qstart
+         input := inp
+         work := work
+         output := out } :
+        Cfg (0 + outputProbeControllerTapes n + controllerTapes)
+          (binarySuccTM
+            (outputProbeIndexedControllerIdx n countIdx)).Q
+        ).WithinAuxSpace input.length falseSpace := by
+    simpa [falseSpace, falseFrame] using hframeInitial false
+  let bodyBound := outputProbeIndexedPrepareTime address + 1 + latchTime + 1 +
+    outputProbeLatchDispatchTime ((f input)[address]'haddress) 1
+      (clearWorkTimeBound 1 + 1 + binarySuccTime count)
+  have hbody := outputProbeCountOnesBodyTM_of_latch_hoareTimeSpace_internal tm
+    controllerTapes addressIdx scratchIdx countIdx outerExtras input output
+    extras ((f input)[address]'haddress) hextras houter houtput count hcount
+    hlatch hclearInitial hzeroInitial honeInitial
+  refine ⟨bodyBound, pre, ?_, ?_⟩
+  · exact ⟨hqueryInput.symm, rfl, hqueryOutput⟩
+  · simpa [bodyBound] using hbody.1
+
+/-- Internal constructor selecting all source-dependent count-scan runtimes. -/
+noncomputable def
+    ComputesInSpace.outputProbeCountOnesSegmentSpecInternal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (addressIdx scratchIdx limitIdx countIdx : Fin controllerTapes)
+    (haddressLimit : addressIdx ≠ limitIdx)
+    (haddressCount : addressIdx ≠ countIdx)
+    (hcountLimit : countIdx ≠ limitIdx)
+    (haddressScratch : addressIdx ≠ scratchIdx)
+    (hscratchAddress : scratchIdx ≠ addressIdx)
+    (hscratchCount : scratchIdx ≠ countIdx)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n scratchIdx))
+        |>.HasBinaryNat 0)
+    (startValue limitValue : ℕ)
+    (hlimitBits : limitValue ≤ (f input).length)
+    (hlimitRegister :
+      (outerExtras (outputProbeIndexedControllerIdx n limitIdx))
+        |>.HasBinaryNat limitValue)
+    (hqueryLimit : ∀ value, startValue ≤ value → value < limitValue →
+      outputProbeCaptureSpace (max 1 (space input.length)) (value + 1) ≤
+        cleanupLimit) :
+    Σ bodyTime : ℕ → ℕ,
+      BinaryForSegmentSpec
+        (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+          countIdx)
+        (outputProbeIndexedControllerIdx n addressIdx)
+        (outputProbeIndexedControllerIdx n limitIdx)
+        bodyTime startValue limitValue := by
+  classical
+  let currentOuter (value : ℕ) :=
+    outputProbeCountOnesOuterExtrasAt n addressIdx countIdx outerExtras
+      (f input) value
+  have bodyExists : ∀ value, ∃ bodyBound : ℕ,
+      ∀ (hstart : startValue ≤ value) (hvalue : value < limitValue)
+        (hvalueBits : value < (f input).length),
+        ∃ pre : TapePred
+            (0 + outputProbeControllerTapes n + controllerTapes),
+          pre
+            (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+              countIdx outerExtras (f input) input output extras value).input
+            (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+              countIdx outerExtras (f input) input output extras value).work
+            (outputProbeCountOnesFrameCfg tm controllerTapes addressIdx
+              countIdx outerExtras (f input) input output extras value).output ∧
+          (outputProbeCountOnesBodyTM tm controllerTapes addressIdx scratchIdx
+            countIdx).HoareTime pre
+              (outputProbeLatchFramePost tm controllerTapes
+                (outputProbeCountOnesOuterExtrasAfter n countIdx
+                  (currentOuter value)
+                  (outputProbePrefixOnes (f input) value)
+                  ((f input)[value]'hvalueBits))
+                input output extras false)
+              bodyBound := by
+    intro value
+    by_cases hrange : startValue ≤ value ∧ value < limitValue
+    · have hcurrentParked : ∀ i,
+          ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+            Parked (currentOuter value i) :=
+        outputProbeCountOnesOuterExtrasAt_parked_internal n outerExtras houter
+          (f input) value
+      have hsourceCurrent :
+          (currentOuter value
+            (outputProbeIndexedControllerIdx n addressIdx)).HasBinaryNat
+              value := by
+        exact outputProbeCountOnesOuterExtrasAt_address_internal n
+          haddressCount outerExtras (f input) value
+      have hscratchCurrent :
+          (currentOuter value
+            (outputProbeIndexedControllerIdx n scratchIdx)).HasBinaryNat
+              0 := by
+        change (outputProbeCountOnesOuterExtrasAt n addressIdx countIdx
+          outerExtras (f input) value
+          (outputProbeIndexedControllerIdx n scratchIdx)).HasBinaryNat 0
+        rw [outputProbeCountOnesOuterExtrasAt_other_internal n
+          hscratchAddress hscratchCount outerExtras (f input) value]
+        exact hscratch
+      have hcountCurrent :
+          (currentOuter value
+            (outputProbeIndexedControllerIdx n countIdx)).HasBinaryNat
+              (outputProbePrefixOnes (f input) value) := by
+        exact outputProbeCountOnesOuterExtrasAt_count_internal n outerExtras
+          (f input) value
+      obtain ⟨bodyBound, pre, hpre, hbody⟩ :=
+        hcomp.outputProbeCountOnesBodyTM_hoareTime_internal input value
+          (by omega) output houtput extras hextras hcleanupCounter cleanupLimit
+          hcleanupLimit (hqueryLimit value hrange.1 hrange.2)
+          controllerTapes (currentOuter value) hcurrentParked addressIdx
+          scratchIdx countIdx haddressScratch hsourceCurrent hscratchCurrent
+          (outputProbePrefixOnes (f input) value) hcountCurrent
+      refine ⟨bodyBound, ?_⟩
+      intro _hstart _hvalue hvalueBits
+      refine ⟨pre, ?_, hbody⟩
+      simpa [currentOuter, outputProbeCountOnesFrameCfg] using hpre
+    · refine ⟨0, ?_⟩
+      intro hstart hvalue _hvalueBits
+      exact (hrange ⟨hstart, hvalue⟩).elim
+  choose bodyTime hbody using bodyExists
+  refine ⟨bodyTime,
+    outputProbeCountOnesSegmentSpecOfBodyWitnessesInternal tm controllerTapes
+      addressIdx scratchIdx limitIdx countIdx haddressLimit haddressCount
+      hcountLimit outerExtras (f input) input output extras hextras houter
+      houtput bodyTime startValue limitValue hlimitBits hlimitRegister ?_⟩
+  intro value hstart hvalue hvalueBits
+  obtain ⟨pre, hpre, hhoare⟩ :=
+    hbody value hstart hvalue hvalueBits
+  exact ⟨bodyTime value, pre, le_rfl, hpre, hhoare⟩
 
 theorem IsTransducer.outputProbeCountOnesTM_internal
     {tm : TM n} {controllerTapes : ℕ}
