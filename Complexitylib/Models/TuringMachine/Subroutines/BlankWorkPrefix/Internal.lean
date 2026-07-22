@@ -304,6 +304,11 @@ private def blankPrefixFinalWork {n : ℕ}
   Function.update work targetIdx
     (blankPrefixResultTape (work targetIdx) limit)
 
+private def rewindTargetWork {n : ℕ}
+    (work : Fin n → Tape) (targetIdx : Fin n) : Fin n → Tape :=
+  Function.update work targetIdx
+    { head := 1, cells := (work targetIdx).cells }
+
 private theorem blankWorkCellTM_reachesIn_at {n : ℕ}
     (targetIdx counterIdx : Fin n) (hne : targetIdx ≠ counterIdx)
     (value : ℕ) (inp : Tape) (work : Fin n → Tape) (out : Tape)
@@ -1033,6 +1038,150 @@ theorem blankWorkPrefixTM_hoareTimeSpace_frame_internal {n : ℕ}
   simpa [loop, rewind, clear, blankWorkPrefixTM, blankWorkPrefixTime,
     blankWorkPrefixSpace, blankPrefixFinalWork, Nat.add_assoc] using hall
 
+private theorem rewindTarget_hoareTime {n : ℕ}
+    (targetIdx : Fin n) (headBound : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (htargetInvariant : (work₀ targetIdx).StartInvariant)
+    (htargetHead : (work₀ targetIdx).head ≤ headBound)
+    (hinp : Parked inp₀)
+    (hother : ∀ i, i ≠ targetIdx → Parked (work₀ i))
+    (hout : Parked out₀) :
+    (rewindWorkTM targetIdx).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧ work = rewindTargetWork work₀ targetIdx ∧ out = out₀)
+      (headBound + 2) := by
+  let RewindFrame : TapePred n := fun inp work out =>
+    inp = inp₀ ∧
+    (work targetIdx).cells = (work₀ targetIdx).cells ∧
+    (∀ i, i ≠ targetIdx → work i = work₀ i) ∧
+    out = out₀
+  have hrewind := rewindWorkTM_hoareTime_frame targetIdx headBound
+    (P := RewindFrame) (by
+      intro inp work out inp' work' out' hframe hcells _hhead
+        hwork' hinp' houtCells houtHead
+      rcases hframe with ⟨hframeInput, hframeCells, hframeOther,
+        hframeOutput⟩
+      refine ⟨hinp'.trans hframeInput, hcells.trans hframeCells,
+        fun i hi => (hwork' i hi).trans (hframeOther i hi), ?_⟩
+      exact (Tape.ext houtHead houtCells).trans hframeOutput)
+  apply hrewind.consequence (b' := headBound + 2)
+  · rintro inp work out ⟨rfl, rfl, rfl⟩
+    exact ⟨htargetInvariant.1, htargetInvariant.2, htargetHead,
+      hinp.read_ne_start, hout.read_ne_start, hout.1,
+      fun i hi => ⟨(hother i hi).read_ne_start, (hother i hi).1⟩,
+      rfl, rfl, fun _ _ => rfl, rfl⟩
+  · intro inp work out hpost
+    rcases hpost with ⟨htargetHead', hframeInput, hframeCells,
+      hframeOther, hframeOutput⟩
+    refine ⟨hframeInput, ?_, hframeOutput⟩
+    funext i
+    by_cases hit : i = targetIdx
+    · subst i
+      rw [rewindTargetWork, Function.update_self]
+      exact Tape.ext htargetHead' hframeCells
+    · rw [rewindTargetWork, Function.update_of_ne hit]
+      exact hframeOther i hit
+  · exact le_rfl
+
+private theorem rewindTargetWork_parked {n : ℕ}
+    (work : Fin n → Tape) (targetIdx : Fin n)
+    (htargetInvariant : (work targetIdx).StartInvariant)
+    (hother : ∀ i, i ≠ targetIdx → Parked (work i)) :
+    ∀ i, Parked (rewindTargetWork work targetIdx i) := by
+  intro i
+  by_cases hit : i = targetIdx
+  · subst i
+    rw [rewindTargetWork, Function.update_self]
+    exact ⟨le_rfl, htargetInvariant.2⟩
+  · rw [rewindTargetWork, Function.update_of_ne hit]
+    exact hother i hit
+
+private theorem rewindTargetWork_startInvariant {n : ℕ}
+    (work : Fin n → Tape) (targetIdx : Fin n)
+    (htargetInvariant : (work targetIdx).StartInvariant) :
+    (rewindTargetWork work targetIdx targetIdx).StartInvariant := by
+  rw [rewindTargetWork, Function.update_self]
+  exact htargetInvariant
+
+private theorem rewindTargetWork_other {n : ℕ}
+    (work : Fin n → Tape) (targetIdx i : Fin n) (hne : i ≠ targetIdx) :
+    rewindTargetWork work targetIdx i = work i := by
+  rw [rewindTargetWork, Function.update_of_ne hne]
+
+/-- Rewinding first removes any assumption about the post-source target head;
+the source-space head bound becomes the rewind budget. -/
+theorem rewindBlankWorkPrefixTM_hoareTimeSpace_frame_internal {n : ℕ}
+    (targetIdx counterIdx limitIdx : Fin n)
+    (hdistinct : BlankWorkPrefixDistinct targetIdx counterIdx limitIdx)
+    (headBound limit inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (htargetInvariant : (work₀ targetIdx).StartInvariant)
+    (htargetHead : (work₀ targetIdx).head ≤ headBound)
+    (hinp : Parked inp₀)
+    (hother : ∀ i, i ≠ targetIdx → Parked (work₀ i))
+    (hcounter : (work₀ counterIdx).HasBinaryNat 0)
+    (hlimit : (work₀ limitIdx).HasBinaryNat limit)
+    (hout : Parked out₀)
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace : inp₀.head ≤ inputLength + initialSpace + 1) :
+    (rewindBlankWorkPrefixTM targetIdx counterIdx limitIdx).HoareTimeSpace
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        work = Function.update work₀ targetIdx
+          (blankPrefixResultTape (work₀ targetIdx) limit) ∧
+        out = out₀)
+      (rewindBlankWorkPrefixTime headBound limit) inputLength
+      (rewindBlankWorkPrefixSpace initialSpace headBound limit) := by
+  let rewind := rewindWorkTM targetIdx
+  let rewoundWork := rewindTargetWork work₀ targetIdx
+  let blank := blankWorkPrefixTM targetIdx counterIdx limitIdx
+  have hrewindTime := rewindTarget_hoareTime targetIdx headBound
+    inp₀ work₀ out₀ htargetInvariant htargetHead hinp hother hout
+  have hrewindTS := hrewindTime.toHoareTimeSpace
+    (inputLength := inputLength) (initialSpace := initialSpace) (by
+    rintro inp work out ⟨rfl, rfl, rfl⟩
+    exact ⟨hworkSpace, hinputSpace⟩)
+  have hrewoundParked := rewindTargetWork_parked work₀ targetIdx
+    htargetInvariant hother
+  have hcounter' : (rewoundWork counterIdx).HasBinaryNat 0 := by
+    dsimp only [rewoundWork]
+    rw [rewindTargetWork_other work₀ targetIdx counterIdx
+      (Ne.symm hdistinct.1)]
+    exact hcounter
+  have hlimit' : (rewoundWork limitIdx).HasBinaryNat limit := by
+    dsimp only [rewoundWork]
+    rw [rewindTargetWork_other work₀ targetIdx limitIdx
+      (Ne.symm hdistinct.2.1)]
+    exact hlimit
+  have hone : 1 ≤ initialSpace := by
+    rw [← hcounter.2.1]
+    exact hworkSpace counterIdx
+  have hrewoundSpace : ∀ i, (rewoundWork i).head ≤ initialSpace := by
+    intro i
+    by_cases hit : i = targetIdx
+    · subst i
+      simp [rewoundWork, rewindTargetWork, hone]
+    · dsimp only [rewoundWork]
+      rw [rewindTargetWork_other work₀ targetIdx i hit]
+      exact hworkSpace i
+  have hblankTS :=
+    blankWorkPrefixTM_hoareTimeSpace_frame_internal targetIdx counterIdx
+      limitIdx hdistinct limit inputLength initialSpace inp₀ rewoundWork out₀
+      (rewindTargetWork_startInvariant work₀ targetIdx htargetInvariant)
+      (by simp [rewoundWork, rewindTargetWork]) hinp hrewoundParked hcounter'
+      hlimit' hout hrewoundSpace hinputSpace
+  have hall := seqTM_hoareTimeSpace rewind blank hrewindTS (by
+      rintro inp work out ⟨rfl, rfl, rfl⟩
+      exact ⟨hinp.transitionInput_eq_self,
+        funext fun i => (hrewoundParked i).transitionTape_eq_self,
+        hout.transitionTape_eq_self⟩)
+    hblankTS
+  simpa [rewind, rewoundWork, blank, rewindBlankWorkPrefixTM,
+    rewindBlankWorkPrefixTime, rewindBlankWorkPrefixSpace,
+    rewindTargetWork, blankPrefixResultTape, Nat.add_assoc] using hall
+
 theorem blankWorkPrefixTM_isTransducer_internal {n : ℕ}
     (targetIdx counterIdx limitIdx : Fin n) :
     (blankWorkPrefixTM targetIdx counterIdx limitIdx).IsTransducer := by
@@ -1040,6 +1189,12 @@ theorem blankWorkPrefixTM_isTransducer_internal {n : ℕ}
     counterIdx limitIdx).seqTM
       ((rewindWorkTM_isTransducer targetIdx).seqTM
         (clearWorkTM_isTransducer counterIdx))
+
+theorem rewindBlankWorkPrefixTM_isTransducer_internal {n : ℕ}
+    (targetIdx counterIdx limitIdx : Fin n) :
+    (rewindBlankWorkPrefixTM targetIdx counterIdx limitIdx).IsTransducer :=
+  (rewindWorkTM_isTransducer targetIdx).seqTM
+    (blankWorkPrefixTM_isTransducer_internal targetIdx counterIdx limitIdx)
 
 end TM
 

@@ -1256,8 +1256,11 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   fixed-address instruction query through that oracle agree with the reference
   compiler. `Models/TuringMachine/Subroutines/BlankWorkPrefix` now supplies the
   missing replay-reset primitive: it blanks an arbitrary sparse work prefix
-  bounded by a preserved binary limit, rewinds the target, restores its scratch
-  counter, and proves exact time plus an all-prefix space envelope. The remaining
+  bounded by a preserved binary limit, rewinds the target from an arbitrary
+  in-bound head position, restores its scratch counter, and proves exact time
+  plus an all-prefix space envelope. Successful output probes now also expose
+  that their countdown ends as the canonical zero tape, including after restart,
+  output retargeting, and placement in a larger controller frame. The remaining
   construction is the concrete machine that composes restartable source-code
   probes with that reset to realize these verified oracle recurrences and
   serializer scans, together with its all-prefix logarithmic-space proof.

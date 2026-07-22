@@ -397,7 +397,8 @@ theorem ComputesInSpace.outputProbeTM_getElem
   hcomp.outputProbeTM_getElem_internal input index hindex
 
 /-- Every prefix of a valid output-bit query stays within the source space
-plus the binary index width and the constant capture seam. -/
+plus the binary index width and the constant capture seam. The query consumes
+its countdown exactly, leaving the canonical zero tape for reuse. -/
 theorem ComputesInSpace.outputProbeTM_getElem_withinAuxSpace
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space) (input : List Bool)
@@ -408,6 +409,7 @@ theorem ComputesInSpace.outputProbeTM_getElem_withinAuxSpace
           (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
       (outputProbeTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeTM tm).reachesIn elapsed
@@ -434,7 +436,7 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem
   hcomp.outputProbeStartedTM_getElem_internal input index hindex
 
 /-- The post-sentinel valid-index query retains the complete all-prefix
-auxiliary-space certificate. -/
+auxiliary-space certificate and leaves its countdown at canonical zero. -/
 theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space) (input : List Bool)
@@ -445,6 +447,7 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace
           (outputProbeCounterTape (index + 1))) done ∧
       (outputProbeStartedTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeStartedTM tm).reachesIn elapsed
@@ -475,7 +478,8 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem
 
 /-- Redirecting a restartable valid-index query to a fresh work tape covers
 that tape, all source tapes, and every intermediate configuration with the
-same explicit auxiliary-space budget. -/
+same explicit auxiliary-space budget. Its physical countdown tape is restored
+to canonical zero. -/
 theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space) (input : List Bool)
@@ -488,6 +492,7 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
       ((outputProbeStartedTM tm).retargetOutput).halted done ∧
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
+      done.work ⟨n, by omega⟩ = outputProbeCounterTape 0 ∧
       done.output = (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
@@ -502,8 +507,8 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace
 
 /-- Place a restartable retargeted query between persistent controller tapes.
 The stable frame is preserved exactly, its largest head is charged alongside
-the query budget, and the captured bit remains available at the corresponding
-physical work-tape index. -/
+the query budget, the captured bit remains available at the corresponding
+physical work-tape index, and the placed countdown is canonical zero. -/
 theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space) (pre post : ℕ)
@@ -527,6 +532,9 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
       ((placeWorkCfg queryTM pre post extras done).work
         (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput
           [(f input)[index]'hindex] ∧
+      (placeWorkCfg queryTM pre post extras done).work
+          (placeWorkIdx pre post ⟨n, by omega⟩) =
+        outputProbeCounterTape 0 ∧
       (placeWorkCfg queryTM pre post extras done).output =
         (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →

@@ -82,6 +82,13 @@ def blankWorkPrefixTM {n : ℕ}
   seqTM (blankWorkPrefixLoopTM targetIdx counterIdx limitIdx)
     (seqTM (rewindWorkTM targetIdx) (clearWorkTM counterIdx))
 
+/-- Rewind an arbitrarily positioned target before blanking its bounded
+prefix. This is the replay-cleanup form used after a source transducer halts. -/
+def rewindBlankWorkPrefixTM {n : ℕ}
+    (targetIdx counterIdx limitIdx : Fin n) : TM n :=
+  seqTM (rewindWorkTM targetIdx)
+    (blankWorkPrefixTM targetIdx counterIdx limitIdx)
+
 /-- Exact loop time before target rewind and counter cleanup. -/
 def blankWorkPrefixLoopTime (limit : ℕ) : ℕ :=
   binaryForLoopTime (fun _ => 1) limit 0 limit
@@ -96,6 +103,16 @@ def blankWorkPrefixSpace (initialSpace limit : ℕ) : ℕ :=
   max (initialSpace + limit + 2 * limit.size + 4)
     (max ((initialSpace + limit) + (limit + 3))
       (initialSpace + clearWorkTimeBound limit.bits.length))
+
+/-- Exact advertised runtime for rewind followed by bounded-prefix blanking. -/
+def rewindBlankWorkPrefixTime (headBound limit : ℕ) : ℕ :=
+  headBound + 2 + 1 + blankWorkPrefixTime limit
+
+/-- All-prefix envelope for rewind followed by bounded-prefix blanking. -/
+def rewindBlankWorkPrefixSpace
+    (initialSpace headBound limit : ℕ) : ℕ :=
+  max (initialSpace + (headBound + 2))
+    (blankWorkPrefixSpace initialSpace limit)
 
 end TM
 

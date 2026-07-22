@@ -1162,6 +1162,7 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_capture_withinAuxSpace_inter
       (outputProbeTM tm).reachesIn probeSteps
         (outputProbeCfg tm before counter output) done ∧
       (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeTM tm).reachesIn elapsed
@@ -1208,10 +1209,25 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_capture_withinAuxSpace_inter
       done := by
     simpa [done, Nat.add_assoc] using
       (TM.reachesIn.step hhaltStep' hcaptureRun)
-  refine ⟨sourceSteps + 2, done, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨sourceSteps + 2, done, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa [done, finalOutput, Nat.add_assoc] using hrun
   · simpa [done] using hdoneHalt
   · simpa [done] using hdoneOutput
+  · have hzero := outputProbeCounterTape_hasBinaryNat_internal 0
+    have hzeroRead : (outputProbeCounterTape 0).read ≠ Γ.start := by
+      rw [Tape.read, hzero.2.1]
+      exact Tape.cells_ne_start_of_hasBinaryString hzero.2 1 le_rfl
+    have hstable :
+        (outputProbeNormalizeTape (outputProbeCounterTape 0)).writeAndMove
+          (readBackWrite
+            (outputProbeNormalizeTape (outputProbeCounterTape 0)).read)
+          (idleDir
+            (outputProbeNormalizeTape (outputProbeCounterTape 0)).read) =
+          outputProbeCounterTape 0 := by
+      rw [outputProbeNormalizeTape_eq_self_internal hzeroRead]
+      exact Tape.writeAndMove_readBack_idle_of_ne_start _ hzeroRead
+    simpa [done, outputProbeDoneCfg, captureWork,
+      outputProbeNormalizeWork, framedWork] using hstable
   · have hfinalHead : finalOutput.head = 1 := by
       simpa [finalOutput] using hphysicalHead
     simp [done, outputProbeDoneCfg, Tape.writeAndMove, Tape.move,
@@ -1316,6 +1332,7 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_withinAuxSp
       (outputProbeTM tm).reachesIn probeSteps
         (outputProbeCfg tm before counter output) done ∧
       (outputProbeTM tm).halted done ∧ done.output.HasOutput [bit] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeTM tm).reachesIn elapsed
@@ -1368,10 +1385,17 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_withinAuxSp
       done := by
     simpa [done, Nat.add_assoc] using
       (TM.reachesIn.step hsourceStep' hcaptureRun)
-  refine ⟨sourceSteps + 2, done, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨sourceSteps + 2, done, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa [done, finalOutput, Nat.add_assoc] using hrun
   · simpa [done] using hdoneHalt
   · simpa [done] using hdoneOutput
+  · have hstable :
+        (outputProbeCounterTape 0).writeAndMove
+          (readBackWrite (outputProbeCounterTape 0).read)
+          (idleDir (outputProbeCounterTape 0).read) =
+          outputProbeCounterTape 0 :=
+      Tape.writeAndMove_readBack_idle_of_ne_start _ hzeroRead
+    simpa [done, outputProbeDoneCfg, captureWork] using hstable
   · have hfinalHead : finalOutput.head = 1 := by
       simpa [finalOutput] using hphysicalHead
     simp [done, outputProbeDoneCfg, Tape.writeAndMove, Tape.move,
@@ -1549,6 +1573,7 @@ theorem ComputesInSpace.outputProbeTM_getElem_withinAuxSpace_internal
           (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
       (outputProbeTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeTM tm).reachesIn elapsed
@@ -1676,7 +1701,8 @@ theorem ComputesInSpace.outputProbeTM_getElem_internal
           (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
       (outputProbeTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] := by
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hhead, _hspace⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hcounter, _hhead,
+      _hspace⟩ :=
     hcomp.outputProbeTM_getElem_withinAuxSpace_internal input index hindex
   exact ⟨probeSteps, done, hreach, hhalt, hout⟩
 
@@ -1713,6 +1739,7 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace_internal
           (outputProbeCounterTape (index + 1))) done ∧
       (outputProbeStartedTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] ∧
+      done.work (Fin.last n) = outputProbeCounterTape 0 ∧
       done.output.head = 2 ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         (outputProbeStartedTM tm).reachesIn elapsed
@@ -1723,7 +1750,8 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace_internal
             (index + 1)) := by
   have hne := qstart_ne_qhalt_of_computesInSpace_getElem_internal
     hcomp input index hindex
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, hhead, hspace⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, hcounter, hhead,
+      hspace⟩ :=
     hcomp.outputProbeTM_getElem_withinAuxSpace_internal input index hindex
   have hprobeNe :
       (outputProbeTM tm).qstart ≠ (outputProbeTM tm).qhalt := by
@@ -1748,7 +1776,7 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem_withinAuxSpace_internal
       subst intermediate
       refine ⟨tailSteps, done,
         (outputProbeTM tm).startedTM_reachesIn_of_source hrest,
-        hhalt, hout, hhead, ?_⟩
+        hhalt, hout, hcounter, hhead, ?_⟩
       intro elapsed cfg helapsed hstarted
       have hsource := (outputProbeTM tm).source_reachesIn_of_startedTM
         hstarted
@@ -1768,7 +1796,8 @@ theorem ComputesInSpace.outputProbeStartedTM_getElem_internal
           (outputProbeCounterTape (index + 1))) done ∧
       (outputProbeStartedTM tm).halted done ∧
       done.output.HasOutput [(f input)[index]'hindex] := by
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hhead, _hspace⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hcounter, _hhead,
+      _hspace⟩ :=
     hcomp.outputProbeStartedTM_getElem_withinAuxSpace_internal
       input index hindex
   exact ⟨probeSteps, done, hreach, hhalt, hout⟩
@@ -1788,6 +1817,7 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
       ((outputProbeStartedTM tm).retargetOutput).halted done ∧
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
+      done.work ⟨n, by omega⟩ = outputProbeCounterTape 0 ∧
       done.output = (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
         ((outputProbeStartedTM tm).retargetOutput).reachesIn elapsed
@@ -1797,8 +1827,8 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
         cfg.WithinAuxSpace input.length
           (outputProbeCaptureSpace (max 1 (space input.length))
             (index + 1)) := by
-  obtain ⟨probeSteps, sourceDone, hsourceRun, hhalt, hout, hhead,
-      hsourcePrefix⟩ :=
+  obtain ⟨probeSteps, sourceDone, hsourceRun, hhalt, hout, hcounter,
+      hhead, hsourcePrefix⟩ :=
     hcomp.outputProbeStartedTM_getElem_withinAuxSpace_internal
       input index hindex
   let sourceTM := outputProbeStartedTM tm
@@ -1808,9 +1838,11 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_withinAuxSpace_inte
     (outputProbeTM_isTransducer_internal tm).startedTM_internal
   refine ⟨probeSteps, sourceTM.retargetCfg sourceDone,
     retargetOutput_reachesIn_retargetCfg_frame sourceTM hsourceRun,
-    hhalt, ?_, rfl, ?_⟩
+    hhalt, ?_, ?_, rfl, ?_⟩
   · rw [retargetCfg_work_last]
     exact hout
+  · rw [retargetCfg_work_lt]
+    exact hcounter
   · intro elapsed cfg helapsed hretarget
     let remaining := probeSteps - elapsed
     have htime : elapsed + remaining = probeSteps := by
@@ -1861,7 +1893,8 @@ theorem ComputesInSpace.outputProbeStartedRetargetTM_getElem_internal
       (done.work (Fin.last (n + 1))).HasOutput
         [(f input)[index]'hindex] ∧
       done.output = (Tape.init []).move Dir3.right := by
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, houtput, _hspace⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, _hcounter, houtput,
+      _hspace⟩ :=
     hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
       input index hindex
   exact ⟨probeSteps, done, hreach, hhalt, hout, houtput⟩
@@ -1893,6 +1926,9 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
       ((placeWorkCfg queryTM pre post extras done).work
         (placeWorkIdx pre post (Fin.last (n + 1)))).HasOutput
           [(f input)[index]'hindex] ∧
+      (placeWorkCfg queryTM pre post extras done).work
+          (placeWorkIdx pre post ⟨n, by omega⟩) =
+        outputProbeCounterTape 0 ∧
       (placeWorkCfg queryTM pre post extras done).output =
         (Tape.init []).move Dir3.right ∧
       ∀ elapsed cfg, elapsed ≤ probeSteps →
@@ -1904,17 +1940,20 @@ theorem ComputesInSpace.placeOutputProbeStartedRetargetTM_getElem_withinAuxSpace
               (index + 1))
             frameSpace) := by
   dsimp only
-  obtain ⟨probeSteps, done, hreach, hhalt, hout, houtput, hprefix⟩ :=
+  obtain ⟨probeSteps, done, hreach, hhalt, hout, hcounter, houtput,
+      hprefix⟩ :=
     hcomp.outputProbeStartedRetargetTM_getElem_withinAuxSpace_internal
       input index hindex
   obtain ⟨hplaced, hplacedPrefix⟩ :=
     placeWorkTM_reachesIn_placeWorkCfg_stable_withinAuxSpace_internal
       ((outputProbeStartedTM tm).retargetOutput) pre post extras hreach
       hextra hprefix hframe
-  refine ⟨probeSteps, done, hplaced, ?_, ?_, ?_, hplacedPrefix⟩
+  refine ⟨probeSteps, done, hplaced, ?_, ?_, ?_, ?_, hplacedPrefix⟩
   · exact hhalt
   · rw [placeWorkCfg_work_middle]
     exact hout
+  · rw [placeWorkCfg_work_middle]
+    exact hcounter
   · simpa only [placeWorkCfg_output] using houtput
 
 end TM

@@ -85,11 +85,47 @@ theorem blankWorkPrefixTM_hoareTimeSpace_frame {n : ℕ}
     htargetInvariant htargetHead hinp hwork hcounter hlimit hout hworkSpace
     hinputSpace
 
+/-- Rewind an arbitrary source-space-bounded target head before applying the
+same exact sparse-prefix reset. -/
+theorem rewindBlankWorkPrefixTM_hoareTimeSpace_frame {n : ℕ}
+    (targetIdx counterIdx limitIdx : Fin n)
+    (hdistinct : BlankWorkPrefixDistinct targetIdx counterIdx limitIdx)
+    (headBound limit inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (htargetInvariant : (work₀ targetIdx).StartInvariant)
+    (htargetHead : (work₀ targetIdx).head ≤ headBound)
+    (hinp : Parked inp₀)
+    (hother : ∀ i, i ≠ targetIdx → Parked (work₀ i))
+    (hcounter : (work₀ counterIdx).HasBinaryNat 0)
+    (hlimit : (work₀ limitIdx).HasBinaryNat limit)
+    (hout : Parked out₀)
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace : inp₀.head ≤ inputLength + initialSpace + 1) :
+    (rewindBlankWorkPrefixTM targetIdx counterIdx limitIdx).HoareTimeSpace
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        work = Function.update work₀ targetIdx
+          (blankPrefixResultTape (work₀ targetIdx) limit) ∧
+        out = out₀)
+      (rewindBlankWorkPrefixTime headBound limit) inputLength
+      (rewindBlankWorkPrefixSpace initialSpace headBound limit) :=
+  rewindBlankWorkPrefixTM_hoareTimeSpace_frame_internal targetIdx counterIdx
+    limitIdx hdistinct headBound limit inputLength initialSpace inp₀ work₀
+    out₀ htargetInvariant htargetHead hinp hother hcounter hlimit hout
+    hworkSpace hinputSpace
+
 /-- Bounded-prefix blanking never moves the physical output head left. -/
 theorem blankWorkPrefixTM_isTransducer {n : ℕ}
     (targetIdx counterIdx limitIdx : Fin n) :
     (blankWorkPrefixTM targetIdx counterIdx limitIdx).IsTransducer :=
   blankWorkPrefixTM_isTransducer_internal targetIdx counterIdx limitIdx
+
+/-- Rewind-then-blank cleanup preserves one-way-output safety. -/
+theorem rewindBlankWorkPrefixTM_isTransducer {n : ℕ}
+    (targetIdx counterIdx limitIdx : Fin n) :
+    (rewindBlankWorkPrefixTM targetIdx counterIdx limitIdx).IsTransducer :=
+  rewindBlankWorkPrefixTM_isTransducer_internal targetIdx counterIdx limitIdx
 
 end TM
 
