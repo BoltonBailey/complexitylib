@@ -165,6 +165,39 @@ theorem BinaryForLoopSpaceSpec.prefix_withinAuxSpace
     c.WithinAuxSpace inputLength spaceBound :=
   spaceSpec.prefix_withinAuxSpace_internal count value t c hlimit hreach htime
 
+/-- Package bounded reachable iteration witnesses into a segment certificate.
+
+The selected runtime is proof data only: execution remains the concrete
+deterministic loop, while callers may supply each iteration through an
+existential Hoare-time witness. -/
+noncomputable def BinaryForSegmentSpec.ofWitnesses
+    {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue : ℕ}
+    (counter_ne_limit : counterIdx ≠ limitIdx)
+    (scanCfg iterationStartCfg iterationDoneCfg :
+      ℕ → Cfg n (binaryForTM body counterIdx limitIdx).Q)
+    (doneCfg : Cfg n (binaryForTM body counterIdx limitIdx).Q)
+    (testRun : ∀ value, startValue ≤ value → value < limitValue →
+      (binaryForTM body counterIdx limitIdx).reachesIn
+        (binaryForCompareTime limitValue) (scanCfg value)
+        (iterationStartCfg value))
+    (iterationWitness : ∀ value, startValue ≤ value → value < limitValue →
+      ∃ time, time ≤ binaryForIterationTime bodyTime value ∧
+        (binaryForTM body counterIdx limitIdx).reachesIn time
+          (iterationStartCfg value) (iterationDoneCfg value))
+    (loopbackStep : ∀ value, startValue ≤ value → value < limitValue →
+      (binaryForTM body counterIdx limitIdx).step (iterationDoneCfg value) =
+        some (scanCfg (value + 1)))
+    (doneRun :
+      (binaryForTM body counterIdx limitIdx).reachesIn
+        (binaryForCompareTime limitValue) (scanCfg limitValue) doneCfg)
+    (doneHalted : (binaryForTM body counterIdx limitIdx).halted doneCfg) :
+    BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue :=
+  BinaryForSegmentSpec.ofWitnessesInternal counter_ne_limit scanCfg
+    iterationStartCfg iterationDoneCfg doneCfg testRun iterationWitness
+    loopbackStep doneRun doneHalted
+
 /-- A bounded reachable-segment certificate terminates within the standard
 recursive binary-loop bound. Iteration witnesses may finish strictly before
 their advertised body-time bounds. -/

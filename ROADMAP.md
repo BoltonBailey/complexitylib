@@ -1304,7 +1304,12 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   The bounded-runtime `BinaryForSegmentSpec` and its all-prefix companion have
   now moved from the experimental routine adapter to the public `BinaryFor`
   API, so source-dependent probe runtimes can be selected existentially per
-  address while remaining under one advertised loop bound.
+  address while remaining under one advertised loop bound. Its canonical
+  witness adapter now packages those existential Hoare runs without repeated
+  choice plumbing. `OutputProbeScan` performs the concrete machine wiring:
+  it embeds address and limit registers behind the probe frame, queries and
+  resets the latch, runs the selected continuation, increments the address,
+  and preserves one-way output safety through the complete bounded scan.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

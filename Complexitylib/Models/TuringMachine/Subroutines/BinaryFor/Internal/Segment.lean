@@ -17,6 +17,62 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Select one actual iteration runtime from each bounded reachable witness. -/
+noncomputable def BinaryForSegmentSpec.ofWitnessesInternal
+    {body : TM n} {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
+    {startValue limitValue : ℕ}
+    (counter_ne_limit : counterIdx ≠ limitIdx)
+    (scanCfg iterationStartCfg iterationDoneCfg :
+      ℕ → Cfg n (binaryForTM body counterIdx limitIdx).Q)
+    (doneCfg : Cfg n (binaryForTM body counterIdx limitIdx).Q)
+    (testRun : ∀ value, startValue ≤ value → value < limitValue →
+      (binaryForTM body counterIdx limitIdx).reachesIn
+        (binaryForCompareTime limitValue) (scanCfg value)
+        (iterationStartCfg value))
+    (iterationWitness : ∀ value, startValue ≤ value → value < limitValue →
+      ∃ time, time ≤ binaryForIterationTime bodyTime value ∧
+        (binaryForTM body counterIdx limitIdx).reachesIn time
+          (iterationStartCfg value) (iterationDoneCfg value))
+    (loopbackStep : ∀ value, startValue ≤ value → value < limitValue →
+      (binaryForTM body counterIdx limitIdx).step (iterationDoneCfg value) =
+        some (scanCfg (value + 1)))
+    (doneRun :
+      (binaryForTM body counterIdx limitIdx).reachesIn
+        (binaryForCompareTime limitValue) (scanCfg limitValue) doneCfg)
+    (doneHalted : (binaryForTM body counterIdx limitIdx).halted doneCfg) :
+    BinaryForSegmentSpec body counterIdx limitIdx bodyTime
+      startValue limitValue := by
+  let actualTime (value : ℕ) : ℕ :=
+    if h : startValue ≤ value ∧ value < limitValue then
+      Classical.choose (iterationWitness value h.1 h.2)
+    else
+      0
+  refine
+    { counter_ne_limit := counter_ne_limit
+      scanCfg := scanCfg
+      iterationStartCfg := iterationStartCfg
+      iterationDoneCfg := iterationDoneCfg
+      doneCfg := doneCfg
+      testRun := testRun
+      iterationTime := actualTime
+      iterationTime_le := ?_
+      iterationRun := ?_
+      loopbackStep := loopbackStep
+      doneRun := doneRun
+      doneHalted := doneHalted }
+  · intro value hstart hlimit
+    rw [show actualTime value =
+      Classical.choose (iterationWitness value hstart hlimit) by
+        simp only [actualTime, dif_pos, hstart, hlimit, and_self]]
+    exact (Classical.choose_spec
+      (iterationWitness value hstart hlimit)).1
+  · intro value hstart hlimit
+    rw [show actualTime value =
+      Classical.choose (iterationWitness value hstart hlimit) by
+        simp only [actualTime, dif_pos, hstart, hlimit, and_self]]
+    exact (Classical.choose_spec
+      (iterationWitness value hstart hlimit)).2
+
 theorem BinaryForSegmentSpec.reachesIn_internal {body : TM n}
     {counterIdx limitIdx : Fin n} {bodyTime : ℕ → ℕ}
     {startValue limitValue : ℕ}

@@ -58,6 +58,7 @@ import Complexitylib.Models.TuringMachine.OutputProbeConsume
 import Complexitylib.Models.TuringMachine.OutputProbeDispatch
 import Complexitylib.Models.TuringMachine.OutputProbeLatch
 import Complexitylib.Models.TuringMachine.OutputProbeIndexed
+import Complexitylib.Models.TuringMachine.OutputProbeScan
 import Complexitylib.Models.TuringMachine.OutputProbeCleanup
 import Complexitylib.Models.TuringMachine.OutputProbeFrame
 import Complexitylib.Models.TuringMachine.RetargetOutputFrame
