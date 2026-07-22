@@ -1402,9 +1402,19 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   two captured canonical bit tapes is now concrete, costs exactly two framed
   transitions beyond its selected continuation, preserves the continuation's
   all-prefix space budget, and is one-way on output. Its raw-bit continuation
-  is proved equal to the cursor's semantic branch. The next machine seam is to
-  position and capture those two bits from the preserved binary slot address,
-  then wire the resulting branch into the three recursive connective cases.
+  is proved equal to the cursor's semantic branch. A one-transition capture
+  primitive now canonicalizes the currently positioned source bit, optionally
+  moves the preserved address head left, carries an all-prefix space contract,
+  and is one-way on output. Its three-transition high/low composition captures
+  one adjacent base-four digit, leaves the source on the low bit, preserves all
+  unrelated tapes, carries its own all-prefix space contract, and remains one-
+  way on output. The runtime positioner is now concrete as a canonical binary
+  count-up loop whose certified two-transition body advances one base-four
+  digit, followed by a certified one-transition move onto the current high bit;
+  all movement bodies carry all-prefix space and one-way-output contracts. The
+  next proof seam is the loop invariant identifying iteration `v` with head
+  offset `2 * v`, then wiring the positioned capture and branch into the three
+  recursive connective cases.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
