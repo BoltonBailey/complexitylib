@@ -1209,6 +1209,9 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   largest countdown's binary width, without accumulating predecessor costs.
   Canonical blank-output specializations also discharge the probe's physical
   head-and-cells premises after every positive-length replay.
+  Output-frontier monotonicity and exact crossing now combine those two capture
+  cases into one machine theorem for every valid index of a completed
+  space-bounded transducer output.
   `Circuits/BarringtonStreaming` now replaces complete program construction by
   a target-independent exact instruction-count recurrence and random-access
   instruction stream, with every query proved equal to the reference compiler.

@@ -66,7 +66,7 @@ end Tape
 
 namespace TM
 
-private theorem output_startInvariant_step_internal {tm : TM n}
+theorem output_startInvariant_step_internal {tm : TM n}
     {cfg cfg' : Cfg n tm.Q} (hstart : cfg.output.StartInvariant)
     (hstep : tm.step cfg = some cfg') :
     cfg'.output.StartInvariant := by
@@ -76,6 +76,16 @@ private theorem output_startInvariant_step_internal {tm : TM n}
   · simp only [Option.some.injEq] at hstep
     rw [← hstep]
     exact hstart.writeAndMove _ _
+
+theorem output_startInvariant_reachesIn_internal {tm : TM n}
+    {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg')
+    (hstart : cfg.output.StartInvariant) :
+    cfg'.output.StartInvariant := by
+  induction hreach with
+  | zero => exact hstart
+  | step hstep _ ih =>
+      exact ih (output_startInvariant_step_internal hstart hstep)
 
 theorem IsTransducer.cursorStep_commute_internal {tm : TM n}
     (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
@@ -161,6 +171,164 @@ theorem IsTransducer.cursorStepObserved_head_internal {tm : TM n}
     simp only [cursorOutputEvent, hdir]
     exact writeAndMove_head_eq_add_advanceCount cfg.output outputWrite
       outputDir hnoleft
+
+theorem IsTransducer.output_head_mono_step_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
+    (hstep : tm.step cfg = some cfg') :
+    cfg.output.head ≤ cfg'.output.head := by
+  generalize htransition :
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read = transition
+  obtain ⟨state, workWrites, outputWrite, inputDir, workDirs,
+    outputDir⟩ := transition
+  have hnoleft : outputDir ≠ Dir3.left := by
+    have := htrans cfg.state cfg.input.read
+      (fun i => (cfg.work i).read) cfg.output.read
+    rw [htransition] at this
+    exact this
+  simp only [TM.step, htransition] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    subst cfg'
+    cases outputDir with
+    | left => exact (hnoleft rfl).elim
+    | right => simp [Tape.writeAndMove, Tape.move, Tape.write_head]
+    | stay => simp [Tape.writeAndMove, Tape.move, Tape.write_head]
+
+private theorem output_head_step_le_internal {tm : TM n}
+    {cfg cfg' : Cfg n tm.Q} (hstep : tm.step cfg = some cfg') :
+    cfg'.output.head ≤ cfg.output.head + 1 := by
+  simp only [TM.step] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    rw [← hstep]
+    generalize hdir :
+      (tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+        cfg.output.read).2.2.2.2.2 = direction
+    cases direction with
+    | left =>
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head]
+        omega
+    | right => simp [Tape.writeAndMove, Tape.move, Tape.write_head]
+    | stay => simp [Tape.writeAndMove, Tape.move, Tape.write_head]
+
+theorem IsTransducer.output_head_mono_reachesIn_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg') :
+    cfg.output.head ≤ cfg'.output.head := by
+  induction hreach with
+  | zero => exact le_rfl
+  | step hstep _ ih =>
+      exact (htrans.output_head_mono_step_internal hstep).trans ih
+
+private theorem output_cells_lt_head_step_internal {tm : TM n}
+    {cfg cfg' : Cfg n tm.Q} (hstep : tm.step cfg = some cfg')
+    {position : ℕ} (hposition : position < cfg.output.head) :
+    cfg'.output.cells position = cfg.output.cells position := by
+  simp only [TM.step] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    rw [← hstep]
+    have hhead : cfg.output.head ≠ 0 := by omega
+    have hne : cfg.output.head ≠ position := by omega
+    cases (tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read).2.2.2.2.2 <;>
+      simp [Tape.writeAndMove, Tape.move, Tape.write, hhead,
+        Function.update_of_ne (Ne.symm hne)]
+
+theorem IsTransducer.output_cells_lt_head_reachesIn_internal {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg') {position : ℕ}
+    (hposition : position < cfg.output.head) :
+    cfg'.output.cells position = cfg.output.cells position := by
+  induction hreach with
+  | zero => rfl
+  | step hstep _ ih =>
+      have hmono := htrans.output_head_mono_step_internal hstep
+      rw [ih (hposition.trans_le hmono)]
+      exact output_cells_lt_head_step_internal hstep hposition
+
+theorem cursorOutputDirection_eq_right_of_output_head_lt_internal
+    {tm : TM n} {cfg cfg' : Cfg n tm.Q}
+    (hstart : cfg.output.StartInvariant)
+    (hstep : tm.step cfg = some cfg')
+    (hhead : cfg.output.head < cfg'.output.head) :
+    tm.cursorOutputDirection (.ofCfg cfg) = Dir3.right := by
+  generalize htransition :
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read = transition
+  obtain ⟨state, workWrites, outputWrite, inputDir, workDirs,
+    outputDir⟩ := transition
+  have hdirection :
+      tm.cursorOutputDirection (.ofCfg cfg) = outputDir := by
+    have hread := OutputCursor.read_outputCursor_internal hstart
+    unfold cursorOutputDirection CursorCfg.ofCfg
+    rw [hread, htransition]
+  simp only [TM.step, htransition] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    subst cfg'
+    rw [hdirection]
+    cases outputDir with
+    | left =>
+        simp [Tape.writeAndMove, Tape.move, Tape.write_head] at hhead
+        omega
+    | right => rfl
+    | stay => simp [Tape.writeAndMove, Tape.move, Tape.write_head] at hhead
+
+theorem cursorOutputWrite_step_cell_internal {tm : TM n}
+    {cfg cfg' : Cfg n tm.Q} (hstart : cfg.output.StartInvariant)
+    (hstep : tm.step cfg = some cfg')
+    (hpositive : 0 < cfg.output.head) :
+    cfg'.output.cells cfg.output.head =
+      (tm.cursorOutputWrite (.ofCfg cfg)).toΓ := by
+  generalize htransition :
+    tm.δ cfg.state cfg.input.read (fun i => (cfg.work i).read)
+      cfg.output.read = transition
+  obtain ⟨state, workWrites, outputWrite, inputDir, workDirs,
+    outputDir⟩ := transition
+  have hwrite : tm.cursorOutputWrite (.ofCfg cfg) = outputWrite := by
+    have hread := OutputCursor.read_outputCursor_internal hstart
+    unfold cursorOutputWrite CursorCfg.ofCfg
+    rw [hread, htransition]
+  simp only [TM.step, htransition] at hstep
+  split at hstep
+  · simp at hstep
+  · simp only [Option.some.injEq] at hstep
+    subst cfg'
+    rw [hwrite]
+    have hhead : cfg.output.head ≠ 0 := by omega
+    cases outputDir <;>
+      simp [Tape.writeAndMove, Tape.move, Tape.write, hhead]
+
+theorem exists_output_crossing_internal {tm : TM n}
+    {steps position : ℕ}
+    {cfg final : Cfg n tm.Q} (hreach : tm.reachesIn steps cfg final)
+    (hbefore : cfg.output.head ≤ position)
+    (hafter : position < final.output.head) :
+    ∃ prefixSteps suffixSteps selected next,
+      tm.reachesIn prefixSteps cfg selected ∧
+      tm.step selected = some next ∧
+      tm.reachesIn suffixSteps next final ∧
+      selected.output.head = position ∧
+      next.output.head = position + 1 := by
+  induction hreach with
+  | zero => omega
+  | @step source next remaining final hstep hrest ih =>
+      by_cases hcrossed : position < next.output.head
+      · have hbound := output_head_step_le_internal hstep
+        refine ⟨0, remaining, source, next, .zero, hstep, hrest, ?_, ?_⟩
+        · omega
+        · omega
+      · obtain ⟨prefixSteps, suffixSteps, selected, crossed, hprefix, hstep',
+          hsuffix, hselected, hcrossed'⟩ :=
+          ih (Nat.le_of_not_gt hcrossed) hafter
+        exact ⟨prefixSteps + 1, suffixSteps, selected, crossed,
+          .step hstep hprefix, hstep', hsuffix, hselected, hcrossed'⟩
 
 theorem IsTransducer.cursorTrace_commute_internal {tm : TM n}
     (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}

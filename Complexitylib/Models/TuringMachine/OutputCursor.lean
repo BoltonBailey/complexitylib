@@ -24,6 +24,8 @@ output string on work tape.
   concrete transducer step.
 - `TM.IsTransducer.cursorStepObserved_commute` -- the same step exposes its
   zero-or-one output-frontier advance.
+- `TM.exists_output_crossing` -- every run from at or before a cell to beyond
+  it exposes the unique one-step frontier crossing.
 - `TM.IsTransducer.cursorTrace_commute` -- the quotient simulates a complete
   exact-step run.
 - `TM.IsTransducer.cursorTraceObserved_initCfg` -- from an initial
@@ -106,6 +108,74 @@ theorem IsTransducer.cursorStepObserved_commute {tm : TM n}
     tm.cursorStepObserved (.ofCfg cfg) =
       some (.ofCfg cfg', tm.cursorOutputEvent (.ofCfg cfg)) :=
   htrans.cursorStepObserved_commute_internal hstart hblank hstep
+
+/-- Exact runs preserve the structural output-tape start-marker invariant. -/
+theorem output_startInvariant_reachesIn {tm : TM n}
+    {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg')
+    (hstart : cfg.output.StartInvariant) :
+    cfg'.output.StartInvariant :=
+  output_startInvariant_reachesIn_internal hreach hstart
+
+/-- A transducer output head never moves left in one concrete step. -/
+theorem IsTransducer.output_head_mono_step {tm : TM n}
+    (htrans : tm.IsTransducer) {cfg cfg' : Cfg n tm.Q}
+    (hstep : tm.step cfg = some cfg') :
+    cfg.output.head ≤ cfg'.output.head :=
+  htrans.output_head_mono_step_internal hstep
+
+/-- A transducer output head never moves left along an exact run. -/
+theorem IsTransducer.output_head_mono_reachesIn {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg') :
+    cfg.output.head ≤ cfg'.output.head :=
+  htrans.output_head_mono_reachesIn_internal hreach
+
+/-- Once a transducer output head lies strictly beyond a cell, no later step
+in the run can change that cell. -/
+theorem IsTransducer.output_cells_lt_head_reachesIn {tm : TM n}
+    (htrans : tm.IsTransducer) {steps : ℕ} {cfg cfg' : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps cfg cfg') {position : ℕ}
+    (hposition : position < cfg.output.head) :
+    cfg'.output.cells position = cfg.output.cells position :=
+  htrans.output_cells_lt_head_reachesIn_internal hreach hposition
+
+/-- If one concrete step increases the output head, its finite-cursor output
+direction is `right`. -/
+theorem cursorOutputDirection_eq_right_of_output_head_lt
+    {tm : TM n} {cfg cfg' : Cfg n tm.Q}
+    (hstart : cfg.output.StartInvariant)
+    (hstep : tm.step cfg = some cfg')
+    (hhead : cfg.output.head < cfg'.output.head) :
+    tm.cursorOutputDirection (.ofCfg cfg) = Dir3.right :=
+  cursorOutputDirection_eq_right_of_output_head_lt_internal
+    hstart hstep hhead
+
+/-- Away from the immutable marker, one concrete step writes its advertised
+finite-cursor output symbol at the old output-head cell. -/
+theorem cursorOutputWrite_step_cell {tm : TM n}
+    {cfg cfg' : Cfg n tm.Q} (hstart : cfg.output.StartInvariant)
+    (hstep : tm.step cfg = some cfg')
+    (hpositive : 0 < cfg.output.head) :
+    cfg'.output.cells cfg.output.head =
+      (tm.cursorOutputWrite (.ofCfg cfg)).toΓ :=
+  cursorOutputWrite_step_cell_internal hstart hstep hpositive
+
+/-- Any exact run that begins at or before `position` and finishes beyond it
+contains a concrete step from head `position` to `position + 1`. The statement
+does not need the transducer discipline; one-step head travel alone forces the
+crossing. -/
+theorem exists_output_crossing {tm : TM n} {steps position : ℕ}
+    {cfg final : Cfg n tm.Q} (hreach : tm.reachesIn steps cfg final)
+    (hbefore : cfg.output.head ≤ position)
+    (hafter : position < final.output.head) :
+    ∃ prefixSteps suffixSteps selected next,
+      tm.reachesIn prefixSteps cfg selected ∧
+      tm.step selected = some next ∧
+      tm.reachesIn suffixSteps next final ∧
+      selected.output.head = position ∧
+      next.output.head = position + 1 :=
+  exists_output_crossing_internal hreach hbefore hafter
 
 /-- Quotienting the output tape commutes with an entire exact-step transducer
 run. The cursor trace retains the source state, input, and work tapes exactly

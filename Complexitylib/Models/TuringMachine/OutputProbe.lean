@@ -42,6 +42,10 @@ the requested position occupies only its binary width.
   theorem from canonical blank physical output, with no tape-shape premises.
 - `TM.outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture` -- the
   corresponding end-to-end theorem for a cell finalized before source halt.
+- `TM.IsTransducer.outputProbeTM_reachesIn_getElem` -- any valid output index
+  of a successful concrete transducer run can be captured.
+- `TM.ComputesInSpace.outputProbeTM_getElem` -- the same valid-index interface
+  for an abstract space-bounded function computation.
 - `TM.outputProbeSourceResultCfg_capture` -- a right move with a zero
   countdown selects the finalized bit for capture.
 - `TM.outputProbeTM_capture_hasOutput` -- capture reaches the unique halt state
@@ -332,6 +336,39 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_init
     Tape.StartInvariant.init_nil hnext hcursor hdir hwrite
     (suppressOutputTapeTrace_succ_init_head steps)
     (suppressOutputTapeTrace_succ_init_cells steps)
+
+/-- Replay a successful complete transducer run to capture any valid output
+index. The theorem hides whether the selected cell was finalized by an earlier
+right move or remained under the source head at halt. -/
+theorem IsTransducer.outputProbeTM_reachesIn_getElem
+    {tm : TM n} (htrans : tm.IsTransducer)
+    {input bits : List Bool} {steps : ℕ} {final : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps (tm.initCfg input) final)
+    (hhalt : tm.halted final) (hout : final.output.HasOutput bits)
+    (index : ℕ) (hindex : index < bits.length) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      done.output.HasOutput [bits[index]'hindex] :=
+  htrans.outputProbeTM_reachesIn_getElem_internal
+    hreach hhalt hout index hindex
+
+/-- Every valid output index of a space-bounded function transducer is
+captured by its concrete output probe from the canonical source input and
+binary position tape. -/
+theorem ComputesInSpace.outputProbeTM_getElem
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      done.output.HasOutput [(f input)[index]'hindex] :=
+  hcomp.outputProbeTM_getElem_internal input index hindex
 
 end TM
 

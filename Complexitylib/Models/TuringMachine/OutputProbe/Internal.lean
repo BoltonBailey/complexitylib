@@ -1077,6 +1077,130 @@ theorem outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_internal
   · simpa [done] using hdoneHalt
   · simpa [done] using hdoneOutput
 
+/-- A successful complete transducer run can be replayed to capture any valid
+output index. The proof splits according to whether the source halts on the
+selected frontier cell or crossed and finalized it earlier. -/
+theorem IsTransducer.outputProbeTM_reachesIn_getElem_internal
+    {tm : TM n} (htrans : tm.IsTransducer)
+    {input bits : List Bool} {steps : ℕ} {final : Cfg n tm.Q}
+    (hreach : tm.reachesIn steps (tm.initCfg input) final)
+    (hhalt : tm.halted final) (hout : final.output.HasOutput bits)
+    (index : ℕ) (hindex : index < bits.length) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      done.output.HasOutput [bits[index]'hindex] := by
+  let position := index + 1
+  let bit := bits[index]'hindex
+  have hcell : final.output.cells position = Γ.ofBool bit := by
+    simpa [position, bit] using hout.1 index hindex
+  have hblank := htrans.initCfg_output_blankAfterHead_reachesIn hreach
+  have hpositionLe : position ≤ final.output.head := by
+    by_contra hnot
+    have hblankCell := hblank position (by omega)
+    rw [hcell] at hblankCell
+    exact Γ.ofBool_ne_blank bit hblankCell
+  by_cases hfrontier : final.output.head = position
+  · have hstepsPositive : 0 < steps := by
+      by_contra hnot
+      have hzero : steps = 0 := by omega
+      subst steps
+      cases hreach
+      simp [position] at hfrontier
+    obtain ⟨replaySteps, hsteps⟩ : ∃ replaySteps, steps = replaySteps + 1 :=
+      ⟨steps - 1, by omega⟩
+    subst steps
+    have htrace := htrans.cursorTraceObserved_initCfg hreach
+    rw [hfrontier] at htrace
+    have hcursor : (CursorCfg.ofCfg final).output =
+        .cell (Γ.ofBool bit) := by
+      unfold CursorCfg.ofCfg Tape.outputCursor
+      simp [hfrontier, position, Tape.read, hcell]
+    exact outputProbeTM_reachesIn_cursorTraceObserved_capture_internal tm
+      (outputProbeCounterTape position) (Tape.init []) bit htrace
+      (Tape.StartInvariant.init_ofBool input)
+      (fun _ => Tape.StartInvariant.init_nil)
+      (outputProbeCounterTape_hasBinaryNat_internal position)
+      Tape.StartInvariant.init_nil hhalt hcursor
+      (suppressOutputTapeTrace_succ_init_head replaySteps)
+      (suppressOutputTapeTrace_succ_init_cells replaySteps)
+  · have hpositionLt : position < final.output.head := by omega
+    obtain ⟨prefixSteps, suffixSteps, selected, next, hprefix, hstep,
+        hsuffix, hselectedHead, hnextHead⟩ :=
+      exists_output_crossing hreach (by simp [position]) hpositionLt
+    have hprefixPositive : 0 < prefixSteps := by
+      by_contra hnot
+      have hzero : prefixSteps = 0 := by omega
+      subst prefixSteps
+      cases hprefix
+      simp [position] at hselectedHead
+    obtain ⟨replaySteps, hprefixSteps⟩ :
+        ∃ replaySteps, prefixSteps = replaySteps + 1 :=
+      ⟨prefixSteps - 1, by omega⟩
+    subst prefixSteps
+    have htrace := htrans.cursorTraceObserved_initCfg hprefix
+    rw [hselectedHead] at htrace
+    have hselectedStart : selected.output.StartInvariant :=
+      output_startInvariant_reachesIn hprefix Tape.StartInvariant.init_nil
+    have hselectedBlank : selected.output.BlankAfterHead :=
+      htrans.initCfg_output_blankAfterHead_reachesIn hprefix
+    have hnextCursor : tm.cursorStep (.ofCfg selected) =
+        some (.ofCfg next) :=
+      htrans.cursorStep_commute hselectedStart hselectedBlank hstep
+    have hcursor : (CursorCfg.ofCfg selected).output =
+        .cell selected.output.read := by
+      unfold CursorCfg.ofCfg Tape.outputCursor
+      simp [hselectedHead, position]
+    have hdir : tm.cursorOutputDirection (.ofCfg selected) =
+        Dir3.right :=
+      cursorOutputDirection_eq_right_of_output_head_lt
+        hselectedStart hstep (by omega)
+    have hstepCell := cursorOutputWrite_step_cell hselectedStart hstep
+      (show 0 < selected.output.head by omega)
+    have hpast := htrans.output_cells_lt_head_reachesIn hsuffix
+      (show position < next.output.head by omega)
+    have hwriteToΓ :
+        (tm.cursorOutputWrite (.ofCfg selected)).toΓ = Γ.ofBool bit := by
+      calc
+        (tm.cursorOutputWrite (.ofCfg selected)).toΓ =
+            next.output.cells selected.output.head := hstepCell.symm
+        _ = next.output.cells position := by rw [hselectedHead]
+        _ = final.output.cells position := hpast.symm
+        _ = Γ.ofBool bit := hcell
+    have hwrite : tm.cursorOutputWrite (.ofCfg selected) =
+        if bit then Γw.one else Γw.zero := by
+      cases hbit : bit <;>
+        cases hsymbol : tm.cursorOutputWrite (.ofCfg selected) <;>
+        simp [hbit, hsymbol, Γ.ofBool, Γw.toΓ] at hwriteToΓ ⊢
+    exact
+      outputProbeTM_reachesIn_cursorTraceObserved_finalize_capture_internal
+        tm (outputProbeCounterTape position) (Tape.init []) bit
+        selected.output.read htrace (Tape.StartInvariant.init_ofBool input)
+        (fun _ => Tape.StartInvariant.init_nil)
+        (outputProbeCounterTape_hasBinaryNat_internal position)
+        Tape.StartInvariant.init_nil hnextCursor hcursor hdir hwrite
+        (suppressOutputTapeTrace_succ_init_head replaySteps)
+        (suppressOutputTapeTrace_succ_init_cells replaySteps)
+
+/-- A space-bounded function transducer's probe captures every valid output
+index from the canonical source input and binary position tape. -/
+theorem ComputesInSpace.outputProbeTM_getElem_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space) (input : List Bool)
+    (index : ℕ) (hindex : index < (f input).length) :
+    ∃ probeSteps done,
+      (outputProbeTM tm).reachesIn probeSteps
+        (outputProbeCfg tm (.ofCfg (tm.initCfg input))
+          (outputProbeCounterTape (index + 1)) (Tape.init [])) done ∧
+      (outputProbeTM tm).halted done ∧
+      done.output.HasOutput [(f input)[index]'hindex] := by
+  obtain ⟨final, hreach, hhalt, hout⟩ := hcomp.2.2 input
+  obtain ⟨steps, hreachIn⟩ := tm.reaches_to_reachesIn hreach
+  exact hcomp.1.outputProbeTM_reachesIn_getElem_internal
+    hreachIn hhalt hout index hindex
+
 end TM
 
 end Complexity
