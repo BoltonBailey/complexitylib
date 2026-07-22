@@ -1358,10 +1358,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   and scratch registers. Its exact cleanup phase resets all three retained tag
   bits to a canonical zero frame without changing any other controller tape;
   invariant-restoring dispatch now wraps every legal and invalid continuation
-  in that same cleanup contract. The source-derived token theorem now composes
-  all three probes, tag retention, canonical cleanup, and selected dispatch in
-  one exact machine run. The variable branch is now instantiated concretely by
-  the bounded terminated-unary machine through the shared layout. The generic
+  in that same cleanup contract. Selected-continuation variants of both the
+  retained-tag and normalized-token contracts require only the branch that can
+  actually execute, so constant tokens do not inherit an impossible variable-
+  payload precondition. The source-derived token theorem now composes all three
+  probes, tag retention, canonical cleanup, and selected dispatch in one exact
+  machine run. The variable branch is now instantiated concretely by the
+  bounded terminated-unary machine through the shared layout. The generic
   `BinaryForSegmentSpec.hoareTime` adapter and the source-derived
   `ComputesInSpace.outputProbeDecodeNatTM_hoareTime` theorem now expose that
   complete loop between canonical initialized and final latch frames.
@@ -1378,9 +1381,13 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `.var` continuation from bounded payload decoding through exact instruction
   emission. The leaf dispatcher is concrete as well: `.tru` uses the constant
   emitter, `.fls` uses the certified no-output frame adapter, and only the
-  recursive connective continuations remain parameters. The next local seam is
-  to certify that combined six-way leaf dispatch before implementing the
-  recursive address/navigation controller.
+  recursive connective continuations remain parameters. Its three source-level
+  leaf contracts are now certified end to end: `.var` alone assumes and decodes
+  a bounded terminated-unary payload before appending the exact dynamic
+  instruction, `.tru` appends the exact constant instruction without a payload
+  assumption, and `.fls` preserves the accumulator unchanged. The next local
+  seam is the recursive address/navigation controller for `.neg`, `.conj`, and
+  `.disj`.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

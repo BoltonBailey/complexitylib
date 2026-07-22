@@ -857,6 +857,100 @@ private theorem outputProbeDecodeTagBitDispatchTM_hoareTime_internal
         hone
       simpa using hbranch
 
+private theorem outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (bitIdx : Fin controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hbit :
+      (outerExtras (outputProbeDecodeTagBitIdx n bitIdx)).HasBinaryNat
+        (if bit then 1 else 0))
+    (onZero onOne :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected : (if bit then onOne else onZero).HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      post selectedTime) :
+    (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n bitIdx) Γ.one onOne
+      onZero).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        post (selectedTime + 1) := by
+  cases bit with
+  | false =>
+      have hzeroBit :
+          (outerExtras (outputProbeDecodeTagBitIdx n bitIdx)).HasBinaryNat 0 :=
+        by simpa using hbit
+      have hzeroController :
+          (outerExtras (outputProbeIndexedControllerIdx n bitIdx))
+            |>.HasBinaryNat 0 := by
+        simpa [outputProbeDecodeTagBitIdx] using hzeroBit
+      have hbranch := branchWorkSymbolTM_hoareTime_different
+        (outputProbeDecodeTagBitIdx n bitIdx) Γ.one onOne onZero
+        (fun inp work out hpost => by
+          change (work (outputProbeIndexedControllerIdx n bitIdx)).read ≠
+            Γ.one
+          have hcontroller := outputProbeLatchFramePost_controller tm
+            controllerTapes outerExtras input output extras false inp work out
+            hpost bitIdx
+          rw [hcontroller, hzeroController.eq_init_move_right]
+          decide)
+        (fun inp work out hpost =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).1.read_ne_start)
+        (fun inp work out hpost i =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).2.1 i |>.read_ne_start)
+        (fun inp work out hpost =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).2.2.read_ne_start)
+        hselected
+      simpa using hbranch
+  | true =>
+      have honeBit :
+          (outerExtras (outputProbeDecodeTagBitIdx n bitIdx)).HasBinaryNat 1 :=
+        by simpa using hbit
+      have honeController :
+          (outerExtras (outputProbeIndexedControllerIdx n bitIdx))
+            |>.HasBinaryNat 1 := by
+        simpa [outputProbeDecodeTagBitIdx] using honeBit
+      have hbranch := branchWorkSymbolTM_hoareTime_equal
+        (outputProbeDecodeTagBitIdx n bitIdx) Γ.one onOne onZero
+        (fun inp work out hpost => by
+          change (work (outputProbeIndexedControllerIdx n bitIdx)).read =
+            Γ.one
+          have hcontroller := outputProbeLatchFramePost_controller tm
+            controllerTapes outerExtras input output extras false inp work out
+            hpost bitIdx
+          rw [hcontroller, honeController.eq_init_move_right]
+          rfl)
+        (fun inp work out hpost =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).1.read_ne_start)
+        (fun inp work out hpost i =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).2.1 i |>.read_ne_start)
+        (fun inp work out hpost =>
+          (outputProbeLatchFramePost_parked tm controllerTapes outerExtras
+            input output extras false hextras houter houtput inp work out
+            hpost).2.2.read_ne_start)
+        hselected
+      simpa using hbranch
+
 theorem outputProbeDecodeTagDispatchTM_hoareTime_internal
     (tm : TM n) (controllerTapes : ℕ)
     (layout : OutputProbeDecodeTagLayout controllerTapes)
@@ -971,6 +1065,180 @@ theorem outputProbeDecodeTagDispatchTM_hoareTime_internal
     simpa [outputProbeDecodeTagDispatchTM,
       outputProbeDecodeTagDispatchTime, outputProbeTokenTag?, tag₂Physical,
       tag₀ZeroTM, tag₀OneTM, tag₁ZeroTM, Nat.add_assoc] using hroot
+
+theorem outputProbeDecodeTagDispatchTM_selected_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? tag₀ tag₁ tag₂)
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+            extras false)
+          post selectedTime) :
+    (outputProbeDecodeTagDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        post (selectedTime + outputProbeDecodeTagDispatchDepth tag₀ tag₁) := by
+  let tag₂Physical := outputProbeDecodeTagBitIdx n layout.tag₂Idx
+  let tag₀ZeroTM := branchWorkSymbolTM tag₂Physical Γ.one onTru onVar
+  let tag₀OneTM := branchWorkSymbolTM tag₂Physical Γ.one onNeg onFls
+  let tag₁ZeroTM := branchWorkSymbolTM tag₂Physical Γ.one onDisj onConj
+  cases tag₀ <;> cases tag₁ <;> cases tag₂
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras false
+      hextras houter houtput htag₂ onVar onTru hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras false
+      hextras houter houtput htag₁ tag₀ZeroTM tag₀OneTM h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras false
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras true
+      hextras houter houtput htag₂ onVar onTru hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras false
+      hextras houter houtput htag₁ tag₀ZeroTM tag₀OneTM h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras false
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras false
+      hextras houter houtput htag₂ onFls onNeg hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras true
+      hextras houter houtput htag₁ tag₀ZeroTM tag₀OneTM h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras false
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras true
+      hextras houter houtput htag₂ onFls onNeg hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras true
+      hextras houter houtput htag₁ tag₀ZeroTM tag₀OneTM h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras false
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras false
+      hextras houter houtput htag₂ onConj onDisj hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras false
+      hextras houter houtput htag₁ tag₁ZeroTM onInvalid h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras true
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₂ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₂Idx outerExtras input output extras true
+      hextras houter houtput htag₂ onConj onDisj hselected
+    have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras false
+      hextras houter houtput htag₁ tag₁ZeroTM onInvalid h₂
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras true
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras true
+      hextras houter houtput htag₁ tag₁ZeroTM onInvalid hselected
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras true
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
+  · have h₁ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₁Idx outerExtras input output extras true
+      hextras houter houtput htag₁ tag₁ZeroTM onInvalid hselected
+    have h₀ := outputProbeDecodeTagBitDispatchTM_selected_hoareTime_internal
+      tm controllerTapes layout.tag₀Idx outerExtras input output extras true
+      hextras houter houtput htag₀
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one tag₀OneTM tag₀ZeroTM)
+      (branchWorkSymbolTM (outputProbeDecodeTagBitIdx n layout.tag₁Idx)
+        Γ.one onInvalid tag₁ZeroTM)
+      h₁
+    simpa [outputProbeDecodeTagDispatchTM,
+      outputProbeDecodeTagDispatchDepth, tag₀ZeroTM, tag₀OneTM,
+      tag₁ZeroTM, Nat.add_assoc] using h₀
 
 theorem ComputesInSpace.outputProbeDecodeTagAndDispatchTM_hoareTime_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}

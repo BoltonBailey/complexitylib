@@ -123,6 +123,13 @@ def outputProbeDecodeTokenDispatchTime (tag₀ tag₁ tag₂ : Bool)
     (clearTime + 1 + conjTime) (clearTime + 1 + disjTime)
     (clearTime + 1 + invalidTime)
 
+/-- Exact cleanup and branch cost when only the selected continuation's
+runtime is relevant. -/
+def outputProbeDecodeTokenSelectedDispatchTime (tag₀ tag₁ tag₂ : Bool)
+    (selectedTime : ℕ) : ℕ :=
+  outputProbeDecodeTokenClearTagsTime tag₀ tag₁ tag₂ + 1 + selectedTime +
+    outputProbeDecodeTagDispatchDepth tag₀ tag₁
+
 /-- Probe a complete fixed-width tag and dispatch from a normalized token
 frame to its selected continuation. -/
 def outputProbeDecodeTokenTM (tm : TM n) (controllerTapes : ℕ)

@@ -187,6 +187,25 @@ def outputProbeDecodeTagDispatchTime (tag₀ tag₁ tag₂ : Bool)
   | true, false, true => disjTime + 3
   | true, true, _ => invalidTime + 2
 
+/-- Select the unique continuation named by a classified three-bit token tag. -/
+def outputProbeTokenContinuation
+    (tag : Option OutputProbeTokenTag)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid : TM tapes) :
+    TM tapes :=
+  match tag with
+  | some .var => onVar
+  | some .tru => onTru
+  | some .fls => onFls
+  | some .neg => onNeg
+  | some .conj => onConj
+  | some .disj => onDisj
+  | none => onInvalid
+
+/-- Number of finite-control branch steps needed to select one retained tag.
+Reserved `11_` tags stop after two bits; every legal tag inspects all three. -/
+def outputProbeDecodeTagDispatchDepth (tag₀ tag₁ : Bool) : ℕ :=
+  if tag₀ && tag₁ then 2 else 3
+
 /-- Probe a complete fixed-width tag and immediately enter its selected legal
 or invalid continuation. -/
 def outputProbeDecodeTagAndDispatchTM (tm : TM n) (controllerTapes : ℕ)

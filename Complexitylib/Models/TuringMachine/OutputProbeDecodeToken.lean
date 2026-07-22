@@ -310,6 +310,56 @@ theorem outputProbeDecodeTokenDispatchTM_hoareTime
     houtput htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj onDisj
     onInvalid hvar htru hfls hneg hconj hdisj hinvalid
 
+/-- Dispatch and normalize a retained tag while requiring a contract only for
+the selected continuation. -/
+theorem outputProbeDecodeTokenDispatchTM_selected_hoareTime
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? tag₀ tag₁ tag₂)
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+            input output extras false)
+          post selectedTime) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        post (outputProbeDecodeTokenSelectedDispatchTime tag₀ tag₁ tag₂
+          selectedTime) :=
+  outputProbeDecodeTokenDispatchTM_selected_hoareTime_internal tm
+    controllerTapes layout outerExtras input output extras tag₀ tag₁ tag₂
+    hextras houter houtput htag₀ htag₁ htag₂ onVar onTru onFls onNeg
+    onConj onDisj onInvalid hselected
+
 /-- Probe a complete source tag, restore the canonical zero-tag invariant, and
 run the selected continuation in one exact source-derived machine contract. -/
 theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime
@@ -437,6 +487,92 @@ theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime
     hlimit₀ hlimit₁ hlimit₂ controllerTapes layout outerExtras houter
     hcursor hscratch htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj
     onDisj onInvalid hvar htru hfls hneg hconj hdisj hinvalid
+
+/-- Probe, normalize, and dispatch a complete token using only the contract of
+the continuation selected by the source tag. -/
+theorem ComputesInSpace.outputProbeDecodeTokenTM_selected_hoareTime
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor + 2 < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit₀ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (hlimit₁ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 2) ≤ cleanupLimit)
+    (hlimit₂ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 3) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (hcursor :
+      (outerExtras
+        (outputProbeDecodeTagCursorIdx n layout.tagLayout)).HasBinaryNat
+          cursor)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.tagLayout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+              cursor ((f input)[cursor]) ((f input)[cursor + 1])
+              ((f input)[cursor + 2]))
+            input output extras false)
+          post selectedTime) :
+    ∃ (bound₀ bound₁ bound₂ : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeTokenTM tm controllerTapes layout onVar onTru onFls
+        onNeg onConj onDisj onInvalid).HoareTime pre post
+          (((bound₀ + 1 + binarySuccTime cursor) + 1 +
+            ((bound₁ + 1 + binarySuccTime (cursor + 1)) + 1 +
+              (bound₂ + 1 + binarySuccTime (cursor + 2)))) + 1 +
+            outputProbeDecodeTokenSelectedDispatchTime ((f input)[cursor])
+              ((f input)[cursor + 1]) ((f input)[cursor + 2]) selectedTime) :=
+  hcomp.outputProbeDecodeTokenTM_selected_hoareTime_internal input cursor
+    hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+    hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes layout outerExtras
+    houter hcursor hscratch htag₀ htag₁ htag₂ onVar onTru onFls onNeg
+    onConj onDisj onInvalid hselected
 
 /-- The concrete variable continuation starts from the normalized post-tag
 frame, decodes the following terminated-unary field, and ends in the exact

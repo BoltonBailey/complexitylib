@@ -599,6 +599,118 @@ theorem outputProbeDecodeTokenDispatchTM_hoareTime_internal
   simpa [outputProbeDecodeTokenDispatchTM,
     outputProbeDecodeTokenDispatchTime] using hdispatch
 
+private theorem outputProbeTokenContinuation_seqTM_internal
+    (before : TM tapes)
+    (tag : Option OutputProbeTokenTag)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid : TM tapes) :
+    outputProbeTokenContinuation tag
+        (seqTM before onVar) (seqTM before onTru) (seqTM before onFls)
+        (seqTM before onNeg) (seqTM before onConj) (seqTM before onDisj)
+        (seqTM before onInvalid) =
+      seqTM before (outputProbeTokenContinuation tag onVar onTru onFls
+        onNeg onConj onDisj onInvalid) := by
+  cases tag with
+  | none => rfl
+  | some tag => cases tag <;> rfl
+
+theorem outputProbeDecodeTokenDispatchTM_selected_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? tag₀ tag₁ tag₂)
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeTokenClearedTagExtras n layout outerExtras)
+            input output extras false)
+          post selectedTime) :
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        post (outputProbeDecodeTokenSelectedDispatchTime tag₀ tag₁ tag₂
+          selectedTime) := by
+  let cleared := outputProbeDecodeTokenClearedTagExtras n layout outerExtras
+  let idx₀ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx
+  let idx₁ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx
+  let idx₂ := outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx
+  let outer₁ := Function.update outerExtras idx₀ (outputProbeCounterTape 0)
+  let outer₂ := Function.update outer₁ idx₁ (outputProbeCounterTape 0)
+  have houter₁ : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outer₁ i) :=
+    outputProbeDecodeToken_update_parked_internal outerExtras
+      (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+      houter idx₀
+  have houter₂ : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outer₂ i) :=
+    outputProbeDecodeToken_update_parked_internal outer₁
+      (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+      houter₁ idx₁
+  have hcleared : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (cleared i) := by
+    simpa [cleared, outputProbeDecodeTokenClearedTagExtras, outer₁, outer₂,
+      idx₀, idx₁, idx₂] using
+      outputProbeDecodeToken_update_parked_internal outer₂
+        (fun i => ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i)
+        houter₂ idx₂
+  have hclear := outputProbeDecodeTokenClearTagsTM_hoareTime_internal tm
+    controllerTapes layout outerExtras input output extras tag₀ tag₁ tag₂
+    hextras houter houtput htag₀ htag₁ htag₂
+  have hseam := outputProbeDecodeTokenFramePost_to_pre_internal tm
+    controllerTapes cleared input output extras hextras hcleared houtput
+  have hselected' := seqTM_hoareTime
+    (outputProbeDecodeTokenClearTagsTM n controllerTapes layout)
+    (outputProbeTokenContinuation (outputProbeTokenTag? tag₀ tag₁ tag₂)
+      onVar onTru onFls onNeg onConj onDisj onInvalid)
+    hclear hseam (by simpa [cleared] using hselected)
+  have hdispatch :=
+    outputProbeDecodeTagDispatchTM_selected_hoareTime_internal tm
+      controllerTapes layout.tagLayout outerExtras input output extras tag₀
+      tag₁ tag₂ hextras houter houtput htag₀ htag₁ htag₂
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onVar)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onTru)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onFls)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onNeg)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onConj)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout) onDisj)
+      (seqTM (outputProbeDecodeTokenClearTagsTM n controllerTapes layout)
+        onInvalid)
+      (post := post)
+      (by
+        rw [outputProbeTokenContinuation_seqTM_internal]
+        exact hselected')
+  simpa [outputProbeDecodeTokenDispatchTM,
+    outputProbeDecodeTokenSelectedDispatchTime] using hdispatch
+
 theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime_internal
     {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
     (hcomp : tm.ComputesInSpace f space)
@@ -753,6 +865,116 @@ theorem ComputesInSpace.outputProbeDecodeTokenTM_hoareTime_internal
     (by simpa [after, tag₀, tag₁, tag₂] using hconj)
     (by simpa [after, tag₀, tag₁, tag₂] using hdisj)
     (by simpa [after, tag₀, tag₁, tag₂] using hinvalid)
+  have hseam := outputProbeDecodeTokenFramePost_to_pre_internal tm
+    controllerTapes after input output extras hextras hafter houtput
+  have hfull := seqTM_hoareTime
+    (outputProbeDecodeTagTM tm controllerTapes layout.tagLayout)
+    (outputProbeDecodeTokenDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid)
+    (by simpa [after, tag₀, tag₁, tag₂] using hdecode) hseam hdispatch
+  refine ⟨bound₀, bound₁, bound₂, pre, hpre, ?_⟩
+  simpa [outputProbeDecodeTokenTM, after, tag₀, tag₁, tag₂] using hfull
+
+theorem ComputesInSpace.outputProbeDecodeTokenTM_selected_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor + 2 < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit₀ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (hlimit₁ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 2) ≤ cleanupLimit)
+    (hlimit₂ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 3) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (hcursor :
+      (outerExtras
+        (outputProbeDecodeTagCursorIdx n layout.tagLayout)).HasBinaryNat
+          cursor)
+    (hscratch :
+      (outerExtras
+        (outputProbeIndexedControllerIdx n layout.tagLayout.scratchIdx))
+        |>.HasBinaryNat 0)
+    (htag₀ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₀Idx))
+        |>.HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₁Idx))
+        |>.HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras
+        (outputProbeDecodeTagBitIdx n layout.tagLayout.tag₂Idx))
+        |>.HasBinaryNat 0)
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? ((f input)[cursor]) ((f input)[cursor + 1])
+          ((f input)[cursor + 2]))
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes
+            (outputProbeDecodeTokenOuterExtrasAfter n layout outerExtras
+              cursor ((f input)[cursor]) ((f input)[cursor + 1])
+              ((f input)[cursor + 2]))
+            input output extras false)
+          post selectedTime) :
+    ∃ (bound₀ bound₁ bound₂ : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (outputProbeDecodeTokenTM tm controllerTapes layout onVar onTru onFls
+        onNeg onConj onDisj onInvalid).HoareTime pre post
+          (((bound₀ + 1 + binarySuccTime cursor) + 1 +
+            ((bound₁ + 1 + binarySuccTime (cursor + 1)) + 1 +
+              (bound₂ + 1 + binarySuccTime (cursor + 2)))) + 1 +
+            outputProbeDecodeTokenSelectedDispatchTime ((f input)[cursor])
+              ((f input)[cursor + 1]) ((f input)[cursor + 2]) selectedTime) := by
+  have hbound₀ : cursor < (f input).length := by omega
+  have hbound₁ : cursor + 1 < (f input).length := by omega
+  have hbound₂ : cursor + 2 < (f input).length := hcursorBound
+  let tag₀ := (f input)[cursor]'hbound₀
+  let tag₁ := (f input)[cursor + 1]'hbound₁
+  let tag₂ := (f input)[cursor + 2]'hbound₂
+  let after := outputProbeDecodeTagOuterExtrasAfter n layout.tagLayout
+    outerExtras cursor tag₀ tag₁ tag₂
+  obtain ⟨hafter, hafterTag₀, hafterTag₁, hafterTag₂⟩ :=
+    outputProbeDecodeTagOuterExtrasAfter_invariant_internal n layout.tagLayout
+      outerExtras houter cursor tag₀ tag₁ tag₂ htag₀ htag₁ htag₂
+  obtain ⟨bound₀, bound₁, bound₂, pre, hpre, hdecode⟩ :=
+    hcomp.outputProbeDecodeTagTM_hoareTime_internal input cursor hcursorBound
+      output houtput extras hextras hcleanupCounter cleanupLimit
+      hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes layout.tagLayout
+      outerExtras houter hcursor hscratch htag₀ htag₁ htag₂
+  have hdispatch :=
+    outputProbeDecodeTokenDispatchTM_selected_hoareTime_internal tm
+      controllerTapes layout after input output extras tag₀ tag₁ tag₂
+      hextras hafter houtput hafterTag₀ hafterTag₁ hafterTag₂ onVar onTru
+      onFls onNeg onConj onDisj onInvalid (post := post)
+      (by simpa [after, tag₀, tag₁, tag₂] using hselected)
   have hseam := outputProbeDecodeTokenFramePost_to_pre_internal tm
     controllerTapes after input output extras hextras hafter houtput
   have hfull := seqTM_hoareTime

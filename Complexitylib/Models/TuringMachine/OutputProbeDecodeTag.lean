@@ -249,6 +249,52 @@ theorem outputProbeDecodeTagDispatchTM_hoareTime
     htag₀ htag₁ htag₂ onVar onTru onFls onNeg onConj onDisj onInvalid
     hvar htru hfls hneg hconj hdisj hinvalid
 
+/-- Dispatch a retained tag using only the contract of the continuation that
+the tag selects. This avoids imposing unreachable payload preconditions on
+the other token cases. -/
+theorem outputProbeDecodeTagDispatchTM_selected_hoareTime
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : OutputProbeDecodeTagLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₀Idx))
+        |>.HasBinaryNat (if tag₀ then 1 else 0))
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₁Idx))
+        |>.HasBinaryNat (if tag₁ then 1 else 0))
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n layout.tag₂Idx))
+        |>.HasBinaryNat (if tag₂ then 1 else 0))
+    (onVar onTru onFls onNeg onConj onDisj onInvalid :
+      TM (0 + outputProbeControllerTapes n + controllerTapes))
+    {post : TapePred (0 + outputProbeControllerTapes n + controllerTapes)}
+    {selectedTime : ℕ}
+    (hselected :
+      (outputProbeTokenContinuation
+        (outputProbeTokenTag? tag₀ tag₁ tag₂)
+        onVar onTru onFls onNeg onConj onDisj onInvalid).HoareTime
+          (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+            extras false)
+          post selectedTime) :
+    (outputProbeDecodeTagDispatchTM n controllerTapes layout onVar onTru
+      onFls onNeg onConj onDisj onInvalid).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        post (selectedTime + outputProbeDecodeTagDispatchDepth tag₀ tag₁) :=
+  outputProbeDecodeTagDispatchTM_selected_hoareTime_internal tm
+    controllerTapes layout outerExtras input output extras tag₀ tag₁ tag₂
+    hextras houter houtput htag₀ htag₁ htag₂ onVar onTru onFls onNeg
+    onConj onDisj onInvalid hselected
+
 /-- Probe all three fixed tag bits and immediately run the selected legal or
 invalid continuation. The result combines the exact source-derived probe
 runtimes, the sequential seam, and the exact two- or three-step dispatch
