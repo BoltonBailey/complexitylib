@@ -53,6 +53,73 @@ theorem binaryEqTM_reachesIn_frame {n : ℕ}
   binaryEqTM_reachesIn_frame_internal lhsIdx rhsIdx resultIdx hdistinct
     lhs rhs inp₀ work₀ out₀ hlhs hrhs hresult hinput hother houtput
 
+/-- Compositional time-bounded form of `binaryEqTM_reachesIn_frame`. -/
+theorem binaryEqTM_hoareTime_frame {n : ℕ}
+    (lhsIdx rhsIdx resultIdx : Fin n)
+    (hdistinct : BinaryEqDistinct lhsIdx rhsIdx resultIdx)
+    (lhs rhs : List Bool)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hlhs : (work₀ lhsIdx).HasBinaryString lhs)
+    (hrhs : (work₀ rhsIdx).HasBinaryString rhs)
+    (hresult : (work₀ resultIdx).HasBinaryPrefix [])
+    (hinput : inp₀.read ≠ Γ.start)
+    (hother : ∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+      (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start) :
+    (binaryEqTM lhsIdx rhsIdx resultIdx).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work resultIdx).HasBinaryPrefix [decide (lhs = rhs)] ∧
+        (work lhsIdx).HasBinaryContent lhs ∧
+        1 ≤ (work lhsIdx).head ∧
+        (work rhsIdx).HasBinaryContent rhs ∧
+        1 ≤ (work rhsIdx).head ∧
+        (∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (binaryEqTime lhs rhs) :=
+  binaryEqTM_hoareTime_frame_internal lhsIdx rhsIdx resultIdx hdistinct lhs rhs
+    inp₀ work₀ out₀ hlhs hrhs hresult hinput hother houtput
+
+/-- Time-and-space form of canonical binary equality. -/
+theorem binaryEqTM_hoareTimeSpace_frame {n : ℕ}
+    (lhsIdx rhsIdx resultIdx : Fin n)
+    (hdistinct : BinaryEqDistinct lhsIdx rhsIdx resultIdx)
+    (lhs rhs : List Bool) (inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hlhs : (work₀ lhsIdx).HasBinaryString lhs)
+    (hrhs : (work₀ rhsIdx).HasBinaryString rhs)
+    (hresult : (work₀ resultIdx).HasBinaryPrefix [])
+    (hinput : inp₀.read ≠ Γ.start)
+    (hother : ∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+      (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start)
+    (hinitial :
+      ({ state := (binaryEqTM lhsIdx rhsIdx resultIdx).qstart,
+         input := inp₀,
+         work := work₀,
+         output := out₀ } :
+        Cfg n (binaryEqTM lhsIdx rhsIdx resultIdx).Q).WithinAuxSpace
+          inputLength initialSpace) :
+    (binaryEqTM lhsIdx rhsIdx resultIdx).HoareTimeSpace
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work resultIdx).HasBinaryPrefix [decide (lhs = rhs)] ∧
+        (work lhsIdx).HasBinaryContent lhs ∧
+        1 ≤ (work lhsIdx).head ∧
+        (work rhsIdx).HasBinaryContent rhs ∧
+        1 ≤ (work rhsIdx).head ∧
+        (∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (binaryEqTime lhs rhs) inputLength
+      (initialSpace + binaryEqTime lhs rhs) :=
+  binaryEqTM_hoareTimeSpace_frame_internal lhsIdx rhsIdx resultIdx hdistinct
+    lhs rhs inputLength initialSpace inp₀ work₀ out₀ hlhs hrhs hresult hinput
+    hother houtput hinitial
+
 /-- Binary equality preserves one-way output safety. -/
 theorem binaryEqTM_isTransducer {n : ℕ}
     (lhsIdx rhsIdx resultIdx : Fin n) :

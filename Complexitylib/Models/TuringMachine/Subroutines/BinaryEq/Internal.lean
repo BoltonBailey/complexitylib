@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq.Defs
+import Complexitylib.Models.TuringMachine.Hoare.Space
 import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
 
 /-!
@@ -364,6 +365,86 @@ theorem binaryEqTM_reachesIn_frame_internal {n : ℕ}
     hfinalLhsHead, ?_, hfinalRhsHead, hfinalOther, hfinalOutput⟩
   · simpa only [Tape.HasBinaryContent, hfinalLhs] using hlhs.hasBinaryContent
   · simpa only [Tape.HasBinaryContent, hfinalRhs] using hrhs.hasBinaryContent
+
+theorem binaryEqTM_hoareTime_frame_internal {n : ℕ}
+    (lhsIdx rhsIdx resultIdx : Fin n)
+    (hdistinct : BinaryEqDistinct lhsIdx rhsIdx resultIdx)
+    (lhs rhs : List Bool)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hlhs : (work₀ lhsIdx).HasBinaryString lhs)
+    (hrhs : (work₀ rhsIdx).HasBinaryString rhs)
+    (hresult : (work₀ resultIdx).HasBinaryPrefix [])
+    (hinput : inp₀.read ≠ Γ.start)
+    (hother : ∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+      (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start) :
+    (binaryEqTM lhsIdx rhsIdx resultIdx).HoareTime
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work resultIdx).HasBinaryPrefix [decide (lhs = rhs)] ∧
+        (work lhsIdx).HasBinaryContent lhs ∧
+        1 ≤ (work lhsIdx).head ∧
+        (work rhsIdx).HasBinaryContent rhs ∧
+        1 ≤ (work rhsIdx).head ∧
+        (∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (binaryEqTime lhs rhs) := by
+  intro inp work out hpre
+  rcases hpre with ⟨hinp, hworkEq, hout⟩
+  subst inp
+  subst work
+  subst out
+  obtain ⟨c, time, htime, hreach, hhalt, hcInput, hcResult, hcLhs,
+      hcLhsHead, hcRhs, hcRhsHead, hcOther, hcOutput⟩ :=
+    binaryEqTM_reachesIn_frame_internal lhsIdx rhsIdx resultIdx hdistinct
+      lhs rhs inp₀ work₀ out₀ hlhs hrhs hresult hinput hother houtput
+  exact ⟨c, time, htime, hreach, hhalt, hcInput, hcResult, hcLhs, hcLhsHead,
+    hcRhs, hcRhsHead, hcOther, hcOutput⟩
+
+theorem binaryEqTM_hoareTimeSpace_frame_internal {n : ℕ}
+    (lhsIdx rhsIdx resultIdx : Fin n)
+    (hdistinct : BinaryEqDistinct lhsIdx rhsIdx resultIdx)
+    (lhs rhs : List Bool) (inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hlhs : (work₀ lhsIdx).HasBinaryString lhs)
+    (hrhs : (work₀ rhsIdx).HasBinaryString rhs)
+    (hresult : (work₀ resultIdx).HasBinaryPrefix [])
+    (hinput : inp₀.read ≠ Γ.start)
+    (hother : ∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+      (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start)
+    (hinitial :
+      ({ state := (binaryEqTM lhsIdx rhsIdx resultIdx).qstart,
+         input := inp₀,
+         work := work₀,
+         output := out₀ } :
+        Cfg n (binaryEqTM lhsIdx rhsIdx resultIdx).Q).WithinAuxSpace
+          inputLength initialSpace) :
+    (binaryEqTM lhsIdx rhsIdx resultIdx).HoareTimeSpace
+      (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+      (fun inp work out =>
+        inp = inp₀ ∧
+        (work resultIdx).HasBinaryPrefix [decide (lhs = rhs)] ∧
+        (work lhsIdx).HasBinaryContent lhs ∧
+        1 ≤ (work lhsIdx).head ∧
+        (work rhsIdx).HasBinaryContent rhs ∧
+        1 ≤ (work rhsIdx).head ∧
+        (∀ i, i ≠ lhsIdx → i ≠ rhsIdx → i ≠ resultIdx →
+          work i = work₀ i) ∧
+        out = out₀)
+      (binaryEqTime lhs rhs) inputLength
+      (initialSpace + binaryEqTime lhs rhs) := by
+  apply (binaryEqTM_hoareTime_frame_internal lhsIdx rhsIdx resultIdx hdistinct
+    lhs rhs inp₀ work₀ out₀ hlhs hrhs hresult hinput hother
+    houtput).toHoareTimeSpace
+  intro inp work out hpre
+  rcases hpre with ⟨hinp, hworkEq, hout⟩
+  subst inp
+  subst work
+  subst out
+  exact hinitial
 
 theorem binaryEqTM_isTransducer_internal {n : ℕ}
     (lhsIdx rhsIdx resultIdx : Fin n) :
