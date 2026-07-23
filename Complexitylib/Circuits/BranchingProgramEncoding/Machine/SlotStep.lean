@@ -188,6 +188,59 @@ theorem barringtonInitialSlotBranchTM_selected_hoareTimeSpace
     inputLength initialSpace inp₀ work₀ out₀ hinput hslot hcounter hlimit
     hlowZero hhighZero hwork houtput hworkSpace hinputSpace hselected
 
+/-- The initial slot controller selects the semantic child named by a
+`BarringtonSlotCursor`; callers need not expose the underlying raw bits. -/
+theorem barringtonInitialSlotBranchTM_cursor_hoareTimeSpace
+    (layout : BarringtonSlotLayout n) (cursor : BarringtonSlotCursor)
+    (onLeft onRight onInverseLeft onInverseRight : TM n)
+    (fuel inputLength initialSpace : ℕ)
+    (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape)
+    (hinput : inp₀.read ≠ Γ.start)
+    (hslot : (work₀ layout.sourceIdx).HasBinaryNat cursor.slot)
+    (hcounter : (work₀ layout.counterIdx).HasBinaryNat 0)
+    (hlimit : (work₀ layout.limitIdx).HasBinaryNat fuel)
+    (hlowZero : (work₀ layout.lowIdx).HasBinaryNat 0)
+    (hhighZero : (work₀ layout.highIdx).HasBinaryNat 0)
+    (hwork : ∀ i, (work₀ i).read ≠ Γ.start)
+    (houtput : out₀.read ≠ Γ.start)
+    (hworkSpace : ∀ i, (work₀ i).head ≤ initialSpace)
+    (hinputSpace : inp₀.head ≤ inputLength + initialSpace + 1)
+    {post : TapePred n} {selectedTime : ℕ}
+    (hselected :
+      (if cursor.selectsInverse fuel then
+          if cursor.selectsRight fuel then onInverseRight else onInverseLeft
+        else if cursor.selectsRight fuel then onRight else onLeft
+      ).HoareTimeSpace
+          (fun inp work out =>
+            inp = inp₀ ∧
+            (work layout.sourceIdx).head =
+              (work₀ layout.sourceIdx).head + 2 * fuel ∧
+            (work layout.sourceIdx).cells =
+              (work₀ layout.sourceIdx).cells ∧
+            (work layout.counterIdx).HasBinaryNat fuel ∧
+            work layout.limitIdx = work₀ layout.limitIdx ∧
+            (work layout.lowIdx).HasBinaryNat
+              (if cursor.slot.testBit (2 * fuel) then 1 else 0) ∧
+            (work layout.highIdx).HasBinaryNat
+              (if cursor.slot.testBit (2 * fuel + 1) then 1 else 0) ∧
+            (∀ i, i ≠ layout.sourceIdx → i ≠ layout.counterIdx →
+              i ≠ layout.limitIdx → i ≠ layout.lowIdx →
+              i ≠ layout.highIdx → work i = work₀ i) ∧
+            out = out₀)
+          post selectedTime inputLength
+          (positionCaptureSlotBitsSpace initialSpace fuel)) :
+    (barringtonInitialSlotBranchTM layout cursor.reversed onLeft onRight
+      onInverseLeft onInverseRight).HoareTimeSpace
+        (fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀)
+        post (barringtonInitialSlotBranchTime fuel selectedTime) inputLength
+        (positionCaptureSlotBitsSpace initialSpace fuel) := by
+  rw [← barringtonSlotContinuation_cursor cursor fuel onLeft onRight
+    onInverseLeft onInverseRight] at hselected
+  exact barringtonInitialSlotBranchTM_selected_hoareTimeSpace layout
+    cursor.reversed onLeft onRight onInverseLeft onInverseRight cursor.slot fuel
+    inputLength initialSpace inp₀ work₀ out₀ hinput hslot hcounter hlimit
+    hlowZero hhighZero hwork houtput hworkSpace hinputSpace hselected
+
 /-- Initial positioning and capture preserve one-way output behavior. -/
 theorem positionCaptureSlotBitsTM_isTransducer
     (layout : BarringtonSlotLayout n) :

@@ -8,6 +8,7 @@ import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbe
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbeToken
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotBranch
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotCapture
+import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotDescend
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotPosition
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotStep
 

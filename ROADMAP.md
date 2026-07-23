@@ -1421,9 +1421,16 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   exact contract, and the resulting raw bits feed the four-way dispatcher and
   any selected continuation. The end-to-end branch retains the tight
   positioning-plus-three all-prefix budget, adds exactly the two dispatch
-  transitions, and remains one-way on output. The next machine seam is to wire
-  that controller into the three recursive connective cases, including child-
-  span recovery and the finite-control cursor/transform updates.
+  transitions, and remains one-way on output. The cursor-facing theorem hides
+  the raw-bit arithmetic behind the semantic left/right/inverse choice. After
+  this one-time positioning phase, recursive slot descent no longer rescans
+  from the address origin: one transition moves onto the next lower digit and
+  simultaneously resets both bit latches, then the existing three-transition
+  capture and two-transition dispatcher select the next semantic child. This
+  constant-cost recursive step has an explicit all-prefix bound and preserves
+  one-way output behavior. The next machine seam is token-span navigation for
+  the three connective cases, followed by the finite-control cursor/transform
+  updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
