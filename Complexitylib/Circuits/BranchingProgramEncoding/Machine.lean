@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.Instr
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.ForwardScan
+import Complexitylib.Circuits.BranchingProgramEncoding.Machine.ForwardScanToken
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbe
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.OutputProbeToken
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.SlotBranch

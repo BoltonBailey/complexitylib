@@ -1439,8 +1439,16 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   scratch. One certified call applies the token arity, increments the token
   count, performs normalized binary equality, conditionally copies both
   boundaries, restores scratch, and preserves one-way output behavior. The
-  next seam is to wrap that step around the existing fixed-tag/terminated-unary
-  token decoder and iterate it in the bounded connective scan, followed by the
+  numeric step is now wrapped around the existing fixed-tag/terminated-unary
+  token decoder by an injective sixteen-role controller layout. The decoder and
+  scan share exactly the source cursor; every other register is structurally
+  disjoint. The concrete dispatcher maps variables, constants, negation, and
+  both binary connectives to arities zero, zero, one, and two respectively. A
+  completed variable decoder now has a certified normalization phase that
+  clears its value and loop counter, restores its active flag, preserves the
+  complete numeric scan frame literally, and remains one-way on output. The
+  next seam is the source-derived semantic contract for that assembled token
+  step and its bounded iteration through the connective scan, followed by the
   finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
