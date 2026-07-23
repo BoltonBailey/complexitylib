@@ -91,6 +91,28 @@ def forwardScanBoundaryWork (layout : ForwardScanLayout n)
       ((Tape.init (cursor.bits.map Γ.ofBool)).move Dir3.right))
     layout.resultIdx ((Tape.init []).move Dir3.right)
 
+/-- Literal final work family after the post-height update. -/
+def forwardScanAfterHeightWork (layout : ForwardScanLayout n)
+    (work : Fin n → Tape) (height tokenCount cursor : ℕ) : Fin n → Tape :=
+  let counted := Function.update work layout.tokenCountIdx
+    ((Tape.init ((tokenCount + 1).bits.map Γ.ofBool)).move Dir3.right)
+  let compared := Function.update counted layout.resultIdx
+    ((Tape.init ([decide (height = 1)].map Γ.ofBool)).move Dir3.right)
+  if height = 1 then
+    forwardScanBoundaryWork layout compared (tokenCount + 1) cursor
+  else
+    Function.update compared layout.resultIdx
+      ((Tape.init []).move Dir3.right)
+
+/-- Literal final work family after one complete token-state update. -/
+def forwardScanTokenStepWork (layout : ForwardScanLayout n)
+    (work : Fin n → Tape) (arity height tokenCount cursor : ℕ) :
+    Fin n → Tape :=
+  let nextHeight := height + 1 - arity
+  let heightUpdated := Function.update work layout.heightIdx
+    ((Tape.init (nextHeight.bits.map Γ.ofBool)).move Dir3.right)
+  forwardScanAfterHeightWork layout heightUpdated nextHeight tokenCount cursor
+
 /-- Update the stack height for one token arity. A leaf increments, a unary
 token leaves the height fixed, and a binary token decrements. Values above two
 share the binary branch; promised formula codes never select them. -/

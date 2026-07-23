@@ -1433,8 +1433,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   binary root's child body maintains only the evaluation-stack height and the
   most recent height-one boundary. That boundary is proved to be exactly the
   end of the left child in both token count and encoded-bit offset, eliminating
-  repeated backward ordinal seeks. The next machine seam is the bounded loop
-  implementing this scan for the three connective cases, followed by the
+  repeated backward ordinal seeks. The machine-side numeric step is now
+  concrete as well: eight distinct binary registers hold the cursor, stack
+  height, token count, retained boundaries, constant one, verdict, and copy
+  scratch. One certified call applies the token arity, increments the token
+  count, performs normalized binary equality, conditionally copies both
+  boundaries, restores scratch, and preserves one-way output behavior. The
+  next seam is to wrap that step around the existing fixed-tag/terminated-unary
+  token decoder and iterate it in the bounded connective scan, followed by the
   finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
