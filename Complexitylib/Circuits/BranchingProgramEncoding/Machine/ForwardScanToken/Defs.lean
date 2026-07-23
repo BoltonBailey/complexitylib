@@ -28,6 +28,12 @@ structure ForwardScanTokenLayout (controllerTapes : ℕ) where
   /-- Injective assignment of logical roles to controller tapes. -/
   roles : Fin 16 ↪ Fin controllerTapes
 
+/-- Postfix evaluation-stack arity of each legal formula-token tag. -/
+def forwardScanTokenTagArity : TM.OutputProbeTokenTag → ℕ
+  | .var | .tru | .fls => 0
+  | .neg => 1
+  | .conj | .disj => 2
+
 /-- Restrict the combined layout to the complete nine-role token decoder. -/
 def ForwardScanTokenLayout.tokenLayout
     (layout : ForwardScanTokenLayout controllerTapes) :
@@ -109,6 +115,21 @@ def forwardScanVarResetTime (value fuel : ℕ) : ℕ :=
   TM.clearWorkTimeBound value.bits.length + 1 +
     (TM.binarySuccTime 0 + 1 + TM.clearWorkTimeBound fuel.bits.length)
 
+/-- Normalize a completed variable decoder and apply its arity-zero numeric
+scan update. -/
+def forwardScanVarFinishTM (n controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes) :
+    TM (0 + TM.outputProbeControllerTapes n + controllerTapes) :=
+  TM.seqTM (forwardScanVarResetTM n controllerTapes layout)
+    (forwardScanTokenStepTM (layout.scanLayout n) 0)
+
+/-- Exact runtime of completed-variable normalization and its scan update. -/
+def forwardScanVarFinishTime (value fuel height tokenCount cursor
+    lastOneCount lastOneCursor : ℕ) : ℕ :=
+  forwardScanVarResetTime value fuel + 1 +
+    forwardScanTokenStepTime 0 height tokenCount cursor lastOneCount
+      lastOneCursor
+
 /-- Decode a terminated-unary variable payload, normalize its private decoder
 registers, and apply the leaf update to the forward scan. -/
 def forwardScanVarTokenStepTM (tm : TM n) (controllerTapes : ℕ)
@@ -120,8 +141,7 @@ def forwardScanVarTokenStepTM (tm : TM n) (controllerTapes : ℕ)
       token.natLayout.scratchIdx token.natLayout.valueIdx
       token.natLayout.activeIdx token.natLayout.loopIdx
       token.natLayout.fuelIdx)
-    (TM.seqTM (forwardScanVarResetTM n controllerTapes layout)
-      (forwardScanTokenStepTM (layout.scanLayout n) 0))
+    (forwardScanVarFinishTM n controllerTapes layout)
 
 /-- Decode one complete formula token and apply its postfix arity update.
 Invalid tags are a no-op; promised canonical formula codes never select that

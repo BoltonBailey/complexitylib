@@ -1446,10 +1446,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   both binary connectives to arities zero, zero, one, and two respectively. A
   completed variable decoder now has a certified normalization phase that
   clears its value and loop counter, restores its active flag, preserves the
-  complete numeric scan frame literally, and remains one-way on output. The
-  next seam is the source-derived semantic contract for that assembled token
-  step and its bounded iteration through the connective scan, followed by the
-  finite-control cursor/transform updates.
+  complete numeric scan frame literally, and remains one-way on output.
+  Source-derived one-token contracts now cover both sides of the dispatcher:
+  every legal fixed token maps through one tag-to-arity theorem, while a
+  variable composes bounded payload probing, the pure decoder's terminal
+  cursor/value state, normalization, and the arity-zero update. The next seam
+  is to transport the scan invariant through tag and payload decoding, then
+  iterate this assembled step through the bounded connective scan, followed by
+  the finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining

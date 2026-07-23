@@ -21,6 +21,34 @@ namespace Machine
 
 open TM
 
+private theorem latchFramePost_transition
+    (tm : TM n) (controllerTapes : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output) :
+    ∀ inp work out,
+      outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false inp work out →
+        outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false (transitionInput inp)
+          (fun i => transitionTape (work i)) (transitionTape out) := by
+  intro inp work out hpost
+  obtain ⟨hinput, hwork, hout⟩ := outputProbeLatchFramePost_parked tm
+    controllerTapes outerExtras input output extras false hextras houter
+    houtput inp work out hpost
+  rw [hinput.transitionInput_eq_self]
+  have hworkTransition : (fun i => transitionTape (work i)) = work := by
+    funext i
+    exact (hwork i).transitionTape_eq_self
+  rw [hworkTransition, hout.transitionTape_eq_self]
+  exact hpost
+
 theorem ForwardScanTokenLayout.scanLayout_cursorIdx_internal
     (layout : ForwardScanTokenLayout controllerTapes) :
     (layout.scanLayout n).cursorIdx =
@@ -159,9 +187,85 @@ theorem ForwardScanFrame.forwardScanVarResetWork_internal
   · simpa only [ForwardScanLayout.copyScratchIdx,
       forwardScanVarResetWork_scanRole_internal] using hscratch
 
+theorem forwardScanTokenStepTM_latchFrame_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (arity height tokenCount cursor lastOneCount lastOneCursor : ℕ)
+    (harity : arity ≤ 2) (hpositive : arity = 2 → 1 ≤ height)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work) :
+    (forwardScanTokenStepTM (layout.scanLayout n) arity).HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (fun inp work out =>
+        inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).input ∧
+        work = forwardScanTokenStepWork (layout.scanLayout n)
+          (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+            output extras false).work
+          arity height tokenCount cursor ∧
+        out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).output)
+      (forwardScanTokenStepTime arity height tokenCount cursor lastOneCount
+        lastOneCursor) := by
+  let frame := outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+    output extras false
+  have hframePost := outputProbeLatchFrameCfg_post tm controllerTapes
+    outerExtras input output extras false
+  obtain ⟨hinput, hwork, hout⟩ := outputProbeLatchFramePost_parked tm
+    controllerTapes outerExtras input output extras false hextras houter
+    houtput frame.input frame.work frame.output hframePost
+  have hrun := forwardScanTokenStepTM_hoareTime (layout.scanLayout n) arity
+    height tokenCount cursor lastOneCount lastOneCursor harity hpositive
+    frame.input frame.work frame.output hframe hinput hwork hout
+  refine hrun.weaken_pre (fun inp work out hpost => ?_)
+  obtain ⟨hinp, hworkEq, houtEq⟩ := outputProbeLatchFramePost_eq_frameCfg
+    tm controllerTapes outerExtras input output extras false inp work out hpost
+  exact ⟨hinp, hworkEq, houtEq⟩
+
 private theorem parked_of_hasBinaryNat {t : Tape} {value : ℕ}
     (h : t.HasBinaryNat value) : Parked t :=
   ⟨by rw [h.2.1], h.2.hasBinaryContent.cells_ne_start⟩
+
+private theorem forwardScanVarResetWork_parked (n : ℕ)
+    {controllerTapes : ℕ}
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) →
+      Tape)
+    (hwork : ∀ i, Parked (work i)) :
+    ∀ i, Parked (forwardScanVarResetWork n layout work i) := by
+  let token := layout.tokenLayout
+  let valueIdx := outputProbeIndexedControllerIdx n token.natLayout.valueIdx
+  let activeIdx := outputProbeIndexedControllerIdx n token.natLayout.activeIdx
+  let loopIdx := outputProbeIndexedControllerIdx n token.natLayout.loopIdx
+  intro i
+  by_cases hloop : i = loopIdx
+  · subst i
+    simp only [forwardScanVarResetWork, loopIdx, token,
+      Function.update_self]
+    exact parked_of_hasBinaryNat (Tape.init_move_right_hasBinaryNat 0)
+  rw [forwardScanVarResetWork, Function.update_of_ne hloop]
+  by_cases hactive : i = activeIdx
+  · subst i
+    simp only [activeIdx, token, Function.update_self]
+    exact parked_of_hasBinaryNat (Tape.init_move_right_hasBinaryNat 1)
+  rw [Function.update_of_ne hactive]
+  by_cases hvalue : i = valueIdx
+  · subst i
+    simp only [valueIdx, token, Function.update_self]
+    exact parked_of_hasBinaryNat (Tape.init_move_right_hasBinaryNat 0)
+  simpa only [valueIdx, token, Function.update_of_ne hvalue] using hwork i
 
 theorem forwardScanVarResetTM_hoareTime_internal (n controllerTapes : ℕ)
     (layout : ForwardScanTokenLayout controllerTapes)
@@ -291,6 +395,470 @@ theorem forwardScanVarResetTM_hoareTime_internal (n controllerTapes : ℕ)
         (seqTM (binarySuccTM activeIdx) (clearWorkTM loopIdx))
         hclearValue' htransition₁ htail
 
+theorem forwardScanVarFinishTM_latchFrame_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (value fuel height tokenCount cursor lastOneCount lastOneCursor : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hvalue :
+      ((outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work (outputProbeIndexedControllerIdx n
+          layout.tokenLayout.natLayout.valueIdx)).HasBinaryNat value)
+    (hactive :
+      ((outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work (outputProbeIndexedControllerIdx n
+          layout.tokenLayout.natLayout.activeIdx)).HasBinaryNat 0)
+    (hloop :
+      ((outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work (outputProbeIndexedControllerIdx n
+          layout.tokenLayout.natLayout.loopIdx)).HasBinaryNat fuel)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work) :
+    (forwardScanVarFinishTM n controllerTapes layout).HoareTime
+      (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+        extras false)
+      (fun inp work out =>
+        inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).input ∧
+        work = forwardScanTokenStepWork (layout.scanLayout n)
+          (forwardScanVarResetWork n layout
+            (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+              output extras false).work)
+          0 height tokenCount cursor ∧
+        out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+          output extras false).output)
+      (forwardScanVarFinishTime value fuel height tokenCount cursor
+        lastOneCount lastOneCursor) := by
+  let frame := outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+    output extras false
+  let resetWork := forwardScanVarResetWork n layout frame.work
+  have hframePost := outputProbeLatchFrameCfg_post tm controllerTapes
+    outerExtras input output extras false
+  obtain ⟨hinput, hwork, hout⟩ := outputProbeLatchFramePost_parked tm
+    controllerTapes outerExtras input output extras false hextras houter
+    houtput frame.input frame.work frame.output hframePost
+  have hreset := forwardScanVarResetTM_hoareTime_internal n controllerTapes
+    layout value fuel frame.input frame.work frame.output hvalue hactive hloop
+    hinput hwork hout
+  have hresetWork : ∀ i, Parked (resetWork i) :=
+    forwardScanVarResetWork_parked n layout frame.work hwork
+  have hscanFrame : ForwardScanFrame (layout.scanLayout n) cursor height
+      tokenCount lastOneCount lastOneCursor resetWork := by
+    exact hframe.forwardScanVarResetWork_internal layout cursor height
+      tokenCount lastOneCount lastOneCursor frame.work
+  have hscan := forwardScanTokenStepTM_hoareTime (layout.scanLayout n) 0
+    height tokenCount cursor lastOneCount lastOneCursor (by decide)
+    (by simp) frame.input resetWork frame.output hscanFrame hinput hresetWork
+    hout
+  have htransition : ∀ inp work out,
+      (inp = frame.input ∧ work = resetWork ∧ out = frame.output) →
+      (transitionInput inp = frame.input ∧
+        (fun i => transitionTape (work i)) = resetWork ∧
+        transitionTape out = frame.output) := by
+    rintro _ _ _ ⟨rfl, rfl, rfl⟩
+    exact ⟨hinput.transitionInput_eq_self,
+      funext fun i => (hresetWork i).transitionTape_eq_self,
+      hout.transitionTape_eq_self⟩
+  have hrun := seqTM_hoareTime (forwardScanVarResetTM n controllerTapes layout)
+    (forwardScanTokenStepTM (layout.scanLayout n) 0) hreset htransition hscan
+  refine hrun.weaken_pre (fun inp work out hpost => ?_)
+  obtain ⟨hinp, hworkEq, houtEq⟩ := outputProbeLatchFramePost_eq_frameCfg
+    tm controllerTapes outerExtras input output extras false inp work out hpost
+  simpa [forwardScanVarFinishTM, forwardScanVarFinishTime, frame, resetWork]
+    using ⟨hinp, hworkEq, houtEq⟩
+
+theorem forwardScanFixedContinuationTM_hoareTime_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (tag : OutputProbeTokenTag) (hfixed : tag ≠ .var)
+    (height tokenCount cursor lastOneCount lastOneCursor : ℕ)
+    (hpositive : forwardScanTokenTagArity tag = 2 → 1 ≤ height)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (houtput : Parked output)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work) :
+    (outputProbeTokenContinuation (some tag)
+      (forwardScanVarTokenStepTM tm controllerTapes layout)
+      (forwardScanTokenStepTM (layout.scanLayout n) 0)
+      (forwardScanTokenStepTM (layout.scanLayout n) 0)
+      (forwardScanTokenStepTM (layout.scanLayout n) 1)
+      (forwardScanTokenStepTM (layout.scanLayout n) 2)
+      (forwardScanTokenStepTM (layout.scanLayout n) 2)
+      skipTM).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes outerExtras input output
+          extras false)
+        (fun inp work out =>
+          inp = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+            output extras false).input ∧
+          work = forwardScanTokenStepWork (layout.scanLayout n)
+            (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+              output extras false).work
+            (forwardScanTokenTagArity tag) height tokenCount cursor ∧
+          out = (outputProbeLatchFrameCfg tm controllerTapes outerExtras input
+            output extras false).output)
+        (forwardScanTokenStepTime (forwardScanTokenTagArity tag) height
+          tokenCount cursor lastOneCount lastOneCursor) := by
+  have hstep₀ := forwardScanTokenStepTM_latchFrame_hoareTime_internal tm
+    controllerTapes layout 0 height tokenCount cursor lastOneCount
+    lastOneCursor (by decide) (by simp) outerExtras input output extras
+    hextras houter houtput hframe
+  have hstep₁ := forwardScanTokenStepTM_latchFrame_hoareTime_internal tm
+    controllerTapes layout 1 height tokenCount cursor lastOneCount
+    lastOneCursor (by decide) (by simp) outerExtras input output extras
+    hextras houter houtput hframe
+  cases tag with
+  | var => exact (hfixed rfl).elim
+  | tru => simpa [outputProbeTokenContinuation, forwardScanTokenTagArity]
+      using hstep₀
+  | fls => simpa [outputProbeTokenContinuation, forwardScanTokenTagArity]
+      using hstep₀
+  | neg => simpa [outputProbeTokenContinuation, forwardScanTokenTagArity]
+      using hstep₁
+  | conj =>
+      have hstep₂ := forwardScanTokenStepTM_latchFrame_hoareTime_internal tm
+        controllerTapes layout 2 height tokenCount cursor lastOneCount
+        lastOneCursor (by decide) (fun _ => hpositive rfl) outerExtras input output
+        extras hextras houter houtput hframe
+      simpa [outputProbeTokenContinuation, forwardScanTokenTagArity] using
+        hstep₂
+  | disj =>
+      have hstep₂ := forwardScanTokenStepTM_latchFrame_hoareTime_internal tm
+        controllerTapes layout 2 height tokenCount cursor lastOneCount
+        lastOneCursor (by decide) (fun _ => hpositive rfl) outerExtras input output
+        extras hextras houter houtput hframe
+      simpa [outputProbeTokenContinuation, forwardScanTokenTagArity] using
+        hstep₂
+
+theorem ComputesInSpace.forwardScanDecodedFixedTokenTM_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (cursor : ℕ)
+    (hcursorBound : cursor + 2 < (f input).length)
+    (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (hlimit₀ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 1) ≤ cleanupLimit)
+    (hlimit₁ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 2) ≤ cleanupLimit)
+    (hlimit₂ : outputProbeCaptureSpace (max 1 (space input.length))
+      (cursor + 3) ≤ cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (hcursor :
+      (outerExtras (outputProbeDecodeTagCursorIdx n
+        layout.tokenLayout.tagLayout)).HasBinaryNat cursor)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.tagLayout.scratchIdx)).HasBinaryNat 0)
+    (htag₀ :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₀Idx)).HasBinaryNat 0)
+    (htag₁ :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₁Idx)).HasBinaryNat 0)
+    (htag₂ :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₂Idx)).HasBinaryNat 0)
+    (tag : OutputProbeTokenTag)
+    (htag : outputProbeTokenTag? ((f input)[cursor])
+      ((f input)[cursor + 1]) ((f input)[cursor + 2]) = some tag)
+    (hfixed : tag ≠ .var)
+    (height tokenCount lastOneCount lastOneCursor : ℕ)
+    (hpositive : forwardScanTokenTagArity tag = 2 → 1 ≤ height) :
+    let after := outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout
+      outerExtras cursor ((f input)[cursor]) ((f input)[cursor + 1])
+      ((f input)[cursor + 2])
+    let afterFrame := outputProbeLatchFrameCfg tm controllerTapes after input
+      output extras false
+    ForwardScanFrame (layout.scanLayout n) (cursor + 3) height tokenCount
+      lastOneCount lastOneCursor afterFrame.work →
+    ∃ (bound₀ bound₁ bound₂ : ℕ)
+      (pre : TapePred
+        (0 + outputProbeControllerTapes n + controllerTapes)),
+      pre
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).input
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).work
+        (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+          extras false).output ∧
+      (forwardScanDecodedTokenTM tm controllerTapes layout).HoareTime pre
+        (fun inp work out =>
+          inp = afterFrame.input ∧
+          work = forwardScanTokenStepWork (layout.scanLayout n)
+            afterFrame.work (forwardScanTokenTagArity tag) height tokenCount
+            (cursor + 3) ∧
+          out = afterFrame.output)
+        (((bound₀ + 1 + binarySuccTime cursor) + 1 +
+          ((bound₁ + 1 + binarySuccTime (cursor + 1)) + 1 +
+            (bound₂ + 1 + binarySuccTime (cursor + 2)))) + 1 +
+          outputProbeDecodeTokenSelectedDispatchTime ((f input)[cursor])
+            ((f input)[cursor + 1]) ((f input)[cursor + 2])
+            (forwardScanTokenStepTime (forwardScanTokenTagArity tag) height
+              tokenCount (cursor + 3) lastOneCount lastOneCursor)) := by
+  dsimp only
+  let after := outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout
+    outerExtras cursor ((f input)[cursor]) ((f input)[cursor + 1])
+    ((f input)[cursor + 2])
+  let afterFrame := outputProbeLatchFrameCfg tm controllerTapes after input
+    output extras false
+  intro hscanFrame
+  have hafter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (after i) := by
+    exact outputProbeDecodeTokenOuterExtrasAfter_parked n layout.tokenLayout
+      outerExtras houter cursor ((f input)[cursor]) ((f input)[cursor + 1])
+      ((f input)[cursor + 2]) htag₀ htag₁ htag₂
+  have hselected := forwardScanFixedContinuationTM_hoareTime_internal tm
+    controllerTapes layout tag hfixed height tokenCount (cursor + 3)
+    lastOneCount lastOneCursor hpositive after input output extras hextras
+    hafter houtput hscanFrame
+  obtain ⟨bound₀, bound₁, bound₂, pre, hpre, hrun⟩ :=
+    hcomp.outputProbeDecodeTokenTM_selected_hoareTime input cursor
+      hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
+      hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes
+      layout.tokenLayout outerExtras houter hcursor hscratch htag₀ htag₁ htag₂
+      (forwardScanVarTokenStepTM tm controllerTapes layout)
+      (forwardScanTokenStepTM (layout.scanLayout n) 0)
+      (forwardScanTokenStepTM (layout.scanLayout n) 0)
+      (forwardScanTokenStepTM (layout.scanLayout n) 1)
+      (forwardScanTokenStepTM (layout.scanLayout n) 2)
+      (forwardScanTokenStepTM (layout.scanLayout n) 2) skipTM
+      (post := fun inp work out =>
+        inp = afterFrame.input ∧
+        work = forwardScanTokenStepWork (layout.scanLayout n)
+          afterFrame.work (forwardScanTokenTagArity tag) height tokenCount
+          (cursor + 3) ∧
+        out = afterFrame.output)
+      (selectedTime := forwardScanTokenStepTime
+        (forwardScanTokenTagArity tag) height tokenCount (cursor + 3)
+        lastOneCount lastOneCursor)
+      (by simpa only [htag] using hselected)
+  exact ⟨bound₀, bound₁, bound₂, pre, hpre,
+    by simpa [forwardScanDecodedTokenTM, after, afterFrame] using hrun⟩
+
+theorem ComputesInSpace.forwardScanVarTokenStepTM_hoareTime_internal
+    {tm : TM n} {f : List Bool → List Bool} {space : ℕ → ℕ}
+    (hcomp : tm.ComputesInSpace f space)
+    (input : List Bool) (output : Tape) (houtput : Parked output)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hextras : ∀ i, ¬placeWorkInMiddle 0 (n + 2) i → Parked (extras i))
+    (hcleanupCounter :
+      (extras (outputProbeCleanupCounterIdx n)).HasBinaryNat 0)
+    (cleanupLimit : ℕ)
+    (hcleanupLimit :
+      (extras (outputProbeCleanupLimitIdx n)).HasBinaryNat cleanupLimit)
+    (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (houter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (outerExtras i))
+    (cursor : ℕ) (tag₀ tag₁ tag₂ : Bool)
+    (hscratch :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.natLayout.scratchIdx)).HasBinaryNat 0)
+    (htag₀Zero :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₀Idx)).HasBinaryNat 0)
+    (htag₁Zero :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₁Idx)).HasBinaryNat 0)
+    (htag₂Zero :
+      (outerExtras (outputProbeDecodeTagBitIdx n
+        layout.tokenLayout.tagLayout.tag₂Idx)).HasBinaryNat 0)
+    (hvalue :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.natLayout.valueIdx)).HasBinaryNat 0)
+    (hactive :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.natLayout.activeIdx)).HasBinaryNat 1)
+    (hloop :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.natLayout.loopIdx)).HasBinaryNat 0)
+    (fuelValue : ℕ)
+    (hfuel :
+      (outerExtras (outputProbeIndexedControllerIdx n
+        layout.tokenLayout.natLayout.fuelIdx)).HasBinaryNat fuelValue)
+    (hqueryValid : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).active = true →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).cursor <
+          (f input).length)
+    (hqueryLimit : ∀ value, value < fuelValue →
+      (outputProbeDecodeNatStateAt (f input)
+        (outputProbeDecodeTokenVarInitial cursor) value).active = true →
+      outputProbeCaptureSpace (max 1 (space input.length))
+        ((outputProbeDecodeNatStateAt (f input)
+          (outputProbeDecodeTokenVarInitial cursor) value).cursor + 1) ≤
+            cleanupLimit)
+    (height tokenCount lastOneCount lastOneCursor : ℕ) :
+    let finalState := outputProbeDecodeNatStateAt (f input)
+      (outputProbeDecodeTokenVarInitial cursor) fuelValue
+    let finalOuter := outputProbeDecodeNatLoopOuterExtras n
+      layout.tokenLayout.natLayout.cursorIdx
+      layout.tokenLayout.natLayout.valueIdx
+      layout.tokenLayout.natLayout.activeIdx
+      layout.tokenLayout.natLayout.loopIdx
+      (outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout
+        outerExtras cursor tag₀ tag₁ tag₂)
+      finalState fuelValue
+    let finalFrame := outputProbeLatchFrameCfg tm controllerTapes finalOuter
+      input output extras false
+    finalState.active = false →
+    ForwardScanFrame (layout.scanLayout n) finalState.cursor height tokenCount
+      lastOneCount lastOneCursor finalFrame.work →
+    ∃ bodyTime : ℕ → ℕ,
+      (forwardScanVarTokenStepTM tm controllerTapes layout).HoareTime
+        (outputProbeLatchFramePost tm controllerTapes
+          (outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout
+            outerExtras cursor tag₀ tag₁ tag₂)
+          input output extras false)
+        (fun inp work out =>
+          inp = finalFrame.input ∧
+          work = forwardScanTokenStepWork (layout.scanLayout n)
+            (forwardScanVarResetWork n layout finalFrame.work)
+            0 height tokenCount finalState.cursor ∧
+          out = finalFrame.output)
+        (binaryForLoopTime bodyTime fuelValue 0 fuelValue + 1 +
+          forwardScanVarFinishTime finalState.value fuelValue height
+            tokenCount finalState.cursor lastOneCount lastOneCursor) := by
+  dsimp only
+  let token := layout.tokenLayout
+  let after := outputProbeDecodeTokenOuterExtrasAfter n token outerExtras
+    cursor tag₀ tag₁ tag₂
+  let finalState := outputProbeDecodeNatStateAt (f input)
+    (outputProbeDecodeTokenVarInitial cursor) fuelValue
+  let finalOuter := outputProbeDecodeNatLoopOuterExtras n
+    token.natLayout.cursorIdx token.natLayout.valueIdx
+    token.natLayout.activeIdx token.natLayout.loopIdx after finalState
+    fuelValue
+  let finalFrame := outputProbeLatchFrameCfg tm controllerTapes finalOuter
+    input output extras false
+  intro hinactive hscanFrame
+  obtain ⟨bodyTime, hdecode⟩ :=
+    hcomp.outputProbeDecodeTokenVar_hoareTime input output houtput extras
+      hextras hcleanupCounter cleanupLimit hcleanupLimit controllerTapes token
+      outerExtras houter cursor tag₀ tag₁ tag₂ hscratch htag₀Zero
+      htag₁Zero htag₂Zero hvalue hactive hloop fuelValue hfuel
+      hqueryValid hqueryLimit
+  have hafter : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (after i) := by
+    exact outputProbeDecodeTokenOuterExtrasAfter_parked n token outerExtras
+      houter cursor tag₀ tag₁ tag₂ htag₀Zero htag₁Zero htag₂Zero
+  have hfinal : ∀ i,
+      ¬placeWorkInMiddle 0 (outputProbeControllerTapes n) i →
+        Parked (finalOuter i) := by
+    exact outputProbeDecodeNatLoopOuterExtras_parked n
+      token.natLayout.cursorIdx token.natLayout.valueIdx
+      token.natLayout.activeIdx token.natLayout.loopIdx after hafter
+      finalState fuelValue
+  have hvalueOuter :
+      (finalOuter (outputProbeIndexedControllerIdx n
+        token.natLayout.valueIdx)).HasBinaryNat finalState.value := by
+    simpa [finalOuter, outputProbeDecodeNatLoopOuterExtras,
+      outputProbeDecodeNatValueIdx] using
+      outputProbeDecodeNatStateOuterExtras_value n
+        token.natLayout.cursorIdx token.natLayout.valueIdx
+        token.natLayout.activeIdx
+        (token.roles.injective.ne (by decide))
+        (Function.update after
+          (outputProbeIndexedControllerIdx n token.natLayout.loopIdx)
+          (outputProbeCounterTape fuelValue)) finalState
+  have hactiveOuter :
+      (finalOuter (outputProbeIndexedControllerIdx n
+        token.natLayout.activeIdx)).HasBinaryNat 0 := by
+    have hraw := outputProbeDecodeNatStateOuterExtras_active n
+      token.natLayout.cursorIdx token.natLayout.valueIdx
+      token.natLayout.activeIdx
+      (Function.update after
+        (outputProbeIndexedControllerIdx n token.natLayout.loopIdx)
+        (outputProbeCounterTape fuelValue)) finalState
+    rw [hinactive] at hraw
+    simpa [finalOuter, outputProbeDecodeNatLoopOuterExtras,
+      outputProbeDecodeNatActiveIdx] using hraw
+  have hloopOuter :
+      (finalOuter (outputProbeIndexedControllerIdx n
+        token.natLayout.loopIdx)).HasBinaryNat fuelValue := by
+    exact outputProbeDecodeNatLoopOuterExtras_loop n
+      token.natLayout.cursorIdx token.natLayout.valueIdx
+      token.natLayout.activeIdx token.natLayout.loopIdx
+      (token.roles.injective.ne (by decide))
+      (token.roles.injective.ne (by decide))
+      (token.roles.injective.ne (by decide)) after finalState fuelValue
+  have hfinalPost := outputProbeLatchFrameCfg_post tm controllerTapes
+    finalOuter input output extras false
+  have hvalueWork :
+      (finalFrame.work (outputProbeIndexedControllerIdx n
+        token.natLayout.valueIdx)).HasBinaryNat finalState.value := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes finalOuter
+      input output extras false finalFrame.input finalFrame.work
+      finalFrame.output hfinalPost token.natLayout.valueIdx]
+    exact hvalueOuter
+  have hactiveWork :
+      (finalFrame.work (outputProbeIndexedControllerIdx n
+        token.natLayout.activeIdx)).HasBinaryNat 0 := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes finalOuter
+      input output extras false finalFrame.input finalFrame.work
+      finalFrame.output hfinalPost token.natLayout.activeIdx]
+    exact hactiveOuter
+  have hloopWork :
+      (finalFrame.work (outputProbeIndexedControllerIdx n
+        token.natLayout.loopIdx)).HasBinaryNat fuelValue := by
+    rw [outputProbeLatchFramePost_controller tm controllerTapes finalOuter
+      input output extras false finalFrame.input finalFrame.work
+      finalFrame.output hfinalPost token.natLayout.loopIdx]
+    exact hloopOuter
+  have hfinish := forwardScanVarFinishTM_latchFrame_hoareTime_internal tm
+    controllerTapes layout finalState.value fuelValue height tokenCount
+    finalState.cursor lastOneCount lastOneCursor finalOuter input output extras
+    hextras hfinal houtput hvalueWork hactiveWork hloopWork hscanFrame
+  have htransition := latchFramePost_transition tm controllerTapes finalOuter
+    input output extras hextras hfinal houtput
+  have hrun := seqTM_hoareTime
+    (outputProbeDecodeNatTM tm controllerTapes token.natLayout.cursorIdx
+      token.natLayout.scratchIdx token.natLayout.valueIdx
+      token.natLayout.activeIdx token.natLayout.loopIdx
+      token.natLayout.fuelIdx)
+    (forwardScanVarFinishTM n controllerTapes layout) hdecode htransition
+    hfinish
+  refine ⟨bodyTime, ?_⟩
+  simpa [forwardScanVarTokenStepTM, token, after, finalState, finalOuter,
+    finalFrame] using hrun
+
 theorem forwardScanVarResetTM_isTransducer_internal (n controllerTapes : ℕ)
     (layout : ForwardScanTokenLayout controllerTapes) :
     (forwardScanVarResetTM n controllerTapes layout).IsTransducer := by
@@ -298,14 +866,20 @@ theorem forwardScanVarResetTM_isTransducer_internal (n controllerTapes : ℕ)
   exact (clearWorkTM_isTransducer _).seqTM
     ((binarySuccTM_isTransducer _).seqTM (clearWorkTM_isTransducer _))
 
+theorem forwardScanVarFinishTM_isTransducer_internal (n controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes) :
+    (forwardScanVarFinishTM n controllerTapes layout).IsTransducer := by
+  unfold forwardScanVarFinishTM
+  exact (forwardScanVarResetTM_isTransducer_internal n controllerTapes
+    layout).seqTM (forwardScanTokenStepTM_isTransducer _ 0)
+
 theorem forwardScanVarTokenStepTM_isTransducer_internal (tm : TM n)
     (controllerTapes : ℕ)
     (layout : ForwardScanTokenLayout controllerTapes) :
     (forwardScanVarTokenStepTM tm controllerTapes layout).IsTransducer := by
   unfold forwardScanVarTokenStepTM
   exact (outputProbeDecodeNatTM_isTransducer tm controllerTapes _ _ _ _ _ _).seqTM
-    ((forwardScanVarResetTM_isTransducer_internal n controllerTapes
-      layout).seqTM (forwardScanTokenStepTM_isTransducer _ 0))
+    (forwardScanVarFinishTM_isTransducer_internal n controllerTapes layout)
 
 theorem forwardScanDecodedTokenTM_isTransducer_internal (tm : TM n)
     (controllerTapes : ℕ)
