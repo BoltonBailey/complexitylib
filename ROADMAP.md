@@ -1455,9 +1455,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   through fixed-tag cleanup, and through the variable decoder's cursor update;
   source theorems need only the original stable scan frame. Canonical variable
   encodings also have an exact successful decoder result with arbitrary extra
-  fuel, exposing the post-token cursor and terminated active state. The next
-  seam is to iterate this assembled step through the bounded connective scan,
-  followed by the finite-control cursor/transform updates.
+  fuel, exposing the post-token cursor and terminated active state. The bounded
+  scan now has its own injective eighteen-role layout and concrete count-up
+  wrapper: the first sixteen roles project to the complete token step, while a
+  fresh iteration counter and preserved token limit are certified distinct
+  from every token role. This avoids aliasing the loop counter with the
+  semantic token count already incremented by the body. The next seam is the
+  stream-indexed loop invariant for that wrapper, followed by the
+  finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
