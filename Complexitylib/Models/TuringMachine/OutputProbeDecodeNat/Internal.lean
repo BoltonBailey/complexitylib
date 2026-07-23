@@ -61,6 +61,34 @@ theorem outputProbeDecodeNatRun_result_internal
           | true =>
               simpa [hbit] using ih (cursor + 1) (value + 1)
 
+theorem outputProbeDecodeNatStateAt_eq_of_result_internal
+    (bits : List Bool) (fuel cursor value result nextCursor : ℕ)
+    (hdecode : FormulaCode.BitOracle.decodeNatAt?
+      (FormulaCode.BitOracle.ofList bits) fuel cursor value =
+        some (result, nextCursor)) :
+    outputProbeDecodeNatStateAt bits
+        { cursor := cursor, value := value, active := true } fuel =
+      { cursor := nextCursor, value := result, active := false } := by
+  let state := outputProbeDecodeNatStateAt bits
+    { cursor := cursor, value := value, active := true } fuel
+  have hresult : state.result? = some (result, nextCursor) := by
+    change (outputProbeDecodeNatRun (FormulaCode.BitOracle.ofList bits) fuel
+      { cursor := cursor, value := value, active := true }).result? =
+        some (result, nextCursor)
+    rw [outputProbeDecodeNatRun_result_internal]
+    exact hdecode
+  rcases hstate : state with ⟨stateCursor, stateValue, stateActive⟩
+  change state =
+    { cursor := nextCursor, value := result, active := false }
+  cases stateActive
+  · rw [hstate] at hresult ⊢
+    simp only [OutputProbeDecodeNatState.result?, Bool.false_eq_true,
+      if_false, Option.some.injEq, Prod.mk.injEq] at hresult
+    rcases hresult with ⟨rfl, rfl⟩
+    rfl
+  · rw [hstate] at hresult
+    simp [OutputProbeDecodeNatState.result?] at hresult
+
 theorem outputProbeDecodeNatStep_ofList_internal
     (bits : List Bool) (state : OutputProbeDecodeNatState)
     (hcursor : state.active = true → state.cursor < bits.length) :

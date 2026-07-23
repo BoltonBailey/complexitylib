@@ -29,6 +29,19 @@ theorem outputProbeDecodeNatRun_result
         FormulaCode.BitOracle.decodeNatAt? query fuel cursor value :=
   outputProbeDecodeNatRun_result_internal query fuel cursor value
 
+/-- A successful oracle-level decode determines the entire final pure
+controller state: accumulated value, advanced cursor, and cleared active flag. -/
+theorem outputProbeDecodeNatStateAt_eq_of_result
+    (bits : List Bool) (fuel cursor value result nextCursor : ℕ)
+    (hdecode : FormulaCode.BitOracle.decodeNatAt?
+      (FormulaCode.BitOracle.ofList bits) fuel cursor value =
+        some (result, nextCursor)) :
+    outputProbeDecodeNatStateAt bits
+        { cursor := cursor, value := value, active := true } fuel =
+      { cursor := nextCursor, value := result, active := false } :=
+  outputProbeDecodeNatStateAt_eq_of_result_internal bits fuel cursor value
+    result nextCursor hdecode
+
 /-- One semantic decoder iteration over a finite output list consumes its
 actual bit whenever the active cursor is valid, and otherwise preserves an
 inactive state. -/

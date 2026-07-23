@@ -22,6 +22,21 @@ namespace Machine
 
 open TM
 
+/-- Bounded unary decoding of a canonical variable token reaches its exact
+post-token cursor and clears the active flag; extra fuel is absorbed by the
+decoder's inactive no-op state. -/
+theorem outputProbeDecodeTokenVarFinalState_of_encode
+    (before after : List Bool) (varValue extraFuel : ℕ) :
+    (outputProbeDecodeNatStateAt
+        (before ++ FormulaCode.Token.encode
+          (FormulaCode.Token.var varValue) ++ after)
+        (outputProbeDecodeTokenVarInitial before.length)
+        (varValue + 1 + extraFuel)).result? =
+      (some (varValue, before.length + varValue + 4) :
+        Option (ℕ × ℕ)) :=
+  outputProbeDecodeTokenVarFinalState_of_encode_internal before after
+    varValue extraFuel
+
 /-- The complete decoder and numeric scan use the same physical source cursor. -/
 @[simp]
 theorem ForwardScanTokenLayout.scanLayout_cursorIdx
@@ -44,6 +59,63 @@ theorem ForwardScanFrame.forwardScanVarResetWork
       lastOneCount lastOneCursor (forwardScanVarResetWork n layout work) :=
   hframe.forwardScanVarResetWork_internal layout cursor height tokenCount
     lastOneCount lastOneCursor work
+
+/-- A numeric scan frame on stable controller tapes is the same frame inside
+the canonical restored output-probe configuration. -/
+theorem ForwardScanFrame.outputProbeLatchFrameCfg
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (cursor height tokenCount lastOneCount lastOneCursor : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor outerExtras) :
+    ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeLatchFrameCfg tm controllerTapes outerExtras input output
+        extras false).work :=
+  hframe.outputProbeLatchFrameCfg_internal tm controllerTapes layout cursor
+    height tokenCount lastOneCount lastOneCursor outerExtras input output
+    extras
+
+/-- Complete fixed-tag probing and cleanup advance exactly the shared scan
+cursor while preserving all seven private numeric scan registers. -/
+theorem ForwardScanFrame.outputProbeDecodeTokenOuterExtrasAfter
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (cursor height tokenCount lastOneCount lastOneCursor : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (tag₀ tag₁ tag₂ : Bool)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor outerExtras) :
+    ForwardScanFrame (layout.scanLayout n) (cursor + 3) height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout outerExtras
+        cursor tag₀ tag₁ tag₂) :=
+  hframe.outputProbeDecodeTokenOuterExtrasAfter_internal layout cursor height
+    tokenCount lastOneCount lastOneCursor outerExtras tag₀ tag₁ tag₂
+
+/-- Completed bounded variable decoding overwrites exactly the shared scan
+cursor with its pure semantic cursor and preserves all other scan registers. -/
+theorem ForwardScanFrame.outputProbeDecodeNatLoopOuterExtras
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (cursor height tokenCount lastOneCount lastOneCursor : ℕ)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : OutputProbeDecodeNatState) (iteration : ℕ)
+    (hframe : ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor outerExtras) :
+    ForwardScanFrame (layout.scanLayout n) state.cursor height tokenCount
+      lastOneCount lastOneCursor
+      (outputProbeDecodeNatLoopOuterExtras n
+        layout.tokenLayout.natLayout.cursorIdx
+        layout.tokenLayout.natLayout.valueIdx
+        layout.tokenLayout.natLayout.activeIdx
+        layout.tokenLayout.natLayout.loopIdx outerExtras state iteration) :=
+  hframe.outputProbeDecodeNatLoopOuterExtras_internal layout cursor height
+    tokenCount lastOneCount lastOneCursor outerExtras state iteration
 
 /-- A numeric token update can run directly from a restored output-probe latch
 frame. Its endpoint is the literal updated full work family, ready for exact
@@ -260,14 +332,14 @@ theorem ComputesInSpace.forwardScanDecodedFixedTokenTM_hoareTime
       ((f input)[cursor + 1]) ((f input)[cursor + 2]) = some tag)
     (hfixed : tag ≠ .var)
     (height tokenCount lastOneCount lastOneCursor : ℕ)
-    (hpositive : forwardScanTokenTagArity tag = 2 → 1 ≤ height) :
+    (hpositive : forwardScanTokenTagArity tag = 2 → 1 ≤ height)
+    (hscanFrame : ForwardScanFrame (layout.scanLayout n) cursor height
+      tokenCount lastOneCount lastOneCursor outerExtras) :
     let after := outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout
       outerExtras cursor ((f input)[cursor]) ((f input)[cursor + 1])
       ((f input)[cursor + 2])
     let afterFrame := outputProbeLatchFrameCfg tm controllerTapes after input
       output extras false
-    ForwardScanFrame (layout.scanLayout n) (cursor + 3) height tokenCount
-      lastOneCount lastOneCursor afterFrame.work →
     ∃ (bound₀ bound₁ bound₂ : ℕ)
       (pre : TapePred
         (0 + outputProbeControllerTapes n + controllerTapes)),
@@ -296,7 +368,7 @@ theorem ComputesInSpace.forwardScanDecodedFixedTokenTM_hoareTime
     hcursorBound output houtput extras hextras hcleanupCounter cleanupLimit
     hcleanupLimit hlimit₀ hlimit₁ hlimit₂ controllerTapes layout
     outerExtras houter hcursor hscratch htag₀ htag₁ htag₂ tag htag hfixed
-    height tokenCount lastOneCount lastOneCursor hpositive
+    height tokenCount lastOneCount lastOneCursor hpositive hscanFrame
 
 /-- Under a valid bounded terminated-unary query schedule, the concrete
 variable continuation reaches the pure decoder's final cursor and then applies
@@ -360,7 +432,9 @@ theorem ComputesInSpace.forwardScanVarTokenStepTM_hoareTime
         ((outputProbeDecodeNatStateAt (f input)
           (outputProbeDecodeTokenVarInitial cursor) value).cursor + 1) ≤
             cleanupLimit)
-    (height tokenCount lastOneCount lastOneCursor : ℕ) :
+    (height tokenCount lastOneCount lastOneCursor : ℕ)
+    (hscanFrame : ForwardScanFrame (layout.scanLayout n) cursor height
+      tokenCount lastOneCount lastOneCursor outerExtras) :
     let finalState := outputProbeDecodeNatStateAt (f input)
       (outputProbeDecodeTokenVarInitial cursor) fuelValue
     let finalOuter := outputProbeDecodeNatLoopOuterExtras n
@@ -374,8 +448,6 @@ theorem ComputesInSpace.forwardScanVarTokenStepTM_hoareTime
     let finalFrame := outputProbeLatchFrameCfg tm controllerTapes finalOuter
       input output extras false
     finalState.active = false →
-    ForwardScanFrame (layout.scanLayout n) finalState.cursor height tokenCount
-      lastOneCount lastOneCursor finalFrame.work →
     ∃ bodyTime : ℕ → ℕ,
       (forwardScanVarTokenStepTM tm controllerTapes layout).HoareTime
         (outputProbeLatchFramePost tm controllerTapes
@@ -395,7 +467,7 @@ theorem ComputesInSpace.forwardScanVarTokenStepTM_hoareTime
     extras hextras hcleanupCounter cleanupLimit hcleanupLimit controllerTapes
     layout outerExtras houter cursor tag₀ tag₁ tag₂ hscratch htag₀Zero
     htag₁Zero htag₂Zero hvalue hactive hloop fuelValue hfuel hqueryValid
-    hqueryLimit height tokenCount lastOneCount lastOneCursor
+    hqueryLimit height tokenCount lastOneCount lastOneCursor hscanFrame
 
 /-- Variable-decoder normalization is append-only. -/
 theorem forwardScanVarResetTM_isTransducer (n controllerTapes : ℕ)
