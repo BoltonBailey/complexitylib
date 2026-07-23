@@ -9,6 +9,7 @@ import Complexitylib.Circuits.DecisionTree
 import Complexitylib.Circuits.Formula
 import Complexitylib.Circuits.FormulaEncoding
 import Complexitylib.Circuits.FormulaEncoding.Navigation
+import Complexitylib.Circuits.FormulaEncoding.ForwardNavigation
 import Complexitylib.Circuits.FormulaEncoding.BitNavigation
 import Complexitylib.Circuits.FormulaEncoding.ProbeNavigation
 import Complexitylib.Circuits.CircuitFormula

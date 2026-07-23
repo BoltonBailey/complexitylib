@@ -1428,9 +1428,14 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   simultaneously resets both bit latches, then the existing three-transition
   capture and two-transition dispatcher select the next semantic child. This
   constant-cost recursive step has an explicit all-prefix bound and preserves
-  one-way output behavior. The next machine seam is token-span navigation for
-  the three connective cases, followed by the finite-control cursor/transform
-  updates.
+  one-way output behavior. Postfix child navigation now also has a forward-
+  streaming invariant tailored to the existing token decoder: scanning a
+  binary root's child body maintains only the evaluation-stack height and the
+  most recent height-one boundary. That boundary is proved to be exactly the
+  end of the left child in both token count and encoded-bit offset, eliminating
+  repeated backward ordinal seeks. The next machine seam is the bounded loop
+  implementing this scan for the three connective cases, followed by the
+  finite-control cursor/transform updates.
   `BarringtonProbeSerializer` fixes the complete oracle-level two-pass output
   and proves that its counted header, filtered instruction stream, and final
   code agree byte-for-byte with the executable compiler. The remaining
