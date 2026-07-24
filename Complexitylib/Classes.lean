@@ -58,6 +58,7 @@ import Complexitylib.Classes.Randomized.PPoly
 import Complexitylib.Classes.Pairing
 import Complexitylib.Classes.FNP
 import Complexitylib.Classes.NP.Witness
+import Complexitylib.Classes.PH
 import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Classes.L
 import Complexitylib.Classes.L.PolynomialTime
