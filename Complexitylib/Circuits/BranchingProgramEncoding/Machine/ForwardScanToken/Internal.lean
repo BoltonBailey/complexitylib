@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.ForwardScan
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.ForwardScanToken.Defs
+import Complexitylib.Circuits.FormulaEncoding.ForwardNavigation
 import Complexitylib.Circuits.FormulaEncoding.ProbeNavigation
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeToken
 import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
@@ -21,6 +22,419 @@ namespace BPCode
 namespace Machine
 
 open TM
+
+theorem forwardScanTokenTagArity_eq_internal (token : FormulaCode.Token) :
+    forwardScanTokenTagArity (forwardScanTokenTag token) = token.arity := by
+  cases token <;> rfl
+
+theorem forwardScanTokenTagBits_classify_internal
+    (token : FormulaCode.Token) :
+    let bits := forwardScanTokenTagBits token
+    outputProbeTokenTag? bits.tag₀ bits.tag₁ bits.tag₂ =
+      some (forwardScanTokenTag token) := by
+  cases token <;> rfl
+
+private theorem outputProbeTokenTag?_of_decodeTokenAt
+    (query : FormulaCode.BitOracle) (fuel cursor next : ℕ)
+    (token : FormulaCode.Token)
+    (hdecode : FormulaCode.BitOracle.decodeTokenAt? query fuel cursor =
+      some (token, next)) :
+    ∃ tag₀ tag₁ tag₂,
+      query cursor = some tag₀ ∧
+      query (cursor + 1) = some tag₁ ∧
+      query (cursor + 2) = some tag₂ ∧
+      outputProbeTokenTag? tag₀ tag₁ tag₂ =
+        some (forwardScanTokenTag token) := by
+  cases h₀ : query cursor with
+  | none => simp [FormulaCode.BitOracle.decodeTokenAt?, h₀] at hdecode
+  | some tag₀ =>
+      cases h₁ : query (cursor + 1) with
+      | none =>
+          simp [FormulaCode.BitOracle.decodeTokenAt?, h₀, h₁] at hdecode
+      | some tag₁ =>
+          cases h₂ : query (cursor + 2) with
+          | none =>
+              simp [FormulaCode.BitOracle.decodeTokenAt?, h₀, h₁,
+                h₂] at hdecode
+          | some tag₂ =>
+              refine ⟨tag₀, tag₁, tag₂, rfl, rfl, rfl, ?_⟩
+              cases token <;> cases tag₀ <;> cases tag₁ <;> cases tag₂ <;>
+                simp [FormulaCode.BitOracle.decodeTokenAt?, h₀, h₁, h₂,
+                  outputProbeTokenTag?, forwardScanTokenTag,
+                  Option.bind_eq_some_iff] at hdecode ⊢
+
+theorem outputProbeTokenTag?_ofList_encodeTokenStream_internal
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    ∃ tag₀ tag₁ tag₂,
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          cursor = some tag₀ ∧
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          (cursor + 1) = some tag₁ ∧
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          (cursor + 2) = some tag₂ ∧
+      outputProbeTokenTag? tag₀ tag₁ tag₂ =
+        some (forwardScanTokenTag stream[index]) := by
+  dsimp only
+  let before := CircuitCode.NatCode.encode stream.length ++
+    (stream.take index).flatMap FormulaCode.Token.encode
+  let after :=
+    (stream.drop (index + 1)).flatMap FormulaCode.Token.encode
+  have hdrop : stream.drop index =
+      stream[index] :: stream.drop (index + 1) :=
+    List.drop_eq_getElem_cons hindex
+  have hflat : stream.flatMap FormulaCode.Token.encode =
+      (stream.take index).flatMap FormulaCode.Token.encode ++
+        FormulaCode.Token.encode stream[index] ++
+        (stream.drop (index + 1)).flatMap FormulaCode.Token.encode := by
+    calc
+      stream.flatMap FormulaCode.Token.encode =
+          (stream.take index ++ stream.drop index).flatMap
+            FormulaCode.Token.encode := by
+        exact congrArg (List.flatMap FormulaCode.Token.encode)
+          (List.take_append_drop index stream).symm
+      _ = _ := by
+        rw [List.flatMap_append, hdrop, List.flatMap_cons]
+        simp only [List.append_assoc]
+  have hstream : FormulaCode.encodeTokenStream stream =
+      before ++ FormulaCode.Token.encode stream[index] ++ after := by
+    rw [FormulaCode.encodeTokenStream, hflat]
+    simp [before, after, List.append_assoc]
+  have hbefore : before.length =
+      stream.length + 1 + FormulaCode.tokenBitOffset stream index := by
+    simp [before, CircuitCode.NatCode.length_encode,
+      FormulaCode.tokenBitOffset,
+      FormulaCode.tokensCodeLength_eq_flatMap_length_internal]
+  have hdecode :=
+    FormulaCode.BitOracle.decodeTokenAt?_ofList_append_encode_internal
+      before after stream[index] 0
+  rw [← hstream, hbefore] at hdecode
+  exact outputProbeTokenTag?_of_decodeTokenAt _ _ _ _ _ hdecode
+
+theorem forwardScanTokenTagBits_ofList_encodeTokenStream_internal
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let bits := FormulaCode.encodeTokenStream stream
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    let tag := forwardScanTokenTagBits stream[index]
+    FormulaCode.BitOracle.ofList bits cursor = some tag.tag₀ ∧
+      FormulaCode.BitOracle.ofList bits (cursor + 1) = some tag.tag₁ ∧
+      FormulaCode.BitOracle.ofList bits (cursor + 2) = some tag.tag₂ := by
+  dsimp only
+  obtain ⟨tag₀, tag₁, tag₂, h₀, h₁, h₂, htag⟩ :=
+    outputProbeTokenTag?_ofList_encodeTokenStream_internal stream index hindex
+  cases htoken : stream[index] <;>
+    cases tag₀ <;> cases tag₁ <;> cases tag₂ <;>
+    simp [forwardScanTokenTag, forwardScanTokenTagBits,
+      outputProbeTokenTag?, htoken] at htag ⊢ <;>
+    exact ⟨h₀, h₁, h₂⟩
+
+theorem outputProbeTokenTag?_getElem_encodeTokenStream_internal
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let bits := FormulaCode.encodeTokenStream stream
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    ∃ (h₀ : cursor < bits.length) (h₁ : cursor + 1 < bits.length)
+        (h₂ : cursor + 2 < bits.length),
+      outputProbeTokenTag? (bits[cursor]'h₀) (bits[cursor + 1]'h₁)
+          (bits[cursor + 2]'h₂) =
+        some (forwardScanTokenTag stream[index]) := by
+  dsimp only
+  obtain ⟨tag₀, tag₁, tag₂, h₀, h₁, h₂, htag⟩ :=
+    outputProbeTokenTag?_ofList_encodeTokenStream_internal stream index hindex
+  simp only [FormulaCode.BitOracle.ofList] at h₀ h₁ h₂
+  obtain ⟨hbound₀, hvalue₀⟩ := List.getElem?_eq_some_iff.mp h₀
+  obtain ⟨hbound₁, hvalue₁⟩ := List.getElem?_eq_some_iff.mp h₁
+  obtain ⟨hbound₂, hvalue₂⟩ := List.getElem?_eq_some_iff.mp h₂
+  refine ⟨hbound₀, hbound₁, hbound₂, ?_⟩
+  simpa [hvalue₀, hvalue₁, hvalue₂] using htag
+
+theorem ForwardScanFrame.forwardScanTokenStepWork_internal
+    (layout : ForwardScanLayout n)
+    (state : FormulaCode.ForwardScanState) (token : FormulaCode.Token)
+    (work : Fin n → Tape)
+    (hframe : ForwardScanFrame layout
+      (state.bitOffset + token.codeLength) state.stackHeight state.tokenCount
+      state.lastOneCount state.lastOneBitOffset work) :
+    ForwardScanFrame layout (state.step token).bitOffset
+      (state.step token).stackHeight (state.step token).tokenCount
+      (state.step token).lastOneCount (state.step token).lastOneBitOffset
+      (forwardScanTokenStepWork layout work token.arity state.stackHeight
+        state.tokenCount (state.bitOffset + token.codeLength)) := by
+  rcases hframe with ⟨hcursor, _hheight, _hcount, hlastCount, hlastCursor,
+    hone, _hresult, hscratch⟩
+  have hcursor' : (work (layout.roles 0)).HasBinaryNat
+      (state.bitOffset + token.codeLength) := by
+    simpa [ForwardScanLayout.cursorIdx] using hcursor
+  have hlastCount' : (work (layout.roles 3)).HasBinaryNat
+      state.lastOneCount := by
+    simpa [ForwardScanLayout.lastOneCountIdx] using hlastCount
+  have hlastCursor' : (work (layout.roles 4)).HasBinaryNat
+      state.lastOneBitOffset := by
+    simpa [ForwardScanLayout.lastOneCursorIdx] using hlastCursor
+  have hone' : (work (layout.roles 5)).HasBinaryNat 1 := by
+    simpa [ForwardScanLayout.oneIdx] using hone
+  have hscratch' : (work (layout.roles 7)).HasBinaryNat 0 := by
+    simpa [ForwardScanLayout.copyScratchIdx] using hscratch
+  simp only [FormulaCode.ForwardScanState.step]
+  by_cases honeHeight : state.stackHeight + 1 - token.arity = 1
+  · simp [forwardScanTokenStepWork, forwardScanAfterHeightWork,
+      forwardScanBoundaryWork, honeHeight, ForwardScanFrame,
+      ForwardScanLayout.cursorIdx, ForwardScanLayout.heightIdx,
+      ForwardScanLayout.tokenCountIdx, ForwardScanLayout.lastOneCountIdx,
+      ForwardScanLayout.lastOneCursorIdx, ForwardScanLayout.oneIdx,
+      ForwardScanLayout.resultIdx, ForwardScanLayout.copyScratchIdx,
+      layout.roles.injective.eq_iff]
+    exact ⟨hcursor', by simpa using Tape.init_move_right_hasBinaryNat 1,
+      Tape.init_move_right_hasBinaryNat (state.tokenCount + 1),
+      Tape.init_move_right_hasBinaryNat
+        (state.bitOffset + token.codeLength), hone',
+      Tape.init_move_right_hasBinaryNat 0, hscratch'⟩
+  · simp [forwardScanTokenStepWork, forwardScanAfterHeightWork,
+      honeHeight, ForwardScanFrame, ForwardScanLayout.cursorIdx,
+      ForwardScanLayout.heightIdx, ForwardScanLayout.tokenCountIdx,
+      ForwardScanLayout.lastOneCountIdx,
+      ForwardScanLayout.lastOneCursorIdx, ForwardScanLayout.oneIdx,
+      ForwardScanLayout.resultIdx, ForwardScanLayout.copyScratchIdx,
+      layout.roles.injective.eq_iff]
+    exact ⟨hcursor', Tape.init_move_right_hasBinaryNat
+        (state.stackHeight + 1 - token.arity),
+      Tape.init_move_right_hasBinaryNat (state.tokenCount + 1),
+      hlastCount', hlastCursor', hone', Tape.init_move_right_hasBinaryNat 0,
+      hscratch'⟩
+
+theorem ForwardScanFrame.forwardScanTokenCursorWork_internal
+    (n : ℕ) (layout : ForwardScanTokenLayout controllerTapes)
+    (oldCursor cursor height tokenCount lastOneCount lastOneCursor : ℕ)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (hframe : ForwardScanFrame (layout.scanLayout n) oldCursor height
+      tokenCount lastOneCount lastOneCursor work) :
+    ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (forwardScanTokenCursorWork n layout work cursor) := by
+  let scan := layout.scanLayout n
+  have hne (i : Fin 8) (hi : i ≠ 0) : scan.roles i ≠ scan.cursorIdx := by
+    unfold scan ForwardScanLayout.cursorIdx
+    exact scan.roles.injective.ne hi
+  have hheightNe :
+      (layout.scanLayout n).heightIdx ≠ (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.heightIdx] using hne 1 (by decide)
+  have hcountNe :
+      (layout.scanLayout n).tokenCountIdx ≠
+        (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.tokenCountIdx] using hne 2 (by decide)
+  have hlastCountNe :
+      (layout.scanLayout n).lastOneCountIdx ≠
+        (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.lastOneCountIdx] using hne 3 (by decide)
+  have hlastCursorNe :
+      (layout.scanLayout n).lastOneCursorIdx ≠
+        (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.lastOneCursorIdx] using hne 4 (by decide)
+  have honeNe :
+      (layout.scanLayout n).oneIdx ≠ (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.oneIdx] using hne 5 (by decide)
+  have hresultNe :
+      (layout.scanLayout n).resultIdx ≠ (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.resultIdx] using hne 6 (by decide)
+  have hscratchNe :
+      (layout.scanLayout n).copyScratchIdx ≠
+        (layout.scanLayout n).cursorIdx := by
+    simpa [scan, ForwardScanLayout.copyScratchIdx] using hne 7 (by decide)
+  rcases hframe with ⟨_hcursor, hheight, hcount, hlastCount, hlastCursor,
+    hone, hresult, hscratch⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [forwardScanTokenCursorWork, Function.update_self]
+    simpa [outputProbeCounterTape] using
+      Tape.init_move_right_hasBinaryNat cursor
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hheightNe] using hheight
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hcountNe] using hcount
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hlastCountNe] using hlastCount
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hlastCursorNe] using hlastCursor
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne honeNe] using hone
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hresultNe] using hresult
+  · simpa only [forwardScanTokenCursorWork,
+      Function.update_of_ne hscratchNe] using hscratch
+
+private theorem outputProbeLatchFramePost_updateScanRole
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (i : Fin 8) (tape : Tape) :
+    outputProbeLatchFramePost tm controllerTapes
+      (Function.update outerExtras ((layout.scanLayout n).roles i) tape)
+      input output extras bit inp
+      (Function.update work ((layout.scanLayout n).roles i) tape) out := by
+  change outputProbeLatchFramePost tm controllerTapes
+    (Function.update outerExtras
+      (outputProbeIndexedControllerIdx n (layout.scanControllerRole i)) tape)
+    input output extras bit inp
+    (Function.update work
+      (outputProbeIndexedControllerIdx n (layout.scanControllerRole i)) tape)
+    out
+  exact outputProbeLatchFramePost_updateController tm controllerTapes
+    outerExtras input output extras bit inp work out hpost
+      (layout.scanControllerRole i) tape
+
+theorem outputProbeLatchFramePost_forwardScanTokenStepWork_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (arity height tokenCount cursor : ℕ) :
+    outputProbeLatchFramePost tm controllerTapes
+      (forwardScanTokenStepWork (layout.scanLayout n) outerExtras arity height
+        tokenCount cursor)
+      input output extras bit inp
+      (forwardScanTokenStepWork (layout.scanLayout n) work arity height
+        tokenCount cursor) out := by
+  let scan := layout.scanLayout n
+  let nextHeight := height + 1 - arity
+  let heightTape :=
+    ((Tape.init (nextHeight.bits.map Γ.ofBool)).move Dir3.right)
+  let heightOuter := Function.update outerExtras scan.heightIdx heightTape
+  let heightWork := Function.update work scan.heightIdx heightTape
+  have hheight : outputProbeLatchFramePost tm controllerTapes heightOuter
+      input output extras bit inp heightWork out := by
+    simpa [heightOuter, heightWork, heightTape, scan,
+      ForwardScanLayout.heightIdx] using
+      outputProbeLatchFramePost_updateScanRole tm controllerTapes layout
+        outerExtras input output extras bit inp work out hpost 1 heightTape
+  let countTape :=
+    ((Tape.init ((tokenCount + 1).bits.map Γ.ofBool)).move Dir3.right)
+  let countOuter := Function.update heightOuter scan.tokenCountIdx countTape
+  let countWork := Function.update heightWork scan.tokenCountIdx countTape
+  have hcount : outputProbeLatchFramePost tm controllerTapes countOuter
+      input output extras bit inp countWork out := by
+    simpa [countOuter, countWork, countTape, scan,
+      ForwardScanLayout.tokenCountIdx] using
+      outputProbeLatchFramePost_updateScanRole tm controllerTapes layout
+        heightOuter input output extras bit inp heightWork out hheight 2
+        countTape
+  let resultTape :=
+    ((Tape.init ([decide (nextHeight = 1)].map Γ.ofBool)).move Dir3.right)
+  let comparedOuter := Function.update countOuter scan.resultIdx resultTape
+  let comparedWork := Function.update countWork scan.resultIdx resultTape
+  have hcompared : outputProbeLatchFramePost tm controllerTapes comparedOuter
+      input output extras bit inp comparedWork out := by
+    simpa [comparedOuter, comparedWork, resultTape, scan,
+      ForwardScanLayout.resultIdx] using
+      outputProbeLatchFramePost_updateScanRole tm controllerTapes layout
+        countOuter input output extras bit inp countWork out hcount 6
+        resultTape
+  by_cases hone : nextHeight = 1
+  · let lastCountTape :=
+      ((Tape.init ((tokenCount + 1).bits.map Γ.ofBool)).move Dir3.right)
+    let lastCountOuter :=
+      Function.update comparedOuter scan.lastOneCountIdx lastCountTape
+    let lastCountWork :=
+      Function.update comparedWork scan.lastOneCountIdx lastCountTape
+    have hlastCount : outputProbeLatchFramePost tm controllerTapes
+        lastCountOuter input output extras bit inp lastCountWork out := by
+      simpa [lastCountOuter, lastCountWork, lastCountTape, scan,
+        ForwardScanLayout.lastOneCountIdx] using
+        outputProbeLatchFramePost_updateScanRole tm controllerTapes layout
+          comparedOuter input output extras bit inp comparedWork out hcompared
+          3 lastCountTape
+    let lastCursorTape :=
+      ((Tape.init (cursor.bits.map Γ.ofBool)).move Dir3.right)
+    let lastCursorOuter :=
+      Function.update lastCountOuter scan.lastOneCursorIdx lastCursorTape
+    let lastCursorWork :=
+      Function.update lastCountWork scan.lastOneCursorIdx lastCursorTape
+    have hlastCursor : outputProbeLatchFramePost tm controllerTapes
+        lastCursorOuter input output extras bit inp lastCursorWork out := by
+      simpa [lastCursorOuter, lastCursorWork, lastCursorTape, scan,
+        ForwardScanLayout.lastOneCursorIdx] using
+        outputProbeLatchFramePost_updateScanRole tm controllerTapes layout
+          lastCountOuter input output extras bit inp lastCountWork out
+          hlastCount 4 lastCursorTape
+    let zeroTape := ((Tape.init []).move Dir3.right)
+    have hzero := outputProbeLatchFramePost_updateScanRole tm controllerTapes
+      layout lastCursorOuter input output extras bit inp lastCursorWork out
+      hlastCursor 6 zeroTape
+    simpa [forwardScanTokenStepWork, forwardScanAfterHeightWork,
+      forwardScanBoundaryWork, scan, nextHeight, heightTape, heightOuter,
+      heightWork, countTape, countOuter, countWork, resultTape, comparedOuter,
+      comparedWork, lastCountTape, lastCountOuter, lastCountWork,
+      lastCursorTape, lastCursorOuter, lastCursorWork, zeroTape, hone] using
+      hzero
+  · let zeroTape := ((Tape.init []).move Dir3.right)
+    have hzero := outputProbeLatchFramePost_updateScanRole tm controllerTapes
+      layout comparedOuter input output extras bit inp comparedWork out
+      hcompared 6 zeroTape
+    simpa [forwardScanTokenStepWork, forwardScanAfterHeightWork, scan,
+      nextHeight, heightTape, heightOuter, heightWork, countTape, countOuter,
+      countWork, resultTape, comparedOuter, comparedWork, zeroTape, hone,
+      ForwardScanLayout.resultIdx, ForwardScanTokenLayout.scanLayout,
+      ForwardScanTokenLayout.scanControllerRole] using
+      hzero
+
+theorem outputProbeLatchFramePost_forwardScanVarResetWork_internal
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out) :
+    outputProbeLatchFramePost tm controllerTapes
+      (forwardScanVarResetWork n layout outerExtras)
+      input output extras bit inp (forwardScanVarResetWork n layout work)
+      out := by
+  let token := layout.tokenLayout
+  let zeroTape := ((Tape.init []).move Dir3.right)
+  let oneTape :=
+    ((Tape.init ((1 : ℕ).bits.map Γ.ofBool)).move Dir3.right)
+  let valueOuter := Function.update outerExtras
+    (outputProbeIndexedControllerIdx n token.natLayout.valueIdx) zeroTape
+  let valueWork := Function.update work
+    (outputProbeIndexedControllerIdx n token.natLayout.valueIdx) zeroTape
+  have hvalue : outputProbeLatchFramePost tm controllerTapes valueOuter input
+      output extras bit inp valueWork out := by
+    exact outputProbeLatchFramePost_updateController tm controllerTapes
+      outerExtras input output extras bit inp work out hpost
+      token.natLayout.valueIdx zeroTape
+  let activeOuter := Function.update valueOuter
+    (outputProbeIndexedControllerIdx n token.natLayout.activeIdx) oneTape
+  let activeWork := Function.update valueWork
+    (outputProbeIndexedControllerIdx n token.natLayout.activeIdx) oneTape
+  have hactive : outputProbeLatchFramePost tm controllerTapes activeOuter input
+      output extras bit inp activeWork out := by
+    exact outputProbeLatchFramePost_updateController tm controllerTapes
+      valueOuter input output extras bit inp valueWork out hvalue
+      token.natLayout.activeIdx oneTape
+  have hloop := outputProbeLatchFramePost_updateController tm controllerTapes
+    activeOuter input output extras bit inp activeWork out hactive
+    token.natLayout.loopIdx zeroTape
+  simpa [forwardScanVarResetWork, token, zeroTape, oneTape, valueOuter,
+    valueWork, activeOuter, activeWork] using hloop
 
 theorem outputProbeDecodeTokenVarFinalState_of_encode_internal
     (before after : List Bool) (varValue extraFuel : ℕ) :
@@ -339,6 +753,36 @@ theorem ForwardScanFrame.outputProbeDecodeTokenOuterExtrasAfter_internal
   · simpa only [ForwardScanLayout.copyScratchIdx,
       outputProbeDecodeTokenOuterExtrasAfter_scanRole n layout outerExtras
         cursor tag₀ tag₁ tag₂ 7 (by decide)] using hscratch
+
+theorem ForwardScanFrame.forwardScanTokenOuterExtrasAfter_internal
+    (n : ℕ) (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : FormulaCode.ForwardScanState) (token : FormulaCode.Token)
+    (hframe : ForwardScanFrame (layout.scanLayout n) state.bitOffset
+      state.stackHeight state.tokenCount state.lastOneCount
+      state.lastOneBitOffset outerExtras) :
+    ForwardScanFrame (layout.scanLayout n) (state.step token).bitOffset
+      (state.step token).stackHeight (state.step token).tokenCount
+      (state.step token).lastOneCount (state.step token).lastOneBitOffset
+      (forwardScanTokenOuterExtrasAfter n layout outerExtras state token) := by
+  unfold forwardScanTokenOuterExtrasAfter
+  apply ForwardScanFrame.forwardScanTokenStepWork_internal
+  exact
+    (ForwardScanFrame.forwardScanTokenCursorWork_internal n layout
+      (state.bitOffset + 3) (state.bitOffset + token.codeLength)
+      state.stackHeight state.tokenCount state.lastOneCount
+      state.lastOneBitOffset
+      (outputProbeDecodeTokenOuterExtrasAfter n layout.tokenLayout outerExtras
+        state.bitOffset (forwardScanTokenTagBits token).tag₀
+        (forwardScanTokenTagBits token).tag₁
+        (forwardScanTokenTagBits token).tag₂)
+      (ForwardScanFrame.outputProbeDecodeTokenOuterExtrasAfter_internal layout
+        state.bitOffset state.stackHeight state.tokenCount state.lastOneCount
+        state.lastOneBitOffset outerExtras
+        (forwardScanTokenTagBits token).tag₀
+        (forwardScanTokenTagBits token).tag₁
+        (forwardScanTokenTagBits token).tag₂ hframe))
 
 private theorem outputProbeDecodeNatLoopOuterExtras_scanRole
     (n : ℕ) {controllerTapes : ℕ}

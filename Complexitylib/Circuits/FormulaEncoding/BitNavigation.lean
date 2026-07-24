@@ -27,6 +27,14 @@ namespace Complexity
 
 namespace FormulaCode
 
+/-- Extending a valid token prefix by one advances its encoded-bit length by
+exactly the selected token's code length. -/
+theorem tokensCodeLength_take_succ (stream : List Token)
+    (index : ℕ) (hindex : index < stream.length) :
+    tokensCodeLength (stream.take (index + 1)) =
+      tokensCodeLength (stream.take index) + stream[index].codeLength :=
+  tokensCodeLength_take_succ_internal stream index hindex
+
 namespace Token
 
 /-- Decoding at the boundary after `prefix` recovers the token and advances

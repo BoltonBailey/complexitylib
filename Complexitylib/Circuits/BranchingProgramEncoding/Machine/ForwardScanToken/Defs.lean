@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.BranchingProgramEncoding.Machine.ForwardScan.Defs
+import Complexitylib.Circuits.FormulaEncoding.ForwardNavigation.Defs
 import Complexitylib.Models.TuringMachine.OutputProbeDecodeToken.Defs
 
 /-!
@@ -27,6 +28,35 @@ scan cursor. Roles nine through fifteen are the remaining seven scan roles. -/
 structure ForwardScanTokenLayout (controllerTapes : ℕ) where
   /-- Injective assignment of logical roles to controller tapes. -/
   roles : Fin 16 ↪ Fin controllerTapes
+
+/-- The fixed three-bit prefix of one legal formula token. -/
+structure ForwardScanTokenTagBits where
+  /-- First tag bit. -/
+  tag₀ : Bool
+  /-- Second tag bit. -/
+  tag₁ : Bool
+  /-- Third tag bit. -/
+  tag₂ : Bool
+  deriving DecidableEq
+
+/-- Fixed tag bits corresponding to one pure formula token. -/
+def forwardScanTokenTagBits :
+    FormulaCode.Token → ForwardScanTokenTagBits
+  | .var _ => ⟨false, false, false⟩
+  | .tru => ⟨false, false, true⟩
+  | .fls => ⟨false, true, false⟩
+  | .neg => ⟨false, true, true⟩
+  | .conj => ⟨true, false, false⟩
+  | .disj => ⟨true, false, true⟩
+
+/-- Decoder tag corresponding to one pure formula token. -/
+def forwardScanTokenTag : FormulaCode.Token → TM.OutputProbeTokenTag
+  | .var _ => .var
+  | .tru => .tru
+  | .fls => .fls
+  | .neg => .neg
+  | .conj => .conj
+  | .disj => .disj
 
 /-- Postfix evaluation-stack arity of each legal formula-token tag. -/
 def forwardScanTokenTagArity : TM.OutputProbeTokenTag → ℕ
@@ -76,6 +106,34 @@ def ForwardScanTokenLayout.scanLayout (n : ℕ)
         by_cases hi : i.val = 0 <;> by_cases hj : j.val = 0 <;>
           simp [hi, hj] at hroles <;>
           omega }
+
+/-- Overwrite only the shared source cursor with a canonical post-token
+position. -/
+def forwardScanTokenCursorWork (n : ℕ) {controllerTapes : ℕ}
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (work : Fin (0 + TM.outputProbeControllerTapes n + controllerTapes) →
+      Tape)
+    (cursor : ℕ) :
+    Fin (0 + TM.outputProbeControllerTapes n + controllerTapes) → Tape :=
+  Function.update work (layout.scanLayout n).cursorIdx
+    (TM.outputProbeCounterTape cursor)
+
+/-- Canonical stable outer frame after consuming and numerically applying one
+pure token from a supplied scan state. -/
+def forwardScanTokenOuterExtrasAfter (n : ℕ) {controllerTapes : ℕ}
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + TM.outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : FormulaCode.ForwardScanState) (token : FormulaCode.Token) :
+    Fin (0 + TM.outputProbeControllerTapes n + controllerTapes) → Tape :=
+  let tag := forwardScanTokenTagBits token
+  let tagged := TM.outputProbeDecodeTokenOuterExtrasAfter n
+    layout.tokenLayout outerExtras state.bitOffset tag.tag₀ tag.tag₁ tag.tag₂
+  let advanced := forwardScanTokenCursorWork n layout tagged
+    (state.bitOffset + token.codeLength)
+  forwardScanTokenStepWork (layout.scanLayout n) advanced token.arity
+    state.stackHeight state.tokenCount
+    (state.bitOffset + token.codeLength)
 
 /-- Literal controller work family after normalizing a completed variable
 decoder for the next token. -/

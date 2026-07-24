@@ -17,6 +17,22 @@ namespace Complexity
 
 namespace FormulaCode
 
+/-- Scanning a concatenated stream is the sequential composition of its two
+parts. -/
+theorem forwardScan_append (first second : List Token)
+    (state : ForwardScanState) :
+    forwardScan (first ++ second) state =
+      forwardScan second (forwardScan first state) :=
+  forwardScan_append_internal first second state
+
+/-- Extending a valid token prefix by one applies exactly one pure scan step. -/
+theorem forwardScan_take_succ (stream : List Token)
+    (state : ForwardScanState) (index : ℕ)
+    (hindex : index < stream.length) :
+    forwardScan (stream.take (index + 1)) state =
+      (forwardScan (stream.take index) state).step stream[index] :=
+  forwardScan_take_succ_internal stream state index hindex
+
 /-- Scanning one canonical formula raises the postfix stack height by one and
 has the closed numeric effect recorded by `afterFormula`. -/
 theorem forwardScan_tokens

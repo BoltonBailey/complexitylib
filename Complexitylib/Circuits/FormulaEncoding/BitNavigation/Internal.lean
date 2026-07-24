@@ -31,6 +31,14 @@ theorem tokensCodeLength_append_internal (first second : List Token) :
       tokensCodeLength first + tokensCodeLength second := by
   simp [tokensCodeLength, List.sum_append]
 
+theorem tokensCodeLength_take_succ_internal (stream : List Token)
+    (index : ℕ) (hindex : index < stream.length) :
+    tokensCodeLength (stream.take (index + 1)) =
+      tokensCodeLength (stream.take index) + stream[index].codeLength := by
+  rw [← List.take_concat_get' stream index hindex,
+    tokensCodeLength_append_internal]
+  simp [tokensCodeLength]
+
 theorem tokensCodeLength_eq_flatMap_length_internal
     (stream : List Token) :
     tokensCodeLength stream = (stream.flatMap Token.encode).length := by

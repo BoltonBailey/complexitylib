@@ -14,7 +14,7 @@ namespace Complexity
 
 namespace FormulaCode
 
-private theorem forwardScan_append_internal
+theorem forwardScan_append_internal
     (first second : List Token) (state : ForwardScanState) :
     forwardScan (first ++ second) state =
       forwardScan second (forwardScan first state) := by
@@ -23,6 +23,15 @@ private theorem forwardScan_append_internal
   | cons token first ih =>
       simp only [List.cons_append, forwardScan]
       exact ih (state.step token)
+
+theorem forwardScan_take_succ_internal (stream : List Token)
+    (state : ForwardScanState) (index : ℕ)
+    (hindex : index < stream.length) :
+    forwardScan (stream.take (index + 1)) state =
+      (forwardScan (stream.take index) state).step stream[index] := by
+  rw [← List.take_concat_get' stream index hindex,
+    forwardScan_append_internal]
+  rfl
 
 theorem forwardScan_tokens_internal
     (formula : BoolFormula) (state : ForwardScanState) :

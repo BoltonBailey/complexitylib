@@ -22,6 +22,157 @@ namespace Machine
 
 open TM
 
+/-- The decoder tag selected by a pure token has exactly that token's postfix
+arity. -/
+theorem forwardScanTokenTagArity_eq (token : FormulaCode.Token) :
+    forwardScanTokenTagArity (forwardScanTokenTag token) = token.arity :=
+  forwardScanTokenTagArity_eq_internal token
+
+/-- The declared tag bits classify to the tag of the same pure token. -/
+theorem forwardScanTokenTagBits_classify (token : FormulaCode.Token) :
+    let bits := forwardScanTokenTagBits token
+    outputProbeTokenTag? bits.tag₀ bits.tag₁ bits.tag₂ =
+      some (forwardScanTokenTag token) :=
+  forwardScanTokenTagBits_classify_internal token
+
+/-- At every valid ordinal in a canonical framed stream, three successful
+source probes recover the exact decoder tag of that token. -/
+theorem outputProbeTokenTag?_ofList_encodeTokenStream
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    ∃ tag₀ tag₁ tag₂,
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          cursor = some tag₀ ∧
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          (cursor + 1) = some tag₁ ∧
+      FormulaCode.BitOracle.ofList (FormulaCode.encodeTokenStream stream)
+          (cursor + 2) = some tag₂ ∧
+      outputProbeTokenTag? tag₀ tag₁ tag₂ =
+        some (forwardScanTokenTag stream[index]) :=
+  outputProbeTokenTag?_ofList_encodeTokenStream_internal stream index hindex
+
+/-- The three canonical source positions contain the exact declared tag bits,
+not merely a tag that classifies equivalently. -/
+theorem forwardScanTokenTagBits_ofList_encodeTokenStream
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let bits := FormulaCode.encodeTokenStream stream
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    let tag := forwardScanTokenTagBits stream[index]
+    FormulaCode.BitOracle.ofList bits cursor = some tag.tag₀ ∧
+      FormulaCode.BitOracle.ofList bits (cursor + 1) = some tag.tag₁ ∧
+      FormulaCode.BitOracle.ofList bits (cursor + 2) = some tag.tag₂ :=
+  forwardScanTokenTagBits_ofList_encodeTokenStream_internal stream index hindex
+
+/-- The same canonical tag theorem exposes direct list indices and all three
+bounds needed by the source-probing machine contract. -/
+theorem outputProbeTokenTag?_getElem_encodeTokenStream
+    (stream : List FormulaCode.Token) (index : ℕ)
+    (hindex : index < stream.length) :
+    let bits := FormulaCode.encodeTokenStream stream
+    let cursor := stream.length + 1 + FormulaCode.tokenBitOffset stream index
+    ∃ (h₀ : cursor < bits.length) (h₁ : cursor + 1 < bits.length)
+        (h₂ : cursor + 2 < bits.length),
+      outputProbeTokenTag? (bits[cursor]'h₀) (bits[cursor + 1]'h₁)
+          (bits[cursor + 2]'h₂) =
+        some (forwardScanTokenTag stream[index]) :=
+  outputProbeTokenTag?_getElem_encodeTokenStream_internal stream index hindex
+
+/-- Once token decoding has advanced the cursor, the numeric work update
+realizes exactly one pure `ForwardScanState.step`. -/
+theorem ForwardScanFrame.forwardScanTokenStepWork
+    (layout : ForwardScanLayout n)
+    (state : FormulaCode.ForwardScanState) (token : FormulaCode.Token)
+    (work : Fin n → Tape)
+    (hframe : ForwardScanFrame layout
+      (state.bitOffset + token.codeLength) state.stackHeight state.tokenCount
+      state.lastOneCount state.lastOneBitOffset work) :
+    ForwardScanFrame layout (state.step token).bitOffset
+      (state.step token).stackHeight (state.step token).tokenCount
+      (state.step token).lastOneCount (state.step token).lastOneBitOffset
+      (forwardScanTokenStepWork layout work token.arity state.stackHeight
+        state.tokenCount (state.bitOffset + token.codeLength)) :=
+  hframe.forwardScanTokenStepWork_internal layout state token work
+
+/-- Overwriting the shared source cursor with a canonical post-token position
+preserves every other numeric scan register. -/
+theorem ForwardScanFrame.forwardScanTokenCursorWork
+    (n : ℕ) (layout : ForwardScanTokenLayout controllerTapes)
+    (oldCursor cursor height tokenCount lastOneCount lastOneCursor : ℕ)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (hframe : ForwardScanFrame (layout.scanLayout n) oldCursor height
+      tokenCount lastOneCount lastOneCursor work) :
+    ForwardScanFrame (layout.scanLayout n) cursor height tokenCount
+      lastOneCount lastOneCursor
+      (forwardScanTokenCursorWork n layout work cursor) :=
+  hframe.forwardScanTokenCursorWork_internal n layout oldCursor cursor height
+    tokenCount lastOneCount lastOneCursor work
+
+/-- The canonical stable outer-frame update for one pure token realizes
+exactly one pure forward-scan step. -/
+theorem ForwardScanFrame.forwardScanTokenOuterExtrasAfter
+    (n : ℕ) (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (state : FormulaCode.ForwardScanState) (token : FormulaCode.Token)
+    (hframe : ForwardScanFrame (layout.scanLayout n) state.bitOffset
+      state.stackHeight state.tokenCount state.lastOneCount
+      state.lastOneBitOffset outerExtras) :
+    ForwardScanFrame (layout.scanLayout n) (state.step token).bitOffset
+      (state.step token).stackHeight (state.step token).tokenCount
+      (state.step token).lastOneCount (state.step token).lastOneBitOffset
+      (forwardScanTokenOuterExtrasAfter n layout outerExtras state token) :=
+  hframe.forwardScanTokenOuterExtrasAfter_internal n layout outerExtras state
+    token
+
+/-- Applying the literal numeric token update to a restored latch frame is
+exactly the same controller-local update to its stable outer frame. -/
+theorem outputProbeLatchFramePost_forwardScanTokenStepWork
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out)
+    (arity height tokenCount cursor : ℕ) :
+    outputProbeLatchFramePost tm controllerTapes
+      (forwardScanTokenStepWork (layout.scanLayout n) outerExtras arity height
+        tokenCount cursor)
+      input output extras bit inp
+      (forwardScanTokenStepWork (layout.scanLayout n) work arity height
+        tokenCount cursor) out :=
+  outputProbeLatchFramePost_forwardScanTokenStepWork_internal tm
+    controllerTapes layout outerExtras input output extras bit inp work out
+    hpost arity height tokenCount cursor
+
+/-- Variable-decoder normalization commutes through a restored latch frame as
+the same three controller-local updates to its stable outer frame. -/
+theorem outputProbeLatchFramePost_forwardScanVarResetWork
+    (tm : TM n) (controllerTapes : ℕ)
+    (layout : ForwardScanTokenLayout controllerTapes)
+    (outerExtras : Fin (0 + outputProbeControllerTapes n +
+      controllerTapes) → Tape)
+    (input : List Bool) (output : Tape)
+    (extras : Fin (outputProbeControllerTapes n) → Tape) (bit : Bool)
+    (inp : Tape)
+    (work : Fin (0 + outputProbeControllerTapes n + controllerTapes) → Tape)
+    (out : Tape)
+    (hpost : outputProbeLatchFramePost tm controllerTapes outerExtras input
+      output extras bit inp work out) :
+    outputProbeLatchFramePost tm controllerTapes
+      (forwardScanVarResetWork n layout outerExtras)
+      input output extras bit inp (forwardScanVarResetWork n layout work)
+      out :=
+  outputProbeLatchFramePost_forwardScanVarResetWork_internal tm
+    controllerTapes layout outerExtras input output extras bit inp work out
+    hpost
+
 /-- Bounded unary decoding of a canonical variable token reaches its exact
 post-token cursor and clears the active flag; extra fuel is absorbed by the
 decoder's inactive no-op state. -/
