@@ -10,6 +10,7 @@ import Complexitylib.Classes.P.Composition
 import Complexitylib.Classes.P.PairWithInput
 import Complexitylib.Classes.P.Preimage
 import Complexitylib.Classes.P.UnaryLength
+import Complexitylib.Classes.P.FinsetDomain
 import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 
 /-!
@@ -33,6 +34,7 @@ This file aggregates the definitions and theorems for P, FP, and PSPACE.
 - `mem_FP_pairWithInput` — an `FP` result can be paired with its original input
 - `mem_P_preimage` — `P` is closed under preimages of functions in `FP`
 - `unaryLength_mem_FP` — materializing the unary input length belongs to `FP`
+- `ite_mem_finset_mem_FP` — functions supported on a finite set belong to `FP`
 -/
 
 namespace Complexity
