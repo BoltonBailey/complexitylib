@@ -26,6 +26,8 @@ applying the per-formula bound pointwise, together with the arithmetic fact that
 
 - `FormulaFamily`, `FormulaFamily.LogDepth` — a family of Boolean formulas and the
   logarithmic-depth (`NC¹`) regime.
+- `four_pow_logDepth_le_poly` — the reusable arithmetic conversion from
+  logarithmic depth to a polynomial `4 ^ depth` bound.
 - `FormulaFamily.logDepth_polyLength_bp` — the family-level containment.
 -/
 
@@ -35,7 +37,7 @@ namespace Complexity
 
 /-- `4^{c·log₂ n + c} ≤ 4^c · (n+1)^{2c}`: the construction length for a
     depth-`(c·log₂ n + c)` formula is polynomial in `n`. -/
-private theorem pow4_poly (c n : ℕ) :
+theorem four_pow_logDepth_le_poly (c n : ℕ) :
     4 ^ (c * Nat.log 2 n + c) ≤ 4 ^ c * (n + 1) ^ (2 * c) := by
   have hlog : 4 ^ Nat.log 2 n ≤ (n + 1) ^ 2 := by
     rcases Nat.eq_zero_or_pos n with hn | hn
@@ -75,7 +77,8 @@ theorem FormulaFamily.logDepth_polyLength_bp (F : FormulaFamily) (hF : F.LogDept
   calc (R n).length ≤ 4 ^ (F n).depth := hlen n
     _ ≤ 4 ^ (c * Nat.log 2 n + c) :=
       Nat.pow_le_pow_right (by omega) (hc n)
-    _ ≤ 4 ^ c * (n + 1) ^ (2 * c) := pow4_poly c n
+    _ ≤ 4 ^ c * (n + 1) ^ (2 * c) :=
+      four_pow_logDepth_le_poly c n
 
 /-- **Family-level Barrington, Boolean-decision form.** A logarithmic-depth formula
     family is *decided* by a family of polynomial-length width-`5` branching

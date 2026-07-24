@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.AndOrNot.Defs
+import Complexitylib.Circuits.Dependency.Defs
 
 /-! # Internal: Gate Elimination Lower Bound
 
@@ -14,8 +15,9 @@ over a bounded fan-in k AND/OR basis, if the computed function depends on n'
 essential variables, the circuit has size at least ⌈n'/k⌉.
 
 The public definitions (`IsEssentialInput`, `essentialInputs`) are in
-`Complexitylib.Circuits.EssentialInput`. The public theorems (`card_essentialInputs_le_mul_size`,
-`le_mul_size_of_forall_isEssentialInput`) are accessible through
+`Complexitylib.Circuits.EssentialInput`. The public theorems
+(`card_essentialInputs_le_mul_size`, `le_mul_size_of_forall_isEssentialInput`)
+are stated in
 `Complexitylib.Circuits.LowerBound`.
 -/
 
@@ -28,7 +30,7 @@ variable {B : Basis} {N M G : Nat} [NeZero N] [NeZero M]
 
 /-- If no internal gate reads primary input `i`, wire values at wires
     other than `i` are unchanged when input `i` is modified. -/
-theorem wireValue_eq_of_unreferenced
+private theorem wireValue_eq_of_unreferenced
     (c : Circuit B N M G) (i : Fin N) (b : Bool)
     (hno : ∀ g : Fin G, ∀ k : Fin (c.gates g).fanIn,
       ((c.gates g).inputs k).val ≠ i.val)
@@ -53,7 +55,7 @@ decreasing_by
 
 /-- If no gate (internal or output) reads primary input `i`, the circuit
     output is unchanged when input `i` is modified. -/
-theorem eval_eq_of_unreferenced
+private theorem eval_eq_of_unreferenced
     (c : Circuit B N M G) (i : Fin N) (b : Bool)
     (hno_gates : ∀ g : Fin G, ∀ k : Fin (c.gates g).fanIn,
       ((c.gates g).inputs k).val ≠ i.val)
@@ -69,7 +71,7 @@ theorem eval_eq_of_unreferenced
 
 /-- If `c` computes `f` and `f` depends on variable `i`, some gate
     (internal or output) directly reads input wire `i`. -/
-theorem exists_gate_reads_input
+private theorem exists_gate_reads_input
     (c : Circuit B N M G) (f : BitString N → BitString M)
     (hf : c.eval = f) (i : Fin N) (hdep : IsEssentialInput f i) :
     (∃ g : Fin G, ∃ k : Fin (c.gates g).fanIn,
@@ -85,19 +87,19 @@ theorem exists_gate_reads_input
 /-! ## Counting argument -/
 
 /-- The set of primary inputs directly wired into a gate. -/
-def coveredInputs (g : Gate B (N + G)) : Finset (Fin N) :=
+private def coveredInputs (g : Gate B (N + G)) : Finset (Fin N) :=
   Finset.univ.filter fun i : Fin N =>
     ∃ k : Fin g.fanIn, (g.inputs k).val = i.val
 
 omit [NeZero N] in
 /-- Membership in `coveredInputs`: input `i` is covered by gate `g` iff some
     fan-in wire of `g` is the primary input wire `i`. -/
-theorem mem_coveredInputs (g : Gate B (N + G)) (i : Fin N) :
+private theorem mem_coveredInputs (g : Gate B (N + G)) (i : Fin N) :
     i ∈ coveredInputs g ↔ ∃ k : Fin g.fanIn, (g.inputs k).val = i.val := by
   simp [coveredInputs]
 
 /-- A gate covers at most `fanIn`-many primary inputs. -/
-theorem card_coveredInputs_le (g : Gate B (N + G)) :
+private theorem card_coveredInputs_le (g : Gate B (N + G)) :
     (coveredInputs g : Finset (Fin N)).card ≤ g.fanIn := by
   -- coveredInputs is contained in the image of a map from Fin g.fanIn
   suffices coveredInputs g ⊆
@@ -117,14 +119,15 @@ theorem card_coveredInputs_le (g : Gate B (N + G)) :
   have hlt : (g.inputs k).val < N := by omega
   simp [hk]
 
-/-- For a gate over bounded fan-in k AON basis, covered inputs has card ≤ k. -/
-theorem card_coveredInputs_le_of_boundedAndOr {k : Nat}
+omit [NeZero N] in
+/-- Every gate over the bounded AND/OR basis has fan-in at most `k`. -/
+private theorem fanIn_le_of_boundedAndOr {k : Nat}
     (g : Gate (Basis.boundedAndOr k) (N + G)) :
-    (coveredInputs g : Finset (Fin N)).card ≤ k := by
-  have hfanIn : g.fanIn ≤ k := by
-    have h := g.arityOk
-    revert h; cases g.op <;> simp [Basis.boundedAndOr, Arity.satisfiedBy]
-  exact le_trans (card_coveredInputs_le g) hfanIn
+    g.fanIn ≤ k := by
+  have h := g.arityOk
+  revert h
+  cases g.op <;>
+    simp [Basis.boundedAndOr, Arity.satisfiedBy]
 
 /-- Gate accessor for internal and output gates uniformly. -/
 private def gateAt (c : Circuit B N M G) : Fin G ⊕ Fin M → Gate B (N + G)
@@ -144,13 +147,13 @@ private theorem essentialInputs_subset_biUnion_coveredInputs
   · exact ⟨.inl g, (mem_coveredInputs _ _).mpr ⟨k, hk⟩⟩
   · exact ⟨.inr j, (mem_coveredInputs _ _).mpr ⟨k, hk⟩⟩
 
-/-- **Counting bound**: for bounded fan-in k, the number of essential
-    variables is at most k times the circuit size. -/
-theorem card_essentialInputs_le_mul_size {k : Nat}
-    (c : Circuit (Basis.boundedAndOr k) N M G)
+/-- **Generic counting bound**: every essential variable consumes at least one
+gate-input occurrence, so their number is bounded by total fan-in. -/
+theorem card_essentialInputs_le_totalFanIn_internal
+    (c : Circuit B N M G)
     (f : BitString N → BitString M)
     (hf : c.eval = f) :
-    (essentialInputs f).card ≤ k * c.size := by
+    (essentialInputs f).card ≤ c.totalFanIn := by
   calc (essentialInputs f).card
       ≤ ((Finset.univ : Finset (Fin G ⊕ Fin M)).biUnion
           (fun idx => coveredInputs (gateAt c idx))).card :=
@@ -158,26 +161,61 @@ theorem card_essentialInputs_le_mul_size {k : Nat}
     _ ≤ ∑ idx : Fin G ⊕ Fin M,
           (coveredInputs (gateAt c idx)).card :=
         Finset.card_biUnion_le
-    _ ≤ ∑ _ : Fin G ⊕ Fin M, k :=
-        Finset.sum_le_sum fun idx _ => card_coveredInputs_le_of_boundedAndOr _
-    _ = (Fintype.card (Fin G ⊕ Fin M)) * k := by
-        rw [Finset.sum_const, Finset.card_univ, Nat.nsmul_eq_mul]
-    _ = k * c.size := by
-        simp [Fintype.card_sum, Fintype.card_fin, size, Nat.mul_comm]
+    _ ≤ ∑ idx : Fin G ⊕ Fin M, (gateAt c idx).fanIn :=
+        Finset.sum_le_sum fun idx _ => card_coveredInputs_le _
+    _ = c.totalFanIn := by
+        simp [gateAt, totalFanIn]
 
-/-- Corollary: if `f` depends on all N inputs, then N ≤ k · size. -/
-theorem le_mul_size_of_forall_isEssentialInput {k : Nat}
-    (c : Circuit (Basis.boundedAndOr k) N M G)
+/-- If every input is essential, total fan-in is at least the input arity. -/
+theorem le_totalFanIn_of_forall_isEssentialInput_internal
+    (c : Circuit B N M G)
     (f : BitString N → BitString M)
     (hf : c.eval = f)
     (hall : ∀ i : Fin N, IsEssentialInput f i) :
-    N ≤ k * c.size := by
+    N ≤ c.totalFanIn := by
   have hcard : (essentialInputs f).card = N := by
     have : essentialInputs f = Finset.univ := by
       simp [essentialInputs, Finset.filter_true_of_mem (fun i _ => hall i)]
     rw [this, Finset.card_univ, Fintype.card_fin]
   calc N = (essentialInputs f).card := hcard.symm
-    _ ≤ k * c.size := card_essentialInputs_le_mul_size c f hf
+    _ ≤ c.totalFanIn :=
+      card_essentialInputs_le_totalFanIn_internal c f hf
+
+private theorem totalFanIn_le_mul_size_of_boundedAndOr {k : Nat}
+    (c : Circuit (Basis.boundedAndOr k) N M G) :
+    c.totalFanIn ≤ k * c.size := by
+  unfold totalFanIn
+  calc
+    (∑ i, (c.gates i).fanIn) + ∑ j, (c.outputs j).fanIn
+        ≤ (∑ _ : Fin G, k) + ∑ _ : Fin M, k :=
+      Nat.add_le_add
+        (Finset.sum_le_sum fun i _ =>
+          fanIn_le_of_boundedAndOr (c.gates i))
+        (Finset.sum_le_sum fun j _ =>
+          fanIn_le_of_boundedAndOr (c.outputs j))
+    _ = k * c.size := by
+      simp [size, Nat.mul_add, Nat.mul_comm]
+
+/-- **Bounded-fan-in corollary**: the number of essential variables is at
+most `k` times circuit size. -/
+theorem card_essentialInputs_le_mul_size_internal {k : Nat}
+    (c : Circuit (Basis.boundedAndOr k) N M G)
+    (f : BitString N → BitString M)
+    (hf : c.eval = f) :
+    (essentialInputs f).card ≤ k * c.size :=
+  (card_essentialInputs_le_totalFanIn_internal c f hf).trans
+    (totalFanIn_le_mul_size_of_boundedAndOr c)
+
+/-- If every input is essential in the bounded-fan-in setting, then
+`N ≤ k * size`. -/
+theorem le_mul_size_of_forall_isEssentialInput_internal {k : Nat}
+    (c : Circuit (Basis.boundedAndOr k) N M G)
+    (f : BitString N → BitString M)
+    (hf : c.eval = f)
+    (hall : ∀ i : Fin N, IsEssentialInput f i) :
+    N ≤ k * c.size :=
+  (le_totalFanIn_of_forall_isEssentialInput_internal c f hf hall).trans
+    (totalFanIn_le_mul_size_of_boundedAndOr c)
 
 end Circuit
 

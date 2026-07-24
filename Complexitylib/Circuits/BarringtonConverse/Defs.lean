@@ -72,11 +72,17 @@ namespace BPFamily
 def PolynomialLength {w : ℕ} (R : BPFamily w) : Prop :=
   ∃ C p, ∀ n, (R n).length ≤ C * (n + 1) ^ p
 
-/-- A branching-program family decides `f` by whether its designated query point
-is moved by the evaluated permutation. -/
-def Decides {w : ℕ} (R : BPFamily w) (x : ℕ → Fin w)
+/-- A branching-program family decides a total-assignment family by whether its
+designated query point is moved by the evaluated permutation. -/
+def DecidesOnTotalAssignments {w : ℕ} (R : BPFamily w) (x : ℕ → Fin w)
     (f : ℕ → (ℕ → Bool) → Bool) : Prop :=
   ∀ n α, (BP.eval α (R n) (x n) ≠ x n) ↔ f n α = true
+
+/-- Compatibility alias for the original total-assignment decision predicate.
+New statements should use `DecidesOnTotalAssignments` explicitly. -/
+abbrev Decides {w : ℕ} (R : BPFamily w) (x : ℕ → Fin w)
+    (f : ℕ → (ℕ → Bool) → Bool) : Prop :=
+  R.DecidesOnTotalAssignments x f
 
 /-- Convert a branching-program family into its balanced decision-formula
 family. -/
@@ -87,17 +93,32 @@ end BPFamily
 
 /-- A formula family computes `f` when it agrees at every family index and on
 every total assignment. -/
-def FormulaFamily.Computes (F : FormulaFamily)
+def FormulaFamily.ComputesOnTotalAssignments (F : FormulaFamily)
     (f : ℕ → (ℕ → Bool) → Bool) : Prop :=
   ∀ n α, BoolFormula.eval α (F n) = f n α
 
-/-- Boolean assignment families computed by logarithmic-depth formula families. -/
-def FormulaNC1 : Set (ℕ → (ℕ → Bool) → Bool) :=
-  {f | ∃ F : FormulaFamily, F.LogDepth ∧ F.Computes f}
+/-- Compatibility alias for the original total-assignment computation
+predicate. New statements should use `ComputesOnTotalAssignments`
+explicitly. -/
+abbrev FormulaFamily.Computes (F : FormulaFamily)
+    (f : ℕ → (ℕ → Bool) → Bool) : Prop :=
+  F.ComputesOnTotalAssignments f
 
-/-- Boolean assignment families decided by polynomial-length width-`5`
-permutation branching programs. -/
-def Width5BP : Set (ℕ → (ℕ → Bool) → Bool) :=
-  {f | ∃ (R : BPFamily 5) (x : ℕ → Fin 5), R.PolynomialLength ∧ R.Decides x f}
+/-- Total-assignment families computed by logarithmic-depth formula families.
+
+The family index controls the depth bound, but assignments have the full
+domain `ℕ → Bool`; no assertion is made here that the length-`n` member only
+reads variables below `n`. -/
+def FormulaNC1OnTotalAssignments : Set (ℕ → (ℕ → Bool) → Bool) :=
+  {f | ∃ F : FormulaFamily, F.LogDepth ∧ F.ComputesOnTotalAssignments f}
+
+/-- Total-assignment families decided by polynomial-length width-`5`
+permutation branching programs.
+
+The family index controls the length bound, but programs may query any natural
+variable index. -/
+def Width5BPOnTotalAssignments : Set (ℕ → (ℕ → Bool) → Bool) :=
+  {f | ∃ (R : BPFamily 5) (x : ℕ → Fin 5),
+    R.PolynomialLength ∧ R.DecidesOnTotalAssignments x f}
 
 end Complexity

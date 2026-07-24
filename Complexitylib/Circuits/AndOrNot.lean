@@ -23,4 +23,37 @@ This module provides the AND/OR basis definitions and completeness results.
 * `CompleteBasis Basis.unboundedAndOr` — proved via DNF construction
 * `CompleteBasis Basis.andOr2` — proved via gate-chain simulation
   from `unboundedAndOr`, using `CompleteBasis.of_simulation`
+* `CompileAndOr.compileFn_eval` — exact semantics of that simulation
+* `CompileAndOr.compileFn_size_le` — its quantitative size overhead
 -/
+
+namespace Complexity
+
+namespace CompileAndOr
+
+variable {N M G : Nat} [NeZero N] [NeZero M]
+
+/-- Compiling unbounded fan-in AND/OR gates to fan-in two preserves the
+circuit's complete multi-output semantics. -/
+@[simp] theorem compileFn_eval
+    (c : Circuit Basis.unboundedAndOr N M G) :
+    (compileFn c).eval = c.eval :=
+  compileFn_eval_internal c
+
+/-- The compiled circuit has one public output gate for each source output,
+in addition to the internal gate chains. -/
+@[simp] theorem compileFn_size
+    (c : Circuit Basis.unboundedAndOr N M G) :
+    (compileFn c).size = G' c + M :=
+  rfl
+
+/-- Gate-chain simulation has size at most source total fan-in plus source
+size plus one passthrough gate per output. -/
+theorem compileFn_size_le
+    (c : Circuit Basis.unboundedAndOr N M G) :
+    (compileFn c).size ≤ c.totalFanIn + c.size + M :=
+  compileFn_size_le_internal c
+
+end CompileAndOr
+
+end Complexity

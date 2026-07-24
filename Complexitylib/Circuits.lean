@@ -5,11 +5,19 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Basic
 import Complexitylib.Circuits.BitString
+import Complexitylib.Circuits.Composition
+import Complexitylib.Circuits.Dependency
 import Complexitylib.Circuits.DecisionTree
+import Complexitylib.Circuits.DecisionTree.Finite
+import Complexitylib.Circuits.DecisionTree.NormalForm
+import Complexitylib.Circuits.DecisionTree.Path
+import Complexitylib.Circuits.DecisionTree.Restriction
 import Complexitylib.Circuits.Formula
+import Complexitylib.Circuits.Spira
 import Complexitylib.Circuits.FormulaEncoding
 import Complexitylib.Circuits.CircuitFormula
 import Complexitylib.Circuits.Restriction
+import Complexitylib.Circuits.RandomRestriction
 import Complexitylib.Circuits.BranchingProgram
 import Complexitylib.Circuits.Barrington
 import Complexitylib.Circuits.BarringtonS5
@@ -21,15 +29,23 @@ import Complexitylib.Circuits.BranchingProgramEncoding
 import Complexitylib.Circuits.BarringtonCodeGenerator
 import Complexitylib.Circuits.BarringtonFamily
 import Complexitylib.Circuits.BarringtonConverse
+import Complexitylib.Circuits.BarringtonTyped
 import Complexitylib.Circuits.CircuitFormula.Family
 import Complexitylib.Circuits.MultilinearExtension
 import Complexitylib.Circuits.NormalForm
+import Complexitylib.Circuits.NormalForm.Operations
+import Complexitylib.Circuits.NormalForm.Restriction
 import Complexitylib.Circuits.AndOrNot
+import Complexitylib.Circuits.BasisHom
+import Complexitylib.Circuits.Threshold
+import Complexitylib.Circuits.Monotone
+import Complexitylib.Circuits.KarchmerWigderson
 import Complexitylib.Circuits.Encoding
 import Complexitylib.Circuits.Family
 import Complexitylib.Circuits.Encoding.Family
 import Complexitylib.Circuits.Encoding.Machine
 import Complexitylib.Circuits.XOR
+import Complexitylib.Circuits.XOR.Restriction
 import Complexitylib.Circuits.EssentialInput
 import Complexitylib.Circuits.Shannon
 import Complexitylib.Circuits.LowerBound
@@ -51,9 +67,10 @@ built on Mathlib.
 A `Circuit B N M G` is an acyclic Boolean circuit over basis `B` with `N`
 primary inputs, `M` outputs, and `G` internal gates. The circuit's `size`
 is `G + M`: internal and output gates are counted, while primary-input
-vertices and per-edge negation flags are not. The `sizeComplexity` of a
-Boolean function is the minimum size of any circuit computing it under this
-convention.
+vertices and per-edge negation flags are not. For an arbitrary basis,
+`sizeComplexityWithTop` is the minimum size of any circuit computing a Boolean
+function, with `⊤` for an unrealizable function. The natural-valued
+`sizeComplexity` interface is available for complete bases.
 
 ## Main results
 
@@ -66,10 +83,10 @@ convention.
   be computed by any fan-in-2 AND/OR circuit with fewer than `2^N / (5N)`
   gates.
 
-* **Gate elimination lower bound** (`Circuit.card_essentialInputs_le_mul_size`,
-  also stated as `Circuit.card_essentialInputs_le_mul_size`): Any circuit over
-  bounded fan-in `k` AND/OR computing a function with `n'` essential inputs
-  satisfies `n' ≤ k · size`, i.e. has size at least `n' / k`.
+* **Essential-input lower bound**
+  (`Circuit.card_essentialInputs_le_totalFanIn`):
+  Over every basis, essential inputs are bounded by total fan-in. For bounded
+  fan-in `k` AND/OR this yields `n' ≤ k · size`.
 
 * **Schnorr's XOR lower bound** (`schnorr_lower_bound_circuit`):
   Any fan-in-2 AND/OR circuit computing N-input XOR (or its complement)
@@ -90,28 +107,61 @@ convention.
   digraph has depth at most `2^k / 2^r`.
 
 * **Barrington's theorem** (`barrington_equivalence`):
-  Logarithmic-depth Boolean formula families are exactly polynomial-length
-  width-`5` permutation branching-program families. The finite forward theorem
+  Variable-bounded logarithmic-depth formula families are exactly
+  variable-bounded polynomial-length width-`5` permutation branching-program
+  families as sets of typed `BoolFunFamily`. The finite forward theorem
   `barrington_representation_depth_four` gives the textbook length bound
   `4 ^ depth`, and `barrington_quadratic_of_log_depth` specializes it to `n²`
   at depth at most `log₂ n`.
   `barringtonCompile_representation` supplies the same finite theorem through
   an explicit executable compiler rather than an existential choice.
-  `BPCode.Program.decode?_encode` verifies the canonical serialized output
-  format needed by the remaining log-space uniformity proof.
-  `barringtonCompileCode_spec` then connects canonical formula bits to canonical
-  program bits, exact semantics, and a serialized output-size bound.
-  `BoolFunFamily.onTotalAssignments_mem_Width5BP` applies the theorem to the
-  total-assignment view of an actual typed `NC1` circuit family.
+  `NC1_subset_Width5BP` applies the typed theorem directly to actual nonuniform
+  `NC1` circuit families. The older
+  `barrington_equivalence_onTotalAssignments` remains as an explicitly named
+  theorem for syntax families whose domain really is `ℕ → Bool`.
+
+* **Spira formula balancing** (`BoolFormula.exists_spira_balanced`):
+  Every finite Boolean formula has an equivalent formula of logarithmic depth
+  and polynomial tree size, with explicit quantitative bounds.
+
+* **Monotone Karchmer--Wigderson correspondence**
+  (`KarchmerWigderson.Protocol.exists_protocol_depth_iff_formula_depth`):
+  root communication protocols and monotone formulas exist at exactly the same
+  depth.
+
+* **Threshold simulation** (`AC_subset_TC`):
+  Exact basis transport embeds every nonuniform `AC^i` family in nonuniform
+  `TC^i` without changing circuit size or depth.
+
+* **Finite AC0 obstruction for parity**
+  (`AC0Formula.parity_counting_obstruction`):
+  Iterated width switching, exact staged-restriction semantics, and the
+  decision-tree lower bound for parity yield a division-free finite counting
+  inequality for every depth-bounded unbounded AND/OR formula computing parity.
 
 ## Module structure
 
 Public modules (definitions a reviewer should read):
 
 * `Complexitylib.Circuits.Basic` — `BitString`, `BoolFunFamily`, `Circuit`, `Basis`, `Gate`,
-  `CompleteBasis`, `sizeComplexity`, `wireDepth`, `depth`
+  `CompleteBasis`, `Realizable`, `sizeComplexityWithTop`, `sizeComplexity`,
+  `wireDepth`, `depth`
 * `Complexitylib.Circuits.BitString` — canonical bridges between `BitString n`
   and `List Bool`
+* `Complexitylib.Circuits.Composition` — serial circuit composition with exact
+  additive size, exact semantics, and additive depth
+* `Complexitylib.Circuits.Dependency` — the finite circuit dependency DAG,
+  its canonical topological order, and its edge bound by total fan-in
+* `Complexitylib.Circuits.DecisionTree.Restriction` — semantic restriction
+  with nonincreasing decision-tree depth
+* `Complexitylib.Circuits.DecisionTree.Finite` — arity-indexed decision trees
+  with exact finite restriction semantics
+* `Complexitylib.Circuits.DecisionTree.NormalForm` — exact decision-tree
+  compilation to CNF and DNF with depth-controlled width
+* `Complexitylib.Circuits.RandomRestriction` — the finite sparse-restriction
+  sample space with exact cardinalities
+* `Complexitylib.Circuits.Spira` — finite nonuniform formula balancing with
+  explicit logarithmic-depth and polynomial-size bounds
 * `Complexitylib.Circuits.CircuitFormula` — exact selected-output unfolding from
   fan-in-two circuit DAGs to Boolean formulas, with a factor-two depth bound
 * `Complexitylib.Circuits.FormulaEncoding` — canonical iterative postfix formula
@@ -121,7 +171,9 @@ Public modules (definitions a reviewer should read):
 * `Complexitylib.Circuits.Family` — circuit families, list semantics, pointwise
   size/depth bounds, and the polynomial-size characterization
 * `Complexitylib.Circuits.BarringtonConverse` — balanced branching-program
-  evaluation and the nonuniform Barrington equivalence
+  evaluation and the explicitly total-assignment equivalence
+* `Complexitylib.Circuits.BarringtonTyped` — variable-bounded fixed-arity
+  formula/program families and the typed nonuniform Barrington equivalence
 * `Complexitylib.Circuits.BarringtonCompiler` — executable finite `S₅` search
   and formula-to-program compilation with the `4 ^ depth` bound
 * `Complexitylib.Circuits.BranchingProgramEncoding` — canonical seven-bit
@@ -140,15 +192,32 @@ Public modules (definitions a reviewer should read):
   reusable zero scratch and explicit time/all-prefix-space bounds
 * `Complexitylib.Circuits.AndOrNot.Defs` — `AndOrOp`, `Basis.unboundedAndOr`,
   `Basis.boundedAndOr`, `Basis.andOr2`
-* `Complexitylib.Circuits.NormalForm.Defs` — `Literal`, `CNF`, `DNF`, `CNF.complexity`,
-  `DNF.complexity`
+* `Complexitylib.Circuits.AndOrNot` — functional completeness and a semantic,
+  total-fan-in size bound for compiling unbounded AND/OR to fan-in two
+* `Complexitylib.Circuits.BasisHom` — exact semantics-, size-, depth-, and
+  topology-preserving circuit transport between compatible bases
+* `Complexitylib.Circuits.Threshold` — unweighted threshold gates, strict
+  majority, and exact unbounded-AND/OR simulation
+* `Complexitylib.Circuits.Monotone` — typed monotone formulas, locality,
+  monotonicity, and essential-input leaf lower bounds
+* `Complexitylib.Circuits.KarchmerWigderson` — rectangle-indexed deterministic
+  protocols and the depth-exact monotone formula correspondence
+* `Complexitylib.Circuits.NormalForm.Defs` — `Literal`, `CNF`, `DNF`,
+  clause/term count, and width
 * `Complexitylib.Circuits.NormalForm` — CNF/DNF lower bound for XOR
   (`two_pow_le_complexity_of_xorBool`)
+* `Complexitylib.Circuits.NormalForm.Operations` — semantic negation,
+  conjunction, and disjunction operations on CNFs and DNFs
+* `Complexitylib.Circuits.NormalForm.Restriction` — semantic CNF/DNF
+  simplification with nonincreasing width and clause/term count
 * `Complexitylib.Circuits.XOR` — `Schnorr.xorBool` (N-input parity)
 * `Complexitylib.Circuits.EssentialInput` — `IsEssentialInput`, `essentialInputs`
-* `Complexitylib.Circuits.DepthClasses` — `DEPTH`, the nonuniform `NC` and `AC`
-  hierarchies, and the aliases `NC0`, `NC1`, and `AC0`
-* `Complexitylib.Circuits.AC0` — compatibility import for `AC0`
+* `Complexitylib.Circuits.DepthClasses` — `DEPTH`, the nonuniform `NC`, `AC`,
+  and `TC` hierarchies, and the aliases `NC0`, `NC1`, `AC0`, and `TC0`
+* `Complexitylib.Circuits.AC0` — the `AC0` class plus finite nonuniform
+  negation-normal formulas, circuit normalization, exact restrictions,
+  width-sensitive switching, finite staged iteration, and the exact parity
+  counting obstruction
 * `Complexitylib.Circuits.Nondeterminism.Defs` — `existsQuantify`, `forallQuantify`
 * `Complexitylib.Circuits.Hardwiring` — exact-size prefix hardwiring
 * `Complexitylib.Circuits.Unrolling` — bounded machine-configuration layouts,

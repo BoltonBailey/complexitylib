@@ -19,12 +19,22 @@ equivalence under the library's total-assignment family convention.
 - `BP.depth_reachesFormula_le` -- depth at most `(w + 1) * d + 1`
 - `BP.eval_decisionFormula_eq_true` -- the decision formula detects movement
 - `BP.depth_decisionFormula_le` -- logarithmic depth in program length
+- `BP.vars_decisionFormula_lt` -- conversion preserves an arity bound
 - `BPFamily.toFormulaFamily_logDepth` -- polynomial-length families give
   logarithmic-depth formula families
-- `barrington_equivalence` -- `FormulaNC1 = Width5BP`
+- `barrington_equivalence_onTotalAssignments` -- the explicitly named
+  total-assignment equivalence
 -/
 
 namespace Complexity
+
+/-- Taking a binary ceiling logarithm of a polynomial bound yields an affine
+bound in `log₂ n`. This arithmetic bridge is shared by total-assignment and
+fixed-arity Barrington converses. -/
+theorem clog_le_of_polynomial_bound
+    (C p n m : ℕ) (h : m ≤ C * (n + 1) ^ p) :
+    Nat.clog 2 m ≤ Nat.clog 2 C + p * (Nat.log 2 n + 1) :=
+  clog_le_of_polynomial_bound_internal C p n m h
 
 namespace BP
 
@@ -54,6 +64,13 @@ theorem depth_decisionFormula_le {w : ℕ} (p : BP w) (x : Fin w) :
     (decisionFormula p x).depth ≤ (w + 1) * Nat.clog 2 p.length + 2 :=
   depth_decisionFormula_le_internal p x
 
+/-- The balanced decision formula introduces no new input variables. -/
+theorem vars_decisionFormula_lt {w n : ℕ}
+    (p : BP w) (x : Fin w)
+    (hvars : ∀ instruction ∈ p, instruction.var < n) :
+    ∀ index ∈ (decisionFormula p x).vars, index < n :=
+  vars_decisionFormula_lt_internal p x hvars
+
 end BP
 
 namespace BPFamily
@@ -61,8 +78,9 @@ namespace BPFamily
 /-- The balanced formula family computes every function family decided by the
 source branching-program family. -/
 theorem toFormulaFamily_computes {w : ℕ} {R : BPFamily w}
-    {x : ℕ → Fin w} {f : ℕ → (ℕ → Bool) → Bool} (h : R.Decides x f) :
-    (R.toFormulaFamily x).Computes f :=
+    {x : ℕ → Fin w} {f : ℕ → (ℕ → Bool) → Bool}
+    (h : R.DecidesOnTotalAssignments x f) :
+    (R.toFormulaFamily x).ComputesOnTotalAssignments f :=
   toFormulaFamily_computes_internal h
 
 /-- A polynomial-length width-`5` branching-program family becomes a
@@ -74,21 +92,28 @@ theorem toFormulaFamily_logDepth {R : BPFamily 5} {x : ℕ → Fin 5}
 
 end BPFamily
 
-/-- Every logarithmic-depth formula family has a polynomial-length width-`5`
-permutation branching-program family. -/
-theorem formulaNC1_subset_width5BP : FormulaNC1 ⊆ Width5BP :=
-  formulaNC1_subset_width5BP_internal
+/-- Every logarithmic-depth total-assignment formula family has a
+polynomial-length width-`5` permutation branching-program family. -/
+theorem formulaNC1OnTotalAssignments_subset_width5BPOnTotalAssignments :
+    FormulaNC1OnTotalAssignments ⊆ Width5BPOnTotalAssignments :=
+  formulaNC1OnTotalAssignments_subset_width5BPOnTotalAssignments_internal
 
-/-- Every polynomial-length width-`5` permutation branching-program family has
-an equivalent logarithmic-depth formula family. -/
-theorem width5BP_subset_formulaNC1 : Width5BP ⊆ FormulaNC1 :=
-  width5BP_subset_formulaNC1_internal
+/-- Every polynomial-length width-`5` total-assignment branching-program
+family has an equivalent logarithmic-depth formula family. -/
+theorem width5BPOnTotalAssignments_subset_formulaNC1OnTotalAssignments :
+    Width5BPOnTotalAssignments ⊆ FormulaNC1OnTotalAssignments :=
+  width5BPOnTotalAssignments_subset_formulaNC1OnTotalAssignments_internal
 
-/-- **Barrington's theorem, nonuniform family form.** Logarithmic-depth Boolean
+/-- **Barrington's theorem on total assignments.** Logarithmic-depth Boolean
 formula families are exactly polynomial-length width-`5` permutation
-branching-program families. -/
-theorem barrington_equivalence : FormulaNC1 = Width5BP :=
-  Set.Subset.antisymm formulaNC1_subset_width5BP
-    width5BP_subset_formulaNC1
+branching-program families over assignments `ℕ → Bool`.
+
+This theorem does not claim that the length-`n` objects only read the first
+`n` variables; the typed fixed-arity theorem is a separate statement. -/
+theorem barrington_equivalence_onTotalAssignments :
+    FormulaNC1OnTotalAssignments = Width5BPOnTotalAssignments :=
+  Set.Subset.antisymm
+    formulaNC1OnTotalAssignments_subset_width5BPOnTotalAssignments
+    width5BPOnTotalAssignments_subset_formulaNC1OnTotalAssignments
 
 end Complexity

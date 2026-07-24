@@ -44,6 +44,19 @@ private theorem depth_disjoin_le {fs : List BoolFormula} {d : ℕ}
     have hi := ih hfs
     omega
 
+private theorem vars_disjoin_lt {n : ℕ} {fs : List BoolFormula}
+    (h : ∀ formula ∈ fs, ∀ index ∈ formula.vars, index < n) :
+    ∀ index ∈ (disjoin fs).vars, index < n := by
+  induction fs with
+  | nil => simp [disjoin, vars]
+  | cons formula formulas ih =>
+      intro index hindex
+      simp only [disjoin, vars, Finset.mem_union] at hindex
+      rcases hindex with hformula | hformulas
+      · exact h formula List.mem_cons_self index hformula
+      · exact ih (fun other hother =>
+          h other (List.mem_cons_of_mem formula hother)) index hformulas
+
 end BoolFormula
 
 namespace BPInstr
@@ -60,6 +73,13 @@ private theorem depth_reachesFormula_le_internal {w : ℕ}
     (reachesFormula ins x y).depth ≤ 1 := by
   simp only [reachesFormula]
   split_ifs <;> simp [BoolFormula.depth]
+
+private theorem vars_reachesFormula_lt_internal {w n : ℕ}
+    (ins : BPInstr w) (x y : Fin w) (hvar : ins.var < n) :
+    ∀ index ∈ (ins.reachesFormula x y).vars, index < n := by
+  intro index hindex
+  simp only [reachesFormula] at hindex
+  split_ifs at hindex <;> simp_all [BoolFormula.vars]
 
 end BPInstr
 
@@ -138,6 +158,40 @@ theorem depth_reachesFormula_le_internal {w : ℕ} :
       have hRight := ih (p.drop (2 ^ d)) x z
       omega
 
+private theorem vars_reachesFormula_lt_internal {w n : ℕ} {p : BP w}
+    (hvars : ∀ instruction ∈ p, instruction.var < n) :
+    ∀ (d : ℕ) (x y : Fin w) index,
+      index ∈ (reachesFormula d p x y).vars → index < n := by
+  intro d
+  induction d generalizing p with
+  | zero =>
+      intro x y index hindex
+      cases p with
+      | nil =>
+          simp only [reachesFormula] at hindex
+          split_ifs at hindex <;> simp_all [BoolFormula.vars]
+      | cons instruction tail =>
+          exact BPInstr.vars_reachesFormula_lt_internal instruction x y
+            (hvars instruction List.mem_cons_self) index hindex
+  | succ d ih =>
+      intro x y index hindex
+      apply BoolFormula.vars_disjoin_lt
+        (fs := List.ofFn fun z : Fin w =>
+          .conj (reachesFormula d (p.take (2 ^ d)) z y)
+            (reachesFormula d (p.drop (2 ^ d)) x z))
+      · intro formula hformula index' hindex'
+        rw [List.mem_ofFn] at hformula
+        obtain ⟨z, rfl⟩ := hformula
+        simp only [BoolFormula.vars, Finset.mem_union] at hindex'
+        rcases hindex' with hleft | hright
+        · exact ih (fun instruction hinstruction =>
+            hvars instruction (List.mem_of_mem_take hinstruction))
+            z y index' hleft
+        · exact ih (fun instruction hinstruction =>
+            hvars instruction (List.mem_of_mem_drop hinstruction))
+            x z index' hright
+      · simpa only [reachesFormula] using hindex
+
 theorem eval_decisionFormula_eq_true_internal {w : ℕ} (α : ℕ → Bool)
     (p : BP w) (x : Fin w) :
     BoolFormula.eval α (decisionFormula p x) = true ↔ BP.eval α p x ≠ x := by
@@ -156,9 +210,19 @@ theorem depth_decisionFormula_le_internal {w : ℕ} (p : BP w) (x : Fin w) :
     (Nat.clog 2 p.length) p x x
   simpa [decisionFormula, BoolFormula.depth] using Nat.succ_le_succ h
 
+theorem vars_decisionFormula_lt_internal {w n : ℕ}
+    (p : BP w) (x : Fin w)
+    (hvars : ∀ instruction ∈ p, instruction.var < n) :
+    ∀ index ∈ (decisionFormula p x).vars, index < n := by
+  intro index hindex
+  apply vars_reachesFormula_lt_internal hvars
+    (Nat.clog 2 p.length) x x index
+  simpa only [decisionFormula, BoolFormula.vars] using hindex
+
 end BP
 
-private theorem clog_poly_le (C p n m : ℕ) (h : m ≤ C * (n + 1) ^ p) :
+theorem clog_le_of_polynomial_bound_internal
+    (C p n m : ℕ) (h : m ≤ C * (n + 1) ^ p) :
     Nat.clog 2 m ≤ Nat.clog 2 C + p * (Nat.log 2 n + 1) := by
   apply Nat.clog_le_of_le_pow
   calc
@@ -174,8 +238,9 @@ private theorem clog_poly_le (C p n m : ℕ) (h : m ≤ C * (n + 1) ^ p) :
 namespace BPFamily
 
 theorem toFormulaFamily_computes_internal {w : ℕ} {R : BPFamily w}
-    {x : ℕ → Fin w} {f : ℕ → (ℕ → Bool) → Bool} (h : R.Decides x f) :
-    (R.toFormulaFamily x).Computes f := by
+    {x : ℕ → Fin w} {f : ℕ → (ℕ → Bool) → Bool}
+    (h : R.DecidesOnTotalAssignments x f) :
+    (R.toFormulaFamily x).ComputesOnTotalAssignments f := by
   intro n α
   apply Bool.eq_iff_iff.mpr
   exact (BP.eval_decisionFormula_eq_true_internal α (R n) (x n)).trans
@@ -190,7 +255,8 @@ theorem toFormulaFamily_logDepth_internal {R : BPFamily 5}
   have hdepth : (BP.decisionFormula (R n) (x n)).depth ≤
       6 * Nat.clog 2 (R n).length + 2 := by
     simpa using BP.depth_decisionFormula_le_internal (R n) (x n)
-  have hclog := clog_poly_le C p n (R n).length (hp n)
+  have hclog :=
+    clog_le_of_polynomial_bound_internal C p n (R n).length (hp n)
   have hcoefficient : 6 * p ≤ c := by
     simp only [c]
     omega
@@ -209,14 +275,16 @@ theorem toFormulaFamily_logDepth_internal {R : BPFamily 5}
 
 end BPFamily
 
-theorem formulaNC1_subset_width5BP_internal : FormulaNC1 ⊆ Width5BP := by
+theorem formulaNC1OnTotalAssignments_subset_width5BPOnTotalAssignments_internal :
+    FormulaNC1OnTotalAssignments ⊆ Width5BPOnTotalAssignments := by
   rintro f ⟨F, hdepth, hcomputes⟩
   obtain ⟨R, x, C, p, hlength, hdecides⟩ :=
     F.logDepth_polyLength_decides hdepth
   refine ⟨R, x, ⟨C, p, hlength⟩, fun n α => ?_⟩
   simpa only [hcomputes n α] using hdecides n α
 
-theorem width5BP_subset_formulaNC1_internal : Width5BP ⊆ FormulaNC1 := by
+theorem width5BPOnTotalAssignments_subset_formulaNC1OnTotalAssignments_internal :
+    Width5BPOnTotalAssignments ⊆ FormulaNC1OnTotalAssignments := by
   rintro f ⟨R, x, hlength, hdecides⟩
   exact ⟨R.toFormulaFamily x,
     BPFamily.toFormulaFamily_logDepth_internal hlength,

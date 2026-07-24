@@ -22,6 +22,8 @@ size claim.
 
 - `Complexity.Circuit.eval_wireFormula` — exact semantics for an unfolded wire.
 - `Complexity.Circuit.eval_outputFormula` — exact semantics for a selected output.
+- `Complexity.Circuit.vars_outputFormula_lt` — every unfolded variable is
+  below the circuit's input arity.
 - `Complexity.Circuit.depth_wireFormula_le` — wire-formula depth is at most twice
   wire depth.
 - `Complexity.Circuit.depth_outputFormula_le_outputDepth` — output-formula depth
@@ -75,6 +77,19 @@ theorem eval_outputFormula
     BoolFormula.eval assignment (circuit.outputFormula output) =
       circuit.eval (fun input => assignment input.val) output :=
   eval_outputFormula_internal circuit assignment output
+
+/-- Every variable in an unfolded wire formula is a primary-input index. -/
+theorem vars_wireFormula_lt
+    (circuit : Circuit Basis.andOr2 N M G) (wire : Fin (N + G)) :
+    ∀ index ∈ (circuit.wireFormula wire).vars, index < N :=
+  vars_wireFormula_lt_internal circuit wire
+
+/-- Every variable in an unfolded output formula lies below the circuit's
+declared input arity. -/
+theorem vars_outputFormula_lt
+    (circuit : Circuit Basis.andOr2 N M G) (output : Fin M) :
+    ∀ index ∈ (circuit.outputFormula output).vars, index < N :=
+  vars_outputFormula_lt_internal circuit output
 
 /-- The unfolded formula below a wire has depth at most twice the wire's DAG
 depth. The factor two accounts for an edge negation followed by its gate. -/

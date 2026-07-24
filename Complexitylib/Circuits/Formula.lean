@@ -25,7 +25,8 @@ measures must not be conflated in lower-bound arguments.
 - `BoolFormula.size`, `BoolFormula.leaves`, `BoolFormula.depth` — tree-size,
   leaf-count, and depth measures
 - `BoolFormula.leaves_le_size`, `BoolFormula.one_le_size`,
-  `BoolFormula.leaves_le_two_pow_depth`, `BoolFormula.depth_le_size`
+  `BoolFormula.leaves_le_two_pow_depth`,
+  `BoolFormula.size_lt_two_pow_depth_succ`, `BoolFormula.depth_le_size`
 - `BoolFormula.vars`, `BoolFormula.eval_eq_of_agree` — the variable set and the
   locality property (evaluation depends only on the variables that occur)
 -/
@@ -131,6 +132,59 @@ theorem leaves_le_two_pow_depth (φ : BoolFormula) : leaves φ ≤ 2 ^ depth φ 
     have h1 : (2 : ℕ) ^ depth ψ ≤ 2 ^ max (depth φ) (depth ψ) :=
       Nat.pow_le_pow_right (by omega) (le_max_right _ _)
     simp only [leaves, depth, Nat.pow_succ, Nat.mul_two]; omega
+
+/-- A formula of depth `d` has fewer than `2 ^ (d + 1)` total nodes. This is
+the tree-size counterpart of `leaves_le_two_pow_depth`. -/
+theorem size_lt_two_pow_depth_succ (φ : BoolFormula) :
+    size φ < 2 ^ (depth φ + 1) := by
+  induction φ with
+  | var i => simp [size, depth]
+  | tru => simp [size, depth]
+  | fls => simp [size, depth]
+  | neg φ ih =>
+    have hpos : 0 < (2 : ℕ) ^ (depth φ + 1) := Nat.two_pow_pos _
+    simp only [size, depth]
+    rw [show depth φ + 1 + 1 = (depth φ + 1) + 1 by omega,
+      Nat.pow_succ, Nat.mul_two]
+    omega
+  | conj φ ψ ihφ ihψ =>
+    have hφ :
+        (2 : ℕ) ^ (depth φ + 1) ≤
+          2 ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.pow_le_pow_right (by omega)
+        (Nat.add_le_add_right (le_max_left _ _) 1)
+    have hψ :
+        (2 : ℕ) ^ (depth ψ + 1) ≤
+          2 ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.pow_le_pow_right (by omega)
+        (Nat.add_le_add_right (le_max_right _ _) 1)
+    have hpos :
+        0 < (2 : ℕ) ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.two_pow_pos _
+    simp only [size, depth]
+    rw [show max (depth φ) (depth ψ) + 1 + 1 =
+        (max (depth φ) (depth ψ) + 1) + 1 by omega,
+      Nat.pow_succ, Nat.mul_two]
+    omega
+  | disj φ ψ ihφ ihψ =>
+    have hφ :
+        (2 : ℕ) ^ (depth φ + 1) ≤
+          2 ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.pow_le_pow_right (by omega)
+        (Nat.add_le_add_right (le_max_left _ _) 1)
+    have hψ :
+        (2 : ℕ) ^ (depth ψ + 1) ≤
+          2 ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.pow_le_pow_right (by omega)
+        (Nat.add_le_add_right (le_max_right _ _) 1)
+    have hpos :
+        0 < (2 : ℕ) ^ (max (depth φ) (depth ψ) + 1) :=
+      Nat.two_pow_pos _
+    simp only [size, depth]
+    rw [show max (depth φ) (depth ψ) + 1 + 1 =
+        (max (depth φ) (depth ψ) + 1) + 1 by omega,
+      Nat.pow_succ, Nat.mul_two]
+    omega
 
 /-- Depth never exceeds size: a longest path uses at most every node. -/
 theorem depth_le_size (φ : BoolFormula) : depth φ ≤ size φ := by

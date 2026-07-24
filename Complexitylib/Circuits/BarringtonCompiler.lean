@@ -28,6 +28,7 @@ proof, not extraction of program data from an existential theorem.
   target `5`-cycle.
 - `Complexity.barringtonCompile_computes` -- exact compiler semantics.
 - `Complexity.barringtonCompile_length_le` -- length at most `4 ^ depth`.
+- `Complexity.barringtonCompile_var_bound` -- no new queried variables.
 - `Complexity.barringtonCompile_representation` -- constructive finite
   Barrington theorem for the fixed canonical target cycle.
 -/
@@ -110,6 +111,17 @@ theorem barringtonCompile_length_le
     (formula : BoolFormula) (target : Perm (Fin 5)) :
     (barringtonCompile formula target).length ≤ 4 ^ formula.depth :=
   barringtonCompile_length_le_internal formula target
+
+/-- The executable compiler reads no formula-external variable: any bound on
+the source formula's variable indices bounds every emitted instruction.
+Constant instructions use variable zero, so the bound is stated for a natural
+upper bound rather than as a literal subset of `formula.vars`. -/
+theorem barringtonCompile_var_bound
+    (formula : BoolFormula) (target : Equiv.Perm (Fin 5)) (bound : ℕ)
+    (hvars : ∀ index ∈ formula.vars, index ≤ bound) :
+    ∀ instruction ∈ barringtonCompile formula target,
+      instruction.var ≤ bound :=
+  barringtonCompile_var_bound_internal formula target bound hvars
 
 /-- The canonical target cycle is nonidentity. -/
 theorem barringtonTargetBase_ne_one : barringtonTargetBase ≠ 1 := by

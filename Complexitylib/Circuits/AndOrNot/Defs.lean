@@ -14,6 +14,7 @@ used throughout the circuit complexity library.
 
 * `AndOrOp` — AND/OR operations (negation is free via per-input gate flags)
 * `AndOrOp.eval` — fold-based evaluation of AND/OR on `n` input bits
+* `AndOrOp.dual`, `AndOrOp.dualIf` — De Morgan duality
 * `Basis.unboundedAndOr` — unbounded fan-in AND/OR basis
 * `Basis.boundedAndOr` — fan-in bounded by `k` AND/OR basis
 * `Basis.andOr2` — fan-in exactly 2 AND/OR basis (used in Shannon/Schnorr bounds)
@@ -35,6 +36,15 @@ inductive AndOrOp where
 def AndOrOp.eval : (op : AndOrOp) → (n : Nat) → BitString n → Bool
   | .and, n, inputs => Fin.foldl n (fun acc i => acc && inputs i) true
   | .or, n, inputs => Fin.foldl n (fun acc i => acc || inputs i) false
+
+/-- De Morgan duality swaps AND and OR. -/
+def AndOrOp.dual : AndOrOp → AndOrOp
+  | .and => .or
+  | .or => .and
+
+/-- Select the De Morgan dual exactly when `negated` is true. -/
+def AndOrOp.dualIf (negated : Bool) (op : AndOrOp) : AndOrOp :=
+  if negated then op.dual else op
 
 /-- AND/OR basis with unbounded fan-in. Negation is free (per-input flags on gates). -/
 def Basis.unboundedAndOr : Basis where
@@ -72,5 +82,9 @@ theorem AndOrOp.eval_two_and (inputs : BitString 2) :
 theorem AndOrOp.eval_two_or (inputs : BitString 2) :
     AndOrOp.eval .or 2 inputs = (inputs 0 || inputs 1) := by
   simp [AndOrOp.eval, Fin.foldl_succ_last, Fin.foldl_zero]
+
+@[simp] theorem AndOrOp.dual_dual (op : AndOrOp) :
+    op.dual.dual = op := by
+  cases op <;> rfl
 
 end Complexity

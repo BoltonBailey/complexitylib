@@ -49,10 +49,23 @@ theorem depth_outputFormulaFamily_le_internal
         Circuit.depth_eq_outputDepth_zero_internal]
       exact Circuit.depth_outputFormula_le_outputDepth (F.circuit (n + 1)) 0
 
+theorem outputFormulaFamily_variables_lt_internal
+    (F : CircuitFamily Basis.andOr2) (n index : ℕ)
+    (hindex : index ∈ (F.outputFormulaFamily n).vars) :
+    index < n := by
+  cases n with
+  | zero =>
+      cases houtput : F.emptyOutput <;>
+        simp [outputFormulaFamily, houtput, BoolFormula.vars] at hindex
+  | succ n =>
+      exact Circuit.vars_outputFormula_lt
+        (F.circuit (n + 1)) 0 index hindex
+
 theorem outputFormulaFamily_computes_internal
     {F : CircuitFamily Basis.andOr2} {f : BoolFunFamily}
     (hcomputes : F.Computes f) :
-    F.outputFormulaFamily.Computes f.onTotalAssignments := by
+    F.outputFormulaFamily.ComputesOnTotalAssignments
+      f.onTotalAssignments := by
   intro n assignment
   rw [eval_outputFormulaFamily_internal]
   exact CircuitFamily.Computes.apply hcomputes n
@@ -71,8 +84,9 @@ theorem outputFormulaFamily_logDepth_internal
 
 end CircuitFamily
 
-theorem NC1_onTotalAssignments_subset_FormulaNC1_internal :
-    BoolFunFamily.onTotalAssignments '' NC1 ⊆ FormulaNC1 := by
+theorem NC1_onTotalAssignments_subset_FormulaNC1OnTotalAssignments_internal :
+    BoolFunFamily.onTotalAssignments '' NC1 ⊆
+      FormulaNC1OnTotalAssignments := by
   rintro _ ⟨f, hf, rfl⟩
   rw [mem_NC1_iff] at hf
   obtain ⟨F, c, hcomputes, -, hdepth⟩ := hf

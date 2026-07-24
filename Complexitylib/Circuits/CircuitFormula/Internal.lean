@@ -41,6 +41,11 @@ theorem depth_andOr_negateIf_le_internal (op : AndOrOp)
   all_goals
     omega
 
+private theorem vars_negateIf_internal
+    (negated : Bool) (formula : BoolFormula) :
+    (negateIf negated formula).vars = formula.vars := by
+  cases negated <;> simp [negateIf, vars]
+
 end BoolFormula
 
 namespace Gate
@@ -75,6 +80,22 @@ theorem depth_toBoolFormula_le_internal {W : ℕ}
     (gate.negated ⟨1, by rw [fanIn_andOr2 gate]; omega⟩)
     (wireFormula (gate.inputs ⟨0, by rw [fanIn_andOr2 gate]; omega⟩))
     (wireFormula (gate.inputs ⟨1, by rw [fanIn_andOr2 gate]; omega⟩))
+
+private theorem vars_toBoolFormula_lt_internal {W N : ℕ}
+    (gate : Gate Basis.andOr2 W) (wireFormula : Fin W → BoolFormula)
+    (hvars : ∀ input : Fin gate.fanIn, ∀ index,
+      index ∈ (wireFormula (gate.inputs input)).vars → index < N) :
+    ∀ index ∈ (gate.toBoolFormula wireFormula).vars, index < N := by
+  unfold Gate.toBoolFormula
+  dsimp only
+  cases gate.op <;>
+    simp only [BoolFormula.vars, Finset.mem_union,
+      BoolFormula.vars_negateIf_internal]
+  all_goals
+    intro index hindex
+    rcases hindex with hleft | hright
+    · exact hvars _ index hleft
+    · exact hvars _ index hright
 
 end Gate
 
@@ -174,6 +195,39 @@ theorem eval_outputFormula_internal
   funext input
   exact congrArg (fun value => Bool.xor ((circuit.outputs output).negated input) value)
     (eval_wireFormula_internal circuit assignment ((circuit.outputs output).inputs input))
+
+theorem vars_wireFormula_lt_internal
+    (circuit : Circuit Basis.andOr2 N M G) (wire : Fin (N + G)) :
+    ∀ index ∈ (circuit.wireFormula wire).vars, index < N := by
+  induction hwire : wire.val using Nat.strong_induction_on
+      generalizing wire with
+  | h wireIndex ih =>
+      by_cases hinput : wire.val < N
+      · rw [wireFormula_of_lt_internal circuit wire hinput]
+        simp only [BoolFormula.vars, Finset.mem_singleton]
+        intro index hindex
+        simpa only [hindex] using hinput
+      · rw [wireFormula_of_not_lt_internal circuit wire hinput]
+        apply Gate.vars_toBoolFormula_lt_internal
+        intro input index hindex
+        apply ih
+          ((circuit.gates ⟨wire.val - N, by omega⟩).inputs input).val
+        · have hacyclic :=
+            circuit.acyclic ⟨wire.val - N, by omega⟩ input
+          change
+            ((circuit.gates ⟨wire.val - N, by omega⟩).inputs input).val <
+              N + (wire.val - N) at hacyclic
+          omega
+        · rfl
+        · exact hindex
+
+theorem vars_outputFormula_lt_internal
+    (circuit : Circuit Basis.andOr2 N M G) (output : Fin M) :
+    ∀ index ∈ (circuit.outputFormula output).vars, index < N := by
+  rw [Circuit.outputFormula]
+  apply Gate.vars_toBoolFormula_lt_internal
+  intro input index hindex
+  exact vars_wireFormula_lt_internal circuit _ index hindex
 
 theorem depth_wireFormula_le_internal
     (circuit : Circuit Basis.andOr2 N M G) (wire : Fin (N + G)) :
