@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 import Mathlib.Data.Fintype.Sets
-import Mathlib.Data.Fintype.Sum
 import Mathlib.Data.Fintype.Option
 import Mathlib.Data.Finset.Lattice.Fold
 import Complexitylib.Classes.P.NormalForm
@@ -99,35 +98,31 @@ theorem output_mem_writeSuffixesFinset {input : List Bool} :
 
 /-! ## The lookup machine -/
 
-/-- States of the lookup machine: either a read-phase state (an optional prefix,
-`none` being the "dead" state after diverging from every element of `S`), or a
-write-phase state (the output suffix still to be written), or the halt state. -/
-abbrev LookupState (g : List Bool → List Bool) (S : Finset (List Bool)) : Type :=
-  Option {p : List Bool // p ∈ prefixesFinset S} ⊕
-    {w : List Bool // w ∈ writeSuffixesFinset g S} ⊕ Unit
-
 instance : Fintype {p : List Bool // p ∈ prefixesFinset S} := Finset.Subtype.fintype _
 instance : Fintype {w : List Bool // w ∈ writeSuffixesFinset g S} := Finset.Subtype.fintype _
 
-instance : Fintype (LookupState g S) := by
-  unfold LookupState
-  infer_instance
-
-instance : DecidableEq (LookupState g S) := by
-  unfold LookupState
-  infer_instance
+/-- States of the lookup machine. -/
+inductive LookupState (g : List Bool → List Bool) (S : Finset (List Bool)) : Type where
+  /-- Read phase: the viable prefix consumed so far, `none` being the "dead"
+  state after diverging from every element of `S`. -/
+  | read (p : Option {p : List Bool // p ∈ prefixesFinset S}) : LookupState g S
+  /-- Write phase: the output suffix still to be written. -/
+  | write (w : {w : List Bool // w ∈ writeSuffixesFinset g S}) : LookupState g S
+  /-- The halt state. -/
+  | halt : LookupState g S
+  deriving DecidableEq, Fintype
 
 /-- The read-phase state after consuming prefix `p`: the viable prefix `p` if it
 is still a prefix of some element of `S`, otherwise the dead state. -/
 def readState (p : List Bool) : LookupState g S :=
-  Sum.inl (if h : p ∈ prefixesFinset S then some ⟨p, h⟩ else none)
+  .read (if h : p ∈ prefixesFinset S then some ⟨p, h⟩ else none)
 
 /-- The write-phase state carrying output suffix `c`. -/
 def writeState (c : List Bool) (hc : c ∈ writeSuffixesFinset g S) : LookupState g S :=
-  Sum.inr (Sum.inl ⟨c, hc⟩)
+  .write ⟨c, hc⟩
 
 /-- The halt state. -/
-def haltState : LookupState g S := Sum.inr (Sum.inr ())
+def haltState : LookupState g S := .halt
 
 /-- The lookup machine for `g` and `S`. See the module docstring for the
 construction. It has no work tapes. -/
@@ -137,7 +132,7 @@ def lookupTM : TM 0 where
   qhalt := haltState g S
   δ := fun state iHead wHeads oHead =>
     match state with
-    | Sum.inl rd =>
+    | .read rd =>
       match iHead with
       | Γ.blank =>
         -- end of input: hand off to the write phase
@@ -150,39 +145,37 @@ def lookupTM : TM 0 where
          idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.start =>
         -- skip the left-end marker: move input right, keep the state
-        (Sum.inl rd,
+        (.read rd,
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.zero =>
         ((match rd with
           | some ⟨p, _⟩ => readState g S (p ++ [false])
-          | none => Sum.inl none),
+          | none => .read none),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.one =>
         ((match rd with
           | some ⟨p, _⟩ => readState g S (p ++ [true])
-          | none => Sum.inl none),
+          | none => .read none),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
-    | Sum.inr (Sum.inl ⟨wl, hw⟩) =>
-      match wl, hw with
-      | [], _ =>
-        (haltState g S,
-         fun i => readBackWrite (wHeads i), readBackWrite oHead,
-         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
-      | a :: rest, hw =>
-        (writeState g S rest (writeSuffixesFinset_closed g S hw),
-         fun i => readBackWrite (wHeads i), Γw.ofBool a,
-         idleDir iHead, fun i => idleDir (wHeads i), Dir3.right)
-    | Sum.inr (Sum.inr ()) =>
+    | .write ⟨[], _⟩ =>
+      (haltState g S,
+       fun i => readBackWrite (wHeads i), readBackWrite oHead,
+       idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .write ⟨a :: rest, hw⟩ =>
+      (writeState g S rest (writeSuffixesFinset_closed g S hw),
+       fun i => readBackWrite (wHeads i), Γw.ofBool a,
+       idleDir iHead, fun i => idleDir (wHeads i), Dir3.right)
+    | .halt =>
       (haltState g S,
        fun i => readBackWrite (wHeads i), readBackWrite oHead,
        idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
   δ_right_of_start := by
     intro state iHead wHeads oHead
     match state with
-    | Sum.inl rd =>
+    | .read rd =>
       match iHead with
       | Γ.blank =>
         exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
@@ -195,14 +188,12 @@ def lookupTM : TM 0 where
       | Γ.one =>
         exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
           idleDir_right_of_start⟩
-    | Sum.inr (Sum.inl ⟨wl, hw⟩) =>
-      match wl, hw with
-      | [], _ =>
-        exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
-          idleDir_right_of_start⟩
-      | a :: rest, hw =>
-        exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, fun _ => rfl⟩
-    | Sum.inr (Sum.inr ()) =>
+    | .write ⟨[], _⟩ =>
+      exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+        idleDir_right_of_start⟩
+    | .write ⟨a :: rest, hw⟩ =>
+      exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, fun _ => rfl⟩
+    | .halt =>
       exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
         idleDir_right_of_start⟩
 
