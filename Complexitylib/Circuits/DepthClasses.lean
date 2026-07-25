@@ -9,10 +9,11 @@ import Complexitylib.Circuits.DepthClasses.Internal
 /-!
 # Circuit depth classes
 
-This module defines nonuniform `DEPTH`, `NC^i`, and `AC^i` classes using the
+This module defines nonuniform `DEPTH`, `NC^i`, `AC^i`, and `TC^i` classes using the
 library's total circuit-family convention. Every class therefore includes a
 specified answer on the empty input. `NC i` uses fan-in two, `AC i` uses
-unbounded fan-in, and both impose polynomial size.
+unbounded AND/OR gates, `TC i` uses unbounded threshold gates, and all impose
+polynomial size.
 
 The concrete polylogarithmic envelope is
 `c * (Nat.log 2 n + 1) ^ i`. Thus `NC0` and `AC0` are constant-depth classes,
@@ -20,7 +21,7 @@ while `NC1` is logarithmic depth with the same `c * log₂ n + c` convention as
 the Barrington formula-family development.
 
 These definitions are explicitly nonuniform. Generator uniformity is an
-additional predicate and is not implicit in the names `NC` or `AC`.
+additional predicate and is not implicit in the names `NC`, `AC`, or `TC`.
 -/
 
 namespace Complexity
@@ -62,6 +63,19 @@ theorem NC_mono {i j : ℕ} (hij : i ≤ j) : NC i ⊆ NC j :=
 theorem AC_mono {i j : ℕ} (hij : i ≤ j) : AC i ⊆ AC j :=
   AC_mono_internal hij
 
+/-- The `TC` hierarchy is monotone in its polylogarithmic exponent. -/
+theorem TC_mono {i j : ℕ} (hij : i ≤ j) : TC i ⊆ TC j :=
+  TC_mono_internal hij
+
+/-- Exact gatewise simulation gives `AC^i ⊆ TC^i` without changing size or
+depth. -/
+theorem AC_subset_TC (i : ℕ) : AC i ⊆ TC i :=
+  AC_subset_TC_internal i
+
+/-- In particular, nonuniform `AC0` is contained in nonuniform `TC0`. -/
+theorem AC0_subset_TC0 : AC0 ⊆ TC0 :=
+  AC_subset_TC 0
+
 /-- In particular, constant-depth bounded-fan-in families are logarithmic
 depth. -/
 theorem NC0_subset_NC1 : NC0 ⊆ NC1 :=
@@ -84,5 +98,14 @@ theorem mem_AC0_iff {f : BoolFunFamily} :
         F.Computes f ∧ F.PolynomialSize ∧
           F.DepthBoundedBy (fun _ => c) :=
   mem_AC0_iff_internal
+
+/-- Membership in `TC0` is exactly polynomial size and a constant pointwise
+depth bound for one total threshold-circuit family. -/
+theorem mem_TC0_iff {f : BoolFunFamily} :
+    f ∈ TC0 ↔
+      ∃ (F : CircuitFamily Basis.threshold) (c : ℕ),
+        F.Computes f ∧ F.PolynomialSize ∧
+          F.DepthBoundedBy (fun _ => c) :=
+  mem_TC0_iff_internal
 
 end Complexity

@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.AndOrNot.Defs
 import Complexitylib.Circuits.Family.Defs
+import Complexitylib.Circuits.Threshold.Defs
 import Mathlib.Data.Nat.Log
 
 /-!
@@ -51,6 +52,13 @@ def AC (i : ℕ) : Set BoolFunFamily :=
     F.Computes f ∧ F.PolynomialSize ∧
       F.DepthBoundedBy (polylogDepth i c)}
 
+/-- **`TC^i`**, in its nonuniform circuit-family form: polynomial-size,
+unbounded-fan-in threshold circuits of depth `O((log n + 1)^i)`. -/
+def TC (i : ℕ) : Set BoolFunFamily :=
+  {f | ∃ (F : CircuitFamily Basis.threshold) (c : ℕ),
+    F.Computes f ∧ F.PolynomialSize ∧
+      F.DepthBoundedBy (polylogDepth i c)}
+
 /-- Constant-depth, polynomial-size bounded-fan-in circuits. -/
 def NC0 : Set BoolFunFamily := NC 0
 
@@ -59,5 +67,8 @@ def NC1 : Set BoolFunFamily := NC 1
 
 /-- Constant-depth, polynomial-size unbounded-fan-in circuits. -/
 def AC0 : Set BoolFunFamily := AC 0
+
+/-- Constant-depth, polynomial-size threshold circuits. -/
+def TC0 : Set BoolFunFamily := TC 0
 
 end Complexity

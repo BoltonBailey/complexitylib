@@ -29,16 +29,6 @@ evaluation matches the source formula, and its instruction count is at most
 
 namespace Complexity
 
-/-- The executable compiler reads no formula-external variable: any uniform
-bound on the source formula's variable indices bounds every emitted
-instruction. Constant instructions use variable zero. -/
-theorem barringtonCompile_var_bound
-    (formula : BoolFormula) (target : Equiv.Perm (Fin 5)) (bound : ℕ)
-    (hvars : ∀ index ∈ formula.vars, index ≤ bound) :
-    ∀ instruction ∈ barringtonCompile formula target,
-      instruction.var ≤ bound :=
-  barringtonCompile_var_bound_internal formula target bound hvars
-
 /-- Every variable referenced by a formula is at most its canonical code
 length. -/
 theorem formula_variable_le_code_length

@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.DepthClasses.Defs
+import Complexitylib.Circuits.BasisHom
 import Complexitylib.Circuits.Family
+import Complexitylib.Circuits.Threshold
 
 /-!
 # Circuit depth classes -- proof internals
@@ -49,6 +51,36 @@ theorem AC_mono_internal {i j : ℕ} (hij : i ≤ j) :
   refine ⟨F, c, hcomputes, hsize, F.depthBoundedBy_mono hdepth ?_⟩
   exact fun n => polylogDepth_mono_exponent_internal hij c n
 
+theorem TC_mono_internal {i j : ℕ} (hij : i ≤ j) :
+    TC i ⊆ TC j := by
+  rintro f ⟨F, c, hcomputes, hsize, hdepth⟩
+  refine ⟨F, c, hcomputes, hsize,
+    F.depthBoundedBy_mono hdepth ?_⟩
+  exact fun n =>
+    polylogDepth_mono_exponent_internal hij c n
+
+theorem AC_subset_TC_internal (i : ℕ) :
+    AC i ⊆ TC i := by
+  rintro f ⟨F, c, hcomputes, hsize, hdepth⟩
+  let thresholdFamily :=
+    F.mapBasis Basis.andOrToThresholdHom
+  refine ⟨thresholdFamily, c, ?_, ?_, ?_⟩
+  · exact (CircuitFamily.function_mapBasis
+      Basis.andOrToThresholdHom F).trans hcomputes
+  · obtain ⟨polynomial, hpolynomial⟩ := hsize
+    refine ⟨polynomial, fun n => ?_⟩
+    rw [show thresholdFamily.size n = F.size n by
+      exact congrFun
+        (CircuitFamily.size_mapBasis
+          Basis.andOrToThresholdHom F) n]
+    exact hpolynomial n
+  · intro n
+    rw [show thresholdFamily.depth n = F.depth n by
+      exact congrFun
+        (CircuitFamily.depth_mapBasis
+          Basis.andOrToThresholdHom F) n]
+    exact hdepth n
+
 theorem mem_NC1_iff_internal {f : BoolFunFamily} :
     f ∈ NC1 ↔
       ∃ (F : CircuitFamily Basis.andOr2) (c : ℕ),
@@ -69,6 +101,20 @@ theorem mem_AC0_iff_internal {f : BoolFunFamily} :
         F.Computes f ∧ F.PolynomialSize ∧
           F.DepthBoundedBy (fun _ => c) := by
   simp only [AC0, AC, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨F, c, hcomputes, hsize, hdepth⟩
+    exact ⟨F, c, hcomputes, hsize, fun n => by
+      simpa only [polylogDepth_zero_internal] using hdepth n⟩
+  · rintro ⟨F, c, hcomputes, hsize, hdepth⟩
+    exact ⟨F, c, hcomputes, hsize, fun n => by
+      simpa only [polylogDepth_zero_internal] using hdepth n⟩
+
+theorem mem_TC0_iff_internal {f : BoolFunFamily} :
+    f ∈ TC0 ↔
+      ∃ (F : CircuitFamily Basis.threshold) (c : ℕ),
+        F.Computes f ∧ F.PolynomialSize ∧
+          F.DepthBoundedBy (fun _ => c) := by
+  simp only [TC0, TC, Set.mem_setOf_eq]
   constructor
   · rintro ⟨F, c, hcomputes, hsize, hdepth⟩
     exact ⟨F, c, hcomputes, hsize, fun n => by

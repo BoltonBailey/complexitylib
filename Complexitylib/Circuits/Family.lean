@@ -43,8 +43,16 @@ theorem ComputesOnLength.apply {c : Circuit B N 1 G} {f : BoolFunFamily}
     (c.eval x) 0 = f N x :=
   Circuit.Computes.apply h x
 
-/-- Any circuit computing `f` witnesses an upper bound on the size complexity of `f`. -/
-theorem Computes.sizeComplexity_le {c : Circuit B N 1 G}
+/-- Any circuit computing `f` witnesses an upper bound on its generic extended
+size complexity. -/
+theorem Computes.sizeComplexityWithTop_le {c : Circuit B N 1 G}
+    {f : BitString N → Bool} (h : c.Computes f) :
+    sizeComplexityWithTop B f ≤ c.size :=
+  Circuit.sizeComplexityWithTop_le c f h
+
+/-- Over a complete basis, any circuit computing `f` witnesses a natural-valued
+upper bound on its size complexity. -/
+theorem Computes.sizeComplexity_le [CompleteBasis B] {c : Circuit B N 1 G}
     {f : BitString N → Bool} (h : c.Computes f) :
     sizeComplexity B f ≤ c.size :=
   Circuit.sizeComplexity_le c f h

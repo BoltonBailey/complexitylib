@@ -14,96 +14,6 @@ import Complexitylib.Circuits.FormulaEncoding
 
 namespace Complexity
 
-private theorem BP.forall_var_inverse_internal {w bound : ℕ}
-    (program : BP w)
-    (hvars : ∀ instruction ∈ program, instruction.var ≤ bound) :
-    ∀ instruction ∈ BP.inverse program, instruction.var ≤ bound := by
-  intro instruction hinstruction
-  simp only [BP.inverse, List.mem_reverse, List.mem_map] at hinstruction
-  obtain ⟨source, hsource, rfl⟩ := hinstruction
-  exact hvars source hsource
-
-private theorem BP.forall_var_postMul_internal {w bound : ℕ}
-    (program : BP w) (permutation : Equiv.Perm (Fin w))
-    (hvars : ∀ instruction ∈ program, instruction.var ≤ bound) :
-    ∀ instruction ∈ BP.postMul program permutation,
-      instruction.var ≤ bound := by
-  induction program using List.reverseRecOn with
-  | nil =>
-      intro instruction hinstruction
-      simp [BP.postMul, BPInstr.const] at hinstruction
-      subst instruction
-      exact Nat.zero_le bound
-  | append_singleton program last ih =>
-      intro instruction hinstruction
-      have hnonempty : program ++ [last] ≠ [] := by simp
-      simp only [BP.postMul, if_neg hnonempty,
-        List.modifyLast_concat, List.mem_append,
-        List.mem_singleton] at hinstruction
-      rcases hinstruction with hprefix | rfl
-      · exact hvars instruction (List.mem_append_left _ hprefix)
-      · exact hvars last (by simp)
-
-private theorem BP.forall_var_commutatorProgram_internal
-    {bound : ℕ} (left right : BP 5)
-    (hleft : ∀ instruction ∈ left, instruction.var ≤ bound)
-    (hright : ∀ instruction ∈ right, instruction.var ≤ bound) :
-    ∀ instruction ∈ BP.commutatorProgram left right,
-      instruction.var ≤ bound := by
-  have hleftInverse := BP.forall_var_inverse_internal left hleft
-  have hrightInverse := BP.forall_var_inverse_internal right hright
-  intro instruction hinstruction
-  simp only [BP.commutatorProgram, List.mem_append] at hinstruction
-  rcases hinstruction with hinstruction | hinstruction
-  · rcases hinstruction with hinstruction | hinstruction
-    · rcases hinstruction with hinstruction | hinstruction
-      · exact hleft instruction hinstruction
-      · exact hright instruction hinstruction
-    · exact hleftInverse instruction hinstruction
-  · exact hrightInverse instruction hinstruction
-
-/-- Internal variable-locality theorem for the executable compiler. -/
-theorem barringtonCompile_var_bound_internal
-    (formula : BoolFormula) (target : Equiv.Perm (Fin 5)) (bound : ℕ)
-    (hvars : ∀ index ∈ formula.vars, index ≤ bound) :
-    ∀ instruction ∈ barringtonCompile formula target,
-      instruction.var ≤ bound := by
-  induction formula generalizing target with
-  | var index =>
-      intro instruction hinstruction
-      simp only [barringtonCompile, List.mem_singleton] at hinstruction
-      subst instruction
-      exact hvars index (by simp [BoolFormula.vars])
-  | tru =>
-      intro instruction hinstruction
-      simp [barringtonCompile, BPInstr.const] at hinstruction
-      subst instruction
-      exact Nat.zero_le bound
-  | fls => simp [barringtonCompile]
-  | neg formula ih =>
-      exact BP.forall_var_postMul_internal _ _
-        (ih target⁻¹ (by simpa only [BoolFormula.vars] using hvars))
-  | conj left right ihLeft ihRight =>
-      apply BP.forall_var_commutatorProgram_internal
-      · apply ihLeft
-        intro index hindex
-        exact hvars index (Finset.mem_union_left _ hindex)
-      · apply ihRight
-        intro index hindex
-        exact hvars index (Finset.mem_union_right _ hindex)
-  | disj left right ihLeft ihRight =>
-      simp only [barringtonCompile]
-      apply BP.forall_var_postMul_internal
-      apply BP.forall_var_commutatorProgram_internal
-      · apply BP.forall_var_postMul_internal
-        apply ihLeft
-        intro index hindex
-        exact hvars index (Finset.mem_union_left _ hindex)
-      · apply BP.forall_var_postMul_internal
-        apply ihRight
-        intro index hindex
-        exact hvars index (Finset.mem_union_right _ hindex)
-
 /-- Internal bound placing every referenced variable below the formula-code
 length. -/
 theorem formula_variable_le_code_length_internal
@@ -186,7 +96,7 @@ theorem length_barringtonCompileCode_encode_le_internal
   have hvariables :
       ∀ instruction ∈ program,
         instruction.var ≤ (FormulaCode.encode formula).length := by
-    apply barringtonCompile_var_bound_internal
+    apply barringtonCompile_var_bound
     intro index hindex
     exact formula_variable_le_code_length_internal formula index hindex
   have hprogram :=

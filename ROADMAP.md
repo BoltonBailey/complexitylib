@@ -81,9 +81,11 @@ core API and encodings
   |     +-- nonuniform TM/circuit bridge + advice
   |     |     +-- BPP subset P/poly
   |     +-- uniform circuits <-> TMs
-  |     |     +-- NC/AC uniformity
-  |     |           +-- Barrington and bounded-depth lower bounds
-  |     +-- canonical complete problems and reductions
+  |           +-- uniform NC/AC variants
+  +-- nonuniform circuit families + quantitative transformations
+  |     +-- Barrington, balancing, restrictions, and bounded-depth lower bounds
+  |     +-- monotone, threshold, and communication-complexity methods
+  +-- canonical complete problems and reductions
   +-- protocol/transcript infrastructure
   |     +-- interactive-proof classes
   |           +-- sum-check and IP = PSPACE
@@ -1156,11 +1158,17 @@ programs by log-depth circuits and a clearly stated uniformity convention.
   `Circuits/BarringtonConverse.lean` — `BP.reachesFormula` composes two half-programs
   through the five possible intermediate states, `BP.depth_decisionFormula_le`
   bounds decision depth by `6·⌈log₂ length⌉ + 2`, and
-  `barrington_equivalence` proves `FormulaNC1 = Width5BP`. All 0 custom axioms.
-  The typed-family bridge is also complete:
-  `BoolFunFamily.onTotalAssignments_mem_Width5BP` unfolds any `NC1` circuit
-  family output with at most a factor-two depth increase and applies the
-  Barrington equivalence. No formula-size claim is used.)
+  `barrington_equivalence_onTotalAssignments` proves
+  `FormulaNC1OnTotalAssignments = Width5BPOnTotalAssignments`. These names now
+  record that formulas and programs range over all assignments `ℕ → Bool` and
+  need not be variable-bounded at family index `n`. All 0 custom axioms.
+  The fixed-arity theorem is complete in `Circuits/BarringtonTyped.lean`:
+  `FixedArityFormulaFamily` and `FixedArityBPFamily` carry explicit variable
+  bounds and deliberate zero-input semantics, and `barrington_equivalence`
+  proves `FormulaNC1 = Width5BP` as sets of `BoolFunFamily`.
+  `CircuitFormula/Family.lean` proves that unfolding reads only variables below
+  the circuit arity and gives the direct typed containment
+  `NC1_subset_Width5BP`. No formula-size claim is used.)
 - [~] Add a uniform version only after instruction-generation uniformity is
   formalized. The extraction prerequisite is now complete:
   `Circuits/BarringtonCompiler` replaces proof-level conjugator choices by a
@@ -1815,17 +1823,98 @@ toward the major unconditional circuit lower-bound toolkit.
 
 **Prerequisites.** M1 family classes, N2 counting, and track-specific combinatorics.
 
+**Current stabilization.** Generic finite-function complexity now uses
+`Circuit.sizeComplexityWithTop`, whose value is `⊤` exactly when the chosen
+basis cannot realize the function. The convenient natural-valued
+`Circuit.sizeComplexity` API requires `CompleteBasis`, and the two measures are
+proved equal after coercion. This removes the former empty-infimum value `0`.
+The Shannon, Schnorr, and gate-elimination headline statements now live in
+their public surface modules, with only `_internal` proofs in implementation
+modules. `Circuits/Composition.lean` now supplies reusable serial composition:
+exact function composition, exact additive size under the `G + M` convention,
+and depth at most the sum of source depths. `Circuits/Dependency.lean` exposes
+the actual finite wiring DAG, proves that circuit indices give a topological
+order, proves acyclicity, and bounds its distinct edges by total fan-in.
+The unbounded-AND/OR to fan-in-two compiler now exposes exact semantics and
+a concrete size bound in terms of source total fan-in. Restrictions now have
+a finite-arity type for counting, associative composition, exact formula
+support tracking, width-nonincreasing CNF/DNF simplification, and
+depth-nonincreasing decision-tree simplification. A selected unbounded-AND/OR
+circuit output now unfolds to an equivalent negation-normal unbounded formula
+without increasing depth. Canonical signed supports remove duplicate
+incidences before unfolding and give the explicit size bound
+`(2 * (N + G) + 1) ^ (outputDepth + 1)`, so constant-depth polynomial-gate
+circuits produce polynomial-size trees under the existing gate-count
+convention. Restricting those formulas preserves evaluation and preserves tree
+size and connective depth exactly while filtering support exactly to the free
+variables. The random-restriction convention is now an explicit finite product:
+`RandomRestriction.Seed N q` has `(2 * q + 1) ^ N` points, with one free symbol
+and `q` copies of either fixed bit per coordinate. Arity-indexed decision trees
+and semantically correct canonical CNF/DNF trees provide the deterministic
+object whose random depth the switching lemma must bound. Canonical deepest
+paths are explicit and path-read-once, and a generic finite-encoding theorem
+turns injections into amplified event-count bounds. Applied to the first `s`
+canonical DNF queries, it gives the checked arity-dependent estimate
+`badCount * q^s ≤ (2q + 1)^N * (2N)^s`. The complete-block encoding now
+reconstructs canonical paths from bounded literal positions, branch bits, and
+phase markers, giving the width-sensitive bound
+`badCount * q^s ≤ (2q + 1)^N * (4(w + 1))^s` for arbitrary DNFs after
+semantics-preserving contradictory-term cleanup. De Morgan duality supplies
+the corresponding CNF theorem, and an exact union bound handles arbitrary
+finite collections simultaneously.
+
+Decision trees of depth `s` compile exactly to width-`s` CNFs and DNFs.
+Using that bridge, `AC0Formula.stagedDecisionTree` iterates switching through
+every connective level of an arbitrary finite depth-bounded formula. Its
+semantics are exact under the cumulative restriction. The staged sample space
+has cardinality `((2q + 1)^N)^d`, and the exact first moment of coordinates
+surviving every stage is `N * ((2q + 1)^(N - 1))^d`. The resulting finite
+counting theorem bounds every bad node in the formula tree at once.
+`AC0Formula.parity_counting_obstruction` combines this with the exact
+decision-tree lower bound for restricted parity. The remaining AC0 task is the
+arithmetic and family-level specialization that turns this finite obstruction
+into `parityFamily ∉ AC0`.
+The essential-input theorem is now stated first in its basis-independent
+form, `card essentialInputs ≤ totalFanIn`, with the former `k * size` theorem
+as a bounded-fan-in corollary. Shannon and Schnorr state their headline bounds
+directly using `Circuit.size`, and their independent descriptor bridges no
+longer import each other's proof developments.
+Arity-dependent basis homomorphisms now transport circuits and families while
+preserving semantics, size, wiring, and depth exactly. This supports
+unbounded-AND/OR to threshold simulation, the nonuniform `TC` hierarchy, and
+`AC^i ⊆ TC^i`. Typed monotone formulas now expose structural monotonicity,
+locality, and the essential-input leaf lower bound. Rectangle-indexed
+Karchmer--Wigderson protocols translate to and from monotone formulas with
+exactly equal depth, yielding the finite formula-depth correspondence without
+any uniformity assumption.
+
+All milestones in this track are nonuniform. Uniform circuit generators and
+machine simulations are separate refinements, not prerequisites for the finite
+or family-level lower bounds below.
+
 **Candidate milestones, roughly increasing in difficulty.**
 
-- [ ] Formula-size measures and balancing; prove a Spira-style balancing theorem.
-- [ ] Decision trees, restrictions, and switching operations with semantic
-  preservation.
-- [ ] Håstad-style switching lemma and parity not in nonuniform `AC^0`.
-- [ ] Monotone circuits and an accessible monotone lower bound before attempting
-  clique.
-- [ ] Threshold circuits and majority gates, initially for upper-bound
-  constructions.
-- [ ] Karchmer--Wigderson communication relations and formula-depth equivalence.
+- [x] Formula-size measures and balancing; `BoolFormula.exists_spira_balanced`
+  gives an equivalent formula of depth at most `15 + 12 * clog₂(size)` and
+  size at most `80 * size ^ 8 - 4`.
+- [x] Decision trees, restrictions, and switching operations with semantic
+  preservation. *(Deterministic finite restrictions, canonical CNF/DNF trees,
+  complete-block path reconstruction, width-sensitive DNF/CNF switching, and
+  simultaneous finite-collection bounds are complete.)*
+- [~] Håstad-style switching lemma and parity not in nonuniform `AC^0`.
+  *(The exact finite width-switching theorem, arbitrary-formula staged
+  iteration, first-moment identity, and finite parity counting obstruction are
+  complete. The family-level arithmetic specialization remains.)*
+- [~] Monotone circuits and an accessible monotone lower bound before attempting
+  clique. *(Typed monotone formulas, structural monotonicity, and the
+  essential-input leaf lower bound are complete; a DAG circuit basis and a
+  genuinely monotone-specific superlinear lower bound remain.)*
+- [x] Threshold circuits and majority gates, initially for upper-bound
+  constructions. *(`Basis.threshold`, strict majority, exact AND/OR transport,
+  nonuniform `TC`, and `AC^i ⊆ TC^i` are complete.)*
+- [x] Karchmer--Wigderson communication relations and formula-depth equivalence.
+  *(Rectangle indices are tracked in the protocol type, and both translations
+  preserve depth exactly.)*
 - [ ] Pseudorandom restrictions/generators only after the probabilistic and
   cryptographic infrastructure is mature.
 
@@ -1840,13 +1929,29 @@ circuit lower bound.
 - [x] Define restriction composition and prove evaluation commutes with applying a
   restriction (`Complexitylib.Circuits.Restriction`: `Restriction`, `applyTo`,
   `comp`, `applyTo_comp`, `BoolFormula.restrict`, `BoolFormula.eval_restrict`).
+- [x] Add finite-arity restrictions and semantic simplification for CNF, DNF,
+  and decision trees, proving that width, clause/term count, and query depth do
+  not increase (`NormalForm.Restriction`, `DecisionTree.Restriction`).
+- [x] Normalize a selected unbounded-AND/OR circuit output to an equivalent
+  negation-normal formula with no depth increase and an explicit polynomial
+  tree-size bound at constant depth (`AC0.Normalization`), then prove exact
+  semantic substitution and support filtering for finite restrictions
+  (`AC0.Restriction`).
 - [x] Define formula size/leaves separately from DAG circuit size
   (`Complexitylib.Circuits.Formula`: `BoolFormula`, `size`, `leaves`,
   `leaves_le_size`).
 - [x] Prove decision-tree evaluation and depth lemmas
   (`Complexitylib.Circuits.DecisionTree`: `DecisionTree`, `eval`, `depth`,
   `numLeaves`, `numLeaves_le_two_pow_depth`).
-- [M] Formalize random restrictions as a finite sample space.
+- [x] Formalize sparse random restrictions as a finite sample space with exact
+  cardinality and explicit free/fixed multiplicities
+  (`Complexitylib.Circuits.RandomRestriction`).
+- [x] Prove the width-sensitive finite switching bound for DNF and CNF, including
+  semantics-preserving cleanup and an exact simultaneous finite-collection
+  union bound (`AC0.Switching`, `AC0.Switching.Collection`).
+- [x] Iterate the switching layer through arbitrary finite depth-bounded formulas
+  and derive the exact finite parity counting obstruction
+  (`AC0.Iteration`, `AC0.Parity`).
 
 ### L5. Counting, polynomial hierarchy, and proof complexity
 

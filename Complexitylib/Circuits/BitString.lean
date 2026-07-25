@@ -21,6 +21,29 @@ namespace Complexity
 
 namespace BitString
 
+/-- Extend a fixed-length bit string to a total assignment by setting every
+out-of-range variable to `false`. This is the canonical semantic bridge from
+typed Boolean functions to formula and branching-program syntax. -/
+def toTotal (x : BitString n) : ℕ → Bool :=
+  fun i => if h : i < n then x ⟨i, h⟩ else false
+
+/-- The total extension agrees with the original bit string on every
+in-range index. -/
+@[simp] theorem toTotal_apply (x : BitString n) (i : Fin n) :
+    x.toTotal i.val = x i := by
+  simp [toTotal, i.isLt]
+
+/-- An explicit natural index below the arity is read from the original bit
+string by the total extension. -/
+theorem toTotal_of_lt (x : BitString n) (i : ℕ) (h : i < n) :
+    x.toTotal i = x ⟨i, h⟩ := by
+  simp [toTotal, h]
+
+/-- Every out-of-range index is `false` in the canonical total extension. -/
+theorem toTotal_of_le (x : BitString n) (i : ℕ) (h : n ≤ i) :
+    x.toTotal i = false := by
+  simp [toTotal, Nat.not_lt.mpr h]
+
 /-- Serialize a fixed-length bit string in increasing index order. -/
 def toList (x : BitString n) : List Bool :=
   List.ofFn x

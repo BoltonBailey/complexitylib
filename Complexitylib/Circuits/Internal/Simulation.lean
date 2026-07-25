@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Circuits.Internal.AndOrNot
+import Complexitylib.Circuits.Dependency.Defs
+import Mathlib.Algebra.BigOperators.Fin
 
 /-! # Internal: Completeness of fan-in-2 AND/OR
 
@@ -31,11 +33,6 @@ are trivial passthroughs reading the last wire of each output chain.
 namespace Complexity
 
 /-! ## AndOrOp extensions -/
-
-/-- Dual operation: swaps AND ↔ OR. Used for constant-gate construction. -/
-def AndOrOp.dual : AndOrOp → AndOrOp
-  | .and => .or
-  | .or => .and
 
 /-- Identity element for fold: `true` for AND, `false` for OR. -/
 def AndOrOp.identity : AndOrOp → Bool
@@ -109,6 +106,11 @@ lemma chainLen_pos (k : Nat) : 0 < chainLen k := by
 lemma chainLen_of_ge_two {k : Nat} (hk : 2 ≤ k) : chainLen k = k - 1 := by
   simp only [chainLen, show ¬(k ≤ 1) from by omega, ite_false]
 
+/-- A chain uses at most one more gate than the simulated gate's fan-in. -/
+private lemma chainLen_le_succ (k : Nat) : chainLen k ≤ k + 1 := by
+  unfold chainLen
+  split <;> omega
+
 /-- Prefix sum: `prefixSum f n = f 0 + f 1 + ⋯ + f (n-1)`. -/
 def prefixSum (f : Nat → Nat) : Nat → Nat
   | 0 => 0
@@ -127,6 +129,47 @@ lemma prefixSum_mono (f : Nat → Nat) {i j : Nat} (h : i ≤ j) :
   induction h with
   | refl => exact Nat.le.refl
   | step _ ih => rw [prefixSum_succ]; omega
+
+private lemma prefixSum_congr {f g : Nat → Nat} {n : Nat}
+    (h : ∀ i, i < n → f i = g i) :
+    prefixSum f n = prefixSum g n := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      rw [prefixSum_succ, prefixSum_succ]
+      rw [ih (fun i hi => h i (by omega)), h n (by omega)]
+
+private lemma prefixSum_le_add
+    (f g : Nat → Nat) (n : Nat)
+    (h : ∀ i, i < n → f i ≤ g i + 1) :
+    prefixSum f n ≤ prefixSum g n + n := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      rw [prefixSum_succ, prefixSum_succ]
+      have hprefix := ih (fun i hi => h i (by omega))
+      have hlast := h n (by omega)
+      omega
+
+private lemma prefixSum_fin_eq {n : Nat} (f : Fin n → Nat) :
+    prefixSum (fun i => if h : i < n then f ⟨i, h⟩ else 0) n =
+      ∑ i, f i := by
+  induction n with
+  | zero => simp [prefixSum]
+  | succ n ih =>
+      rw [prefixSum_succ, Fin.sum_univ_castSucc]
+      have hprefix :
+          prefixSum
+              (fun i => if h : i < n + 1 then f ⟨i, h⟩ else 0) n =
+            ∑ i : Fin n, f i.castSucc := by
+        rw [← ih (fun i : Fin n => f i.castSucc)]
+        apply prefixSum_congr
+        intro i hi
+        simp only [hi, show i < n + 1 by omega, dite_true]
+        congr 1
+      rw [hprefix]
+      simp only [Nat.lt_add_one, dite_true]
+      congr 1
 
 /-! ## Segment lookup -/
 
@@ -918,7 +961,7 @@ private theorem lastOutputChainValue_eq (c : Circuit Basis.unboundedAndOr N M G)
       rfl
 
 /-- The compiled fan-in-2 circuit computes the same function as the original circuit. -/
-theorem compile_eval (c : Circuit Basis.unboundedAndOr N M G) :
+theorem compileFn_eval_internal (c : Circuit Basis.unboundedAndOr N M G) :
     (compileFn c).eval = c.eval := by
   funext input j
   -- LHS: (compileFn c).eval input j = (compileOutputs c j).eval ((compileFn c).wireValue input)
@@ -930,11 +973,50 @@ theorem compile_eval (c : Circuit Basis.unboundedAndOr N M G) :
   -- Now we need: wireValue at the last output chain wire = original output gate eval
   exact lastOutputChainValue_eq c input j.val j.isLt
 
+/-- The gate-chain simulation has linear overhead in total fan-in and gate
+count. The additional `M` term in the final circuit size comes from its
+passthrough output gates. -/
+theorem compileFn_size_le_internal
+    (c : Circuit Basis.unboundedAndOr N M G) :
+    (compileFn c).size ≤ c.totalFanIn + c.size + M := by
+  have hi :
+      prefixSum (iChainF c) G ≤
+        prefixSum
+            (fun i =>
+              if h : i < G then (c.gates ⟨i, h⟩).fanIn else 0) G +
+          G := by
+    apply prefixSum_le_add
+    intro i hi
+    rw [iChainF_eq c hi]
+    simp only [hi, dite_true]
+    exact chainLen_le_succ _
+  have ho :
+      prefixSum (oChainF c) M ≤
+        prefixSum
+            (fun j =>
+              if h : j < M then (c.outputs ⟨j, h⟩).fanIn else 0) M +
+          M := by
+    apply prefixSum_le_add
+    intro j hj
+    rw [oChainF_eq c hj]
+    simp only [hj, dite_true]
+    exact chainLen_le_succ _
+  have hifin :=
+    prefixSum_fin_eq (fun i : Fin G => (c.gates i).fanIn)
+  have hofin :=
+    prefixSum_fin_eq (fun j : Fin M => (c.outputs j).fanIn)
+  rw [hifin] at hi
+  rw [hofin] at ho
+  simp only [Circuit.size, Circuit.totalFanIn, G', iTotal, oTotal]
+  omega
+
 end CompileAndOr
 
 /-- Fan-in-2 AND/OR is functionally complete. -/
 instance : CompleteBasis Basis.andOr2 :=
   CompleteBasis.of_simulation Basis.unboundedAndOr Basis.andOr2
-    fun c => ⟨CompileAndOr.G' c, CompileAndOr.compileFn c, CompileAndOr.compile_eval c⟩
+    fun c =>
+      ⟨CompileAndOr.G' c, CompileAndOr.compileFn c,
+        CompileAndOr.compileFn_eval_internal c⟩
 
 end Complexity
