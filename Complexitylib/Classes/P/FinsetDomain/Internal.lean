@@ -39,7 +39,7 @@ The public statement (`ite_mem_finset_mem_FP`) lives in
 
 namespace Complexity
 
-namespace TM
+namespace TM.FinsetDomain
 
 variable (g : List Bool → List Bool) (S : Finset (List Bool))
 
@@ -429,7 +429,7 @@ theorem lookupTM_computesInTime :
       exact h.hasOutput
     exact hres
 
-end TM
+end TM.FinsetDomain
 
 open Polynomial in
 /-- Internal proof that a function supported on a finite set belongs to `FP`:
@@ -437,13 +437,13 @@ the lookup machine's linear time bound is packaged as a degree-one polynomial. -
 theorem ite_mem_finset_mem_FP_internal (g : List Bool → List Bool) (S : Finset (List Bool)) :
     (fun s => if s ∈ S then g s else []) ∈ FP := by
   rw [mem_FP_iff_computesInTime_polynomial]
-  refine ⟨0, TM.lookupTM g S, X + C ((S.sup fun s => (g s).length) + 3), ?_⟩
+  refine ⟨0, TM.FinsetDomain.lookupTM g S, X + C ((S.sup fun s => (g s).length) + 3), ?_⟩
   have heval : (X + C ((S.sup fun s => (g s).length) + 3)).eval
       = fun m : ℕ => m + (S.sup fun s => (g s).length) + 3 := by
     funext m
     simp only [eval_add, eval_X, eval_C]
     omega
   rw [heval]
-  exact TM.lookupTM_computesInTime g S
+  exact TM.FinsetDomain.lookupTM_computesInTime g S
 
 end Complexity
