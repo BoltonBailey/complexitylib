@@ -75,31 +75,56 @@ instance : Fintype {w : List Bool // w ∈ (outputsFinset g S).suffixes} :=
 
 /-- States of the lookup machine. -/
 inductive LookupState (g : List Bool → List Bool) (S : Finset (List Bool)) : Type where
-  /-- Read phase: the viable prefix consumed so far, `none` being the "dead"
-  state after diverging from every element of `S`.
-
-  TODO: Avoid use of Option, make a separate constructor for the dead state.
-  Also, instead of passing a subtype as arg, pass the value and proof of membership
-  separately, so that the proof can be used in the transition function.
-  -/
-  | read (p : Option {p : List Bool // p ∈ S.prefixes}) : LookupState g S
+  /-- Read phase: the viable prefix consumed so far, carried together with the
+  proof that it is a prefix of some element of `S`, so that the transition
+  function can use the proof directly. -/
+  | read (p : List Bool) (hp : p ∈ S.prefixes) : LookupState g S
+  /-- Read phase, dead state: the input read so far has diverged from every
+  element of `S`. -/
+  | dead : LookupState g S
   /-- Write phase: the output suffix still to be written. -/
-  | write (w : {w : List Bool // w ∈ (outputsFinset g S).suffixes}) : LookupState g S
+  | write (w : List Bool) (hw : w ∈ (outputsFinset g S).suffixes) : LookupState g S
   /-- The halt state. -/
   | halt : LookupState g S
-  deriving DecidableEq, Fintype
+
+/-- `LookupState` as a sum of two finite subtypes and two extra states. This
+equivalence supplies the `DecidableEq` and `Fintype` instances, which cannot be
+derived because the `read`/`write` constructors have dependent fields. -/
+private def lookupStateEquiv :
+    LookupState g S ≃
+      (Option {p : List Bool // p ∈ S.prefixes} ⊕
+        Option {w : List Bool // w ∈ (outputsFinset g S).suffixes}) where
+  toFun
+    | .read p hp => .inl (some ⟨p, hp⟩)
+    | .dead => .inl none
+    | .write w hw => .inr (some ⟨w, hw⟩)
+    | .halt => .inr none
+  invFun
+    | .inl (some ⟨p, hp⟩) => .read p hp
+    | .inl none => .dead
+    | .inr (some ⟨w, hw⟩) => .write w hw
+    | .inr none => .halt
+  left_inv s := by cases s <;> rfl
+  right_inv s := by rcases s with (_ | ⟨p, hp⟩) | (_ | ⟨w, hw⟩) <;> rfl
+
+instance : DecidableEq (LookupState g S) := (lookupStateEquiv g S).decidableEq
+instance : Fintype (LookupState g S) := Fintype.ofEquiv _ (lookupStateEquiv g S).symm
 
 /-- The read-phase state after consuming prefix `p`: the viable prefix `p` if it
 is still a prefix of some element of `S`, otherwise the dead state. -/
 def readState (p : List Bool) : LookupState g S :=
-  .read (if h : p ∈ S.prefixes then some ⟨p, h⟩ else none)
+  if h : p ∈ S.prefixes then .read p h else .dead
 
 /-- The write-phase state carrying output suffix `c`. -/
 def writeState (c : List Bool) (hc : c ∈ (outputsFinset g S).suffixes) : LookupState g S :=
-  .write ⟨c, hc⟩
+  .write c hc
 
 /-- The halt state. -/
 def haltState : LookupState g S := .halt
+
+theorem readState_ne_haltState (p : List Bool) : readState g S p ≠ haltState g S := by
+  rw [readState, haltState]
+  split <;> simp
 
 /-- The lookup machine for `g` and `S`. See the module docstring for the
 construction. It has no work tapes. -/
@@ -109,39 +134,51 @@ def lookupTM : TM 0 where
   qhalt := haltState g S
   δ := fun state iHead wHeads oHead =>
     match state with
-    | .read rd =>
+    | .read p hp =>
       match iHead with
       | Γ.blank =>
         -- end of input: hand off to the write phase
-        ((match rd with
-          | some ⟨p, _⟩ =>
-            writeState g S (if p ∈ S then g p else [])
-              (output_mem_suffixes_outputsFinset g S)
-          | none => writeState g S [] (nil_mem_suffixes_outputsFinset g S)),
+        (writeState g S (if p ∈ S then g p else [])
+           (output_mem_suffixes_outputsFinset g S),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.start =>
         -- skip the left-end marker: move input right, keep the state
-        (.read rd,
+        (.read p hp,
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.zero =>
-        ((match rd with
-          | some ⟨p, _⟩ => readState g S (p ++ [false])
-          | none => .read none),
+        (readState g S (p ++ [false]),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.one =>
-        ((match rd with
-          | some ⟨p, _⟩ => readState g S (p ++ [true])
-          | none => .read none),
+        (readState g S (p ++ [true]),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
-    | .write ⟨[], _⟩ =>
+    | .dead =>
+      match iHead with
+      | Γ.blank =>
+        -- end of input: no element of `S` matched, write the empty output
+        (writeState g S [] (nil_mem_suffixes_outputsFinset g S),
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+      | Γ.start =>
+        (.dead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+      | Γ.zero =>
+        (.dead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+      | Γ.one =>
+        (.dead,
+         fun i => readBackWrite (wHeads i), readBackWrite oHead,
+         Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+    | .write [] _ =>
       (haltState g S,
        fun i => readBackWrite (wHeads i), readBackWrite oHead,
        idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
-    | .write ⟨a :: rest, hw⟩ =>
+    | .write (a :: rest) hw =>
       (writeState g S rest (Finset.mem_suffixes_of_suffix (List.suffix_cons a rest) hw),
        fun i => readBackWrite (wHeads i), Γw.ofBool a,
        idleDir iHead, fun i => idleDir (wHeads i), Dir3.right)
@@ -152,7 +189,7 @@ def lookupTM : TM 0 where
   δ_right_of_start := by
     intro state iHead wHeads oHead
     match state with
-    | .read rd =>
+    | .read p hp =>
       match iHead with
       | Γ.blank =>
         exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
@@ -165,10 +202,23 @@ def lookupTM : TM 0 where
       | Γ.one =>
         exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
           idleDir_right_of_start⟩
-    | .write ⟨[], _⟩ =>
+    | .dead =>
+      match iHead with
+      | Γ.blank =>
+        exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
+      | Γ.start =>
+        exact ⟨fun _ => rfl, fun _ => idleDir_right_of_start, idleDir_right_of_start⟩
+      | Γ.zero =>
+        exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
+      | Γ.one =>
+        exact ⟨fun h => absurd h (by decide), fun _ => idleDir_right_of_start,
+          idleDir_right_of_start⟩
+    | .write [] _ =>
       exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
         idleDir_right_of_start⟩
-    | .write ⟨a :: rest, hw⟩ =>
+    | .write (a :: rest) hw =>
       exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start, fun _ => rfl⟩
     | .halt =>
       exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
@@ -190,7 +240,7 @@ private theorem lookup_read_bit_step (p : List Bool) (b : Bool)
         output := c.output.writeAndMove (readBackWrite c.output.read)
           (idleDir c.output.read) } := by
   have hne : c.state ≠ (lookupTM g S).qhalt := by
-    rw [hstate, readState]; simp [lookupTM, haltState]
+    rw [hstate]; exact readState_ne_haltState g S p
   by_cases hp : p ∈ S.prefixes
   · cases b <;>
       simp [TM.step, lookupTM, hstate, hread, readState, haltState, dif_pos hp, Γ.ofBool]
@@ -273,11 +323,14 @@ private theorem lookup_initial_step (x : List Bool) :
       input := (Tape.init (x.map Γ.ofBool)).move Dir3.right
       work := fun _ => (Tape.init []).move Dir3.right
       output := (Tape.init ([] : List Γ)).move Dir3.right } with hc0
-  have hg : ((lookupTM g S).initCfg x).state ≠ (lookupTM g S).qhalt := by
-    simp [lookupTM, readState, haltState]
+  have hg : ((lookupTM g S).initCfg x).state ≠ (lookupTM g S).qhalt :=
+    readState_ne_haltState g S []
   have hstep : (lookupTM g S).step ((lookupTM g S).initCfg x) = some c0 := by
-    simp only [TM.step, if_neg hg]
-    exact congrArg some (Cfg.ext rfl rfl (Subsingleton.elim _ _) rfl)
+    by_cases h : ([] : List Bool) ∈ S.prefixes
+    · simp only [TM.step, hc0, lookupTM, readState, dif_pos h]
+      exact congrArg some (Cfg.ext rfl rfl (Subsingleton.elim _ _) rfl)
+    · simp only [TM.step, hc0, lookupTM, readState, dif_neg h]
+      exact congrArg some (Cfg.ext rfl rfl (Subsingleton.elim _ _) rfl)
   refine ⟨c0, hstep, rfl, ?_, ?_, ?_⟩
   · rw [hc0]; simp [Tape.move_cells]
   · rw [hc0]; simp [Tape.move]
