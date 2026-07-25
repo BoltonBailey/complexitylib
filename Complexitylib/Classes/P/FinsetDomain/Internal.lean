@@ -6,6 +6,7 @@ Authors: Bolton Bailey
 import Mathlib.Data.Fintype.Sets
 import Mathlib.Data.Fintype.Option
 import Mathlib.Data.Finset.Lattice.Fold
+import Complexitylib.Mathlib.FinsetPrefixes
 import Complexitylib.Classes.P.NormalForm
 import Complexitylib.Models.TuringMachine.Tape.Encoding
 import Complexitylib.Models.TuringMachine.Combinators
@@ -43,54 +44,24 @@ namespace TM.FinsetDomain
 
 variable (g : List Bool → List Bool) (S : Finset (List Bool))
 
-/-! ## Prefix and output finsets -/
+/-! ## Output finset
 
-/-- The finite set of all prefixes of elements of `S`. -/
-def prefixesFinset (S : Finset (List Bool)) : Finset (List Bool) :=
-  S.biUnion fun s => s.inits.toFinset
-
-theorem mem_prefixesFinset {p : List Bool} :
-    p ∈ prefixesFinset S ↔ ∃ s ∈ S, p <+: s := by
-  simp [prefixesFinset, List.mem_inits]
-
-theorem mem_prefixesFinset_self {s : List Bool} (hs : s ∈ S) :
-    s ∈ prefixesFinset S :=
-  (mem_prefixesFinset S).2 ⟨s, hs, List.prefix_rfl⟩
-
-theorem prefixesFinset_closed {p : List Bool} {a : Bool}
-    (h : p ++ [a] ∈ prefixesFinset S) : p ∈ prefixesFinset S := by
-  rw [mem_prefixesFinset] at *
-  obtain ⟨s, hs, hp⟩ := h
-  exact ⟨s, hs, (List.prefix_append p [a]).trans hp⟩
+The read phase tracks membership in `S.prefixes` and the write phase tracks
+membership in `(outputsFinset g S).suffixes`; both finsets come from the
+generic `Finset.prefixes`/`Finset.suffixes` API. -/
 
 /-- The possible output strings: `g s` for `s ∈ S`, together with `[]`. -/
 def outputsFinset (g : List Bool → List Bool) (S : Finset (List Bool)) :
     Finset (List Bool) :=
   insert [] (S.image g)
 
-/-- The reachable "remaining to write" states: suffixes of possible outputs. -/
-def writeSuffixesFinset (g : List Bool → List Bool) (S : Finset (List Bool)) :
-    Finset (List Bool) :=
-  (outputsFinset g S).biUnion fun c => c.tails.toFinset
+theorem nil_mem_suffixes_outputsFinset :
+    ([] : List Bool) ∈ (outputsFinset g S).suffixes :=
+  Finset.nil_mem_suffixes ⟨[], Finset.mem_insert_self _ _⟩
 
-theorem mem_writeSuffixesFinset {w : List Bool} :
-    w ∈ writeSuffixesFinset g S ↔ ∃ c ∈ outputsFinset g S, w <:+ c := by
-  simp [writeSuffixesFinset, List.mem_tails]
-
-theorem nil_mem_writeSuffixesFinset :
-    ([] : List Bool) ∈ writeSuffixesFinset g S :=
-  (mem_writeSuffixesFinset g S).2 ⟨[], Finset.mem_insert_self _ _, List.nil_suffix⟩
-
-theorem writeSuffixesFinset_closed {a : Bool} {w : List Bool}
-    (h : a :: w ∈ writeSuffixesFinset g S) : w ∈ writeSuffixesFinset g S := by
-  rw [mem_writeSuffixesFinset] at *
-  obtain ⟨c, hc, hw⟩ := h
-  exact ⟨c, hc, (List.suffix_cons a w).trans hw⟩
-
-theorem output_mem_writeSuffixesFinset {input : List Bool} :
-    (if input ∈ S then g input else ([] : List Bool)) ∈ writeSuffixesFinset g S := by
-  rw [mem_writeSuffixesFinset]
-  refine ⟨_, ?_, List.suffix_refl _⟩
+theorem output_mem_suffixes_outputsFinset {input : List Bool} :
+    (if input ∈ S then g input else ([] : List Bool)) ∈ (outputsFinset g S).suffixes := by
+  refine Finset.mem_suffixes_self ?_
   unfold outputsFinset
   split
   · exact Finset.mem_insert_of_mem (Finset.mem_image_of_mem g ‹_›)
@@ -98,16 +69,22 @@ theorem output_mem_writeSuffixesFinset {input : List Bool} :
 
 /-! ## The lookup machine -/
 
-instance : Fintype {p : List Bool // p ∈ prefixesFinset S} := Finset.Subtype.fintype _
-instance : Fintype {w : List Bool // w ∈ writeSuffixesFinset g S} := Finset.Subtype.fintype _
+instance : Fintype {p : List Bool // p ∈ S.prefixes} := Finset.Subtype.fintype _
+instance : Fintype {w : List Bool // w ∈ (outputsFinset g S).suffixes} :=
+  Finset.Subtype.fintype _
 
 /-- States of the lookup machine. -/
 inductive LookupState (g : List Bool → List Bool) (S : Finset (List Bool)) : Type where
   /-- Read phase: the viable prefix consumed so far, `none` being the "dead"
-  state after diverging from every element of `S`. -/
-  | read (p : Option {p : List Bool // p ∈ prefixesFinset S}) : LookupState g S
+  state after diverging from every element of `S`.
+
+  TODO: Avoid use of Option, make a separate constructor for the dead state.
+  Also, instead of passing a subtype as arg, pass the value and proof of membership
+  separately, so that the proof can be used in the transition function.
+  -/
+  | read (p : Option {p : List Bool // p ∈ S.prefixes}) : LookupState g S
   /-- Write phase: the output suffix still to be written. -/
-  | write (w : {w : List Bool // w ∈ writeSuffixesFinset g S}) : LookupState g S
+  | write (w : {w : List Bool // w ∈ (outputsFinset g S).suffixes}) : LookupState g S
   /-- The halt state. -/
   | halt : LookupState g S
   deriving DecidableEq, Fintype
@@ -115,10 +92,10 @@ inductive LookupState (g : List Bool → List Bool) (S : Finset (List Bool)) : T
 /-- The read-phase state after consuming prefix `p`: the viable prefix `p` if it
 is still a prefix of some element of `S`, otherwise the dead state. -/
 def readState (p : List Bool) : LookupState g S :=
-  .read (if h : p ∈ prefixesFinset S then some ⟨p, h⟩ else none)
+  .read (if h : p ∈ S.prefixes then some ⟨p, h⟩ else none)
 
 /-- The write-phase state carrying output suffix `c`. -/
-def writeState (c : List Bool) (hc : c ∈ writeSuffixesFinset g S) : LookupState g S :=
+def writeState (c : List Bool) (hc : c ∈ (outputsFinset g S).suffixes) : LookupState g S :=
   .write ⟨c, hc⟩
 
 /-- The halt state. -/
@@ -139,8 +116,8 @@ def lookupTM : TM 0 where
         ((match rd with
           | some ⟨p, _⟩ =>
             writeState g S (if p ∈ S then g p else [])
-              (output_mem_writeSuffixesFinset g S)
-          | none => writeState g S [] (nil_mem_writeSuffixesFinset g S)),
+              (output_mem_suffixes_outputsFinset g S)
+          | none => writeState g S [] (nil_mem_suffixes_outputsFinset g S)),
          fun i => readBackWrite (wHeads i), readBackWrite oHead,
          idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
       | Γ.start =>
@@ -165,7 +142,7 @@ def lookupTM : TM 0 where
        fun i => readBackWrite (wHeads i), readBackWrite oHead,
        idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
     | .write ⟨a :: rest, hw⟩ =>
-      (writeState g S rest (writeSuffixesFinset_closed g S hw),
+      (writeState g S rest (Finset.mem_suffixes_of_suffix (List.suffix_cons a rest) hw),
        fun i => readBackWrite (wHeads i), Γw.ofBool a,
        idleDir iHead, fun i => idleDir (wHeads i), Dir3.right)
     | .halt =>
@@ -214,10 +191,11 @@ private theorem lookup_read_bit_step (p : List Bool) (b : Bool)
           (idleDir c.output.read) } := by
   have hne : c.state ≠ (lookupTM g S).qhalt := by
     rw [hstate, readState]; simp [lookupTM, haltState]
-  by_cases hp : p ∈ prefixesFinset S
+  by_cases hp : p ∈ S.prefixes
   · cases b <;>
       simp [TM.step, lookupTM, hstate, hread, readState, haltState, dif_pos hp, Γ.ofBool]
-  · have hp' : p ++ [b] ∉ prefixesFinset S := fun h => hp (prefixesFinset_closed S h)
+  · have hp' : p ++ [b] ∉ S.prefixes := fun h =>
+      hp (Finset.mem_prefixes_of_prefix (List.prefix_append p [b]) h)
     cases b <;>
       simp [TM.step, lookupTM, hstate, hread, readState, haltState, dif_neg hp, dif_neg hp',
         Γ.ofBool]
@@ -313,20 +291,20 @@ private theorem lookup_handoff_step (inp : List Bool) (c : Cfg 0 (lookupTM g S).
     (houtput : c.output.HasBinaryPrefix []) :
     ∃ c', (lookupTM g S).step c = some c' ∧
       c'.state = writeState g S (if inp ∈ S then g inp else [])
-        (output_mem_writeSuffixesFinset g S) ∧
+        (output_mem_suffixes_outputsFinset g S) ∧
       c'.output.HasBinaryPrefix [] := by
   set c1 : Cfg 0 (lookupTM g S).Q :=
     { state := writeState g S (if inp ∈ S then g inp else [])
-        (output_mem_writeSuffixesFinset g S)
+        (output_mem_suffixes_outputsFinset g S)
       input := c.input.move (idleDir c.input.read)
       work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
         (idleDir (c.work i).read)
       output := c.output.writeAndMove (readBackWrite c.output.read)
         (idleDir c.output.read) } with hc1
   have hstep : (lookupTM g S).step c = some c1 := by
-    by_cases hp : inp ∈ prefixesFinset S
+    by_cases hp : inp ∈ S.prefixes
     · simp [TM.step, lookupTM, hstate, hread, readState, writeState, haltState, dif_pos hp, hc1]
-    · have hpS : inp ∉ S := fun h => hp (mem_prefixesFinset_self S h)
+    · have hpS : inp ∉ S := fun h => hp (Finset.mem_prefixes_self h)
       simp [TM.step, lookupTM, hstate, hread, readState, writeState, haltState, dif_neg hp,
         if_neg hpS, hc1]
   refine ⟨c1, hstep, by rw [hc1], ?_⟩
@@ -336,10 +314,10 @@ private theorem lookup_handoff_step (inp : List Bool) (c : Cfg 0 (lookupTM g S).
 /-- Writing one output symbol in the write phase extends the written prefix and
 advances to the remaining suffix. -/
 private theorem lookup_write_cons_step (a : Bool) (rest : List Bool)
-    (hw : a :: rest ∈ writeSuffixesFinset g S) (c : Cfg 0 (lookupTM g S).Q)
+    (hw : a :: rest ∈ (outputsFinset g S).suffixes) (c : Cfg 0 (lookupTM g S).Q)
     (hstate : c.state = writeState g S (a :: rest) hw) :
     (lookupTM g S).step c = some
-      { state := writeState g S rest (writeSuffixesFinset_closed g S hw)
+      { state := writeState g S rest (Finset.mem_suffixes_of_suffix (List.suffix_cons a rest) hw)
         input := c.input.move (idleDir c.input.read)
         work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
           (idleDir (c.work i).read)
@@ -350,7 +328,7 @@ private theorem lookup_write_cons_step (a : Bool) (rest : List Bool)
 state carries the remaining suffix `w`, the machine writes `w` and halts, in
 `|w| + 1` steps, leaving `written ++ w` on the output tape. -/
 private theorem lookup_write_loop (written : List Bool) :
-    ∀ (w : List Bool) (hw : w ∈ writeSuffixesFinset g S) (c : Cfg 0 (lookupTM g S).Q),
+    ∀ (w : List Bool) (hw : w ∈ (outputsFinset g S).suffixes) (c : Cfg 0 (lookupTM g S).Q),
       c.state = writeState g S w hw →
       c.output.HasBinaryPrefix written →
       ∃ c',
@@ -381,7 +359,7 @@ private theorem lookup_write_loop (written : List Bool) :
     intro hw c hstate houtput
     have hstep := lookup_write_cons_step g S a rest hw c hstate
     set c1 : Cfg 0 (lookupTM g S).Q :=
-      { state := writeState g S rest (writeSuffixesFinset_closed g S hw)
+      { state := writeState g S rest (Finset.mem_suffixes_of_suffix (List.suffix_cons a rest) hw)
         input := c.input.move (idleDir c.input.read)
         work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
           (idleDir (c.work i).read)
@@ -389,7 +367,7 @@ private theorem lookup_write_loop (written : List Bool) :
     have hout1 : c1.output.HasBinaryPrefix (written ++ [a]) := by
       rw [hc1]; exact Tape.hasBinaryPrefix_write_bit a houtput
     obtain ⟨c', hreach, hhalt, hout'⟩ :=
-      ih (written ++ [a]) (writeSuffixesFinset_closed g S hw) c1 rfl hout1
+      ih (written ++ [a]) (Finset.mem_suffixes_of_suffix (List.suffix_cons a rest) hw) c1 rfl hout1
     refine ⟨c', ?_, hhalt, ?_⟩
     · have : rest.length + 1 + 1 = (a :: rest).length + 1 := by simp [List.length_cons]
       rw [← this]
@@ -410,7 +388,7 @@ theorem lookupTM_computesInTime :
   obtain ⟨c2, hstep2, hst2, hout2⟩ := lookup_handoff_step g S x c1 hst1 hread1_blank hout1
   set cval : List Bool := if x ∈ S then g x else [] with hcval
   obtain ⟨c3, hwriteloop, hhalt3, hout3⟩ :=
-    lookup_write_loop g S [] cval (output_mem_writeSuffixesFinset g S) c2 hst2 hout2
+    lookup_write_loop g S [] cval (output_mem_suffixes_outputsFinset g S) c2 hst2 hout2
   have hlen : cval.length ≤ S.sup fun s => (g s).length := by
     rw [hcval]
     split
