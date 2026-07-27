@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib.Models
+import Complexitylib.Encoding
 import Complexitylib.Asymptotics
 import Complexitylib.TimeConstructible
 import Complexitylib.Classes

@@ -315,7 +315,7 @@ theorem pairInputWorkTM_reachesIn_internal {n : ℕ}
   · intro i hi
     rw [hwork₂]
     exact hother₁ i hi
-  · simpa [pair, doubled, List.append_assoc] using houtput₂
+  · simpa [pair, delimit, doubled, List.append_assoc] using houtput₂
 
 /-- Internal compact Hoare contract for pair emission. -/
 theorem pairInputWorkTM_hoareTime_internal {n : ℕ}

@@ -3,39 +3,26 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.List.Basic
-import Mathlib.Data.Nat.Init
-import Lean.Elab.Tactic.Omega
+import Complexitylib.Encoding.Delimit
 
 /-!
 # Pairing binary strings
 
 This file defines the low-level self-delimiting pairing codec used by machine
-inputs throughout Complexitylib. It deliberately has no dependency on the
-machine or complexity-class layers, so parsers and encoders can reuse it
-without introducing an import cycle.
+inputs throughout Complexitylib: `pair x y = delimit x ++ y`, framed by the
+shared delimiting operation of `Complexitylib.Encoding.Delimit` and parsed
+back by its `unpair?`. It deliberately has no dependency on the machine or
+complexity-class layers, so parsers and encoders can reuse it without
+introducing an import cycle.
 -/
 
 namespace Complexity
 
-/-- Encode a pair of binary strings as a single binary string.
-    Each bit of `x` is doubled (`false ↦ [false, false]`, `true ↦ [true, true]`),
-    followed by the separator `[false, true]`, followed by `y` verbatim.
+/-- Encode a pair of binary strings as a single binary string: the self-delimiting block
+    `delimit x` followed by `y` verbatim. `unpair?` is the partial inverse.
     This encoding is injective and computable in linear time. -/
 def pair (x y : List Bool) : List Bool :=
-  (x.flatMap fun b => [b, b]) ++ [false, true] ++ y
-
-/-- Partial inverse to `pair`. It scans doubled bits until the first
-    separator `[false, true]`, returning the decoded left component together
-    with the remaining suffix. Invalid doubled prefixes return `none`. -/
-def unpair? : List Bool → Option (List Bool × List Bool)
-  | [] => none
-  | false :: true :: y => some ([], y)
-  | false :: false :: z =>
-      Option.map (fun (xy : List Bool × List Bool) => (false :: xy.1, xy.2)) (unpair? z)
-  | true :: true :: z =>
-      Option.map (fun (xy : List Bool × List Bool) => (true :: xy.1, xy.2)) (unpair? z)
-  | _ => none
+  delimit x ++ y
 
 private theorem pair_nil_eq (y : List Bool) :
     pair [] y = false :: true :: y := by
@@ -45,7 +32,7 @@ private theorem pair_nil_eq (y : List Bool) :
     doubled bit `b, b`. -/
 theorem pair_cons_eq (b : Bool) (x y : List Bool) :
     pair (b :: x) y = b :: b :: pair x y := by
-  simp [pair, List.append_assoc]
+  simp [pair]
 
 /-- `|pair x y| = 2·|x| + 2 + |y|`. The `2·|x|` comes from doubling every
     bit of `x`; the `+2` is the separator `[false, true]`. -/
@@ -92,55 +79,14 @@ theorem pair_inj {x₁ x₂ : List Bool} {y₁ y₂ : List Bool}
 /-- `unpair?` is a left inverse of `pair`: decoding an encoded pair
     recovers exactly its two components. -/
 @[simp] theorem unpair?_pair (x y : List Bool) :
-    unpair? (pair x y) = some (x, y) := by
-  induction x with
-  | nil =>
-    simp [unpair?, pair_nil_eq]
-  | cons b xs ih =>
-    rw [pair_cons_eq]
-    cases b <;> simp [unpair?, ih]
+    unpair? (pair x y) = some (x, y) :=
+  unpair?_delimit_append x y
 
 /-- Soundness of the decoder: if `unpair?` succeeds on `z`, producing `(x, y)`,
     then `z` was exactly the encoding `pair x y`. -/
 theorem eq_pair_of_unpair?_eq_some {z x y : List Bool} (h : unpair? z = some (x, y)) :
-    z = pair x y := by
-  have hsound :
-      ∀ z x y, unpair? z = some (x, y) → z = pair x y := by
-    intro z x y h
-    induction hlen : z.length using Nat.strong_induction_on generalizing z x y with
-    | h n ih =>
-        cases z with
-        | nil =>
-            simp [unpair?] at h
-        | cons a z1 =>
-            cases z1 with
-            | nil =>
-                cases a <;> simp [unpair?] at h
-            | cons b z2 =>
-                cases a
-                · cases b
-                  · simp [unpair?] at h
-                    rcases h with ⟨x', htail, rfl⟩
-                    have hz2lt : z2.length < n := by
-                      rw [← hlen]
-                      have : z2.length < z2.length + 1 + 1 := by omega
-                      exact this
-                    have hz2 : z2 = pair x' y := ih z2.length hz2lt z2 x' y htail rfl
-                    simpa [pair_cons_eq] using congrArg (fun t => false :: false :: t) hz2
-                  · simp [unpair?] at h
-                    rcases h with ⟨rfl, rfl⟩
-                    simp [pair_nil_eq]
-                · cases b
-                  · simp [unpair?] at h
-                  · simp [unpair?] at h
-                    rcases h with ⟨x', htail, rfl⟩
-                    have hz2lt : z2.length < n := by
-                      rw [← hlen]
-                      have : z2.length < z2.length + 1 + 1 := by omega
-                      exact this
-                    have hz2 : z2 = pair x' y := ih z2.length hz2lt z2 x' y htail rfl
-                    simpa [pair_cons_eq] using congrArg (fun t => true :: true :: t) hz2
-  exact hsound z x y h
+    z = pair x y :=
+  eq_delimit_append_of_unpair?_eq_some h
 
 /-- `unpair? z` returns `some (x, y)` if and only if `z = pair x y`,
     characterizing exactly which strings are valid pair encodings. -/
