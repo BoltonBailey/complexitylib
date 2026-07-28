@@ -3,9 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.SAT.CookLevin
-import Complexitylib.Models.TuringMachine.Registers.MixedRadix
-import Complexitylib.Models.TuringMachine.Registers.DecReg
+
+module
+public import Complexitylib.Models.TuringMachine.Registers.MixedRadix
+public import Complexitylib.SAT.Encoding
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 
 /-!
 # The reduction emitter: clause and CNF machines
@@ -21,6 +23,9 @@ The family drivers (one per `tableauCNFFlat` clause family) instantiate
 these with the concrete descriptor lists mirroring each family's
 definition.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

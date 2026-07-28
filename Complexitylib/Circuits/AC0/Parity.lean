@@ -3,9 +3,9 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.AC0.Iteration
-import Complexitylib.Circuits.AC0.Parity.Internal
-import Complexitylib.Circuits.XOR.Restriction
+
+module
+public import Complexitylib.Circuits.AC0.Parity.Internal
 
 /-!
 # Parity versus finite AC0 formulas
@@ -23,6 +23,9 @@ No uniformity assumption occurs. The remaining family-level step is purely
 arithmetic: instantiate the parameters against a polynomial formula-size
 bound and a fixed depth.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 namespace AC0Formula

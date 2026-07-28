@@ -3,10 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Defs
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal
-import Complexitylib.Models.RandomAccessMachine.Structured
-import Complexitylib.Asymptotics
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Defs
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal
+public import Complexitylib.Models.RandomAccessMachine.Structured
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse
 
 /-!
 # A fixed sparse-RAM block for one Turing-machine transition
@@ -18,6 +21,9 @@ nested dispatch, fixed iteration controller, and transfer to concrete compiled
 RAM execution are checked. The separate `Sparse.ABI` surface supplies the
 public input/output marshalling layer.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

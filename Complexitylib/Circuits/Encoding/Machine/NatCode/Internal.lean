@@ -3,12 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Machine.NatCode.Defs
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Seq
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Control
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
-import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
+
+module
+public import Complexitylib.Circuits.Encoding.Machine.NatCode.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+public import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
+public import Complexitylib.Circuits.Encoding.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 
 /-!
 # Machine emission of terminated-unary natural codes — proof internals
@@ -17,6 +18,9 @@ This module instantiates the generic canonical binary loop with one-bit output
 emission.  The proof tracks concrete counter and output tapes at every loop
 index, then composes scratch clearing and the terminating zero-bit emitter.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -29,13 +33,13 @@ open TM
 variable {n : ℕ}
 
 /-- Replace the scratch counter by the canonical binary tape for `value`. -/
-private def natCodeWorkAt (work : Fin n → Tape) (counterIdx : Fin n)
+def natCodeWorkAt (work : Fin n → Tape) (counterIdx : Fin n)
     (value : ℕ) : Fin n → Tape :=
   Function.update work counterIdx
     ((Tape.init (value.bits.map Γ.ofBool)).move Dir3.right)
 
 /-- Concrete output tape after appending `count` one-bits. -/
-private def natCodeOutputAt (out : Tape) : ℕ → Tape
+def natCodeOutputAt (out : Tape) : ℕ → Tape
   | 0 => out
   | count + 1 =>
       (natCodeOutputAt out count).writeAndMove Γ.one Dir3.right

@@ -3,8 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Decision
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Resources
+
+module
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Decision
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Resources
 
 /-!
 # Resource bounds for the public sparse-simulator ABI -- proof internals
@@ -15,6 +19,9 @@ the writable value scratch register can temporarily exceed the core word bound;
 support. The first captured-position repair reloads that scratch register from
 the sparse data region, returning to the core envelope before simulation.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

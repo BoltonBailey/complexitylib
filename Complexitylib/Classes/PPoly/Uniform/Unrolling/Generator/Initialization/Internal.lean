@@ -3,18 +3,24 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization.Defs
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 
 /-!
 # Direct-unrolling initialization generator -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -867,7 +873,8 @@ private theorem repeatRoutine_emitted_eq_indexedGateBlocks
         ih _ (hupdate values (values Work.available + step) hinvariant)]
       simp [indexedGateBlocks, List.flatMap_append]
 
-private def tapeInvariant (T : ℕ) (values : BinaryValues WorkCount) : Prop :=
+/-- Register invariant maintained while emitting one tape's initialization gates. -/
+def tapeInvariant (T : ℕ) (values : BinaryValues WorkCount) : Prop :=
   values Work.reference₀ = 0 ∧ values Work.loop₀ = 0 ∧
     values Work.limit₀ = T + 1 ∧ values Work.horizon = T
 

@@ -3,16 +3,15 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Tableau.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Tableau.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 
 /-!
 # Complete direct-unrolling generator -- proof internals
@@ -21,6 +20,9 @@ This file first verifies the outer transition-layer loop. Its pure trajectory
 keeps the step scratch convention reusable, preserves the horizon, and advances
 the dedicated layer counter exactly once per emitted packed step.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -297,7 +299,8 @@ private theorem stepLoopValues_numeric_invariant (tm : TM k)
   refine ⟨hbasic.1, hbasic.2.1, ?_, hnumeric⟩
   simpa [hloop] using hbasic.2.2
 
-private noncomputable def stepLoopIndexPolynomial
+/-- Polynomial space envelope for indexing one tableau-step iteration. -/
+noncomputable def stepLoopIndexPolynomial
     (tm : NTM k) : Polynomial ℕ :=
   Polynomial.C (Fintype.card tm.Q) +
     Polynomial.C (k + 2) * (Polynomial.X + Polynomial.C 2) +
@@ -307,7 +310,8 @@ private noncomputable def stepLoopIndexPolynomial
     (Polynomial.X + Polynomial.C 2) +
     Polynomial.C (2 * (k + 2) + 8)
 
-private noncomputable def stepLoopEvaluatorPolynomial
+/-- Polynomial space envelope for evaluating one tableau-step iteration. -/
+noncomputable def stepLoopEvaluatorPolynomial
     (tm : NTM k) : Polynomial ℕ :=
   TM.binaryPolynomialSpaceWidthPolynomial
       predecessorHeadSchedulePolynomial +
@@ -331,7 +335,8 @@ private noncomputable def stepLoopEvaluatorPolynomial
         (writtenNextFormulaPolynomial tm tape symbol)) +
     TM.binaryPolynomialSpaceWidthPolynomial (Polynomial.C 1)
 
-private noncomputable def stepLoopEndPolynomial
+/-- Polynomial endpoint bound after the tableau-step loop. -/
+noncomputable def stepLoopEndPolynomial
     (tm : TM k) (q : Polynomial ℕ) : Polynomial ℕ :=
   let horizon := TM.directSerializerHorizonPolynomial q
   Polynomial.X +
@@ -341,7 +346,8 @@ private noncomputable def stepLoopEndPolynomial
       (Polynomial.C (stepSizeCoeff tm.toNTM) *
         (horizon + Polynomial.C 2) ^ 2)
 
-private noncomputable def stepLoopWidthPolynomial
+/-- Polynomial work-width envelope for the complete tableau-step loop. -/
+noncomputable def stepLoopWidthPolynomial
     (tm : TM k) (q : Polynomial ℕ) : Polynomial ℕ :=
   let horizon := TM.directSerializerHorizonPolynomial q
   let endpoint := stepLoopEndPolynomial tm q

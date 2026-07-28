@@ -3,13 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Internal
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Defs
 
 /-!
 # Immediate sparse-store instructions -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,7 +3,9 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.Nat.Lattice
+
+module
+public import Mathlib.Data.Nat.Lattice
 
 /-! # Boolean Circuit Complexity
 
@@ -28,6 +30,9 @@ establishes the circuit size complexity measure for Boolean functions.
 
 * `Circuit.sizeComplexity_pos` — for complete bases, size complexity is positive
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -239,7 +244,8 @@ over `B` computes it. -/
 def Realizable (B : Basis) (f : BitString N → Bool) : Prop :=
   ∃ G, ∃ c : Circuit B N 1 G, (fun x => (c.eval x) 0) = f
 
-private def realizationSizes (B : Basis) (f : BitString N → Bool) : Set Nat :=
+/-- Sizes of all single-output circuits over `B` that realize `f`. -/
+def realizationSizes (B : Basis) (f : BitString N → Bool) : Set Nat :=
   {s | ∃ G, ∃ c : Circuit B N 1 G,
     c.size = s ∧ (fun x => (c.eval x) 0) = f}
 

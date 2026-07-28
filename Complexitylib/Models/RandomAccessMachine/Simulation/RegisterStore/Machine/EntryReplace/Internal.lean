@@ -3,17 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
+
+module
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryReplace.Defs
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryCleanup
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryEncode
-import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryCleanup
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryEncode
 
 /-!
 # Sparse-entry replacement — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

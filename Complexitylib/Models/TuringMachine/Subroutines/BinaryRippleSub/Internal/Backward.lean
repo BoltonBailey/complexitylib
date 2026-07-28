@@ -3,8 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub.Internal.Pure
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub.Internal.Pure
+public import Complexitylib.Models.TuringMachine.Tape.Encoding
+public import Mathlib.Algebra.Order.Sub.Basic
 
 /-!
 # Linear-time canonical binary subtraction -- backward cleanup
@@ -15,6 +19,9 @@ only redundant high zeros, preserves the significant suffix after its first
 high one, and returns the result head to cell one. All other tapes are framed
 literally throughout the run.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

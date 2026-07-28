@@ -3,15 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryCleanup
-import
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryCleanup
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScanStep.Defs
-import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
+public import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch
 
 /-!
 # One bounded sparse-entry scan iteration — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

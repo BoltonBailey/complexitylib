@@ -3,12 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Asymptotics
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryPolynomial.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
+
+module
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPolynomial.Defs
 
 /-!
 # Canonical binary evaluation of a fixed natural polynomial — proof internals
@@ -20,13 +20,17 @@ one width-based space budget independent of their (potentially much larger)
 running time.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace TM
 
 variable {n : ℕ}
 
-private def binaryPolynomialNatTape (value : ℕ) : Tape :=
+/-- Canonical parked tape encoding of a natural for polynomial evaluation. -/
+def binaryPolynomialNatTape (value : ℕ) : Tape :=
   (Tape.init (value.bits.map Γ.ofBool)).move Dir3.right
 
 private theorem binaryPolynomialNatTape_hasBinaryNat (value : ℕ) :
@@ -43,7 +47,8 @@ private theorem binaryPolynomialNatTape_parked (value : ℕ) :
   binaryPolynomialHasBinaryNat_parked
     (binaryPolynomialNatTape_hasBinaryNat value)
 
-private abbrev binaryPolynomialFramePred
+/-- Predicate fixing the tapes framing a binary polynomial evaluation. -/
+abbrev binaryPolynomialFramePred
     (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape) : TapePred n :=
   fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀
 

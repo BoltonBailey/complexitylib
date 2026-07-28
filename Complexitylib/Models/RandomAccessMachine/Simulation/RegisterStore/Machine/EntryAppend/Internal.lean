@@ -3,17 +3,22 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
+
+module
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryAppend.Defs
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryEncode
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan
-import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryEncode
+public import Mathlib.Data.Rat.Cast.Order
+public import Mathlib.Tactic.NormNum.Abs
+public import Mathlib.Tactic.NormNum.DivMod
+public import Mathlib.Tactic.NormNum.OfScientific
 
 /-!
 # Sparse-entry final append — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

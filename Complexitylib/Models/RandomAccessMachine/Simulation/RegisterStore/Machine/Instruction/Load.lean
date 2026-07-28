@@ -3,15 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Internal
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryLookupRestore
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Defs
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Static
 
 /-!
 # Indirect sparse-store load instructions -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

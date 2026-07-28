@@ -3,8 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Decision.Defs
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Defs
+public import Mathlib.Tactic.NormNum.Inv
+public import Mathlib.Tactic.NormNum.Pow
 
 /-!
 # Sparse RAM decision-machine resource-bound definitions
@@ -17,6 +20,9 @@ time.  The fourth-power envelope is deliberately coarse: it keeps the public
 class-transfer theorem independent of low-level controller constants while
 still recording a genuine polynomial simulation.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

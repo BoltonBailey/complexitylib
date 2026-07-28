@@ -3,16 +3,17 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Offset
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Case
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect.Defs
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Case
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect.Defs
 
 /-!
 # Direct-unrolling transition-effect generator -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -24,7 +25,7 @@ namespace DirectGenerator
 
 /-- Scratch invariant while a rolling effect-member output reference moves
 backward through the variable-width case stream. -/
-private structure EffectConnectorClean
+structure EffectConnectorClean
     (values : BinaryValues WorkCount) : Prop where
   reference₁ : values Work.reference₁ = 0
   loop₃ : values Work.loop₃ = 0

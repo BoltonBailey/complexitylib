@@ -3,11 +3,17 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Load
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Layout
+public import Complexitylib.Models.RandomAccessMachine.Structured.Internal.Resources
 
 /-!
 # Selected TM transition actions -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -277,7 +283,7 @@ private theorem writeOps_one (n bound : ℕ) (slot : Fin (n + 2))
   rw [writeOps_apply n bound slot write store honeAddress honeValue,
     Function.update_of_ne honeBase, Function.update_of_ne honeTarget]
 
-theorem writeMoveOps_tape_internal (n bound : ℕ) (slot : Fin (n + 2))
+private theorem writeMoveOps_tape_internal (n bound : ℕ) (slot : Fin (n + 2))
     (write : Γw) (direction : Dir3) (tape : Tape) (store : Structured.Store)
     (hrepresents : RepresentsTape bound slot tape store)
     (hhead : tape.head ≤ bound) (hstart : tape.cells 0 = Γ.start)
@@ -319,7 +325,7 @@ theorem writeMoveOps_one_internal (n bound : ℕ) (slot : Fin (n + 2))
   rw [writeMoveOps, execList_append,
     moveOps_apply_of_ne n bound slot direction written honeHead, honeWritten]
 
-theorem writeMoveOps_otherTape_internal (n bound : ℕ)
+private theorem writeMoveOps_otherTape_internal (n bound : ℕ)
     {slot other : Fin (n + 2)} (hne : slot ≠ other)
     (write : Γw) (direction : Dir3) (otherTape : Tape)
     (store : Structured.Store)
@@ -1047,13 +1053,14 @@ private theorem workPrefix_list_envelope {tm : TM n} {bound : ℕ}
           List.append_assoc] using hfinalPrefix
       · simpa [List.flatMap_cons] using hblock.append hrestChain
 
-theorem actionOps_envelopeChain_internal {tm : TM n} {bound : ℕ}
+private theorem actionOps_envelopeChain_internal {tm : TM n} {bound : ℕ}
     {cfg : Complexity.Cfg n tm.Q} {store : Structured.Store}
     (hrepresents : Represents tm bound cfg store)
     (hheads : HeadsBounded cfg bound)
     (hworkStart : ∀ i, (cfg.work i).cells 0 = Γ.start)
     (hone : store (oneReg n bound) = 1)
-    (henvelope : StepEnvelope tm bound store) :
+    (henvelope : Structured.Internal.StoreEnvelope
+      (registerLimit n bound) (wordBound tm bound) store) :
     StepEnvelopeChain tm bound
       (actionOps tm bound cfg.state (readSymbols cfg)) store := by
   rcases hdelta : tm.δ cfg.state cfg.input.read
@@ -1144,7 +1151,8 @@ theorem actionOps_measured_internal {tm : TM n} {bound : ℕ}
     (hworkStart : ∀ i, (cfg.work i).cells 0 = Γ.start)
     (houtputStart : cfg.output.cells 0 = Γ.start)
     (hone : store (oneReg n bound) = 1)
-    (henvelope : StepEnvelope tm bound store) :
+    (henvelope : Structured.Internal.StoreEnvelope
+      (registerLimit n bound) (wordBound tm bound) store) :
     let final := Structured.Basic.execList
       (actionOps tm bound cfg.state (readSymbols cfg)) store
     Structured.Internal.MeasuredRuns
@@ -1152,7 +1160,9 @@ theorem actionOps_measured_internal {tm : TM n} {bound : ℕ}
         (actionOps tm bound cfg.state (readSymbols cfg)).length
         (4 * (actionOps tm bound cfg.state (readSymbols cfg)).length *
           wordWidth tm bound) (spaceBound tm bound) ∧
-      Represents tm bound next final ∧ StepEnvelope tm bound final := by
+      Represents tm bound next final ∧
+        Structured.Internal.StoreEnvelope
+          (registerLimit n bound) (wordBound tm bound) final := by
   have hchain := actionOps_envelopeChain_internal hrepresents hheads
     hworkStart hone henvelope
   have hmeasured := Structured.Internal.MeasuredRuns.basicsEnvelopeChain

@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Defs
-import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Internal
-import Complexitylib.Asymptotics
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Defs
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Internal
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.RandomAccessMachine.Structured
 
 /-!
 # Verified structured RAM decoded-gate evaluator
@@ -15,6 +18,9 @@ evaluator. Given an already-decoded, topologically valid gate, it performs two
 indirect memo reads, evaluates the gate with branch-free Boolean arithmetic,
 and indirectly appends the result in exactly twenty RAM transitions.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

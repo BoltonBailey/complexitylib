@@ -3,11 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Fragment.Defs
-import Complexitylib.Models.TuringMachine
-import Mathlib.Data.Fintype.Sum
-import Mathlib.Logic.Equiv.Fin.Basic
-import Mathlib.Tactic.DeriveFintype
+
+module
+public import Complexitylib.Circuits.Encoding.Fragment.Defs
+public import Complexitylib.Models.TuringMachine
+public import Mathlib.Data.Fintype.Sum
+public import Mathlib.Logic.Equiv.Fin.Basic
+public import Mathlib.Tactic.DeriveFintype
 
 /-!
 # Circuit layouts for bounded Turing-machine traces
@@ -22,6 +24,9 @@ The primary-input layout is independent of the configuration layout. This
 lets later clients place random choices, data, and auxiliary inputs wherever
 they choose. `prefixInputWires` supplies the canonical choices-first order.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -97,7 +102,7 @@ def configWidth (tm : NTM k) (T : ℕ) : ℕ :=
   Fintype.card tm.Q + (k + 2) * (T + 1) + 4 * (k + 2) * (T + 2)
 
 /-- State/head/cell sum representation used to construct the explicit layout. -/
-private def configAtomSumEquiv (tm : NTM k) (T : ℕ) :
+def configAtomSumEquiv (tm : NTM k) (T : ℕ) :
     ConfigAtom tm T ≃
       tm.Q ⊕ ((TapeSlot k × Fin (T + 1)) ⊕ ((TapeSlot k × Fin (T + 2)) × Γ)) where
   toFun
@@ -152,7 +157,7 @@ private theorem TapeSlot.index_surjective : Function.Surjective (@TapeSlot.index
 /-- Named tapes are explicitly equivalent to their input/work/output indices. -/
 noncomputable def tapeSlotEquiv (k : ℕ) : TapeSlot k ≃ Fin (k + 2) :=
   Equiv.ofBijective TapeSlot.index
-    ⟨TapeSlot.index_injective, TapeSlot.index_surjective⟩
+    ⟨by exact TapeSlot.index_injective, by exact TapeSlot.index_surjective⟩
 
 private theorem symbolIndex_injective : Function.Injective symbolIndex := by
   intro first second h
@@ -163,13 +168,16 @@ private theorem symbolIndex_surjective : Function.Surjective symbolIndex := by
 
 /-- Alphabet symbols are explicitly equivalent to their four layout indices. -/
 noncomputable def symbolEquiv : Γ ≃ Fin 4 :=
-  Equiv.ofBijective symbolIndex ⟨symbolIndex_injective, symbolIndex_surjective⟩
+  Equiv.ofBijective symbolIndex
+    ⟨by exact symbolIndex_injective, by exact symbolIndex_surjective⟩
 
-private noncomputable def headAtomEquiv (k T : ℕ) :
+/-- Tape-head atoms are explicitly equivalent to their contiguous layout indices. -/
+noncomputable def headAtomEquiv (k T : ℕ) :
     TapeSlot k × Fin (T + 1) ≃ Fin ((k + 2) * (T + 1)) :=
   (Equiv.prodCongr (tapeSlotEquiv k) (Equiv.refl _)).trans finProdFinEquiv
 
-private noncomputable def cellAtomEquiv (k T : ℕ) :
+/-- Tape-cell atoms are explicitly equivalent to their contiguous layout indices. -/
+noncomputable def cellAtomEquiv (k T : ℕ) :
     (TapeSlot k × Fin (T + 2)) × Γ ≃ Fin (4 * (k + 2) * (T + 2)) :=
   ((Equiv.prodCongr
       ((Equiv.prodCongr (tapeSlotEquiv k) (Equiv.refl _)).trans finProdFinEquiv)

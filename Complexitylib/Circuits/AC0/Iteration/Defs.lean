@@ -3,12 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.AC0.Restriction
-import Complexitylib.Circuits.AC0.Switching.Defs
-import Complexitylib.Circuits.DecisionTree.NormalForm.Defs
-import Complexitylib.Circuits.RandomRestriction.Defs
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Data.Fintype.Card
+
+module
+public import Complexitylib.Circuits.AC0.Switching.Defs
+public import Complexitylib.Circuits.DecisionTree.NormalForm.Defs
+public import Complexitylib.Circuits.RandomRestriction.Defs
+public import Complexitylib.Circuits.AC0.NormalForm.Defs
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 
 /-!
 # Iterated switching for AC0 formulas -- definitions
@@ -20,6 +21,9 @@ next restriction used to switch the normal form assembled at that gate.
 This representation is finite and nonuniform. It contains restrictions and
 formula trees only; it does not contain or assume a circuit generator.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

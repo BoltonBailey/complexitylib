@@ -3,8 +3,9 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured.Scanner.Defs
-import Mathlib.Data.FinEnum.Option
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.Scanner.Defs
 
 /-!
 # Structured RAM last-bit scanner — definitions
@@ -12,6 +13,9 @@ import Mathlib.Data.FinEnum.Option
 This is a second consumer of the typed finite-state scanner API. Its state is
 `Option Bool`: `none` before any input and `some bit` thereafter.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

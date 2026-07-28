@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Fragment
-import Complexitylib.Circuits.BitString
-import Complexitylib.Circuits.Unrolling.Defs
+
+module
+public import Complexitylib.Circuits.Encoding.Fragment
+public import Complexitylib.Circuits.BitString
+public import Complexitylib.Circuits.Unrolling.Defs
+public import Std.Tactic.BVDecide.Normalize.BitVec
 
 /-!
 # Internal correctness of bounded-trace initialization circuits
@@ -13,6 +16,9 @@ import Complexitylib.Circuits.Unrolling.Defs
 This file proves the exact size, topological ordering, and iterative-evaluator
 semantics of the one-gate-per-atom initialization fragment.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

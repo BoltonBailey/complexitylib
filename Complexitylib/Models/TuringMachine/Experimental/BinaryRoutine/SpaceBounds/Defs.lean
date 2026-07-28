@@ -3,9 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Asymptotics
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
-import Mathlib.Data.Nat.Pairing
+
+module
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
 
 /-!
 # Compositional width bounds for binary routines -- definitions
@@ -15,6 +16,9 @@ final asymptotic argument. Its certificates compose along pure value effects,
 while `BinaryForSpaceEnvelope` bounds an input-dependent loop by one envelope
 covering every reachable comparison, body invocation, and successor.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,9 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Algebra.BigOperators.Expect
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.Data.ZMod.Basic
+
+module
+public import Mathlib.Analysis.Complex.Order
+public import Mathlib.Analysis.InnerProductSpace.Defs
 
 /-!
 # Chapter 1: Boolean functions and the Fourier expansion — Definitions
@@ -41,6 +42,9 @@ the book's conventions:
 * `Pr[P]` — uniform probability `𝔼[𝟙 P]`
 * `Pr₂[P]` — joint uniform probability over pairs
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -154,7 +158,7 @@ noncomputable instance instCore : PreInnerProductSpace.Core ℝ (BooleanFunction
   toInner := instInner
   conj_inner_symm f g := by simp [inner_comm f g]
   re_inner_nonneg f := by simp [inner_self_nonneg' f]
-  add_left := inner_add_left
+  add_left := by exact inner_add_left
   smul_left f g r := by rw [inner_smul_left]; simp
 
 -- `instFullCore` adds the definiteness axiom (`‖f‖ = 0 → f = 0`) needed to upgrade
@@ -164,7 +168,7 @@ noncomputable instance instCore : PreInnerProductSpace.Core ℝ (BooleanFunction
 -- from the same inner product, so there is no diamond.
 noncomputable instance instFullCore : InnerProductSpace.Core ℝ (BooleanFunction n) where
   toCore := instCore
-  definite := @inner_self_eq_zero n
+  definite := by exact @inner_self_eq_zero n
 
 noncomputable instance : NormedAddCommGroup (BooleanFunction n) :=
   @InnerProductSpace.Core.toNormedAddCommGroup ℝ _ _ _ _ instFullCore

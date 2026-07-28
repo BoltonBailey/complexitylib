@@ -3,9 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Threshold.Internal
-import Complexitylib.Circuits.Unrolling.Acceptance.Internal.Evaluation
-import Complexitylib.Circuits.Unrolling.Amplification.Internal.Structure
+
+module
+public import Complexitylib.Circuits.Unrolling.Acceptance.Internal.Evaluation
+public import Complexitylib.Circuits.Unrolling.Amplification.Internal.Structure
 
 /-!
 # Evaluation internals for parallel amplification circuits
@@ -20,6 +21,9 @@ The final result intentionally remains in the dependency-light form
 `Fin.countP`: its interpretation as a block-event majority belongs above the
 circuit layer.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,12 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.BasisHom
-import Complexitylib.Circuits.Threshold.Defs
+
+module
+public import Complexitylib.Circuits.Threshold.Defs
+public import Complexitylib.Circuits.AndOrNot.Defs
+public import Complexitylib.Circuits.BasisHom.Defs
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Threshold circuits -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
