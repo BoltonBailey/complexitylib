@@ -3,9 +3,15 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.List.Basic
-import Mathlib.Data.Nat.Init
-import Lean.Elab.Tactic.Omega
+
+module
+public import Mathlib.Data.Nat.Init
+public import Aesop.BuiltinRules
+public import Mathlib.Tactic.Attr.Core
+public import Mathlib.Tactic.Basic
+public import Mathlib.Tactic.Push
+public import Mathlib.Tactic.Widget.Calc
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Pairing binary strings
@@ -15,6 +21,9 @@ inputs throughout Complexitylib. It deliberately has no dependency on the
 machine or complexity-class layers, so parsers and encoders can reuse it
 without introducing an import cycle.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

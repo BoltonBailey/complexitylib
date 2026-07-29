@@ -3,15 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Internal.Codec
-import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Internal
-import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Defs
-import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Internal
-import Mathlib.Tactic.IntervalCases
+
+module
+public import Complexitylib.Circuits.Encoding.Internal.Codec
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Internal
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Defs
+public import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Internal
+public import Mathlib.Tactic.IntervalCases
 
 /-!
 # Structured RAM iterable serialized-gate step — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -589,7 +594,7 @@ private theorem header_negated1 {gateStart base : ℕ}
   rw [header_high store (gateStart + 2) hlarge, hready.code_eq 2]
   simp [codeBits, CircuitCode.RawGate.encode]
 
-theorem decoders_internal {gateStart base : ℕ} {gate : CircuitCode.RawGate}
+private theorem decoders_internal {gateStart base : ℕ} {gate : CircuitCode.RawGate}
     {tail wires : List Bool} {store : Store}
     (hready : Ready gateStart base gate tail wires store)
     (hbound : StoreEnvelope (codeEnd gateStart gate tail)

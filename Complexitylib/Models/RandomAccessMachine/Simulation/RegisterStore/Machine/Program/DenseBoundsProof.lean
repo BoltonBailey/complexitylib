@@ -3,22 +3,25 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
+
+module
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.DenseBoundsDefs
-import
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Bounds
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate
-import
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.DenseInputLookup
-import Mathlib.Algebra.Order.BigOperators.Group.Finset
-import Mathlib.Tactic.Linarith
+public import Mathlib.Algebra.Order.BigOperators.Group.Finset
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.DenseOverlay
+public import
+Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.DenseDecisionDefs
 
 /-!
 # Dense-overlay RAM decision-machine resource-bound proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 namespace RAM

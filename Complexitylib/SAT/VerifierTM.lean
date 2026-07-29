@@ -3,15 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.SAT.Verifier
-import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
-import Complexitylib.Models.TuringMachine.Subroutines.Counter
-import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
-import Complexitylib.Models.TuringMachine.Hoare
-import Complexitylib.Models.TuringMachine.Hoare.Defs
-import Complexitylib.Models.TuringMachine.Tape.Encoding
+
+module
+public import Complexitylib.SAT.Verifier
+public import Complexitylib.Models.TuringMachine.Subroutines.Counter
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 
 /-!
 # SAT verifier TMs
@@ -35,6 +31,9 @@ The pure model is tied to the reference verifier by `verifyPairSem` and
 paired witness language underlying `SAT.language ∈ NP` — is characterized
 both semantically and at the machine level.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -1290,18 +1289,22 @@ instance : Fintype SatEvalPhase where
     | rewindAlpha mode =>
         simp
 
-private def boolWrite (b : Bool) : Γw :=
+/-- Writable tape symbol encoding of a Boolean. -/
+def boolWrite (b : Bool) : Γw :=
   if b then Γw.one else Γw.zero
 
-private def readBit? : Γ → Option Bool
+/-- Decodes a tape symbol as a bit when it is `0` or `1`. -/
+def readBit? : Γ → Option Bool
   | Γ.zero => some false
   | Γ.one => some true
   | _ => none
 
-private def assignmentBitAtHead (g : Γ) : Bool :=
+/-- Assignment value represented by the symbol under the assignment-tape head. -/
+def assignmentBitAtHead (g : Γ) : Bool :=
   g = Γ.one
 
-private def literalValueAtHead (sign : Bool) (g : Γ) : Bool :=
+/-- Truth value of a signed literal at the assignment-tape head. -/
+def literalValueAtHead (sign : Bool) (g : Γ) : Bool :=
   assignmentBitAtHead g == sign
 
 private theorem assignmentBitAtHead_initTape_eq_get (α : Assignment) (var : ℕ) :
@@ -1321,17 +1324,20 @@ private theorem literalValueAtHead_initTape_eq_litEval
       (Assignment.get α var == sign) := by
   simp [literalValueAtHead, assignmentBitAtHead_initTape_eq_get]
 
-private def finishEvalMode : SatEvalMode → Γw
+/-- Output written when the evaluator reaches the end of the encoded formula. -/
+def finishEvalMode : SatEvalMode → Γw
   | .boundary cnf _clause empty => boolWrite (cnf && empty)
   | .inLit .. => Γw.zero
 
-private def satEvalReject {n : ℕ} (state : SatEvalPhase)
+/-- Rejecting transition that preserves the current tape contents. -/
+def satEvalReject {n : ℕ} (state : SatEvalPhase)
     (iHead : Γ) (wHeads : Fin n → Γ) (oHead : Γ) :
     SatEvalPhase × (Fin n → Γw) × Γw × Dir3 × (Fin n → Dir3) × Dir3 :=
   (state, fun i => TM.readBackWrite (wHeads i), Γw.zero,
     TM.idleDir iHead, fun i => TM.idleDir (wHeads i), TM.idleDir oHead)
 
-private def satEvalTokenStep (mode : SatEvalMode) (tok : EncToken) (αHead : Γ) :
+/-- Pure evaluator-state transition for one decoded encoding token. -/
+def satEvalTokenStep (mode : SatEvalMode) (tok : EncToken) (αHead : Γ) :
     SatEvalPhase × Dir3 × Γw :=
   match mode with
   | .boundary cnf clause empty =>
@@ -1352,14 +1358,16 @@ private def satEvalTokenStep (mode : SatEvalMode) (tok : EncToken) (αHead : Γ)
       | .clauseSep =>
           (.done, Dir3.stay, Γw.zero)
 
-private def tokenOfBits (first second : Bool) : EncToken :=
+/-- Decodes the fixed two-bit representation of an encoding token. -/
+def tokenOfBits (first second : Bool) : EncToken :=
   match first, second with
   | false, false => .bit false
   | true, true => .bit true
   | false, true => .litSep
   | true, false => .clauseSep
 
-private def satEvalDelta :
+/-- Transition function of the one-work-tape SAT evaluator. -/
+def satEvalDelta :
     SatEvalPhase → Γ → (Fin 1 → Γ) → Γ →
       SatEvalPhase × (Fin 1 → Γw) × Γw × Dir3 × (Fin 1 → Dir3) × Dir3 :=
   fun state iHead wHeads oHead =>
@@ -2680,41 +2688,48 @@ instance : Fintype VerifyPairPhase where
     intro q
     cases q <;> simp
 
-private def verifyPairReject (iHead : Γ) (wHeads : Fin 3 → Γ) (oHead : Γ) :
+/-- Rejecting transition for the paired-formula verifier. -/
+def verifyPairReject (iHead : Γ) (wHeads : Fin 3 → Γ) (oHead : Γ) :
     VerifyPairPhase × (Fin 3 → Γw) × Γw × Dir3 × (Fin 3 → Dir3) × Dir3 :=
   (.done, fun i => TM.readBackWrite (wHeads i), Γw.zero,
     TM.idleDir iHead, fun i => TM.idleDir (wHeads i),
     TM.idleDir oHead)
 
-private def verifyPairPreserveWork (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
+/-- Rewrites every paired-verifier work symbol without changing its value. -/
+def verifyPairPreserveWork (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
   fun i => TM.readBackWrite (wHeads i)
 
-private def verifyPairSplitWrite (zBit : Bool) (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
+/-- Work-tape writes while splitting the formula and assignment encodings. -/
+def verifyPairSplitWrite (zBit : Bool) (wHeads : Fin 3 → Γ) : Fin 3 → Γw :=
   fun i =>
     if i = ⟨0, by omega⟩ then boolWrite zBit
     else if i = ⟨2, by omega⟩ then Γw.one
     else TM.readBackWrite (wHeads i)
 
-private def verifyPairSplitDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
+/-- Work-tape head directions while splitting the paired encoding. -/
+def verifyPairSplitDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
   fun i =>
     if i = ⟨0, by omega⟩ then Dir3.right
     else if i = ⟨2, by omega⟩ then Dir3.right
     else TM.idleDir (wHeads i)
 
-private def verifyPairCopyAlphaWrite (aBit : Bool) (wHeads : Fin 3 → Γ) :
+/-- Work-tape writes while copying the assignment component. -/
+def verifyPairCopyAlphaWrite (aBit : Bool) (wHeads : Fin 3 → Γ) :
     Fin 3 → Γw :=
   fun i =>
     if i = ⟨1, by omega⟩ then boolWrite aBit
     else if i = ⟨2, by omega⟩ then Γw.blank
     else TM.readBackWrite (wHeads i)
 
-private def verifyPairCopyAlphaDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
+/-- Work-tape head directions while copying the assignment component. -/
+def verifyPairCopyAlphaDirs (wHeads : Fin 3 → Γ) : Fin 3 → Dir3 :=
   fun i =>
     if i = ⟨1, by omega⟩ then Dir3.right
     else if i = ⟨2, by omega⟩ then Dir3.right
     else TM.idleDir (wHeads i)
 
-private def verifyPairEvalDirs (αHead : Γ) (αDir : Dir3) (wHeads : Fin 3 → Γ) :
+/-- Work-tape directions induced by one evaluator step. -/
+def verifyPairEvalDirs (αHead : Γ) (αDir : Dir3) (wHeads : Fin 3 → Γ) :
     Fin 3 → Dir3 :=
   fun i =>
     if i = ⟨0, by omega⟩ then Dir3.right
@@ -2723,7 +2738,8 @@ private def verifyPairEvalDirs (αHead : Γ) (αDir : Dir3) (wHeads : Fin 3 → 
     else
       TM.idleDir (wHeads i)
 
-private def verifyPairDelta :
+/-- Transition function for verifying a paired formula-and-assignment encoding. -/
+def verifyPairDelta :
     VerifyPairPhase → Γ → (Fin 3 → Γ) → Γ →
       VerifyPairPhase × (Fin 3 → Γw) × Γw × Dir3 × (Fin 3 → Dir3) × Dir3 :=
   fun state iHead wHeads oHead =>

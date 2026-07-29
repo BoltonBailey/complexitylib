@@ -3,12 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
-import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul.Internal.Pure
-import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
+public import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul.Internal.Pure
+public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 
 /-!
 # Width-driven binary shift-and-add multiplication -- composed semantics
@@ -17,6 +18,9 @@ This file composes the width-linear copy and ripple-add primitives through a
 bit-driven work-tape loop. The multiplier cursor is preserved by every body
 phase and advanced only by the loopback seam.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -1249,7 +1253,8 @@ private def binaryShiftMulCleanupMid {n : ℕ} (abi : BinaryShiftMulABI n)
       i ≠ abi.shift → i ≠ abi.tmp → i ≠ abi.dbl → work i = work₀ i) ∧
     out = out₀
 
-private def binaryShiftMulPost {n : ℕ} (abi : BinaryShiftMulABI n)
+/-- Postcondition for completed shift-and-add binary multiplication. -/
+def binaryShiftMulPost {n : ℕ} (abi : BinaryShiftMulABI n)
     (lhs rhs : ℕ) (inp₀ : Tape) (work₀ : Fin n → Tape)
     (out₀ : Tape) : TapePred n :=
   fun inp work out =>

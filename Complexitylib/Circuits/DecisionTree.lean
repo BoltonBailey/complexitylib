@@ -3,12 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.Nat.Basic
-import Mathlib.Data.Bool.Basic
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Union
-import Mathlib.Data.Finset.Card
-import Complexitylib.Circuits.Formula
+
+module
+public import Mathlib.Data.Finset.Card
+public import Complexitylib.Circuits.Formula
+public import Std.Tactic.BVDecide.Normalize.Bool
 
 /-!
 # Boolean decision trees
@@ -33,6 +32,9 @@ are distinct from the DAG-shaped `Circuit`.
 - `DecisionTree.toFormula`, `DecisionTree.toFormula_eval` — compilation to an
   equivalent Boolean formula (the decision-tree ⟹ formula direction)
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

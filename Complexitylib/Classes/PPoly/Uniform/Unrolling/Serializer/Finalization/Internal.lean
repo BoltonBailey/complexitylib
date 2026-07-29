@@ -3,14 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
-import Complexitylib.Circuits.Unrolling
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Stream
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded.Defs
 
 /-!
 # Numeric direct-tableau finalization -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

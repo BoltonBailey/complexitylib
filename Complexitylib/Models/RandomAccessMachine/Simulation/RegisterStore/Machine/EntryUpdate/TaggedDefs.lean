@@ -3,11 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
+
+module
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Defs
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.DenseOverlay.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc.Defs
 
 /-!
 # Positive-tag sparse updates
@@ -16,6 +15,9 @@ Dense overlays encode an actual register value `v` by the positive sparse
 value `v + 1`. This module packages successor followed by the existing sparse
 update controller as one reusable write-side kernel.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 namespace RAM

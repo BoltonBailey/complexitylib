@@ -3,7 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Subroutines.Internal
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Generic
+public import Complexitylib.Models.TuringMachine.Hoare.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines
+public import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Copy a raw work-tape output — proof internals
@@ -16,6 +21,9 @@ and their first blank delimiter.
 Public statements are in
 `Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

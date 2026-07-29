@@ -3,9 +3,10 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Languages.Trivial
-import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Complement
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators
+public import Complexitylib.Classes.Containments
 
 /-!
 # `palindromes`: strings equal to their reverse
@@ -39,6 +40,9 @@ Phases (see comments on `PalindromePhase`):
    `reject`.
 5. `reject`: consume remaining input, then halt with output `0`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

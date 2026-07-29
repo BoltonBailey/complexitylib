@@ -3,17 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.PolynomialOffset
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.PolynomialOffset
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial
 
 /-!
 # Direct-unrolling moved-head generator -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -24,7 +27,7 @@ namespace Serializer
 namespace DirectGenerator
 
 /-- Numeric direction code used by the canonical moved-head schedule. -/
-private def movedHeadDirectionCode : Dir3 → ℕ
+def movedHeadDirectionCode : Dir3 → ℕ
   | .left => 0
   | .right => 1
   | .stay => 2
@@ -32,7 +35,7 @@ private def movedHeadDirectionCode : Dir3 → ℕ
 /-- Scratch owned by the conjunction between an effect child and a
 predecessor-head child. The run-time target and tape selector are deliberately
 excluded because the predecessor routine preserves them. -/
-private structure MovedHeadConjunctionClean
+structure MovedHeadConjunctionClean
     (values : BinaryValues WorkCount) : Prop where
   temporary₃ : values Work.temporary₃ = 0
   polynomialScratch : values Work.polynomialScratch = 0
@@ -263,7 +266,8 @@ theorem saveMovedHeadMemberOutput_sound_internal (save : Fin WorkCount) :
     (saveMovedHeadMemberOutput save).Sound :=
   prepareRecentReference_sound save 1
 
-private def movedHeadMemberResult (values : BinaryValues WorkCount)
+/-- Register state after emitting and saving one moved-head disjunction member. -/
+def movedHeadMemberResult (values : BinaryValues WorkCount)
     (save : Fin WorkCount) (effectSize : ℕ) : BinaryValues WorkCount :=
   Function.update
     (Function.update

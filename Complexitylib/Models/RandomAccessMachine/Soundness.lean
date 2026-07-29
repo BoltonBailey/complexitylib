@@ -3,7 +3,10 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Internal
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Internal
+public import Mathlib.Data.Nat.Size
 
 /-!
 # Why the RAM must use logarithmic cost: a formal soundness theorem
@@ -25,6 +28,9 @@ logarithmic cost measure and never the unit-cost one — the difference is not a
 convention but the boundary between a sound Turing-equivalent model and a
 "reward-hacked" one that decides more than it should in polynomial time.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

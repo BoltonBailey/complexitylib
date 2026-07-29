@@ -5,7 +5,6 @@ Authors: Christian Reitwiessner
 -/
 
 module
-
 public import Complexitylib.Models.RoseTreeMachine.Data
 public import Mathlib.Data.Nat.Bits
 public import Mathlib.Data.List.Basic
@@ -20,6 +19,7 @@ Instances are provided for convenience for `Data` itself, `Bool`, `List α`, `Op
 and `ℕ` (binary encoding via `List Bool`)
 
 -/
+
 
 @[expose] public section
 

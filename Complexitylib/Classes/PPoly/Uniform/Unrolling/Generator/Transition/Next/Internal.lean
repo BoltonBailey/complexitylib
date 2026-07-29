@@ -3,17 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.PolynomialOffset
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.WrittenCell
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.WrittenCell
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 
 /-!
 # Direct-unrolling next-atom generator -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -23,7 +26,8 @@ namespace Serializer
 
 namespace DirectGenerator
 
-private def advanceAvailableValues (values : BinaryValues WorkCount)
+/-- Advances the generator's available-wire register by `amount`. -/
+def advanceAvailableValues (values : BinaryValues WorkCount)
     (amount : ℕ) :
     BinaryValues WorkCount :=
   Function.update values Work.available (values Work.available + amount)

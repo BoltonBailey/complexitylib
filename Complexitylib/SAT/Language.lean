@@ -3,11 +3,10 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.SAT.Semantics
-import Complexitylib.SAT.Encoding
-import Complexitylib.Classes.Pairing
-import Complexitylib.Classes.FNP
-import Complexitylib.Classes.NP.Witness
+
+module
+public import Complexitylib.SAT.Encoding
+public import Complexitylib.Classes.NP.Witness
 
 /-!
 # SAT: Language and Witness Relation
@@ -27,6 +26,9 @@ polynomial-time TM implementation is proved in `SAT/VerifierTM.lean`, and the
 SAT-specialized guess-and-verify construction is assembled into the
 unconditional headline theorem in `SAT/Headline.lean`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

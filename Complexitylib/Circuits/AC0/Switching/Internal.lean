@@ -3,15 +3,20 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.AC0.Switching.Defs
-import Complexitylib.Circuits.DecisionTree.Block
-import Complexitylib.Circuits.DecisionTree.Finite
-import Complexitylib.Circuits.DecisionTree.Path
-import Complexitylib.Circuits.RandomRestriction.Internal
+
+module
+public import Complexitylib.Circuits.AC0.Switching.Defs
+public import Complexitylib.Circuits.DecisionTree.Finite
+public import Complexitylib.Circuits.RandomRestriction.Internal
+public import Complexitylib.Circuits.DecisionTree.Block.Internal
+public import Complexitylib.Circuits.DecisionTree.Path.Internal
 
 /-!
 # Switching-lemma substrate -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

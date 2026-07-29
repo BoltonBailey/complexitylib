@@ -3,9 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.Structure
-import Mathlib.Algebra.Order.BigOperators.Group.List
-import Mathlib.Tactic.Ring
+
+module
+public import Complexitylib.Circuits.Unrolling.Transition.Fragment.Internal.Structure
+public import Mathlib.Tactic.Ring.RingNF
 
 /-!
 # Size bounds for packed one-step transition fragments
@@ -15,20 +16,27 @@ machine-dependent linear function of the trace horizon. Since a configuration
 block itself has linear width, the packed one-step fragment has quadratic size.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace CircuitUnrolling
 
-private def caseSizeCoeff (k : ℕ) : ℕ :=
+/-- Linear coefficient bounding the size of one transition-case formula. -/
+def caseSizeCoeff (k : ℕ) : ℕ :=
   4 * (k + 2) + 6
 
-private noncomputable def effectSizeCoeff (tm : NTM k) : ℕ :=
+/-- Linear coefficient bounding a transition-effect selector. -/
+noncomputable def effectSizeCoeff (tm : NTM k) : ℕ :=
   1 + (transitionCases tm).length * (caseSizeCoeff k + 1)
 
-private noncomputable def nextSizeCoeff (tm : NTM k) : ℕ :=
+/-- Linear coefficient bounding a next-configuration formula. -/
+noncomputable def nextSizeCoeff (tm : NTM k) : ℕ :=
   3 * effectSizeCoeff tm + 20
 
-private def widthSizeCoeff (tm : NTM k) : ℕ :=
+/-- Linear coefficient bounding the width of a configuration fragment. -/
+def widthSizeCoeff (tm : NTM k) : ℕ :=
   Fintype.card tm.Q + 5 * (k + 2)
 
 private theorem sum_map_le_length_mul {alpha : Type*} (items : List alpha)

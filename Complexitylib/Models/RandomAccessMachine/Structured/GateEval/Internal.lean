@@ -3,13 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured
-import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Defs
-import Complexitylib.Models.RandomAccessMachine.Structured.Internal.Resources
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateEval.Defs
+public import Complexitylib.Models.RandomAccessMachine.Structured.Internal.Resources
+public import Mathlib.Algebra.Order.Sub.Basic
+public import Std.Tactic.BVDecide.Normalize.Bool
 
 /-!
 # Structured RAM decoded-gate evaluator — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -1608,7 +1614,7 @@ theorem routine_exec_internal {base : ℕ} {gate : CircuitCode.RawGate}
   · intro index hindex
     exact routineFinal_wire hready index hindex
 
-theorem finalStore_output_internal (gate : CircuitCode.RawGate) (wires : List Bool)
+private theorem finalStore_output_internal (gate : CircuitCode.RawGate) (wires : List Bool)
     (value0 value1 : Bool) (hvalue0 : wires[gate.input₀]? = some value0)
     (hvalue1 : wires[gate.input₁]? = some value1) :
     finalStore gate wires outputReg = Input.bitValue (gate.eval value0 value1) :=

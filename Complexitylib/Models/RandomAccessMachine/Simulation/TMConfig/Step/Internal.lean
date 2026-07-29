@@ -3,11 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Layout
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Load
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Action
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Dispatch
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Resources
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Layout
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Load
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Action
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Dispatch
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Resources
 
 /-!
 # One-step TM-to-RAM simulation -- proof internals

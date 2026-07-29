@@ -3,8 +3,26 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Nondeterminism.Defs
-import Complexitylib.Circuits.Internal.ShannonUpper
+
+module
+public import Complexitylib.Circuits.Nondeterminism.Defs
+public import Complexitylib.Circuits.AndOrNot.Defs
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Tactic.Measurability.Init
+public import Mathlib.Tactic.NormNum.BigOperators
+public import Mathlib.Tactic.NormNum.Irrational
+public import Mathlib.Tactic.NormNum.IsCoprime
+public import Mathlib.Tactic.NormNum.IsSquare
+public import Mathlib.Tactic.NormNum.LegendreSymbol
+public import Mathlib.Tactic.NormNum.ModEq
+public import Mathlib.Tactic.NormNum.NatFactorial
+public import Mathlib.Tactic.NormNum.NatFib
+public import Mathlib.Tactic.NormNum.NatLog
+public import Mathlib.Tactic.NormNum.NatSqrt
+public import Mathlib.Tactic.NormNum.Ordinal
+public import Mathlib.Tactic.NormNum.Parity
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Tactic.NormNum.RealSqrt
 
 /-! # Internal: Nondeterministic Quantification Circuit Constructions
 
@@ -37,6 +55,9 @@ complexity of the OR of two Boolean functions by the sum of their complexities
 plus one; no OR-specific construction is defined here.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 variable {k m : Nat}
@@ -63,7 +84,7 @@ private theorem andOr2_eval_two {W : Nat} (g : Gate Basis.andOr2 W)
 /-! ## Restriction gate construction -/
 
 /-- A constant-output gate: `OR(x, ¬x) = true` or `AND(x, ¬x) = false`. -/
-private def mkConstGateBounded {G : Nat} [NeZero m] (val : Bool) (bound : Nat) :
+def mkConstGateBounded {G : Nat} [NeZero m] (val : Bool) (bound : Nat) :
     { g : Gate Basis.andOr2 (k + m + G) //
       ∀ j : Fin g.fanIn, (g.inputs j).val < k + m + bound } :=
   have hW : 0 < k + m + G := by have := NeZero.ne m; omega
@@ -80,7 +101,7 @@ private def mkConstGateBounded {G : Nat} [NeZero m] (val : Bool) (bound : Nat) :
      fun _ => by dsimp; exact hB⟩
 
 /-- An identity/passthrough gate: `OP(w, w)` with negation `neg`. -/
-private def mkIdentGateBounded {G : Nat} (op : AndOrOp) (w : Fin (k + m + G)) (neg : Bool)
+def mkIdentGateBounded {G : Nat} (op : AndOrOp) (w : Fin (k + m + G)) (neg : Bool)
     (bound : Nat) (hw : w.val < k + m + bound) :
     { g : Gate Basis.andOr2 (k + m + G) //
       ∀ j : Fin g.fanIn, (g.inputs j).val < k + m + bound } :=
@@ -112,7 +133,7 @@ private theorem mkIdentGateP_eval {G : Nat} (op : AndOrOp) (w : Fin (k + m + G))
     The gate's two inputs are inspected. For each input referencing wire 0,
     the effective constant `b ^^ negated` is computed. The gate is then
     simplified: identity, constant, or shifted, depending on the case. -/
-private def restrictGateBounded {G : Nat} [NeZero m] (b : Bool)
+def restrictGateBounded {G : Nat} [NeZero m] (b : Bool)
     (g : Gate Basis.andOr2 ((k + 1) + m + G))
     (hfanIn : g.fanIn = 2)
     (bound : Nat)

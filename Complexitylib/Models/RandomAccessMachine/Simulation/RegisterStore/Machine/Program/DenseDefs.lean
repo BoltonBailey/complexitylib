@@ -3,14 +3,22 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.DenseDispatch
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Defs
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Program.Defs
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.DenseSimDefs
+public import Mathlib.Data.Rat.Cast.Order
+public import Mathlib.Tactic.NormNum.Abs
+public import Mathlib.Tactic.NormNum.DivMod
+public import Mathlib.Tactic.NormNum.OfScientific
 
 /-!
 # Dense-overlay RAM program controller -- definitions
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 namespace RAM

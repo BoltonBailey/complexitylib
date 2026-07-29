@@ -5,8 +5,12 @@ Authors: Christian Reitwiessner
 -/
 
 module
-
-public import Mathlib.Data.Part
+public import Aesop.BuiltinRules
+public import Mathlib.Data.Nat.Notation
+public import Mathlib.Tactic.Finiteness.Attr
+public import Mathlib.Tactic.Push
+public import Mathlib.Tactic.ToAdditive
+public import Mathlib.Tactic.ToDual
 
 /-!
 # Main internal data type for the rose tree machine (RTM)
@@ -22,6 +26,7 @@ This file contains the main internal data structure for the RTM, `Data`, a rose 
 - `Data.inductionL` - the main induction principle for `Data`
 
 -/
+
 
 @[expose] public section
 

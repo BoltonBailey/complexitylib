@@ -3,7 +3,28 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Encoding.Machine.Core.Defs
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators
+public import Complexitylib.Models.TuringMachine.Tape.Encoding
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Tactic.ENatToNat
+public import Mathlib.Tactic.Measurability.Init
+public import Mathlib.Tactic.NormNum.BigOperators
+public import Mathlib.Tactic.NormNum.Irrational
+public import Mathlib.Tactic.NormNum.IsCoprime
+public import Mathlib.Tactic.NormNum.IsSquare
+public import Mathlib.Tactic.NormNum.LegendreSymbol
+public import Mathlib.Tactic.NormNum.ModEq
+public import Mathlib.Tactic.NormNum.NatFactorial
+public import Mathlib.Tactic.NormNum.NatFib
+public import Mathlib.Tactic.NormNum.NatLog
+public import Mathlib.Tactic.NormNum.NatSqrt
+public import Mathlib.Tactic.NormNum.Ordinal
+public import Mathlib.Tactic.NormNum.Parity
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Tactic.NormNum.RealSqrt
+public import Mathlib.Tactic.ReduceModChar
 
 /-!
 # Tape cursors for the streaming circuit evaluator
@@ -13,6 +34,9 @@ The evaluator repeatedly rewinds, indexes, and extends canonical binary tapes.
 the current zero-based read position. This is intentionally internal: the
 neutral endpoint and suffix predicates remain the public tape API.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

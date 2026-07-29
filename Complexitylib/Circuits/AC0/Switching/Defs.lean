@@ -3,10 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.DecisionTree.Block.Defs
-import Complexitylib.Circuits.DecisionTree.Finite.Defs
-import Complexitylib.Circuits.NormalForm.Restriction
-import Complexitylib.Circuits.RandomRestriction.Defs
+
+module
+public import Complexitylib.Circuits.DecisionTree.Block.Defs
+public import Complexitylib.Circuits.NormalForm.Restriction
 
 /-!
 # Switching-lemma substrate -- definitions
@@ -21,6 +21,9 @@ The explicit fuel is a proof-engineering device. The public construction starts
 with the number of variables in the DNF, and its correctness proof shows that
 each recursive query removes its variable from support.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
