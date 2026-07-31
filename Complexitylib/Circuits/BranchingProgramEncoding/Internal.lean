@@ -3,9 +3,27 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.BarringtonCompiler
-import Complexitylib.Circuits.BranchingProgramEncoding.Defs
-import Complexitylib.Circuits.Encoding
+
+module
+public import Complexitylib.Circuits.BarringtonCompiler
+public import Complexitylib.Circuits.BranchingProgramEncoding.Defs
+public import Complexitylib.Circuits.Encoding.Internal.Codec
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Tactic.Measurability.Init
+public import Mathlib.Tactic.NormNum.BigOperators
+public import Mathlib.Tactic.NormNum.Irrational
+public import Mathlib.Tactic.NormNum.IsCoprime
+public import Mathlib.Tactic.NormNum.IsSquare
+public import Mathlib.Tactic.NormNum.LegendreSymbol
+public import Mathlib.Tactic.NormNum.ModEq
+public import Mathlib.Tactic.NormNum.NatFactorial
+public import Mathlib.Tactic.NormNum.NatFib
+public import Mathlib.Tactic.NormNum.NatLog
+public import Mathlib.Tactic.NormNum.NatSqrt
+public import Mathlib.Tactic.NormNum.Ordinal
+public import Mathlib.Tactic.NormNum.Parity
+public import Mathlib.Tactic.NormNum.RealSqrt
+public import Mathlib.Tactic.ReduceModChar
 
 /-!
 # Width-five branching-program codec internals
@@ -14,6 +32,9 @@ This module proves round-trip and length properties of the canonical codec.
 Public statements are re-exported by
 `Complexitylib.Circuits.BranchingProgramEncoding`.
 -/
+
+
+@[expose] public section
 
 set_option maxRecDepth 100000
 

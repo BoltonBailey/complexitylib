@@ -3,11 +3,18 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Dispatch
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Action
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.Internal.Load
+public import Complexitylib.Models.RandomAccessMachine.Structured.Switch
 
 /-!
 # Resource bounds for one TM-to-RAM transition -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -18,7 +25,8 @@ namespace TMConfig
 namespace Step
 
 
-private abbrev StepEnvelope (tm : TM n) (bound : ℕ) :=
+/-- Register and word bounds preserved by a simulated Turing-machine step. -/
+abbrev StepEnvelope (tm : TM n) (bound : ℕ) :=
   Structured.Internal.StoreEnvelope (registerLimit n bound) (wordBound tm bound)
 
 private theorem cleared_envelope {tm : TM n} {bound test : ℕ}

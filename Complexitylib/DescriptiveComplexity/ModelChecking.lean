@@ -3,10 +3,15 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.DescriptiveComplexity.Structure
-import Complexitylib.DescriptiveComplexity.Env
-import Complexitylib.DescriptiveComplexity.FirstOrder.Semantics
-import Mathlib.Data.List.FinRange
+
+module
+public import Complexitylib.DescriptiveComplexity.FirstOrder.Semantics
+public import Aesop.BuiltinRules
+public import Mathlib.Tactic.Attr.Core
+public import Mathlib.Tactic.Basic
+public import Mathlib.Tactic.Finiteness.Attr
+public import Mathlib.Tactic.ToAdditive
+public import Mathlib.Tactic.ToDual
 
 /-!
 # Computable first-order model checking
@@ -28,6 +33,9 @@ characterization, and the `FO ⊆ AC⁰` bridge.
 - `DescriptiveComplexity.Sentence.evalB`, `Sentence.evalB_eq_models` — the sentence
   form.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

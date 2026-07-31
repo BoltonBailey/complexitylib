@@ -3,9 +3,16 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import Mathlib.Data.List.Basic
-import Mathlib.Data.Nat.Init
-import Lean.Elab.Tactic.Omega
+
+module
+public import Mathlib.Data.List.Basic
+public import Mathlib.Data.Nat.Init
+public import Aesop.BuiltinRules
+public import Mathlib.Tactic.Attr.Core
+public import Mathlib.Tactic.Basic
+public import Mathlib.Tactic.Push
+public import Mathlib.Tactic.Widget.Calc
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Self-delimiting blocks
@@ -27,6 +34,9 @@ This file deliberately has no dependency on the machine or complexity-class laye
 the machine-input pairing codec (`Complexitylib.Encoding.Pairing`) and the encoding layer
 (`Complexitylib.Encoding.Bitstring`) can build on it without import cycles.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

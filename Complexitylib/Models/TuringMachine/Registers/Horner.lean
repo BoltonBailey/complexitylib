@@ -3,9 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Registers.EmitSeq
-import Mathlib.Algebra.Polynomial.Eval.Defs
-import Mathlib.Algebra.Polynomial.Eval.Degree
+
+module
+public import Complexitylib.Models.TuringMachine.Registers.EmitSeq
+public import Mathlib.Algebra.Polynomial.Eval.Defs
+public import Mathlib.Algebra.Polynomial.Eval.Degree
+public import Complexitylib.Models.TuringMachine.Registers.Arith
 
 /-!
 # Horner layers: polynomial register evaluation
@@ -33,6 +36,9 @@ are deliberately loose.
 
 - the `_hoareTime` specification of each machine
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

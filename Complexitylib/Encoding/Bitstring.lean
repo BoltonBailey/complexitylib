@@ -3,10 +3,12 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import Complexitylib.Encoding.Delimit
-import Mathlib.Computability.Encoding
-import Mathlib.Data.PNat.Defs
-import Mathlib.Algebra.Field.Rat
+
+module
+public import Complexitylib.Encoding.Delimit
+public import Mathlib.Computability.Encoding
+public import Mathlib.Data.PNat.Defs
+public import Mathlib.Algebra.Field.Rat
 
 /-!
 # Bitstring Encoding Typeclass
@@ -36,6 +38,9 @@ the same framing underlying the machine-input pairing codec `Complexity.pair`
 This layer is deliberately independent of the machine model. The type `Bitstring` below is
 unrelated to the fixed-length `BitString n := Fin n → Bool` used by the circuit layers.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

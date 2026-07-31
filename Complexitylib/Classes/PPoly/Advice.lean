@@ -3,9 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Advice.Defs
-import Complexitylib.Classes.PPoly.Advice.Internal
-import Complexitylib.Classes.PPoly.Advice.Reverse
+
+module
+public import Complexitylib.Classes.PPoly.Advice.Defs
+public import Complexitylib.Classes.PPoly.Advice.Internal
+public import Complexitylib.Classes.PPoly.Advice.Reverse
 
 /-!
 # Polynomial advice and nonuniform circuits
@@ -27,6 +29,9 @@ evaluator.
 - `PAdvice_eq_PPoly`: the two nonuniform formulations coincide.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 /-- The advised input has the exact self-delimiting pairing length. -/
@@ -40,7 +45,7 @@ namespace Advice
 input. -/
 theorem fixedPrefix_append (a : Advice) (x : List Bool) :
     a.fixedPrefix x.length ++ x = advisedInput a x := by
-  simp [fixedPrefix, advisedInput, pair, List.append_assoc]
+  simp [fixedPrefix, advisedInput, pair]
 
 /-- The fixed-prefix bit string serializes to the self-delimiting advised
 machine input. -/

@@ -3,12 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Action
-import Complexitylib.Models.RandomAccessMachine.Structured.Switch
+
+module
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Action
+public import Complexitylib.Models.RandomAccessMachine.Structured.Switch
+public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Load
 
 /-!
 # Nested finite dispatch for the fixed sparse TM transition -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -245,7 +252,8 @@ theorem program_exec_internal {tm : TM n}
     hfinalRepresents⟩
   simpa [program, stepCount, loaded] using Structured.Exec.seq hloadExec hdispatch
 
-private abbrev ResourceEnvelope (tm : TM n) (bound : ℕ) :=
+/-- Register and word bounds preserved by sparse step dispatch. -/
+abbrev ResourceEnvelope (tm : TM n) (bound : ℕ) :=
   Structured.Internal.StoreEnvelope (registerBound n (bound + 1))
     (wordBound tm bound)
 

@@ -3,10 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 
 /-!
 # Copying canonical binary naturals -- proof internals
@@ -17,13 +18,17 @@ proofs compose the public literal-frame and all-prefix contracts of both
 phases, then recover the original literal copy frame from canonicality.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace TM
 
 variable {n : ℕ}
 
-private def binaryCopyNatTape (value : ℕ) : Tape :=
+/-- Canonical parked tape encoding of a natural for binary copying. -/
+def binaryCopyNatTape (value : ℕ) : Tape :=
   (Tape.init (value.bits.map Γ.ofBool)).move Dir3.right
 
 private theorem binaryCopyNatTape_hasBinaryNat (value : ℕ) :

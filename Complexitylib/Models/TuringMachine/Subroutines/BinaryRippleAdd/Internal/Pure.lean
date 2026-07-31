@@ -3,7 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd.Defs
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd.Defs
+public import Mathlib.Data.Nat.Size
+public import Std.Tactic.BVDecide.Normalize.Bool
 
 /-!
 # Linear-time canonical binary addition -- pure proofs
@@ -12,6 +16,9 @@ This file proves that the finite full-adder recurrence computes addition on
 canonical little-endian `Nat.bits`. The generalized theorem includes an
 incoming carry so that its induction follows the recurrence exactly.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

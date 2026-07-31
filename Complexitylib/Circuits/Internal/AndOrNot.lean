@@ -3,7 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.AndOrNot.Defs
+
+module
+public import Complexitylib.Circuits.AndOrNot.Defs
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-! # Internal: AND/OR/NOT Completeness Proof
 
@@ -12,6 +16,9 @@ via DNF (disjunctive normal form) construction. The basis definitions are
 in `Complexitylib.Circuits.AndOrNot.Defs`; this module is re-exported through
 `Complexitylib.Circuits.AndOrNot`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -34,7 +41,7 @@ For each of the `2^N` possible inputs `s` (decoded via `Nat.testBit`),
 internal gate `i` is the indicator AND for `s` when `f s = true`, or a
 trivially-false 0-input OR otherwise. The single output OR gate disjoins
 all internal gates. -/
-private def andOrNotFor.mkGate {N : Nat} (f : BitString N → Bool) (i : Fin (2 ^ N)) :
+def andOrNotFor.mkGate {N : Nat} (f : BitString N → Bool) (i : Fin (2 ^ N)) :
     Gate Basis.unboundedAndOr (N + 2 ^ N) :=
   if f (fun j => i.val.testBit j.val) then
     { op := .and, fanIn := N, arityOk := trivial,
@@ -65,7 +72,8 @@ def andOrNotFor {N : Nat} [NeZero N] (f : BitString N → Bool) :
     { op := .or, fanIn := 2 ^ N, arityOk := trivial,
       inputs := fun j => (j.natAdd N),
       negated := fun _ => false }
-  acyclic := andOrNotFor.mkGate_acyclic f
+  acyclic i k := by
+    exact andOrNotFor.mkGate_acyclic f i k
 
 private lemma AONFor_wireValue_gate {N : Nat} [NeZero N] (f : BitString N → Bool)
     (x : BitString N) (i : Fin (2 ^ N)) :
@@ -225,13 +233,18 @@ theorem andOrNotFor_eval {N : Nat} [NeZero N] (f : BitString N → Bool) :
 /-- Internal gate for the multi-output DNF circuit.
 Gate `idx` encodes output bit `j = idx / 2^N` and indicator index `i = idx % 2^N`.
 If `f(bitstring i)[j] = true`, it's an AND indicator gate; otherwise a trivially-false OR gate. -/
-private def AONForM_j {N M : Nat} (idx : Fin (M * 2 ^ N)) : Fin M :=
+@[nolint defsWithUnderscore]
+def AONForM_j {N M : Nat} (idx : Fin (M * 2 ^ N)) : Fin M :=
   ⟨idx.val / 2 ^ N, Nat.div_lt_of_lt_mul (Nat.mul_comm M (2^N) ▸ idx.isLt)⟩
 
-private def AONForM_i {N : Nat} {M : Nat} (idx : Fin (M * 2 ^ N)) : Fin (2 ^ N) :=
+/-- Indicator coordinate encoded by a gate index in the multi-output DNF circuit. -/
+@[nolint defsWithUnderscore]
+def AONForM_i {N : Nat} {M : Nat} (idx : Fin (M * 2 ^ N)) : Fin (2 ^ N) :=
   ⟨idx.val % 2 ^ N, Nat.mod_lt _ (Nat.two_pow_pos N)⟩
 
-private def AONForM_mkGate {N M : Nat} (f : BitString N → BitString M) (idx : Fin (M * 2 ^ N)) :
+/-- Gate selected by an encoded output and indicator pair in the multi-output DNF circuit. -/
+@[nolint defsWithUnderscore]
+def AONForM_mkGate {N M : Nat} (f : BitString N → BitString M) (idx : Fin (M * 2 ^ N)) :
     Gate Basis.unboundedAndOr (N + M * 2 ^ N) :=
   if f (fun k => (AONForM_i idx).val.testBit k.val) (AONForM_j idx) then
     { op := .and, fanIn := N, arityOk := trivial,
@@ -269,9 +282,11 @@ def andOrNotForM {N M : Nat} [NeZero N] [NeZero M] (f : BitString N → BitStrin
   gates := AONForM_mkGate f
   outputs j :=
     { op := .or, fanIn := 2 ^ N, arityOk := trivial,
-      inputs := fun k => ⟨N + j.val * 2 ^ N + k.val, AONForM_output_bound j k⟩,
+      inputs := fun k => ⟨N + j.val * 2 ^ N + k.val, by
+        exact AONForM_output_bound j k⟩,
       negated := fun _ => false }
-  acyclic := AONForM_mkGate_acyclic f
+  acyclic idx k := by
+    exact AONForM_mkGate_acyclic f idx k
 
 private lemma AONForM_wireValue_input {N M : Nat} [NeZero N] [NeZero M]
     (f : BitString N → BitString M) (x : BitString N) (k : Fin N) :

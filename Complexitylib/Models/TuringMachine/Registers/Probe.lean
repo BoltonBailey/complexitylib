@@ -3,7 +3,15 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Registers.MixedRadix
+
+module
+import Mathlib.Tactic.FinCases
+public import Complexitylib.Models.TuringMachine.Registers.Emit
+public import Mathlib.Data.Rat.Cast.Order
+public import Mathlib.Tactic.NormNum.Abs
+public import Mathlib.Tactic.NormNum.DivMod
+public import Mathlib.Tactic.NormNum.OfScientific
+public import Mathlib.Tactic.NormNum.Pow
 
 /-!
 # symProbeTM: read the input symbol at a register-indexed position
@@ -17,6 +25,9 @@ This is the reduction emitter's only input-reading machine: the start
 clauses of the tableau pin the input cells, so their symbol digits are
 read off the input tape position by position.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

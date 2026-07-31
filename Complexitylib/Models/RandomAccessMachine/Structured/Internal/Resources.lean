@@ -3,7 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured.Defs
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.Defs
+public import Mathlib.Algebra.Order.BigOperators.Group.Finset
+public import Mathlib.Algebra.Order.Ring.Nat
+public import Mathlib.Data.Nat.Size
+public import Mathlib.Tactic.Ring.RingNF
 
 /-!
 # Resource-proof infrastructure for structured RAM programs
@@ -13,6 +19,9 @@ structured program is verified against the concrete logarithmic-cost RAM:
 finite register envelopes, their induced `finsum` space bounds, and compositional
 source executions carrying exact steps with upper bounds on time and space.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

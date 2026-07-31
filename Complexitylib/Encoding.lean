@@ -3,9 +3,11 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import Complexitylib.Encoding.Delimit
-import Complexitylib.Encoding.Pairing
-import Complexitylib.Encoding.Bitstring
+
+module
+public import Complexitylib.Encoding.Delimit
+public import Complexitylib.Encoding.Pairing
+public import Complexitylib.Encoding.Bitstring
 
 /-!
 # Encodings

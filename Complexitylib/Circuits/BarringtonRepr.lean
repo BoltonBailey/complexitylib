@@ -3,12 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Barrington
-import Complexitylib.Circuits.BarringtonS5
-import Complexitylib.Circuits.BarringtonBridge
-import Complexitylib.Circuits.Formula
-import Mathlib.GroupTheory.Perm.Cycle.Type
-import Mathlib.GroupTheory.Perm.Fin
+
+module
+public import Complexitylib.Circuits.Barrington
+public import Complexitylib.Circuits.BarringtonBridge
+public import Complexitylib.Circuits.Formula
 
 /-!
 # Barrington's theorem (representation form)
@@ -42,6 +41,9 @@ converse live in `BarringtonFamily.lean` and `BarringtonConverse.lean`.
 - `Complexity.barrington_boolean` — the Boolean-decision form: a width-`5` program
   and a query point `x` whose orbit under the program's value decides `φ`.
 -/
+
+
+@[expose] public section
 
 open scoped commutatorElement
 open Equiv

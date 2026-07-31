@@ -3,11 +3,17 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.CircuitFormula.Defs
+
+module
+public import Complexitylib.Circuits.CircuitFormula.Defs
+import all Complexitylib.Circuits.CircuitFormula.Defs
 
 /-!
 # Unfolding fan-in-two circuit outputs into Boolean formulas -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -133,11 +139,19 @@ theorem wireDepth_of_not_lt_two_internal
         (circuit.wireDepth (gate.inputs input₁)) := by
   rw [Circuit.wireDepth_of_not_lt circuit wire hinput]
   dsimp only
-  generalize circuit.gates ⟨wire.val - N, by omega⟩ = gate
-  obtain ⟨op, fanIn, arityOk, inputs, negated⟩ := gate
-  change fanIn = 2 at arityOk
-  subst arityOk
-  simp [Fin.foldl_succ_last, Fin.foldl_zero]
+  have hfold (gate : Gate Basis.andOr2 (N + G)) :
+      Fin.foldl gate.fanIn
+          (fun acc k => max acc (circuit.wireDepth (gate.inputs k))) 0 =
+        max
+          (circuit.wireDepth
+            (gate.inputs ⟨0, by rw [fanIn_andOr2 gate]; omega⟩))
+          (circuit.wireDepth
+            (gate.inputs ⟨1, by rw [fanIn_andOr2 gate]; omega⟩)) := by
+    obtain ⟨op, fanIn, arityOk, inputs, negated⟩ := gate
+    change fanIn = 2 at arityOk
+    subst arityOk
+    simp [Fin.foldl_succ_last, Fin.foldl_zero]
+  rw [hfold]
 
 theorem outputDepth_two_internal
     (circuit : Circuit Basis.andOr2 N M G) (output : Fin M) :
@@ -151,11 +165,19 @@ theorem outputDepth_two_internal
         (circuit.wireDepth (gate.inputs input₁)) := by
   unfold Circuit.outputDepth
   dsimp only
-  generalize circuit.outputs output = gate
-  obtain ⟨op, fanIn, arityOk, inputs, negated⟩ := gate
-  change fanIn = 2 at arityOk
-  subst arityOk
-  simp [Fin.foldl_succ_last, Fin.foldl_zero]
+  have hfold (gate : Gate Basis.andOr2 (N + G)) :
+      Fin.foldl gate.fanIn
+          (fun acc k => max acc (circuit.wireDepth (gate.inputs k))) 0 =
+        max
+          (circuit.wireDepth
+            (gate.inputs ⟨0, by rw [fanIn_andOr2 gate]; omega⟩))
+          (circuit.wireDepth
+            (gate.inputs ⟨1, by rw [fanIn_andOr2 gate]; omega⟩)) := by
+    obtain ⟨op, fanIn, arityOk, inputs, negated⟩ := gate
+    change fanIn = 2 at arityOk
+    subst arityOk
+    simp [Fin.foldl_succ_last, Fin.foldl_zero]
+  rw [hfold]
 
 theorem eval_wireFormula_internal
     (circuit : Circuit Basis.andOr2 N M G) (assignment : ℕ → Bool)

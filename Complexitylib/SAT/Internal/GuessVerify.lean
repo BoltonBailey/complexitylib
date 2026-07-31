@@ -3,13 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.SAT.Language
-import Complexitylib.Asymptotics
-import Complexitylib.Classes.NP.Internal.PairBuildTM
-import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
-import Complexitylib.Models.TuringMachine.Subroutines.Internal
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
-import Complexitylib.Models.TuringMachine.Trace
+
+module
+public import Complexitylib.SAT.Language
+public import Complexitylib.Classes.NP.Internal.PairBuildTM
+public import Complexitylib.Models.TuringMachine.Subroutines.GuessBounded
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
 
 /-!
 # SAT-specialized guess-and-verify NTM
@@ -32,6 +31,9 @@ The state space is a direct sequence of the existing subroutine phases:
 counter setup, input rewind, bounded guessing, pair building, and verifier
 simulation.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -159,7 +161,8 @@ instance {Q : Type} [DecidableEq Q] [Fintype Q] : Fintype (GuessVerifyPhase Q) w
 def verifierStartedState (M : TM k) : M.Q :=
   (M.δ M.qstart Γ.start (fun _ : Fin k => Γ.start) Γ.start).1
 
-private def phaseBoundary {Q : Type} (q : GuessVerifyPhase Q)
+/-- Boundary transition that preserves symbols and advances heads parked on `▷`. -/
+def phaseBoundary {Q : Type} (q : GuessVerifyPhase Q)
     (iHead : Γ) (wHeads : Fin (k + 3) → Γ) (oHead : Γ) :
     GuessVerifyPhase Q × (Fin (k + 3) → Γw) × Γw ×
       Dir3 × (Fin (k + 3) → Dir3) × Dir3 :=
@@ -174,7 +177,8 @@ private theorem phaseBoundary_right_of_start {Q : Type} (q : GuessVerifyPhase Q)
     (oHead = Γ.start → (phaseBoundary (k := k) q iHead wHeads oHead).2.2.2.2.2 = Dir3.right) :=
   rightOfStart_allIdle iHead wHeads oHead
 
-private def satVerifyTransition (M : TM k) (q : M.Q)
+/-- Lift of the deterministic verifier transition to the guess-and-verify tape layout. -/
+def satVerifyTransition (M : TM k) (q : M.Q)
     (iHead : Γ) (wHeads : Fin (k + 3) → Γ) (oHead : Γ) :
     GuessVerifyPhase M.Q × (Fin (k + 3) → Γw) × Γw ×
       Dir3 × (Fin (k + 3) → Dir3) × Dir3 :=
@@ -221,7 +225,8 @@ private theorem satVerifyTransition_right_of_start (M : TM k) (q : M.Q)
         exact hwi)
     · simp [hip, idleDir_right_of_start hwi]
 
-private def satGuessVerifyDelta (M : TM k) :
+/-- Nondeterministic transition function for the combined SAT guess-and-verify machine. -/
+def satGuessVerifyDelta (M : TM k) :
     Bool → GuessVerifyPhase M.Q → Γ → (Fin (k + 3) → Γ) → Γ →
       GuessVerifyPhase M.Q × (Fin (k + 3) → Γw) × Γw ×
         Dir3 × (Fin (k + 3) → Dir3) × Dir3 :=

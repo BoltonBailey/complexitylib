@@ -3,7 +3,9 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Repetition.Internal
+
+module
+public import Complexitylib.Models.TuringMachine.Repetition.Defs
 
 /-!
 # Vote bookkeeping for fixed-time repetition
@@ -12,6 +14,9 @@ This file connects the finite-control vote vector of `NTM.repeatAtTime` to the
 block-event majority API and provides the update invariant used by the outer
 trial induction.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,13 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Asymptotics
-import Complexitylib.Mathlib.NatBits
-import Complexitylib.Models.TuringMachine.Combinators.ForInput.Internal
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Experimental.Routine.Internal
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+
+module
+public import Complexitylib.Asymptotics
+public import Complexitylib.Mathlib.NatBits
+public import Complexitylib.Models.TuringMachine.Experimental.Routine.Internal
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 
 /-!
 # Binary input-length counter — proof internals
@@ -19,23 +19,30 @@ The exact run proof scans the read-only input and lifts one proved
 reachable driver/body phase so input length is never charged as work space.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace TM
 
 variable {n : ℕ} {counterIdx : Fin n}
 
-private def binaryLengthStartedBlank : Tape :=
+/-- A blank tape parked immediately to the right of its start marker. -/
+def binaryLengthStartedBlank : Tape :=
   (Tape.init []).move Dir3.right
 
-private def binaryLengthInput (x : List Bool) (head : ℕ) : Tape :=
+/-- The immutable input tape for `x`, with its head at `head`. -/
+def binaryLengthInput (x : List Bool) (head : ℕ) : Tape :=
   { head := head
     cells := (Tape.init (x.map Γ.ofBool)).cells }
 
-private def binaryLengthCounterTape (value : ℕ) : Tape :=
+/-- The canonical binary counter tape representing `value`. -/
+def binaryLengthCounterTape (value : ℕ) : Tape :=
   (Tape.init (value.bits.map Γ.ofBool)).move Dir3.right
 
-private def binaryLengthWork (counterIdx : Fin n) (value : ℕ) : Fin n → Tape :=
+/-- Work tapes with `value` on the selected counter tape and blank tapes elsewhere. -/
+def binaryLengthWork (counterIdx : Fin n) (value : ℕ) : Fin n → Tape :=
   Function.update (fun _ => binaryLengthStartedBlank) counterIdx
     (binaryLengthCounterTape value)
 
@@ -60,7 +67,8 @@ private def binaryLengthBodyDoneCfg (x : List Bool) (counterIdx : Fin n)
     work := binaryLengthWork counterIdx (value + 1)
     output := binaryLengthStartedBlank }
 
-private def binaryLengthDoneCfg (x : List Bool) (counterIdx : Fin n) :
+/-- Canonical halted configuration produced after measuring `x`. -/
+def binaryLengthDoneCfg (x : List Bool) (counterIdx : Fin n) :
     Cfg n (binaryLengthTM counterIdx).Q :=
   { state := .inl .done
     input := binaryLengthInput x (x.length + 1)

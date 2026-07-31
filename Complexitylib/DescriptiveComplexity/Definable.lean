@@ -3,10 +3,10 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.DescriptiveComplexity.Query
-import Complexitylib.DescriptiveComplexity.FirstOrder
-import Complexitylib.DescriptiveComplexity.Reduction
-import Complexitylib.DescriptiveComplexity.SecondOrder
+
+module
+public import Complexitylib.DescriptiveComplexity.Reduction
+public import Complexitylib.DescriptiveComplexity.SecondOrder.Isomorphism
 
 /-!
 # First-order definable queries
@@ -32,6 +32,9 @@ bounds.
   reductions and projections.
 - `FODefinable.toSODefinable` — `FO ⊆ SO` at the query level.
 -/
+
+
+@[expose] public section
 
 open scoped Complexity.DescriptiveComplexity
 

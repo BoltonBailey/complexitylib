@@ -3,9 +3,9 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine
-import Complexitylib.Asymptotics
-import Complexitylib.Classes.Time
+
+module
+public import Complexitylib.Classes.Time
 
 /-!
 # Randomized complexity classes
@@ -24,6 +24,9 @@ The acceptance-probability conditions shared across classes are factored into
 `NTM.AcceptsWithProb` (lower-bounding acceptance on yes-instances) and
 `NTM.RejectsWithProb` (upper-bounding acceptance on no-instances).
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

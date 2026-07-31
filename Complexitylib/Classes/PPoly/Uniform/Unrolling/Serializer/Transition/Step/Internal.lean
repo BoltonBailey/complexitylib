@@ -3,14 +3,17 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Step.Defs
-import Complexitylib.Circuits.Unrolling.Transition.Fragment
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Step.Defs
 
 /-!
 # Numeric packed-step schedules -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

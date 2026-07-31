@@ -3,9 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.DescriptiveComplexity.SecondOrder.Syntax
-import Complexitylib.DescriptiveComplexity.SecondOrder.Semantics
-import Complexitylib.DescriptiveComplexity.SecondOrder.Isomorphism
+
+module
+public import Complexitylib.DescriptiveComplexity.SecondOrder.Syntax
+public import Complexitylib.DescriptiveComplexity.SecondOrder.Semantics
+public import Complexitylib.DescriptiveComplexity.SecondOrder.Isomorphism
 
 /-!
 # Second-order logic over finite structures

@@ -3,10 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Asymptotics
-import Complexitylib.Classes.Pairing
-import Complexitylib.Classes.PPoly.Defs
-import Complexitylib.Circuits.Unrolling.Acceptance.Hardwiring
+
+module
+public import Complexitylib.Asymptotics
+public import Complexitylib.Circuits.Unrolling.Acceptance.Hardwiring
+public import Complexitylib.Circuits.Family.Defs
+public import Complexitylib.Encoding.Pairing
 
 /-!
 # Polynomial advice — definitions
@@ -19,6 +21,9 @@ This file also defines the nonuniform circuit family obtained by fixing both
 the deterministic choice prefix and the length-dependent advice prefix of a
 bounded acceptance circuit.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

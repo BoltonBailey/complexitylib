@@ -5,10 +5,9 @@ Authors: Christian Reitwiessner
 -/
 
 module
-
-public import Complexitylib.Models.RoseTreeMachine.Data
 public import Complexitylib.Models.RoseTreeMachine.DataEncode
-
+public import Mathlib.Order.Lattice
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Programs in a rose tree machine (RTM)
@@ -29,6 +28,7 @@ semantics and time and space resource consumption.
 - `ComputableInOTime` - generic time-complexity in the RTM model
 - `ComputableInOSpace` - generic space-complexity in the RTM model
 -/
+
 
 @[expose] public section
 

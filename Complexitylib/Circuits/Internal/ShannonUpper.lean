@@ -3,9 +3,29 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.AndOrNot.Defs
-import Mathlib.Data.Nat.Log
-import Mathlib.Tactic
+
+module
+public import Complexitylib.Circuits.AndOrNot.Defs
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Tactic.ENatToNat
+public import Mathlib.Tactic.Measurability.Init
+public import Mathlib.Tactic.NormNum.BigOperators
+public import Mathlib.Tactic.NormNum.Irrational
+public import Mathlib.Tactic.NormNum.IsCoprime
+public import Mathlib.Tactic.NormNum.IsSquare
+public import Mathlib.Tactic.NormNum.LegendreSymbol
+public import Mathlib.Tactic.NormNum.ModEq
+public import Mathlib.Tactic.NormNum.NatFactorial
+public import Mathlib.Tactic.NormNum.NatFib
+public import Mathlib.Tactic.NormNum.NatLog
+public import Mathlib.Tactic.NormNum.NatSqrt
+public import Mathlib.Tactic.NormNum.Ordinal
+public import Mathlib.Tactic.NormNum.Parity
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Tactic.NormNum.RealSqrt
+public import Mathlib.Tactic.ReduceModChar
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-! # Internal: Shannon Upper Bound Construction
 
@@ -28,6 +48,9 @@ for column functions, AND/OR combining layers. Total ≤ `18 · 2^N / N`
 gates for `N ≥ 16`.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace ShannonUpper
@@ -43,7 +66,7 @@ def dataBits (N : Nat) : Nat := N - addrBits N
 /-! ## Gate Construction Helpers -/
 
 /-- Build a fan-in-2 gate bundled with an acyclicity proof. -/
-private def mkGate2' (op : AndOrOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
+def mkGate2' (op : AndOrOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : Bool)
     (bound : Nat) (hw₀ : w₀.val < bound) (hw₁ : w₁.val < bound) :
     { g : Gate Basis.andOr2 W // ∀ k : Fin g.fanIn, (g.inputs k).val < bound } :=
   ⟨{ op := op, fanIn := 2, arityOk := rfl,
@@ -52,7 +75,7 @@ private def mkGate2' (op : AndOrOp) {W : Nat} (w₀ w₁ : Fin W) (n₀ n₁ : B
    fun k => by dsimp; split_ifs <;> assumption⟩
 
 /-- Remap a wire from c₂'s space into the combined space. -/
-private def remap₂ (N G₁ G₂ : Nat) (w : Fin (N + G₂)) : Fin (N + (G₁ + G₂ + 2)) :=
+def remap₂ (N G₁ G₂ : Nat) (w : Fin (N + G₂)) : Fin (N + (G₁ + G₂ + 2)) :=
   if h : w.val < N then ⟨w.val, by omega⟩
   else ⟨w.val + G₁ + 1, by have := w.isLt; omega⟩
 
@@ -61,17 +84,20 @@ private lemma remap₂_val_lt (N G₁ G₂ : Nat) (w : Fin (N + G₂))
     (remap₂ N G₁ G₂ w).val < N + bound := by
   unfold remap₂; split_ifs <;> dsimp <;> omega
 
-private def gw (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
+/-- The input wire at `idx` of a binary AND/OR gate. -/
+def gw (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
     (_ : idx < 2 := by omega) : Fin W :=
   g.inputs ⟨idx, by rw [fanIn_andOr2]; omega⟩
-private def gn (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
+
+/-- Whether the input at `idx` of a binary AND/OR gate is negated. -/
+def gn (idx : Nat) {W : Nat} (g : Gate Basis.andOr2 W)
     (_ : idx < 2 := by omega) : Bool :=
   g.negated ⟨idx, by rw [fanIn_andOr2]; omega⟩
 
 /-! ## Binary Circuit Composition -/
 
 /-- Gate + acyclicity proof for the binary composition, bundled as a subtype. -/
-private def binopGWP {N G₁ G₂ : Nat} [NeZero N]
+def binopGWP {N G₁ G₂ : Nat} [NeZero N]
     (c₁ : Circuit Basis.andOr2 N 1 G₁) (c₂ : Circuit Basis.andOr2 N 1 G₂)
     (i : Fin (G₁ + G₂ + 2)) :
     { g : Gate Basis.andOr2 (N + (G₁ + G₂ + 2)) //
@@ -92,18 +118,22 @@ private def binopGWP {N G₁ G₂ : Nat} [NeZero N]
     let g := c₂.gates ⟨i.val - G₁ - 1, by omega⟩
     mkGate2' g.op (remap₂ N G₁ G₂ (gw 0 g)) (remap₂ N G₁ G₂ (gw 1 g)) (gn 0 g) (gn 1 g)
       (N + i.val)
-      (remap₂_val_lt N G₁ G₂ (gw 0 g) i.val (by omega)
-        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩))
-      (remap₂_val_lt N G₁ G₂ (gw 1 g) i.val (by omega)
-        (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩))
+      (by
+        exact remap₂_val_lt N G₁ G₂ (gw 0 g) i.val (by omega)
+          (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨0, by rw [fanIn_andOr2]; omega⟩))
+      (by
+        exact remap₂_val_lt N G₁ G₂ (gw 1 g) i.val (by omega)
+          (c₂.acyclic ⟨i.val-G₁-1, by omega⟩ ⟨1, by rw [fanIn_andOr2]; omega⟩))
   else
     let g := c₂.outputs 0
     mkGate2' g.op (remap₂ N G₁ G₂ (gw 0 g)) (remap₂ N G₁ G₂ (gw 1 g)) (gn 0 g) (gn 1 g)
       (N + i.val)
-      (remap₂_val_lt N G₁ G₂ (gw 0 g) i.val (by omega)
-        (show (gw 0 g).val < _ by have := (gw 0 g).isLt; omega))
-      (remap₂_val_lt N G₁ G₂ (gw 1 g) i.val (by omega)
-        (show (gw 1 g).val < _ by have := (gw 1 g).isLt; omega))
+      (by
+        exact remap₂_val_lt N G₁ G₂ (gw 0 g) i.val (by omega)
+          (show (gw 0 g).val < _ by have := (gw 0 g).isLt; omega))
+      (by
+        exact remap₂_val_lt N G₁ G₂ (gw 1 g) i.val (by omega)
+          (show (gw 1 g).val < _ by have := (gw 1 g).isLt; omega))
 
 /-- Compose two circuits with a binary AND/OR. -/
 def binopCircuit (op : AndOrOp) {N G₁ G₂ : Nat} [NeZero N]

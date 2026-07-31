@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode.Defs
-import Complexitylib.Models.TuringMachine.Internal
-import Complexitylib.Models.TuringMachine.Tape.Encoding
+
+module
+public import
+  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.WordDecode.Defs
+public import Complexitylib.Models.TuringMachine.Internal
+public import Std.Tactic.BVDecide.Normalize.BitVec
 
 /-!
 # Linear RAM snapshot word decoder — proof internals
@@ -14,6 +17,9 @@ This file proves the exact three-pass behavior of `wordDecodeLinearTM`: copy
 the unary width to a marker tape, rewind those markers, then consume one marker
 while copying one payload bit. Each pass is linear in the encoded word width.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

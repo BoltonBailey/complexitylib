@@ -3,16 +3,18 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Atomic
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Effect
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
-import Complexitylib.Circuits.Encoding.Formula
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 
 /-!
 # Numeric next-atom schedules -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

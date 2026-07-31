@@ -3,9 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Combinatorics.Digraph.Basic
-import Mathlib.Data.Fintype.Prod
-import Mathlib.Data.Nat.Lattice
+
+module
+public import Mathlib.Combinatorics.Digraph.Basic
+public import Mathlib.Data.Fintype.Prod
+public import Mathlib.Data.Nat.Lattice
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-! # Digraph extensions for Mathlib
 
@@ -30,6 +33,9 @@ Depth-reduction-specific machinery (canonical labeling, acyclicity
 arguments, edge partitions by first-differing bit, etc.) lives in
 `Complexitylib.Circuits.Internal.Valiant`.
 -/
+
+
+@[expose] public section
 
 namespace Digraph
 
