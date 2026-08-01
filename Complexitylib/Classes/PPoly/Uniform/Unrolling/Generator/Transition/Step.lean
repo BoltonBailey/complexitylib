@@ -3,8 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Defs
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Step
 
 /-!
 # Verified direct packed-step generation
@@ -14,6 +17,9 @@ Its contracts cover the concrete machine, its clean entry domain, exact
 register effect, restored scratch convention, and byte-for-byte emitted
 packed transition fragment.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

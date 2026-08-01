@@ -3,17 +3,18 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine
-import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Control
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine
+public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control.Defs
 
 /-!
 # Proof-carrying binary routine control -- proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

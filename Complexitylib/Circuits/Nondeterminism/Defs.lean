@@ -3,9 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Basic
-import Mathlib.Data.Fin.Tuple.Basic
-import Mathlib.Data.Fintype.BigOperators
+
+module
+public import Complexitylib.Circuits.Basic
+public import Mathlib.Data.Fintype.Pi
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-! # Nondeterministic Quantification of Boolean Functions
 
@@ -31,6 +34,9 @@ guesses the first `k` input bits.
 * `forallQuantify_eq_not_existsQuantify_not` — De Morgan duality
 * `existsQuantify_mono` — monotonicity under pointwise implication
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

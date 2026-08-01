@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 
+module
+
 /-!
   # Vocabularies (Signatures)
 
@@ -12,6 +14,9 @@ Authors: Samuel Schlesinger
   We represent this finitely: `numRels` relation symbols with arities given by
   `relArity`, and `numConsts` constant symbols.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

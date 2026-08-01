@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Defs
-import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Internal
-import Complexitylib.Asymptotics
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Defs
+public import Complexitylib.Models.RandomAccessMachine.Structured.UnaryDecode.Internal
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.RandomAccessMachine.Structured
 
 /-!
 # Verified structured RAM terminated-unary decoder
@@ -15,6 +18,9 @@ serialized-circuit format. The source proof covers both successful termination
 and input exhaustion, and compilation preserves its exact transition count,
 logarithmic cost, peak space, decoded value, and suffix cursor.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

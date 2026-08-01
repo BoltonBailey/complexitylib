@@ -3,9 +3,28 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Tactic
-import Complexitylib.Circuits.Basic
+
+module
+public import Complexitylib.Circuits.Basic
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+public import Mathlib.Tactic.ENatToNat
+public import Mathlib.Tactic.Measurability.Init
+public import Mathlib.Tactic.NormNum.BigOperators
+public import Mathlib.Tactic.NormNum.Irrational
+public import Mathlib.Tactic.NormNum.IsCoprime
+public import Mathlib.Tactic.NormNum.IsSquare
+public import Mathlib.Tactic.NormNum.LegendreSymbol
+public import Mathlib.Tactic.NormNum.ModEq
+public import Mathlib.Tactic.NormNum.NatFactorial
+public import Mathlib.Tactic.NormNum.NatFib
+public import Mathlib.Tactic.NormNum.NatLog
+public import Mathlib.Tactic.NormNum.NatSqrt
+public import Mathlib.Tactic.NormNum.Ordinal
+public import Mathlib.Tactic.NormNum.Parity
+public import Mathlib.Tactic.NormNum.Prime
+public import Mathlib.Tactic.NormNum.RealSqrt
+public import Mathlib.Tactic.ReduceModChar
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-! # Internal: Circuit Descriptors and Shannon Counting Bound
 
@@ -14,6 +33,9 @@ arguments, and proves the Shannon lower bound for this model. The public
 theorem `shannon_lower_bound_circuit` (which speaks in terms of `Circuit`)
 is in `Complexitylib.Circuits.Internal.Bridge`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

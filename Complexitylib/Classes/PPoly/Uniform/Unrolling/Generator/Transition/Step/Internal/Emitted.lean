@@ -3,7 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Effect
+
+module
+public import
+  Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Effect
 
 /-!
 # Exact output of the direct packed-step generator
@@ -12,6 +15,9 @@ This file proves that the direct generator emits the canonical numeric step
 schedule byte for byte.  The intermediate results identify each nested
 enumeration with its contiguous slice of the global configuration-atom order.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -750,7 +756,8 @@ private theorem stepFormulaBlockSpecialized_internal_writtenCell (tm : NTM k)
     nextWritableCellAtomKind, nextAtomTapeIndex, nextAtomPosition,
     nextAtomSymbolIndex, nextAtomEffectSelectedAt, hpositive.ne']
 
-private def stepCellStart (tm : NTM k) (T : ℕ) (tape : TapeSlot k)
+/-- First flattened configuration index for the four symbols at a tape cell. -/
+def stepCellStart (tm : NTM k) (T : ℕ) (tape : TapeSlot k)
     (position : ℕ) : ℕ :=
   Fintype.card tm.Q + (k + 2) * (T + 1) +
     (tape.index.val * (T + 2) + position) * 4

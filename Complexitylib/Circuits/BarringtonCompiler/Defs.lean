@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Barrington
-import Complexitylib.Circuits.BarringtonS5
-import Complexitylib.Circuits.Formula
+
+module
+public import Complexitylib.Circuits.Barrington
+public import Complexitylib.Circuits.Formula
+public import Mathlib.GroupTheory.Perm.Fin
+public import Mathlib.Tactic.NormNum.Prime
 
 /-!
 # An executable Barrington compiler -- definitions
@@ -14,6 +17,9 @@ The original existence proof chooses conjugators and commutator factors inside
 `Prop`. This module instead searches the finite group `S₅` explicitly, making
 the target-cycle decomposition and the resulting formula compiler executable.
 -/
+
+
+@[expose] public section
 
 open scoped commutatorElement
 open Equiv

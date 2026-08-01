@@ -3,12 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Defs
-import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary.Defs
-import Complexitylib.Models.TuringMachine.Tape.Encoding
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines
+public import Mathlib.Data.Nat.Bits
+public import Mathlib.Tactic.NormNum.Inv
+public import Mathlib.Tactic.NormNum.Pow
 
 /-!
 # Self-delimiting word emission — definitions
@@ -17,6 +17,9 @@ The encoded-store update path needs to re-emit decoded entries. A generic
 work-tape pass either emits one unary width mark per source bit or copies the
 payload bits themselves. `wordEncodeTM` composes those passes around a rewind.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

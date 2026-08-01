@@ -3,17 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
+
+module
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Defs
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Defs
-import Complexitylib.Models.TuringMachine.Combinators.WorkBranch.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleAdd.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary.Defs
-import Mathlib.Tactic.FinCases
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryRippleSub.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul.Defs
 
 /-!
 # Concrete sparse-store arithmetic instruction kernel
@@ -24,6 +20,9 @@ canonical work tapes; the arithmetic result is written directly to the update
 controller's replacement tape, so no value-sized bridge is hidden between the
 two phases.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 
@@ -145,7 +144,8 @@ private theorem lhsLookupSlot_injective : Function.Injective lhsLookupSlot := by
 def lhsLookup {n : ℕ} (tapes : BinaryInstructionTapes n) :
     EntryLookupRestoreTapes n where
   idx := fun i => tapes.idx (lhsLookupSlot i)
-  injective := fun _ _ h => lhsLookupSlot_injective (tapes.injective h)
+  injective := fun _ _ h => by
+    exact lhsLookupSlot_injective (tapes.injective h)
 
 /-- Parent slots for a reusable lookup whose destination is `rhs`. -/
 def rhsLookupSlot (i : Fin 14) : Fin 18 :=
@@ -173,7 +173,8 @@ private theorem rhsLookupSlot_injective : Function.Injective rhsLookupSlot := by
 def rhsLookup {n : ℕ} (tapes : BinaryInstructionTapes n) :
     EntryLookupRestoreTapes n where
   idx := fun i => tapes.idx (rhsLookupSlot i)
-  injective := fun _ _ h => rhsLookupSlot_injective (tapes.injective h)
+  injective := fun _ _ h => by
+    exact rhsLookupSlot_injective (tapes.injective h)
 
 @[simp] theorem lhsLookup_count {n : ℕ} (tapes : BinaryInstructionTapes n) :
     tapes.lhsLookup.idx 9 = tapes.update.remaining := rfl
@@ -283,7 +284,8 @@ private theorem indirectLoadLookupSlot_injective :
 def indirectLoadLookup {n : ℕ} (tapes : BinaryInstructionTapes n) :
     EntryLookupRestoreTapes n where
   idx := fun i => tapes.idx (indirectLoadLookupSlot i)
-  injective := fun _ _ h => indirectLoadLookupSlot_injective (tapes.injective h)
+  injective := fun _ _ h => by
+    exact indirectLoadLookupSlot_injective (tapes.injective h)
 
 @[simp] theorem indirectLoadLookup_count {n : ℕ}
     (tapes : BinaryInstructionTapes n) :
@@ -324,7 +326,7 @@ private theorem mulSlot_injective : Function.Injective mulSlot := by
 def mul {n : ℕ} (tapes : BinaryInstructionTapes n) : TM.BinaryShiftMulABI n where
   tape :=
     ⟨fun i => tapes.idx (mulSlot i), fun _ _ h =>
-      mulSlot_injective (tapes.injective h)⟩
+      by exact mulSlot_injective (tapes.injective h)⟩
 
 @[simp] theorem mul_lhs {n : ℕ} (tapes : BinaryInstructionTapes n) :
     tapes.mul.lhs = tapes.lhs := rfl

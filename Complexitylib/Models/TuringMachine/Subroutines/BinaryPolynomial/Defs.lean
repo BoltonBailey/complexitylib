@@ -3,10 +3,16 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Mathlib.Algebra.Polynomial.Eval.Degree
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.ClearWork.Defs
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst.Defs
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd.Defs
+public import Mathlib.Algebra.Polynomial.Degree.Defs
+public import Mathlib.Data.Rat.Cast.Order
+public import Mathlib.Tactic.NormNum.Abs
+public import Mathlib.Tactic.NormNum.DivMod
+public import Mathlib.Tactic.NormNum.OfScientific
+public import Mathlib.Tactic.NormNum.Pow
 
 /-!
 # Canonical binary evaluation of a fixed natural polynomial — definitions
@@ -17,6 +23,9 @@ coefficient, clears the old accumulator, and swaps the two accumulator roles.
 The initial orientation is chosen from coefficient-list parity so the
 designated result tape holds the final value and the other accumulator is zero.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

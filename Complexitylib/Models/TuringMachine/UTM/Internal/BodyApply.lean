@@ -3,8 +3,11 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.UTM.Internal.BodyInternal
-import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
+
+module
+public import Complexitylib.Models.TuringMachine.UTM.Internal.BodyInternal
+public import Complexitylib.Models.TuringMachine.UTM.Internal.VTape
+public import Complexitylib.Models.TuringMachine.UTM.Internal.Desc
 
 /-!
 # Body machine: peek, default-move, and apply phases
@@ -26,6 +29,9 @@ tapes (the `+1`-shift shadows of the simulated input/work/output tapes,
 `grpΓw_eq_decΓw` / `grpDir_eq_decDir` bridge the machine's 2-bit group
 decoders to the description decoders in `Desc.lean`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

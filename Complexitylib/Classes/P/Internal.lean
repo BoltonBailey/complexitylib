@@ -3,10 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.P.Defs
-import Complexitylib.Models.TuringMachine.Combinators
-import Complexitylib.Models.TuringMachine.Combinators.Internal
-import Mathlib.Analysis.Asymptotics.Defs
+
+module
+public import Complexitylib.Models.TuringMachine.Combinators
+public import Complexitylib.Asymptotics
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Retarget
+public import Complexitylib.Models.TuringMachine.Combinators.Internal.Union
 
 /-!
 # P closure properties — proof internals
@@ -15,6 +17,9 @@ This file contains the proof helpers used by `DTIME_union` (stated in `P.lean`).
 The key simulation theorem `unionTM_decidesInTime` establishes that the
 composite machine from `TM.unionTM` correctly decides `L₁ ∪ L₂`.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

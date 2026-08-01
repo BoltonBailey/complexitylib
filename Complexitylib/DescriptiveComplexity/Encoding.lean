@@ -3,12 +3,12 @@ Copyright (c) 2025 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.DescriptiveComplexity.Structure
-import Mathlib.Data.Fintype.Pi
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Data.List.FinRange
-import Mathlib.Data.Fin.Tuple.Basic
-import Mathlib.Data.List.TakeWhile
+
+module
+public import Complexitylib.DescriptiveComplexity.Structure
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.BigOperators
+public import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
 # Encoding finite structures as bit strings
@@ -30,6 +30,9 @@ relational part of that encoding and computes its length; it is step 5 (structur
   enumeration and a computable truth-table encoding (needed for the machine-side
   Fagin bridge).
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

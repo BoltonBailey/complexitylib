@@ -3,18 +3,19 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.AddressEq
-import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryDecode
-import
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.AddressEq
+public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryDecode
+public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch.Defs
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Seq
-import Complexitylib.Models.TuringMachine.Internal
 
 /-!
 # RAM sparse-entry matching — proof internals
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

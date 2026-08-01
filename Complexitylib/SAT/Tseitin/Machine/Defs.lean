@@ -3,9 +3,12 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Lift
-import Complexitylib.Models.TuringMachine.Registers.InputLen
-import Complexitylib.SAT.ThreeSAT
+
+module
+public import Complexitylib.Models.TuringMachine.Registers.InputLen
+public import Complexitylib.SAT.ThreeSAT
+public import Complexitylib.Models.TuringMachine.Registers.Arith
+public import Complexitylib.Models.TuringMachine.Subroutines
 
 /-!
 # Machine building blocks for the CNF-to-3CNF reduction
@@ -35,6 +38,9 @@ these machines.
 - `seedFreshTM` — initialize the fresh register to `|z| + 1`
 - `reductionTMWith` — validate first, then branch to an emitter or fallback
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,8 +3,9 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive.Defs
-import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Defs
+
+module
+public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive.Defs
 
 /-!
 # Direct-unrolling read-formula generator -- definitions
@@ -19,6 +20,9 @@ Only the first loop pair, the position counter, both references, and
 temporaries zero through two are owned as scratch. In particular,
 `temporary₃` remains available to an enclosing transition generator.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,15 +3,10 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.TuringMachine.Combinators.Internal.Seq
-import Complexitylib.Models.TuringMachine.Hoare.Space
-import Complexitylib.Models.TuringMachine.SpaceTime.Internal.Reachability
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Control
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
-import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd.Defs
-import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
-import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
+
+module
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryMulAdd.Defs
 
 /-!
 # Canonical binary multiply-add — proof internals
@@ -24,13 +19,17 @@ formula. Space is proved compositionally for each repeated-addition iteration,
 so it depends on binary widths rather than on the number of loop steps.
 -/
 
+
+@[expose] public section
+
 namespace Complexity
 
 namespace TM
 
 variable {n : ℕ}
 
-private def binaryMulAddNatTape (value : ℕ) : Tape :=
+/-- Canonical parked tape encoding of a natural for multiply-add. -/
+def binaryMulAddNatTape (value : ℕ) : Tape :=
   (Tape.init (value.bits.map Γ.ofBool)).move Dir3.right
 
 private theorem binaryMulAddNatTape_hasBinaryNat (value : ℕ) :
@@ -245,7 +244,8 @@ private theorem binaryMulAddWorkAt_clear_eq
       simp [binaryMulAddWorkAt, hne]
     · simp [binaryMulAddWorkAt, him, hia]
 
-private abbrev binaryMulAddFramePred
+/-- Predicate fixing the tapes framing a binary multiply-add execution. -/
+abbrev binaryMulAddFramePred
     (inp₀ : Tape) (work₀ : Fin n → Tape) (out₀ : Tape) : TapePred n :=
   fun inp work out => inp = inp₀ ∧ work = work₀ ∧ out = out₀
 

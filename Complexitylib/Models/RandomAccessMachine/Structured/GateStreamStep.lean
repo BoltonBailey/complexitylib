@@ -3,8 +3,11 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Defs
-import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Internal
+
+module
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Defs
+public import Complexitylib.Models.RandomAccessMachine.Structured.GateStreamStep.Internal
+public import Complexitylib.Models.RandomAccessMachine.Structured
 
 /-!
 # Verified structured RAM iterable serialized-gate step
@@ -13,6 +16,9 @@ This module exposes the split-layout gate routine used by the serialized-circuit
 experiment. Code and mutable memo occupy disjoint regions, so the exact same
 routine can be invoked again at the returned cursor.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

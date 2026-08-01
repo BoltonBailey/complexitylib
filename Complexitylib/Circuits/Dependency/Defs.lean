@@ -3,9 +3,13 @@ Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
-import Complexitylib.Circuits.Basic
-import Complexitylib.Mathlib.Digraph
-import Mathlib.Data.Fintype.BigOperators
+
+module
+public import Complexitylib.Circuits.Basic
+public import Mathlib.Algebra.BigOperators.Group.Finset.Defs
+public import Mathlib.Combinatorics.Digraph.Basic
+public import Mathlib.Data.Fintype.Sigma
+public import Mathlib.Data.Fintype.Sum
 
 /-!
 # Circuit dependency graphs -- definitions
@@ -16,6 +20,9 @@ edge from the referenced wire to the gate that reads it. Repeated occurrences
 of the same wire at the same gate collapse in the graph's edge set, while
 `Circuit.totalFanIn` continues to count them with multiplicity.
 -/
+
+
+@[expose] public section
 
 namespace Complexity
 

@@ -3,9 +3,10 @@ Copyright (c) 2026 Bolton Bailey. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
-import Complexitylib.Classes.Containments
-import Complexitylib.Encoding.Pairing
-import Mathlib.Algebra.Polynomial.Eval.Defs
+module
+public import Complexitylib.Classes.Containments
+public import Complexitylib.Encoding.Pairing
+public import Mathlib.Algebra.Polynomial.Eval.Defs
 
 /-!
 # The polynomial hierarchy
@@ -53,6 +54,8 @@ without touching this file's statements. All other results are unconditional.
 - Relate `SigmaP 1` to the NTM-based `NP` through the witness characterization
   interface in `Complexitylib.Classes.NP.Witness`.
 -/
+
+@[expose] public section
 
 namespace Complexity
 
