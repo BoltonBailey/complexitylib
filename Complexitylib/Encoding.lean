@@ -7,7 +7,8 @@ Authors: Bolton Bailey
 module
 public import Complexitylib.Encoding.Delimit
 public import Complexitylib.Encoding.Pairing
-public import Complexitylib.Encoding.Bitstring
+public import Complexitylib.Encoding.Data
+public import Complexitylib.Encoding.DataEncode
 
 /-!
 # Encodings
@@ -15,6 +16,7 @@ public import Complexitylib.Encoding.Bitstring
 Aggregation module for the machine-independent encoding layer: the shared
 self-delimiting block framing and its parsers
 (`Complexitylib.Encoding.Delimit`), the pairing codec used by machine inputs
-(`Complexitylib.Encoding.Pairing`), and the `BitstringEncoding` typeclass with
-instances for common types (`Complexitylib.Encoding.Bitstring`).
+(`Complexitylib.Encoding.Pairing`), and the rose-tree `Data` type
+(`Complexitylib.Encoding.Data`) together with the `DataEncode` typeclass and its
+derived bitstring encoding (`Complexitylib.Encoding.DataEncode`).
 -/

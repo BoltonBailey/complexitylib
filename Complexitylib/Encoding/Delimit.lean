@@ -30,9 +30,9 @@ end. This file defines the library's single framing operation and its parsers:
 - `undelimitBlock`, `takeFirstBlock`, `hasBlock`, `tagBlock`, and `undelimitBlocks` are the
   total helper functions machines compute when working with framed data.
 
-This file deliberately has no dependency on the machine or complexity-class layers, so both
-the machine-input pairing codec (`Complexitylib.Encoding.Pairing`) and the encoding layer
-(`Complexitylib.Encoding.Bitstring`) can build on it without import cycles.
+This file deliberately has no dependency on the machine or complexity-class layers, so the
+machine-input pairing codec (`Complexitylib.Encoding.Pairing`) can build on it without import
+cycles.
 -/
 
 

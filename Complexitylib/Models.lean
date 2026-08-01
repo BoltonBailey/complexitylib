@@ -67,8 +67,6 @@ public import Complexitylib.Models.TuringMachine.UTM.ClockedUtm
 public import Complexitylib.Models.TuringMachine.UTM.HierarchySupport
 public import Complexitylib.Models.TuringMachine.UTM.Diagonal
 public import Complexitylib.Models.RandomAccessMachine
-public import Complexitylib.Models.RoseTreeMachine.Data
-public import Complexitylib.Models.RoseTreeMachine.DataEncode
 public import Complexitylib.Models.RoseTreeMachine.Prog
 
 /-!
