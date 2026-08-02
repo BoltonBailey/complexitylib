@@ -6,6 +6,7 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Defs
+public import Complexitylib.Classes.P.Cobham.Internal.MulLen
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Classes.P.NormalForm
 public import Complexitylib.Classes.P.Composition
@@ -37,15 +38,21 @@ argument vectors*. The soundness direction `CobhamFP ⊆ FP` is then an inductio
 
 Fully proved here:
 - the framework (`encodeVec`, `FPn`) and its basic lemmas;
-- `const_nil_mem_FP` and the `empty` constructor case (`fpn_empty`);
-- the arity-one specialization glue `CobhamFP_subset_FP_of_FPn`, modulo the
-  single foundational machine lemma `pairRightNil_mem_FP`.
+- the arity-one specialization glue `CobhamFP_subset_FP_of_FPn`, on top of the
+  framing map `pairLeftNil_mem_FP`;
+- the atomic machine lemmas `cons_mem_FP`, `sndBlock_mem_FP`,
+  `fstBlock_mem_FP`, `reorder_mem_FP` (bespoke transducers) and the derived
+  `pairFn_mem_FP`, `assembleVec_mem_FP`, `mulLenFn_mem_FP`;
+- all six constructor cases of the soundness induction: `fpn_empty`, `fpn_proj`,
+  `fpn_bit`, `fpn_smash`, `fpn_comp`, and `fpn_boundedRec` — the last modulo the
+  single loop lemma below, with all of its algebra (`recFold`, `recFoldClamp`,
+  `recFold_eq_recNotation`, `recFoldClamp_eq_recFold`) and the discharge of
+  Cobham's limited-recursion side condition proved here.
 
 Reduced to precisely-stated lemmas (still `sorry`, each documented with the
 intended construction):
-- `pairRightNil_mem_FP` — the framing map `x ↦ pair x []` is in `FP`;
-- `fpn_proj`, `fpn_bit`, `fpn_smash`, `fpn_comp`, `fpn_boundedRec` — the
-  remaining constructor cases of the soundness induction;
+- `recFoldClamp_mem_FP` — the loop of the `boundedRec` case: iterating a
+  width-clamped `FP` step function once per bit of `sndBlock z`;
 - `FP_subset_CobhamFP_internal` — the completeness direction (Turing-machine
   interpreter inside the algebra).
 
@@ -142,13 +149,17 @@ def sndBlock (z : List Bool) : List Bool :=
 @[simp] theorem sndBlock_pair (x y : List Bool) : sndBlock (pair x y) = y := by
   simp [sndBlock]
 
-/-- Stripping the head component of an encoded vector yields the encoded tail. -/
-@[simp] theorem fstBlock_encodeVec_succ {n : ℕ} (v : Fin (n + 1) → List Bool) :
+/-- Stripping the head component of an encoded vector yields the encoded tail.
+(Not a `simp` lemma: `simp` already reaches this via `encodeVec_succ` and
+`fstBlock_pair`.) -/
+theorem fstBlock_encodeVec_succ {n : ℕ} (v : Fin (n + 1) → List Bool) :
     fstBlock (encodeVec v) = encodeVec (Fin.tail v) := by
   simp
 
-/-- The suffix of an encoded vector is its head component. -/
-@[simp] theorem sndBlock_encodeVec_succ {n : ℕ} (v : Fin (n + 1) → List Bool) :
+/-- The suffix of an encoded vector is its head component.
+(Not a `simp` lemma: `simp` already reaches this via `encodeVec_succ` and
+`sndBlock_pair`.) -/
+theorem sndBlock_encodeVec_succ {n : ℕ} (v : Fin (n + 1) → List Bool) :
     sndBlock (encodeVec v) = v 0 := by
   simp
 
@@ -1805,36 +1816,16 @@ theorem pairFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b �
     funext z; simp [Function.comp, reorder_pair_pair]
   rwa [heq2] at hr
 
-/-- Emit `|A| · |B|` copies of `false` from a pair `pair A B`. On `pair A B` this
-is `List.replicate (|A|·|B|) false` (`mulLenPair_pair`); a self-contained machine
-computes it (decode both component lengths, multiply, emit), so it needs no
-sub-machines. -/
-def mulLenPair (p : List Bool) : List Bool :=
-  List.replicate ((fstBlock p).length * (sndBlock p).length) false
-
-theorem mulLenPair_pair (A B : List Bool) :
-    mulLenPair (pair A B) = List.replicate (A.length * B.length) false := by
-  show List.replicate ((fstBlock (pair A B)).length * (sndBlock (pair A B)).length) false = _
-  rw [fstBlock_pair, sndBlock_pair]
-
-/-- `mulLenPair` is polynomial-time, via a self-contained transducer.
-
-*Construction (TODO):* decode the two block lengths `|A|`, `|B|` (scan-and-count,
-as `fstBlockTM`/`sndBlockTM` but counting), form the product `|A|·|B|`
-(register `mulAddIntoTM` or binary `binaryShiftMulTM`), and emit that many `false`
-bits (`forRegTM (emitBitsTM [false])`). No sub-machines are invoked. -/
-theorem mulLenPair_mem_FP : mulLenPair ∈ FP := by
-  sorry
-
 /-- Emitting `|a z| · |b z|` copies of `false` is `FP` when `a, b` are. Built as
-the self-contained `mulLenPair` after `pairFn a b`, avoiding a bespoke
-length-arithmetic machine over two sub-machines. -/
+the self-contained `mulUnpair` (see `Complexitylib.Classes.P.Cobham.Internal.MulLen`)
+after `pairFn a b`, avoiding a bespoke length-arithmetic machine over two
+sub-machines. -/
 theorem mulLenFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
     (fun z => List.replicate ((a z).length * (b z).length) false) ∈ FP := by
-  have hc := mem_FP_comp (pairFn_mem_FP ha hb) mulLenPair_mem_FP
-  have heq : (mulLenPair ∘ fun z => pair (a z) (b z))
+  have hc := mem_FP_comp (pairFn_mem_FP ha hb) mulUnpair_mem_FP
+  have heq : (mulUnpair ∘ fun z => pair (a z) (b z))
       = fun z => List.replicate ((a z).length * (b z).length) false := by
-    funext z; simp [Function.comp, mulLenPair_pair]
+    funext z; simp [Function.comp, mulUnpair_pair]
   rwa [heq] at hc
 
 /-- `smash` case: the smash function is `FPn`. On `encodeVec ![x, y]` the two
@@ -1930,18 +1921,114 @@ theorem recNotation_eq_foldr {n : ℕ} (g : (Fin n → List Bool) → List Bool)
       simp only [recNotationStep]
       rw [recNotationStep_foldr_fst g x w, ih]
 
+/-! ### The `boundedRec` loop
+
+The `boundedRec` case runs the recursion as a loop on *encoded* arguments:
+`recFold A B e W s` threads a running suffix `t` of `s` and the running
+accumulator `a` through the argument encoding `pair (pair W a) t`, which is
+exactly `encodeVec (Fin.cons t (Fin.cons a w))` when `W = encodeVec w`.
+
+A machine cannot run `recFold` as written: nothing stops the accumulator from
+doubling in length at every iteration, so intermediate values would need
+exponential space. `recFoldClamp` truncates every intermediate value to a
+prescribed width, which makes the loop unconditionally polynomial-time
+(`recFoldClamp_mem_FP`); Cobham's limited-recursion side condition is then
+exactly what shows the truncation never fires (`recFoldClamp_eq_recFold`). -/
+
+/-- The recursion-on-notation loop on encoded arguments: fold the bit-selected
+step functions `A` (bit `false`) and `B` (bit `true`) over `s`, threading the
+running suffix and accumulator through the argument encoding. -/
+def recFold (A B : List Bool → List Bool) (e W : List Bool) :
+    List Bool → List Bool
+  | [] => e
+  | b :: t => (bif b then B else A) (pair (pair W (recFold A B e W t)) t)
+
+/-- `recFold` with every intermediate value truncated to `bound` bits. This is
+the loop a machine can actually run: each iteration's state is length-bounded,
+so the whole loop takes polynomial time. -/
+def recFoldClamp (A B : List Bool → List Bool) (bound : ℕ) (e W : List Bool) :
+    List Bool → List Bool
+  | [] => e.take bound
+  | b :: t =>
+      ((bif b then B else A)
+        (pair (pair W (recFoldClamp A B bound e W t)) t)).take bound
+
+/-- **The loop of the `boundedRec` case** — the one machine-level fact the
+soundness direction still needs.
+
+*Construction (TODO):* run `forBinaryWorkTM` over a work tape holding `sndBlock z`
+reversed. The loop state is a work tape holding the current pair
+`pair (pair (fstBlock z) a) t`; one iteration appends the driver bit to `t`,
+runs the `FP` machine for `A` or `B` on the state tape (via `retargetInput` and
+`retargetOutput`, with the sub-machine's tapes cleared between iterations), and
+truncates the result to `bound` bits. Because `bound` is a polynomial in `|z|`
+and there are at most `|z|` iterations, the total time is polynomial. -/
+theorem recFoldClamp_mem_FP {A B E : List Bool → List Bool}
+    (hA : A ∈ FP) (hB : B ∈ FP) (hE : E ∈ FP) (p : Polynomial ℕ) :
+    (fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z))
+      ∈ FP := by
+  sorry
+
+/-- Truncation is a no-op as soon as every intermediate value already fits. -/
+theorem recFoldClamp_eq_recFold {A B : List Bool → List Bool} {bound : ℕ}
+    {e W : List Bool} (s : List Bool)
+    (hle : ∀ t : List Bool, t.length ≤ s.length →
+      (recFold A B e W t).length ≤ bound) :
+    recFoldClamp A B bound e W s = recFold A B e W s := by
+  induction s with
+  | nil =>
+      show e.take bound = e
+      exact List.take_of_length_le (hle [] (by simp))
+  | cons b t ih =>
+      have htail : recFoldClamp A B bound e W t = recFold A B e W t :=
+        ih fun u hu => hle u (by simp only [List.length_cons]; omega)
+      show ((bif b then B else A)
+        (pair (pair W (recFoldClamp A B bound e W t)) t)).take bound = _
+      rw [htail]
+      exact List.take_of_length_le (hle (b :: t) le_rfl)
+
+/-- On encoded arguments the loop computes recursion on notation: `recFold` over
+the `FP` witnesses of `g`, `h₀`, `h₁` reproduces `recNotation`. -/
+theorem recFold_eq_recNotation {n : ℕ} {g : (Fin n → List Bool) → List Bool}
+    {h₀ h₁ : (Fin (n + 2) → List Bool) → List Bool}
+    {G H₀ H₁ : List Bool → List Bool}
+    (hG : ∀ u : Fin n → List Bool, G (encodeVec u) = g u)
+    (hH₀ : ∀ u : Fin (n + 2) → List Bool, H₀ (encodeVec u) = h₀ u)
+    (hH₁ : ∀ u : Fin (n + 2) → List Bool, H₁ (encodeVec u) = h₁ u)
+    (w : Fin n → List Bool) (s : List Bool) :
+    recFold H₀ H₁ (G (encodeVec w)) (encodeVec w) s = recNotation g h₀ h₁ s w := by
+  -- The encoded step argument is exactly the vector `Fin.cons t (Fin.cons a w)`.
+  have henc : ∀ (t a : List Bool),
+      pair (pair (encodeVec w) a) t = encodeVec (Fin.cons t (Fin.cons a w)) := by
+    intro t a
+    rw [encodeVec_succ, encodeVec_succ]
+    simp [Fin.tail_cons]
+  induction s with
+  | nil => exact hG w
+  | cons b t ih =>
+      show (bif b then H₁ else H₀)
+        (pair (pair (encodeVec w) (recFold H₀ H₁ (G (encodeVec w)) (encodeVec w) t)) t)
+        = _
+      rw [ih, henc, recNotation_cons]
+      cases b
+      · simp only [cond_false]; exact hH₀ _
+      · simp only [cond_true]; exact hH₁ _
+
+/-- Every `FP` function has polynomially bounded output length: a time bound is
+also an output-length bound (`TM.ComputesInTime.output_length_le`). -/
+theorem output_length_poly_of_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) :
+    ∃ p : Polynomial ℕ, ∀ x, (f x).length ≤ p.eval x.length := by
+  obtain ⟨k, tm, p, hcomp⟩ := mem_FP_iff_computesInTime_polynomial.mp hf
+  exact ⟨p, fun x => hcomp.output_length_le x⟩
+
 /-- `boundedRec` case: `FPn` is closed under limited recursion on notation.
 
-This is the crux of the soundness direction and the one remaining constructor.
-By `recNotation_eq_foldr` the value is a `List.foldr` of `recNotationStep` over the
-bits of `v 0`, so it suffices to iterate that single step in `FP`. *Construction
-(TODO):* maintain the running suffix and accumulator as an encoded pair-state; each
-step selects `h₀`/`h₁` by the current bit (their `FPn` witnesses) and rebuilds the
-state. The class-level length bound `hbound` (via
-`TM.ComputesInTime.output_length_le`) caps every intermediate accumulator at
-`|j (...)|`, which is polynomial, so each of the `|v 0|` iterations costs
-polynomial time and the total is polynomial. Realize the loop with
-`forBinaryWorkTM` over (a reversed copy of) `v 0`. -/
+By `recFold_eq_recNotation` the value is the encoded-argument loop `recFold` run
+over the bits of `v 0`. Cobham's limited-recursion side condition `hbound` caps
+every intermediate accumulator by `|j (…)|`, which is polynomial in `|encodeVec v|`
+(`output_length_poly_of_mem_FP`), so the clamped loop `recFoldClamp` — which a
+machine can run in polynomial time (`recFoldClamp_mem_FP`) — never truncates and
+therefore agrees with `recFold`. -/
 theorem fpn_boundedRec {n : ℕ} {g : (Fin n → List Bool) → List Bool}
     {h₀ h₁ : (Fin (n + 2) → List Bool) → List Bool}
     {j : (Fin (n + 1) → List Bool) → List Bool}
@@ -1949,7 +2036,36 @@ theorem fpn_boundedRec {n : ℕ} {g : (Fin n → List Bool) → List Bool}
     (hbound : ∀ x v, (recNotation g h₀ h₁ x v).length ≤ (j (Fin.cons x v)).length) :
     FPn (fun v : Fin (n + 1) → List Bool =>
       recNotation g h₀ h₁ (v 0) (Fin.tail v)) := by
-  sorry
+  obtain ⟨G, hGFP, hG⟩ := ihg
+  obtain ⟨H₀, hH0FP, hH0⟩ := ih0
+  obtain ⟨H₁, hH1FP, hH1⟩ := ih1
+  obtain ⟨J, hJFP, hJ⟩ := ihj
+  obtain ⟨p, hp⟩ := output_length_poly_of_mem_FP hJFP
+  have hE : (fun z => G (fstBlock z)) ∈ FP := mem_FP_comp fstBlock_mem_FP hGFP
+  refine ⟨fun z => recFoldClamp H₀ H₁ (p.eval z.length) (G (fstBlock z)) (fstBlock z)
+      (sndBlock z), recFoldClamp_mem_FP hH0FP hH1FP hE p, fun v => ?_⟩
+  show recFoldClamp H₀ H₁ (p.eval (encodeVec v).length) (G (fstBlock (encodeVec v)))
+      (fstBlock (encodeVec v)) (sndBlock (encodeVec v))
+    = recNotation g h₀ h₁ (v 0) (Fin.tail v)
+  rw [fstBlock_encodeVec_succ, sndBlock_encodeVec_succ]
+  rw [recFoldClamp_eq_recFold (v 0) ?_]
+  · exact recFold_eq_recNotation hG hH0 hH1 (Fin.tail v) (v 0)
+  · -- Cobham's limited-recursion bound caps every intermediate accumulator.
+    intro t ht
+    rw [recFold_eq_recNotation hG hH0 hH1 (Fin.tail v) t]
+    refine le_trans (hbound t (Fin.tail v)) ?_
+    have hJt : (j (Fin.cons t (Fin.tail v))).length
+        ≤ p.eval (encodeVec (Fin.cons t (Fin.tail v))).length := by
+      rw [← hJ (Fin.cons t (Fin.tail v))]
+      exact hp _
+    refine le_trans hJt (polynomial_eval_mono_nat p ?_)
+    have e1 : (encodeVec (Fin.cons t (Fin.tail v))).length
+        = 2 * (encodeVec (Fin.tail v)).length + 2 + t.length := by
+      simp [encodeVec_succ, Fin.tail_cons]
+    have e2 : (encodeVec v).length
+        = 2 * (encodeVec (Fin.tail v)).length + 2 + (v 0).length := by
+      simp [encodeVec_succ]
+    omega
 
 /-- **Soundness induction.** Every function of Cobham's algebra is polynomial
 time on encoded argument vectors. -/

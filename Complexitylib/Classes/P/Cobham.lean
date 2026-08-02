@@ -56,12 +56,20 @@ scanner (copy the leading block verbatim, then decode the next block's payload),
 which is built and verified. So four of the six constructor cases — `empty`,
 `proj`, `bit`, `comp` — are complete.
 
-The two remaining constructor cases rest on one arithmetic machine and one loop
-(each `sorry` with a documented build):
+The `smash` case is complete as well: `mulUnpair_mem_FP`
+(`Complexitylib.Classes.P.Cobham.Internal.MulLen`) counts the leading block's
+payload into a unary work register and then emits that many `false` bits once
+per remaining input symbol, giving `|A|·|B|` zeros from `pair A B`; `fpn_smash`
+follows via `mulLenFn_mem_FP`. So five of the six constructor cases — `empty`,
+`proj`, `bit`, `comp`, `smash` — are complete.
 
-- `mulLenPair_mem_FP` — from `pair A B`, emit `|A|·|B|` copies of `false` (count
-  both block lengths, multiply, emit); needed for `fpn_smash` (via `mulLenFn`);
-- the `forBinaryWorkTM`-based loop for `fpn_boundedRec`.
+The last constructor case, `fpn_boundedRec`, is proved modulo a single
+machine-level loop lemma, `Cobham.recFoldClamp_mem_FP`: iterating a
+width-clamped `FP` step function once per bit of `sndBlock z`. Everything else
+in that case — that recursion on notation is the encoded-argument loop
+`recFold` (`Cobham.recFold_eq_recNotation`), and that Cobham's
+limited-recursion side condition makes the width clamp vacuous
+(`Cobham.recFoldClamp_eq_recFold`) — is proved.
 
 **Completeness (`FP ⊆ CobhamFP`)**, `Cobham.FP_subset_CobhamFP_internal`, is still
 a single `sorry`: it simulates a polynomial-time machine inside the algebra —
