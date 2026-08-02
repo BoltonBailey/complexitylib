@@ -181,6 +181,57 @@ The last three are the quality gates:
 API documentation builds with doc-gen4 from the `docbuild/` subproject
 (`cd docbuild && lake build Complexitylib:docs`); CI publishes it weekly.
 
+## Minimizing module interfaces
+
+A module's interface is what every downstream module must rebuild against.
+Two things inflate it: `public import X` re-exports X to everything
+downstream, and `@[expose]` puts a definition's *body* in the interface rather
+than just its signature. They also constrain each other — a `public`
+declaration's signature may only mention names from `public` imports, and an
+*exposed* definition's body must too — so de-exposing is what makes some
+import demotions legal in the first place.
+
+`lake shake` reports the import half:
+
+```bash
+lake build --wfail        # shake reads the .oleans, so build first
+lake shake                # report only
+lake shake --explain      # also show which constants require each import
+```
+
+`scripts/shake_minimize.py` turns both halves into a verified minimization
+pass. It applies only *removals* — `@[expose] public section` → `public
+section`, `public import X` → `import X`, or dropping an unused import — and
+runs the full five-target gate build after each change, reverting anything
+that breaks. Run the expose pass first:
+
+```bash
+python3 scripts/shake_minimize.py --state .expose-minimize.json scan-expose
+python3 scripts/shake_minimize.py --state .expose-minimize.json apply
+
+lake build --wfail
+python3 scripts/shake_minimize.py scan --retry-reverted
+python3 scripts/shake_minimize.py apply
+python3 scripts/shake_minimize.py report -v
+```
+
+Shake's suggested *additions* are deliberately ignored, so the script can only
+shrink an interface; a demotion that would have needed a compensating import
+downstream simply fails its build and is rolled back. Nothing is ever made to
+build by adjusting a proof.
+
+State lives in the file named by `--state` (gitignored) and is rewritten after
+every verified step, so `apply` can be interrupted with Ctrl-C or `kill` and
+resumed. Because each candidate costs a real build, a full pass takes hours;
+use `--time-budget MINUTES` to run it in slices. Expose candidates are ordered
+by transitive dependent count ascending, which puts the cheap, near-certain
+wins first. Re-running a scan after a pass finds candidates newly exposed by
+it, and `--retry-reverted` re-queues ones an earlier pass rejected.
+
+Two shake annotations are honoured: `import X -- shake: keep` pins a single
+import and `module -- shake: keep-all` pins a whole file. `meta import` lines
+are never touched.
+
 ## Choosing a Contribution
 
 See [ROADMAP.md](ROADMAP.md) for dependency-ordered research programs and

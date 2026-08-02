@@ -1,5 +1,8 @@
 /.lake
 docbuild/.lake
 .codex/
+.shake-minimize.json
+.expose-minimize.json
+scripts/__pycache__/
 arora-barak-draft.pdf
 .claude/
