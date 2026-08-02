@@ -22,7 +22,7 @@ iteration precisely below the limit, or to `done` precisely at equality.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

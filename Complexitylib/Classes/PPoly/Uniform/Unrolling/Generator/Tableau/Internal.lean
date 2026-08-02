@@ -5,13 +5,13 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Program
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Tableau.Defs
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Padded
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Finalization
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength
 
 /-!
 # Complete direct-unrolling generator -- proof internals

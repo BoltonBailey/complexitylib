@@ -31,7 +31,7 @@ closure, and a fresh-start computation bridge.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

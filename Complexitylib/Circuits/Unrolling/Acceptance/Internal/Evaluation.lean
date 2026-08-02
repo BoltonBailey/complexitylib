@@ -18,7 +18,7 @@ Boolean acceptance predicate used by `NTM.acceptCount`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
