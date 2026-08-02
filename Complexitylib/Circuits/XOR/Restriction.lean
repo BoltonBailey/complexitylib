@@ -21,7 +21,7 @@ contradiction needed after a switching argument leaves many variables free.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace Schnorr

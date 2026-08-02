@@ -14,7 +14,7 @@ public import Mathlib.Data.Fintype.BigOperators
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

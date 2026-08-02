@@ -18,7 +18,7 @@ intentionally deferred until that generator's public contracts are available.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

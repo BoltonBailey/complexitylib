@@ -18,7 +18,7 @@ filtered to the free variables.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace AC0Formula

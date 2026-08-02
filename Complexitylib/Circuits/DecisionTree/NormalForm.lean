@@ -18,7 +18,7 @@ therefore have at most `2 ^ d` terms or clauses.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

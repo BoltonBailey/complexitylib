@@ -17,7 +17,7 @@ tableau body and discharges its value-level entry condition.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -16,7 +16,7 @@ the terminal copy reads the original acceptance wire through the dead padding.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

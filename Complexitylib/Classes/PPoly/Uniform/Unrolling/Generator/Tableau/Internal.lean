@@ -22,7 +22,7 @@ the dedicated layer counter exactly once per emitted packed step.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

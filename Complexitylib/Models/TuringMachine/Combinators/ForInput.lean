@@ -25,7 +25,7 @@ counterpart of the unary-work-register loop `TM.forRegTM`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

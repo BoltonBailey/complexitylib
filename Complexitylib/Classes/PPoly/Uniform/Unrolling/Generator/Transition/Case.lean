@@ -16,7 +16,7 @@ with soundness of the complete case-formula emitter.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

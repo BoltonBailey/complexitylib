@@ -15,7 +15,7 @@ polynomial. This is the standard notion used in cryptographic definitions.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

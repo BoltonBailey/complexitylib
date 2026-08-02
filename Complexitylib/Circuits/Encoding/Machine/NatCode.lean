@@ -30,7 +30,7 @@ satisfies the one-way-output transducer discipline.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

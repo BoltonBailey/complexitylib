@@ -20,7 +20,7 @@ the operand bit widths.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

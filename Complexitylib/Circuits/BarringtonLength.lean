@@ -39,7 +39,7 @@ the classical `4 ^ depth` bound.
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

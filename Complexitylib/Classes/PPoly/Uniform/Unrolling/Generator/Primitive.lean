@@ -16,7 +16,7 @@ head, and cell configuration-wire references.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

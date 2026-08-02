@@ -18,7 +18,7 @@ size in the source literal and clause counts.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -37,7 +37,7 @@ with a distinct failure result.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

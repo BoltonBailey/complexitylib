@@ -23,7 +23,7 @@ No uniformity assumption is used.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

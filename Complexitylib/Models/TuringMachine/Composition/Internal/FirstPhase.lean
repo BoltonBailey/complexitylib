@@ -19,7 +19,7 @@ exact tape facts required by the normalization tail.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

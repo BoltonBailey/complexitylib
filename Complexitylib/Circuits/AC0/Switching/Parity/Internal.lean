@@ -13,7 +13,7 @@ public import Complexitylib.Circuits.XOR.Restriction.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

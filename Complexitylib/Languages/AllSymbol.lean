@@ -28,7 +28,7 @@ single `Bool` tracking "every bit so far equals target".
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

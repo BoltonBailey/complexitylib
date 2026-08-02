@@ -6,15 +6,15 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Defs
-public import Mathlib.Tactic.NormNum.Inv
-public import Mathlib.Tactic.NormNum.Pow
+import Mathlib.Tactic.NormNum.Inv
+import Mathlib.Tactic.NormNum.Pow
 
 /-!
 # Capturing raw-input scratch bits in finite control -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

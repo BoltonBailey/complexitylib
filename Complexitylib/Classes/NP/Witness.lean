@@ -53,7 +53,7 @@ verifier being in P) rest only on that single lemma.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

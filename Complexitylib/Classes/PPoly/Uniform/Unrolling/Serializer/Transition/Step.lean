@@ -29,7 +29,7 @@ one packed-output copy per atom in that same order.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

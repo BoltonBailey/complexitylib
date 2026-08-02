@@ -5,11 +5,11 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Internal.Ctrl
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Internal.Inv
-public import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
+import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScanStep
@@ -19,7 +19,7 @@ public import
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

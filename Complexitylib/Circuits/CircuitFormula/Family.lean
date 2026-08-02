@@ -27,7 +27,7 @@ translation controls directly.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

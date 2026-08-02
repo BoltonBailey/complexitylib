@@ -17,7 +17,7 @@ public import Complexitylib.DescriptiveComplexity.FirstOrder.Isomorphism
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

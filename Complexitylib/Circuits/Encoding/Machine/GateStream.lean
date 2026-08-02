@@ -24,7 +24,7 @@ restored to zero and every other tape is preserved literally.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

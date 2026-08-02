@@ -25,7 +25,7 @@ since every machine has at least its start state.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

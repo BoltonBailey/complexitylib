@@ -17,7 +17,7 @@ are intentionally handled by separate modules.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -26,7 +26,7 @@ The completed loop simulation and headline universal-machine theorems are in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

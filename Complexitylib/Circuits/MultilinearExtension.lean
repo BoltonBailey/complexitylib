@@ -26,7 +26,7 @@ arithmetized formulas agree with their Boolean originals on the cube.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

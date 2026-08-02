@@ -34,7 +34,7 @@ De Morgan duality (`CNF.neg`).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

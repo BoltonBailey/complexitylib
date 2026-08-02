@@ -34,7 +34,7 @@ states only the existence of an equivalent shallow, polynomial-size formula.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace BoolFormula

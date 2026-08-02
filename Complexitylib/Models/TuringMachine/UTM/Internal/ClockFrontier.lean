@@ -36,7 +36,7 @@ Two `TM 7` machines, both with ghost-initial-tapes `HoareTime` specs:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

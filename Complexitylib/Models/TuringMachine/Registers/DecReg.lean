@@ -25,7 +25,7 @@ Mirror of `incRegTM` (`RegisterOps.lean`) with an erase phase.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

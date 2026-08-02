@@ -18,7 +18,7 @@ the selected instruction is `halt`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

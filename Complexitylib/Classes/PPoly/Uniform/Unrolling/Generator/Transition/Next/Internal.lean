@@ -6,17 +6,17 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next.Defs
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.WrittenCell
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 
 /-!
 # Direct-unrolling next-atom generator -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

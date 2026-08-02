@@ -16,7 +16,7 @@ one-step proofs independent of the implementation's nested index tests.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

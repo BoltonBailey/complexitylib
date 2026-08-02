@@ -15,7 +15,7 @@ public import Mathlib.Data.Nat.Bitwise
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

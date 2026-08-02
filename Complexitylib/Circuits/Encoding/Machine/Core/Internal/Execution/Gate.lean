@@ -22,7 +22,7 @@ within this controller. They are the reusable proof-engineering seam between
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

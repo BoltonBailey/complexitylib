@@ -27,7 +27,7 @@ which is exactly the final transition performed by `ifTM`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

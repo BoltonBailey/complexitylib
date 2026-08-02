@@ -25,7 +25,7 @@ six-gate suffix combines the selected write with the old cell value.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

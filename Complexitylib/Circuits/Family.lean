@@ -18,7 +18,7 @@ the power big-O convention used by complexity classes.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

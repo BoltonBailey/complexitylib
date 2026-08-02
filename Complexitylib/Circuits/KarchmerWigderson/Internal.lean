@@ -12,7 +12,7 @@ public import Complexitylib.Circuits.KarchmerWigderson.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace KarchmerWigderson

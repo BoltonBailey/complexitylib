@@ -19,7 +19,7 @@ cells have been consumed.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

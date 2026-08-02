@@ -34,7 +34,7 @@ Public statements are re-exported by
 -/
 
 
-@[expose] public section
+public section
 
 set_option maxRecDepth 100000
 

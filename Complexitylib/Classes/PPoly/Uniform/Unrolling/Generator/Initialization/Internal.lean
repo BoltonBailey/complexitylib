@@ -7,20 +7,20 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization.Defs
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Bounds
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
 public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization.Defs
 public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.InputLength.Defs
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 
 /-!
 # Direct-unrolling initialization generator -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

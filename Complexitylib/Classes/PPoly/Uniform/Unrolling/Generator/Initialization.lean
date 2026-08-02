@@ -17,7 +17,7 @@ the direct initialization phase.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

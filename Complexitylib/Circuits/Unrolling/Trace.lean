@@ -30,7 +30,7 @@ arity and has machine-dependent cubic size in the trace horizon.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -8,7 +8,7 @@ module
 public import Complexitylib.Circuits.XOR
 public import Complexitylib.Circuits.Internal.CircuitDescriptor
 
-@[expose] public section
+public section
 
 namespace Complexity
 

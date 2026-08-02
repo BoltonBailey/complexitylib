@@ -42,7 +42,7 @@ The witness is the diagonal language `diagLang clk` of the diagonalizer
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

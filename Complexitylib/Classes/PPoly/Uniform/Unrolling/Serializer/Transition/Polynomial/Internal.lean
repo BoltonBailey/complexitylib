@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial.Defs
 
 /-!
@@ -13,7 +13,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transitio
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

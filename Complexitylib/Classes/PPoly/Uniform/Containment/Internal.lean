@@ -17,7 +17,7 @@ public import Complexitylib.Classes.PPoly
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

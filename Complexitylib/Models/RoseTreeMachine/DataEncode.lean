@@ -21,7 +21,7 @@ and `ℕ` (binary encoding via `List Bool`)
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

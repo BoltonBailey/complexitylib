@@ -33,7 +33,7 @@ that serializer reproduce the recursive `TraceBuild` arithmetic at run time.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

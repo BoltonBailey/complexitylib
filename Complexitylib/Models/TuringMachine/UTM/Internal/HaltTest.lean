@@ -50,7 +50,7 @@ state tape holds bit symbols only, so this is no restriction in use.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

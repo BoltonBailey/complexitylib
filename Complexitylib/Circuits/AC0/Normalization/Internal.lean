@@ -30,7 +30,7 @@ public import Mathlib.Tactic.ReduceModChar
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

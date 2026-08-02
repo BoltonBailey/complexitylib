@@ -27,7 +27,7 @@ read off the input tape position by position.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

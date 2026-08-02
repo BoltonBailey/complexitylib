@@ -24,7 +24,7 @@ the fixed malformed-input fallback.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

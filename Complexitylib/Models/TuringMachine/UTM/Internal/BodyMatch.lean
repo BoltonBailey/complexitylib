@@ -23,7 +23,7 @@ as an update-on-an-interval of the ghost cells (as in `dfCopy_loop`).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

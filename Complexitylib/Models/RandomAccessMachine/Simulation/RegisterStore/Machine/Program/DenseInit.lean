@@ -19,7 +19,7 @@ program ABI, and rewinds the input for dense fallback reads.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace RAM

@@ -17,7 +17,7 @@ typed CNF token stream. The endpoint is recovered from the public
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

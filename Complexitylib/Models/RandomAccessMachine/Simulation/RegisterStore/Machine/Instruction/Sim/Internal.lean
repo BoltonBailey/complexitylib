@@ -7,18 +7,18 @@ Authors: Samuel Schlesinger
 module
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Sim.Defs
-public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
-public import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
-public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
+import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 
 /-!
 # Fixed-program dispatch -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

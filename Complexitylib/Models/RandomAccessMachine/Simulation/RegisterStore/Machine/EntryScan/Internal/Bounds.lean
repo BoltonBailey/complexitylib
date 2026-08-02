@@ -5,13 +5,12 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
-public import
-  Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch.Internal
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch.Internal
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Defs
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
-public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 
 /-!
 # Encoded-length bounds for sparse-entry scans -- proof internals
@@ -22,7 +21,7 @@ scan theorem retains only the separate binary remaining-count charge.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

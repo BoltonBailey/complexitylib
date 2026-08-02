@@ -24,7 +24,7 @@ zero. The resource contract gives a width-based all-prefix space bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

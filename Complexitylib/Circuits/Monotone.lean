@@ -21,7 +21,7 @@ and essential variables are both bounded by the number of formula leaves.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace MonotoneFormula

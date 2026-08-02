@@ -23,7 +23,7 @@ bound. Consequently `L ⊆ P` and `FL ⊆ FP`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

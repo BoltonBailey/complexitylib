@@ -18,7 +18,7 @@ width envelope.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

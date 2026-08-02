@@ -31,7 +31,7 @@ reuses the local successor bound at each iteration and is formally `O(log n)`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

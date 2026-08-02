@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.BitString
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace MonotoneFormula
