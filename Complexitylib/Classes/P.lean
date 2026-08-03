@@ -12,6 +12,7 @@ public import Complexitylib.Classes.P.PairWithInput
 public import Complexitylib.Classes.P.Preimage
 public import Complexitylib.Classes.P.UnaryLength
 public import Complexitylib.Classes.P.Reverse
+public import Complexitylib.Classes.P.TakeLen
 public import Complexitylib.Classes.P.FinsetDomain
 public import Complexitylib.Classes.P.Cobham
 public import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput

@@ -6,6 +6,10 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Defs
+public import Complexitylib.Classes.P.Cobham.Internal.Algebra
+public import Complexitylib.Classes.P.Cobham.Internal.Encoding
+public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
+public import Complexitylib.Classes.P.Cobham.Internal.Simulate
 public import Complexitylib.Classes.P.Cobham.Internal.MulLen
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Classes.P.NormalForm
@@ -47,18 +51,21 @@ Fully proved here:
   `fpn_bit`, `fpn_smash`, `fpn_comp`, and `fpn_boundedRec` — the last modulo the
   single loop lemma below, with all of its algebra (`recFold`, `recFoldClamp`,
   `recFold_eq_recNotation`, `recFoldClamp_eq_recFold`) and the discharge of
-  Cobham's limited-recursion side condition proved here.
+  Cobham's limited-recursion side condition proved here;
+- the `FP` rulers (`exists_const_ruler`, `exists_pow_ruler`, `exists_ruler`)
+  that let that loop carry its width clamp as data;
+- the whole completeness direction `FP_subset_CobhamFP_internal`, via the
+  Turing-machine interpreter built in `Internal.Encoding` (configurations as
+  block-aligned bitstrings), `Internal.StepAlgebra` (the transition table and the
+  output-head rewind, inside the algebra), `Internal.Extract` (reading a string
+  off an aligned tape window) and `Internal.Simulate` (the clocked run).
 
-Reduced to precisely-stated lemmas (still `sorry`, each documented with the
-intended construction):
+Reduced to a precisely-stated lemma (still `sorry`, documented with the intended
+construction):
 - `recFoldClamp_mem_FP` — the loop of the `boundedRec` case: iterating a
-  width-clamped `FP` step function once per bit of `sndBlock z`;
-- `FP_subset_CobhamFP_internal` — the completeness direction (Turing-machine
-  interpreter inside the algebra).
+  width-clamped `FP` step function once per bit of `sndBlock z`.
 
-See each lemma's docstring for the construction it stands for. This decomposition
-is the contribution of the draft: it turns the two opaque `sorry`s of the surface
-file into an auditable work-list.
+See that lemma's docstring for the construction it stands for.
 -/
 
 
@@ -1953,16 +1960,76 @@ def recFoldClamp (A B : List Bool → List Bool) (bound : ℕ) (e W : List Bool)
       ((bif b then B else A)
         (pair (pair W (recFoldClamp A B bound e W t)) t)).take bound
 
+/-- A natural-coefficient polynomial is dominated by a single power of `n + 1`
+scaled by the sum of its coefficients. -/
+private theorem poly_eval_le_pow (p : Polynomial ℕ) (n : ℕ) :
+    p.eval n ≤
+      (∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i) * (n + 1) ^ p.natDegree := by
+  rw [Polynomial.eval_eq_sum_range, Finset.sum_mul]
+  refine Finset.sum_le_sum fun i hi => ?_
+  have hi' : i ≤ p.natDegree := by rw [Finset.mem_range] at hi; omega
+  exact Nat.mul_le_mul_left _
+    (le_trans (Nat.pow_le_pow_left (by omega) i) (Nat.pow_le_pow_right (by omega) hi'))
+
+/-- An `FP` function whose output is at least `c` bits long, for any constant `c`.
+Built by iterating `pair · []`, which doubles the length and adds two. -/
+theorem exists_const_ruler (c : ℕ) :
+    ∃ K : List Bool → List Bool, K ∈ FP ∧ ∀ z, c ≤ (K z).length := by
+  induction c with
+  | zero => exact ⟨fun _ => [], const_nil_mem_FP, fun _ => by simp⟩
+  | succ c ih =>
+      obtain ⟨K, hK, hlen⟩ := ih
+      refine ⟨fun z => pair (K z) [], pairFn_mem_FP hK const_nil_mem_FP, fun z => ?_⟩
+      have := hlen z
+      simp only [pair_length, List.length_nil]
+      omega
+
+/-- **Rulers.** For every constant `c` and exponent `d` there is an `FP` function
+whose output is at least `c · (|z| + 1) ^ d` bits long. Rulers let the loop of the
+`boundedRec` case carry its width clamp as *data* — truncating to a string costs
+linear time, whereas truncating to a computed number would not. -/
+theorem exists_pow_ruler (c d : ℕ) :
+    ∃ R : List Bool → List Bool, R ∈ FP ∧
+      ∀ z, c * (z.length + 1) ^ d ≤ (R z).length := by
+  induction d with
+  | zero =>
+      obtain ⟨K, hK, hlen⟩ := exists_const_ruler c
+      exact ⟨K, hK, fun z => by simpa using hlen z⟩
+  | succ d ih =>
+      obtain ⟨R, hR, hlen⟩ := ih
+      refine ⟨fun z => List.replicate ((R z).length * (pair [] z).length) false,
+        mulLenFn_mem_FP hR pairLeftNil_mem_FP, fun z => ?_⟩
+      have hR' := hlen z
+      have hL : z.length + 1 ≤ (pair [] z).length := by simp
+      calc c * (z.length + 1) ^ (d + 1)
+          = (c * (z.length + 1) ^ d) * (z.length + 1) := by ring
+        _ ≤ (R z).length * (pair [] z).length := Nat.mul_le_mul hR' hL
+        _ = _ := by simp
+
+/-- Every polynomial bound has an `FP` ruler. -/
+theorem exists_ruler (p : Polynomial ℕ) :
+    ∃ R : List Bool → List Bool, R ∈ FP ∧ ∀ z, p.eval z.length ≤ (R z).length := by
+  obtain ⟨R, hR, hlen⟩ :=
+    exists_pow_ruler (∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i) p.natDegree
+  exact ⟨R, hR, fun z => le_trans (poly_eval_le_pow p z.length) (hlen z)⟩
+
 /-- **The loop of the `boundedRec` case** — the one machine-level fact the
 soundness direction still needs.
 
-*Construction (TODO):* run `forBinaryWorkTM` over a work tape holding `sndBlock z`
-reversed. The loop state is a work tape holding the current pair
-`pair (pair (fstBlock z) a) t`; one iteration appends the driver bit to `t`,
-runs the `FP` machine for `A` or `B` on the state tape (via `retargetInput` and
-`retargetOutput`, with the sub-machine's tapes cleared between iterations), and
-truncates the result to `bound` bits. Because `bound` is a polynomial in `|z|`
-and there are at most `|z|` iterations, the total time is polynomial. -/
+*Construction (TODO):* run `forBinaryWorkTM` over a work tape holding
+`(sndBlock z).reverse` — the recursion peels the *head* of `sndBlock z`, so an
+iterative evaluation consumes its bits back to front, which is what
+`Complexity.reverse_mem_FP` supplies. The loop state is a work tape holding the
+current pair `pair (pair (fstBlock z) a) t`; one iteration appends the driver
+bit to `t`, runs the `FP` machine for `A` or `B` on the state tape (selected by
+the driver bit via `TM.ifTM`, and run via `TM.placeWorkTM_retargetInputStarted_-`
+`computesVirtual`, with the sub-machine's tapes cleared between iterations), and
+truncates the result to `bound` bits.
+
+The clamp is realized as data rather than arithmetic: `exists_ruler` builds an
+`FP` string of length at least `p.eval |z|`, and `Complexity.takeLen_mem_FP`
+truncates to a ruler's length in linear time. With at most `|z|` iterations,
+each on a state of polynomially bounded width, the total time is polynomial. -/
 theorem recFoldClamp_mem_FP {A B E : List Bool → List Bool}
     (hA : A ∈ FP) (hB : B ∈ FP) (hE : E ∈ FP) (p : Polynomial ℕ) :
     (fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z))
@@ -2102,23 +2169,30 @@ theorem CobhamFP_subset_FP_of_FPn : CobhamFP ⊆ FP := by
 /-- **Completeness direction.** Every polynomial-time function belongs to
 Cobham's algebra.
 
-*Construction (TODO — the major remaining task):* simulate a polynomial-time
-Turing machine inside the algebra.
-1. Encode a full configuration (state, input tape, work tapes, output tape, head
-   positions) as a bitstring, each tape split at its head so that head moves are
-   bit-successor operations.
-2. Show the one-step transition function is `Cobham`: it is a finite case split
-   (finite `Q`, 4-symbol alphabet), each case realized by recursion on notation
-   on single bits together with the block/concatenation operations already shown
-   to be `Cobham` (`Cobham.append`, and analogous select/index helpers to add).
-3. Iterate the step function `T(n)` times by limited recursion on notation over a
-   clock string of length `T(n)` built from `smash` (`T` polynomial, via the
-   normal form `mem_FP_iff_computesInTime_polynomial`).
-4. Read the output off the halting configuration.
+*Construction:* a polynomial-time Turing machine is simulated inside the algebra.
+1. A whole configuration — state, input tape, work tapes, output tape and every
+   head position — is one bitstring of equal-width blocks, each tape split at its
+   head so that a head move is a two-bit shift (`Cobham.cfgCode`).
+2. The one-step transition is a finite case split on (state, symbols read), which
+   is `Cobham.tableFn` against the finitely many constant key patterns, with each
+   branch built from `takeFn`/`dropFn`/`appendFn`/`padFn` (`Cobham.stepFn`). At
+   the halting state the branch is the identity, so the encoding is a fixed point
+   once the machine stops.
+3. The step is iterated once per bit of a clock string built from `smash`
+   (`Cobham.exists_pow_clock`), long enough by the polynomial normal form
+   `mem_FP_iff_computesInTime_polynomial`.
+4. A second iteration walks the output head back to cell `0`
+   (`Cobham.rewindFn`), after which that tape's right half-block is the whole
+   tape in order, and the output is read off it by two `Complexity.cellBits`
+   recursions and one `Complexity.runTrue` (`Cobham.simFn`).
 The length bounds throughout are polynomial, so every `boundedRec` side condition
 is met. -/
 theorem FP_subset_CobhamFP_internal : FP ⊆ CobhamFP := by
-  sorry
+  intro f hf
+  obtain ⟨k, tm, p, hcomp⟩ := mem_FP_iff_computesInTime_polynomial.mp hf
+  exact computes_mem_CobhamFP tm
+    (S := ∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i) (D := p.natDegree)
+    (poly_eval_le_pow p) hcomp
 
 end Cobham
 

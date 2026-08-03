@@ -22,8 +22,44 @@ string functions. The headline statement is `CobhamFP_eq_FP`.
 
 - `CobhamFP_eq_FP` — Cobham's algebra equals `FP` *(draft: proof in progress —
   see the reduction status below)*
-- `Cobham.of_eq`, `Cobham.const`, `Cobham.append` — basic members and congruence,
-  validating that the algebra is usable
+- `Cobham.of_eq`, `Cobham.comp₂`, `Cobham.comp₃` — congruence and usable
+  composition at small arities
+- `Cobham.const`, `Cobham.append`, `Cobham.appendFn`, `Cobham.pairing`,
+  `Cobham.tail`, `Cobham.dispatch`, `Cobham.dropPrefix`, `Cobham.takePrefix`,
+  `Cobham.lengthPad` — the working toolkit: constants, concatenation,
+  self-delimiting pairing, bit peeling, branching on a bit, prefix/suffix
+  splitting at a given length, and unary length. These are the operations a
+  machine interpreter written inside the algebra needs, and each is a single
+  limited recursion on notation.
+- `Cobham.takeFn`, `Cobham.dropFn`, `Cobham.zeroBlockFn`, `Cobham.padFn`,
+  `Cobham.repeatFn`, `Cobham.blockFn` — fixed-width block packing and
+  addressing: pad every field of a configuration to one ruler's width and field
+  `i` is `blockFn … i`, so the algebra never needs a self-delimiting decoder
+- `Cobham.tableFn` — finite table dispatch, the shape of a machine's transition
+  function: finitely many constant patterns, first match wins
+- `Cobham.dispatch₀`, `Cobham.iteFn`, `Cobham.andFn`, `Cobham.orFn`,
+  `Cobham.notFn`, `Cobham.bitAtFn`, `Cobham.headFlagFn`, `Cobham.matchPrefixFn` —
+  the Boolean layer in which a machine's finite transition table gets written:
+  total dispatch, if-then-else, the connectives, bit extraction, and testing a
+  string against a fixed constant. `matchPrefixFn` is a *finite* composition for
+  each constant — the induction is at the meta level, not inside the algebra
+- `Cobham.iterFn`, `Cobham.exists_pow_clock` — **the class is closed under
+  clocked iteration**, and polynomial clocks are available. Iterating a step
+  function once per bit of a clock string is a single limited recursion on
+  notation whose step ignores the bit it peels and applies `f` to its own
+  recursive value; the clock's *length* is the iteration count, and `smash`
+  builds clocks of any polynomial length. This is the skeleton of the
+  completeness direction: encode configurations, show one machine step is in the
+  class, then iterate under a polynomial clock.
+
+Two of these carry the weight. `dispatch` shows that branching is free: the step
+functions of `recNotation` are already selected by the bit being peeled, so a
+one-step recursion on `v 0` *is* an if-then-else on its leading bit.
+`dropPrefix` shows how to move an argument that changes along a recursion —
+`recNotation` fixes its parameters, so the changing value has to live in the
+recursion's *value*, and iterating `tail` there gives `drop`. With `drop` in
+hand, `takePrefix` reads off successive bits, and fixed-width pairing with
+projections follows.
 
 ## Reduction status (draft)
 
@@ -69,15 +105,26 @@ width-clamped `FP` step function once per bit of `sndBlock z`. Everything else
 in that case — that recursion on notation is the encoded-argument loop
 `recFold` (`Cobham.recFold_eq_recNotation`), and that Cobham's
 limited-recursion side condition makes the width clamp vacuous
-(`Cobham.recFoldClamp_eq_recFold`) — is proved.
+(`Cobham.recFoldClamp_eq_recFold`) — is proved. The two `FP` primitives that
+loop needs are also in place: `Complexity.reverse_mem_FP` (to consume the
+recursion string back to front) and `Complexity.takeLen_mem_FP` together with
+`Cobham.exists_ruler` (to carry the width clamp as a string rather than a
+number).
 
-**Completeness (`FP ⊆ CobhamFP`)**, `Cobham.FP_subset_CobhamFP_internal`, is still
-a single `sorry`: it simulates a polynomial-time machine inside the algebra —
-configurations encoded as bitstrings with each tape split at the head (so head
-moves are bit-successor operations), the transition function a finite case split
-via recursion on notation on single bits, and the run `T(n)` iterations of the
-step function via recursion on notation on a clock string of length `T(n)` built
-from `smash`.
+**Completeness (`FP ⊆ CobhamFP`)**, `Cobham.FP_subset_CobhamFP_internal`, is now
+fully proved: a polynomial-time machine is simulated inside the algebra. A whole
+configuration is one block-aligned bitstring with each tape split at its head, so
+a head move is a two-bit shift (`Cobham.cfgCode`); the transition function is the
+finite table `Cobham.stepFn`, dispatching on the constant key patterns
+(`Cobham.keyPattern`) with each branch a short composition of the toolkit; the
+run is `Cobham.iterFn` over a clock string built from `smash`
+(`Cobham.exists_pow_clock`); and the output is read off the output tape after a
+second iteration walks its head back to cell `0` (`Cobham.rewindFn`,
+`Complexity.cellBits`, `Complexity.runTrue`). The assembly is
+`Cobham.simFn_mem` / `Cobham.simFn_eq`.
+
+So the only remaining gap in `CobhamFP_eq_FP` is the soundness-side loop lemma
+`Cobham.recFoldClamp_mem_FP`.
 -/
 
 
@@ -85,55 +132,6 @@ from `smash`.
 
 namespace Complexity
 
-namespace Cobham
-
-/-- The class respects pointwise equality of functions. Useful because the constructors
-of `Cobham` produce syntactically specific lambda terms. -/
-theorem of_eq {n : ℕ} {f g : (Fin n → List Bool) → List Bool} (hf : Cobham f)
-    (h : ∀ v, f v = g v) : Cobham g :=
-  (funext h : f = g) ▸ hf
-
-/-- Every constant function is in the class: build the constant string bit by bit from
-`empty` and the successors. -/
-theorem const {n : ℕ} (s : List Bool) : Cobham fun _ : Fin n → List Bool => s := by
-  induction s with
-  | nil => exact .empty
-  | cons b s ih => exact (Cobham.comp (.bit b) fun _ : Fin 1 => ih).of_eq fun v => rfl
-
-/-- Concatenation is in the class, by limited recursion on notation on the first
-argument with bound `smash (true :: x) (true :: y)`. -/
-theorem append : Cobham fun v : Fin 2 → List Bool => v 0 ++ v 1 := by
-  -- Recursion on notation computing `x ++ y`: base `y`, step `b :: ·` on the
-  -- recursive value.
-  have hrec : ∀ (x : List Bool) (v : Fin 1 → List Bool),
-      recNotation (fun v : Fin 1 → List Bool => v 0)
-        (fun w : Fin 3 → List Bool => false :: w 1)
-        (fun w : Fin 3 → List Bool => true :: w 1) x v = x ++ v 0 := by
-    intro x v
-    induction x with
-    | nil => rfl
-    | cons b x ih => cases b <;> simp [ih]
-  -- The bit-prepending step functions are in the class.
-  have hstep : ∀ b : Bool, Cobham fun w : Fin 3 → List Bool => b :: w 1 := fun b =>
-    (Cobham.comp (.bit b) fun _ : Fin 1 => .proj 1).of_eq fun v => rfl
-  -- The length bound `smash (true :: x) (true :: y)` is in the class.
-  have hj : Cobham fun w : Fin 2 → List Bool =>
-      Complexity.smash (true :: w 0) (true :: w 1) :=
-    (Cobham.comp .smash fun i : Fin 2 =>
-      (Cobham.comp (.bit true) fun _ : Fin 1 => .proj i).of_eq fun v => rfl).of_eq
-        fun v => rfl
-  refine (Cobham.boundedRec (.proj 0) (hstep false) (hstep true) hj ?_).of_eq fun v => ?_
-  · intro x v
-    rw [hrec]
-    have h1 : (Fin.cons x v : Fin 2 → List Bool) 1 = v 0 := rfl
-    have hexp : (x.length + 1) * ((v 0).length + 1) =
-        x.length * (v 0).length + x.length + (v 0).length + 1 := by ring
-    simp only [Fin.cons_zero, h1, smash_length, List.length_append, List.length_cons]
-    omega
-  · rw [hrec]
-    rfl
-
-end Cobham
 
 /-- Cobham's algebra is sound for polynomial time: every function of the (unary
 fragment of the) algebra is computable by a deterministic TM in polynomial time.
