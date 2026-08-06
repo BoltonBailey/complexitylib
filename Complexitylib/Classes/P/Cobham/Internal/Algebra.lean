@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
+public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Defs
 public import Complexitylib.Encoding.Pairing
 public import Mathlib.Data.Fin.VecNotation
@@ -19,11 +20,14 @@ Derived members of `Complexity.Cobham`: the operations a Turing-machine
 interpreter written inside the algebra needs. Each is a single limited recursion
 on notation, or a finite composition of such.
 
-This lives in the `Internal` layer because the completeness direction
-(`Complexitylib.Classes.P.Cobham.Internal`) consumes it, and that module sits
-below the surface file `Complexitylib.Classes.P.Cobham` in the import graph. The
-statements are still meant to be readable — see the surface file's module
-documentation for the guided tour.
+Two of these carry the weight. `dispatch` shows that branching is free: the step
+functions of `recNotation` are already selected by the bit being peeled, so a
+one-step recursion on `v 0` *is* an if-then-else on its leading bit.
+`dropPrefix` shows how to move an argument that changes along a recursion —
+`recNotation` fixes its parameters, so the changing value has to live in the
+recursion's *value*, and iterating `tail` there gives `drop`. With `drop` in
+hand, `takePrefix` reads off successive bits, and fixed-width pairing with
+projections follows.
 -/
 
 

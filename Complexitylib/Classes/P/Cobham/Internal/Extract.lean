@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
+public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Internal.Algebra
 
 /-!
@@ -16,7 +17,7 @@ its encoded output tape. Once the output head has been driven back to cell `0`
 half-block is the whole tape in order, two bits per cell: the first bit of a
 cell says whether it holds data, the second is the data bit.
 
-So the output is recovered by three short recursions on notation, all collected
+So the output is recovered by two short recursions on notation, both collected
 here:
 
 * `Complexity.cellBits` — every second bit of a string, from a fixed offset;

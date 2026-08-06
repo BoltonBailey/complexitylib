@@ -5,7 +5,8 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Classes.P.Cobham.Internal.Loop
+public import Complexitylib.Asymptotics.PolyBound
+public import Complexitylib.Classes.P.Cobham.Internal.IterateLayout
 public import Complexitylib.Models.TuringMachine.Registers.Horner
 public import Complexitylib.Models.TuringMachine.Registers.InputLen
 public import Complexitylib.Models.TuringMachine.Subroutines.PairEmit
@@ -17,7 +18,7 @@ public import Complexitylib.Classes.P.NormalForm
 `Complexity.Cobham.iterate_mem_FP` needs one machine: given a polynomial-time
 `G`, a machine that applies `G` to its own input `|x|` times. This file builds
 it out of the phase contracts of
-`Complexitylib.Classes.P.Cobham.Internal.Loop`.
+`Complexitylib.Classes.P.Cobham.Internal.IterateLayout`.
 
 ## Layout
 
@@ -872,133 +873,78 @@ theorem iterTM_computesInTime (M : TM k) {G : List Bool → List Bool} {tp : Pol
 
 /-! ## Polynomial bounds
 
-`Complexity.iterBound` is a sum of products of polynomial evaluations, so it is
-bounded by `c · (n+1)^d`; that shape is closed under everything the bound is
-built from. -/
+`Complexity.iterBound` is a sum of products of polynomial evaluations, so the
+closure API of `Complexitylib.Asymptotics.PolyBound` bounds it directly. -/
 
-/-- Bounded by `c · (n+1)^d`: the closure-friendly form of "polynomially
-bounded". -/
-def PolyBnd (f : ℕ → ℕ) : Prop := ∃ c d : ℕ, ∀ n, f n ≤ c * (n + 1) ^ d
-
-theorem polyBnd_const (c : ℕ) : PolyBnd (fun _ => c) := ⟨c, 0, fun n => by simp⟩
-
-theorem polyBnd_id : PolyBnd (fun n => n) := ⟨1, 1, fun n => by simp⟩
-
-theorem polyBnd_mono {f g : ℕ → ℕ} (h : ∀ n, f n ≤ g n) (hg : PolyBnd g) : PolyBnd f := by
-  obtain ⟨c, d, hcd⟩ := hg
-  exact ⟨c, d, fun n => le_trans (h n) (hcd n)⟩
-
-theorem polyBnd_add {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
-    PolyBnd (fun n => f n + g n) := by
-  obtain ⟨c₁, d₁, h₁⟩ := hf
-  obtain ⟨c₂, d₂, h₂⟩ := hg
-  refine ⟨c₁ + c₂, max d₁ d₂, fun n => ?_⟩
-  have e₁ : (n + 1) ^ d₁ ≤ (n + 1) ^ (max d₁ d₂) :=
-    Nat.pow_le_pow_right (by omega) (le_max_left _ _)
-  have e₂ : (n + 1) ^ d₂ ≤ (n + 1) ^ (max d₁ d₂) :=
-    Nat.pow_le_pow_right (by omega) (le_max_right _ _)
-  have hm₁ := Nat.mul_le_mul_left c₁ e₁
-  have hm₂ := Nat.mul_le_mul_left c₂ e₂
-  have h₁' := h₁ n
-  have h₂' := h₂ n
-  calc f n + g n ≤ c₁ * (n + 1) ^ (max d₁ d₂) + c₂ * (n + 1) ^ (max d₁ d₂) := by omega
-    _ = (c₁ + c₂) * (n + 1) ^ (max d₁ d₂) := by ring
-
-theorem polyBnd_mul {f g : ℕ → ℕ} (hf : PolyBnd f) (hg : PolyBnd g) :
-    PolyBnd (fun n => f n * g n) := by
-  obtain ⟨c₁, d₁, h₁⟩ := hf
-  obtain ⟨c₂, d₂, h₂⟩ := hg
-  refine ⟨c₁ * c₂, d₁ + d₂, fun n => ?_⟩
-  calc f n * g n ≤ c₁ * (n + 1) ^ d₁ * (c₂ * (n + 1) ^ d₂) :=
-        Nat.mul_le_mul (h₁ n) (h₂ n)
-    _ = c₁ * c₂ * (n + 1) ^ (d₁ + d₂) := by rw [pow_add]; ring
-
-theorem polyBnd_pow {f : ℕ → ℕ} (hf : PolyBnd f) (m : ℕ) :
-    PolyBnd (fun n => f n ^ m) := by
-  induction m with
-  | zero => simpa using polyBnd_const 1
-  | succ m ih => simpa [pow_succ] using polyBnd_mul ih hf
-
-theorem polyBnd_eval (q : Polynomial ℕ) : PolyBnd (fun n => q.eval n) := by
-  refine ⟨∑ i ∈ Finset.range (q.natDegree + 1), q.coeff i, q.natDegree, fun n => ?_⟩
-  show q.eval n ≤ _
-  rw [Polynomial.eval_eq_sum_range, Finset.sum_mul]
-  refine Finset.sum_le_sum fun i hi => ?_
-  have hi' : i ≤ q.natDegree := by rw [Finset.mem_range] at hi; omega
-  exact Nat.mul_le_mul_left _
-    (le_trans (Nat.pow_le_pow_left (by omega) i) (Nat.pow_le_pow_right (by omega) hi'))
-
-theorem bigO_of_polyBnd {f : ℕ → ℕ} (h : PolyBnd f) : ∃ d, f =O (· ^ d) := by
-  obtain ⟨c, d, hcd⟩ := h
-  exact ⟨_, BigO.of_polynomial_bound (Polynomial.C c * (Polynomial.X + Polynomial.C 1) ^ d)
-    (fun n => by simpa using hcd n)⟩
-
-theorem polyBnd_iterBound (k : ℕ) (tp p r : Polynomial ℕ) :
-    PolyBnd (iterBound k tp p r) := by
-  have hcomp : PolyBnd (fun n => tp.eval (r.eval n)) :=
-    polyBnd_mono (fun n => le_of_eq (by rw [Polynomial.eval_comp])) (polyBnd_eval (tp.comp r))
-  have hp : PolyBnd (fun n => p.eval n) := polyBnd_eval p
-  have hr : PolyBnd (fun n => r.eval n) := polyBnd_eval r
-  have hpow : PolyBnd (fun n => (n + 1) ^ (polyCoeffs p).length) :=
-    polyBnd_pow (polyBnd_add polyBnd_id (polyBnd_const 1)) _
-  have hM : PolyBnd (fun n => polyM p n) := by
+theorem polyBound_iterBound (k : ℕ) (tp p r : Polynomial ℕ) :
+    PolyBound (iterBound k tp p r) := by
+  have hcomp : PolyBound (fun n => tp.eval (r.eval n)) :=
+    PolyBound.mono (PolyBound.eval (tp.comp r))
+      (fun n => le_of_eq (by rw [Polynomial.eval_comp]))
+  have hp : PolyBound (fun n => p.eval n) := PolyBound.eval p
+  have hr : PolyBound (fun n => r.eval n) := PolyBound.eval r
+  have hpow : PolyBound (fun n => (n + 1) ^ (polyCoeffs p).length) :=
+    PolyBound.pow (PolyBound.add PolyBound.id (PolyBound.const 1)) _
+  have hM : PolyBound (fun n => polyM p n) := by
     rw [show (fun n => polyM p n) = fun n =>
       ((polyCoeffs p).sum + 1) * (n + 1) ^ (polyCoeffs p).length + n + p.eval n from rfl]
-    exact polyBnd_add (polyBnd_add (polyBnd_mul (polyBnd_const _) hpow) polyBnd_id) hp
-  have hop : PolyBnd (fun n => opBudget (polyM p n)) := by
+    exact PolyBound.add (PolyBound.add (PolyBound.mul (PolyBound.const _) hpow) PolyBound.id) hp
+  have hop : PolyBound (fun n => opBudget (polyM p n)) := by
     rw [show (fun n => opBudget (polyM p n)) = fun n =>
       32 * ((polyM p n + 2) * (polyM p n + 2) * (polyM p n + 2)) from rfl]
-    exact polyBnd_mul (polyBnd_const _)
-      (polyBnd_mul (polyBnd_mul (polyBnd_add hM (polyBnd_const _))
-        (polyBnd_add hM (polyBnd_const _))) (polyBnd_add hM (polyBnd_const _)))
-  have hlayer : PolyBnd (fun n => layerBudget (polyM p n)) := by
+    exact PolyBound.mul (PolyBound.const _)
+      (PolyBound.mul (PolyBound.mul (PolyBound.add hM (PolyBound.const _))
+        (PolyBound.add hM (PolyBound.const _))) (PolyBound.add hM (PolyBound.const _)))
+  have hlayer : PolyBound (fun n => layerBudget (polyM p n)) := by
     rw [show (fun n => layerBudget (polyM p n)) = fun n =>
       4 * opBudget (polyM p n) + 3 from rfl]
-    exact polyBnd_add (polyBnd_mul (polyBnd_const _) hop) (polyBnd_const _)
-  have hsetup : PolyBnd (setupBound p) := by
+    exact PolyBound.add (PolyBound.mul (PolyBound.const _) hop) (PolyBound.const _)
+  have hsetup : PolyBound (setupBound p) := by
     rw [show setupBound p = fun n => 1 + 1 + (2 * n + 4) + 1 +
         (opBudget (polyM p n) + 1 +
           ((p.natDegree + 1) * (layerBudget (polyM p n) + 1) + 1)) + 1 + (n + 3) from rfl]
-    exact polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add
-      (polyBnd_add (polyBnd_const _) (polyBnd_const _))
-      (polyBnd_add (polyBnd_mul (polyBnd_const 2) polyBnd_id) (polyBnd_const _)))
-      (polyBnd_const _))
-      (polyBnd_add (polyBnd_add hop (polyBnd_const _))
-        (polyBnd_add (polyBnd_mul (polyBnd_const _) (polyBnd_add hlayer (polyBnd_const _)))
-          (polyBnd_const _))))
-      (polyBnd_const _)) (polyBnd_add polyBnd_id (polyBnd_const _))
-  have htail : ∀ m : ℕ → ℕ, PolyBnd m →
-      PolyBnd (fun n => tailBound k (p.eval n) (m n)) := by
+    exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
+      (PolyBound.add (PolyBound.const _) (PolyBound.const _))
+      (PolyBound.add (PolyBound.mul (PolyBound.const 2) PolyBound.id) (PolyBound.const _)))
+      (PolyBound.const _))
+      (PolyBound.add (PolyBound.add hop (PolyBound.const _))
+        (PolyBound.add
+          (PolyBound.mul (PolyBound.const _) (PolyBound.add hlayer (PolyBound.const _)))
+          (PolyBound.const _))))
+      (PolyBound.const _)) (PolyBound.add PolyBound.id (PolyBound.const _))
+  have htail : ∀ m : ℕ → ℕ, PolyBound m →
+      PolyBound (fun n => tailBound k (p.eval n) (m n)) := by
     intro m hm
     rw [show (fun n => tailBound k (p.eval n) (m n)) = fun n =>
       1 + 1 + (p.eval n + 1 + 2) + 1 +
         ((k + 1) * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + ((k + 1) * (p.eval n + 4) + 1)) + 1 +
       (2 * m n + 5 + 1 +
         (1 * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + (1 * (p.eval n + 4) + 1))) from rfl]
-    have hbase : PolyBnd (fun n => p.eval n + 4) := polyBnd_add hp (polyBnd_const _)
-    have hk : PolyBnd (fun n => (k + 1) * (p.eval n + 4)) :=
-      polyBnd_mul (polyBnd_const _) hbase
-    have h1 : PolyBnd (fun n => 1 * (p.eval n + 4)) := polyBnd_mul (polyBnd_const _) hbase
-    have h4 : PolyBnd (fun n => p.eval n * 4) := polyBnd_mul hp (polyBnd_const _)
-    exact polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add
-      (polyBnd_add (polyBnd_const _) (polyBnd_const _))
-      (polyBnd_add (polyBnd_add hp (polyBnd_const _)) (polyBnd_const _))) (polyBnd_const _))
-      (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add hk h4) (polyBnd_const _))
-        (polyBnd_const _)) (polyBnd_add hk (polyBnd_const _)))) (polyBnd_const _))
-      (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_mul (polyBnd_const 2) hm)
-        (polyBnd_const _)) (polyBnd_const _))
-        (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add h1 h4) (polyBnd_const _))
-          (polyBnd_const _)) (polyBnd_add h1 (polyBnd_const _))))
+    have hbase : PolyBound (fun n => p.eval n + 4) := PolyBound.add hp (PolyBound.const _)
+    have hk : PolyBound (fun n => (k + 1) * (p.eval n + 4)) :=
+      PolyBound.mul (PolyBound.const _) hbase
+    have h1 : PolyBound (fun n => 1 * (p.eval n + 4)) := PolyBound.mul (PolyBound.const _) hbase
+    have h4 : PolyBound (fun n => p.eval n * 4) := PolyBound.mul hp (PolyBound.const _)
+    exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
+      (PolyBound.add (PolyBound.const _) (PolyBound.const _))
+      (PolyBound.add (PolyBound.add hp (PolyBound.const _)) (PolyBound.const _)))
+      (PolyBound.const _))
+      (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add hk h4) (PolyBound.const _))
+        (PolyBound.const _)) (PolyBound.add hk (PolyBound.const _)))) (PolyBound.const _))
+      (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.mul (PolyBound.const 2) hm)
+        (PolyBound.const _)) (PolyBound.const _))
+        (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add h1 h4) (PolyBound.const _))
+          (PolyBound.const _)) (PolyBound.add h1 (PolyBound.const _))))
   rw [show iterBound k tp p r = fun n => setupBound p n + 1 +
       (tailBound k (p.eval n) (n + 2) + 1 +
         (n * (tp.eval (r.eval n) + 1 + tailBound k (p.eval n) (r.eval n) + 2) + (n + 2)) + 1 +
         tp.eval (r.eval n)) from rfl]
-  exact polyBnd_add (polyBnd_add hsetup (polyBnd_const _))
-    (polyBnd_add (polyBnd_add (polyBnd_add (polyBnd_add
-      (htail _ (polyBnd_add polyBnd_id (polyBnd_const _))) (polyBnd_const _))
-      (polyBnd_add (polyBnd_mul polyBnd_id (polyBnd_add (polyBnd_add (polyBnd_add hcomp
-        (polyBnd_const _)) (htail _ hr)) (polyBnd_const _)))
-        (polyBnd_add polyBnd_id (polyBnd_const _)))) (polyBnd_const _)) hcomp)
+  exact PolyBound.add (PolyBound.add hsetup (PolyBound.const _))
+    (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
+      (htail _ (PolyBound.add PolyBound.id (PolyBound.const _))) (PolyBound.const _))
+      (PolyBound.add (PolyBound.mul PolyBound.id (PolyBound.add (PolyBound.add (PolyBound.add hcomp
+        (PolyBound.const _)) (htail _ hr)) (PolyBound.const _)))
+        (PolyBound.add PolyBound.id (PolyBound.const _)))) (PolyBound.const _)) hcomp)
 
 /-- **`FP` is closed under iterating a polynomial-time function once per input
 bit**, provided every intermediate value stays polynomially bounded. -/
@@ -1012,7 +958,7 @@ theorem iterate_input_mem_FP {G : List Bool → List Bool} (hG : G ∈ FP) (r : 
     intro n
     rw [hpdef]
     simp [Polynomial.eval_comp]
-  obtain ⟨d, hd⟩ := bigO_of_polyBnd (polyBnd_iterBound k tp p r)
+  obtain ⟨d, hd⟩ := (polyBound_iterBound k tp p r).bigO
   exact ⟨d, 3 + (k + 2) + 0, iterTM M p, iterBound k tp p r,
     iterTM_computesInTime M hcomp p r (fun n => by rw [hpeval]; omega)
       (fun n => by rw [hpeval]; omega) (fun n => by rw [hpeval]; omega) hr, hd⟩

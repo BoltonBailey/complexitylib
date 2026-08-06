@@ -18,7 +18,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 # Self-delimiting blocks
 
 To concatenate binary strings into a single binary string, each piece must announce its own
-end. This file defines the library's single framing operation and its parsers:
+end. This file defines the library's single framing operation and its parser:
 
 - `delimit` frames a payload: each payload bit is doubled (`false ↦ [false, false]`,
   `true ↦ [true, true]`) and the block is terminated by the separator `[false, true]`,
@@ -27,12 +27,9 @@ end. This file defines the library's single framing operation and its parsers:
   remaining suffix (`none` on malformed input). It is named for its role in the pairing
   codec `Complexity.pair` (see `Complexitylib.Encoding.Pairing`), which is
   `pair x y = delimit x ++ y`.
-- `undelimitBlock`, `takeFirstBlock`, `hasBlock`, `tagBlock`, and `undelimitBlocks` are the
-  total helper functions machines compute when working with framed data.
 
-This file deliberately has no dependency on the machine or complexity-class layers, so both
-the machine-input pairing codec (`Complexitylib.Encoding.Pairing`) and the encoding layer
-(`Complexitylib.Encoding.Bitstring`) can build on it without import cycles.
+This file deliberately has no dependency on the machine or complexity-class layers, so the
+pairing codec can build on it without introducing an import cycle.
 -/
 
 
@@ -98,112 +95,5 @@ theorem eq_delimit_append_of_unpair?_eq_some :
     obtain ⟨rfl, rfl⟩ : true :: p₁ = x ∧ p₂ = y := by simpa [Prod.ext_iff] using heq
     simp only [eq_delimit_append_of_unpair?_eq_some hp, delimit_cons, List.cons_append]
   | true :: false :: rest, _, _, h => by simp [unpair?] at h
-
-/- ## Total block helpers -/
-
-/-- Strip the framing of a single self-delimiting block, returning its payload. On `delimit P`
-this returns `P`. Unlike `unpair?`, this is total: it ignores any data trailing the first block
-and maps malformed input to `[]`. -/
-def undelimitBlock : List Bool → List Bool
-  | false :: true :: _ => []
-  | false :: false :: rest => false :: undelimitBlock rest
-  | true :: _ :: rest => true :: undelimitBlock rest
-  | _ => []
-
-@[simp]
-theorem undelimitBlock_delimit (P : List Bool) :
-    undelimitBlock (delimit P) = P := by
-  induction P with
-  | nil => rfl
-  | cons b P ih => cases b <;> simp [undelimitBlock, ih]
-
-/-- Keep the leading self-delimiting block of a bitstring, dropping everything after it. On a
-pair encoding `delimit x ++ w` this returns `delimit x`. -/
-def takeFirstBlock : List Bool → List Bool
-  | false :: true :: _ => [false, true]
-  | false :: false :: rest => false :: false :: takeFirstBlock rest
-  | true :: c :: rest => true :: c :: takeFirstBlock rest
-  | l => l
-
-@[simp]
-theorem takeFirstBlock_delimit_append (P Q : List Bool) :
-    takeFirstBlock (delimit P ++ Q) = delimit P := by
-  induction P with
-  | nil => rfl
-  | cons b P ih => cases b <;> simp [takeFirstBlock, ih]
-
-/-- Does the bitstring begin with a well-formed self-delimiting block? -/
-def hasBlock : List Bool → Bool
-  | false :: true :: _ => true
-  | false :: false :: rest => hasBlock rest
-  | true :: true :: rest => hasBlock rest
-  | _ => false
-
-theorem hasBlock_eq_isSome_unpair? :
-    ∀ l : List Bool, hasBlock l = (unpair? l).isSome
-  | [] => rfl
-  | [b] => by cases b <;> rfl
-  | false :: true :: _ => rfl
-  | false :: false :: rest => by
-    simp only [hasBlock, unpair?, hasBlock_eq_isSome_unpair? rest]
-    cases unpair? rest <;> rfl
-  | true :: true :: rest => by
-    simp only [hasBlock, unpair?, hasBlock_eq_isSome_unpair? rest]
-    cases unpair? rest <;> rfl
-  | true :: false :: _ => rfl
-
-/-- Tag a bitstring with a leading `true` if it begins with a well-formed self-delimiting
-block, and return the empty bitstring otherwise. On pair encodings this computes
-`encode ∘ decode`. -/
-def tagBlock (l : List Bool) : List Bool :=
-  bif hasBlock l then true :: l else []
-
-/- ## Parsing a sequence of blocks -/
-
-/-- Parse a sequence of self-delimiting blocks, using `fuel` to bound the number of blocks.
-
-This is the auxiliary, fuel-carrying implementation of `undelimitBlocks`; since every block
-is nonempty, `input.length` is always enough fuel. -/
-def undelimitBlocksAux : ℕ → List Bool → Option (List (List Bool))
-  | _, [] => some []
-  | 0, _ :: _ => none
-  | fuel + 1, input => do
-    let (block, rest) ← unpair? input
-    let blocks ← undelimitBlocksAux fuel rest
-    return block :: blocks
-
-/-- Parse a sequence of self-delimiting blocks off the front of the input.
-
-Since every block is nonempty, `input.length` bounds the number of blocks, so it always
-suffices as fuel for `undelimitBlocksAux`. -/
-def undelimitBlocks (input : List Bool) : Option (List (List Bool)) :=
-  undelimitBlocksAux input.length input
-
-theorem length_le_length_flatten_delimit (l : List (List Bool)) :
-    l.length ≤ ((l.map delimit).flatten).length := by
-  induction l with
-  | nil => simp
-  | cons b t ih =>
-    simp only [List.map_cons, List.flatten_cons, List.length_append, List.length_cons,
-      delimit_length]
-    omega
-
-private theorem undelimitBlocksAux_flatten_delimit (l : List (List Bool)) :
-    ∀ fuel, l.length ≤ fuel → undelimitBlocksAux fuel ((l.map delimit).flatten) = some l := by
-  induction l with
-  | nil => intro fuel _; cases fuel <;> rfl
-  | cons b t ih =>
-    intro fuel hfuel
-    rw [List.length_cons] at hfuel
-    obtain ⟨fuel, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    obtain ⟨hd, tl, hcons⟩ : ∃ hd tl, delimit b ++ (t.map delimit).flatten = hd :: tl := by
-      cases b <;> exact ⟨_, _, rfl⟩
-    simp only [List.map_cons, List.flatten_cons, hcons, undelimitBlocksAux]
-    rw [← hcons, unpair?_delimit_append]
-    simp [ih fuel (by omega)]
-
-theorem undelimitBlocks_flatten_delimit (l : List (List Bool)) :
-    undelimitBlocks ((l.map delimit).flatten) = some l :=
-  undelimitBlocksAux_flatten_delimit l _ (length_le_length_flatten_delimit l)
 
 end Complexity

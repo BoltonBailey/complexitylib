@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Asymptotics.PolyBound
 public import Complexitylib.Classes.P.NormalForm
 public import Complexitylib.Models.RandomAccessMachine.Classes.Defs
 public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI
@@ -62,47 +63,21 @@ theorem mem_DTIME_of_decidesInTime_internal
     (fun inputLength => decisionTimeBound tm inputLength (T inputLength)),
     compiledDecision_decidesInTime_internal hdecides, BigO.refl _⟩
 
-/-- Pointwise domination by the evaluation of a natural polynomial. -/
-def PolyBound (f : ℕ → ℕ) : Prop :=
-  ∃ p : Polynomial ℕ, ∀ inputLength, f inputLength ≤ p.eval inputLength
+end Sparse
+
+end TMConfig
+
+end RAM
+
+/-! ## Polynomial bounds on the sparse simulation's resource functions
+
+Extensions of the generic `PolyBound` API of `Complexitylib.Asymptotics.PolyBound`
+to the register, word, marshalling, and running-time bounds of this simulation.
+They live in the root `PolyBound` namespace so that dot notation reaches them. -/
 
 namespace PolyBound
 
-theorem const (value : ℕ) : PolyBound (fun _ => value) :=
-  ⟨Polynomial.C value, fun _ => by simp⟩
-
-theorem id : PolyBound (fun inputLength => inputLength) :=
-  ⟨Polynomial.X, fun _ => by simp⟩
-
-theorem add {f g : ℕ → ℕ} (hf : PolyBound f) (hg : PolyBound g) :
-    PolyBound (fun inputLength => f inputLength + g inputLength) := by
-  obtain ⟨p, hp⟩ := hf
-  obtain ⟨q, hq⟩ := hg
-  exact ⟨p + q, fun inputLength => by
-    rw [Polynomial.eval_add]
-    exact Nat.add_le_add (hp inputLength) (hq inputLength)⟩
-
-theorem mul {f g : ℕ → ℕ} (hf : PolyBound f) (hg : PolyBound g) :
-    PolyBound (fun inputLength => f inputLength * g inputLength) := by
-  obtain ⟨p, hp⟩ := hf
-  obtain ⟨q, hq⟩ := hg
-  exact ⟨p * q, fun inputLength => by
-    rw [Polynomial.eval_mul]
-    exact Nat.mul_le_mul (hp inputLength) (hq inputLength)⟩
-
-theorem mono {f g : ℕ → ℕ} (hg : PolyBound g)
-    (hle : ∀ inputLength, f inputLength ≤ g inputLength) : PolyBound f := by
-  obtain ⟨p, hp⟩ := hg
-  exact ⟨p, fun inputLength => le_trans (hle inputLength) (hp inputLength)⟩
-
-theorem max {f g : ℕ → ℕ} (hf : PolyBound f) (hg : PolyBound g) :
-    PolyBound (fun inputLength => max (f inputLength) (g inputLength)) :=
-  (hf.add hg).mono fun _ => Nat.max_le.mpr
-    ⟨Nat.le_add_right _ _, Nat.le_add_left _ _⟩
-
-theorem eval (p : Polynomial ℕ) :
-    PolyBound (fun inputLength => p.eval inputLength) :=
-  ⟨p, fun _ => le_rfl⟩
+open RAM RAM.TMConfig.Sparse
 
 private theorem size_le_self (value : ℕ) : value.size ≤ value := by
   rw [Nat.size_le]
@@ -201,6 +176,12 @@ theorem decisionTimeBound (tm : TM n) {T : ℕ → ℕ} (hT : PolyBound T) :
     ((marshalTimeBound tm).add hrun).add hextract
 
 end PolyBound
+
+namespace RAM
+
+namespace TMConfig
+
+namespace Sparse
 
 theorem P_subset_internal : Complexity.P ⊆ RAM.P := by
   intro L hL

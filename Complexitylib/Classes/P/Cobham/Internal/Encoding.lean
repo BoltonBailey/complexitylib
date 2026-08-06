@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
+public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Defs
 public import Complexitylib.Models.TuringMachine
 public import Complexitylib.Models.TuringMachine.Internal
@@ -16,7 +17,7 @@ The completeness direction of Cobham's theorem simulates a polynomial-time
 machine inside the function algebra, so a configuration has to become a single
 bitstring. This module fixes that encoding and proves the arithmetic facts about
 it; the algebra-side operations that act on it live in
-`Complexitylib.Classes.P.Cobham`.
+`Complexitylib.Classes.P.Cobham.Internal.StepAlgebra`.
 
 ## The two design choices
 
