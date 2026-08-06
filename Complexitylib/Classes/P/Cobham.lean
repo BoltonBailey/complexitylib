@@ -6,10 +6,8 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Defs
-public import Complexitylib.Classes.P.Cobham.Internal
 public import Complexitylib.Classes.P.Defs
-public import Complexitylib.Classes.P.NormalForm
-public import Complexitylib.Classes.P.Composition
+import Complexitylib.Classes.P.Cobham.Internal
 
 /-!
 # Cobham's characterization of FP — surface layer

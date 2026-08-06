@@ -17,14 +17,13 @@ the input onto the work tape left to right, then walks the work head back to the
 left-end marker, emitting each cell to the output as it passes. The result is the
 input read backwards, in `2 · |x| + 3` steps.
 
-Reversal is the primitive that turns a right-to-left recursion (recursion on
-notation peels the *head* of a string, so an iterative evaluation consumes the
-*last* bit first) into a left-to-right loop.
+Reversal is what turns a right-to-left recursion into a left-to-right loop:
+recursion on notation peels the *head* of a string, so an iterative evaluation
+consumes the *last* bit first.
 
 ## Main results
 
-- `Complexity.reverseTM_computesInTime` — the transducer computes `List.reverse`
-- `Complexity.reverse_mem_FP_internal` — hence reversal is in `FP`
+- `Complexity.reverse_mem_FP` — reversal is in `FP`
 -/
 
 
@@ -304,7 +303,7 @@ theorem reverseTM_computesInTime :
   exact hfin.hasOutput
 
 /-- Internal proof that string reversal is in `FP`. -/
-theorem reverse_mem_FP_internal :
+theorem reverse_mem_FP :
     (fun x : List Bool => x.reverse) ∈ FP := by
   refine ⟨1, 1, reverseTM, (fun n => 2 * n + 3), reverseTM_computesInTime, ?_⟩
   have hn : (fun n : ℕ => 2 * n) =O ((· ^ 1) : ℕ → ℕ) := by

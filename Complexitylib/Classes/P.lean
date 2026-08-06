@@ -11,9 +11,6 @@ public import Complexitylib.Classes.P.Composition
 public import Complexitylib.Classes.P.PairWithInput
 public import Complexitylib.Classes.P.Preimage
 public import Complexitylib.Classes.P.UnaryLength
-public import Complexitylib.Classes.P.HeadFlag
-public import Complexitylib.Classes.P.Reverse
-public import Complexitylib.Classes.P.TakeLen
 public import Complexitylib.Classes.P.FinsetDomain
 public import Complexitylib.Classes.P.Cobham
 public import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
@@ -40,8 +37,6 @@ This file aggregates the definitions and theorems for P, FP, and PSPACE.
 - `mem_P_preimage` — `P` is closed under preimages of functions in `FP`
 - `unaryLength_mem_FP` — materializing the unary input length belongs to `FP`
 - `ite_mem_finset_mem_FP` — functions supported on a finite set belong to `FP`
-- `reverse_mem_FP`, `takeLen_mem_FP`, `headFlag_mem_FP` — string reversal,
-  truncation to a ruler's length, and a leading-bit test belong to `FP`
 - `CobhamFP_eq_FP` — Cobham's machine-independent characterization of `FP`
 -/
 

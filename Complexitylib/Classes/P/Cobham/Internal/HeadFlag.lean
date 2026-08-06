@@ -5,15 +5,23 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Classes.P.HeadFlag.Defs
+public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Models.TuringMachine.Subroutines
 
 /-!
 # Testing a leading bit — proof internals
 
-The two-state transducer behind `Complexity.headFlag_mem_FP`: `skip` moves off
-the left-end marker, `test` reads the first input bit and emits one output bit
-exactly when it matches.
+Every other `FP` primitive the Cobham proof uses — `Complexity.takeLen`,
+`List.reverse`, `Complexity.pair`, `Cobham.mulUnpair` — fixes its output's
+*length* from its inputs' lengths alone, so none of them can react to a bit's
+value. `Complexity.headFlag` closes that gap by turning a bit test into a length:
+the answer is carried by whether the result is empty. Its two-state transducer
+moves off the left-end marker, then emits one bit exactly when the first input
+bit matches.
+
+## Main results
+
+- `Complexity.headFlag_mem_FP` — the leading-bit test is in `FP`
 -/
 
 
@@ -22,6 +30,11 @@ exactly when it matches.
 namespace Complexity
 
 open Complexity.TM
+
+/-- `[false]` when `x` begins with `target`, and `[]` otherwise: a bit test whose
+answer is carried by the *length* of the result. -/
+def headFlag (target : Bool) (x : List Bool) : List Bool :=
+  if x.head? = some target then [false] else []
 
 /-- Control states of the head-bit flag machine. -/
 inductive HeadPhase where
@@ -148,5 +161,10 @@ theorem headFlagTM_computesInTime (target : Bool) :
         write_read_self']
     rw [hcells]
     simp [c1, Tape.move, Tape.init]
+
+/-- **A bit test, as a length.** -/
+theorem headFlag_mem_FP (target : Bool) : headFlag target ∈ FP :=
+  ⟨1, 0, headFlagTM target, (fun _ => 2), headFlagTM_computesInTime target,
+    BigO.const_le_pow 2 1⟩
 
 end Complexity
