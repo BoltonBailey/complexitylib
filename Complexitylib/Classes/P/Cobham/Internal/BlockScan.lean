@@ -27,7 +27,7 @@ namespace Complexity
 namespace Cobham
 
 /-- Decode the payload of the leading self-delimiting block: read doubled bits
-until the `[false, true]` separator. On a valid block `delimit x ++ y` this
+until the `[false, true]` separator. On a valid pair `pair x y` this
 returns `x` (see `fstBlock_pair`); on malformed input it returns the bits decoded
 so far. This total, incremental form is what the `fstBlockTM` scanner computes. -/
 def fstBlock : List Bool → List Bool

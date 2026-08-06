@@ -87,7 +87,7 @@ theorem mulAux_double (k : ℕ) (b : Bool) (z : List Bool) :
 /-- On a genuine pair the scanner emits `|A| · |B|` copies of `false`. -/
 theorem mulUnpair_pair (A B : List Bool) :
     mulUnpair (pair A B) = List.replicate (A.length * B.length) false := by
-  simp [mulUnpair, mulAux, pair]
+  simp [mulUnpair, mulAux]
 
 /-! ## The scanner -/
 

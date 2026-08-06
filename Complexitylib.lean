@@ -6,7 +6,6 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models
-public import Complexitylib.Encoding
 public import Complexitylib.Asymptotics
 public import Complexitylib.TimeConstructible
 public import Complexitylib.Classes

@@ -45,7 +45,7 @@ namespace Advice
 input. -/
 theorem fixedPrefix_append (a : Advice) (x : List Bool) :
     a.fixedPrefix x.length ++ x = advisedInput a x := by
-  simp [fixedPrefix, advisedInput, pair]
+  simp [fixedPrefix, advisedInput, pair, List.append_assoc]
 
 /-- The fixed-prefix bit string serializes to the self-delimiting advised
 machine input. -/

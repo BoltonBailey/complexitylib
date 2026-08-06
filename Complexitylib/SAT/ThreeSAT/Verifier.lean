@@ -97,7 +97,7 @@ left component belongs to the exact-3 syntax language. -/
     pair z witness ∈ language ↔ z ∈ Syntax.language := by
   change accept ((pair z witness).foldl step initial) = true ↔
     Syntax.accept (z.foldl Syntax.bitStep Syntax.bitStart) = true
-  rw [pair, delimit, List.foldl_append, List.foldl_append]
+  rw [pair, List.foldl_append, List.foldl_append]
   simp only [initial]
   rw [foldl_doubled]
   cases hsyntax : Syntax.accept (z.foldl Syntax.bitStep Syntax.bitStart) <;>

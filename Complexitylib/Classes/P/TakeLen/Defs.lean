@@ -69,6 +69,6 @@ theorem takeLenAux_double (k : ℕ) (b : Bool) (z : List Bool) :
 
 /-- On a genuine pair the leading block is the ruler. -/
 theorem takeLen_pair (c y : List Bool) : takeLen (pair c y) = y.take c.length := by
-  simp [takeLen, takeLenAux, pair]
+  simp [takeLen, takeLenAux]
 
 end Complexity
