@@ -10,6 +10,11 @@ public import Complexitylib.Classes.P.Cobham.Internal.Algebra
 public import Complexitylib.Classes.P.Cobham.Internal.Encoding
 public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
 public import Complexitylib.Classes.P.Cobham.Internal.Simulate
+public import Complexitylib.Classes.P.Cobham.Internal.Loop
+public import Complexitylib.Classes.P.Cobham.Internal.Iterate
+public import Complexitylib.Classes.P.TakeLen
+public import Complexitylib.Classes.P.Reverse
+public import Complexitylib.Classes.P.UnaryLength
 public import Complexitylib.Classes.P.Cobham.Internal.MulLen
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Classes.P.NormalForm
@@ -60,12 +65,9 @@ Fully proved here:
   output-head rewind, inside the algebra), `Internal.Extract` (reading a string
   off an aligned tape window) and `Internal.Simulate` (the clocked run).
 
-Reduced to a precisely-stated lemma (still `sorry`, documented with the intended
-construction):
 - `recFoldClamp_mem_FP` — the loop of the `boundedRec` case: iterating a
-  width-clamped `FP` step function once per bit of `sndBlock z`.
-
-See that lemma's docstring for the construction it stands for.
+  width-clamped `FP` step function once per bit of `sndBlock z`, on the
+  bounded-iteration machine of `Internal.Iterate` (`iterate_mem_FP`).
 -/
 
 
@@ -898,6 +900,383 @@ theorem fstBlock_mem_FP : fstBlock ∈ FP := by
     have hpre : c1.output.HasBinaryPrefix [] := Tape.init_nil_move_right_hasBinaryPrefix_nil
     obtain ⟨c', t, ht, hreach, hhalt, hcout⟩ :=
       fstBlockTM_scan_loop z.length z [] le_rfl c1 rfl hsuf hpre
+    refine ⟨c', t + 1, by show t + 1 ≤ 2 * z.length + 3; omega,
+      .step hstep1 hreach, hhalt, ?_⟩
+    simpa using hcout.hasOutput
+  · have hn : (fun m : ℕ => 2 * m) =O ((· ^ 1) : ℕ → ℕ) := by
+      simpa [pow_one] using (BigO.refl (fun m : ℕ => m)).const_mul_left 2
+    exact BigO.add hn (BigO.const_le_pow 3 1)
+
+/-! ### Concatenation
+
+`catBlocks` is `fstBlock` and `sndBlock` fused: decode the leading block's
+payload *and* keep the suffix, so on a genuine pair it is concatenation. Its
+machine is `sndBlockTM` with the scan also emitting each decoded bit — the one
+`FP` primitive that lets two computed strings be joined. -/
+
+/-- Decode the leading self-delimiting block's payload and keep the suffix. On
+`pair x y` this is `x ++ y` (`catBlocks_pair`); on malformed input it returns the
+bits decoded so far. -/
+def catBlocks : List Bool → List Bool
+  | false :: false :: z => false :: catBlocks z
+  | true :: true :: z => true :: catBlocks z
+  | false :: true :: z => z
+  | _ => []
+
+@[simp] theorem catBlocks_pair (x y : List Bool) : catBlocks (pair x y) = x ++ y := by
+  induction x with
+  | nil => rfl
+  | cons b x ih => cases b <;> (rw [pair_cons_eq]; simp [catBlocks, ih])
+
+/-- The concatenator: like `sndBlockTM`, but the scan also emits each decoded
+payload bit, so the output ends up holding the payload followed by the suffix.
+Computes `catBlocks`. -/
+def catTM : TM 0 where
+  Q := ScanPhase
+  qstart := .skip
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .skip =>
+        (.scanA, fun i => readBackWrite (wHeads i), readBackWrite oHead, Dir3.right,
+          fun i => idleDir (wHeads i), Dir3.right)
+    | .scanA =>
+        match iHead with
+        | Γ.zero =>
+            (.scanBfalse, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+        | Γ.one =>
+            (.scanBtrue, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+        | _ =>
+            (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .scanBfalse =>
+        match iHead with
+        | Γ.one =>
+            (.emit, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              Dir3.right, fun i => idleDir (wHeads i), idleDir oHead)
+        | Γ.zero =>
+            (.scanA, fun i => readBackWrite (wHeads i), Γw.ofBool false,
+              Dir3.right, fun i => idleDir (wHeads i), Dir3.right)
+        | _ =>
+            (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .scanBtrue =>
+        match iHead with
+        | Γ.one =>
+            (.scanA, fun i => readBackWrite (wHeads i), Γw.ofBool true,
+              Dir3.right, fun i => idleDir (wHeads i), Dir3.right)
+        | _ =>
+            (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+              idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .emit =>
+        if iHead = Γ.blank then
+          (.done, fun i => readBackWrite (wHeads i), readBackWrite oHead,
+            idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+        else
+          (.emit, fun i => readBackWrite (wHeads i), readBackWrite iHead,
+            Dir3.right, fun i => idleDir (wHeads i), Dir3.right)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .skip => exact ⟨fun _ => rfl, fun _ => idleDir_right_of_start, fun _ => rfl⟩
+    | .scanA =>
+        cases iHead <;>
+          exact ⟨by first | exact fun _ => rfl | exact idleDir_right_of_start,
+            fun _ => idleDir_right_of_start,
+            by first | exact fun _ => rfl | exact idleDir_right_of_start⟩
+    | .scanBfalse =>
+        cases iHead <;>
+          exact ⟨by first | exact fun _ => rfl | exact idleDir_right_of_start,
+            fun _ => idleDir_right_of_start,
+            by first | exact fun _ => rfl | exact idleDir_right_of_start⟩
+    | .scanBtrue =>
+        cases iHead <;>
+          exact ⟨by first | exact fun _ => rfl | exact idleDir_right_of_start,
+            fun _ => idleDir_right_of_start,
+            by first | exact fun _ => rfl | exact idleDir_right_of_start⟩
+    | .emit =>
+        dsimp only []
+        split
+        · exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+            idleDir_right_of_start⟩
+        · exact ⟨fun _ => rfl, fun _ => idleDir_right_of_start, fun _ => rfl⟩
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- The copy phase of `catTM`: from `emit` with input cursor on suffix `y` and
+output holding `acc`, the machine copies `y` after `acc` and halts. -/
+private theorem catTM_emit_loop :
+    ∀ (y acc : List Bool) (c : Cfg 0 catTM.Q),
+      c.state = ScanPhase.emit →
+      c.input.HasBinarySuffix y →
+      c.output.HasBinaryPrefix acc →
+      ∃ c' t, t ≤ y.length + 1 ∧ catTM.reachesIn t c c' ∧ catTM.halted c' ∧
+        c'.output.HasBinaryPrefix (acc ++ y) := by
+  intro y
+  induction y with
+  | nil =>
+      intro acc c hstate hsuf hpre
+      have hread : c.input.read = Γ.blank := hsuf.read_nil
+      have houtne : c.output.read ≠ Γ.start := by rw [hpre.read_blank]; decide
+      refine ⟨{ state := ScanPhase.done
+                input := c.input.move (idleDir c.input.read)
+                work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                  (idleDir (c.work i).read)
+                output := c.output.writeAndMove (readBackWrite c.output.read)
+                  (idleDir c.output.read) }, 1, by simp,
+        .step (by simp [TM.step, hstate, catTM, hread]) .zero, rfl, ?_⟩
+      rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
+          = c.output from output_idle_eq houtne]
+      simpa using hpre
+  | cons bit y ih =>
+      intro acc c hstate hsuf hpre
+      have hread : c.input.read = Γ.ofBool bit := hsuf.read_cons
+      have hne : c.input.read ≠ Γ.blank := by rw [hread]; cases bit <;> decide
+      let c1 : Cfg 0 catTM.Q :=
+        { state := ScanPhase.emit
+          input := c.input.move Dir3.right
+          work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+            (idleDir (c.work i).read)
+          output := c.output.writeAndMove (readBackWrite c.input.read) Dir3.right }
+      have hstep : catTM.step c = some c1 := by
+        simp [TM.step, hstate, catTM, hne, c1]
+      have hpre1 : c1.output.HasBinaryPrefix (acc ++ [bit]) := by
+        have hco : (readBackWrite c.input.read).toΓ = Γ.ofBool bit := by
+          rw [hread]; cases bit <;> rfl
+        show (c.output.writeAndMove ((readBackWrite c.input.read).toΓ) Dir3.right).HasBinaryPrefix
+          (acc ++ [bit])
+        rw [hco]; exact Tape.hasBinaryPrefix_write_bit bit hpre
+      obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+        ih (acc ++ [bit]) c1 rfl hsuf.move_right_cons hpre1
+      refine ⟨c', t + 1, by simp; omega, .step hstep hreach, hhalt, ?_⟩
+      rwa [List.append_assoc, List.cons_append, List.nil_append] at hout
+
+/-- A one-step halt from a scan state whose input reads a symbol that ends the
+block: the output is untouched. -/
+private theorem catTM_halt_step {c : Cfg 0 catTM.Q} {acc : List Bool}
+    (hstep : catTM.step c = some
+      { state := ScanPhase.done
+        input := c.input.move (idleDir c.input.read)
+        work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+          (idleDir (c.work i).read)
+        output := c.output.writeAndMove (readBackWrite c.output.read)
+          (idleDir c.output.read) })
+    (hpre : c.output.HasBinaryPrefix acc) :
+    ∃ c' t, t ≤ 1 ∧ catTM.reachesIn t c c' ∧ catTM.halted c' ∧
+      c'.output.HasBinaryPrefix acc := by
+  have houtne : c.output.read ≠ Γ.start := by rw [hpre.read_blank]; decide
+  refine ⟨_, 1, le_rfl, .step hstep .zero, rfl, ?_⟩
+  rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
+      = c.output from output_idle_eq houtne]
+  exact hpre
+
+/-- The scan phase of `catTM`: from `scanA` with input cursor on `w` and output
+holding `acc`, the machine halts with output `acc ++ catBlocks w`. -/
+private theorem catTM_scan_loop :
+    ∀ (fuel : ℕ) (w acc : List Bool), w.length ≤ fuel → ∀ (c : Cfg 0 catTM.Q),
+      c.state = ScanPhase.scanA →
+      c.input.HasBinarySuffix w →
+      c.output.HasBinaryPrefix acc →
+      ∃ c' t, t ≤ 2 * w.length + 2 ∧ catTM.reachesIn t c c' ∧ catTM.halted c' ∧
+        c'.output.HasBinaryPrefix (acc ++ catBlocks w) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro w acc hw c hstate hsuf hpre
+      have hwnil : w = [] := List.length_eq_zero_iff.mp (Nat.le_zero.mp hw)
+      subst hwnil
+      have hread : c.input.read = Γ.blank := hsuf.read_nil
+      obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+        catTM_halt_step (c := c) (acc := acc)
+          (by simp [TM.step, hstate, catTM, hread]) hpre
+      exact ⟨c', t, by omega, hreach, hhalt, by simpa [catBlocks] using hout⟩
+  | succ fuel ih =>
+      intro w acc hw c hstate hsuf hpre
+      have houtne : c.output.read ≠ Γ.start := by rw [hpre.read_blank]; decide
+      match w with
+      | [] =>
+          have hread : c.input.read = Γ.blank := hsuf.read_nil
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+            catTM_halt_step (c := c) (acc := acc)
+              (by simp [TM.step, hstate, catTM, hread]) hpre
+          exact ⟨c', t, by omega, hreach, hhalt, by simpa [catBlocks] using hout⟩
+      | [b0] =>
+          have hread : c.input.read = Γ.ofBool b0 := hsuf.read_cons
+          let c1 : Cfg 0 catTM.Q :=
+            { state := if b0 then ScanPhase.scanBtrue else ScanPhase.scanBfalse
+              input := c.input.move Dir3.right
+              work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                (idleDir (c.work i).read)
+              output := c.output.writeAndMove (readBackWrite c.output.read)
+                (idleDir c.output.read) }
+          have hstep : catTM.step c = some c1 := by
+            cases b0 <;> simp [TM.step, hstate, catTM, hread, Γ.ofBool, c1]
+          have hsuf1 : c1.input.HasBinarySuffix [] := hsuf.move_right_cons
+          have hpre1 : c1.output.HasBinaryPrefix acc := by
+            show (c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne]; exact hpre
+          have hread1 : c1.input.read = Γ.blank := hsuf1.read_nil
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+            catTM_halt_step (c := c1) (acc := acc)
+              (by cases b0 <;> simp [TM.step, catTM, hread1, c1]) hpre1
+          exact ⟨c', t + 1, by simp; omega, .step hstep hreach, hhalt,
+            by cases b0 <;> simpa [catBlocks] using hout⟩
+      | false :: true :: y =>
+          have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
+          let c1 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanBfalse
+              input := c.input.move Dir3.right
+              work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                (idleDir (c.work i).read)
+              output := c.output.writeAndMove (readBackWrite c.output.read)
+                (idleDir c.output.read) }
+          have hstepA : catTM.step c = some c1 := by
+            simp [TM.step, hstate, catTM, hreadA, Γ.ofBool, c1]
+          have hsuf1 : c1.input.HasBinarySuffix (true :: y) := hsuf.move_right_cons
+          have hpre1 : c1.output.HasBinaryPrefix acc := by
+            show (c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne]; exact hpre
+          have hreadB : c1.input.read = Γ.ofBool true := hsuf1.read_cons
+          have houtne1 : c1.output.read ≠ Γ.start := by rw [hpre1.read_blank]; decide
+          let c2 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.emit
+              input := c1.input.move Dir3.right
+              work := fun i => (c1.work i).writeAndMove (readBackWrite (c1.work i).read)
+                (idleDir (c1.work i).read)
+              output := c1.output.writeAndMove (readBackWrite c1.output.read)
+                (idleDir c1.output.read) }
+          have hstepB : catTM.step c1 = some c2 := by
+            simp [TM.step, catTM, hreadB, Γ.ofBool, c1, c2]
+          have hsuf2 : c2.input.HasBinarySuffix y := hsuf1.move_right_cons
+          have hpre2 : c2.output.HasBinaryPrefix acc := by
+            show (c1.output.writeAndMove (readBackWrite c1.output.read)
+              (idleDir c1.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne1]; exact hpre1
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ := catTM_emit_loop y acc c2 rfl hsuf2 hpre2
+          refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
+            .step hstepA (.step hstepB hreach), hhalt, ?_⟩
+          simpa [catBlocks] using hout
+      | true :: false :: rest =>
+          have hreadA : c.input.read = Γ.ofBool true := hsuf.read_cons
+          let c1 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanBtrue
+              input := c.input.move Dir3.right
+              work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                (idleDir (c.work i).read)
+              output := c.output.writeAndMove (readBackWrite c.output.read)
+                (idleDir c.output.read) }
+          have hstepA : catTM.step c = some c1 := by
+            simp [TM.step, hstate, catTM, hreadA, Γ.ofBool, c1]
+          have hsuf1 : c1.input.HasBinarySuffix (false :: rest) := hsuf.move_right_cons
+          have hpre1 : c1.output.HasBinaryPrefix acc := by
+            show (c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne]; exact hpre
+          have hreadB : c1.input.read = Γ.ofBool false := hsuf1.read_cons
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+            catTM_halt_step (c := c1) (acc := acc)
+              (by simp [TM.step, catTM, hreadB, Γ.ofBool, c1]) hpre1
+          exact ⟨c', t + 1, by simp only [List.length_cons]; omega,
+            .step hstepA hreach, hhalt, by simpa [catBlocks] using hout⟩
+      | false :: false :: rest =>
+          have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
+          let c1 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanBfalse
+              input := c.input.move Dir3.right
+              work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                (idleDir (c.work i).read)
+              output := c.output.writeAndMove (readBackWrite c.output.read)
+                (idleDir c.output.read) }
+          have hstepA : catTM.step c = some c1 := by
+            simp [TM.step, hstate, catTM, hreadA, Γ.ofBool, c1]
+          have hsuf1 : c1.input.HasBinarySuffix (false :: rest) := hsuf.move_right_cons
+          have hpre1 : c1.output.HasBinaryPrefix acc := by
+            show (c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne]; exact hpre
+          have hreadB : c1.input.read = Γ.ofBool false := hsuf1.read_cons
+          let c2 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanA
+              input := c1.input.move Dir3.right
+              work := fun i => (c1.work i).writeAndMove (readBackWrite (c1.work i).read)
+                (idleDir (c1.work i).read)
+              output := c1.output.writeAndMove (Γw.ofBool false) Dir3.right }
+          have hstepB : catTM.step c1 = some c2 := by
+            simp [TM.step, catTM, hreadB, Γ.ofBool, c1, c2]
+          have hsuf2 : c2.input.HasBinarySuffix rest := hsuf1.move_right_cons
+          have hpre2 : c2.output.HasBinaryPrefix (acc ++ [false]) := by
+            show (c1.output.writeAndMove ((Γw.ofBool false).toΓ) Dir3.right).HasBinaryPrefix
+              (acc ++ [false])
+            rw [Γw.ofBool_toΓ]; exact Tape.hasBinaryPrefix_write_bit false hpre1
+          have hrfuel : rest.length ≤ fuel := by
+            simp only [List.length_cons] at hw; omega
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+            ih rest (acc ++ [false]) hrfuel c2 rfl hsuf2 hpre2
+          refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
+            .step hstepA (.step hstepB hreach), hhalt, ?_⟩
+          have hcb : catBlocks (false :: false :: rest) = false :: catBlocks rest := rfl
+          rw [hcb, List.append_assoc, List.cons_append, List.nil_append] at *
+          exact hout
+      | true :: true :: rest =>
+          have hreadA : c.input.read = Γ.ofBool true := hsuf.read_cons
+          let c1 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanBtrue
+              input := c.input.move Dir3.right
+              work := fun i => (c.work i).writeAndMove (readBackWrite (c.work i).read)
+                (idleDir (c.work i).read)
+              output := c.output.writeAndMove (readBackWrite c.output.read)
+                (idleDir c.output.read) }
+          have hstepA : catTM.step c = some c1 := by
+            simp [TM.step, hstate, catTM, hreadA, Γ.ofBool, c1]
+          have hsuf1 : c1.input.HasBinarySuffix (true :: rest) := hsuf.move_right_cons
+          have hpre1 : c1.output.HasBinaryPrefix acc := by
+            show (c.output.writeAndMove (readBackWrite c.output.read)
+              (idleDir c.output.read)).HasBinaryPrefix acc
+            rw [output_idle_eq houtne]; exact hpre
+          have hreadB : c1.input.read = Γ.ofBool true := hsuf1.read_cons
+          let c2 : Cfg 0 catTM.Q :=
+            { state := ScanPhase.scanA
+              input := c1.input.move Dir3.right
+              work := fun i => (c1.work i).writeAndMove (readBackWrite (c1.work i).read)
+                (idleDir (c1.work i).read)
+              output := c1.output.writeAndMove (Γw.ofBool true) Dir3.right }
+          have hstepB : catTM.step c1 = some c2 := by
+            simp [TM.step, catTM, hreadB, Γ.ofBool, c1, c2]
+          have hsuf2 : c2.input.HasBinarySuffix rest := hsuf1.move_right_cons
+          have hpre2 : c2.output.HasBinaryPrefix (acc ++ [true]) := by
+            show (c1.output.writeAndMove ((Γw.ofBool true).toΓ) Dir3.right).HasBinaryPrefix
+              (acc ++ [true])
+            rw [Γw.ofBool_toΓ]; exact Tape.hasBinaryPrefix_write_bit true hpre1
+          have hrfuel : rest.length ≤ fuel := by
+            simp only [List.length_cons] at hw; omega
+          obtain ⟨c', t, ht, hreach, hhalt, hout⟩ :=
+            ih rest (acc ++ [true]) hrfuel c2 rfl hsuf2 hpre2
+          refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
+            .step hstepA (.step hstepB hreach), hhalt, ?_⟩
+          have hcb : catBlocks (true :: true :: rest) = true :: catBlocks rest := rfl
+          rw [hcb, List.append_assoc, List.cons_append, List.nil_append] at *
+          exact hout
+
+/-- **Concatenation is polynomial-time.** -/
+theorem catBlocks_mem_FP : catBlocks ∈ FP := by
+  refine ⟨1, 0, catTM, (fun m => 2 * m + 3), ?_, ?_⟩
+  · intro z
+    let c1 : Cfg 0 catTM.Q :=
+      { state := ScanPhase.scanA
+        input := (Tape.init (z.map Γ.ofBool)).move Dir3.right
+        work := fun _ => (Tape.init []).move Dir3.right
+        output := (Tape.init []).move Dir3.right }
+    have hstep1 : catTM.step (catTM.initCfg z) = some c1 := by
+      simp [TM.step, catTM, c1, Tape.read, Tape.init, readBackWrite, idleDir,
+        Tape.writeAndMove, Tape.write, Tape.move]
+    have hsuf : c1.input.HasBinarySuffix z := Tape.init_move_right_hasBinarySuffix z
+    have hpre : c1.output.HasBinaryPrefix [] := Tape.init_nil_move_right_hasBinaryPrefix_nil
+    obtain ⟨c', t, ht, hreach, hhalt, hcout⟩ :=
+      catTM_scan_loop z.length z [] le_rfl c1 rfl hsuf hpre
     refine ⟨c', t + 1, by show t + 1 ≤ 2 * z.length + 3; omega,
       .step hstep1 hreach, hhalt, ?_⟩
     simpa using hcout.hasOutput
@@ -1823,6 +2202,15 @@ theorem pairFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b �
     funext z; simp [Function.comp, reorder_pair_pair]
   rwa [heq2] at hr
 
+/-- **`FP` is closed under concatenation.** -/
+theorem appendFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
+    (fun z => a z ++ b z) ∈ FP := by
+  have h := mem_FP_comp (pairFn_mem_FP ha hb) catBlocks_mem_FP
+  have heq : (catBlocks ∘ fun z => pair (a z) (b z)) = fun z => a z ++ b z := by
+    funext z
+    simp [Function.comp]
+  rwa [heq] at h
+
 /-- Emitting `|a z| · |b z|` copies of `false` is `FP` when `a, b` are. Built as
 the self-contained `mulUnpair` (see `Complexitylib.Classes.P.Cobham.Internal.MulLen`)
 after `pairFn a b`, avoiding a bespoke length-arithmetic machine over two
@@ -1834,6 +2222,51 @@ theorem mulLenFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b 
       = fun z => List.replicate ((a z).length * (b z).length) false := by
     funext z; simp [Function.comp, mulUnpair_pair]
   rwa [heq] at hc
+
+/-- Truncating one `FP` value to another's length. -/
+theorem takeLenFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
+    (fun z => (b z).take (a z).length) ∈ FP := by
+  have hc := mem_FP_comp (pairFn_mem_FP ha hb) takeLen_mem_FP
+  have heq : (takeLen ∘ fun z => pair (a z) (b z))
+      = fun z => (b z).take (a z).length := by
+    funext z; simp [Function.comp, takeLen_pair]
+  rwa [heq] at hc
+
+/-- Select `x` or `y` according to the leading bit of `s`; nothing when `s` is
+empty. This is the only shape of value-dependent branching the algebra's loop
+needs, and `Complexity.headFlag` is what makes it expressible. -/
+def selectHead (s x y : List Bool) : List Bool :=
+  if s.head? = some true then x else if s.head? = some false then y else []
+
+/-- **Selection is masking.** Exactly one of the two masks is full width, so the
+concatenation returns exactly one branch. -/
+theorem selectHead_eq (s x y : List Bool) :
+    selectHead s x y = x.take ((headFlag true s).length * x.length)
+      ++ y.take ((headFlag false s).length * y.length) := by
+  rw [selectHead, headFlag, headFlag]
+  rcases hs : s.head? with _ | a
+  · simp
+  · cases a <;> simp
+
+/-- **Selecting between two `FP` values by a bit is `FP`.** -/
+theorem selectHeadFn_mem_FP {f a b : List Bool → List Bool}
+    (hf : f ∈ FP) (ha : a ∈ FP) (hb : b ∈ FP) :
+    (fun z => selectHead (f z) (a z) (b z)) ∈ FP := by
+  have hflag : ∀ t : Bool, (fun z => headFlag t (f z)) ∈ FP := fun t => by
+    have := mem_FP_comp hf (headFlag_mem_FP t)
+    simpa [Function.comp] using this
+  have hx : (fun z => (a z).take ((headFlag true (f z)).length * (a z).length)) ∈ FP := by
+    have := takeLenFn_mem_FP (mulLenFn_mem_FP (hflag true) ha) ha
+    simpa using this
+  have hy : (fun z => (b z).take ((headFlag false (f z)).length * (b z).length)) ∈ FP := by
+    have := takeLenFn_mem_FP (mulLenFn_mem_FP (hflag false) hb) hb
+    simpa using this
+  have h := appendFn_mem_FP hx hy
+  have heq : (fun z => (a z).take ((headFlag true (f z)).length * (a z).length)
+      ++ (b z).take ((headFlag false (f z)).length * (b z).length))
+      = fun z => selectHead (f z) (a z) (b z) := by
+    funext z; rw [selectHead_eq]
+  rwa [heq] at h
 
 /-- `smash` case: the smash function is `FPn`. On `encodeVec ![x, y]` the two
 components are `sndBlock` and `sndBlock ∘ fstBlock`; `smash x y` is
@@ -2013,28 +2446,586 @@ theorem exists_ruler (p : Polynomial ℕ) :
     exists_pow_ruler (∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i) p.natDegree
   exact ⟨R, hR, fun z => le_trans (poly_eval_le_pow p z.length) (hlen z)⟩
 
-/-- **The loop of the `boundedRec` case** — the one machine-level fact the
-soundness direction still needs.
+/-! ### Exact rulers
 
-*Construction (TODO):* run `forBinaryWorkTM` over a work tape holding
-`(sndBlock z).reverse` — the recursion peels the *head* of `sndBlock z`, so an
-iterative evaluation consumes its bits back to front, which is what
-`Complexity.reverse_mem_FP` supplies. The loop state is a work tape holding the
-current pair `pair (pair (fstBlock z) a) t`; one iteration appends the driver
-bit to `t`, runs the `FP` machine for `A` or `B` on the state tape (selected by
-the driver bit via `TM.ifTM`, and run via `TM.placeWorkTM_retargetInputStarted_-`
-`computesVirtual`, with the sub-machine's tapes cleared between iterations), and
-truncates the result to `bound` bits.
+`exists_ruler` builds an `FP` string *at least* `p.eval |z|` bits long, which is
+all a clamp needs. The loop needs an exact one: the width it truncates to is the
+ruler's length, and that has to be the bound the statement names. Exactness comes
+from `Complexity.unaryLength_mem_FP` together with the two exact length
+arithmetic operations now available — `mulLenFn_mem_FP` multiplies lengths and
+`appendFn_mem_FP` adds them. -/
 
-The clamp is realized as data rather than arithmetic: `exists_ruler` builds an
-`FP` string of length at least `p.eval |z|`, and `Complexity.takeLen_mem_FP`
-truncates to a ruler's length in linear time. With at most `|z|` iterations,
-each on a state of polynomially bounded width, the total time is polynomial. -/
+/-- Constants of any width are `FP`. -/
+theorem const_replicate_mem_FP (c : ℕ) :
+    (fun _ : List Bool => List.replicate c false) ∈ FP := by
+  induction c with
+  | zero => simpa using const_nil_mem_FP
+  | succ c ih =>
+      have := mem_FP_comp ih (cons_mem_FP false)
+      simpa [Function.comp, List.replicate_succ] using this
+
+/-- A ruler of length exactly `|z| ^ d`. -/
+private theorem exists_pow_exact_ruler (d : ℕ) :
+    ∃ R : List Bool → List Bool, R ∈ FP ∧ ∀ z, (R z).length = z.length ^ d := by
+  induction d with
+  | zero => exact ⟨fun _ => List.replicate 1 false, const_replicate_mem_FP 1,
+      fun z => by simp⟩
+  | succ d ih =>
+      obtain ⟨R, hR, hlen⟩ := ih
+      refine ⟨fun z => List.replicate ((R z).length * (List.replicate z.length true).length)
+        false, mulLenFn_mem_FP hR unaryLength_mem_FP, fun z => ?_⟩
+      simp [hlen, pow_succ]
+
+/-- **A ruler of length exactly `p.eval |z|`.** -/
+theorem exists_exact_ruler (p : Polynomial ℕ) :
+    ∃ R : List Bool → List Bool, R ∈ FP ∧ ∀ z, (R z).length = p.eval z.length := by
+  have hsum : ∀ N : ℕ, ∃ R : List Bool → List Bool, R ∈ FP ∧
+      ∀ z, (R z).length = ∑ i ∈ Finset.range N, p.coeff i * z.length ^ i := by
+    intro N
+    induction N with
+    | zero => exact ⟨fun _ => [], const_nil_mem_FP, fun z => by simp⟩
+    | succ N ih =>
+        obtain ⟨R, hR, hlen⟩ := ih
+        obtain ⟨S, hS, hSlen⟩ := exists_pow_exact_ruler N
+        refine ⟨fun z => R z ++ List.replicate
+          ((List.replicate (p.coeff N) false).length * (S z).length) false,
+          appendFn_mem_FP hR (mulLenFn_mem_FP (const_replicate_mem_FP _) hS),
+          fun z => ?_⟩
+        rw [List.length_append, hlen, List.length_replicate, List.length_replicate,
+          hSlen, Finset.sum_range_succ]
+  obtain ⟨R, hR, hlen⟩ := hsum (p.natDegree + 1)
+  exact ⟨R, hR, fun z => by rw [hlen, ← Polynomial.eval_eq_sum_range]⟩
+
+/-! ### The loop as an iteration
+
+`recFoldClamp` is an iteration of a *single* `FP` step function on a packed
+state. Writing `s` for `sndBlock z`, the state after `m` iterations is
+
+  `pair (pair R (pair W s)) (pair (s.drop (|s| - m)) (recFoldClamp … (s.drop (|s| - m))))`
+
+so the answer is the accumulator after `|s|` iterations. Every ingredient of the
+step is now `FP`: the suffix grows by `Complexity.takeLen` against a ruler one
+longer, read off `s.reverse`; the branch on the new leading bit is `selectHead`;
+and the clamp is `takeLen` against `R`. -/
+
+/-- One iteration of the clamped loop, on the loop's components. -/
+def loopStepOn (A B : List Bool → List Bool) (R W s t a : List Bool) : List Bool :=
+  pair (pair R (pair W s))
+    (pair ((takeLen (pair (false :: t) s.reverse)).reverse)
+      (takeLen (pair R
+        (selectHead ((takeLen (pair (false :: t) s.reverse)).reverse)
+          (B (pair (pair W a) t)) (A (pair (pair W a) t))))))
+
+/-- One iteration of the clamped loop, on the packed state. -/
+def loopStep (A B : List Bool → List Bool) (v : List Bool) : List Bool :=
+  loopStepOn A B (fstBlock (fstBlock v)) (fstBlock (sndBlock (fstBlock v)))
+    (sndBlock (sndBlock (fstBlock v))) (fstBlock (sndBlock v)) (sndBlock (sndBlock v))
+
+@[simp] theorem loopStep_pair (A B : List Bool → List Bool) (R W s t a : List Bool) :
+    loopStep A B (pair (pair R (pair W s)) (pair t a)) = loopStepOn A B R W s t a := by
+  simp [loopStep]
+
+/-- **The step is `FP`.** -/
+theorem loopStep_mem_FP {A B : List Bool → List Bool} (hA : A ∈ FP) (hB : B ∈ FP) :
+    loopStep A B ∈ FP := by
+  have hfst : fstBlock ∈ FP := fstBlock_mem_FP
+  have hsnd : sndBlock ∈ FP := sndBlock_mem_FP
+  have hcomp₁ : ∀ {g : List Bool → List Bool}, g ∈ FP →
+      (fun v => fstBlock (g v)) ∈ FP := fun hg => by
+    simpa [Function.comp] using mem_FP_comp hg hfst
+  have hcomp₂ : ∀ {g : List Bool → List Bool}, g ∈ FP →
+      (fun v => sndBlock (g v)) ∈ FP := fun hg => by
+    simpa [Function.comp] using mem_FP_comp hg hsnd
+  have hP : (fun v : List Bool => fstBlock v) ∈ FP := hfst
+  have hR : (fun v : List Bool => fstBlock (fstBlock v)) ∈ FP := hcomp₁ hP
+  have hW : (fun v : List Bool => fstBlock (sndBlock (fstBlock v))) ∈ FP :=
+    hcomp₁ (hcomp₂ hP)
+  have hs : (fun v : List Bool => sndBlock (sndBlock (fstBlock v))) ∈ FP :=
+    hcomp₂ (hcomp₂ hP)
+  have ht : (fun v : List Bool => fstBlock (sndBlock v)) ∈ FP := hcomp₁ hsnd
+  have ha : (fun v : List Bool => sndBlock (sndBlock v)) ∈ FP := hcomp₂ hsnd
+  have hrev : ∀ {g : List Bool → List Bool}, g ∈ FP →
+      (fun v => (g v).reverse) ∈ FP := fun hg => by
+    simpa [Function.comp] using mem_FP_comp hg reverse_mem_FP
+  have hcons : (fun v : List Bool => false :: fstBlock (sndBlock v)) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp ht (cons_mem_FP false)
+  have ht' : (fun v : List Bool =>
+      (takeLen (pair (false :: fstBlock (sndBlock v))
+        (sndBlock (sndBlock (fstBlock v))).reverse)).reverse) ∈ FP := by
+    refine hrev ?_
+    have := takeLenFn_mem_FP hcons (hrev hs)
+    simpa [takeLen_pair] using this
+  have hX : (fun v : List Bool =>
+      pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
+        (fstBlock (sndBlock v))) ∈ FP := pairFn_mem_FP (pairFn_mem_FP hW ha) ht
+  have hsel := selectHeadFn_mem_FP ht'
+    (by simpa [Function.comp] using mem_FP_comp hX hB)
+    (by simpa [Function.comp] using mem_FP_comp hX hA)
+  have hacc : (fun v : List Bool => takeLen (pair (fstBlock (fstBlock v))
+      (selectHead ((takeLen (pair (false :: fstBlock (sndBlock v))
+          (sndBlock (sndBlock (fstBlock v))).reverse)).reverse)
+        (B (pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
+            (fstBlock (sndBlock v))))
+        (A (pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
+            (fstBlock (sndBlock v))))))) ∈ FP := by
+    have := takeLenFn_mem_FP hR hsel
+    simpa [takeLen_pair, Function.comp] using this
+  have hall := pairFn_mem_FP (pairFn_mem_FP hR (pairFn_mem_FP hW hs))
+    (pairFn_mem_FP ht' hacc)
+  simpa [loopStep, loopStepOn] using hall
+
+/-- **The loop's invariant.** After `m` iterations the state holds the suffix
+`s.drop (|s| - m)` and the clamped fold over it. -/
+theorem loopStep_iterate {A B : List Bool → List Bool} (R W s e : List Bool) :
+    ∀ m ≤ s.length,
+      (loopStep A B)^[m]
+          (pair (pair R (pair W s)) (pair [] (e.take R.length)))
+        = pair (pair R (pair W s))
+            (pair (s.drop (s.length - m))
+              (recFoldClamp A B R.length e W (s.drop (s.length - m)))) := by
+  intro m
+  induction m with
+  | zero => intro _; simp [recFoldClamp]
+  | succ m ih =>
+      intro hm
+      rw [Function.iterate_succ_apply', ih (by omega), loopStep_pair, loopStepOn]
+      have hlt : s.length - (m + 1) < s.length := by omega
+      have hdrop : s.drop (s.length - (m + 1))
+          = s[s.length - (m + 1)] :: s.drop (s.length - m) := by
+        rw [List.drop_eq_getElem_cons hlt,
+          show s.length - (m + 1) + 1 = s.length - m from by omega]
+      have hnext : (takeLen (pair (false :: s.drop (s.length - m)) s.reverse)).reverse
+          = s.drop (s.length - (m + 1)) := by
+        rw [takeLen_pair, List.length_cons, List.length_drop,
+          show s.length - (s.length - m) + 1 = s.length - (s.length - (m + 1)) from by omega,
+          ← List.reverse_drop, List.reverse_reverse]
+      rw [hnext, hdrop, recFoldClamp]
+      congr 2
+      rw [takeLen_pair, selectHead]
+      cases hb : s[s.length - (m + 1)] <;> simp
+
+/-- The clamp really clamps. -/
+theorem recFoldClamp_length_le (A B : List Bool → List Bool) (bound : ℕ)
+    (e W s : List Bool) : (recFoldClamp A B bound e W s).length ≤ bound := by
+  cases s with
+  | nil => simp [recFoldClamp]
+  | cons b t => simp [recFoldClamp]
+
+/-! ### The loop's step function
+
+`Complexity.iterate_input_mem_FP` supplies a machine that applies an `FP`
+function once per bit of its own input, starting from `pair [] x`. The state
+below is `pair (pair C v) x`: a counter `C`, the running value `v`, and the
+machine's input `x` kept verbatim. Keeping `x` is what makes the whole
+construction work: the ruler and the width stay readable at every step, and
+truncating the new state to `|x|` bounds the state length *globally* — the
+machine's contract needs a bound that holds for every input, not just for the
+well-formed ones. -/
+
+/-- A flag whose leading bit is `true` exactly when `s` is empty — the one test
+`Complexity.selectHead` cannot make directly. -/
+def emptyFlag (s : List Bool) : List Bool :=
+  headFlag true s ++ headFlag false s ++ [true]
+
+@[simp] theorem emptyFlag_nil : emptyFlag [] = [true] := rfl
+
+theorem emptyFlag_head_cons (b : Bool) (t : List Bool) :
+    (emptyFlag (b :: t)).head? = some false := by
+  cases b <;> rfl
+
+theorem selectHead_emptyFlag_nil (x y : List Bool) : selectHead (emptyFlag []) x y = x := by
+  rw [emptyFlag_nil, selectHead,
+    if_pos (show ([true] : List Bool).head? = some true from rfl)]
+
+theorem length_take_le_arg (n : ℕ) (l : List Bool) : (l.take n).length ≤ n := by
+  rw [List.length_take]; omega
+
+theorem selectHead_emptyFlag_cons (b : Bool) (t x y : List Bool) :
+    selectHead (emptyFlag (b :: t)) x y = y := by
+  rw [selectHead, if_neg (by rw [emptyFlag_head_cons]; simp),
+    if_pos (emptyFlag_head_cons b t)]
+
+theorem selectHead_length_le (s x y : List Bool) :
+    (selectHead s x y).length ≤ max x.length y.length := by
+  rw [selectHead]
+  split
+  · exact le_max_left _ _
+  · split
+    · exact le_max_right _ _
+    · simp
+
+/-- The counter of the next iteration: one more mark of the reversed ruler. -/
+def nextCounter (w : List Bool) : List Bool :=
+  (takeLen (pair (false :: fstBlock (fstBlock w))
+    (fstBlock (fstBlock (sndBlock w))))).reverse
+
+/-- The value of the next iteration: the initial value on the first step, then
+`F` of the current value until the counter saturates. -/
+def nextValue (F : List Bool → List Bool) (w : List Bool) : List Bool :=
+  selectHead (emptyFlag (fstBlock (fstBlock w)))
+    (sndBlock (sndBlock w))
+    (selectHead (nextCounter w) (sndBlock (fstBlock w))
+      (takeLen (pair (sndBlock (fstBlock (sndBlock w))) (F (sndBlock (fstBlock w))))))
+
+/-- One iteration of the loop, truncated to the machine's own input length. -/
+def iterStep (F : List Bool → List Bool) (w : List Bool) : List Bool :=
+  pair (takeLen (pair (sndBlock w) (pair (nextCounter w) (nextValue F w)))) (sndBlock w)
+
+theorem sndBlock_iterStep (F : List Bool → List Bool) (w : List Bool) :
+    sndBlock (iterStep F w) = sndBlock w := by
+  rw [iterStep, sndBlock_pair]
+
+theorem iterStep_length_le (F : List Bool → List Bool) (w : List Bool) :
+    (iterStep F w).length ≤ 3 * (sndBlock w).length + 2 := by
+  rw [iterStep, pair_length, takeLen_pair]
+  have := length_take_le_arg (sndBlock w).length (pair (nextCounter w) (nextValue F w))
+  omega
+
+/-- **The state length is globally bounded**: whatever the input, the state
+after one or more iterations fits in `3|x| + 2`. -/
+theorem iterStep_iterate_length_le (F : List Bool → List Bool) (x : List Bool) :
+    ∀ i, ((iterStep F)^[i] (pair [] x)).length ≤ 3 * x.length + 2 := by
+  have hsnd : ∀ i, sndBlock ((iterStep F)^[i] (pair [] x)) = x := by
+    intro i
+    induction i with
+    | zero => exact sndBlock_pair [] x
+    | succ i ih => rw [Function.iterate_succ_apply', sndBlock_iterStep, ih]
+  intro i
+  cases i with
+  | zero =>
+      rw [Function.iterate_zero_apply, pair_length]
+      simp
+      omega
+  | succ i =>
+      rw [Function.iterate_succ_apply']
+      have := iterStep_length_le F ((iterStep F)^[i] (pair [] x))
+      rw [hsnd i] at this
+      exact this
+
+theorem emptyFlag_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) :
+    (fun z => emptyFlag (f z)) ∈ FP := by
+  have hcst : (fun _ : List Bool => [true]) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp const_nil_mem_FP (cons_mem_FP true)
+  have h1 : (fun z => headFlag true (f z)) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp hf (headFlag_mem_FP true)
+  have h2 : (fun z => headFlag false (f z)) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp hf (headFlag_mem_FP false)
+  exact appendFn_mem_FP (appendFn_mem_FP h1 h2) hcst
+
+theorem nextCounter_mem_FP : nextCounter ∈ FP := by
+  have hf : fstBlock ∈ FP := fstBlock_mem_FP
+  have hs : sndBlock ∈ FP := sndBlock_mem_FP
+  have hc : (fun w => false :: fstBlock (fstBlock w)) ∈ FP := by
+    simpa [Function.comp] using
+      mem_FP_comp (mem_FP_comp hf hf) (cons_mem_FP false)
+  have hk : (fun w => fstBlock (fstBlock (sndBlock w))) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp hs (mem_FP_comp hf hf)
+  have := takeLenFn_mem_FP hc hk
+  have hrev : (fun w => ((fstBlock (fstBlock (sndBlock w))).take
+      (false :: fstBlock (fstBlock w)).length).reverse) ∈ FP := by
+    simpa [Function.comp] using mem_FP_comp this reverse_mem_FP
+  have heq : (fun w => ((fstBlock (fstBlock (sndBlock w))).take
+      (false :: fstBlock (fstBlock w)).length).reverse) = nextCounter := by
+    funext w
+    rw [nextCounter, takeLen_pair]
+  rwa [heq] at hrev
+
+theorem nextValue_mem_FP {F : List Bool → List Bool} (hF : F ∈ FP) :
+    nextValue F ∈ FP := by
+  have hf : fstBlock ∈ FP := fstBlock_mem_FP
+  have hs : sndBlock ∈ FP := sndBlock_mem_FP
+  have hC : (fun w => fstBlock (fstBlock w)) ∈ FP := mem_FP_comp hf hf
+  have hv : (fun w => sndBlock (fstBlock w)) ∈ FP := mem_FP_comp hf hs
+  have hv0 : (fun w => sndBlock (sndBlock w)) ∈ FP := mem_FP_comp hs hs
+  have hW : (fun w => sndBlock (fstBlock (sndBlock w))) ∈ FP :=
+    mem_FP_comp hs (mem_FP_comp hf hs)
+  have hFv : (fun w => F (sndBlock (fstBlock w))) ∈ FP := mem_FP_comp hv hF
+  have hclamp : (fun w => takeLen (pair (sndBlock (fstBlock (sndBlock w)))
+      (F (sndBlock (fstBlock w))))) ∈ FP := by
+    have := takeLenFn_mem_FP hW hFv
+    simpa [takeLen_pair] using this
+  exact selectHeadFn_mem_FP (emptyFlag_mem_FP hC) hv0
+    (selectHeadFn_mem_FP nextCounter_mem_FP hv hclamp)
+
+theorem iterStep_mem_FP {F : List Bool → List Bool} (hF : F ∈ FP) :
+    iterStep F ∈ FP := by
+  have hs : sndBlock ∈ FP := sndBlock_mem_FP
+  have hpair : (fun w => pair (nextCounter w) (nextValue F w)) ∈ FP :=
+    pairFn_mem_FP nextCounter_mem_FP (nextValue_mem_FP hF)
+  have hclamp : (fun w => takeLen (pair (sndBlock w)
+      (pair (nextCounter w) (nextValue F w)))) ∈ FP := by
+    have := takeLenFn_mem_FP hs hpair
+    simpa [takeLen_pair] using this
+  exact pairFn_mem_FP hclamp hs
+
+/-- The value the loop carries after `i` iterations, from the second on. -/
+def iterVal (F : List Bool → List Bool) (Krev W v₀ : List Bool) : ℕ → List Bool
+  | 0 => v₀
+  | i + 1 => selectHead ((Krev.take (i + 2)).reverse) (iterVal F Krev W v₀ i)
+      ((F (iterVal F Krev W v₀ i)).take W.length)
+
+theorem iterVal_length_le (F : List Bool → List Bool) (Krev W v₀ : List Bool) :
+    ∀ i, (iterVal F Krev W v₀ i).length ≤ max v₀.length W.length := by
+  intro i
+  induction i with
+  | zero => exact le_max_left _ _
+  | succ i ih =>
+      refine le_trans (selectHead_length_le _ _ _) ?_
+      have := length_take_le_arg W.length (F (iterVal F Krev W v₀ i))
+      omega
+
+theorem take_succ_min (l : List Bool) (i : ℕ) :
+    l.take (min i l.length + 1) = l.take (i + 1) := by
+  rcases Nat.lt_or_ge l.length i with h | h
+  · rw [min_eq_right (by omega), List.take_of_length_le (by omega),
+      List.take_of_length_le (by omega)]
+  · rw [min_eq_left h]
+
+/-- **The loop's trajectory.** With the counter growing one mark per iteration
+and the state always fitting in the input, the `i+1`-st state is exactly the
+counter `(Krev.take (i+1)).reverse` beside the value `iterVal … i`. -/
+theorem iterStep_iterate (F : List Bool → List Bool) (Krev W v₀ : List Bool)
+    (hK : Krev ≠ [])
+    (hfit : ∀ i, (pair ((Krev.take (i + 1)).reverse) (iterVal F Krev W v₀ i)).length
+      ≤ (pair (pair Krev W) v₀).length) :
+    ∀ i, (iterStep F)^[i + 1] (pair [] (pair (pair Krev W) v₀))
+      = pair (pair ((Krev.take (i + 1)).reverse) (iterVal F Krev W v₀ i))
+          (pair (pair Krev W) v₀) := by
+  intro i
+  induction i with
+  | zero =>
+      rw [Function.iterate_succ_apply', Function.iterate_zero_apply, iterStep, sndBlock_pair]
+      rw [show nextCounter (pair [] (pair (pair Krev W) v₀)) = (Krev.take 1).reverse from by
+        rw [nextCounter, fstBlock_pair, sndBlock_pair, fstBlock_pair, fstBlock_pair,
+          takeLen_pair]
+        simp [fstBlock]]
+      rw [show nextValue F (pair [] (pair (pair Krev W) v₀)) = v₀ from by
+        rw [nextValue, fstBlock_pair, show fstBlock ([] : List Bool) = [] from rfl,
+          selectHead_emptyFlag_nil, sndBlock_pair, sndBlock_pair]]
+      rw [takeLen_pair]
+      show pair ((pair ((Krev.take (0 + 1)).reverse) (iterVal F Krev W v₀ 0)).take
+        (pair (pair Krev W) v₀).length) (pair (pair Krev W) v₀) = _
+      rw [List.take_of_length_le (hfit 0)]
+  | succ i ih =>
+      rw [Function.iterate_succ_apply', ih, iterStep, sndBlock_pair]
+      have hlen : ((Krev.take (i + 1)).reverse).length = min (i + 1) Krev.length := by
+        simp
+      have hC : nextCounter (pair (pair ((Krev.take (i + 1)).reverse)
+          (iterVal F Krev W v₀ i)) (pair (pair Krev W) v₀))
+          = (Krev.take (i + 2)).reverse := by
+        rw [nextCounter, fstBlock_pair, sndBlock_pair, fstBlock_pair, fstBlock_pair,
+          fstBlock_pair, takeLen_pair, List.length_cons, hlen, take_succ_min]
+      have hne : (Krev.take (i + 1)).reverse ≠ [] := by
+        intro hc
+        have : Krev.length = 0 := by
+          have h0 : ((Krev.take (i + 1)).reverse).length = 0 := by rw [hc]; rfl
+          rw [hlen] at h0
+          omega
+        exact hK (List.eq_nil_of_length_eq_zero this)
+      obtain ⟨b, t, hbt⟩ := List.exists_cons_of_ne_nil hne
+      have hV : nextValue F (pair (pair ((Krev.take (i + 1)).reverse)
+          (iterVal F Krev W v₀ i)) (pair (pair Krev W) v₀))
+          = iterVal F Krev W v₀ (i + 1) := by
+        rw [nextValue, fstBlock_pair, fstBlock_pair, sndBlock_pair, sndBlock_pair,
+          fstBlock_pair, sndBlock_pair, hbt, selectHead_emptyFlag_cons, ← hbt, hC,
+          takeLen_pair, sndBlock_pair, iterVal]
+      rw [hC, hV, takeLen_pair, List.take_of_length_le (hfit (i + 1))]
+
+theorem counter_take_le (a j : ℕ) (h : j ≤ a) :
+    (List.replicate a false ++ [true]).take j = List.replicate j false := by
+  rw [List.take_append_of_le_length (by simpa using h), List.take_replicate, min_eq_left h]
+
+theorem counter_head_false (a j : ℕ) (h1 : 1 ≤ j) (h2 : j ≤ a) :
+    (((List.replicate a false ++ [true]).take j).reverse).head? = some false := by
+  rw [counter_take_le a j h2, List.reverse_replicate]
+  cases j with
+  | zero => omega
+  | succ j => rfl
+
+theorem counter_head_true (a j : ℕ) (h : a + 1 ≤ j) :
+    (((List.replicate a false ++ [true]).take j).reverse).head? = some true := by
+  rw [List.take_of_length_le (by simp; omega), List.reverse_append, List.reverse_replicate]
+  rfl
+
+/-- **The value sequence is the iterate.** While the counter has marks left the
+step applies `F`; once it saturates the value stops changing. The clamp is a
+no-op because every intermediate value fits in `W`. -/
+theorem iterVal_eq_iterate (F : List Bool → List Bool) (W v₀ : List Bool) (M : ℕ)
+    (hclamp : ∀ j, j ≤ M → (F^[j] v₀).length ≤ W.length) :
+    ∀ i, iterVal F (List.replicate (M + 1) false ++ [true]) W v₀ i = F^[min i M] v₀ := by
+  intro i
+  induction i with
+  | zero => simp [iterVal]
+  | succ i ih =>
+      rw [iterVal, ih]
+      by_cases h : i + 2 ≤ M + 1
+      · have hhead := counter_head_false (M + 1) (i + 2) (by omega) h
+        rw [selectHead, if_neg (by rw [hhead]; simp), if_pos hhead,
+          show min i M = i from by omega, ← Function.iterate_succ_apply' F i v₀,
+          List.take_of_length_le (hclamp (i + 1) (by omega)),
+          show min (i + 1) M = i + 1 from by omega]
+      · have hhead := counter_head_true (M + 1) (i + 2) (by omega)
+        rw [selectHead, if_pos hhead, show min i M = M from by omega,
+          show min (i + 1) M = M from by omega]
+
+/-- **`FP` is closed under bounded iteration** — the one machine-level fact the
+soundness direction needs.
+
+*Construction.* The machine is assembled in
+`Complexitylib.Classes.P.Cobham.Internal.Iterate` out of the phase contracts of
+`Complexitylib.Classes.P.Cobham.Internal.Loop`; `iterate_input_mem_FP` is its
+interface. Three details are worth recording, because three earlier plans died
+on them.
+
+*Why resetting scratch is the crux.* `F`'s machine `M` comes from an
+existential (`F ∈ FP`), so nothing is known about the shape it leaves its
+scratch tapes in. Re-running it needs those tapes genuinely blank, but a
+content-driven eraser (`TM.blankWorkTM` scans right to the *first* blank)
+under-wipes whenever `M` left a gap — an isolated blank cell with more content
+beyond it. `TM.wipeStepTM` therefore writes blank *unconditionally*, and
+`Complexity.resetTapesTM` drives it a fixed number of times off a fuel register
+that is unrelated to the wiped tapes' content. `TM.reachesIn_work_cells_far`
+supplies the bound that makes the fixed count sufficient: a `t`-step run cannot
+have touched anything past `head + t`. `Complexity.iterTail` is the resulting
+five-phase cleanup, shared by the loop body and the setup; its first two phases
+are not bookkeeping either, since `δ_right_of_start` only forces a head
+*reading* `▷` to move right, so an arbitrary witness machine may legitimately
+*halt* with a head at cell `0`.
+
+*Why the state carries the machine's own input.* `TM.ComputesInTime` quantifies
+over *all* inputs, so the loop's contract has to survive malformed ones: the
+state is `pair (pair C v) x` with the machine's input `x` kept verbatim, and
+every new state is truncated to `|x|` (`iterStep`). That makes
+`iterStep_iterate_length_le` — a state-length bound holding for every input,
+not just the well-formed ones — available for free, and keeps the ruler and the
+width readable at every step. On the intended trajectory the truncation is a
+no-op (`iterStep_iterate`).
+
+*How the counter avoids a second fuel value.* The loop runs `|x| + 1` times, one
+per bit of the machine's own input (`TM.inputLenRegTM`), which is more
+iterations than needed; the surplus is absorbed by a counter that grows one mark
+of `Krev = 0^(m+1) 1` per step, whose leading bit turns `true` exactly when the
+`m` real applications are done (`counter_head_false`, `counter_head_true`). So
+`iterVal` is `F` iterated `min i m` times, and over-iteration is harmless
+(`iterVal_eq_iterate`). The wipe width is a *different* register, `p.eval |x|`,
+computed by `TM.polyEvalTM` — the state is longer than the input, so `|x|`
+alone cannot pay for the reset.
+
+*Time.* Each iteration costs `iterStep`'s own polynomial bound at width
+`(width z).length` — which is why `hbound` is a hypothesis — plus the linear
+copies and the wipe, and there are `|x| + 1` of them, so the total is polynomial
+(`polyBnd_iterBound`). -/
+theorem iterate_mem_FP {F init ruler width : List Bool → List Bool}
+    (hF : F ∈ FP) (hinit : init ∈ FP) (hruler : ruler ∈ FP) (hwidth : width ∈ FP)
+    (hbound : ∀ z, ∀ n ≤ (ruler z).length,
+      (F^[n] (init z)).length ≤ (width z).length) :
+    (fun z => F^[(ruler z).length] (init z)) ∈ FP := by
+  set Krev : List Bool → List Bool :=
+    fun z => List.replicate ((ruler z).length + 1) false ++ [true] with hKrev
+  have hKrevLen : ∀ z, (Krev z).length = (ruler z).length + 2 := by
+    intro z; rw [hKrev]; simp
+  have hKrevNe : ∀ z, Krev z ≠ [] := by
+    intro z h
+    have := hKrevLen z
+    rw [h] at this
+    simp at this
+  -- the machine's input
+  set X : List Bool → List Bool :=
+    fun z => pair (pair (Krev z) (width z)) (init z) with hX
+  have hXlen : ∀ z, (X z).length
+      = 4 * (Krev z).length + 2 * (width z).length + (init z).length + 6 := by
+    intro z; rw [hX]; simp only [pair_length]; omega
+  -- the iterated step is `FP`, and its state length is globally bounded
+  have hstep : iterStep F ∈ FP := iterStep_mem_FP hF
+  have hr : ∀ (x : List Bool), ∀ i ≤ x.length,
+      ((iterStep F)^[i] (pair [] x)).length
+        ≤ (3 * Polynomial.X + Polynomial.C 2 : Polynomial ℕ).eval x.length := by
+    intro x i _
+    have := iterStep_iterate_length_le F x i
+    simpa using this
+  have hΛ := iterate_input_mem_FP hstep (3 * Polynomial.X + Polynomial.C 2) hr
+  -- the wrapper is `FP`, so the composite is
+  have hXFP : X ∈ FP := by
+    have hone : (fun _ : List Bool => [false]) ∈ FP := by
+      simpa [Function.comp] using mem_FP_comp const_nil_mem_FP (cons_mem_FP false)
+    have htrue : (fun _ : List Bool => [true]) ∈ FP := by
+      simpa [Function.comp] using mem_FP_comp const_nil_mem_FP (cons_mem_FP true)
+    have hrl : (fun z => ruler z ++ [false]) ∈ FP := appendFn_mem_FP hruler hone
+    have hrep : (fun z => List.replicate ((ruler z).length + 1) false) ∈ FP := by
+      have := mulLenFn_mem_FP hrl hone
+      simpa using this
+    exact pairFn_mem_FP (pairFn_mem_FP (appendFn_mem_FP hrep htrue) hwidth) hinit
+  have hXeq : ∀ z, X z = pair (pair (Krev z) (width z)) (init z) := fun z => by rw [hX]
+  have heq : (fun z => F^[(ruler z).length] (init z))
+      = sndBlock ∘ (fstBlock ∘ ((fun x => (iterStep F)^[x.length + 1] (pair [] x)) ∘ X)) := by
+    funext z
+    simp only [Function.comp_apply]
+    have hfit : ∀ i, (pair (((Krev z).take (i + 1)).reverse)
+        (iterVal F (Krev z) (width z) (init z) i)).length ≤ (X z).length := by
+      intro i
+      have h1 : (((Krev z).take (i + 1)).reverse).length ≤ (Krev z).length := by simp
+      have h2 := iterVal_length_le F (Krev z) (width z) (init z) i
+      rw [pair_length, hXlen z]
+      omega
+    have hval : ∀ i, iterVal F (Krev z) (width z) (init z) i
+        = F^[min i (ruler z).length] (init z) := by
+      have hclamp : ∀ j, j ≤ (ruler z).length → (F^[j] (init z)).length ≤ (width z).length :=
+        fun j hj => hbound z j hj
+      intro i
+      exact iterVal_eq_iterate F (width z) (init z) (ruler z).length hclamp i
+    have hiter := iterStep_iterate F (Krev z) (width z) (init z) (hKrevNe z) hfit (X z).length
+    have hlarge : (ruler z).length ≤ (X z).length := by
+      have := hKrevLen z
+      rw [hXlen z]; omega
+    rw [hXeq z, hiter, fstBlock_pair, sndBlock_pair, hval, min_eq_right hlarge]
+  rw [heq]
+  exact mem_FP_comp (mem_FP_comp (mem_FP_comp hXFP hΛ) fstBlock_mem_FP) sndBlock_mem_FP
+
+/-- **The loop of the `boundedRec` case.** `recFoldClamp` is `loopStep` iterated
+once per bit of `sndBlock z` (`loopStep_iterate`), started from the packed state
+`pair (pair R (pair W s)) (pair [] (e.take |R|))` — with `R` an *exact* ruler for
+the clamp (`exists_exact_ruler`) — and read off with two `sndBlock`s. -/
 theorem recFoldClamp_mem_FP {A B E : List Bool → List Bool}
     (hA : A ∈ FP) (hB : B ∈ FP) (hE : E ∈ FP) (p : Polynomial ℕ) :
     (fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z))
       ∈ FP := by
-  sorry
+  obtain ⟨R, hR, hRlen⟩ := exists_exact_ruler p
+  have hfst : fstBlock ∈ FP := fstBlock_mem_FP
+  have hsnd : sndBlock ∈ FP := sndBlock_mem_FP
+  have hP : (fun z => pair (R z) (pair (fstBlock z) (sndBlock z))) ∈ FP :=
+    pairFn_mem_FP hR (pairFn_mem_FP hfst hsnd)
+  have hinit : (fun z => pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+      (pair [] ((E z).take (R z).length))) ∈ FP :=
+    pairFn_mem_FP hP (pairFn_mem_FP const_nil_mem_FP (takeLenFn_mem_FP hR hE))
+  have hwidth : (fun z => pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+      (pair (sndBlock z) (R z))) ∈ FP := pairFn_mem_FP hP (pairFn_mem_FP hsnd hR)
+  have hbound : ∀ z, ∀ n ≤ (sndBlock z).length,
+      ((loopStep A B)^[n] (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+        (pair [] ((E z).take (R z).length)))).length
+        ≤ (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+            (pair (sndBlock z) (R z))).length := by
+    intro z n hn
+    rw [loopStep_iterate (A := A) (B := B) (R z) (fstBlock z) (sndBlock z) (E z) n hn]
+    have h1 : ((sndBlock z).drop ((sndBlock z).length - n)).length
+        ≤ (sndBlock z).length := by simp
+    have h2 : (recFoldClamp A B (R z).length (E z) (fstBlock z)
+        ((sndBlock z).drop ((sndBlock z).length - n))).length ≤ (R z).length :=
+      recFoldClamp_length_le _ _ _ _ _ _
+    simp only [pair_length]
+    omega
+  have hiter := iterate_mem_FP (loopStep_mem_FP hA hB) hinit hsnd hwidth hbound
+  have hout := mem_FP_comp hiter (mem_FP_comp hsnd hsnd)
+  have heq : ((sndBlock ∘ sndBlock) ∘ fun z =>
+      (loopStep A B)^[(sndBlock z).length]
+        (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+          (pair [] ((E z).take (R z).length))))
+      = fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z) := by
+    funext z
+    rw [Function.comp, Function.comp,
+      loopStep_iterate (A := A) (B := B) (R z) (fstBlock z) (sndBlock z) (E z)
+        (sndBlock z).length le_rfl]
+    simp [hRlen z]
+  rwa [heq] at hout
 
 /-- Truncation is a no-op as soon as every intermediate value already fits. -/
 theorem recFoldClamp_eq_recFold {A B : List Bool → List Bool} {bound : ℕ}

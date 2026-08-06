@@ -20,8 +20,7 @@ string functions. The headline statement is `CobhamFP_eq_FP`.
 
 ## Main results
 
-- `CobhamFP_eq_FP` — Cobham's algebra equals `FP` *(draft: proof in progress —
-  see the reduction status below)*
+- `CobhamFP_eq_FP` — Cobham's algebra equals `FP`
 - `Cobham.of_eq`, `Cobham.comp₂`, `Cobham.comp₃` — congruence and usable
   composition at small arities
 - `Cobham.const`, `Cobham.append`, `Cobham.appendFn`, `Cobham.pairing`,
@@ -99,17 +98,24 @@ per remaining input symbol, giving `|A|·|B|` zeros from `pair A B`; `fpn_smash`
 follows via `mulLenFn_mem_FP`. So five of the six constructor cases — `empty`,
 `proj`, `bit`, `comp`, `smash` — are complete.
 
-The last constructor case, `fpn_boundedRec`, is proved modulo a single
-machine-level loop lemma, `Cobham.recFoldClamp_mem_FP`: iterating a
-width-clamped `FP` step function once per bit of `sndBlock z`. Everything else
-in that case — that recursion on notation is the encoded-argument loop
-`recFold` (`Cobham.recFold_eq_recNotation`), and that Cobham's
-limited-recursion side condition makes the width clamp vacuous
-(`Cobham.recFoldClamp_eq_recFold`) — is proved. The two `FP` primitives that
-loop needs are also in place: `Complexity.reverse_mem_FP` (to consume the
-recursion string back to front) and `Complexity.takeLen_mem_FP` together with
-`Cobham.exists_ruler` (to carry the width clamp as a string rather than a
-number).
+The last constructor case, `fpn_boundedRec`, rests on a general closure
+property of `FP` alone, `Cobham.iterate_mem_FP`: `FP` is closed under iterating
+an `FP` function once per bit of an `FP` ruler, given an `FP` bound on the width
+of the intermediate states.
+
+Everything between that lemma and the constructor case is proved. Recursion on
+notation is the encoded-argument loop `recFold`
+(`Cobham.recFold_eq_recNotation`); Cobham's limited-recursion side condition
+makes the width clamp vacuous (`Cobham.recFoldClamp_eq_recFold`); and the
+clamped loop is that iteration on a packed state
+(`Cobham.loopStep_mem_FP`, `Cobham.loopStep_iterate`), giving
+`Cobham.recFoldClamp_mem_FP`. Realizing one iteration inside `FP` needed three
+closure properties the library did not have, all proved here:
+`Cobham.appendFn_mem_FP` (concatenation, via the `Cobham.catTM` scanner),
+`Cobham.selectHeadFn_mem_FP` (branching on a bit — every other `FP` primitive
+fixes its output length from its inputs' lengths, so `Complexity.headFlag`
+turns the bit test into a length), and `Cobham.exists_exact_ruler` (a ruler of
+length *exactly* `p.eval |z|`, which is the width the clamp names).
 
 **Completeness (`FP ⊆ CobhamFP`)**, `Cobham.FP_subset_CobhamFP_internal`, is now
 fully proved: a polynomial-time machine is simulated inside the algebra. A whole
@@ -123,8 +129,14 @@ second iteration walks its head back to cell `0` (`Cobham.rewindFn`,
 `Complexity.cellBits`, `Complexity.runTrue`). The assembly is
 `Cobham.simFn_mem` / `Cobham.simFn_eq`.
 
-So the only remaining gap in `CobhamFP_eq_FP` is the soundness-side loop lemma
-`Cobham.recFoldClamp_mem_FP`.
+`Cobham.iterate_mem_FP` itself is the one machine-level construction of the
+soundness direction, assembled in
+`Complexitylib.Classes.P.Cobham.Internal.Iterate`: `TM.forRegTM_hoareTime`
+drives a body that runs `F`'s machine on the state tape as a virtual input
+(`TM.applyTM`), moves the result back with `Complexity.copyToVirtualInputTM`,
+and blanks the witness machine's scratch between iterations with
+`Complexity.resetTapesTM` — a content-agnostic wipe, since an opaque witness
+machine may leave gaps that a content-driven eraser would stop at.
 -/
 
 
