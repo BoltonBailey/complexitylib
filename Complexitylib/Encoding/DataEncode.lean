@@ -5,7 +5,7 @@ Authors: Christian Reitwiessner
 -/
 
 module
-public import Complexitylib.Models.RoseTreeMachine.Data
+public import Complexitylib.Encoding.Data
 public import Mathlib.Data.Nat.Bits
 public import Mathlib.Data.List.Basic
 
