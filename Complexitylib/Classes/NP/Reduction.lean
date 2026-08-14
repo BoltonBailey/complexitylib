@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.NP
 public import Complexitylib.Classes.P
+public import Complexitylib.Classes.Containments
 
 /-!
 # Polynomial-time many-one reductions and NP-completeness
@@ -104,5 +105,21 @@ theorem NPComplete.transfer {L₁ L₂ : Language}
     (h₁ : NPComplete L₁) (hmem : L₂ ∈ NP) (h₂ : L₁ ≤ₚ L₂) :
     NPComplete L₂ :=
   NPComplete.of_mem_of_reduction h₁.2 hmem h₂
+
+/-! ### Hard languages in `P` collapse `NP` -/
+
+/-- **If an NP-hard language is in `P`, then `P = NP`.** NP-hardness pulls
+every NP language back into `P` along its reduction (`MapReducesPoly.mem_P`),
+and `P ⊆ NP` unconditionally. -/
+theorem NPHard.P_eq_NP_of_mem_P {L : Language} (h : NPHard L) (hP : L ∈ P) :
+    P = NP :=
+  Set.Subset.antisymm P_subset_NP fun L' hL' => (h L' hL').mem_P hP
+
+/-- **An NP-complete language is in `P` iff `P = NP`** (Arora–Barak,
+Theorem 2.10 discussion): deciding any single NP-complete language in
+deterministic polynomial time is equivalent to collapsing `NP` to `P`. -/
+theorem NPComplete.mem_P_iff_P_eq_NP {L : Language} (h : NPComplete L) :
+    L ∈ P ↔ P = NP :=
+  ⟨h.2.P_eq_NP_of_mem_P, fun hEq => hEq.symm ▸ h.1⟩
 
 end Complexity

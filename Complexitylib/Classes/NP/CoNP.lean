@@ -27,7 +27,8 @@ definition `coNP = complClass NP` from `Complexitylib.Classes.NP`:
   from `NP`.
 
 The headline application is `SAT.coNPComplete_compl_language` (the
-complement of SAT is coNP-complete), in `Complexitylib/SAT/CoNP.lean`.
+complement of SAT is coNP-complete), in
+`Complexitylib/SAT/CookLevin/Corollaries.lean`.
 -/
 
 

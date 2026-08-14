@@ -9,11 +9,15 @@ public import Complexitylib.SAT.CookLevin.Assembly
 public import Complexitylib.Classes.NP.CoNP
 
 /-!
-# The complement of SAT is coNP-complete
+# Corollaries of Cook–Levin
 
-Dualizing Cook–Levin (`SAT.NPComplete_language`) through
-`NPComplete.compl` shows that the complement of the SAT language is
-coNP-complete.
+Structural consequences of the NP-completeness of SAT
+(`SAT.NPComplete_language`):
+
+* `SAT.coNPComplete_compl_language` — the complement of the SAT language is
+  coNP-complete, by dualizing through `NPComplete.compl`.
+* `SAT.language_mem_P_iff_P_eq_NP` — SAT is decidable in deterministic
+  polynomial time iff `P = NP`.
 
 Note that `languageᶜ` is the complement *as a set of bit-strings*: it
 contains the encodings of unsatisfiable CNF formulas together with all
@@ -33,6 +37,11 @@ namespace SAT
     Cook–Levin theorem `NPComplete_language`. -/
 theorem coNPComplete_compl_language : coNPComplete languageᶜ :=
   NPComplete_language.compl
+
+/-- **SAT is in `P` iff `P = NP`.** Deciding satisfiability in deterministic
+    polynomial time is equivalent to the collapse of `NP` to `P`. -/
+theorem language_mem_P_iff_P_eq_NP : language ∈ P ↔ P = NP :=
+  NPComplete_language.mem_P_iff_P_eq_NP
 
 end SAT
 

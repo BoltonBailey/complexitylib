@@ -50,8 +50,9 @@ def headlineTheorems : List Name := [
   `Complexity.SAT.NPComplete_language,
   `Complexity.SAT.language_mem_NP,
   `Complexity.SAT.pairLang_witness_mem_P,
-  -- coNP duality
+  -- Cook–Levin corollaries and coNP duality
   `Complexity.SAT.coNPComplete_compl_language,
+  `Complexity.SAT.language_mem_P_iff_P_eq_NP,
   `Complexity.P_ne_NP_of_NP_ne_coNP,
   -- Universal machine
   `Complexity.TM.UTMBody.utmTM_universal,
