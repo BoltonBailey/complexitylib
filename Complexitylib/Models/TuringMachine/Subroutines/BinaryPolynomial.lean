@@ -27,7 +27,7 @@ not runtime, and is logarithmic in the input value for every fixed polynomial.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

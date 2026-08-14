@@ -18,7 +18,7 @@ formula lookup order, and arithmetic addresses of packed successor atoms.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

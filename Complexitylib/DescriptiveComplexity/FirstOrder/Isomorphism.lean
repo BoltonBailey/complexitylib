@@ -18,7 +18,7 @@ public import Complexitylib.DescriptiveComplexity.FirstOrder.Semantics
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

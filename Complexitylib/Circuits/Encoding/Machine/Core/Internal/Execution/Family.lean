@@ -5,9 +5,9 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.EmptyReject
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.EmptyReject
 public import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.PositiveLoopReject
-public import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.PositiveReject
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.PositiveReject
 
 /-!
 # Total tagged-family core execution
@@ -18,7 +18,7 @@ successful Boolean results are preserved and every malformed stream writes zero.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

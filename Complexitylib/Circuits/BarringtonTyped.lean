@@ -25,7 +25,7 @@ model stores the unique zero-input answer separately.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

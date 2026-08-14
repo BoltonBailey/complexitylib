@@ -33,7 +33,7 @@ limit, or tape frames. Clients record those endpoint facts in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

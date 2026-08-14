@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Hit
 public import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Miss
@@ -15,7 +15,7 @@ Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryU
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

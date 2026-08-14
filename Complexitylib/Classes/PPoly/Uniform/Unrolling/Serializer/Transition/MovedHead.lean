@@ -24,7 +24,7 @@ reverse disjunction connectors complete the stream.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

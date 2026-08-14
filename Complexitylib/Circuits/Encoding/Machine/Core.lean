@@ -29,7 +29,7 @@ concrete quadratic bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

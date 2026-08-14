@@ -13,7 +13,7 @@ public import Complexitylib.Models.TuringMachine.Combinators.WorkSymbolBranch.De
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

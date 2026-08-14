@@ -18,7 +18,7 @@ direct use by downstream code.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

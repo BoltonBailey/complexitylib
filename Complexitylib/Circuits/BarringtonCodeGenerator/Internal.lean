@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.FormulaEncoding
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

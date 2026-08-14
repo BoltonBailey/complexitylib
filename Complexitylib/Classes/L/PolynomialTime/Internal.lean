@@ -18,7 +18,7 @@ The public results are in `Complexitylib.Classes.L.PolynomialTime`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

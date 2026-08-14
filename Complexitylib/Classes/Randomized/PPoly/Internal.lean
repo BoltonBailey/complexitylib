@@ -18,7 +18,7 @@ statements are exposed by `Complexitylib.Classes.Randomized.PPoly`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

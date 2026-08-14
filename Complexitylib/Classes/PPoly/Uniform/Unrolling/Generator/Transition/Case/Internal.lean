@@ -9,7 +9,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initializa
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Offset
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Case.Defs
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
 
 /-!
 # Direct-unrolling transition-case generator -- proof internals

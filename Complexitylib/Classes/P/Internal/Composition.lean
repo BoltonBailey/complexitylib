@@ -18,7 +18,7 @@ normal forms for its two component computations. The public theorem is in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

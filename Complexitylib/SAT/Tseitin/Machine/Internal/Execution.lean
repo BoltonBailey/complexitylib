@@ -27,7 +27,7 @@ started execution theorem.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

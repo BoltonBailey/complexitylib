@@ -30,7 +30,7 @@ convention but the boundary between a sound Turing-equivalent model and a
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

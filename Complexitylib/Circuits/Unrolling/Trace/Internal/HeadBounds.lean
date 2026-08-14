@@ -19,7 +19,7 @@ below `T`. It also identifies one `choiceStep` from prefix `i` with prefix
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

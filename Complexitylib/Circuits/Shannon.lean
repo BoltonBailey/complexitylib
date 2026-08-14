@@ -40,7 +40,7 @@ Together these establish that worst-case circuit complexity is `Θ(2^N / N)`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

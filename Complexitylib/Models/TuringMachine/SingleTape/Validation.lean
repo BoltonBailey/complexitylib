@@ -30,7 +30,7 @@ materialization, distant writes read back, and `k = 2` tape interleaving.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

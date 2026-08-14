@@ -55,7 +55,7 @@ This module exposes the machine-facing representation of
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

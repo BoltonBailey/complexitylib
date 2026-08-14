@@ -18,7 +18,7 @@ encoded sparse register-store entry.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

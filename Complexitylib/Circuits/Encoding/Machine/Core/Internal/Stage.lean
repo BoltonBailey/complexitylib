@@ -16,7 +16,7 @@ core's precondition across the standard sequential-composition tape transition.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -21,7 +21,7 @@ retaining a concrete polynomial-preserving time bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

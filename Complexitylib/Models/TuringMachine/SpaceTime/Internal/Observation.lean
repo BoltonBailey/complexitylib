@@ -19,7 +19,7 @@ remain inside the observed window.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

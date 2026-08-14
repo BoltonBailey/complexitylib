@@ -16,7 +16,7 @@ raw gate with one dynamic and one fixed recent-wire reference.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

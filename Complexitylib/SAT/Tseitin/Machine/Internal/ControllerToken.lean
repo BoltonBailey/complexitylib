@@ -29,7 +29,7 @@ later induction over `Streaming.run` can instantiate it directly.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -25,7 +25,7 @@ serializing the target `Data` value with `Data.toBits`. Since both the `DataEnco
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

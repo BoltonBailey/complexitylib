@@ -24,7 +24,7 @@ Proofs that `TM.scannerTM` correctly implements a left-to-right fold with
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

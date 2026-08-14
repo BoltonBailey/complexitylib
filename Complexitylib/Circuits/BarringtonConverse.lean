@@ -29,7 +29,7 @@ equivalence under the library's total-assignment family convention.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

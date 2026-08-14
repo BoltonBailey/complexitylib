@@ -37,7 +37,7 @@ to the executable guards, its imported proof layer establishes:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

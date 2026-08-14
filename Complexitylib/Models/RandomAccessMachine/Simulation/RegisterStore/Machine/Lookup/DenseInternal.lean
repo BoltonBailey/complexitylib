@@ -15,7 +15,7 @@ Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.DenseI
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace RAM

@@ -18,7 +18,7 @@ block lie in the existing circuit prefix.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

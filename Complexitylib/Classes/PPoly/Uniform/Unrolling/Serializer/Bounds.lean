@@ -26,7 +26,7 @@ padding frontier without first counting the emitted raw gates.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

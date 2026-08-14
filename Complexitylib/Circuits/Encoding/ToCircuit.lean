@@ -30,7 +30,7 @@ Boolean evaluation, and exact gate count.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -21,7 +21,7 @@ depth, negation flags, or semantics.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace ThresholdOp

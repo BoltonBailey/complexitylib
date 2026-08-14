@@ -18,7 +18,7 @@ then halts with an explicit zero write.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

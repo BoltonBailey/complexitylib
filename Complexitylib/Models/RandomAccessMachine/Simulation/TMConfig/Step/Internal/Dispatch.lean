@@ -14,7 +14,7 @@ public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Step.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

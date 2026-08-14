@@ -18,7 +18,7 @@ kept in a separate proof layer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

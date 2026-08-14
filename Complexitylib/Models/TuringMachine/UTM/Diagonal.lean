@@ -63,7 +63,7 @@ Two landed specs do not quite fit and are bridged locally:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

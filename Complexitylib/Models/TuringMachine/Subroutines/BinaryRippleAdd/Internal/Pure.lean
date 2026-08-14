@@ -18,7 +18,7 @@ incoming carry so that its induction follows the recurrence exactly.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

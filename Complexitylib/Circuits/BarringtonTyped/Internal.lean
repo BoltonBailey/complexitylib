@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.BarringtonTyped.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

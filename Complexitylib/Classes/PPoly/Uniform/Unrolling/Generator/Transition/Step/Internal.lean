@@ -23,7 +23,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

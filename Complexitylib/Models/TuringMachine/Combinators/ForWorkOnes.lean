@@ -24,7 +24,7 @@ the RAM snapshot word decoder.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

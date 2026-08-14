@@ -19,7 +19,7 @@ configuration block for the halted-or-successor machine configuration.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

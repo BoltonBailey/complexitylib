@@ -16,7 +16,7 @@ resulting constant packed-layer size.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

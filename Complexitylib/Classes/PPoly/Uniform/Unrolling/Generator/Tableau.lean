@@ -18,7 +18,7 @@ member), and has a verified logarithmic all-prefix auxiliary-space bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

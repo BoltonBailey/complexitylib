@@ -24,7 +24,7 @@ and the reusable zero scratch are restored literally.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

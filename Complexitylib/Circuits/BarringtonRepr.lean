@@ -43,7 +43,7 @@ converse live in `BarringtonFamily.lean` and `BarringtonConverse.lean`.
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

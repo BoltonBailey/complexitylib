@@ -27,7 +27,7 @@ ultimately rest on.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

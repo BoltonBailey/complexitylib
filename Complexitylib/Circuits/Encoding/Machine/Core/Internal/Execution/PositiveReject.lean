@@ -17,7 +17,7 @@ frontier-level wrappers also cover a positive tag paired with the empty input.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

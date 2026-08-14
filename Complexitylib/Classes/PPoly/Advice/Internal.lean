@@ -18,7 +18,7 @@ for advised-computation circuit families. Public statements are exposed by
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

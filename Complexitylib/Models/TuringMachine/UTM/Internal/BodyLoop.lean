@@ -43,7 +43,7 @@ which has just read the next region's head symbol and found it non-`□`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

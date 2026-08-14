@@ -25,7 +25,7 @@ and the final trial writes their strict majority.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

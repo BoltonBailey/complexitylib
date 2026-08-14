@@ -16,7 +16,7 @@ retaining a well-formed counter remainder and an explicit zero verdict.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

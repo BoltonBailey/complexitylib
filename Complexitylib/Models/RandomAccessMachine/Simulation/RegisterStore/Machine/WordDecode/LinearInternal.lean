@@ -19,7 +19,7 @@ while copying one payload bit. Each pass is linear in the encoded word width.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -17,7 +17,7 @@ bound back to `Circuit`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

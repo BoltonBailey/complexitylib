@@ -5,8 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import
-  Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Action
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Action
 public import Complexitylib.Models.RandomAccessMachine.Structured.Switch
 public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Load
 
@@ -15,7 +14,7 @@ public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Spars
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

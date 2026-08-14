@@ -23,7 +23,7 @@ the two decoded components.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

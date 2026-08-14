@@ -25,7 +25,7 @@ are parked away from the left-end marker.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

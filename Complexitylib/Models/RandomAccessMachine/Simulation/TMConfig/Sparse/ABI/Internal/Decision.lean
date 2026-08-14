@@ -7,8 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Marshal
-public import
-  Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Iteration
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Step.Internal.Iteration
 public import Complexitylib.Models.RandomAccessMachine.Structured
 
 /-!
@@ -16,7 +15,7 @@ public import Complexitylib.Models.RandomAccessMachine.Structured
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -16,7 +16,7 @@ Helper lemmas for `OrRelation` used by the surface-layer theorem
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

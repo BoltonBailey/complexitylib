@@ -25,7 +25,7 @@ head at the entry region) and the match loop (entry-region cells).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

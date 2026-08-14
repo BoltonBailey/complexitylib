@@ -21,7 +21,7 @@ of restrictions. No uniformity or circuit-generator assumption is present.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

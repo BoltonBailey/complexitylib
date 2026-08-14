@@ -20,7 +20,7 @@ logarithmic cost, peak space, decoded value, and suffix cursor.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
