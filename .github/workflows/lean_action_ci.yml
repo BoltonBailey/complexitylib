@@ -19,6 +19,8 @@ jobs:
           auto-config: false
           build: true
           build-args: "--wfail"
+      - name: Run Cobham-characterization regression guards
+        run: lake build --wfail Complexitylib.Classes.P.Cobham.Validation
       - name: Run single-tape simulation regression guards
         run: lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
       - name: Run fixed-time repetition regression guards
@@ -30,6 +32,7 @@ jobs:
       - name: Run environment linters, including validation-only graphs
         run: |
           lake exe runLinter Complexitylib \
+            Complexitylib.Classes.P.Cobham.Validation \
             Complexitylib.Models.TuringMachine.SingleTape.Validation \
             Complexitylib.Models.TuringMachine.Repetition.Validation \
             Complexitylib.Circuits.Encoding.Validation \

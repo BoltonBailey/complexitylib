@@ -48,6 +48,7 @@ EXPOSE_SECTION = "@[expose] public section"
 PRIVATE_IN_PUBLIC = "set_option backward.privateInPublic true"
 PRIVATE_IN_PUBLIC_WARN = "set_option backward.privateInPublic.warn false"
 VALIDATION_MODULES = [
+    "Complexitylib.Classes.P.Cobham.Validation",
     "Complexitylib.Models.TuringMachine.SingleTape.Validation",
     "Complexitylib.Models.TuringMachine.Repetition.Validation",
     "Complexitylib.Circuits.Encoding.Validation",
