@@ -42,7 +42,7 @@ variable {nf ng : ℕ}
     state at the virtual-input rewind's halt, virtual input `y` parked at
     head `1`, second scratch block and output parked blank, and every tape
     start-invariant with positive head. -/
-def DetPrefixBoundary (tmF : TM nf) (N : NTM ng) (y : List Bool)
+@[expose] def DetPrefixBoundary (tmF : TM nf) (N : NTM ng) (y : List Bool)
     (E : Cfg (TM.compositionTapeCount nf ng) (compositionNTM tmF N).Q) : Prop :=
   E.state = Sum.inr (Sum.inr (Sum.inr (Sum.inl
     (TM.rewindWorkTM (TM.compositionVirtualInputIdx nf ng)).qhalt))) ∧
