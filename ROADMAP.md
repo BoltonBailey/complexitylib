@@ -567,6 +567,15 @@ polynomial-time preimages and reductions.
       `P` witnesses to polynomial evaluations, and prove closure under `FP`
       preimages and polynomial reductions (`TM.compositionTM_decidesInTime`,
       `mem_P_preimage`, and `MapReducesPoly.mem_P`).
+    - [x] Lift the pipeline to a nondeterministic second machine sharing the
+      deterministic composition's state skeleton (`NTM.compositionNTM` with
+      `det`-projection factorization, `TM.ReachesInVia` deterministic-prefix
+      transport, the `placedCfg` bit-for-bit phase correspondence, and
+      `NTM.compositionNTM_decidesInTime`); conclude closure of `NP` and `coNP`
+      under `FP` preimages and polynomial reductions (`mem_NP_preimage`,
+      `MapReducesPoly.mem_NP`, `MapReducesPoly.mem_coNP`) and the collapse
+      criteria `NPComplete.mem_P_iff_P_eq_NP` /
+      `NPComplete.mem_coNP_iff_NP_eq_coNP` with their SAT instances.
 - [~] Define and relate SAT, CNF-SAT, and 3SAT encodings; prove a size-controlled
   Tseitin transformation. *Decomposed:*
   - [x] Name the existing encoded CNF problem as `CNFSAT.language`, expose

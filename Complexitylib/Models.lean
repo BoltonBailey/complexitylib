@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Models.TuringMachine
 public import Complexitylib.Models.TuringMachine.Trace
+public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape
 public import Complexitylib.Models.TuringMachine.Combinators
 public import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
@@ -54,6 +55,8 @@ public import Complexitylib.Models.TuringMachine.SpaceTime
 public import Complexitylib.Models.TuringMachine.Placement
 public import Complexitylib.Models.TuringMachine.Composition
 public import Complexitylib.Models.TuringMachine.Composition.PairWithInput
+public import Complexitylib.Models.TuringMachine.Composition.Nondeterministic
+public import Complexitylib.Models.TuringMachine.Composition.Nondeterministic.Trace
 public import Complexitylib.Models.TuringMachine.Deterministic
 public import Complexitylib.Models.TuringMachine.Lift
 public import Complexitylib.Models.TuringMachine.Repetition
