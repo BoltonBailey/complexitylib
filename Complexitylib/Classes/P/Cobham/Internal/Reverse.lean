@@ -7,7 +7,7 @@ Authors: Bolton Bailey
 module
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Models.TuringMachine.Combinators
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Polynomial-time string reversal — proof internals
@@ -27,7 +27,7 @@ consumes the *last* bit first.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

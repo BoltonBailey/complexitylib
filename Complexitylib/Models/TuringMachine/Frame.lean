@@ -6,8 +6,8 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Models.TuringMachine.Combinators.Internal
-public import Complexitylib.Models.TuringMachine.Hoare
-public import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Hoare
+import Complexitylib.Models.TuringMachine.Internal
 public import Complexitylib.Models.TuringMachine.Placement
 public import Complexitylib.Models.TuringMachine.Registers
 

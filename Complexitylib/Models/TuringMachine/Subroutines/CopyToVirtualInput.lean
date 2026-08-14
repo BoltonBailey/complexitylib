@@ -5,9 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Models.TuringMachine.Combinators.RetargetCompute
-public import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
-public import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
+import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 public import Complexitylib.Models.TuringMachine.Subroutines.ResetTapes
 
 /-!
@@ -25,7 +23,7 @@ rewind closes the gap.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

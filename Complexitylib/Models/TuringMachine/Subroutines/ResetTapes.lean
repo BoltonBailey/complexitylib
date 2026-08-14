@@ -5,7 +5,6 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Models.TuringMachine.Subroutines.MoveLeftStep
 public import Complexitylib.Models.TuringMachine.Subroutines.RewindList
 public import Complexitylib.Models.TuringMachine.Subroutines.WipeLoop
 
@@ -25,7 +24,7 @@ wipe and is left exactly as it started.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

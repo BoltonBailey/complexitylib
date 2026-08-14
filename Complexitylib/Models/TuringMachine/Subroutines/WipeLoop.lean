@@ -5,9 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Models.TuringMachine.Registers
 public import Complexitylib.Models.TuringMachine.Registers.ForReg
-public import Complexitylib.Models.TuringMachine.Registers.RegisterOps
 public import Complexitylib.Models.TuringMachine.Subroutines.WipeStep
 
 /-!

@@ -5,7 +5,6 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Internal.Algebra
 public import Complexitylib.Classes.P.Cobham.Internal.Encoding
 public import Mathlib.Data.Fintype.Prod

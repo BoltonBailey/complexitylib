@@ -6,9 +6,8 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Internal.Blocks
-public import Complexitylib.Classes.P.Cobham.Defs
 public import Complexitylib.Models.TuringMachine
-public import Complexitylib.Models.TuringMachine.Internal
+import Complexitylib.Models.TuringMachine.Internal
 
 /-!
 # Encoding machine configurations as bitstrings — proof internals

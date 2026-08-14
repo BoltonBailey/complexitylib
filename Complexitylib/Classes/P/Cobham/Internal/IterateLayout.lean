@@ -6,11 +6,7 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Models.TuringMachine.Combinators.Apply
-public import Complexitylib.Models.TuringMachine.Registers.EmitSeq
-public import Complexitylib.Models.TuringMachine.Registers.ForReg
-public import Complexitylib.Models.TuringMachine.Registers.RegisterOps
 public import Complexitylib.Models.TuringMachine.Subroutines.CopyToVirtualInput
-public import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 
 /-!
 # The bounded-iteration machine's tape layout — proof internals

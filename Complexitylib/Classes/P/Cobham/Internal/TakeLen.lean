@@ -8,7 +8,7 @@ module
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Encoding.Pairing
 public import Complexitylib.Models.TuringMachine.Registers
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Truncating to the length of a leading block — proof internals

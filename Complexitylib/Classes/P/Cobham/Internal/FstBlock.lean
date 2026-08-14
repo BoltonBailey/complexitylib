@@ -6,11 +6,8 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Internal.BlockScan
-public import Complexitylib.Classes.P.Defs
-public import Complexitylib.Classes.P.NormalForm
-public import Complexitylib.Models.TuringMachine.Subroutines
-public import Complexitylib.Models.TuringMachine.Subroutines.Counter
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Subroutines.Counter
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # The block-payload decoder — proof internals
@@ -25,7 +22,7 @@ halts with empty output.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

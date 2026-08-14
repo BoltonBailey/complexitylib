@@ -7,8 +7,8 @@ Authors: Bolton Bailey
 module
 public import Complexitylib.Asymptotics.PolyBound
 public import Complexitylib.Classes.P.Cobham.Internal.IterateLayout
-public import Complexitylib.Models.TuringMachine.Registers.Horner
-public import Complexitylib.Models.TuringMachine.Registers.InputLen
+import Complexitylib.Models.TuringMachine.Registers.Horner
+import Complexitylib.Models.TuringMachine.Registers.InputLen
 public import Complexitylib.Models.TuringMachine.Subroutines.PairEmit
 public import Complexitylib.Classes.P.NormalForm
 
@@ -42,7 +42,7 @@ running value and whose last tape `resIdx` receives each result.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

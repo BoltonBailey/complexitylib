@@ -6,7 +6,6 @@ Authors: Bolton Bailey
 
 module
 public import Mathlib.Data.Fin.Tuple.Basic
-public import Mathlib.Data.List.Basic
 
 /-!
 # Cobham's characterization of FP — definitions

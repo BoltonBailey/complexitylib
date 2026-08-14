@@ -6,7 +6,6 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Models.TuringMachine.Frame
-public import Complexitylib.Models.TuringMachine.Subroutines.Internal
 
 /-!
 # An unconditional, content-agnostic wipe step
@@ -26,7 +25,7 @@ number of cells whatever was there.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -20,16 +20,12 @@ public import Complexitylib.Classes.P.Cobham.Internal.IterateLayout
 public import Complexitylib.Classes.P.Cobham.Internal.Iterate
 public import Complexitylib.Classes.P.Cobham.Internal.TakeLen
 public import Complexitylib.Classes.P.Cobham.Internal.Reverse
-public import Complexitylib.Classes.P.UnaryLength
+import Complexitylib.Classes.P.UnaryLength
 public import Complexitylib.Classes.P.Cobham.Internal.MulLen
-public import Complexitylib.Classes.P.Defs
-public import Complexitylib.Classes.P.NormalForm
-public import Complexitylib.Classes.P.Composition
-public import Complexitylib.Classes.P.FinsetDomain
+import Complexitylib.Classes.P.NormalForm
+import Complexitylib.Classes.P.Composition
 public import Complexitylib.Classes.P.Cobham.Internal.HeadFlag
-public import Complexitylib.Classes.P.PairWithInput
-public import Complexitylib.Models.TuringMachine.Subroutines
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Classes.P.PairWithInput
 
 /-!
 # Cobham's characterization of FP — proof internals

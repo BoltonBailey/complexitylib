@@ -5,10 +5,9 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Internal.Extract
 public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
-public import Complexitylib.Models.TuringMachine.OutputBounds
+import Complexitylib.Models.TuringMachine.OutputBounds
 
 /-!
 # Running a machine inside the algebra — proof internals

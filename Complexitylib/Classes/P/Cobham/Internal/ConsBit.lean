@@ -6,11 +6,8 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Defs
-public import Complexitylib.Classes.P.NormalForm
-public import Complexitylib.Models.TuringMachine.Subroutines
 public import Complexitylib.Models.TuringMachine.Subroutines.Counter
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
-public import Complexitylib.Classes.P.Cobham.Internal.Vec
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # The bit successor — proof internals
@@ -24,7 +21,7 @@ the `bit` constructor of Cobham's algebra.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -44,7 +44,7 @@ after a rewind (`Cobham.rewindFn`). The assembly is `Cobham.simFn_eq`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

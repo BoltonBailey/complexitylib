@@ -8,7 +8,7 @@ module
 public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Encoding.Pairing
 public import Complexitylib.Models.TuringMachine.Registers
-public import Complexitylib.Models.TuringMachine.Tape.Encoding
+import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 /-!
 # Multiplying the block lengths of a pair — proof internals

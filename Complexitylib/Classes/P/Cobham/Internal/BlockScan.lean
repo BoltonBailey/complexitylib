@@ -5,9 +5,7 @@ Authors: Bolton Bailey
 -/
 
 module
-public import Complexitylib.Classes.P.Defs
 public import Complexitylib.Classes.P.Cobham.Internal.Vec
-public import Complexitylib.Models.TuringMachine.Subroutines
 
 /-!
 # What the block scanners compute — proof internals

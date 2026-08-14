@@ -9,8 +9,8 @@ public import Complexitylib.Classes.P.Cobham.Internal.Blocks
 public import Complexitylib.Classes.P.Cobham.Defs
 public import Complexitylib.Encoding.Pairing
 public import Mathlib.Data.Fin.VecNotation
-public import Mathlib.Data.Fintype.Basic
-public import Mathlib.Tactic.FinCases
+import Mathlib.Data.Fintype.Basic
+import Mathlib.Tactic.FinCases
 public import Mathlib.Tactic.Ring
 
 /-!
@@ -31,7 +31,7 @@ projections follows.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

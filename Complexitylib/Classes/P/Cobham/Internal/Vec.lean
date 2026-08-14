@@ -6,7 +6,7 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Defs
-public import Complexitylib.Classes.P.FinsetDomain
+import Complexitylib.Classes.P.FinsetDomain
 public import Complexitylib.Classes.P.PairWithInput
 
 /-!

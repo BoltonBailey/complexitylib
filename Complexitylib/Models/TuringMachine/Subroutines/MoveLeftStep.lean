@@ -23,7 +23,7 @@ whole list of tapes, exactly as `TM.wipeStepTM` is a content-agnostic bulk wipe.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -25,7 +25,7 @@ via `TM.bigSeqTM` works once every tape has been parked once
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

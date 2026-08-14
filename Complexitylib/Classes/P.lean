@@ -13,7 +13,7 @@ public import Complexitylib.Classes.P.Preimage
 public import Complexitylib.Classes.P.UnaryLength
 public import Complexitylib.Classes.P.FinsetDomain
 public import Complexitylib.Classes.P.Cobham
-public import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
+import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 
 /-!
 # P — surface layer
