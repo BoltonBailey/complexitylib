@@ -18,7 +18,7 @@ from an absent overlay entry.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace RAM

@@ -16,7 +16,7 @@ public import Complexitylib.Models.TuringMachine.Hoare.RetargetOutput
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

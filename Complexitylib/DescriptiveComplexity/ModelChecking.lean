@@ -35,7 +35,7 @@ characterization, and the `FO ⊆ AC⁰` bridge.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

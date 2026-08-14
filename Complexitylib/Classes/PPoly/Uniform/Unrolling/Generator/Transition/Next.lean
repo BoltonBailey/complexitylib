@@ -20,7 +20,7 @@ canonical raw schedules are literally identical.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

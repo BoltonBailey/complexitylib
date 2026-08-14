@@ -19,7 +19,7 @@ The key distinction from intersecting separate time and space classes is that
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

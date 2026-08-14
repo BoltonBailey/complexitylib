@@ -30,7 +30,7 @@ bound — lives in `Complexitylib.Circuits.Internal.Valiant`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

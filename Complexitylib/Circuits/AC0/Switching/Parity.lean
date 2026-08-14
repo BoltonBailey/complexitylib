@@ -21,7 +21,7 @@ without changing semantics or increasing width.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

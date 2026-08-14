@@ -6,9 +6,9 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.PolynomialOffset
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Effect
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.MovedHead.Defs
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Polynomial
 
 /-!
@@ -16,7 +16,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transitio
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

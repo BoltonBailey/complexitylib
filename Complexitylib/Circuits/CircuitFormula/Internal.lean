@@ -13,7 +13,7 @@ import all Complexitylib.Circuits.CircuitFormula.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -29,7 +29,7 @@ recomputation; no executable cursor is claimed here.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

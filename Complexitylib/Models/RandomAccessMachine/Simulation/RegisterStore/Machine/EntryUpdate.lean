@@ -26,7 +26,7 @@ entry exactly when the address was absent.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

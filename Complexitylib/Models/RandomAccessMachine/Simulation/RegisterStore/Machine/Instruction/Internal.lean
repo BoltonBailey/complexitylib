@@ -16,7 +16,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.BinaryShiftMul
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -17,7 +17,7 @@ preserved by lowering through sequential composition and read-only-input loops.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

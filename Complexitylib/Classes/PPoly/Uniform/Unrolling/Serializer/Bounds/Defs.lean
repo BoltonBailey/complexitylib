@@ -6,19 +6,19 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.Unrolling.Acceptance.Defs
-public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
-public import Mathlib.Tactic.Measurability.Init
-public import Mathlib.Tactic.NormNum.BigOperators
-public import Mathlib.Tactic.NormNum.Irrational
-public import Mathlib.Tactic.NormNum.IsCoprime
-public import Mathlib.Tactic.NormNum.IsSquare
+import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
+import Mathlib.Tactic.Measurability.Init
+import Mathlib.Tactic.NormNum.BigOperators
+import Mathlib.Tactic.NormNum.Irrational
+import Mathlib.Tactic.NormNum.IsCoprime
+import Mathlib.Tactic.NormNum.IsSquare
 public import Mathlib.Tactic.NormNum.LegendreSymbol
-public import Mathlib.Tactic.NormNum.ModEq
-public import Mathlib.Tactic.NormNum.NatFactorial
-public import Mathlib.Tactic.NormNum.NatFib
-public import Mathlib.Tactic.NormNum.NatLog
-public import Mathlib.Tactic.NormNum.NatSqrt
-public import Mathlib.Tactic.NormNum.Ordinal
+import Mathlib.Tactic.NormNum.ModEq
+import Mathlib.Tactic.NormNum.NatFactorial
+import Mathlib.Tactic.NormNum.NatFib
+import Mathlib.Tactic.NormNum.NatLog
+import Mathlib.Tactic.NormNum.NatSqrt
+import Mathlib.Tactic.NormNum.Ordinal
 public import Mathlib.Tactic.NormNum.Parity
 public import Mathlib.Tactic.NormNum.Prime
 public import Mathlib.Tactic.NormNum.RealSqrt

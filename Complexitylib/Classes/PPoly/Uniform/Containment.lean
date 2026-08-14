@@ -21,7 +21,7 @@ polynomial time. A generic fanout combinator then constructs the serialized
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

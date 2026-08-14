@@ -24,7 +24,7 @@ only in the final compilation adapter.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

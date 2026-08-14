@@ -19,7 +19,7 @@ campaign (`docs/A5-ReductionEmitter.md`).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

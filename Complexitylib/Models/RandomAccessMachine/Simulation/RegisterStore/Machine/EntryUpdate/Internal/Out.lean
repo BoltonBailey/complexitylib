@@ -11,7 +11,7 @@ public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMissCopy
 public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryReplace
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
 public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryMatch
 
 /-!
@@ -23,7 +23,7 @@ the output head idle, so the complete controller remains a transducer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

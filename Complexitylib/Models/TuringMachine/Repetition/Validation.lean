@@ -18,7 +18,7 @@ final majority verdict.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

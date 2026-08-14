@@ -23,7 +23,7 @@ machine, whose setup immediately halts with the empty majority verdict.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

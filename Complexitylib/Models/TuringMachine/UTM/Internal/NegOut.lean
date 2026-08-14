@@ -45,7 +45,7 @@ writes and `idleDir` moves); the output cells are unchanged except cell 1.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

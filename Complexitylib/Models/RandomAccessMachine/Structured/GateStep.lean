@@ -19,7 +19,7 @@ memo base at runtime, evaluates the decoded gate, and appends its result.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

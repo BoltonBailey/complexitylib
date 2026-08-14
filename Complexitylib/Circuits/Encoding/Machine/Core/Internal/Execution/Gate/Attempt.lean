@@ -18,7 +18,7 @@ uniform linear bound in the current wire-memo length.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

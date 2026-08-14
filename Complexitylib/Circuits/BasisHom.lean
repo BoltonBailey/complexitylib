@@ -17,7 +17,7 @@ gate count, wiring, and depth exactly.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

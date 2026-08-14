@@ -35,7 +35,7 @@ the randomized layer's `blockMajority` is supplied by
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

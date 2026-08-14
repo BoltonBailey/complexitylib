@@ -33,7 +33,7 @@ heads reading `▷` must move right.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

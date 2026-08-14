@@ -28,7 +28,7 @@ does not yet construct a Turing machine that emits those gates.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -23,7 +23,7 @@ the resulting routine inherits a total all-prefix `ComputesInSpace` contract.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

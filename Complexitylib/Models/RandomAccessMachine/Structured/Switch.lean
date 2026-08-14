@@ -16,7 +16,7 @@ logarithmic-cost and peak-space bounds for a finite numeric switch.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

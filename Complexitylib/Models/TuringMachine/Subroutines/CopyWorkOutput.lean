@@ -22,7 +22,7 @@ junk. The fresh destination receives a canonical `Tape.HasBinaryPrefix`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

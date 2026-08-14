@@ -26,7 +26,7 @@ all results in one contiguous block starting at `rawBatchOutputBase`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

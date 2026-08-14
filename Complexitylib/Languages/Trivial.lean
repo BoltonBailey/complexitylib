@@ -31,7 +31,7 @@ complexity class.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

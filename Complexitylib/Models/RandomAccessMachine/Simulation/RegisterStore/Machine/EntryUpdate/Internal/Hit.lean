@@ -7,11 +7,11 @@ Authors: Samuel Schlesinger
 module
 public import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Loop
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Out
-public import
+import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Time
-public import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
+import Complexitylib.Models.TuringMachine.Combinators.WorkBranch
 
 /-!
 # Bounded encoded sparse-store update -- matching iterations
@@ -22,7 +22,7 @@ requested address.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

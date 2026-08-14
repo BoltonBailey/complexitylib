@@ -10,15 +10,15 @@ public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arit
 public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
 public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Case.Defs
-public import Mathlib.Tactic.ENatToNat
-public import Mathlib.Tactic.ReduceModChar
+import Mathlib.Tactic.ENatToNat
+import Mathlib.Tactic.ReduceModChar
 
 /-!
 # Direct-unrolling generator primitives -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

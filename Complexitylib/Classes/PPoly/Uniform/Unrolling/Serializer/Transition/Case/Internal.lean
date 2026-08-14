@@ -18,7 +18,7 @@ indices before identifying the emitted stream with the definitions layer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

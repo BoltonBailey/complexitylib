@@ -23,7 +23,7 @@ size, rather than duplicating the inner circuit once per outer use.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

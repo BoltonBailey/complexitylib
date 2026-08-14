@@ -26,7 +26,7 @@ for bitwise algorithms without iterating over the represented numeric value.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

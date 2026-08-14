@@ -25,7 +25,7 @@ referenced wire to the gate that reads it.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

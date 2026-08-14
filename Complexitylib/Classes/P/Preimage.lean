@@ -16,7 +16,7 @@ public import Complexitylib.Classes.P.Internal.Preimage
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

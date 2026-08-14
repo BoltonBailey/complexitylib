@@ -12,7 +12,7 @@ public import Complexitylib.Circuits.AC0.NormalForm.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace AC0Formula

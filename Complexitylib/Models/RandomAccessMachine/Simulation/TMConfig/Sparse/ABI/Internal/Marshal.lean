@@ -5,11 +5,11 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Loop
-public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Internal
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Loop
+import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.Internal
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Sparse.ABI.Internal.Capture
-public import Mathlib.Algebra.Order.Sub.Basic
+import Mathlib.Algebra.Order.Sub.Basic
 
 /-!
 # Public-input marshalling correctness -- proof internals

@@ -18,7 +18,7 @@ indices make the honest bit-level bound quadratic in the source encoding length.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

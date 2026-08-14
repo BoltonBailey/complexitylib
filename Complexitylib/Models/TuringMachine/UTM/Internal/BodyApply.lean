@@ -31,7 +31,7 @@ decoders to the description decoders in `Desc.lean`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

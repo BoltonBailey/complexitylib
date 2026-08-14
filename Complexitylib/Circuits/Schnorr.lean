@@ -41,7 +41,7 @@ When `Basis.andOr2` is known to be complete, this yields a
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

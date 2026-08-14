@@ -8,14 +8,14 @@ module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Primitive
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Read.Defs
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
 
 /-!
 # Direct-unrolling read-formula generator -- proof internals
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

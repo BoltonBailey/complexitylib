@@ -26,7 +26,7 @@ time bound are completely independent of the supplied `validEmitter`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

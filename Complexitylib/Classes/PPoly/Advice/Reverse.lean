@@ -27,7 +27,7 @@ length-dependent advice for the verified circuit evaluator.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

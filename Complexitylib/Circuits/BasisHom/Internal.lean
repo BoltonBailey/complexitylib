@@ -12,7 +12,7 @@ public import Complexitylib.Circuits.BasisHom.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

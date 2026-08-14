@@ -29,7 +29,7 @@ width-based rather than derived from total loop runtime.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

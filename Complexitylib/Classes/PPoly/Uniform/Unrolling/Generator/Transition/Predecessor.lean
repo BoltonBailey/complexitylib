@@ -19,7 +19,7 @@ mean stay, matching `movedHeadPositionCode`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

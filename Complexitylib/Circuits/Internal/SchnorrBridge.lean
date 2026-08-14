@@ -16,7 +16,7 @@ typed fan-in-two circuit model.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

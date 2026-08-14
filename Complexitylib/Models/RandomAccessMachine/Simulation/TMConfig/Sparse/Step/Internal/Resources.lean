@@ -18,7 +18,7 @@ measurements into explicit bounds depending only on input length and TM steps.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

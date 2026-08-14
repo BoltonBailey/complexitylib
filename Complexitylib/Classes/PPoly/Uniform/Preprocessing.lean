@@ -17,7 +17,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Preprocessing.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

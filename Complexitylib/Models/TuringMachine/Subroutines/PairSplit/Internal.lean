@@ -21,7 +21,7 @@ This file proves the stepwise decoding and exact-time correctness facts for
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

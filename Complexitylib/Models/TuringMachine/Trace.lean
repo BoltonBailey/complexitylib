@@ -21,7 +21,7 @@ dependent `Fin` casts into fixed-schedule simulation proofs.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

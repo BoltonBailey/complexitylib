@@ -23,7 +23,7 @@ Combining them yields the unconditional theorem `SAT.language_mem_NP : language 
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -24,7 +24,7 @@ Four self-contained ingredients used by the diagonalization argument:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

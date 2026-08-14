@@ -13,7 +13,7 @@ public import Complexitylib.Circuits.DecisionTree.Path.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

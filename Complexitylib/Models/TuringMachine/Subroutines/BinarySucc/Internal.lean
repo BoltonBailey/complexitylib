@@ -18,7 +18,7 @@ content predicate, generalized over the already-zeroed low-order prefix.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

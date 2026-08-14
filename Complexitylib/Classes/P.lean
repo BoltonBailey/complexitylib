@@ -41,7 +41,7 @@ This file aggregates the definitions and theorems for P, FP, and PSPACE.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

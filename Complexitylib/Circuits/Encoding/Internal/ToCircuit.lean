@@ -17,7 +17,7 @@ from the existing typed-to-raw evaluator theorem rather than reproved.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

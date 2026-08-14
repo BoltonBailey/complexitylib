@@ -19,7 +19,7 @@ optimized dense-input RAM simulator.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace RAM

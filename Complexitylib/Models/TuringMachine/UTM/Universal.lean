@@ -28,7 +28,7 @@ public import Complexitylib.Models.TuringMachine.Deterministic
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

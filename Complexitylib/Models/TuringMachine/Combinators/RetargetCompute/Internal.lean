@@ -19,7 +19,7 @@ therefore halts immediately on its parked blank output tape.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -29,7 +29,7 @@ serialization is injective, and the code-length equation records every bit.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

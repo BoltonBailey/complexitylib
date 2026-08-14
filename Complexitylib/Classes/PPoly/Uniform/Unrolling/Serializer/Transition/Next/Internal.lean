@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Next.Defs
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.WrittenCell
 
@@ -14,7 +14,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transitio
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

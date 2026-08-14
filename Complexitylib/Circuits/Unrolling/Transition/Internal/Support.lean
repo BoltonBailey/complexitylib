@@ -17,7 +17,7 @@ packed Boolean-formula compiler.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

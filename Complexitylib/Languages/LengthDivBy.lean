@@ -30,7 +30,7 @@ This generalizes `evenLength` (which is `lengthDivBy 2`).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

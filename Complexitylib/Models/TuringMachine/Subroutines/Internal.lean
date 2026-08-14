@@ -39,7 +39,7 @@ an arbitrary predicate `P` on the untouched tapes through the run.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

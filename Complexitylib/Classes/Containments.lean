@@ -49,7 +49,7 @@ This file collects the standard containment results between complexity classes.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

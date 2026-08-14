@@ -16,7 +16,7 @@ public import Complexitylib.Classes.P.UnaryLength.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

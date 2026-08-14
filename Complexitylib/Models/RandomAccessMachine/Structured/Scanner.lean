@@ -20,7 +20,7 @@ the concrete compiled RAM.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
