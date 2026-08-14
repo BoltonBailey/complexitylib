@@ -15,7 +15,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

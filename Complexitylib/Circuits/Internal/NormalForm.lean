@@ -26,7 +26,7 @@ The public interface re-exports the main theorems from `Complexitylib.Circuits.N
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

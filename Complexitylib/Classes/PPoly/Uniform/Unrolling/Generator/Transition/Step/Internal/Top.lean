@@ -16,7 +16,7 @@ for the complete formula phase, packed-copy phase, and deterministic step.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

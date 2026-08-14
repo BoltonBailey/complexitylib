@@ -24,7 +24,7 @@ first blank. Every stable tape outside that target is preserved exactly.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

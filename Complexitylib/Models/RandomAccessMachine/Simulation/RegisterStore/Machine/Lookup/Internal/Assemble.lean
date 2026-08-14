@@ -5,13 +5,13 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Prepare
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Restore
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Scan
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Internal.Value
 
 /-!
@@ -19,7 +19,7 @@ public import
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

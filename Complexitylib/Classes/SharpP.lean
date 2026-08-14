@@ -26,7 +26,7 @@ existing `NTM.acceptCount` path semantics (roadmap track L5).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

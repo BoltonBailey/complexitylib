@@ -26,7 +26,7 @@ and concludes `P ⊆ P/poly` directly from the unrolling construction.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

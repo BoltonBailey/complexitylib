@@ -17,7 +17,7 @@ restriction arguments.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace AC0Formula

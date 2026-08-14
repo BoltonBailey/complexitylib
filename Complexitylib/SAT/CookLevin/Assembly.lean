@@ -28,7 +28,7 @@ Cook–Levin reductions `cookLevin_reduction_singleTape` /
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

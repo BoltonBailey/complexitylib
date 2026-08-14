@@ -28,7 +28,7 @@ The results are definitional seams used by the later controller induction.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -18,7 +18,7 @@ distributive expansion.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

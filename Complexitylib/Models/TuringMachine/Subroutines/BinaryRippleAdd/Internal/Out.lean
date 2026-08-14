@@ -17,7 +17,7 @@ computation.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

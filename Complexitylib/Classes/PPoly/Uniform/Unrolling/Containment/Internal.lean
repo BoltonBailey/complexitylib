@@ -20,7 +20,7 @@ serializer, yielding the unconditional machines-to-circuits containment.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

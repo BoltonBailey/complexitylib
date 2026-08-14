@@ -31,7 +31,7 @@ finite permutation proofs on the machine tape.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

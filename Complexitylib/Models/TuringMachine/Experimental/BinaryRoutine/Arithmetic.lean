@@ -25,7 +25,7 @@ word, time bound, and all-prefix space bound to its concrete Turing machine.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

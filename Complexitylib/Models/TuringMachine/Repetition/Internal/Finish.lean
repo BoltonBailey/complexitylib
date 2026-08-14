@@ -15,7 +15,7 @@ transition of `NTM.repeatAtTime`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

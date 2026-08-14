@@ -18,7 +18,7 @@ for `BoolFormula.compileRawBatch`. Public statements are re-exported by
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

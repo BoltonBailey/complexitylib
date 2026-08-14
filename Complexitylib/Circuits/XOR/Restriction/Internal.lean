@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.XOR
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace Schnorr

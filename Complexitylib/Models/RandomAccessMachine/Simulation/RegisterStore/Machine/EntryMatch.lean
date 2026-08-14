@@ -18,7 +18,7 @@ unit used by a bounded sparse register-store scan.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

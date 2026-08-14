@@ -18,7 +18,7 @@ certificate-finding problem is in TFNP (Megiddo–Papadimitriou 1991).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -6,9 +6,9 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Finalization.Defs
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
-public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Arithmetic
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Control
+import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.List
 public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.SpaceBounds.Internal
 
 /-!
@@ -16,7 +16,7 @@ public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Spac
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

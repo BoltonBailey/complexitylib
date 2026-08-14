@@ -26,7 +26,7 @@ headline NP-completeness theorem.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

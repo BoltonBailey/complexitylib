@@ -16,7 +16,7 @@ and the NTM trace on `toNTM` compute the same thing.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

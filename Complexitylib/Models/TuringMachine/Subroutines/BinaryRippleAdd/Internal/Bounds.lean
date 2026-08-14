@@ -16,7 +16,7 @@ standard binary widths of the two operands.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

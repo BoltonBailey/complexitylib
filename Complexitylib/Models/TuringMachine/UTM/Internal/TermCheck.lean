@@ -34,7 +34,7 @@ Contents:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

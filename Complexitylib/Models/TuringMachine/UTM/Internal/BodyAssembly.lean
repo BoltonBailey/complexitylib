@@ -23,7 +23,7 @@ running one brings it to the peek phase with all tapes restored.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

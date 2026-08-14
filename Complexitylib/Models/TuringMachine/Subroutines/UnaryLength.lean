@@ -21,7 +21,7 @@ emits `List.replicate x.length true` within the linear bound `|x| + 2`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

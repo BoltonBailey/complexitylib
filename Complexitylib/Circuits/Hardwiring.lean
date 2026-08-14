@@ -29,7 +29,7 @@ Circuit families represent the zero-input member separately with `emptyOutput`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

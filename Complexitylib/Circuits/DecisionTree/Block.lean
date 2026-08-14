@@ -17,7 +17,7 @@ restriction.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

@@ -16,7 +16,7 @@ are fixed polynomials in the run-time tableau horizon.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -5,8 +5,8 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.PackedCopy
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Next
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.PackedCopy
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Defs
 
 /-!
@@ -17,7 +17,7 @@ by one direct-unrolling transition step.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

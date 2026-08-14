@@ -9,7 +9,7 @@ public import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Ctrl
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryScan.Internal.Inv
-public import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
+import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 
 /-!
 # Bounded encoded sparse-store update — invariant internals

@@ -15,7 +15,7 @@ staged-tape precondition and defaulted-verdict postcondition.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

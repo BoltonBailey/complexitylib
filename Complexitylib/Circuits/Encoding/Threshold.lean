@@ -31,7 +31,7 @@ higher layer where both APIs are already available.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

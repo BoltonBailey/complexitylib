@@ -17,7 +17,7 @@ restored literally at the endpoint.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

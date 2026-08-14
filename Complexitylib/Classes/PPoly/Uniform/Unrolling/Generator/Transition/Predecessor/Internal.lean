@@ -5,11 +5,11 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Initialization
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Offset
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Predecessor.Defs
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
-public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Initialization
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.MovedHead.Defs
 
 /-!
@@ -17,7 +17,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transitio
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

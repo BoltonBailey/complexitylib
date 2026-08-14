@@ -18,7 +18,7 @@ indices share a common upper bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

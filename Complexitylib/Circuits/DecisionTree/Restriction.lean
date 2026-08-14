@@ -26,7 +26,7 @@ simplification used when switching-lemma arguments measure decision-tree depth.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

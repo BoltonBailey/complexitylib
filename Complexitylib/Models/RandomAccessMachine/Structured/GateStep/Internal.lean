@@ -16,7 +16,7 @@ public import Mathlib.Tactic.IntervalCases
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

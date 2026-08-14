@@ -27,7 +27,7 @@ accounting and preserves explicit logarithmic-cost and space envelopes.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

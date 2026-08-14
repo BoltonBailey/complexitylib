@@ -26,7 +26,7 @@ specifies the raw gate stream without run-time configuration atoms or formulas.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

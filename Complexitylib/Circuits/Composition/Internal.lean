@@ -12,7 +12,7 @@ public import Complexitylib.Circuits.Composition.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

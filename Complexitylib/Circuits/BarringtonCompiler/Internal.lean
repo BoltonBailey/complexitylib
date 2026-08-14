@@ -14,7 +14,7 @@ public import Std.Tactic.BVDecide.Normalize.BitVec
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

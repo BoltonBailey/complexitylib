@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.NormalForm.Operations.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

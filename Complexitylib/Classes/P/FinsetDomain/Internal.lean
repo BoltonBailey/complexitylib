@@ -40,7 +40,7 @@ The public statement (`ite_mem_finset_mem_FP`) lives in
 `Complexitylib.Classes.P.FinsetDomain`.
 -/
 
-@[expose] public section
+public section
 
 namespace Complexity
 

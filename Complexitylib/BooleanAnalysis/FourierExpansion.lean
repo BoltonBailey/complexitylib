@@ -20,7 +20,7 @@ Functions" by Ryan O'Donnell.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

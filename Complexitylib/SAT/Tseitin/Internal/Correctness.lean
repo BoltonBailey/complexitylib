@@ -18,7 +18,7 @@ proof threads those extensions across disjoint fresh ranges.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -20,7 +20,7 @@ prefix. The complete-trace theorem is the horizon specialization.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

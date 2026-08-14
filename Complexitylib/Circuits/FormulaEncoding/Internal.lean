@@ -33,7 +33,7 @@ properties of the canonical postfix formula encoding.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

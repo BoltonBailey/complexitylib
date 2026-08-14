@@ -27,7 +27,7 @@ additional predicate and is not implicit in the names `NC`, `AC`, or `TC`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

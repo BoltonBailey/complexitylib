@@ -20,7 +20,7 @@ reachable driver/body phase so input length is never charged as work space.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

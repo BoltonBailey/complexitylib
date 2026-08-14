@@ -16,7 +16,7 @@ public import Complexitylib.DescriptiveComplexity.Structure
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

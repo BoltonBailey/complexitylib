@@ -23,7 +23,7 @@ exact-3 syntax checker.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -16,7 +16,7 @@ transition table.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

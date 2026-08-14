@@ -17,7 +17,7 @@ depending on `Complexitylib.Models.TuringMachine.Repetition`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

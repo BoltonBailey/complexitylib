@@ -7,7 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import
 Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.Step
-public import
+import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.EntryUpdate.Internal.End
 
 /-!
@@ -20,7 +20,7 @@ output needed to connect the concrete controller to `RegisterStore.write`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

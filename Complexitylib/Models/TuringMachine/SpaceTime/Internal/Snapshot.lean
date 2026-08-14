@@ -18,7 +18,7 @@ contents are fixed.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

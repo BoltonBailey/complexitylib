@@ -19,7 +19,7 @@ accumulator, and composes routines across the parked `seqTM` phase boundary.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

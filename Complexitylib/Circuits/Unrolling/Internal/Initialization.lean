@@ -18,7 +18,7 @@ semantics of the one-gate-per-atom initialization fragment.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

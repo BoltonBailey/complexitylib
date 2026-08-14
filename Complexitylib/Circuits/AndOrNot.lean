@@ -29,7 +29,7 @@ This module provides the AND/OR basis definitions and completeness results.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

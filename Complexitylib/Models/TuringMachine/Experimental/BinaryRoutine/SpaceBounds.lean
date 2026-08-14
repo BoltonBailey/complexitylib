@@ -20,7 +20,7 @@ composed certificate to logarithmic space.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

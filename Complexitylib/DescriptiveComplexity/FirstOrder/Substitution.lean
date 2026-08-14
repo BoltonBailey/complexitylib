@@ -32,7 +32,7 @@ formula along an `FOInterpretation`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

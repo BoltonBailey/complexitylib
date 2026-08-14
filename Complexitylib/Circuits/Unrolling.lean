@@ -28,7 +28,7 @@ threshold with an explicit polynomial gate bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

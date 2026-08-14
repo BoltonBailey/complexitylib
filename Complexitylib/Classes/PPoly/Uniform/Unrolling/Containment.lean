@@ -27,7 +27,7 @@ discharges them unconditionally.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

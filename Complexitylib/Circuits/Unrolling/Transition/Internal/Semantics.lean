@@ -18,7 +18,7 @@ the head-movement and tape-write formulas atom by atom.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -25,7 +25,7 @@ simulation invariants proved in the internal correctness layer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

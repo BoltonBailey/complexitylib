@@ -17,7 +17,7 @@ arbitrary canonical binary cursor and clearing it to the standard blank tape.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

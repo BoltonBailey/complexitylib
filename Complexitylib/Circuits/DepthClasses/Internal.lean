@@ -15,7 +15,7 @@ public import Complexitylib.Circuits.Threshold
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -49,7 +49,7 @@ gates for `N ≥ 16`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

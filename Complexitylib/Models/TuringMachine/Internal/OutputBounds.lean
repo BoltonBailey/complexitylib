@@ -19,7 +19,7 @@ Public statements are in `Complexitylib.Models.TuringMachine.OutputBounds`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

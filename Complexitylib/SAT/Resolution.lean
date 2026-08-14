@@ -27,7 +27,7 @@ resolvent — is the semantic core underlying resolution proof systems.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

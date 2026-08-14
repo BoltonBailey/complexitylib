@@ -23,7 +23,7 @@ The public compositional theorem is stated in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

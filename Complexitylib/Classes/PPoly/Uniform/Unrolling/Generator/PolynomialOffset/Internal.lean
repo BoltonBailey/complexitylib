@@ -13,7 +13,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Polynomial
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

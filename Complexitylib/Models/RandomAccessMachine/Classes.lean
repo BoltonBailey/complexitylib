@@ -15,7 +15,7 @@ elementary monotonicity properties.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

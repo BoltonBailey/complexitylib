@@ -7,15 +7,15 @@ Authors: Samuel Schlesinger
 module
 public import
   Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction.Sim.Defs
-public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction
-public import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
+import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Instruction
+import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 
 /-!
 # Uniform next-store buffering for control instructions
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

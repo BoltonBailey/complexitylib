@@ -18,7 +18,7 @@ configuration block supplied by the trace-structure layer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

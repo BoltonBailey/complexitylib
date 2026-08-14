@@ -27,7 +27,7 @@ short heterogeneous machine trees and retains each stage's structural bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

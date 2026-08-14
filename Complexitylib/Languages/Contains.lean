@@ -28,7 +28,7 @@ The strings containing at least one `0`-bit (resp. `1`-bit). Decided by a
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

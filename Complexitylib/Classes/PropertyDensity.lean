@@ -24,7 +24,7 @@ random-bit `eventProb` layer but over the sample space of all Boolean functions.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

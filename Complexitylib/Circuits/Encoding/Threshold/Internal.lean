@@ -18,7 +18,7 @@ statements are re-exported by `Complexitylib.Circuits.Encoding.Threshold`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

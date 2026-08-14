@@ -19,7 +19,7 @@ write-backs — in closed form.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

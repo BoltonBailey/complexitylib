@@ -17,7 +17,7 @@ choice wire, without separately constructing a total Boolean assignment.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
