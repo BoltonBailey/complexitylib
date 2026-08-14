@@ -11,27 +11,132 @@ public import Complexitylib.Models.TuringMachine
 # Deterministic prefixes of nondeterministic traces
 
 Many NTM constructions (guess-and-verify, deterministic preprocessing before
-a nondeterministic phase) run through a *deterministic prefix*: a region of
-configurations on which the two transition branches agree. On that region the
-trace is independent of the choice bits and follows an ordinary DTM run.
+a nondeterministic phase) run through a *deterministic prefix*: an initial
+segment of the computation on which the two transition branches agree. On
+that segment the trace is independent of the choice bits and follows an
+ordinary DTM run.
 
-This file provides the generic transport for that pattern:
+The stepping stone is `TM.ReachesInVia`, a run whose step *sources* are
+annotated with a predicate. Annotating sources rather than imposing a
+step-closed invariant matters: the last prefix step typically exits the
+agreeing region (entering the nondeterministic phase), so no step-closed
+predicate can describe the prefix. Phase wraps produce annotated runs via
+`TM.reachesInVia_of_stepCommute`, and annotated runs concatenate with
+`TM.ReachesInVia.trans`.
+
+Main results:
 
 - `NTM.det` — project an NTM onto the DTM that always follows branch `b`.
-- `NTM.det_step_congr` — on a configuration where the branches agree, the two
-  projections take the same step.
+- `NTM.BranchesAgreeAt`, `NTM.det_step_congr` — pointwise branch agreement,
+  under which the projections take the same step.
 - `NTM.trace_succ_det` — one non-halted trace step is one step of the
   `det`-projection selected by the current choice bit.
-- `NTM.trace_of_det_prefix` — the workhorse: given an invariant `P` that is
-  preserved by `det false` steps and forces branch agreement, a `det false`
-  run of `t ≤ T` steps to `c'` lets any length-`T` trace restart from `c'`
-  with the first `t` choices discarded.
+- `NTM.trace_of_det_prefix` — the workhorse: a `det false` run of `t` steps
+  whose sources all satisfy `BranchesAgreeAt` lets any length-`(s + t)`
+  trace restart from the run's endpoint with the first `t` choices
+  discarded.
 -/
 
 
 @[expose] public section
 
 namespace Complexity
+
+namespace TM
+
+variable {n m : ℕ}
+
+/-- A DTM run of `t` steps from `c` to `c'` all of whose step *sources*
+    satisfy `A`. Unlike a step-closed invariant, this can describe a run
+    whose final step leaves the region described by `A`. -/
+inductive ReachesInVia (tm : TM n) (A : Cfg n tm.Q → Prop) :
+    ℕ → Cfg n tm.Q → Cfg n tm.Q → Prop where
+  | zero : ReachesInVia tm A 0 c c
+  | step : A c → tm.step c = some c'' → ReachesInVia tm A t c'' c' →
+      ReachesInVia tm A (t + 1) c c'
+
+/-- A zero-step annotated run goes nowhere. Inversion form of
+    `ReachesInVia.zero`, usable when the machine is a compound expression on
+    which `cases` cannot abstract the configuration indices. -/
+theorem reachesInVia_zero_iff {tm : TM n} {A : Cfg n tm.Q → Prop}
+    {c c' : Cfg n tm.Q} :
+    tm.ReachesInVia A 0 c c' ↔ c = c' :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ ReachesInVia.zero⟩
+
+/-- An annotated run of `t + 1` steps factors as one step from an `A`-source
+    followed by an annotated run of `t` steps. Inversion form of
+    `ReachesInVia.step`. -/
+theorem reachesInVia_succ_iff {tm : TM n} {A : Cfg n tm.Q → Prop} {t : ℕ}
+    {c c' : Cfg n tm.Q} :
+    tm.ReachesInVia A (t + 1) c c' ↔
+      A c ∧ ∃ c'', tm.step c = some c'' ∧ tm.ReachesInVia A t c'' c' :=
+  ⟨fun h => by cases h with | step hA hstep hrest => exact ⟨hA, _, hstep, hrest⟩,
+   fun ⟨hA, _, hstep, hrest⟩ => ReachesInVia.step hA hstep hrest⟩
+
+/-- Forget the source annotations of an annotated run. -/
+theorem ReachesInVia.toReachesIn {tm : TM n} {A : Cfg n tm.Q → Prop} {t : ℕ}
+    {c c' : Cfg n tm.Q} (h : tm.ReachesInVia A t c c') :
+    tm.reachesIn t c c' := by
+  induction h with
+  | zero => exact .zero
+  | step _ hstep _ ih => exact .step hstep ih
+
+/-- Weaken the source annotation of an annotated run. -/
+theorem ReachesInVia.mono {tm : TM n} {A B : Cfg n tm.Q → Prop} {t : ℕ}
+    {c c' : Cfg n tm.Q} (hAB : ∀ c, A c → B c)
+    (h : tm.ReachesInVia A t c c') :
+    tm.ReachesInVia B t c c' := by
+  induction h with
+  | zero => exact .zero
+  | step hA hstep _ ih => exact .step (hAB _ hA) hstep ih
+
+/-- Concatenate annotated runs. -/
+theorem ReachesInVia.trans {tm : TM n} {A : Cfg n tm.Q → Prop} {t u : ℕ}
+    {c c' c'' : Cfg n tm.Q} (h₁ : tm.ReachesInVia A t c c')
+    (h₂ : tm.ReachesInVia A u c' c'') :
+    tm.ReachesInVia A (t + u) c c'' := by
+  induction t generalizing c with
+  | zero =>
+    obtain rfl := reachesInVia_zero_iff.mp h₁
+    simpa using h₂
+  | succ t ih =>
+    obtain ⟨hA, d, hstep, hrest⟩ := reachesInVia_succ_iff.mp h₁
+    simpa [Nat.succ_add] using ReachesInVia.step hA hstep (ih hrest)
+
+/-- Annotate a run with a step-closed invariant that implies the
+    annotation. -/
+theorem reachesInVia_of_invariant {tm : TM n} {P A : Cfg n tm.Q → Prop}
+    (hPA : ∀ c, P c → A c)
+    (hpres : ∀ {c c'}, P c → tm.step c = some c' → P c')
+    {t : ℕ} {c c' : Cfg n tm.Q} (hreach : tm.reachesIn t c c') (hP : P c) :
+    tm.ReachesInVia A t c c' := by
+  induction t generalizing c with
+  | zero =>
+    obtain rfl := reachesIn_zero_iff.mp hreach
+    exact .zero
+  | succ t ih =>
+    obtain ⟨c'', hstep, hrest⟩ := reachesIn_succ_iff.mp hreach
+    exact .step (hPA _ hP) hstep (ih hrest (hpres hP hstep))
+
+/-- Transport a run through a step-commuting wrap `w`, annotating every
+    source with membership in the image region described by `A`. This is how
+    phase embeddings (whose sources all live inside one phase of a composed
+    machine) produce annotated runs. -/
+theorem reachesInVia_of_stepCommute {tm₁ : TM n} {tm₂ : TM m}
+    {A : Cfg m tm₂.Q → Prop} (w : Cfg n tm₁.Q → Cfg m tm₂.Q)
+    (hA : ∀ c, A (w c))
+    (hcomm : ∀ {c c'}, tm₁.step c = some c' → tm₂.step (w c) = some (w c'))
+    {t : ℕ} {c c' : Cfg n tm₁.Q} (hreach : tm₁.reachesIn t c c') :
+    tm₂.ReachesInVia A t (w c) (w c') := by
+  induction t generalizing c with
+  | zero =>
+    obtain rfl := reachesIn_zero_iff.mp hreach
+    exact .zero
+  | succ t ih =>
+    obtain ⟨c'', hstep, hrest⟩ := reachesIn_succ_iff.mp hreach
+    exact .step (hA c) (hcomm hstep) (ih hrest)
+
+end TM
 
 namespace NTM
 
@@ -75,34 +180,34 @@ theorem trace_succ_det {N : NTM n} {c : Cfg n N.Q} {T : ℕ}
           (by simp [TM.step, det, hne])) := by
   simp [NTM.trace, det, TM.step, hne]
 
-/-- **Deterministic-prefix transport.** Let `P` be an invariant that forces
-    the two transition branches to agree and is preserved by `det false`
-    steps. If `det false` runs `t` steps from `c` to `c'`, then along *any*
-    choice sequence of length `s + t` the trace passes through `c'`:
-    it equals the trace of the remaining `s` steps from `c'` with the
-    first `t` choices discarded. -/
-theorem trace_of_det_prefix {N : NTM n} {P : Cfg n N.Q → Prop}
-    (hagree : ∀ c, P c → N.BranchesAgreeAt c)
-    (hpres : ∀ {c c'}, P c → (N.det false).step c = some c' → P c')
-    {t : ℕ} {c c' : Cfg n N.Q}
-    (hreach : (N.det false).reachesIn t c c') (hP : P c)
+/-- **Deterministic-prefix transport.** A `det false` run of `t` steps whose
+    sources all satisfy `BranchesAgreeAt` is followed identically by the
+    trace along *any* choice sequence: a length-`(s + t)` trace equals the
+    trace of the remaining `s` steps from the run's endpoint with the first
+    `t` choices discarded. -/
+theorem trace_of_det_prefix {N : NTM n} {t : ℕ} {c c' : Cfg n N.Q}
+    (hreach : (N.det false).ReachesInVia N.BranchesAgreeAt t c c')
     (s : ℕ) (choices : Fin (s + t) → Bool) :
     N.trace (s + t) choices c =
       N.trace s (fun i => choices ⟨i.val + t, by omega⟩) c' := by
   induction t generalizing c with
   | zero =>
-    obtain rfl := TM.reachesIn_zero_iff.mp hreach
+    obtain rfl := TM.reachesInVia_zero_iff.mp hreach
     rfl
   | succ t ih =>
-    obtain ⟨c'', hstep, hrest⟩ := TM.reachesIn_succ_iff.mp hreach
+    obtain ⟨hA, c'', hstep, hrest⟩ := TM.reachesInVia_succ_iff.mp hreach
     have hne := TM.state_ne_qhalt_of_step hstep
     change N.trace ((s + t) + 1) choices c = _
     rw [trace_succ_det (N := N) (T := s + t) (c := c) choices hne]
     have hstep' :=
-      (det_step_congr (hagree _ hP) (choices ⟨0, Nat.zero_lt_succ (s + t)⟩)).trans hstep
+      (det_step_congr hA (choices ⟨0, Nat.zero_lt_succ (s + t)⟩)).trans hstep
     have hisSome : ((N.det (choices ⟨0, Nat.zero_lt_succ (s + t)⟩)).step c).isSome := by
       rw [hstep']; rfl
     have hget : ((N.det (choices ⟨0, Nat.zero_lt_succ (s + t)⟩)).step c).get hisSome = c'' :=
       Option.some_injective _ ((Option.some_get hisSome).trans hstep')
     rw [hget]
-    exact ih hrest (hpres hP hstep) _
+    exact ih hrest _
+
+end NTM
+
+end Complexity
