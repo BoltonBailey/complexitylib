@@ -12,14 +12,15 @@ definition or intermediate theorem layer at a time.
 
 ```bash
 lake build --wfail
+lake build --wfail Complexitylib.Classes.P.Cobham.Validation
 lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Models.TuringMachine.Repetition.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
 lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
 ```
 
-Always verify all five commands pass before considering a change complete.
-The latter four run executable regression guards that are intentionally kept
+Always verify all six commands pass before considering a change complete.
+The latter five run executable regression guards that are intentionally kept
 out of the public import graph.
 
 Quality gates (also run in CI; see CONTRIBUTING.md):
@@ -27,6 +28,7 @@ Quality gates (also run in CI; see CONTRIBUTING.md):
 ```bash
 python3 scripts/lint_style.py        # headers, module docs, 100-col, _root_ escapes
 lake exe runLinter Complexitylib \
+  Complexitylib.Classes.P.Cobham.Validation \
   Complexitylib.Models.TuringMachine.SingleTape.Validation \
   Complexitylib.Models.TuringMachine.Repetition.Validation \
   Complexitylib.Circuits.Encoding.Validation \

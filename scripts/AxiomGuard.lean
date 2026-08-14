@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib
+import Complexitylib.Classes.P.Cobham.Validation
 import Complexitylib.Circuits.Encoding.Validation
 import Complexitylib.Models.TuringMachine.Repetition.Validation
 import Complexitylib.Models.TuringMachine.SingleTape.Validation
@@ -42,6 +43,9 @@ def complexitylibModulePrefix : Name := `Complexitylib
 
 /-- A readable index of the library's headline theorems. -/
 def headlineTheorems : List Name := [
+  -- Cobham's characterization of polynomial-time functions
+  `Complexity.Cobham.cobham_iff_FPn,
+  `Complexity.CobhamFP_eq_FP,
   -- Cook–Levin / NP-completeness
   `Complexity.SAT.NPComplete_language,
   `Complexity.SAT.language_mem_NP,

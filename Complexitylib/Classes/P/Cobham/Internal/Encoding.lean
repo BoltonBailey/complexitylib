@@ -264,10 +264,10 @@ theorem write_cells_of_ne {t : Tape} {s : Γ} {j : ℕ} (h : j ≠ t.head) :
   · exact Function.update_of_ne h _ _
 
 /-- Writing at the head sets exactly that cell — except at cell `0`, where the
-model makes the write a no-op, so the written symbol must already agree with
-what is there. In a run that agreement is automatic: cell `0` holds `▷`, and
-`TM.δ_right_of_start` fires only when the head reads `▷`, in which branch the
-transition table's write constant is `▷` too. -/
+model makes the write a no-op, so callers must establish that the modeled symbol
+already agrees with what is there. A raw `TM` transition writes only `Γw`, which
+excludes `▷`; the encoded simulator later supplies the corrected symbol through
+`correctWrite`. -/
 theorem write_cells_head {t : Tape} {s : Γ} (hs : t.head = 0 → s = t.cells t.head) :
     (t.write s).cells t.head = s := by
   rw [Tape.write]
@@ -480,11 +480,10 @@ def tapeStepBlocks (R : List Bool) (s : Γ) (d : Dir3) (L Rt : List Bool) :
 
 /-- **The encoded step simulates `Tape.writeAndMove`** on both half-blocks.
 
-The hypotheses are exactly what a real run supplies. `hs`: at cell `0` the write
-is a no-op, so the transition's write constant must agree with `▷` there — which
-it does, because `TM.δ_right_of_start` fires only in the branch whose read symbol
-is `▷`. `hne`: for the same reason a head at cell `0` can only move *right*, so
-the stay and left cases never arise there. -/
+The hypotheses are exactly what the corrected encoded action supplies. `hs`: at
+cell `0` the write is a no-op, so `correctWrite` replaces the raw `Γw` symbol by
+the existing `▷`. `hne`: `TM.δ_right_of_start` ensures that a head at cell `0`
+can only move *right*, so the stay and left cases never arise there. -/
 theorem tapeStepBlocks_eq {W : ℕ} (t : Tape) (s : Γ) (d : Dir3)
     (hs : t.head = 0 → s = t.cells t.head)
     (hne : d ≠ Dir3.right → t.head ≠ 0) (hW : t.head ≤ W) :
@@ -520,9 +519,10 @@ theorem tapeStepBlocks_eq {W : ℕ} (t : Tape) (s : Γ) (d : Dir3)
 /-! ### All the tapes at once
 
 `TM.step` writes and moves on every tape independently, so the encoded step is
-the same operation applied tapewise. Treating the tapes as one list — input, work
-tapes, output, the order the encoding uses — makes that a `List.zipWith` against
-the transition's per-tape actions, with no positional index arithmetic. -/
+the same operation applied tapewise. Treating the tapes as one list — input,
+output, then work tapes, the order the encoding uses — makes that a
+`List.zipWith` against the transition's per-tape actions, with no positional
+index arithmetic. -/
 
 /-- Writing back the symbol already under the head changes nothing. This is what
 lets the read-only input tape take part in the uniform tapewise step: its action
@@ -781,7 +781,7 @@ theorem tapesBlocks_tapesStep {W : ℕ} :
       exact congrArg (List.append _) ih
 
 /-- A whole configuration as a list of equal-width blocks: the one-hot state
-padded to a block, then the input tape, the work tapes, and the output tape,
+padded to a block, then the input tape, the output tape, and the work tapes,
 each as two half-blocks. -/
 noncomputable def cfgBlocks {k : ℕ} {Q : Type} [Fintype Q] [DecidableEq Q]
     (W : ℕ) (c : Cfg k Q) : List (List Bool) :=
