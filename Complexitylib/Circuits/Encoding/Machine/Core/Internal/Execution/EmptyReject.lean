@@ -18,7 +18,7 @@ in three.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

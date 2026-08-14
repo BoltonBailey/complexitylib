@@ -16,7 +16,7 @@ for reading one symbol from a bounded encoded configuration.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

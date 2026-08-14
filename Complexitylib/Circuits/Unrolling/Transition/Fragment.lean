@@ -29,7 +29,7 @@ machine-dependent quadratic size in the trace horizon.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

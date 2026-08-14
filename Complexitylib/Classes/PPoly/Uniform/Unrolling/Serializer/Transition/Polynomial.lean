@@ -17,7 +17,7 @@ measure nested transition schedules as functions of the tableau horizon.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

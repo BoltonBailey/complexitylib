@@ -22,7 +22,7 @@ linear in the current entry and the instruction's query/replacement widths.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

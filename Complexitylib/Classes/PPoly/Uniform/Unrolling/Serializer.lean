@@ -37,7 +37,7 @@ They isolate the exact arithmetic that the later finite controller must realize.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

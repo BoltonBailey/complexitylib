@@ -17,7 +17,7 @@ public import Complexitylib.Circuits.AC0.NormalForm.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

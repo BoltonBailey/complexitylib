@@ -29,7 +29,7 @@ circuits; circuit families handle their zero-input member separately.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -27,7 +27,7 @@ tape to cell one.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

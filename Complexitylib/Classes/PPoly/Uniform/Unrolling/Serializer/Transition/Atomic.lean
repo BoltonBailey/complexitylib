@@ -16,7 +16,7 @@ postorder halted-or wrapper used by state, head, and writable-cell successors.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

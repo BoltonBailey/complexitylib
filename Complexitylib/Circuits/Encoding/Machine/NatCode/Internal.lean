@@ -20,7 +20,7 @@ index, then composes scratch clearing and the terminating zero-bit emitter.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

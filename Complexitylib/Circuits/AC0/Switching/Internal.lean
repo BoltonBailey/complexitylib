@@ -16,7 +16,7 @@ public import Complexitylib.Circuits.DecisionTree.Path.Internal
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -26,7 +26,7 @@ successor machine step.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

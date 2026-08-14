@@ -30,7 +30,7 @@ evaluation matches the source formula, and its instruction count is at most
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

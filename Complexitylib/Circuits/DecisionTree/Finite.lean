@@ -17,7 +17,7 @@ arguments; no query can silently fall outside the sampled variable set.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

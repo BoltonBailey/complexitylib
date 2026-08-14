@@ -17,7 +17,7 @@ leaving only genuinely input-dependent ranges to the binary loop adapter.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

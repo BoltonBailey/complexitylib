@@ -16,7 +16,7 @@ used to assemble the auxiliary-space proof for direct packed-step generation.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

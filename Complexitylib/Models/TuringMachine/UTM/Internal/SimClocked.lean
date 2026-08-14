@@ -54,7 +54,7 @@ subsequent halt test conclusive via `simInv_verdict`).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

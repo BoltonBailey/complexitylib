@@ -17,7 +17,7 @@ convention used elsewhere in the library.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

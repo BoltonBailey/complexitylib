@@ -44,7 +44,7 @@ unchanged (only its head moves).
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

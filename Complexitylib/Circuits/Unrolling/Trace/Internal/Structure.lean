@@ -17,7 +17,7 @@ configuration block and derives a machine-dependent cubic size bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

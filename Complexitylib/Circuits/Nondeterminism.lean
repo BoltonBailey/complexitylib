@@ -50,7 +50,7 @@ the Shannon bound wins when `k` is large, regardless of `f`'s complexity.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

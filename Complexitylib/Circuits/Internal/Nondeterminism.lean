@@ -56,7 +56,7 @@ plus one; no OR-specific construction is defined here.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

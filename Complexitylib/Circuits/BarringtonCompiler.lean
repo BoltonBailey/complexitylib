@@ -36,7 +36,7 @@ proof, not extraction of program data from an existential theorem.
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

@@ -33,7 +33,7 @@ actually consumes — where the *target* representing cycle is an arbitrary
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

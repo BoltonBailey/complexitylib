@@ -16,7 +16,7 @@ execution choices to the machine model.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

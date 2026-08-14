@@ -17,7 +17,7 @@ that path is an embedding into the input coordinates.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace DecisionTree.On

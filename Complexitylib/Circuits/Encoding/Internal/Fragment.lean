@@ -17,7 +17,7 @@ iterative raw-circuit evaluator. The statements are exposed by
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

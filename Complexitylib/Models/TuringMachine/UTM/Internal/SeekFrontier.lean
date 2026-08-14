@@ -30,7 +30,7 @@ steps, every other tape exactly preserved. Behavior from head 1 on
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

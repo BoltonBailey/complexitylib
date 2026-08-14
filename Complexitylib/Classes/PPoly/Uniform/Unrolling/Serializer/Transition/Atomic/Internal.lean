@@ -6,7 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transition.Atomic.Defs
-public import Complexitylib.Circuits.Encoding.Formula
+import Complexitylib.Circuits.Encoding.Formula
 public import Complexitylib.Circuits.Unrolling.Transition.Defs
 
 /-!
@@ -14,7 +14,7 @@ public import Complexitylib.Circuits.Unrolling.Transition.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

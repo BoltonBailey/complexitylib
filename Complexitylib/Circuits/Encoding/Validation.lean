@@ -23,7 +23,7 @@ This module is not part of the public import graph. Build it explicitly with
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

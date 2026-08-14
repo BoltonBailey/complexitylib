@@ -44,7 +44,7 @@ output cycle.
 -/
 
 
-@[expose] public section
+public section
 
 open scoped commutatorElement
 open Equiv

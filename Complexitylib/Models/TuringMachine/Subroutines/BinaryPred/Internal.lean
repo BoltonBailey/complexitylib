@@ -22,7 +22,7 @@ high-bit erasure needed when decrementing a power of two.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -13,7 +13,7 @@ public import Complexitylib.Circuits.Encoding.Formula.Stream.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

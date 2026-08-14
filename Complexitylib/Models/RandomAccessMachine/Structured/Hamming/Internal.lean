@@ -13,7 +13,7 @@ public import Complexitylib.Models.RandomAccessMachine.Structured.Internal.Resou
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

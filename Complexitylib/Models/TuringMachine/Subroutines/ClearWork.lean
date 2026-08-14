@@ -23,7 +23,7 @@ discipline of the clearing, rewinding, and composite machines.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

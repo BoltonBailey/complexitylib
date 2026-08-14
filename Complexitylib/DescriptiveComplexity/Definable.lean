@@ -34,7 +34,7 @@ bounds.
 -/
 
 
-@[expose] public section
+public section
 
 open scoped Complexity.DescriptiveComplexity
 

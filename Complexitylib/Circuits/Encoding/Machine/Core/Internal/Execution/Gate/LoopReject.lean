@@ -6,7 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate.Loop
-public import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate.Reject
+import Complexitylib.Circuits.Encoding.Machine.Core.Internal.Execution.Gate.Reject
 
 /-!
 # Rejecting gate-stream execution
@@ -18,7 +18,7 @@ recording the machine's zero verdict.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

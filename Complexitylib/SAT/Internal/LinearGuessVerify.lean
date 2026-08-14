@@ -23,7 +23,7 @@ theorems for any relation with that same linear bound.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

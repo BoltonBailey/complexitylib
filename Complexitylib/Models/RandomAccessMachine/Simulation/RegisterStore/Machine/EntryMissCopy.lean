@@ -18,7 +18,7 @@ the new store and restores the exact invariant needed to inspect the next one.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

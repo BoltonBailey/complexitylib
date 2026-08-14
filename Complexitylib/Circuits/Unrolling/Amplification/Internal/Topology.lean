@@ -17,7 +17,7 @@ ordered and that the final nonempty raw circuit is well formed.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

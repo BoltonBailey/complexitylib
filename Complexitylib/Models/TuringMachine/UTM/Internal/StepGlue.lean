@@ -21,7 +21,7 @@ Small bridges used when matching the body's phase outputs against
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

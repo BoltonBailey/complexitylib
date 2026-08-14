@@ -47,7 +47,7 @@ And its corollary for functions that depend on all inputs:
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

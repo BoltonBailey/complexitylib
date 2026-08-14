@@ -18,7 +18,7 @@ uses logarithmic-width work values and performs no preliminary counting pass.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

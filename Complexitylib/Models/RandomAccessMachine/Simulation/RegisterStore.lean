@@ -24,7 +24,7 @@ bit-width at most `w`, a snapshot with `m` entries occupies at most
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

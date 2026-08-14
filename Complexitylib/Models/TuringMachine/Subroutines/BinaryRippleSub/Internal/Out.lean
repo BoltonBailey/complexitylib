@@ -16,7 +16,7 @@ tape one-way, so the core and complete machines are safe transducers.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

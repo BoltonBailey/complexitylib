@@ -19,7 +19,7 @@ This module verifies the generic fanout pipeline defined in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

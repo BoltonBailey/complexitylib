@@ -5,8 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import
-  Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.FormulaSpace
+import Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.FormulaSpace
 public import
   Complexitylib.Classes.PPoly.Uniform.Unrolling.Generator.Transition.Step.Internal.Space.Packed
 
@@ -18,7 +17,7 @@ seven exact register phases of `emitStep`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

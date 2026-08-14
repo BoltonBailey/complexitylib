@@ -6,14 +6,14 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Defs
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
 
 /-!
 # Reusable sparse-register lookup -- query preparation
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -21,7 +21,7 @@ the positive-length data suffix live.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

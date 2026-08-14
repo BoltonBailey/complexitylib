@@ -5,20 +5,20 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
+import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 public import Complexitylib.Models.RandomAccessMachine.Simulation.RegisterStore.Machine.Lookup.Defs
-public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
-public import Mathlib.Data.Rat.Cast.Order
-public import Mathlib.Tactic.NormNum.Abs
-public import Mathlib.Tactic.NormNum.DivMod
-public import Mathlib.Tactic.NormNum.OfScientific
+import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
+import Mathlib.Data.Rat.Cast.Order
+import Mathlib.Tactic.NormNum.Abs
+import Mathlib.Tactic.NormNum.DivMod
+import Mathlib.Tactic.NormNum.OfScientific
 
 /-!
 # Reusable sparse-register lookup -- scanner restoration
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

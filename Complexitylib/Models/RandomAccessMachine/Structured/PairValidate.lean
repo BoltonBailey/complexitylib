@@ -20,7 +20,7 @@ correctness theorem for the canonical pair-encoding language.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

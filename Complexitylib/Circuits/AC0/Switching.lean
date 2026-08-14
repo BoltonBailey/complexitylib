@@ -19,7 +19,7 @@ bounded literal positions, branch bits, and phase markers.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -17,7 +17,7 @@ evaluation preserves every previously available wire.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

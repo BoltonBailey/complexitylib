@@ -18,7 +18,7 @@ The public theorem is in `Complexitylib.Classes.P.NormalForm`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

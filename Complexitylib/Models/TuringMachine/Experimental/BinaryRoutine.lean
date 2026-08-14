@@ -35,7 +35,7 @@ this initial layer.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

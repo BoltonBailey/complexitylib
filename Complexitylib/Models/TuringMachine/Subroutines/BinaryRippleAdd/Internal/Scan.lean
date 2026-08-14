@@ -18,7 +18,7 @@ later internal layers.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

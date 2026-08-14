@@ -24,7 +24,7 @@ rounding or division conventions.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace RandomRestriction

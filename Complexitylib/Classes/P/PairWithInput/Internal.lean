@@ -13,7 +13,7 @@ public import Complexitylib.Models.TuringMachine.Composition.PairWithInput
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

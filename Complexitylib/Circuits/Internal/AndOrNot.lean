@@ -18,7 +18,7 @@ in `Complexitylib.Circuits.AndOrNot.Defs`; this module is re-exported through
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

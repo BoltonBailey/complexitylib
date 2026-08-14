@@ -19,7 +19,7 @@ by unrolling a deterministic machine. Public statements are exposed by
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

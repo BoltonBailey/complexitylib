@@ -16,7 +16,7 @@ cursor and emits the corresponding packed-output copy gate.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

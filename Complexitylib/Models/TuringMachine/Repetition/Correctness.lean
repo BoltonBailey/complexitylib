@@ -29,7 +29,7 @@ The source machine need only halt on every `T`-step path for the fixed input.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

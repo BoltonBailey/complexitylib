@@ -20,7 +20,7 @@ descriptor wires `0, ..., N + k - 1`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

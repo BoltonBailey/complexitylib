@@ -37,7 +37,7 @@ Emptiness (`h = 0`) is detected structurally by the work head reading
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

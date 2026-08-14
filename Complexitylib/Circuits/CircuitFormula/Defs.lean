@@ -17,7 +17,7 @@ formula tree; no formula-size claim is implicit in this bridge.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

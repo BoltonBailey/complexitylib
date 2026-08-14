@@ -14,7 +14,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPolynomial
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

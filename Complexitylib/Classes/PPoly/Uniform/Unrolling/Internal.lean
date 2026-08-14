@@ -18,7 +18,7 @@ exact positive-length serialization theorem.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

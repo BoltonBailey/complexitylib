@@ -20,7 +20,7 @@ circuit by one cubic unrolling per run plus a quadratic majority threshold.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

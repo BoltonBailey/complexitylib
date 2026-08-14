@@ -30,7 +30,7 @@ experimental until a second independent construction validates the interface.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

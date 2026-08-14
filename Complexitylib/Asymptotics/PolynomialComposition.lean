@@ -21,7 +21,7 @@ deterministic function computations are connected sequentially.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

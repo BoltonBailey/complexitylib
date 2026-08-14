@@ -12,7 +12,7 @@ public import Complexitylib.Models.RandomAccessMachine.Simulation.TMConfig.Defs
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

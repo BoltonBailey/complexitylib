@@ -19,7 +19,7 @@ clean work-tape image consumed by the reusable RAM program controller.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

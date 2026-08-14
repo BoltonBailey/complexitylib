@@ -35,7 +35,7 @@ via the permanently-`▷` cell 0.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

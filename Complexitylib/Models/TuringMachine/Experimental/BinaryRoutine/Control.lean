@@ -29,7 +29,7 @@ Thus many iterations can retain logarithmic auxiliary space.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -15,7 +15,7 @@ evaluation, then lifts that construction to polynomial-length families.
 -/
 
 
-@[expose] public section
+public section
 
 open Equiv
 

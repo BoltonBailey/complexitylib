@@ -14,7 +14,7 @@ Proofs for the public finite-trace decomposition rules.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

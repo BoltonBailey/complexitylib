@@ -23,7 +23,7 @@ Public statements are in
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

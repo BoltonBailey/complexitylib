@@ -26,7 +26,7 @@ No uniformity condition is present.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 namespace KarchmerWigderson

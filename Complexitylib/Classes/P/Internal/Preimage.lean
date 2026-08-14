@@ -18,7 +18,7 @@ those bounds.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

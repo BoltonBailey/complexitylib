@@ -15,7 +15,7 @@ public import Complexitylib.Models.TuringMachine.Combinators.Internal.Loop
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

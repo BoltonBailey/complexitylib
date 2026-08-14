@@ -26,7 +26,7 @@ source configuration, and specializes the final finish theorem to `repeatVotes`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

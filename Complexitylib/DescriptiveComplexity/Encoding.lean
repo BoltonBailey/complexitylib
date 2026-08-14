@@ -32,7 +32,7 @@ relational part of that encoding and computes its length; it is step 5 (structur
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

@@ -21,7 +21,7 @@ the headline theorem `ThreeSAT.language_mem_NP`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 

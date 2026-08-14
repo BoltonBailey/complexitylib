@@ -18,7 +18,7 @@ This module verifies the exact two-pass controller in `PairEmit.Defs`.
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
