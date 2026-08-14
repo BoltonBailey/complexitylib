@@ -55,6 +55,7 @@ public import Complexitylib.Models.TuringMachine.SpaceTime
 public import Complexitylib.Models.TuringMachine.Placement
 public import Complexitylib.Models.TuringMachine.Composition
 public import Complexitylib.Models.TuringMachine.Composition.PairWithInput
+public import Complexitylib.Models.TuringMachine.Composition.Nondeterministic
 public import Complexitylib.Models.TuringMachine.Deterministic
 public import Complexitylib.Models.TuringMachine.Lift
 public import Complexitylib.Models.TuringMachine.Repetition

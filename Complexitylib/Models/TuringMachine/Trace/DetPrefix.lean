@@ -124,7 +124,7 @@ theorem reachesInVia_of_invariant {tm : TM n} {P A : Cfg n tm.Q → Prop}
     machine) produce annotated runs. -/
 theorem reachesInVia_of_stepCommute {tm₁ : TM n} {tm₂ : TM m}
     {A : Cfg m tm₂.Q → Prop} (w : Cfg n tm₁.Q → Cfg m tm₂.Q)
-    (hA : ∀ c, A (w c))
+    (hA : ∀ {c c'}, tm₁.step c = some c' → A (w c))
     (hcomm : ∀ {c c'}, tm₁.step c = some c' → tm₂.step (w c) = some (w c'))
     {t : ℕ} {c c' : Cfg n tm₁.Q} (hreach : tm₁.reachesIn t c c') :
     tm₂.ReachesInVia A t (w c) (w c') := by
@@ -134,7 +134,7 @@ theorem reachesInVia_of_stepCommute {tm₁ : TM n} {tm₂ : TM m}
     exact .zero
   | succ t ih =>
     obtain ⟨c'', hstep, hrest⟩ := reachesIn_succ_iff.mp hreach
-    exact .step (hA c) (hcomm hstep) (ih hrest)
+    exact .step (hA hstep) (hcomm hstep) (ih hrest)
 
 end TM
 
