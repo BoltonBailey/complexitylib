@@ -12,7 +12,8 @@ public import Complexitylib.Classes.P.PairWithInput
 public import Complexitylib.Classes.P.Preimage
 public import Complexitylib.Classes.P.UnaryLength
 public import Complexitylib.Classes.P.FinsetDomain
-public import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
+public import Complexitylib.Classes.P.Cobham
+import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 
 /-!
 # P — surface layer
@@ -36,6 +37,7 @@ This file aggregates the definitions and theorems for P, FP, and PSPACE.
 - `mem_P_preimage` — `P` is closed under preimages of functions in `FP`
 - `unaryLength_mem_FP` — materializing the unary input length belongs to `FP`
 - `ite_mem_finset_mem_FP` — functions supported on a finite set belong to `FP`
+- `CobhamFP_eq_FP` — Cobham's machine-independent characterization of `FP`
 -/
 
 
