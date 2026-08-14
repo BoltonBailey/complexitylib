@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.SAT.CookLevin.Assembly
 public import Complexitylib.Classes.NP.CoNP
+public import Complexitylib.Classes.NP.Closure
 
 /-!
 # Corollaries of Cook–Levin
@@ -42,6 +43,11 @@ theorem coNPComplete_compl_language : coNPComplete languageᶜ :=
     polynomial time is equivalent to the collapse of `NP` to `P`. -/
 theorem language_mem_P_iff_P_eq_NP : language ∈ P ↔ P = NP :=
   NPComplete_language.mem_P_iff_P_eq_NP
+
+/-- **SAT is in `coNP` iff `NP = coNP`.** A coNP certificate for
+    satisfiability would collapse `NP` and `coNP`. -/
+theorem language_mem_coNP_iff_NP_eq_coNP : language ∈ coNP ↔ NP = coNP :=
+  NPComplete_language.mem_coNP_iff_NP_eq_coNP
 
 end SAT
 
