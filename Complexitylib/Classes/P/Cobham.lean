@@ -6,6 +6,7 @@ Authors: Bolton Bailey
 
 module
 public import Complexitylib.Classes.P.Cobham.Defs
+public import Complexitylib.Classes.P.Cobham.Vec
 public import Complexitylib.Classes.P.Defs
 import Complexitylib.Classes.P.Cobham.Internal
 
@@ -18,6 +19,7 @@ the polynomial-time computable string functions.
 
 ## Main results
 
+- `Cobham.cobham_iff_FPn` — the characterization at every fixed arity
 - `CobhamFP_subset_FP` — every function of the algebra is polynomial-time
 - `FP_subset_CobhamFP` — every polynomial-time function is in the algebra
 - `CobhamFP_eq_FP` — **Cobham's theorem**, the two directions together
@@ -47,6 +49,27 @@ after a rewind (`Cobham.rewindFn`). The assembly is `Cobham.simFn_eq`.
 public section
 
 namespace Complexity
+
+namespace Cobham
+
+/-- The canonical fixed-arity tuple encoding is itself a member of Cobham's
+algebra. -/
+theorem encodeVec_mem {n : ℕ} : Cobham (@encodeVec n) :=
+  encodeVec_mem_internal
+
+/-- Multi-arity completeness: every function that is polynomial-time on encoded
+argument vectors belongs to Cobham's algebra. -/
+theorem FPn_imp_cobham {n : ℕ} {f : (Fin n → List Bool) → List Bool} :
+    FPn f → Cobham f :=
+  FPn_imp_cobham_internal
+
+/-- **Cobham's theorem at every fixed arity.** A function belongs to Cobham's
+algebra exactly when it is polynomial-time on the canonical encoded vectors. -/
+theorem cobham_iff_FPn {n : ℕ} {f : (Fin n → List Bool) → List Bool} :
+    Cobham f ↔ FPn f :=
+  ⟨cobham_imp_FPn, FPn_imp_cobham⟩
+
+end Cobham
 
 /-- Cobham's algebra is sound for polynomial time: every function of the (unary
 fragment of the) algebra is computable by a deterministic TM in polynomial time.

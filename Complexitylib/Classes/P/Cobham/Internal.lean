@@ -34,7 +34,7 @@ The assembly of `CobhamFP = FP` (`Complexitylib.Classes.P.Cobham`). Not meant
 for human review of the mathematics — the surface file carries the auditable
 statements; the type checker carries this.
 
-The machines are in sibling modules (`Internal.BlockDecoders`, `Internal.Cat`,
+The machines are in sibling modules (`Internal.BlockScan`, `Internal.Cat`,
 `Internal.ConsBit`, `Internal.Reorder`, `Internal.MulLen`, `Internal.Iterate`),
 the algebra toolkit in `Internal.Algebra`, and the interpreter of the
 completeness direction in `Internal.Encoding`, `Internal.StepAlgebra`,
@@ -61,6 +61,20 @@ induction and the `boundedRec` loop.
 namespace Complexity
 
 namespace Cobham
+
+/-! ## The canonical tuple encoding is in the algebra -/
+
+/-- The nested tuple encoding is a Cobham function at every fixed arity. -/
+theorem encodeVec_mem_internal {n : ℕ} : Cobham (@encodeVec n) := by
+  induction n with
+  | zero =>
+      exact Cobham.empty.of_eq fun v => by simp
+  | succ n ih =>
+      have htail : Cobham fun v : Fin (n + 1) → List Bool => encodeVec (Fin.tail v) :=
+        (Cobham.comp ih fun i : Fin n => Cobham.proj i.succ).of_eq fun v => rfl
+      exact (comp₂ pairing htail (Cobham.proj 0)).of_eq fun v => by
+        rw [encodeVec_succ]
+        rfl
 
 /-! ## Soundness: `Cobham f → FPn f`, constructor by constructor -/
 
@@ -132,10 +146,10 @@ theorem appendFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b 
     simp [Function.comp]
   rwa [heq] at h
 
-/-- Emitting `|a z| · |b z|` copies of `false` is `FP` when `a, b` are. Built as
-the self-contained `mulUnpair` (see `Complexitylib.Classes.P.Cobham.Internal.MulLen`)
-after `pairFn a b`, avoiding a bespoke length-arithmetic machine over two
-sub-machines. -/
+/-- Emitting `|a z| · |b z|` copies of `false` is `FP` when `a, b` are. This
+zero-filled ruler is an internal length-arithmetic helper, not Cobham's public
+all-one smash. It is built as the self-contained `mulUnpair` (see
+`Complexitylib.Classes.P.Cobham.Internal.MulLen`) after `pairFn a b`. -/
 theorem mulLenFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
     (fun z => List.replicate ((a z).length * (b z).length) false) ∈ FP := by
   have hc := mem_FP_comp (pairFn_mem_FP ha hb) mulUnpair_mem_FP
@@ -191,17 +205,27 @@ theorem selectHeadFn_mem_FP {f a b : List Bool → List Bool}
 
 /-- `smash` case: the smash function is `FPn`. On `encodeVec ![x, y]` the two
 components are `sndBlock` and `sndBlock ∘ fstBlock`; `smash x y` is
-`|x| · |y|` copies of `false`, so the witness is `mulLenFn_mem_FP` of the two
-decoders. Rests only on `mulLenFn_mem_FP` and the block decoders. -/
+`|x| · |y|` copies of `true`, so the witness first computes a zero-filled ruler
+with `mulLenFn_mem_FP` and then applies `unaryLength_mem_FP`. -/
 theorem fpn_smash :
     FPn (fun v : Fin 2 → List Bool => Complexity.smash (v 0) (v 1)) := by
   refine ⟨fun z =>
-      List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) false,
-    mulLenFn_mem_FP sndBlock_mem_FP (mem_FP_comp fstBlock_mem_FP sndBlock_mem_FP),
-    fun v => ?_⟩
+      List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) true,
+    ?_, fun v => ?_⟩
+  · have hmul :=
+      mulLenFn_mem_FP sndBlock_mem_FP (mem_FP_comp fstBlock_mem_FP sndBlock_mem_FP)
+    have h := mem_FP_comp hmul unaryLength_mem_FP
+    have heq : (fun z =>
+        List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) true) =
+        (fun x => List.replicate x.length true) ∘ fun z =>
+          List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) false := by
+      funext z
+      simp [Function.comp]
+    rw [heq]
+    exact h
   show List.replicate
       ((sndBlock (encodeVec v)).length *
-        (sndBlock (fstBlock (encodeVec v))).length) false
+        (sndBlock (fstBlock (encodeVec v))).length) true
     = Complexity.smash (v 0) (v 1)
   rw [sndBlock_encodeVec_succ, fstBlock_encodeVec_succ, sndBlock_encodeVec_succ,
     Complexity.smash]
@@ -1082,7 +1106,7 @@ theorem CobhamFP_subset_FP_of_FPn : CobhamFP ⊆ FP := by
 Cobham's algebra.
 
 *Construction:* a polynomial-time Turing machine is simulated inside the algebra.
-1. A whole configuration — state, input tape, work tapes, output tape and every
+1. A whole configuration — state, input tape, output tape, work tapes and every
    head position — is one bitstring of equal-width blocks, each tape split at its
    head so that a head move is a two-bit shift (`Cobham.cfgCode`).
 2. The one-step transition is a finite case split on (state, symbols read), which
@@ -1105,3 +1129,14 @@ theorem FP_subset_CobhamFP_internal : FP ⊆ CobhamFP := by
   exact computes_mem_CobhamFP tm
     (S := ∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i) (D := p.natDegree)
     (poly_eval_le_pow p) hcomp
+
+/-- **Multi-arity completeness.** A unary `FP` witness on canonical encodings is
+first translated into the unary Cobham algebra and then composed with
+`encodeVec_mem_internal`. -/
+theorem FPn_imp_cobham_internal {n : ℕ} {f : (Fin n → List Bool) → List Bool}
+    (hf : FPn f) : Cobham f := by
+  obtain ⟨g, hg, hgf⟩ := hf
+  have hgCobham : Cobham fun v : Fin 1 → List Bool => g (v 0) :=
+    FP_subset_CobhamFP_internal hg
+  refine (Cobham.comp hgCobham fun _ : Fin 1 => encodeVec_mem_internal).of_eq fun v => ?_
+  exact hgf v

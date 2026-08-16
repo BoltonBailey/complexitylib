@@ -616,6 +616,21 @@ theorem reachesIn_snoc {tm : TM n} {t : ℕ} {c c' c'' : Cfg n tm.Q}
     tm.reachesIn (t + 1) c c'' :=
   tm.reachesIn_trans h (reachesIn.step hstep reachesIn.zero)
 
+/-- A zero-step run goes nowhere. Inversion form of `reachesIn.zero`, usable
+    when the machine is a compound expression on which `cases` cannot
+    abstract the configuration indices. -/
+theorem reachesIn_zero_iff {tm : TM n} {c c' : Cfg n tm.Q} :
+    tm.reachesIn 0 c c' ↔ c = c' :=
+  ⟨fun h => by cases h; rfl, fun h => h ▸ reachesIn.zero⟩
+
+/-- A run of `t + 1` steps factors as one step followed by a run of `t`
+    steps. Inversion form of `reachesIn.step`. -/
+theorem reachesIn_succ_iff {tm : TM n} {t : ℕ} {c c' : Cfg n tm.Q} :
+    tm.reachesIn (t + 1) c c' ↔
+      ∃ c'', tm.step c = some c'' ∧ tm.reachesIn t c'' c' :=
+  ⟨fun h => by cases h with | step hstep hrest => exact ⟨_, hstep, hrest⟩,
+   fun ⟨_, hstep, hrest⟩ => reachesIn.step hstep hrest⟩
+
 /-- `AcceptsInTime` implies `Accepts` — forget the time bound. -/
 theorem accepts_of_acceptsInTime {tm : TM n} {x : List Bool} {T : ℕ}
     (h : tm.AcceptsInTime x T) : tm.Accepts x := by

@@ -28,7 +28,7 @@ machine class `FP`.
 
 ## Main definitions
 
-- `Complexity.smash` — Cobham's smash function: a string of length `|x| · |y|`
+- `Complexity.smash` — binary-word smash: `1^(|x| · |y|)`
 - `Complexity.recNotation` — the recursion-on-notation combinator
 - `Complexity.Cobham` — the inductive predicate carving out Cobham's function algebra
 - `Complexity.CobhamFP` — the unary fragment, as a set of string functions
@@ -51,15 +51,16 @@ The string toolkit the proof is written in — bit dispatch, flags, fixed-width 
 
 namespace Complexity
 
-/-- **Cobham's smash function** on bitstrings: a canonical string of length
-`|x| · |y|`. This is the length-arithmetic engine of the class: composing `smash` with
-the bit successors and projections realizes every polynomial length bound, which is
-what lets `Cobham.boundedRec` bound recursions by a function of the class itself.
+/-- **Cobham's smash function** in the binary-word presentation:
+`smash x y = 1^(|x| · |y|)`. This is the length-arithmetic engine of the class:
+composing `smash` with the bit successors and projections realizes every polynomial
+length bound, which is what lets `Cobham.boundedRec` bound recursions by a function of
+the class itself.
 
-(Cobham's original smash is `x # y = 2^(|x|·|y|)`; over bitstrings we keep only the
-length, which is all the class ever uses.) -/
+This all-one word is the customary string analogue of Cobham's original
+number-theoretic smash `x # y = 2^(|x|·|y|)`. -/
 def smash (x y : List Bool) : List Bool :=
-  List.replicate (x.length * y.length) false
+  List.replicate (x.length * y.length) true
 
 @[simp] theorem smash_length (x y : List Bool) :
     (smash x y).length = x.length * y.length := by

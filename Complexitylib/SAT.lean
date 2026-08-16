@@ -22,6 +22,7 @@ public import Complexitylib.SAT.Headline
 public import Complexitylib.SAT.ThreeSAT.Headline
 public import Complexitylib.SAT.CookLevin
 public import Complexitylib.SAT.CookLevin.Assembly
+public import Complexitylib.SAT.CookLevin.Corollaries
 
 /-!
 # SAT: Boolean satisfiability

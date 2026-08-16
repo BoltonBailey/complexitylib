@@ -61,6 +61,8 @@ public import Complexitylib.Classes.Pairing
 public import Complexitylib.Classes.FNP
 public import Complexitylib.Classes.NP.Witness
 public import Complexitylib.Classes.NP.Reduction
+public import Complexitylib.Classes.NP.CoNP
+public import Complexitylib.Classes.NP.Closure
 public import Complexitylib.Classes.L
 public import Complexitylib.Classes.L.PolynomialTime
 public import Complexitylib.Classes.Exponential

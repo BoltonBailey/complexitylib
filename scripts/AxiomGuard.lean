@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Samuel Schlesinger
 -/
 import Complexitylib
+import Complexitylib.Classes.P.Cobham.Validation
 import Complexitylib.Circuits.Encoding.Validation
 import Complexitylib.Models.TuringMachine.Repetition.Validation
 import Complexitylib.Models.TuringMachine.SingleTape.Validation
@@ -42,10 +43,22 @@ def complexitylibModulePrefix : Name := `Complexitylib
 
 /-- A readable index of the library's headline theorems. -/
 def headlineTheorems : List Name := [
+  -- Cobham's characterization of polynomial-time functions
+  `Complexity.Cobham.cobham_iff_FPn,
+  `Complexity.CobhamFP_eq_FP,
   -- Cook–Levin / NP-completeness
   `Complexity.SAT.NPComplete_language,
   `Complexity.SAT.language_mem_NP,
   `Complexity.SAT.pairLang_witness_mem_P,
+  -- Cook–Levin corollaries and coNP duality
+  `Complexity.SAT.coNPComplete_compl_language,
+  `Complexity.SAT.language_mem_P_iff_P_eq_NP,
+  `Complexity.SAT.language_mem_coNP_iff_NP_eq_coNP,
+  `Complexity.P_ne_NP_of_NP_ne_coNP,
+  -- Closure under polynomial-time reductions
+  `Complexity.MapReducesPoly.mem_NP,
+  `Complexity.MapReducesPoly.mem_coNP,
+  `Complexity.NTM.compositionNTM_decidesInTime,
   -- Universal machine
   `Complexity.TM.UTMBody.utmTM_universal,
   `Complexity.TM.UTMBody.utmTM_universal_padded,
@@ -55,6 +68,7 @@ def headlineTheorems : List Name := [
   `Complexity.DTIME_pow_ssubset,
   -- Structural containments
   `Complexity.P_subset_NP,
+  `Complexity.P_subset_NP_inter_coNP,
   `Complexity.P_subset_PSPACE,
   `Complexity.P_subset_UniformPPoly,
   `Complexity.UniformPPoly_eq_P,
