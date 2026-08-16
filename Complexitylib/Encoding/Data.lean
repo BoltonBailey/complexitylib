@@ -14,17 +14,14 @@ public import Mathlib.Tactic.ToAdditive
 public import Mathlib.Tactic.ToDual
 
 /-!
-# The rose-tree `Data` type
+# Main internal data type for the rose tree machine (RTM)
 
-This file contains the rose-tree data structure `Data`, a general-purpose container into which
-most of Lean's data structures can be encoded (see `Complexitylib.Encoding.DataEncode`). It is
-the internal data structure operated on by the rose tree machine (RTM), but it lives in the
-machine-independent encoding layer because it is also used as a target for encodings.
+This file contains the main internal data structure for the RTM, `Data`, a rose tree.
 
 ## Main definitions and notations
 
 - `Data` - the main data structure
-- `Data.size` - the size of a `Data` object when encoded using parentheses; complexity results
+- `Data.size` - the size of a `Data` object when encoded using parentheses, complexity results
   use this size as the main measure.
 - `Data.toBits` - a parenthesized (balanced-bracket) serialization into `List Bool`, with length
   equal to `Data.size`, and injective (`Data.toBits_injective`).
@@ -34,7 +31,7 @@ machine-independent encoding layer because it is also used as a target for encod
 -/
 
 
-@[expose] public section
+public section
 
 namespace Complexity
 
