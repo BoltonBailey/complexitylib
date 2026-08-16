@@ -12,11 +12,11 @@ public import Mathlib.Data.List.Basic
 /-!
 # Encodings into `Data`
 
-This file defines the class that is used to encode arbitrary data structures into `Data`
-(`Complexitylib.Encoding.Data`), so that RTMs (rose tree machines) can operate on them.
+This file defines the class that is used to encode arbitrary data structures into `Data`,
+so that RTMs (rose tree machines) can operate on them.
 
 Instances are provided for convenience for `Data` itself, `Bool`, `List α`, `Option α`, `α × β`,
-and `ℕ` (binary encoding via `List Bool`).
+and `ℕ` (binary encoding via `List Bool`)
 
 Every `DataEncode` instance also yields a *bitstring* encoding `DataEncode.bitstringEncode`, by
 serializing the target `Data` value with `Data.toBits`. Since both the `DataEncode` instance and

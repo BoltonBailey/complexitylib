@@ -18,11 +18,9 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 # Pairing binary strings
 
 This file defines the low-level self-delimiting pairing codec used by machine
-inputs throughout Complexitylib: `pair x y = delimit x ++ y`, framed by the
-shared delimiting operation of `Complexitylib.Encoding.Delimit` and parsed
-back by its `unpair?`. It deliberately has no dependency on the machine or
-complexity-class layers, so parsers and encoders can reuse it without
-introducing an import cycle.
+inputs throughout Complexitylib. It deliberately has no dependency on the
+machine or complexity-class layers, so parsers and encoders can reuse it
+without introducing an import cycle.
 -/
 
 
@@ -30,8 +28,9 @@ introducing an import cycle.
 
 namespace Complexity
 
-/-- Encode a pair of binary strings as a single binary string: the self-delimiting block
-    `delimit x` followed by `y` verbatim. `unpair?` is the partial inverse.
+/-- Encode a pair of binary strings as a single binary string.
+    Each bit of `x` is doubled (`false ↦ [false, false]`, `true ↦ [true, true]`),
+    followed by the separator `[false, true]`, followed by `y` verbatim.
     This encoding is injective and computable in linear time. -/
 def pair (x y : List Bool) : List Bool :=
   delimit x ++ y
