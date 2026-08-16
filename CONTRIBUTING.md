@@ -146,12 +146,14 @@ Aggregation files (`Complexitylib.lean`, `Models.lean`, …) contain only
 
 ```bash
 lake build --wfail
+lake build --wfail Complexitylib.Classes.P.Cobham.Validation
 lake build --wfail Complexitylib.Models.TuringMachine.SingleTape.Validation
 lake build --wfail Complexitylib.Models.TuringMachine.Repetition.Validation
 lake build --wfail Complexitylib.Circuits.Encoding.Validation
 lake build --wfail Complexitylib.SAT.Tseitin.Machine.Validation
 python3 scripts/lint_style.py
 lake exe runLinter Complexitylib \
+  Complexitylib.Classes.P.Cobham.Validation \
   Complexitylib.Models.TuringMachine.SingleTape.Validation \
   Complexitylib.Models.TuringMachine.Repetition.Validation \
   Complexitylib.Circuits.Encoding.Validation \
@@ -159,9 +161,9 @@ lake exe runLinter Complexitylib \
 lake env lean scripts/AxiomGuard.lean
 ```
 
-All eight commands must pass before submitting changes; CI runs them on every
+All nine commands must pass before submitting changes; CI runs them on every
 push. The first checks the complete library and treats warnings (including
-proof placeholders) as failures. The next four run executable regression
+proof placeholders) as failures. The next five run executable regression
 suites that are intentionally outside the public import graph.
 
 The last three are the quality gates:
@@ -170,7 +172,7 @@ The last three are the quality gates:
   line length, and whitespace. It is a hard gate: any violation fails the run.
 - **`lake exe runLinter …`** runs the Mathlib/Batteries environment linters
   (missing docstrings, naming, unused arguments, simp hygiene, …) over the
-  public root and all four validation-only import graphs, also as a hard gate.
+  public root and all five validation-only import graphs, also as a hard gate.
   To suppress a genuinely-intended lint, put a documented inline
   `@[nolint …]` on the declaration — there is no project-level baseline.
 - **`scripts/AxiomGuard.lean`** audits every declaration originating in a

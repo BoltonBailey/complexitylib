@@ -15,7 +15,9 @@ import Complexitylib.Models.TuringMachine.Tape.Encoding
 
 This module builds the one quadratic-output transducer needed by Cobham's
 soundness direction: from `pair A B` it emits `|A| · |B|` copies of `false`,
-which is exactly the length behaviour of `Complexity.smash`.
+which is exactly the length behaviour of `Complexity.smash`. The soundness proof
+then applies `unaryLength_mem_FP` to turn this internal zero-filled ruler into
+Cobham's all-one smash word.
 
 The machine `mulLenTM` is self-contained (one work tape, eight control states):
 
