@@ -5,7 +5,7 @@ Authors: Christian Reitwiessner
 -/
 
 module
-public import Complexitylib.Models.RoseTreeMachine.DataEncode
+public import Complexitylib.Encoding.DataEncode
 public import Mathlib.Order.Lattice
 public import Std.Tactic.BVDecide.Normalize.Prop
 
