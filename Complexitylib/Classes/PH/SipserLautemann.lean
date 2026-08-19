@@ -12,6 +12,8 @@ public import Complexitylib.Classes.PH.SipserLautemann.Verdict
 /-!
 # The Sipser–Lautemann theorem
 
+⚠️ Unreviewed by Bolton
+
 The Sipser–Lautemann theorem (Arora–Barak Theorem 7.15) places bounded-error
 probabilistic polynomial time inside the second level of the polynomial
 hierarchy: `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`. This file states that containment against the
