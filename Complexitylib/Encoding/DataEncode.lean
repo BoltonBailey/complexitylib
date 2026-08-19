@@ -18,14 +18,16 @@ so that RTMs (rose tree machines) can operate on them.
 Instances are provided for convenience for `Data` itself, `Bool`, `List α`, `Option α`, `α × β`,
 and `ℕ` (binary encoding via `List Bool`)
 
+Every `DataEncode` instance also yields a *bitstring* encoding `DataEncode.bitstringEncode`, by
+serializing the target `Data` value with `Data.toBits`. Since both the `DataEncode` instance and
+`Data.toBits` are injective, `bitstringEncode` is injective too
+(`DataEncode.bitstringEncode_injective`).
 -/
 
 
 public section
 
 namespace Complexity
-
-namespace RoseTreeMachine
 
 /-- Encoding of types into `Data`. -/
 class DataEncode (α : Type) where
@@ -102,6 +104,19 @@ instance : DataEncode ℕ where
     have := congrArg (List.foldr (fun b acc => Nat.bit b acc) 0) hb
     simpa [hrec] using this
 
-end RoseTreeMachine
+/-- Encode a value into a bitstring (`List Bool`) by first encoding it into `Data` and then
+serializing that with the parenthesized `Data.toBits`. This is the class-inferrable bitstring
+encoding available for any type with a `DataEncode` instance. -/
+@[expose] def DataEncode.bitstringEncode {α : Type} [DataEncode α] (a : α) : List Bool :=
+  (DataEncode.encode a).toBits
+
+lemma DataEncode.bitstringEncode_def {α : Type} [DataEncode α] (a : α) :
+    DataEncode.bitstringEncode a = (DataEncode.encode a).toBits := rfl
+
+/-- The bitstring encoding is injective: distinct values yield distinct bitstrings. This composes
+the injectivity of the `DataEncode` instance with that of `Data.toBits`. -/
+theorem DataEncode.bitstringEncode_injective {α : Type} [DataEncode α] :
+    Function.Injective (DataEncode.bitstringEncode (α := α)) :=
+  Data.toBits_injective.comp DataEncode.h_inj
 
 end Complexity

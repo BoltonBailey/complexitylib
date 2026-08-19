@@ -1276,7 +1276,7 @@ private theorem initTM_hoareTime_core (α x : List Bool) {c₁ : Cfg 6 initTM.Q}
       (c'.work 5).HoldsExact [] ∧ (c'.work 5).head = 1 ∧
       c'.output.cells = (Tape.init []).cells ∧ c'.output.head = 1 := by
   have hP : pair α x = (α.flatMap fun b => [b, b]) ++ false :: true :: x := by
-    simp [pair]
+    simp [pair, delimit]
   have hwf := Tape.StartInvariant.init_ofBool (pair α x)
   have hblank1 : (Tape.init []).cells 1 = Γ.blank := Tape.init_nil_cells_succ 0
   have hwo₁ : ∀ i, (c₁.work i).read ≠ Γ.start ∧ 1 ≤ (c₁.work i).head := by

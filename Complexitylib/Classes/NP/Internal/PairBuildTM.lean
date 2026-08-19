@@ -1023,7 +1023,7 @@ private theorem pairBuild_copyY_loop {k : ℕ} (yIdx pIdx : Fin k)
 /-- Helper: `pair (b :: xs) y = b :: b :: pair xs y`. -/
 private theorem pair_build_cons_eq (b : Bool) (xs y : List Bool) :
     pair (b :: xs) y = b :: b :: pair xs y := by
-  simp [pair, List.append_assoc]
+  simp [pair]
 
 /-- Shift lemma: accessing `pair (b :: xs) y` at index `k+2` is the same as
     accessing `pair xs y` at index `k`. -/

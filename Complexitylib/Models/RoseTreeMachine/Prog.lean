@@ -36,6 +36,9 @@ namespace Complexity
 
 namespace RoseTreeMachine
 
+/-- Index of a tape cell used by the rose tree machine's execution model. -/
+abbrev TapeIndex := ℕ
+
 /--
 Prog is the syntax representation of a functional language that has a resource consumption
 model which is compatible to that of a Turing machine.
