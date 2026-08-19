@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 module
+public import Complexitylib.Classes.P.DecisionFn
 public import Complexitylib.Classes.PH
 public import Complexitylib.Classes.PH.SipserLautemann.Matrix
 
@@ -35,23 +36,29 @@ Everything except one Turing-machine construction is proved here and in the
   it.
 
 The one interface left open is `MatrixInP`: the matrix language is decidable
-in deterministic polynomial time. That is the standard "simulate a fixed
-machine on given random bits" construction — parse the triple, recover the
+in deterministic polynomial time. It is deliberately isolated rather than
+assumed silently, and it is sharpened here to a statement about a *function*,
+`MatrixVerdictInFP`, so that discharging it needs no machine construction —
+`Complexitylib.Classes.P.Cobham`'s `CobhamFP_eq_FP` turns it into a
+programming task in Cobham's algebra, and `mem_P_of_decisionFn_bool` converts
+the result back. The verdict to compute is: parse the triple, recover the
 per-trial step count from the input length, run the fixed machine on each
-shifted seed, and take the majority vote — of the same kind as
-`Complexitylib.Classes.NP.Witness`'s `WitnessNTMConstruction`, and it is
-deliberately isolated rather than assumed silently. Note that the matrix
-language is taken at a *polynomial* time bound, which is what makes the step
-count recoverable by a decider; `TimeBound` supplies the normalization.
+shifted seed, and take the majority vote. Running the machine along given
+choice bits is exactly `NTM.choiceTM_simulates`. Note that the matrix is taken
+at a *polynomial* time bound, which is what makes the step count recoverable
+by a decider; `TimeBound` supplies the normalization.
 
 ## Main definitions
 
 - `SipserLautemann` — the statement `BPP ⊆ SigmaP 2 ∩ PiP 2`
 - `MatrixInP` — the polynomial-time decidability interface for the matrix
+- `MatrixVerdictInFP` — the same interface as a statement about a function
 
 ## Main results
 
-- `sipserLautemann_of_matrixInP` — **the theorem**, given the interface
+- `sipserLautemann_of_matrixInP`, `sipserLautemann_of_verdictInFP` — **the
+  theorem**, given either form of the interface
+- `matrixInP_of_verdictInFP` — the function form implies the language form
 - `mem_SigmaP_two_of_matrixInP`, `mem_PiP_two_of_matrixInP` — the two halves
 - `sipserLautemann_iff` — the statement splits into its `Σ₂` and `Π₂` halves
 - `sipserLautemann_of_subset_SigmaP` — the `Σ₂` half suffices, given that
@@ -86,6 +93,24 @@ content of the theorem free of machine engineering. -/
 def MatrixInP : Prop :=
   ∀ (k : ℕ) (tm : NTM k) (pt : Polynomial ℕ) (b : Bool),
     Lautemann.matrixLang tm pt.eval b ∈ P
+
+/-- **The matrix interface as a function statement.** For every machine and
+every polynomial time bound, the matrix verdict is computable in deterministic
+polynomial time.
+
+This is the form to discharge: by `CobhamFP_eq_FP` it suffices to build the
+verdict inside Cobham's algebra, with `NTM.choiceTM_simulates` supplying the
+semantics of running the machine along given choice bits. -/
+def MatrixVerdictInFP : Prop :=
+  ∀ (k : ℕ) (tm : NTM k) (pt : Polynomial ℕ) (b : Bool),
+    (fun z => [Lautemann.matrixVerdict tm pt.eval b z]) ∈ FP
+
+/-- A polynomial-time verdict function gives the polynomial-time matrix
+language. -/
+theorem matrixInP_of_verdictInFP (h : MatrixVerdictInFP) : MatrixInP :=
+  fun k tm pt b =>
+    mem_P_of_decisionFn_bool (h k tm pt b)
+      (fun z => Lautemann.mem_matrixLang_iff_verdict tm pt.eval b z)
 
 /-- Every `BPP` language is in `Σ₂ᵖ`, given the matrix interface. -/
 theorem mem_SigmaP_two_of_matrixInP (hmatrix : MatrixInP) {L : Language}
@@ -126,6 +151,11 @@ theorem mem_PiP_two_of_matrixInP (hmatrix : MatrixInP) {L : Language}
 interface: `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`. -/
 theorem sipserLautemann_of_matrixInP (hmatrix : MatrixInP) : SipserLautemann :=
   fun _ hL => ⟨mem_SigmaP_two_of_matrixInP hmatrix hL, mem_PiP_two_of_matrixInP hmatrix hL⟩
+
+/-- **The Sipser–Lautemann theorem**, given the matrix interface in its
+function form. -/
+theorem sipserLautemann_of_verdictInFP (h : MatrixVerdictInFP) : SipserLautemann :=
+  sipserLautemann_of_matrixInP (matrixInP_of_verdictInFP h)
 
 /-- The statement splits into its two halves: containment in `Σ₂ᵖ` and
 containment in `Π₂ᵖ`. -/

@@ -85,6 +85,60 @@ theorem mem_matrixLang_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : L
     subst hr
     exact h
 
+/-- The matrix as a `Bool`-valued verdict function. The definition mirrors
+`matrixLang` through the pair decoder, so it is total and its equivalence with
+the language is immediate; it is stated this way so that the remaining
+polynomial-time obligation is about a *function*, which
+`Complexitylib.Classes.P.Cobham` can discharge inside Cobham's algebra without
+constructing a machine. -/
+noncomputable def matrixVerdict (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (z : List Bool) : Bool :=
+  match unpair? z with
+  | none => true
+  | some (y, r) =>
+    match unpair? y with
+    | none => true
+    | some (x, w) =>
+      if r.length = ampRuns f x.length * f x.length then
+        decide (∃ i : Fin (ampShifts f x.length),
+          blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
+            (shift (seedOfList (ampRuns f x.length * f x.length) r)
+              (shiftsOfList (ampShifts f x.length)
+                (ampRuns f x.length * f x.length) w i)) = b)
+      else true
+
+/-- The verdict function on an encoded triple. -/
+@[simp] theorem matrixVerdict_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
+    matrixVerdict tm f b (pair (pair x w) r) =
+      (if r.length = ampRuns f x.length * f x.length then
+        decide (∃ i : Fin (ampShifts f x.length),
+          blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
+            (shift (seedOfList (ampRuns f x.length * f x.length) r)
+              (shiftsOfList (ampShifts f x.length)
+                (ampRuns f x.length * f x.length) w i)) = b)
+      else true) := by
+  simp [matrixVerdict]
+
+/-- The verdict function decides the matrix language. -/
+theorem mem_matrixLang_iff_verdict (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (z : List Bool) :
+    z ∈ matrixLang tm f b ↔ matrixVerdict tm f b z = true := by
+  constructor
+  · intro h
+    rcases hz : unpair? z with _ | ⟨y, r⟩
+    · simp [matrixVerdict, hz]
+    · rcases hy : unpair? y with _ | ⟨x, w⟩
+      · simp [matrixVerdict, hz, hy]
+      · have hzeq : z = pair (pair x w) r := by
+          rw [unpair?_eq_some_iff] at hz hy
+          rw [hz, hy]
+        subst hzeq
+        by_cases hlen : r.length = ampRuns f x.length * f x.length
+        · simpa [hlen] using h x w r rfl hlen
+        · simp [hlen]
+  · intro h x w r hz hlen
+    subst hz
+    rw [matrixVerdict_pair] at h
+    simpa [hlen] using h
+
 /-! ## The `Σ₂` form -/
 
 /-- **The `Σ₂` form of a covering characterization.** Given a family of events

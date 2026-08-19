@@ -1,0 +1,52 @@
+/-
+Copyright (c) 2026 Bolton Bailey. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bolton Bailey
+-/
+module
+public import Complexitylib.Classes.P.Preimage
+public import Complexitylib.Languages.Contains
+
+/-!
+# From a polynomial-time decision function to membership in `P`
+
+A language whose verdict is computed by a polynomial-time *function* is in
+`P`. This is the bridge that lets a development establish membership in `P`
+by exhibiting a function — in particular by building one in Cobham's algebra,
+where `Complexitylib.Classes.P.Cobham` supplies `CobhamFP_eq_FP` — instead of
+constructing a decider machine by hand.
+
+The proof reads the verdict off the output through the polynomial-time
+language `Language.containsOne`: a verdict string is accepted exactly when it
+contains a `1`, and `P` is closed under polynomial-time preimages.
+
+## Main results
+
+- `mem_P_of_decisionFn` — a verdict function in `FP` puts its language in `P`
+- `mem_P_of_decisionFn_bool` — the same with a `Bool`-valued verdict
+-/
+
+@[expose] public section
+
+namespace Complexity
+
+/-- **A polynomial-time verdict function decides a polynomial-time language.**
+If `f ∈ FP` and `x ∈ L` exactly when `f x` contains a `1`-bit, then `L ∈ P`. -/
+theorem mem_P_of_decisionFn {f : List Bool → List Bool} {L : Language}
+    (hf : f ∈ FP) (hL : ∀ x, x ∈ L ↔ ∃ b ∈ f x, b = true) : L ∈ P := by
+  have hpre : L = f ⁻¹' Language.containsOne := by
+    ext x
+    rw [Set.mem_preimage, Language.mem_containsOne]
+    exact hL x
+  rw [hpre]
+  exact mem_P_preimage hf containsOne_mem_P
+
+/-- The `Bool`-valued form: a polynomial-time function that emits the verdict
+as a one-bit string decides its language. -/
+theorem mem_P_of_decisionFn_bool {g : List Bool → Bool} {L : Language}
+    (hf : (fun x => [g x]) ∈ FP) (hL : ∀ x, x ∈ L ↔ g x = true) : L ∈ P := by
+  refine mem_P_of_decisionFn hf (fun x => ?_)
+  rw [hL x]
+  simp
+
+end Complexity
