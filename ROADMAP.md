@@ -1985,12 +1985,19 @@ randomness, interaction, and lower bounds.
   characterization of `L` and of its complement (`SipserLautemann.Amplified`),
   the seed/shift bitstring codecs (`SipserLautemann.Encode`), and the identity
   exhibiting `L` and `Lᶜ` as polynomially bounded `∃∀` forms over the matrix
-  language (`SipserLautemann.Matrix`). What remains is `MatrixInP`: a
-  deterministic polynomial-time decider that parses the encoded triple,
-  recovers the per-trial step count from the input length, and runs the fixed
-  machine on each shifted seed. That is the same NTM-path-simulation
-  engineering as `NP.WitnessNTMConstruction`, and landing a shared simulation
-  primitive would discharge both.)*
+  language (`SipserLautemann.Matrix`). What remains is `MatrixVerdictInFP`:
+  the matrix verdict function — parse the encoded triple, recover the
+  per-trial step count from the input length, run the fixed machine on each
+  shifted seed, take the majority vote — is in `FP`. By `CobhamFP_eq_FP` that
+  is a programming task in Cobham's algebra rather than a machine
+  construction, and `mem_P_of_decisionFn_bool` converts the result back to
+  `P`. The path semantics it needs are already available:
+  `NTM.choiceTM_simulates` runs one nondeterministic path deterministically
+  from a choice tape, so `Cobham.stepFn (NTM.choiceTM tm)` is the step
+  function to iterate; the missing piece is an initial-configuration encoder
+  that places the choice string on that tape with its head at cell 1, in the
+  style of `Cobham.initFn_mem`. The same primitive discharges
+  `NP.WitnessNTMConstruction`.)*
 - [~] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
   counts. *(`#P` = `SharpP` and `GapP` (with `GapP.neg_mem`) in
   `Complexitylib.Classes.SharpP` done; parsimonious reductions remain.)*
