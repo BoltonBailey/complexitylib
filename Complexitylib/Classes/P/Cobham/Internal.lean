@@ -16,6 +16,7 @@ public import Complexitylib.Classes.P.Cobham.Internal.Algebra
 public import Complexitylib.Classes.P.Cobham.Internal.Encoding
 public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
 public import Complexitylib.Classes.P.Cobham.Internal.Simulate
+public import Complexitylib.Classes.P.Cobham.Internal.ChoiceSim
 public import Complexitylib.Classes.P.Cobham.Internal.IterateLayout
 public import Complexitylib.Classes.P.Cobham.Internal.Iterate
 public import Complexitylib.Classes.P.Cobham.Internal.TakeLen
