@@ -260,7 +260,7 @@ noncomputable def anyShiftAux (tm : NTM k) (b : Bool) (u x τ ρ σ r wit : List
     List Bool → List Bool
   | [] => [false]
   | _ :: y =>
-      orBit (verdictFlag tm b u x τ (xorSuffix r (blockOf σ wit y)) ρ)
+      orBit (verdictFlag tm b u x τ (xorSuffix r (padTo σ (blockOf σ wit y))) ρ)
         (anyShiftAux tm b u x τ ρ σ r wit y)
 
 theorem anyShiftAux_flag (tm : NTM k) (b : Bool) (u x τ ρ σ r wit ι : List Bool) :
@@ -275,7 +275,8 @@ theorem anyShiftAux_eq_true_iff (tm : NTM k) (b : Bool)
     (u x τ ρ σ r wit ι : List Bool) :
     anyShiftAux tm b u x τ ρ σ r wit ι = [true] ↔
       ∃ i < ι.length,
-        verdictFlag tm b u x τ (xorSuffix r (blockAtIdx σ.length wit i)) ρ = [true] := by
+        verdictFlag tm b u x τ
+          (xorSuffix r (padTo σ (blockAtIdx σ.length wit i))) ρ = [true] := by
   induction ι with
   | nil => simp [anyShiftAux]
   | cons β y ih =>
@@ -298,12 +299,13 @@ theorem anyShiftAux_eq_true_iff (tm : NTM k) (b : Bool)
 private noncomputable def shiftStep (tm : NTM k) (b : Bool) (w : Fin 9 → List Bool) :
     List Bool :=
   orBit (verdictFlag tm b (w 2) (w 3) (w 4)
-    (xorSuffix (w 7) (blockOf (w 6) (w 8) (w 0))) (w 5)) (w 1)
+    (xorSuffix (w 7) (padTo (w 6) (blockOf (w 6) (w 8) (w 0)))) (w 5)) (w 1)
 
 private theorem shiftStep_mem (tm : NTM k) (b : Bool) : Cobham (shiftStep tm b) :=
   (orFn (verdictFlag_mem tm b (Cobham.proj 2) (Cobham.proj 3) (Cobham.proj 4)
       (xorSuffix_mem (Cobham.proj 7)
-        (blockOf_mem (Cobham.proj 6) (Cobham.proj 8) (Cobham.proj 0)))
+        (padFn (Cobham.proj 6)
+          (blockOf_mem (Cobham.proj 6) (Cobham.proj 8) (Cobham.proj 0))))
       (Cobham.proj 5))
     (Cobham.proj 1)).of_eq fun _ => rfl
 
@@ -319,7 +321,7 @@ private theorem recNotation_anyShift (tm : NTM k) (b : Bool)
       cases β <;>
         · show shiftStep tm b (Fin.cons y (Fin.cons _ ![u, x, τ, ρ, σ, r, wit])) = _
           rw [shiftStep]
-          show orBit (verdictFlag tm b u x τ (xorSuffix r (blockOf σ wit y)) ρ)
+          show orBit (verdictFlag tm b u x τ (xorSuffix r (padTo σ (blockOf σ wit y))) ρ)
               (recNotation (fun _ : Fin 7 → List Bool => ([false] : List Bool))
                 (shiftStep tm b) (shiftStep tm b) y ![u, x, τ, ρ, σ, r, wit]) = _
           rw [ih]

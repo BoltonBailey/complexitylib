@@ -1976,31 +1976,26 @@ randomness, interaction, and lower bounds.
   definition is `Complexitylib.Classes.PH`: `SigmaP`, `PiP`, `PH`, quantifier
   duality, and the level inclusions relative to the `pairFst ∈ FP` seam. Oracle
   levels and the equivalence remain.)*
-- [~] Prove the Sipser--Lautemann theorem `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`.
-  *(`Complexitylib.Classes.PH.SipserLautemann`: proved from the single interface
-  `MatrixInP`. Unconditional so far: Lautemann's covering lemma in both
-  directions (`SipserLautemann.Covering`), the freeze of acceptance probability
-  past the halting time, which replaces a machine's arbitrary time bound by a
-  dominating polynomial (`SipserLautemann.TimeBound`), the amplified `∃∀`
-  characterization of `L` and of its complement (`SipserLautemann.Amplified`),
-  the seed/shift bitstring codecs (`SipserLautemann.Encode`), and the identity
-  exhibiting `L` and `Lᶜ` as polynomially bounded `∃∀` forms over the matrix
-  language (`SipserLautemann.Matrix`). What remains is `MatrixVerdictInFP`:
-  the matrix verdict function — parse the encoded triple, recover the
-  per-trial step count from the input length, run the fixed machine on each
-  shifted seed, take the majority vote — is in `FP`. By `CobhamFP_eq_FP` that
-  is a programming task in Cobham's algebra rather than a machine
-  construction, and `mem_P_of_decisionFn_bool` converts the result back to
-  `P`. The path semantics it needs are already available:
-  `NTM.choiceTM_simulates` runs one nondeterministic path deterministically
-  from a choice tape, so `Cobham.stepFn (NTM.choiceTM tm)` is the step
-  function to iterate; the missing piece is an initial-configuration encoder
-  that places the choice string on that tape with its head at cell 1, in the
-  style of `Cobham.initFn_mem`. The same primitive discharges
-  `NP.WitnessNTMConstruction`.)*
-- [~] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
-  counts. *(`#P` = `SharpP` and `GapP` (with `GapP.neg_mem`) in
-  `Complexitylib.Classes.SharpP` done; parsimonious reductions remain.)*
+- [x] Prove the Sipser--Lautemann theorem `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`
+  (`Complexitylib.Classes.PH.SipserLautemann`: `sipserLautemann`, with
+  `BPP_subset_SigmaP_two`, `BPP_subset_PiP_two` and `BPP_subset_PH`).
+  Unconditional. The development: Lautemann's covering lemma in both
+  directions (`SipserLautemann.Covering`); the freeze of acceptance
+  probability past the halting time, which replaces a machine's arbitrary time
+  bound by a dominating polynomial (`SipserLautemann.TimeBound`); the
+  amplified `∃∀` characterization of `L` and of its complement
+  (`SipserLautemann.Amplified`); the seed/shift codecs
+  (`SipserLautemann.Encode`); the identity exhibiting `L` and `Lᶜ` as
+  polynomially bounded `∃∀` forms over the matrix language
+  (`SipserLautemann.Matrix`); and the matrix verdict as a member of Cobham's
+  algebra (`SipserLautemann.Verdict`), which discharges the polynomial-time
+  obligation with no machine construction. Supporting additions:
+  `NTM.choiceTM` runs one nondeterministic path deterministically from a
+  choice tape (`Complexitylib.Models.TuringMachine.ChoiceTape`), simulated
+  inside the algebra by `Complexitylib.Classes.P.Cobham.Internal.ChoiceSim`
+  and `.BlockLoop`; `mem_P_of_decisionFn_bool`
+  (`Complexitylib.Classes.P.DecisionFn`) turns a verdict function in `FP` into
+  membership in `P`.
 - [ ] Prove elementary closure properties and relate PP to GapP sign.
 - [ ] Formalize `PH subset P^#P`/Toda-style results only after polynomial
   interpolation and modular counting are available.

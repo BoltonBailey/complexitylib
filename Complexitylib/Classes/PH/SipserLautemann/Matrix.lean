@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.PH
+public import Complexitylib.Classes.P.Cobham.Internal.BlockScan
 public import Complexitylib.Classes.PH.SipserLautemann.Amplified
 public import Complexitylib.Classes.PH.SipserLautemann.Encode
 public import Complexitylib.Classes.PH.SipserLautemann.TimeBound
@@ -51,93 +52,71 @@ variable {k : ℕ}
 
 /-! ## The matrix language -/
 
+/-- The quantifier-free predicate of the Lautemann characterization, on the
+three decoded components. -/
+def matrixPred (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) : Prop :=
+  r.length = ampRuns f x.length * f x.length →
+    ∃ i : Fin (ampShifts f x.length),
+      blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
+        (shift (seedOfList (ampRuns f x.length * f x.length) r)
+          (shiftsOfList (ampShifts f x.length)
+            (ampRuns f x.length * f x.length) w i)) = b
+
+/-- The same predicate as a `Bool`-valued verdict. -/
+noncomputable def matrixVerdictOn (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
+    Bool :=
+  if r.length = ampRuns f x.length * f x.length then
+    decide (∃ i : Fin (ampShifts f x.length),
+      blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
+        (shift (seedOfList (ampRuns f x.length * f x.length) r)
+          (shiftsOfList (ampShifts f x.length)
+            (ampRuns f x.length * f x.length) w i)) = b)
+  else true
+
+/-- The verdict decides the predicate. -/
+theorem matrixVerdictOn_eq_true_iff (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
+    matrixVerdictOn tm f b x w r = true ↔ matrixPred tm f b x w r := by
+  rw [matrixVerdictOn, matrixPred]
+  by_cases h : r.length = ampRuns f x.length * f x.length
+  · rw [if_pos h]
+    simp [h]
+  · rw [if_neg h]
+    simp [h]
+
 /-- The innermost predicate of the Lautemann characterization, as a language of
-encoded triples. On `z = pair (pair x w) r` with `r` a well-formed seed, it
-holds when some shift decoded from `w` carries the seed decoded from `r` to a
-seed whose amplified majority verdict is `b`. Malformed `z`, and seeds of the
-wrong length, are in the language. -/
+encoded triples. The components are decoded with the polynomial-time payload
+scanners `Cobham.fstBlock` and `Cobham.sndBlock`, which recover them from a
+canonical pair; on malformed input the decoders return their partial reads, and
+the language's contents there are irrelevant to the `Σ₂` identity below. -/
 def matrixLang (tm : NTM k) (f : ℕ → ℕ) (b : Bool) : Language :=
-  {z | ∀ x w r, z = pair (pair x w) r →
-      r.length = ampRuns f x.length * f x.length →
-      ∃ i : Fin (ampShifts f x.length),
-        blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
-          (shift (seedOfList (ampRuns f x.length * f x.length) r)
-            (shiftsOfList (ampShifts f x.length)
-              (ampRuns f x.length * f x.length) w i)) = b}
+  {z | matrixPred tm f b (Cobham.fstBlock (Cobham.fstBlock z))
+    (Cobham.sndBlock (Cobham.fstBlock z)) (Cobham.sndBlock z)}
 
 /-- Membership of an encoded triple in the matrix language. -/
 theorem mem_matrixLang_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
-    pair (pair x w) r ∈ matrixLang tm f b ↔
-      (r.length = ampRuns f x.length * f x.length →
-        ∃ i : Fin (ampShifts f x.length),
-          blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
-            (shift (seedOfList (ampRuns f x.length * f x.length) r)
-              (shiftsOfList (ampShifts f x.length)
-                (ampRuns f x.length * f x.length) w i)) = b) := by
-  constructor
-  · intro h
-    exact h x w r rfl
-  · intro h x' w' r' hz
-    obtain ⟨hy, hr⟩ := pair_inj hz
-    obtain ⟨hx, hw⟩ := pair_inj hy
-    subst hx
-    subst hw
-    subst hr
-    exact h
+    pair (pair x w) r ∈ matrixLang tm f b ↔ matrixPred tm f b x w r := by
+  rw [matrixLang]
+  simp
 
-/-- The matrix as a `Bool`-valued verdict function. The definition mirrors
-`matrixLang` through the pair decoder, so it is total and its equivalence with
-the language is immediate; it is stated this way so that the remaining
+/-- The matrix as a `Bool`-valued verdict function, so that the remaining
 polynomial-time obligation is about a *function*, which
 `Complexitylib.Classes.P.Cobham` can discharge inside Cobham's algebra without
 constructing a machine. -/
 noncomputable def matrixVerdict (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (z : List Bool) : Bool :=
-  match unpair? z with
-  | none => true
-  | some (y, r) =>
-    match unpair? y with
-    | none => true
-    | some (x, w) =>
-      if r.length = ampRuns f x.length * f x.length then
-        decide (∃ i : Fin (ampShifts f x.length),
-          blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
-            (shift (seedOfList (ampRuns f x.length * f x.length) r)
-              (shiftsOfList (ampShifts f x.length)
-                (ampRuns f x.length * f x.length) w i)) = b)
-      else true
+  matrixVerdictOn tm f b (Cobham.fstBlock (Cobham.fstBlock z))
+    (Cobham.sndBlock (Cobham.fstBlock z)) (Cobham.sndBlock z)
 
 /-- The verdict function on an encoded triple. -/
 @[simp] theorem matrixVerdict_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
-    matrixVerdict tm f b (pair (pair x w) r) =
-      (if r.length = ampRuns f x.length * f x.length then
-        decide (∃ i : Fin (ampShifts f x.length),
-          blockMajority (NTM.repeatAcceptEvent tm x (f x.length))
-            (shift (seedOfList (ampRuns f x.length * f x.length) r)
-              (shiftsOfList (ampShifts f x.length)
-                (ampRuns f x.length * f x.length) w i)) = b)
-      else true) := by
-  simp [matrixVerdict]
+    matrixVerdict tm f b (pair (pair x w) r) = matrixVerdictOn tm f b x w r := by
+  rw [matrixVerdict]
+  simp
 
 /-- The verdict function decides the matrix language. -/
 theorem mem_matrixLang_iff_verdict (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (z : List Bool) :
     z ∈ matrixLang tm f b ↔ matrixVerdict tm f b z = true := by
-  constructor
-  · intro h
-    rcases hz : unpair? z with _ | ⟨y, r⟩
-    · simp [matrixVerdict, hz]
-    · rcases hy : unpair? y with _ | ⟨x, w⟩
-      · simp [matrixVerdict, hz, hy]
-      · have hzeq : z = pair (pair x w) r := by
-          rw [unpair?_eq_some_iff] at hz hy
-          rw [hz, hy]
-        subst hzeq
-        by_cases hlen : r.length = ampRuns f x.length * f x.length
-        · simpa [hlen] using h x w r rfl hlen
-        · simp [hlen]
-  · intro h x w r hz hlen
-    subst hz
-    rw [matrixVerdict_pair] at h
-    simpa [hlen] using h
+  rw [matrixLang, matrixVerdict, matrixVerdictOn_eq_true_iff]
+  rfl
 
 /-! ## The `Σ₂` form -/
 

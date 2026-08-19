@@ -7,6 +7,7 @@ module
 public import Complexitylib.Classes.P.DecisionFn
 public import Complexitylib.Classes.PH
 public import Complexitylib.Classes.PH.SipserLautemann.Matrix
+public import Complexitylib.Classes.PH.SipserLautemann.Verdict
 
 /-!
 # The Sipser–Lautemann theorem
@@ -16,12 +17,11 @@ probabilistic polynomial time inside the second level of the polynomial
 hierarchy: `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`. This file states that containment against the
 library's concrete `BPP` (`Complexitylib.Classes.Randomized`) and the
 certificate-quantifier levels `SigmaP` / `PiP` (`Complexitylib.Classes.PH`),
-and proves it from a single machine-engineering interface, `MatrixInP`.
+and proves it: `sipserLautemann`.
 
-## What is proved, and what is assumed
+## How it is proved
 
-Everything except one Turing-machine construction is proved here and in the
-`SipserLautemann` subdirectory:
+The development lives in the `SipserLautemann` subdirectory:
 
 - `Covering` — Lautemann's covering lemma in both directions, by counting
   shifts of an event in the seed space;
@@ -33,20 +33,24 @@ Everything except one Turing-machine construction is proved here and in the
 - `Encode` — bitstring codecs for seeds and shift tuples;
 - `Matrix` — the quantifier-free matrix as a language of encoded triples, and
   the identity exhibiting `L` and `Lᶜ` as polynomially bounded `∃∀` forms over
-  it.
+  it;
+- `Verdict` — the matrix verdict as a member of Cobham's algebra, hence in
+  `FP`.
 
-The one interface left open is `MatrixInP`: the matrix language is decidable
-in deterministic polynomial time. It is deliberately isolated rather than
-assumed silently, and it is sharpened here to a statement about a *function*,
-`MatrixVerdictInFP`, so that discharging it needs no machine construction —
-`Complexitylib.Classes.P.Cobham`'s `CobhamFP_eq_FP` turns it into a
-programming task in Cobham's algebra, and `mem_P_of_decisionFn_bool` converts
-the result back. The verdict to compute is: parse the triple, recover the
-per-trial step count from the input length, run the fixed machine on each
-shifted seed, and take the majority vote. Running the machine along given
-choice bits is exactly `NTM.choiceTM_simulates`. Note that the matrix is taken
-at a *polynomial* time bound, which is what makes the step count recoverable
-by a decider; `TimeBound` supplies the normalization.
+What remained was the polynomial-time decidability of the matrix, isolated as
+the interfaces `MatrixInP` and — as a statement about a *function* —
+`MatrixVerdictInFP`. It is discharged by `matrixVerdictInFP` with no machine
+construction at all: `CobhamFP_eq_FP` turns it into a programming task inside
+Cobham's algebra, and `mem_P_of_decisionFn_bool` converts the result back to
+`P`. The verdict is computed in `SipserLautemann.Verdict` — decode the triple
+with the payload scanners, build the trial count and seed length as `smash`
+lengths from the polynomial time bound, and take the disjunction over shift
+blocks of the majority vote over trial blocks — with each trial one run of the
+machine along the choice bits of its block, via `NTM.choiceTM` and its
+in-algebra simulation in `Complexitylib.Classes.P.Cobham.Internal.ChoiceSim`.
+The matrix is taken at a *polynomial* time bound, which is what makes the
+per-trial step count computable from the input; `TimeBound` supplies the
+normalization.
 
 ## Main definitions
 
@@ -56,8 +60,12 @@ by a decider; `TimeBound` supplies the normalization.
 
 ## Main results
 
-- `sipserLautemann_of_matrixInP`, `sipserLautemann_of_verdictInFP` — **the
-  theorem**, given either form of the interface
+- `sipserLautemann` — **the theorem**, `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`
+- `BPP_subset_SigmaP_two`, `BPP_subset_PiP_two`, `BPP_subset_PH` — its halves
+  and the corollary
+- `matrixVerdictInFP` — the matrix interface, discharged
+- `sipserLautemann_of_matrixInP`, `sipserLautemann_of_verdictInFP` — the
+  theorem from either form of the interface
 - `matrixInP_of_verdictInFP` — the function form implies the language form
 - `mem_SigmaP_two_of_matrixInP`, `mem_PiP_two_of_matrixInP` — the two halves
 - `sipserLautemann_iff` — the statement splits into its `Σ₂` and `Π₂` halves
@@ -182,5 +190,32 @@ theorem sipserLautemann_of_subset_SigmaP (hcompl : ∀ L ∈ BPP, Lᶜ ∈ BPP)
 /-- Sipser–Lautemann puts `BPP` inside the polynomial hierarchy. -/
 theorem BPP_subset_PH_of_sipserLautemann (h : SipserLautemann) : BPP ⊆ PH :=
   fun _ hL => SigmaP_subset_PH 2 (h hL).1
+
+/-- **The matrix interface holds.** The verdict is computed inside Cobham's
+algebra — decode the triple with the payload scanners, build the trial count
+and seed length as `smash` lengths from the time bound, and take the
+disjunction over shift blocks of the majority vote over trial blocks, each
+trial being one run of the machine along the choice bits of its block — and
+`CobhamFP_eq_FP` makes that a polynomial-time function. -/
+theorem matrixVerdictInFP : MatrixVerdictInFP :=
+  fun _ tm pt b => Lautemann.matrixVerdict_mem_FP tm pt b
+
+/-- **The Sipser–Lautemann theorem**: bounded-error probabilistic polynomial
+time lies in the second level of the polynomial hierarchy,
+`BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ` (Arora–Barak Theorem 7.15). -/
+theorem sipserLautemann : SipserLautemann :=
+  sipserLautemann_of_verdictInFP matrixVerdictInFP
+
+/-- `BPP ⊆ Σ₂ᵖ`. -/
+theorem BPP_subset_SigmaP_two : BPP ⊆ SigmaP 2 :=
+  BPP_subset_SigmaP_two_of_sipserLautemann sipserLautemann
+
+/-- `BPP ⊆ Π₂ᵖ`. -/
+theorem BPP_subset_PiP_two : BPP ⊆ PiP 2 :=
+  BPP_subset_PiP_two_of_sipserLautemann sipserLautemann
+
+/-- **`BPP` lies inside the polynomial hierarchy.** -/
+theorem BPP_subset_PH : BPP ⊆ PH :=
+  BPP_subset_PH_of_sipserLautemann sipserLautemann
 
 end Complexity
