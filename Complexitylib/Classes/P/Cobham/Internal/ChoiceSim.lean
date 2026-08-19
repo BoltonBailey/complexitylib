@@ -429,6 +429,11 @@ noncomputable def acceptChoiceFn (tm : NTM k) (u x c : List Bool) : List Bool :=
     (matchPrefix (symCode Γ.one)
       (((outPairChoiceFn tm u x c).drop (clockRuler u).length).drop 2))
 
+/-- The verdict is a genuine one-bit flag. -/
+theorem acceptChoiceFn_flag (tm : NTM k) (u x c : List Bool) :
+    acceptChoiceFn tm u x c = [true] ∨ acceptChoiceFn tm u x c = [false] :=
+  andBit_flag _ _
+
 /-- **The verdict is in the algebra.** -/
 theorem acceptChoiceFn_mem {n : ℕ} (tm : NTM k)
     {gu gx gc : (Fin n → List Bool) → List Bool}

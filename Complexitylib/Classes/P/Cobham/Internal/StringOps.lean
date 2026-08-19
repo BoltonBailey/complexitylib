@@ -50,6 +50,25 @@ theorem orBit_eq_true_iff {x y : List Bool}
     orBit x y = [true] ↔ x = [true] ∨ y = [true] := by
   rcases hx with rfl | rfl <;> rcases hy with rfl | rfl <;> simp [orBit]
 
+/-- Disjunction of flags is a flag. -/
+theorem orBit_flag {x y : List Bool}
+    (hx : x = [true] ∨ x = [false]) (hy : y = [true] ∨ y = [false]) :
+    orBit x y = [true] ∨ orBit x y = [false] := by
+  rcases hx with rfl | rfl <;> rcases hy with rfl | rfl <;> simp [orBit]
+
+/-- A disjunction is always exactly one bit long. -/
+theorem orBit_length (x y : List Bool) : (orBit x y).length = 1 := by
+  rw [orBit]
+  rcases x with _ | ⟨a, x⟩
+  · rcases y with _ | ⟨c, y⟩
+    · rfl
+    · cases c <;> rfl
+  · cases a
+    · rcases y with _ | ⟨c, y⟩
+      · rfl
+      · cases c <;> rfl
+    · rfl
+
 /-- Negation of a flag. -/
 theorem notBit_eq_true_iff {x : List Bool} (hx : x = [true] ∨ x = [false]) :
     notBit x = [true] ↔ x = [false] := by
