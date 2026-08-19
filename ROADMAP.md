@@ -1971,8 +1971,26 @@ randomness, interaction, and lower bounds.
 
 **Staged directions.**
 
-- [ ] Define the polynomial hierarchy both by alternating quantifiers and oracle
-  levels, then prove equivalence at fixed levels.
+- [~] Define the polynomial hierarchy both by alternating quantifiers and oracle
+  levels, then prove equivalence at fixed levels. *(The certificate-quantifier
+  definition is `Complexitylib.Classes.PH`: `SigmaP`, `PiP`, `PH`, quantifier
+  duality, and the level inclusions relative to the `pairFst ∈ FP` seam. Oracle
+  levels and the equivalence remain.)*
+- [~] Prove the Sipser--Lautemann theorem `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`.
+  *(`Complexitylib.Classes.PH.SipserLautemann`: proved from the single interface
+  `MatrixInP`. Unconditional so far: Lautemann's covering lemma in both
+  directions (`SipserLautemann.Covering`), the freeze of acceptance probability
+  past the halting time, which replaces a machine's arbitrary time bound by a
+  dominating polynomial (`SipserLautemann.TimeBound`), the amplified `∃∀`
+  characterization of `L` and of its complement (`SipserLautemann.Amplified`),
+  the seed/shift bitstring codecs (`SipserLautemann.Encode`), and the identity
+  exhibiting `L` and `Lᶜ` as polynomially bounded `∃∀` forms over the matrix
+  language (`SipserLautemann.Matrix`). What remains is `MatrixInP`: a
+  deterministic polynomial-time decider that parses the encoded triple,
+  recovers the per-trial step count from the input length, and runs the fixed
+  machine on each shifted seed. That is the same NTM-path-simulation
+  engineering as `NP.WitnessNTMConstruction`, and landing a shared simulation
+  primitive would discharge both.)*
 - [~] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
   counts. *(`#P` = `SharpP` and `GapP` (with `GapP.neg_mem`) in
   `Complexitylib.Classes.SharpP` done; parsimonious reductions remain.)*

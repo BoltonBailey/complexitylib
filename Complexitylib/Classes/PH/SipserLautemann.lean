@@ -5,7 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.PH
-public import Complexitylib.Classes.Randomized
+public import Complexitylib.Classes.PH.SipserLautemann.Matrix
 
 /-!
 # The Sipser–Lautemann theorem
@@ -14,45 +14,51 @@ The Sipser–Lautemann theorem (Arora–Barak Theorem 7.15) places bounded-error
 probabilistic polynomial time inside the second level of the polynomial
 hierarchy: `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`. This file states that containment against the
 library's concrete `BPP` (`Complexitylib.Classes.Randomized`) and the
-certificate-quantifier levels `SigmaP` / `PiP`
-(`Complexitylib.Classes.PH`), and proves the set-theoretic consequences that
-follow from it without any machine engineering.
+certificate-quantifier levels `SigmaP` / `PiP` (`Complexitylib.Classes.PH`),
+and proves it from a single machine-engineering interface, `MatrixInP`.
 
-The containment itself is not proved here. Following the interface-isolation
-pattern used elsewhere in the library, the statement is packaged as the
-`Prop`-valued definition `SipserLautemann`, so that downstream results can be
-stated and proved against it now and discharged once the probabilistic
-argument lands. Every theorem in this file is unconditional: each takes the
-statement (or its `Σ₂` half) as an explicit hypothesis rather than assuming it
-globally.
+## What is proved, and what is assumed
+
+Everything except one Turing-machine construction is proved here and in the
+`SipserLautemann` subdirectory:
+
+- `Covering` — Lautemann's covering lemma in both directions, by counting
+  shifts of an event in the seed space;
+- `TimeBound` — the acceptance probability is frozen past the halting time, so
+  a machine's arbitrary time bound may be replaced by a dominating polynomial;
+- `Amplified` — majority amplification plus the covering lemma give the `∃∀`
+  characterization `x ∈ L ↔ ∃ shifts, ∀ seeds, some shift accepts`, and its
+  complementary form for `x ∉ L`;
+- `Encode` — bitstring codecs for seeds and shift tuples;
+- `Matrix` — the quantifier-free matrix as a language of encoded triples, and
+  the identity exhibiting `L` and `Lᶜ` as polynomially bounded `∃∀` forms over
+  it.
+
+The one interface left open is `MatrixInP`: the matrix language is decidable
+in deterministic polynomial time. That is the standard "simulate a fixed
+machine on given random bits" construction — parse the triple, recover the
+per-trial step count from the input length, run the fixed machine on each
+shifted seed, and take the majority vote — of the same kind as
+`Complexitylib.Classes.NP.Witness`'s `WitnessNTMConstruction`, and it is
+deliberately isolated rather than assumed silently. Note that the matrix
+language is taken at a *polynomial* time bound, which is what makes the step
+count recoverable by a decider; `TimeBound` supplies the normalization.
 
 ## Main definitions
 
 - `SipserLautemann` — the statement `BPP ⊆ SigmaP 2 ∩ PiP 2`
+- `MatrixInP` — the polynomial-time decidability interface for the matrix
 
 ## Main results
 
+- `sipserLautemann_of_matrixInP` — **the theorem**, given the interface
+- `mem_SigmaP_two_of_matrixInP`, `mem_PiP_two_of_matrixInP` — the two halves
 - `sipserLautemann_iff` — the statement splits into its `Σ₂` and `Π₂` halves
 - `sipserLautemann_of_subset_SigmaP` — the `Σ₂` half suffices, given that
-  `BPP` is closed under complement (`BPP` is a two-sided-error class, so the
-  `Π₂` half is the `Σ₂` half applied to complements)
+  `BPP` is closed under complement
 - `BPP_subset_SigmaP_two_of_sipserLautemann`,
   `BPP_subset_PiP_two_of_sipserLautemann` — the two halves
 - `BPP_subset_PH_of_sipserLautemann` — `BPP ⊆ PH`
-
-## TODO
-
-- Prove `BPP` is closed under complement (swap the accept/reject outputs of a
-  `BPTIME` machine), reducing `SipserLautemann` to its `Σ₂` half via
-  `sipserLautemann_of_subset_SigmaP`.
-- Prove that half. The standard route: amplify a `BPP` machine so that the
-  bad-seed set has density below `2^(-m)` for `m` the number of random bits
-  used (the amplification machinery of
-  `Complexitylib.Classes.Randomized.GoodSeed` and
-  `Complexitylib.Classes.Randomized.CircuitAmplification` is the starting
-  point), then express membership by Lautemann's shift trick: `x ∈ L` iff
-  there exist `m` shift vectors `u₁, …, u_m` whose translates of the accepting
-  seed set cover `{0,1}^m`, a `∃∀` predicate with a polynomial-time matrix.
 -/
 
 @[expose] public section
@@ -62,11 +68,64 @@ namespace Complexity
 /-- **Sipser–Lautemann**: bounded-error probabilistic polynomial time lies in
 the second level of the polynomial hierarchy, `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`.
 
-Stated as a `Prop` rather than proved: the probabilistic argument behind it is
-still to be formalized (see the module docstring). Results depending on it take
-it as an explicit hypothesis. -/
+Stated as a `Prop` so that results can depend on it explicitly; it is proved
+from the `MatrixInP` interface by `sipserLautemann_of_matrixInP`. -/
 def SipserLautemann : Prop :=
   BPP ⊆ SigmaP 2 ∩ PiP 2
+
+/-- **The matrix-decidability interface.** For every machine and every
+polynomial time bound, the quantifier-free matrix of the Lautemann
+characterization is decidable in deterministic polynomial time.
+
+A decider parses `pair (pair x w) r`, computes the per-trial step count
+`pt.eval |x|` and the amplified seed length from it, decodes the shift tuple
+and the seed, and for each shift runs the fixed machine on the shifted seed,
+block by block, taking the majority verdict; all of this is polynomial in the
+input length. Isolating it here keeps the probabilistic and combinatorial
+content of the theorem free of machine engineering. -/
+def MatrixInP : Prop :=
+  ∀ (k : ℕ) (tm : NTM k) (pt : Polynomial ℕ) (b : Bool),
+    Lautemann.matrixLang tm pt.eval b ∈ P
+
+/-- Every `BPP` language is in `Σ₂ᵖ`, given the matrix interface. -/
+theorem mem_SigmaP_two_of_matrixInP (hmatrix : MatrixInP) {L : Language}
+    (hL : L ∈ BPP) : L ∈ SigmaP 2 := by
+  obtain ⟨d, hd⟩ := Set.mem_iUnion.mp hL
+  obtain ⟨k, tm, f, hhalt, haccept, hreject, hO⟩ := hd
+  obtain ⟨pt, hpt⟩ := BigO.pow_polynomial_bound hO
+  obtain ⟨hq, hp⟩ := Lautemann.boundPoly_bounds (f := pt.eval) (P := pt) (fun n => le_rfl)
+  have haccept' : tm.AcceptsWithProb L pt.eval (2 / 3) :=
+    NTM.acceptsWithProb_of_le hhalt hpt haccept
+  have hreject' : tm.RejectsWithProb L pt.eval (1 / 3) :=
+    NTM.rejectsWithProb_of_le hhalt hpt hreject
+  have hEq := Lautemann.eq_polyExistsLang_of_boundedError haccept' hreject' hp hq
+  show L ∈ SigmaP (1 + 1)
+  rw [SigmaP_succ, PiP_one]
+  exact ⟨(Lautemann.boundPoly pt + 1) * Lautemann.boundPoly pt, _,
+    ⟨Lautemann.boundPoly pt, _, hmatrix k tm pt true, rfl⟩, hEq⟩
+
+/-- Every `BPP` language is in `Π₂ᵖ`, given the matrix interface: the
+complementary covering characterization puts the complement in `Σ₂ᵖ`. -/
+theorem mem_PiP_two_of_matrixInP (hmatrix : MatrixInP) {L : Language}
+    (hL : L ∈ BPP) : L ∈ PiP 2 := by
+  obtain ⟨d, hd⟩ := Set.mem_iUnion.mp hL
+  obtain ⟨k, tm, f, hhalt, haccept, hreject, hO⟩ := hd
+  obtain ⟨pt, hpt⟩ := BigO.pow_polynomial_bound hO
+  obtain ⟨hq, hp⟩ := Lautemann.boundPoly_bounds (f := pt.eval) (P := pt) (fun n => le_rfl)
+  have haccept' : tm.AcceptsWithProb L pt.eval (2 / 3) :=
+    NTM.acceptsWithProb_of_le hhalt hpt haccept
+  have hreject' : tm.RejectsWithProb L pt.eval (1 / 3) :=
+    NTM.rejectsWithProb_of_le hhalt hpt hreject
+  have hEq := Lautemann.compl_eq_polyExistsLang_of_boundedError haccept' hreject' hp hq
+  show Lᶜ ∈ SigmaP (1 + 1)
+  rw [SigmaP_succ, PiP_one]
+  exact ⟨(Lautemann.boundPoly pt + 1) * Lautemann.boundPoly pt, _,
+    ⟨Lautemann.boundPoly pt, _, hmatrix k tm pt false, rfl⟩, hEq⟩
+
+/-- **The Sipser–Lautemann theorem**, given the matrix-decidability
+interface: `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`. -/
+theorem sipserLautemann_of_matrixInP (hmatrix : MatrixInP) : SipserLautemann :=
+  fun _ hL => ⟨mem_SigmaP_two_of_matrixInP hmatrix hL, mem_PiP_two_of_matrixInP hmatrix hL⟩
 
 /-- The statement splits into its two halves: containment in `Σ₂ᵖ` and
 containment in `Π₂ᵖ`. -/
