@@ -318,6 +318,128 @@ theorem iterate_stepFn_choice (tm : NTM k) (W : ℕ) (x c : List Bool)
               exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _
                 (List.mem_ofFn.mpr ⟨i, rfl⟩)))
 
+/-! ## Running the path inside the algebra -/
+
+@[simp] theorem initChoiceFn_length (tm : NTM k) (R x c : List Bool) :
+    (initChoiceFn tm R x c).length = (2 * (k + 3) + 1) * R.length := by
+  rw [initChoiceFn]
+  simp only [List.length_append, padTo_length, List.length_flatten,
+    List.map_replicate, List.sum_replicate]
+  simp
+  ring
+
+/-- The encoded run stays inside its blocks. -/
+theorem iterate_stepFn_choice_length_le (tm : NTM k) (R x c : List Bool) (n : ℕ) :
+    ((stepFn (NTM.choiceTM tm) R)^[n] (initChoiceFn tm R x c)).length
+      ≤ (2 * (k + 3) + 1) * R.length := by
+  induction n with
+  | zero => exact (initChoiceFn_length tm R x c).le
+  | succ n ih =>
+      rw [Function.iterate_succ_apply']
+      exact stepFn_length_le _ R _ ih
+
+/-- The encoded configuration after running the path for `|c|` steps, under a
+ruler derived from the clock string `u`. -/
+noncomputable def runChoiceFn (tm : NTM k) (u x c : List Bool) : List Bool :=
+  (stepFn (NTM.choiceTM tm) (clockRuler u))^[c.length]
+    (initChoiceFn tm (clockRuler u) x c)
+
+/-- **Running the path is in the algebra.** -/
+theorem runChoiceFn_mem {n : ℕ} (tm : NTM k)
+    {gu gx gc : (Fin n → List Bool) → List Bool}
+    (hu : Cobham gu) (hx : Cobham gx) (hc : Cobham gc) :
+    Cobham fun v : Fin n → List Bool => runChoiceFn tm (gu v) (gx v) (gc v) := by
+  have hstage :=
+    iterFn (n := 3)
+      (e := fun w : Fin 3 → List Bool =>
+        initChoiceFn tm (clockRuler (w 1)) (w 2) (w 0))
+      (f := fun w : Fin 4 → List Bool =>
+        stepFn (NTM.choiceTM tm) (clockRuler (w 2)) (w 0))
+      (j := fun w : Fin 4 → List Bool =>
+        (List.replicate (2 * (k + 3) + 1) (clockRuler (w 2))).flatten)
+      (initChoiceFn_mem tm (clockRulerFn (Cobham.proj 1)) (Cobham.proj 2) (Cobham.proj 0))
+      (stepFn_mem _ (clockRulerFn (Cobham.proj 2)) (Cobham.proj 0))
+      (repeatFn (clockRulerFn (Cobham.proj 2)) _)
+      (by
+        intro c v
+        have hlen := iterate_stepFn_choice_length_le tm (clockRuler (v 1)) (v 2) (v 0) c.length
+        simp only [List.length_flatten, List.map_replicate, List.sum_replicate]
+        simpa using hlen)
+  have hg : ∀ i : Fin 4, Cobham (![gc, gc, gu, gx] i) := by
+    intro i
+    match i with
+    | 0 => exact hc
+    | 1 => exact hc
+    | 2 => exact hu
+    | 3 => exact hx
+  refine (Cobham.comp hstage hg).of_eq fun v => ?_
+  rfl
+
+/-! ## Reading the verdict -/
+
+/-- The output tape's two half-blocks after the run, rewound to cell `0`. -/
+noncomputable def outPairChoiceFn (tm : NTM k) (u x c : List Bool) : List Bool :=
+  (rewindFn (clockRuler u))^[u.length]
+    (blockAt (clockRuler u) (runChoiceFn tm u x c) 3
+      ++ blockAt (clockRuler u) (runChoiceFn tm u x c) 4)
+
+/-- **The rewind stage is in the algebra.** -/
+theorem outPairChoiceFn_mem {n : ℕ} (tm : NTM k)
+    {gu gx gc : (Fin n → List Bool) → List Bool}
+    (hu : Cobham gu) (hx : Cobham gx) (hc : Cobham gc) :
+    Cobham fun v : Fin n → List Bool => outPairChoiceFn tm (gu v) (gx v) (gc v) := by
+  have hstage :=
+    iterFn (n := 3)
+      (e := fun w : Fin 3 → List Bool =>
+        blockAt (clockRuler (w 0)) (runChoiceFn tm (w 0) (w 1) (w 2)) 3
+          ++ blockAt (clockRuler (w 0)) (runChoiceFn tm (w 0) (w 1) (w 2)) 4)
+      (f := fun w : Fin 4 → List Bool => rewindFn (clockRuler (w 1)) (w 0))
+      (j := fun w : Fin 4 → List Bool => clockRuler (w 1) ++ clockRuler (w 1))
+      (appendFn
+        (blockFn (clockRulerFn (Cobham.proj 0))
+          (runChoiceFn_mem tm (Cobham.proj 0) (Cobham.proj 1) (Cobham.proj 2)) 3)
+        (blockFn (clockRulerFn (Cobham.proj 0))
+          (runChoiceFn_mem tm (Cobham.proj 0) (Cobham.proj 1) (Cobham.proj 2)) 4))
+      (rewindFn_mem (clockRulerFn (Cobham.proj 1)) (Cobham.proj 0))
+      (appendFn (clockRulerFn (Cobham.proj 1)) (clockRulerFn (Cobham.proj 1)))
+      (by
+        intro c v
+        show ((rewindFn (clockRuler (v 0)))^[c.length]
+            (blockAt (clockRuler (v 0)) (runChoiceFn tm (v 0) (v 1) (v 2)) 3
+              ++ blockAt (clockRuler (v 0)) (runChoiceFn tm (v 0) (v 1) (v 2)) 4)).length
+          ≤ (clockRuler (v 0) ++ clockRuler (v 0)).length
+        rw [List.length_append]
+        refine le_trans (iterate_rewindFn_length_le _ _ ?_ _) (by omega)
+        rw [List.length_append, blockAt, blockAt, List.length_take, List.length_take]
+        omega)
+  have hg : ∀ i : Fin 4, Cobham (![gu, gu, gx, gc] i) := by
+    intro i
+    match i with
+    | 0 => exact hu
+    | 1 => exact hu
+    | 2 => exact hx
+    | 3 => exact hc
+  refine (Cobham.comp hstage hg).of_eq fun v => ?_
+  rfl
+
+/-- The verdict of the path: the machine halted with `1` on output cell `1`. -/
+noncomputable def acceptChoiceFn (tm : NTM k) (u x c : List Bool) : List Bool :=
+  andBit
+    (matchPrefix (stateCode tm.qhalt) (blockAt (clockRuler u) (runChoiceFn tm u x c) 0))
+    (matchPrefix (symCode Γ.one)
+      (((outPairChoiceFn tm u x c).drop (clockRuler u).length).drop 2))
+
+/-- **The verdict is in the algebra.** -/
+theorem acceptChoiceFn_mem {n : ℕ} (tm : NTM k)
+    {gu gx gc : (Fin n → List Bool) → List Bool}
+    (hu : Cobham gu) (hx : Cobham gx) (hc : Cobham gc) :
+    Cobham fun v : Fin n → List Bool => acceptChoiceFn tm (gu v) (gx v) (gc v) :=
+  andFn
+    (matchPrefixFn (blockFn (clockRulerFn hu) (runChoiceFn_mem tm hu hx hc) 0) _)
+    (matchPrefixFn
+      (dropFn (Cobham.const (List.replicate 2 false))
+        (dropFn (clockRulerFn hu) (outPairChoiceFn_mem tm hu hx hc))) _)
+
 /-! ## The run is the nondeterministic trace -/
 
 /-- The choice bits found on the choice tape are the bits of `c`. -/
@@ -357,6 +479,110 @@ theorem dropChoice_runCfg_choiceCfg (tm : NTM k) (T : ℕ) (x c : List Bool) :
       rw [← this, hpart]
   rw [hrun]
   simpa using heq
+
+/-! ## The verdict is the path's verdict -/
+
+private theorem andBit_eq_true_iff {x y : List Bool}
+    (hx : x = [true] ∨ x = [false]) (hy : y = [true] ∨ y = [false]) :
+    andBit x y = [true] ↔ x = [true] ∧ y = [true] := by
+  rcases hx with rfl | rfl <;> rcases hy with rfl | rfl <;> simp [andBit]
+
+/-- The predicate the verdict computes: after `|c|` steps along the choice bits
+of `c`, the machine has halted with `1` on the first output cell. -/
+def PathAccepts (tm : NTM k) (x c : List Bool) : Prop :=
+  (tm.trace c.length (fun j => c[j.val]'j.isLt) (tm.initCfg x)).state = tm.qhalt ∧
+    (tm.trace c.length (fun j => c[j.val]'j.isLt) (tm.initCfg x)).output.cells 1 = Γ.one
+
+/-- **The algebra's verdict is the path's verdict.** -/
+theorem acceptChoiceFn_eq_true_iff (tm : NTM k) (u x c : List Bool)
+    (hlen : x.length + c.length + Fintype.card tm.Q + 3 ≤ u.length) :
+    acceptChoiceFn tm u x c = [true] ↔ PathAccepts tm x c := by
+  classical
+  have hu1 : 1 ≤ u.length := by omega
+  have hR : clockRuler u = blockRuler (u.length - 1) := clockRuler_eq hu1
+  have hq : Fintype.card tm.Q ≤ blockWidth (u.length - 1) := by
+    rw [blockWidth]; omega
+  set W := u.length - 1 with hWdef
+  set c' := TM.runCfg (NTM.choiceTM tm) (choiceCfg tm x c) c.length with hc'def
+  have hrun : runChoiceFn tm u x c = cfgCode W c' := by
+    rw [runChoiceFn, hR, initChoiceFn_eq tm W x c (by omega) (by omega),
+      iterate_stepFn_choice tm W x c hq c.length (by omega)]
+  -- the state half
+  have hQcard : Fintype.card (NTM.choiceTM tm).Q = Fintype.card tm.Q := rfl
+  have hblk0 : (cfgBlocks W c')[0]'(by rw [cfgBlocks_length]; omega)
+      = padTo (blockRuler W) (stateCode c'.state) := rfl
+  have hstate : blockAt (clockRuler u) (runChoiceFn tm u x c) 0
+      = padTo (blockRuler W) (stateCode c'.state) := by
+    rw [hrun, hR, blockAt_cfgCode W c' 0 (by rw [cfgBlocks_length]; omega), hblk0]
+  have hcard : (stateCode c'.state).length = (stateCode tm.qhalt).length := by
+    rw [stateCode_length, stateCode_length]
+    exact hQcard
+  have hstateiff : matchPrefix (stateCode tm.qhalt)
+      (blockAt (clockRuler u) (runChoiceFn tm u x c) 0) = [true] ↔ c'.state = tm.qhalt := by
+    rw [hstate, matchPrefix_eq_true_iff,
+      padTo_eq_append _ _ (by
+        rw [stateCode_length, blockRuler_length, hQcard, blockWidth]
+        omega)]
+    constructor
+    · rintro ⟨t, ht⟩
+      have := List.append_inj_left ht hcard.symm
+      exact (stateCode_injective this).symm
+    · intro h
+      rw [h]
+      exact ⟨_, rfl⟩
+  -- the output half
+  obtain ⟨hinvs, hheads⟩ := cfgTapes_runCfg_choiceCfg_inv tm x c c.length W (by omega)
+  have hmem : c'.output ∈ cfgTapes c' := by simp [cfgTapes]
+  have hinv : c'.output.StartInvariant := hinvs _ hmem
+  have hhead : c'.output.head ≤ W := hheads _ hmem
+  obtain ⟨hb3, hb4⟩ := blockAt_cfgCode_tape W c' 1 (by rw [cfgTapes_length]; omega)
+  have hidx : (cfgTapes c')[1]'(by rw [cfgTapes_length]; omega) = c'.output := rfl
+  rw [hidx, show 2 * 1 + 1 = 3 from rfl] at hb3
+  rw [hidx, show 2 * 1 + 2 = 4 from rfl] at hb4
+  have hpair : blockAt (clockRuler u) (runChoiceFn tm u x c) 3
+      ++ blockAt (clockRuler u) (runChoiceFn tm u x c) 4 = pairCode W c'.output := by
+    rw [hrun, hR, hb3, hb4, pairCode]
+  have hrew : outPairChoiceFn tm u x c
+      = pairCode W { head := 0, cells := c'.output.cells } := by
+    rw [outPairChoiceFn, hpair, hR, iterate_rewindFn c'.output hinv hhead u.length,
+      rewound c'.output (by omega)]
+  have hdrop : ((outPairChoiceFn tm u x c).drop (clockRuler u).length).drop 2
+      = cellsCode c'.output 1 W := by
+    rw [hrew, hR, drop_pairCode_rewound, show W + 1 = 1 + W from by omega,
+      cellsCode_add c'.output 0 1 W]
+    rw [cellsCode_succ_left, cellsCode_zero, List.append_nil]
+    cases c'.output.cells 0 <;> simp [symCode]
+  have houtiff : matchPrefix (symCode Γ.one)
+      (((outPairChoiceFn tm u x c).drop (clockRuler u).length).drop 2) = [true]
+      ↔ c'.output.cells 1 = Γ.one := by
+    rw [hdrop, show W = 1 + (W - 1) from by omega, cellsCode_add c'.output 1 1 (W - 1),
+      matchPrefix_eq_true_iff]
+    have hcell : cellsCode c'.output 1 1 = symCode (c'.output.cells 1) := by
+      rw [cellsCode_succ_left, cellsCode_zero, List.append_nil]
+    rw [hcell]
+    constructor
+    · rintro ⟨t, ht⟩
+      have hl : (symCode Γ.one).length = (symCode (c'.output.cells 1)).length := by
+        cases c'.output.cells 1 <;> rfl
+      exact (symCode_injective (List.append_inj_left ht hl)).symm
+    · rintro h
+      rw [h]
+      exact ⟨_, rfl⟩
+  -- assemble
+  rw [acceptChoiceFn, andBit_eq_true_iff (matchPrefix_flag _ _) (matchPrefix_flag _ _),
+    hstateiff, houtiff]
+  have htrace : NTM.dropChoice c' = tm.trace c.length (fun j => c[j.val]'j.isLt)
+      (tm.initCfg x) := by
+    rw [hc'def, dropChoice_runCfg_choiceCfg]
+    congr 1
+    funext j
+    exact choiceStream_choiceCfg tm x c j.val j.isLt
+  have hstate' : c'.state = (tm.trace c.length (fun j => c[j.val]'j.isLt)
+      (tm.initCfg x)).state := by rw [← htrace]; rfl
+  have hout' : c'.output = (tm.trace c.length (fun j => c[j.val]'j.isLt)
+      (tm.initCfg x)).output := by rw [← htrace]; rfl
+  rw [hstate', hout']
+  rfl
 
 end Cobham
 
