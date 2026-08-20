@@ -273,6 +273,94 @@ theorem xorSuffix_mem {n : ℕ} {ga gb : (Fin n → List Bool) → List Bool}
   show recNotation _ _ _ (ga v) (Fin.tail fun i => ![ga, gb] i v) = _
   rw [hb2, recNotation_xor]
 
+/-! ## Equality of strings -/
+
+/-- Flag: every bit of `x` is `false`. -/
+def allZeroFlag : List Bool → List Bool
+  | [] => [true]
+  | true :: _ => [false]
+  | false :: x => allZeroFlag x
+
+@[simp] theorem allZeroFlag_nil : allZeroFlag [] = [true] := rfl
+
+theorem allZeroFlag_flag (x : List Bool) : allZeroFlag x = [true] ∨ allZeroFlag x = [false] := by
+  induction x with
+  | nil => exact Or.inl rfl
+  | cons b x ih =>
+      cases b
+      · exact ih
+      · exact Or.inr rfl
+
+@[simp] theorem allZeroFlag_eq_true_iff (x : List Bool) :
+    allZeroFlag x = [true] ↔ ∀ b ∈ x, b = false := by
+  induction x with
+  | nil => simp
+  | cons b x ih =>
+      cases b
+      · simpa [allZeroFlag] using ih
+      · simp [allZeroFlag]
+
+private theorem recNotation_allZero (x : List Bool) (v : Fin 0 → List Bool) :
+    recNotation (fun _ : Fin 0 → List Bool => ([true] : List Bool))
+      (fun w : Fin 2 → List Bool => w 1)
+      (fun _ : Fin 2 → List Bool => ([false] : List Bool)) x v = allZeroFlag x := by
+  induction x with
+  | nil => rfl
+  | cons b x ih =>
+      cases b
+      · simpa [allZeroFlag] using ih
+      · rfl
+
+/-- **The all-zero test is in the algebra.** -/
+theorem allZeroFlag_mem_one : Cobham fun v : Fin 1 → List Bool => allZeroFlag (v 0) := by
+  have hrec := Cobham.boundedRec (g := fun _ : Fin 0 → List Bool => ([true] : List Bool))
+    (h₀ := fun w : Fin 2 → List Bool => w 1)
+    (h₁ := fun _ : Fin 2 → List Bool => ([false] : List Bool))
+    (j := fun _ : Fin 1 → List Bool => ([false] : List Bool))
+    (Cobham.const _) (Cobham.proj 1) (Cobham.const _) (Cobham.const _)
+    (by
+      intro x v
+      rw [recNotation_allZero]
+      rcases allZeroFlag_flag x with h | h <;> simp [h])
+  exact hrec.of_eq fun v => recNotation_allZero (v 0) _
+
+theorem allZeroFlag_mem {n : ℕ} {g : (Fin n → List Bool) → List Bool} (hg : Cobham g) :
+    Cobham fun v : Fin n → List Bool => allZeroFlag (g v) :=
+  (Cobham.comp allZeroFlag_mem_one fun _ : Fin 1 => hg).of_eq fun _ => rfl
+
+/-- Flag: the two strings are equal. -/
+def eqFlag (a b : List Bool) : List Bool := andBit (lenEqFlag a b) (allZeroFlag (xorSuffix a b))
+
+theorem eqFlag_flag (a b : List Bool) : eqFlag a b = [true] ∨ eqFlag a b = [false] :=
+  andBit_flag _ _
+
+@[simp] theorem eqFlag_eq_true_iff (a b : List Bool) : eqFlag a b = [true] ↔ a = b := by
+  rw [eqFlag, andBit_eq_true_iff (lenEqFlag_flag a b) (allZeroFlag_flag _),
+    lenEqFlag_eq_true_iff, allZeroFlag_eq_true_iff]
+  constructor
+  · rintro ⟨hlen, hzero⟩
+    rw [xorSuffix_eq_zipWith_of_length a b hlen] at hzero
+    refine List.ext_getElem hlen fun i h₁ h₂ => ?_
+    have hlt : i < (List.zipWith xor a b).length := by
+      rw [List.length_zipWith]
+      omega
+    have hmem := List.getElem_mem hlt
+    have hval := hzero _ hmem
+    rw [List.getElem_zipWith] at hval
+    cases ha : a[i] <;> cases hb : b[i] <;> simp_all
+  · rintro rfl
+    refine ⟨rfl, fun c hc => ?_⟩
+    rw [xorSuffix_eq_zipWith_of_length a a rfl] at hc
+    obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hc
+    rw [List.getElem_zipWith]
+    simp
+
+/-- **String equality is in the algebra.** -/
+theorem eqFlag_mem {n : ℕ} {ga gb : (Fin n → List Bool) → List Bool}
+    (ha : Cobham ga) (hb : Cobham gb) :
+    Cobham fun v : Fin n → List Bool => eqFlag (ga v) (gb v) :=
+  (andFn (lenEqFlag_mem ha hb) (allZeroFlag_mem (xorSuffix_mem ha hb))).of_eq fun _ => rfl
+
 end Cobham
 
 end Complexity

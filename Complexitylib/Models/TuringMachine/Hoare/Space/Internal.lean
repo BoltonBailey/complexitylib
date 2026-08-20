@@ -83,6 +83,20 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Internal: an inductive configuration predicate discharges a space contract. -/
+theorem hoareSpace_of_invariant_internal {tm : TM n} {pre : TapePred n}
+    {inputLength space : ℕ} (P : Cfg n tm.Q → Prop)
+    (hinit : ∀ inp work out, pre inp work out →
+      P { state := tm.qstart, input := inp, work := work, output := out })
+    (hstep : ∀ c c', P c → tm.step c = some c' → P c')
+    (hbound : ∀ c, P c → c.WithinAuxSpace inputLength space) :
+    tm.HoareSpace pre inputLength space := by
+  intro inp work out hpre c' hreach
+  refine hbound c' ?_
+  induction hreach with
+  | refl => exact hinit inp work out hpre
+  | tail _ hs ih => exact hstep _ _ ih hs
+
 /-- Internal precondition weakening for all-reachable space contracts. -/
 theorem HoareSpace.weaken_pre_internal {tm : TM n}
     {pre pre' : TapePred n} {inputLength space : ℕ}

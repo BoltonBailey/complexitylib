@@ -9,6 +9,7 @@ public import Complexitylib.Models.TuringMachine
 public import Complexitylib.Models.TuringMachine.Trace
 public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape
+public import Complexitylib.Models.TuringMachine.Branch
 public import Complexitylib.Models.TuringMachine.ChoiceTape
 public import Complexitylib.Models.TuringMachine.Combinators
 public import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
@@ -40,6 +41,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPolynomial
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryLength
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryPred
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryBump
 public import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc
 public import Complexitylib.Models.TuringMachine.Subroutines.ClearWork
 public import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput

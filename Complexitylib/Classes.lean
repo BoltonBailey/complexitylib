@@ -71,6 +71,30 @@ public import Complexitylib.Classes.L.PolynomialTime
 public import Complexitylib.Classes.Exponential
 public import Complexitylib.Classes.DTISP
 public import Complexitylib.Classes.Containments
+public import Complexitylib.Classes.Containments.Defs
+public import Complexitylib.Classes.Containments.Internal.ConfigCount
+public import Complexitylib.Classes.Containments.Internal.LogSpaceBound
+public import Complexitylib.Classes.Containments.Internal.ReachSet
+public import Complexitylib.Classes.Containments.Internal.ConfigGraph
+public import Complexitylib.Classes.Containments.Internal.BoundedReach
+public import Complexitylib.Classes.Containments.Internal.CodeSearch
+public import Complexitylib.Classes.Containments.Internal.ReachIn
+public import Complexitylib.Classes.Containments.Internal.SavitchBound
+public import Complexitylib.Classes.Containments.Internal.InductiveCounting
+public import Complexitylib.Classes.Containments.Internal.ComplementSpace
+public import Complexitylib.Classes.Containments.Internal.PHSubsetPSPACE
+public import Complexitylib.Classes.Containments.Internal.PPSubsetPSPACE
+public import Complexitylib.Classes.Containments.Internal.IPSubsetPSPACE
+public import Complexitylib.Classes.Containments.CoNLSubsetNL
+public import Complexitylib.Classes.Containments.IPSubsetPSPACE
+public import Complexitylib.Classes.Containments.NLSubsetCoNL
+public import Complexitylib.Classes.Containments.NLSubsetP
+public import Complexitylib.Classes.Containments.NPSPACESubsetPSPACE
+public import Complexitylib.Classes.Containments.PHSubsetPSPACE
+public import Complexitylib.Classes.Containments.PPSubsetPSPACE
+public import Complexitylib.Classes.Containments.PSPACESubsetEXP
+public import Complexitylib.Classes.Containments.PSPACESubsetIP
+public import Complexitylib.Classes.Containments.PSPACESubsetNPSPACE
 public import Complexitylib.Classes.Hierarchy
 
 /-!

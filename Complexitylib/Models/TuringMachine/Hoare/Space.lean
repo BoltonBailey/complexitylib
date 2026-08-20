@@ -72,6 +72,20 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- **A step-closed configuration predicate discharges a space contract.** Supply any predicate
+that holds at every start satisfying the precondition, is preserved by one step, and implies the
+space bound; every reachable configuration then satisfies the bound. This is the workhorse for
+machines whose space analysis is a phase invariant rather than a composition of subroutine
+contracts. -/
+theorem hoareSpace_of_invariant {tm : TM n} {pre : TapePred n}
+    {inputLength space : ℕ} (P : Cfg n tm.Q → Prop)
+    (hinit : ∀ inp work out, pre inp work out →
+      P { state := tm.qstart, input := inp, work := work, output := out })
+    (hstep : ∀ c c', P c → tm.step c = some c' → P c')
+    (hbound : ∀ c, P c → c.WithinAuxSpace inputLength space) :
+    tm.HoareSpace pre inputLength space :=
+  hoareSpace_of_invariant_internal P hinit hstep hbound
+
 /-- Strengthening the precondition preserves an all-reachable space contract. -/
 theorem HoareSpace.weaken_pre {tm : TM n}
     {pre pre' : TapePred n} {inputLength space : ℕ}
