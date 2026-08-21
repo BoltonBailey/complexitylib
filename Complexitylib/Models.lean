@@ -11,6 +11,9 @@ public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape
 public import Complexitylib.Models.TuringMachine.Branch
 public import Complexitylib.Models.TuringMachine.ChoiceTape
+public import Complexitylib.Models.TuringMachine.GuessTape
+public import Complexitylib.Models.TuringMachine.GuessStream
+public import Complexitylib.Models.TuringMachine.GuessAssembly
 public import Complexitylib.Models.TuringMachine.Combinators
 public import Complexitylib.Models.TuringMachine.Combinators.ForBinaryWork
 public import Complexitylib.Models.TuringMachine.Combinators.ForInput
@@ -30,6 +33,7 @@ public import Complexitylib.Models.TuringMachine.Experimental.BinaryRoutine.Spac
 public import Complexitylib.Models.TuringMachine.Tape.Encoding
 public import Complexitylib.Models.TuringMachine.Subroutines
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
+public import Complexitylib.Models.TuringMachine.Subroutines.InputMatch
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq
@@ -49,6 +53,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.CopyWorkOutput
 public import Complexitylib.Models.TuringMachine.Subroutines.PairEmit
 public import Complexitylib.Models.TuringMachine.Subroutines.PairValidate
 public import Complexitylib.Models.TuringMachine.Subroutines.PairSplit
+public import Complexitylib.Models.TuringMachine.Subroutines.Scan
 public import Complexitylib.Models.TuringMachine.Subroutines.ScanRight
 public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
 public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany

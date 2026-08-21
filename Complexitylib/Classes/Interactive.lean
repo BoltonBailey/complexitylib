@@ -52,10 +52,12 @@ The three classes differ in who speaks when:
 
 Completeness `2/3` and soundness `1/3` are hard-wired, as in
 `Complexitylib.Classes.Randomized`. Message lengths are bounded by
-`Protocol.msgLen`, and soundness in `IP` quantifies over the strategies obeying
-that bound (`ProverStrategy.Bounded`): an unbounded message would blow up the
-transcript the polynomial-time verifier has to read. The prover is adaptive —
-it is a function of the transcript, not a single witness string.
+`Protocol.msgLen` — the prover's by `ProverStrategy.Bounded`, which soundness in
+`IP` quantifies over, and the verifier's by `Protocol.vmsg_len`. An unbounded
+message would blow up the transcript the polynomial-time verifier has to read,
+and after polynomially many rounds the verifier would no longer be polynomial in
+the input at all. The prover is adaptive — it is a function of the transcript,
+not a single witness string.
 
 ## TODO
 
@@ -119,21 +121,36 @@ def ProverStrategy := Transcript → List Bool
 def ProverStrategy.Bounded (S : ProverStrategy) (m : ℕ) : Prop :=
   ∀ τ : Transcript, (S τ).length ≤ m
 
+/-- The encoded view handed to the verifier: the input, its coins, and the
+transcript so far. -/
+def protocolView (x r : List Bool) (τ : Transcript) : List Bool :=
+  pair (pair x r) (DataEncode.bitstringEncode τ)
+
 /-- An interactive protocol: a round count, a private-coin count, a
 message-length bound, the verifier's next message as a polynomial-time function
 of the encoded input, coins and transcript, and its final verdict as a
-polynomial-time predicate of the same. -/
+polynomial-time predicate of the same.
+
+`msgLen` bounds *both* sides' messages: the prover's through
+`ProverStrategy.Bounded`, the verifier's through `vmsg_len`. Bounding the
+verifier is not a convenience — without it the transcript grows by a polynomial
+each round, so after polynomially many rounds the view, and with it the
+verifier's own running time, is no longer polynomial in the input. -/
 structure Protocol where
   /-- Number of rounds, as a function of the input length. -/
   rounds : ℕ → ℕ
   /-- Number of private coins, as a function of the input length. -/
   coins : ℕ → ℕ
-  /-- Bound on the length of the prover's messages. -/
+  /-- Bound on the length of either side's messages. -/
   msgLen : ℕ → ℕ
   /-- The verifier's next message, computed from `pair (pair x r) ⌜τ⌝`. -/
   vmsg : List Bool → List Bool
   /-- That computation is polynomial-time. -/
   vmsg_mem : vmsg ∈ FP
+  /-- The verifier's messages respect the length bound, so the transcript stays
+  polynomially long however many rounds are played. -/
+  vmsg_len : ∀ (x r : List Bool) (τ : Transcript),
+    (vmsg (protocolView x r τ)).length ≤ msgLen x.length
   /-- The verifier's final verdict, on `pair (pair x r) ⌜τ⌝`. -/
   verdict : Language
   /-- That verdict is polynomial-time decidable. -/
@@ -143,8 +160,7 @@ namespace Protocol
 
 /-- The encoded view handed to the verifier: the input, its coins, and the
 transcript so far. -/
-def view (x r : List Bool) (τ : Transcript) : List Bool :=
-  pair (pair x r) (DataEncode.bitstringEncode τ)
+abbrev view (x r : List Bool) (τ : Transcript) : List Bool := protocolView x r τ
 
 /-- The transcript after `n` rounds of `prot` on input `x` with coins `r`
 against the strategy `S`: each round appends the verifier's message and then
@@ -170,13 +186,19 @@ noncomputable def acceptEvent (prot : Protocol) (S : ProverStrategy) (x : List B
 end Protocol
 
 /-- **IP**: languages with an interactive proof system whose round count, coin
-count and message lengths are polynomially bounded. Completeness asks for one
+count and message lengths are *given by polynomials*. Completeness asks for one
 strategy convincing the verifier with probability at least `2/3`; soundness
-bounds every length-respecting strategy by `1/3`. -/
+bounds every length-respecting strategy by `1/3`.
+
+The three counts are polynomials rather than merely polynomially bounded because
+a verifier has to *know* them: it must stop after the right number of rounds and
+read the right number of coins. An arbitrary polynomially bounded `ℕ → ℕ` need
+not be computable at all, and a protocol carrying one would let the class contain
+undecidable languages. -/
 def IP : Set Language :=
-  {L | ∃ (prot : Protocol) (p : Polynomial ℕ),
-    (∀ n, prot.rounds n ≤ p.eval n) ∧ (∀ n, prot.coins n ≤ p.eval n) ∧
-    (∀ n, prot.msgLen n ≤ p.eval n) ∧
+  {L | ∃ (prot : Protocol) (rp cp mp : Polynomial ℕ),
+    (∀ n, prot.rounds n = rp.eval n) ∧ (∀ n, prot.coins n = cp.eval n) ∧
+    (∀ n, prot.msgLen n = mp.eval n) ∧
     (∀ x ∈ L, ∃ S : ProverStrategy, S.Bounded (prot.msgLen x.length) ∧
       2 / 3 ≤ eventProb (prot.acceptEvent S x)) ∧
     (∀ x ∉ L, ∀ S : ProverStrategy, S.Bounded (prot.msgLen x.length) →

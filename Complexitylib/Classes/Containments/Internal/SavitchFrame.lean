@@ -121,11 +121,15 @@ def stkTop (S : List Bool) : List Bool := fstBlock S
 /-- The stack below the top frame. -/
 def stkRest (S : List Bool) : List Bool := sndBlock S
 
-@[simp] theorem stkTop_cons (f : List Bool) (fs : List (List Bool)) :
-    stkTop (encStack (f :: fs)) = f := by simp [stkTop]
+@[simp] theorem stkTop_pair (f g : List Bool) : stkTop (pair f g) = f := by simp [stkTop]
 
-@[simp] theorem stkRest_cons (f : List Bool) (fs : List (List Bool)) :
-    stkRest (encStack (f :: fs)) = encStack fs := by simp [stkRest]
+@[simp] theorem stkRest_pair (f g : List Bool) : stkRest (pair f g) = g := by simp [stkRest]
+
+theorem stkTop_cons (f : List Bool) (fs : List (List Bool)) :
+    stkTop (encStack (f :: fs)) = f := by simp
+
+theorem stkRest_cons (f : List Bool) (fs : List (List Bool)) :
+    stkRest (encStack (f :: fs)) = encStack fs := by simp
 
 /-- A stack is empty exactly when its encoding is. -/
 theorem encStack_eq_nil_iff (fs : List (List Bool)) : encStack fs = [] ↔ fs = [] := by

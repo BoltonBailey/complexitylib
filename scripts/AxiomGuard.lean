@@ -74,6 +74,15 @@ def headlineTheorems : List Name := [
   `Complexity.UniformPPoly_eq_P,
   `Complexity.RP_subset_NP,
   `Complexity.BPP_subset_PP,
+  `Complexity.NL_subset_P,
+  `Complexity.PSPACE_subset_EXP,
+  `Complexity.PP_subset_PSPACE,
+  `Complexity.PH_subset_PSPACE,
+  -- Savitch's theorem
+  `Complexity.NPSPACE_subset_PSPACE,
+  `Complexity.PSPACE_eq_NPSPACE,
+  -- the easy half of Shamir's theorem
+  `Complexity.IP_subset_PSPACE,
   -- Circuit lower and upper bounds
   `Complexity.shannon_lower_bound_circuit,
   `Complexity.shannon_sizeComplexity,

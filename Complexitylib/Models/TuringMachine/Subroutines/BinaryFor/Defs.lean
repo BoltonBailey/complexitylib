@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models.TuringMachine.Subroutines.BinarySucc.Defs
+public import Complexitylib.Models.TuringMachine.Hoare.Defs
 
 /-!
 # Canonical binary count-up loops — definitions
@@ -279,6 +280,40 @@ structure BinaryForLoopSpaceSpec {n : ℕ} {body : TM n}
     (binaryForTM body counterIdx limitIdx).reachesIn time
       (spec.iterationStartCfg value) cfg →
     cfg.WithinAuxSpace inputLength spaceBound
+
+/-- The loop-carried tape condition at counter value `value`: the client
+invariant `P value`, a canonical counter and preserved limit, and off-marker
+heads on every tape.
+
+This is the precondition the driver hands the body at each iteration and the
+postcondition it re-establishes before the next comparison. -/
+def BinaryForFrame {n : ℕ} (counterIdx limitIdx : Fin n) (limitValue : ℕ)
+    (P : ℕ → TapePred n) (value : ℕ) : TapePred n :=
+  fun inp work out =>
+    P value inp work out ∧
+    (work counterIdx).HasBinaryNat value ∧
+    (work limitIdx).HasBinaryNat limitValue ∧
+    inp.read ≠ Γ.start ∧
+    (∀ i, (work i).read ≠ Γ.start) ∧
+    out.read ≠ Γ.start
+
+/-- What a loop body must establish before the driver increments the counter.
+
+The body leaves the counter and limit canonical and every head off the left
+marker, and it promises the *next* invariant for whatever canonical
+representation of `value + 1` the successor subroutine goes on to leave in the
+counter slot. Stating the last clause with `Function.update` keeps the body's
+obligation independent of how `binarySuccTM` lays out its result. -/
+def BinaryForBodyPost {n : ℕ} (counterIdx limitIdx : Fin n) (limitValue : ℕ)
+    (P : ℕ → TapePred n) (value : ℕ) : TapePred n :=
+  fun inp work out =>
+    (work counterIdx).HasBinaryNat value ∧
+    (work limitIdx).HasBinaryNat limitValue ∧
+    inp.read ≠ Γ.start ∧
+    (∀ i, (work i).read ≠ Γ.start) ∧
+    out.read ≠ Γ.start ∧
+    ∀ t : Tape, t.HasBinaryNat (value + 1) →
+      P (value + 1) inp (Function.update work counterIdx t) out
 
 end TM
 

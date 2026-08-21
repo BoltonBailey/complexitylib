@@ -7,6 +7,7 @@ module
 public import Complexitylib.Classes.Containments.Internal.SavitchFrame
 public import Complexitylib.Classes.Containments.Internal.CodeAccept
 public import Complexitylib.Classes.Containments.Internal.NLSearchAssemble
+public import Complexitylib.Classes.Containments.Internal.BinArith
 
 /-!
 # One step of Savitch's stack machine
@@ -52,23 +53,6 @@ open Cobham
 variable {k : ℕ}
 
 /-! ## Reading the state -/
-
-/-- Is the string empty, as a flag. -/
-def emptyFlag (y : List Bool) : List Bool := lenLeFlag [] y
-
-@[simp] theorem emptyFlag_nil : emptyFlag [] = [true] := rfl
-
-theorem emptyFlag_cons (b : Bool) (y : List Bool) : emptyFlag (b :: y) = [false] := by
-  rw [emptyFlag, lenLeFlag]
-  simp [nonemptyFlag, notBit]
-
-theorem emptyFlag_pair (a b : List Bool) : emptyFlag (pair a b) = [false] := by
-  cases a with
-  | nil => rw [pair]; rfl
-  | cons c a => rw [pair_cons_eq]; exact emptyFlag_cons _ _
-
-/-- Drop the leading bit. -/
-def dropOne (y : List Bool) : List Bool := y.drop 1
 
 /-- The frame on top of the state's stack. -/
 def savTop (s : List Bool) : List Bool := stkTop (stStk s)
@@ -210,15 +194,6 @@ theorem savG_step (tm : NTM k) (qp lp : Polynomial ℕ) (s x : List Bool) (hs : 
   simp
 
 /-! ## The step is polynomial-time -/
-
-theorem emptyFlagFn_mem_FP {a : List Bool → List Bool} (ha : a ∈ FP) :
-    (fun z => emptyFlag (a z)) ∈ FP :=
-  lenLeFlagFn_mem_FP (constFn_mem_FP []) ha
-
-theorem dropOneFn_mem_FP {a : List Bool → List Bool} (ha : a ∈ FP) :
-    (fun z => dropOne (a z)) ∈ FP := by
-  have := dropLenFn_mem_FP (constFn_mem_FP [false]) ha
-  simpa [dropOne] using this
 
 theorem savRulerFn_mem_FP (k : ℕ) {a : List Bool → List Bool} (ha : a ∈ FP) :
     (fun z => savRuler k (a z)) ∈ FP := wideRulerFn_mem_FP ha (codeBlocks k)

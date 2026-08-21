@@ -39,8 +39,8 @@ namespace Complexity
 /-- **`PSPACE ⊆ IP`** (Shamir): arithmetize a quantified Boolean formula and run sum-check. -/
 def PSPACESubsetIP : Prop := PSPACE ⊆ IP
 
-/-- The two halves together are Shamir's theorem. -/
-theorem IP_eq_PSPACE_of (h : IPSubsetPSPACE) (h' : PSPACESubsetIP) : IP = PSPACE :=
-  subset_antisymm (h : IP ⊆ PSPACE) (h' : PSPACE ⊆ IP)
+/-- The two halves together are Shamir's theorem; the first is `IP_subset_PSPACE`. -/
+theorem IP_eq_PSPACE_of (h' : PSPACESubsetIP) : IP = PSPACE :=
+  subset_antisymm IP_subset_PSPACE (h' : PSPACE ⊆ IP)
 
 end Complexity
