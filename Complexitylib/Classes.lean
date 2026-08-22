@@ -54,6 +54,7 @@ public import Complexitylib.Classes.PPoly.Uniform.Preprocessing
 public import Complexitylib.Classes.PPoly.Uniform.Containment
 public import Complexitylib.Classes.NP
 public import Complexitylib.Classes.Interactive
+public import Complexitylib.Classes.PCP
 public import Complexitylib.Classes.Randomized
 public import Complexitylib.Classes.Randomized.GoodSeed
 public import Complexitylib.Classes.Randomized.CircuitAmplification
