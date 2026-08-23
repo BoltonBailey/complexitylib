@@ -5,7 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.Containments
-public import Complexitylib.Encoding.Pairing
+public import Complexitylib.Classes.P.Pairing
 public import Mathlib.Algebra.Polynomial.Eval.Defs
 
 /-!
@@ -19,38 +19,29 @@ of length at most `p.eval |x|` puts the encoded pair `pair x w` in `L`, and
 operators gives the levels `SigmaP 0 = P`, `SigmaP (n + 1) =
 polyExistsClass (PiP n)`, `PiP n = complClass (SigmaP n)`, and their union `PH`.
 
-The level inclusions `SigmaP n ⊆ SigmaP (n + 1)` and `PiP n ⊆ PiP (n + 1)` are
-proved relative to a single machine-engineering seam, stated as the hypothesis
-`pairFst ∈ FP`: decoding the first component of a canonical pair is
-polynomial-time computable. This follows the interface-isolation pattern of
-`Complexitylib.Classes.NP.Witness` — every set-theoretic consequence is proved
-unconditionally here, and the one remaining TM construction can land later
-without touching this file's statements. All other results are unconditional.
+The level inclusions `SigmaP n ⊆ SigmaP (n + 1)` and `PiP n ⊆ PiP (n + 1)` need
+one computational fact: decoding the first component of a canonical pair is
+polynomial-time computable (`pairFst_mem_FP`, from
+`Complexitylib.Classes.P.Pairing`), so every result in this file is
+unconditional.
 
 ## Main definitions
 
 - `polyExistsLang`, `polyForallLang` — witness quantifiers on languages
 - `polyExistsClass`, `polyForallClass` — the induced operators on classes
-- `pairFst` — first-component decoder for the pairing codec
 - `SigmaP`, `PiP`, `PH` — the hierarchy levels and their union
 
 ## Main results
 
 - `compl_polyExistsLang` / `compl_polyForallLang` — quantifier duality
 - `complClass_polyExistsClass` / `complClass_polyForallClass` — class duality
-- `complClass_P` — `P` is closed under language complement, as a class equation
 - `SigmaP_zero`, `PiP_zero`, `SigmaP_succ`, `PiP_succ` — recursion laws
 - `P_subset_polyExistsClass_P` / `P_subset_polyForallClass_P` — base inclusions
-  (given `pairFst ∈ FP`)
 - `SigmaP_subset_SigmaP_succ` / `PiP_subset_PiP_succ` — level inclusions
-  (given `pairFst ∈ FP`)
 - `SigmaP_subset_PH`, `P_subset_PH`
 
 ## TODO
 
-- Implement the `pairFst ∈ FP` seam: split the input with a
-  `pairSplitCoreTM`-style scanner and copy the decoded first component to the
-  output tape, packaging the result as `TM.ComputesInTime`.
 - Relate `SigmaP 1` to the NTM-based `NP` through the witness characterization
   interface in `Complexitylib.Classes.NP.Witness`.
 -/
@@ -119,11 +110,6 @@ theorem polyForallClass_mono {C D : Set Language} (h : C ⊆ D) :
   rintro L ⟨p, L', hL', rfl⟩
   exact ⟨p, L', h hL', rfl⟩
 
-/-- `complClass` is monotone. -/
-theorem complClass_mono {C D : Set Language} (h : C ⊆ D) :
-    complClass C ⊆ complClass D :=
-  fun _ hL => h hL
-
 /-- Class-level quantifier duality: the complement class of a bounded
 existential class is the bounded universal class over the complement class. -/
 theorem complClass_polyExistsClass (C : Set Language) :
@@ -150,32 +136,14 @@ theorem complClass_polyForallClass (C : Set Language) :
   · rintro ⟨p, L', hL', rfl⟩
     exact ⟨p, L'ᶜ, hL', by rw [compl_polyExistsLang]⟩
 
-/-! ## The pair decoder seam -/
-
-/-- Decode the first component of a canonical pair, returning `[]` on malformed
-inputs. Statements below take the hypothesis `pairFst ∈ FP` — the one remaining
-machine construction of this development (see the module docstring). -/
-def pairFst (z : List Bool) : List Bool :=
-  ((unpair? z).map Prod.fst).getD []
-
-/-- `pairFst` recovers the first component of a canonical pair. -/
-@[simp] theorem pairFst_pair (x y : List Bool) : pairFst (pair x y) = x := by
-  simp [pairFst]
-
 /-! ## Base inclusions -/
-
-/-- `P` is closed under complement, stated as a class equation. -/
-theorem complClass_P : complClass P = P := by
-  ext L
-  exact ⟨fun h => compl_compl L ▸ P_compl h, fun h => P_compl h⟩
 
 /-- Every language of `P` is a bounded existential over `P`: take the zero
 witness bound, so the only witness is `[]`, and decide `pair x []` by decoding
 the first component and running the original decider. -/
-theorem P_subset_polyExistsClass_P (hpair : pairFst ∈ FP) :
-    P ⊆ polyExistsClass P := by
+theorem P_subset_polyExistsClass_P : P ⊆ polyExistsClass P := by
   intro L hL
-  refine ⟨0, pairFst ⁻¹' L, mem_P_preimage hpair hL, ?_⟩
+  refine ⟨0, pairFst ⁻¹' L, mem_P_preimage_pairFst hL, ?_⟩
   ext x
   simp only [mem_polyExistsLang, Polynomial.eval_zero, Nat.le_zero,
     List.length_eq_zero_iff, Set.mem_preimage]
@@ -188,10 +156,9 @@ theorem P_subset_polyExistsClass_P (hpair : pairFst ∈ FP) :
 /-- Every language of `P` is a bounded universal over `P`: with the zero
 witness bound the only witness is `[]`, decided as in
 `P_subset_polyExistsClass_P`. -/
-theorem P_subset_polyForallClass_P (hpair : pairFst ∈ FP) :
-    P ⊆ polyForallClass P := by
+theorem P_subset_polyForallClass_P : P ⊆ polyForallClass P := by
   intro L hL
-  refine ⟨0, pairFst ⁻¹' L, mem_P_preimage hpair hL, ?_⟩
+  refine ⟨0, pairFst ⁻¹' L, mem_P_preimage_pairFst hL, ?_⟩
   ext x
   simp only [mem_polyForallLang, Polynomial.eval_zero, Nat.le_zero,
     List.length_eq_zero_iff, Set.mem_preimage]
@@ -244,30 +211,20 @@ theorem PiP_succ (n : ℕ) : PiP (n + 1) = polyForallClass (SigmaP n) := by
   show complClass (polyExistsClass (complClass (SigmaP n))) = _
   rw [complClass_polyExistsClass, complClass_complClass]
 
-/-- The first Σ level is the bounded existential closure of `P` — the
-certificate form of `NP`. -/
-theorem SigmaP_one : SigmaP 1 = polyExistsClass P := by
-  rw [SigmaP_succ, PiP_zero]
-
-/-- The first Π level is the bounded universal closure of `P` — the
-certificate form of `coNP`. -/
-theorem PiP_one : PiP 1 = polyForallClass P := by
-  rw [PiP_succ, SigmaP_zero]
-
 /-! ## Level inclusions -/
 
 /-- Both level inclusions, proved simultaneously by induction: the base case is
 the pair of base inclusions of `P`, and each successor case is monotonicity of
 the opposite quantifier applied to the other component. -/
-private theorem piP_sigmaP_subset_succ (hpair : pairFst ∈ FP) (n : ℕ) :
+private theorem piP_sigmaP_subset_succ (n : ℕ) :
     PiP n ⊆ PiP (n + 1) ∧ SigmaP n ⊆ SigmaP (n + 1) := by
   induction n with
   | zero =>
     constructor
-    · rw [PiP_zero, PiP_one]
-      exact P_subset_polyForallClass_P hpair
-    · rw [SigmaP_zero, SigmaP_one]
-      exact P_subset_polyExistsClass_P hpair
+    · rw [PiP_zero, PiP_succ, SigmaP_zero]
+      exact P_subset_polyForallClass_P
+    · rw [SigmaP_zero, SigmaP_succ, PiP_zero]
+      exact P_subset_polyExistsClass_P
   | succ n ih =>
     constructor
     · rw [PiP_succ, PiP_succ]
@@ -276,14 +233,12 @@ private theorem piP_sigmaP_subset_succ (hpair : pairFst ∈ FP) (n : ℕ) :
       exact polyExistsClass_mono ih.1
 
 /-- Each Σ level is contained in the next. -/
-theorem SigmaP_subset_SigmaP_succ (hpair : pairFst ∈ FP) (n : ℕ) :
-    SigmaP n ⊆ SigmaP (n + 1) :=
-  (piP_sigmaP_subset_succ hpair n).2
+theorem SigmaP_subset_SigmaP_succ (n : ℕ) : SigmaP n ⊆ SigmaP (n + 1) :=
+  (piP_sigmaP_subset_succ n).2
 
 /-- Each Π level is contained in the next. -/
-theorem PiP_subset_PiP_succ (hpair : pairFst ∈ FP) (n : ℕ) :
-    PiP n ⊆ PiP (n + 1) :=
-  (piP_sigmaP_subset_succ hpair n).1
+theorem PiP_subset_PiP_succ (n : ℕ) : PiP n ⊆ PiP (n + 1) :=
+  (piP_sigmaP_subset_succ n).1
 
 /-! ## PH -/
 

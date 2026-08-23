@@ -52,4 +52,8 @@ def complClass (C : Set Language) : Set Language :=
 theorem complClass_complClass (C : Set Language) : complClass (complClass C) = C := by
   ext L; simp [complClass]
 
+/-- `complClass` is monotone. -/
+theorem complClass_mono {C D : Set Language} (h : C ⊆ D) : complClass C ⊆ complClass D :=
+  fun _ hL => h hL
+
 end Complexity

@@ -233,6 +233,11 @@ theorem P_compl {L : Language} (h : L ∈ P) : Lᶜ ∈ P := by
   have hpow : f =O (· ^ (k + 1)) := hbig.trans (BigO.pow_le_pow_succ k)
   exact BigO.add (BigO.const_mul_left 2 hpow) (BigO.const_le_pow 4 (k + 1))
 
+/-- `P` is closed under complement, stated as a class equation. -/
+theorem complClass_P : complClass P = P := by
+  ext L
+  exact ⟨fun h => compl_compl L ▸ P_compl h, fun h => P_compl h⟩
+
 /-- **DSPACE ⊆ NSPACE**: every language decidable by a DTM in space `O(S)` is also
     decidable by an NTM in space `O(S)`, via the `TM.toNTM` embedding. -/
 theorem DSPACE_subset_NSPACE (S : ℕ → ℕ) : DSPACE S ⊆ NSPACE S := by
