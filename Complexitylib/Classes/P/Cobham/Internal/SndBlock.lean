@@ -32,7 +32,7 @@ open Complexity.TM
 
 /-- The suffix decoder: scan doubled payload bits until the `[false, true]`
 separator, then copy the remaining input (the suffix `y` of `pair x y`) to the
-output. On malformed input it halts with empty output. Computes `sndBlock`. -/
+output. On malformed input it halts with empty output. Computes `pairSnd`. -/
 def sndBlockTM : TM 0 where
   Q := ScanPhase
   qstart := .skip
@@ -159,14 +159,14 @@ private theorem sndBlockTM_emit_loop :
 
 /-- The scan phase of `sndBlockTM`: from `scanA` with input cursor on `w`, the
 machine parses doubled pairs to the separator and copies the suffix, halting with
-output `sndBlock w`. `fuel` bounds the recursion by the input length. -/
+output `pairSnd w`. `fuel` bounds the recursion by the input length. -/
 private theorem sndBlockTM_scan_loop :
     ∀ (fuel : ℕ) (w : List Bool), w.length ≤ fuel → ∀ (c : Cfg 0 sndBlockTM.Q),
       c.state = ScanPhase.scanA →
       c.input.HasBinarySuffix w →
       c.output.HasBinaryPrefix [] →
       ∃ c' t, t ≤ 2 * w.length + 2 ∧ sndBlockTM.reachesIn t c c' ∧ sndBlockTM.halted c' ∧
-        c'.output.HasOutput (sndBlock w) := by
+        c'.output.HasOutput (pairSnd w) := by
   intro fuel
   induction fuel with
   | zero =>
@@ -186,7 +186,7 @@ private theorem sndBlockTM_scan_loop :
       rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
           = c.output from by
             rw [writeAndMove_readBack c.output houtne, idleDir, if_neg houtne, Tape.move]]
-      simpa [sndBlock] using hpre.hasOutput
+      simpa [pairSnd] using hpre.hasOutput
   | succ fuel ih =>
       intro w hw c hstate hsuf hpre
       -- Halting helper for the malformed / end-of-input branches.
@@ -205,7 +205,7 @@ private theorem sndBlockTM_scan_loop :
           rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
               = c.output from by
                 rw [writeAndMove_readBack c.output houtne, idleDir, if_neg houtne, Tape.move]]
-          simpa [sndBlock] using hpre.hasOutput
+          simpa [pairSnd] using hpre.hasOutput
       | [false] =>
           -- scanA reads false → scanBfalse; next reads blank → done.
           have hread : c.input.read = Γ.ofBool false := hsuf.read_cons
@@ -236,7 +236,7 @@ private theorem sndBlockTM_scan_loop :
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from by
                 rw [writeAndMove_readBack c1.output houtne1, idleDir, if_neg houtne1, Tape.move]]
-          simpa [sndBlock] using hpre1.hasOutput
+          simpa [pairSnd] using hpre1.hasOutput
       | [true] =>
           have hread : c.input.read = Γ.ofBool true := hsuf.read_cons
           let c1 : Cfg 0 sndBlockTM.Q :=
@@ -266,7 +266,7 @@ private theorem sndBlockTM_scan_loop :
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from by
                 rw [writeAndMove_readBack c1.output houtne1, idleDir, if_neg houtne1, Tape.move]]
-          simpa [sndBlock] using hpre1.hasOutput
+          simpa [pairSnd] using hpre1.hasOutput
       | false :: true :: y =>
           -- separator: scanA false → scanBfalse → (reads true) → emit; copy y.
           have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
@@ -305,7 +305,7 @@ private theorem sndBlockTM_scan_loop :
             sndBlockTM_emit_loop y [] c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have : sndBlock (false :: true :: y) = y := by simp [sndBlock, unpair?]
+          have : pairSnd (false :: true :: y) = y := by simp [pairSnd, unpair?]
           rw [this]
           simpa using hcout.hasOutput
       | false :: false :: z =>
@@ -346,8 +346,8 @@ private theorem sndBlockTM_scan_loop :
             ih z hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have : sndBlock (false :: false :: z) = sndBlock z := by
-            cases h : unpair? z <;> simp [sndBlock, unpair?, h]
+          have : pairSnd (false :: false :: z) = pairSnd z := by
+            cases h : unpair? z <;> simp [pairSnd, unpair?, h]
           rw [this]; exact hcout
       | true :: true :: z =>
           have hreadA : c.input.read = Γ.ofBool true := hsuf.read_cons
@@ -387,8 +387,8 @@ private theorem sndBlockTM_scan_loop :
             ih z hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have : sndBlock (true :: true :: z) = sndBlock z := by
-            cases h : unpair? z <;> simp [sndBlock, unpair?, h]
+          have : pairSnd (true :: true :: z) = pairSnd z := by
+            cases h : unpair? z <;> simp [pairSnd, unpair?, h]
           rw [this]; exact hcout
       | true :: false :: rest =>
           -- malformed: scanA true → scanBtrue → reads false → done, empty output.
@@ -421,11 +421,11 @@ private theorem sndBlockTM_scan_loop :
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from by
                 rw [writeAndMove_readBack c1.output houtne1, idleDir, if_neg houtne1, Tape.move]]
-          have : sndBlock (true :: false :: rest) = [] := by simp [sndBlock, unpair?]
+          have : pairSnd (true :: false :: rest) = [] := by simp [pairSnd, unpair?]
           rw [this]; simpa using hpre1.hasOutput
 
-/-- `sndBlock` is polynomial-time, via the `sndBlockTM` scanner. -/
-theorem sndBlock_mem_FP : sndBlock ∈ FP := by
+/-- `pairSnd` is polynomial-time, via the `sndBlockTM` scanner. -/
+theorem sndBlock_mem_FP : pairSnd ∈ FP := by
   refine ⟨1, 0, sndBlockTM, (fun m => 2 * m + 3), ?_, ?_⟩
   · intro z
     -- Step 1: skip past ▷, positioning both cursors.

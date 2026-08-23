@@ -33,7 +33,7 @@ open Complexity.TM
 
 /-! ### Concatenation
 
-`catBlocks` is `fstBlock` and `sndBlock` fused: decode the leading block's
+`catBlocks` is `pairFst` and `pairSnd` fused: decode the leading block's
 payload *and* keep the suffix, so on a genuine pair it is concatenation. Its
 machine is `sndBlockTM` with the scan also emitting each decoded bit — the one
 `FP` primitive that lets two computed strings be joined. -/

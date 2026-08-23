@@ -33,14 +33,14 @@ open Complexity.TM
 
 /-- Drop the third component of a right-nested triple. Copy doubled payload bits
 verbatim until the `[false, true]` separator, then decode the *next* block's
-payload (`fstBlock`). On a valid triple this satisfies
+payload (`pairFst`). On a valid triple this satisfies
 `reorder (pair A (pair B C)) = pair A B` (`reorder_pair_pair`). The incremental
 recursion (writing before knowing validity) is what the `reorderTM` scanner
 computes; it is total and needs no sub-machines. -/
 def reorder : List Bool → List Bool
   | false :: false :: z => false :: false :: reorder z
   | true :: true :: z => true :: true :: reorder z
-  | false :: true :: z => false :: true :: fstBlock z
+  | false :: true :: z => false :: true :: pairFst z
   | c :: _ => [c]
   | [] => []
 
@@ -48,8 +48,8 @@ theorem reorder_pair_pair (A B C : List Bool) :
     reorder (pair A (pair B C)) = pair A B := by
   induction A with
   | nil =>
-      show false :: true :: fstBlock (pair B C) = false :: true :: B
-      rw [fstBlock_pair]
+      show false :: true :: pairFst (pair B C) = false :: true :: B
+      rw [pairFst_pair]
   | cons a A ih =>
       rw [pair_cons_eq]
       cases a
@@ -176,7 +176,7 @@ def reorderTM : TM 0 where
     | .rdone => exact rightOfStart_allIdle iHead wHeads oHead
 
 /-- Phase 2 of `reorderTM`: from `rdecA` on input `w` with output holding `acc`,
-decode and emit `fstBlock w`, halting with `acc ++ fstBlock w`. Identical in shape
+decode and emit `pairFst w`, halting with `acc ++ pairFst w`. Identical in shape
 to `fstBlockTM_scan_loop`. -/
 private theorem reorderTM_dec_loop :
     ∀ (fuel : ℕ) (w acc : List Bool), w.length ≤ fuel → ∀ (c : Cfg 0 reorderTM.Q),
@@ -184,7 +184,7 @@ private theorem reorderTM_dec_loop :
       c.input.HasBinarySuffix w →
       c.output.HasBinaryPrefix acc →
       ∃ c' t, t ≤ 2 * w.length + 2 ∧ reorderTM.reachesIn t c c' ∧ reorderTM.halted c' ∧
-        c'.output.HasBinaryPrefix (acc ++ fstBlock w) := by
+        c'.output.HasBinaryPrefix (acc ++ pairFst w) := by
   intro fuel
   induction fuel with
   | zero =>
@@ -202,7 +202,7 @@ private theorem reorderTM_dec_loop :
         .step (by simp [TM.step, hstate, reorderTM, hread]) .zero, rfl, ?_⟩
       rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
           = c.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne]
-      simpa [fstBlock] using hpre
+      simpa [pairFst] using hpre
   | succ fuel ih =>
       intro w acc hw c hstate hsuf hpre
       have houtne : c.output.read ≠ Γ.start := by rw [hpre.read_blank]; decide
@@ -218,7 +218,7 @@ private theorem reorderTM_dec_loop :
             .step (by simp [TM.step, hstate, reorderTM, hread]) .zero, rfl, ?_⟩
           rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
               = c.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne]
-          simpa [fstBlock] using hpre
+          simpa [pairFst] using hpre
       | [false] =>
           have hread : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 reorderTM.Q :=
@@ -246,7 +246,7 @@ private theorem reorderTM_dec_loop :
             .step hstep (.step (by simp [TM.step, reorderTM, hread1, c1]) .zero), rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | [true] =>
           have hread : c.input.read = Γ.ofBool true := hsuf.read_cons
           let c1 : Cfg 0 reorderTM.Q :=
@@ -274,7 +274,7 @@ private theorem reorderTM_dec_loop :
             .step hstep (.step (by simp [TM.step, reorderTM, hread1, c1]) .zero), rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | false :: true :: y =>
           have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 reorderTM.Q :=
@@ -303,7 +303,7 @@ private theorem reorderTM_dec_loop :
             rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | true :: false :: rest =>
           have hreadA : c.input.read = Γ.ofBool true := hsuf.read_cons
           let c1 : Cfg 0 reorderTM.Q :=
@@ -332,7 +332,7 @@ private theorem reorderTM_dec_loop :
             rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | false :: false :: z =>
           have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 reorderTM.Q :=
@@ -369,7 +369,7 @@ private theorem reorderTM_dec_loop :
             ih z (acc ++ [false]) hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have hfb : fstBlock (false :: false :: z) = false :: fstBlock z := rfl
+          have hfb : pairFst (false :: false :: z) = false :: pairFst z := rfl
           rw [hfb, List.append_assoc, List.cons_append, List.nil_append] at *
           exact hcout
       | true :: true :: z =>
@@ -408,7 +408,7 @@ private theorem reorderTM_dec_loop :
             ih z (acc ++ [true]) hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have hfb : fstBlock (true :: true :: z) = true :: fstBlock z := rfl
+          have hfb : pairFst (true :: true :: z) = true :: pairFst z := rfl
           rw [hfb, List.append_assoc, List.cons_append, List.nil_append] at *
           exact hcout
 
@@ -557,7 +557,7 @@ private theorem reorderTM_copy_loop :
             reorderTM_dec_loop fuel y (acc ++ [false, true]) hyfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have hr : reorder (false :: true :: y) = false :: true :: fstBlock y := rfl
+          have hr : reorder (false :: true :: y) = false :: true :: pairFst y := rfl
           rw [hr]
           rwa [List.append_assoc] at hcout
       | false :: false :: z =>
