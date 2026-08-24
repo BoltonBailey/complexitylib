@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.EventProb
+public import Complexitylib.Classes.NP
 public import Complexitylib.Classes.P.Composition
 public import Complexitylib.Classes.P.Cobham.Internal.ConsBit
 public import Complexitylib.Classes.P.Cobham.Internal.FstBlock
@@ -50,6 +51,7 @@ and costs only a `2^q` blow-up in query count against the adaptive variant.
 - `PCP_mono` — more coins or more queries only enlarge the class
 - `P_subset_PCP` — the definition contains `P` for every `r` and `q`: the
   verifier reads nothing and ignores its coins
+- `PCP_theorem` — the statement `NP = PCP[O(log n), O(1)]`, currently `sorry`
 
 ## Conventions
 
@@ -174,5 +176,15 @@ theorem PCP_mono_queries {r q q' : ℕ → ℕ} (hq : ∀ n, q n ≤ q' n) :
     PCP r q ⊆ PCP r q' := by
   rintro L ⟨V, hV, hc, hs⟩
   exact ⟨V, fun x ρ => (hV x ρ).trans (hq _), hc, hs⟩
+
+/-! ## The PCP theorem -/
+
+/-- **The PCP theorem**, as stated on
+<https://en.wikipedia.org/wiki/PCP_theorem>: `NP = PCP[O(log n), O(1)]`. The
+big-O classes are unions over all functions `r =O log` and `q =O 1` in the
+library's `BigO` (eventual domination up to a constant). -/
+theorem PCP_theorem :
+    NP = ⋃ (r : ℕ → ℕ) (_ : r =O Nat.log 2) (q : ℕ → ℕ) (_ : q =O fun _ => 1), PCP r q := by
+  sorry
 
 end Complexity
