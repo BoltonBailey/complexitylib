@@ -37,9 +37,10 @@ The library already contains substantial foundations:
 - A logarithmic-cost random access machine model with a soundness theorem
   distinguishing it from the unsound unit-cost measure.
 - A Fourier-analysis-of-Boolean-functions subtheory (`Complexitylib.BooleanAnalysis`,
-  after Ryan O'Donnell): Chapter 1, with the parity functions as an orthonormal
-  basis, Fourier coefficients/weights, and the mean/variance/convolution API — the
-  analytic foundation for small-depth-circuit lower bounds and natural proofs.
+  after Ryan O'Donnell): Chapters 1 and 2, from the parity basis and the
+  mean/variance/convolution API through noise, influence, derivatives, and
+  average sensitivity — the analytic foundation for small-depth-circuit lower
+  bounds and natural proofs.
 
 This baseline is not yet a single unified theory. In particular, machine
 encodings, circuit families, uniformity, advice, oracle access, interactive
