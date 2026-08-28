@@ -379,8 +379,9 @@ def parseEntries (w : ℕ) : List Γw → List DescEntry
 
 /-- Decode a desc-tape symbol string into a description. The state width is
     the length of the leading `qstart` field; a `qhalt` field of any other
-    length denotes the out-of-range sentinel `2^w` (a machine that never
-    halts), matching the universal machine's symbol-wise comparison. -/
+    length denotes the out-of-range sentinel `2^w`. The interpreter can reach
+    that halt state through its default action, matching the universal
+    machine's symbol-wise comparison with the malformed field. -/
 def parseSyms (l : List Γw) : TMDesc :=
   let (qsF, r₁) := takeField l
   let (qhF, r₂) := takeField r₁
