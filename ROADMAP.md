@@ -1998,18 +1998,22 @@ randomness, interaction, and lower bounds.
   unsatisfiability), and `derives_cons` (weakening). `resolvent_length_le` gives
   the one-step width bound; fuller width/size measures over derivations remain.)*
 
-**Formalization hazards.** Counting paths depends on a clock and on a canonical
-number of nondeterministic choices; early halting must be padded consistently.
-Oracle characterizations of PH depend on the exact query model. Proof-complexity
-lower bounds need a clean distinction between semantic unsatisfiability and the
-syntactic derivation system.
+**Formalization hazards.** Fixed-length random strings and nondeterministic
+computation leaves are different counts when a machine halts early. PTM
+probabilities retain every unused random suffix with equal multiplicity; `#P`
+counts the halted leaf once. In particular, a merely big-O-bounded external clock
+must not be allowed to change a `#P` value. Oracle characterizations of PH depend
+on the exact query model. Proof-complexity lower bounds need a clean distinction
+between semantic unsatisfiability and the syntactic derivation system.
 
 **Small entry tasks.**
 
-- [S] Define a clocked accepting-path count and prove invariance after halted-path
-  padding.
-- [x] Define `#P` functions using the existing NTM path semantics
-  (`Complexitylib.Classes.SharpP`: `SharpP` class, `NTM.acceptCount_le`,
+- [x] Define accepting-leaf count separately from fixed-clock PTM count and prove
+  invariance under extending any sufficient all-paths clock
+  (`NTM.acceptLeafCount`,
+  `NTM.acceptLeafCount_eq_of_le_of_allPathsHaltIn`).
+- [x] Define `#P` functions using accepting computation-tree leaves
+  (`Complexitylib.Classes.SharpP`: `SharpP`, `NTM.acceptLeafCount_le`,
   `SharpP.le_two_pow`).
 - [x] Define quantified Boolean formulas with a quantifier-nesting-depth measure
   (`Complexitylib.SAT.QBF`: `QBF`, `QBF.quantDepth`, `QBF.QuantifierFree`).
