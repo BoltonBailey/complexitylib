@@ -480,7 +480,9 @@ tape-bank layout, its exact random-bit schedule, and cancellation of ignored
 administrative bits are now public. The wrapper's complete pathwise simulation,
 exact acceptance-probability identity, and yes/no amplification bounds are proved
 in `Complexitylib.Models.TuringMachine.Repetition.Correctness`, completing the N2
-wrapper milestone.
+wrapper milestone. Acceptance probability is also proved invariant under extending
+an observation clock after every path has halted
+(`NTM.acceptProb_eq_of_le_of_allPathsHaltIn`).
 
 **Staged milestones.**
 
@@ -489,7 +491,8 @@ wrapper milestone.
   `blockEquiv`/`blockFst`/`blockAppend`, `eventProb_map`).
 - [x] Define finite event probability once and relate it to `Finset.card` and the
   existing rational PTM probabilities (`Complexitylib.Classes.EventProb`:
-  `eventProb`, its basic laws, and `NTM.acceptProb_eq_eventProb`).
+  `eventProb`, its basic laws, `NTM.acceptProb_eq_eventProb`, and clock-extension
+  invariance after all-paths halting).
 - [x] Prove union, complement, conditioning-by-partition, and product lemmas
   (`eventProb_union_le`, `eventProb_compl`, `eventProb_eq_sum_fiberwise`,
   `eventProb_block`, and the `popCount` complement count).
@@ -525,6 +528,11 @@ to formalizing an optimal Chernoff constant first.
 - [x] Prove the finite union bound for a list of predicates by card counting.
 - [x] Implement a majority function on `Fin k -> Bool` and prove its complement
   symmetry.
+- [L] Add a direct Las Vegas/zero-error class and prove that it equals the current
+  definition `ZPP = RP ∩ coRP`. Keep expected-time or explicit `don't know`
+  semantics separate from strict all-path polynomial time: a binary-output machine
+  that is always correct and halts within a polynomial bound on every random tape
+  already gives a deterministic polynomial-time decider.
 
 ### N3. Canonical complete problems and reduction infrastructure
 
