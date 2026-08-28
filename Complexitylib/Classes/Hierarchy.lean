@@ -33,7 +33,6 @@ The witness is the diagonal language `diagLang clk` of the diagonalizer
 
 ## Main results
 
-  threshold from a big-O bound
 - `time_hierarchy_weak` — the separation, existential form
 - `time_hierarchy_weak_ssubset` — the separation as a strict inclusion
   `DTIME f ⊂ DTIME ((n + 1)² · (g n + 1))`
