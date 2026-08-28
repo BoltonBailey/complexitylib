@@ -2003,8 +2003,10 @@ syntactic derivation system.
 - [x] Define `#P` functions using the existing NTM path semantics
   (`Complexitylib.Classes.SharpP`: `SharpP` class, `NTM.acceptCount_le`,
   `SharpP.le_two_pow`).
-- [x] Define quantified Boolean formulas with a bounded alternation counter
+- [x] Define quantified Boolean formulas with a quantifier-nesting-depth measure
   (`Complexitylib.SAT.QBF`: `QBF`, `QBF.quantDepth`, `QBF.QuantifierFree`).
+- [S] Add a quantifier-block/alternation measure after fixing conventions for
+  formulas that are not in prenex normal form.
 - [x] Define resolution clauses and verify soundness of one resolution step
   (`Complexitylib.SAT.Resolution`: `Clause.resolvent`, `Clause.resolvent_sound`).
 
