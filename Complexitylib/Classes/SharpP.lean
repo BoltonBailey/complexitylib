@@ -25,8 +25,8 @@ under extending any clock by which every path has halted.
 ## Main definitions and results
 
 - `SharpP` — the counting class
-- `NTM.acceptCount_le` — a machine has at most `2 ^ T` accepting paths among the
-  `2 ^ T` length-`T` choice sequences
+- `NTM.acceptCount_le` — a machine has at most `2 ^ T` accepting fixed-clock
+  choice strings among the `2 ^ T` length-`T` strings
 - `NTM.acceptLeafCount_eq_of_le_of_allPathsHaltIn` — accepting-leaf counts do not
   depend on the choice of a sufficient clock
 - `SharpP.le_two_pow` — every `#P` function is bounded by `2 ^ T(|x|)` for its
