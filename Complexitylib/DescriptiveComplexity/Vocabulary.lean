@@ -50,10 +50,10 @@ abbrev graph : Vocabulary := ofRel 2
     one binary relation E and two constants s, t. -/
 abbrev graphST : Vocabulary := ⟨1, fun _ => 2, 2⟩
 
-/-- The vocabulary for binary strings with built-in ordering (Proviso 1.14):
-    one unary relation S (the "1-bit" predicate).
-    The linear order ≤ and successor are built-in numeric predicates, not part
-    of the vocabulary. -/
+/-- The vocabulary used for binary-string examples: one unary relation `S`
+    (the "1-bit" predicate). The name records the intended ordered setting,
+    but the current first-order syntax does not yet expose the canonical order
+    and successor helpers as formula atoms. -/
 abbrev stringBuiltinOrder : Vocabulary := ofRel 1
 
 theorem graph_isRelational : graph.IsRelational := rfl

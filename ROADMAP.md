@@ -2017,9 +2017,11 @@ track grows it toward the headline theorems.
 
 **Foundations (imported, all 0 custom axioms).**
 
-- [x] Vocabularies/signatures and finite structures over `Fin card`
+- [~] Vocabularies/signatures and finite structures over `Fin card`
   (`DescriptiveComplexity.Vocabulary`, `.Structure`: `Vocabulary`, `FinStruct`,
-  built-in `≤`/successor/min/max, `DecFinStruct`).
+  `DecFinStruct`, and canonical `≤`/successor/min/max helpers). The existing
+  unordered `Formula` syntax cannot yet mention those helpers; ordered terms,
+  atoms, and their appropriate preservation theorem remain.
 - [x] Isomorphisms, embeddings, substructures; isomorphism is an equivalence and
   preserves cardinality (`.Isomorphism`: `Iso.refl`/`symm`/`trans`,
   `Iso.card_eq`, `Embedding`, `IsSubstructure`).
@@ -2030,14 +2032,18 @@ track grows it toward the headline theorems.
 - [x] **FO sentences define order-independent queries** (Immerman Prop 1.16):
   `.FirstOrder.Isomorphism` `Sentence.orderIndependent`, via term/formula
   isomorphism-invariance (`Term.eval_iso`, `Formula.sat_iso`).
-- [x] Worked examples: directed 3-cycles with an explicit isomorphism, a binary
-  string with built-in order (`.Examples`).
+- [x] Worked examples: directed 3-cycles with an explicit isomorphism, and a
+  binary string over the canonical meta-level `Fin` order (`.Examples`).
 - [x] First-order *definable* queries and the packaged crux
   (`.Definable`: `FODefinable`, `FODefinable.orderIndependent` — FO-definable ⟹
   order-independent — with Boolean closure `complement`/`inter`/`union`).
 
 **Milestones (open).**
 
+- [ ] Add an explicitly ordered first-order layer exposing canonical min/max,
+  `≤`, and successor. Keep the existing unordered `Formula` and its unrestricted
+  isomorphism-invariance theorem intact; ordered formulas need a preservation
+  notion whose maps respect the canonical order.
 - [~] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
   structures, and its order-independence. *Decomposed:*
   - [x] `SOFormula` syntax: extend `Formula` with relation-variable application
