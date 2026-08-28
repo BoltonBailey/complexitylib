@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.Dependency
 public import Complexitylib.Circuits.DecisionTree
 public import Complexitylib.Circuits.DecisionTree.Finite
+public import Complexitylib.Circuits.DecisionTree.Block
 public import Complexitylib.Circuits.DecisionTree.NormalForm
 public import Complexitylib.Circuits.DecisionTree.Path
 public import Complexitylib.Circuits.DecisionTree.Restriction
