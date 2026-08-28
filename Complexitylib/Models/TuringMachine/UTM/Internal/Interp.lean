@@ -11,11 +11,11 @@ public import Complexitylib.Models.TuringMachine.UTM.Internal.Desc
 # Interpreting machine descriptions
 
 `TMDesc.toTM` turns a description into an actual single-work-tape machine:
-states are `Fin (2^w + 1)` (the extra state `2^w` is the "never halts"
-sentinel produced when decoding a malformed halt field — it is unreachable,
-since every transition target is reduced mod `2^w`), transitions look up the
-table, and head directions are sanitized to satisfy the `▷ ⇒ move right`
-discipline.
+states are `Fin (2^w + 1)` (the extra state `2^w` represents a malformed
+out-of-range halt field), transitions look up the table, and head directions
+are sanitized to satisfy the `▷ ⇒ move right` discipline. Transition targets
+are clamped at `2^w`; in particular, a missing table entry takes the default
+action to the represented halt state, including the malformed sentinel.
 
 `descOfTM` extracts a well-formed description from any single-work-tape
 machine: states are numbered by the canonical `Fintype` equivalence and the
@@ -38,9 +38,10 @@ namespace Complexity
 namespace TMDesc
 
 /-- Interpret a description as a single-work-tape machine. States are
-    `Fin (2^w + 1)`; state `2^w` is the never-halting sentinel (reachable
-    only as a malformed `qhalt`, never as a transition target). Directions
-    are sanitized to satisfy the `▷ ⇒ right` discipline. -/
+    `Fin (2^w + 1)`; state `2^w` represents an out-of-range `qhalt`. Transition
+    targets are clamped at that state, so the default action still reaches the
+    represented halt state. Directions are sanitized to satisfy the
+    `▷ ⇒ right` discipline. -/
 def toTM (d : TMDesc) : TM 1 where
   Q := Fin (2 ^ d.w + 1)
   qstart := ⟨d.qstart % 2 ^ d.w, Nat.lt_succ_of_lt (Nat.mod_lt _ (Nat.two_pow_pos _))⟩
