@@ -59,6 +59,7 @@ public import Complexitylib.Circuits.Nondeterminism
 public import Complexitylib.Circuits.Hardwiring
 public import Complexitylib.Circuits.Unrolling
 public import Complexitylib.Circuits.Valiant
+import Complexitylib.Circuits.Internal.Bridge
 
 /-! # Circuit Complexity Library
 
