@@ -43,6 +43,8 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
   adapters from bad-event bounds to one seed that works on every input
 - `NTM.acceptProb_eq_eventProb` — the PTM acceptance probability *is* the event
   probability of its set of accepting choice sequences
+- `NTM.acceptProb_eq_of_le_of_allPathsHaltIn` — extending an all-paths-halting
+  observation clock does not change acceptance probability
 - `NTM.acceptProb_eq_eventProb_repeatRandomSeed` — remove administrative random
   bits when a machine's acceptance factors through the compact repetition seed
 -/
@@ -436,6 +438,50 @@ theorem NTM.acceptProb_eq_eventProb {n : ℕ} (tm : NTM n) (x : List Bool) (T : 
         let c' := tm.trace T choices (tm.initCfg x)
         c'.state = tm.qhalt ∧ c'.output.cells 1 = Γ.one) := by
   rfl
+
+/-- Once every path has halted by time `T`, extending the observation clock to
+any `T' ≥ T` leaves acceptance probability unchanged. Halted traces are fixed,
+and every length-`T` choice sequence has the same number of extensions, so the
+extra random bits cancel from the numerator and denominator. -/
+theorem NTM.acceptProb_eq_of_le_of_allChoicesHalt {n T T' : ℕ}
+    (tm : NTM n) (x : List Bool) (hle : T ≤ T')
+    (hhalt : ∀ choices : Fin T → Bool,
+      tm.halted (tm.trace T choices (tm.initCfg x))) :
+    tm.acceptProb x T' = tm.acceptProb x T := by
+  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hle
+  rw [NTM.acceptProb_eq_eventProb, NTM.acceptProb_eq_eventProb]
+  let accepts : (Fin T → Bool) → Prop := fun choices =>
+    let c := tm.trace T choices (tm.initCfg x)
+    c.state = tm.qhalt ∧ c.output.cells 1 = Γ.one
+  have hpredicate : ∀ choices : Fin (T + d) → Bool,
+      (let c := tm.trace (T + d) choices (tm.initCfg x)
+       c.state = tm.qhalt ∧ c.output.cells 1 = Γ.one) ↔
+        accepts (blockFst T d choices) := by
+    intro choices
+    have htrace := tm.trace_mono (Nat.le_add_right T d)
+      (choices := blockFst T d choices) (choices' := choices)
+      (c := tm.initCfg x) (fun _ => rfl) (hhalt _)
+    simp only [accepts]
+    rw [htrace]
+  rw [show
+      (Finset.univ.filter fun choices : Fin (T + d) → Bool =>
+        let c := tm.trace (T + d) choices (tm.initCfg x)
+        c.state = tm.qhalt ∧ c.output.cells 1 = Γ.one) =
+        Finset.univ.filter
+          (fun choices => accepts (blockFst T d choices) ∧ True) by
+    ext choices
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, and_true]
+    exact hpredicate choices]
+  have hblock := eventProb_block accepts (fun _ : Fin d → Bool => True)
+  simpa using hblock
+
+/-- A pointwise-larger clock gives the same acceptance probability once the
+machine satisfies `AllPathsHaltIn` for the smaller clock. -/
+theorem NTM.acceptProb_eq_of_le_of_allPathsHaltIn {n : ℕ} {T T' : ℕ → ℕ}
+    (tm : NTM n) (hle : ∀ m, T m ≤ T' m) (hhalt : tm.AllPathsHaltIn T)
+    (x : List Bool) :
+    tm.acceptProb x (T' x.length) = tm.acceptProb x (T x.length) :=
+  tm.acceptProb_eq_of_le_of_allChoicesHalt x (hle x.length) (hhalt x)
 
 /-- A repeated machine's administrative random choices cancel from its acceptance
     probability whenever its accepting-path predicate factors through
