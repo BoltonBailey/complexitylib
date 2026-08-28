@@ -108,7 +108,10 @@ same file are acceptable.
   exists exactly for `x ∈ L`; any halted path whose output cell is not `1` is
   rejecting. Use `NTM.RejectsWithZero` when a construction additionally needs
   exact `0` output on every rejecting path.
-- **PTM counting**: `acceptCount` and `acceptProb` count/measure accepting paths over `Fin T → Bool`. Meaningful only when all paths halt within `T` steps.
+- **PTM counting**: `acceptCount` and `acceptProb` count/measure accepting
+  fixed-length choice strings over `Fin T → Bool`. Meaningful only when all
+  paths halt within `T` steps. This is distinct from the computation-tree leaf
+  count used by `SharpP`.
 - **Custom one-sided tapes**: `Tape` has `head : ℕ` and `cells : ℕ → Γ`. Cell 0 is leftmost and permanently `▷` (write is a no-op at cell 0). Moving left at position 0 is a no-op (Nat subtraction). Output is read from `cells 1` (first cell after `▷`). No dependency on `Mathlib.Computability.Tape`.
 - **Read vs write alphabet**: `δ` reads `Γ = {0, 1, □, ▷}` but writes `Γw = {0, 1, □}`, structurally preventing writing `▷`. Combined with immutable cell 0, `▷` uniquely marks position 0 on every tape.
 - **Finite state**: `TM` and `NTM` carry `[Fintype Q]`, matching AB's finite state requirement.
