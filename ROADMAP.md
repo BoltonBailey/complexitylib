@@ -2064,10 +2064,10 @@ track grows it toward the headline theorems.
   - [~] Full encoding: prepend `card` (and any constants) and make it computable;
     a decode/encode round-trip on ordered structures. (`Encoding.lean`: computable
     tuple enumeration `allTuples` (length `card^k`, `mem_allTuples`), computable
-    relation/structure encodings `encodeRelC`/`encodeRelsC`, and the full
-    `encodeStruct` (unary `card` prefix + relations) with cardinality recovery
-    `encodeStruct_card` are done; encoding the constants and a full structure
-    round-trip remain.)
+    relation/structure encodings `encodeRelC`/`encodeRelsC`, one-hot constant
+    blocks `encodeConstC`/`encodeConstsC`, and the full `encodeStruct` (unary
+    `card` prefix + relations + constants) with cardinality recovery
+    `encodeStruct_card` are done; a full structure parser and round-trip remain.)
   - [x] The induced language `⟦Q⟧ : Language` of a query (`Language.lean`:
     `queryLanguage` — the encodings of `Q`-satisfying structures — and
     `mem_queryLanguage`). This is the bridge to the machine-model `Language`.
