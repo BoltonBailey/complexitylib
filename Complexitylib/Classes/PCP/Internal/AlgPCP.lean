@@ -110,8 +110,8 @@ open scoped Complexity in
 /-- **Every `NP` language has a PCP verifier** with logarithmically many coins
 and constantly many queries. -/
 theorem exists_pcp_of_mem_NP {L : Language} (hL : L ∈ NP) :
-    ∃ r qc : ℕ → ℕ, r =O (fun n => Nat.log 2 n) ∧ Constructible r
-      ∧ qc =O (fun _ => 1) ∧ L ∈ PCP r qc := by
+    ∃ r : ℕ → ℕ, r =O (fun n => Nat.log 2 n) ∧ Constructible r
+      ∧ ∃ qc : ℕ → ℕ, qc =O (fun _ => 1) ∧ L ∈ PCP r qc := by
   classical
   obtain ⟨E, Φ, hEfp, hEeq, h3, hLiff⟩ := exists_reduction_cnf hL
   obtain ⟨pad0, q0, hpad0fp, hmark0, hq0, hle0⟩ := exists_padRuler hEfp 3
@@ -196,8 +196,8 @@ theorem exists_pcp_of_mem_NP {L : Language} (hL : L ∈ NP) :
     (fun x => by rw [hNE x]; exact two_pow_gapCoins_le (hqpos x.length))
     (Dinur.amplifier (algF.toFamily algHd)).gap_pos
     (Dinur.amplifier (algF.toFamily algHd)).gap_le_one hcomp hsound
-  refine ⟨fun n => 2 ^ j * gapCoins q n,
-    fun _ => 2 ^ j * (2 * (gapAlg algF algHd E padU hgap).width), ?_, ?_, ?_, hj⟩
+  refine ⟨fun n => 2 ^ j * gapCoins q n, ?_, ?_,
+    fun _ => 2 ^ j * (2 * (gapAlg algF algHd E padU hgap).width), ?_, hj⟩
   · exact BigO.const_mul_left _ (gapCoins_bigO_log q)
   · exact constructible_pow_mul ht j
   · have h := BigO.const_mul_left (2 ^ j * (2 * (gapAlg algF algHd E padU hgap).width))

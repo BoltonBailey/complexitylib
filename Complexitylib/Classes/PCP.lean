@@ -41,12 +41,8 @@ theorem PCP_theorem :
     NP = ⋃ (r : ℕ → ℕ) (_ : r =O Nat.log 2) (_ : Constructible r)
       (q : ℕ → ℕ) (_ : q =O fun _ => 1), PCP r q := by
   ext L
-  simp only [Set.mem_iUnion]
-  constructor
-  · intro hL
-    obtain ⟨r, qc, hrlog, hrc, hq1, hmem⟩ := exists_pcp_of_mem_NP hL
-    exact ⟨r, hrlog, hrc, qc, hq1, hmem⟩
-  · rintro ⟨r, hrlog, hrc, qc, hq1, hmem⟩
-    exact PCP_subset_NP hrc hrlog hq1 hmem
+  simp only [Set.mem_iUnion, exists_prop]
+  exact ⟨exists_pcp_of_mem_NP,
+    fun ⟨_, hrlog, hrc, _, hq1, hmem⟩ => PCP_subset_NP hrc hrlog hq1 hmem⟩
 
 end Complexity
