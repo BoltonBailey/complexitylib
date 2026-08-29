@@ -796,16 +796,6 @@ theorem assignOf_get {M : ℕ} (g : ℕ → Bool) {v : ℕ} (h : v < M) :
     (assignOf M g).get v = g v := by
   simp [assignOf, Assignment.get, h]
 
-/-- Every element of a list is bounded by the list's `foldr max 0`. -/
-theorem le_foldr_max {v : ℕ} {l : List ℕ} (h : v ∈ l) : v ≤ l.foldr max 0 := by
-  induction l with
-  | nil => simp at h
-  | cons a t ih =>
-    rw [List.foldr_cons]
-    rcases List.mem_cons.mp h with h' | h'
-    · subst h'; exact le_max_left _ _
-    · exact le_trans (ih h') (le_max_right _ _)
-
 /-- Indicator assignment for a finite list of "true" variables: every listed
     variable reads `true`, every other variable reads `false`. The truncation
     length is one past the list's maximum, so listed variables stay in range while
@@ -815,7 +805,7 @@ def listAssign (l : List ℕ) : Assignment := assignOf (l.foldr max 0 + 1) (fun 
 /-- `listAssign l` reads `true` on every listed variable. -/
 theorem listAssign_get_true {l : List ℕ} {v : ℕ} (h : v ∈ l) :
     (listAssign l).get v = true := by
-  rw [listAssign, assignOf_get _ (Nat.lt_succ_of_le (le_foldr_max h))]
+  rw [listAssign, assignOf_get _ (Nat.lt_succ_of_le (List.le_max_of_le' 0 h le_rfl))]
   simp [h]
 
 /-- `listAssign l` reads `false` on every unlisted variable. -/

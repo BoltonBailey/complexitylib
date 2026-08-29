@@ -131,15 +131,6 @@ theorem ccStep_iterate : ∀ (k : ℕ) (c s : List Bool), s.length ≤ 2 * k →
 
 /-! ### The scan as one function -/
 
-theorem length_selectHead_le (s x y : List Bool) :
-    (Cobham.selectHead s x y).length ≤ max x.length y.length := by
-  rw [Cobham.selectHead]
-  split
-  · exact le_max_left _ _
-  · split
-    · exact le_max_right _ _
-    · simp
-
 theorem ccStep_one (c s : List Bool) :
     ∃ X Y, ccStep (pair c s) = pair X Y
       ∧ X.length ≤ c.length + 1 ∧ Y.length ≤ s.length := by

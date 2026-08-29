@@ -6,7 +6,7 @@ Authors: Bolton Bailey
 module
 public import Complexitylib.Classes.PCP.Internal.ZigZag
 public import Complexitylib.Classes.PCP.Internal.Power
-public import Complexitylib.Classes.PCP.Internal.ExpanderAssemble
+public import Complexitylib.Classes.PCP.Internal.ExpanderPad
 
 /-!
 # The zig-zag tower

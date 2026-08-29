@@ -5,21 +5,21 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.PCP.Internal.TowerFin
-public import Complexitylib.Classes.PCP.Internal.TowerFamily
+public import Complexitylib.Classes.PCP.Internal.MergeGen
 
 /-!
 # An expander of every size, numbered
 
 `TowerFin` gives an expander at the tower's own sizes; a constraint graph asks
 for one on exactly its own vertex count, and Dinur's degree reduction asks for
-one on every vertex degree. This module closes the gap the way `TowerFamily`
-does — fold the first large enough member onto `n` vertices, then pad the degree
-with self-loops — but keeps every naming explicit, so that the rotation map
-stays a formula in numbers.
+one on every vertex degree. This module closes the gap — fold the first large
+enough member onto `n` vertices, then pad the degree with self-loops — keeping
+every naming explicit, so that the rotation map stays a formula in numbers.
 
-The one place `TowerFamily` numbers its darts by an arbitrary bijection is here
-replaced by packing a slot and a dart with `finProdFinEquiv` and the padding
-with `finSumFinEquiv`.
+Nothing is numbered by an arbitrary bijection: a slot and a dart are packed with
+`finProdFinEquiv`, and the padding with `finSumFinEquiv`. That is what lets
+`famRotVal` compute the family's rotation map on raw numerals, which is what an
+algorithm has to be handed.
 
 ## Main definitions
 

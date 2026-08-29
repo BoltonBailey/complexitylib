@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 module
-public import Complexitylib.Classes.PCP.Internal.ExpanderAssemble
+public import Complexitylib.Classes.PCP.Internal.RegularGraph
 public import Mathlib.Data.ZMod.Basic
 
 /-!

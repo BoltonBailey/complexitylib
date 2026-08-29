@@ -24,10 +24,11 @@ finite of size `∑_{ℓ ≤ T} deg ^ ℓ`, so the alphabet stays a constant
 `|α| ^ (∑_{ℓ ≤ T} deg ^ ℓ)`, independent of the number of vertices — which is
 what makes the alphabet-reduction step afterwards possible.
 
-Variable-length indices are the point of the redesign. With the fixed-length
-indices of `PowerCSP`, a short prefix had to be padded out with self-loops, and
-the padded indices formed a vanishing sub-cube that the plurality bound could
-not see; that module's docstring records why this sinks soundness there.
+Variable-length indices are the point of the design. Were the indices instead
+walks of one fixed length, a short prefix would have to be padded out with
+self-loops, and the padded indices would form a vanishing sub-cube that the
+plurality bound cannot see — which sinks soundness. `KilledWalk` records the
+counting behind that failure.
 
 ## The constraint
 

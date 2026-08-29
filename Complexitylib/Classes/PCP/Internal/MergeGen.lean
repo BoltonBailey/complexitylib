@@ -5,6 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.PCP.Internal.ExpanderMerge
+public import Mathlib.Data.Real.Sqrt
 
 /-!
 # Merging at an arbitrary width

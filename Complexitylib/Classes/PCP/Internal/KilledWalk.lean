@@ -24,7 +24,8 @@ Soundness decodes an assignment of the powered system by plurality and needs the
 opinions at the two ends of a checked step to be truthful. Summed over the
 checked steps that amounts to `∑ a_i · b_j` over the prefix length `i` and the
 suffix length `j`. With walks of *fixed* length those are tied by `i + j = t - 1`
-and the sum can vanish, as `PowerCSP`'s module docstring explains. Killing makes
+and the sum can vanish — the two ends can be truthful at complementary lengths
+and never at the same step, so nothing is charged. Killing makes
 `i` and `j` **independent**, so the sum factorises into a product of two
 plurality bounds. That factorisation is the whole reason for this construction.
 

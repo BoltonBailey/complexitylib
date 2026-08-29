@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 module
-public import Complexitylib.Classes.PCP.Internal.SizedExpander
+public import Complexitylib.Classes.PCP.Internal.ZigZagTower
 public import Complexitylib.Classes.PCP.Internal.ExpanderExists
 
 /-!
@@ -30,8 +30,6 @@ Applied to `randExpander`, this shows a `ZigZagBase` exists.
 ## Main results
 
 - `Complexity.nonempty_zigZagBase` — a base graph exists
-- `Complexity.nonempty_sizedExpanderFamily` — so the tower's size-flexible
-  family exists too
 -/
 
 @[expose] public section
@@ -83,18 +81,10 @@ theorem one_lt_deg_toZigZagBase (h : 1 < E.degree) : 1 < E.toZigZagBase.base.deg
   rw [deg_toZigZagBase]
   exact Nat.one_lt_pow (by have := E.one_le_fifthExp; omega) h
 
-/-- **The tower's size-flexible family, from any expander family.** -/
-noncomputable def toSizedFamily (h : 1 < E.degree) : SizedExpanderFamily :=
-  E.toZigZagBase.toSized (E.one_lt_deg_toZigZagBase h)
-
 end ExpanderFamily
 
 /-- **A base graph for the tower exists.** -/
 theorem nonempty_zigZagBase : Nonempty ZigZagBase :=
   ⟨randExpander.toZigZagBase⟩
-
-/-- **A size-flexible family exists.** -/
-theorem nonempty_sizedExpanderFamily : Nonempty SizedExpanderFamily :=
-  ⟨randExpander.toSizedFamily (by show 1 < 120; norm_num)⟩
 
 end Complexity

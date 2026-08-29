@@ -59,16 +59,6 @@ theorem accepts_iff_acceptsWith (x π ρ : List Bool) :
 
 /-! ### Realising a table by a proof -/
 
-/-- Every entry of a list is at most its running maximum. -/
-theorem le_foldr_max (l : List ℕ) {p : ℕ} (hp : p ∈ l) : p ≤ l.foldr max 0 := by
-  induction l with
-  | nil => exact absurd hp (by simp)
-  | cons a l ih =>
-      rcases List.mem_cons.mp hp with h | h
-      · subst h
-        exact le_max_left _ _
-      · exact le_trans (ih h) (le_max_right _ _)
-
 /-- A bound past every position the verifier can query on `x` with `t` coins. -/
 noncomputable def maxQuery (V : PCPVerifier) (t : ℕ) (x : List Bool) : ℕ :=
   (Finset.univ.sup fun ρ : Fin t → Bool =>
@@ -76,7 +66,7 @@ noncomputable def maxQuery (V : PCPVerifier) (t : ℕ) (x : List Bool) : ℕ :=
 
 theorem lt_maxQuery {t : ℕ} {x : List Bool} {ρ : Fin t → Bool} {p : ℕ}
     (hp : p ∈ V.positions x (BitString.toList ρ)) : p < V.maxQuery t x := by
-  have h1 : p ≤ (V.positions x (BitString.toList ρ)).foldr max 0 := le_foldr_max _ hp
+  have h1 : p ≤ (V.positions x (BitString.toList ρ)).foldr max 0 := List.le_max_of_le' 0 hp le_rfl
   have h2 : (V.positions x (BitString.toList ρ)).foldr max 0
       ≤ Finset.univ.sup fun σ : Fin t → Bool =>
         (V.positions x (BitString.toList σ)).foldr max 0 :=

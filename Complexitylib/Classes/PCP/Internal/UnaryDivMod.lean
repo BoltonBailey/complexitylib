@@ -106,7 +106,7 @@ theorem dmStep_iterate {B : List Bool} (hb : 0 < B.length) :
 
 /-! ### Halving -/
 
-theorem length_selectHead_le' (s x y : List Bool) :
+theorem length_selectHead_le (s x y : List Bool) :
     (Cobham.selectHead s x y).length ≤ max x.length y.length := by
   rw [Cobham.selectHead]
   split
@@ -125,9 +125,9 @@ theorem dmStep_one (q r b : List Bool) :
   have hb : Cobham.sndBlock (pair (pair q r) b) = b := Cobham.sndBlock_pair _ _
   rw [dmStep, hq, hr, hb]
   refine ⟨_, _, rfl, ?_, ?_⟩
-  · refine le_trans (length_selectHead_le' _ _ _) ?_
+  · refine le_trans (length_selectHead_le _ _ _) ?_
     simp
-  · refine le_trans (length_selectHead_le' _ _ _) ?_
+  · refine le_trans (length_selectHead_le _ _ _) ?_
     simp
 
 theorem dmStep_shape : ∀ (k : ℕ) (q r b : List Bool),

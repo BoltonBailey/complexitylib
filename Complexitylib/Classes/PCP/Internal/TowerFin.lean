@@ -31,7 +31,6 @@ level's types be `Fin` on the nose rather than up to a transport.
 - `Complexity.FinBase.graphAt_succ` — one level is a zig-zag of the previous
 - `Complexity.FinBase.spectral_graphAt` — every level has bound `2 / 5`
 - `Complexity.FinBase.rotVal_eq` — the numeric recursion computes it
-- `Complexity.FinBase.toSized` — the numbered tower as a size-flexible family
 - `Complexity.nonempty_finBase` — a numbered base exists
 -/
 
@@ -440,20 +439,6 @@ theorem size_level_le (hd : 1 < F.deg) (n : ℕ) (hn : 1 ≤ n) :
     rw [size] at hprev
     calc (F.deg ^ 4) ^ (m + 1 + 1) = F.deg ^ 4 * (F.deg ^ 4) ^ (m + 1) := by ring
       _ ≤ F.deg ^ 4 * n := Nat.mul_le_mul_left _ hprev.le
-
-/-- **The numbered tower, as a size-flexible family.** -/
-noncomputable def toSized (hd : 1 < F.deg) : SizedExpanderFamily where
-  degree := F.deg ^ 2
-  degree_pos := F.sq_pos
-  factor := F.deg ^ 4
-  graph := fun n => F.graphAt (F.level hd n)
-  deg_graph := fun n => F.deg_graphAt _
-  order_ge := fun n => by rw [order_graphAt]; exact F.le_size_level hd n
-  order_le := fun n hn => by rw [order_graphAt]; exact F.size_level_le hd n hn
-  lam := 2 / 5
-  lam_nonneg := by norm_num
-  lam_lt_one := by norm_num
-  spectral := fun n => spectral_graphAt F _
 
 end FinBase
 
