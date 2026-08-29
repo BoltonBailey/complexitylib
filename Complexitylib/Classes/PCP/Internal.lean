@@ -1,0 +1,108 @@
+/-
+Copyright (c) 2026 Bolton Bailey. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bolton Bailey
+-/
+module
+public import Complexitylib.Classes.PCP.Internal.AlgCSPModel
+public import Complexitylib.Classes.PCP.Internal.AlphabetLift
+public import Complexitylib.Classes.PCP.Internal.Amplification
+public import Complexitylib.Classes.PCP.Internal.Arithmetize
+public import Complexitylib.Classes.PCP.Internal.BaseAlg
+public import Complexitylib.Classes.PCP.Internal.BinToUnary
+public import Complexitylib.Classes.PCP.Internal.BitwiseFP
+public import Complexitylib.Classes.PCP.Internal.BoundNotConstructible
+public import Complexitylib.Classes.PCP.Internal.BoundedQuant
+public import Complexitylib.Classes.PCP.Internal.CNFCount
+public import Complexitylib.Classes.PCP.Internal.CNFMaxVar
+public import Complexitylib.Classes.PCP.Internal.CNFSegment
+public import Complexitylib.Classes.PCP.Internal.CNFTokens
+public import Complexitylib.Classes.PCP.Internal.CSPVerifier
+public import Complexitylib.Classes.PCP.Internal.Cheeger
+public import Complexitylib.Classes.PCP.Internal.Clique
+public import Complexitylib.Classes.PCP.Internal.CloudDisagreement
+public import Complexitylib.Classes.PCP.Internal.CoinEnum
+public import Complexitylib.Classes.PCP.Internal.Compose
+public import Complexitylib.Classes.PCP.Internal.ConsistencyLang
+public import Complexitylib.Classes.PCP.Internal.ConstraintGraph
+public import Complexitylib.Classes.PCP.Internal.CubeBlocks
+public import Complexitylib.Classes.PCP.Internal.DartCorrelation
+public import Complexitylib.Classes.PCP.Internal.DataScan
+public import Complexitylib.Classes.PCP.Internal.DataScanSpec
+public import Complexitylib.Classes.PCP.Internal.DegreeReduction
+public import Complexitylib.Classes.PCP.Internal.DegreeReductionSound
+public import Complexitylib.Classes.PCP.Internal.Dinur
+public import Complexitylib.Classes.PCP.Internal.Disagreement
+public import Complexitylib.Classes.PCP.Internal.EdgeExpansion
+public import Complexitylib.Classes.PCP.Internal.Expander
+public import Complexitylib.Classes.PCP.Internal.ExpanderAssemble
+public import Complexitylib.Classes.PCP.Internal.ExpanderExists
+public import Complexitylib.Classes.PCP.Internal.ExpanderMerge
+public import Complexitylib.Classes.PCP.Internal.ExpanderPad
+public import Complexitylib.Classes.PCP.Internal.ExpanderRandom
+public import Complexitylib.Classes.PCP.Internal.ExpanderizeCSP
+public import Complexitylib.Classes.PCP.Internal.FiniteKey
+public import Complexitylib.Classes.PCP.Internal.FinsetPlurality
+public import Complexitylib.Classes.PCP.Internal.GapReduction
+public import Complexitylib.Classes.PCP.Internal.GapTheorem
+public import Complexitylib.Classes.PCP.Internal.GuessVerifyGeneric
+public import Complexitylib.Classes.PCP.Internal.Hadamard
+public import Complexitylib.Classes.PCP.Internal.HadamardTester
+public import Complexitylib.Classes.PCP.Internal.KilledCSP
+public import Complexitylib.Classes.PCP.Internal.KilledFirstMoment
+public import Complexitylib.Classes.PCP.Internal.KilledPlurality
+public import Complexitylib.Classes.PCP.Internal.KilledWalk
+public import Complexitylib.Classes.PCP.Internal.LengthMod
+public import Complexitylib.Classes.PCP.Internal.ListEncode
+public import Complexitylib.Classes.PCP.Internal.LocalTest
+public import Complexitylib.Classes.PCP.Internal.MaxLoop
+public import Complexitylib.Classes.PCP.Internal.MergeGen
+public import Complexitylib.Classes.PCP.Internal.Mixing
+public import Complexitylib.Classes.PCP.Internal.NatEncode
+public import Complexitylib.Classes.PCP.Internal.PCPtoSAT
+public import Complexitylib.Classes.PCP.Internal.Pad
+public import Complexitylib.Classes.PCP.Internal.PadCSP
+public import Complexitylib.Classes.PCP.Internal.PadVerts
+public import Complexitylib.Classes.PCP.Internal.PermArith
+public import Complexitylib.Classes.PCP.Internal.PermCount
+public import Complexitylib.Classes.PCP.Internal.PermGraph
+public import Complexitylib.Classes.PCP.Internal.Plurality
+public import Complexitylib.Classes.PCP.Internal.PosScan
+public import Complexitylib.Classes.PCP.Internal.PositionsFP
+public import Complexitylib.Classes.PCP.Internal.Power
+public import Complexitylib.Classes.PCP.Internal.PowerCSP
+public import Complexitylib.Classes.PCP.Internal.PoweringBound
+public import Complexitylib.Classes.PCP.Internal.Preprocess
+public import Complexitylib.Classes.PCP.Internal.RegCSP
+public import Complexitylib.Classes.PCP.Internal.RegularGraph
+public import Complexitylib.Classes.PCP.Internal.SecondMoment
+public import Complexitylib.Classes.PCP.Internal.SelfLoops
+public import Complexitylib.Classes.PCP.Internal.SizedExpander
+public import Complexitylib.Classes.PCP.Internal.SizedExpanderize
+public import Complexitylib.Classes.PCP.Internal.SquareVerifier
+public import Complexitylib.Classes.PCP.Internal.StripTrailing
+public import Complexitylib.Classes.PCP.Internal.SubsetNP
+public import Complexitylib.Classes.PCP.Internal.SubsetNPFinal
+public import Complexitylib.Classes.PCP.Internal.SymbolCodec
+public import Complexitylib.Classes.PCP.Internal.TesterChecks
+public import Complexitylib.Classes.PCP.Internal.TesterCore
+public import Complexitylib.Classes.PCP.Internal.TesterInput
+public import Complexitylib.Classes.PCP.Internal.ThreeSATReduction
+public import Complexitylib.Classes.PCP.Internal.TowerFamily
+public import Complexitylib.Classes.PCP.Internal.UnaryDivMod
+public import Complexitylib.Classes.PCP.Internal.UnaryExp
+public import Complexitylib.Classes.PCP.Internal.Union
+public import Complexitylib.Classes.PCP.Internal.VerifierLang
+public import Complexitylib.Classes.PCP.Internal.Walk
+public import Complexitylib.Classes.PCP.Internal.WalkDart
+public import Complexitylib.Classes.PCP.Internal.WalkPath
+public import Complexitylib.Classes.PCP.Internal.WalkSplit
+public import Complexitylib.Classes.PCP.Internal.ZigZag
+public import Complexitylib.Classes.PCP.Internal.ZigZagTower
+
+/-!
+# Aggregation: the internals of the PCP development
+
+Every module of Dinur's proof, so that the whole tree is reachable from a single
+build target. Aggregation files carry no definitions.
+-/

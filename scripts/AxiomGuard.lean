@@ -83,6 +83,10 @@ def headlineTheorems : List Name := [
   `Complexity.PSPACE_eq_NPSPACE,
   -- the easy half of Shamir's theorem
   `Complexity.IP_subset_PSPACE,
+  -- the PCP theorem
+  `Complexity.PCP_theorem,
+  `Complexity.exists_pcp_of_mem_NP,
+  `Complexity.PCP_subset_NP,
   -- Circuit lower and upper bounds
   `Complexity.shannon_lower_bound_circuit,
   `Complexity.shannon_sizeComplexity,
