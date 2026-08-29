@@ -336,7 +336,7 @@ theorem segAtFn_mem_FP : segAtFn s0 s1 ∈ FP := by
     omega
   have hiter := Cobham.iterate_mem_FP (segStep_mem_FP s0 s1) hinit hs hwidth hbound
   have := mem_FP_comp hiter segColl_mem_FP
-  simpa [Function.comp, segAtFn] using this
+  simpa only using this
 
 theorem segAtFn_eq {j : ℕ} {e : List Bool} (h : Even e.length) :
     segAtFn s0 s1 (pair (List.replicate j true) e) = segFrom s0 s1 j 0 e := by
@@ -363,9 +363,9 @@ theorem litSegFn_mem_FP : litSegFn ∈ FP := by
   have hcl : (fun z : List Bool => segAtFn true false
       (pair (Cobham.fstBlock (Cobham.fstBlock z)) (Cobham.sndBlock z))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hj he) (segAtFn_mem_FP true false)
-    simpa [Function.comp] using this
+    simpa only using this
   have := mem_FP_comp (Cobham.pairFn_mem_FP hp hcl) (segAtFn_mem_FP false true)
-  simpa [Function.comp, litSegFn] using this
+  simpa only using this
 
 theorem litSegFn_eq {j p : ℕ} {e : List Bool} (h : Even e.length) :
     litSegFn (pair (pair (List.replicate j true) (List.replicate p true)) e)
@@ -383,7 +383,7 @@ theorem litVarFn_mem_FP : litVarFn ∈ FP := by
     refine mem_FP_of_eq this fun z => ?_
     rfl
   have := mem_FP_comp hdrop halfFn_mem_FP
-  simpa [Function.comp, litVarFn] using this
+  simpa only using this
 
 theorem litVarFn_eq {j p : ℕ} {e : List Bool} (h : Even e.length) :
     litVarFn (pair (pair (List.replicate j true) (List.replicate p true)) e)

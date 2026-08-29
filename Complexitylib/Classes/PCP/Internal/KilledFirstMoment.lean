@@ -1169,7 +1169,6 @@ theorem powering_soundness (A : (R.killedPow q T hq).Assignment) {H : ℕ}
       ≤ (((R.killedPow q T hq).unsatDarts A).card : ℝ) := by
   classical
   have hK : (0 : ℝ) < ((Fintype.card α ^ 2 * (R.graph.deg ^ (T + 1) * q ^ T) : ℕ) : ℝ) := by
-    have hα : 0 < Fintype.card α := Fintype.card_pos
     have hd : 0 < R.graph.deg := R.graph.deg_pos
     have : 0 < Fintype.card α ^ 2 * (R.graph.deg ^ (T + 1) * q ^ T) := by positivity
     exact_mod_cast this

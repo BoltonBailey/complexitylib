@@ -132,8 +132,7 @@ theorem rulerLen_bigO_log {N : ℕ → ℕ} {A B : ℕ} (hN : ∀ n, N n ≤ A *
       le_trans (hN n) (Nat.mul_le_mul hA hpow)
     have h2 : 2 ^ (Nat.log 2 A + 3 + (Nat.log 2 n + 1) * B)
         = 4 * (2 ^ (Nat.log 2 A + 1) * 2 ^ ((Nat.log 2 n + 1) * B)) := by
-      rw [← pow_add]
-      rw [show (4 : ℕ) = 2 ^ 2 from rfl, ← pow_add]
+      rw [← pow_add, show (4 : ℕ) = 2 ^ 2 from rfl, ← pow_add]
       congr 1
       ring
     have h3 : 0 < 2 ^ (Nat.log 2 A + 1) * 2 ^ ((Nat.log 2 n + 1) * B) :=
@@ -176,8 +175,6 @@ theorem logFold_eq (bound : ℕ) : ∀ z : List Bool, 4 * z.length + 4 ≤ bound
   | cons b t ih =>
       intro hb
       have hbt : 4 * t.length + 4 ≤ bound := by simp at hb ⊢; omega
-      have hpow := two_pow_rulerLen_le (t.length + 1)
-      have hlen := rulerLen_le (t.length + 1)
       rw [Cobham.recFoldClamp]
       simp only [Bool.cond_self]
       rw [ih hbt, logStep]

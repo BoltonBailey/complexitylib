@@ -294,10 +294,10 @@ theorem scanArg_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b �
     (fun z => scanArg (a z).length (b z)) ∈ FP := by
   have hrep : (fun z => List.replicate (a z).length true) ∈ FP := by
     have := mem_FP_comp ha unaryLength_mem_FP
-    simpa [Function.comp] using this
+    simpa using this
   have hrev : (fun z => (b z).reverse) ∈ FP := by
     have := mem_FP_comp hb reverse_mem_FP
-    simpa [Function.comp] using this
+    simpa using this
   exact Cobham.pairFn_mem_FP hrep hrev
 
 /-- **The scan extracts the child.** Reading the concatenated serializations of

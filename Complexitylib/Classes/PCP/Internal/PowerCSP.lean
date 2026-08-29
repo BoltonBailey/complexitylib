@@ -217,7 +217,7 @@ theorem not_satisfies_power_of_faulty {σ : R.Assignment}
 theorem card_dart_power :
     Fintype.card (R.power L t h).Dart = R.graph.order * R.graph.deg ^ t := by
   rw [card_dart]
-  simp [graph_power]
+  simp
 
 /-- The value of an assignment of the powered system is the fraction of *walks*
 whose constraint it fails. -/
@@ -227,7 +227,7 @@ theorem unsatFrac_power (A : (R.power L t h).Assignment) :
         / ((R.graph.order * R.graph.deg ^ t : ℕ) : ℚ) := by
   rw [unsatFrac]
   congr 2
-  simp [graph_power]
+  simp
 
 /-- **The first moment.** For each step index `k`, the walks whose `k`-th dart
 is one that `σ` fails number exactly `deg ^ (t-1)` times the faulty darts — one

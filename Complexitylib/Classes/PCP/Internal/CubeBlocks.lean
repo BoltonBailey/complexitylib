@@ -101,8 +101,6 @@ theorem prob_leftBlock (P : Cube a → Prop) :
     rw [hcard]
     norm_num
   rw [Finset.sum_congr rfl fun x _ => hinner x, ← Finset.mul_sum]
-  have hpa : (2 : ℝ) ^ a ≠ 0 := by positivity
-  have hpb : (2 : ℝ) ^ b ≠ 0 := by positivity
   rw [pow_add]
   field_simp
 
@@ -130,8 +128,6 @@ theorem prob_rightBlock (P : Cube b → Prop) :
     rw [hcard]
     norm_num
   rw [Finset.sum_congr rfl fun y _ => hinner y, ← Finset.mul_sum]
-  have hpa : (2 : ℝ) ^ a ≠ 0 := by positivity
-  have hpb : (2 : ℝ) ^ b ≠ 0 := by positivity
   rw [pow_add]
   field_simp
 
@@ -235,7 +231,6 @@ theorem prob₂_eq_prob_blocks {n : ℕ} (P : Cube n → Cube n → Prop) :
       rw [← rightBlock_blockEquiv ((cubeBlockEquiv n n).symm z), Equiv.apply_symm_apply]
     simp only [indicator, h1, h2]
   rw [hL, hR, Fintype.sum_prod_type, ← Finset.mul_sum, pow_add]
-  have h2n : (2 : ℝ) ^ n ≠ 0 := by positivity
   field_simp
 
 /-- A pair drawn from the first block of a bundled string is a uniform pair,
@@ -297,8 +292,6 @@ theorem prob_blocks {a b : ℕ} (Q : Cube a → Cube b → Prop) :
     rw [expect_unfold]
     exact congrArg _ (Finset.sum_congr rfl fun u _ => expect_unfold _)
   rw [hL, hR, Fintype.sum_prod_type, ← Finset.mul_sum, pow_add]
-  have h2a : (2 : ℝ) ^ a ≠ 0 := by positivity
-  have h2b : (2 : ℝ) ^ b ≠ 0 := by positivity
   field_simp
 
 /-- **A bound that holds for every earlier outcome holds overall.** -/

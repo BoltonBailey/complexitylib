@@ -84,7 +84,7 @@ theorem inRange_mem_FP : A.inRange p ∈ FP := by
   have hn : (fun z : List Bool =>
       List.replicate (A.numEdges (Cobham.fstBlock z)) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP A.numEdges_mem
-    simpa [Function.comp] using this
+    simpa using this
   exact lenLeFlagFn_mem_FP hn (mem_FP_comp (edgeU_mem_FP p) (Cobham.cons_mem_FP true))
 
 theorem inRange_eq_true_iff {z : List Bool}
@@ -168,7 +168,7 @@ theorem posU_mem_FP : A.posU p ∈ FP := by
     rw [Function.comp_apply, List.length_replicate, List.length_replicate]
   have hoff : (fun w => List.replicate (A.offU w).length true) ∈ FP := by
     have := mem_FP_comp A.offU_mem_FP unaryLength_mem_FP
-    simpa [Function.comp] using this
+    simpa using this
   exact Cobham.appendFn_mem_FP hmul hoff
 
 theorem cntU_eq_replicate (z : List Bool) :
@@ -215,10 +215,10 @@ theorem verdictLang_mem_P : A.verdictLang p ∈ P := by
   obtain ⟨g, hgFP, hg⟩ := exists_decisionFn_of_mem_P A.ok_mem
   have hin : (fun z : List Bool => A.inRange p (Cobham.fstBlock z)) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (A.inRange_mem_FP p)
-    simpa [Function.comp] using this
+    simpa using this
   have hok : (fun z : List Bool => [g (okArg p z)]) ∈ FP := by
     have := mem_FP_comp (okArg_mem_FP p) hgFP
-    simpa [Function.comp] using this
+    simpa using this
   have hflag : (fun z : List Bool =>
       Cobham.selectHead (A.inRange p (Cobham.fstBlock z)) [g (okArg p z)] [true]) ∈ FP :=
     Cobham.selectHeadFn_mem_FP hin hok (constFn_mem_FP [true])
@@ -392,7 +392,7 @@ theorem card_reject {x : List Bool} {T : ℕ} (hN : A.numEdges x ≤ 2 ^ T) (π 
       = Finset.univ.filter (fun ρ : Fin T → Bool =>
         ¬ (PCPVerifier.coinIndex ρ < A.numEdges x → A.Sat x π (PCPVerifier.coinIndex ρ))) := by
     ext ρ
-    simp [Finset.mem_filter]
+    simp
   rw [hcompl, card_filter_coinIndex T (fun e => ¬ (e < A.numEdges x → A.Sat x π e))]
   congr 1
   ext e
@@ -448,7 +448,6 @@ theorem eventProb_le {x : List Bool} {T : ℕ} {gap : ℚ}
   have hNpos : 0 < N := by
     have h2 : (0 : ℕ) < 2 ^ T := Nat.two_pow_pos T
     omega
-  have hNQ : (0 : ℚ) < (N : ℚ) := by exact_mod_cast hNpos
   have hTQ : (0 : ℚ) < (2 : ℚ) ^ T := by positivity
   have hRQ : (R : ℚ) = (N : ℚ) - (S : ℚ) := by
     have : (S : ℚ) + (R : ℚ) = (N : ℚ) := by exact_mod_cast hsum

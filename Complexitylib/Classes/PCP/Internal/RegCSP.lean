@@ -96,7 +96,7 @@ def Satisfiable : Prop := ∃ a : R.Assignment, ∀ p, R.Satisfies a p
 
 /-- The number of darts. -/
 theorem card_dart : Fintype.card R.Dart = R.graph.order * R.graph.deg := by
-  simp [Dart]
+  simp
 
 theorem card_unsatDarts_le (a : R.Assignment) :
     (R.unsatDarts a).card ≤ R.graph.order * R.graph.deg := by
@@ -187,7 +187,6 @@ theorem inv_card_dart_le_unsatVal (h : ¬ R.Satisfiable) :
     1 / ((R.graph.order * R.graph.deg : ℕ) : ℚ) ≤ R.unsatVal := by
   refine R.le_unsatVal fun a => ?_
   have hpos : 0 < R.graph.order * R.graph.deg := R.card_dart_pos_of_not_satisfiable h
-  have hmq : (0 : ℚ) < ((R.graph.order * R.graph.deg : ℕ) : ℚ) := by exact_mod_cast hpos
   have hne : (R.unsatDarts a).Nonempty := by
     by_contra hcon
     rw [Finset.not_nonempty_iff_eq_empty] at hcon

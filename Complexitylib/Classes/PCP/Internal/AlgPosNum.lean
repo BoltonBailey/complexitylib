@@ -65,8 +65,8 @@ noncomputable def blockNum (p : R.Dart) : ReadIdx → ℕ
   | .f1x | .f1y | .f1s | .g2x | .g2y | .g2s | .c3cQ | .c3tQ | .c3cX | .c3xX | .c3cY | .c3yY
   | .k4qG | .k4tG | .k4cF | .k4lF | .i5c | .i5b | .i6c | .i6b => NumEnc.enc p
 
-/-- The number of the cube a read's position names inside its block. -/
-noncomputable def cubeNum (p : R.Dart) (z : Cube (ROf B)) : ReadIdx → ℕ
+/-- The cube a read names, from the satisfying set alone. -/
+noncomputable def cubeOfSet (S : Finset (Cube (kOf B))) (z : Cube (ROf B)) : ReadIdx → ℕ
   | .f1x => NumEnc.enc (leftBlock (blk1 z))
   | .f1y => NumEnc.enc (rightBlock (blk1 z))
   | .f1s => NumEnc.enc (leftBlock (blk1 z) + rightBlock (blk1 z))
@@ -80,10 +80,10 @@ noncomputable def cubeNum (p : R.Dart) (z : Cube (ROf B)) : ReadIdx → ℕ
   | .c3cY => NumEnc.enc (cY (blk3 z))
   | .c3yY => NumEnc.enc (qY (blk3 z) + cY (blk3 z))
   | .k4qG => NumEnc.enc (rightBlock (rightBlock (blk4 z)))
-  | .k4tG => NumEnc.enc ((QuadConstraint.combine (oneHotSystem (R.satSet enc p))
+  | .k4tG => NumEnc.enc ((QuadConstraint.combine (oneHotSystem S)
       (leftBlock (blk4 z))).quad + rightBlock (rightBlock (blk4 z)))
   | .k4cF => NumEnc.enc (leftBlock (rightBlock (blk4 z)))
-  | .k4lF => NumEnc.enc ((QuadConstraint.combine (oneHotSystem (R.satSet enc p))
+  | .k4lF => NumEnc.enc ((QuadConstraint.combine (oneHotSystem S)
       (leftBlock (blk4 z))).lin + leftBlock (rightBlock (blk4 z)))
   | .i5r => NumEnc.enc (leftBlock (blk5 z))
   | .i5c => NumEnc.enc (rightBlock (blk5 z))
@@ -91,6 +91,10 @@ noncomputable def cubeNum (p : R.Dart) (z : Cube (ROf B)) : ReadIdx → ℕ
   | .i6r => NumEnc.enc (leftBlock (blk6 z))
   | .i6c => NumEnc.enc (rightBlock (blk6 z))
   | .i6b => NumEnc.enc (basisVec (inHead B (leftBlock (blk6 z))) + rightBlock (blk6 z))
+
+/-- The number of the cube a read's position names inside its block. -/
+noncomputable def cubeNum (p : R.Dart) (z : Cube (ROf B)) : ReadIdx → ℕ :=
+  cubeOfSet (R.satSet enc p) z
 
 /-- The number a kind, a block and a cube make: encoding blocks first, then the
 linear tables, then the quadratic ones. -/
@@ -135,33 +139,6 @@ theorem val_head_toGraph_compose (k : Fin (Fintype.card (R.compose enc).Edge)) :
           ((R.compose enc).edgeOf k).2.2) := by
   rw [MultiTest.val_head_toGraph, enc_pos_compose]
 
-/-- The cube a read names, from the satisfying set alone. -/
-noncomputable def cubeOfSet (S : Finset (Cube (kOf B))) (z : Cube (ROf B)) : ReadIdx → ℕ
-  | .f1x => NumEnc.enc (leftBlock (blk1 z))
-  | .f1y => NumEnc.enc (rightBlock (blk1 z))
-  | .f1s => NumEnc.enc (leftBlock (blk1 z) + rightBlock (blk1 z))
-  | .g2x => NumEnc.enc (leftBlock (blk2 z))
-  | .g2y => NumEnc.enc (rightBlock (blk2 z))
-  | .g2s => NumEnc.enc (leftBlock (blk2 z) + rightBlock (blk2 z))
-  | .c3cQ => NumEnc.enc (cQ (blk3 z))
-  | .c3tQ => NumEnc.enc (tensor (qX (blk3 z)) (qY (blk3 z)) + cQ (blk3 z))
-  | .c3cX => NumEnc.enc (cX (blk3 z))
-  | .c3xX => NumEnc.enc (qX (blk3 z) + cX (blk3 z))
-  | .c3cY => NumEnc.enc (cY (blk3 z))
-  | .c3yY => NumEnc.enc (qY (blk3 z) + cY (blk3 z))
-  | .k4qG => NumEnc.enc (rightBlock (rightBlock (blk4 z)))
-  | .k4tG => NumEnc.enc ((QuadConstraint.combine (oneHotSystem S)
-      (leftBlock (blk4 z))).quad + rightBlock (rightBlock (blk4 z)))
-  | .k4cF => NumEnc.enc (leftBlock (rightBlock (blk4 z)))
-  | .k4lF => NumEnc.enc ((QuadConstraint.combine (oneHotSystem S)
-      (leftBlock (blk4 z))).lin + leftBlock (rightBlock (blk4 z)))
-  | .i5r => NumEnc.enc (leftBlock (blk5 z))
-  | .i5c => NumEnc.enc (rightBlock (blk5 z))
-  | .i5b => NumEnc.enc (basisVec (inTail B (leftBlock (blk5 z))) + rightBlock (blk5 z))
-  | .i6r => NumEnc.enc (leftBlock (blk6 z))
-  | .i6c => NumEnc.enc (rightBlock (blk6 z))
-  | .i6b => NumEnc.enc (basisVec (inHead B (leftBlock (blk6 z))) + rightBlock (blk6 z))
-
 /-- The test's verdict, from the satisfying set alone. -/
 noncomputable def checkOfSet (S : Finset (Cube (kOf B))) (z : Cube (ROf B))
     (rd : ReadIdx → ZMod 2) : Bool :=
@@ -170,8 +147,7 @@ noncomputable def checkOfSet (S : Finset (Cube (kOf B))) (z : Cube (ROf B))
 omit [DecidableEq β] [Nonempty β] [NumEnc R.graph.V] [NumEnc R.graph.D] in
 /-- **The cube depends on the satisfying set alone.** -/
 theorem cubeNum_eq_cubeOfSet (p : R.Dart) (z : Cube (ROf B)) (i : ReadIdx) :
-    R.cubeNum enc p z i = cubeOfSet (R.satSet enc p) z i := by
-  cases i <;> rfl
+    R.cubeNum enc p z i = cubeOfSet (R.satSet enc p) z i := rfl
 
 omit [DecidableEq β] [Nonempty β] [NumEnc R.graph.V] [NumEnc R.graph.D] in
 /-- **And so does the verdict.** -/
@@ -179,7 +155,7 @@ theorem check_eq_checkOfSet (p : R.Dart) (z : Cube (ROf B)) :
     (R.compose enc).check p z = checkOfSet (R.satSet enc p) z := rfl
 
 omit [DecidableEq β] [Nonempty β] in
-set_option maxHeartbeats 2000000 in
+set_option maxHeartbeats 800000 in
 /-- **An edge's data and all three of its numbers**, in one package: a caller
 never has to spell the composed system out, nor match anything against it. -/
 theorem edge_facts (e : ℕ) (he : e < (R.compose enc).toGraph.numEdges) :
@@ -195,13 +171,11 @@ theorem edge_facts (e : ℕ) (he : e < (R.compose enc).toGraph.numEdges) :
         ∧ (R.compose enc).toGraph.rel ⟨e, he⟩
             = MultiTest.relOfCheck ((R.compose enc).check p z) i := by
   obtain ⟨p, z, i, hp, hz, hi, hsplit⟩ := R.edge_data B enc e he
-  subst hp
-  subst hz
-  subst hi
-  refine ⟨_, _, _, hsplit, (MultiTest.tailNum_eq _ ⟨e, he⟩).symm, ?_,
-    MultiTest.rel_toGraph_eq _ ⟨e, he⟩⟩
-  rw [MultiTest.val_head_toGraph, enc_pos_compose]
-  rfl
+  refine ⟨p, z, i, hsplit, (MultiTest.tailNum_eq _ ⟨e, he⟩).symm, ?_, ?_⟩
+  · rw [hp, hz, hi, MultiTest.val_head_toGraph, enc_pos_compose]
+    rfl
+  · rw [hp, hz, hi]
+    exact MultiTest.rel_toGraph_eq _ _
 
 /-! ### Everything depends on the dart's constraint alone -/
 
@@ -222,7 +196,7 @@ theorem cubeNum_congr {β' : Type} [Fintype β'] [DecidableEq β'] [Nonempty β'
     (p : R.Dart) (p' : R'.Dart) (z : Cube (ROf B)) (i : ReadIdx)
     (h : R.satSet enc p = R'.satSet enc' p') :
     R.cubeNum enc p z i = R'.cubeNum enc' p' z i := by
-  cases i <;> rw [cubeNum, cubeNum] <;> rw [h]
+  rw [cubeNum, cubeNum, h]
 
 omit [DecidableEq β] [Nonempty β] [NumEnc R.graph.V] [NumEnc R.graph.D] in
 /-- **And so does the test's verdict.** -/

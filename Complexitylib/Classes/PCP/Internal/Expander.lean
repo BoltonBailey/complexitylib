@@ -141,7 +141,6 @@ omit [NumEnc G.V] in
 a factor. -/
 theorem expanderize_bound_lt_one :
     ((G.deg : ℝ) + (E.degree : ℝ) * E.lam) / ((G.deg : ℝ) + (E.degree : ℝ)) < 1 := by
-  have hdG : (0 : ℝ) < (G.deg : ℝ) := by have := G.deg_pos; positivity
   have hdE : (0 : ℝ) < (E.degree : ℝ) := by exact_mod_cast E.degree_pos
   rw [div_lt_one (by positivity)]
   nlinarith [E.lam_lt_one, E.lam_nonneg]

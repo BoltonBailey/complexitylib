@@ -101,12 +101,12 @@ theorem parityFun_basis (S : Finset (Fin n)) (i : Fin n) :
     · show chi (if i = i then (1 : ZMod 2) else 0) = -1
       rw [if_pos rfl]
       show chi 1 = -1
-      simp [chi]
+      simp
     · intro j _ hj
       show chi (if j = i then (1 : ZMod 2) else 0) = 1
       rw [if_neg hj]
       show chi 0 = 1
-      simp [chi]
+      simp
     · intro hni
       exact absurd hi hni
   · rw [if_neg hi]
@@ -115,7 +115,7 @@ theorem parityFun_basis (S : Finset (Fin n)) (i : Fin n) :
     show chi (if j = i then (1 : ZMod 2) else 0) = 1
     rw [if_neg hji]
     show chi 0 = 1
-    simp [chi]
+    simp
 
 /-! ### The Hadamard code -/
 
@@ -160,7 +160,7 @@ theorem signOf_hadamard (a : Cube n) :
       · exact h
       · exact absurd h hi.2
     rw [hzero, zero_mul]
-    simp [chi]
+    simp
   rw [hone, mul_one]
   refine Finset.prod_congr rfl fun i hi => ?_
   simp only [Finset.mem_filter] at hi
@@ -432,9 +432,8 @@ theorem expect_signOf (F : BitFun n) :
     rw [Finset.sum_const, Finset.card_univ, card_cube, nsmul_eq_mul, mul_one]
     norm_num
   rw [hcard]
-  have hpow : (2 : ℝ) ^ n ≠ 0 := by positivity
   field_simp
-  ring
+  ring_nf
 
 /-- **A nonzero linear form is balanced.** Over `𝔽₂` a nonzero linear form takes
 each value on exactly half the cube — the counting fact behind every "the check
@@ -599,7 +598,6 @@ theorem expect_add (f g : BooleanFunction n) :
 
 theorem expect_one : 𝔼[fun _ : Cube n => (1 : ℝ)] = 1 := by
   rw [expect_unfold, Finset.sum_const, Finset.card_univ, card_cube, nsmul_eq_mul, mul_one]
-  have hpow : (2 : ℝ) ^ n ≠ 0 := by positivity
   push_cast
   field_simp
 

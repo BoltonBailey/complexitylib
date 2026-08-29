@@ -88,9 +88,6 @@ theorem two_pow_log_succ_le (n : ℕ) : 2 ^ (Nat.log 2 n + 1) ≤ 2 * n + 2 := b
   · subst h
     simp
   · have hlow : 2 ^ Nat.log 2 n ≤ n := Nat.pow_log_le_self 2 (by omega)
-    have hsplit : 2 ^ (Nat.log 2 n + 1) = 2 * 2 ^ Nat.log 2 n := by
-      rw [pow_succ]
-      ring
     omega
 
 private theorem pow_pow_comm (a b c : ℕ) : (a ^ b) ^ c = (a ^ c) ^ b := by

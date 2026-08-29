@@ -187,9 +187,7 @@ theorem spectralBound_preprocess :
   exact hL
 
 theorem preprocessLam_lt_one : preprocessLam E < 1 := by
-  have hd : (0 : ℝ) ≤ (E.degree : ℝ) := by positivity
   have hlam := E.lam_lt_one
-  have hlamnn := E.lam_nonneg
   have hmu : ((1 + (E.degree : ℝ)) + (E.degree : ℝ) * E.lam)
       / ((1 + (E.degree : ℝ)) + E.degree) < 1 := by
     rw [div_lt_one (by positivity)]

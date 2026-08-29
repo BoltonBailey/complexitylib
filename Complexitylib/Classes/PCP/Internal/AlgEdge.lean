@@ -339,7 +339,6 @@ theorem stepFn_mem_FP (F : FinBase) (pol : Polynomial ℕ) (r : Round)
     (marks_mem_FP (mulC_mem_FP (posCount_mem_FP Cobham.sndBlock_mem_FP) edgeF))
     (edgeRule_mem_FP F pol r posF cardB cardN cardNN hQ hD hZ hC dflt encβ)
 
-set_option maxHeartbeats 1000000 in
 /-- **One round of amplification, computed.** The algorithm's output is the
 graph the round produces. -/
 theorem stepFn_eq (F : FinBase) (pol : Polynomial ℕ) (hd : 1 < F.deg)

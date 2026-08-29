@@ -150,10 +150,10 @@ theorem accCoin_mem_FP
     accCoin r ∈ FP := by
   have ht : (fun y : List Bool => List.replicate (r (accX y).length) true) ∈ FP := by
     have := mem_FP_comp accX_mem_FP hr
-    simpa [Function.comp] using this
+    simpa using this
   have hc : (fun y : List Bool => List.replicate (Cobham.sndBlock y).length true) ∈ FP := by
     have := mem_FP_comp Cobham.sndBlock_mem_FP unaryLength_mem_FP
-    simpa [Function.comp] using this
+    simpa using this
   exact coinStr_mem_FP ht hc
 
 theorem accView_mem_FP (hf : f ∈ FP)
@@ -164,7 +164,7 @@ theorem accView_mem_FP (hf : f ∈ FP)
     Cobham.pairFn_mem_FP accX_mem_FP hcoin
   have hfv : (fun y => f (pair (accX y) (accCoin r y))) ∈ FP := by
     have := mem_FP_comp hview hf
-    simpa [Function.comp] using this
+    simpa using this
   have hcount : (fun y => posCount (f (pair (accX y) (accCoin r y)))) ∈ FP :=
     posCount_mem_FP hfv
   have hoff : (fun y : List Bool =>
@@ -202,7 +202,7 @@ theorem accLang_mem_P (hf : f ∈ FP)
   have hlen : (fun z : List Bool =>
       List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
-    simpa [Function.comp] using this
+    simpa using this
   exact forall_unary_mem_P (accInner_mem_P V f r Q hf hr) hlen
 
 /-- What one iteration looks at, on a well-formed input. -/

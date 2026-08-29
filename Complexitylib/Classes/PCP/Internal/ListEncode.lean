@@ -48,7 +48,7 @@ theorem listStep_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) : listStep
   have hE' : (fun st : List Bool =>
       E (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st)))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hx hctr) hE
-    simpa [Function.comp] using this
+    simpa using this
   exact Cobham.pairFn_mem_FP
     (Cobham.pairFn_mem_FP (Cobham.appendFn_mem_FP hacc hE')
       (mem_FP_comp hctr (Cobham.cons_mem_FP true))) hx
@@ -146,7 +146,7 @@ theorem listEncFn_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) (p : Poly
   have := Cobham.appendFn_mem_FP hcons (constFn_mem_FP [true])
   refine mem_FP_of_eq this fun z => ?_
   rw [listEncFn]
-  simp [Function.comp]
+  simp
 
 theorem listEncFn_eq (E : List Bool → List Bool) (z : List Bool) :
     listEncFn E z

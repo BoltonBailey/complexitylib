@@ -352,8 +352,7 @@ theorem sum_liftN_eq (hn : 0 < n) (hN : N ≤ m * n) (hm1 : (m - 1) * n ≤ N) (
             (match liftN N n v i with | some _ => (0 : ℝ) | none => f v) :=
         Fin.sum_univ_eq_sum_range
           (fun i => (match liftN N n v i with | some _ => (0 : ℝ) | none => f v)) m
-      rw [hconv]
-      rw [Finset.sum_eq_single (m - 1)]
+      rw [hconv, Finset.sum_eq_single (m - 1)]
       · intro b hb hbne
         rw [Finset.mem_range] at hb
         have : b + 1 < m := by omega

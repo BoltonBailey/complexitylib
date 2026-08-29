@@ -78,9 +78,6 @@ theorem two_pow_mul_escB_le {s : ℕ} (hs : 1 ≤ s) (hsn : 2 * s ≤ n) :
     2 ^ s * (n.choose s * escB n s ^ 30) ≤ Nat.factorial n ^ 30 := by
   set t := (s - 1) / 10 with ht
   set k := s - t with hk
-  have hmt : 10 * t ≤ s := by
-    rw [ht]
-    omega
   have hts : t ≤ s := by omega
   have h9 : 9 * s ≤ 10 * k := by omega
   have hkn : k ≤ n := by omega

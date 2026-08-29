@@ -140,8 +140,7 @@ theorem levelAfter_stable (d n : ℕ) (p : ℕ × ℕ) (j : ℕ) (h : 2 * n ≤ 
   | zero => rfl
   | succ i ih =>
       have hji : j + (i + 1) = (j + i) + 1 := by omega
-      rw [hji, levelAfter, ih]
-      rw [if_neg (by omega)]
+      rw [hji, levelAfter, ih, if_neg (by omega)]
 
 /-- The loop never overshoots by more than a factor of `d`. -/
 theorem levelAfter_snd_le (d n : ℕ) :

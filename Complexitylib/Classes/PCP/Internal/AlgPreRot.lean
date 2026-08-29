@@ -65,7 +65,6 @@ noncomputable def cloudMark (w : List Bool) : List Bool :=
   ifEqLen (ownerFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w)))
     (Cobham.sndBlock (Cobham.fstBlock w)) [true] []
 
-set_option maxHeartbeats 1000000 in
 theorem cloudMark_mem_FP : cloudMark ∈ FP := by
   have hG : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
@@ -96,7 +95,6 @@ noncomputable def cloudSizeFn (z : List Bool) : List Bool :=
   countOver cloudMark
     (pair (marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z))))) z)
 
-set_option maxHeartbeats 1000000 in
 theorem cloudSizeFn_mem_FP : cloudSizeFn ∈ FP := by
   have hcnt : (fun z : List Bool =>
       marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z))))) ∈ FP := by
@@ -127,7 +125,6 @@ noncomputable def cloudIdxFn (z : List Bool) : List Bool :=
   countOver cloudMark
     (pair (marks (Cobham.sndBlock z)) (pair (Cobham.fstBlock z) (ownerFn z)))
 
-set_option maxHeartbeats 1000000 in
 theorem cloudIdxFn_mem_FP : cloudIdxFn ∈ FP := by
   have hcnt := marks_mem_FP Cobham.sndBlock_mem_FP
   have hdata := Cobham.pairFn_mem_FP Cobham.fstBlock_mem_FP ownerFn_mem_FP
@@ -162,7 +159,6 @@ noncomputable def eltMark (w : List Bool) : List Bool :=
       (Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock w))) [true] [])
     []
 
-set_option maxHeartbeats 1000000 in
 theorem eltMark_mem_FP : eltMark ∈ FP := by
   have hG : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
@@ -218,7 +214,6 @@ theorem cloudEltFn_eq_replicate (z : List Bool) :
   conv_lhs => rw [cloudEltFn, findFirst_eq_replicate]
   rw [← cloudEltFn]
 
-set_option maxHeartbeats 1000000 in
 theorem cloudEltFn_mem_FP : cloudEltFn ∈ FP := by
   have h1 : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
@@ -369,7 +364,6 @@ theorem length_cloudIdxFn_eq (m : ℕ) (hm : m < 2 * G.numEdges) :
 omit [Fintype α] [DecidableEq α] in
 /-- The code of a half-edge is below twice the edge count. -/
 theorem halfCode_lt (p : G.HalfEdge) : G.halfCode p < 2 * G.numEdges := by
-  have hp := p.1.isLt
   rw [ConstraintGraph.halfCode]
   by_cases hb : p.2 = true
   · rw [if_pos hb]
@@ -465,7 +459,6 @@ noncomputable def cloudStepFn (z : List Bool) : List Bool :=
             (Cobham.fstBlock (Cobham.sndBlock z))))
           (Cobham.sndBlock (Cobham.sndBlock z))))))
 
-set_option maxHeartbeats 1000000 in
 theorem cloudStepFn_mem_FP : cloudStepFn F pol ∈ FP := by
   have hG : (fun z : List Bool => Cobham.fstBlock (Cobham.fstBlock z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
@@ -518,7 +511,6 @@ noncomputable def expStepFn (z : List Bool) : List Bool :=
     (pair (marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z)))))
       (Cobham.sndBlock z))
 
-set_option maxHeartbeats 1000000 in
 theorem expStepFn_mem_FP : expStepFn F pol ∈ FP := by
   have h1 : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
@@ -666,7 +658,6 @@ noncomputable def preRotFn (deg : ℕ) (z : List Bool) : List Bool :=
                 ((Cobham.sndBlock (Cobham.sndBlock z)).drop (2 + deg)))))
             ++ List.replicate (2 + deg) true))))
 
-set_option maxHeartbeats 1000000 in
 theorem preRotFn_mem_FP (deg : ℕ) : preRotFn F pol deg ∈ FP := by
   have hG : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
   have hv : (fun z : List Bool => Cobham.fstBlock (Cobham.sndBlock z)) ∈ FP :=
@@ -720,7 +711,6 @@ theorem preRotFn_mem_FP (deg : ℕ) : preRotFn F pol deg ∈ FP := by
   simp only [Function.comp_apply]
   rw [preRotFn]
 
-set_option maxHeartbeats 1000000 in
 /-- **The whole rotation map computes what it should.** -/
 theorem preRotFn_eq (hd : 1 < F.deg) (v d : ℕ) (hv : v < 2 * G.numEdges)
     (hdlt : d < 2 + 2 * (F.toFamily hd).degree)
@@ -749,7 +739,6 @@ theorem preRotFn_eq (hd : 1 < F.deg) (v d : ℕ) (hv : v < 2 * G.numEdges)
     rw [ifEqLen_pos (by simp), if_pos rfl, flipFn_eq]
     rfl
   rw [ifEqLen_neg (by simpa using h1), if_neg h1]
-  have hd2 : 2 ≤ d := by omega
   have hdrop2 : (List.replicate d true).drop 2 = List.replicate (d - 2) true := by simp
   by_cases h2 : d < 2 + (F.toFamily hd).degree
   · -- the cloud's move

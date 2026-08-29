@@ -192,7 +192,7 @@ theorem clauseCountFn_mem_FP : clauseCountFn ∈ FP := by
     omega
   have hiter := Cobham.iterate_mem_FP ccStep_mem_FP hinit id_mem_FP hwidth hbound
   have := mem_FP_comp hiter Cobham.fstBlock_mem_FP
-  simpa [Function.comp, clauseCountFn] using this
+  simpa using this
 
 theorem clauseCountFn_eq {z : List Bool} (h : Even z.length) :
     clauseCountFn z = List.replicate (sepCount z) true := by

@@ -79,6 +79,10 @@ arity one. -/
 theorem CobhamFP_subset_FP : CobhamFP ⊆ FP :=
   Cobham.CobhamFP_subset_FP_of_FPn
 
+/-- Every constant function is polynomial-time. -/
+theorem constFn_mem_FP (c : List Bool) : (fun _ : List Bool => c) ∈ FP :=
+  CobhamFP_subset_FP (Cobham.const c)
+
 /-- Cobham's algebra is complete for polynomial time: every polynomial-time
 computable function belongs to the algebra.
 

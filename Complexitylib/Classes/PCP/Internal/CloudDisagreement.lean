@@ -234,14 +234,10 @@ theorem cloud_disagreement_bound (A : (G.reduce E).Assignment) (v : Fin G.numVer
       exact_mod_cast hinj
     refine le_trans ?_ (le_trans hexp hinjR)
     -- plurality: `|devᶜ| ≥ length / card α`
-    have hlenq : (0 : ℝ) < ((G.cloudList v).length : ℝ) := by exact_mod_cast hlen
-    have hcardq : (0 : ℝ) < (Fintype.card α : ℝ) := by
-      exact_mod_cast (Fintype.card_pos (α := α))
     have hplur : ((G.cloudList v).length : ℝ)
         ≤ (Fintype.card α : ℝ) * (((G.devIdx A v)ᶜ).card : ℝ) := by
       exact_mod_cast G.length_le_card_agree A v
     have hlam : 0 ≤ 1 - E.lam := by linarith [E.lam_lt_one]
-    have hdeg : (0 : ℝ) ≤ (E.degree : ℝ) := by positivity
     have hdev : (0 : ℝ) ≤ ((G.devIdx A v).card : ℝ) := by positivity
     have hkey : ((G.devIdx A v).card : ℝ) / (Fintype.card α : ℝ)
         ≤ ((G.devIdx A v).card : ℝ) * (((G.devIdx A v)ᶜ).card : ℝ)

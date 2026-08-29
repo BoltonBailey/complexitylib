@@ -158,7 +158,6 @@ theorem edgeClause_lt {φ : CNF} (e : Fin (toGraph φ).numEdges) :
 /-- Every (clause, position) pair is realized by an edge. -/
 theorem exists_edge {φ : CNF} {j : ℕ} (hj : j < φ.length) (q : Fin 3) :
     ∃ e : Fin (toGraph φ).numEdges, edgeClause e.val = j ∧ edgePos e.val = q := by
-  have hq := q.isLt
   refine ⟨⟨3 * j + q.val, ?_⟩, ?_, ?_⟩
   · show 3 * j + q.val < 3 * φ.length; omega
   · show (3 * j + q.val) / 3 = j; omega
@@ -213,8 +212,6 @@ def mkAssign (φ : CNF) (a : (toGraph φ).Assignment) : SAT.Assignment :=
 /-- `mkAssign` reads back the label bit it was built from. -/
 theorem get_mkAssign {φ : CNF} {a : (toGraph φ).Assignment} {v : ℕ}
     (hv : v ≤ φ.maxVar) : Assignment.get (mkAssign φ a) v = a (varVertex φ v) 0 := by
-  have hlen : v < (mkAssign φ a).length := by
-    simp [mkAssign]; omega
   have hr : v < (List.range (φ.maxVar + 1)).length := by simp; omega
   simp [Assignment.get, mkAssign, List.getElem?_map,
     List.getElem?_eq_getElem hr]

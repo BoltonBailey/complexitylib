@@ -87,7 +87,6 @@ theorem eq_mean_add_center (f : G.V → ℝ) : f = fun v => G.mean f + G.center 
   funext v; simp [center]
 
 theorem sum_center (hn : 0 < G.order) (f : G.V → ℝ) : ∑ v : G.V, G.center f v = 0 := by
-  have hnq : (G.order : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   simp only [center, Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ,
     nsmul_eq_mul, mean, card_eq_order]
   field_simp
@@ -96,7 +95,6 @@ theorem sum_center (hn : 0 < G.order) (f : G.V → ℝ) : ∑ v : G.V, G.center 
 theorem sum_sq_center (hn : 0 < G.order) (f : G.V → ℝ) :
     ∑ v : G.V, (G.center f v) ^ 2
       = (∑ v : G.V, (f v) ^ 2) - (∑ v : G.V, f v) ^ 2 / (G.order : ℝ) := by
-  have hnq : (G.order : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   have expand : ∀ v : G.V, (G.center f v) ^ 2
       = (f v) ^ 2 - 2 * G.mean f * f v + (G.mean f) ^ 2 := by
     intro v; simp only [center]; ring
@@ -106,7 +104,7 @@ theorem sum_sq_center (hn : 0 < G.order) (f : G.V → ℝ) :
     _ = (∑ v : G.V, (f v) ^ 2) - 2 * G.mean f * (∑ v : G.V, f v)
           + (G.order : ℝ) * (G.mean f) ^ 2 := by
         rw [Finset.sum_add_distrib, Finset.sum_sub_distrib, ← Finset.mul_sum]
-        simp [mul_comm]
+        simp
     _ = (∑ v : G.V, (f v) ^ 2) - (∑ v : G.V, f v) ^ 2 / (G.order : ℝ) := by
         simp only [mean]
         field_simp
@@ -124,7 +122,6 @@ theorem inner_stepIter_eq (hn : 0 < G.order) (t : ℕ) (f g : G.V → ℝ) :
     ∑ v : G.V, f v * G.stepIter t g v
       = (∑ v : G.V, f v) * (∑ v : G.V, g v) / (G.order : ℝ)
         + ∑ v : G.V, G.center f v * G.stepIter t (G.center g) v := by
-  have hnq : (G.order : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn.ne'
   have hsumS : ∑ v : G.V, G.stepIter t (G.center g) v = 0 := by
     rw [G.sum_stepIter, G.sum_center hn]
   have hsumF : ∑ v : G.V, G.center f v = 0 := G.sum_center hn f

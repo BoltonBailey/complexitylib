@@ -85,20 +85,20 @@ theorem conW_mem_FP : conW ∈ FP :=
 
 theorem unary_conC1_mem_FP : (fun y => List.replicate (conC1 y) true) ∈ FP := by
   have := mem_FP_comp (mem_FP_comp conY1_mem_FP Cobham.sndBlock_mem_FP) unaryLength_mem_FP
-  simpa [Function.comp, conC1] using this
+  simpa using this
 
 theorem unary_conC2_mem_FP : (fun y => List.replicate (conC2 y) true) ∈ FP := by
   have := mem_FP_comp (mem_FP_comp conY2_mem_FP Cobham.sndBlock_mem_FP) unaryLength_mem_FP
-  simpa [Function.comp, conC2] using this
+  simpa using this
 
 theorem unary_conC3_mem_FP : (fun y => List.replicate (conC3 y) true) ∈ FP := by
   have := mem_FP_comp
     (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP) unaryLength_mem_FP
-  simpa [Function.comp, conC3] using this
+  simpa using this
 
 theorem unary_conC4_mem_FP : (fun y => List.replicate (conC4 y) true) ∈ FP := by
   have := mem_FP_comp Cobham.sndBlock_mem_FP unaryLength_mem_FP
-  simpa [Function.comp, conC4] using this
+  simpa using this
 
 /-! ### The check -/
 
@@ -143,21 +143,21 @@ include hr in
 theorem conRho_mem_FP : conRho r ∈ FP := by
   have ht : (fun y : List Bool => List.replicate (r (conX y).length) true) ∈ FP := by
     have := mem_FP_comp conX_mem_FP hr
-    simpa [Function.comp] using this
+    simpa using this
   exact coinStr_mem_FP ht unary_conC1_mem_FP
 
 include hr in
 theorem conRho'_mem_FP : conRho' r ∈ FP := by
   have ht : (fun y : List Bool => List.replicate (r (conX y).length) true) ∈ FP := by
     have := mem_FP_comp conX_mem_FP hr
-    simpa [Function.comp] using this
+    simpa using this
   exact coinStr_mem_FP ht unary_conC2_mem_FP
 
 include hf hr in
 theorem conP_mem_FP : conP f r ∈ FP := by
   have hb : (fun y => f (pair (conX y) (conRho r y))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP conX_mem_FP (conRho_mem_FP r hr)) hf
-    simpa [Function.comp] using this
+    simpa using this
   have := posAt_mem_FP unary_conC3_mem_FP hb
   refine mem_FP_of_eq this fun y => ?_
   rw [conP, List.length_replicate]
@@ -166,7 +166,7 @@ include hf hr in
 theorem conP'_mem_FP : conP' f r ∈ FP := by
   have hb : (fun y => f (pair (conX y) (conRho' r y))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP conX_mem_FP (conRho'_mem_FP r hr)) hf
-    simpa [Function.comp] using this
+    simpa using this
   have := posAt_mem_FP unary_conC4_mem_FP hb
   refine mem_FP_of_eq this fun y => ?_
   rw [conP', List.length_replicate]
@@ -250,11 +250,11 @@ theorem consLang_mem_P (hrlog : r =O fun n => Nat.log 2 n) : consLang f r Q ∈ 
   have hexp : (fun z : List Bool =>
       List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
-    simpa [Function.comp] using this
+    simpa using this
   have hexp2 : (fun y : List Bool =>
       List.replicate (2 ^ r (Cobham.fstBlock (Cobham.fstBlock y)).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP hexp
-    simpa [Function.comp] using this
+    simpa using this
   have h1 : consL1 f r Q ∈ P := forall_unary_mem_P h2 hexp2
   exact forall_unary_mem_P h1 hexp
 

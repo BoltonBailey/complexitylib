@@ -62,11 +62,6 @@ theorem sq_between (n : ℕ) (hn : 10 ≤ n) :
   have h2 : s * s ≤ 2 * n := Nat.sqrt_le (2 * n)
   refine ⟨h1.le, ?_⟩
   -- `2 s + 1 ≤ n` since otherwise `n² ≤ 4 s² ≤ 8 n`
-  have h3 : 2 * s + 1 ≤ n := by
-    by_contra hcon
-    push Not at hcon
-    have : n ≤ 2 * s := by omega
-    nlinarith
   nlinarith
 
 /-! ### The empty graph -/

@@ -147,8 +147,7 @@ theorem cloudStepNum_eq (p : G.HalfEdge) (j : Fin E.degree) :
     rw [G.idxOf_cloudList rfl, enc_halfEdge]
   have hlt' : countBelow (G.cloudCodes (G.owner p)) (enc p)
       < (G.cloudList (G.owner p)).length := by rw [← hidx]; exact hlt
-  rw [cloudStepNum, dif_pos hlt']
-  rw [cloudRot, cloudRotAux, dif_pos hlt]
+  rw [cloudStepNum, dif_pos hlt', cloudRot, cloudRotAux, dif_pos hlt]
   simp only [← hidx]
   refine Prod.ext ?_ rfl
   dsimp only

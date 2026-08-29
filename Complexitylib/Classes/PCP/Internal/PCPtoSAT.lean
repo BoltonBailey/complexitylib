@@ -104,8 +104,7 @@ def varIdx (t Q : ℕ) (ρ : Fin t → Bool) (i : ℕ) : ℕ := coinIndex ρ * Q
 theorem get_varIdx (t Q : ℕ) (x w : List Bool) (ρ : Fin t → Bool) {i : ℕ}
     (hi : i < (V.positions x (BitString.toList ρ)).length) :
     (V.tableOf t Q x w ρ)[i]? = some (Assignment.get w (varIdx t Q ρ i)) := by
-  rw [tableOf]
-  rw [List.getElem?_map, List.getElem?_range hi]
+  rw [tableOf, List.getElem?_map, List.getElem?_range hi]
   rfl
 
 /-! ### The clauses -/

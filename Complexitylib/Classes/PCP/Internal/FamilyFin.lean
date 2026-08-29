@@ -145,7 +145,6 @@ theorem spectral_mergedG {n : ℕ} (hn : 0 < n) : (F.mergedG hd hn).SpectralBoun
   rw [show (4 : ℝ) / 5 = Real.sqrt ((4 / 5) ^ 2) by rw [Real.sqrt_sq (by norm_num)]]
   refine Real.sqrt_le_sqrt ?_
   have hm3 : (3 : ℝ) ≤ (F.wid hd n : ℝ) := by exact_mod_cast F.three_le_wid hd hn
-  have hm0 : (0 : ℝ) < (F.wid hd n : ℝ) := by linarith
   set m : ℝ := (F.wid hd n : ℝ)
   have h1 : (1 - (2 / 5 : ℝ) ^ 2) / (2 * m) ≤ (1 - (2 / 5 : ℝ) ^ 2) / (2 * 3) :=
     div_le_div_of_nonneg_left (by norm_num) (by norm_num) (by linarith)
@@ -202,7 +201,6 @@ theorem spectral_paddedG {n : ℕ} (hn : 0 < n) : (F.paddedG hd hn).SpectralBoun
   have hk : (((F.famDeg - F.wid hd n * F.fitD : ℕ) : ℝ))
       = (F.famDeg : ℝ) - (F.wid hd n : ℝ) * (F.fitD : ℝ) := by
     rw [Nat.cast_sub hle]; push_cast; ring
-  have hWpos : (0 : ℝ) < (F.widthBnd : ℝ) := by linarith
   have hDpos : (0 : ℝ) < (F.widthBnd : ℝ) * (F.fitD : ℝ) := by positivity
   rw [F.deg_mergedG hd hn, hk]
   push_cast

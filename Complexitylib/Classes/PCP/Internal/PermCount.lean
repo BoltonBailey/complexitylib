@@ -174,7 +174,6 @@ theorem card_perm_escape_le (S : Finset (Fin n)) (t : ℕ) :
       ⊆ (S.powersetCard k).biUnion fun K => permsInto S K := by
     intro σ hσ
     rw [Finset.mem_filter] at hσ
-    have hesc : escape σ S ≤ t := hσ.2
     set A : Finset (Fin n) := S.filter fun v => σ v ∈ S with hA
     have hcompl : A.card + escape σ S = S.card := by
       rw [hA, escape]

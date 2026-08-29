@@ -374,7 +374,6 @@ theorem sum_sq_headCount_le (F : Finset (G.V × G.D)) :
     intro z
     have h := G.headCount_le F z
     have hR : (G.headCount F z : ℝ) ≤ (G.deg : ℝ) := by exact_mod_cast h
-    have hnn : (0 : ℝ) ≤ (G.headCount F z : ℝ) := by positivity
     nlinarith
   calc ∑ z : G.V, ((G.headCount F z : ℝ)) ^ 2
       ≤ ∑ z : G.V, (G.deg : ℝ) * (G.headCount F z : ℝ) := Finset.sum_le_sum fun z _ => hterm z
@@ -390,7 +389,6 @@ theorem sum_sq_dartCount_le (F : Finset (G.V × G.D)) :
     intro v
     have h := G.dartCount_le F v
     have hR : (G.dartCount F v : ℝ) ≤ (G.deg : ℝ) := by exact_mod_cast h
-    have hnn : (0 : ℝ) ≤ (G.dartCount F v : ℝ) := by positivity
     nlinarith
   calc ∑ v : G.V, ((G.dartCount F v : ℝ)) ^ 2
       ≤ ∑ v : G.V, (G.deg : ℝ) * (G.dartCount F v : ℝ) := Finset.sum_le_sum fun v _ => hterm v

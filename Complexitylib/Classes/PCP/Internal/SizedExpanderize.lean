@@ -81,9 +81,6 @@ theorem spectralBound_sizedExpanderize :
 theorem sizedExpanderize_bound_lt_one :
     ((R.graph.deg : ℝ) + (F.degree : ℝ) * F.lam)
       / ((R.graph.deg : ℝ) + (F.degree : ℝ)) < 1 := by
-  have hdR : (0 : ℝ) < (R.graph.deg : ℝ) := by
-    have := R.graph.deg_pos
-    positivity
   have hdF : (0 : ℝ) < (F.degree : ℝ) := by exact_mod_cast F.degree_pos
   rw [div_lt_one (by positivity)]
   nlinarith [F.lam_lt_one, F.lam_nonneg]
@@ -109,7 +106,6 @@ theorem unsatVal_sizedExpanderize_ge [Fintype α] [Nonempty α] [DecidableEq α]
     have h1 : (0 : ℚ) < (R.graph.deg : ℚ) := by
       have := R.graph.deg_pos
       exact_mod_cast this
-    have h2 : (0 : ℚ) ≤ (F.degree : ℚ) := by positivity
     linarith
   have hd : (0 : ℚ) ≤ (R.graph.deg : ℚ) := by positivity
   rw [sizedExpanderize, unsatVal_addTrivial, deg_padded, F.deg_graph]

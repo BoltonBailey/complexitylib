@@ -536,7 +536,7 @@ theorem killedRotFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (T q v s c : �
     walkFn_eq F pol hd G v s hv hpc hpe, marks_revSum_eq hd G T v s _ hv hpc hpe,
     marks_eq, length_mulC, List.length_replicate, hco, ConstraintGraph.killedRotNum]
   dsimp only
-  congr 1
+  refine congrArg (pair _) ?_
   rw [← List.replicate_add, G.killedRevNum_eq_revAtNum]
 
 end Complexity

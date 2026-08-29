@@ -151,7 +151,6 @@ theorem cloudRotAux_involutive {l : List G.HalfEdge} (hnd : l.Nodup) {p : G.Half
   have hstep : G.cloudRotAux E l p j = (l.getD q.1.val p, q.2) := by
     rw [cloudRotAux, dif_pos hlt]
   have hget : l.getD q.1.val p = l[q.1.val] := (List.getElem_eq_getD p).symm
-  have hmem' : l[q.1.val] ∈ l := List.getElem_mem hq1
   have hidx' : l.idxOf l[q.1.val] = q.1.val := hnd.idxOf_getElem _ hq1
   have hlt' : l.idxOf (l.getD q.1.val p) < l.length := by
     rw [hget, hidx']; exact hq1

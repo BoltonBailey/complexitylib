@@ -316,7 +316,7 @@ theorem parBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
       = List.replicate (NumEnc.enc (stepKeyOf G (F.toFamily hd) v x B z i).par) true := by
   have hstop := stopBlk_eq r hd G hq v x hg hv hdart
   rw [marks_eq]
-  congr 1
+  refine congrArg (List.replicate · true) ?_
   refine length_digitSum_eq_enc (X := Fin 2)
     (stepKeyOf G (F.toFamily hd) v x B z i).par _ w fun j hj => ?_
   rw [parDigit, hstop, hdeg, hP]
@@ -367,7 +367,7 @@ theorem codeBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
       = List.replicate (NumEnc.enc (stepKeyOf G (F.toFamily hd) v x B z i).code) true := by
   have hstop := stopBlk_eq r hd G hq v x hg hv hdart
   rw [marks_eq]
-  congr 1
+  refine congrArg (List.replicate · true) ?_
   rw [hC]
   refine length_digitSum_eq_enc (X := Fin (Fintype.card (α → α → Bool)))
     (stepKeyOf G (F.toFamily hd) v x B z i).code _ w fun j hj => ?_

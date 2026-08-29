@@ -172,8 +172,6 @@ union bound over all sets of size `s`. -/
 theorem key_estimate {n s k B : ℕ} (hs : 1 ≤ s) (hsn : 2 * s ≤ n) (h9 : 9 * s ≤ 10 * k)
     (hB : B * 2 ^ k * n ^ k ≤ 3 ^ s * s ^ k * Nat.factorial n) :
     2 ^ s * (n.choose s * B ^ 30) ≤ Nat.factorial n ^ 30 := by
-  have hks : s ≤ k * 30 := by omega
-  have hn0 : 0 < n := by omega
   obtain ⟨m, hm⟩ : ∃ m, k * 30 = s + m := ⟨k * 30 - s, by omega⟩
   have hsspos : 0 < s ^ s := pow_pos (by omega) s
   have hnum := two_pow_three_pow_le h9

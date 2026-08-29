@@ -47,7 +47,7 @@ theorem lenLang_mem_P
   have hexp : (fun z : List Bool =>
       List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
-    simpa [Function.comp] using this
+    simpa using this
   have hQ : (fun _ : List Bool => List.replicate Q false) ∈ FP :=
     Cobham.const_replicate_mem_FP Q
   have hb : (fun z : List Bool =>

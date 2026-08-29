@@ -6,6 +6,7 @@ Authors: Bolton Bailey
 module
 public import Complexitylib.Classes.EventProb
 public import Complexitylib.Classes.NP
+public import Complexitylib.Classes.P.Cobham
 public import Complexitylib.Classes.P.Composition
 public import Complexitylib.Classes.P.Cobham.Internal.ConsBit
 public import Complexitylib.Classes.P.Cobham.Internal.FstBlock
@@ -131,21 +132,13 @@ def PCP (r q : ℕ → ℕ) : Set Language :=
 
 /-! ## Elementary properties -/
 
-/-- Every constant string function is polynomial-time. -/
-private theorem const_mem_FP (c : List Bool) : (fun _ : List Bool => c) ∈ FP := by
-  induction c with
-  | nil => exact Cobham.const_nil_mem_FP
-  | cons b c ih =>
-      have := mem_FP_comp ih (Cobham.cons_mem_FP b)
-      simpa [Function.comp] using this
-
 /-- The verifier that reads no bits of the proof, ignores its coins, and
 decides `L` on the input it recovers from the encoded view. -/
 private noncomputable def inputVerifier (L : Language) (hL : L ∈ P) : PCPVerifier where
   positions _ _ := []
   positions_mem :=
     ⟨fun _ => DataEncode.bitstringEncode ([] : List ℕ),
-      const_mem_FP _, fun _ _ => rfl⟩
+      constFn_mem_FP _, fun _ _ => rfl⟩
   verdict := (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L
   verdict_mem := by
     refine mem_P_preimage ?_ hL

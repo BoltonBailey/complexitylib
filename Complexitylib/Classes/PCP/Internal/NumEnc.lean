@@ -217,9 +217,6 @@ instance instProd [NumEnc α] [NumEnc β] : NumEnc (α × β) where
       obtain ⟨b, hbb, hp⟩ := hb
       have hea := enc_dec _ a ha
       have heb := enc_dec _ b hbb
-      have hcb : 0 < card β := by
-        have := enc_lt b
-        omega
       show enc p.1 * card β + enc p.2 = i
       rw [← hp]
       show enc a * card β + enc b = i

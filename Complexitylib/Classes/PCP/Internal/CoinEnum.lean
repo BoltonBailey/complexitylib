@@ -99,7 +99,6 @@ theorem coinIndex_coinOfIndex {t : ℕ} (c : Fin (2 ^ t)) :
       = finFunctionFinEquiv.symm c := by
     funext i
     rw [PCPVerifier.coinDigits, PCPVerifier.coinOfIndex]
-    have hlt : (finFunctionFinEquiv.symm c i).val < 2 := (finFunctionFinEquiv.symm c i).isLt
     have hv : (finFunctionFinEquiv.symm c i).val = 0
         ∨ (finFunctionFinEquiv.symm c i).val = 1 := by omega
     rcases hv with hv | hv

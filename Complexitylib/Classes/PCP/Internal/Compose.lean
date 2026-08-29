@@ -353,7 +353,6 @@ theorem unsatFrac_compose_ge (henc : Function.Injective enc)
   have hE : (Fintype.card R.Dart : ℚ) = ((R.graph.order * R.graph.deg : ℕ) : ℚ) := by
     rw [R.card_dart]
   rw [RegCSP.unsatFrac, hE]
-  have hpos : (0 : ℚ) < 2 ^ ROf B := by positivity
   rcases Nat.eq_zero_or_pos (R.graph.order * R.graph.deg) with h0 | h0
   · rw [h0]
     simp

@@ -154,7 +154,6 @@ theorem preprocessLam_nonneg : 0 ≤ ConstraintGraph.preprocessLam E := by
 theorem preprocessConst_pos : 0 < ConstraintGraph.preprocessConst E DinurAlpha := by
   have hd : (0 : ℝ) < E.degree := by exact_mod_cast E.degree_pos
   have hl : 0 < 1 - E.lam := by linarith [E.lam_lt_one]
-  have hK : (0 : ℝ) < Fintype.card DinurAlpha := by exact_mod_cast (Fintype.card_pos)
   rw [ConstraintGraph.preprocessConst, ConstraintGraph.reduceConst]
   have : 0 < min (1 : ℝ) ((1 - E.lam) * (E.degree : ℝ) / (Fintype.card DinurAlpha : ℝ)) := by
     apply lt_min one_pos
@@ -201,7 +200,6 @@ theorem le_unsatVal_step (q : ℕ) (hq2 : 2 ≤ q) (G : ConstraintGraph DinurAlp
   have hc : 0 ≤ RegCSP.powConst q DinurAlpha := by
     rw [RegCSP.powConst, card_dinurAlpha_eq]
     have h1 : (1 : ℝ) ≤ q := by exact_mod_cast (by omega : 1 ≤ q)
-    have hK0 : (0 : ℝ) < K := by exact_mod_cast one_le_K
     apply div_nonneg
     · linarith
     · have hsq : (0 : ℝ) ≤ (K : ℝ) ^ 2 := sq_nonneg _

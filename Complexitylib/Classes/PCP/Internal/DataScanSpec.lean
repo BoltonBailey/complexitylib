@@ -100,7 +100,7 @@ theorem runSpec_toBits (i : ℕ) (y : Data) :
       have hsplit : (Data.l (x :: xs)).toBits
           = false :: (x.toBits ++ ((xs.map Data.toBits).flatten ++ [true])) := by
         rw [Data.toBits_l]
-        simp [List.append_assoc]
+        simp
       have htail : (Data.l xs).toBits = false :: ((xs.map Data.toBits).flatten ++ [true]) := by
         rw [Data.toBits_l]
       set F := (xs.map Data.toBits).flatten ++ [true] with hF
@@ -141,7 +141,7 @@ theorem runSpec_toBits (i : ℕ) (y : Data) :
           simp only [hc, hacc₁] at hacc
           simpa using hacc.symm
         rw [hacc₂, hacc₁, if_pos hc, if_pos hc, if_pos hc, hR']
-        simp [List.append_assoc]
+        simp
       · have hR' : R = [] := by
           simp only [if_neg hc, hacc₁] at hacc
           simpa using hacc.symm

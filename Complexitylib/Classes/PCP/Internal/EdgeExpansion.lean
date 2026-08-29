@@ -103,10 +103,8 @@ theorem card_dartsBetween_compl_ge {lam : ℝ} (hlam : 0 ≤ lam) (h : G.Spectra
     (hn : 0 < G.order) (S : Finset G.V) :
     (1 - lam) * (G.deg : ℝ) * ((S.card : ℝ) * (Sᶜ.card : ℝ) / (G.order : ℝ))
       ≤ ((G.dartsBetween S Sᶜ).card : ℝ) := by
-  have hnq : (0 : ℝ) < (G.order : ℝ) := by exact_mod_cast hn
   have hdq : (0 : ℝ) < (G.deg : ℝ) := by have := G.deg_pos; positivity
   set B : ℝ := (S.card : ℝ) * (Sᶜ.card : ℝ) / (G.order : ℝ) with hB
-  have hBnn : 0 ≤ B := by positivity
   -- both variances are `B`
   have hcompl : (S.card : ℝ) + (Sᶜ.card : ℝ) = (G.order : ℝ) := by
     have h : S.card + Sᶜ.card = Fintype.card G.V := Finset.card_add_card_compl S

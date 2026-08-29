@@ -100,7 +100,7 @@ theorem exists_proof_of_table (t : ℕ) (x : List Bool) (f : ℕ → Bool)
     have hlen : ((List.range (V.maxQuery t x)).map f).length = V.maxQuery t x := by
       simp
     rw [← List.getElem_eq_getD (h := by rw [hlen]; exact hlt)]
-    simp [List.getElem_map]
+    simp
   have hmap : (V.positions x (BitString.toList ρ)).map
       (fun i => ((List.range (V.maxQuery t x)).map f).getD i false)
       = (V.positions x (BitString.toList ρ)).map f :=
@@ -244,8 +244,7 @@ theorem coinOfIndex_coinIndex {t : ℕ} (ρ : Fin t → Bool) (h : coinIndex ρ 
   have hfin : (⟨coinIndex ρ, h⟩ : Fin (2 ^ t)) = finFunctionFinEquiv (coinDigits ρ) :=
     Fin.ext rfl
   funext i
-  rw [coinOfIndex, hfin, Equiv.symm_apply_apply]
-  rw [coinDigits]
+  rw [coinOfIndex, hfin, Equiv.symm_apply_apply, coinDigits]
   cases ρ i <;> decide
 
 /-- The table a witness encodes: the answers for coin string `ρ` sit in the

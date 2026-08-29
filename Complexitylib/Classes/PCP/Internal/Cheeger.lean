@@ -136,7 +136,7 @@ theorem sum_darts_boundary (S : Finset G.V) :
     rw [dartsBetween, Finset.card_filter]
     push_cast
     refine Finset.sum_congr rfl fun p _ => ?_
-    simp [Finset.mem_compl]
+    simp
   have h2 : ∑ p : G.V × G.D, (if p.1 ∉ S ∧ G.nbr p.1 p.2 ∈ S then (1 : ℝ) else 0)
       = ((G.dartsBetween S Sᶜ).card : ℝ) := by
     rw [← h1, G.sum_darts_swap (fun u w => if u ∉ S ∧ w ∈ S then (1 : ℝ) else 0)]
@@ -214,7 +214,6 @@ theorem coarea {h : ℝ} (hexp : G.EdgeExpansion h) :
           _ < S.card := Finset.card_erase_lt_of_mem hv₀S
       have hhalf' : 2 * (G.support ψ').card ≤ G.order := by
         have := Finset.card_le_card hψ'supp
-        have h2 := Finset.card_erase_le (s := S) (a := v₀)
         omega
       have ihψ' := ih _ hcard' ψ' rfl hψ'pos hhalf'
       -- relate the two functions
@@ -553,7 +552,6 @@ theorem spectralBound_padLoops_of_edgeExpansion {h : ℝ} (hexp : G.EdgeExpansio
   have hcs := G.lazyQ_sq_le f B
   have hQf := G.lazyQ_nonneg f
   have hQB := G.lazyQ_nonneg B
-  have hSf : 0 ≤ ∑ v : G.V, (f v) ^ 2 := Finset.sum_nonneg fun v _ => sq_nonneg _
   have hSB : 0 ≤ ∑ v : G.V, (B v) ^ 2 := Finset.sum_nonneg fun v _ => sq_nonneg _
   show ∑ v : G.V, (B v) ^ 2 ≤ (1 - h ^ 2 / 4) ^ 2 * ∑ v : G.V, (f v) ^ 2
   set lam := 1 - h ^ 2 / 4 with hlam

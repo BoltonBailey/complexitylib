@@ -94,10 +94,6 @@ theorem binFn_mem_FP {g : List Bool → List Bool → List Bool}
 
 /-! ## The rules -/
 
-/-- Every constant function is polynomial-time. -/
-theorem constFn_mem_FP (c : List Bool) : (fun _ : List Bool => c) ∈ FP :=
-  CobhamFP_subset_FP (Cobham.const c)
-
 /-- Dropping a prefix at another value's width is polynomial-time. -/
 theorem dropLenFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
     (fun z => (b z).drop (a z).length) ∈ FP :=

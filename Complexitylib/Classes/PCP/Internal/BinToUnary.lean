@@ -87,8 +87,6 @@ theorem recFoldClamp_binValLE (bound : ℕ) (W : List Bool) :
       have hlen : 2 ^ (l.length + 1) ≤ bound := by
         have : (b :: l).length = l.length + 1 := by simp
         omega
-      have hpow : 2 ^ (l.length + 1) = 2 ^ l.length + 2 ^ l.length := by
-        rw [pow_succ]; ring
       rw [Cobham.recFoldClamp, ih hb']
       have hstate : Cobham.sndBlock (Cobham.fstBlock
           (pair (pair W (List.replicate (binValLE l) true)) l))

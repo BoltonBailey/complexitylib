@@ -79,7 +79,7 @@ theorem clause_tokens_no_sep (c : Clause) :
       rw [Clause.tokens, List.filter_append, List.filter_append, ih]
       have hraw : (Lit.rawTokens l).filter (fun t => t = EncToken.clauseSep) = [] := by
         rw [Lit.rawTokens, List.filter_map]
-        simp [Function.comp]
+        simp
       rw [hraw]
       rfl
 

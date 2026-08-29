@@ -149,8 +149,6 @@ theorem length_encGraph_le (G : ConstraintGraph α) :
       obtain ⟨i, hi, rfl⟩ := List.mem_iff_getElem.mp he
       rw [length_edgeRecs] at hi
       rw [getElem_edgeRecs G i hi, ← encTriple_eq, length_encTriple]
-      have h1 := (G.tail ⟨i, hi⟩).isLt
-      have h2 := (G.head ⟨i, hi⟩).isLt
       have h3 := codeOfRel_lt (G.rel ⟨i, hi⟩)
       omega
     · rw [List.length_map, length_edgeRecs, smul_eq_mul]

@@ -199,7 +199,6 @@ theorem satisfiable_killedPow_of_satisfiable (hR : R.Satisfiable) :
 /-! ### The soundness witness -/
 
 /-- A step of the effective walk that `σ` fails, whose two vertices both ends
-have truthful opinions about, breaks the killed walk's constraint. This is the
 shape every soundness count is built from. -/
 theorem not_satisfies_killedPow_of_faulty {σ : R.Assignment}
     (A : (R.killedPow q T hq).Assignment) (v : R.graph.V)

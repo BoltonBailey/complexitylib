@@ -86,9 +86,6 @@ theorem unsatFrac_addTrivial (a : R.Assignment) :
   have hd : (0 : ℚ) < (R.graph.deg : ℚ) := by
     have := R.graph.deg_pos
     exact_mod_cast this
-  have hdH : (0 : ℚ) < (H.deg : ℚ) := by
-    have := H.deg_pos
-    exact_mod_cast this
   have hcards := R.card_unsatDarts_addTrivial H e a
   rcases Nat.eq_zero_or_pos R.graph.order with hz | hz
   · have hempty : (R.unsatDarts a).card = 0 := by

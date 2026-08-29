@@ -273,8 +273,7 @@ theorem sum_sq_lift_le (hn : 0 < n) (hN : N ≤ 3 * n) (f : Fin n → ℝ) :
     ∑ u : Fin N, (f (proj n hn u)) ^ 2 ≤ 3 * ∑ v : Fin n, (f v) ^ 2 := by
   classical
   have h := sum_over_lift hn hN (fun u => (f (proj n hn u)) ^ 2)
-  rw [← h, Fintype.sum_prod_type]
-  rw [Finset.mul_sum]
+  rw [← h, Fintype.sum_prod_type, Finset.mul_sum]
   refine Finset.sum_le_sum fun v _ => ?_
   have : ∀ i : Fin 3, (match lift N n v i with | some u => (f (proj n hn u)) ^ 2 | none => 0)
       ≤ (f v) ^ 2 := by
@@ -343,7 +342,6 @@ theorem sum_sq_step_lift_le (hn : 0 < n) (hd : 0 < d) (rot : Fin N × Fin d → 
   set G := base hd rot hrot with hG
   set F : Fin N → ℝ := fun w => f (proj n hn w) with hF
   have hord : (G.order : ℝ) = N := by rw [hG, order_ofRot]
-  have hN' : (0 : ℝ) < N := by exact_mod_cast hN0
   have hordpos : 0 < G.order := by rw [hG, order_ofRot]; exact hN0
   -- decompose `F` into its mean and its centred part
   have hdec : F = fun v => G.mean F + G.center F v := G.eq_mean_add_center F
@@ -438,7 +436,6 @@ theorem liftN_eq_lift (N n : ℕ) (v : Fin n) (i : Fin 3) :
 theorem liftN_isSome {N n m : ℕ} (hm : (m - 1) * n ≤ N) (v : Fin n) {i : ℕ}
     (hi : i + 1 < m) : (liftN N n v i).isSome := by
   rw [liftN]
-  have hv : v.val < n := v.isLt
   have hle : v.val + i * n < (m - 1) * n := by
     have h1 : i + 1 ≤ m - 1 := by omega
     calc v.val + i * n < n + i * n := by omega

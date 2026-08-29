@@ -121,8 +121,6 @@ theorem edgeExpansion_permsGraph (hD : 0 < D) (σ : Fin D → Equiv.Perm (Fin n)
   rw [order_permsGraph] at hS
   obtain ⟨i, hi⟩ := hesc S hS
   have hcD : (0 : ℝ) < 2 * (c : ℝ) * D := by
-    have h1 : (0 : ℝ) < c := by exact_mod_cast hc
-    have h2 : (0 : ℝ) < D := by exact_mod_cast hD
     positivity
   have hsum : (escape (σ i) S : ℝ) ≤ ∑ j : Fin D, (escape (σ j) S : ℝ) := by
     refine Finset.single_le_sum (f := fun j => (escape (σ j) S : ℝ)) (fun j _ => ?_)

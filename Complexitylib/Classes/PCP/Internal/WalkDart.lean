@@ -94,7 +94,6 @@ theorem sum_stepDart {M : Type*} [AddCommMonoid M] :
       intro t hk f
       obtain ⟨t', rfl⟩ : ∃ t', t = t' + 1 := ⟨t - 1, by omega⟩
       have hkt : k < t' := by omega
-      have ht' : 1 ≤ t' := by omega
       have hsplit : ∀ v : G.V,
           (∑ s : Fin (t' + 1) → G.D,
               f (G.walkAt (t' + 1) v s (k + 1), s ⟨k + 1, hk⟩))
@@ -167,7 +166,6 @@ theorem sum_stepDart_fixed (h : G.V → G.D → ℝ) :
       intro m hk x
       obtain ⟨m', rfl⟩ : ∃ m', m = m' + 1 := ⟨m - 1, by omega⟩
       have hkm : k < m' := by omega
-      have hm1 : 1 ≤ m' := by omega
       have hd : (G.deg : ℝ) ≠ 0 := G.deg_ne_zero
       have hsplit : (∑ r : Fin (m' + 1) → G.D,
             h (G.walkAt (m' + 1) x r (k + 1)) (r ⟨k + 1, hk⟩))
@@ -281,12 +279,6 @@ theorem sum_two_darts_fixed (h₁ h₂ : G.V → G.D → ℝ) :
                 (G.nbr x i) :=
         fun i => ih l' m' hkl' hl' (G.nbr x i)
       rw [Finset.sum_congr rfl fun i _ => hIH i, ← Finset.mul_sum]
-      have hswap : ∀ i : G.D, (∑ a : G.D, ∑ b : G.D,
-            G.stepIter k (fun y => h₁ y a
-              * G.stepIter (l' - k - 1) (fun z => h₂ z b) (G.nbr y a)) (G.nbr x i))
-          = ∑ a : G.D, ∑ b : G.D,
-            G.stepIter k (fun y => h₁ y a
-              * G.stepIter (l' - k - 1) (fun z => h₂ z b) (G.nbr y a)) (G.nbr x i) := fun _ => rfl
       have hcomm : (∑ i : G.D, ∑ a : G.D, ∑ b : G.D,
             G.stepIter k (fun y => h₁ y a
               * G.stepIter (l' - k - 1) (fun z => h₂ z b) (G.nbr y a)) (G.nbr x i))
@@ -329,7 +321,7 @@ theorem card_walks_stepDart_mem {t : ℕ} {k : ℕ} (hk : k < t) (S : Finset (G.
   rw [Finset.sum_congr rfl fun v _ => hind v]
   rw [G.sum_stepDart k t hk (fun p => if p ∈ S then 1 else 0)]
   rw [← Finset.card_filter (fun p => p ∈ S) Finset.univ]
-  simp [smul_eq_mul]
+  simp
 
 end RegGraph
 

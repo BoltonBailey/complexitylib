@@ -230,22 +230,21 @@ theorem famRotFn_eq (hd : 1 < F.deg) (n v i : ℕ) (hn : 0 < n)
       rw [hT, hidx, F.tableFst_table hbound, F.tableSnd_table hbound,
         show F.deg ^ 2 = F.fitD from rfl,
         mul_add_div_of_lt hdpos (Nat.mod_lt _ hdpos), mul_add_mod_of_lt (Nat.mod_lt _ hdpos)]
-      congr 1
+      refine congrArg₂ pair ?_ ?_
       · rw [marks_eq, modFn2_eq (by rw [hrep]; exact hn),
           List.length_replicate, hrep, List.length_replicate]
       · rw [marks_eq, List.length_append, List.length_replicate,
           length_mulC, divFn2_eq (by rw [hrep]; exact hn), List.length_replicate, hrep,
           List.length_replicate]
-        congr 1
-        ring
+        exact congrArg (List.replicate · true) (by ring)
     · rw [if_neg h2, ifLtLen_neg (by rw [hlift, hN]; exact h2)]
-      congr 1
+      refine congrArg₂ pair ?_ ?_
       · rw [marks_eq, List.length_replicate]
       · rw [marks_eq, List.length_replicate]
   · rw [if_neg h1, ifLtLen_neg (by
       rw [List.length_replicate, length_mulLen, hm, List.length_replicate]
       exact h1)]
-    congr 1
+    refine congrArg₂ pair ?_ ?_
     · rw [marks_eq, List.length_replicate]
     · rw [marks_eq, List.length_replicate]
 

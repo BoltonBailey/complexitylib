@@ -129,7 +129,6 @@ private theorem sum_mul_le_of_sq_le {X Y : G.V → ℝ} {A lam : ℝ} (hlam : 0 
       ≤ (∑ v : G.V, (X v) ^ 2) * ∑ v : G.V, (Y v) ^ 2 :=
     Finset.sum_mul_sq_le_sq_mul_sq _ _ _
   have hprod : (∑ v : G.V, (X v) ^ 2) * (∑ v : G.V, (Y v) ^ 2) ≤ (lam * A) ^ 2 := by
-    have h1 : (0 : ℝ) ≤ ∑ v : G.V, (X v) ^ 2 := Finset.sum_nonneg fun _ _ => sq_nonneg _
     have h2 : (0 : ℝ) ≤ ∑ v : G.V, (Y v) ^ 2 := Finset.sum_nonneg fun _ _ => sq_nonneg _
     calc (∑ v : G.V, (X v) ^ 2) * (∑ v : G.V, (Y v) ^ 2)
         ≤ A * (lam ^ 2 * A) := by
@@ -148,7 +147,6 @@ theorem sum_sq_step_union_le {lam : ℝ} (hlam : 0 ≤ lam) (hH : H.SpectralBoun
   set A : ℝ := ∑ v : G.V, (f v) ^ 2 with hAdef
   have hA : 0 ≤ A := Finset.sum_nonneg fun _ _ => sq_nonneg _
   have hdG : (0 : ℝ) < (G.deg : ℝ) := by have := G.deg_pos; positivity
-  have hdH : (0 : ℝ) < (H.deg : ℝ) := by have := H.deg_pos; positivity
   set X : G.V → ℝ := fun v => G.step f v with hXdef
   set Y : G.V → ℝ := fun v => H.step (fun u => f (e u)) (e.symm v) with hYdef
   -- the two individual bounds
@@ -176,8 +174,7 @@ theorem sum_sq_step_union_le {lam : ℝ} (hlam : 0 ≤ lam) (hH : H.SpectralBoun
     field_simp
     ring
   have hden : (0 : ℝ) < ((G.deg : ℝ) + (H.deg : ℝ)) ^ 2 := by positivity
-  rw [Finset.sum_congr rfl fun v _ => hexp v, ← Finset.sum_div]
-  rw [div_le_iff₀ hden]
+  rw [Finset.sum_congr rfl fun v _ => hexp v, ← Finset.sum_div, div_le_iff₀ hden]
   have hsplit : ∑ v : G.V, ((G.deg : ℝ) ^ 2 * (X v) ^ 2
         + 2 * (G.deg : ℝ) * (H.deg : ℝ) * (X v * Y v) + (H.deg : ℝ) ^ 2 * (Y v) ^ 2)
       = (G.deg : ℝ) ^ 2 * (∑ v : G.V, (X v) ^ 2)

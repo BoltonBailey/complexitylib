@@ -75,17 +75,12 @@ theorem powering_algebra {U N d K q lam C : ℝ} (T' : ℕ) (hN : 0 < N) (hd : 0
           + 2 * ((T' + 2 : ℕ) : ℝ) / (1 - lam))
       ≤ C / (N * (d ^ (T' + 2) * q ^ (T' + 2))) := by
   have hlam' : 0 < 1 - lam := by linarith
-  have hq0 : 0 < q := by linarith
   set c : ℝ := (q - 1) / (4 * K ^ 2) with hc
   set u : ℝ := U / (N * d) with hu
   set W : ℝ := N * (d ^ (T' + 2) * q ^ (T' + 2)) with hW
   set Tr : ℝ := ((T' + 2 : ℕ) : ℝ) with hTr
   set E : ℝ := 2 * Tr ^ 2 * u + 2 * Tr / (1 - lam) with hE
-  have hc0 : 0 ≤ c := by rw [hc]; apply div_nonneg <;> nlinarith
-  have hu0 : 0 < u := by rw [hu]; positivity
   have hW0 : 0 < W := by rw [hW]; positivity
-  have hTr0 : 0 < Tr := by rw [hTr]; positivity
-  have hE0 : 0 < E := by rw [hE]; positivity
   have hF : U * ((q - 1) * (d ^ (T' + 2) * q ^ (T' + 2) / 2
         * (d ^ (T' + 2) * q ^ (T' + 2) / 2))) / (K ^ 2 * (d ^ (T' + 2 + 1) * q ^ (T' + 2)))
       = c * u * W := by
@@ -102,8 +97,7 @@ theorem powering_algebra {U N d K q lam C : ℝ} (T' : ℕ) (hN : 0 < N) (hd : 0
     field_simp
   rw [hratio] at hcount
   have hgoal : c + 2 * Tr ^ 2 * u + 2 * Tr / (1 - lam) = c + E := by rw [hE]; ring
-  rw [hgoal]
-  rw [div_le_div_iff₀ (by positivity) hW0]
+  rw [hgoal, div_le_div_iff₀ (by positivity) hW0]
   have hcE : 0 < c + E := by positivity
   have h := mul_le_mul_of_nonneg_right hcount hcE.le
   have heq : c ^ 2 * u * W = W * (c ^ 2 * u / (c + E)) * (c + E) := by
@@ -215,7 +209,6 @@ theorem unsatFrac_killedPow_clean (A : (R.killedPow q T hq).Assignment) {H : ℕ
     refine mul_le_mul_of_nonneg_left ?_ (by linarith)
     exact mul_le_mul hhalf hhalf (by positivity) (by positivity)
   have hB := R.sum_sq_goodCrossings_le q T hq A hlam0 hlam1 hspec hn
-  have hT2 : 2 ≤ T := by omega
   obtain ⟨T', rfl⟩ : ∃ T', T = T' + 2 := ⟨T - 2, by omega⟩
   have hP0 : (0 : ℝ) < 2 * ((q : ℝ) ^ (T' + 2) * ((R.graph.deg : ℝ) ^ (T' + 2 - 2)
       * (((T' + 2 : ℕ) : ℝ) * ((T' + 2 : ℕ) : ℝ)
@@ -223,7 +216,6 @@ theorem unsatFrac_killedPow_clean (A : (R.killedPow q T hq).Assignment) {H : ℕ
             * ((R.unsatDarts (R.kDecode q (T' + 2) hq A)).card : ℝ) / (R.graph.order : ℝ))
         + ((T' + 2 : ℕ) : ℝ) * (1 / (1 - lam)) * ((R.graph.deg : ℝ)
             * ((R.unsatDarts (R.kDecode q (T' + 2) hq A)).card : ℝ))))) := by
-    have hlam' : 0 < 1 - lam := by linarith
     positivity
   have hcount := R.card_unsatDarts_ge' q (T' + 2) hq A (by positivity) hF hB hP0
   have hsub : T' + 2 - 2 = T' := by omega
@@ -301,7 +293,6 @@ theorem le_unsatVal_killedPow_min {H : ℕ}
   refine min_le_min_right _ ?_
   have hs : 0 ≤ powSlope (powConst q α) T lam := by
     rw [powSlope]
-    have hlam' : 0 < 1 - lam := by linarith
     positivity
   exact mul_le_mul_of_nonneg_left hv hs
 
@@ -334,7 +325,6 @@ theorem four_mul_pow_le {K q : ℕ} (hK : 1 ≤ K) (hq : 2 ≤ q) :
   have hpm : (0 : ℝ) < ((q - 1 : ℕ) : ℝ) ^ m := by positivity
   rw [le_div_iff₀ hpm] at hbern
   have : (4 * K : ℝ) * ((q - 1 : ℕ) : ℝ) ^ m ≤ (q : ℝ) ^ m := by
-    have hK0 : (0 : ℝ) ≤ ((q - 1 : ℕ) : ℝ) ^ m := hpm.le
     nlinarith
   exact_mod_cast this
 
@@ -402,8 +392,6 @@ theorem slopeUnit_mul_le_powSlope {K : ℕ} {q : ℕ} (hK : 1 ≤ K) (hq : 2 ≤
     (hlam1 : lam < 1) :
     slopeUnit (K : ℝ) lam * ((q : ℝ) - 1)
       ≤ RegCSP.powSlope (((q : ℝ) - 1) / (4 * (K : ℝ) ^ 2)) (powT K q : ℝ) lam := by
-  have hlam' : 0 < 1 - lam := by linarith
-  have hK0 : (0 : ℝ) < K := by exact_mod_cast (by omega : 0 < K)
   have hq1 : (1 : ℝ) ≤ (q : ℝ) - 1 := by
     have : (2 : ℝ) ≤ q := by exact_mod_cast hq
     linarith
@@ -414,10 +402,8 @@ theorem slopeUnit_mul_le_powSlope {K : ℕ} {q : ℕ} (hK : 1 ≤ K) (hq : 2 ≤
   rw [hTcast, RegCSP.powSlope, slopeUnit]
   set r := (q : ℝ) - 1 with hr
   set D₀ : ℝ := 1 / (4 * (K : ℝ) ^ 2) + 2 + 16 * K / (1 - lam) with hD₀
-  have hD₀0 : 0 < D₀ := by rw [hD₀]; positivity
   have hden : r / (4 * (K : ℝ) ^ 2) + 2 + 2 * (8 * K * r) / (1 - lam) ≤ r * D₀ := by
     rw [hD₀]
-    have h2 : (2 : ℝ) ≤ r * 2 := by linarith
     have hx : r / (4 * (K : ℝ) ^ 2) = r * (1 / (4 * (K : ℝ) ^ 2)) := by ring
     have hy : 2 * (8 * K * r) / (1 - lam) = r * (16 * K / (1 - lam)) := by ring
     rw [hx, hy]

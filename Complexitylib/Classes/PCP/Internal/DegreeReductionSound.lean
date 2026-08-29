@@ -279,7 +279,6 @@ theorem unsatFrac_reduce_ge (A : (G.reduce E).Assignment) :
     calc c / (2 * (1 + (E.degree : ℝ))) * ((G.unsatVal : ℚ) : ℝ)
           * (2 * (G.numEdges : ℝ) * (1 + (E.degree : ℝ)))
         = c * ((G.unsatVal : ℚ) : ℝ) * (G.numEdges : ℝ) := by
-          have hd1 : (0 : ℝ) < 1 + (E.degree : ℝ) := by positivity
           field_simp
       _ ≤ (((G.reduce E).unsatDarts A).card : ℝ) := hkey
 

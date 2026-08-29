@@ -95,7 +95,7 @@ theorem zigzagRot_involutive : Function.Involutive (zigzagRot G H e) := by
     have : (p.1, p.2) = p := rfl
     rw [this, hp, H.rot_involutive]
   simp only [hrr, hqq, hpp]
-  simp [Equiv.apply_symm_apply]
+  simp
 
 /-- **The zig-zag product.** Its vertices are the darts of `G` and its degree is
 the square of `H`'s. -/
@@ -152,8 +152,7 @@ theorem step_zigzag (f : (zigzag G H e).V → ℝ) (x : (zigzag G H e).V) :
   have hsum : (∑ d : (zigzag G H e).D, f ((zigzag G H e).nbr x d))
       = ∑ a : H.D, ∑ b : H.D, f ((zigzagRot G H e (x, (a, b))).1) :=
     Fintype.sum_prod_type (f := fun d : H.D × H.D => f ((zigzagRot G H e (x, d)).1))
-  rw [RegGraph.step, hdeg, hsum]
-  rw [cloudStep]
+  rw [RegGraph.step, hdeg, hsum, cloudStep]
   have hinner : ∀ a : H.D,
       ∑ b : H.D, f ((zigzagRot G H e (x, (a, b))).1)
         = (H.deg : ℝ) * cloudStep G H e f
@@ -816,7 +815,6 @@ theorem spectralBound_zigzag {lamG lamH : ℝ} (hG : G.SpectralBound lamG)
     RegGraph.sum_step (zigzag G H e) f
   have hTf0 : ∑ x : G.V × G.D, (zigzag G H e).step f x = 0 := by rw [hmean]; exact hf'
   have hA0 : 0 ≤ ip G ((zigzag G H e).step f) ((zigzag G H e).step f) := ip_nonneg G _
-  have hB0 : 0 ≤ ip G f f := ip_nonneg G f
   -- the test vector `g = (1/lam) • T f`, or `T f` itself in the degenerate case
   have hmain : ∀ c : ℝ, 0 < c →
       2 * (ip G ((zigzag G H e).step f) ((zigzag G H e).step f) * c)
@@ -886,7 +884,6 @@ theorem spectralBound_zigzag {lamG lamH : ℝ} (hG : G.SpectralBound lamG)
     rw [sum_sq_eq_ip, sum_sq_eq_ip, hz, ← h0]
     norm_num
   · have hc := hmain (1 / (lamG + lamH + lamH ^ 2)) (by positivity)
-    have hne : lamG + lamH + lamH ^ 2 ≠ 0 := ne_of_gt hpos
     have hsimp : (lamG + lamH + lamH ^ 2)
         * (ip G f f + (1 / (lamG + lamH + lamH ^ 2)) ^ 2
             * ip G ((zigzag G H e).step f) ((zigzag G H e).step f))

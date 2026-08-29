@@ -68,7 +68,6 @@ theorem rot_power_two (G : RegGraph) (v : G.V) (s : Fin 2 → G.D) :
       rfl
     · show G.backLabel v s (Fin.rev 1) = _
       show (G.rot (G.walkAt 2 v s (Fin.rev (1 : Fin 2)).val, s (Fin.rev 1))).2 = _
-      norm_num
       rfl
 
 end RegGraph
@@ -385,7 +384,7 @@ theorem rotVal_eq (k : ℕ) (v : Fin (F.size k)) (i : Fin (F.deg ^ 2)) :
       rw [hq1]
       dsimp only
       rw [hr]
-      simp [Equiv.symm_apply_apply]
+      simp
 
 theorem baseVal_lt {x a : ℕ} (hx : x < F.deg ^ 4) (ha : a < F.deg) :
     (F.baseVal x a).1 < F.deg ^ 4 ∧ (F.baseVal x a).2 < F.deg := by

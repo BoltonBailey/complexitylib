@@ -280,13 +280,13 @@ theorem card_preWalk_eq {T m : ℕ} (hm : m ≤ T) (w : Fin m → G.D) :
       by_cases hj : j.val < m
       · simp only [hj, dif_pos, Finset.mem_singleton]
         have hval := congrFun h ⟨j.val, hj⟩
-        simpa [preWalk] using hval
+        simpa using hval
       · simp [hj]
     · intro h
       funext j
       have hmem := h ⟨j.val, lt_of_lt_of_le j.isLt hm⟩
       simp only [j.isLt, dif_pos, Finset.mem_singleton] at hmem
-      simpa [preWalk] using hmem
+      simpa using hmem
   have hlt : (Finset.univ.filter fun j : Fin T => j.val < m).card = m := by
     have himg : (Finset.univ.filter fun j : Fin T => j.val < m).image Fin.val
         = Finset.range m := by

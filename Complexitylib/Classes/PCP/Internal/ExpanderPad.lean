@@ -143,7 +143,6 @@ theorem spectralBound_padLoops (k : ℕ) {lam : ℝ} (h : G.SpectralBound lam) :
   intro f hf
   have hspec := h f hf
   have hd : (0 : ℝ) < G.deg := by exact_mod_cast G.deg_pos
-  have hk : (0 : ℝ) ≤ k := by positivity
   have hD : (0 : ℝ) < (G.deg : ℝ) + k := by positivity
   rw [Real.sq_sqrt (by positivity)]
   set a : ℝ := (G.deg : ℝ) / ((G.deg : ℝ) + k) with ha
@@ -164,7 +163,6 @@ theorem spectralBound_padLoops (k : ℕ) {lam : ℝ} (h : G.SpectralBound lam) :
       ≤ a * ∑ v : G.V, (G.step f v) ^ 2 + (1 - a) * ∑ v : G.V, (f v) ^ 2 := by
     rw [Finset.mul_sum, Finset.mul_sum, ← Finset.sum_add_distrib]
     exact Finset.sum_le_sum fun v _ => hpt v
-  have hS : 0 ≤ ∑ v : G.V, (f v) ^ 2 := Finset.sum_nonneg fun v _ => sq_nonneg _
   have hcoef : ((G.deg : ℝ) * lam ^ 2 + k) / ((G.deg : ℝ) + k) = a * lam ^ 2 + (1 - a) := by
     rw [← hb, ha]; field_simp
   rw [hcoef]

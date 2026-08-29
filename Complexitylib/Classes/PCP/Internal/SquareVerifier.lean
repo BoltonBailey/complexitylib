@@ -88,7 +88,7 @@ theorem fstCoinsFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : 
     (fun z => fstCoins t (a z) (b z)) ∈ FP := by
   have hlen : (fun z => List.replicate (t (a z).length) true) ∈ FP := by
     have := mem_FP_comp ha ht
-    simpa [Function.comp] using this
+    simpa using this
   have := Cobham.takeLenFn_mem_FP hlen hb
   refine mem_FP_of_eq this fun z => ?_
   rw [fstCoins, List.length_replicate]
@@ -98,7 +98,7 @@ theorem sndCoinsFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : 
     (fun z => sndCoins t (a z) (b z)) ∈ FP := by
   have hlen : (fun z => List.replicate (t (a z).length) true) ∈ FP := by
     have := mem_FP_comp ha ht
-    simpa [Function.comp] using this
+    simpa using this
   have := dropLenFn_mem_FP hlen hb
   refine mem_FP_of_eq this fun z => ?_
   rw [sndCoins, List.length_replicate]
@@ -116,12 +116,12 @@ theorem sqPositions_mem (hf : f ∈ FP)
       (fstCoins t (Cobham.fstBlock z) (Cobham.sndBlock z)))) ∈ FP := by
     have := mem_FP_comp
       (Cobham.pairFn_mem_FP hx (fstCoinsFn_mem_FP ht hx hr)) hf
-    simpa [Function.comp] using this
+    simpa using this
   have h2 : (fun z : List Bool => f (pair (Cobham.fstBlock z)
       (sndCoins t (Cobham.fstBlock z) (Cobham.sndBlock z)))) ∈ FP := by
     have := mem_FP_comp
       (Cobham.pairFn_mem_FP hx (sndCoinsFn_mem_FP ht hx hr)) hf
-    simpa [Function.comp] using this
+    simpa using this
   refine ⟨fun z => false :: (posInner (f (pair (Cobham.fstBlock z)
       (fstCoins t (Cobham.fstBlock z) (Cobham.sndBlock z))))
       ++ posInner (f (pair (Cobham.fstBlock z)
@@ -130,7 +130,7 @@ theorem sqPositions_mem (hf : f ∈ FP)
     have hcons := mem_FP_comp hcat (Cobham.cons_mem_FP false)
     have := Cobham.appendFn_mem_FP hcons (constFn_mem_FP [true])
     refine mem_FP_of_eq this fun z => ?_
-    simp [Function.comp]
+    simp
   · intro x ρ
     show false :: (posInner (f (pair (Cobham.fstBlock (pair x ρ))
         (fstCoins t (Cobham.fstBlock (pair x ρ)) (Cobham.sndBlock (pair x ρ)))))
@@ -152,7 +152,7 @@ theorem sqVerdict_mem_P (hf : f ∈ FP)
     sndCoinsFn_mem_FP ht vX_mem_FP vR_mem_FP
   have hfv : (fun z => f (pair (vX z) (fstCoins t (vX z) (vR z)))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP vX_mem_FP hc1) hf
-    simpa [Function.comp] using this
+    simpa using this
   have hn : (fun z => posCount (f (pair (vX z) (fstCoins t (vX z) (vR z))))) ∈ FP :=
     posCount_mem_FP hfv
   have hnlen : ∀ z, (posCount (f (pair (vX z) (fstCoins t (vX z) (vR z))))).length

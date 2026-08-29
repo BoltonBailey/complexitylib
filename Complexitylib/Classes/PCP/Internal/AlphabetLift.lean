@@ -69,7 +69,7 @@ theorem satisfies_lift_iff (G : ConstraintGraph α) (f : α → β)
       ∃ a₁ : α, ∃ a₂ : α, f a₁ = b (G.tail e) ∧ f a₂ = b (G.head e)
         ∧ G.rel e a₁ a₂ = true := by
   rw [Satisfies, satisfies]
-  simp [lift]
+  simp
 
 /-- **Satisfiability is unchanged.** -/
 theorem satisfiable_lift_iff (G : ConstraintGraph α) {f : α → β} (hf : Function.Injective f)

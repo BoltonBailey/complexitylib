@@ -201,7 +201,6 @@ value is at least one edge's worth. -/
 theorem inv_numEdges_le_unsatFrac (h : ¬ G.Satisfiable) (a : G.Assignment) :
     1 / (G.numEdges : ℚ) ≤ G.unsatFrac a := by
   have hpos : 0 < G.numEdges := numEdges_pos_of_not_satisfiable h
-  have hmq : (0 : ℚ) < (G.numEdges : ℚ) := by exact_mod_cast hpos
   have hne : (G.unsatEdges a).Nonempty := by
     by_contra hcon
     rw [Finset.not_nonempty_iff_eq_empty] at hcon

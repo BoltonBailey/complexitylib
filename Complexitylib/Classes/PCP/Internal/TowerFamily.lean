@@ -142,7 +142,6 @@ theorem spectral_mergedGraph {n : ℕ} (hn : 0 < n) :
   refine Real.sqrt_le_sqrt ?_
   have hm3 : (3 : ℝ) ≤ (B.fitWidth hd n : ℝ) := by
     exact_mod_cast B.three_le_fitWidth hd hn
-  have hm0 : (0 : ℝ) < (B.fitWidth hd n : ℝ) := by linarith
   set m : ℝ := (B.fitWidth hd n : ℝ)
   have h1 : (1 - (2 / 5 : ℝ) ^ 2) / (2 * m) ≤ (1 - (2 / 5 : ℝ) ^ 2) / (2 * 3) := by
     apply div_le_div_of_nonneg_left (by norm_num) (by norm_num) (by linarith)
@@ -182,7 +181,6 @@ theorem famLam_nonneg : 0 ≤ B.famLam := Real.sqrt_nonneg _
 
 theorem famLam_lt_one : B.famLam < 1 := by
   have hW : (3 : ℝ) ≤ (B.widthBound : ℝ) := by exact_mod_cast B.three_le_widthBound
-  have hWpos : (0 : ℝ) < (B.widthBound : ℝ) := by linarith
   have h0 : (0 : ℝ) ≤ 1 - 27 / (25 * B.widthBound) := by
     rw [sub_nonneg, div_le_one (by linarith)]
     linarith
@@ -209,7 +207,6 @@ theorem spectral_paddedGraph {n : ℕ} (hn : 0 < n) :
   have hk : (((B.famDegree - B.fitWidth hd n * B.fitD : ℕ) : ℝ))
       = (B.famDegree : ℝ) - (B.fitWidth hd n : ℝ) * (B.fitD : ℝ) := by
     rw [Nat.cast_sub hle]; push_cast; ring
-  have hWpos : (0 : ℝ) < (B.widthBound : ℝ) := by linarith
   have hDpos : (0 : ℝ) < (B.widthBound : ℝ) * (B.fitD : ℝ) := by positivity
   rw [B.deg_mergedGraph hd hn, hk]
   push_cast

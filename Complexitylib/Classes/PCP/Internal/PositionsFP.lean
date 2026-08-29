@@ -38,7 +38,7 @@ noncomputable def posEntryFn (P : List Bool → List Bool) (w : List Bool) : Lis
 theorem posEntryFn_mem_FP {P : List Bool → List Bool} (hP : P ∈ FP) :
     posEntryFn P ∈ FP := by
   have := mem_FP_comp (Cobham.pairFn_mem_FP hP hP) natEncodeFn_mem_FP
-  simpa [Function.comp, posEntryFn] using this
+  simpa using this
 
 theorem posEntryFn_eq {P : List Bool → List Bool} (w : List Bool) :
     posEntryFn P w = DataEncode.bitstringEncode ((P w).length) := by
@@ -86,14 +86,13 @@ theorem positions_mem_of_unary {pos : List Bool → ℕ → ℕ} {cnt : List Boo
     have hpe : p.eval z'.length
         = 4 * z'.length * (pE.eval (3 * z'.length + 2)) + 3 * z'.length + 6 := by
       rw [hp]
-      simp [Polynomial.eval_comp]
+      simp
     rw [hpe]
     have hkz : k ≤ z'.length := le_trans hk hf
     have hmul : k * pE.eval (3 * z'.length + 2)
         ≤ z'.length * pE.eval (3 * z'.length + 2) := Nat.mul_le_mul_right _ hkz
     have hcat' : (entryCat E (Cobham.sndBlock z') k).length
         ≤ z'.length * pE.eval (3 * z'.length + 2) := le_trans hcat hmul
-    have h4 := Nat.mul_le_mul_left 4 hcat'
     rw [show 4 * z'.length * pE.eval (3 * z'.length + 2)
         = 4 * (z'.length * pE.eval (3 * z'.length + 2)) from by ring]
     omega
@@ -101,7 +100,7 @@ theorem positions_mem_of_unary {pos : List Bool → ℕ → ℕ} {cnt : List Boo
   · have hpair : (fun z : List Bool => pair (List.replicate (cnt z) true) z) ∈ FP :=
       mem_FP_pairWithInput hcnt
     have := mem_FP_comp hpair (listEncFn_mem_FP hEfp p hbound)
-    simpa [Function.comp] using this
+    simpa using this
   · intro z
     refine listEncFn_eq_bitstringEncode _ ?_ ?_
     · rw [Cobham.fstBlock_pair, List.length_replicate, List.length_map, List.length_range]

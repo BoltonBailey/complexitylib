@@ -94,7 +94,7 @@ theorem segGlue_split {ℓ i : ℕ} (hi : i < ℓ) (W : Fin ℓ → G.D) :
   · simp [segGlue, segPre, preWalk, hk]
   · have hkey : k = ⟨i, hi⟩ := Fin.ext hk
     subst hkey
-    simp [segGlue]
+    simp
   · have h1 : ¬ (k.val < i) := by omega
     have h2 : ¬ (k.val = i) := by omega
     simp only [segGlue, dif_neg h1, dif_neg h2, segSuf]
@@ -128,7 +128,6 @@ theorem revWalk_segSuf {ℓ : ℕ} (v : G.V) (W : Fin ℓ → G.D) {i : ℕ} (hi
     G.revWalk (G.walkAt ℓ v W (i + 1)) (G.segSuf W i)
       = G.segPre (G.revWalk v W) (show ℓ - (i + 1) ≤ ℓ by omega) := by
   funext k
-  have hk := k.isLt
   have hkl : k.val < ℓ := by omega
   have hlt : ℓ - (k.val + 1) < ℓ := by omega
   have hrev : ((Fin.rev k : Fin (ℓ - (i + 1)))).val = ℓ - (i + 1) - (k.val + 1) :=
