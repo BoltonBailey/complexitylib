@@ -17,8 +17,6 @@ public import Complexitylib.Encoding.DataEncode
 /-!
 # Probabilistically checkable proofs: definitions
 
-⚠️ Unreviewed by Bolton
-
 `PCP r q` is the class of languages with a probabilistically checkable proof
 system: a polynomial-time verifier that, on an input of length `n`, flips
 `r n` coins, reads at most `q n` bits of a proof string, always accepts a
