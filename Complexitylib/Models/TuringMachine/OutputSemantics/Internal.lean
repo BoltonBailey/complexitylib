@@ -71,6 +71,37 @@ theorem runCfg_eq_of_reachesIn_halted_internal (tm : TM n) {c c' : Cfg n tm.Q}
   rw [show time = steps + (time - steps) from by omega, runCfg_add_internal,
     runCfg_of_reachesIn_internal tm hreach, runCfg_of_halted_internal tm hhalt]
 
+theorem haltsInTime_iff_runCfg_internal (tm : TM n) (program : List Bool) (time : ℕ) :
+    tm.HaltsInTime program time ↔ tm.halted (tm.runCfg (tm.initCfg program) time) := by
+  constructor
+  · rintro ⟨c, steps, hsteps, hreach, hhalt⟩
+    rw [runCfg_eq_of_reachesIn_halted_internal tm hreach hhalt hsteps]
+    exact hhalt
+  · intro hhalt
+    obtain ⟨steps, hsteps, hreach⟩ :=
+      runCfg_reachesIn_internal tm (tm.initCfg program) time
+    exact ⟨_, steps, hsteps, hreach, hhalt⟩
+
+theorem haltsInTime_mono_internal {tm : TM n} {program : List Bool}
+    {first second : ℕ} (hbound : first ≤ second) (hhalt : tm.HaltsInTime program first) :
+    tm.HaltsInTime program second := by
+  obtain ⟨c, steps, hsteps, hreach, hhalted⟩ := hhalt
+  exact ⟨c, steps, hsteps.trans hbound, hreach, hhalted⟩
+
+theorem halts_of_haltsInTime_internal {tm : TM n} {program : List Bool} {time : ℕ}
+    (hhalt : tm.HaltsInTime program time) : tm.Halts program := by
+  obtain ⟨c, _steps, _hsteps, hreach, hhalted⟩ := hhalt
+  exact ⟨c, reaches_of_reachesIn hreach, hhalted⟩
+
+theorem halts_iff_exists_haltsInTime_internal (tm : TM n) (program : List Bool) :
+    tm.Halts program ↔ ∃ time, tm.HaltsInTime program time := by
+  constructor
+  · rintro ⟨c, hreach, hhalt⟩
+    obtain ⟨steps, hsteps⟩ := tm.reaches_to_reachesIn hreach
+    exact ⟨steps, c, steps, le_rfl, hsteps, hhalt⟩
+  · rintro ⟨_time, hhalt⟩
+    exact halts_of_haltsInTime_internal hhalt
+
 theorem producesInTime_iff_runCfg_internal (tm : TM n) (program output : List Bool)
     (time : ℕ) :
     tm.ProducesInTime program output time ↔
@@ -97,6 +128,17 @@ theorem produces_of_producesInTime_internal {tm : TM n} {program output : List B
     tm.Produces program output := by
   obtain ⟨c, _steps, _hsteps, hreach, hhalt, hout⟩ := hproduce
   exact ⟨c, reaches_of_reachesIn hreach, hhalt, hout⟩
+
+theorem haltsInTime_of_producesInTime_internal {tm : TM n}
+    {program output : List Bool} {time : ℕ}
+    (hproduce : tm.ProducesInTime program output time) : tm.HaltsInTime program time := by
+  obtain ⟨c, steps, hsteps, hreach, hhalt, _hout⟩ := hproduce
+  exact ⟨c, steps, hsteps, hreach, hhalt⟩
+
+theorem halts_of_produces_internal {tm : TM n} {program output : List Bool}
+    (hproduce : tm.Produces program output) : tm.Halts program := by
+  obtain ⟨c, hreach, hhalt, _hout⟩ := hproduce
+  exact ⟨c, hreach, hhalt⟩
 
 theorem produces_iff_exists_producesInTime_internal (tm : TM n)
     (program output : List Bool) :

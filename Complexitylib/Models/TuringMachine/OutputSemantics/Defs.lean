@@ -22,6 +22,7 @@ halting, so its clock agrees with the exact-step semantics of `TM.reachesIn`.
 ## Main definitions
 
 - `TM.runCfg` -- total bounded execution, frozen after halting
+- `TM.Halts`, `TM.HaltsInTime` -- raw halting semantics for a program
 - `TM.Produces` -- a program eventually halts with an exact string output
 - `TM.ProducesInTime` -- the same relation with an explicit transition budget
 -/
@@ -41,6 +42,15 @@ def runCfg (tm : TM n) (c : Cfg n tm.Q) : ℕ → Cfg n tm.Q
   | steps + 1 =>
       let current := runCfg tm c steps
       (tm.step current).getD current
+
+/-- Machine `tm`, run on program `program`, eventually reaches its halt state. -/
+def Halts (tm : TM n) (program : List Bool) : Prop :=
+  ∃ c, tm.reaches (tm.initCfg program) c ∧ tm.halted c
+
+/-- Machine `tm`, run on program `program`, reaches its halt state within
+`time` transitions. The witness `steps` is the actual number of transitions. -/
+def HaltsInTime (tm : TM n) (program : List Bool) (time : ℕ) : Prop :=
+  ∃ c steps, steps ≤ time ∧ tm.reachesIn steps (tm.initCfg program) c ∧ tm.halted c
 
 /-- Machine `tm`, run on program `program`, eventually halts with exact output `output`. -/
 def Produces (tm : TM n) (program output : List Bool) : Prop :=

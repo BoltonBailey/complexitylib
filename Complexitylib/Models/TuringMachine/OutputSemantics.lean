@@ -18,6 +18,7 @@ machines and for later universal-machine invariance theorems.
 ## Main results
 
 - `TM.runCfg_reachesIn` -- bounded evaluation agrees with relational execution
+- `TM.HaltsInTime.iff_runCfg` -- executable bounded halting
 - `TM.ProducesInTime.iff_runCfg` -- an executable characterization
 - `TM.ProducesInTime.mono` -- increasing the clock preserves production
 - `Tape.HasOutput.eq` -- a tape has at most one exact binary-string output
@@ -66,6 +67,33 @@ theorem runCfg_eq_of_reachesIn_halted (tm : TM n) {c c' : Cfg n tm.Q}
     (hsteps : steps ≤ time) : tm.runCfg c time = c' :=
   runCfg_eq_of_reachesIn_halted_internal tm hreach hhalt hsteps
 
+/-- Bounded halting is exactly the decidable property that the bounded evaluator
+has reached the halt state. -/
+theorem HaltsInTime.iff_runCfg (tm : TM n) (program : List Bool) (time : ℕ) :
+    tm.HaltsInTime program time ↔ tm.halted (tm.runCfg (tm.initCfg program) time) :=
+  haltsInTime_iff_runCfg_internal tm program time
+
+/-- Bounded halting is decidable by executing the advertised clock. -/
+instance instDecidableHaltsInTime (tm : TM n) (program : List Bool) (time : ℕ) :
+    Decidable (tm.HaltsInTime program time) :=
+  decidable_of_iff _ (HaltsInTime.iff_runCfg tm program time).symm
+
+/-- Increasing the clock preserves bounded halting. -/
+theorem HaltsInTime.mono {tm : TM n} {program : List Bool} {first second : ℕ}
+    (hbound : first ≤ second) (hhalt : tm.HaltsInTime program first) :
+    tm.HaltsInTime program second :=
+  haltsInTime_mono_internal hbound hhalt
+
+/-- Forgetting a clock turns bounded halting into eventual halting. -/
+theorem halts_of_haltsInTime {tm : TM n} {program : List Bool} {time : ℕ}
+    (hhalt : tm.HaltsInTime program time) : tm.Halts program :=
+  halts_of_haltsInTime_internal hhalt
+
+/-- Eventual halting is equivalent to halting under some finite clock. -/
+theorem halts_iff_exists_haltsInTime (tm : TM n) (program : List Bool) :
+    tm.Halts program ↔ ∃ time, tm.HaltsInTime program time :=
+  halts_iff_exists_haltsInTime_internal tm program
+
 /-- Pointwise bounded production is exactly the decidable property of the
 bounded evaluator being halted with the requested output. -/
 theorem ProducesInTime.iff_runCfg (tm : TM n) (program output : List Bool)
@@ -93,6 +121,17 @@ theorem produces_of_producesInTime {tm : TM n} {program output : List Bool}
     {time : ℕ} (hproduce : tm.ProducesInTime program output time) :
     tm.Produces program output :=
   produces_of_producesInTime_internal hproduce
+
+/-- Producing an output within a clock entails halting within that clock. -/
+theorem ProducesInTime.haltsInTime {tm : TM n} {program output : List Bool}
+    {time : ℕ} (hproduce : tm.ProducesInTime program output time) :
+    tm.HaltsInTime program time :=
+  haltsInTime_of_producesInTime_internal hproduce
+
+/-- Producing an output entails eventual halting. -/
+theorem Produces.halts {tm : TM n} {program output : List Bool}
+    (hproduce : tm.Produces program output) : tm.Halts program :=
+  halts_of_produces_internal hproduce
 
 /-- Eventual production is equivalent to production under some finite clock. -/
 theorem produces_iff_exists_producesInTime (tm : TM n) (program output : List Bool) :

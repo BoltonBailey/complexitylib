@@ -51,6 +51,7 @@ public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinary
 public import Complexitylib.Models.TuringMachine.Subroutines.ResetBinaryMany
 public import Complexitylib.Models.TuringMachine.Subroutines.UnaryLength
 public import Complexitylib.Models.TuringMachine.OutputSemantics
+public import Complexitylib.Models.TuringMachine.Universality
 public import Complexitylib.Models.TuringMachine.OutputBounds
 public import Complexitylib.Models.TuringMachine.SpaceTime
 public import Complexitylib.Models.TuringMachine.Placement

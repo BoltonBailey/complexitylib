@@ -1714,7 +1714,12 @@ public `TM.runCfg`, `TM.Produces`, and `TM.ProducesInTime` API now supplies a
 total halt-idempotent evaluator, a decidable bounded-production relation,
 clock monotonicity, exact-output uniqueness, and equivalences with the existing
 whole-function computation predicates. The evaluator is shared with the Cobham
-simulation rather than duplicated in a metacomplexity-specific layer. The
+simulation rather than duplicated in a metacomplexity-specific layer.
+`TM.Simulates`, `TM.IsUniversal`, and `TM.IsEfficientlyUniversalFor` now give a
+machine-independent universality interface over arbitrary source work-tape
+counts. Semantic halting/output preservation, additive program length, explicit
+program-sensitive clocks, and polynomial clock admissibility are separate
+composable predicates; none mentions the concrete UTM codec. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1725,8 +1730,8 @@ On the circuit side, `Circuit.sizeComplexityWithTop` and
 functions, and the truth-table bridges, circuit codec, evaluator, and functional
 unrolling construction supply most of the intended MCSP verification path.
 
-What remains missing is a reusable notion of universal or efficiently universal
-machine, any Kolmogorov measure, a total MCSP instance language, and
+What remains missing is an instance connecting the fixed UTM to the generic
+interface, any Kolmogorov measure, a total MCSP instance language, and
 promise/reduction infrastructure for gap problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
@@ -1776,7 +1781,7 @@ the mathematics and must not be hidden behind notation.
 - [x] Add pointwise `Produces`/`ProducesInTime` semantics, bounded executable
   simulation, monotonicity in the clock, output uniqueness, and conversion to
   and from the existing whole-function computation predicates.
-- [ ] Define output-preserving `TM.Simulates`, `TM.IsUniversal`, and
+- [x] Define output-preserving `TM.Simulates`, `TM.IsUniversal`, and
   `TM.IsEfficientlyUniversal` interfaces over arbitrary work-tape counts. Split
   semantic simulation, additive program-length overhead, and time overhead into
   reusable fields or mixins rather than one theorem-shaped structure.
