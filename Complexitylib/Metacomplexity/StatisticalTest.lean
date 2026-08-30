@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.StatisticalTest.Defs
 public import Complexitylib.Metacomplexity.StatisticalTest.Internal
 public import Complexitylib.Metacomplexity.StatisticalTest.Hybrid
+public import Complexitylib.Metacomplexity.StatisticalTest.HybridPrediction
 public import Complexitylib.Metacomplexity.StatisticalTest.Prediction
 
 /-!

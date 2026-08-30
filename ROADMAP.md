@@ -1765,7 +1765,12 @@ independent uniform candidate raises a Boolean test's acceptance by `gamma`,
 the predictor that returns the candidate on acceptance and its complement on
 rejection succeeds with probability exactly `1/2 + gamma`. The proof expands
 the two candidate fibers and normalizes their exact finite counts; connecting
-this generic experiment to an NW hybrid coordinate is the next coding layer.
+this generic experiment to an NW hybrid coordinate is now also complete. The
+combined generator-seed/output-tail randomness is split bijectively into a
+background with one normalized tail coordinate and an independent candidate
+bit. Candidate acceptance is proved equal to the current hybrid, target-bit
+acceptance equal to the next hybrid, and the canonical predictor therefore has
+success probability exactly `1/2 + hybridGap_i`.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2918,8 +2923,11 @@ meta-computational notation hides several incompatible choices; expose them.
   design construction remains. The exact abstract next-bit prediction identity
   `success = 1/2 + targetAcceptance - candidateAcceptance` is proved for every
   nonempty finite background space. Decomposing an NW hybrid's random tail into
-  a candidate coordinate and its complement, then hardwiring overlap-dependent
-  values within the proved budget, remain before full reconstruction.*
+  a candidate coordinate and its complement is now complete via an explicit
+  finite equivalence. The resulting actual-hybrid predictor succeeds with
+  probability exactly `1/2 + hybridGap_i`. Hardwiring overlap-dependent values
+  within the proved budget, the randomized certificate search, and the final
+  reconstruction remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
