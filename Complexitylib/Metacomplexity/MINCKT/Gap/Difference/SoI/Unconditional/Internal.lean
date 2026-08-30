@@ -45,6 +45,57 @@ theorem SupportsPairUpper.pair_upper_internal
       (hsupports.condition_finite inst) (hsupports.result_finite inst)
       (hsupports.condition_le_bound inst) (hsupports.result_le_bound inst)
 
+theorem Compatible.satisfiesSoIInputsOnQueries_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {ordinaryParameters : GapMINKT.Logarithmic.Parameters}
+    {conditionalParameters : GapMINCKT.Parameters}
+    {soiClock soiLoss : ℕ → ℕ}
+    (hcompatible : Compatible plan ordinaryMachine conditionalMachine
+      ordinaryParameters conditionalParameters soiClock soiLoss)
+    {estimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : estimate.SatisfiesBoundsOn ordinaryMachine
+      ordinaryParameters plan.IsEstimatorQuery) :
+    (plan.components estimate).SatisfiesSoIInputs
+      (plan.accountingSchedule ordinaryParameters) ordinaryMachine
+        conditionalMachine conditionalParameters soiClock soiLoss := by
+  constructor
+  · exact hcompatible.soiClock_le_conditionalTime
+  · exact hcompatible.soiSize
+  · intro inst
+    have hpair := hestimate (plan.pairInput inst) ⟨inst, Or.inl rfl⟩
+    simpa [Plan.components, Plan.pairInput, Plan.accountingSchedule] using
+      hpair.1
+  · intro inst
+    simpa [Plan.accountingSchedule] using hcompatible.pair_upper inst
+  · intro inst
+    have hcondition :=
+      hestimate (plan.conditionInput inst) ⟨inst, Or.inr rfl⟩
+    have hwiden := TM.timeBoundedKolmogorovComplexity_mono_internal
+      ordinaryMachine inst.condition
+        (hcompatible.conditionTransformedTime_le inst)
+    exact hwiden.trans (by
+      simpa [Plan.components, Plan.conditionInput, Plan.accountingSchedule] using
+        hcondition.2)
+  · intro inst
+    have hcondition :=
+      hestimate (plan.conditionInput inst) ⟨inst, Or.inr rfl⟩
+    have hupper := hcondition.1
+    change (estimate (plan.conditionInput inst) : WithTop ℕ) ≤
+      ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
+        (plan.conditionInputTime inst) at hupper
+    rw [hcompatible.conditionInputTime_eq inst] at hupper
+    simpa [Plan.components, Plan.conditionInput] using hupper
+  · intro inst
+    have hpair := hestimate (plan.pairInput inst) ⟨inst, Or.inl rfl⟩
+    have hlower := hpair.2
+    rw [hcompatible.pairTransformedTime_eq inst] at hlower
+    simpa [Plan.components, Plan.pairInput, Plan.accountingSchedule] using
+      hlower
+  · exact hcompatible.upperLoss_budget
+  · exact hcompatible.lowerLoss_budget
+
 theorem Compatible.satisfiesSoIInputs_internal
     {ordinaryTapes conditionalTapes : ℕ}
     {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
@@ -59,36 +110,9 @@ theorem Compatible.satisfiesSoIInputs_internal
     (plan.components estimate).SatisfiesSoIInputs
       (plan.accountingSchedule ordinaryParameters) ordinaryMachine
         conditionalMachine conditionalParameters soiClock soiLoss := by
-  constructor
-  · exact hcompatible.soiClock_le_conditionalTime
-  · exact hcompatible.soiSize
-  · intro inst
-    simpa [Plan.components, Plan.pairInput, Plan.accountingSchedule] using
-      (hestimate (plan.pairInput inst)).1
-  · intro inst
-    simpa [Plan.accountingSchedule] using hcompatible.pair_upper inst
-  · intro inst
-    have hlower := (hestimate (plan.conditionInput inst)).2
-    have hwiden := TM.timeBoundedKolmogorovComplexity_mono_internal
-      ordinaryMachine inst.condition
-        (hcompatible.conditionTransformedTime_le inst)
-    exact hwiden.trans (by
-      simpa [Plan.components, Plan.conditionInput, Plan.accountingSchedule] using
-        hlower)
-  · intro inst
-    have hupper := (hestimate (plan.conditionInput inst)).1
-    change (estimate (plan.conditionInput inst) : WithTop ℕ) ≤
-      ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
-        (plan.conditionInputTime inst) at hupper
-    rw [hcompatible.conditionInputTime_eq inst] at hupper
-    simpa [Plan.components, Plan.conditionInput] using hupper
-  · intro inst
-    have hlower := (hestimate (plan.pairInput inst)).2
-    rw [hcompatible.pairTransformedTime_eq inst] at hlower
-    simpa [Plan.components, Plan.pairInput, Plan.accountingSchedule] using
-      hlower
-  · exact hcompatible.upperLoss_budget
-  · exact hcompatible.lowerLoss_budget
+  apply hcompatible.satisfiesSoIInputsOnQueries_internal
+  intro query _hquery
+  exact hestimate query
 
 end Unconditional
 

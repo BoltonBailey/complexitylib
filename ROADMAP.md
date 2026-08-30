@@ -3055,9 +3055,13 @@ meta-computational notation hides several incompatible choices; expose them.
   search against any semantic promise solver returns the least accepted value,
   which satisfies the estimator sandwich at every finite source instance.
   Public variants expose the paper's exact `|x| <= t` domain and the stronger
-  global-finiteness specialization separately. Proving that this bounded sweep
-  preserves `FP`, and discharging domain finiteness from a concrete universal
-  printer, remain the algorithmic parts of Fact 3.4.*
+  global-finiteness specialization separately. The bounded sweep is now also a
+  concrete string algorithm: its `(base,counter,found,best)` state scans exactly
+  `0,...,t`, stays inside a linear-width envelope, and returns the least accepted
+  threshold in exact unary form. Cobham bounded iteration proves that an `FP`
+  one-bit gap decider yields an `FP` estimator, closing the algorithmic
+  solver-to-estimator direction. Discharging source finiteness from a concrete
+  universal printer remains evaluator-specific.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
@@ -3330,7 +3334,15 @@ meta-computational notation hides several incompatible choices; expose them.
   estimator completion, and therefore discharges its `P` membership by
   preimage closure. The main collapse and anti-SoI consequences now have
   implementation-level forms with no standalone `estimatorLanguage in P`
-  assumption. Concrete realization of those encoded functions remains.*
+  assumption. The ordinary encoded estimator is now realized concretely from
+  any `FP` logarithmic-GapMINKT solver by the exact unary threshold sweep. This
+  composes through the full slack-amplified consequence. Estimator correctness
+  is needed only on the paired and condition-only query families, and their
+  finiteness now follows from the operational pair-composition contract plus
+  regular-clock widening. Thus the gap solver, an encoded conditional query
+  plan, SoI, and multiplicative conditional-gap hardness imply `P = NP`, with a
+  checked `P != NP` contrapositive. Concrete realization of the encoded query
+  plan remains.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3391,8 +3403,16 @@ formalization targets and should be stated positively under their exact names.
   logarithmic Definition 3.3, and prove the corresponding Fact 3.4 estimator
   solver and `PromiseP` completion criterion.
 - [x] Prove the reverse numerical direction of Fact 3.4 by bounded threshold
-  search, both pointwise and on the exact `|x| <= t` domain; retain `FP`
-  preservation and the concrete universal-printer bound as explicit next steps.
+  search, both pointwise and on the exact `|x| <= t` domain; retain the concrete
+  universal-printer bound as an explicit next step.
+- [x] Implement the reverse Fact 3.4 threshold sweep as an exact unary `FP`
+  function and feed it directly into the implementation-level SoI/hardness
+  consequence; retain the concrete universal-printer and encoded-plan
+  constructions as explicit obligations.
+- [x] Restrict the two-query SoI reduction to the exact paired and
+  condition-only estimator domain, and derive finiteness of both query families
+  from the operational pair compiler and regular-clock widening. Remove the
+  redundant source-finiteness premise from the solver-level collapse theorem.
 - [x] Isolate Proposition 6.2's adjusted-difference estimator and prove that its
   two pre-cancellation accounting inequalities imply the full conditional
   estimator sandwich, solver, and `PromiseP` criterion.

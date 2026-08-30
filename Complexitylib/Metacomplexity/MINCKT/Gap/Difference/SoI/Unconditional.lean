@@ -53,6 +53,18 @@ namespace Plan
 @[simp] theorem conditionInput_time (plan : Plan) (inst : MINCKT.Instance) :
     (plan.conditionInput inst).time = plan.conditionInputTime inst := rfl
 
+/-- Every paired query belongs to the plan's exact estimator-query domain. -/
+theorem pairInput_isEstimatorQuery (plan : Plan) (inst : MINCKT.Instance) :
+    plan.IsEstimatorQuery (plan.pairInput inst) :=
+  ⟨inst, Or.inl rfl⟩
+
+/-- Every condition-only query belongs to the plan's exact estimator-query
+domain. -/
+theorem conditionInput_isEstimatorQuery (plan : Plan)
+    (inst : MINCKT.Instance) :
+    plan.IsEstimatorQuery (plan.conditionInput inst) :=
+  ⟨inst, Or.inr rfl⟩
+
 /-- The induced minuend is one application of the ordinary estimator to the
 paired query. -/
 @[simp] theorem components_minuend (plan : Plan)
@@ -115,6 +127,25 @@ theorem Compatible.satisfiesSoIInputs
         conditionalMachine conditionalParameters soiClock soiLoss :=
   hcompatible.satisfiesSoIInputs_internal hestimate
 
+/-- Estimator correctness is needed only on the two ordinary queries issued by
+the plan, not on every possible MINKT instance. -/
+theorem Compatible.satisfiesSoIInputsOnQueries
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {ordinaryParameters : GapMINKT.Logarithmic.Parameters}
+    {conditionalParameters : GapMINCKT.Parameters}
+    {soiClock soiLoss : ℕ → ℕ}
+    (hcompatible : Compatible plan ordinaryMachine conditionalMachine
+      ordinaryParameters conditionalParameters soiClock soiLoss)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBoundsOn ordinaryMachine
+      ordinaryParameters plan.IsEstimatorQuery) :
+    (plan.components ordinaryEstimate).SatisfiesSoIInputs
+      (plan.accountingSchedule ordinaryParameters) ordinaryMachine
+        conditionalMachine conditionalParameters soiClock soiLoss :=
+  hcompatible.satisfiesSoIInputsOnQueries_internal hestimate
+
 /-- Fully composed ordinary-estimator-plus-SoI construction of the conditional
 estimator sandwich. -/
 theorem Compatible.satisfiesBounds
@@ -135,6 +166,28 @@ theorem Compatible.satisfiesBounds
     (plan.components ordinaryEstimate).estimate.SatisfiesBounds ordinaryMachine
       conditionalMachine conditionalParameters :=
   (hcompatible.satisfiesSoIInputs hestimate).satisfiesBounds hsoi hwidening
+
+/-- Query-local ordinary estimator correctness suffices for the fully composed
+conditional estimator sandwich. -/
+theorem Compatible.satisfiesBoundsOnQueries
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {ordinaryParameters : GapMINKT.Logarithmic.Parameters}
+    {conditionalParameters : GapMINCKT.Parameters}
+    {soiClock soiLoss : ℕ → ℕ}
+    (hcompatible : Compatible plan ordinaryMachine conditionalMachine
+      ordinaryParameters conditionalParameters soiClock soiLoss)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBoundsOn ordinaryMachine
+      ordinaryParameters plan.IsEstimatorQuery)
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine soiClock soiLoss)
+    (hwidening : conditionalParameters.IsWidening) :
+    (plan.components ordinaryEstimate).estimate.SatisfiesBounds ordinaryMachine
+      conditionalMachine conditionalParameters :=
+  (hcompatible.satisfiesSoIInputsOnQueries hestimate).satisfiesBounds
+    hsoi hwidening
 
 /-- Thresholding the adjusted difference of two ordinary estimator queries
 solves the exact conditional gap promise. -/
@@ -183,6 +236,31 @@ theorem Compatible.mem_PromiseP
         conditionalParameters hwidening ∈ PromiseP :=
   GapMINCKT_mem_PromiseP_of_estimatorLanguage_mem_P hwidening
     (hcompatible.satisfiesBounds hestimate hsoi hwidening) hpolynomial
+
+/-- Query-local ordinary estimator bounds and a polynomial-time induced
+completion place the exact conditional gap promise in `PromiseP`. -/
+theorem Compatible.mem_PromisePOnQueries
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {ordinaryParameters : GapMINKT.Logarithmic.Parameters}
+    {conditionalParameters : GapMINCKT.Parameters}
+    {soiClock soiLoss : ℕ → ℕ}
+    (hcompatible : Compatible plan ordinaryMachine conditionalMachine
+      ordinaryParameters conditionalParameters soiClock soiLoss)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBoundsOn ordinaryMachine
+      ordinaryParameters plan.IsEstimatorQuery)
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine soiClock soiLoss)
+    (hwidening : conditionalParameters.IsWidening)
+    (hpolynomial : GapMINCKT.estimatorLanguage
+      (plan.components ordinaryEstimate).estimate ∈ P) :
+    Complexity.GapMINCKT ordinaryMachine conditionalMachine
+        conditionalParameters hwidening ∈ PromiseP :=
+  GapMINCKT_mem_PromiseP_of_estimatorLanguage_mem_P hwidening
+    (hcompatible.satisfiesBoundsOnQueries hestimate hsoi hwidening)
+      hpolynomial
 
 end Unconditional
 

@@ -115,6 +115,91 @@ theorem P_eq_NP_of_multiplicative_hard_of_SoI_of_implementations
     conditionalMachine hclock hsupports hestimate hsoi factor hfactor hhard
       (encodedPlan.estimatorLanguage_mem_P encodedEstimator)
 
+/-- Implementation-level collapse using ordinary estimator correctness only on
+the plan's paired and condition-only query families. -/
+theorem P_eq_NP_of_multiplicative_hard_of_SoI_of_query_implementations
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ} (additive compilerLoss : ℕ)
+    {composition : PairCompositionPlan}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (hclock : IsAdmissibleClock clock)
+    (hsupports : SupportsPairUpper (plan clock compilerLoss) composition
+      ordinaryMachine conditionalMachine)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBoundsOn ordinaryMachine
+      (ordinaryParameters clock) (plan clock compilerLoss).IsEstimatorQuery)
+    (encodedPlan : EncodedPlan (plan clock compilerLoss))
+    (encodedEstimator : EncodedEstimator ordinaryEstimate)
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock (logarithmicSoILoss clock additive))
+    (factor : ℕ → ℕ) (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (GapMINCKT.Multiplicative.problem ordinaryMachine conditionalMachine
+        (parameters clock additive compilerLoss) factor
+          (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+            compilerLoss).widening
+            hfactor)) :
+    P = NP := by
+  have hcompatible :=
+    Slack.IsRegularClock.compatible_of_pairComposition
+      (additive := additive) hclock.toIsRegularClock hsupports
+  exact GapMINCKT.Multiplicative.P_eq_NP_of_hard_of_estimatorLanguage_mem_P
+    ordinaryMachine conditionalMachine (parameters clock additive compilerLoss)
+      factor (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+        compilerLoss).widening
+        hfactor hhard
+          (hcompatible.satisfiesBoundsOnQueries hestimate hsoi
+            (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+              compilerLoss).widening)
+          (encodedPlan.estimatorLanguage_mem_P encodedEstimator)
+
+/-- Replace the abstract ordinary estimator and its encoded implementation by
+an `FP` solver for logarithmic GapMINKT.
+
+The bounded threshold sweep supplies both the Fact 3.4 estimator sandwich and
+the encoded estimator consumed by the two-query conditional reduction. The
+operational pair-composition contract proves finiteness of both query families,
+so no separate source-finiteness premise remains. -/
+theorem P_eq_NP_of_multiplicative_hard_of_SoI_of_logarithmic_solver
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ} (additive compilerLoss : ℕ)
+    {composition : PairCompositionPlan}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (hclock : IsAdmissibleClock clock)
+    (hsupports : SupportsPairUpper (plan clock compilerLoss) composition
+      ordinaryMachine conditionalMachine)
+    (decide : List Bool → Bool)
+    (hdecide : (fun bits => [decide bits]) ∈ FP)
+    (hsolve : (GapMINKT.Logarithmic.problem ordinaryMachine
+      (ordinaryParameters clock)
+        hclock.toIsRegularClock.ordinaryParameters_widening).SolvedBy decide)
+    (encodedPlan : EncodedPlan (plan clock compilerLoss))
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock (logarithmicSoILoss clock additive))
+    (factor : ℕ → ℕ) (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (GapMINCKT.Multiplicative.problem ordinaryMachine conditionalMachine
+        (parameters clock additive compilerLoss) factor
+          (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+            compilerLoss).widening
+            hfactor)) :
+    P = NP := by
+  have hfinite : ∀ query : MINKT.Instance,
+      (plan clock compilerLoss).IsEstimatorQuery query →
+      ordinaryMachine.timeBoundedKolmogorovComplexity
+        query.output query.time ≠ ⊤ := by
+    intro query hquery
+    exact hclock.toIsRegularClock.estimatorQuery_finite hsupports hquery
+  have hestimate :=
+    GapMINKT.Logarithmic.Efficient.executableEstimator_satisfiesBoundsOn
+      hclock.toIsRegularClock.ordinaryParameters_widening hsolve hfinite
+  exact P_eq_NP_of_multiplicative_hard_of_SoI_of_query_implementations additive
+    compilerLoss ordinaryMachine conditionalMachine hclock hsupports hestimate
+      encodedPlan (encodedEstimatorOfGapSolver decide hdecide) hsoi factor
+        hfactor hhard
+
 /-- Assuming `P ≠ NP`, the simultaneous SoI, estimator-efficiency, compiler,
 and multiplicative-hardness hypotheses are inconsistent. This is the precise
 contrapositive needed before a future `DistNP ⊆ AvgP → SoI` theorem can rule
@@ -179,6 +264,40 @@ theorem not_timeBoundedSymmetryOfInformation_of_P_ne_NP_of_implementations
     (P_eq_NP_of_multiplicative_hard_of_SoI_of_implementations additive
       compilerLoss ordinaryMachine conditionalMachine hclock hsupports hestimate
         encodedPlan encodedEstimator hsoi factor hfactor hhard)
+
+/-- Under `P ≠ NP`, an efficient logarithmic GapMINKT solver, the encoded
+two-query plan, and multiplicative conditional-gap hardness rule out the
+corresponding SoI statement. -/
+theorem not_timeBoundedSymmetryOfInformation_of_P_ne_NP_of_logarithmic_solver
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ} (additive compilerLoss : ℕ)
+    {composition : PairCompositionPlan}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (hclock : IsAdmissibleClock clock)
+    (hsupports : SupportsPairUpper (plan clock compilerLoss) composition
+      ordinaryMachine conditionalMachine)
+    (decide : List Bool → Bool)
+    (hdecide : (fun bits => [decide bits]) ∈ FP)
+    (hsolve : (GapMINKT.Logarithmic.problem ordinaryMachine
+      (ordinaryParameters clock)
+        hclock.toIsRegularClock.ordinaryParameters_widening).SolvedBy decide)
+    (encodedPlan : EncodedPlan (plan clock compilerLoss))
+    (factor : ℕ → ℕ) (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (GapMINCKT.Multiplicative.problem ordinaryMachine conditionalMachine
+        (parameters clock additive compilerLoss) factor
+          (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+            compilerLoss).widening
+            hfactor))
+    (hne : P ≠ NP) :
+    ¬TimeBoundedSymmetryOfInformation ordinaryMachine conditionalMachine
+      clock (logarithmicSoILoss clock additive) := by
+  intro hsoi
+  exact hne
+    (P_eq_NP_of_multiplicative_hard_of_SoI_of_logarithmic_solver additive
+      compilerLoss ordinaryMachine conditionalMachine hclock hsupports decide
+        hdecide hsolve encodedPlan hsoi factor hfactor hhard)
 
 end Slack
 

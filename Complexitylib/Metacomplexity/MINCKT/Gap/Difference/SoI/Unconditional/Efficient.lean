@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Efficient.Defs
+public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic.Efficient
 public import Complexitylib.Languages.FirstCell
 import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Efficient.Internal
 
@@ -41,6 +42,18 @@ theorem lengthLeFlag_mem_FP {first second : List Bool → List Bool}
     (hfirst : first ∈ FP) (hsecond : second ∈ FP) :
     (fun bits => lengthLeFlag (first bits) (second bits)) ∈ FP :=
   lengthLeFlag_mem_FP_internal hfirst hsecond
+
+/-- Package the explicit Fact 3.4 threshold sweep as the encoded ordinary
+estimator consumed by the unconditional two-query reduction. -/
+def encodedEstimatorOfGapSolver (decide : List Bool → Bool)
+    (hdecide : (fun bits => [decide bits]) ∈ FP) :
+    EncodedEstimator
+      (GapMINKT.Logarithmic.Efficient.executableEstimator decide) where
+  run := GapMINKT.Logarithmic.Efficient.encodedTimeSearchEstimator decide
+  run_mem_FP :=
+    GapMINKT.Logarithmic.Efficient.encodedTimeSearchEstimator_mem_FP
+      decide hdecide
+  length_run_encode := fun _inst => rfl
 
 namespace EncodedPlan
 
@@ -98,6 +111,30 @@ theorem Compatible.mem_PromiseP_of_implementations
     Complexity.GapMINCKT ordinaryMachine conditionalMachine
         conditionalParameters hwidening ∈ PromiseP :=
   hcompatible.mem_PromiseP hestimate hsoi hwidening
+    (encodedPlan.estimatorLanguage_mem_P encodedEstimator)
+
+/-- The implementation theorem also needs estimator correctness only on the
+plan's two ordinary-query families. -/
+theorem Compatible.mem_PromiseP_of_implementationsOnQueries
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {ordinaryParameters : GapMINKT.Logarithmic.Parameters}
+    {conditionalParameters : GapMINCKT.Parameters}
+    {soiClock soiLoss : ℕ → ℕ}
+    (hcompatible : Compatible plan ordinaryMachine conditionalMachine
+      ordinaryParameters conditionalParameters soiClock soiLoss)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBoundsOn ordinaryMachine
+      ordinaryParameters plan.IsEstimatorQuery)
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine soiClock soiLoss)
+    (hwidening : conditionalParameters.IsWidening)
+    (encodedPlan : EncodedPlan plan)
+    (encodedEstimator : EncodedEstimator ordinaryEstimate) :
+    Complexity.GapMINCKT ordinaryMachine conditionalMachine
+        conditionalParameters hwidening ∈ PromiseP :=
+  hcompatible.mem_PromisePOnQueries hestimate hsoi hwidening
     (encodedPlan.estimatorLanguage_mem_P encodedEstimator)
 
 end Unconditional

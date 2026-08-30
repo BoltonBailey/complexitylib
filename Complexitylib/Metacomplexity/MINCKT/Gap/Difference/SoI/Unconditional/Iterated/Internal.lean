@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Iterated.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Internal
 
 /-!
 # The iterated-clock schedule -- proof internals
@@ -114,6 +115,39 @@ theorem IsRegularClock.conditionalParameters_widening_internal
   intro outputLength conditionLength time
   exact (by omega : time ≤ time + outputLength + conditionLength) |>.trans
     (clockIterate_dominates_internal hclock.dominates 4 _)
+
+theorem IsRegularClock.estimatorQuery_finite_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ}
+    {pairUpperLoss correction : MINCKT.Instance → ℕ}
+    {composition : PairCompositionPlan}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    (hclock : IsRegularClock clock)
+    (hsupports : SupportsPairUpper (plan clock pairUpperLoss correction)
+      composition ordinaryMachine conditionalMachine)
+    {query : MINKT.Instance}
+    (hquery : (plan clock pairUpperLoss correction).IsEstimatorQuery query) :
+    ordinaryMachine.timeBoundedKolmogorovComplexity
+      query.output query.time ≠ ⊤ := by
+  rcases hquery with ⟨inst, hpair | hcondition⟩
+  · rw [hpair]
+    have hright :
+        inst.complexity conditionalMachine +
+              ordinaryMachine.timeBoundedKolmogorovComplexity
+                inst.condition inst.time +
+            ((plan clock pairUpperLoss correction).pairUpperLoss inst :
+              WithTop ℕ) ≠ ⊤ := by
+      simp [hsupports.result_finite inst, hsupports.condition_finite inst]
+    exact ne_top_of_le_ne_top hright (hsupports.pair_upper_internal inst)
+  · rw [hcondition]
+    have htime : inst.time ≤
+        (plan clock pairUpperLoss correction).conditionInputTime inst :=
+      (paddedTime_time_le_internal inst).trans
+        (clockIterate_dominates_internal hclock.dominates 3 _)
+    exact ne_top_of_le_ne_top (hsupports.condition_finite inst)
+      (TM.timeBoundedKolmogorovComplexity_mono_internal
+        ordinaryMachine inst.condition htime)
 
 theorem IsRegularClock.compatible_internal
     {ordinaryTapes conditionalTapes : ℕ}

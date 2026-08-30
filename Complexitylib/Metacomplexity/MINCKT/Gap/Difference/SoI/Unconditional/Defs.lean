@@ -70,6 +70,11 @@ def conditionInput (plan : Plan) (inst : MINCKT.Instance) : MINKT.Instance where
   output := inst.condition
   time := plan.conditionInputTime inst
 
+/-- Exactly the paired and condition-only MINKT queries issued by this plan. -/
+def IsEstimatorQuery (plan : Plan) (query : MINKT.Instance) : Prop :=
+  ∃ inst : MINCKT.Instance,
+    query = plan.pairInput inst ∨ query = plan.conditionInput inst
+
 /-- Difference components obtained by applying one unconditional estimator to
 the paired and condition-only queries. -/
 def components (plan : Plan)

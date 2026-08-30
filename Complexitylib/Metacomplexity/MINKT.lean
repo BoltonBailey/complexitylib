@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.MINKT.Defs
 public import Complexitylib.Metacomplexity.MINKT.Gap
 public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic
+public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic.Efficient
 public import Complexitylib.Metacomplexity.MINKT.Internal
 
 /-!
