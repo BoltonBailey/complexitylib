@@ -52,6 +52,18 @@ theorem floorMul_mono (scale : PositiveRationalScale) :
     Monotone scale.floorMul :=
   floorMul_mono_internal scale
 
+/-- The floor-scaled exponent tends to infinity for every positive rational
+scale. -/
+theorem tendsto_floorMul_atTop (scale : PositiveRationalScale) :
+    Filter.Tendsto scale.floorMul Filter.atTop Filter.atTop :=
+  tendsto_floorMul_atTop_internal scale
+
+/-- Every fixed multiple of `n + 1` is eventually bounded by `2^n`. -/
+theorem eventually_coefficient_mul_succ_le_two_pow (coefficient : ℕ) :
+    ∀ᶠ exponent : ℕ in Filter.atTop,
+      coefficient * (exponent + 1) ≤ 2 ^ exponent :=
+  eventually_coefficient_mul_succ_le_two_pow_internal coefficient
+
 /-- Ceiling-scaled multiplication is monotone in the natural argument. -/
 theorem ceilMul_mono (scale : PositiveRationalScale) :
     Monotone scale.ceilMul :=

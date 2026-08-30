@@ -60,6 +60,46 @@ theorem yesThreshold_pos_of_denominator_le_internal
     0 < parameters.yesThreshold arity := by
   exact Nat.div_pos hdenominator (Nat.mul_pos parameters.constant_pos harity)
 
+theorem eventually_denominator_le_powFloor_internal
+    (parameters : Parameters) :
+    ∀ᶠ arity in Filter.atTop,
+      parameters.constant * arity ≤ parameters.beta.powFloor arity := by
+  have hpower :=
+    PositiveRationalScale.eventually_coefficient_mul_succ_le_two_pow_internal
+      (parameters.constant * parameters.beta.denominator)
+  have hpulled :=
+    (PositiveRationalScale.tendsto_floorMul_atTop_internal parameters.beta).eventually
+      hpower
+  filter_upwards [hpulled] with arity hbound
+  calc
+    parameters.constant * arity ≤
+        parameters.constant *
+          (parameters.beta.denominator *
+            (parameters.beta.floorMul arity + 1)) := by
+      apply Nat.mul_le_mul_left
+      apply Nat.le_of_lt
+      exact lt_of_le_of_lt
+        (show arity ≤ parameters.beta.numerator * arity by
+          calc
+            arity = 1 * arity := by simp
+            _ ≤ parameters.beta.numerator * arity :=
+              Nat.mul_le_mul_right arity parameters.beta.numerator_pos)
+        (Nat.lt_mul_div_succ
+          (parameters.beta.numerator * arity)
+          parameters.beta.denominator_pos)
+    _ = (parameters.constant * parameters.beta.denominator) *
+        (parameters.beta.floorMul arity + 1) := by
+      ac_rfl
+    _ ≤ 2 ^ parameters.beta.floorMul arity := hbound
+    _ = parameters.beta.powFloor arity := rfl
+
+theorem eventually_yesThreshold_pos_internal (parameters : Parameters) :
+    ∀ᶠ arity in Filter.atTop, 0 < parameters.yesThreshold arity := by
+  filter_upwards [eventually_denominator_le_powFloor_internal parameters,
+    Filter.eventually_gt_atTop 0] with arity hdenominator harity
+  exact yesThreshold_pos_of_denominator_le_internal
+    parameters harity hdenominator
+
 theorem noThreshold_le_powCeil_internal
     (parameters : Parameters) (arity : ℕ) :
     parameters.noThreshold arity ≤ parameters.beta.powCeil arity := by

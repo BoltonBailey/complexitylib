@@ -83,6 +83,19 @@ theorem yesThreshold_pos_of_denominator_le
   yesThreshold_pos_of_denominator_le_internal
     parameters harity hdenominator
 
+/-- The rounded binary exponential eventually dominates the selected linear
+denominator `c*n`. -/
+theorem eventually_denominator_le_powFloor (parameters : Parameters) :
+    ∀ᶠ arity in Filter.atTop,
+      parameters.constant * arity ≤ parameters.beta.powFloor arity :=
+  eventually_denominator_le_powFloor_internal parameters
+
+/-- The selected small-circuit threshold is positive at every sufficiently
+large arity. -/
+theorem eventually_yesThreshold_pos (parameters : Parameters) :
+    ∀ᶠ arity in Filter.atTop, 0 < parameters.yesThreshold arity :=
+  eventually_yesThreshold_pos_internal parameters
+
 /-- Floor rounding puts the no threshold below the ceiling-rounded power. -/
 theorem noThreshold_le_powCeil
     (parameters : Parameters) (arity : ℕ) :

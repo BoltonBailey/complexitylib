@@ -1928,7 +1928,9 @@ floor/ceiling versions of `beta*n` and proves their binary powers differ by at
 most a factor of two. `GapMCSP.Magnification.Parameters` instantiates the finite
 thresholds `2^floor(beta*n)/(c*n)` and `2^floor(beta*n)`, proves their gap, and
 defines the rounded `N^(1+epsilon)` solver bound with an exact `N = 2^n`
-identity. `PromiseProblem`
+identity. The floor-scaled exponent tends to infinity, its binary exponential
+eventually dominates `c*n`, and therefore the selected yes threshold is positive
+at every sufficiently large arity. `PromiseProblem`
 now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
@@ -2723,8 +2725,11 @@ to zero from above with an exact positive-cutoff characterization. The selected
 `GapMCSP.Magnification.Parameters` family now defines
 `2^floor(beta*n)/(c*n)` versus `2^floor(beta*n)`, proves the finite gap and
 denominator inequality, and gives a rounded solver bound that agrees exactly
-with its arity form on `N = 2^n` bits. `PromiseSIZE` is characterized by an
-explicit family solving both promise sides, while `PromiseEventuallySIZE`
+with its arity form on `N = 2^n` bits. The floor-scaled exponent tends to
+infinity; consequently its binary power eventually dominates `c*n`, making the
+selected yes threshold positive at every sufficiently large arity. `PromiseSIZE`
+is characterized by an explicit family solving both promise sides, while
+`PromiseEventuallySIZE`
 records bounds outside a finite prefix. Eventual polynomial bounds yield
 `PromisePPoly` after a proved finite-prefix patch. The selected parameter family
 now exposes both pointwise and eventual lower-bound predicates.
@@ -2834,14 +2839,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   `N = 2^n` input bits. Prove exact power-of-two well-formedness, membership
   characterizations, raw/canonical round trips, and semantic side-preserving maps
   in both directions.
-- [~] Add rationally scaled natural thresholds for `2^(beta*n)`, division by
+- [x] Add rationally scaled natural thresholds for `2^(beta*n)`, division by
   `c*n`, and slightly-superlinear bounds on `N = 2^n`. Prove monotonicity,
   rounding robustness, positivity, the required threshold gap, and eventual
-  domination lemmas without introducing real-valued circuit sizes. *The finite
-  scale, floor/ceiling factor-two comparison, selected GapMCSP thresholds, gap,
-  exact power-of-two input identity, and the small-positive filter are done;
-  the selected frontier quantifier is also packaged, while eventual domination
-  remains.*
+  domination lemmas without introducing real-valued circuit sizes.
 - [~] Define the nonuniform circuit-size predicate for promise problems used by
   the selected theorem. Relate it to `PromiseClass (SIZE s)`, allow finite
   exceptional lengths explicitly, and prove that polynomial-size promise solvers

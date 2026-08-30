@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.ScaledExponent.Defs
+import Mathlib.Analysis.SpecificLimits.Normed
 
 /-!
 # Positive rational exponent scales -- proof internals
@@ -109,6 +110,65 @@ theorem floorMul_mono_internal (scale : PositiveRationalScale) :
     Monotone scale.floorMul := by
   intro first second hle
   exact Nat.div_le_div_right (Nat.mul_le_mul_left scale.numerator hle)
+
+theorem tendsto_floorMul_atTop_internal (scale : PositiveRationalScale) :
+    Filter.Tendsto scale.floorMul Filter.atTop Filter.atTop := by
+  apply Filter.tendsto_atTop.mpr
+  intro target
+  apply Filter.eventually_atTop.mpr
+  refine ⟨scale.denominator * target, fun n hn => ?_⟩
+  apply (Nat.le_div_iff_mul_le scale.denominator_pos).mpr
+  calc
+    target * scale.denominator = scale.denominator * target := by
+      exact Nat.mul_comm _ _
+    _ ≤ n := hn
+    _ = 1 * n := by simp
+    _ ≤ scale.numerator * n :=
+      Nat.mul_le_mul_right n scale.numerator_pos
+
+theorem eventually_coefficient_mul_succ_le_two_pow_internal
+    (coefficient : ℕ) :
+    ∀ᶠ exponent : ℕ in Filter.atTop,
+      coefficient * (exponent + 1) ≤ 2 ^ exponent := by
+  have hlittle : ((↑) : ℕ → ℝ) =o[Filter.atTop]
+      fun exponent => (2 : ℝ) ^ exponent :=
+    isLittleO_coe_const_pow_of_one_lt (by norm_num)
+  have hcoefficient :
+      (0 : ℝ) < (((coefficient + 1 : ℕ) : ℝ))⁻¹ := by
+    positivity
+  have hbound := hlittle.bound hcoefficient
+  filter_upwards [hbound, Filter.eventually_ge_atTop coefficient]
+      with exponent hexponential hcoefficient_le
+  simp only [Real.norm_eq_abs] at hexponential
+  rw [abs_of_nonneg (Nat.cast_nonneg exponent),
+    abs_of_nonneg (pow_nonneg (by norm_num) exponent)] at hexponential
+  have hcoefficient_pos :
+      (0 : ℝ) < ((coefficient + 1 : ℕ) : ℝ) := by
+    positivity
+  have hexponential' :
+      (((coefficient + 1 : ℕ) : ℝ) * exponent) ≤
+        (2 : ℝ) ^ exponent := by
+    have hdiv :
+        (exponent : ℝ) ≤
+          (2 : ℝ) ^ exponent / ((coefficient + 1 : ℕ) : ℝ) := by
+      rw [div_eq_inv_mul]
+      exact hexponential
+    simpa only [mul_comm] using
+      (le_div_iff₀ hcoefficient_pos).mp hdiv
+  have hnat :
+      coefficient * (exponent + 1) ≤ (coefficient + 1) * exponent := by
+    calc
+      coefficient * (exponent + 1) =
+          coefficient * exponent + coefficient := by
+        simp [Nat.mul_add]
+      _ ≤ coefficient * exponent + exponent :=
+        Nat.add_le_add_left hcoefficient_le (coefficient * exponent)
+      _ = (coefficient + 1) * exponent := by simp [Nat.add_mul]
+  have hnatReal :
+      (coefficient : ℝ) * (exponent + 1) ≤
+        ((coefficient + 1 : ℕ) : ℝ) * exponent := by
+    exact_mod_cast hnat
+  exact_mod_cast hnatReal.trans hexponential'
 
 theorem ceilMul_mono_internal (scale : PositiveRationalScale) :
     Monotone scale.ceilMul := by
