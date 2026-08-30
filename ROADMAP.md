@@ -3297,10 +3297,11 @@ meta-computational notation hides several incompatible choices; expose them.
   A slack-amplified final clock now constructively pays all three logarithmic
   losses, the SoI additive constant, and a uniform pair-compiler loss. This
   removes both abstract loss inequalities while retaining every clock
-  domination explicitly. Proving polynomial growth of this amplified clock,
-  constructing a concrete universal compiler, connecting the induced algorithm
-  to `P`, adding the multiplicative Definition 6.5 variant, and the
-  hardness/class bridge remain.*
+  domination explicitly. Its power-of-two slack factor is bounded by a product
+  of the three iterated clocks, proving that the amplified clock is polynomial
+  and its conditional-gap parameters are admissible. Constructing a concrete
+  universal compiler, connecting the induced algorithm to `P`, adding the
+  multiplicative Definition 6.5 variant, and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3381,6 +3382,8 @@ formalization targets and should be stated positively under their exact names.
 - [x] Construct a slack-amplified final clock whose logarithm pays the three
   estimator/SoI losses and fixed compiler overhead, eliminating both abstract
   finite loss-budget hypotheses from the reduction.
+- [x] Bound the power-of-two slack factor by a product of iterated clocks and
+  prove the slack-amplified conditional parameters are polynomially admissible.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
