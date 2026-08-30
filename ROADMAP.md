@@ -2969,6 +2969,17 @@ meta-computational notation hides several incompatible choices; expose them.
   self-delimiting tuple, with exact decoding, code length, direct-program
   threshold semantics, and clock/threshold monotonicity. A paper-specific
   evaluator must still prove equivalence to this query convention.*
+- Hirahara's 2022 `Gap_tau MINcKT` promise is now represented exactly at the
+  machine-relative level. Its parameter is the trivariate clock
+  `tau(|x|,|y|,t)`; widening and polynomial growth are separate properties.
+  Canonical `(x,y,1^t,1^s)` codes feed a yes side
+  `C_cond^t(x|y) + cd^(t,tau)(y) <= s` and a no side
+  `C_cond^tau(x|y) > s + log_2(tau)`. The sum is the nontruncating form of the
+  paper's subtraction. Exact adjusted-witness and excluded-witness laws,
+  threshold monotonicity, clock/depth reconstruction, codec injectivity and
+  length, widening-based disjointness, and the `PromiseProblem` bundle are
+  complete. The ordinary depth machine and conditional oracle machine remain
+  separate until a universal-evaluator equivalence theorem identifies them.
 - Computational depth is now defined machine-relatively both in Hirahara's
   two-clock form `cd_M^(s,t)(x) = C_M^s(x) - C_M^t(x)` for `s <= t` and in the
   usual plain-limit form `C_M^s(x) - C_M(x)`. The extended-natural difference
@@ -3238,9 +3249,13 @@ meta-computational notation hides several incompatible choices; expose them.
   the paired-program overhead, and the SoI loss. The generic condition-first
   composition theorem supplies the required paired upper bound from a concrete
   evaluator contract and additive compiler; `conditional_le_of_composition`
-  now composes these layers without a manual intermediate inequality.
-  Constructing that evaluator, lifting the result to gap promises, and the
-  hardness/class bridge remain.*
+  now composes these layers without a manual intermediate inequality. The exact
+  Definition 6.1 `GapMINCKT` promise is also complete: trivariate clock,
+  depth-adjusted yes side, logarithmic no side, canonical quadruple codec,
+  program characterizations, and widening-certified disjointness are all
+  machine checked. Constructing the concrete evaluator, proving the estimator
+  maps these promise sides to an unconditional gap promise, adding the
+  multiplicative Definition 6.5 variant, and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3293,6 +3308,8 @@ formalization targets and should be stated positively under their exact names.
   paired upper bound directly in terms of attained minimum complexities.
 - [x] Add canonical `(x,y,1^t)` conditional MinKT instances with exact codec,
   witness semantics, and clock/threshold monotonicity.
+- [x] Formalize Hirahara's depth-adjusted `Gap_tau MINcKT` Definition 6.1 as a
+  canonical widening-certified promise problem with exact program semantics.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

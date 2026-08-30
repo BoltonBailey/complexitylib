@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MINCKT.Defs
+public import Complexitylib.Metacomplexity.MINCKT.Gap
 public import Complexitylib.Metacomplexity.MINCKT.Internal
 
 /-!
@@ -14,7 +15,8 @@ public import Complexitylib.Metacomplexity.MINCKT.Internal
 This module exposes canonical `(x, y, 1^t)` instances for machine-relative
 conditional time-bounded Kolmogorov complexity. Conditions use the library's
 faithful random-access oracle convention. Universality and paper-specific
-evaluator equivalence remain explicit future obligations.
+evaluator equivalence remain explicit future obligations. The depth-adjusted
+`GapMINCKT` promise follows Hirahara's 2022 Definition 6.1.
 -/
 
 
