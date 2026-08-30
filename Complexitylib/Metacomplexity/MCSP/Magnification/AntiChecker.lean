@@ -12,12 +12,13 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Relation
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Circuit
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator
 
 /-!
 # The Oliveira--Pich--Santhanam Anti-Checker Lemma
 
 Public aggregation module for the rounded finite parameters, typed multi-output
 generator contract, semantic approximate-selection rounds, and the explicit
-conditional approximate-counter circuit interface. Deriving that interface
-from `NP ⊆ P/poly` remains open.
+conditional approximate-counter circuit and estimator interfaces. Deriving the
+counter families from `NP ⊆ P/poly` remains open.
 -/
