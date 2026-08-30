@@ -2856,10 +2856,12 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   language agreement, and finite-prefix invariance for polynomial bounds are
   done. Exact `Basis.Hom` transport and two-way equivalence are also done; the
   selected paper-basis compiler and its constant overhead remain.*
-- [ ] Define `SuccinctMCSP`: a list of distinct or repeated input/output samples
+- [~] Define `SuccinctMCSP`: a list of distinct or repeated input/output samples
   together with a circuit-size threshold, accepted when one small circuit matches
-  every sample. Give it a total codec, exact sample semantics, polynomial witness
-  bounds, and an NP theorem via the executable circuit verifier.
+  every sample. *Typed sampled instances, their exact total codec, repeated-input
+  semantics, positive-arity circuit witnesses, and the consistent-constant
+  zero-arity convention are done. Polynomial witness bounds and the NP theorem
+  via the executable circuit verifier remain.*
 - [ ] Define finite anti-checkers as multisets of inputs meeting every small
   circuit that fails to compute a target function. Prove monotonicity, extraction
   from a shrinking set of consistent circuit descriptions, and the exact bridge

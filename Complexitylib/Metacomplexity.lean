@@ -20,6 +20,7 @@ public import Complexitylib.Metacomplexity.MINCKT
 public import Complexitylib.Metacomplexity.MCSP
 public import Complexitylib.Metacomplexity.MCSP.Shannon
 public import Complexitylib.Metacomplexity.MCSP.Raw
+public import Complexitylib.Metacomplexity.MCSP.Succinct
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Parameters
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Frontier
 
@@ -32,7 +33,7 @@ decoding and Hamming geometry, and the minimum-resource problems built from
 them, including canonical MCSP, strict-threshold MINKT, and conditional MinKT
 instances. Canonical MCSP also exposes its exact finite Shannon threshold
 window, while raw GapMCSP supplies the bare `2^n`-bit input convention used by
-hardness magnification. Positive rational exponent scales and the selected
-finite magnification parameters make its rounded thresholds and lower-bound
-quantifiers explicit.
+hardness magnification and SuccinctMCSP supplies typed sampled constraints.
+Positive rational exponent scales and the selected finite magnification
+parameters make its rounded thresholds and lower-bound quantifiers explicit.
 -/
