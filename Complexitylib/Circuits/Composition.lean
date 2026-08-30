@@ -150,9 +150,21 @@ theorem wireValue_parallel_right
 and otherwise preserves every internal and output gate. -/
 @[simp] theorem size_parallel
     (left : Circuit B N K G₁) (right : Circuit B N M G₂) :
-    (left.parallel right).size = left.size + right.size := by
-  simp only [Circuit.size]
-  omega
+    (left.parallel right).size = left.size + right.size :=
+  size_parallel_internal left right
+
+/-- Any positive finite family of single-output circuits with shared primary
+inputs can be packed into one multi-output circuit. Its size is exactly the sum
+of the source sizes, and output `i` is the output of source circuit `i`. -/
+theorem exists_parallelFamily {count : ℕ} [NeZero count]
+    (circuits : Fin count →
+      Σ internalGates, Circuit B N 1 internalGates) :
+    ∃ internalGates,
+      ∃ packed : Circuit B N count internalGates,
+        packed.size = (∑ i, ((circuits i).2).size) ∧
+          ∀ input i,
+            packed.eval input i = ((circuits i).2.eval input) 0 :=
+  exists_parallelFamily_internal circuits
 
 end Circuit
 

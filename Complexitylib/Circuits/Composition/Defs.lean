@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.Basic
+public import Mathlib.Algebra.BigOperators.Fin
 
 /-!
 # Circuit composition -- definitions

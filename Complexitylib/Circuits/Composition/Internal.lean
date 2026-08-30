@@ -407,6 +407,74 @@ theorem eval_parallel_internal
     funext wire
     exact wireValue_parallel_right_internal left right input wire
 
+theorem size_parallel_internal
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂) :
+    (left.parallel right).size = left.size + right.size := by
+  simp only [Circuit.size]
+  omega
+
+private theorem exists_parallelFamily_succ_internal (count : ℕ)
+    (circuits : Fin (count + 1) →
+      Σ internalGates, Circuit B N 1 internalGates) :
+    ∃ internalGates,
+      ∃ packed : Circuit B N (count + 1) internalGates,
+        packed.size = (∑ i, ((circuits i).2).size) ∧
+          ∀ input i,
+            packed.eval input i = ((circuits i).2.eval input) 0 := by
+  induction count with
+  | zero =>
+      rcases hfirst : circuits 0 with ⟨internalGates, circuit⟩
+      refine ⟨internalGates, circuit, ?_, ?_⟩
+      · simpa using (congrArg (fun bundled => bundled.2.size) hfirst).symm
+      · intro input output
+        have houtput : output = 0 := by
+          apply Fin.ext
+          omega
+        subst output
+        rw [hfirst]
+  | succ count ih =>
+      let initialCircuits : Fin (count + 1) →
+          Σ internalGates, Circuit B N 1 internalGates :=
+        fun i => circuits i.castSucc
+      obtain ⟨prefixGates, prefixCircuit, hprefixSize, hprefixEval⟩ :=
+        ih initialCircuits
+      rcases hlast : circuits (Fin.last (count + 1)) with
+        ⟨lastGates, lastCircuit⟩
+      refine
+        ⟨prefixGates + lastGates,
+          prefixCircuit.parallel lastCircuit, ?_, ?_⟩
+      · rw [size_parallel_internal, hprefixSize,
+          Fin.sum_univ_castSucc
+            (fun i : Fin (count + 1 + 1) => ((circuits i).2).size)]
+        have hlastSize :=
+          congrArg (fun bundled => bundled.2.size) hlast
+        simp only [initialCircuits]
+        simpa only using congrArg
+          (fun size =>
+            (∑ i : Fin (count + 1), ((circuits i.castSucc).2).size) +
+              size)
+          hlastSize.symm
+      · intro input output
+        refine Fin.lastCases ?_ (fun prior => ?_) output
+        · rw [eval_parallel_internal]
+          rw [Fin.append_right_eq_snoc, Fin.snoc_last, hlast]
+        · rw [eval_parallel_internal]
+          rw [show prior.castSucc = Fin.castAdd 1 prior by rfl,
+            Fin.append_left]
+          exact hprefixEval input prior
+
+theorem exists_parallelFamily_internal {count : ℕ} [NeZero count]
+    (circuits : Fin count →
+      Σ internalGates, Circuit B N 1 internalGates) :
+    ∃ internalGates,
+      ∃ packed : Circuit B N count internalGates,
+        packed.size = (∑ i, ((circuits i).2).size) ∧
+          ∀ input i,
+            packed.eval input i = ((circuits i).2.eval input) 0 := by
+  cases count with
+  | zero => exact (NeZero.ne 0 rfl).elim
+  | succ count => exact exists_parallelFamily_succ_internal count circuits
+
 private theorem le_fold_max {n : ℕ} (f : Fin n → ℕ) (i : Fin n) :
     f i ≤ Fin.foldl n (fun acc j => max acc (f j)) 0 := by
   induction n with
