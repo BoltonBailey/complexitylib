@@ -2989,7 +2989,9 @@ meta-computational notation hides several incompatible choices; expose them.
   Markov bound is now proved exactly. Independent advice repetition now has the
   exact geometric success law, and the end-to-end theorem proves success at
   least one half under the explicit Hirahara trial condition
-  `k * (delta / (2m)) >= 1`, while retaining the fixed payload bound. An
+  `k * (delta / (2m)) >= 1`, while retaining the fixed payload bound. The
+  canonical count `ceil(2m / delta)` meets this condition and is proved strictly
+  below `2m / delta + 1`. An
   executable sampler and checker for the resulting approximate description,
   list decoding, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case

@@ -25,6 +25,32 @@ namespace Complexity
 
 namespace NWDesign
 
+/-- The canonical trial count is at least the exact ratio `2m / δ`. -/
+theorem ratio_le_reconstructionAdviceTrialCount
+    (outputLength : ℕ) (density : ℚ) :
+    2 * (outputLength : ℚ) / density ≤
+      (reconstructionAdviceTrialCount outputLength density : ℚ) :=
+  ratio_le_reconstructionAdviceTrialCount_internal outputLength density
+
+/-- For positive density, the canonical trial count is strictly below
+`2m / δ + 1`, making its `O(m / δ)` cost explicit. -/
+theorem reconstructionAdviceTrialCount_lt_ratio_add_one
+    (outputLength : ℕ) (density : ℚ) (hdensity : 0 < density) :
+    (reconstructionAdviceTrialCount outputLength density : ℚ) <
+      2 * (outputLength : ℚ) / density + 1 :=
+  reconstructionAdviceTrialCount_lt_ratio_add_one_internal
+    outputLength density hdensity
+
+/-- The canonical ceiling trial count meets the repetition threshold exactly
+needed for half-success advice search. -/
+theorem one_le_reconstructionAdviceTrialCount_mul_halfAdvantage
+    (outputLength : ℕ) (density : ℚ)
+    (houtputLength : 0 < outputLength) (hdensity : 0 < density) :
+    1 ≤ (reconstructionAdviceTrialCount outputLength density : ℚ) *
+      ((density / (outputLength : ℚ)) / 2) :=
+  one_le_reconstructionAdviceTrialCount_mul_halfAdvantage_internal
+    outputLength density houtputLength hdensity
+
 /-- Exact independent-repetition law for sampling good reconstruction advice. -/
 theorem repeatedGoodReconstructionAdviceProbability_eq_one_sub_pow
     {outputLength inputLength seedLength : ℕ}
@@ -132,6 +158,32 @@ theorem exists_half_le_repeatedGoodAdviceProbability_of_randomTest
   exists_half_le_repeatedGoodAdviceProbability_of_randomTest_internal
     houtputLength hdensity htrials hlow hrandom hdense hbudget
 
+/-- The canonical `ceil(2m / δ)` advice count finds a reconstruction predictor
+of agreement `1/2 + δ/(2m)` with probability at least one half. -/
+theorem exists_half_le_canonicalRepeatedGoodAdvice_of_randomTest
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ (complement : Bool) (current : Fin outputLength),
+      1 / 2 ≤
+          design.repeatedGoodReconstructionAdviceProbability hardFunction
+            (BitGenerator.orientTest test complement) current
+            (1 / 2 + (density / (outputLength : ℚ)) / 2)
+            (reconstructionAdviceTrialCount outputLength density) ∧
+        design.reconstructionDataBitsAt current ≤
+          budget + (seedLength - inputLength) + 1 :=
+  exists_half_le_canonicalRepeatedGoodAdvice_of_randomTest_internal
+    houtputLength hdensity hlow hrandom hdense hbudget
+
 /-- Exact repeated advice-search bound when generator complexity is discharged
 by direct short-seed descriptions. -/
 theorem exists_repeatedGoodAdviceProbability_ge_of_seedDescriptions
@@ -186,6 +238,33 @@ theorem exists_half_le_repeatedGoodAdviceProbability_of_seedDescriptions
           budget + (seedLength - inputLength) + 1 :=
   exists_half_le_repeatedGoodAdviceProbability_of_seedDescriptions_internal
     houtputLength hdensity htrials hseedLength hproduces hrandom hdense hbudget
+
+/-- Canonical-count half-success advice search with low complexity discharged
+by direct short-seed descriptions. -/
+theorem exists_half_le_canonicalRepeatedGoodAdvice_of_seedDescriptions
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density) (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ (complement : Bool) (current : Fin outputLength),
+      1 / 2 ≤
+          design.repeatedGoodReconstructionAdviceProbability hardFunction
+            (BitGenerator.orientTest test complement) current
+            (1 / 2 + (density / (outputLength : ℚ)) / 2)
+            (reconstructionAdviceTrialCount outputLength density) ∧
+        design.reconstructionDataBitsAt current ≤
+          budget + (seedLength - inputLength) + 1 :=
+  exists_half_le_canonicalRepeatedGoodAdvice_of_seedDescriptions_internal
+    houtputLength hdensity hseedLength hproduces hrandom hdense hbudget
 
 end NWDesign
 

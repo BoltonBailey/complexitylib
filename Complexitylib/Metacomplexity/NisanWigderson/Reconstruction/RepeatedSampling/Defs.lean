@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Averaging.Defs
+public import Mathlib.Data.Rat.Floor
 
 /-!
 # Repeated sampling of NW reconstruction advice -- definitions
@@ -21,6 +22,12 @@ one sampled advice attains the requested agreement threshold.
 namespace Complexity
 
 namespace NWDesign
+
+/-- Canonical number of independent advice trials for output length `m` and
+positive density `δ`: the ceiling of `2m / δ`. The definition is total; its
+sampling guarantee assumes positive density. -/
+def reconstructionAdviceTrialCount (outputLength : ℕ) (density : ℚ) : ℕ :=
+  Nat.ceil (2 * (outputLength : ℚ) / density)
 
 /-- Advice choices attaining a requested reconstruction-agreement threshold. -/
 def goodReconstructionAdviceEvent
