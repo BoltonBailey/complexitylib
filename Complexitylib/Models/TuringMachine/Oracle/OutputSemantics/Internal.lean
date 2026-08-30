@@ -30,6 +30,12 @@ theorem HaltsInTime.mono_internal
   obtain ⟨cfg, steps, hsteps, hreach, hhalted⟩ := hhalt
   exact ⟨cfg, steps, hsteps.trans hbound, hreach, hhalted⟩
 
+theorem halts_of_haltsInTime_internal
+    {machine : OracleTM n} {oracle : BooleanOracle} {program : List Bool}
+    {time : ℕ} (hhalt : machine.HaltsInTime oracle program time) :
+    machine.Halts oracle program :=
+  ⟨time, hhalt⟩
+
 theorem ProducesInTime.mono_internal
     {machine : OracleTM n} {oracle : BooleanOracle}
     {program output : List Bool} {first second : ℕ}

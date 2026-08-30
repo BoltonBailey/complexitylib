@@ -33,6 +33,14 @@ theorem HaltsInTime.mono
     machine.HaltsInTime oracle program second :=
   hhalt.mono_internal hbound
 
+/-- Forgetting a clock turns bounded oracle-machine halting into eventual
+halting. -/
+theorem halts_of_haltsInTime
+    {machine : OracleTM n} {oracle : BooleanOracle} {program : List Bool}
+    {time : ℕ} (hhalt : machine.HaltsInTime oracle program time) :
+    machine.Halts oracle program :=
+  halts_of_haltsInTime_internal hhalt
+
 /-- Increasing the clock preserves bounded oracle-machine production. -/
 theorem ProducesInTime.mono
     {machine : OracleTM n} {oracle : BooleanOracle}

@@ -31,6 +31,11 @@ def HaltsInTime (machine : OracleTM n) (oracle : BooleanOracle)
     machine.reachesIn oracle steps (machine.initCfg program) cfg ∧
     machine.halted cfg
 
+/-- Eventual oracle-machine halting, expressed through some finite clock. -/
+def Halts (machine : OracleTM n) (oracle : BooleanOracle)
+    (program : List Bool) : Prop :=
+  ∃ time, machine.HaltsInTime oracle program time
+
 /-- An oracle machine produces an exact output within an explicit step budget. -/
 def ProducesInTime (machine : OracleTM n) (oracle : BooleanOracle)
     (program output : List Bool) (time : ℕ) : Prop :=

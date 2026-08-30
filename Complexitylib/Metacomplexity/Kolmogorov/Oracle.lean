@@ -13,7 +13,9 @@ public import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Internal
 
 This module exposes plain and time-bounded description complexity relative to
 an arbitrary deterministic oracle machine and Boolean oracle. The ordinary TM
-embedding preserves bounded complexity exactly for every oracle.
+embedding preserves bounded complexity exactly for every oracle. An
+oracle-uniform polynomial simulation transfers bounded descriptions with one
+compiler constant and clock shared by all oracles.
 -/
 
 
@@ -85,6 +87,28 @@ theorem timeBoundedKolmogorovComplexity_mono
       machine.timeBoundedKolmogorovComplexity oracle output first :=
   timeBoundedKolmogorovComplexity_mono_internal
     machine oracle output hclock
+
+/-- An oracle-uniform polynomial simulation transfers every bounded
+oracle-relative description using the same compiler constant and polynomial
+clock for all Boolean oracles. -/
+theorem SimulatesInTime.kolmogorov_transfer
+    {simulatorTapes sourceTapes : ℕ}
+    {simulator : OracleTM simulatorTapes} {source : OracleTM sourceTapes}
+    {compile : List Bool → List Bool} {constant : ℕ}
+    {clock : TM.TimeOverhead}
+    (hsim : simulator.SimulatesInTime source compile clock)
+    (hlength : TM.HasAdditiveProgramOverhead compile constant)
+    (hclock : TM.PolynomialTimeOverhead clock) :
+    ∃ coefficient exponent,
+      ∀ (oracle : BooleanOracle) (output : List Bool)
+        (sourceTime bound : ℕ),
+        source.timeBoundedKolmogorovComplexity oracle output sourceTime ≤
+            (bound : WithTop ℕ) →
+          simulator.timeBoundedKolmogorovComplexity oracle output
+              (coefficient * (bound + sourceTime + 1) ^ exponent) ≤
+            (bound + constant : ℕ) :=
+  polynomialTimeOverhead_kolmogorov_transfer_internal
+    hsim hlength hclock
 
 end OracleTM
 

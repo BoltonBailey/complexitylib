@@ -1997,7 +1997,10 @@ the mathematics and must not be hidden behind notation.
   theorem. A time-bounded measure is not invariant under an unchanged clock.
   The deterministic oracle model now also has plain `C^A_M` and bounded
   `C^{t,A}_M`, including bounded witnesses, threshold characterization, clock
-  monotonicity, and exact conservativity for embedded ordinary machines.
+  monotonicity, and exact conservativity for embedded ordinary machines. Its
+  efficient-universality interface chooses one compiler and polynomial clock
+  before the oracle, and the corresponding `C^{t,A}` transfer is uniform in
+  that oracle.
 - [~] Prove finite incompressibility: fewer than `2^s` descriptions of length
   below `s` exist, so sufficiently large length slices contain strings of high
   complexity. Add the trivial print upper bound for an efficiently universal
@@ -2165,7 +2168,9 @@ precise closure property of arguments.
   Boolean-oracle model is complete at the base layer: it has a dedicated query
   tape, total query-word semantics, one-step lookup cost, exact-time execution,
   functional runs, and true/false query laws. Nondeterministic oracle machines
-  remain.*
+  remain. Semantic and polynomially efficient deterministic oracle-universality
+  interfaces are also defined, but no concrete universal oracle machine is yet
+  instantiated.*
 - [ ] Define relativized time/space classes and lift basic simulations and
   containments that genuinely relativize.
 - [ ] Build clocked enumerations of oracle machines suitable for diagonalization.
@@ -3136,7 +3141,7 @@ meta-computational notation hides several incompatible choices; expose them.
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
   bounded ambient codec or a family-uniform oracle decoder, constructing
   machine/runtime realizers for the sampler, checker, indexed-message evaluator,
-  and concrete code family, defining efficient oracle universality,
+  and concrete code family, instantiating a concrete oracle-universal machine,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case

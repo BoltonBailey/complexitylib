@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Defs
 public import Complexitylib.Models.TuringMachine.Oracle.OutputSemantics
+public import Complexitylib.Models.TuringMachine.Oracle.Universality
 public import Complexitylib.Metacomplexity.Kolmogorov.Defs
 
 /-!
@@ -108,6 +109,39 @@ theorem timeBoundedKolmogorovComplexity_mono_internal
   subst size
   exact timeBoundedKolmogorovComplexity_le_internal
     (hproduce.mono hclock)
+
+theorem polynomialTimeOverhead_kolmogorov_transfer_internal
+    {simulatorTapes sourceTapes : ℕ}
+    {simulator : OracleTM simulatorTapes} {source : OracleTM sourceTapes}
+    {compile : List Bool → List Bool} {constant : ℕ}
+    {clock : TM.TimeOverhead}
+    (hsim : simulator.SimulatesInTime source compile clock)
+    (hlength : TM.HasAdditiveProgramOverhead compile constant)
+    (hclock : TM.PolynomialTimeOverhead clock) :
+    ∃ coefficient exponent,
+      ∀ (oracle : BooleanOracle) (output : List Bool)
+        (sourceTime bound : ℕ),
+        source.timeBoundedKolmogorovComplexity oracle output sourceTime ≤
+            (bound : WithTop ℕ) →
+          simulator.timeBoundedKolmogorovComplexity oracle output
+              (coefficient * (bound + sourceTime + 1) ^ exponent) ≤
+            (bound + constant : ℕ) := by
+  obtain ⟨coefficient, exponent, hclock⟩ := hclock
+  refine ⟨coefficient, exponent, ?_⟩
+  intro oracle output sourceTime bound hsource
+  obtain ⟨program, hprogramLength, hproduce⟩ :=
+    (timeBoundedKolmogorovComplexity_le_coe_iff_internal
+      source oracle output sourceTime bound).mp hsource
+  have htime : clock program sourceTime ≤
+      coefficient * (bound + sourceTime + 1) ^ exponent := by
+    exact (hclock program sourceTime).trans
+      (Nat.mul_le_mul_left _ (Nat.pow_le_pow_left (by omega) exponent))
+  have hcompiled :=
+    (hsim.produces oracle program output sourceTime hproduce).mono htime
+  have hcompiledLength : (compile program).length ≤ bound + constant :=
+    (hlength program).trans (Nat.add_le_add_right hprogramLength constant)
+  exact (timeBoundedKolmogorovComplexity_le_internal hcompiled).trans
+    (WithTop.coe_le_coe.mpr hcompiledLength)
 
 end OracleTM
 
