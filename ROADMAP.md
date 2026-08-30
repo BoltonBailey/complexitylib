@@ -83,9 +83,13 @@ core API and encodings
   |     |     +-- BPP subset P/poly
   |     +-- uniform circuits <-> TMs
   |           +-- uniform NC/AC variants
+  |     +-- resource-aware universal simulation
+  |           +-- bounded Kolmogorov measures + MKtP
   +-- nonuniform circuit families + quantitative transformations
   |     +-- Barrington, balancing, restrictions, and bounded-depth lower bounds
   |     +-- monotone, threshold, and communication-complexity methods
+  |     +-- truth-table minimization + MCSP
+  |           +-- gap problems + hardness magnification
   +-- canonical complete problems and reductions
   +-- protocol/transcript infrastructure
   |     +-- interactive-proof classes
@@ -1690,6 +1694,178 @@ so that the simulation's own workspace is charged.
   - [x] Compose one-step correctness into a fixed halt-aware decision loop.
   - [x] Package the complete simulator as `RAM.P ⊆ P` and hence `RAM.P = P`.
 
+### M7. Metacomplexity and minimum-description problems
+
+**Goal.** Build a reusable theory of problems whose instances describe functions
+or strings and ask about their computational complexity. The first concrete
+endpoints are machine-relative time-bounded Kolmogorov measures, the Minimum
+Circuit Size Problem (`MCSP`), the Minimum `KT` Problem (`MKtP`), and their
+search, gap, and average-case variants.
+
+**Prerequisites.** N0 bounded-run and output APIs, N1 codecs, N3 reductions, the
+existing universal-machine development, M1 truth tables/circuit encodings and
+TM-to-circuit unrolling, and M6 when a genuinely random-access cost model is
+required. N2 is needed for incompressibility and average-case statements. The
+first definition-only slices do not need all of these prerequisites.
+
+**Current foundation.** `TM.reachesIn`, `Tape.HasOutput`, and
+`TM.ComputesInTime` provide bounded execution and string-output semantics. The
+public `TM.runCfg`, `TM.Produces`, and `TM.ProducesInTime` API now supplies a
+total halt-idempotent evaluator, a decidable bounded-production relation,
+clock monotonicity, exact-output uniqueness, and equivalences with the existing
+whole-function computation predicates. The evaluator is shared with the Cobham
+simulation rather than duplicated in a metacomplexity-specific layer. The
+fixed `TM.utmTM` has a total description decoder, an interpreter for
+single-work-tape machines, a compiler from arbitrary multitape machines through
+the single-tape simulation, and explicit simulation overhead. Its strongest
+implementation theorem preserves the complete output through the first blank,
+although the current public universality theorem is packaged only for deciders.
+On the circuit side, `Circuit.sizeComplexityWithTop` and
+`Circuit.sizeComplexity` already define minimum circuit size for typed Boolean
+functions, and the truth-table bridges, circuit codec, evaluator, and functional
+unrolling construction supply most of the intended MCSP verification path.
+
+What remains missing is a reusable notion of universal or efficiently universal
+machine, any Kolmogorov measure, a total MCSP instance language, and
+promise/reduction infrastructure for gap problems.
+
+**Definitions and conventions to settle first.** These distinctions are part of
+the mathematics and must not be hidden behind notation.
+
+- Define `TM.ProducesInTime U p x t` pointwise: some run of `U` on program `p`
+  halts in at most `t` steps with exact output `x`. Keep the primitive budget
+  explicit; wrappers may use a bound such as `t(x.length)`. Because
+  `reachesIn` counts exact steps and a halted machine has no next step, the
+  definition must quantify an actual runtime `r ≤ t`.
+- Define machine-relative bounded description complexity for every machine
+  `U`, not only for machines already proved universal. Use `WithTop Nat` (or an
+  equivalent explicit failure value) when no program meets the budget. Prove
+  universality separately and invoke it only for invariance and upper bounds.
+- Reserve `C_U` for plain description complexity over arbitrary bit strings.
+  Reserve prefix-free `K_U` for a machine whose halting domain is proved
+  prefix-free. The current input convention does not make programs prefix-free.
+- Keep three resource-bounded measures distinct:
+  1. `C^t_U(x)`, minimum program length subject to a fixed whole-output clock;
+  2. Levin `Kt_U(x)`, minimizing program length plus logarithmic running time;
+  3. random-access `KT_U(x)`, minimizing description length plus the time to
+     answer every indexed-bit query (including a chosen end-marker convention).
+  The third requires an explicit random-access description/query model; an
+  ordinary sequential input tape does not provide it for free.
+- Factor universal simulation into a behavioral relation and a compiler. A
+  simulator must preserve halting and exact string output under
+  `compile M p`; an additive bound on `|compile M p|` gives ordinary
+  Kolmogorov invariance, while a separate explicit clock transformation gives
+  efficient universality. Do not put a particular `TMDesc`, pairing function,
+  tape count, or overhead formula in the generic predicate.
+- Represent an MCSP instance by an explicit arity, truth table, and size
+  threshold, with a canonical binary codec and total malformed-input behavior.
+  Validate `table.length = 2^arity`, specify the zero-arity case, encode the
+  threshold explicitly, and distinguish truth-table length `N = 2^n` from
+  function arity `n` in every resource statement.
+- Define MCSP first for the library's exact `Basis.andOr2` convention, where
+  input vertices and negation flags are free and the output gate is counted.
+  Prove linear-overhead transport to any literature convention used by a later
+  theorem instead of silently identifying the measures.
+- Introduce a small `PromiseProblem` API before `GapMCSP` or `GapMKtP`: disjoint
+  yes/no languages, algorithms constrained only on the promise, and reductions
+  preserving both sides with explicit parameter maps. Keep approximation,
+  worst-case gap, and distributional gap formulations separate.
+
+**Staged milestones.** Land these as independently useful theorem layers.
+
+- [x] Add pointwise `Produces`/`ProducesInTime` semantics, bounded executable
+  simulation, monotonicity in the clock, output uniqueness, and conversion to
+  and from the existing whole-function computation predicates.
+- [ ] Define output-preserving `TM.Simulates`, `TM.IsUniversal`, and
+  `TM.IsEfficientlyUniversal` interfaces over arbitrary work-tape counts. Split
+  semantic simulation, additive program-length overhead, and time overhead into
+  reusable fields or mixins rather than one theorem-shaped structure.
+- [ ] Promote the fixed UTM's full-output theorem to the public surface and
+  instantiate the generic efficient-universality interface. The compiler should
+  expose the exact paired-program length `2 * |description| + 2 + |p|` and the
+  existing single-tape and UTM clock transformations.
+- [ ] Define plain `C_U`, bounded `C^t_U`, and prefix-free `K_U`; prove clock
+  monotonicity, witness/threshold characterizations, additive invariance under
+  the appropriate compiler, and the corresponding resource-aware comparison
+  theorem. A time-bounded measure is not invariant under an unchanged clock.
+- [ ] Prove finite incompressibility: fewer than `2^s` descriptions of length
+  below `s` exist, so sufficiently large length slices contain strings of high
+  complexity. Add the trivial print upper bound for an efficiently universal
+  machine and clearly state its clock requirement.
+- [ ] Formalize the classical noncomputability layer for unbounded plain or
+  prefix-free complexity, separately from the decidable bounded measures. This
+  should reuse a precise partial-computation or halting interface rather than a
+  cardinality slogan.
+- [ ] Define conditional complexity `C^t_U(x | y)` once the two-input encoding
+  and auxiliary-input cost convention are fixed. Add only those chain-rule and
+  symmetry statements whose logarithmic/additive losses have been stated
+  exactly.
+- [ ] Define the random-access evaluator model needed by `KT`, instantiate one
+  efficient universal evaluator, and prove model-robustness under explicit
+  compiler and query-overhead hypotheses. Relate it to the logarithmic-cost RAM
+  only after accounting for program access, index encoding, and the end query.
+- [ ] Define Levin `Kt`, random-access `KT`, and the corresponding threshold and
+  search problems. Prove total upper bounds, counting bounds, clock/threshold
+  monotonicity, and polynomial-time verification of bounded witnesses.
+- [ ] Add a generic finite-resource threshold construction only after MCSP and
+  MKtP demonstrate the same abstraction. It should package a costed decoder,
+  exact semantics, a threshold language, a search relation, and a gap promise
+  without erasing representation-specific obligations.
+- [ ] Define total `MCSP`, parameterized `MCSP[s]`, and search-MCSP over the
+  canonical truth-table codec. Prove agreement with `Circuit.sizeComplexity`,
+  basis-transport lemmas, threshold monotonicity, and `MCSP ∈ NP` using the
+  existing circuit decoder/evaluator as the verifier core.
+- [ ] Define `MKtP`, `MK^tP`, their search variants, and their gap promise
+  problems. Prove the intended NP upper bounds with an executable bounded
+  universal evaluator; do not use noncomputable minimization as the verifier.
+- [ ] Establish the quantitative circuit/description bridge in both directions:
+  a small circuit gives a short random-access description, while a bounded
+  program can be unrolled to a circuit with an explicit size bound. Derive the
+  resulting polynomial relationships and only the gap reductions actually
+  supported by those inequalities.
+- [ ] Add partial-function, formula-size, branching-program-size, oracle-circuit,
+  and implicit/succinct variants through the same threshold/promise vocabulary.
+  Use these to formalize known hardness results before treating exact total MCSP
+  hardness as an endpoint.
+- [ ] Add distributional and average-case metacomplexity: samplable ensembles,
+  compression probability, low-complexity density, and distinguishing random
+  truth tables from generator ranges. Connect this layer to L3 natural
+  properties, learning, cryptography, and range avoidance.
+
+**Open-problem boundary.** Exact total single-output MCSP is in NP, but its
+NP-hardness under standard polynomial-time reductions remains open; the analogous
+headline questions for standard total MKtP are also not roadmap promises. Record
+partial-function, implicit, oracle, randomized-reduction, gap, approximation,
+conditional, and assumption-dependent results under their exact names. A theorem
+about one such variant must never be surfaced as NP-completeness of ordinary MCSP.
+
+**Formalization hazards.** The choice of universal machine changes bounded
+complexity through its clock overhead, not merely an additive description
+constant. Prefix-free, whole-output, and indexed-bit machines have different
+domains and costs. The clocked UTM's timeout sentinel is an implementation device,
+not a definition of bounded output. MCSP thresholds larger than a trivial upper
+bound need normalization so NP witnesses stay polynomial in the encoded input.
+Truth-table algorithms run in the input length `N`, even though `N` is exponential
+in arity `n`. Gap problems are promise problems, and behavior in the gap cannot be
+quietly fixed to either answer. Finally, `Circuit.sizeComplexity` is
+noncomputable by design; language membership theorems need explicit witnesses and
+verified evaluators.
+
+**Small entry tasks.**
+
+- [x] Add `TM.ProducesInTime` and prove monotonicity and uniqueness of the halted
+  output.
+- [S] Package the fixed-description compiler `p ↦ pair α p` and prove its exact
+  additive length bound.
+- [M] State a function-output version of `utmTM_universal` and derive it from the
+  existing output-preserving Hoare theorem.
+- [M] Define a total encoded MCSP instance syntax, including malformed and
+  zero-arity cases, and prove encode/decode round trips.
+- [M] Bound the number of size-`s` circuit descriptions and derive a finite
+  incompressibility lemma for truth tables.
+- [M] Define `PromiseProblem` and deterministic many-one reductions with explicit
+  yes/no preservation, then instantiate `GapMCSP[s₁,s₂]`.
+
 ## Long-term tracks
 
 ### L1. Sum-check and `IP = PSPACE`
@@ -2214,6 +2390,164 @@ coordinates rather than importing continuous machinery. Influence has two distin
 operators — the spectral derivative `Dᵢ` (strips `i` from each frequency) and the
 sensitivity operator `Lᵢ` (keeps frequencies containing `i`) — with the same squared
 norm; keep them separate to avoid off-by-a-coordinate errors.
+
+### L8. Hardness magnification and metacomplexity frontiers
+
+**Goal.** Formalize a published hardness-magnification theorem in which a modest
+strengthening of the best known lower bound for a gap metacomplexity problem
+implies a major circuit or class separation. Build enough surrounding theory to
+compare the magnification frontier with current lower bounds, natural proofs,
+locality, learning, and pseudorandomness without turning an implication into a
+claimed unconditional breakthrough.
+
+**Prerequisites.** M7 metacomplexity and promise problems, M1 circuit families and
+unrolling, N2 finite probability, N3 quantitative reductions, L3 natural
+properties, and L4 formula/circuit lower-bound models. Coding-based routes also
+need an explicit error-correcting-code library. A streaming magnification theorem
+additionally needs a streaming model; a probabilistic-formula theorem needs the
+corresponding finite randomized circuit semantics.
+
+**Literature anchors.** The initial theorem menu should be drawn from the
+Oliveira--Santhanam hardness-magnification framework, the
+Oliveira--Pich--Santhanam gap-MCSP/gap-MKtP results, the
+Chen--Jin--Williams sharp-threshold results, and the
+Chen--Hirahara--Oliveira--Pich--Rajgopal--Santhanam analysis of natural proofs and
+the locality barrier. Allender--Grochow--van Melkebeek--Moore--Morgan supplies a
+separate reduction-oriented bridge between MKtP and isomorphism problems. Before
+formalization, pin one paper/version and transcribe its exact model, threshold,
+uniformity, error, and quantifier conventions into a short design document.
+
+**Definitions and theorem shape to settle first.**
+
+- A magnification theorem is an implication
+  `weak lower bound for Q -> major separation`. The antecedent remains a named
+  hypothesis unless the required weak lower bound has independently been proved.
+  The theorem statement should expose both sides instead of naming the implication
+  as though it established the separation.
+- State finite parameter inequalities first. Only then quantify over arity `n`,
+  truth-table length `N = 2^n`, thresholds `s₁(n), s₂(n)`, and lower-bound model
+  size. “Slightly superlinear” or “near quadratic” is meaningless without all four
+  scales.
+- Distinguish worst-case `GapMCSP[s₁,s₂]`, approximate agreement with a small
+  circuit, average-case/zero-error variants, and distributional problems. These
+  are different promise problems and support different magnification theorems.
+- Define each weak lower-bound model extension exactly: for example formula-XOR,
+  probabilistic formulas, nondeterministic or parity branching programs,
+  one-pass streaming with update time and space, or local-oracle circuits. Reuse
+  the existing typed formula, branching-program, and finite-probability layers
+  where their conventions match.
+- Make every reduction quantitative: output length, threshold transformation,
+  circuit/formula size blow-up, randomness, advice, query adaptivity, error side,
+  and uniformity. Ordinary polynomial many-one reducibility erases the parameters
+  that magnification needs.
+- Treat locality as a mathematical property of circuits, reductions, generators,
+  or restrictions. Do not attempt to classify informal proof techniques or Lean
+  proof terms as “local.”
+
+**Staged milestones.**
+
+- [ ] Add binary-code foundations sufficient for magnification: Hamming distance,
+  rate, relative distance, encoding/decoding correctness, circuit complexity of
+  encoding, and whichever local/list/unique decoding guarantee the selected paper
+  actually uses. Start with a finite linear code and exact parameters.
+- [ ] Define parameter-preserving reductions between promise families. Prove
+  identity/composition while retaining yes/no thresholds, output length, resource
+  blow-up, randomness, and error rather than projecting immediately to a language
+  reduction.
+- [ ] Isolate an abstract coding/compression lemma: under a stated upper-bound or
+  collapse hypothesis, codewords of relevant instances receive low circuit or
+  `Kt` complexity, while the decoding/distance argument keeps no-instances far
+  from every low-complexity string. Keep this finite and model-independent.
+- [ ] Instantiate the compression lemma for `GapMKtP`, where descriptions and
+  clocks are the native witnesses. Audit every use of efficient universality and
+  every additive/logarithmic term before asymptotic simplification.
+- [ ] Transfer the construction to `GapMCSP` using the M7 circuit/description
+  bridges. State the loss in thresholds and lower-bound-model size explicitly;
+  polynomial relatedness of measures is insufficient for a sharp frontier.
+- [ ] Formalize one complete published formula-based magnification frontier for
+  `GapMKtP` or `GapMCSP`: exact finite implication, asymptotic implication, and
+  the advertised major separation. This is the preferred first headline because
+  the repository already has typed formulas, composition, restrictions, and
+  substantial near-quadratic lower-bound infrastructure.
+- [ ] Place the strongest matching unconditional lower bound and the magnification
+  hypothesis in one comparison theorem or parameter table. Machine-check which
+  exponent/gap remains, rather than saying only that the results are “close.”
+- [ ] Add probabilistic formulas and formalize a sharp-threshold result relating a
+  modest exponent improvement for MCSP/MKtP to a superpolynomial lower bound.
+  Zero-error, bounded-error, and distributional formula lower bounds must remain
+  distinct.
+- [ ] Develop a one-pass streaming model and formalize a resource-bounded
+  compression/magnification theorem for `MCSP[s]`, including update time, space,
+  scan direction, and input-access conventions. Relate it to the existing TM/RAM
+  models by explicit simulations.
+- [ ] Formalize the equivalence layer connecting useful natural properties,
+  efficient algorithms/circuits for approximate or gap MCSP, learning algorithms,
+  and absence of suitable PRFs in one fixed parameter regime. Reuse L3 property
+  density rather than introducing a second natural-property definition.
+- [ ] Define local oracle circuits and localizable reductions/generators, then
+  prove one mathematical locality-barrier theorem for a selected magnification
+  frontier. State precisely which known lower-bound construction localizes and
+  why the transformed object cannot cross the frontier.
+- [ ] Add search and witness-producing versions of MCSP/MKtP and study
+  search-to-decision, threshold scaling, and black-box universality only under the
+  oracle/query assumptions of the corresponding theorem. Do not extrapolate a
+  black-box equivalence to ordinary worst-case reductions.
+- [ ] Connect average-case metacomplexity to learning and cryptography: generator
+  range distinguishing, natural properties, agnostic/PAC learning variants,
+  one-way functions, and witness-encryption-based conditional hardness. Every
+  assumption and reduction type should be a visible parameter or hypothesis.
+- [ ] Add range-avoidance and sparse-language viewpoints. Prove the finite bridge
+  between avoiding low-complexity strings and the chosen MCSP/MKtP threshold
+  problem before attempting AM/coAM, pseudodeterministic, or derandomization
+  consequences.
+- [ ] Formalize known hardness results for partial, implicit, oracle, and
+  approximation variants as a ladder toward the open total problems. The public
+  names must retain all qualifiers, especially `Partial`, `Implicit`, `Oracle`,
+  `Gap`, `AverageCase`, `RandomizedReduction`, and `Conditional`.
+
+**Ambitious endpoints.** After the first magnification theorem is complete, the
+track may pursue a small matrix of frontiers rather than a single isolated result:
+
+- gap MCSP and gap MKtP against formulas, formula-XOR, probabilistic formulas,
+  branching programs, and small-depth circuits;
+- exact comparison of a known lower bound just below a frontier with the lower
+  bound that would trigger magnification;
+- natural-property/learning/pseudorandomness equivalences at matching parameters;
+- a locality theorem explaining why a specified restriction or local-generator
+  technique reaches the known bound but not the magnifying one;
+- a model-robust transfer theorem showing which frontier survives a change of
+  circuit basis, universal machine, or truth-table codec and with what losses.
+
+Exact NP-hardness or NP-completeness of ordinary total MCSP/MKtP remains an open
+research endpoint, not an unchecked milestone expected to close. It is appropriate
+to formalize an equivalence, conditional consequence, oracle result, or barrier
+whose statement contains that open claim; it is not appropriate to assume the
+claim inside an innocuously named definition.
+
+**Formalization hazards.** Magnification proofs are quantitatively brittle. The
+order of quantifiers over constants, thresholds, and input lengths matters, as do
+average-case error and whether the lower bound is worst-case, infinitely often,
+or eventually always. Error-correcting codes must be efficient in the model used
+by the collapse hypothesis. A lower bound for an easier neighboring problem does
+not automatically transfer to the magnifying problem; that missing reduction is
+often the point. Natural-proofs and locality results describe different barriers.
+Finally, a formal contrapositive deriving a small solver under a class collapse is
+not evidence that either the collapse or the desired lower bound has been proved.
+
+**Small entry tasks.**
+
+- [S] Prove monotonicity and containment lemmas for `GapMCSP[s₁,s₂]` as either
+  threshold moves.
+- [M] Define a parameter-preserving promise reduction and prove composition with
+  exact output-length and threshold maps.
+- [M] Add Hamming balls and the elementary packing/counting bounds used by the
+  selected coding argument.
+- [M] Define formula-XOR (or the first selected weak model) by extending the
+  existing formula semantics and prove its basic size monotonicity.
+- [M] Write the selected published magnification theorem's complete Lean signature
+  in a design or uncommitted scratch file, check that it expresses the paper's
+  quantifiers, and plan separate finite-coding, resource-simulation, and
+  asymptotic-lifting modules. Do not land proof placeholders.
 
 ## Cross-cutting project ideas
 

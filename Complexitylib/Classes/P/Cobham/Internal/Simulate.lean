@@ -8,6 +8,7 @@ module
 public import Complexitylib.Classes.P.Cobham.Internal.Extract
 public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
 import Complexitylib.Models.TuringMachine.OutputBounds
+public import Complexitylib.Models.TuringMachine.OutputSemantics
 
 /-!
 # Running a machine inside the algebra — proof internals
@@ -20,7 +21,7 @@ inside the encoded window), and the iterated versions of `Cobham.stepFn` and
 
 ## Main results
 
-- `Complexity.TM.runCfg` — the configuration after `n` steps, halting-idempotent
+- `Complexity.TM.runCfg` — the shared bounded evaluator used by this simulation
 - `Complexity.Cobham.iterate_stepFn` — the encoded iteration tracks it
 - `Complexity.Cobham.iterate_rewindFn` — the rewind iteration drives the head to
   cell `0`
@@ -34,41 +35,6 @@ namespace Complexity
 namespace TM
 
 variable {k : ℕ}
-
-/-! ## A total run -/
-
-/-- The configuration after `n` steps, standing still once halted. -/
-def runCfg (tm : TM k) (c : Cfg k tm.Q) : ℕ → Cfg k tm.Q
-  | 0 => c
-  | n + 1 => (tm.step (runCfg tm c n)).getD (runCfg tm c n)
-
-@[simp] theorem runCfg_zero (tm : TM k) (c : Cfg k tm.Q) : runCfg tm c 0 = c := rfl
-
-theorem runCfg_succ (tm : TM k) (c : Cfg k tm.Q) (n : ℕ) :
-    runCfg tm c (n + 1) = (tm.step (runCfg tm c n)).getD (runCfg tm c n) := rfl
-
-theorem runCfg_add (tm : TM k) (c : Cfg k tm.Q) (a b : ℕ) :
-    runCfg tm c (a + b) = runCfg tm (runCfg tm c a) b := by
-  induction b with
-  | zero => rfl
-  | succ b ih => rw [show a + (b + 1) = (a + b) + 1 from by omega, runCfg_succ, ih,
-      runCfg_succ]
-
-/-- Once halted, the run stands still. -/
-theorem runCfg_of_halted (tm : TM k) {c : Cfg k tm.Q} (h : c.state = tm.qhalt) (n : ℕ) :
-    runCfg tm c n = c := by
-  induction n with
-  | zero => rfl
-  | succ n ih => rw [runCfg_succ, ih, TM.step, if_pos h, Option.getD_none]
-
-/-- A run of exactly `t` steps is the `t`-th iterate. -/
-theorem runCfg_of_reachesIn (tm : TM k) {c c' : Cfg k tm.Q} {t : ℕ}
-    (h : tm.reachesIn t c c') : runCfg tm c t = c' := by
-  induction h with
-  | zero => rfl
-  | @step c c'' t c' hstep _ ih =>
-      rw [show t + 1 = 1 + t from by omega, runCfg_add, runCfg_succ, runCfg_zero, hstep,
-        Option.getD_some, ih]
 
 /-! ## The standing invariants of a run -/
 
