@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Internal
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Selection
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Round
 
 /-!
 # Typed Anti-Checker Lemma generators
