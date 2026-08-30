@@ -10,6 +10,7 @@ public import Complexitylib.Circuits.BitString
 public import Complexitylib.Circuits.BinaryComparison
 public import Complexitylib.Circuits.BinaryMinimum
 public import Complexitylib.Circuits.Composition
+public import Complexitylib.Circuits.OracleInlining
 public import Complexitylib.Circuits.InputProjection
 public import Complexitylib.Circuits.InputReindexing
 public import Complexitylib.Circuits.InputSources
@@ -164,6 +165,8 @@ Public modules (definitions a reviewer should read):
   and `List Bool`
 * `Complexitylib.Circuits.Composition` — serial circuit composition with exact
   additive size, exact semantics, and additive depth
+* `Complexitylib.Circuits.OracleInlining` — exact one-step adaptive oracle
+  replacement with explicit size accounting
 * `Complexitylib.Circuits.Dependency` — the finite circuit dependency DAG,
   its canonical topological order, and its edge bound by total fan-in
 * `Complexitylib.Circuits.DecisionTree.Restriction` — semantic restriction
