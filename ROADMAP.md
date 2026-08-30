@@ -2898,8 +2898,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   a certified `1/(2*d)` shrink for the selected input. The good-string layer now
   has exact weighted-binomial counts for caught survivor tuples, the exact bridge
   from disagreement density to survivor shrinkage, and the max-fiber averaging
-  step over all inputs. The binomial-tail estimate, majority-circuit hardness
-  bridge, conditional counter circuits, and round composition remain.*
+  step over all inputs. An ordered-tuple binomial bound now yields a constant
+  disagreement share and hence the required `1/(2n)` shrink for `n ≥ 8`,
+  avoiding the paper's distinct-subset/Stirling detour. The majority-circuit
+  hardness bridge, conditional counter circuits, and round composition remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

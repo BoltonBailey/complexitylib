@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Internal
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Tail
 
 /-!
 # Good-string combinatorics
@@ -19,8 +20,10 @@ number of caught tuples is an exact weighted binomial tail.
 If every survivor tuple is caught somewhere, a max-fiber averaging argument
 finds one input catching at least a `2^-arity` share of all tuples, stated by
 cross-multiplication. The remaining quantitative step is to bound the binomial
-tail when too few individual survivors disagree; the circuit-theoretic step is
-to obtain every-tuple coverage from target hardness via majority composition.
+tail when too few individual survivors disagree. The tail layer does this using
+ordered tuples with repetition and obtains the required `1/(2n)` shrink. The
+remaining circuit-theoretic step is to obtain every-tuple coverage from target
+hardness via majority composition.
 -/
 
 
