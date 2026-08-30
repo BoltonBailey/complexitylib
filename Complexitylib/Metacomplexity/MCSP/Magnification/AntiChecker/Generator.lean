@@ -12,13 +12,15 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Genera
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Iteration
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Padding
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Size
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Assembly
 
 /-!
 # Typed Anti-Checker Lemma generators
 
 This module exposes the exact multi-output generator interface from the
-Oliveira--Pich--Santhanam Anti-Checker Lemma. `HasGenerators` is only the
-lemma's conclusion; no theorem deriving it from `NP ⊆ PPoly` is asserted here.
+Oliveira--Pich--Santhanam Anti-Checker Lemma and its construction from correct
+approximate-counter families. No theorem deriving those counter families from
+`NP ⊆ PPoly` is asserted here.
 -/
 
 

@@ -2919,11 +2919,16 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   `ApproximateCounterFamily`; `HasApproximateCounterFamilies` is only a named
   conditional conclusion, not a theorem. Every correct family now induces the
   bounded round estimator and, for every sufficiently large hard target, an
-  anti-checker of exactly the published sample count. What remains is to derive
-  these counter families from `NP ⊆ PPoly` through a formal relative-counting/PH
-  circuitization argument with the quantitative size bound, and to realize the
-  exhaustive minimum-estimate selector as the advertised multi-output generator
-  circuit.*
+  anti-checker of exactly the published sample count. The exhaustive selector
+  circuit is now complete: it evaluates every candidate counter in parallel,
+  selects a global minimum by a keyed tournament, iterates every required round,
+  projects the selected inputs, and zero-pads to the published output width. Its
+  computed output is certified as the semantic anti-checker. Exact gate accounting
+  gives an explicit counter-to-generator overhead lift `k ↦ k + 32`, packages the
+  circuit as `Generator`, and proves
+  `HasApproximateCounterFamilies → HasGenerators`. What remains is to derive the
+  counter families from `NP ⊆ PPoly` through a formal relative-counting/PH
+  circuitization argument with the quantitative size bound.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
