@@ -25,6 +25,7 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
 - `eventProb` with `eventProb_nonneg`, `eventProb_le_one`, `eventProb_empty`,
   `eventProb_univ`, the complement identity `eventProb_compl`, and the union
   bound `eventProb_union_le`
+- `eventProb_le_uniformAverage_div` — finite-uniform Markov inequality
 - `eventProb_biUnion`, `eventProb_eq_sum_fiberwise` — finite additivity and the
   conditioning-by-partition identity
 - `eventProb_filter_of_constant_fibers`, `eventProb_repeatRandomSeed` — cancel
@@ -73,6 +74,28 @@ theorem eventProb_le_one {T : ℕ} (E : Finset (Fin T → Bool)) : eventProb E �
   calc eventProb E = (E.card : ℚ) / 2 ^ T := rfl
     _ ≤ (2 ^ T) / 2 ^ T := by gcongr
     _ = 1 := div_self hpos
+
+/-- **Markov's inequality for the finite uniform sample space.** If every point
+in `E` has nonnegative weight at least `threshold`, then the probability of
+`E` is at most the uniform average weight divided by `threshold`. -/
+theorem eventProb_le_uniformAverage_div {T : ℕ}
+    (E : Finset (Fin T → Bool)) (weight : (Fin T → Bool) → ℚ)
+    (threshold : ℚ) (hthreshold : 0 < threshold)
+    (hweight : ∀ seed, 0 ≤ weight seed)
+    (hlarge : ∀ seed ∈ E, threshold ≤ weight seed) :
+    eventProb E ≤
+      ((∑ seed : Fin T → Bool, weight seed) / (2 : ℚ) ^ T) / threshold := by
+  rw [le_div_iff₀ hthreshold]
+  unfold eventProb
+  rw [div_mul_eq_mul_div]
+  apply (div_le_div_iff_of_pos_right (by positivity : (0 : ℚ) < 2 ^ T)).2
+  calc
+    (E.card : ℚ) * threshold = ∑ _seed ∈ E, threshold := by simp
+    _ ≤ ∑ seed ∈ E, weight seed := by
+      exact Finset.sum_le_sum fun seed hseed => hlarge seed hseed
+    _ ≤ ∑ seed : Fin T → Bool, weight seed := by
+      exact Finset.sum_le_sum_of_subset_of_nonneg (Finset.subset_univ E)
+        fun seed _ _ => hweight seed
 
 /-! ### Good seeds from probability bounds -/
 
