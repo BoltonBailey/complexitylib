@@ -1918,7 +1918,12 @@ problem parameters. Raw decoding succeeds exactly at power-of-two lengths.
 Adding canonical metadata and erasing it again are inverse on valid raw inputs,
 and adding or erasing metadata is proved to preserve both promise sides. These
 are semantic `MapReducesVia` theorems; polynomial-time implementations of the
-two maps remain separate obligations. `PromiseProblem`
+two maps remain separate obligations. `PositiveRationalScale` now gives natural
+floor/ceiling versions of `beta*n` and proves their binary powers differ by at
+most a factor of two. `GapMCSP.Magnification.Parameters` instantiates the finite
+thresholds `2^floor(beta*n)/(c*n)` and `2^floor(beta*n)`, proves their gap, and
+defines the rounded `N^(1+epsilon)` solver bound with an exact `N = 2^n`
+identity. `PromiseProblem`
 now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
@@ -2679,6 +2684,14 @@ length. Its public API proves that every promised input has length `N = 2^n`,
 characterizes both sides by the same minimum-size inequalities as the canonical
 problem, and gives side-preserving raw-to-canonical and canonical-to-raw maps.
 The maps are semantic reductions, not yet polynomial-time circuit constructions.
+`PositiveRationalScale` represents positive rational exponents without
+real-valued resources. Floor and ceiling scaling are monotone, differ by at most
+one, and their powers of two differ by at most a factor of two. The selected
+`GapMCSP.Magnification.Parameters` family now defines
+`2^floor(beta*n)/(c*n)` versus `2^floor(beta*n)`, proves the finite gap and
+denominator inequality, and gives a rounded solver bound that agrees exactly
+with its arity form on `N = 2^n` bits. Eventual small-`beta` quantification and
+promise circuit-size membership remain.
 Canonical truth tables now round-trip to typed Boolean functions, and the checked
 Shannon circuit bounds give the exact finite MCSP window from a no-instance at
 `2^n/(5n)` to universal acceptance at `18*2^n/n` for `n >= 16`. This calibrates
@@ -2779,10 +2792,13 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   `N = 2^n` input bits. Prove exact power-of-two well-formedness, membership
   characterizations, raw/canonical round trips, and semantic side-preserving maps
   in both directions.
-- [ ] Add rationally scaled natural thresholds for `2^(beta*n)`, division by
+- [~] Add rationally scaled natural thresholds for `2^(beta*n)`, division by
   `c*n`, and slightly-superlinear bounds on `N = 2^n`. Prove monotonicity,
   rounding robustness, positivity, the required threshold gap, and eventual
-  domination lemmas without introducing real-valued circuit sizes.
+  domination lemmas without introducing real-valued circuit sizes. *The finite
+  scale, floor/ceiling factor-two comparison, selected GapMCSP thresholds, gap,
+  and exact power-of-two input identity are done; eventual domination and the
+  small-parameter filter remain.*
 - [ ] Define the nonuniform circuit-size predicate for promise problems used by
   the selected theorem. Relate it to `PromiseClass (SIZE s)`, allow finite
   exceptional lengths explicitly, and prove that polynomial-size promise solvers
@@ -2928,8 +2944,10 @@ not evidence that either the collapse or the desired lower bound has been proved
 - [x] Pin Oliveira--Pich--Santhanam CCC 2019, Theorem 4 as the first headline and
   record its exact input, promise, threshold, circuit-model, and quantifier
   conventions together with the Anti-Checker Lemma proof spine.
-- [M] Define rational scaled-exponential threshold functions and an eventual
+- [~] Define rational scaled-exponential threshold functions and an eventual
   promise-`SIZE` interface sufficient to state the selected theorem in Lean.
+  *The rounded threshold and solver-bound functions are done; the eventual
+  promise-`SIZE` interface remains.*
 - [M] Define finite anti-checkers and prove their equivalence with rejection of
   the corresponding sampled `SuccinctMCSP` instance.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
