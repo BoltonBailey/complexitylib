@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting
 
 /-!
 # Finite anti-checkers
@@ -24,7 +25,8 @@ target rejects if and only if its input list is an anti-checker. The extraction
 layer obtains such a list from any finite covering set of circuit codes whose
 members all fail somewhere, using at most one disagreement input per code. The
 enumeration layer supplies a canonical covering set with an explicit exhaustive
-cardinality bound.
+cardinality bound. Its survivor-count layer identifies anti-checking exactly
+with reducing the number of consistent canonical candidates to zero.
 -/
 
 
