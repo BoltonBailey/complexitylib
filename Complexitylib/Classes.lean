@@ -97,6 +97,7 @@ public import Complexitylib.Classes.Containments.PSPACESubsetEXP
 public import Complexitylib.Classes.Containments.PSPACESubsetIP
 public import Complexitylib.Classes.Containments.PSPACESubsetNPSPACE
 public import Complexitylib.Classes.Hierarchy
+import Complexitylib.Classes.NP.Internal.PairSplitTM
 
 /-!
 # Complexity classes

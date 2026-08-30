@@ -260,4 +260,39 @@ theorem pair_getElem_right (x y : List Bool) (j : ℕ) (hj : j < y.length) :
           rw [hprefix]
           omega
 
+/-! ## The projections
+
+Total decoders for the two components. `pairFst` is defined by scanning rather
+than through `unpair?` so that a single-pass machine can compute it; only the
+behaviour of either projection on canonical pairs is ever used. -/
+
+/-- The first component of a canonical pair: read doubled bits until the
+`[false, true]` separator. On `pair x y` this returns `x` (see `pairFst_pair`);
+on malformed input it returns the bits decoded so far. -/
+def pairFst : List Bool → List Bool
+  | false :: false :: z => false :: pairFst z
+  | true :: true :: z => true :: pairFst z
+  | _ => []
+
+/-- The second component of a canonical pair: the suffix after the leading
+self-delimiting block, or `[]` if the input is not a valid pair. -/
+def pairSnd (z : List Bool) : List Bool :=
+  match unpair? z with
+  | some (_, s) => s
+  | none => []
+
+@[simp] theorem pairFst_pair (x y : List Bool) : pairFst (pair x y) = x := by
+  induction x with
+  | nil => rfl
+  | cons b x ih => cases b <;> (rw [pair_cons_eq]; simp [pairFst, ih])
+
+@[simp] theorem pairSnd_pair (x y : List Bool) : pairSnd (pair x y) = y := by
+  simp [pairSnd]
+
+/-- `pairSnd` agrees with the partial decoder `unpair?`, defaulting to `[]`. -/
+theorem pairSnd_eq_unpair? (z : List Bool) :
+    pairSnd z = ((unpair? z).map Prod.snd).getD [] := by
+  unfold pairSnd
+  cases unpair? z <;> rfl
+
 end Complexity

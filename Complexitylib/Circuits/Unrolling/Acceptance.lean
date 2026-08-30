@@ -30,8 +30,8 @@ zero-length case separately.
 - `acceptanceCircuit_eval`: typed evaluation has the same semantics.
 - `canonicalAcceptanceCircuit_eval`: canonical choices-first semantics.
 - `canonicalAcceptanceCircuit_size_le`: canonical cubic size bound.
-- `card_acceptingChoices_eq_acceptCount`: circuit acceptance counts machine
-  accepting paths exactly.
+- `card_acceptingChoices_eq_acceptCount`: circuit acceptance counts the machine's
+  accepting fixed-length choice strings exactly.
 -/
 
 
@@ -195,7 +195,7 @@ theorem canonicalAcceptanceCircuit_size_le
   acceptanceCircuit_size_le tm T n (T + n) (prefixInputWires T n)
 
 /-- The number of canonical choice strings accepted by the circuit is exactly
-the machine's bounded accepting-path count. -/
+the machine's bounded fixed-length `acceptCount`. -/
 theorem card_acceptingChoices_eq_acceptCount
     (tm : NTM k) (T n : ℕ) [NeZero (T + n)] (x : BitString n) :
     (Finset.univ.filter fun choices : BitString T =>

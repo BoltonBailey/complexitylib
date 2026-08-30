@@ -89,8 +89,8 @@ theorem fpn_empty {n : ℕ} : FPn (fun _ : Fin n → List Bool => ([] : List Boo
 
 /-- `proj` case: extracting the `i`-th component of an encoded vector is `FP`.
 
-The extraction is `sndBlock` after `i`-fold `fstBlock`: peel `i` leading blocks to
-reach the encoding of components `i, i+1, …`, then read its head with `sndBlock`.
+The extraction is `pairSnd` after `i`-fold `pairFst`: peel `i` leading blocks to
+reach the encoding of components `i, i+1, …`, then read its head with `pairSnd`.
 Proved here by induction on the arity; each atomic step is `FP`
 (`fstBlock_mem_FP`, `sndBlock_mem_FP`) and `FP` is closed under composition
 (`mem_FP_comp`), so only those two machine lemmas remain open. -/
@@ -100,22 +100,22 @@ theorem fpn_proj {n : ℕ} (i : Fin n) : FPn (fun v : Fin n → List Bool => v i
   | succ n ih =>
       induction i using Fin.cases with
       | zero =>
-          exact ⟨sndBlock, sndBlock_mem_FP, fun v => sndBlock_encodeVec_succ v⟩
+          exact ⟨pairSnd, sndBlock_mem_FP, fun v => sndBlock_encodeVec_succ v⟩
       | succ j =>
           obtain ⟨g, hg, hgf⟩ := ih j
-          refine ⟨g ∘ fstBlock, mem_FP_comp fstBlock_mem_FP hg, fun v => ?_⟩
-          show g (fstBlock (encodeVec v)) = v j.succ
+          refine ⟨g ∘ pairFst, mem_FP_comp fstBlock_mem_FP hg, fun v => ?_⟩
+          show g (pairFst (encodeVec v)) = v j.succ
           rw [fstBlock_encodeVec_succ, hgf]
           rfl
 
 /-- `bit` case: prepending a fixed bit is `FPn` at arity one. On the arity-one
-encoding `encodeVec ![x] = pair [] x`, the head component `x` is `sndBlock`, so the
-witness is `(b :: ·) ∘ sndBlock`; both factors are `FP`. -/
+encoding `encodeVec ![x] = pair [] x`, the head component `x` is `pairSnd`, so the
+witness is `(b :: ·) ∘ pairSnd`; both factors are `FP`. -/
 theorem fpn_bit (b : Bool) :
     FPn (fun v : Fin 1 → List Bool => b :: v 0) := by
-  refine ⟨(fun x => b :: x) ∘ sndBlock,
+  refine ⟨(fun x => b :: x) ∘ pairSnd,
     mem_FP_comp sndBlock_mem_FP (cons_mem_FP b), fun v => ?_⟩
-  show b :: sndBlock (encodeVec v) = b :: v 0
+  show b :: pairSnd (encodeVec v) = b :: v 0
   rw [sndBlock_encodeVec_succ]
 
 /-- Pairing two `FP` functions of the same input is `FP`.
@@ -128,12 +128,12 @@ tuple-assembly machine. -/
 theorem pairFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
     (fun z => pair (a z) (b z)) ∈ FP := by
   have h1 : (fun z => pair (b z) z) ∈ FP := mem_FP_pairWithInput hb
-  have h2 : (fun w => pair (a (sndBlock w)) w) ∈ FP :=
+  have h2 : (fun w => pair (a (pairSnd w)) w) ∈ FP :=
     mem_FP_pairWithInput (mem_FP_comp sndBlock_mem_FP ha)
   have h12 := mem_FP_comp h1 h2
-  have heq : ((fun w => pair (a (sndBlock w)) w) ∘ fun z => pair (b z) z)
+  have heq : ((fun w => pair (a (pairSnd w)) w) ∘ fun z => pair (b z) z)
       = fun z => pair (a z) (pair (b z) z) := by
-    funext z; simp [Function.comp, sndBlock_pair]
+    funext z; simp [Function.comp, pairSnd_pair]
   rw [heq] at h12
   have hr := mem_FP_comp h12 reorder_mem_FP
   have heq2 : (reorder ∘ fun z => pair (a z) (pair (b z) z))
@@ -208,28 +208,28 @@ theorem selectHeadFn_mem_FP {f a b : List Bool → List Bool}
   rwa [heq] at h
 
 /-- `smash` case: the smash function is `FPn`. On `encodeVec ![x, y]` the two
-components are `sndBlock` and `sndBlock ∘ fstBlock`; `smash x y` is
+components are `pairSnd` and `pairSnd ∘ pairFst`; `smash x y` is
 `|x| · |y|` copies of `true`, so the witness first computes a zero-filled ruler
 with `mulLenFn_mem_FP` and then applies `unaryLength_mem_FP`. -/
 theorem fpn_smash :
     FPn (fun v : Fin 2 → List Bool => Complexity.smash (v 0) (v 1)) := by
   refine ⟨fun z =>
-      List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) true,
+      List.replicate ((pairSnd z).length * (pairSnd (pairFst z)).length) true,
     ?_, fun v => ?_⟩
   · have hmul :=
       mulLenFn_mem_FP sndBlock_mem_FP (mem_FP_comp fstBlock_mem_FP sndBlock_mem_FP)
     have h := mem_FP_comp hmul unaryLength_mem_FP
     have heq : (fun z =>
-        List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) true) =
+        List.replicate ((pairSnd z).length * (pairSnd (pairFst z)).length) true) =
         (fun x => List.replicate x.length true) ∘ fun z =>
-          List.replicate ((sndBlock z).length * (sndBlock (fstBlock z)).length) false := by
+          List.replicate ((pairSnd z).length * (pairSnd (pairFst z)).length) false := by
       funext z
       simp [Function.comp]
     rw [heq]
     exact h
   show List.replicate
-      ((sndBlock (encodeVec v)).length *
-        (sndBlock (fstBlock (encodeVec v))).length) true
+      ((pairSnd (encodeVec v)).length *
+        (pairSnd (pairFst (encodeVec v))).length) true
     = Complexity.smash (v 0) (v 1)
   rw [sndBlock_encodeVec_succ, fstBlock_encodeVec_succ, sndBlock_encodeVec_succ,
     Complexity.smash]
@@ -448,7 +448,7 @@ theorem exists_exact_ruler (p : Polynomial ℕ) :
 /-! ### The loop as an iteration
 
 `recFoldClamp` is an iteration of a *single* `FP` step function on a packed
-state. Writing `s` for `sndBlock z`, the state after `m` iterations is
+state. Writing `s` for `pairSnd z`, the state after `m` iterations is
 
   `pair (pair R (pair W s)) (pair (s.drop (|s| - m)) (recFoldClamp … (s.drop (|s| - m))))`
 
@@ -467,8 +467,8 @@ def loopStepOn (A B : List Bool → List Bool) (R W s t a : List Bool) : List Bo
 
 /-- One iteration of the clamped loop, on the packed state. -/
 def loopStep (A B : List Bool → List Bool) (v : List Bool) : List Bool :=
-  loopStepOn A B (fstBlock (fstBlock v)) (fstBlock (sndBlock (fstBlock v)))
-    (sndBlock (sndBlock (fstBlock v))) (fstBlock (sndBlock v)) (sndBlock (sndBlock v))
+  loopStepOn A B (pairFst (pairFst v)) (pairFst (pairSnd (pairFst v)))
+    (pairSnd (pairSnd (pairFst v))) (pairFst (pairSnd v)) (pairSnd (pairSnd v))
 
 @[simp] theorem loopStep_pair (A B : List Bool → List Bool) (R W s t a : List Bool) :
     loopStep A B (pair (pair R (pair W s)) (pair t a)) = loopStepOn A B R W s t a := by
@@ -477,46 +477,46 @@ def loopStep (A B : List Bool → List Bool) (v : List Bool) : List Bool :=
 /-- **The step is `FP`.** -/
 theorem loopStep_mem_FP {A B : List Bool → List Bool} (hA : A ∈ FP) (hB : B ∈ FP) :
     loopStep A B ∈ FP := by
-  have hfst : fstBlock ∈ FP := fstBlock_mem_FP
-  have hsnd : sndBlock ∈ FP := sndBlock_mem_FP
+  have hfst : pairFst ∈ FP := fstBlock_mem_FP
+  have hsnd : pairSnd ∈ FP := sndBlock_mem_FP
   have hcomp₁ : ∀ {g : List Bool → List Bool}, g ∈ FP →
-      (fun v => fstBlock (g v)) ∈ FP := fun hg => by
+      (fun v => pairFst (g v)) ∈ FP := fun hg => by
     simpa [Function.comp] using mem_FP_comp hg hfst
   have hcomp₂ : ∀ {g : List Bool → List Bool}, g ∈ FP →
-      (fun v => sndBlock (g v)) ∈ FP := fun hg => by
+      (fun v => pairSnd (g v)) ∈ FP := fun hg => by
     simpa [Function.comp] using mem_FP_comp hg hsnd
-  have hP : (fun v : List Bool => fstBlock v) ∈ FP := hfst
-  have hR : (fun v : List Bool => fstBlock (fstBlock v)) ∈ FP := hcomp₁ hP
-  have hW : (fun v : List Bool => fstBlock (sndBlock (fstBlock v))) ∈ FP :=
+  have hP : (fun v : List Bool => pairFst v) ∈ FP := hfst
+  have hR : (fun v : List Bool => pairFst (pairFst v)) ∈ FP := hcomp₁ hP
+  have hW : (fun v : List Bool => pairFst (pairSnd (pairFst v))) ∈ FP :=
     hcomp₁ (hcomp₂ hP)
-  have hs : (fun v : List Bool => sndBlock (sndBlock (fstBlock v))) ∈ FP :=
+  have hs : (fun v : List Bool => pairSnd (pairSnd (pairFst v))) ∈ FP :=
     hcomp₂ (hcomp₂ hP)
-  have ht : (fun v : List Bool => fstBlock (sndBlock v)) ∈ FP := hcomp₁ hsnd
-  have ha : (fun v : List Bool => sndBlock (sndBlock v)) ∈ FP := hcomp₂ hsnd
+  have ht : (fun v : List Bool => pairFst (pairSnd v)) ∈ FP := hcomp₁ hsnd
+  have ha : (fun v : List Bool => pairSnd (pairSnd v)) ∈ FP := hcomp₂ hsnd
   have hrev : ∀ {g : List Bool → List Bool}, g ∈ FP →
       (fun v => (g v).reverse) ∈ FP := fun hg => by
     simpa [Function.comp] using mem_FP_comp hg reverse_mem_FP
-  have hcons : (fun v : List Bool => false :: fstBlock (sndBlock v)) ∈ FP := by
+  have hcons : (fun v : List Bool => false :: pairFst (pairSnd v)) ∈ FP := by
     simpa [Function.comp] using mem_FP_comp ht (cons_mem_FP false)
   have ht' : (fun v : List Bool =>
-      (takeLen (pair (false :: fstBlock (sndBlock v))
-        (sndBlock (sndBlock (fstBlock v))).reverse)).reverse) ∈ FP := by
+      (takeLen (pair (false :: pairFst (pairSnd v))
+        (pairSnd (pairSnd (pairFst v))).reverse)).reverse) ∈ FP := by
     refine hrev ?_
     have := takeLenFn_mem_FP hcons (hrev hs)
     simpa [takeLen_pair] using this
   have hX : (fun v : List Bool =>
-      pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
-        (fstBlock (sndBlock v))) ∈ FP := pairFn_mem_FP (pairFn_mem_FP hW ha) ht
+      pair (pair (pairFst (pairSnd (pairFst v))) (pairSnd (pairSnd v)))
+        (pairFst (pairSnd v))) ∈ FP := pairFn_mem_FP (pairFn_mem_FP hW ha) ht
   have hsel := selectHeadFn_mem_FP ht'
     (by simpa [Function.comp] using mem_FP_comp hX hB)
     (by simpa [Function.comp] using mem_FP_comp hX hA)
-  have hacc : (fun v : List Bool => takeLen (pair (fstBlock (fstBlock v))
-      (selectHead ((takeLen (pair (false :: fstBlock (sndBlock v))
-          (sndBlock (sndBlock (fstBlock v))).reverse)).reverse)
-        (B (pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
-            (fstBlock (sndBlock v))))
-        (A (pair (pair (fstBlock (sndBlock (fstBlock v))) (sndBlock (sndBlock v)))
-            (fstBlock (sndBlock v))))))) ∈ FP := by
+  have hacc : (fun v : List Bool => takeLen (pair (pairFst (pairFst v))
+      (selectHead ((takeLen (pair (false :: pairFst (pairSnd v))
+          (pairSnd (pairSnd (pairFst v))).reverse)).reverse)
+        (B (pair (pair (pairFst (pairSnd (pairFst v))) (pairSnd (pairSnd v)))
+            (pairFst (pairSnd v))))
+        (A (pair (pair (pairFst (pairSnd (pairFst v))) (pairSnd (pairSnd v)))
+            (pairFst (pairSnd v))))))) ∈ FP := by
     have := takeLenFn_mem_FP hR hsel
     simpa [takeLen_pair, Function.comp] using this
   have hall := pairFn_mem_FP (pairFn_mem_FP hR (pairFn_mem_FP hW hs))
@@ -605,39 +605,39 @@ theorem selectHead_length_le (s x y : List Bool) :
 
 /-- The counter of the next iteration: one more mark of the reversed ruler. -/
 def nextCounter (w : List Bool) : List Bool :=
-  (takeLen (pair (false :: fstBlock (fstBlock w))
-    (fstBlock (fstBlock (sndBlock w))))).reverse
+  (takeLen (pair (false :: pairFst (pairFst w))
+    (pairFst (pairFst (pairSnd w))))).reverse
 
 /-- The value of the next iteration: the initial value on the first step, then
 `F` of the current value until the counter saturates. -/
 def nextValue (F : List Bool → List Bool) (w : List Bool) : List Bool :=
-  selectHead (emptyFlag (fstBlock (fstBlock w)))
-    (sndBlock (sndBlock w))
-    (selectHead (nextCounter w) (sndBlock (fstBlock w))
-      (takeLen (pair (sndBlock (fstBlock (sndBlock w))) (F (sndBlock (fstBlock w))))))
+  selectHead (emptyFlag (pairFst (pairFst w)))
+    (pairSnd (pairSnd w))
+    (selectHead (nextCounter w) (pairSnd (pairFst w))
+      (takeLen (pair (pairSnd (pairFst (pairSnd w))) (F (pairSnd (pairFst w))))))
 
 /-- One iteration of the loop, truncated to the machine's own input length. -/
 def iterStep (F : List Bool → List Bool) (w : List Bool) : List Bool :=
-  pair (takeLen (pair (sndBlock w) (pair (nextCounter w) (nextValue F w)))) (sndBlock w)
+  pair (takeLen (pair (pairSnd w) (pair (nextCounter w) (nextValue F w)))) (pairSnd w)
 
 theorem sndBlock_iterStep (F : List Bool → List Bool) (w : List Bool) :
-    sndBlock (iterStep F w) = sndBlock w := by
-  rw [iterStep, sndBlock_pair]
+    pairSnd (iterStep F w) = pairSnd w := by
+  rw [iterStep, pairSnd_pair]
 
 theorem iterStep_length_le (F : List Bool → List Bool) (w : List Bool) :
-    (iterStep F w).length ≤ 3 * (sndBlock w).length + 2 := by
+    (iterStep F w).length ≤ 3 * (pairSnd w).length + 2 := by
   rw [iterStep, pair_length, takeLen_pair]
-  have := length_take_le_arg (sndBlock w).length (pair (nextCounter w) (nextValue F w))
+  have := length_take_le_arg (pairSnd w).length (pair (nextCounter w) (nextValue F w))
   omega
 
 /-- **The state length is globally bounded**: whatever the input, the state
 after one or more iterations fits in `3|x| + 2`. -/
 theorem iterStep_iterate_length_le (F : List Bool → List Bool) (x : List Bool) :
     ∀ i, ((iterStep F)^[i] (pair [] x)).length ≤ 3 * x.length + 2 := by
-  have hsnd : ∀ i, sndBlock ((iterStep F)^[i] (pair [] x)) = x := by
+  have hsnd : ∀ i, pairSnd ((iterStep F)^[i] (pair [] x)) = x := by
     intro i
     induction i with
-    | zero => exact sndBlock_pair [] x
+    | zero => exact pairSnd_pair [] x
     | succ i ih => rw [Function.iterate_succ_apply', sndBlock_iterStep, ih]
   intro i
   cases i with
@@ -662,35 +662,35 @@ theorem emptyFlag_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) :
   exact appendFn_mem_FP (appendFn_mem_FP h1 h2) hcst
 
 theorem nextCounter_mem_FP : nextCounter ∈ FP := by
-  have hf : fstBlock ∈ FP := fstBlock_mem_FP
-  have hs : sndBlock ∈ FP := sndBlock_mem_FP
-  have hc : (fun w => false :: fstBlock (fstBlock w)) ∈ FP := by
+  have hf : pairFst ∈ FP := fstBlock_mem_FP
+  have hs : pairSnd ∈ FP := sndBlock_mem_FP
+  have hc : (fun w => false :: pairFst (pairFst w)) ∈ FP := by
     simpa [Function.comp] using
       mem_FP_comp (mem_FP_comp hf hf) (cons_mem_FP false)
-  have hk : (fun w => fstBlock (fstBlock (sndBlock w))) ∈ FP := by
+  have hk : (fun w => pairFst (pairFst (pairSnd w))) ∈ FP := by
     simpa [Function.comp] using mem_FP_comp hs (mem_FP_comp hf hf)
   have := takeLenFn_mem_FP hc hk
-  have hrev : (fun w => ((fstBlock (fstBlock (sndBlock w))).take
-      (false :: fstBlock (fstBlock w)).length).reverse) ∈ FP := by
+  have hrev : (fun w => ((pairFst (pairFst (pairSnd w))).take
+      (false :: pairFst (pairFst w)).length).reverse) ∈ FP := by
     simpa [Function.comp] using mem_FP_comp this reverse_mem_FP
-  have heq : (fun w => ((fstBlock (fstBlock (sndBlock w))).take
-      (false :: fstBlock (fstBlock w)).length).reverse) = nextCounter := by
+  have heq : (fun w => ((pairFst (pairFst (pairSnd w))).take
+      (false :: pairFst (pairFst w)).length).reverse) = nextCounter := by
     funext w
     rw [nextCounter, takeLen_pair]
   rwa [heq] at hrev
 
 theorem nextValue_mem_FP {F : List Bool → List Bool} (hF : F ∈ FP) :
     nextValue F ∈ FP := by
-  have hf : fstBlock ∈ FP := fstBlock_mem_FP
-  have hs : sndBlock ∈ FP := sndBlock_mem_FP
-  have hC : (fun w => fstBlock (fstBlock w)) ∈ FP := mem_FP_comp hf hf
-  have hv : (fun w => sndBlock (fstBlock w)) ∈ FP := mem_FP_comp hf hs
-  have hv0 : (fun w => sndBlock (sndBlock w)) ∈ FP := mem_FP_comp hs hs
-  have hW : (fun w => sndBlock (fstBlock (sndBlock w))) ∈ FP :=
+  have hf : pairFst ∈ FP := fstBlock_mem_FP
+  have hs : pairSnd ∈ FP := sndBlock_mem_FP
+  have hC : (fun w => pairFst (pairFst w)) ∈ FP := mem_FP_comp hf hf
+  have hv : (fun w => pairSnd (pairFst w)) ∈ FP := mem_FP_comp hf hs
+  have hv0 : (fun w => pairSnd (pairSnd w)) ∈ FP := mem_FP_comp hs hs
+  have hW : (fun w => pairSnd (pairFst (pairSnd w))) ∈ FP :=
     mem_FP_comp hs (mem_FP_comp hf hs)
-  have hFv : (fun w => F (sndBlock (fstBlock w))) ∈ FP := mem_FP_comp hv hF
-  have hclamp : (fun w => takeLen (pair (sndBlock (fstBlock (sndBlock w)))
-      (F (sndBlock (fstBlock w))))) ∈ FP := by
+  have hFv : (fun w => F (pairSnd (pairFst w))) ∈ FP := mem_FP_comp hv hF
+  have hclamp : (fun w => takeLen (pair (pairSnd (pairFst (pairSnd w)))
+      (F (pairSnd (pairFst w))))) ∈ FP := by
     have := takeLenFn_mem_FP hW hFv
     simpa [takeLen_pair] using this
   exact selectHeadFn_mem_FP (emptyFlag_mem_FP hC) hv0
@@ -698,10 +698,10 @@ theorem nextValue_mem_FP {F : List Bool → List Bool} (hF : F ∈ FP) :
 
 theorem iterStep_mem_FP {F : List Bool → List Bool} (hF : F ∈ FP) :
     iterStep F ∈ FP := by
-  have hs : sndBlock ∈ FP := sndBlock_mem_FP
+  have hs : pairSnd ∈ FP := sndBlock_mem_FP
   have hpair : (fun w => pair (nextCounter w) (nextValue F w)) ∈ FP :=
     pairFn_mem_FP nextCounter_mem_FP (nextValue_mem_FP hF)
-  have hclamp : (fun w => takeLen (pair (sndBlock w)
+  have hclamp : (fun w => takeLen (pair (pairSnd w)
       (pair (nextCounter w) (nextValue F w)))) ∈ FP := by
     have := takeLenFn_mem_FP hs hpair
     simpa [takeLen_pair] using this
@@ -743,27 +743,27 @@ theorem iterStep_iterate (F : List Bool → List Bool) (Krev W v₀ : List Bool)
   intro i
   induction i with
   | zero =>
-      rw [Function.iterate_succ_apply', Function.iterate_zero_apply, iterStep, sndBlock_pair]
+      rw [Function.iterate_succ_apply', Function.iterate_zero_apply, iterStep, pairSnd_pair]
       rw [show nextCounter (pair [] (pair (pair Krev W) v₀)) = (Krev.take 1).reverse from by
-        rw [nextCounter, fstBlock_pair, sndBlock_pair, fstBlock_pair, fstBlock_pair,
+        rw [nextCounter, pairFst_pair, pairSnd_pair, pairFst_pair, pairFst_pair,
           takeLen_pair]
-        simp [fstBlock]]
+        simp [pairFst]]
       rw [show nextValue F (pair [] (pair (pair Krev W) v₀)) = v₀ from by
-        rw [nextValue, fstBlock_pair, show fstBlock ([] : List Bool) = [] from rfl,
-          selectHead_emptyFlag_nil, sndBlock_pair, sndBlock_pair]]
+        rw [nextValue, pairFst_pair, show pairFst ([] : List Bool) = [] from rfl,
+          selectHead_emptyFlag_nil, pairSnd_pair, pairSnd_pair]]
       rw [takeLen_pair]
       show pair ((pair ((Krev.take (0 + 1)).reverse) (iterVal F Krev W v₀ 0)).take
         (pair (pair Krev W) v₀).length) (pair (pair Krev W) v₀) = _
       rw [List.take_of_length_le (hfit 0)]
   | succ i ih =>
-      rw [Function.iterate_succ_apply', ih, iterStep, sndBlock_pair]
+      rw [Function.iterate_succ_apply', ih, iterStep, pairSnd_pair]
       have hlen : ((Krev.take (i + 1)).reverse).length = min (i + 1) Krev.length := by
         simp
       have hC : nextCounter (pair (pair ((Krev.take (i + 1)).reverse)
           (iterVal F Krev W v₀ i)) (pair (pair Krev W) v₀))
           = (Krev.take (i + 2)).reverse := by
-        rw [nextCounter, fstBlock_pair, sndBlock_pair, fstBlock_pair, fstBlock_pair,
-          fstBlock_pair, takeLen_pair, List.length_cons, hlen, take_succ_min]
+        rw [nextCounter, pairFst_pair, pairSnd_pair, pairFst_pair, pairFst_pair,
+          pairFst_pair, takeLen_pair, List.length_cons, hlen, take_succ_min]
       have hne : (Krev.take (i + 1)).reverse ≠ [] := by
         intro hc
         have : Krev.length = 0 := by
@@ -775,9 +775,9 @@ theorem iterStep_iterate (F : List Bool → List Bool) (Krev W v₀ : List Bool)
       have hV : nextValue F (pair (pair ((Krev.take (i + 1)).reverse)
           (iterVal F Krev W v₀ i)) (pair (pair Krev W) v₀))
           = iterVal F Krev W v₀ (i + 1) := by
-        rw [nextValue, fstBlock_pair, fstBlock_pair, sndBlock_pair, sndBlock_pair,
-          fstBlock_pair, sndBlock_pair, hbt, selectHead_emptyFlag_cons, ← hbt, hC,
-          takeLen_pair, sndBlock_pair, iterVal]
+        rw [nextValue, pairFst_pair, pairFst_pair, pairSnd_pair, pairSnd_pair,
+          pairFst_pair, pairSnd_pair, hbt, selectHead_emptyFlag_cons, ← hbt, hC,
+          takeLen_pair, pairSnd_pair, iterVal]
       rw [hC, hV, takeLen_pair, List.take_of_length_le (hfit (i + 1))]
 
 theorem counter_take_le (a j : ℕ) (h : j ≤ a) :
@@ -906,7 +906,7 @@ theorem iterate_mem_FP {F init ruler width : List Bool → List Bool}
     exact pairFn_mem_FP (pairFn_mem_FP (appendFn_mem_FP hrep htrue) hwidth) hinit
   have hXeq : ∀ z, X z = pair (pair (Krev z) (width z)) (init z) := fun z => by rw [hX]
   have heq : (fun z => F^[(ruler z).length] (init z))
-      = sndBlock ∘ (fstBlock ∘ ((fun x => (iterStep F)^[x.length + 1] (pair [] x)) ∘ X)) := by
+      = pairSnd ∘ (pairFst ∘ ((fun x => (iterStep F)^[x.length + 1] (pair [] x)) ∘ X)) := by
     funext z
     simp only [Function.comp_apply]
     have hfit : ∀ i, (pair (((Krev z).take (i + 1)).reverse)
@@ -926,53 +926,53 @@ theorem iterate_mem_FP {F init ruler width : List Bool → List Bool}
     have hlarge : (ruler z).length ≤ (X z).length := by
       have := hKrevLen z
       rw [hXlen z]; omega
-    rw [hXeq z, hiter, fstBlock_pair, sndBlock_pair, hval, min_eq_right hlarge]
+    rw [hXeq z, hiter, pairFst_pair, pairSnd_pair, hval, min_eq_right hlarge]
   rw [heq]
   exact mem_FP_comp (mem_FP_comp (mem_FP_comp hXFP hΛ) fstBlock_mem_FP) sndBlock_mem_FP
 
 /-- **The loop of the `boundedRec` case.** `recFoldClamp` is `loopStep` iterated
-once per bit of `sndBlock z` (`loopStep_iterate`), started from the packed state
+once per bit of `pairSnd z` (`loopStep_iterate`), started from the packed state
 `pair (pair R (pair W s)) (pair [] (e.take |R|))` — with `R` an *exact* ruler for
-the clamp (`exists_exact_ruler`) — and read off with two `sndBlock`s. -/
+the clamp (`exists_exact_ruler`) — and read off with two `pairSnd`s. -/
 theorem recFoldClamp_mem_FP {A B E : List Bool → List Bool}
     (hA : A ∈ FP) (hB : B ∈ FP) (hE : E ∈ FP) (p : Polynomial ℕ) :
-    (fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z))
+    (fun z => recFoldClamp A B (p.eval z.length) (E z) (pairFst z) (pairSnd z))
       ∈ FP := by
   obtain ⟨R, hR, hRlen⟩ := exists_exact_ruler p
-  have hfst : fstBlock ∈ FP := fstBlock_mem_FP
-  have hsnd : sndBlock ∈ FP := sndBlock_mem_FP
-  have hP : (fun z => pair (R z) (pair (fstBlock z) (sndBlock z))) ∈ FP :=
+  have hfst : pairFst ∈ FP := fstBlock_mem_FP
+  have hsnd : pairSnd ∈ FP := sndBlock_mem_FP
+  have hP : (fun z => pair (R z) (pair (pairFst z) (pairSnd z))) ∈ FP :=
     pairFn_mem_FP hR (pairFn_mem_FP hfst hsnd)
-  have hinit : (fun z => pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+  have hinit : (fun z => pair (pair (R z) (pair (pairFst z) (pairSnd z)))
       (pair [] ((E z).take (R z).length))) ∈ FP :=
     pairFn_mem_FP hP (pairFn_mem_FP const_nil_mem_FP (takeLenFn_mem_FP hR hE))
-  have hwidth : (fun z => pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
-      (pair (sndBlock z) (R z))) ∈ FP := pairFn_mem_FP hP (pairFn_mem_FP hsnd hR)
-  have hbound : ∀ z, ∀ n ≤ (sndBlock z).length,
-      ((loopStep A B)^[n] (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+  have hwidth : (fun z => pair (pair (R z) (pair (pairFst z) (pairSnd z)))
+      (pair (pairSnd z) (R z))) ∈ FP := pairFn_mem_FP hP (pairFn_mem_FP hsnd hR)
+  have hbound : ∀ z, ∀ n ≤ (pairSnd z).length,
+      ((loopStep A B)^[n] (pair (pair (R z) (pair (pairFst z) (pairSnd z)))
         (pair [] ((E z).take (R z).length)))).length
-        ≤ (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
-            (pair (sndBlock z) (R z))).length := by
+        ≤ (pair (pair (R z) (pair (pairFst z) (pairSnd z)))
+            (pair (pairSnd z) (R z))).length := by
     intro z n hn
-    rw [loopStep_iterate (A := A) (B := B) (R z) (fstBlock z) (sndBlock z) (E z) n hn]
-    have h1 : ((sndBlock z).drop ((sndBlock z).length - n)).length
-        ≤ (sndBlock z).length := by simp
-    have h2 : (recFoldClamp A B (R z).length (E z) (fstBlock z)
-        ((sndBlock z).drop ((sndBlock z).length - n))).length ≤ (R z).length :=
+    rw [loopStep_iterate (A := A) (B := B) (R z) (pairFst z) (pairSnd z) (E z) n hn]
+    have h1 : ((pairSnd z).drop ((pairSnd z).length - n)).length
+        ≤ (pairSnd z).length := by simp
+    have h2 : (recFoldClamp A B (R z).length (E z) (pairFst z)
+        ((pairSnd z).drop ((pairSnd z).length - n))).length ≤ (R z).length :=
       recFoldClamp_length_le _ _ _ _ _ _
     simp only [pair_length]
     omega
   have hiter := iterate_mem_FP (loopStep_mem_FP hA hB) hinit hsnd hwidth hbound
   have hout := mem_FP_comp hiter (mem_FP_comp hsnd hsnd)
-  have heq : ((sndBlock ∘ sndBlock) ∘ fun z =>
-      (loopStep A B)^[(sndBlock z).length]
-        (pair (pair (R z) (pair (fstBlock z) (sndBlock z)))
+  have heq : ((pairSnd ∘ pairSnd) ∘ fun z =>
+      (loopStep A B)^[(pairSnd z).length]
+        (pair (pair (R z) (pair (pairFst z) (pairSnd z)))
           (pair [] ((E z).take (R z).length))))
-      = fun z => recFoldClamp A B (p.eval z.length) (E z) (fstBlock z) (sndBlock z) := by
+      = fun z => recFoldClamp A B (p.eval z.length) (E z) (pairFst z) (pairSnd z) := by
     funext z
     rw [Function.comp, Function.comp,
-      loopStep_iterate (A := A) (B := B) (R z) (fstBlock z) (sndBlock z) (E z)
-        (sndBlock z).length le_rfl]
+      loopStep_iterate (A := A) (B := B) (R z) (pairFst z) (pairSnd z) (E z)
+        (pairSnd z).length le_rfl]
     simp [hRlen z]
   rwa [heq] at hout
 
@@ -1048,11 +1048,11 @@ theorem fpn_boundedRec {n : ℕ} {g : (Fin n → List Bool) → List Bool}
   obtain ⟨H₁, hH1FP, hH1⟩ := ih1
   obtain ⟨J, hJFP, hJ⟩ := ihj
   obtain ⟨p, hp⟩ := output_length_poly_of_mem_FP hJFP
-  have hE : (fun z => G (fstBlock z)) ∈ FP := mem_FP_comp fstBlock_mem_FP hGFP
-  refine ⟨fun z => recFoldClamp H₀ H₁ (p.eval z.length) (G (fstBlock z)) (fstBlock z)
-      (sndBlock z), recFoldClamp_mem_FP hH0FP hH1FP hE p, fun v => ?_⟩
-  show recFoldClamp H₀ H₁ (p.eval (encodeVec v).length) (G (fstBlock (encodeVec v)))
-      (fstBlock (encodeVec v)) (sndBlock (encodeVec v))
+  have hE : (fun z => G (pairFst z)) ∈ FP := mem_FP_comp fstBlock_mem_FP hGFP
+  refine ⟨fun z => recFoldClamp H₀ H₁ (p.eval z.length) (G (pairFst z)) (pairFst z)
+      (pairSnd z), recFoldClamp_mem_FP hH0FP hH1FP hE p, fun v => ?_⟩
+  show recFoldClamp H₀ H₁ (p.eval (encodeVec v).length) (G (pairFst (encodeVec v)))
+      (pairFst (encodeVec v)) (pairSnd (encodeVec v))
     = recNotation g h₀ h₁ (v 0) (Fin.tail v)
   rw [fstBlock_encodeVec_succ, sndBlock_encodeVec_succ]
   rw [recFoldClamp_eq_recFold (v 0) ?_]

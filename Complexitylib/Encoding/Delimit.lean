@@ -104,33 +104,44 @@ theorem eq_delimit_append_of_unpair?_eq_some :
 /-- Strip the framing of a single self-delimiting block, returning its payload. On `delimit P`
 this returns `P`. Unlike `unpair?`, this is total: it ignores any data trailing the first block
 and maps malformed input to `[]`. -/
-def undelimitBlock : List Bool → List Bool
-  | false :: true :: _ => []
-  | false :: false :: rest => false :: undelimitBlock rest
-  | true :: _ :: rest => true :: undelimitBlock rest
-  | _ => []
+def undelimitBlock (input : List Bool) : List Bool :=
+  match unpair? input with
+  | some (block, _) => block
+  | none => []
+
+@[simp]
+theorem undelimitBlock_eq_nil_of_unpair?_eq_none {input : List Bool}
+    (h : unpair? input = none) :
+    undelimitBlock input = [] := by
+  simp [undelimitBlock, h]
+
+@[simp]
+theorem undelimitBlock_delimit_append (P Q : List Bool) :
+    undelimitBlock (delimit P ++ Q) = P := by
+  simp [undelimitBlock]
 
 @[simp]
 theorem undelimitBlock_delimit (P : List Bool) :
     undelimitBlock (delimit P) = P := by
-  induction P with
-  | nil => rfl
-  | cons b P ih => cases b <;> simp [undelimitBlock, ih]
+  simpa using undelimitBlock_delimit_append P []
 
-/-- Keep the leading self-delimiting block of a bitstring, dropping everything after it. On a
-pair encoding `delimit x ++ w` this returns `delimit x`. -/
-def takeFirstBlock : List Bool → List Bool
-  | false :: true :: _ => [false, true]
-  | false :: false :: rest => false :: false :: takeFirstBlock rest
-  | true :: c :: rest => true :: c :: takeFirstBlock rest
-  | l => l
+/-- Keep the leading self-delimiting block of a bitstring, dropping everything after it and
+mapping malformed input to `[]`. On a pair encoding `delimit x ++ w` this returns `delimit x`. -/
+def takeFirstBlock (input : List Bool) : List Bool :=
+  match unpair? input with
+  | some (block, _) => delimit block
+  | none => []
+
+@[simp]
+theorem takeFirstBlock_eq_nil_of_unpair?_eq_none {input : List Bool}
+    (h : unpair? input = none) :
+    takeFirstBlock input = [] := by
+  simp [takeFirstBlock, h]
 
 @[simp]
 theorem takeFirstBlock_delimit_append (P Q : List Bool) :
     takeFirstBlock (delimit P ++ Q) = delimit P := by
-  induction P with
-  | nil => rfl
-  | cons b P ih => cases b <;> simp [takeFirstBlock, ih]
+  simp [takeFirstBlock]
 
 /-- Does the bitstring begin with a well-formed self-delimiting block? -/
 def hasBlock : List Bool → Bool

@@ -9,14 +9,14 @@ public import Complexitylib.BooleanAnalysis.FourierExpansion.Internal
 public import Mathlib.Probability.ProbabilityMassFunction.Constructions
 
 /-!
-# Chapter 1: Boolean functions and the Fourier expansion
+# Boolean functions and Fourier analysis
 
-This file contains the main theorems from Chapter 1 of "Analysis of Boolean
-Functions" by Ryan O'Donnell.
+This file contains the main Chapter 1 results and the Chapter 2 foundations on
+noise and influence from "Analysis of Boolean Functions" by Ryan O'Donnell.
 
 ## References
 
-* Ryan O'Donnell, *Analysis of Boolean Functions*, Chapter 1.
+* Ryan O'Donnell, *Analysis of Boolean Functions*, Chapters 1–2.
 -/
 
 
