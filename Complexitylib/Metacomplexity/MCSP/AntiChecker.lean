@@ -80,6 +80,27 @@ theorem isFor_perm {arity : ℕ} [NeZero arity]
     IsFor target threshold first ↔ IsFor target threshold second :=
   isFor_perm_internal hperm
 
+/-- Padding a list no longer than the target length reaches that length
+exactly. -/
+theorem length_padInputsTo {arity targetLength : ℕ}
+    {inputs : List (BitString arity)} (hlength : inputs.length ≤ targetLength) :
+    (padInputsTo targetLength inputs).length = targetLength :=
+  length_padInputsTo_internal hlength
+
+/-- Every original input remains present after padding. -/
+theorem mem_padInputsTo_of_mem {arity targetLength : ℕ}
+    {inputs : List (BitString arity)} {input : BitString arity}
+    (hinput : input ∈ inputs) :
+    input ∈ padInputsTo targetLength inputs :=
+  mem_padInputsTo_of_mem_internal hinput
+
+/-- Padding with all-zero inputs preserves the anti-checker property. -/
+theorem IsFor.padInputsTo {arity threshold targetLength : ℕ}
+    [NeZero arity] {target : BitString arity → Bool}
+    {inputs : List (BitString arity)} (hanti : IsFor target threshold inputs) :
+    IsFor target threshold (padInputsTo targetLength inputs) :=
+  hanti.padInputsTo_internal
+
 /-- A circuit satisfies every canonical sample induced by an input list exactly
 when it agrees with the target throughout that list. -/
 theorem samplesFunction_ofInputs_iff_agreesOn {arity threshold : ℕ}

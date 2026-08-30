@@ -44,6 +44,12 @@ def IsFor {arity : ℕ} [NeZero arity]
     circuit.size ≤ threshold →
       ∃ input ∈ inputs, circuit.eval input 0 ≠ target input
 
+/-- Prepend all-zero inputs until the list reaches `targetLength`. If the list
+is already at least that long, leave it unchanged. -/
+def padInputsTo {arity : ℕ} (targetLength : ℕ)
+    (inputs : List (BitString arity)) : List (BitString arity) :=
+  List.replicate (targetLength - inputs.length) (fun _ => false) ++ inputs
+
 end AntiChecker
 
 end Complexity

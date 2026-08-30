@@ -68,6 +68,26 @@ theorem isFor_perm_internal {arity : ℕ} [NeZero arity]
     intro input hinput
     exact hperm.mem_iff.mpr hinput
 
+theorem length_padInputsTo_internal {arity targetLength : ℕ}
+    {inputs : List (BitString arity)} (hlength : inputs.length ≤ targetLength) :
+    (padInputsTo targetLength inputs).length = targetLength := by
+  simp [padInputsTo]
+  omega
+
+theorem mem_padInputsTo_of_mem_internal {arity targetLength : ℕ}
+    {inputs : List (BitString arity)} {input : BitString arity}
+    (hinput : input ∈ inputs) :
+    input ∈ padInputsTo targetLength inputs := by
+  simp [padInputsTo, hinput]
+
+theorem IsFor.padInputsTo_internal {arity threshold targetLength : ℕ}
+    [NeZero arity] {target : BitString arity → Bool}
+    {inputs : List (BitString arity)} (hanti : IsFor target threshold inputs) :
+    IsFor target threshold (padInputsTo targetLength inputs) := by
+  apply isFor_inputs_mono_internal (hanti := hanti)
+  intro input hinput
+  exact mem_padInputsTo_of_mem_internal hinput
+
 theorem samplesFunction_ofInputs_iff_agreesOn_internal {arity threshold : ℕ}
     [NeZero arity] (target : BitString arity → Bool)
     (inputs : List (BitString arity)) {internalGates : ℕ}
