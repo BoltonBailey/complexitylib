@@ -2653,7 +2653,10 @@ exactly `1/copies` for positive message length, multiplies every distance by
 `copies`, corrects below half that lower bound, and satisfies the specialized
 packing inequality. It is an infrastructure code rather than an asymptotically
 good one; efficient encoder/decoder circuits, a theorem-suitable code family,
-and theorem-specific resource analysis remain missing.
+and theorem-specific resource analysis remain missing. On the nonconstructive
+side, a maximum-cardinality separated code is proved to cover the entire cube
+by radius-`d-1` balls, yielding the exact finite Gilbert--Varshamov inequality
+`2^n <= |C| * volume(n,d-1)`. This supplies existence, not an efficient family.
 
 **Literature anchors.** The initial theorem menu should be drawn from the
 Oliveira--Santhanam hardness-magnification framework, the
@@ -2701,8 +2704,9 @@ uniformity, error, and quantifier conventions into a short design document.
   complete finite Hamming geometry, exact volumes, abstract injective-code rate,
   minimum-distance packing, and exhaustive unique decoding are done; concrete
   XOR-linear repetition codes with exact rate and distance are done as the first
-  concrete instance; asymptotically useful codes, efficient algorithms, and
-  circuit complexity remain.*
+  concrete instance; the finite nonconstructive Gilbert--Varshamov covering
+  bound is also done. Explicit asymptotically useful codes, efficient algorithms,
+  and circuit complexity remain.*
 - [~] Define parameter-preserving reductions between promise families. Prove
   identity/composition while retaining yes/no thresholds, output length, resource
   blow-up, randomness, and error rather than projecting immediately to a language

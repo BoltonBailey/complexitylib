@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Hamming.Defs
 public import Complexitylib.Metacomplexity.Hamming.Internal
+public import Complexitylib.Metacomplexity.Hamming.Existence
 public import Complexitylib.Metacomplexity.Hamming.Code
 
 /-!
@@ -17,7 +18,8 @@ metacomplexity and hardness magnification: a metric on Boolean words, exact
 binomial sphere and ball counts, and the Hamming packing bound. Absolute and
 rational relative distance are connected explicitly. `BooleanCode` then packages
 injective finite encodings, exact rate, minimum distance, and exhaustive unique
-decoding without asserting an efficient implementation.
+decoding without asserting an efficient implementation. A finite
+Gilbert--Varshamov theorem supplies separated covering codes nonconstructively.
 -/
 
 
