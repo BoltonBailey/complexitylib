@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.Randomized.Hashing.Defs
 public import Complexitylib.Classes.Randomized.Hashing.Affine
+public import Complexitylib.Classes.Randomized.Hashing.Amplification
 import Complexitylib.Classes.Randomized.Hashing.Internal
 
 /-!
