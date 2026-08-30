@@ -3288,10 +3288,14 @@ meta-computational notation hides several incompatible choices; expose them.
   chain theorem. The condition-query clock is related to the final gap clock by
   domination rather than equality, faithfully retaining the paper's
   `p^4(max {t, |x| + |y|}) <= p^4(t + |x| + |y|)` monotonicity step.
-  Constructing a concrete universal compiler satisfying that contract,
-  discharging the iterated-polynomial clock/loss budgets, connecting the
-  induced algorithm to `P`, adding the multiplicative Definition 6.5 variant,
-  and the hardness/class bridge remain.*
+  The exact `p`, `p^2`, `p^3`, and `p^4` query schedule now has a reusable
+  constructor: monotone widening clocks prove every clock alignment, while an
+  explicit finite `LossBudget` retains both logarithmic inequalities instead
+  of hiding them in `O(log t)`. Constructing a concrete universal compiler,
+  proving polynomial growth of the iterated transforms, discharging the finite
+  losses for a sufficiently enlarged polynomial, connecting the induced
+  algorithm to `P`, adding the multiplicative Definition 6.5 variant, and the
+  hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3363,6 +3367,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Derive the schedule's paired upper bound from the condition-first
   operational composition contract with explicit minima and additive compiler
   loss.
+- [x] Construct the exact iterated-clock plan and reduce all clock alignment
+  and logarithmic accounting to monotonicity, widening, and two explicit finite
+  loss inequalities.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
