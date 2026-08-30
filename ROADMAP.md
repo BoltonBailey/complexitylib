@@ -2611,14 +2611,18 @@ two-input universal evaluator with explicit random-access and clock conventions.
 The symmetry branch additionally needs finite incompressibility, pairing bounds,
 and an asymptotic library capable of retaining logarithmic losses.
 
-**Current foundation.** `DyadicEnsemble` represents each parameter slice by an
-explicit uniform Boolean seed and deterministic sample map, retaining sampler
-multiplicity. Its exact rational theory includes complement and union laws,
-predicate monotonicity, deterministic pushforward, normalized finite support
-mass, independent products via the seed-block bijection, point masses, and
-uniform bit-string slices. This is the representation-level distribution layer;
-no sample map is called efficient until a machine realizes it with proved
-polynomial seed, runtime, and output bounds.
+**Current foundation.** `FiniteEnsemble` represents each parameter slice by an
+arbitrary nonempty finite uniform seed space and a deterministic sample map,
+retaining sampler multiplicity. Its exact rational theory includes complement
+and union laws, predicate monotonicity, deterministic pushforward, normalized
+finite support mass, independent products, and point masses. `DyadicEnsemble`
+is the fixed-length fair-bit specialization; its exact embedding into
+`FiniteEnsemble` preserves every event probability, and uniform bit-string
+slices remain available there. The general layer is necessary for exact uniform
+choices from `Fin m` when `m` is not a power of two. This is the
+representation-level distribution layer; no sample map is called efficient
+until a machine realizes it with proved polynomial seed, runtime, and output
+bounds.
 `HeuristicAnswer` now gives errorless algorithms distinct accept, reject, and
 failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
 global soundness, deterministic polynomial time, and per-slice failure bounds;
@@ -2666,9 +2670,12 @@ The principal published implications to formalize separately are:
 meta-computational notation hides several incompatible choices; expose them.
 
 - A distribution ensemble is indexed by a security/size parameter and represented
-  by an explicit finite random seed and sample map. Define polynomial-time
-  samplability by a uniform machine plus polynomial seed and runtime bounds.
-  Preserve output lengths; do not assume samples have length equal to the index.
+  by an explicit nonempty finite uniform seed space and sample map. Fixed-length
+  fair bits are an important specialization, not the general definition: they
+  cannot choose exactly uniformly from `Fin m` unless `m` is a power of two.
+  Define polynomial-time samplability by a uniform machine plus a polynomially
+  bounded encoding of the seed, runtime, and output. Preserve output lengths; do
+  not assume samples have length equal to the index.
 - An errorless heuristic returns `yes`, `no`, or `failure`, is never wrong on any
   input, and fails with bounded probability on each ensemble slice. An error-prone
   heuristic may be wrong. Define `Avg_delta P`, `AvgP`, `Heur_delta P`, and
@@ -2706,11 +2713,13 @@ meta-computational notation hides several incompatible choices; expose them.
 
 **Staged milestones.** Each completed item should be independently checkable.
 
-- [~] Build exact dyadic ensembles, finite event probabilities under pushforward,
-  product/mixture ensembles, and the uniform and auxiliary-unary ensembles.
-  *The generic seed representation, probability laws, pushforward, normalized
-  support mass, independent products, point masses, and uniform bit strings are
-  done; mixtures and the auxiliary-unary ensemble remain.*
+- [~] Build arbitrary finite uniform-seed ensembles, their exact dyadic
+  specialization, finite event probabilities under pushforward, product/mixture
+  ensembles, and the uniform and auxiliary-unary ensembles. *The general finite
+  and dyadic seed representations, their exact probability bridge, probability
+  laws, pushforward, normalized support mass, independent products, point masses,
+  and uniform bit strings are done; mixtures and the auxiliary-unary ensemble
+  remain.*
 - [ ] Define polynomial-time samplers by uniform machines and prove closure under
   polynomial-time maps, pairing, padding, products, and efficiently chosen
   mixtures. Package distributional problems and `DistNP` only after this bridge.
@@ -2790,6 +2799,8 @@ formalization targets and should be stated positively under their exact names.
 
 - [x] Define a dyadic ensemble as an explicit seed width plus sample map, and
   prove that pushforward preserves total mass and event probability.
+- [x] Generalize to arbitrary nonempty finite uniform seed spaces and prove the
+  dyadic embedding preserves every event probability exactly.
 - [x] Define errorless answers and prove that complementing an errorless heuristic
   preserves its failure event exactly.
 - [M] Define the auxiliary-unary ensemble and calculate the probability of every

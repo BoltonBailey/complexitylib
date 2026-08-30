@@ -13,9 +13,9 @@ public import Complexitylib.Classes.AverageCase.Heuristic.Internal
 
 This module exposes the exact errorless-heuristic semantics used in average-case
 complexity: globally sound yes/no/failure answers, polynomial runtime through a
-canonical `FP` output codec, and slice-wise failure probability over dyadic
-ensembles. It also defines `AvgPAt δ` and the inverse-polynomial intersection
-`AvgP` for distributional problems.
+canonical `FP` output codec, and slice-wise failure probability over arbitrary
+finite uniform-seed ensembles. It also defines `AvgPAt δ` and the
+inverse-polynomial intersection `AvgP` for distributional problems.
 -/
 
 
@@ -74,26 +74,26 @@ theorem IsErrorlessFor.complement {A : HeuristicAlgorithm} {L : Language}
   complement_apply_eq_failure_iff_internal A x
 
 /-- Failure probability is nonnegative. -/
-theorem failureProbability_nonneg (D : DyadicEnsemble (List Bool))
+theorem failureProbability_nonneg (D : FiniteEnsemble (List Bool))
     (A : HeuristicAlgorithm) (n : ℕ) :
     0 ≤ A.failureProbability D n :=
   failureProbability_nonneg_internal D A n
 
 /-- Failure probability is at most one. -/
-theorem failureProbability_le_one (D : DyadicEnsemble (List Bool))
+theorem failureProbability_le_one (D : FiniteEnsemble (List Bool))
     (A : HeuristicAlgorithm) (n : ℕ) :
     A.failureProbability D n ≤ 1 :=
   failureProbability_le_one_internal D A n
 
 /-- Complementing a heuristic preserves its failure probability exactly. -/
 @[simp] theorem failureProbability_complement
-    (D : DyadicEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
     A.complement.failureProbability D n = A.failureProbability D n :=
   failureProbability_complement_internal D A n
 
 /-- A failure guarantee remains true under a pointwise weaker bound. -/
 theorem FailsWithProbabilityAtMost.mono
-    {D : DyadicEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ ε : ℕ → ℚ}
+    {D : FiniteEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ ε : ℕ → ℚ}
     (hfailure : A.FailsWithProbabilityAtMost D δ)
     (hδε : ∀ n, δ n ≤ ε n) :
     A.FailsWithProbabilityAtMost D ε :=
@@ -101,7 +101,7 @@ theorem FailsWithProbabilityAtMost.mono
 
 /-- Complementing a heuristic preserves every failure guarantee. -/
 theorem FailsWithProbabilityAtMost.complement
-    {D : DyadicEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ : ℕ → ℚ}
+    {D : FiniteEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ : ℕ → ℚ}
     (hfailure : A.FailsWithProbabilityAtMost D δ) :
     A.complement.FailsWithProbabilityAtMost D δ :=
   hfailure.complement_internal
@@ -133,13 +133,13 @@ theorem ofDecision_isErrorlessFor {decide : List Bool → Bool} {L : Language}
 /-- A total decision adapter has zero failure probability on every ensemble
 slice. -/
 @[simp] theorem ofDecision_failureProbability
-    (D : DyadicEnsemble (List Bool)) (decide : List Bool → Bool) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (decide : List Bool → Bool) (n : ℕ) :
     (ofDecision decide).failureProbability D n = 0 :=
   ofDecision_failureProbability_internal D decide n
 
 /-- A total decision adapter meets the zero failure bound. -/
 theorem ofDecision_failsWithProbabilityAtMost_zero
-    (D : DyadicEnsemble (List Bool)) (decide : List Bool → Bool) :
+    (D : FiniteEnsemble (List Bool)) (decide : List Bool → Bool) :
     (ofDecision decide).FailsWithProbabilityAtMost D (fun _ => 0) :=
   ofDecision_failsWithProbabilityAtMost_zero_internal D decide
 

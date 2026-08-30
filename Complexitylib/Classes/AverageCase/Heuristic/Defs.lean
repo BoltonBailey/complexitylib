@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Classes.AverageCase.Ensemble.Defs
+public import Complexitylib.Classes.AverageCase.FiniteEnsemble.Defs
 public import Complexitylib.Classes.P.Defs
 
 /-!
@@ -97,12 +97,12 @@ def ofDecision (decide : List Bool → Bool) : HeuristicAlgorithm :=
   fun x => if decide x then .accept else .reject
 
 /-- Exact failure probability of a heuristic on one ensemble slice. -/
-def failureProbability (D : DyadicEnsemble (List Bool))
+def failureProbability (D : FiniteEnsemble (List Bool))
     (A : HeuristicAlgorithm) (n : ℕ) : ℚ :=
   D.probability n fun x => A x = .failure
 
 /-- Pointwise failure-probability bound across every ensemble slice. -/
-def FailsWithProbabilityAtMost (D : DyadicEnsemble (List Bool))
+def FailsWithProbabilityAtMost (D : FiniteEnsemble (List Bool))
     (A : HeuristicAlgorithm) (δ : ℕ → ℚ) : Prop :=
   ∀ n, A.failureProbability D n ≤ δ n
 
@@ -114,7 +114,7 @@ structure DistributionalProblem where
   /-- Decision problem being solved. -/
   language : Language
   /-- Distribution ensemble on inputs. -/
-  ensemble : DyadicEnsemble (List Bool)
+  ensemble : FiniteEnsemble (List Bool)
 
 namespace DistributionalProblem
 

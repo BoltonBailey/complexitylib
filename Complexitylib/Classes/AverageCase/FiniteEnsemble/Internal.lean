@@ -1,0 +1,272 @@
+/-
+Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+
+module
+public import Complexitylib.Classes.AverageCase.FiniteEnsemble.Defs
+import Complexitylib.Classes.AverageCase.Ensemble.Internal
+
+/-!
+# Finite uniform-seed distribution ensembles -- proof internals
+
+The generic finite probability laws are proved by exact cardinal arithmetic.
+Ensemble laws then instantiate them with each slice's explicit nonempty seed
+space.
+-/
+
+
+public section
+
+universe u v w
+
+namespace Complexity
+
+theorem uniformProbability_nonneg_internal {Ω : Type u} [Fintype Ω]
+    (event : Finset Ω) :
+    0 ≤ uniformProbability event := by
+  unfold uniformProbability
+  positivity
+
+theorem uniformProbability_le_one_internal {Ω : Type u}
+    [Fintype Ω] [Nonempty Ω] (event : Finset Ω) :
+    uniformProbability event ≤ 1 := by
+  have hden : ((Fintype.card Ω : ℕ) : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  have hcard : (event.card : ℚ) ≤ Fintype.card Ω := by
+    exact_mod_cast Finset.card_le_univ event
+  calc
+    uniformProbability event = (event.card : ℚ) / Fintype.card Ω := rfl
+    _ ≤ (Fintype.card Ω : ℚ) / Fintype.card Ω := by gcongr
+    _ = 1 := div_self hden
+
+theorem uniformProbability_empty_internal {Ω : Type u}
+    [Fintype Ω] :
+    uniformProbability (∅ : Finset Ω) = 0 := by
+  simp [uniformProbability]
+
+theorem uniformProbability_univ_internal {Ω : Type u}
+    [Fintype Ω] [Nonempty Ω] :
+    uniformProbability (Finset.univ : Finset Ω) = 1 := by
+  have hden : ((Fintype.card Ω : ℕ) : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  simp [uniformProbability, hden]
+
+theorem uniformProbability_compl_internal {Ω : Type u}
+    [Fintype Ω] [DecidableEq Ω] [Nonempty Ω] (event : Finset Ω) :
+    uniformProbability eventᶜ = 1 - uniformProbability event := by
+  have hcard : event.card ≤ Fintype.card Ω := Finset.card_le_univ event
+  have hden : ((Fintype.card Ω : ℕ) : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  unfold uniformProbability
+  rw [Finset.card_compl, Nat.cast_sub hcard, sub_div, div_self hden]
+
+theorem uniformProbability_union_le_internal {Ω : Type u}
+    [Fintype Ω] [DecidableEq Ω] (event₁ event₂ : Finset Ω) :
+    uniformProbability (event₁ ∪ event₂) ≤
+      uniformProbability event₁ + uniformProbability event₂ := by
+  unfold uniformProbability
+  rw [← add_div]
+  gcongr
+  exact_mod_cast Finset.card_union_le event₁ event₂
+
+theorem uniformProbability_eq_sum_fiberwise_internal
+    {Ω : Type u} {ι : Type v} [Fintype Ω] [DecidableEq Ω]
+    [DecidableEq ι] (event : Finset Ω) (indices : Finset ι) (f : Ω → ι)
+    (hmaps : (event : Set Ω).MapsTo f indices) :
+    uniformProbability event =
+      ∑ i ∈ indices,
+        uniformProbability (event.filter fun seed => f seed = i) := by
+  unfold uniformProbability
+  rw [Finset.card_eq_sum_card_fiberwise hmaps]
+  push_cast
+  rw [Finset.sum_div]
+
+theorem uniformProbability_product_internal
+    {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
+    [Fintype Ξ] [DecidableEq Ξ] (P : Ω → Prop) (Q : Ξ → Prop)
+    [DecidablePred P] [DecidablePred Q] :
+    uniformProbability
+        (Finset.univ.filter fun seed : Ω × Ξ => P seed.1 ∧ Q seed.2) =
+      uniformProbability (Finset.univ.filter P) *
+        uniformProbability (Finset.univ.filter Q) := by
+  have hevent :
+      (Finset.univ.filter fun seed : Ω × Ξ => P seed.1 ∧ Q seed.2) =
+        (Finset.univ.filter P).product (Finset.univ.filter Q) := by
+    ext seed
+    simp
+  rw [hevent]
+  unfold uniformProbability
+  rw [show
+    ((Finset.univ.filter P).product (Finset.univ.filter Q)).card =
+      (Finset.univ.filter P).card * (Finset.univ.filter Q).card from
+    Finset.card_product _ _]
+  simp only [Fintype.card_prod]
+  push_cast
+  exact (div_mul_div_comm
+    ((Finset.univ.filter P).card : ℚ) (Fintype.card Ω : ℚ)
+    ((Finset.univ.filter Q).card : ℚ) (Fintype.card Ξ : ℚ)).symm
+
+namespace FiniteEnsemble
+
+variable {α : Type u} {β : Type w}
+
+theorem probability_nonneg_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P : α → Prop) [DecidablePred P] :
+    0 ≤ D.probability n P := by
+  letI := D.seedFintype n
+  exact uniformProbability_nonneg_internal _
+
+theorem probability_le_one_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P : α → Prop) [DecidablePred P] :
+    D.probability n P ≤ 1 := by
+  letI := D.seedFintype n
+  letI := D.seedNonempty n
+  exact uniformProbability_le_one_internal _
+
+theorem probability_false_internal (D : FiniteEnsemble α) (n : ℕ) :
+    D.probability n (fun _ => False) = 0 := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  simp [probability, event, uniformProbability_empty_internal]
+
+theorem probability_true_internal (D : FiniteEnsemble α) (n : ℕ) :
+    D.probability n (fun _ => True) = 1 := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  letI := D.seedNonempty n
+  simp [probability, event, uniformProbability_univ_internal]
+
+theorem probability_not_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P : α → Prop) [DecidablePred P] :
+    D.probability n (fun x => ¬ P x) = 1 - D.probability n P := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  letI := D.seedNonempty n
+  have hevent : D.event n (fun x => ¬ P x) = (D.event n P)ᶜ := by
+    ext seed
+    simp [event]
+  rw [probability, hevent, uniformProbability_compl_internal]
+  rfl
+
+theorem probability_or_le_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P Q : α → Prop) [DecidablePred P] [DecidablePred Q] :
+    D.probability n (fun x => P x ∨ Q x) ≤
+      D.probability n P + D.probability n Q := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  have hevent : D.event n (fun x => P x ∨ Q x) = D.event n P ∪ D.event n Q := by
+    ext seed
+    simp [event]
+  rw [probability, hevent]
+  exact uniformProbability_union_le_internal _ _
+
+theorem probability_mono_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P Q : α → Prop) [DecidablePred P] [DecidablePred Q]
+    (hPQ : ∀ x, P x → Q x) :
+    D.probability n P ≤ D.probability n Q := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  unfold probability uniformProbability
+  gcongr
+  intro seed hseed
+  rw [show D.event n P =
+      Finset.univ.filter (fun seed => P (D.sample n seed)) from rfl] at hseed
+  rw [show D.event n Q =
+      Finset.univ.filter (fun seed => Q (D.sample n seed)) from rfl]
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hseed ⊢
+  exact hPQ _ hseed
+
+theorem probability_congr_internal (D : FiniteEnsemble α) (n : ℕ)
+    (P Q : α → Prop) [DecidablePred P] [DecidablePred Q]
+    (hPQ : ∀ x, P x ↔ Q x) :
+    D.probability n P = D.probability n Q := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  unfold probability
+  apply congrArg uniformProbability
+  ext seed
+  rw [show D.event n P =
+      Finset.univ.filter (fun seed => P (D.sample n seed)) from rfl]
+  rw [show D.event n Q =
+      Finset.univ.filter (fun seed => Q (D.sample n seed)) from rfl]
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  exact hPQ _
+
+theorem probability_map_internal (D : FiniteEnsemble α) (f : α → β)
+    (n : ℕ) (P : β → Prop) [DecidablePred P] :
+    (D.map f).probability n P = D.probability n (fun x => P (f x)) := by
+  rfl
+
+theorem sum_mass_eq_one_internal [DecidableEq α]
+    (D : FiniteEnsemble α) (n : ℕ) :
+    ∑ x ∈ D.support n, D.mass n x = 1 := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  letI := D.seedNonempty n
+  have hmaps :
+      ((Finset.univ : Finset (D.Seed n)) : Set (D.Seed n)).MapsTo
+        (D.sample n) (D.support n) := by
+    intro seed _
+    simp [support]
+  have hpartition := uniformProbability_eq_sum_fiberwise_internal
+    (Finset.univ : Finset (D.Seed n)) (D.support n) (D.sample n) hmaps
+  rw [uniformProbability_univ_internal] at hpartition
+  simpa [mass, probability, event] using hpartition.symm
+
+theorem probability_product_internal (D : FiniteEnsemble α)
+    (E : FiniteEnsemble β) (n : ℕ) (P : α → Prop) (Q : β → Prop)
+    [DecidablePred P] [DecidablePred Q] :
+    (D.product E).probability n (fun xy => P xy.1 ∧ Q xy.2) =
+      D.probability n P * E.probability n Q := by
+  letI := D.seedFintype n
+  letI := D.seedDecidableEq n
+  letI := E.seedFintype n
+  letI := E.seedDecidableEq n
+  simpa [product, probability, event] using
+    (uniformProbability_product_internal
+      (fun seed : D.Seed n => P (D.sample n seed))
+      (fun seed : E.Seed n => Q (E.sample n seed)))
+
+theorem probability_dirac_internal (x : ℕ → α) (n : ℕ)
+    (P : α → Prop) [DecidablePred P] :
+    (dirac x).probability n P = if P (x n) then 1 else 0 := by
+  letI := (dirac x).seedFintype n
+  letI := (dirac x).seedDecidableEq n
+  letI := (dirac x).seedNonempty n
+  by_cases hP : P (x n)
+  · rw [if_pos hP]
+    unfold probability
+    rw [show (dirac x).event n P = Finset.univ by
+      ext seed
+      simp [event, dirac, hP]]
+    exact uniformProbability_univ_internal
+  · rw [if_neg hP]
+    unfold probability
+    rw [show (dirac x).event n P = ∅ by
+      ext seed
+      simp [event, dirac, hP]]
+    exact uniformProbability_empty_internal
+
+end FiniteEnsemble
+
+namespace DyadicEnsemble
+
+variable {α : Type u}
+
+theorem probability_toFinite_internal (D : DyadicEnsemble α) (n : ℕ)
+    (P : α → Prop) [DecidablePred P] :
+    D.toFinite.probability n P = D.probability n P := by
+  change
+    ((Finset.univ.filter fun seed : Fin (D.seedLength n) → Bool =>
+        P (D.sample n seed)).card : ℚ) /
+        Fintype.card (Fin (D.seedLength n) → Bool) =
+      ((Finset.univ.filter fun seed : Fin (D.seedLength n) → Bool =>
+        P (D.sample n seed)).card : ℚ) / 2 ^ D.seedLength n
+  rw [card_finArrowBool]
+  norm_cast
+
+end DyadicEnsemble
+
+end Complexity

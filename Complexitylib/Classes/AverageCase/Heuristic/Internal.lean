@@ -6,7 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.AverageCase.Heuristic.Defs
-import Complexitylib.Classes.AverageCase.Ensemble.Internal
+import Complexitylib.Classes.AverageCase.FiniteEnsemble.Internal
 
 /-!
 # Errorless average-case heuristics -- proof internals
@@ -64,24 +64,24 @@ theorem complement_apply_eq_failure_iff_internal
   exact HeuristicAnswer.complement_eq_failure_iff_internal (A x)
 
 theorem failureProbability_nonneg_internal
-    (D : DyadicEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
     0 ≤ A.failureProbability D n :=
   D.probability_nonneg_internal n _
 
 theorem failureProbability_le_one_internal
-    (D : DyadicEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
     A.failureProbability D n ≤ 1 :=
   D.probability_le_one_internal n _
 
 theorem failureProbability_complement_internal
-    (D : DyadicEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
     A.complement.failureProbability D n = A.failureProbability D n := by
   apply D.probability_congr_internal
   intro x
   exact complement_apply_eq_failure_iff_internal A x
 
 theorem FailsWithProbabilityAtMost.mono_internal
-    {D : DyadicEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ ε : ℕ → ℚ}
+    {D : FiniteEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ ε : ℕ → ℚ}
     (hfailure : A.FailsWithProbabilityAtMost D δ)
     (hδε : ∀ n, δ n ≤ ε n) :
     A.FailsWithProbabilityAtMost D ε := by
@@ -89,7 +89,7 @@ theorem FailsWithProbabilityAtMost.mono_internal
   exact (hfailure n).trans (hδε n)
 
 theorem FailsWithProbabilityAtMost.complement_internal
-    {D : DyadicEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ : ℕ → ℚ}
+    {D : FiniteEnsemble (List Bool)} {A : HeuristicAlgorithm} {δ : ℕ → ℚ}
     (hfailure : A.FailsWithProbabilityAtMost D δ) :
     A.complement.FailsWithProbabilityAtMost D δ := by
   intro n
@@ -125,7 +125,7 @@ theorem ofDecision_isErrorlessFor_internal {decide : List Bool → Bool}
     exact (hdecide x).mp h
 
 theorem ofDecision_failureProbability_internal
-    (D : DyadicEnsemble (List Bool)) (decide : List Bool → Bool) (n : ℕ) :
+    (D : FiniteEnsemble (List Bool)) (decide : List Bool → Bool) (n : ℕ) :
     (ofDecision decide).failureProbability D n = 0 := by
   unfold failureProbability
   have himpossible : ∀ x : List Bool, ofDecision decide x ≠ .failure := by
@@ -139,7 +139,7 @@ theorem ofDecision_failureProbability_internal
   · exact D.probability_nonneg_internal n _
 
 theorem ofDecision_failsWithProbabilityAtMost_zero_internal
-    (D : DyadicEnsemble (List Bool)) (decide : List Bool → Bool) :
+    (D : FiniteEnsemble (List Bool)) (decide : List Bool → Bool) :
     (ofDecision decide).FailsWithProbabilityAtMost D (fun _ => 0) := by
   intro n
   rw [ofDecision_failureProbability_internal]
