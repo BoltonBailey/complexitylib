@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.BooleanDependency.Defs
 public import Complexitylib.Metacomplexity.BooleanDependency.Internal
+public import Complexitylib.Metacomplexity.BooleanDependency.Encoding
 
 /-!
 # Finite Boolean dependency tables
@@ -16,7 +17,8 @@ canonical table on assignments to that set. This module exposes exact
 reconstruction, the `2^|S|` table-entry count, finiteness of the function's
 range, and the corresponding range-cardinality bound. It also splits total
 assignments bijectively across a coordinate set and its complement and proves
-that uniform restriction is exactly uniform.
+that uniform restriction is exactly uniform. Ordered finite coordinate sets
+also receive computable exact-length assignment and truth-table codecs.
 -/
 
 

@@ -3009,9 +3009,13 @@ meta-computational notation hides several incompatible choices; expose them.
   it is pointwise equal to the original fixed-advice predictor, and its Boolean
   payload is proved exactly equal to the earlier entry count. Thus every
   selected certificate yields a stored predictor with the claimed agreement
-  and weak-design payload bound. A bit-level codec and machine/runtime analysis
-  of the sampler, checker, and program evaluator, the explicit RRV
-  construction, list decoding, and final program/time accounting remain.*
+  and weak-design payload bound. Canonical little-endian codecs now serialize
+  assignments to ordered finite coordinate sets in exactly `|S|` bits and
+  Boolean dependency tables in exactly `2^|S|` bits, with exact decoder round
+  trips and malformed-length rejection. Wiring these primitives into the whole
+  reconstruction-program codec and giving machine/runtime analyses of the
+  sampler, checker, and evaluator, along with the explicit RRV construction,
+  list decoding, and final program/time accounting, remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
