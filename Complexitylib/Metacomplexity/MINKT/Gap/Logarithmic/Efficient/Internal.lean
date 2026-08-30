@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic.Efficient.Defs
 public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic.Internal
 import Complexitylib.Classes.P
 import Complexitylib.Classes.P.Cobham.Internal
+import Complexitylib.Metacomplexity.Kolmogorov
 
 /-!
 # Efficient threshold search for logarithmic-gap MINKT -- proof internals
@@ -313,6 +314,31 @@ theorem executableEstimator_eq_timeSearchEstimator_internal
     executableEstimator decide = timeSearchEstimator decide := by
   funext inst
   exact encodedTimeSearchEstimator_length_encode_internal decide inst
+
+theorem fp_and_satisfiesBoundsOn_printerClock_internal
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    (huniversal : machine.IsEfficientlyUniversal)
+    {decide : List Bool → Bool}
+    (hdecide : (fun bits => [decide bits]) ∈ FP)
+    (haccept : ∀ bits ∈ yesLanguage machine, decide bits = true)
+    (hreject : ∀ bits ∈ noLanguage machine parameters,
+      decide bits = false) :
+    ∃ coefficient exponent,
+      encodedTimeSearchEstimator decide ∈ FP ∧
+        (executableEstimator decide).SatisfiesBoundsOn machine parameters
+          (fun inst => coefficient *
+            (2 * inst.output.length + 3) ^ exponent ≤ inst.time) := by
+  obtain ⟨constant, coefficient, exponent, hprinter⟩ :=
+    huniversal.timeBoundedKolmogorovComplexity_printer
+  refine ⟨coefficient, exponent,
+    encodedTimeSearchEstimator_mem_FP_internal decide hdecide, ?_⟩
+  rw [executableEstimator_eq_timeSearchEstimator_internal]
+  apply timeSearchEstimator_satisfiesBoundsOn_internal haccept hreject
+  intro inst heligible
+  exact ne_top_of_le_ne_top
+    (show ((inst.output.length + constant : ℕ) : WithTop ℕ) ≠ ⊤ from
+      WithTop.coe_ne_top)
+    (hprinter inst.output inst.time heligible)
 
 end Efficient
 

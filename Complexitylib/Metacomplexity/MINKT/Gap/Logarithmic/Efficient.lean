@@ -111,6 +111,25 @@ theorem fp_and_satisfiesBoundsOn_lengthWithinTime {tapes : ℕ}
   exact ⟨encodedTimeSearchEstimator_mem_FP decide hdecide,
     executableEstimator_satisfiesBoundsOn hwidening hsolve hfinite⟩
 
+/-- Generic efficient universality discharges source finiteness on a uniform
+polynomial printer-clock domain. The returned coefficients depend only on the
+universal machine; every eligible `(x,1^t)` with the printer clock below `t`
+receives both the executable `FP` estimator and the Fact 3.4 sandwich. -/
+theorem fp_and_satisfiesBoundsOn_printerClock {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    (huniversal : machine.IsEfficientlyUniversal)
+    (hwidening : parameters.IsWidening) {decide : List Bool → Bool}
+    (hdecide : (fun bits => [decide bits]) ∈ FP)
+    (hsolve : (problem machine parameters hwidening).SolvedBy decide) :
+    ∃ coefficient exponent,
+      encodedTimeSearchEstimator decide ∈ FP ∧
+        (executableEstimator decide).SatisfiesBoundsOn machine parameters
+          (fun inst => coefficient *
+            (2 * inst.output.length + 3) ^ exponent ≤ inst.time) := by
+  apply fp_and_satisfiesBoundsOn_printerClock_internal huniversal hdecide
+  · simpa using hsolve.1
+  · simpa using hsolve.2
+
 /-- Under global source finiteness, the executable estimator satisfies the
 global Fact 3.4 sandwich. -/
 theorem executableEstimator_satisfiesBounds {tapes : ℕ}

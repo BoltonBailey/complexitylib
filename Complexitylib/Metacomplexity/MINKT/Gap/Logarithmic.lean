@@ -162,11 +162,21 @@ theorem Estimator.SatisfiesBounds.decision_eq_false_of_mem_noLanguage
   decisionOfEstimator_eq_false_of_mem_noLanguage_internal hestimate hno
 
 /-- The widening-certified exact logarithmic GapMINKT promise. -/
-def problem {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+@[expose] def problem {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
     (hwidening : parameters.IsWidening) : PromiseProblem where
   yesInstances := yesLanguage machine
   noInstances := noLanguage machine parameters
   disjoint := disjoint_yesLanguage_noLanguage machine parameters hwidening
+
+@[simp] theorem problem_yesInstances {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (hwidening : parameters.IsWidening) :
+    (problem machine parameters hwidening).yesInstances =
+      yesLanguage machine := rfl
+
+@[simp] theorem problem_noInstances {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (hwidening : parameters.IsWidening) :
+    (problem machine parameters hwidening).noInstances =
+      noLanguage machine parameters := rfl
 
 /-- The reverse numerical direction of Fact 3.4 at one finite source instance.
 

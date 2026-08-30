@@ -43,6 +43,8 @@ complexity value is at most `t`.
 - `TimeBoundedSymmetryOfInformation.conditional_le_of_composition` -- evaluator bridge
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
+- `TM.IsUniversal.plainKolmogorovComplexity_ne_top` -- universal descriptions exist
+- `TM.IsEfficientlyUniversal.timeBoundedKolmogorovComplexity_printer` -- uniform printer
 -/
 
 
@@ -181,6 +183,57 @@ theorem PolynomialTimeOverhead.kolmogorov_transfer
             (coefficient * (bound + sourceTime + 1) ^ exponent) ≤
           (bound + constant : ℕ) :=
   polynomialTimeOverhead_kolmogorov_transfer_internal hsim hlength hclock
+
+/-- Every semantically universal machine has a finite plain description of
+every binary string. The proof uses universality only against the fixed
+input-to-output copy machine. -/
+theorem IsUniversal.plainKolmogorovComplexity_ne_top
+    {simulator : TM simulatorTapes} (huniversal : simulator.IsUniversal)
+    (output : List Bool) :
+    simulator.plainKolmogorovComplexity output ≠ ⊤ :=
+  huniversal.plainKolmogorovComplexity_ne_top_internal output
+
+/-- Every output has finite bounded complexity at some clock on any
+semantically universal machine. Semantic universality alone does not select a
+uniform time bound. -/
+theorem IsUniversal.exists_timeBoundedKolmogorovComplexity_ne_top
+    {simulator : TM simulatorTapes} (huniversal : simulator.IsUniversal)
+    (output : List Bool) :
+    ∃ time, simulator.timeBoundedKolmogorovComplexity output time ≠ ⊤ :=
+  huniversal.exists_timeBoundedKolmogorovComplexity_ne_top_internal output
+
+/-- Polynomially efficient universality supplies one uniform printer: every
+string `x` has a description of length at most `|x| + constant` within
+`coefficient * (2|x| + 3)^exponent` steps. The same bound remains valid at
+every larger clock. -/
+theorem IsEfficientlyUniversal.timeBoundedKolmogorovComplexity_printer
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent, ∀ (output : List Bool) (time : ℕ),
+      coefficient * (2 * output.length + 3) ^ exponent ≤ time →
+        simulator.timeBoundedKolmogorovComplexity output time ≤
+          (output.length + constant : ℕ) :=
+  huniversal.timeBoundedKolmogorovComplexity_printer_internal
+
+/-- Efficient universality gives the usual linear self-description upper bound
+for plain complexity, with one additive constant for every output. -/
+theorem IsEfficientlyUniversal.plainKolmogorovComplexity_le_length_add
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ constant, ∀ output : List Bool,
+      simulator.plainKolmogorovComplexity output ≤
+        (output.length + constant : ℕ) :=
+  huniversal.plainKolmogorovComplexity_le_length_add_internal
+
+/-- The uniform polynomial printer clock makes time-bounded complexity finite
+for every output of an efficiently universal machine. -/
+theorem IsEfficientlyUniversal.exists_polynomial_printer_finite
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ coefficient exponent, ∀ output : List Bool,
+      simulator.timeBoundedKolmogorovComplexity output
+        (coefficient * (2 * output.length + 3) ^ exponent) ≠ ⊤ :=
+  huniversal.exists_polynomial_printer_finite_internal
 
 end TM
 

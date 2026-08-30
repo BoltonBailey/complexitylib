@@ -1725,6 +1725,12 @@ machine-independent universality interface over arbitrary source work-tape
 counts. Semantic halting/output preservation, additive program length, explicit
 program-sensitive clocks, and polynomial clock admissibility are separate
 composable predicates; none mentions the concrete UTM codec.
+Semantic universality now implies that every string has finite plain complexity
+and finite time-bounded complexity at some clock. Polynomially efficient
+universality gives one stronger printer theorem uniform over all strings:
+descriptions have length `|x| + O(1)` and run within one explicit polynomial in
+`|x|`. This consequence uses only the generic interface and the fixed linear-time
+input-to-output copy machine, not the concrete UTM encoding.
 `TM.plainKolmogorovComplexity`, `TM.timeBoundedKolmogorovComplexity`, and
 `TM.prefixKolmogorovComplexity` now provide the machine-relative `C_U`, `C_U^t`,
 and certified-prefix-free `K_U` layers with `WithTop Nat` failure values. Their
@@ -3060,8 +3066,10 @@ meta-computational notation hides several incompatible choices; expose them.
   `0,...,t`, stays inside a linear-width envelope, and returns the least accepted
   threshold in exact unary form. Cobham bounded iteration proves that an `FP`
   one-bit gap decider yields an `FP` estimator, closing the algorithmic
-  solver-to-estimator direction. Discharging source finiteness from a concrete
-  universal printer remains evaluator-specific.*
+  solver-to-estimator direction. The generic efficient-universality interface
+  now supplies source finiteness at a uniform polynomial printer clock with
+  `|x| + O(1)` descriptions. Instantiating the fixed `utmTM` interface and
+  matching the paper's sharper source-clock convention remain evaluator-specific.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
@@ -3409,6 +3417,10 @@ formalization targets and should be stated positively under their exact names.
   function and feed it directly into the implementation-level SoI/hardness
   consequence; retain the concrete universal-printer and encoded-plan
   constructions as explicit obligations.
+- [x] Derive universal-printer consequences from the machine-independent
+  universality interfaces: plain finiteness from semantic universality, and a
+  uniform polynomial clock with `|x| + O(1)` descriptions from efficient
+  universality. Keep the concrete UTM instance and sharper paper clock separate.
 - [x] Restrict the two-query SoI reduction to the exact paired and
   condition-only estimator domain, and derive finiteness of both query families
   from the operational pair compiler and regular-clock widening. Remove the

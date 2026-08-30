@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Defs
 public import Complexitylib.Models.TuringMachine.Universality
+import Complexitylib.Models.TuringMachine.Subroutines.CopyOutput
 
 /-!
 # Machine-relative Kolmogorov complexity -- proof internals
@@ -226,6 +227,94 @@ theorem polynomialTimeOverhead_kolmogorov_transfer_internal
     (hlength program).trans (Nat.add_le_add_right hprogramLength constant)
   exact (timeBoundedKolmogorovComplexity_le_internal hcompiled).trans
     (WithTop.coe_le_coe.mpr hcompiledLength)
+
+theorem IsUniversal.plainKolmogorovComplexity_ne_top_internal
+    {simulator : TM simulatorTapes} (huniversal : simulator.IsUniversal)
+    (output : List Bool) :
+    simulator.plainKolmogorovComplexity output ≠ ⊤ := by
+  obtain ⟨compile, hsimulates⟩ :=
+    huniversal 0 (copyInputToOutputTM (n := 0))
+  have hsource : (copyInputToOutputTM (n := 0)).ProducesInTime output output
+      (output.length + 2) := by
+    simpa using (copyInputToOutputTM_computesInTime 0 output)
+  have hcompiled : simulator.Produces (compile output) output :=
+    (hsimulates.produces_iff output output).mpr
+      (produces_of_producesInTime hsource)
+  intro htop
+  exact (plainKolmogorovComplexity_eq_top_iff_internal simulator output).mp
+    htop ⟨compile output, hcompiled⟩
+
+theorem IsUniversal.exists_timeBoundedKolmogorovComplexity_ne_top_internal
+    {simulator : TM simulatorTapes} (huniversal : simulator.IsUniversal)
+    (output : List Bool) :
+    ∃ time, simulator.timeBoundedKolmogorovComplexity output time ≠ ⊤ := by
+  obtain ⟨compile, hsimulates⟩ :=
+    huniversal 0 (copyInputToOutputTM (n := 0))
+  have hsource : (copyInputToOutputTM (n := 0)).ProducesInTime output output
+      (output.length + 2) := by
+    simpa using (copyInputToOutputTM_computesInTime 0 output)
+  have hcompiled : simulator.Produces (compile output) output :=
+    (hsimulates.produces_iff output output).mpr
+      (produces_of_producesInTime hsource)
+  obtain ⟨time, hbounded⟩ :=
+    (produces_iff_exists_producesInTime simulator (compile output) output).mp
+      hcompiled
+  have hle := timeBoundedKolmogorovComplexity_le_internal hbounded
+  exact ⟨time, ne_top_of_le_ne_top
+    (show ((compile output).length : WithTop ℕ) ≠ ⊤ from WithTop.coe_ne_top)
+      hle⟩
+
+theorem IsEfficientlyUniversal.timeBoundedKolmogorovComplexity_printer_internal
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent, ∀ (output : List Bool) (time : ℕ),
+      coefficient * (2 * output.length + 3) ^ exponent ≤ time →
+        simulator.timeBoundedKolmogorovComplexity output time ≤
+          (output.length + constant : ℕ) := by
+  obtain ⟨compile, constant, clock, _hsimulates, hlength, htimed, hclock⟩ :=
+    huniversal 0 (copyInputToOutputTM (n := 0))
+  obtain ⟨coefficient, exponent, hclock⟩ := hclock
+  refine ⟨constant, coefficient, exponent, ?_⟩
+  intro output time htime
+  have hsource : (copyInputToOutputTM (n := 0)).ProducesInTime output output
+      (output.length + 2) := by
+    simpa using (copyInputToOutputTM_computesInTime 0 output)
+  have hcompiled := htimed.produces output output (output.length + 2) hsource
+  have hclockBound := hclock output (output.length + 2)
+  have harg : output.length + (output.length + 2) + 1 =
+      2 * output.length + 3 := by
+    omega
+  rw [harg] at hclockBound
+  have hcompiled' := hcompiled.mono (hclockBound.trans htime)
+  exact (timeBoundedKolmogorovComplexity_le_internal hcompiled').trans
+    (WithTop.coe_le_coe.mpr (hlength output))
+
+theorem IsEfficientlyUniversal.plainKolmogorovComplexity_le_length_add_internal
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ constant, ∀ output : List Bool,
+      simulator.plainKolmogorovComplexity output ≤
+        (output.length + constant : ℕ) := by
+  obtain ⟨constant, coefficient, exponent, hprinter⟩ :=
+    huniversal.timeBoundedKolmogorovComplexity_printer_internal
+  refine ⟨constant, fun output => ?_⟩
+  exact (plainKolmogorovComplexity_le_timeBounded_internal simulator output
+    (coefficient * (2 * output.length + 3) ^ exponent)).trans
+      (hprinter output _ le_rfl)
+
+theorem IsEfficientlyUniversal.exists_polynomial_printer_finite_internal
+    {simulator : TM simulatorTapes}
+    (huniversal : simulator.IsEfficientlyUniversal) :
+    ∃ coefficient exponent, ∀ output : List Bool,
+      simulator.timeBoundedKolmogorovComplexity output
+        (coefficient * (2 * output.length + 3) ^ exponent) ≠ ⊤ := by
+  obtain ⟨constant, coefficient, exponent, hprinter⟩ :=
+    huniversal.timeBoundedKolmogorovComplexity_printer_internal
+  refine ⟨coefficient, exponent, fun output => ?_⟩
+  exact ne_top_of_le_ne_top
+    (show ((output.length + constant : ℕ) : WithTop ℕ) ≠ ⊤ from
+      WithTop.coe_ne_top)
+    (hprinter output _ le_rfl)
 
 end TM
 
