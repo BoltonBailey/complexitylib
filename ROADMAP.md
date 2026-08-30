@@ -3103,6 +3103,12 @@ meta-computational notation hides several incompatible choices; expose them.
   machine simulation. The latter generic transfer is now complete too: any
   arbitrary `IsEfficientlyUniversal` machine inherits the certificate with its
   compiler's additive description constant and an explicit polynomial clock.
+  This is now composed directly with the inverse-density reconstruction theorem:
+  one public endpoint chooses the universal compiler constants, retains the
+  at-least-one-half checked-search probability, and turns every returned
+  certificate into the explicit universal-machine `C^t` bound. Its decoder
+  realization remains fixed by the ambient design, code, and test, so it does
+  not claim the paper's oracle-uniform decoder interface.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
   remaining ambient parameters, constructing machine/runtime realizers for the

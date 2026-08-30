@@ -20,6 +20,8 @@ accuracy `q`, under the exact relation `1/q = density/(2*outputLength)` used in
 Hirahara's argument. Polynomial list size then gives a concrete logarithmic
 bound on the encoded decoder choice. For density `1/inverseDensity`, the final
 theorem chooses `q = 2*outputLength*inverseDensity` and discharges that relation.
+The final endpoint composes this exact specialization with any efficiently
+universal machine while retaining the compiler constant and polynomial clock.
 -/
 
 
@@ -336,6 +338,73 @@ theorem half_le_timeBoundedKolmogorovComplexity_of_inverseDensity
   half_le_timeBoundedKolmogorovComplexity_of_inverseDensity_internal
     family hfamily bounds houtputLength hinverseDensity realization hlow hrandom
       hdense hbudget
+
+/-- End-to-end inverse-density reconstruction for an arbitrary efficiently
+universal machine. Canonical sampling succeeds with probability at least one
+half; every returned certificate gives the source message a description of the
+explicit reconstruction length plus the universal compiler constant, under the
+compiler's polynomial clock. The decoder realization remains fixed in the
+ambient design/code/test parameters. -/
+theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget universalTapes : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (realization : EncodedMessageDecoderRealization design
+      (family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) test)
+    (universal : TM universalTapes)
+    (huniversal : universal.IsEfficientlyUniversal)
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ constant coefficient exponent,
+      1 / 2 ≤
+          design.checkedReconstructionBatchSuccessProbability
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+            (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) ∧
+        ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) →
+            ReconstructionTrial outputLength seedLength) certificate,
+          design.findGoodReconstructionCertificate?
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+            some certificate →
+          universal.timeBoundedKolmogorovComplexity (List.ofFn message)
+              (coefficient *
+                (inverseDensityDescriptionBound family bounds messageLength
+                    outputLength inverseDensity seedLength budget +
+                  realization.time
+                    (inverseDensityDescriptionBound family bounds messageLength
+                      outputLength inverseDensity seedLength budget) + 1) ^
+                    exponent) ≤
+            (inverseDensityDescriptionBound family bounds messageLength
+              outputLength inverseDensity seedLength budget + constant : ℕ) :=
+  half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
+    family hfamily bounds houtputLength hinverseDensity realization universal
+      huniversal hlow hrandom hdense hbudget
 
 end NWDesign
 
