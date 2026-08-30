@@ -1750,6 +1750,15 @@ an absolute distinguishing advantage, after which a finite averaging theorem
 finds one coordinate transition with gap at least `delta / m`. This conclusion
 holds for every positive output length and every finite test, with no sign or
 nonnegativity assumption silently imposed on `delta`.
+`NWDesign m ell d` now represents the ordered coordinate blocks by embeddings
+`Fin ell ↪ Fin d`, making seed restriction and generator evaluation
+definitionally exact without cardinality casts. The finite theory proves block
+cardinality, membership, overlap symmetry, self-overlap, the bound
+`|S_i ∩ S_j| ≤ ell`, and monotonicity of the exact predecessor-overlap
+budget. The associated Nisan--Wigderson generator is a `BitGenerator d m`.
+For this generator, a positive-density time-bounded-random test now yields an
+oriented adjacent hybrid gap of at least `delta / m`; a direct seed-production
+corollary discharges the low-complexity premise whenever `d < r`.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2895,8 +2904,12 @@ meta-computational notation hides several incompatible choices; expose them.
   from seeds shorter than the threshold. The exact finite hybrid argument is
   also complete: complementing the test chooses the favorable polarity, the
   adjacent hybrid gaps telescope, and some coordinate has oriented gap at
-  least `delta / m`. Weak designs, the NW generator, next-bit prediction, and
-  reconstruction from the predictor remain.*
+  least `delta / m`. The ordered NW set-system, exact overlap-cost predicate,
+  seed restriction, and generator are now defined and their basic finite laws
+  proved. The dense-random test theorem is instantiated to this generator,
+  including the direct short-seed-description premise. The explicit RRV weak-
+  design construction, next-bit prediction, and reconstruction from the
+  predictor remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
