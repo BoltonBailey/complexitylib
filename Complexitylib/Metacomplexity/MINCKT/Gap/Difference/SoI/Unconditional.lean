@@ -78,6 +78,24 @@ condition query. -/
 
 end Plan
 
+/-- An operational condition-first compiler with attained minima proves the
+paired upper-chain field required by `Compatible`. -/
+theorem SupportsPairUpper.pair_upper
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {composition : PairCompositionPlan}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    (hsupports : SupportsPairUpper plan composition ordinaryMachine
+      conditionalMachine)
+    (inst : MINCKT.Instance) :
+    ordinaryMachine.timeBoundedKolmogorovComplexity
+          (pair inst.output inst.condition) (plan.pairInputTime inst) ≤
+      inst.complexity conditionalMachine +
+          ordinaryMachine.timeBoundedKolmogorovComplexity
+            inst.condition inst.time +
+        (plan.pairUpperLoss inst : WithTop ℕ) :=
+  hsupports.pair_upper_internal inst
+
 /-- A valid unconditional estimator plus clock/loss compatibility instantiates
 all inputs surrounding the single SoI invocation. -/
 theorem Compatible.satisfiesSoIInputs

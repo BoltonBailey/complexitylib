@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Chain.Internal
 
 /-!
 # Building the conditional difference estimator from one ordinary estimator
@@ -23,6 +24,25 @@ namespace GapMINCKT
 namespace DifferenceEstimator
 
 namespace Unconditional
+
+theorem SupportsPairUpper.pair_upper_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {plan : Plan} {composition : PairCompositionPlan}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    (hsupports : SupportsPairUpper plan composition ordinaryMachine
+      conditionalMachine)
+    (inst : MINCKT.Instance) :
+    ordinaryMachine.timeBoundedKolmogorovComplexity
+          (pair inst.output inst.condition) (plan.pairInputTime inst) ≤
+      inst.complexity conditionalMachine +
+          ordinaryMachine.timeBoundedKolmogorovComplexity
+            inst.condition inst.time +
+        (plan.pairUpperLoss inst : WithTop ℕ) :=
+  timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition_internal
+    (hsupports.composes inst) (hsupports.length_le inst)
+      (hsupports.condition_finite inst) (hsupports.result_finite inst)
+      (hsupports.condition_le_bound inst) (hsupports.result_le_bound inst)
 
 theorem Compatible.satisfiesSoIInputs_internal
     {ordinaryTapes conditionalTapes : ℕ}

@@ -3282,10 +3282,13 @@ meta-computational notation hides several incompatible choices; expose them.
   MINKT queries, records the `p^3 <= p^4` clock ladder, and converts its two
   estimator sandwiches into the complete SoI input contract. The resulting
   adjusted difference reaches the conditional sandwich, solver, and
-  `PromiseP` criterion. Constructing a concrete plan from the evaluator
-  composition theorem, discharging its iterated-polynomial clock/loss budgets,
-  connecting the induced algorithm to `P`, adding the multiplicative
-  Definition 6.5 variant, and the hardness/class bridge remain.*
+  `PromiseP` criterion. The plan's paired upper-chain field is now discharged
+  generically from a condition-first operational compiler, additive program
+  length, attained minima, and explicit description budgets by the existing
+  chain theorem. Constructing a concrete universal compiler satisfying that
+  contract, discharging the iterated-polynomial clock/loss budgets, connecting
+  the induced algorithm to `P`, adding the multiplicative Definition 6.5
+  variant, and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3354,6 +3357,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Instantiate the SoI schedule from two queries to one unconditional Fact
   3.4 estimator, retaining the paired/condition clocks, `p^3 <= p^4` ordering,
   upper-chain premise, and both logarithmic budgets.
+- [x] Derive the schedule's paired upper bound from the condition-first
+  operational composition contract with explicit minima and additive compiler
+  loss.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

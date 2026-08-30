@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic.Defs
+public import Complexitylib.Metacomplexity.Kolmogorov.Chain.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Defs
 
 /-!
@@ -47,6 +48,16 @@ structure Plan where
   /-- Centering and rounding correction in the final difference. -/
   correction : MINCKT.Instance → ℕ
 
+/-- Compiler and attained-minimum budgets for the paired upper-chain query. -/
+structure PairCompositionPlan where
+  /-- Compile a condition program and conditional result program into one
+  ordinary program. -/
+  compile : List Bool → List Bool → List Bool
+  /-- Program-length budget for the condition minimum. -/
+  conditionBound : MINCKT.Instance → ℕ
+  /-- Program-length budget for the conditional result minimum. -/
+  resultBound : MINCKT.Instance → ℕ
+
 namespace Plan
 
 /-- Ordinary MINKT query for the paired output. -/
@@ -82,6 +93,42 @@ def accountingSchedule (plan : Plan)
     ordinaryParameters.logarithmicSlack (plan.pairInput inst)
 
 end Plan
+
+/-- Operational evidence that the plan's `pairUpperLoss` really gives the
+unconditional upper-chain bound used by the SoI argument. -/
+structure SupportsPairUpper
+    {ordinaryTapes conditionalTapes : ℕ}
+    (plan : Plan) (composition : PairCompositionPlan)
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes) : Prop where
+  /-- The compiler produces `pair x y` from a program for `y` followed by a
+  conditional program for `x`. -/
+  composes : ∀ inst : MINCKT.Instance,
+    TimeBoundedConditionalPairCompositionAt ordinaryMachine ordinaryMachine
+      conditionalMachine composition.compile inst.output inst.condition
+        inst.time inst.time (plan.pairInputTime inst)
+        (composition.conditionBound inst) (composition.resultBound inst)
+  /-- Compiler length is additive up to the plan's explicit upper loss. -/
+  length_le : ∀ (inst : MINCKT.Instance) conditionProgram resultProgram,
+    conditionProgram.length ≤ composition.conditionBound inst →
+    resultProgram.length ≤ composition.resultBound inst →
+    (composition.compile conditionProgram resultProgram).length ≤
+      resultProgram.length + conditionProgram.length + plan.pairUpperLoss inst
+  /-- The source-clock condition minimum is attained. -/
+  condition_finite : ∀ inst : MINCKT.Instance,
+    ordinaryMachine.timeBoundedKolmogorovComplexity
+      inst.condition inst.time ≠ ⊤
+  /-- The source-clock conditional minimum is attained. -/
+  result_finite : ∀ inst : MINCKT.Instance,
+    inst.complexity conditionalMachine ≠ ⊤
+  /-- The chosen condition budget contains the attained minimum. -/
+  condition_le_bound : ∀ inst : MINCKT.Instance,
+    ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition inst.time ≤
+      (composition.conditionBound inst : WithTop ℕ)
+  /-- The chosen conditional-result budget contains the attained minimum. -/
+  result_le_bound : ∀ inst : MINCKT.Instance,
+    inst.complexity conditionalMachine ≤
+      (composition.resultBound inst : WithTop ℕ)
 
 /-- Clock, upper-chain, and loss compatibility for reusing one unconditional
 Fact 3.4 estimator in the SoI difference construction. -/
