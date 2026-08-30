@@ -18,6 +18,41 @@ namespace Complexity
 
 namespace BooleanDependency
 
+theorem OrderedAssignment.card_internal
+    {coordinate : Type*} [LinearOrder coordinate]
+    (coordinates : Finset coordinate) :
+    Fintype.card (OrderedAssignment coordinates) = 2 ^ coordinates.card := by
+  simpa using Fintype.card_congr
+    (OrderedAssignment.indexEquiv coordinates)
+
+theorem length_encodeOrderedFunction_internal
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (function : index → Bool) :
+    (encodeOrderedFunction function).length = Fintype.card index := by
+  simp [encodeOrderedFunction]
+
+theorem decodeOrderedFunction?_encodeOrderedFunction_internal
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (function : index → Bool) :
+    decodeOrderedFunction? (encodeOrderedFunction function) = some function := by
+  simp [decodeOrderedFunction?, encodeOrderedFunction]
+
+theorem encodeOrderedFunction_injective_internal
+    {index : Type*} [Fintype index] [LinearOrder index] :
+    Function.Injective (encodeOrderedFunction : (index → Bool) → List Bool) := by
+  intro first second heq
+  have hdecode := congrArg
+    (decodeOrderedFunction? (index := index)) heq
+  simpa only [decodeOrderedFunction?_encodeOrderedFunction_internal,
+    Option.some.injEq] using hdecode
+
+theorem decodeOrderedFunction?_eq_none_iff_internal
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (bits : List Bool) :
+    decodeOrderedFunction? (index := index) bits = none ↔
+      bits.length ≠ Fintype.card index := by
+  simp [decodeOrderedFunction?]
+
 theorem length_encodeAssignment_internal
     {coordinate : Type*} [LinearOrder coordinate]
     (coordinates : Finset coordinate) (assignment : coordinates → Bool) :

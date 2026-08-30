@@ -3012,10 +3012,15 @@ meta-computational notation hides several incompatible choices; expose them.
   and weak-design payload bound. Canonical little-endian codecs now serialize
   assignments to ordered finite coordinate sets in exactly `|S|` bits and
   Boolean dependency tables in exactly `2^|S|` bits, with exact decoder round
-  trips and malformed-length rejection. Wiring these primitives into the whole
-  reconstruction-program codec and giving machine/runtime analyses of the
-  sampler, checker, and evaluator, along with the explicit RRV construction,
-  list decoding, and final program/time accounting, remain.*
+  trips and malformed-length rejection. The whole Boolean reconstruction
+  payload is now one flat canonical string indexed by the lexicographic sum of
+  predecessor entries, outside coordinates, later coordinates, and candidate;
+  its decoder round-trips given the polarity/coordinate metadata, and its
+  length is exactly the weak-design payload count. The end-to-end theorem now
+  bounds this actual encoded string. Encoding the remaining metadata and giving
+  machine/runtime analyses of the sampler, checker, and evaluator, along with
+  the explicit RRV construction, list decoding, and final program/time
+  accounting, remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

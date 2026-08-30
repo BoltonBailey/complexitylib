@@ -11,8 +11,9 @@ public import Complexitylib.Metacomplexity.BooleanDependency.Encoding.Internal
 /-!
 # Canonical encoding of finite Boolean assignments and tables
 
-This module exposes computable exact-length codecs for assignments on ordered
-finite coordinate sets and for their full Boolean truth tables.
+This module exposes computable exact-length codecs for Boolean functions on
+finite ordered domains, assignments on ordered finite coordinate sets, and
+their full Boolean truth tables.
 -/
 
 
@@ -21,6 +22,42 @@ public section
 namespace Complexity
 
 namespace BooleanDependency
+
+/-- There are exactly `2^|S|` canonically ordered assignments to `S`. -/
+theorem OrderedAssignment.card
+    {coordinate : Type*} [LinearOrder coordinate]
+    (coordinates : Finset coordinate) :
+    Fintype.card (OrderedAssignment coordinates) = 2 ^ coordinates.card :=
+  OrderedAssignment.card_internal coordinates
+
+/-- Ordered finite-function encodings contain exactly one bit per input. -/
+@[simp] theorem length_encodeOrderedFunction
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (function : index → Bool) :
+    (encodeOrderedFunction function).length = Fintype.card index :=
+  length_encodeOrderedFunction_internal function
+
+/-- Exact round trip for Boolean functions on finite ordered domains. -/
+@[simp] theorem decodeOrderedFunction?_encodeOrderedFunction
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (function : index → Bool) :
+    decodeOrderedFunction? (encodeOrderedFunction function) = some function :=
+  decodeOrderedFunction?_encodeOrderedFunction_internal function
+
+/-- Canonical ordered finite-function encoding is injective. -/
+theorem encodeOrderedFunction_injective
+    {index : Type*} [Fintype index] [LinearOrder index] :
+    Function.Injective
+      (encodeOrderedFunction : (index → Bool) → List Bool) :=
+  encodeOrderedFunction_injective_internal
+
+/-- Ordered finite-function decoding fails exactly on malformed lengths. -/
+@[simp] theorem decodeOrderedFunction?_eq_none_iff
+    {index : Type*} [Fintype index] [LinearOrder index]
+    (bits : List Bool) :
+    decodeOrderedFunction? (index := index) bits = none ↔
+      bits.length ≠ Fintype.card index :=
+  decodeOrderedFunction?_eq_none_iff_internal bits
 
 /-- Assignment encodings contain exactly one bit per selected coordinate. -/
 @[simp] theorem length_encodeAssignment

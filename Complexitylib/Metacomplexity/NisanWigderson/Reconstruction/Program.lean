@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Internal
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Encoding
 
 /-!
 # Explicit NW reconstruction programs
@@ -14,7 +15,9 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program
 Checked finite certificates can be materialized into reconstruction programs
 that store every predecessor table used by their predictor. Program evaluation
 therefore has no hard-function oracle; the hard function is used only while
-materializing and subsequently scoring the stored predictor.
+materializing and subsequently scoring the stored predictor. The encoding
+submodule flattens every stored Boolean field into a canonical bit string with
+an exact decoder and length theorem.
 -/
 
 

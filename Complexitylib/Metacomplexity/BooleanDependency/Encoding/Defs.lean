@@ -43,6 +43,64 @@ def assignmentIndexEquiv {coordinate : Type*} [LinearOrder coordinate]
     apply Fin.ext
     simp [Fin.ofBits, Nat.ofBits_testBit, Nat.mod_eq_of_lt index.isLt]
 
+/-- Boolean assignments equipped with their canonical little-endian order. -/
+structure OrderedAssignment {coordinate : Type*} [LinearOrder coordinate]
+    (coordinates : Finset coordinate) where
+  /-- Underlying assignment. -/
+  toFun : coordinates → Bool
+
+namespace OrderedAssignment
+
+instance {coordinate : Type*} [LinearOrder coordinate]
+    {coordinates : Finset coordinate} :
+    CoeFun (OrderedAssignment coordinates) (fun _ => coordinates → Bool) :=
+  ⟨toFun⟩
+
+/-- Ordered assignments are canonically equivalent to their little-endian
+indices. -/
+def indexEquiv {coordinate : Type*} [LinearOrder coordinate]
+    (coordinates : Finset coordinate) :
+    OrderedAssignment coordinates ≃ Fin (2 ^ coordinates.card) where
+  toFun assignment := assignmentIndexEquiv coordinates assignment.toFun
+  invFun index := ⟨(assignmentIndexEquiv coordinates).symm index⟩
+  left_inv assignment := by cases assignment; simp
+  right_inv index := by simp
+
+instance {coordinate : Type*} [LinearOrder coordinate]
+    {coordinates : Finset coordinate} :
+    DecidableEq (OrderedAssignment coordinates) :=
+  (indexEquiv coordinates).decidableEq
+
+instance {coordinate : Type*} [LinearOrder coordinate]
+    {coordinates : Finset coordinate} :
+    Fintype (OrderedAssignment coordinates) :=
+  Fintype.ofEquiv (Fin (2 ^ coordinates.card))
+    (indexEquiv coordinates).symm
+
+instance {coordinate : Type*} [LinearOrder coordinate]
+    {coordinates : Finset coordinate} :
+    LinearOrder (OrderedAssignment coordinates) :=
+  (indexEquiv coordinates).linearOrder
+
+end OrderedAssignment
+
+/-- Encode a Boolean function on any finite linearly ordered domain. -/
+def encodeOrderedFunction {index : Type*} [Fintype index] [LinearOrder index]
+    (function : index → Bool) : List Bool :=
+  List.ofFn fun position : Fin (Fintype.card index) =>
+    function (Fintype.orderIsoFinOfCardEq index rfl position)
+
+/-- Decode a Boolean function on a finite linearly ordered domain only from a
+bit string with exactly one entry per domain element. -/
+def decodeOrderedFunction? {index : Type*} [Fintype index] [LinearOrder index]
+    (bits : List Bool) : Option (index → Bool) :=
+  if hlength : bits.length = Fintype.card index then
+    some fun input =>
+      let position := (Fintype.orderIsoFinOfCardEq index rfl).symm input
+      bits.get ⟨position.val, by rw [hlength]; exact position.isLt⟩
+  else
+    none
+
 /-- Encode one assignment by listing its coordinate values in increasing
 coordinate order. -/
 def encodeAssignment {coordinate : Type*} [LinearOrder coordinate]
