@@ -35,6 +35,16 @@ def roundPrecision (arity : ℕ) : ℕ :=
 def roundShrinkDenominator (arity : ℕ) : ℕ :=
   4 * arity
 
+/-- Number of halving blocks needed to exceed the canonical initial survivor
+count by a factor of two. -/
+def roundBlockCount (beta : PositiveRationalScale) (arity : ℕ) : ℕ :=
+  AntiChecker.codeLengthBound arity (smallThreshold beta arity) + 2
+
+/-- Number of shrinking rounds used before padding to the published sample
+count. -/
+def requiredRoundCount (beta : PositiveRationalScale) (arity : ℕ) : ℕ :=
+  roundShrinkDenominator arity * roundBlockCount beta arity
+
 /-- A semantic extension estimator satisfies the required relative-count
 contract at every sample prefix for the selected small-circuit threshold. -/
 def IsAccurateRoundEstimator {arity : ℕ}

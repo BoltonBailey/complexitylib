@@ -6,8 +6,12 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds.Defs
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting.Internal
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.Internal
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Selection.Internal
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.GoodString
+import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters.Internal
+import Complexitylib.Metacomplexity.ScaledExponent
 
 /-!
 # Anti-Checker Lemma round parameters -- proof internals
@@ -23,6 +27,93 @@ namespace GapMCSP
 namespace Magnification
 
 namespace AntiCheckerLemma
+
+theorem initialCandidateSurvivorCount_lt_two_pow_roundBlockCount_internal
+    {arity : ℕ} (beta : PositiveRationalScale)
+    (target : BitString arity → Bool) :
+    AntiChecker.candidateSurvivorCount target
+        (smallThreshold beta arity) [] <
+      2 ^ roundBlockCount beta arity := by
+  rw [AntiChecker.candidateSurvivorCount_nil_internal]
+  calc
+    (AntiChecker.candidateCodes arity
+          (smallThreshold beta arity)).card ≤
+        2 ^ (AntiChecker.codeLengthBound arity
+          (smallThreshold beta arity) + 1) :=
+      AntiChecker.card_candidateCodes_le_internal
+        arity (smallThreshold beta arity)
+    _ < 2 ^ (AntiChecker.codeLengthBound arity
+          (smallThreshold beta arity) + 2) :=
+      Nat.pow_lt_pow_right (by omega) (by omega)
+    _ = 2 ^ roundBlockCount beta arity := rfl
+
+theorem eventually_requiredRoundCount_le_sampleCount_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      requiredRoundCount beta arity ≤ sampleCount beta arity := by
+  have harityBound :=
+    PositiveRationalScale.eventually_coefficient_mul_succ_pow_le_powFloor
+      beta 1 1
+  have hconstantBound :=
+    PositiveRationalScale.eventually_coefficient_mul_succ_pow_le_powFloor
+      beta 52 0
+  filter_upwards [harityBound, hconstantBound]
+      with arity harityBound hconstantBound
+  let hard := hardThreshold beta arity
+  let small := smallThreshold beta arity
+  have hhardPos : 0 < hard := by
+    dsimp only [hard]
+    exact PositiveRationalScale.powFloor_pos beta arity
+  have harityLe : arity ≤ hard := by
+    change arity ≤ beta.powFloor arity
+    have : arity + 1 ≤ beta.powFloor arity := by
+      simpa using harityBound
+    omega
+  have hconstantLe : 52 ≤ hard := by
+    change 52 ≤ beta.powFloor arity
+    simpa using hconstantBound
+  have hsmallLe : small ≤ hard := by
+    dsimp only [small, hard]
+    exact smallThreshold_le_hardThreshold_internal beta arity
+  have hinterior :
+      2 * (arity + small) + 6 ≤ 4 * hard + 6 := by
+    omega
+  have hblockBound :
+      AntiChecker.codeLengthBound arity small + 2 ≤
+        13 * hard ^ 2 := by
+    unfold AntiChecker.codeLengthBound
+    calc
+      1 + small * (2 * (arity + small) + 6) + 2 ≤
+          1 + hard * (4 * hard + 6) + 2 :=
+        Nat.add_le_add_right
+          (Nat.add_le_add_left
+            (Nat.mul_le_mul hsmallLe hinterior) 1) 2
+      _ ≤ 13 * hard ^ 2 := by
+        nlinarith
+  have hrequiredLe : requiredRoundCount beta arity ≤ hard ^ 4 := by
+    unfold requiredRoundCount roundShrinkDenominator roundBlockCount
+    dsimp only [small] at hblockBound
+    calc
+      4 * arity *
+            (AntiChecker.codeLengthBound arity
+              (smallThreshold beta arity) + 2) ≤
+          4 * hard * (13 * hard ^ 2) :=
+        Nat.mul_le_mul
+          (Nat.mul_le_mul_left 4 harityLe) hblockBound
+      _ = 52 * hard ^ 3 := by ring
+      _ ≤ hard * hard ^ 3 :=
+        Nat.mul_le_mul_right (hard ^ 3) hconstantLe
+      _ = hard ^ 4 := by ring
+  calc
+    requiredRoundCount beta arity ≤ hard ^ 4 := hrequiredLe
+    _ ≤ beta.powFloor (4 * arity) := by
+      dsimp only [hard]
+      exact PositiveRationalScale.powFloor_pow_le_mul beta arity 4
+    _ ≤ beta.powFloor (fixedConstant * arity) :=
+      PositiveRationalScale.powFloor_mono beta (by
+        unfold fixedConstant
+        omega)
+    _ = sampleCount beta arity := rfl
 
 theorem eventually_exists_shrinkTrace_of_isHardAt_internal
     (beta : PositiveRationalScale) :

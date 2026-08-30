@@ -28,6 +28,25 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+/-- The initial canonical survivor count is strictly below the power of two
+indexed by the selected number of halving blocks. -/
+theorem initialCandidateSurvivorCount_lt_two_pow_roundBlockCount
+    {arity : ℕ} (beta : PositiveRationalScale)
+    (target : BitString arity → Bool) :
+    AntiChecker.candidateSurvivorCount target
+        (smallThreshold beta arity) [] <
+      2 ^ roundBlockCount beta arity :=
+  initialCandidateSurvivorCount_lt_two_pow_roundBlockCount_internal
+    beta target
+
+/-- The published sample count eventually covers every shrinking round needed
+by the canonical circuit-code cardinality bound. -/
+theorem eventually_requiredRoundCount_le_sampleCount
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      requiredRoundCount beta arity ≤ sampleCount beta arity :=
+  eventually_requiredRoundCount_le_sampleCount_internal beta
+
 /-- For every sufficiently large arity, any accurate round estimator produces
 a `1/(4n)` shrink trace of any requested length for every hard target. -/
 theorem eventually_exists_shrinkTrace_of_isHardAt
