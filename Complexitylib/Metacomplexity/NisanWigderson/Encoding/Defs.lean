@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Defs
+public import Complexitylib.Encoding.BinaryNat
+public import Complexitylib.Encoding.Pairing
 public import Complexitylib.Mathlib.NatBits
 
 /-!
@@ -104,6 +106,68 @@ def decode?
       none
   else
     none
+
+/-- All numeric parameters and the design needed by one uniform NW decoder
+invocation. Recording `inputLength` explicitly lets a parser recover the raw
+coordinate-table dimensions without evaluating a code-family function. -/
+structure DecoderInstance where
+  /-- Source-message length used by the list-code family. -/
+  messageLength : ℕ
+  /-- Inverse list-decoding accuracy. -/
+  inverseAccuracy : ℕ
+  /-- Number of NW output coordinates. -/
+  outputLength : ℕ
+  /-- Number of seed coordinates read by each design block. -/
+  inputLength : ℕ
+  /-- Total NW seed length. -/
+  seedLength : ℕ
+  /-- The parameterized NW design. -/
+  design : NWDesign outputLength inputLength seedLength
+
+namespace DecoderInstance
+
+/-- Canonical self-describing encoding of a uniform-decoder instance. Five
+framed minimal binary naturals precede the fixed-width design table. -/
+def encode (data : DecoderInstance) : List Bool :=
+  pair (BinaryNatCode.encode data.messageLength) <|
+    pair (BinaryNatCode.encode data.inverseAccuracy) <|
+      pair (BinaryNatCode.encode data.outputLength) <|
+        pair (BinaryNatCode.encode data.inputLength) <|
+          pair (BinaryNatCode.encode data.seedLength) data.design.encode
+
+/-- Parse a self-describing uniform-decoder instance, rejecting noncanonical
+natural codes, malformed pair boundaries, and invalid design tables. -/
+def decode? (bits : List Bool) : Option DecoderInstance := do
+  let (messageLengthBits, rest) ← unpair? bits
+  let messageLength ← BinaryNatCode.decode? messageLengthBits
+  let (inverseAccuracyBits, rest) ← unpair? rest
+  let inverseAccuracy ← BinaryNatCode.decode? inverseAccuracyBits
+  let (outputLengthBits, rest) ← unpair? rest
+  let outputLength ← BinaryNatCode.decode? outputLengthBits
+  let (inputLengthBits, rest) ← unpair? rest
+  let inputLength ← BinaryNatCode.decode? inputLengthBits
+  let (seedLengthBits, designBits) ← unpair? rest
+  let seedLength ← BinaryNatCode.decode? seedLengthBits
+  let design ← NWDesign.decode? outputLength inputLength seedLength designBits
+  pure {
+    messageLength := messageLength
+    inverseAccuracy := inverseAccuracy
+    outputLength := outputLength
+    inputLength := inputLength
+    seedLength := seedLength
+    design := design
+  }
+
+end DecoderInstance
+
+/-- Package a design with the two list-code parameters needed by a uniform
+decoder. -/
+def decoderInstance
+    {outputLength inputLength seedLength : ℕ}
+    (messageLength inverseAccuracy : ℕ)
+    (design : NWDesign outputLength inputLength seedLength) : DecoderInstance :=
+  { messageLength, inverseAccuracy, outputLength, inputLength, seedLength,
+    design }
 
 end NWDesign
 

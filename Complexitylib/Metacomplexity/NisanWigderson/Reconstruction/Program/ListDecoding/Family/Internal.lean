@@ -76,7 +76,8 @@ theorem uniformOracleTimeBoundedKolmogorovComplexity_le_internal
   obtain ⟨description, hdecode, hlength⟩ := hcertificate
   have hproduce := realization.correct design test description message hdecode
   have hframedLength :
-      (pair design.encode description).length ≤
+      (pair (decoderInstance messageLength inverseAccuracy design).encode
+        description).length ≤
         UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
           design bound := by
     simp [UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound]
@@ -98,11 +99,15 @@ theorem framedDescriptionBound_eq_internal
       (family.coordinateLength messageLength inverseAccuracy) seedLength)
     (descriptionBound : ℕ) :
     framedDescriptionBound design descriptionBound =
-      2 * (outputLength *
+      4 * (messageLength.size + inverseAccuracy.size + outputLength.size +
+          (family.coordinateLength messageLength inverseAccuracy).size +
+          seedLength.size) + 22 +
+        2 * (outputLength *
           family.coordinateLength messageLength inverseAccuracy *
-          Fin.bitWidth seedLength) + 2 + descriptionBound := by
+          Fin.bitWidth seedLength) + descriptionBound := by
   simp [UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound,
-    length_encode_internal]
+    DecoderInstance.length_encode_internal, decoderInstance]
+  omega
 
 theorem inverseDensityFramedDescriptionBound_eq_internal
     {family : BooleanListCodeFamily}
@@ -113,10 +118,16 @@ theorem inverseDensityFramedDescriptionBound_eq_internal
         (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength)
     (budget : ℕ) :
     inverseDensityFramedDescriptionBound bounds design budget =
-      2 * (outputLength *
+      4 * (messageLength.size +
+          (reconstructionInverseAccuracy outputLength inverseDensity).size +
+          outputLength.size +
+          (family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).size +
+          seedLength.size) + 22 +
+        2 * (outputLength *
           family.coordinateLength messageLength
             (reconstructionInverseAccuracy outputLength inverseDensity) *
-          Fin.bitWidth seedLength) + 2 +
+          Fin.bitWidth seedLength) +
         inverseDensityDescriptionBound family bounds messageLength outputLength
           inverseDensity seedLength budget := by
   simp [inverseDensityFramedDescriptionBound,

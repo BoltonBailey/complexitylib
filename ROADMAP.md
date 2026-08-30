@@ -3147,12 +3147,17 @@ meta-computational notation hides several incompatible choices; expose them.
   `clog_2(seedLength)` bits, has total length
   `outputLength * inputLength * clog_2(seedLength)`, and has an executable
   decoder that rejects malformed lengths, out-of-range coordinates, and
-  noninjective blocks while round-tripping every valid design. The uniform
-  oracle realization now uses this codec by construction, so its framed cost is
-  exactly twice that rectangular length plus two framing bits and the
-  reconstruction-description bound. Thus the remaining uniformity work is the
-  concrete decoder-machine construction and runtime proof, not a hidden codec
-  or compiler constant.
+  noninjective blocks while round-tripping every valid design. A second
+  self-describing codec frames the message length, inverse accuracy, output
+  length, block-input length, and seed length as canonical minimal binary
+  naturals before that table; its parser round-trips the full dependent design
+  instance. The uniform oracle realization now uses this self-describing codec
+  by construction, so one decoder can recover every dimension from its input.
+  After the outer program pairing, the exact cost is four times the sum of the
+  five binary parameter widths, plus `22`, twice the rectangular table length,
+  and the reconstruction-description bound. Thus the remaining uniformity work
+  is the concrete decoder-machine construction and runtime proof, not a hidden
+  codec, ambient parameter, or compiler constant.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
   bounded oracle-free ambient codec, constructing machine/runtime realizers for

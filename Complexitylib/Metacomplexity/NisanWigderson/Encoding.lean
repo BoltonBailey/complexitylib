@@ -15,7 +15,8 @@ The complete ordered coordinate table is encoded injectively using exactly
 `outputLength * inputLength * clog_2(seedLength)` bits. The executable decoder
 rejects malformed lengths, out-of-range coordinates, and noninjective blocks,
 round-trips every valid design, and accepts only that design's canonical
-encoding.
+encoding. A nested self-delimiting wrapper also records all numeric parameters
+needed by one uniform list-decoder invocation.
 -/
 
 
@@ -75,6 +76,35 @@ theorem decode?_eq_some_iff
     decode? outputLength inputLength seedLength bits = some design ↔
       bits = design.encode :=
   decode?_eq_some_iff_internal bits design
+
+namespace DecoderInstance
+
+/-- A self-describing decoder instance has the exact cost of five framed
+minimal binary parameters followed by the raw coordinate table. -/
+@[simp] theorem length_encode (data : DecoderInstance) :
+    data.encode.length =
+      2 * (data.messageLength.size + data.inverseAccuracy.size +
+        data.outputLength.size + data.inputLength.size + data.seedLength.size) +
+        10 +
+      data.outputLength * data.inputLength * Fin.bitWidth data.seedLength :=
+  data.length_encode_internal
+
+/-- The self-describing instance decoder round-trips every valid instance. -/
+@[simp] theorem decode?_encode (data : DecoderInstance) :
+    DecoderInstance.decode? data.encode = some data :=
+  data.decode?_encode_internal
+
+/-- Parsing yields a given self-describing instance exactly on its canonical
+encoding. -/
+theorem decode?_eq_some_iff (bits : List Bool) (data : DecoderInstance) :
+    DecoderInstance.decode? bits = some data ↔ bits = data.encode :=
+  decode?_eq_some_iff_internal bits data
+
+/-- Self-describing decoder-instance encoding is injective. -/
+theorem encode_injective : Function.Injective DecoderInstance.encode :=
+  encode_injective_internal
+
+end DecoderInstance
 
 end NWDesign
 

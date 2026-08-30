@@ -152,6 +152,49 @@ theorem encode_injective_internal
     (decode? outputLength inputLength seedLength) hencode
   simpa only [decode?_encode_internal, Option.some.injEq] using hdecode
 
+theorem DecoderInstance.length_encode_internal (data : DecoderInstance) :
+    data.encode.length =
+      2 * (data.messageLength.size + data.inverseAccuracy.size +
+        data.outputLength.size + data.inputLength.size + data.seedLength.size) +
+        10 +
+      data.outputLength * data.inputLength * Fin.bitWidth data.seedLength := by
+  simp only [DecoderInstance.encode, pair_length,
+    BinaryNatCode.length_encode]
+  rw [NWDesign.length_encode_internal]
+  omega
+
+theorem DecoderInstance.decode?_encode_internal (data : DecoderInstance) :
+    DecoderInstance.decode? data.encode = some data := by
+  cases data
+  simp [DecoderInstance.decode?, DecoderInstance.encode]
+  rw [NWDesign.decode?_encode_internal]
+  rfl
+
+theorem DecoderInstance.decode?_eq_some_iff_internal
+    (bits : List Bool) (data : DecoderInstance) :
+    DecoderInstance.decode? bits = some data ↔ bits = data.encode := by
+  cases data with
+  | mk messageLength inverseAccuracy outputLength inputLength seedLength design =>
+      simp [DecoderInstance.decode?, DecoderInstance.encode,
+        Option.bind_eq_some_iff, unpair?_eq_some_iff,
+        BinaryNatCode.decode?_eq_some_iff,
+        NWDesign.decode?_eq_some_iff_internal]
+      constructor
+      · rintro ⟨decodedOutputLength, decodedInputLength, decodedSeedLength,
+          decodedDesign, hbits, rfl, rfl, rfl, hdesign⟩
+        cases hdesign
+        exact hbits
+      · intro hbits
+        exact ⟨outputLength, inputLength, seedLength, design, hbits, rfl, rfl,
+          rfl, HEq.rfl⟩
+
+theorem DecoderInstance.encode_injective_internal :
+    Function.Injective DecoderInstance.encode := by
+  intro first second hencode
+  have hdecode := congrArg DecoderInstance.decode? hencode
+  simpa only [DecoderInstance.decode?_encode_internal, Option.some.injEq] using
+    hdecode
+
 end NWDesign
 
 end Complexity

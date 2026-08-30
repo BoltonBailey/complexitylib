@@ -130,9 +130,12 @@ namespace UniformOracleEncodedMessageDecoderRealization
       (family.coordinateLength messageLength inverseAccuracy) seedLength)
     (descriptionBound : ℕ) :
     framedDescriptionBound design descriptionBound =
-      2 * (outputLength *
+      4 * (messageLength.size + inverseAccuracy.size + outputLength.size +
+          (family.coordinateLength messageLength inverseAccuracy).size +
+          seedLength.size) + 22 +
+        2 * (outputLength *
           family.coordinateLength messageLength inverseAccuracy *
-          Fin.bitWidth seedLength) + 2 + descriptionBound :=
+          Fin.bitWidth seedLength) + descriptionBound :=
   framedDescriptionBound_eq_internal design descriptionBound
 
 /-- At inverse-density parameters, canonical design framing makes the complete
@@ -146,10 +149,16 @@ description bound an explicit arithmetic expression. -/
         (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength)
     (budget : ℕ) :
     inverseDensityFramedDescriptionBound bounds design budget =
-      2 * (outputLength *
+      4 * (messageLength.size +
+          (reconstructionInverseAccuracy outputLength inverseDensity).size +
+          outputLength.size +
+          (family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).size +
+          seedLength.size) + 22 +
+        2 * (outputLength *
           family.coordinateLength messageLength
             (reconstructionInverseAccuracy outputLength inverseDensity) *
-          Fin.bitWidth seedLength) + 2 +
+          Fin.bitWidth seedLength) +
         inverseDensityDescriptionBound family bounds messageLength outputLength
           inverseDensity seedLength budget :=
   inverseDensityFramedDescriptionBound_eq_internal bounds design budget

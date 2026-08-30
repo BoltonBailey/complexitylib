@@ -114,9 +114,9 @@ def inverseDensityFramedDescriptionBound
 end UniformEncodedMessageDecoderRealization
 
 /-- A single oracle decoder machine for every instance of one Boolean
-list-code family. The NW design is supplied by its canonical fixed-width codec;
-the statistical test remains separate oracle access and contributes no program
-bits. -/
+list-code family. All numeric parameters and the NW design are supplied by the
+canonical self-describing instance codec; the statistical test remains separate
+oracle access and contributes no program bits. -/
 structure UniformOracleEncodedMessageDecoderRealization
     (family : BooleanListCodeFamily) where
   /-- Number of ordinary work tapes in addition to the query tape. -/
@@ -138,8 +138,11 @@ structure UniformOracleEncodedMessageDecoderRealization
       decodeIndexedMessage? design (family.code messageLength inverseAccuracy)
           test description = some message →
         machine.ProducesInTime (finiteTestOracle test)
-          (pair design.encode description) (List.ofFn message)
-          (time (pair design.encode description).length)
+          (pair (decoderInstance messageLength inverseAccuracy design).encode
+            description) (List.ofFn message)
+          (time (pair
+            (decoderInstance messageLength inverseAccuracy design).encode
+            description).length)
 
 namespace UniformOracleEncodedMessageDecoderRealization
 
@@ -151,7 +154,8 @@ def framedDescriptionBound
     (design : NWDesign outputLength
       (family.coordinateLength messageLength inverseAccuracy) seedLength)
     (descriptionBound : ℕ) : ℕ :=
-  2 * design.encode.length + 2 + descriptionBound
+  2 * (decoderInstance messageLength inverseAccuracy design).encode.length +
+    2 + descriptionBound
 
 /-- Total framed program bound at the canonical inverse-density parameters. -/
 def inverseDensityFramedDescriptionBound
