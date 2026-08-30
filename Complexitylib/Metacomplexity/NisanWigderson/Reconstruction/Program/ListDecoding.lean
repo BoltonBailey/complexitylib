@@ -33,6 +33,8 @@ design and test, without conflating explicit input with oracle access.
 Separately, an oracle decoder realization keeps the design and code fixed but
 handles every finite test through its canonical membership oracle, yielding a
 machine-relative oracle `C^{t,A}` certificate with no test bits in the program.
+Every oracle machine satisfying the oracle-uniform efficient-universality
+interface inherits those bounds with constants chosen before the test oracle.
 -/
 
 
@@ -136,6 +138,32 @@ theorem oracleTimeBoundedKolmogorovComplexity_le
   hcertificate.oracleTimeBoundedKolmogorovComplexity_le_internal realization
 
 end HasEncodedMessageCertificateWithin
+
+namespace OracleEncodedMessageDecoderRealization
+
+/-- Every efficiently universal oracle machine inherits the decoded
+description bound using one compiler constant and polynomial clock shared by
+all finite test oracles. -/
+theorem efficientlyUniversal_transfer
+    {messageLength listSize outputLength inputLength seedLength
+      universalTapes : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    (realization : OracleEncodedMessageDecoderRealization design code)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ (test : Finset (Fin outputLength → Bool))
+        (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design code test message bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ) :=
+  realization.efficientlyUniversal_transfer_internal universal huniversal
+
+end OracleEncodedMessageDecoderRealization
 
 /-- Every efficiently universal machine inherits the decoded-description bound
 with the universal compiler's additive constant and an explicit polynomially

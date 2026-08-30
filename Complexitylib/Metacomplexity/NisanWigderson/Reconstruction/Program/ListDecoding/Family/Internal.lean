@@ -479,6 +479,88 @@ theorem half_le_oracleTimeBoundedKolmogorovComplexity_of_inverseDensity_internal
   exact hcertificate.oracleTimeBoundedKolmogorovComplexity_le_internal
     realization
 
+theorem half_le_efficientlyUniversalOracleKolmogorovComplexity_of_inverseDensity_internal
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget universalTapes : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (realization : OracleEncodedMessageDecoderRealization design
+      (family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)))
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal)
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ constant coefficient exponent,
+      (∀ (otherTest : Finset (Fin outputLength → Bool))
+        (otherMessage : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design
+            (family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity))
+            otherTest otherMessage bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle otherTest) (List.ofFn otherMessage)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ)) ∧
+        1 / 2 ≤
+          design.checkedReconstructionBatchSuccessProbability
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+            (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) ∧
+        ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) →
+            ReconstructionTrial outputLength seedLength) certificate,
+          design.findGoodReconstructionCertificate?
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+            some certificate →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (inverseDensityDescriptionBound family bounds messageLength
+                    outputLength inverseDensity seedLength budget +
+                  realization.time
+                    (inverseDensityDescriptionBound family bounds messageLength
+                      outputLength inverseDensity seedLength budget) + 1) ^
+                    exponent) ≤
+            (inverseDensityDescriptionBound family bounds messageLength
+              outputLength inverseDensity seedLength budget + constant : ℕ) := by
+  obtain ⟨constant, coefficient, exponent, htransfer⟩ :=
+    realization.efficientlyUniversal_transfer_internal universal huniversal
+  obtain ⟨hhalf, hcertificates⟩ :=
+    half_le_encodedMessageCertificate_of_inverseDensity_internal
+      family hfamily bounds houtputLength hinverseDensity hlow hrandom hdense
+        hbudget
+  refine ⟨constant, coefficient, exponent, htransfer, hhalf, ?_⟩
+  intro batch certificate hfind
+  exact htransfer test message
+    (inverseDensityDescriptionBound family bounds messageLength outputLength
+      inverseDensity seedLength budget)
+    (hcertificates batch certificate hfind)
+
 theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
     {messageLength outputLength inverseDensity seedLength tapes time
       threshold budget universalTapes : ℕ}

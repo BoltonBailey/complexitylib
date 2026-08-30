@@ -26,6 +26,8 @@ A family-uniform realization chooses those constants before all ambient
 instances and charges the explicit design/test encoding in the description.
 An oracle-relative endpoint instead supplies the finite test through canonical
 membership queries and retains the original reconstruction-description bound.
+Its efficiently universal specialization exposes one transfer law valid for
+all finite test oracles before applying the half-success reconstruction result.
 -/
 
 
@@ -457,6 +459,85 @@ theorem half_le_oracleTimeBoundedKolmogorovComplexity_of_inverseDensity
   half_le_oracleTimeBoundedKolmogorovComplexity_of_inverseDensity_internal
     family hfamily bounds houtputLength hinverseDensity realization hlow hrandom
       hdense hbudget
+
+/-- End-to-end inverse-density reconstruction for an arbitrary efficiently
+universal oracle machine. The returned compiler constant and polynomial clock
+first satisfy a transfer law for every finite test oracle. Checked certificate
+search for the current test then succeeds with probability at least one half,
+and every returned certificate gives the source message the explicit
+reconstruction-description bound plus that constant. -/
+theorem half_le_efficientlyUniversalOracleKolmogorovComplexity_of_inverseDensity
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget universalTapes : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (realization : OracleEncodedMessageDecoderRealization design
+      (family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)))
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal)
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ constant coefficient exponent,
+      (∀ (otherTest : Finset (Fin outputLength → Bool))
+        (otherMessage : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design
+            (family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity))
+            otherTest otherMessage bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle otherTest) (List.ofFn otherMessage)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ)) ∧
+        1 / 2 ≤
+          design.checkedReconstructionBatchSuccessProbability
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+            (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) ∧
+        ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) →
+            ReconstructionTrial outputLength seedLength) certificate,
+          design.findGoodReconstructionCertificate?
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+            some certificate →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (inverseDensityDescriptionBound family bounds messageLength
+                    outputLength inverseDensity seedLength budget +
+                  realization.time
+                    (inverseDensityDescriptionBound family bounds messageLength
+                      outputLength inverseDensity seedLength budget) + 1) ^
+                    exponent) ≤
+            (inverseDensityDescriptionBound family bounds messageLength
+              outputLength inverseDensity seedLength budget + constant : ℕ) :=
+  half_le_efficientlyUniversalOracleKolmogorovComplexity_of_inverseDensity_internal
+    family hfamily bounds houtputLength hinverseDensity realization universal
+      huniversal hlow hrandom hdense hbudget
 
 /-- End-to-end inverse-density reconstruction for an arbitrary efficiently
 universal machine. Canonical sampling succeeds with probability at least one

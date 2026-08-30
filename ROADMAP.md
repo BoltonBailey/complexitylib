@@ -3135,8 +3135,11 @@ meta-computational notation hides several incompatible choices; expose them.
   decoder machine for a design/code pair handles every such test, and the
   inverse-density theorem yields the same half-success certificate bound in
   `C_M^{t,A}` without charging any test-truth-table bits to the program. This is
-  machine-relative; oracle-efficient universality and uniformity across the
-  remaining design/code parameters are still open.
+  now also transferred to any abstract efficiently universal oracle machine:
+  the public endpoint returns one compiler constant and polynomial clock with a
+  transfer law quantified over every finite test oracle before retaining the
+  half-success guarantee for the current test. Uniformity across the remaining
+  design/code parameters and a concrete universal oracle machine are still open.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
   bounded ambient codec or a family-uniform oracle decoder, constructing

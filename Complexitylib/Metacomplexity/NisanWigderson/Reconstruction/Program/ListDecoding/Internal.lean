@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Defs
+public import Complexitylib.Models.TuringMachine.Oracle.Universality.Defs
 import Complexitylib.Metacomplexity.ListDecoding.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Internal
@@ -123,6 +124,39 @@ theorem oracleTimeBoundedKolmogorovComplexity_le_internal
     (by exact_mod_cast hlength)
 
 end HasEncodedMessageCertificateWithin
+
+namespace OracleEncodedMessageDecoderRealization
+
+theorem efficientlyUniversal_transfer_internal
+    {messageLength listSize outputLength inputLength seedLength
+      universalTapes : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    (realization : OracleEncodedMessageDecoderRealization design code)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ (test : Finset (Fin outputLength → Bool))
+        (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design code test message bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ) := by
+  obtain ⟨compile, constant, clock, _hsim, hlength, htimed, hclock⟩ :=
+    huniversal realization.tapes realization.machine
+  obtain ⟨coefficient, exponent, htransfer⟩ :=
+    OracleTM.polynomialTimeOverhead_kolmogorov_transfer_internal
+      htimed hlength hclock
+  refine ⟨constant, coefficient, exponent, ?_⟩
+  intro test message bound hcertificate
+  exact htransfer (finiteTestOracle test) (List.ofFn message)
+    (realization.time bound) bound
+    (hcertificate.oracleTimeBoundedKolmogorovComplexity_le_internal
+      realization)
+
+end OracleEncodedMessageDecoderRealization
 
 theorem EncodedMessageDecoderRealization.efficientlyUniversal_transfer_internal
     {messageLength listSize outputLength inputLength seedLength
