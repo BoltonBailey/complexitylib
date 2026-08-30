@@ -1885,7 +1885,14 @@ Oversized binary thresholds are now capped at the proved unconditional bound
 `MCSP.RawWitnessRelation` is characterized exactly against MCSP membership and
 is `PolyBalanced`; its concrete witness envelope is a fixed polynomial in the
 canonical encoded instance length. This establishes the short-witness half of
-the NP argument, not the polynomial-time machine verifier. `PromiseProblem`
+the NP argument, not the polynomial-time machine verifier. `GapMCSP.Parameters`
+now gives the relaxed no-threshold as an explicit function of arity and the
+source threshold stored in the canonical instance. Its yes side is exactly
+ordinary MCSP, its no side requires minimum size strictly above the relaxed
+threshold, and malformed encodings remain outside the promise. Widening proves
+disjointness; source-threshold monotonicity and pointwise relaxation order give
+the exact yes/no containments, including an identity side-preserving reduction
+from a stricter gap to a weaker one. `PromiseProblem`
 now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
@@ -2019,6 +2026,9 @@ the mathematics and must not be hidden behind notation.
   - [x] Normalize oversized thresholds at a proved unconditional
     truth-table-square circuit bound, preserve yes/no semantics, and package the
     normalized witness relation as polynomially balanced in encoded input length.
+  - [x] Instantiate `GapMCSP` as a canonical two-threshold promise, prove
+    widening/disjointness and both threshold monotonicities, and derive identity
+    side-preserving reductions under pointwise relaxation order.
   - [ ] Prove that a machine implementation of the circuit decoder/evaluator
     verifies the normalized relation within a polynomial in truth-table input
     length `N`.
@@ -2071,8 +2081,9 @@ verified evaluators.
   zero-arity cases, and prove encode/decode round trips.
 - [M] Bound the number of size-`s` circuit descriptions and derive a finite
   incompressibility lemma for truth tables.
-- [M] Define `PromiseProblem` and deterministic many-one reductions with explicit
-  yes/no preservation, then instantiate `GapMCSP[s₁,s₂]`.
+- [x] Define `PromiseProblem` and deterministic many-one reductions with explicit
+  yes/no preservation, then instantiate canonical `GapMCSP` with an embedded
+  source threshold and an explicit relaxed-threshold map.
 
 ## Long-term tracks
 
@@ -2744,8 +2755,9 @@ not evidence that either the collapse or the desired lower bound has been proved
 
 **Small entry tasks.**
 
-- [S] Prove monotonicity and containment lemmas for `GapMCSP[s₁,s₂]` as either
-  threshold moves.
+- [x] Prove monotonicity and containment lemmas for canonical `GapMCSP` as either
+  threshold moves, including the induced identity promise reduction under
+  pointwise parameter order.
 - [M] Define a parameter-preserving promise reduction and prove composition with
   exact output-length and threshold maps.
 - [M] Add Hamming balls and the elementary packing/counting bounds used by the
