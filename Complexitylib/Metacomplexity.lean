@@ -24,6 +24,7 @@ public import Complexitylib.Metacomplexity.MCSP.Succinct
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Parameters
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Frontier
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker
 
 /-!
 # Metacomplexity

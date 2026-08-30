@@ -2876,13 +2876,16 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   typed and encoded SuccinctMCSP rejection bridges are done. The survivor-set
   construction now extracts a list of length at most the covering finite code
   set's cardinality under explicit coverage and pointwise-failure hypotheses.*
-- [ ] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (Lemma 17) as the
+- [~] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (Lemma 17) as the
   main conditional engine. Under `NP ⊆ PPoly`, construct the multi-output circuit
   that maps an `N`-bit truth table to `t = 2^(10*beta*n)` sample points using size
   `2^(n + k*beta*n)`; prove that functions above size `2^(beta*n)` yield an
   anti-checker against circuits of size `2^(beta*n)/(10*n)`. Isolate and prove the
   approximate-counting/circuit-enumeration sublemma rather than importing it as an
-  axiom.
+  axiom. *The floor-rounded hard and small thresholds, floor-rounded sample count,
+  ceiling-rounded generator bound, factor-two rounding slack, and exact link to the
+  existing GapMCSP parameter family are done. The typed multi-output generator
+  interface and the conditional construction remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
