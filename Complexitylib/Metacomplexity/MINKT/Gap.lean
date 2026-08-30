@@ -131,6 +131,14 @@ theorem yesWitnessRelation_polyBalanced {tapes : ℕ}
     PolyBalanced (YesWitnessRelation machine) :=
   yesWitnessRelation_polyBalanced_internal machine
 
+/-- Once its paired verifier language is in `P`, the direct GapMINKT
+yes-witness relation belongs to `FNP`; polynomial balance is unconditional. -/
+theorem yesWitnessRelation_mem_FNP_of_pairLang_mem_P {tapes : ℕ}
+    (machine : TM tapes)
+    (hverifier : pairLang (YesWitnessRelation machine) ∈ P) :
+    YesWitnessRelation machine ∈ FNP :=
+  yesWitnessRelation_mem_FNP_of_pairLang_mem_P_internal machine hverifier
+
 /-- The optimization search relation has a witness exactly when the source
 time-bounded complexity is finite. -/
 theorem exists_searchRelation_iff {tapes : ℕ}
@@ -220,5 +228,30 @@ theorem GapMINKT_solvedBy_decisionOfSearch
       hdescription hsearch hyes
   · intro bits hno
     exact GapMINKT.decisionOfSearch_eq_false_of_mem_noLanguage search hno
+
+/-- An FNP implementation of the direct yes-witness relation places GapMINKT
+in `PromiseNP`, conditional on the generic guess-and-verify NTM construction. -/
+theorem GapMINKT_mem_PromiseNP_of_yesWitnessRelation_mem_FNP
+    {tapes : ℕ} {machine : TM tapes} {parameters : GapMINKT.Parameters}
+    (hwidening : parameters.IsWidening)
+    (hwitness : NP.WitnessNTMConstruction)
+    (hrelation : GapMINKT.YesWitnessRelation machine ∈ FNP) :
+    GapMINKT machine parameters hwidening ∈ PromiseNP := by
+  apply PromiseProblem.mem_PromiseNP_of_FNP_witness
+    (GapMINKT machine parameters hwidening) hwitness hrelation
+  intro bits
+  exact GapMINKT.mem_yesLanguage_iff_exists_program machine bits
+
+/-- The remaining GapMINKT-specific `PromiseNP` obligation is a deterministic
+polynomial-time verifier for the paired direct-witness language. -/
+theorem GapMINKT_mem_PromiseNP_of_pairLang_mem_P
+    {tapes : ℕ} {machine : TM tapes} {parameters : GapMINKT.Parameters}
+    (hwidening : parameters.IsWidening)
+    (hwitness : NP.WitnessNTMConstruction)
+    (hverifier : pairLang (GapMINKT.YesWitnessRelation machine) ∈ P) :
+    GapMINKT machine parameters hwidening ∈ PromiseNP :=
+  GapMINKT_mem_PromiseNP_of_yesWitnessRelation_mem_FNP
+    hwidening hwitness
+      (GapMINKT.yesWitnessRelation_mem_FNP_of_pairLang_mem_P machine hverifier)
 
 end Complexity

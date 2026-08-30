@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.Promise.Defs
 public import Complexitylib.Classes.NP.Reduction
+public import Complexitylib.Classes.NP.Witness
 import Complexitylib.Classes.P
 import Complexitylib.Classes.NP.Closure
 import Complexitylib.Classes.Containments
@@ -170,6 +171,19 @@ theorem MapReducesPoly.mem_PromiseNP_internal
     source ∈ PromiseNP :=
   hred.mem_promiseClass_internal
     (fun hf hL => mem_NP_preimage hf hL) htarget
+
+theorem mem_PromiseNP_of_yesInstances_mem_NP_internal
+    (problem : PromiseProblem) (hyes : problem.yesInstances ∈ NP) :
+    problem ∈ PromiseNP :=
+  ⟨problem.yesInstances, hyes, fun _ hx => hx, problem.disjoint⟩
+
+theorem mem_PromiseNP_of_FNP_witness_internal
+    (problem : PromiseProblem) (hwitness : NP.WitnessNTMConstruction)
+    {R : List Bool → List Bool → Prop} (hR : R ∈ FNP)
+    (hchar : ∀ x, x ∈ problem.yesInstances ↔ ∃ y, R x y) :
+    problem ∈ PromiseNP :=
+  mem_PromiseNP_of_yesInstances_mem_NP_internal problem
+    (NP.mem_NP_of_FNP_witness hwitness hR hchar)
 
 end PromiseProblem
 

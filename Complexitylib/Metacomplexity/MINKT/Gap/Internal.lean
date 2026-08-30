@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.FNP.Defs
 public import Complexitylib.Metacomplexity.MINKT.Gap.Defs
 public import Complexitylib.Metacomplexity.MINKT.Internal
 
@@ -251,6 +252,12 @@ theorem yesWitnessRelation_polyBalanced_internal {tapes : ℕ}
   intro bits program hrelation
   simpa only [Polynomial.eval_X] using
     yesWitnessRelation_length_le_input_internal machine hrelation
+
+theorem yesWitnessRelation_mem_FNP_of_pairLang_mem_P_internal {tapes : ℕ}
+    (machine : TM tapes)
+    (hverifier : pairLang (YesWitnessRelation machine) ∈ P) :
+    YesWitnessRelation machine ∈ FNP :=
+  ⟨yesWitnessRelation_polyBalanced_internal machine, hverifier⟩
 
 theorem exists_searchRelation_iff_internal {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters)

@@ -132,6 +132,23 @@ theorem MapReducesPoly.mem_PromiseNP
     source ∈ PromiseNP :=
   hred.mem_PromiseNP_internal htarget
 
+/-- A promise problem belongs to `PromiseNP` whenever its yes-instance
+language itself belongs to `NP`. -/
+theorem mem_PromiseNP_of_yesInstances_mem_NP
+    (problem : PromiseProblem) (hyes : problem.yesInstances ∈ NP) :
+    problem ∈ PromiseNP :=
+  mem_PromiseNP_of_yesInstances_mem_NP_internal problem hyes
+
+/-- An FNP relation characterizing the promised yes-instances yields
+`PromiseNP` membership, conditional only on the generic guess-and-verify NTM
+construction. -/
+theorem mem_PromiseNP_of_FNP_witness
+    (problem : PromiseProblem) (hwitness : NP.WitnessNTMConstruction)
+    {R : List Bool → List Bool → Prop} (hR : R ∈ FNP)
+    (hchar : ∀ x, x ∈ problem.yesInstances ↔ ∃ y, R x y) :
+    problem ∈ PromiseNP :=
+  mem_PromiseNP_of_FNP_witness_internal problem hwitness hR hchar
+
 /-- A total embedded language lies in a lifted promise class exactly when the
 language lies in the underlying class. -/
 @[simp] theorem ofLanguage_mem_promiseClass_iff
@@ -230,6 +247,14 @@ theorem PromiseNPHard.P_eq_NP_of_mem_PromiseP
     (hmembership : target ∈ PromiseP) :
     P = NP :=
   hhard.P_eq_NP_of_mem_PromiseP_internal hmembership
+
+/-- Assuming `P ≠ NP`, no NP-hard promise target can have a deterministic
+polynomial-time completion. -/
+theorem PromiseNPHard.not_mem_PromiseP_of_P_ne_NP
+    {target : PromiseProblem} (hhard : PromiseNPHard target)
+    (hne : P ≠ NP) :
+    target ∉ PromiseP :=
+  fun hmembership => hne (hhard.P_eq_NP_of_mem_PromiseP hmembership)
 
 /-- A promise-NP-complete problem lies in `PromiseP` exactly if `P = NP`. -/
 theorem PromiseNPComplete.mem_PromiseP_iff_P_eq_NP

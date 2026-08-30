@@ -1757,7 +1757,11 @@ any search algorithm satisfying the approximation relation on finite inputs
 induces a semantic GapMINKT promise solver when `sigma(n,-)` is monotone. On
 promised no-instances the checker rejects independently of the search
 algorithm's behavior. The canonical yes-witness relation is linearly balanced:
-every source program is no longer than the unary-threshold instance code. The
+every source program is no longer than the unary-threshold instance code. Its
+conditional `PromiseNP` packaging is complete: membership follows from the
+generic guess-and-verify construction plus a `P` decider for the paired witness
+language. Thus polynomial balance has been discharged and the remaining
+GapMINKT-specific membership obligation is isolated as machine verification. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1800,7 +1804,10 @@ under polynomial-time preimages. In particular, `PromiseP ⊆ PromiseNP`, and
 promise target; this is proved equivalent to quantifying over every source in
 the lifted promise class. Thus `PromiseNPHard` and `PromiseNPComplete` agree
 exactly with ordinary `NPHard` and `NPComplete` on total embedded languages.
-A `PromiseNPHard` target in `PromiseP` collapses `P` and `NP`.
+A `PromiseNPHard` target in `PromiseP` collapses `P` and `NP`, so under
+`P ≠ NP` every such hard target is outside `PromiseP`. An FNP relation that
+characterizes the yes-instances also yields `PromiseNP` membership under the
+library's explicit generic guess-and-verify construction hypothesis.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
@@ -2825,9 +2832,12 @@ meta-computational notation hides several incompatible choices; expose them.
   codec, widening/disjointness theorem, direct witness semantics, and finite
   optimization-search relation are done. An executable relaxed-witness checker
   and the semantic search-to-decision implication are also done. The canonical
-  yes-witness relation is linearly `PolyBalanced`; polynomial-time machine
-  verification, parameter-sensitive balance for the optimization search
-  relation, and construction of the randomized search algorithm remain.*
+  yes-witness relation is linearly `PolyBalanced`, and its conditional
+  `PromiseNP` theorem reduces the problem-specific FNP obligation exactly to
+  polynomial-time machine verification of the paired relation. That verifier,
+  the generic guess-and-verify NTM construction, parameter-sensitive balance
+  for the optimization search relation, and construction of the randomized
+  search algorithm remain.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
