@@ -93,6 +93,28 @@ theorem eventually_exists_requiredShrinkTrace_of_isHardAt
                   (smallThreshold beta arity) inputs :=
   eventually_exists_requiredShrinkTrace_of_isHardAt_internal beta
 
+/-- For every sufficiently large positive arity, any required-length greedy
+estimate-selection trace from an accurate estimator becomes an anti-checker
+after canonical zero padding to the published sample count. -/
+theorem eventually_padInputsTo_isFor_of_isEstimateSelectionTrace
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ)
+          (inputs : List (BitString arity)),
+        IsHardAt beta target →
+          IsAccurateRequiredRoundEstimator beta target estimator →
+            inputs.length = requiredRoundCount beta arity →
+              AntiChecker.IsEstimateSelectionTrace estimator inputs →
+                (AntiChecker.padInputsTo (sampleCount beta arity) inputs).length =
+                    sampleCount beta arity ∧
+                  AntiChecker.IsFor target (smallThreshold beta arity)
+                    (AntiChecker.padInputsTo (sampleCount beta arity) inputs) :=
+  eventually_padInputsTo_isFor_of_isEstimateSelectionTrace_internal beta
+
 /-- For every sufficiently large arity, estimator accuracy through only the
 required rounds yields an anti-checker of exactly the published sample count
 for every hard target. -/

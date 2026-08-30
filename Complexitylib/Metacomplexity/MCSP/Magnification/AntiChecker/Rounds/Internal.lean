@@ -179,6 +179,58 @@ theorem eventually_exists_requiredShrinkTrace_of_isHardAt_internal
       (fun inputs => hgood target inputs hhard)
   simpa [roundShrinkDenominator, ← Nat.mul_assoc] using htrace
 
+theorem eventually_padInputsTo_isFor_of_isEstimateSelectionTrace_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ)
+          (inputs : List (BitString arity)),
+        IsHardAt beta target →
+          IsAccurateRequiredRoundEstimator beta target estimator →
+            inputs.length = requiredRoundCount beta arity →
+              AntiChecker.IsEstimateSelectionTrace estimator inputs →
+                (AntiChecker.padInputsTo (sampleCount beta arity) inputs).length =
+                    sampleCount beta arity ∧
+                  AntiChecker.IsFor target (smallThreshold beta arity)
+                    (AntiChecker.padInputsTo (sampleCount beta arity) inputs) := by
+  filter_upwards
+      [eventually_hasShrinkExtension_of_isHardAt beta,
+        eventually_requiredRoundCount_le_sampleCount_internal beta]
+      with arity hgood hbudget
+  intro harity target estimator inputs hhard hestimate hlength hselection
+  letI : NeZero arity := ⟨harity⟩
+  have hshrink' :=
+    hselection.isShrinkTrace_of_length_le_internal
+      (rounds := requiredRoundCount beta arity)
+      (precision := roundPrecision arity) (denominator := 2 * arity)
+      (by unfold roundPrecision; omega) (by omega)
+      (by unfold roundPrecision; omega) hestimate
+      (fun samplePrefix => hgood target samplePrefix hhard)
+      (by rw [hlength])
+  have hshrink :
+      AntiChecker.IsShrinkTrace (roundShrinkDenominator arity) target
+        (smallThreshold beta arity) inputs := by
+    simpa [roundShrinkDenominator, ← Nat.mul_assoc] using hshrink'
+  have hanti :
+      AntiChecker.IsFor target (smallThreshold beta arity) inputs := by
+    apply hshrink.isFor_of_initial_lt_two_pow_internal
+      (blocks := roundBlockCount beta arity)
+    · unfold roundShrinkDenominator
+      omega
+    · rw [hlength]
+      rfl
+    · exact
+        initialCandidateSurvivorCount_lt_two_pow_roundBlockCount_internal
+          beta target
+  have hlengthLe : inputs.length ≤ sampleCount beta arity := by
+    rw [hlength]
+    exact hbudget
+  exact ⟨AntiChecker.length_padInputsTo_internal hlengthLe,
+    hanti.padInputsTo_internal⟩
+
 theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal
     (beta : PositiveRationalScale) :
     ∀ᶠ arity : ℕ in Filter.atTop,
