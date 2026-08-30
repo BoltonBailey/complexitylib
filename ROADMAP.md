@@ -3209,9 +3209,12 @@ meta-computational notation hides several incompatible choices; expose them.
   theorem now derives paired bounded complexity from an explicit operational
   program-composition contract and arbitrary compiler-length bound. Canonical
   program pairing is instantiated in both orientations, retaining the exact
-  asymmetric codec costs. A concrete evaluator satisfying this contract with
-  the paper's additive overhead, the lower SoI inequality, and the chosen
-  universal evaluator remain.*
+  asymmetric codec costs. A distinct condition-first contract now prevents the
+  `C(y) + C(x | y)` evaluator from silently producing `pair y x`; under an
+  additive compiler bound it proves the exact upper inequality in terms of the
+  two attained minimum complexities. A concrete evaluator satisfying this
+  contract, its paper-level clock overhead, and the chosen universal evaluator
+  remain.*
 - [~] State time-bounded symmetry of information as a named machine-relative
   hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
   into dense-string, language-compression, and clock-accounting modules.
@@ -3228,9 +3231,10 @@ meta-computational notation hides several incompatible choices; expose them.
   *The evaluator-independent algebraic core is complete:
   `conditional_le_of_pair_upper` cancels the later-clock condition complexity
   and leaves exactly an alternative conditional description, two-clock depth,
-  the paired-program overhead, and the SoI loss. Constructing the paired upper
-  bound, lifting the inequality to gap promises, and the hardness/class bridge
-  remain.*
+  the paired-program overhead, and the SoI loss. The generic condition-first
+  composition theorem supplies the required paired upper bound from a concrete
+  evaluator contract and additive compiler. Constructing that evaluator,
+  lifting the inequality to gap promises, and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3279,6 +3283,8 @@ formalization targets and should be stated positively under their exact names.
   polynomial clock, logarithmic loss, pair codec, and finiteness consequences.
 - [x] Prove the SoI depth-loss cancellation lemma from an arbitrary explicit
   paired-description upper bound.
+- [x] Add the condition-first composition orientation and derive the additive
+  paired upper bound directly in terms of attained minimum complexities.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

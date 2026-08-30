@@ -138,4 +138,110 @@ theorem timeBoundedKolmogorovComplexity_pair_le_of_reverse_pair_composition_inte
   rw [pair_length]
   omega
 
+theorem TimeBoundedConditionalPairCompositionAt.restrict_bounds_internal
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime jointTime conditionBound resultBound : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime jointTime conditionBound resultBound)
+    {smallerConditionBound smallerResultBound : ℕ}
+    (hcondition : smallerConditionBound ≤ conditionBound)
+    (hresult : smallerResultBound ≤ resultBound) :
+    TimeBoundedConditionalPairCompositionAt jointMachine conditionMachine
+      resultMachine compile result condition conditionTime resultTime jointTime
+      smallerConditionBound smallerResultBound := by
+  intro conditionProgram resultProgram hconditionLength hresultLength
+    hconditionProduce hresultProduce
+  exact hcompose conditionProgram resultProgram
+    (hconditionLength.trans hcondition) (hresultLength.trans hresult)
+    hconditionProduce hresultProduce
+
+theorem TimeBoundedConditionalPairCompositionAt.mono_jointTime_internal
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime firstJointTime secondJointTime
+      conditionBound resultBound : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime firstJointTime conditionBound resultBound)
+    (hjoint : firstJointTime ≤ secondJointTime) :
+    TimeBoundedConditionalPairCompositionAt jointMachine conditionMachine
+      resultMachine compile result condition conditionTime resultTime
+      secondJointTime conditionBound resultBound := by
+  intro conditionProgram resultProgram hconditionLength hresultLength
+    hconditionProduce hresultProduce
+  exact (hcompose conditionProgram resultProgram hconditionLength hresultLength
+    hconditionProduce hresultProduce).mono hjoint
+
+theorem timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition_internal
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime jointTime conditionBound resultBound constant : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime jointTime conditionBound resultBound)
+    (hlength : ∀ conditionProgram resultProgram,
+      conditionProgram.length ≤ conditionBound →
+      resultProgram.length ≤ resultBound →
+      (compile conditionProgram resultProgram).length ≤
+        resultProgram.length + conditionProgram.length + constant)
+    (hconditionFinite : conditionMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≠ ⊤)
+    (hresultFinite :
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        result condition resultTime ≠ ⊤)
+    (hconditionBound : conditionMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≤ (conditionBound : WithTop ℕ))
+    (hresultBound :
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        result condition resultTime ≤ (resultBound : WithTop ℕ)) :
+    jointMachine.timeBoundedKolmogorovComplexity
+        (pair result condition) jointTime ≤
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            result condition resultTime +
+          conditionMachine.timeBoundedKolmogorovComplexity
+            condition conditionTime +
+        (constant : WithTop ℕ) := by
+  obtain ⟨conditionProgram, hconditionValue, hconditionProduce⟩ :=
+    TM.timeBoundedKolmogorovComplexity_witness_internal
+      conditionMachine condition conditionTime hconditionFinite
+  obtain ⟨resultProgram, hresultValue, hresultProduce⟩ :=
+    OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity_witness_internal
+      resultMachine result condition resultTime hresultFinite
+  have hconditionLength : conditionProgram.length ≤ conditionBound := by
+    have hbound := hconditionBound
+    rw [← hconditionValue] at hbound
+    exact (WithTop.coe_le_coe (α := ℕ)).mp hbound
+  have hresultLength : resultProgram.length ≤ resultBound := by
+    have hbound := hresultBound
+    rw [← hresultValue] at hbound
+    exact (WithTop.coe_le_coe (α := ℕ)).mp hbound
+  calc
+    jointMachine.timeBoundedKolmogorovComplexity
+          (pair result condition) jointTime ≤
+        ((compile conditionProgram resultProgram).length : ℕ) :=
+      TM.timeBoundedKolmogorovComplexity_le_internal <|
+        hcompose conditionProgram resultProgram hconditionLength hresultLength
+          hconditionProduce hresultProduce
+    _ ≤ (resultProgram.length + conditionProgram.length + constant : ℕ) :=
+      WithTop.coe_le_coe.mpr <|
+        hlength conditionProgram resultProgram hconditionLength hresultLength
+    _ = resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+              result condition resultTime +
+            conditionMachine.timeBoundedKolmogorovComplexity
+              condition conditionTime +
+          (constant : WithTop ℕ) := by
+      rw [← hresultValue, ← hconditionValue]
+      rfl
+
 end Complexity

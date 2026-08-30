@@ -133,4 +133,83 @@ theorem timeBoundedKolmogorovComplexity_pair_le_of_reverse_pair_composition
   timeBoundedKolmogorovComplexity_pair_le_of_reverse_pair_composition_internal
     hcompose hfirst hsecond
 
+/-- A condition-first composition contract remains valid after restricting its
+two description budgets. -/
+theorem TimeBoundedConditionalPairCompositionAt.restrict_bounds
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime jointTime conditionBound resultBound : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime jointTime conditionBound resultBound)
+    {smallerConditionBound smallerResultBound : ℕ}
+    (hcondition : smallerConditionBound ≤ conditionBound)
+    (hresult : smallerResultBound ≤ resultBound) :
+    TimeBoundedConditionalPairCompositionAt jointMachine conditionMachine
+      resultMachine compile result condition conditionTime resultTime jointTime
+      smallerConditionBound smallerResultBound :=
+  hcompose.restrict_bounds_internal hcondition hresult
+
+/-- Enlarging the target clock preserves a condition-first composition
+contract. -/
+theorem TimeBoundedConditionalPairCompositionAt.mono_jointTime
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime firstJointTime secondJointTime
+      conditionBound resultBound : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime firstJointTime conditionBound resultBound)
+    (hjoint : firstJointTime ≤ secondJointTime) :
+    TimeBoundedConditionalPairCompositionAt jointMachine conditionMachine
+      resultMachine compile result condition conditionTime resultTime
+      secondJointTime conditionBound resultBound :=
+  hcompose.mono_jointTime_internal hjoint
+
+/-- A condition-first compiler with additive encoded length gives the exact
+upper chain rule
+`C(pair result condition) ≤ C(result | condition) + C(condition) + constant`.
+Finiteness and budget hypotheses are explicit because the machines are not yet
+fixed universal evaluators. -/
+theorem timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition
+    {jointTapes conditionTapes resultTapes : ℕ}
+    {jointMachine : TM jointTapes} {conditionMachine : TM conditionTapes}
+    {resultMachine : OracleTM resultTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {result condition : List Bool}
+    {conditionTime resultTime jointTime conditionBound resultBound constant : ℕ}
+    (hcompose : TimeBoundedConditionalPairCompositionAt jointMachine
+      conditionMachine resultMachine compile result condition conditionTime
+      resultTime jointTime conditionBound resultBound)
+    (hlength : ∀ conditionProgram resultProgram,
+      conditionProgram.length ≤ conditionBound →
+      resultProgram.length ≤ resultBound →
+      (compile conditionProgram resultProgram).length ≤
+        resultProgram.length + conditionProgram.length + constant)
+    (hconditionFinite : conditionMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≠ ⊤)
+    (hresultFinite :
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        result condition resultTime ≠ ⊤)
+    (hconditionBound : conditionMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≤ (conditionBound : WithTop ℕ))
+    (hresultBound :
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        result condition resultTime ≤ (resultBound : WithTop ℕ)) :
+    jointMachine.timeBoundedKolmogorovComplexity
+        (pair result condition) jointTime ≤
+      resultMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            result condition resultTime +
+          conditionMachine.timeBoundedKolmogorovComplexity
+            condition conditionTime +
+        (constant : WithTop ℕ) :=
+  timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition_internal
+    hcompose hlength hconditionFinite hresultFinite hconditionBound hresultBound
+
 end Complexity

@@ -51,4 +51,31 @@ def TimeBoundedProgramCompositionAt
       (compile firstProgram secondProgram)
       (pair firstOutput secondOutput) jointTime
 
+/-- Condition-first composition for the chain-rule orientation used by SoI.
+The ordinary program produces `condition`; the oracle program then produces
+`result` given random access to that condition; the joint output is nevertheless
+ordered as `pair result condition`.
+
+Keeping this contract distinct from `TimeBoundedProgramCompositionAt` prevents
+an unnoticed swap between `C(y) + C(x | y)` and the encoded output
+`pair x y`. -/
+def TimeBoundedConditionalPairCompositionAt
+    {jointTapes conditionTapes resultTapes : ℕ}
+    (jointMachine : TM jointTapes) (conditionMachine : TM conditionTapes)
+    (resultMachine : OracleTM resultTapes)
+    (compile : List Bool → List Bool → List Bool)
+    (result condition : List Bool)
+    (conditionTime resultTime jointTime conditionBound resultBound : ℕ) : Prop :=
+  ∀ conditionProgram resultProgram,
+    conditionProgram.length ≤ conditionBound →
+    resultProgram.length ≤ resultBound →
+    conditionMachine.ProducesInTime
+      conditionProgram condition conditionTime →
+    resultMachine.ProducesInTime
+        (RandomAccessCondition.oracle condition)
+        resultProgram result resultTime →
+    jointMachine.ProducesInTime
+      (compile conditionProgram resultProgram)
+      (pair result condition) jointTime
+
 end Complexity
