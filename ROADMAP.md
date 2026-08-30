@@ -3040,10 +3040,16 @@ meta-computational notation hides several incompatible choices; expose them.
   sharpens its index cost to `clog_2(C*(q+1)^k)`. For density
   `1/inverseDensity`, the canonical paper choice
   `q = 2*outputLength*inverseDensity` is now proved admissible and removes the
-  arithmetic compatibility premise. Constructing an explicit
+  arithmetic compatibility premise. The endpoint is now an actual bounded
+  bitstring decoded to the original message, not merely a semantic structured
+  program. Any monotone-clock TM realization of that fixed decoder yields the
+  corresponding machine-relative time-bounded Kolmogorov upper bound, cleanly
+  separating Corollary III.9's certificate transfer from later universal-
+  machine simulation. Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
   remaining ambient parameters, constructing machine/runtime realizers for the
-  sampler, checker, evaluator, and concrete code family, the explicit RRV
+  sampler, checker, indexed-message evaluator, and concrete code family,
+  instantiating the efficient universal-machine transfer, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional

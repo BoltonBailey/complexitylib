@@ -25,6 +25,20 @@ def reconstructionInverseAccuracy
     (outputLength inverseDensity : ℕ) : ℕ :=
   2 * outputLength * inverseDensity
 
+/-- Complete bit-length bound delivered by inverse-density reconstruction with
+a polynomially bounded list-code family. -/
+def inverseDensityDescriptionBound
+    (family : BooleanListCodeFamily)
+    (bounds : family.PolynomialParameterBounds)
+    (messageLength outputLength inverseDensity seedLength budget : ℕ) : ℕ :=
+  1 + Fin.bitWidth outputLength +
+    (budget + (seedLength - family.coordinateLength messageLength
+      (reconstructionInverseAccuracy outputLength inverseDensity)) + 1) +
+      Nat.clog 2
+        (bounds.listConstant *
+          (reconstructionInverseAccuracy outputLength inverseDensity + 1) ^
+            bounds.listDegree)
+
 end NWDesign
 
 end Complexity

@@ -227,6 +227,124 @@ theorem
           houtputLength hinverseDensity)
         houtputLength (by positivity) hlow hrandom hdense hbudget
 
+theorem half_le_encodedMessageCertificate_of_inverseDensity_internal
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message) test
+          (1 / 2 +
+            ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+          (1 / (inverseDensity : ℚ))) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate?
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        HasEncodedMessageCertificateWithin design
+          (family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity))
+          test message
+          (inverseDensityDescriptionBound family bounds messageLength
+            outputLength inverseDensity seedLength budget) := by
+  obtain ⟨hhalf, hselected⟩ :=
+    half_le_fullyEncodedIndexedReconstructionProgram_of_inverseDensity_internal
+      family hfamily bounds houtputLength hinverseDensity hlow hrandom hdense
+        hbudget
+  refine ⟨hhalf, ?_⟩
+  intro batch certificate hfind
+  obtain ⟨indexed, _hreconstruction, hdecode, hlength⟩ :=
+    hselected batch certificate hfind
+  refine ⟨indexed.encode, ?_, hlength⟩
+  rw [decodeIndexedMessage?_encode_internal, hdecode]
+
+theorem half_le_timeBoundedKolmogorovComplexity_of_inverseDensity_internal
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (realization : EncodedMessageDecoderRealization design
+      (family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) test)
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message) test
+          (1 / 2 +
+            ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+          (1 / (inverseDensity : ℚ))) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate?
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        realization.machine.timeBoundedKolmogorovComplexity
+            (List.ofFn message)
+            (realization.time (inverseDensityDescriptionBound family bounds
+              messageLength outputLength inverseDensity seedLength budget)) ≤
+          (inverseDensityDescriptionBound family bounds messageLength
+            outputLength inverseDensity seedLength budget : WithTop ℕ) := by
+  obtain ⟨hhalf, hcertificates⟩ :=
+    half_le_encodedMessageCertificate_of_inverseDensity_internal
+      family hfamily bounds houtputLength hinverseDensity hlow hrandom hdense
+        hbudget
+  refine ⟨hhalf, ?_⟩
+  intro batch certificate hfind
+  exact
+    HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le_internal
+      realization (hcertificates batch certificate hfind)
+
 end NWDesign
 
 end Complexity

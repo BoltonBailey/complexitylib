@@ -7,6 +7,8 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Defs
 import Complexitylib.Metacomplexity.ListDecoding.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Internal
+import Complexitylib.Models.TuringMachine.OutputSemantics.Internal
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.CertificateSearch.Internal
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Encoding.Internal
 
@@ -66,6 +68,37 @@ theorem decodeIndexedReconstructionProgram?_encode_internal
   simp [decodeIndexedReconstructionProgram?,
     IndexedReconstructionProgram.encode,
     decodeIndexedReconstructionBooleanPayload?_encode_internal]
+
+theorem decodeIndexedMessage?_encode_internal
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool)) :
+    decodeIndexedMessage? design code test program.encode =
+      some (program.decodedMessage code test) := by
+  simp [decodeIndexedMessage?,
+    decodeIndexedReconstructionProgram?_encode_internal]
+
+theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le_internal
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : EncodedMessageDecoderRealization design code test)
+    (hcertificate : HasEncodedMessageCertificateWithin
+      design code test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (List.ofFn message) (realization.time bound) ≤
+      (bound : WithTop ℕ) := by
+  obtain ⟨description, hdecode, hlength⟩ := hcertificate
+  have hproduce := realization.correct description message hdecode
+  have hproduceBound := TM.producesInTime_mono_internal
+    (realization.time_mono hlength) hproduce
+  exact le_trans
+    (TM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
+    (by exact_mod_cast hlength)
 
 theorem ReconstructionProgram.agreementProbability_eq_listCode_internal
     {messageLength listSize outputLength inputLength seedLength : ℕ}
@@ -192,6 +225,30 @@ theorem findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound_inter
   simp only [IndexedReconstructionProgram.encode, List.length_cons,
     List.length_append, Fin.length_toBits]
   omega
+
+theorem findGoodReconstructionCertificate_encodedMessage_sound_internal
+    {messageLength listSize outputLength inputLength seedLength trials budget : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (message : Fin messageLength → Bool)
+    (test : Finset (Fin outputLength → Bool)) (margin : ℚ)
+    (hcode : code.IsListDecodableAt (1 / 2 - margin))
+    (hbudget : design.HasOverlapBudget budget)
+    (batch : Fin trials → ReconstructionTrial outputLength seedLength)
+    (certificate : ReconstructionCertificate outputLength seedLength)
+    (hfind : design.findGoodReconstructionCertificate? (code.encode message)
+      test (1 / 2 + margin) batch = some certificate) :
+    ∃ description : List Bool,
+      decodeIndexedMessage? design code test description = some message ∧
+        description.length ≤
+          1 + Fin.bitWidth outputLength +
+            (budget + (seedLength - inputLength) + 1) +
+              BooleanListCode.decoderIndexBitWidth listSize := by
+  obtain ⟨indexed, _hreconstruction, hdecode, hlength⟩ :=
+    findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound_internal
+      design code message test margin hcode hbudget batch certificate hfind
+  refine ⟨indexed.encode, ?_, hlength⟩
+  rw [decodeIndexedMessage?_encode_internal, hdecode]
 
 theorem findGoodReconstructionCertificate_listDecoding_sound_internal
     {messageLength listSize outputLength inputLength seedLength trials budget : ℕ}

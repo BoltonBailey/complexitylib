@@ -28,7 +28,9 @@ then checks both test orientations by exact finite agreement and returns the
 first successful sampled trial. Finally, explicit reconstruction programs
 materialize the predecessor tables so that evaluating a selected predictor no
 longer accesses the hard function, serialize the complete program and decoder
-index exactly, and compose its agreement guarantee with finite list decoding.
+index exactly, compose its agreement guarantee with finite list decoding, and
+turn the resulting short string into a machine-relative bounded-complexity
+certificate whenever the fixed decoder has a TM realization.
 -/
 
 

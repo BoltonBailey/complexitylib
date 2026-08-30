@@ -22,7 +22,9 @@ codec includes polarity, hybrid coordinate, reconstruction data, and list
 index, leaving only ambient parameters external. The family specialization
 matches inverse accuracy to reconstruction advantage and converts polynomial
 list size into a concrete logarithmic description bound, including the
-canonical choice for inverse-polynomially represented test density.
+canonical choice for inverse-polynomially represented test density. The final
+decoder layer turns the complete encoding into a literal bitstring certificate
+and, for any realizing TM, a machine-relative time-bounded Kolmogorov bound.
 -/
 
 
@@ -75,6 +77,35 @@ design and list-size parameters alone. -/
     decodeIndexedReconstructionProgram? design listSize program.encode =
       some program :=
   decodeIndexedReconstructionProgram?_encode_internal program
+
+/-- Decoding and semantically evaluating a complete indexed-program bit string
+recovers the program's selected source message. -/
+@[simp] theorem decodeIndexedMessage?_encode
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool)) :
+    decodeIndexedMessage? design code test program.encode =
+      some (program.decodedMessage code test) :=
+  decodeIndexedMessage?_encode_internal program code test
+
+/-- Any bounded bitstring certificate for a realized indexed-message decoder
+gives the corresponding time-bounded Kolmogorov upper bound relative to that
+arbitrary decoder machine. -/
+theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : EncodedMessageDecoderRealization design code test)
+    (hcertificate : HasEncodedMessageCertificateWithin
+      design code test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (List.ofFn message) (realization.time bound) ≤
+      (bound : WithTop ℕ) :=
+  hcertificate.timeBoundedKolmogorovComplexity_le_internal realization
 
 /-- Explicit-program agreement with an encoded message is exactly the generic
 Boolean list-code agreement statistic. -/
@@ -178,6 +209,29 @@ theorem findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound
               (budget + (seedLength - inputLength) + 1) +
                 BooleanListCode.decoderIndexBitWidth listSize :=
   findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound_internal
+    design code message test margin hcode hbudget batch certificate hfind
+
+/-- A checked reconstruction certificate yields an actual short bit string
+that the fixed semantic decoder maps to the original source message. -/
+theorem findGoodReconstructionCertificate_encodedMessage_sound
+    {messageLength listSize outputLength inputLength seedLength trials budget : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (message : Fin messageLength → Bool)
+    (test : Finset (Fin outputLength → Bool)) (margin : ℚ)
+    (hcode : code.IsListDecodableAt (1 / 2 - margin))
+    (hbudget : design.HasOverlapBudget budget)
+    (batch : Fin trials → ReconstructionTrial outputLength seedLength)
+    (certificate : ReconstructionCertificate outputLength seedLength)
+    (hfind : design.findGoodReconstructionCertificate? (code.encode message)
+      test (1 / 2 + margin) batch = some certificate) :
+    ∃ description : List Bool,
+      decodeIndexedMessage? design code test description = some message ∧
+        description.length ≤
+          1 + Fin.bitWidth outputLength +
+            (budget + (seedLength - inputLength) + 1) +
+              BooleanListCode.decoderIndexBitWidth listSize :=
+  findGoodReconstructionCertificate_encodedMessage_sound_internal
     design code message test margin hcode hbudget batch certificate hfind
 
 /-- Any checked certificate at agreement `1/2 + margin` produces a bounded

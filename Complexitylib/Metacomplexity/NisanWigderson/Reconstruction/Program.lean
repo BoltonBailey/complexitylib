@@ -24,7 +24,9 @@ submodule turns agreement with an encoded source message into a fully encoded
 indexed program that decodes exactly to that message, paying only a
 ceiling-logarithmic list-index cost beyond reconstruction. Its family layer
 instantiates the result at inverse accuracy `q` and exposes the exact semantic,
-polynomial-parameter, and uniform-machine obligations on the code family.
+polynomial-parameter, and uniform-machine obligations on the code family. A
+complete bitstring decoder and its realization interface expose the resulting
+machine-relative time-bounded Kolmogorov certificate.
 -/
 
 

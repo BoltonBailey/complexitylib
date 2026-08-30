@@ -6,15 +6,17 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.ListDecoding.Defs
+public import Complexitylib.Metacomplexity.Kolmogorov.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Encoding.Defs
 
 /-!
 # List decoding explicit NW reconstruction programs -- definitions
 
 An explicit reconstruction program approximating an encoded message can be
-fed directly to the code's list decoder. This module names the resulting
-finite candidate set before proving that sufficient reconstruction agreement
-places the original message inside it.
+fed directly to the code's list decoder. Besides the finite candidate set,
+this module defines the complete bitstring decoder, bounded decoded
+certificates, and the machine-realization interface used to obtain a
+machine-relative time-bounded Kolmogorov bound.
 -/
 
 
@@ -99,6 +101,54 @@ def decodeIndexedReconstructionProgram?
       | some current =>
           decodeIndexedReconstructionBooleanPayload? design listSize
             complement current (body.drop coordinateWidth)
+
+/-- Decode a complete indexed-program bit string and run its semantic source
+message decoder. The ambient design, list code, and statistical test are fixed
+parameters rather than hidden program fields. -/
+def decodeIndexedMessage?
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool)) (bits : List Bool) :
+    Option (Fin messageLength → Bool) :=
+  match decodeIndexedReconstructionProgram? design listSize bits with
+  | some program => some (program.decodedMessage code test)
+  | none => none
+
+/-- A literal bitstring description, bounded in length, that the fixed indexed
+reconstruction decoder maps to a source message. -/
+def HasEncodedMessageCertificateWithin
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool))
+    (message : Fin messageLength → Bool) (bound : ℕ) : Prop :=
+  ∃ description : List Bool,
+    decodeIndexedMessage? design code test description = some message ∧
+      description.length ≤ bound
+
+/-- A deterministic machine realizing the fixed indexed-message decoder. The
+clock depends on description length and is monotone so a length bound yields a
+single common time budget. -/
+structure EncodedMessageDecoderRealization
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool)) where
+  /-- Number of work tapes used by the decoder machine. -/
+  tapes : ℕ
+  /-- Machine interpreting complete indexed reconstruction descriptions. -/
+  machine : TM tapes
+  /-- Decoder time as a function of description length. -/
+  time : ℕ → ℕ
+  /-- Larger descriptions receive no smaller clock. -/
+  time_mono : Monotone time
+  /-- Every semantically decoded message is produced by the machine within the
+  advertised clock. -/
+  correct : ∀ description message,
+    decodeIndexedMessage? design code test description = some message →
+      machine.ProducesInTime description (List.ofFn message)
+        (time description.length)
 
 namespace ReconstructionProgram
 
