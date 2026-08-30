@@ -2884,8 +2884,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   approximate-counting/circuit-enumeration sublemma rather than importing it as an
   axiom. *The floor-rounded hard and small thresholds, floor-rounded sample count,
   ceiling-rounded generator bound, factor-two rounding slack, and exact link to the
-  existing GapMCSP parameter family are done. The typed multi-output generator
-  interface and the conditional construction remain.*
+  existing GapMCSP parameter family are done. The typed multi-output circuit,
+  canonical truth-table input, packed sample decoder, exact sample count,
+  hard-function contract, SuccinctMCSP rejection bridge, and nested eventual
+  quantifiers are also done. The conditional approximate-counting construction
+  remains.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

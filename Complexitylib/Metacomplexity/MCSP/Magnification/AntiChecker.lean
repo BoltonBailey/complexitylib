@@ -6,10 +6,12 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator
 
 /-!
 # The Oliveira--Pich--Santhanam Anti-Checker Lemma
 
-Public aggregation module for the rounded finite parameters and, eventually,
-the multi-output generator and its approximate-counting construction.
+Public aggregation module for the rounded finite parameters and typed
+multi-output generator contract. Its approximate-counting construction remains
+to be formalized.
 -/
