@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.BooleanDependency.Encoding.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Defs
+public import Complexitylib.Mathlib.NatBits
 public import Mathlib.Data.Sigma.Order
 public import Mathlib.Data.Sum.Order
 
@@ -109,6 +110,15 @@ def encodeBooleanPayload
     (program : design.ReconstructionProgram) : List Bool :=
   BooleanDependency.encodeOrderedFunction program.booleanPayload
 
+/-- Complete program-specific encoding: polarity, fixed-width hybrid
+coordinate, and the flat Boolean reconstruction payload. The ambient design
+parameters remain external to the codec. -/
+def encode
+    {outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : design.ReconstructionProgram) : List Bool :=
+  program.complement :: program.current.toBits ++ program.encodeBooleanPayload
+
 end ReconstructionProgram
 
 /-- Decode a flat Boolean payload using an externally supplied polarity and
@@ -133,6 +143,22 @@ def decodeReconstructionBooleanPayload?
           payload (laterPayloadIndex design current coordinate)
         candidate := payload (candidatePayloadIndex design current)
       }
+
+/-- Decode a complete reconstruction program relative only to its ambient
+design parameters. -/
+def decodeReconstructionProgram?
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength) (bits : List Bool) :
+    Option design.ReconstructionProgram :=
+  match bits with
+  | [] => none
+  | complement :: body =>
+      let coordinateWidth := Fin.bitWidth outputLength
+      match Fin.fromBits? outputLength (body.take coordinateWidth) with
+      | none => none
+      | some current =>
+          decodeReconstructionBooleanPayload? design complement current
+            (body.drop coordinateWidth)
 
 end NWDesign
 

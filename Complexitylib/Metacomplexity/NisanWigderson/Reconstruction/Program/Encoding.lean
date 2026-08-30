@@ -12,8 +12,9 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program
 # Bit encoding of explicit NW reconstruction programs
 
 The stored predecessor tables, outside seed, later tail, and candidate are
-serialized as one canonical flat bit string. The codec is parameterized by the
-polarity and hybrid coordinate, which belong to the later metadata layer.
+serialized as one canonical flat bit string. A complete program encoding
+prefixes its polarity and a ceiling-logarithmic hybrid coordinate, leaving
+only the ambient design parameters external to the decoder.
 -/
 
 
@@ -51,6 +52,17 @@ theorem length_encodeBooleanPayload_eq_booleanPayloadSize
     program.encodeBooleanPayload.length = program.booleanPayloadSize :=
   length_encodeBooleanPayload_eq_booleanPayloadSize_internal program
 
+/-- A complete reconstruction-program encoding pays one polarity bit and a
+ceiling-logarithmic hybrid coordinate beyond its Boolean payload. -/
+@[simp] theorem ReconstructionProgram.length_encode
+    {outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : design.ReconstructionProgram) :
+    program.encode.length =
+      1 + Fin.bitWidth outputLength +
+        design.reconstructionDataBitsAt program.current :=
+  program.length_encode_internal
+
 /-- Exact round trip for the reconstruction Boolean payload when its polarity
 and coordinate metadata are supplied. -/
 @[simp] theorem decodeReconstructionBooleanPayload?_encode
@@ -60,6 +72,15 @@ and coordinate metadata are supplied. -/
     decodeReconstructionBooleanPayload? design program.complement
       program.current program.encodeBooleanPayload = some program :=
   decodeReconstructionBooleanPayload?_encode_internal program
+
+/-- Complete reconstruction-program encoding round-trips from the ambient
+design alone. -/
+@[simp] theorem decodeReconstructionProgram?_encode
+    {outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : design.ReconstructionProgram) :
+    decodeReconstructionProgram? design program.encode = some program :=
+  decodeReconstructionProgram?_encode_internal program
 
 /-- Payload decoding fails exactly on strings whose length differs from the
 exact reconstruction entry count. -/
@@ -91,6 +112,28 @@ theorem findGoodReconstructionCertificate_encodedProgram_sound
       (certificate.toProgram design hardFunction).encodeBooleanPayload.length ≤
         budget + (seedLength - inputLength) + 1 :=
   findGoodReconstructionCertificate_encodedProgram_sound_internal design
+    hardFunction test agreementThreshold hbudget batch certificate hfind
+
+/-- The same checked certificate bound for the complete program encoding,
+including polarity and hybrid-coordinate metadata. -/
+theorem findGoodReconstructionCertificate_fullyEncodedProgram_sound
+    {outputLength inputLength seedLength trials budget : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (agreementThreshold : ℚ)
+    (hbudget : design.HasOverlapBudget budget)
+    (batch : Fin trials → ReconstructionTrial outputLength seedLength)
+    (certificate : ReconstructionCertificate outputLength seedLength)
+    (hfind : design.findGoodReconstructionCertificate? hardFunction test
+      agreementThreshold batch = some certificate) :
+    agreementThreshold ≤
+        (certificate.toProgram design hardFunction).agreementProbability
+          hardFunction test ∧
+      (certificate.toProgram design hardFunction).encode.length ≤
+        1 + Fin.bitWidth outputLength +
+          (budget + (seedLength - inputLength) + 1) :=
+  findGoodReconstructionCertificate_fullyEncodedProgram_sound_internal design
     hardFunction test agreementThreshold hbudget batch certificate hfind
 
 /-- End-to-end encoded reconstruction: canonical checked sampling succeeds
@@ -126,6 +169,39 @@ theorem half_le_encodedReconstructionProgram_of_randomTest
   half_le_encodedReconstructionProgram_of_randomTest_internal
     houtputLength hdensity hlow hrandom hdense hbudget
 
+/-- End-to-end reconstruction with the polarity and hybrid coordinate included
+in every selected program's actual encoding. -/
+theorem half_le_fullyEncodedReconstructionProgram_of_randomTest
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability hardFunction test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? hardFunction test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        1 / 2 + (density / (outputLength : ℚ)) / 2 ≤
+            (certificate.toProgram design hardFunction).agreementProbability
+              hardFunction test ∧
+          (certificate.toProgram design hardFunction).encode.length ≤
+            1 + Fin.bitWidth outputLength +
+              (budget + (seedLength - inputLength) + 1) :=
+  half_le_fullyEncodedReconstructionProgram_of_randomTest_internal
+    houtputLength hdensity hlow hrandom hdense hbudget
+
 /-- The encoded reconstruction theorem with low generator complexity
 discharged by direct short-seed descriptions. -/
 theorem half_le_encodedReconstructionProgram_of_seedDescriptions
@@ -157,6 +233,40 @@ theorem half_le_encodedReconstructionProgram_of_seedDescriptions
           (certificate.toProgram design hardFunction).encodeBooleanPayload.length ≤
             budget + (seedLength - inputLength) + 1 :=
   half_le_encodedReconstructionProgram_of_seedDescriptions_internal
+    houtputLength hdensity hseedLength hproduces hrandom hdense hbudget
+
+/-- The fully encoded reconstruction theorem with generator complexity
+discharged by direct short-seed descriptions. -/
+theorem half_le_fullyEncodedReconstructionProgram_of_seedDescriptions
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density) (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability hardFunction test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? hardFunction test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        1 / 2 + (density / (outputLength : ℚ)) / 2 ≤
+            (certificate.toProgram design hardFunction).agreementProbability
+              hardFunction test ∧
+          (certificate.toProgram design hardFunction).encode.length ≤
+            1 + Fin.bitWidth outputLength +
+              (budget + (seedLength - inputLength) + 1) :=
+  half_le_fullyEncodedReconstructionProgram_of_seedDescriptions_internal
     houtputLength hdensity hseedLength hproduces hrandom hdense hbudget
 
 end NWDesign

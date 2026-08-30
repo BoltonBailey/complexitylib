@@ -56,6 +56,16 @@ def encodeBooleanPayload
   program.reconstruction.encodeBooleanPayload ++
     BooleanListCode.encodeDecoderIndex program.decoderIndex
 
+/-- Complete encoding of an indexed reconstruction program: polarity,
+hybrid coordinate, reconstruction data, and list-decoder index. Only ambient
+parameters remain external. -/
+def encode
+    {listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize) : List Bool :=
+  program.reconstruction.complement ::
+    program.reconstruction.current.toBits ++ program.encodeBooleanPayload
+
 end IndexedReconstructionProgram
 
 /-- Decode the Boolean payload of an indexed reconstruction program using an
@@ -73,6 +83,22 @@ def decodeIndexedReconstructionBooleanPayload?
   | some reconstruction, some decoderIndex =>
       some { reconstruction, decoderIndex }
   | _, _ => none
+
+/-- Decode a complete indexed reconstruction program relative to its ambient
+design and list-size parameters. -/
+def decodeIndexedReconstructionProgram?
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength) (listSize : ℕ)
+    (bits : List Bool) : Option (IndexedReconstructionProgram design listSize) :=
+  match bits with
+  | [] => none
+  | complement :: body =>
+      let coordinateWidth := Fin.bitWidth outputLength
+      match Fin.fromBits? outputLength (body.take coordinateWidth) with
+      | none => none
+      | some current =>
+          decodeIndexedReconstructionBooleanPayload? design listSize
+            complement current (body.drop coordinateWidth)
 
 namespace ReconstructionProgram
 

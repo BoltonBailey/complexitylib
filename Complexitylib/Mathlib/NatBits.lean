@@ -18,6 +18,8 @@ Big-endian, fixed-width binary encoding `Nat.toBits` with its exact decoder
 `Nat.fromBitsLE` used by local Turing-machine arithmetic. Both conventions
 have exact length, truncation, round-trip, and fixed-width injectivity lemmas.
 Values wider than the target width are truncated modulo `2 ^ w`.
+The final layer packages these bits into a canonical ceiling-logarithmic codec
+for `Fin n`, including exact rejection conditions for malformed inputs.
 
 This file lives in `Complexitylib/Mathlib/` because it extends a Mathlib
 type in its home (root) namespace — the sanctioned exception to the
@@ -214,3 +216,48 @@ theorem Nat.size_eq_log_two_add_one {value : ℕ} (hvalue : value ≠ 0) :
     rw [Nat.lt_size]
     exact Nat.pow_log_le_self 2 hvalue
   omega
+
+/-- Ceiling-logarithmic width sufficient to encode an element of `Fin size`. -/
+def Fin.bitWidth (size : ℕ) : ℕ :=
+  Nat.clog 2 size
+
+/-- Encode a finite index using the canonical ceiling-logarithmic width. -/
+def Fin.toBits {size : ℕ} (index : Fin size) : List Bool :=
+  Nat.toBits (Fin.bitWidth size) index
+
+/-- Decode an exactly sized finite-index encoding, rejecting out-of-range
+values. -/
+def Fin.fromBits? (size : ℕ) (bits : List Bool) : Option (Fin size) :=
+  if _hlength : bits.length = Fin.bitWidth size then
+    if hvalue : Nat.fromBits bits < size then
+      some ⟨Nat.fromBits bits, hvalue⟩
+    else
+      none
+  else
+    none
+
+/-- Finite-index encoding has exactly the canonical ceiling-logarithmic
+width. -/
+@[simp] theorem Fin.length_toBits {size : ℕ} (index : Fin size) :
+    index.toBits.length = Fin.bitWidth size := by
+  simp [Fin.toBits, Fin.bitWidth, Nat.length_toBits]
+
+/-- Canonical finite-index encoding round-trips exactly. -/
+@[simp] theorem Fin.fromBits?_toBits {size : ℕ} (index : Fin size) :
+    Fin.fromBits? size index.toBits = some index := by
+  have hfits : index.val < 2 ^ Fin.bitWidth size :=
+    lt_of_lt_of_le index.isLt
+      (Nat.le_pow_clog Nat.one_lt_two size)
+  unfold Fin.fromBits?
+  rw [Fin.length_toBits, dif_pos rfl]
+  simp only [Fin.toBits]
+  simp [Nat.fromBits_toBits hfits, index.isLt]
+
+/-- Finite-index decoding fails exactly on a malformed width or an
+out-of-range decoded value. -/
+theorem Fin.fromBits?_eq_none_iff (size : ℕ) (bits : List Bool) :
+    Fin.fromBits? size bits = none ↔
+      bits.length ≠ Fin.bitWidth size ∨ size ≤ Nat.fromBits bits := by
+  by_cases hlength : bits.length = Fin.bitWidth size
+  · simp [Fin.fromBits?, hlength]
+  · simp [Fin.fromBits?, hlength]

@@ -18,9 +18,11 @@ that store every predecessor table used by their predictor. Program evaluation
 therefore has no hard-function oracle; the hard function is used only while
 materializing and subsequently scoring the stored predictor. The encoding
 submodule flattens every stored Boolean field into a canonical bit string with
-an exact decoder and length theorem. The list-decoding submodule then turns
-agreement with an encoded source message into an indexed program that decodes
-exactly to that message, paying a ceiling-logarithmic list-index cost.
+an exact decoder and length theorem, then prefixes the polarity and hybrid
+coordinate to obtain a complete program-specific encoding. The list-decoding
+submodule turns agreement with an encoded source message into a fully encoded
+indexed program that decodes exactly to that message, paying only a
+ceiling-logarithmic list-index cost beyond reconstruction.
 -/
 
 

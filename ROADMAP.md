@@ -3029,10 +3029,13 @@ meta-computational notation hides several incompatible choices; expose them.
   `clog_2(L)` bits. Appending it to the reconstruction payload has an exact
   decoder round trip and yields an indexed oracle-free program whose decoded
   message is the original source; the end-to-end bound pays precisely those
-  extra `clog_2(L)` bits. Encoding the polarity, coordinate, and ambient
-  parameters; constructing an explicit efficiently list-decodable code family;
-  giving machine/runtime analyses of the sampler, checker, evaluator, and
-  decoder; the explicit RRV construction; and final program/time accounting
+  extra `clog_2(L)` bits. Polarity and hybrid coordinate are now included too:
+  complete reconstruction and indexed-program codecs round-trip from the
+  ambient parameters, paying exactly one polarity bit and
+  `clog_2(outputLength)` coordinate bits. Encoding or fixing the remaining
+  ambient parameters; constructing an explicit efficiently list-decodable code
+  family; giving machine/runtime analyses of the sampler, checker, evaluator,
+  and decoder; the explicit RRV construction; and final program/time accounting
   remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional

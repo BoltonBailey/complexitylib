@@ -27,8 +27,8 @@ trial matching the randomized reconstruction algorithm. Certificate search
 then checks both test orientations by exact finite agreement and returns the
 first successful sampled trial. Finally, explicit reconstruction programs
 materialize the predecessor tables so that evaluating a selected predictor no
-longer accesses the hard function, serialize the stored payload exactly, and
-compose its agreement guarantee with finite list decoding.
+longer accesses the hard function, serialize the complete program and decoder
+index exactly, and compose its agreement guarantee with finite list decoding.
 -/
 
 

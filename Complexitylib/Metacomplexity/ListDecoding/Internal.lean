@@ -24,18 +24,12 @@ namespace BooleanListCode
 theorem length_encodeDecoderIndex_internal
     {listSize : ℕ} (index : Fin listSize) :
     (encodeDecoderIndex index).length = decoderIndexBitWidth listSize := by
-  simp [encodeDecoderIndex, decoderIndexBitWidth, Nat.length_toBits]
+  simp [encodeDecoderIndex, decoderIndexBitWidth]
 
 theorem decodeDecoderIndex?_encodeDecoderIndex_internal
     {listSize : ℕ} (index : Fin listSize) :
     decodeDecoderIndex? listSize (encodeDecoderIndex index) = some index := by
-  have hfits : index.val < 2 ^ decoderIndexBitWidth listSize :=
-    lt_of_lt_of_le index.isLt
-      (Nat.le_pow_clog Nat.one_lt_two listSize)
-  unfold decodeDecoderIndex?
-  rw [length_encodeDecoderIndex_internal, dif_pos rfl]
-  simp only [encodeDecoderIndex]
-  simp [Nat.fromBits_toBits hfits, index.isLt]
+  simp [decodeDecoderIndex?, encodeDecoderIndex]
 
 theorem decodeAtIndexBits?_encodeDecoderIndex_internal
     {messageLength listSize : ℕ} {coordinate : Type u}

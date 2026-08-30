@@ -62,22 +62,16 @@ def candidates {messageLength listSize : ℕ} {coordinate : Type u}
 /-- Number of bits sufficient to select one of `listSize` indexed decoder
 outputs. -/
 def decoderIndexBitWidth (listSize : ℕ) : ℕ :=
-  Nat.clog 2 listSize
+  Fin.bitWidth listSize
 
 /-- Fixed-width binary encoding of an indexed decoder output. -/
 def encodeDecoderIndex {listSize : ℕ} (index : Fin listSize) : List Bool :=
-  Nat.toBits (decoderIndexBitWidth listSize) index
+  index.toBits
 
 /-- Decode a fixed-width decoder index, rejecting malformed lengths and
 values outside `Fin listSize`. -/
 def decodeDecoderIndex? (listSize : ℕ) (bits : List Bool) : Option (Fin listSize) :=
-  if _hlength : bits.length = decoderIndexBitWidth listSize then
-    if hvalue : Nat.fromBits bits < listSize then
-      some ⟨Nat.fromBits bits, hvalue⟩
-    else
-      none
-  else
-    none
+  Fin.fromBits? listSize bits
 
 /-- Decode a source message using a fixed-width encoded list index. -/
 def decodeAtIndexBits? {messageLength listSize : ℕ} {coordinate : Type u}

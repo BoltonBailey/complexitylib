@@ -15,7 +15,9 @@ import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDe
 This layer composes checked, encoded NW reconstruction with a finite Boolean
 list code. Beyond producing a bounded candidate set containing the source
 message, it stores a selecting decoder index in ceiling-logarithmic space and
-materializes a program that decodes exactly to the source message.
+materializes a program that decodes exactly to the source message. Its complete
+codec includes polarity, hybrid coordinate, reconstruction data, and list
+index, leaving only ambient parameters external.
 -/
 
 
@@ -36,6 +38,18 @@ the reconstruction data followed by exactly `clog₂(listSize)` index bits. -/
         BooleanListCode.decoderIndexBitWidth listSize :=
   program.length_encodeBooleanPayload_internal
 
+/-- Complete indexed-program encoding accounts exactly for polarity, hybrid
+coordinate, reconstruction data, and list-decoder index. -/
+@[simp] theorem IndexedReconstructionProgram.length_encode
+    {listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize) :
+    program.encode.length =
+      1 + Fin.bitWidth outputLength +
+        design.reconstructionDataBitsAt program.reconstruction.current +
+          BooleanListCode.decoderIndexBitWidth listSize :=
+  program.length_encode_internal
+
 /-- The concatenated reconstruction-data and list-index encoding round-trips
 when polarity and hybrid coordinate are supplied as codec metadata. -/
 theorem decodeIndexedReconstructionBooleanPayload?_encode
@@ -46,6 +60,16 @@ theorem decodeIndexedReconstructionBooleanPayload?_encode
       program.reconstruction.complement program.reconstruction.current
         program.encodeBooleanPayload = some program :=
   decodeIndexedReconstructionBooleanPayload?_encode_internal program
+
+/-- Complete indexed reconstruction encoding round-trips from its ambient
+design and list-size parameters alone. -/
+@[simp] theorem decodeIndexedReconstructionProgram?_encode
+    {listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize) :
+    decodeIndexedReconstructionProgram? design listSize program.encode =
+      some program :=
+  decodeIndexedReconstructionProgram?_encode_internal program
 
 /-- Explicit-program agreement with an encoded message is exactly the generic
 Boolean list-code agreement statistic. -/
@@ -123,6 +147,32 @@ theorem findGoodReconstructionCertificate_indexedProgram_sound
             budget + (seedLength - inputLength) + 1 +
               BooleanListCode.decoderIndexBitWidth listSize :=
   findGoodReconstructionCertificate_indexedProgram_sound_internal
+    design code message test margin hcode hbudget batch certificate hfind
+
+/-- A checked certificate yields a complete, round-tripping indexed program
+that recovers the source message. Its bound accounts for polarity, hybrid
+coordinate, reconstruction data, and decoder-list index. -/
+theorem findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound
+    {messageLength listSize outputLength inputLength seedLength trials budget : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (message : Fin messageLength → Bool)
+    (test : Finset (Fin outputLength → Bool)) (margin : ℚ)
+    (hcode : code.IsListDecodableAt (1 / 2 - margin))
+    (hbudget : design.HasOverlapBudget budget)
+    (batch : Fin trials → ReconstructionTrial outputLength seedLength)
+    (certificate : ReconstructionCertificate outputLength seedLength)
+    (hfind : design.findGoodReconstructionCertificate? (code.encode message)
+      test (1 / 2 + margin) batch = some certificate) :
+    ∃ indexed : IndexedReconstructionProgram design listSize,
+      indexed.reconstruction =
+          certificate.toProgram design (code.encode message) ∧
+        indexed.decodedMessage code test = message ∧
+          indexed.encode.length ≤
+            1 + Fin.bitWidth outputLength +
+              (budget + (seedLength - inputLength) + 1) +
+                BooleanListCode.decoderIndexBitWidth listSize :=
+  findGoodReconstructionCertificate_fullyEncodedIndexedProgram_sound_internal
     design code message test margin hcode hbudget batch certificate hfind
 
 /-- Any checked certificate at agreement `1/2 + margin` produces a bounded
@@ -232,6 +282,47 @@ theorem half_le_indexedReconstructionProgram_of_randomTest
   half_le_indexedReconstructionProgram_of_randomTest_internal
     houtputLength hdensity hcode hlow hrandom hdense hbudget
 
+/-- With probability at least one half, canonical checked sampling yields a
+complete indexed encoding that round-trips and decodes exactly to the source
+message, with every program-specific bit explicitly charged. -/
+theorem half_le_fullyEncodedIndexedReconstructionProgram_of_randomTest
+    {messageLength listSize outputLength inputLength seedLength tapes time
+      threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density)
+    (hcode : code.IsListDecodableAt
+      (1 / 2 - (density / (outputLength : ℚ)) / 2))
+    (hlow : (design.generator (code.encode message)).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          (code.encode message) test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? (code.encode message) test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        ∃ indexed : IndexedReconstructionProgram design listSize,
+          indexed.reconstruction =
+              certificate.toProgram design (code.encode message) ∧
+            indexed.decodedMessage code test = message ∧
+              indexed.encode.length ≤
+                1 + Fin.bitWidth outputLength +
+                  (budget + (seedLength - inputLength) + 1) +
+                    BooleanListCode.decoderIndexBitWidth listSize :=
+  half_le_fullyEncodedIndexedReconstructionProgram_of_randomTest_internal
+    houtputLength hdensity hcode hlow hrandom hdense hbudget
+
 /-- The list-decoded reconstruction theorem with generator complexity
 discharged by direct short-seed descriptions. -/
 theorem half_le_listDecodedReconstructionProgram_of_seedDescriptions
@@ -312,6 +403,48 @@ theorem half_le_indexedReconstructionProgram_of_seedDescriptions
                 budget + (seedLength - inputLength) + 1 +
                   BooleanListCode.decoderIndexBitWidth listSize :=
   half_le_indexedReconstructionProgram_of_seedDescriptions_internal
+    houtputLength hdensity hcode hseedLength hproduces hrandom hdense hbudget
+
+/-- The fully encoded indexed reconstruction theorem with generator
+complexity discharged by direct short-seed descriptions. -/
+theorem half_le_fullyEncodedIndexedReconstructionProgram_of_seedDescriptions
+    {messageLength listSize outputLength inputLength seedLength tapes time
+      threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density)
+    (hcode : code.IsListDecodableAt
+      (1 / 2 - (density / (outputLength : ℚ)) / 2))
+    (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator (code.encode message) seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          (code.encode message) test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? (code.encode message) test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        ∃ indexed : IndexedReconstructionProgram design listSize,
+          indexed.reconstruction =
+              certificate.toProgram design (code.encode message) ∧
+            indexed.decodedMessage code test = message ∧
+              indexed.encode.length ≤
+                1 + Fin.bitWidth outputLength +
+                  (budget + (seedLength - inputLength) + 1) +
+                    BooleanListCode.decoderIndexBitWidth listSize :=
+  half_le_fullyEncodedIndexedReconstructionProgram_of_seedDescriptions_internal
     houtputLength hdensity hcode hseedLength hproduces hrandom hdense hbudget
 
 end NWDesign

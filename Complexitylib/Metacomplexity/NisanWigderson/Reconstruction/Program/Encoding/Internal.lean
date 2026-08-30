@@ -55,6 +55,17 @@ theorem length_encodeBooleanPayload_eq_booleanPayloadSize_internal
   rw [length_encodeBooleanPayload_internal,
     ReconstructionProgram.booleanPayloadSize_eq_internal]
 
+theorem ReconstructionProgram.length_encode_internal
+    {outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : design.ReconstructionProgram) :
+    program.encode.length =
+      1 + Fin.bitWidth outputLength +
+        design.reconstructionDataBitsAt program.current := by
+  simp [ReconstructionProgram.encode,
+    Complexity.NWDesign.length_encodeBooleanPayload_internal]
+  omega
+
 theorem decodeReconstructionBooleanPayload?_encode_internal
     {outputLength inputLength seedLength : ℕ}
     {design : NWDesign outputLength inputLength seedLength}
@@ -68,6 +79,14 @@ theorem decodeReconstructionBooleanPayload?_encode_internal
         BooleanDependency.decodeOrderedFunction?_encodeOrderedFunction_internal,
         ReconstructionProgram.booleanPayload, predecessorPayloadIndex,
         outsidePayloadIndex, laterPayloadIndex, candidatePayloadIndex]
+
+theorem decodeReconstructionProgram?_encode_internal
+    {outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : design.ReconstructionProgram) :
+    decodeReconstructionProgram? design program.encode = some program := by
+  simp [decodeReconstructionProgram?, ReconstructionProgram.encode,
+    decodeReconstructionBooleanPayload?_encode_internal]
 
 theorem decodeReconstructionBooleanPayload?_eq_none_iff_internal
     {outputLength inputLength seedLength : ℕ}
@@ -127,6 +146,31 @@ theorem findGoodReconstructionCertificate_encodedProgram_sound_internal
     rw [length_encodeBooleanPayload_eq_booleanPayloadSize_internal]
     exact hsize⟩
 
+theorem findGoodReconstructionCertificate_fullyEncodedProgram_sound_internal
+    {outputLength inputLength seedLength trials budget : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (agreementThreshold : ℚ)
+    (hbudget : design.HasOverlapBudget budget)
+    (batch : Fin trials → ReconstructionTrial outputLength seedLength)
+    (certificate : ReconstructionCertificate outputLength seedLength)
+    (hfind : design.findGoodReconstructionCertificate? hardFunction test
+      agreementThreshold batch = some certificate) :
+    agreementThreshold ≤
+        (certificate.toProgram design hardFunction).agreementProbability
+          hardFunction test ∧
+      (certificate.toProgram design hardFunction).encode.length ≤
+        1 + Fin.bitWidth outputLength +
+          (budget + (seedLength - inputLength) + 1) := by
+  obtain ⟨hagreement, hpayload⟩ :=
+    findGoodReconstructionCertificate_encodedProgram_sound_internal design
+      hardFunction test agreementThreshold hbudget batch certificate hfind
+  refine ⟨hagreement, ?_⟩
+  simp only [ReconstructionProgram.encode, List.length_cons,
+    List.length_append, Fin.length_toBits]
+  omega
+
 theorem half_le_encodedReconstructionProgram_of_randomTest_internal
     {outputLength inputLength seedLength tapes time threshold budget : ℕ}
     {design : NWDesign outputLength inputLength seedLength}
@@ -160,6 +204,44 @@ theorem half_le_encodedReconstructionProgram_of_randomTest_internal
   refine ⟨hhalf, ?_⟩
   intro batch certificate hfind
   exact findGoodReconstructionCertificate_encodedProgram_sound_internal
+    design hardFunction test
+      (1 / 2 + (density / (outputLength : ℚ)) / 2) hbudget batch
+      certificate hfind
+
+theorem half_le_fullyEncodedReconstructionProgram_of_randomTest_internal
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability hardFunction test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? hardFunction test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        1 / 2 + (density / (outputLength : ℚ)) / 2 ≤
+            (certificate.toProgram design hardFunction).agreementProbability
+              hardFunction test ∧
+          (certificate.toProgram design hardFunction).encode.length ≤
+            1 + Fin.bitWidth outputLength +
+              (budget + (seedLength - inputLength) + 1) := by
+  obtain ⟨hhalf, _hselected⟩ :=
+    half_le_encodedReconstructionProgram_of_randomTest_internal
+      houtputLength hdensity hlow hrandom hdense hbudget
+  refine ⟨hhalf, ?_⟩
+  intro batch certificate hfind
+  exact findGoodReconstructionCertificate_fullyEncodedProgram_sound_internal
     design hardFunction test
       (1 / 2 + (density / (outputLength : ℚ)) / 2) hbudget batch
       certificate hfind
@@ -198,6 +280,45 @@ theorem half_le_encodedReconstructionProgram_of_seedDescriptions_internal
   refine ⟨hhalf, ?_⟩
   intro batch certificate hfind
   exact findGoodReconstructionCertificate_encodedProgram_sound_internal
+    design hardFunction test
+      (1 / 2 + (density / (outputLength : ℚ)) / 2) hbudget batch
+      certificate hfind
+
+theorem half_le_fullyEncodedReconstructionProgram_of_seedDescriptions_internal
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 < density) (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability hardFunction test
+          (1 / 2 + (density / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength density) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength density) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate? hardFunction test
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        1 / 2 + (density / (outputLength : ℚ)) / 2 ≤
+            (certificate.toProgram design hardFunction).agreementProbability
+              hardFunction test ∧
+          (certificate.toProgram design hardFunction).encode.length ≤
+            1 + Fin.bitWidth outputLength +
+              (budget + (seedLength - inputLength) + 1) := by
+  obtain ⟨hhalf, _hselected⟩ :=
+    half_le_encodedReconstructionProgram_of_seedDescriptions_internal
+      houtputLength hdensity hseedLength hproduces hrandom hdense hbudget
+  refine ⟨hhalf, ?_⟩
+  intro batch certificate hfind
+  exact findGoodReconstructionCertificate_fullyEncodedProgram_sound_internal
     design hardFunction test
       (1 / 2 + (density / (outputLength : ℚ)) / 2) hbudget batch
       certificate hfind
