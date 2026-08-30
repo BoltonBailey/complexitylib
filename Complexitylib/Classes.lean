@@ -14,6 +14,7 @@ public import Complexitylib.Classes.PropertyDensity
 public import Complexitylib.Classes.SharpP
 public import Complexitylib.Classes.Negligible
 public import Complexitylib.Classes.P
+public import Complexitylib.Classes.Promise
 public import Complexitylib.Classes.PPoly
 public import Complexitylib.Classes.PPoly.Advice
 public import Complexitylib.Classes.PPoly.Unrolling

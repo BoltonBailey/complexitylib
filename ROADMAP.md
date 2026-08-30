@@ -1772,12 +1772,17 @@ Oversized binary thresholds are now capped at the proved unconditional bound
 `MCSP.RawWitnessRelation` is characterized exactly against MCSP membership and
 is `PolyBalanced`; its concrete witness envelope is a fixed polynomial in the
 canonical encoded instance length. This establishes the short-witness half of
-the NP argument, not the polynomial-time machine verifier.
+the NP argument, not the polynomial-time machine verifier. `PromiseProblem`
+now packages disjoint yes/no languages, their promised union, semantic Boolean
+solvers constrained only on that union, explicit side-preserving maps, and
+polynomial-time many-one reductions. Complement, total-language embedding, and
+reduction reflexivity/transitivity are proved, so gap problems need not assign
+arbitrary semantics to their gap region.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
 normalized MCSP verifier and its NP packaging, and the search, promise, and
-reduction infrastructure for gap minimum-description problems.
+gap-specific reduction infrastructure for minimum-description problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
 the mathematics and must not be hidden behind notation.
@@ -1816,10 +1821,10 @@ the mathematics and must not be hidden behind notation.
   input vertices and negation flags are free and the output gate is counted.
   Prove linear-overhead transport to any literature convention used by a later
   theorem instead of silently identifying the measures.
-- Introduce a small `PromiseProblem` API before `GapMCSP` or `GapMKtP`: disjoint
-  yes/no languages, algorithms constrained only on the promise, and reductions
-  preserving both sides with explicit parameter maps. Keep approximation,
-  worst-case gap, and distributional gap formulations separate.
+- Use the shared `PromiseProblem` API for `GapMCSP` and `GapMKtP`: its yes/no
+  languages are disjoint, solvers are constrained only on the promise, and
+  reductions preserve both sides. Keep approximation, worst-case gap, and
+  distributional gap formulations separate, with explicit parameter maps.
 
 **Staged milestones.** Land these as independently useful theorem layers.
 
@@ -1830,6 +1835,9 @@ the mathematics and must not be hidden behind notation.
   `TM.IsEfficientlyUniversal` interfaces over arbitrary work-tape counts. Split
   semantic simulation, additive program-length overhead, and time overhead into
   reusable fields or mixins rather than one theorem-shaped structure.
+- [x] Add the generic `PromiseProblem` layer with disjoint sides, promised-input
+  semantics, complement and total-language embedding, and composable explicit
+  and polynomial-time side-preserving many-one reductions.
 - [ ] Promote the fixed UTM's full-output theorem to the public surface and
   instantiate the generic efficient-universality interface. The compiler should
   expose the exact paired-program length `2 * |description| + 2 + |p|` and the
