@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.Gap.Defs
 public import Complexitylib.Metacomplexity.MCSP.Gap.Internal
+public import Complexitylib.Metacomplexity.MCSP.Gap.Slice
 
 /-!
 # Gap MCSP
@@ -14,7 +15,9 @@ public import Complexitylib.Metacomplexity.MCSP.Gap.Internal
 Gap MCSP is a genuine promise problem over the existing canonical MCSP codec.
 The source threshold is part of each instance; an explicit parameter map gives
 the relaxed no-threshold. The public theory exposes the monotonicity directions
-needed for quantitative hardness-magnification reductions.
+needed for quantitative hardness-magnification reductions. Arity-indexed
+`sliceProblem` specializes this to the conventional `GapMCSP[s_yes, s_no]`
+form and provides exact table-preserving threshold re-encoding reductions.
 -/
 
 

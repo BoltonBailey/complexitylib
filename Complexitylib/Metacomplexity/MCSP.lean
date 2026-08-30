@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.Defs
 public import Complexitylib.Metacomplexity.MCSP.Internal
 public import Complexitylib.Metacomplexity.MCSP.Normalization
 public import Complexitylib.Metacomplexity.MCSP.Witness
+public import Complexitylib.Metacomplexity.MCSP.Threshold
 public import Complexitylib.Metacomplexity.MCSP.Gap
 
 /-!
@@ -25,7 +26,9 @@ to the library's Boolean circuit complexity measure.
 - `MCSP.Instance.HasCircuitAtMost` -- direct circuit-witness predicate
 - `MCSP.Instance.verifyRawCircuit` -- executable canonical witness checker
 - `MCSP.Instance.normalizeThreshold` -- semantics-preserving threshold cap
+- `MCSP.atThreshold` -- arity-indexed canonical threshold slices
 - `GapMCSP.problem` -- two-threshold MCSP promise with explicit relaxation
+- `GapMCSP.sliceProblem` -- conventional `GapMCSP[s_yes, s_no]` slices
 - `MCSP` -- encoded language, with malformed strings rejected
 
 The zero-arity case is explicit: its one truth-table bit is stored directly and

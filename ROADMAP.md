@@ -1892,7 +1892,14 @@ ordinary MCSP, its no side requires minimum size strictly above the relaxed
 threshold, and malformed encodings remain outside the promise. Widening proves
 disjointness; source-threshold monotonicity and pointwise relaxation order give
 the exact yes/no containments, including an identity side-preserving reduction
-from a stricter gap to a weaker one. `PromiseProblem`
+from a stricter gap to a weaker one. `MCSP.atThreshold s` now restricts the
+canonical codec to the conventional arity-indexed threshold `s(n)`, while
+`MCSP.rethreshold` changes only that field, composes exactly, preserves minimum
+circuit size, and records the precise change in code length through the old and
+new binary threshold widths. `GapMCSP.sliceProblem` supplies the corresponding
+`GapMCSP[s_yes,s_no]` promise. Its parameter order exposes both inequalities
+needed by a table-preserving side reduction, and the resulting explicit map is
+proved correct. `PromiseProblem`
 now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
@@ -2032,7 +2039,9 @@ the mathematics and must not be hidden behind notation.
   - [ ] Prove that a machine implementation of the circuit decoder/evaluator
     verifies the normalized relation within a polynomial in truth-table input
     length `N`.
-  - [ ] Add `MCSP[s]`, search-MCSP, basis transport, and the final NP theorem.
+  - [~] Add `MCSP[s]`, search-MCSP, basis transport, and the final NP theorem.
+    *Canonical arity-indexed threshold slices and exact threshold re-encoding
+    are done; search, basis transport, and the NP theorem remain.*
 - [ ] Define `MKtP`, `MK^tP`, their search variants, and their gap promise
   problems. Prove the intended NP upper bounds with an executable bounded
   universal evaluator; do not use noncomputable minimization as the verifier.
@@ -2758,8 +2767,10 @@ not evidence that either the collapse or the desired lower bound has been proved
 - [x] Prove monotonicity and containment lemmas for canonical `GapMCSP` as either
   threshold moves, including the induced identity promise reduction under
   pointwise parameter order.
-- [M] Define a parameter-preserving promise reduction and prove composition with
-  exact output-length and threshold maps.
+- [x] Define a parameter-preserving promise reduction and prove composition with
+  exact output-length and threshold maps. The canonical map preserves the truth
+  table, installs the target yes threshold, and exposes both parameter-order
+  inequalities.
 - [M] Add Hamming balls and the elementary packing/counting bounds used by the
   selected coding argument.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
