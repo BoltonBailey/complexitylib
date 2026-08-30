@@ -83,6 +83,39 @@ theorem uniformProbability_product
       uniformProbability (Finset.univ.filter Q) :=
   uniformProbability_product_internal P Q
 
+/-- Uniform probability on a product is the average of its conditional fiber
+probabilities over the first coordinate. -/
+theorem uniformProbability_product_eq_average_fibers
+    {advice : Type u} {challenge : Type v}
+    [Fintype advice] [DecidableEq advice] [Nonempty advice]
+    [Fintype challenge] [DecidableEq challenge] [Nonempty challenge]
+    (event : advice → challenge → Prop)
+    [DecidablePred fun sample : advice × challenge =>
+      event sample.1 sample.2]
+    [∀ fixed, DecidablePred (event fixed)] :
+    uniformProbability (Finset.univ.filter fun sample : advice × challenge =>
+        event sample.1 sample.2) =
+      (∑ fixed : advice,
+        uniformProbability (Finset.univ.filter (event fixed))) /
+        Fintype.card advice :=
+  uniformProbability_product_eq_average_fibers_internal event
+
+/-- Some first-coordinate fiber has probability at least the joint product
+probability. -/
+theorem exists_fiber_uniformProbability_ge
+    {advice : Type u} {challenge : Type v}
+    [Fintype advice] [DecidableEq advice] [Nonempty advice]
+    [Fintype challenge] [DecidableEq challenge] [Nonempty challenge]
+    (event : advice → challenge → Prop)
+    [DecidablePred fun sample : advice × challenge =>
+      event sample.1 sample.2]
+    [∀ fixed, DecidablePred (event fixed)] :
+    ∃ fixed : advice,
+      uniformProbability (Finset.univ.filter fun sample : advice × challenge =>
+          event sample.1 sample.2) ≤
+        uniformProbability (Finset.univ.filter (event fixed)) :=
+  exists_fiber_uniformProbability_ge_internal event
+
 /-- Relabeling a finite uniform sample space by an equivalence preserves event
 probability. -/
 theorem uniformProbability_equiv

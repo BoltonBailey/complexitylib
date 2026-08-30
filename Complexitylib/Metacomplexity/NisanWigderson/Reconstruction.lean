@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Internal
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Averaging
 
 /-!
 # Nisan--Wigderson fixed-advice reconstruction
@@ -14,7 +15,8 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Interna
 This module turns the overlap tables into the exact query made by the Yao
 next-bit predictor. It also removes irrelevant seed and tail coordinates from
 the fixed advice and proves the resulting Boolean payload bound
-`overlapCostAt + (d - ell) + 1`, before codec and parameter overhead.
+`overlapCostAt + (d - ell) + 1`, before codec and parameter overhead. The
+averaging submodule fixes one advice choice without losing success probability.
 -/
 
 

@@ -25,7 +25,8 @@ output length. The public submodules also connect that gap to an exact next-bit
 predictor and realize the weak-design predecessor term as the entry count of
 canonical overlap-indexed hardwiring tables. A fixed-advice reconstruction then
 assembles those tables, outside seed coordinates, candidate bit, and later tail
-into exactly the query evaluated by that predictor.
+into exactly the query evaluated by that predictor. Finite fiber averaging fixes
+one such advice choice while preserving the predictor's full agreement rate.
 -/
 
 

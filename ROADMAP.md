@@ -1792,12 +1792,19 @@ to the canonical hybrid predictor's test input, pointwise for every challenge
 and candidate. Its exact non-codec Boolean payload is
 `overlapCostAt(i) + (d - ell) + 1`, and a weak-design budget substitutes directly
 for the first term.
-Composing all finite layers now gives the concrete probabilistic NW conclusion:
-every positive-density random-string test against a low-complexity NW generator
-admits a polarity and coordinate whose canonical predictor succeeds with
-probability at least `1/2 + delta/m`. The same theorem derives low complexity
-from direct production by seeds of length strictly below the randomness
-threshold.
+Finite product probability is now proved to equal the exact average of its
+first-coordinate fiber probabilities, with a maximum-fiber corollary. Applying
+this to reconstruction, uniform seeds split bijectively into outside bits and a
+challenge, normalized tails split into earlier and later bits, and the earlier
+factor cancels because the hybrid query ignores it. Thus some fixed outside
+seed, later tail, and candidate preserve the full next-bit success probability
+over uniform challenges.
+Composing all finite layers now gives the stronger concrete NW conclusion:
+every positive-density random-string test against a low-complexity weak-design
+generator admits a polarity, coordinate, and fixed advice whose predictor agrees
+with the hard function on a `1/2 + delta/m` fraction of inputs, with payload at
+most `budget + (d - ell) + 1`. The same theorem derives low complexity from
+direct production by seeds shorter than the randomness threshold.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2963,9 +2970,12 @@ meta-computational notation hides several incompatible choices; expose them.
   canonical tables of `2^|S_i ∩ S_j|` entries, and their sum fits the proved
   weak-design budget. The table-based fixed-advice query is now proved
   pointwise equal to the actual hybrid query, with exact payload
-  `overlapCostAt(i) + (d - ell) + 1`. The explicit RRV construction,
-  averaging to a fixed successful advice choice, randomized certificate search,
-  list decoding, and final program/time accounting remain.*
+  `overlapCostAt(i) + (d - ell) + 1`. Uniform seed/tail splitting and finite
+  fiber averaging now fix one outside seed, later tail, and candidate without
+  losing the `1/2 + delta/m` agreement guarantee. The end-to-end theorem combines
+  that agreement with the weak-design payload bound. The explicit RRV
+  construction, randomized certificate search with its Markov bound, list
+  decoding, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

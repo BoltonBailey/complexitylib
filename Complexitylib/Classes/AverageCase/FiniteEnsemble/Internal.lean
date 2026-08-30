@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.AverageCase.FiniteEnsemble.Defs
 import Complexitylib.Classes.AverageCase.Ensemble.Internal
+import Mathlib.Algebra.BigOperators.Group.Finset.Sigma
 
 /-!
 # Finite uniform-seed distribution ensembles -- proof internals
@@ -107,6 +108,82 @@ theorem uniformProbability_product_internal
   exact (div_mul_div_comm
     ((Finset.univ.filter P).card : ℚ) (Fintype.card Ω : ℚ)
     ((Finset.univ.filter Q).card : ℚ) (Fintype.card Ξ : ℚ)).symm
+
+theorem uniformProbability_product_eq_average_fibers_internal
+    {advice : Type u} {challenge : Type v}
+    [Fintype advice] [DecidableEq advice] [Nonempty advice]
+    [Fintype challenge] [DecidableEq challenge] [Nonempty challenge]
+    (event : advice → challenge → Prop)
+    [DecidablePred fun sample : advice × challenge =>
+      event sample.1 sample.2]
+    [∀ fixed, DecidablePred (event fixed)] :
+    uniformProbability (Finset.univ.filter fun sample : advice × challenge =>
+        event sample.1 sample.2) =
+      (∑ fixed : advice,
+        uniformProbability (Finset.univ.filter (event fixed))) /
+        Fintype.card advice := by
+  classical
+  unfold uniformProbability
+  have hcard :
+      (Finset.univ.filter fun sample : advice × challenge =>
+        event sample.1 sample.2).card =
+        ∑ fixed : advice, (Finset.univ.filter (event fixed)).card := by
+    calc
+      (Finset.univ.filter fun sample : advice × challenge =>
+          event sample.1 sample.2).card =
+          ∑ sample ∈ (Finset.univ : Finset (advice × challenge)),
+            if event sample.1 sample.2 then 1 else 0 := by
+        rw [Finset.card_eq_sum_ones, Finset.sum_filter]
+      _ = ∑ fixed ∈ (Finset.univ : Finset advice),
+          ∑ input ∈ (Finset.univ : Finset challenge),
+            if event fixed input then 1 else 0 := by
+        rw [← Finset.univ_product_univ, Finset.sum_product]
+      _ = ∑ fixed : advice,
+          (Finset.univ.filter (event fixed)).card := by
+        simp only [Finset.card_eq_sum_ones, Finset.sum_filter]
+  rw [hcard, Fintype.card_prod]
+  push_cast
+  rw [Finset.sum_div]
+  have hadvice : (Fintype.card advice : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  have hchallenge : (Fintype.card challenge : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  field_simp [hadvice, hchallenge]
+  rw [Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro fixed _hfixed
+  field_simp [hadvice, hchallenge]
+
+theorem exists_fiber_uniformProbability_ge_internal
+    {advice : Type u} {challenge : Type v}
+    [Fintype advice] [DecidableEq advice] [Nonempty advice]
+    [Fintype challenge] [DecidableEq challenge] [Nonempty challenge]
+    (event : advice → challenge → Prop)
+    [DecidablePred fun sample : advice × challenge =>
+      event sample.1 sample.2]
+    [∀ fixed, DecidablePred (event fixed)] :
+    ∃ fixed : advice,
+      uniformProbability (Finset.univ.filter fun sample : advice × challenge =>
+          event sample.1 sample.2) ≤
+        uniformProbability (Finset.univ.filter (event fixed)) := by
+  classical
+  let overall := uniformProbability
+    (Finset.univ.filter fun sample : advice × challenge =>
+      event sample.1 sample.2)
+  have hadvice : (Fintype.card advice : ℚ) ≠ 0 := by
+    exact_mod_cast (Fintype.card_pos_iff.mpr inferInstance).ne'
+  have hsum :
+      ∑ _fixed : advice, overall ≤
+        ∑ fixed : advice,
+          uniformProbability (Finset.univ.filter (event fixed)) := by
+    simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    dsimp [overall]
+    rw [uniformProbability_product_eq_average_fibers_internal event]
+    field_simp [hadvice]
+    exact le_rfl
+  obtain ⟨fixed, _hfixed, hle⟩ := Finset.exists_le_of_sum_le
+    (Finset.univ_nonempty : (Finset.univ : Finset advice).Nonempty) hsum
+  exact ⟨fixed, hle⟩
 
 theorem uniformProbability_equiv_internal
     {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
