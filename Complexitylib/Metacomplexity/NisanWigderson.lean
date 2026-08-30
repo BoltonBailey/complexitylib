@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.NisanWigderson.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Internal
 public import Complexitylib.Metacomplexity.NisanWigderson.Hardwiring
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction
 
 /-!
 # Nisan--Wigderson set systems and generators
@@ -22,7 +23,9 @@ lemma shows that every dense random test against a low-complexity NW generator
 has an oriented adjacent hybrid gap of at least its density divided by the
 output length. The public submodules also connect that gap to an exact next-bit
 predictor and realize the weak-design predecessor term as the entry count of
-canonical overlap-indexed hardwiring tables.
+canonical overlap-indexed hardwiring tables. A fixed-advice reconstruction then
+assembles those tables, outside seed coordinates, candidate bit, and later tail
+into exactly the query evaluated by that predictor.
 -/
 
 

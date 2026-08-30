@@ -1784,6 +1784,14 @@ challenge coordinates pulled back from `S_i ∩ S_j`; hence the canonical table
 recovers every observed predecessor value from exactly `2^|S_i ∩ S_j|`
 assignments. Summing those assignment spaces over `j < i` gives the predecessor
 term of `overlapCostAt`, and `HasOverlapBudget` bounds the entire collection.
+The fixed-advice query layer now removes the irrelevant coordinates explicitly.
+There are exactly `d - ell` outside seed positions and
+`m - (i + 1)` later output positions. Combining those assignments with the
+predecessor tables and candidate bit yields a reconstructed query proved equal
+to the canonical hybrid predictor's test input, pointwise for every challenge
+and candidate. Its exact non-codec Boolean payload is
+`overlapCostAt(i) + (d - ell) + 1`, and a weak-design budget substitutes directly
+for the first term.
 Composing all finite layers now gives the concrete probabilistic NW conclusion:
 every positive-density random-string test against a low-complexity NW generator
 admits a polarity and coordinate whose canonical predictor succeeds with
@@ -2953,8 +2961,11 @@ meta-computational notation hides several incompatible choices; expose them.
   also complete: challenge insertion is exact, overlap coordinates have the
   recorded intersection cardinality, predecessor observations are recovered by
   canonical tables of `2^|S_i ∩ S_j|` entries, and their sum fits the proved
-  weak-design budget. The explicit RRV construction, randomized certificate
-  search, and final reconstruction remain.*
+  weak-design budget. The table-based fixed-advice query is now proved
+  pointwise equal to the actual hybrid query, with exact payload
+  `overlapCostAt(i) + (d - ell) + 1`. The explicit RRV construction,
+  averaging to a fixed successful advice choice, randomized certificate search,
+  list decoding, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
