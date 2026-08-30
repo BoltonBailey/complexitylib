@@ -80,8 +80,26 @@ theorem uniformProbability_product
     uniformProbability
         (Finset.univ.filter fun seed : Ω × Ξ => P seed.1 ∧ Q seed.2) =
       uniformProbability (Finset.univ.filter P) *
-        uniformProbability (Finset.univ.filter Q) :=
+      uniformProbability (Finset.univ.filter Q) :=
   uniformProbability_product_internal P Q
+
+/-- Relabeling a finite uniform sample space by an equivalence preserves event
+probability. -/
+theorem uniformProbability_equiv
+    {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
+    [Fintype Ξ] [DecidableEq Ξ] (e : Ω ≃ Ξ) (P : Ξ → Prop)
+    [DecidablePred P] :
+    uniformProbability (Finset.univ.filter fun x : Ω => P (e x)) =
+      uniformProbability (Finset.univ.filter P) :=
+  uniformProbability_equiv_internal e P
+
+/-- Every point in a finite uniform sample space has reciprocal-cardinality
+probability. -/
+theorem uniformProbability_eq {Ω : Type u}
+    [Fintype Ω] [DecidableEq Ω] (x : Ω) :
+    uniformProbability (Finset.univ.filter fun y : Ω => y = x) =
+      1 / Fintype.card Ω :=
+  uniformProbability_eq_internal x
 
 namespace FiniteEnsemble
 

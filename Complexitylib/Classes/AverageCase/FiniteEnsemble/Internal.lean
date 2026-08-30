@@ -108,6 +108,38 @@ theorem uniformProbability_product_internal
     ((Finset.univ.filter P).card : ℚ) (Fintype.card Ω : ℚ)
     ((Finset.univ.filter Q).card : ℚ) (Fintype.card Ξ : ℚ)).symm
 
+theorem uniformProbability_equiv_internal
+    {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
+    [Fintype Ξ] [DecidableEq Ξ] (e : Ω ≃ Ξ) (P : Ξ → Prop)
+    [DecidablePred P] :
+    uniformProbability (Finset.univ.filter fun x : Ω => P (e x)) =
+      uniformProbability (Finset.univ.filter P) := by
+  have hcard :
+      (Finset.univ.filter fun x : Ω => P (e x)).card =
+        (Finset.univ.filter P).card := by
+    apply Finset.card_bij' (fun x _ => e x) (fun y _ => e.symm y)
+    · intro x hx
+      simpa only [Finset.mem_filter, Finset.mem_univ, true_and] using hx
+    · intro y hy
+      simpa only [Finset.mem_filter, Finset.mem_univ, true_and,
+        Equiv.apply_symm_apply] using hy
+    · intro x _
+      exact e.symm_apply_apply x
+    · intro y _
+      exact e.apply_symm_apply y
+  unfold uniformProbability
+  rw [hcard, Fintype.card_congr e]
+
+theorem uniformProbability_eq_internal {Ω : Type u}
+    [Fintype Ω] [DecidableEq Ω] (x : Ω) :
+    uniformProbability (Finset.univ.filter fun y : Ω => y = x) =
+      1 / Fintype.card Ω := by
+  unfold uniformProbability
+  rw [show Finset.univ.filter (fun y : Ω => y = x) = {x} by
+    ext y
+    simp]
+  simp
+
 namespace FiniteEnsemble
 
 variable {α : Type u} {β : Type w}

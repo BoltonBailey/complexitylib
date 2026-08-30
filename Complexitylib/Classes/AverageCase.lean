@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.AverageCase.AuxiliaryUnary
 public import Complexitylib.Classes.AverageCase.Ensemble
 public import Complexitylib.Classes.AverageCase.FiniteEnsemble
 public import Complexitylib.Classes.AverageCase.Heuristic
@@ -12,6 +13,7 @@ public import Complexitylib.Classes.AverageCase.Heuristic
 /-!
 # Average-case complexity
 
-Shared foundations for distribution ensembles, heuristic algorithms, and
-average-case complexity classes.
+Shared foundations for finite and dyadic distribution ensembles, Hirahara's
+auxiliary-unary distribution, heuristic algorithms, and average-case complexity
+classes.
 -/

@@ -2623,6 +2623,12 @@ choices from `Fin m` when `m` is not a power of two. This is the
 representation-level distribution layer; no sample map is called efficient
 until a machine realizes it with proved polynomial seed, runtime, and output
 bounds.
+`FiniteEnsemble.auxiliaryUnary` now gives the exact 2018 distribution `D^u`:
+at positive parameter `m`, it chooses the binary length `n` uniformly from
+`{0, ..., m - 1}`, retains a uniform `n`-bit prefix, and emits the canonical
+pair `(x, 1^(m-n))`. The seed space has `m * 2^m` points, and every fixed pair
+with `|x| = n < m` has proved mass `1 / (m * 2^n)`. The zero slice is explicitly
+totalized as the point `pair [] []` rather than being attributed to the paper.
 `HeuristicAnswer` now gives errorless algorithms distinct accept, reject, and
 failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
 global soundness, deterministic polynomial time, and per-slice failure bounds;
@@ -2718,8 +2724,8 @@ meta-computational notation hides several incompatible choices; expose them.
   ensembles, and the uniform and auxiliary-unary ensembles. *The general finite
   and dyadic seed representations, their exact probability bridge, probability
   laws, pushforward, normalized support mass, independent products, point masses,
-  and uniform bit strings are done; mixtures and the auxiliary-unary ensemble
-  remain.*
+  uniform bit strings, and the exact auxiliary-unary sampler and fixed-pair mass
+  law are done; mixtures remain.*
 - [ ] Define polynomial-time samplers by uniform machines and prove closure under
   polynomial-time maps, pairing, padding, products, and efficiently chosen
   mixtures. Package distributional problems and `DistNP` only after this bridge.
@@ -2733,9 +2739,11 @@ meta-computational notation hides several incompatible choices; expose them.
 - [ ] State and prove the easy half `P = NP -> DistNP subset AvgP`. Give
   `ExcludesHeuristica` and the equivalent nontrivial implication stable public
   names so later conditional results compose without restating class logic.
-- [ ] Add `MINKT[r]`, the auxiliary-unary ensemble `D^u`, search
+- [~] Add `MINKT[r]`, the auxiliary-unary ensemble `D^u`, search
   `Gap_(sigma,tau)MINKT`, and the associated decision promise. Prove all codec,
   threshold-monotonicity, and NP-witness facts before the average-case theorem.
+  *The exact `D^u` sampler, component decoding, seed cardinality, and fixed-pair
+  probability are done; the MinKT languages and gap/search problems remain.*
 - [ ] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
   because low-complexity strings are sparse. This is the first substantive bridge
@@ -2803,7 +2811,7 @@ formalization targets and should be stated positively under their exact names.
   dyadic embedding preserves every event probability exactly.
 - [x] Define errorless answers and prove that complementing an errorless heuristic
   preserves its failure event exactly.
-- [M] Define the auxiliary-unary ensemble and calculate the probability of every
+- [x] Define the auxiliary-unary ensemble and calculate the probability of every
   fixed split/string pair.
 - [M] Define finite computational depth from two ordered clocks and prove its
   zero/monotonicity laws.
