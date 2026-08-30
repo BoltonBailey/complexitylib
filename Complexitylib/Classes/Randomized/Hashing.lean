@@ -75,6 +75,32 @@ theorem averageCellSizeSquare_eq
           (2 : ℚ) ^ (2 * rangeWidth) :=
   hash.averageCellSizeSquare_eq_internal set target
 
+/-- Exact variance of the size of one target cell. -/
+theorem cellSizeVariance_eq
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.cellSizeVariance set target =
+      (set.card : ℚ) / (2 : ℚ) ^ rangeWidth *
+        (1 - 1 / (2 : ℚ) ^ rangeWidth) :=
+  hash.cellSizeVariance_eq_internal set target
+
+/-- The cell-size variance is nonnegative. -/
+theorem cellSizeVariance_nonneg
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    0 ≤ hash.cellSizeVariance set target :=
+  hash.cellSizeVariance_nonneg_internal set target
+
+/-- Pairwise independence bounds the cell-size variance by its mean. -/
+theorem cellSizeVariance_le_averageCellSize
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.cellSizeVariance set target ≤ hash.averageCellSize set target :=
+  hash.cellSizeVariance_le_averageCellSize_internal set target
+
 end PairwiseIndependentHash
 
 end Complexity

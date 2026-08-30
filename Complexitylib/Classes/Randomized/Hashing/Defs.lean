@@ -87,6 +87,15 @@ def averageCellSizeSquare {domainWidth rangeWidth seedWidth : ℕ}
       (hash.cellSize set target seed : ℚ) ^ 2) /
     (2 : ℚ) ^ seedWidth
 
+/-- Variance of the target-cell size over a uniform hash seed. -/
+def cellSizeVariance {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) : ℚ :=
+  (∑ seed : BitString seedWidth,
+      ((hash.cellSize set target seed : ℚ) -
+        hash.averageCellSize set target) ^ 2) /
+    (2 : ℚ) ^ seedWidth
+
 end PairwiseIndependentHash
 
 end Complexity

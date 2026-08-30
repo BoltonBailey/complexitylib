@@ -159,6 +159,76 @@ theorem averageCellSizeSquare_eq_internal
     hash.averageCellSize_eq_internal set target,
     hash.averageOrderedPairCellSize_eq_internal set target]
 
+/-- Internal variance identity for a finite uniform hash family. -/
+theorem cellSizeVariance_eq_sub_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.cellSizeVariance set target =
+      hash.averageCellSizeSquare set target -
+        hash.averageCellSize set target ^ 2 := by
+  classical
+  unfold cellSizeVariance averageCellSizeSquare
+  have hsum :
+      ∑ seed : BitString seedWidth,
+          (hash.cellSize set target seed : ℚ) =
+        hash.averageCellSize set target * (2 : ℚ) ^ seedWidth := by
+    rw [averageCellSize]
+    field_simp
+  have hcard :
+      (Fintype.card (BitString seedWidth) : ℚ) =
+        (2 : ℚ) ^ seedWidth := by
+    rw [card_finArrowBool]
+    norm_num
+  field_simp
+  simp_rw [sub_sq]
+  rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  simp only [Finset.sum_const, nsmul_eq_mul, Finset.card_univ]
+  rw [← Finset.sum_mul, ← Finset.mul_sum, hsum, hcard]
+  ring
+
+/-- Internal closed form for the variance of one target-cell size. -/
+theorem cellSizeVariance_eq_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.cellSizeVariance set target =
+      (set.card : ℚ) / (2 : ℚ) ^ rangeWidth *
+        (1 - 1 / (2 : ℚ) ^ rangeWidth) := by
+  rw [hash.cellSizeVariance_eq_sub_internal set target,
+    hash.averageCellSizeSquare_eq_internal set target,
+    hash.averageCellSize_eq_internal set target]
+  have hle : set.card ≤ set.card * set.card := by
+    cases set.card with
+    | zero => simp
+    | succ count =>
+        exact Nat.le_mul_of_pos_right (count + 1) (by omega)
+  rw [Nat.cast_sub hle]
+  push_cast
+  rw [pow_mul']
+  ring
+
+/-- Internal nonnegativity of finite uniform variance. -/
+theorem cellSizeVariance_nonneg_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    0 ≤ hash.cellSizeVariance set target := by
+  unfold cellSizeVariance
+  positivity
+
+/-- Internal pairwise-independence variance bound. -/
+theorem cellSizeVariance_le_averageCellSize_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.cellSizeVariance set target ≤ hash.averageCellSize set target := by
+  rw [hash.cellSizeVariance_eq_internal set target,
+    hash.averageCellSize_eq_internal set target]
+  have hmean : 0 ≤ (set.card : ℚ) / (2 : ℚ) ^ rangeWidth := by positivity
+  have hinv : 0 ≤ 1 / (2 : ℚ) ^ rangeWidth := by positivity
+  nlinarith
+
 end PairwiseIndependentHash
 
 end Complexity
