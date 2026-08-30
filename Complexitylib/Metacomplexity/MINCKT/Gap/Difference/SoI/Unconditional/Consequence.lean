@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Final
+public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Efficient
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Multiplicative
 
 /-!
@@ -83,6 +84,37 @@ theorem P_eq_NP_of_multiplicative_hard_of_SoI
               compilerLoss).widening)
           hpolynomial
 
+/-- The implementation-level form of the complete consequence. Polynomial-time
+encoded query builders and an encoded ordinary estimator construct the induced
+threshold language in `P`, so no separate semantic membership premise remains. -/
+theorem P_eq_NP_of_multiplicative_hard_of_SoI_of_implementations
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ} (additive compilerLoss : ℕ)
+    {composition : PairCompositionPlan}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (hclock : IsAdmissibleClock clock)
+    (hsupports : SupportsPairUpper (plan clock compilerLoss) composition
+      ordinaryMachine conditionalMachine)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBounds ordinaryMachine
+      (ordinaryParameters clock))
+    (encodedPlan : EncodedPlan (plan clock compilerLoss))
+    (encodedEstimator : EncodedEstimator ordinaryEstimate)
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock (logarithmicSoILoss clock additive))
+    (factor : ℕ → ℕ) (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (GapMINCKT.Multiplicative.problem ordinaryMachine conditionalMachine
+        (parameters clock additive compilerLoss) factor
+          (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+            compilerLoss).widening
+            hfactor)) :
+    P = NP :=
+  P_eq_NP_of_multiplicative_hard_of_SoI additive compilerLoss ordinaryMachine
+    conditionalMachine hclock hsupports hestimate hsoi factor hfactor hhard
+      (encodedPlan.estimatorLanguage_mem_P encodedEstimator)
+
 /-- Assuming `P ≠ NP`, the simultaneous SoI, estimator-efficiency, compiler,
 and multiplicative-hardness hypotheses are inconsistent. This is the precise
 contrapositive needed before a future `DistNP ⊆ AvgP → SoI` theorem can rule
@@ -115,6 +147,38 @@ theorem not_timeBoundedSymmetryOfInformation_of_P_ne_NP
   exact hne (P_eq_NP_of_multiplicative_hard_of_SoI additive compilerLoss
     ordinaryMachine conditionalMachine hclock hsupports hestimate hsoi factor
       hfactor hhard hpolynomial)
+
+/-- Under `P ≠ NP`, implementation-level estimator efficiency and
+multiplicative hardness rule out the corresponding time-bounded SoI statement. -/
+theorem not_timeBoundedSymmetryOfInformation_of_P_ne_NP_of_implementations
+    {ordinaryTapes conditionalTapes : ℕ}
+    {clock : ℕ → ℕ} (additive compilerLoss : ℕ)
+    {composition : PairCompositionPlan}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (hclock : IsAdmissibleClock clock)
+    (hsupports : SupportsPairUpper (plan clock compilerLoss) composition
+      ordinaryMachine conditionalMachine)
+    {ordinaryEstimate : GapMINKT.Logarithmic.Estimator}
+    (hestimate : ordinaryEstimate.SatisfiesBounds ordinaryMachine
+      (ordinaryParameters clock))
+    (encodedPlan : EncodedPlan (plan clock compilerLoss))
+    (encodedEstimator : EncodedEstimator ordinaryEstimate)
+    (factor : ℕ → ℕ) (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (GapMINCKT.Multiplicative.problem ordinaryMachine conditionalMachine
+        (parameters clock additive compilerLoss) factor
+          (Slack.IsAdmissibleClock.parameters_admissible hclock additive
+            compilerLoss).widening
+            hfactor))
+    (hne : P ≠ NP) :
+    ¬TimeBoundedSymmetryOfInformation ordinaryMachine conditionalMachine
+      clock (logarithmicSoILoss clock additive) := by
+  intro hsoi
+  exact hne
+    (P_eq_NP_of_multiplicative_hard_of_SoI_of_implementations additive
+      compilerLoss ordinaryMachine conditionalMachine hclock hsupports hestimate
+        encodedPlan encodedEstimator hsoi factor hfactor hhard)
 
 end Slack
 

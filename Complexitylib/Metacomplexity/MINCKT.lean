@@ -15,6 +15,7 @@ public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Uncondition
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Growth
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Slack
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Final
+public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Efficient
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Consequence
 public import Complexitylib.Metacomplexity.MINCKT.Internal
 

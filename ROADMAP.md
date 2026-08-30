@@ -3314,7 +3314,16 @@ meta-computational notation hides several incompatible choices; expose them.
   threshold language, and multiplicative-gap NP-hardness imply `P = NP`. Its
   contrapositive isolates exactly the SoI statement that must fail under
   `P != NP`; the future `DistNP subset AvgP -> SoI` bridge can therefore attach
-  without restating the clock and loss accounting.*
+  without restating the clock and loss accounting. The formerly semantic
+  threshold-language `P` premise now also has an implementation theorem.
+  An `EncodedPlan` supplies `FP` query builders, malformed-input recognition,
+  and unary-length correction/threshold rulers; an `EncodedEstimator` supplies
+  an `FP` ordinary estimator whose output length is its value. Their constructed
+  two-query comparison is proved in `FP`, recognizes exactly the induced
+  estimator completion, and therefore discharges its `P` membership by
+  preimage closure. The main collapse and anti-SoI consequences now have
+  implementation-level forms with no standalone `estimatorLanguage in P`
+  assumption. Concrete realization of those encoded functions remains.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3407,6 +3416,10 @@ formalization targets and should be stated positively under their exact names.
   unconditional estimator, SoI hypothesis, threshold-language implementation,
   and multiplicative NP-hardness into one finite `P = NP` theorem and its
   `P != NP` contrapositive.
+- [x] Replace the opaque induced-language `P` obligation by encoded `FP`
+  contracts for query construction, validity, correction, threshold, and the
+  ordinary estimator; build the adjusted comparison and prove its language is
+  exactly the required polynomial-time completion.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
