@@ -1727,7 +1727,14 @@ composable predicates; none mentions the concrete UTM codec.
 and certified-prefix-free `K_U` layers with `WithTop Nat` failure values. Their
 public theory includes attaining witnesses, threshold characterizations, clock
 monotonicity, additive semantic-simulation comparison, and a polynomial
-resource-aware timed comparison. The
+resource-aware timed comparison. `ShortProgram k` now packages all binary
+programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
+Deterministic output uniqueness injects every fixed-length time-bounded
+compressible string into that finite type, giving both the exact cardinal upper
+bound and the uniform-probability bound
+`Pr[C_U^t(x) <= k] <= (2^(k+1)-1)/2^n`. The complementary density theorem and
+the existence of an `n`-bit string above every threshold `k < n` are also
+proved, for every machine and clock. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1820,10 +1827,13 @@ the mathematics and must not be hidden behind notation.
   monotonicity, witness/threshold characterizations, additive invariance under
   the appropriate compiler, and the corresponding resource-aware comparison
   theorem. A time-bounded measure is not invariant under an unchanged clock.
-- [ ] Prove finite incompressibility: fewer than `2^s` descriptions of length
+- [~] Prove finite incompressibility: fewer than `2^s` descriptions of length
   below `s` exist, so sufficiently large length slices contain strings of high
   complexity. Add the trivial print upper bound for an efficiently universal
-  machine and clearly state its clock requirement.
+  machine and clearly state its clock requirement. *The exact short-program
+  cardinality, fixed-length compressible/incompressible counts, uniform density
+  bounds, and high-complexity existence theorem are done for arbitrary machines
+  and clocks; the efficient-universal print upper bound remains.*
 - [ ] Formalize the classical noncomputability layer for unbounded plain or
   prefix-free complexity, separately from the decidable bounded measures. This
   should reuse a precise partial-computation or halting interface rather than a
@@ -2744,10 +2754,12 @@ meta-computational notation hides several incompatible choices; expose them.
   threshold-monotonicity, and NP-witness facts before the average-case theorem.
   *The exact `D^u` sampler, component decoding, seed cardinality, and fixed-pair
   probability are done; the MinKT languages and gap/search problems remain.*
-- [ ] Formalize the finite dense-random-string extraction lemma: an errorless
+- [~] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
   because low-complexity strings are sparse. This is the first substantive bridge
-  from finite incompressibility to the 2018 reduction.
+  from finite incompressibility to the 2018 reduction. *The machine-relative
+  sparse-low-complexity count and exact uniform density bound are done; the
+  language/heuristic acceptance argument and auxiliary-unary averaging remain.*
 - [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
   turn that dense set into a near-optimal description search algorithm. First
   prove the exact finite parameter theorem; then derive the published

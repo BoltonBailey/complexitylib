@@ -6,11 +6,13 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.Kolmogorov
+public import Complexitylib.Metacomplexity.Kolmogorov.Incompressibility
 public import Complexitylib.Metacomplexity.MCSP
 
 /-!
 # Metacomplexity
 
-Public aggregation module for machine-relative description complexity and the
-minimum-resource problems built from it, including canonical MCSP instances.
+Public aggregation module for machine-relative description complexity, finite
+incompressibility, and the minimum-resource problems built from them, including
+canonical MCSP instances.
 -/
