@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bolton Bailey
 -/
 module
-public import Complexitylib.Classes.P.Cobham.Internal
+public import Complexitylib.Encoding.Pairing
+import Complexitylib.Classes.P.Cobham.Internal
 public import Complexitylib.Classes.P.Preimage
 
 /-!
