@@ -3271,10 +3271,16 @@ meta-computational notation hides several incompatible choices; expose them.
   `B = J-D-c`; two pre-cancellation accounting inequalities suffice to prove
   the estimator sandwich despite natural truncated subtraction and possible
   `WithTop` values. This result composes directly with the semantic solver and
-  `PromiseP` criterion. Instantiating those accounting inequalities from SoI,
-  the upper chain rule, and concrete unconditional estimators, connecting the
-  algorithm to `P`, adding the multiplicative Definition 6.5 variant, and the
-  hardness/class bridge remain.*
+  `PromiseP` criterion. The SoI accounting theorem is now complete too: an
+  explicit schedule records the SoI base time, paired upper-chain time, three
+  finite losses, the exact transformed-clock equality, both joint/condition
+  estimator bounds, and the two loss budgets. Under widening, one invocation
+  of the named SoI hypothesis and these surrounding inputs produce the full
+  cancellation contract, estimator sandwich, solver, and `PromiseP` endpoint.
+  Constructing this schedule from one concrete Fact 3.4 unconditional
+  estimator and the evaluator composition theorem, connecting its algorithm to
+  `P`, adding the multiplicative Definition 6.5 variant, and the hardness/class
+  bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3337,6 +3343,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Isolate Proposition 6.2's adjusted-difference estimator and prove that its
   two pre-cancellation accounting inequalities imply the full conditional
   estimator sandwich, solver, and `PromiseP` criterion.
+- [x] Compose an explicit clock/loss accounting schedule with the named SoI
+  hypothesis to derive both adjusted-difference premises and the end-to-end
+  `GapMINCKT` solver/`PromiseP` endpoint.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
