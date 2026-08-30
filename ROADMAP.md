@@ -1735,10 +1735,19 @@ On the circuit side, `Circuit.sizeComplexityWithTop` and
 `Circuit.sizeComplexity` already define minimum circuit size for typed Boolean
 functions, and the truth-table bridges, circuit codec, evaluator, and functional
 unrolling construction supply most of the intended MCSP verification path.
+`MCSP.Instance` now packages an explicit arity, a structurally exact `2^n`-bit
+truth table, and a threshold. Its total decoder uses canonical minimal binary
+natural fields inside the shared pairing codec, rejects every malformed or
+noncanonical string, and has an exact code-length theorem separating `2^n` from
+the binary widths of `n` and the threshold. The zero-arity convention matches
+`CircuitFamily`'s explicit size-zero bit; at positive arity the direct circuit
+witness predicate agrees exactly with `Circuit.sizeComplexity Basis.andOr2` and
+is monotone in the threshold.
 
 What remains missing is an instance connecting the fixed UTM to the generic
-interface, executable finite minimization for the bounded measure, a total MCSP
-instance language, and promise/reduction infrastructure for gap problems.
+interface, executable finite minimization for the bounded measure, an executable
+normalized MCSP verifier and its NP packaging, and promise/reduction
+infrastructure for gap problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
 the mathematics and must not be hidden behind notation.
@@ -1822,10 +1831,16 @@ the mathematics and must not be hidden behind notation.
   MKtP demonstrate the same abstraction. It should package a costed decoder,
   exact semantics, a threshold language, a search relation, and a gap promise
   without erasing representation-specific obligations.
-- [ ] Define total `MCSP`, parameterized `MCSP[s]`, and search-MCSP over the
-  canonical truth-table codec. Prove agreement with `Circuit.sizeComplexity`,
-  basis-transport lemmas, threshold monotonicity, and `MCSP ∈ NP` using the
-  existing circuit decoder/evaluator as the verifier core.
+- [ ] Complete total `MCSP`, parameterized `MCSP[s]`, and search-MCSP over the
+  canonical truth-table codec. Prove basis-transport lemmas and `MCSP ∈ NP`
+  using the existing circuit decoder/evaluator as the verifier core.
+  - [x] Land total typed instances and their exact canonical codec, reject
+    malformed strings, settle zero arity, and prove positive-arity agreement
+    with `Circuit.sizeComplexity` plus threshold monotonicity.
+  - [ ] Normalize oversized thresholds, expose an executable raw-circuit witness
+    relation, and prove that the circuit decoder/evaluator verifies it within a
+    polynomial in truth-table input length `N`.
+  - [ ] Add `MCSP[s]`, search-MCSP, basis transport, and the final NP theorem.
 - [ ] Define `MKtP`, `MK^tP`, their search variants, and their gap promise
   problems. Prove the intended NP upper bounds with an executable bounded
   universal evaluator; do not use noncomputable minimization as the verifier.
@@ -1870,7 +1885,7 @@ verified evaluators.
   additive length bound.
 - [M] State a function-output version of `utmTM_universal` and derive it from the
   existing output-preserving Hoare theorem.
-- [M] Define a total encoded MCSP instance syntax, including malformed and
+- [x] Define a total encoded MCSP instance syntax, including malformed and
   zero-arity cases, and prove encode/decode round trips.
 - [M] Bound the number of size-`s` circuit descriptions and derive a finite
   incompressibility lemma for truth tables.
