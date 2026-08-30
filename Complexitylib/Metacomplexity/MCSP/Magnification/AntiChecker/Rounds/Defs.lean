@@ -53,6 +53,14 @@ def IsAccurateRoundEstimator {arity : ℕ}
   AntiChecker.ApproximatesEveryRound (roundPrecision arity) target
     (smallThreshold beta arity) estimator
 
+/-- A semantic extension estimator satisfies the relative-count contract for
+exactly the prefix lengths used by the anti-checker construction. -/
+def IsAccurateRequiredRoundEstimator {arity : ℕ}
+    (beta : PositiveRationalScale) (target : BitString arity → Bool)
+    (estimator : List (BitString arity) → BitString arity → ℕ) : Prop :=
+  AntiChecker.ApproximatesRoundsUpTo (requiredRoundCount beta arity)
+    (roundPrecision arity) target (smallThreshold beta arity) estimator
+
 end AntiCheckerLemma
 
 end Magnification

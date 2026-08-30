@@ -11,10 +11,11 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds
 /-!
 # Anti-Checker Lemma round parameters
 
-At every sufficiently large arity, an accurate semantic extension estimator
-and target hardness generate a shrink trace of any prescribed finite length.
-This is the combinatorial round-composition contract; constructing a small
-circuit that realizes the estimator is a separate conditional step.
+At every sufficiently large arity, target hardness and a semantic extension
+estimator accurate through the required finite prefix range generate an
+anti-checker. This is the combinatorial round-composition contract;
+constructing a small circuit that realizes the estimator is a separate
+conditional step.
 -/
 
 
@@ -27,6 +28,16 @@ namespace GapMCSP
 namespace Magnification
 
 namespace AntiCheckerLemma
+
+/-- Global round-estimator accuracy implies the bounded accuracy contract used
+by the anti-checker construction. -/
+theorem IsAccurateRoundEstimator.isAccurateRequiredRoundEstimator
+    {arity : ℕ} {beta : PositiveRationalScale}
+    {target : BitString arity → Bool}
+    {estimator : List (BitString arity) → BitString arity → ℕ}
+    (hestimate : IsAccurateRoundEstimator beta target estimator) :
+    IsAccurateRequiredRoundEstimator beta target estimator :=
+  hestimate.isAccurateRequiredRoundEstimator_internal
 
 /-- The initial canonical survivor count is strictly below the power of two
 indexed by the selected number of halving blocks. -/
@@ -65,8 +76,26 @@ theorem eventually_exists_shrinkTrace_of_isHardAt
                     (smallThreshold beta arity) inputs :=
   eventually_exists_shrinkTrace_of_isHardAt_internal beta
 
-/-- For every sufficiently large arity, an accurate round estimator yields an
-anti-checker of exactly the published sample count for every hard target. -/
+/-- For every sufficiently large arity, accuracy only through the required
+number of rounds produces the shrink trace used by the construction. -/
+theorem eventually_exists_requiredShrinkTrace_of_isHardAt
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ),
+        IsHardAt beta target →
+          IsAccurateRequiredRoundEstimator beta target estimator →
+            ∃ inputs : List (BitString arity),
+              inputs.length = requiredRoundCount beta arity ∧
+                AntiChecker.IsShrinkTrace
+                  (roundShrinkDenominator arity) target
+                  (smallThreshold beta arity) inputs :=
+  eventually_exists_requiredShrinkTrace_of_isHardAt_internal beta
+
+/-- For every sufficiently large arity, estimator accuracy through only the
+required rounds yields an anti-checker of exactly the published sample count
+for every hard target. -/
 theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt
     (beta : PositiveRationalScale) :
     ∀ᶠ arity : ℕ in Filter.atTop,
@@ -76,7 +105,7 @@ theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt
           (estimator :
             List (BitString arity) → BitString arity → ℕ),
         IsHardAt beta target →
-          IsAccurateRoundEstimator beta target estimator →
+          IsAccurateRequiredRoundEstimator beta target estimator →
             ∃ inputs : List (BitString arity),
               inputs.length = sampleCount beta arity ∧
                 AntiChecker.IsFor target (smallThreshold beta arity) inputs :=

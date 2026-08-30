@@ -30,6 +30,14 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+theorem IsAccurateRoundEstimator.isAccurateRequiredRoundEstimator_internal
+    {arity : ℕ} {beta : PositiveRationalScale}
+    {target : BitString arity → Bool}
+    {estimator : List (BitString arity) → BitString arity → ℕ}
+    (hestimate : IsAccurateRoundEstimator beta target estimator) :
+    IsAccurateRequiredRoundEstimator beta target estimator :=
+  hestimate.approximatesRoundsUpTo_internal (requiredRoundCount beta arity)
+
 theorem initialCandidateSurvivorCount_lt_two_pow_roundBlockCount_internal
     {arity : ℕ} (beta : PositiveRationalScale)
     (target : BitString arity → Bool) :
@@ -144,6 +152,33 @@ theorem eventually_exists_shrinkTrace_of_isHardAt_internal
       (fun inputs => hgood target inputs hhard)
   simpa [roundShrinkDenominator, ← Nat.mul_assoc] using htrace
 
+theorem eventually_exists_requiredShrinkTrace_of_isHardAt_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ),
+        IsHardAt beta target →
+          IsAccurateRequiredRoundEstimator beta target estimator →
+            ∃ inputs : List (BitString arity),
+              inputs.length = requiredRoundCount beta arity ∧
+                AntiChecker.IsShrinkTrace
+                  (roundShrinkDenominator arity) target
+                  (smallThreshold beta arity) inputs := by
+  filter_upwards
+      [eventually_hasShrinkExtension_of_isHardAt beta,
+        Filter.eventually_ge_atTop 1]
+      with arity hgood harity
+  intro target estimator hhard hestimate
+  have htrace :=
+    AntiChecker.exists_isShrinkTrace_length_of_approximatesRoundsUpTo_internal
+      (precision := roundPrecision arity) (denominator := 2 * arity)
+      estimator (requiredRoundCount beta arity)
+      (by unfold roundPrecision; omega) (by omega)
+      (by unfold roundPrecision; omega) hestimate
+      (fun inputs => hgood target inputs hhard)
+  simpa [roundShrinkDenominator, ← Nat.mul_assoc] using htrace
+
 theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal
     (beta : PositiveRationalScale) :
     ∀ᶠ arity : ℕ in Filter.atTop,
@@ -153,20 +188,18 @@ theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal
           (estimator :
             List (BitString arity) → BitString arity → ℕ),
         IsHardAt beta target →
-          IsAccurateRoundEstimator beta target estimator →
+          IsAccurateRequiredRoundEstimator beta target estimator →
             ∃ inputs : List (BitString arity),
               inputs.length = sampleCount beta arity ∧
                 AntiChecker.IsFor target (smallThreshold beta arity) inputs := by
   filter_upwards
-      [eventually_exists_shrinkTrace_of_isHardAt_internal beta,
-        eventually_requiredRoundCount_le_sampleCount_internal beta,
-        Filter.eventually_ge_atTop 1]
-      with arity htrace hbudget hlarge
+      [eventually_exists_requiredShrinkTrace_of_isHardAt_internal beta,
+        eventually_requiredRoundCount_le_sampleCount_internal beta]
+      with arity htrace hbudget
   intro harity target estimator hhard hestimate
   letI : NeZero arity := ⟨harity⟩
   obtain ⟨inputs, hlength, hshrink⟩ :=
     htrace target estimator hhard hestimate
-      (requiredRoundCount beta arity)
   have hanti :
       AntiChecker.IsFor target (smallThreshold beta arity) inputs := by
     apply hshrink.isFor_of_initial_lt_two_pow_internal
