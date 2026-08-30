@@ -2891,7 +2891,9 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   codes now supplies exact coverage, an explicit cardinality bound, and a
   hardness-to-finite-extraction theorem. The exact survivor count is defined,
   is monotone under extending the sample prefix, and vanishes exactly for typed
-  anti-checkers over the canonical domain. The conditional relative-approximation
+  anti-checkers over the canonical domain. An exact natural-number relative-error
+  contract now proves zero preservation and transfers comparison of estimates to
+  scaled comparison of true survivor counts. The conditional approximation
   circuits, good-string argument, and quantitative compression remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the

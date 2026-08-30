@@ -10,6 +10,7 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Approximation
 
 /-!
 # Finite anti-checkers
@@ -26,7 +27,8 @@ layer obtains such a list from any finite covering set of circuit codes whose
 members all fail somewhere, using at most one disagreement input per code. The
 enumeration layer supplies a canonical covering set with an explicit exhaustive
 cardinality bound. Its survivor-count layer identifies anti-checking exactly
-with reducing the number of consistent canonical candidates to zero.
+with reducing the number of consistent canonical candidates to zero. Relative
+estimates of that count use an exact cross-multiplied natural-number contract.
 -/
 
 
