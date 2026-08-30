@@ -30,6 +30,27 @@ theorem oracle_decides {language : Language}
     circuitOracle.oracle.Decides language :=
   circuitOracle.decides.evalList
 
+/-- At every positive query width, the selected family member computes the
+induced Boolean oracle on the serialized query. -/
+theorem circuit_eval_eq_oracle {language : Language}
+    (circuitOracle : PolynomialCircuitOracle language)
+    {queryWidth : ℕ} [NeZero queryWidth] (query : BitString queryWidth) :
+    (circuitOracle.family.circuit queryWidth).eval query 0 =
+      circuitOracle.oracle query.toList := by
+  rw [oracle, CircuitFamily.evalList_toList]
+  obtain ⟨width, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (NeZero.ne queryWidth)
+  rfl
+
+/-- At every positive width, the selected oracle circuit's size is the circuit
+family's size at that width. -/
+theorem circuit_size_eq_family_size {language : Language}
+    (circuitOracle : PolynomialCircuitOracle language)
+    (queryWidth : ℕ) [NeZero queryWidth] :
+    (circuitOracle.family.circuit queryWidth).size =
+      circuitOracle.family.size queryWidth := by
+  obtain ⟨width, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (NeZero.ne queryWidth)
+  rfl
+
 end PolynomialCircuitOracle
 
 /-- A language is in `P/poly` exactly when it has a packaged polynomial-size

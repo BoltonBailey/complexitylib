@@ -2930,8 +2930,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   counter families from `NP ⊆ PPoly` through a formal relative-counting and
   direct SAT-oracle circuitization argument with the quantitative size bound.
   The exact Boolean-oracle semantics and the extraction of a polynomial-size
-  SAT circuit oracle from `NP ⊆ PPoly` are now packaged; adaptive oracle-circuit
-  inlining and the randomized relative counter remain.*
+  SAT circuit oracle from `NP ⊆ PPoly` are now packaged. Fixed-round adaptive
+  programs with round-dependent query widths now inline those family members
+  with exact semantics and size accounting. Circuitizing Stockmeyer's randomized
+  relative counter and deriving the quantitative family bound remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
