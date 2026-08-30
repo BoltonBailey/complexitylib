@@ -3125,11 +3125,18 @@ meta-computational notation hides several incompatible choices; expose them.
   `2 * |ambientEncoding| + 2` self-delimiting cost is charged to the program.
   This closes the hidden compiler-constant dependency in the oracle-free model,
   but deliberately does not claim the paper's oracle-uniform decoder interface.
+  The first genuine oracle-relative endpoint is now complete as well: every
+  finite test has a canonical length-checking membership oracle, one fixed
+  decoder machine for a design/code pair handles every such test, and the
+  inverse-density theorem yields the same half-success certificate bound in
+  `C_M^{t,A}` without charging any test-truth-table bits to the program. This is
+  machine-relative; oracle-efficient universality and uniformity across the
+  remaining design/code parameters are still open.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
-  bounded ambient codec or lifting the indexed decoder realization to the new
-  oracle-relative Kolmogorov layer, constructing machine/runtime realizers for
-  the sampler, checker, indexed-message evaluator, and concrete code family,
+  bounded ambient codec or a family-uniform oracle decoder, constructing
+  machine/runtime realizers for the sampler, checker, indexed-message evaluator,
+  and concrete code family, defining efficient oracle universality,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case

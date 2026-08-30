@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Defs
 import Complexitylib.Metacomplexity.ListDecoding.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Internal
 import Complexitylib.Models.TuringMachine.OutputSemantics.Internal
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.CertificateSearch.Internal
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Encoding.Internal
@@ -99,6 +100,29 @@ theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le_in
   exact le_trans
     (TM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
     (by exact_mod_cast hlength)
+
+namespace HasEncodedMessageCertificateWithin
+
+theorem oracleTimeBoundedKolmogorovComplexity_le_internal
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : OracleEncodedMessageDecoderRealization design code)
+    (hcertificate : HasEncodedMessageCertificateWithin
+      design code test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (finiteTestOracle test) (List.ofFn message) (realization.time bound) ≤
+      (bound : WithTop ℕ) := by
+  obtain ⟨description, hdecode, hlength⟩ := hcertificate
+  have hproduce := realization.correct test description message hdecode
+  have hproduceBound := hproduce.mono (realization.time_mono hlength)
+  exact le_trans
+    (OracleTM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
+    (by exact_mod_cast hlength)
+
+end HasEncodedMessageCertificateWithin
 
 theorem EncodedMessageDecoderRealization.efficientlyUniversal_transfer_internal
     {messageLength listSize outputLength inputLength seedLength

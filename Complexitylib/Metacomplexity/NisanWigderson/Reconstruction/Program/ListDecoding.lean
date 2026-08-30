@@ -30,6 +30,9 @@ inherits that bound with additive description and polynomial clock overhead.
 An additional family-uniform decoder interface uses one machine for every
 ambient instance and exposes the exact self-delimiting cost of encoding the
 design and test, without conflating explicit input with oracle access.
+Separately, an oracle decoder realization keeps the design and code fixed but
+handles every finite test through its canonical membership oracle, yielding a
+machine-relative oracle `C^{t,A}` certificate with no test bits in the program.
 -/
 
 
@@ -111,6 +114,28 @@ theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le
         (List.ofFn message) (realization.time bound) ≤
       (bound : WithTop ℕ) :=
   hcertificate.timeBoundedKolmogorovComplexity_le_internal realization
+
+namespace HasEncodedMessageCertificateWithin
+
+/-- A bounded indexed reconstruction certificate gives an oracle-relative
+time-bounded Kolmogorov upper bound when one decoder machine handles every
+finite test through its canonical membership oracle. The test truth table
+occupies no program bits. -/
+theorem oracleTimeBoundedKolmogorovComplexity_le
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : OracleEncodedMessageDecoderRealization design code)
+    (hcertificate : HasEncodedMessageCertificateWithin
+      design code test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (finiteTestOracle test) (List.ofFn message) (realization.time bound) ≤
+      (bound : WithTop ℕ) :=
+  hcertificate.oracleTimeBoundedKolmogorovComplexity_le_internal realization
+
+end HasEncodedMessageCertificateWithin
 
 /-- Every efficiently universal machine inherits the decoded-description bound
 with the universal compiler's additive constant and an explicit polynomially

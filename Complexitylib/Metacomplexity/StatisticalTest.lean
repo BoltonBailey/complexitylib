@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.StatisticalTest.Defs
 public import Complexitylib.Metacomplexity.StatisticalTest.Internal
+public import Complexitylib.Metacomplexity.StatisticalTest.Oracle
 public import Complexitylib.Metacomplexity.StatisticalTest.Hybrid
 public import Complexitylib.Metacomplexity.StatisticalTest.HybridPrediction
 public import Complexitylib.Metacomplexity.StatisticalTest.Prediction
@@ -23,6 +24,9 @@ In particular, if the machine directly produces each generated output from
 its seed within the clock and the seed length is strictly below the randomness
 threshold, the test has zero acceptance probability on generated outputs. Its
 distinguishing advantage therefore equals its uniform density exactly.
+
+Every finite test also has a canonical total Boolean oracle: fixed-length
+queries receive their membership bit and malformed lengths are rejected.
 -/
 
 

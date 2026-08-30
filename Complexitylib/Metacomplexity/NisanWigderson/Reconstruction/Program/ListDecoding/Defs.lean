@@ -7,6 +7,8 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.ListDecoding.Defs
 public import Complexitylib.Metacomplexity.Kolmogorov.Defs
+public import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Defs
+public import Complexitylib.Metacomplexity.StatisticalTest.Oracle.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.Encoding.Defs
 
 /-!
@@ -149,6 +151,29 @@ structure EncodedMessageDecoderRealization
     decodeIndexedMessage? design code test description = some message →
       machine.ProducesInTime description (List.ofFn message)
         (time description.length)
+
+/-- One oracle machine realizing the indexed-message decoder for every finite
+statistical test. The design and list code remain fixed machine parameters,
+but the test is supplied through its canonical Boolean oracle and therefore
+does not occupy program bits. -/
+structure OracleEncodedMessageDecoderRealization
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool)) where
+  /-- Number of ordinary work tapes used in addition to the query tape. -/
+  tapes : ℕ
+  /-- Oracle machine interpreting complete indexed reconstruction programs. -/
+  machine : OracleTM tapes
+  /-- Decoder time as a function of program length. -/
+  time : ℕ → ℕ
+  /-- Larger descriptions receive no smaller clock. -/
+  time_mono : Monotone time
+  /-- Correctness for every finite test supplied through
+  `finiteTestOracle`. -/
+  correct : ∀ (test : Finset (Fin outputLength → Bool)) description message,
+    decodeIndexedMessage? design code test description = some message →
+      machine.ProducesInTime (finiteTestOracle test) description
+        (List.ofFn message) (time description.length)
 
 namespace ReconstructionProgram
 

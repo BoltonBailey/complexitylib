@@ -24,6 +24,8 @@ The final endpoints compose this exact specialization with any efficiently
 universal machine while retaining the compiler constant and polynomial clock.
 A family-uniform realization chooses those constants before all ambient
 instances and charges the explicit design/test encoding in the description.
+An oracle-relative endpoint instead supplies the finite test through canonical
+membership queries and retains the original reconstruction-description bound.
 -/
 
 
@@ -394,6 +396,65 @@ theorem half_le_timeBoundedKolmogorovComplexity_of_inverseDensity
           (inverseDensityDescriptionBound family bounds messageLength
             outputLength inverseDensity seedLength budget : WithTop ℕ) :=
   half_le_timeBoundedKolmogorovComplexity_of_inverseDensity_internal
+    family hfamily bounds houtputLength hinverseDensity realization hlow hrandom
+      hdense hbudget
+
+/-- Oracle-relative form of inverse-density reconstruction. One decoder machine
+handles every finite statistical test through its canonical membership oracle.
+Canonical certificate search succeeds with probability at least one half, and
+each returned certificate gives the source message the exact existing
+description bound with no test-truth-table bits added to the program. -/
+theorem half_le_oracleTimeBoundedKolmogorovComplexity_of_inverseDensity
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (realization : OracleEncodedMessageDecoderRealization design
+      (family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)))
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message) test
+          (1 / 2 +
+            ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+          (1 / (inverseDensity : ℚ))) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate?
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        realization.machine.timeBoundedKolmogorovComplexity
+            (finiteTestOracle test) (List.ofFn message)
+            (realization.time (inverseDensityDescriptionBound family bounds
+              messageLength outputLength inverseDensity seedLength budget)) ≤
+          (inverseDensityDescriptionBound family bounds messageLength
+            outputLength inverseDensity seedLength budget : WithTop ℕ) :=
+  half_le_oracleTimeBoundedKolmogorovComplexity_of_inverseDensity_internal
     family hfamily bounds houtputLength hinverseDensity realization hlow hrandom
       hdense hbudget
 
