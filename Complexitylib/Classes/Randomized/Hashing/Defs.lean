@@ -61,6 +61,32 @@ def averageCellSize {domainWidth rangeWidth seedWidth : ℕ}
   (∑ seed : BitString seedWidth, (hash.cellSize set target seed : ℚ)) /
     (2 : ℚ) ^ seedWidth
 
+/-- Number of ordered pairs of distinct set members that land in the same
+seeded target cell. -/
+def orderedPairCellSize {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (seed : BitString seedWidth) : ℕ :=
+  (set.offDiag.filter fun pair =>
+    hash.eval seed pair.1 = target ∧ hash.eval seed pair.2 = target).card
+
+/-- Uniform rational average of the ordered distinct-pair count in one target
+cell. -/
+def averageOrderedPairCellSize {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) : ℚ :=
+  (∑ seed : BitString seedWidth,
+      (hash.orderedPairCellSize set target seed : ℚ)) /
+    (2 : ℚ) ^ seedWidth
+
+/-- Uniform rational average of the squared target-cell size. -/
+def averageCellSizeSquare {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) : ℚ :=
+  (∑ seed : BitString seedWidth,
+      (hash.cellSize set target seed : ℚ) ^ 2) /
+    (2 : ℚ) ^ seedWidth
+
 end PairwiseIndependentHash
 
 end Complexity
