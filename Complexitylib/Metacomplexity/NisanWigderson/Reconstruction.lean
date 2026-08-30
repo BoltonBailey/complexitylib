@@ -10,6 +10,7 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Interna
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Averaging
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.RepeatedSampling
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.GlobalSampling
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.CertificateSearch
 
 /-!
 # Nisan--Wigderson fixed-advice reconstruction
@@ -21,7 +22,9 @@ the fixed advice and proves the resulting Boolean payload bound
 averaging submodule fixes one advice choice without losing success probability,
 repeated sampling finds such advice with an explicit geometric guarantee, and
 global sampling chooses the hybrid coordinate and advice in one fixed-width
-trial matching the randomized reconstruction algorithm.
+trial matching the randomized reconstruction algorithm. Certificate search
+then checks both test orientations by exact finite agreement and returns the
+first successful sampled trial.
 -/
 
 

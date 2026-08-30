@@ -2998,9 +2998,15 @@ meta-computational notation hides several incompatible choices; expose them.
   that this single global trial succeeds with probability at least
   `delta/(2m)`, so the same canonical number of global trials succeeds with
   probability at least one half without assuming the good coordinate is known.
-  A machine realization of the sampler, the executable agreement checker and
-  certificate selector, list decoding, and final program/time accounting
-  remain.*
+  The finite agreement checker and certificate selector are now executable:
+  every sampled trial is tested in both orientations against the exact truth
+  table, successful output is sound and belongs to the sampled batch, and its
+  success probability dominates the favorable-orientation repetition event.
+  Consequently `ceil(2m/delta)` checked global trials succeed with probability
+  at least one half while preserving the selected predictor's payload bound.
+  A machine realization and codec/runtime analysis of the sampler and checker,
+  the explicit RRV construction, list decoding, and final program/time
+  accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
