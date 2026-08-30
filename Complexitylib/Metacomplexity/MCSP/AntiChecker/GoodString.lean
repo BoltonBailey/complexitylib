@@ -33,6 +33,44 @@ namespace Complexity
 
 namespace AntiChecker
 
+/-- A valid survivor code outputs the target bit exactly when the encoded
+circuit agrees with the target at that input. -/
+theorem survivorCodeOutput_eq_target_iff {arity : ℕ}
+    (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity))
+    (code : SurvivorCode target threshold inputs)
+    (input : BitString arity) :
+    survivorCodeOutput target threshold inputs code input = target input ↔
+      CodeAgreesAt target code.1 input :=
+  survivorCodeOutput_eq_target_iff_internal
+    target threshold inputs code input
+
+/-- If one input does not catch a survivor tuple, then a strict majority of
+the tuple's circuit outputs agrees with the target there. -/
+theorem survivorTupleMajority_eq_target_of_not_caught
+    {arity : ℕ} (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity)) (input : BitString arity)
+    (tuple : Fin arity → SurvivorCode target threshold inputs)
+    (hnotCaught :
+      ¬ IsSurvivorTupleCaughtAt target threshold inputs input tuple) :
+    majority
+        (fun i => survivorCodeOutput target threshold inputs (tuple i) input) =
+      target input :=
+  survivorTupleMajority_eq_target_of_not_caught_internal
+    target threshold inputs input tuple hnotCaught
+
+/-- Ruling out every survivor tuple as a majority representation of the target
+is enough to ensure that every tuple is caught somewhere. -/
+theorem everySurvivorTupleCaught_of_no_majorityComputes
+    {arity : ℕ} (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity))
+    (hnoMajority :
+      ∀ tuple : Fin arity → SurvivorCode target threshold inputs,
+        ¬ SurvivorTupleMajorityComputes target threshold inputs tuple) :
+    EverySurvivorTupleCaught target threshold inputs :=
+  everySurvivorTupleCaught_of_no_majorityComputes_internal
+    target threshold inputs hnoMajority
+
 /-- The finite type of canonical survivor codes has cardinality equal to the
 canonical survivor count. -/
 theorem card_survivorCode {arity : ℕ}

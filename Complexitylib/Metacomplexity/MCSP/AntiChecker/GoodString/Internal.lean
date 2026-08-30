@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Defs
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting.Internal
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.Internal
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction.Internal
 
 /-!
@@ -19,6 +20,34 @@ public section
 namespace Complexity
 
 namespace AntiChecker
+
+theorem survivorCodeOutput_eq_target_iff_internal {arity : ℕ}
+    (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity))
+    (code : SurvivorCode target threshold inputs)
+    (input : BitString arity) :
+    survivorCodeOutput target threshold inputs code input = target input ↔
+      CodeAgreesAt target code.1 input := by
+  have hcandidate : code.1 ∈ candidateCodes arity threshold :=
+    (Finset.mem_filter.mp code.2).1
+  have hsmall := (mem_candidateCodes_iff_internal.mp hcandidate).2
+  unfold IsSmallCircuitCode at hsmall
+  cases hdecode : CircuitCode.RawCircuit.decode? code.1 with
+  | none => simp [hdecode] at hsmall
+  | some circuit =>
+      simp only [hdecode] at hsmall
+      obtain ⟨hwell, -⟩ := hsmall
+      have heval :
+          (circuit.eval? input.toList).isSome :=
+        (CircuitCode.RawCircuit.eval?_isSome_iff circuit input.toList).mpr
+          (by simpa [BitString.length_toList] using hwell)
+      obtain ⟨output, houtput⟩ := Option.isSome_iff_exists.mp heval
+      have hevalCode :
+          CircuitCode.evalCode arity code.1 input.toList = some output := by
+        simp [CircuitCode.evalCode, BitString.length_toList, hdecode, houtput]
+      unfold survivorCodeOutput CodeAgreesAt
+      rw [hevalCode]
+      simp
 
 theorem card_survivorCode_internal {arity : ℕ}
     (target : BitString arity → Bool) (threshold : ℕ)
@@ -50,6 +79,91 @@ theorem isSurvivorTupleCaughtAt_iff_agreementCount_le_internal
   rw [hdisagreements, Finset.mem_Icc]
   simp only [Finset.card_univ, Fintype.card_fin] at hpartition
   omega
+
+theorem survivorTupleMajority_eq_target_of_not_caught_internal
+    {arity : ℕ} (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity)) (input : BitString arity)
+    (tuple : Fin arity → SurvivorCode target threshold inputs)
+    (hnotCaught :
+      ¬ IsSurvivorTupleCaughtAt target threshold inputs input tuple) :
+    majority
+        (fun i => survivorCodeOutput target threshold inputs (tuple i) input) =
+      target input := by
+  have hagreement : arity / 2 <
+      survivorTupleAgreementCount target threshold inputs input tuple := by
+    have hiff := isSurvivorTupleCaughtAt_iff_agreementCount_le_internal
+      target threshold inputs input tuple
+    have hnotLe :
+        ¬ survivorTupleAgreementCount target threshold inputs input tuple ≤
+          arity / 2 := fun hle => hnotCaught (hiff.mpr hle)
+    omega
+  unfold survivorTupleAgreementCount at hagreement
+  have hagreementEq :
+      (Finset.univ.filter
+          (fun i => CodeAgreesAt target (tuple i).1 input)).card =
+        (Finset.univ.filter (fun i =>
+          survivorCodeOutput target threshold inputs (tuple i) input =
+            target input)).card := by
+    congr 1
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact (survivorCodeOutput_eq_target_iff_internal
+      target threshold inputs (tuple i) input).symm
+  rw [hagreementEq] at hagreement
+  cases htarget : target input with
+  | false =>
+      rw [majority_eq_false_iff]
+      change
+        (Finset.univ.filter (fun i =>
+          survivorCodeOutput target threshold inputs (tuple i) input = true)).card ≤
+            arity / 2
+      have hpartition := Finset.card_filter_add_card_filter_not
+        (s := (Finset.univ : Finset (Fin arity)))
+        (fun i =>
+          survivorCodeOutput target threshold inputs (tuple i) input = true)
+      have hfalseFilter :
+          Finset.univ.filter (fun i =>
+              survivorCodeOutput target threshold inputs (tuple i) input =
+                false) =
+            Finset.univ.filter (fun i =>
+              ¬ survivorCodeOutput target threshold inputs (tuple i) input =
+                true) := by
+        ext i
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        cases survivorCodeOutput target threshold inputs (tuple i) input <;>
+          simp
+      have hpartition' :
+          (Finset.univ.filter (fun i =>
+              survivorCodeOutput target threshold inputs (tuple i) input =
+                true)).card +
+            (Finset.univ.filter (fun i =>
+              survivorCodeOutput target threshold inputs (tuple i) input =
+                false)).card = arity := by
+        rw [hfalseFilter]
+        simpa only [Finset.card_univ, Fintype.card_fin] using hpartition
+      simp only [htarget] at hagreement
+      omega
+  | true =>
+      rw [majority_eq_true_iff]
+      change arity / 2 <
+        (Finset.univ.filter (fun i =>
+          survivorCodeOutput target threshold inputs (tuple i) input = true)).card
+      simpa only [htarget] using hagreement
+
+theorem everySurvivorTupleCaught_of_no_majorityComputes_internal
+    {arity : ℕ} (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity))
+    (hnoMajority :
+      ∀ tuple : Fin arity → SurvivorCode target threshold inputs,
+        ¬ SurvivorTupleMajorityComputes target threshold inputs tuple) :
+    EverySurvivorTupleCaught target threshold inputs := by
+  intro tuple
+  by_contra hmissing
+  apply hnoMajority tuple
+  intro input
+  apply survivorTupleMajority_eq_target_of_not_caught_internal
+  intro hcaught
+  exact hmissing ⟨input, hcaught⟩
 
 theorem card_caughtSurvivorTuples_internal {arity : ℕ}
     (target : BitString arity → Bool) (threshold : ℕ)

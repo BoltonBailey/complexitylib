@@ -29,6 +29,26 @@ abbrev SurvivorCode {arity : ℕ} (target : BitString arity → Bool)
     (threshold : ℕ) (inputs : List (BitString arity)) :=
   ↑(ConsistentCodes target inputs (candidateCodes arity threshold))
 
+/-- The Boolean output of a surviving circuit code on one input. The default
+branch is unreachable for survivor codes: candidate membership guarantees a
+canonical well-formed circuit at the declared arity. -/
+def survivorCodeOutput {arity : ℕ} (target : BitString arity → Bool)
+    (threshold : ℕ) (inputs : List (BitString arity))
+    (code : SurvivorCode target threshold inputs)
+    (input : BitString arity) : Bool :=
+  (CircuitCode.evalCode arity code.1 input.toList).getD false
+
+/-- A survivor tuple computes the target by taking the strict majority of its
+pointwise circuit outputs. -/
+def SurvivorTupleMajorityComputes {arity : ℕ}
+    (target : BitString arity → Bool) (threshold : ℕ)
+    (inputs : List (BitString arity))
+    (tuple : Fin arity → SurvivorCode target threshold inputs) : Prop :=
+  ∀ input,
+    majority
+        (fun i => survivorCodeOutput target threshold inputs (tuple i) input) =
+      target input
+
 /-- Current survivors that disagree with the target at one possible next
 input. -/
 def disagreeingSurvivors {arity : ℕ}
