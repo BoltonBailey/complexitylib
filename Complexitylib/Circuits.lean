@@ -13,6 +13,7 @@ public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.InputProjection
 public import Complexitylib.Circuits.InputReindexing
 public import Complexitylib.Circuits.KeyedMinimum
+public import Complexitylib.Circuits.KeyedMinimumTournament
 public import Complexitylib.Circuits.Majority
 public import Complexitylib.Circuits.Multiplexer
 public import Complexitylib.Circuits.Dependency
