@@ -9,11 +9,13 @@ public import Complexitylib.Classes.Promise.Defs
 public import Complexitylib.Classes.Promise.Internal
 
 /-!
-# Promise problems
+# Promise problems and promise complexity classes
 
 This module exposes disjoint yes/no promise problems, semantic Boolean solvers,
 side-preserving maps, polynomial-time many-one reductions, complements, and the
-total embedding of ordinary languages.
+total embedding of ordinary languages. `PromiseClass` lifts an ordinary
+language class by completions, yielding `PromiseP`, `PromiseNP`, and
+`PromiseCoNP` without assigning semantics outside the promise.
 -/
 
 
@@ -104,6 +106,78 @@ theorem mapReducesVia_ofLanguage_iff (first second : Language)
       ∀ x, x ∈ first ↔ f x ∈ second :=
   mapReducesVia_ofLanguage_iff_internal first second f
 
+/-- Promise-class membership transports backward along a polynomial-time
+side-preserving reduction whenever the underlying language class is closed
+under polynomial-time preimages. -/
+theorem MapReducesPoly.mem_promiseClass
+    {C : Set Language} {source target : PromiseProblem}
+    (hpreimage : ∀ {f : List Bool → List Bool} {L : Language},
+      f ∈ FP → L ∈ C → f ⁻¹' L ∈ C)
+    (hred : source.MapReducesPoly target)
+    (htarget : target ∈ PromiseClass C) :
+    source ∈ PromiseClass C :=
+  hred.mem_promiseClass_internal hpreimage htarget
+
+/-- `PromiseP` is closed backward under polynomial-time promise reductions. -/
+theorem MapReducesPoly.mem_PromiseP
+    {source target : PromiseProblem}
+    (hred : source.MapReducesPoly target) (htarget : target ∈ PromiseP) :
+    source ∈ PromiseP :=
+  hred.mem_PromiseP_internal htarget
+
+/-- `PromiseNP` is closed backward under polynomial-time promise reductions. -/
+theorem MapReducesPoly.mem_PromiseNP
+    {source target : PromiseProblem}
+    (hred : source.MapReducesPoly target) (htarget : target ∈ PromiseNP) :
+    source ∈ PromiseNP :=
+  hred.mem_PromiseNP_internal htarget
+
+/-- A total embedded language lies in a lifted promise class exactly when the
+language lies in the underlying class. -/
+@[simp] theorem ofLanguage_mem_promiseClass_iff
+    (C : Set Language) (L : Language) :
+    ofLanguage L ∈ PromiseClass C ↔ L ∈ C :=
+  ofLanguage_mem_promiseClass_iff_internal C L
+
+/-- Total-language embedding preserves and reflects `P`. -/
+@[simp] theorem ofLanguage_mem_PromiseP_iff (L : Language) :
+    ofLanguage L ∈ PromiseP ↔ L ∈ P := by
+  exact ofLanguage_mem_promiseClass_iff P L
+
+/-- Total-language embedding preserves and reflects `NP`. -/
+@[simp] theorem ofLanguage_mem_PromiseNP_iff (L : Language) :
+    ofLanguage L ∈ PromiseNP ↔ L ∈ NP := by
+  exact ofLanguage_mem_promiseClass_iff NP L
+
+/-- Total-language embedding preserves and reflects `coNP`. -/
+@[simp] theorem ofLanguage_mem_PromiseCoNP_iff (L : Language) :
+    ofLanguage L ∈ PromiseCoNP ↔ L ∈ coNP := by
+  exact ofLanguage_mem_promiseClass_iff coNP L
+
 end PromiseProblem
+
+/-- Inclusion of ordinary language classes lifts to their completion-based
+promise classes. -/
+theorem promiseClass_mono {C D : Set Language} (hsubset : C ⊆ D) :
+    PromiseClass C ⊆ PromiseClass D :=
+  promiseClass_mono_internal hsubset
+
+/-- Deterministic polynomial-time promise problems lie in `PromiseNP`. -/
+theorem PromiseP_subset_PromiseNP : PromiseP ⊆ PromiseNP :=
+  PromiseP_subset_PromiseNP_internal
+
+/-- `PromiseP` is closed under swapping its promised yes and no sides. -/
+theorem PromiseP.complement {problem : PromiseProblem}
+    (hproblem : problem ∈ PromiseP) :
+    problem.complement ∈ PromiseP :=
+  PromiseP_complement_internal hproblem
+
+/-- Complementing a promise problem preserves `PromiseP` in both directions. -/
+@[simp] theorem complement_mem_PromiseP_iff (problem : PromiseProblem) :
+    problem.complement ∈ PromiseP ↔ problem ∈ PromiseP := by
+  constructor
+  · intro hcomplement
+    simpa using PromiseP.complement hcomplement
+  · exact PromiseP.complement
 
 end Complexity

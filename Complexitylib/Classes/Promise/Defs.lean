@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.P.Defs
+public import Complexitylib.Classes.NP
 
 /-!
 # Promise problems -- definitions
@@ -68,5 +69,26 @@ def ofLanguage (L : Language) : PromiseProblem where
   disjoint := disjoint_compl_right
 
 end PromiseProblem
+
+/-- Lift a language class to promise problems by total completions. A promise
+problem belongs to `PromiseClass C` when some language in `C` contains every
+yes-instance and no no-instance. Behavior outside the promise is unrestricted. -/
+def PromiseClass (C : Set Language) : Set PromiseProblem :=
+  {problem | ∃ completion : Language,
+    completion ∈ C ∧
+      problem.yesInstances ⊆ completion ∧
+      Disjoint completion problem.noInstances}
+
+/-- Promise problems admitting a deterministic polynomial-time completion. -/
+def PromiseP : Set PromiseProblem :=
+  PromiseClass P
+
+/-- Promise problems admitting a nondeterministic polynomial-time completion. -/
+def PromiseNP : Set PromiseProblem :=
+  PromiseClass NP
+
+/-- Promise problems admitting a coNP completion. -/
+def PromiseCoNP : Set PromiseProblem :=
+  PromiseClass coNP
 
 end Complexity

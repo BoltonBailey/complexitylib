@@ -1789,7 +1789,13 @@ now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
 reduction reflexivity/transitivity are proved, so gap problems need not assign
-arbitrary semantics to their gap region.
+arbitrary semantics to their gap region. `PromiseClass` lifts any ordinary
+language class by total completions; `PromiseP`, `PromiseNP`, and `PromiseCoNP`
+are now defined this way. The lift agrees exactly with the underlying class on
+total embedded languages, preserves class inclusions, and is closed backward
+under side-preserving polynomial reductions whenever the base class is closed
+under polynomial-time preimages. In particular, `PromiseP ⊆ PromiseNP`, and
+`PromiseP` is closed under complement.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
@@ -1850,6 +1856,10 @@ the mathematics and must not be hidden behind notation.
 - [x] Add the generic `PromiseProblem` layer with disjoint sides, promised-input
   semantics, complement and total-language embedding, and composable explicit
   and polynomial-time side-preserving many-one reductions.
+- [x] Lift language classes to promises by completions, define `PromiseP`,
+  `PromiseNP`, and `PromiseCoNP`, and prove total-embedding equivalences,
+  reduction closure, deterministic containment, and complement closure for
+  `PromiseP`.
 - [ ] Promote the fixed UTM's full-output theorem to the public surface and
   instantiate the generic efficient-universality interface. The compiler should
   expose the exact paired-program length `2 * |description| + 2 + |p|` and the

@@ -7,6 +7,8 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.Promise.Defs
 import Complexitylib.Classes.P
+import Complexitylib.Classes.NP.Closure
+import Complexitylib.Classes.Containments
 
 /-!
 # Promise problems -- proof internals
@@ -138,6 +140,70 @@ theorem mapReducesVia_ofLanguage_iff_internal (first second : Language)
     · intro x hx hsecond
       exact hx ((hiff x).mpr hsecond)
 
+theorem MapReducesPoly.mem_promiseClass_internal
+    {C : Set Language} {source target : PromiseProblem}
+    (hpreimage : ∀ {f : List Bool → List Bool} {L : Language},
+      f ∈ FP → L ∈ C → f ⁻¹' L ∈ C)
+    (hred : source.MapReducesPoly target)
+    (htarget : target ∈ PromiseClass C) :
+    source ∈ PromiseClass C := by
+  obtain ⟨f, hf, hmap⟩ := hred
+  obtain ⟨completion, hcompletion, hyes, hno⟩ := htarget
+  refine ⟨f ⁻¹' completion, hpreimage hf hcompletion, ?_, ?_⟩
+  · intro x hx
+    exact hyes (hmap.1 x hx)
+  · apply Set.disjoint_left.mpr
+    intro x hxCompletion hxNo
+    exact Set.disjoint_left.mp hno hxCompletion (hmap.2 x hxNo)
+
+theorem MapReducesPoly.mem_PromiseP_internal
+    {source target : PromiseProblem}
+    (hred : source.MapReducesPoly target) (htarget : target ∈ PromiseP) :
+    source ∈ PromiseP :=
+  hred.mem_promiseClass_internal
+    (fun hf hL => mem_P_preimage hf hL) htarget
+
+theorem MapReducesPoly.mem_PromiseNP_internal
+    {source target : PromiseProblem}
+    (hred : source.MapReducesPoly target) (htarget : target ∈ PromiseNP) :
+    source ∈ PromiseNP :=
+  hred.mem_promiseClass_internal
+    (fun hf hL => mem_NP_preimage hf hL) htarget
+
 end PromiseProblem
+
+theorem promiseClass_mono_internal {C D : Set Language} (hsubset : C ⊆ D) :
+    PromiseClass C ⊆ PromiseClass D := by
+  rintro problem ⟨completion, hcompletion, hyes, hno⟩
+  exact ⟨completion, hsubset hcompletion, hyes, hno⟩
+
+theorem ofLanguage_mem_promiseClass_iff_internal
+    (C : Set Language) (L : Language) :
+    PromiseProblem.ofLanguage L ∈ PromiseClass C ↔ L ∈ C := by
+  constructor
+  · rintro ⟨completion, hcompletion, hyes, hno⟩
+    have heq : completion = L := by
+      apply Set.Subset.antisymm
+      · intro x hx
+        by_contra hxL
+        exact Set.disjoint_left.mp hno hx hxL
+      · exact hyes
+    rwa [heq] at hcompletion
+  · intro hL
+    exact ⟨L, hL, fun _ hx => hx, disjoint_compl_right⟩
+
+theorem PromiseP_subset_PromiseNP_internal : PromiseP ⊆ PromiseNP :=
+  promiseClass_mono_internal P_subset_NP
+
+theorem PromiseP_complement_internal {problem : PromiseProblem}
+    (hproblem : problem ∈ PromiseP) :
+    problem.complement ∈ PromiseP := by
+  obtain ⟨completion, hcompletion, hyes, hno⟩ := hproblem
+  refine ⟨completionᶜ, P_compl hcompletion, ?_, ?_⟩
+  · intro x hxNo hxCompletion
+    exact Set.disjoint_left.mp hno hxCompletion hxNo
+  · apply Set.disjoint_left.mpr
+    intro x hxComplement hxYes
+    exact hxComplement (hyes hxYes)
 
 end Complexity
