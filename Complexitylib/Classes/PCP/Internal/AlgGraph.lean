@@ -81,27 +81,27 @@ noncomputable def encGraph (G : ConstraintGraph α) : List Bool :=
 /-! ### Reading it back -/
 
 /-- How many vertices an encoded graph has. -/
-def gVerts (z : List Bool) : ℕ := (Cobham.fstBlock z).length
+def gVerts (z : List Bool) : ℕ := (pairFst z).length
 
 /-- How many edges. -/
-noncomputable def gEdges (z : List Bool) : ℕ := (posCount (Cobham.sndBlock z)).length
+noncomputable def gEdges (z : List Bool) : ℕ := (posCount (pairSnd z)).length
 
 /-- The first endpoint of an edge. -/
-noncomputable def gTail (z : List Bool) (e : ℕ) : ℕ := (recFst (Cobham.sndBlock z) e).length
+noncomputable def gTail (z : List Bool) (e : ℕ) : ℕ := (recFst (pairSnd z) e).length
 
 /-- The second endpoint. -/
-noncomputable def gHead (z : List Bool) (e : ℕ) : ℕ := (recSnd (Cobham.sndBlock z) e).length
+noncomputable def gHead (z : List Bool) (e : ℕ) : ℕ := (recSnd (pairSnd z) e).length
 
 /-- The code of the constraint. -/
-noncomputable def gCode (z : List Bool) (e : ℕ) : ℕ := (recThd (Cobham.sndBlock z) e).length
+noncomputable def gCode (z : List Bool) (e : ℕ) : ℕ := (recThd (pairSnd z) e).length
 
 variable (G : ConstraintGraph α)
 
 @[simp] theorem gVerts_encGraph : gVerts (encGraph G) = G.numVerts := by
-  rw [gVerts, encGraph, Cobham.fstBlock_pair, List.length_replicate]
+  rw [gVerts, encGraph, pairFst_pair, List.length_replicate]
 
 @[simp] theorem gEdges_encGraph : gEdges (encGraph G) = G.numEdges := by
-  rw [gEdges, encGraph, Cobham.sndBlock_pair, posCount_eq, List.length_replicate,
+  rw [gEdges, encGraph, pairSnd_pair, posCount_eq, List.length_replicate,
     length_edgeRecs]
 
 theorem getElem_edgeRecs (e : ℕ) (he : e < G.numEdges) :
@@ -114,19 +114,19 @@ theorem getElem_edgeRecs (e : ℕ) (he : e < G.numEdges) :
 
 @[simp] theorem gTail_encGraph (e : ℕ) (he : e < G.numEdges) :
     gTail (encGraph G) e = (G.tail ⟨e, he⟩).val := by
-  rw [gTail, encGraph, Cobham.sndBlock_pair,
+  rw [gTail, encGraph, pairSnd_pair,
     recFst_eq (l3 := edgeRecs G) (by rw [length_edgeRecs]; exact he) (getElem_edgeRecs G e he),
     List.length_replicate]
 
 @[simp] theorem gHead_encGraph (e : ℕ) (he : e < G.numEdges) :
     gHead (encGraph G) e = (G.head ⟨e, he⟩).val := by
-  rw [gHead, encGraph, Cobham.sndBlock_pair,
+  rw [gHead, encGraph, pairSnd_pair,
     recSnd_eq (l3 := edgeRecs G) (by rw [length_edgeRecs]; exact he) (getElem_edgeRecs G e he),
     List.length_replicate]
 
 theorem gCode_encGraph (e : ℕ) (he : e < G.numEdges) :
     gCode (encGraph G) e = codeOfRel (G.rel ⟨e, he⟩) := by
-  rw [gCode, encGraph, Cobham.sndBlock_pair,
+  rw [gCode, encGraph, pairSnd_pair,
     recThd_eq (l3 := edgeRecs G) (by rw [length_edgeRecs]; exact he) (getElem_edgeRecs G e he),
     List.length_replicate]
 
@@ -186,39 +186,39 @@ theorem buildGraph_eq {nv cnt E : List Bool → List Bool} {z : List Bool}
 /-! ### Reading one, in polynomial time -/
 
 theorem gVertsFn_mem_FP {g : List Bool → List Bool} (hg : g ∈ FP) :
-    (fun z => marks (Cobham.fstBlock (g z))) ∈ FP :=
+    (fun z => marks (pairFst (g z))) ∈ FP :=
   marks_mem_FP (mem_FP_comp hg Cobham.fstBlock_mem_FP)
 
 theorem gEdgesFn_mem_FP {g : List Bool → List Bool} (hg : g ∈ FP) :
-    (fun z => posCount (Cobham.sndBlock (g z))) ∈ FP :=
+    (fun z => posCount (pairSnd (g z))) ∈ FP :=
   posCount_mem_FP (mem_FP_comp hg Cobham.sndBlock_mem_FP)
 
 theorem gTailFn_mem_FP {f g : List Bool → List Bool} (hf : f ∈ FP) (hg : g ∈ FP) :
-    (fun z => recFst (Cobham.sndBlock (g z)) (f z).length) ∈ FP :=
+    (fun z => recFst (pairSnd (g z)) (f z).length) ∈ FP :=
   recFst_mem_FP hf (mem_FP_comp hg Cobham.sndBlock_mem_FP)
 
 theorem gHeadFn_mem_FP {f g : List Bool → List Bool} (hf : f ∈ FP) (hg : g ∈ FP) :
-    (fun z => recSnd (Cobham.sndBlock (g z)) (f z).length) ∈ FP :=
+    (fun z => recSnd (pairSnd (g z)) (f z).length) ∈ FP :=
   recSnd_mem_FP hf (mem_FP_comp hg Cobham.sndBlock_mem_FP)
 
 theorem gCodeFn_mem_FP {f g : List Bool → List Bool} (hf : f ∈ FP) (hg : g ∈ FP) :
-    (fun z => recThd (Cobham.sndBlock (g z)) (f z).length) ∈ FP :=
+    (fun z => recThd (pairSnd (g z)) (f z).length) ∈ FP :=
   recThd_mem_FP hf (mem_FP_comp hg Cobham.sndBlock_mem_FP)
 
 theorem length_marks_fstBlock (z : List Bool) :
-    (marks (Cobham.fstBlock z)).length = gVerts z := by
+    (marks (pairFst z)).length = gVerts z := by
   rw [marks_eq, List.length_replicate, gVerts]
 
 theorem length_posCount_sndBlock (z : List Bool) :
-    (posCount (Cobham.sndBlock z)).length = gEdges z := rfl
+    (posCount (pairSnd z)).length = gEdges z := rfl
 
 theorem length_recFst_sndBlock (z : List Bool) (e : ℕ) :
-    (recFst (Cobham.sndBlock z) e).length = gTail z e := rfl
+    (recFst (pairSnd z) e).length = gTail z e := rfl
 
 theorem length_recSnd_sndBlock (z : List Bool) (e : ℕ) :
-    (recSnd (Cobham.sndBlock z) e).length = gHead z e := rfl
+    (recSnd (pairSnd z) e).length = gHead z e := rfl
 
 theorem length_recThd_sndBlock (z : List Bool) (e : ℕ) :
-    (recThd (Cobham.sndBlock z) e).length = gCode z e := rfl
+    (recThd (pairSnd z) e).length = gCode z e := rfl
 
 end Complexity

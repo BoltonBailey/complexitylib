@@ -49,28 +49,28 @@ def levelAfter (d n : ℕ) : ℕ → ℕ × ℕ → ℕ × ℕ
 /-- One tick: if the size so far is below twice the request, take another
 level. The state is `pair (pair (level so far) (size so far)) (the request)`. -/
 noncomputable def levelStep (d : ℕ) (st : List Bool) : List Bool :=
-  ifLtLen (Cobham.sndBlock (Cobham.fstBlock st))
-    (Cobham.sndBlock st ++ Cobham.sndBlock st)
-    (pair (pair (Cobham.fstBlock (Cobham.fstBlock st) ++ [true])
-      ((marks (mulC d (Cobham.sndBlock (Cobham.fstBlock st)))).take
-        (List.replicate d true ++ mulC (2 * d) (Cobham.sndBlock st)).length))
-      (Cobham.sndBlock st))
+  ifLtLen (pairSnd (pairFst st))
+    (pairSnd st ++ pairSnd st)
+    (pair (pair (pairFst (pairFst st) ++ [true])
+      ((marks (mulC d (pairSnd (pairFst st)))).take
+        (List.replicate d true ++ mulC (2 * d) (pairSnd st)).length))
+      (pairSnd st))
     st
 
 theorem levelStep_mem_FP (d : ℕ) : levelStep d ∈ FP := by
-  have hk : (fun st : List Bool => Cobham.fstBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hk : (fun st : List Bool => pairFst (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hs : (fun st : List Bool => Cobham.sndBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hs : (fun st : List Bool => pairSnd (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hn : (fun st : List Bool => Cobham.sndBlock st) ∈ FP := Cobham.sndBlock_mem_FP
+  have hn : (fun st : List Bool => pairSnd st) ∈ FP := Cobham.sndBlock_mem_FP
   have hbound : (fun st : List Bool =>
-      List.replicate d true ++ mulC (2 * d) (Cobham.sndBlock st)) ∈ FP :=
+      List.replicate d true ++ mulC (2 * d) (pairSnd st)) ∈ FP :=
     Cobham.appendFn_mem_FP (constFn_mem_FP (List.replicate d true)) (mulC_mem_FP hn (2 * d))
   have hadv : (fun st : List Bool =>
-      pair (pair (Cobham.fstBlock (Cobham.fstBlock st) ++ [true])
-        ((marks (mulC d (Cobham.sndBlock (Cobham.fstBlock st)))).take
-          (List.replicate d true ++ mulC (2 * d) (Cobham.sndBlock st)).length))
-        (Cobham.sndBlock st)) ∈ FP :=
+      pair (pair (pairFst (pairFst st) ++ [true])
+        ((marks (mulC d (pairSnd (pairFst st)))).take
+          (List.replicate d true ++ mulC (2 * d) (pairSnd st)).length))
+        (pairSnd st)) ∈ FP :=
     Cobham.pairFn_mem_FP
       (Cobham.pairFn_mem_FP (Cobham.appendFn_mem_FP hk (constFn_mem_FP [true]))
         (Cobham.takeLenFn_mem_FP hbound (marks_mem_FP (mulC_mem_FP hs d)))) hn
@@ -82,8 +82,8 @@ theorem levelStep_apply (d k s : ℕ) (Z : List Bool) :
           pair (pair (List.replicate (k + 1) true) (List.replicate (s * d) true)) Z
         else pair (pair (List.replicate k true) (List.replicate s true)) Z := by
   set n := Z.length with hn
-  rw [levelStep, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair]
+  rw [levelStep, pairFst_pair, pairSnd_pair, pairFst_pair,
+    pairSnd_pair]
   have hlen : (Z ++ Z).length = 2 * n := by
     simp only [List.length_append]
     omega
@@ -195,8 +195,8 @@ theorem levelStep_iterate_shape (d : ℕ) (z : List Bool) :
       omega
   | succ j ih =>
       obtain ⟨K, S, hst, hK, hS⟩ := ih
-      rw [Function.iterate_succ_apply', hst, levelStep, Cobham.fstBlock_pair,
-        Cobham.sndBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+      rw [Function.iterate_succ_apply', hst, levelStep, pairFst_pair,
+        pairSnd_pair, pairFst_pair, pairSnd_pair]
       by_cases h : S.length < (z ++ z).length
       · refine ⟨K ++ [true],
           (marks (mulC d S)).take (List.replicate d true ++ mulC (2 * d) z).length, ?_, ?_, ?_⟩
@@ -223,7 +223,7 @@ noncomputable def levelWidth (d : ℕ) (p : Polynomial ℕ) : Polynomial ℕ :=
 /-- **The tower level for a requested count**, as one function: run the search
 for polynomially many ticks and read off the level. -/
 noncomputable def levelFn (d : ℕ) (p : Polynomial ℕ) (z : List Bool) : List Bool :=
-  Cobham.fstBlock (Cobham.fstBlock
+  pairFst (pairFst
     ((levelStep d)^[(polyRuler p z).length] (pair (pair [] (List.replicate d true)) z)))
 
 theorem levelFn_mem_FP (d : ℕ) (p : Polynomial ℕ) : levelFn d p ∈ FP := by
@@ -250,7 +250,7 @@ theorem levelFn_mem_FP (d : ℕ) (p : Polynomial ℕ) : levelFn d p ∈ FP := by
 
 /-- The size at the level the search reports. -/
 noncomputable def sizeFn (d : ℕ) (p : Polynomial ℕ) (z : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock
+  pairSnd (pairFst
     ((levelStep d)^[(polyRuler p z).length] (pair (pair [] (List.replicate d true)) z)))
 
 theorem sizeFn_mem_FP (d : ℕ) (p : Polynomial ℕ) : sizeFn d p ∈ FP := by
@@ -280,8 +280,8 @@ theorem sizeFn_length (d : ℕ) (p : Polynomial ℕ) (z : List Bool) :
     (sizeFn d p z).length = d ^ ((levelFn d p z).length + 1) := by
   have hinit : (pair ([] : List Bool) (List.replicate d true))
       = pair (List.replicate 0 true) (List.replicate d true) := rfl
-  rw [sizeFn, levelFn, hinit, levelStep_iterate d z _ 0 d, Cobham.fstBlock_pair,
-    Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate, List.length_replicate]
+  rw [sizeFn, levelFn, hinit, levelStep_iterate d z _ 0 d, pairFst_pair,
+    pairFst_pair, pairSnd_pair, List.length_replicate, List.length_replicate]
   exact levelAfter_pow d z.length _
 
 /-- **The search finds the first level that is large enough.** -/
@@ -297,7 +297,7 @@ theorem levelFn_length (d : ℕ) (p : Polynomial ℕ) (z : List Bool) (L : ℕ)
     rw [levelAfter_stable d z.length (0, d) L (by rw [hL']; exact hL) i, hL']
   obtain ⟨i, hi⟩ : ∃ i, p.eval z.length = L + i := ⟨p.eval z.length - L, by omega⟩
   rw [levelFn, hinit, polyRuler_length, hi, levelStep_iterate d z (L + i) 0 d, hstable i,
-    Cobham.fstBlock_pair, Cobham.fstBlock_pair, List.length_replicate]
+    pairFst_pair, pairFst_pair, List.length_replicate]
 
 /-- **Whatever level the search reports, its size is bounded** — which is what
 lets the table at that level be written down. -/
@@ -307,8 +307,8 @@ theorem pow_levelFn_le (d : ℕ) (p : Polynomial ℕ) (z : List Bool) :
       = pair (List.replicate 0 true) (List.replicate d true) := rfl
   have hlen : (levelFn d p z).length
       = (levelAfter d z.length (polyRuler p z).length (0, d)).1 := by
-    rw [levelFn, hinit, levelStep_iterate d z _ 0 d, Cobham.fstBlock_pair,
-      Cobham.fstBlock_pair, List.length_replicate]
+    rw [levelFn, hinit, levelStep_iterate d z _ 0 d, pairFst_pair,
+      pairFst_pair, List.length_replicate]
   rw [hlen]
   exact pow_levelAfter_le d z.length _
 

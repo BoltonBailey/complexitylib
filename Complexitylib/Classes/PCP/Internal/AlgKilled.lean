@@ -143,12 +143,12 @@ variable (F : FinBase) (pol : Polynomial ℕ)
 /-- The vertex a walk reaches after `k` steps, on
 `pair (graph) (pair (unary vertex) (unary steps))`. -/
 noncomputable def walkFn (deg P : ℕ) : ℕ → List Bool → List Bool
-  | 0, w => Cobham.fstBlock (Cobham.sndBlock w)
+  | 0, w => pairFst (pairSnd w)
   | k + 1, w =>
-      Cobham.fstBlock (preRotFn F pol deg
-        (pair (Cobham.fstBlock w)
+      pairFst (preRotFn F pol deg
+        (pair (pairFst w)
           (pair (walkFn deg P k w)
-            (modC P (divC (P ^ k) (Cobham.sndBlock (Cobham.sndBlock w)))))))
+            (modC P (divC (P ^ k) (pairSnd (pairSnd w)))))))
 
 theorem walkFn_mem_FP (deg P : ℕ) : ∀ k, walkFn F pol deg P k ∈ FP := by
   intro k
@@ -158,7 +158,7 @@ theorem walkFn_mem_FP (deg P : ℕ) : ∀ k, walkFn F pol deg P k ∈ FP := by
         fun w => ?_
       rw [Function.comp_apply, walkFn]
   | succ k ih =>
-      have hs : (fun w : List Bool => Cobham.sndBlock (Cobham.sndBlock w)) ∈ FP :=
+      have hs : (fun w : List Bool => pairSnd (pairSnd w)) ∈ FP :=
         mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP
       have h := mem_FP_comp (Cobham.pairFn_mem_FP Cobham.fstBlock_mem_FP
         (Cobham.pairFn_mem_FP ih (modC_mem_FP (divC_mem_FP hs (P ^ k)) P)))
@@ -180,7 +180,7 @@ theorem walkFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (v s : ℕ)
   intro k
   induction k with
   | zero =>
-      rw [walkFn, Cobham.sndBlock_pair, Cobham.fstBlock_pair]
+      rw [walkFn, pairSnd_pair, pairFst_pair]
       rfl
   | succ k ih =>
       have hdig : modC (G.preDeg (F.toFamily hd))
@@ -193,9 +193,9 @@ theorem walkFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (v s : ℕ)
           < 2 + 2 * (F.toFamily hd).degree := by
         rw [← G.preDeg_eq (F.toFamily hd)]
         exact Nat.mod_lt _ hPpos
-      rw [walkFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.sndBlock_pair, ih, hdig,
+      rw [walkFn, pairFst_pair, pairSnd_pair, pairSnd_pair, ih, hdig,
         preRotFn_eq G F pol hd _ _ (G.walkNum_lt _ hv s k) hdlt hpc hpe,
-        Cobham.fstBlock_pair, ConstraintGraph.walkNum]
+        pairFst_pair, ConstraintGraph.walkNum]
 
 /-! ### Where the walk stops -/
 
@@ -281,13 +281,13 @@ theorem stopFn_eq {q : ℕ} (hq : 0 < q) {co : List Bool → List Bool} {z : Lis
 
 /-- The label the walk's `i`-th step points back along. -/
 noncomputable def backFn (deg P i : ℕ) (w : List Bool) : List Bool :=
-  Cobham.sndBlock (preRotFn F pol deg
-    (pair (Cobham.fstBlock w)
+  pairSnd (preRotFn F pol deg
+    (pair (pairFst w)
       (pair (walkFn F pol deg P i w)
-        (modC P (divC (P ^ i) (Cobham.sndBlock (Cobham.sndBlock w)))))))
+        (modC P (divC (P ^ i) (pairSnd (pairSnd w)))))))
 
 theorem backFn_mem_FP (deg P i : ℕ) : backFn F pol deg P i ∈ FP := by
-  have hs : (fun w : List Bool => Cobham.sndBlock (Cobham.sndBlock w)) ∈ FP :=
+  have hs : (fun w : List Bool => pairSnd (pairSnd w)) ∈ FP :=
     mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP
   have h := mem_FP_comp (Cobham.pairFn_mem_FP Cobham.fstBlock_mem_FP
     (Cobham.pairFn_mem_FP (walkFn_mem_FP F pol deg P i)
@@ -319,9 +319,9 @@ theorem backFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (v s i : ℕ)
       < 2 + 2 * (F.toFamily hd).degree := by
     rw [← G.preDeg_eq (F.toFamily hd)]
     exact Nat.mod_lt _ hPpos
-  rw [backFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.sndBlock_pair,
+  rw [backFn, pairFst_pair, pairSnd_pair, pairSnd_pair,
     walkFn_eq F pol hd G v s hv hpc hpe, hdig,
-    preRotFn_eq G F pol hd _ _ (G.walkNum_lt _ hv s i) hdlt hpc hpe, Cobham.sndBlock_pair]
+    preRotFn_eq G F pol hd _ _ (G.walkNum_lt _ hv s i) hdlt hpc hpe, pairSnd_pair]
 
 /-- The reversed dart's digits, for a fixed stopping index `k`, over the first
 `n` places. -/
@@ -330,18 +330,18 @@ noncomputable def revSum (deg P k : ℕ) : ℕ → List Bool → List Bool
   | n + 1, w =>
       revSum deg P k n w ++ mulC (P ^ n)
         (if n < k then backFn F pol deg P (k - 1 - n) w
-          else modC P (divC (P ^ n) (Cobham.sndBlock (Cobham.sndBlock w))))
+          else modC P (divC (P ^ n) (pairSnd (pairSnd w))))
 
 theorem revSum_mem_FP (deg P k : ℕ) : ∀ n, revSum F pol deg P k n ∈ FP := by
   intro n
   induction n with
   | zero => exact mem_FP_of_eq (constFn_mem_FP []) fun w => by rw [revSum]
   | succ n ih =>
-      have hs : (fun w : List Bool => Cobham.sndBlock (Cobham.sndBlock w)) ∈ FP :=
+      have hs : (fun w : List Bool => pairSnd (pairSnd w)) ∈ FP :=
         mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP
       have hterm : (fun w : List Bool =>
           if n < k then backFn F pol deg P (k - 1 - n) w
-            else modC P (divC (P ^ n) (Cobham.sndBlock (Cobham.sndBlock w)))) ∈ FP := by
+            else modC P (divC (P ^ n) (pairSnd (pairSnd w)))) ∈ FP := by
         by_cases h : n < k
         · simpa [h] using backFn_mem_FP F pol deg P (k - 1 - n)
         · simpa [h] using modC_mem_FP (divC_mem_FP hs (P ^ n)) P
@@ -375,7 +375,7 @@ theorem length_revSum (hd : 1 < F.deg) (G : ConstraintGraph α) (v s k : ℕ)
       by_cases h : n < k
       · rw [if_pos h, if_pos h, backFn_eq hd G v s (k - 1 - n) hv hpc hpe,
           List.length_replicate]
-      · rw [if_neg h, if_neg h, Cobham.sndBlock_pair, Cobham.sndBlock_pair,
+      · rw [if_neg h, if_neg h, pairSnd_pair, pairSnd_pair,
           divC_eq (Nat.pow_pos hPpos), List.length_replicate, modC_eq hPpos]
         simp
 
@@ -400,13 +400,13 @@ end ConstraintGraph
 
 /-- The coins of a killed dart. -/
 noncomputable def coinsOf (q T : ℕ) (z : List Bool) : List Bool :=
-  modC (q ^ T) (Cobham.sndBlock (Cobham.sndBlock z))
+  modC (q ^ T) (pairSnd (pairSnd z))
 
 /-- A killed dart's steps, in the walk's input format. -/
 noncomputable def toWalk (q T : ℕ) (z : List Bool) : List Bool :=
-  pair (Cobham.fstBlock z)
-    (pair (Cobham.fstBlock (Cobham.sndBlock z))
-      (divC (q ^ T) (Cobham.sndBlock (Cobham.sndBlock z))))
+  pair (pairFst z)
+    (pair (pairFst (pairSnd z))
+      (divC (q ^ T) (pairSnd (pairSnd z))))
 
 theorem coinsOf_mem_FP (q T : ℕ) : coinsOf q T ∈ FP :=
   modC_mem_FP (mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP) _
@@ -482,13 +482,13 @@ theorem revNumFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (T q v s c : ℕ)
     rw [Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hc]
   have hco : coinsOf q T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true))) = List.replicate c true := by
-    rw [coinsOf, Cobham.sndBlock_pair, Cobham.sndBlock_pair, modC_eq hqT,
+    rw [coinsOf, pairSnd_pair, pairSnd_pair, modC_eq hqT,
       List.length_replicate, hmod]
   have htw : toWalk q T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true)))
       = pair (encGraph G) (pair (List.replicate v true) (List.replicate s true)) := by
-    rw [toWalk, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-      Cobham.sndBlock_pair, divC_eq hqT, List.length_replicate, hdiv]
+    rw [toWalk, pairFst_pair, pairSnd_pair, pairFst_pair,
+      pairSnd_pair, divC_eq hqT, List.length_replicate, hdiv]
   have hstop : stopFn q (coinsOf q T) 0 T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true))) = List.replicate (stopAtNum T q c) true := by
     rw [stopFn_eq hq hco T 0, ← stopAtNum_eq_stopFromNum]
@@ -518,13 +518,13 @@ theorem killedRotFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (T q v s c : �
     rw [Nat.add_comm, Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hc]
   have hco : coinsOf q T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true))) = List.replicate c true := by
-    rw [coinsOf, Cobham.sndBlock_pair, Cobham.sndBlock_pair, modC_eq hqT,
+    rw [coinsOf, pairSnd_pair, pairSnd_pair, modC_eq hqT,
       List.length_replicate, hmod]
   have htw : toWalk q T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true)))
       = pair (encGraph G) (pair (List.replicate v true) (List.replicate s true)) := by
-    rw [toWalk, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-      Cobham.sndBlock_pair, divC_eq hqT, List.length_replicate, hdiv]
+    rw [toWalk, pairFst_pair, pairSnd_pair, pairFst_pair,
+      pairSnd_pair, divC_eq hqT, List.length_replicate, hdiv]
   have hstop : stopFn q (coinsOf q T) 0 T (pair (encGraph G) (pair (List.replicate v true)
       (List.replicate (s * q ^ T + c) true))) = List.replicate (stopAtNum T q c) true := by
     rw [stopFn_eq hq hco T 0, ← stopAtNum_eq_stopFromNum]

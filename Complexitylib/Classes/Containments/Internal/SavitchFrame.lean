@@ -59,24 +59,24 @@ def mkFrame (kind ph lvl u v m : List Bool) : List Bool :=
   pair kind (pair ph (pair lvl (pair u (pair v m))))
 
 /-- Which subproblem the frame is working on. -/
-def frKind (f : List Bool) : List Bool := fstBlock f
+def frKind (f : List Bool) : List Bool := pairFst f
 
 /-- Which half of the interval the frame is trying. -/
-def frPh (f : List Bool) : List Bool := fstBlock (sndBlock f)
+def frPh (f : List Bool) : List Bool := pairFst (pairSnd f)
 
 /-- The frame's level, in unary. -/
-def frLvl (f : List Bool) : List Bool := fstBlock (sndBlock (sndBlock f))
+def frLvl (f : List Bool) : List Bool := pairFst (pairSnd (pairSnd f))
 
 /-- The frame's source endpoint. -/
-def frU (f : List Bool) : List Bool := fstBlock (sndBlock (sndBlock (sndBlock f)))
+def frU (f : List Bool) : List Bool := pairFst (pairSnd (pairSnd (pairSnd f)))
 
 /-- The frame's target endpoint. -/
 def frV (f : List Bool) : List Bool :=
-  fstBlock (sndBlock (sndBlock (sndBlock (sndBlock f))))
+  pairFst (pairSnd (pairSnd (pairSnd (pairSnd f))))
 
 /-- The midpoint the frame is trying. -/
 def frM (f : List Bool) : List Bool :=
-  sndBlock (sndBlock (sndBlock (sndBlock (sndBlock f))))
+  pairSnd (pairSnd (pairSnd (pairSnd (pairSnd f))))
 
 @[simp] theorem frKind_mk (kind ph lvl u v m : List Bool) :
     frKind (mkFrame kind ph lvl u v m) = kind := by simp [frKind, mkFrame]
@@ -116,10 +116,10 @@ def encStack : List (List Bool) → List Bool
     encStack (f :: fs) = pair f (encStack fs) := rfl
 
 /-- The frame on top of the stack. -/
-def stkTop (S : List Bool) : List Bool := fstBlock S
+def stkTop (S : List Bool) : List Bool := pairFst S
 
 /-- The stack below the top frame. -/
-def stkRest (S : List Bool) : List Bool := sndBlock S
+def stkRest (S : List Bool) : List Bool := pairSnd S
 
 @[simp] theorem stkTop_pair (f g : List Bool) : stkTop (pair f g) = f := by simp [stkTop]
 
@@ -157,19 +157,19 @@ def mkSt (d a R ret stk : List Bool) : List Bool :=
   pair d (pair a (pair R (pair ret stk)))
 
 /-- The done flag — the bit the iteration watches. -/
-def stDone (s : List Bool) : List Bool := fstBlock s
+def stDone (s : List Bool) : List Bool := pairFst s
 
 /-- The answer, once the recursion has produced one. -/
-def stAns (s : List Bool) : List Bool := fstBlock (sndBlock s)
+def stAns (s : List Bool) : List Bool := pairFst (pairSnd s)
 
 /-- The block ruler the configuration codes are written against. -/
-def stR (s : List Bool) : List Bool := fstBlock (sndBlock (sndBlock s))
+def stR (s : List Bool) : List Bool := pairFst (pairSnd (pairSnd s))
 
 /-- The value a finished subcall is returning; `[]` while descending. -/
-def stRet (s : List Bool) : List Bool := fstBlock (sndBlock (sndBlock (sndBlock s)))
+def stRet (s : List Bool) : List Bool := pairFst (pairSnd (pairSnd (pairSnd s)))
 
 /-- The stack. -/
-def stStk (s : List Bool) : List Bool := sndBlock (sndBlock (sndBlock (sndBlock s)))
+def stStk (s : List Bool) : List Bool := pairSnd (pairSnd (pairSnd (pairSnd s)))
 
 @[simp] theorem stDone_mk (d a R ret stk : List Bool) : stDone (mkSt d a R ret stk) = d := by
   simp [stDone, mkSt]
@@ -208,12 +208,12 @@ theorem mkSt_ne_nil (d a R ret stk : List Bool) : mkSt d a R ret stk ≠ [] := b
 /-! ## The readers and the constructors are polynomial-time -/
 
 theorem fstBlockOf_mem_FP {a : List Bool → List Bool} (ha : a ∈ FP) :
-    (fun z => fstBlock (a z)) ∈ FP := by
+    (fun z => pairFst (a z)) ∈ FP := by
   have := mem_FP_comp ha Cobham.fstBlock_mem_FP
   simpa [Function.comp] using this
 
 theorem sndBlockOf_mem_FP {a : List Bool → List Bool} (ha : a ∈ FP) :
-    (fun z => sndBlock (a z)) ∈ FP := by
+    (fun z => pairSnd (a z)) ∈ FP := by
   have := mem_FP_comp ha Cobham.sndBlock_mem_FP
   simpa [Function.comp] using this
 

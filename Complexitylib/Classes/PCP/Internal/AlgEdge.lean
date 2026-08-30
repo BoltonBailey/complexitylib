@@ -93,7 +93,7 @@ variable {α : Type} [Fintype α] [DecidableEq α]
 /-- An edge's first endpoint: the test vertex it belongs to, after all the
 positions. -/
 noncomputable def tailBlk (posF : ℕ) (r : Round) (w : List Bool) : List Bool :=
-  marks (mulC posF (posCount (Cobham.sndBlock (Cobham.fstBlock w))))
+  marks (mulC posF (posCount (pairSnd (pairFst w))))
     ++ (marks (mulC r.cZ (testFn r w)) ++ randFn r w)
 
 theorem tailBlk_mem_FP (posF : ℕ) (r : Round) : tailBlk posF r ∈ FP :=
@@ -105,10 +105,10 @@ theorem tailBlk_mem_FP (posF : ℕ) (r : Round) : tailBlk posF r ∈ FP :=
 
 /-- **The first endpoint's algorithm computes it.** -/
 theorem tailBlk_eq (posF : ℕ) (r : Round) (G : ConstraintGraph α) {w : List Bool} {t zN : ℕ}
-    (hg : Cobham.fstBlock w = encGraph G) (ht : testFn r w = List.replicate t true)
+    (hg : pairFst w = encGraph G) (ht : testFn r w = List.replicate t true)
     (hz : randFn r w = List.replicate zN true) :
     tailBlk posF r w = List.replicate (G.numEdges * posF + (t * r.cZ + zN)) true := by
-  have hcnt : (posCount (Cobham.sndBlock (encGraph G))).length = G.numEdges := by
+  have hcnt : (posCount (pairSnd (encGraph G))).length = G.numEdges := by
     have h := gEdges_encGraph G
     rwa [gEdges] at h
   rw [tailBlk, hg, ht, hz, marks_eq, marks_eq, length_mulC, length_mulC, hcnt,
@@ -140,13 +140,13 @@ noncomputable def blockBlk (F : FinBase) (pol : Polynomial ℕ) (r : Round) (w :
     List Bool :=
   ifEqLen (readFn w) (List.replicate (NumEnc.enc ReadIdx.i5r) true) (vertFn r w)
     (ifEqLen (readFn w) (List.replicate (NumEnc.enc ReadIdx.i6r) true)
-      (Cobham.fstBlock (killedRotFn F pol r.deg r.P r.T r.q (killArg r w)))
+      (pairFst (killedRotFn F pol r.deg r.P r.T r.q (killArg r w)))
       (testFn r w))
 
 theorem blockBlk_mem_FP (F : FinBase) (pol : Polynomial ℕ) (r : Round) :
     blockBlk F pol r ∈ FP := by
   have hrot : (fun w : List Bool =>
-      Cobham.fstBlock (killedRotFn F pol r.deg r.P r.T r.q (killArg r w))) ∈ FP :=
+      pairFst (killedRotFn F pol r.deg r.P r.T r.q (killArg r w))) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp (killArg_mem_FP r)
       (mem_FP_comp (killedRotFn_mem_FP F pol r.deg r.P r.T r.q) Cobham.fstBlock_mem_FP))
       fun _ => rfl
@@ -160,7 +160,7 @@ theorem blockBlk_eq {β : Type} [Fintype β] [DecidableEq β] [Nonempty β] {R :
     (hread : readFn w = List.replicate (NumEnc.enc i) true)
     (hv : vertFn r w = List.replicate (NumEnc.enc p.1) true)
     (ht : testFn r w = List.replicate (NumEnc.enc p) true)
-    (hrot : Cobham.fstBlock (killedRotFn F pol r.deg r.P r.T r.q (killArg r w))
+    (hrot : pairFst (killedRotFn F pol r.deg r.P r.T r.q (killArg r w))
       = List.replicate (NumEnc.enc (R.graph.rot p).1) true) :
     blockBlk F pol r w = List.replicate (R.blockNum p i) true := by
   have hne : ∀ j k : ReadIdx, j ≠ k → NumEnc.enc j ≠ NumEnc.enc k :=
@@ -179,16 +179,16 @@ theorem blockBlk_eq {β : Type} [Fintype β] [DecidableEq β] [Nonempty β] {R :
 
 /-- How many vertices the powered graph has: twice the input's edge count. -/
 noncomputable def vertCount (w : List Bool) : List Bool :=
-  marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock w))))
+  marks (mulC 2 (posCount (pairSnd (pairFst w))))
 
 theorem vertCount_mem_FP : vertCount ∈ FP :=
   marks_mem_FP (mulC_mem_FP (posCount_mem_FP
     (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP)) 2)
 
 theorem vertCount_eq (G : ConstraintGraph α) {w : List Bool}
-    (hg : Cobham.fstBlock w = encGraph G) :
+    (hg : pairFst w = encGraph G) :
     vertCount w = List.replicate (2 * G.numEdges) true := by
-  have hcnt : (posCount (Cobham.sndBlock (encGraph G))).length = G.numEdges := by
+  have hcnt : (posCount (pairSnd (encGraph G))).length = G.numEdges := by
     have h := gEdges_encGraph G
     rwa [gEdges] at h
   rw [vertCount, hg, marks_eq, length_mulC, hcnt, Nat.mul_comm]
@@ -316,15 +316,15 @@ noncomputable def stepFn (F : FinBase) (pol : Polynomial ℕ) (r : Round)
     (vertF edgeF posF cardB cardN cardNN : ℕ) {E : ExpanderFamily} {B : ℕ}
     (dflt : StepKey E r.T r.q B (Fintype.card (α → α → Bool)))
     (encβ : (PreWalk E r.T → α) → Cube B) : List Bool → List Bool :=
-  buildGraph (fun z => marks (mulC vertF (posCount (Cobham.sndBlock z))))
-    (fun z => marks (mulC edgeF (posCount (Cobham.sndBlock z))))
+  buildGraph (fun z => marks (mulC vertF (posCount (pairSnd z))))
+    (fun z => marks (mulC edgeF (posCount (pairSnd z))))
     (edgeRule F pol r posF cardB cardN cardNN dflt encβ)
 
 /-- **A count block is a constant multiple of the input's edge count.** -/
 theorem countBlk_eq (G : ConstraintGraph α) (c : ℕ) :
-    marks (mulC c (posCount (Cobham.sndBlock (encGraph G))))
+    marks (mulC c (posCount (pairSnd (encGraph G))))
       = List.replicate (c * G.numEdges) true := by
-  have hcnt : (posCount (Cobham.sndBlock (encGraph G))).length = G.numEdges := by
+  have hcnt : (posCount (pairSnd (encGraph G))).length = G.numEdges := by
     have h := gEdges_encGraph G
     rwa [gEdges] at h
   rw [marks_eq, length_mulC, hcnt, Nat.mul_comm]
@@ -398,7 +398,7 @@ theorem stepFn_eq (F : FinBase) (pol : Polynomial ℕ) (hd : 1 < F.deg)
     obtain ⟨htest, hvert, hdart, hrand, hread⟩ :=
       blocks_eq r hDpos (by omega) (encGraph G)
         (NumEnc.enc p.1) (NumEnc.enc p.2) (NumEnc.enc z) (NumEnc.enc i) hblt hclt hilt
-    rw [edgeRule, tailBlk_eq posF r G (Cobham.fstBlock_pair _ _) htest hrand,
+    rw [edgeRule, tailBlk_eq posF r G (pairFst_pair _ _) htest hrand,
       RegCSP.tailNum_split' (cZ := r.cZ) _ _ _ _ _ _ hrZ hclt hilt, hposF]
     rw [codeFn_eq' (B := Dinur.bits (F.toFamily hd) r.T) r hd G hq hdeg hP hC (by omega) p z i
       (by rw [hrZ, NumEnc.card_eq_fintype_card, card_cube]) hpc hpe dflt
@@ -426,8 +426,8 @@ theorem stepFn_eq (F : FinBase) (pol : Polynomial ℕ) (hd : 1 < F.deg)
         have hd2 : NumEnc.enc p.2 = NumEnc.enc p.2.1 * r.q ^ r.T + NumEnc.enc p.2.2 := rfl
         have hkr := killedRotFn_eq hd G r.T r.q (NumEnc.enc p.1) (NumEnc.enc p.2.1)
           (NumEnc.enc p.2.2) hq hv2 hc2 hpc hpe
-        rw [killArg_eq r (Cobham.fstBlock_pair _ _) hvert hdart, hdeg, hP, hd2, hkr,
-          Cobham.fstBlock_pair]
+        rw [killArg_eq r (pairFst_pair _ _) hvert hdart, hdeg, hP, hd2, hkr,
+          pairFst_pair]
         have hrn := G.killedRotNum_eq (F.toFamily hd) hq (G.preDeg_pos _) p.1 p.2
           (w := (((G.preprocess (F.toFamily hd)).graph.killedPower r.q r.T hq).rot
             (p.1, p.2)).1)
@@ -435,7 +435,7 @@ theorem stepFn_eq (F : FinBase) (pol : Polynomial ℕ) (hd : 1 < F.deg)
             (p.1, p.2)).2) rfl
         exact congrArg (fun n => List.replicate n true) (congrArg Prod.fst hrn)
     rw [headBlk_eq F pol r cardB cardN cardNN dflt (Dinur.enc (F.toFamily hd) G r.T)
-      (vertCount_eq G (Cobham.fstBlock_pair _ _)) (kindBlk_eq hread) hblock hcube]
+      (vertCount_eq G (pairFst_pair _ _)) (kindBlk_eq hread) hblock hcube]
     rw [hV', ← hrD, ← hcardB, ← hcardN, ← hcardNN]
     rfl
 

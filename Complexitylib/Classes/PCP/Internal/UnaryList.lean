@@ -205,7 +205,7 @@ theorem encUnary_mem_FP {a : List Bool → List Bool} (ha : a ∈ FP) :
     have hpair : (fun z => pair z (a z)) ∈ FP := Cobham.pairFn_mem_FP id_mem_FP ha
     have := mem_FP_comp hpair flatBitsFn_mem_FP
     refine mem_FP_of_eq this fun z => ?_
-    rw [Function.comp_apply, flatBitsFn_eq, Cobham.sndBlock_pair]
+    rw [Function.comp_apply, flatBitsFn_eq, pairSnd_pair]
   have hcons := mem_FP_comp hflat (Cobham.cons_mem_FP false)
   have := Cobham.appendFn_mem_FP hcons (constFn_mem_FP [true])
   exact mem_FP_of_eq this fun z => rfl

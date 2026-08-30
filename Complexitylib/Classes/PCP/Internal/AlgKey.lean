@@ -125,23 +125,23 @@ noncomputable def packKey (k : StepKey E T q B C) : List Bool :=
 /-- The data read back from a string, falling back on a default. -/
 noncomputable def keyOfString (dflt : StepKey E T q B C) (s : List Bool) :
     StepKey E T q B C :=
-  ((decOr dflt.dart (Cobham.fstBlock (Cobham.fstBlock s)).length,
-      decOr dflt.coins (Cobham.sndBlock (Cobham.fstBlock s)).length),
+  ((decOr dflt.dart (pairFst (pairFst s)).length,
+      decOr dflt.coins (pairSnd (pairFst s)).length),
     ((decOr dflt.par
-          (Cobham.fstBlock (Cobham.fstBlock (Cobham.sndBlock s))).length,
+          (pairFst (pairFst (pairSnd s))).length,
         decOr dflt.code
-          (Cobham.sndBlock (Cobham.fstBlock (Cobham.sndBlock s))).length),
-      (decOr dflt.rev (Cobham.fstBlock (Cobham.sndBlock (Cobham.sndBlock s))).length,
-        (decOr dflt.rand (Cobham.fstBlock (Cobham.sndBlock
-            (Cobham.sndBlock (Cobham.sndBlock s)))).length,
-          decOr dflt.read (Cobham.sndBlock (Cobham.sndBlock
-            (Cobham.sndBlock (Cobham.sndBlock s)))).length))))
+          (pairSnd (pairFst (pairSnd s))).length),
+      (decOr dflt.rev (pairFst (pairSnd (pairSnd s))).length,
+        (decOr dflt.rand (pairFst (pairSnd
+            (pairSnd (pairSnd s)))).length,
+          decOr dflt.read (pairSnd (pairSnd
+            (pairSnd (pairSnd s)))).length))))
 
 /-- **The reading inverts the writing.** -/
 theorem keyOfString_packKey (dflt k : StepKey E T q B C) :
     keyOfString dflt (packKey k) = k := by
   rw [keyOfString, packKey]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate, decOr_enc]
+  simp only [pairFst_pair, pairSnd_pair, List.length_replicate, decOr_enc]
   rfl
 
 /-- **A digit sum is a tuple's number**, when the digits are the entries'. -/

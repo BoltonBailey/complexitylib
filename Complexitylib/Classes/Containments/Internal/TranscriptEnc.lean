@@ -149,17 +149,17 @@ def encPack (acc rest : List Bool) : List Bool := pair acc rest
 
 /-- One step of the packed scan. -/
 def encStepP (z : List Bool) : List Bool :=
-  selectHead (lenLeFlag (sndBlock z) [false])
-    (encPack (fstBlock z ++
-        selectHead (bit1 (sndBlock z)) [false, false, true, true] [false, true])
-      ((sndBlock z).drop 1))
+  selectHead (lenLeFlag (pairSnd z) [false])
+    (encPack (pairFst z ++
+        selectHead (bit1 (pairSnd z)) [false, false, true, true] [false, true])
+      ((pairSnd z).drop 1))
     z
 
 theorem encStepP_pack (acc rest : List Bool) :
     encStepP (encPack acc rest)
       = encPack (encStep (acc, rest)).1 (encStep (acc, rest)).2 := by
   rw [encStepP, encPack]
-  simp only [fstBlock_pair, sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   cases rest with
   | nil =>
       have hflag : lenLeFlag ([] : List Bool) [false] = [false] := rfl
@@ -187,7 +187,7 @@ theorem encStepP_iterate_args (acc rest : List Bool) (n : ℕ) :
   encStepP_iterate (acc, rest) n
 
 /-- The flattened per-bit encodings, computed by the scan. -/
-def encFlat (v : List Bool) : List Bool := fstBlock (encStepP^[v.length] (encPack [] v))
+def encFlat (v : List Bool) : List Bool := pairFst (encStepP^[v.length] (encPack [] v))
 
 theorem encFlat_eq (v : List Bool) : encFlat v = (v.map encBit).flatten := by
   rw [encFlat, encStepP_iterate_args, encStep_iterate_run, encPack]
@@ -198,13 +198,13 @@ theorem encMsg_eq_encFlat (v : List Bool) : encMsg v = false :: (encFlat v ++ [t
 
 theorem encStepP_mem_FP : encStepP ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
-  have hfst : (fun z : List Bool => fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hsnd : (fun z : List Bool => sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hfst : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hsnd : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
   have hone : (fun _ : List Bool => ([false] : List Bool)) ∈ FP := constFn_mem_FP [false]
-  have hbit : (fun z => bit1 (sndBlock z)) ∈ FP := by
+  have hbit : (fun z => bit1 (pairSnd z)) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone (Cobham.appendFn_mem_FP hsnd hone)
     simpa [bit1] using this
-  have hdrop : (fun z => (sndBlock z).drop 1) ∈ FP := by
+  have hdrop : (fun z => (pairSnd z).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hsnd
     simpa using this
   exact Cobham.selectHeadFn_mem_FP (lenLeFlagFn_mem_FP hsnd hone)

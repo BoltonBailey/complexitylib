@@ -53,31 +53,31 @@ theorem selectHead_cons (b : Bool) (t x y : List Bool) :
 is `pair count unread`. -/
 def ccStep (z : List Bool) : List Bool :=
   pair
-    (Cobham.selectHead (emptyFlag (Cobham.sndBlock z)) (Cobham.fstBlock z)
-      (Cobham.selectHead (Cobham.sndBlock z)
-        (Cobham.selectHead (dropOne (Cobham.sndBlock z)) (Cobham.fstBlock z)
-          (true :: Cobham.fstBlock z))
-        (Cobham.fstBlock z)))
-    (dropOne (dropOne (Cobham.sndBlock z)))
+    (Cobham.selectHead (emptyFlag (pairSnd z)) (pairFst z)
+      (Cobham.selectHead (pairSnd z)
+        (Cobham.selectHead (dropOne (pairSnd z)) (pairFst z)
+          (true :: pairFst z))
+        (pairFst z)))
+    (dropOne (dropOne (pairSnd z)))
 
 theorem ccStep_mem_FP : ccStep ∈ FP := by
-  have hc : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hs : (fun z : List Bool => Cobham.sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
-  have hd : (fun z : List Bool => dropOne (Cobham.sndBlock z)) ∈ FP := dropOneFn_mem_FP hs
+  have hc : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hs : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hd : (fun z : List Bool => dropOne (pairSnd z)) ∈ FP := dropOneFn_mem_FP hs
   refine Cobham.pairFn_mem_FP ?_ (dropOneFn_mem_FP hd)
   refine Cobham.selectHeadFn_mem_FP (emptyFlagFn_mem_FP hs) hc ?_
   exact Cobham.selectHeadFn_mem_FP hs
     (Cobham.selectHeadFn_mem_FP hd hc (mem_FP_comp hc (Cobham.cons_mem_FP true))) hc
 
 @[simp] theorem ccStep_nil (c : List Bool) : ccStep (pair c []) = pair c [] := by
-  rw [ccStep, Cobham.fstBlock_pair, Cobham.sndBlock_pair, emptyFlag_nil,
+  rw [ccStep, pairFst_pair, pairSnd_pair, emptyFlag_nil,
     selectHead_cons_true]
   rfl
 
 theorem ccStep_cons₂ (c : List Bool) (b0 b1 : Bool) (r : List Bool) :
     ccStep (pair c (b0 :: b1 :: r))
       = pair (if b0 = true ∧ b1 = false then true :: c else c) r := by
-  rw [ccStep, Cobham.fstBlock_pair, Cobham.sndBlock_pair, emptyFlag_cons,
+  rw [ccStep, pairFst_pair, pairSnd_pair, emptyFlag_cons,
     selectHead_cons_false]
   cases b0
   · rw [selectHead_cons]
@@ -134,7 +134,7 @@ theorem ccStep_iterate : ∀ (k : ℕ) (c s : List Bool), s.length ≤ 2 * k →
 theorem ccStep_one (c s : List Bool) :
     ∃ X Y, ccStep (pair c s) = pair X Y
       ∧ X.length ≤ c.length + 1 ∧ Y.length ≤ s.length := by
-  rw [ccStep, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  rw [ccStep, pairFst_pair, pairSnd_pair]
   refine ⟨_, _, rfl, ?_, ?_⟩
   · refine le_trans (length_selectHead_le _ _ _) ?_
     simp only [max_le_iff]
@@ -163,7 +163,7 @@ theorem ccStep_shape : ∀ (k : ℕ) (c s : List Bool),
 
 /-- **The clause count**, in unary. -/
 noncomputable def clauseCountFn (z : List Bool) : List Bool :=
-  Cobham.fstBlock (ccStep^[z.length] (pair [] z))
+  pairFst (ccStep^[z.length] (pair [] z))
 
 theorem clauseCountFn_mem_FP : clauseCountFn ∈ FP := by
   have hinit : (fun z : List Bool => pair [] z) ∈ FP :=
@@ -187,7 +187,7 @@ theorem clauseCountFn_mem_FP : clauseCountFn ∈ FP := by
 
 theorem clauseCountFn_eq {z : List Bool} (h : Even z.length) :
     clauseCountFn z = List.replicate (sepCount z) true := by
-  rw [clauseCountFn, ccStep_iterate z.length [] z (by omega) h, Cobham.fstBlock_pair]
+  rw [clauseCountFn, ccStep_iterate z.length [] z (by omega) h, pairFst_pair]
   simp
 
 end Complexity

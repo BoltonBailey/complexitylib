@@ -51,17 +51,17 @@ open Cobham
 length and append the bit it returns. The state is `pair (output so far) input`.
 -/
 def bitStep (G : List Bool → List Bool) (z : List Bool) : List Bool :=
-  pair (fstBlock z ++ G (pair (sndBlock z) (List.replicate (fstBlock z).length true)))
-    (sndBlock z)
+  pair (pairFst z ++ G (pair (pairSnd z) (List.replicate (pairFst z).length true)))
+    (pairSnd z)
 
 theorem bitStep_mem_FP {G : List Bool → List Bool} (hG : G ∈ FP) : bitStep G ∈ FP := by
-  have hfst : (fun z : List Bool => fstBlock z) ∈ FP := fstBlock_mem_FP
-  have hsnd : (fun z : List Bool => sndBlock z) ∈ FP := sndBlock_mem_FP
-  have hcnt : (fun z : List Bool => List.replicate (fstBlock z).length true) ∈ FP := by
+  have hfst : (fun z : List Bool => pairFst z) ∈ FP := fstBlock_mem_FP
+  have hsnd : (fun z : List Bool => pairSnd z) ∈ FP := sndBlock_mem_FP
+  have hcnt : (fun z : List Bool => List.replicate (pairFst z).length true) ∈ FP := by
     have := mem_FP_comp hfst unaryLength_mem_FP
     simpa using this
   have hquery : (fun z : List Bool =>
-      G (pair (sndBlock z) (List.replicate (fstBlock z).length true))) ∈ FP := by
+      G (pair (pairSnd z) (List.replicate (pairFst z).length true))) ∈ FP := by
     have := mem_FP_comp (pairFn_mem_FP hsnd hcnt) hG
     simpa using this
   exact pairFn_mem_FP (appendFn_mem_FP hfst hquery) hsnd
@@ -74,7 +74,7 @@ theorem bitStep_iterate {G : List Bool → List Bool} {b : List Bool → ℕ →
   induction n with
   | zero => simp
   | succ n ih =>
-      rw [Function.iterate_succ_apply', ih, bitStep, fstBlock_pair, sndBlock_pair,
+      rw [Function.iterate_succ_apply', ih, bitStep, pairFst_pair, pairSnd_pair,
         List.length_map, List.length_range, hGspec, List.range_succ, List.map_append]
       simp
 
@@ -102,7 +102,7 @@ theorem bitwise_mem_FP {len : List Bool → ℕ} {b : List Bool → ℕ → Bool
   have := mem_FP_comp hiter fstBlock_mem_FP
   refine mem_FP_of_eq this ?_
   intro x
-  rw [Function.comp_apply, List.length_replicate, bitStep_iterate hGspec, fstBlock_pair]
+  rw [Function.comp_apply, List.length_replicate, bitStep_iterate hGspec, pairFst_pair]
 
 /-- **The same, from a language in `P`.** The bit rule is usually established as
 a decision problem — "does position `i` of the output carry a one?" — and this

@@ -86,21 +86,21 @@ theorem baseMaxU_eq {Φ : List Bool → CNF} (hE : ∀ x, E x = (Φ x).encode)
 
 /-- The unary form of the first endpoint: the clause vertex. -/
 noncomputable def baseTailU (w : List Bool) : List Bool :=
-  baseMaxU E (Cobham.fstBlock w) ++ [true]
-    ++ List.replicate (divFn [false, false, false] (Cobham.sndBlock w)).length true
+  baseMaxU E (pairFst w) ++ [true]
+    ++ List.replicate (divFn [false, false, false] (pairSnd w)).length true
 
 /-- The unary form of the second endpoint: the variable vertex. -/
 noncomputable def baseHeadU (w : List Bool) : List Bool :=
-  slotVar (pair (E (Cobham.fstBlock w)) (Cobham.sndBlock w))
+  slotVar (pair (E (pairFst w)) (pairSnd w))
 
 theorem baseTailU_mem_FP (hE : E ∈ FP) : baseTailU E ∈ FP := by
-  have hm : (fun w => baseMaxU E (Cobham.fstBlock w)) ∈ FP := by
+  have hm : (fun w => baseMaxU E (pairFst w)) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (baseMaxU_mem_FP E hE)
     refine mem_FP_of_eq this fun w => ?_
     rw [Function.comp_apply]
   have hd : (fun w : List Bool =>
-      List.replicate (divFn [false, false, false] (Cobham.sndBlock w)).length true) ∈ FP := by
-    have h1 : (fun w : List Bool => divFn [false, false, false] (Cobham.sndBlock w)) ∈ FP := by
+      List.replicate (divFn [false, false, false] (pairSnd w)).length true) ∈ FP := by
+    have h1 : (fun w : List Bool => divFn [false, false, false] (pairSnd w)) ∈ FP := by
       have := mem_FP_comp Cobham.sndBlock_mem_FP (divFn_mem_FP [false, false, false])
       refine mem_FP_of_eq this fun w => ?_
       rw [Function.comp_apply]
@@ -110,7 +110,7 @@ theorem baseTailU_mem_FP (hE : E ∈ FP) : baseTailU E ∈ FP := by
   exact Cobham.appendFn_mem_FP (Cobham.appendFn_mem_FP hm (constFn_mem_FP [true])) hd
 
 theorem baseHeadU_mem_FP (hE : E ∈ FP) : baseHeadU E ∈ FP := by
-  have hp : (fun w => pair (E (Cobham.fstBlock w)) (Cobham.sndBlock w)) ∈ FP := by
+  have hp : (fun w => pair (E (pairFst w)) (pairSnd w)) ∈ FP := by
     refine Cobham.pairFn_mem_FP ?_ Cobham.sndBlock_mem_FP
     have := mem_FP_comp Cobham.fstBlock_mem_FP hE
     refine mem_FP_of_eq this fun w => ?_
@@ -125,7 +125,7 @@ theorem baseTailU_eq {Φ : List Bool → CNF} (hE : ∀ x, E x = (Φ x).encode)
     (h3 : ∀ x, CNF.Is3CNF (Φ x)) (x : List Bool) (e : ℕ) :
     (baseTailU E (pair x (List.replicate e true))).length
       = ((Φ x).maxVar + 1) + e / 3 := by
-  rw [baseTailU, Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_append,
+  rw [baseTailU, pairFst_pair, pairSnd_pair, List.length_append,
     List.length_append, List.length_replicate, List.length_singleton,
     divFn_eq (by simp) (List.replicate e true), List.length_replicate,
     List.length_replicate, baseMaxU_eq E hE h3]
@@ -139,7 +139,7 @@ theorem baseHeadU_eq {Φ : List Bool → CNF} (hE : ∀ x, E x = (Φ x).encode)
   have hp : e % 3 < ((Φ x)[e / 3]'hj).length := by
     rw [h3 x _ (List.getElem_mem hj)]
     omega
-  rw [baseHeadU, Cobham.fstBlock_pair, Cobham.sndBlock_pair, hE,
+  rw [baseHeadU, pairFst_pair, pairSnd_pair, hE,
     slotVar_eq (Φ x) hj hp rfl rfl]
   congr 1
   rw [litOf, List.getElem?_eq_getElem hj]
@@ -151,8 +151,8 @@ theorem baseHeadU_eq {Φ : List Bool → CNF} (hE : ∀ x, E x = (Φ x).encode)
 
 /-- The three literal signs of the clause an edge belongs to. -/
 noncomputable def baseSigns (z : List Bool) : List Bool :=
-  let j := divFn [false, false, false] (Cobham.sndBlock (Cobham.fstBlock z))
-  let x := Cobham.fstBlock (Cobham.fstBlock z)
+  let j := divFn [false, false, false] (pairSnd (pairFst z))
+  let x := pairFst (pairFst z)
   litSignFn (pair (pair j []) (E x))
     ++ litSignFn (pair (pair j [true]) (E x))
     ++ litSignFn (pair (pair j [true, true]) (E x))
@@ -161,24 +161,24 @@ noncomputable def baseSigns (z : List Bool) : List Bool :=
 inside the clause, and the two symbol blocks. -/
 noncomputable def baseKey (w : ℕ) (z : List Bool) : List Bool :=
   pair (pair (baseSigns E z)
-      (modFn [false, false, false] (Cobham.sndBlock (Cobham.fstBlock z))))
-    ((Cobham.sndBlock z).take (2 * w))
+      (modFn [false, false, false] (pairSnd (pairFst z))))
+    ((pairSnd z).take (2 * w))
 
 theorem baseSigns_mem_FP (hE : E ∈ FP) : baseSigns E ∈ FP := by
-  have hx : (fun z : List Bool => E (Cobham.fstBlock (Cobham.fstBlock z))) ∈ FP := by
+  have hx : (fun z : List Bool => E (pairFst (pairFst z))) ∈ FP := by
     have := mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP) hE
     refine mem_FP_of_eq this fun z => ?_
     rw [Function.comp_apply, Function.comp_apply]
   have hj : (fun z : List Bool =>
-      divFn [false, false, false] (Cobham.sndBlock (Cobham.fstBlock z))) ∈ FP := by
+      divFn [false, false, false] (pairSnd (pairFst z))) ∈ FP := by
     have := mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP)
       (divFn_mem_FP [false, false, false])
     refine mem_FP_of_eq this fun z => ?_
     rw [Function.comp_apply, Function.comp_apply]
   have hsign : ∀ c : List Bool, (fun z : List Bool =>
       litSignFn (pair (pair (divFn [false, false, false]
-        (Cobham.sndBlock (Cobham.fstBlock z))) c)
-        (E (Cobham.fstBlock (Cobham.fstBlock z))))) ∈ FP := by
+        (pairSnd (pairFst z))) c)
+        (E (pairFst (pairFst z))))) ∈ FP := by
     intro c
     have := mem_FP_comp
       (Cobham.pairFn_mem_FP (Cobham.pairFn_mem_FP hj (constFn_mem_FP c)) hx) litSignFn_mem_FP
@@ -189,12 +189,12 @@ theorem baseSigns_mem_FP (hE : E ∈ FP) : baseSigns E ∈ FP := by
 
 theorem baseKey_mem_FP (hE : E ∈ FP) (w : ℕ) : baseKey E w ∈ FP := by
   have hm : (fun z : List Bool =>
-      modFn [false, false, false] (Cobham.sndBlock (Cobham.fstBlock z))) ∈ FP := by
+      modFn [false, false, false] (pairSnd (pairFst z))) ∈ FP := by
     have := mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP)
       (modFn_mem_FP [false, false, false])
     refine mem_FP_of_eq this fun z => ?_
     rw [Function.comp_apply, Function.comp_apply]
-  have ht : (fun z : List Bool => (Cobham.sndBlock z).take (2 * w)) ∈ FP := by
+  have ht : (fun z : List Bool => (pairSnd z).take (2 * w)) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP
       (constFn_mem_FP (List.replicate (2 * w) false)) Cobham.sndBlock_mem_FP
     refine mem_FP_of_eq this fun z => ?_
@@ -210,24 +210,24 @@ theorem length_baseSigns_le (z : List Bool) : (baseSigns E z).length ≤ 3 := by
     · split <;> simp
   rw [baseSigns, List.length_append, List.length_append]
   have h1 := hs (pair (pair (divFn [false, false, false]
-    (Cobham.sndBlock (Cobham.fstBlock z))) []) (E (Cobham.fstBlock (Cobham.fstBlock z))))
+    (pairSnd (pairFst z))) []) (E (pairFst (pairFst z))))
   have h2 := hs (pair (pair (divFn [false, false, false]
-    (Cobham.sndBlock (Cobham.fstBlock z))) [true]) (E (Cobham.fstBlock (Cobham.fstBlock z))))
+    (pairSnd (pairFst z))) [true]) (E (pairFst (pairFst z))))
   have h3 := hs (pair (pair (divFn [false, false, false]
-    (Cobham.sndBlock (Cobham.fstBlock z))) [true, true])
-    (E (Cobham.fstBlock (Cobham.fstBlock z))))
+    (pairSnd (pairFst z))) [true, true])
+    (E (pairFst (pairFst z))))
   omega
 
 theorem length_baseKey_le (w : ℕ) (z : List Bool) :
     (baseKey E w z).length ≤ 2 * w + 22 := by
   have hs := length_baseSigns_le E z
   have hm : (modFn [false, false, false]
-      (Cobham.sndBlock (Cobham.fstBlock z))).length ≤ 2 := by
+      (pairSnd (pairFst z))).length ≤ 2 := by
     rw [modFn_eq (by simp)]
     simp only [List.length_replicate,
       show ([false, false, false] : List Bool).length = 3 from rfl]
     omega
-  have ht : ((Cobham.sndBlock z).take (2 * w)).length ≤ 2 * w := by
+  have ht : ((pairSnd z).take (2 * w)).length ≤ 2 * w := by
     rw [List.length_take]
     omega
   rw [baseKey, pair_length, pair_length]
@@ -241,10 +241,10 @@ name symbols in the image of the alphabet embedding whose preimages satisfy the
 clause and agree on the checked position. -/
 noncomputable def baseOkKey (w : ℕ) (k : List Bool) : Prop :=
   ∃ a₁ a₂ : Fin 3 → Bool,
-    alphaEmb a₁ = symDec GapAlpha ((Cobham.sndBlock k).take w) ∧
-    alphaEmb a₂ = symDec GapAlpha ((Cobham.sndBlock k).drop w) ∧
-    (∃ q : Fin 3, a₁ q = (Cobham.fstBlock (Cobham.fstBlock k)).getD q.val false) ∧
-    a₁ ⟨(Cobham.sndBlock (Cobham.fstBlock k)).length % 3,
+    alphaEmb a₁ = symDec GapAlpha ((pairSnd k).take w) ∧
+    alphaEmb a₂ = symDec GapAlpha ((pairSnd k).drop w) ∧
+    (∃ q : Fin 3, a₁ q = (pairFst (pairFst k)).getD q.val false) ∧
+    a₁ ⟨(pairSnd (pairFst k)).length % 3,
       Nat.mod_lt _ (by omega)⟩ = a₂ 0
 
 /-- The constraint, as a language on the verifier's verdict argument. -/
@@ -270,12 +270,12 @@ noncomputable def baseAlg (hE : E ∈ FP) : AlgCSP where
       (baseTailU E (pair x (List.replicate e true))).length
   vert_mem := by
     intro b
-    have hu : (fun w : List Bool => List.replicate (Cobham.sndBlock w).length true) ∈ FP := by
+    have hu : (fun w : List Bool => List.replicate (pairSnd w).length true) ∈ FP := by
       have := mem_FP_comp Cobham.sndBlock_mem_FP unaryLength_mem_FP
       refine mem_FP_of_eq this fun w => ?_
       rw [Function.comp_apply]
     have harg : (fun w : List Bool =>
-        pair (Cobham.fstBlock w) (List.replicate (Cobham.sndBlock w).length true)) ∈ FP :=
+        pair (pairFst w) (List.replicate (pairSnd w).length true)) ∈ FP :=
       Cobham.pairFn_mem_FP Cobham.fstBlock_mem_FP hu
     cases b
     · have := mem_FP_comp (mem_FP_comp harg (baseTailU_mem_FP E hE)) unaryLength_mem_FP
@@ -401,7 +401,7 @@ theorem baseSigns_pair (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3CNF
       rw [hlen]
       exact q.isLt
     rw [hE, litSignFn_encode (Φ x) hj hq, litOf_eq (Φ x) hj q hq]
-  rw [baseSigns, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
+  rw [baseSigns, pairFst_pair, pairSnd_pair, pairFst_pair,
     divFn_eq (by simp) (List.replicate e true), List.length_replicate,
     show ([false, false, false] : List Bool).length = 3 from rfl]
   have h0 : litSignFn (pair (pair (List.replicate (e / 3) true) []) (E x))
@@ -419,8 +419,8 @@ theorem baseKey_pair (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3CNF (
     baseKey E 23 (pair (pair x (List.replicate e true)) a)
       = pair (pair [(litOf (Φ x) (e / 3) 0).sign, (litOf (Φ x) (e / 3) 1).sign,
           (litOf (Φ x) (e / 3) 2).sign] (List.replicate (e % 3) true)) a := by
-  rw [baseKey, baseSigns_pair E hE h3 x he a, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
-    Cobham.sndBlock_pair, modFn_eq (by simp) (List.replicate e true),
+  rw [baseKey, baseSigns_pair E hE h3 x he a, pairFst_pair, pairSnd_pair,
+    pairSnd_pair, modFn_eq (by simp) (List.replicate e true),
     List.length_replicate, show ([false, false, false] : List Bool).length = 3 from rfl,
     List.take_of_length_le (by omega)]
 
@@ -447,7 +447,7 @@ theorem baseAlg_ok_iff (hE' : E ∈ FP) (hE : ∀ x, E x = (Φ x).encode)
   rw [baseKey_pair E hE h3 x he' ha]
   show _ ↔ (ConstraintGraph.lift (toGraph (Φ x)) alphaEmb).rel ⟨e, he⟩ _ _ = true
   rw [ConstraintGraph.rel_lift, decide_eq_true_iff]
-  simp only [baseOkKey, Cobham.sndBlock_pair, Cobham.fstBlock_pair, htake, hdrop,
+  simp only [baseOkKey, pairSnd_pair, pairFst_pair, htake, hdrop,
     List.length_replicate, hmod]
   have hsign : ∀ q : Fin 3,
       ([(litOf (Φ x) (e / 3) 0).sign, (litOf (Φ x) (e / 3) 1).sign,

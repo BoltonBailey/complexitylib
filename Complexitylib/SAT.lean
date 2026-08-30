@@ -14,6 +14,7 @@ public import Complexitylib.SAT.ThreeSAT.Syntax
 public import Complexitylib.SAT.Tseitin
 public import Complexitylib.SAT.Tseitin.Machine
 public import Complexitylib.SAT.QBF
+public import Complexitylib.SAT.QBF.Arith
 public import Complexitylib.SAT.Resolution
 public import Complexitylib.SAT.Encoding
 public import Complexitylib.SAT.Language

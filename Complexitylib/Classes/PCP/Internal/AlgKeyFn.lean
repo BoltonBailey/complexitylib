@@ -72,14 +72,14 @@ variable (F : FinBase) (pol : Polynomial ℕ) (r : Round)
 
 /-- The test an edge belongs to. -/
 noncomputable def testFn (w : List Bool) : List Bool :=
-  divC (r.cZ * 22) (Cobham.sndBlock w)
+  divC (r.cZ * 22) (pairSnd w)
 
 /-- The random string it runs on. -/
 noncomputable def randFn (w : List Bool) : List Bool :=
-  divC 22 (modC (r.cZ * 22) (Cobham.sndBlock w))
+  divC 22 (modC (r.cZ * 22) (pairSnd w))
 
 /-- The read it asks for. -/
-noncomputable def readFn (w : List Bool) : List Bool := modC 22 (Cobham.sndBlock w)
+noncomputable def readFn (w : List Bool) : List Bool := modC 22 (pairSnd w)
 
 /-- The killed dart the test is. -/
 noncomputable def dartFn (w : List Bool) : List Bool := modC r.cD (testFn r w)
@@ -95,11 +95,11 @@ noncomputable def coinFn (w : List Bool) : List Bool := modC r.cQ (dartFn r w)
 
 /-- The input the walk algorithm reads. -/
 noncomputable def walkArg (w : List Bool) : List Bool :=
-  pair (Cobham.fstBlock w) (pair (vertFn r w) (stepsFn r w))
+  pair (pairFst w) (pair (vertFn r w) (stepsFn r w))
 
 /-- The input the killed-walk algorithms read. -/
 noncomputable def killArg (w : List Bool) : List Bool :=
-  pair (Cobham.fstBlock w) (pair (vertFn r w) (dartFn r w))
+  pair (pairFst w) (pair (vertFn r w) (dartFn r w))
 
 theorem testFn_mem_FP : testFn r ∈ FP := divC_mem_FP Cobham.sndBlock_mem_FP _
 
@@ -148,14 +148,14 @@ theorem parDigit_mem_FP (i : ℕ) : parDigit F pol r i ∈ FP :=
 /-- The code of the constraint the `i`-th step meets, and `0` past the end. -/
 noncomputable def codeDigit (i : ℕ) (w : List Bool) : List Bool :=
   ifLtLen (List.replicate i true) (stopBlk r w)
-    ((recThd (Cobham.sndBlock (Cobham.fstBlock w))
+    ((recThd (pairSnd (pairFst w))
       (divC 2 (walkFn F pol r.deg r.P i (walkArg r w))).length).take r.C) []
 
 theorem codeDigit_mem_FP (i : ℕ) : codeDigit F pol r i ∈ FP := by
   have hwalk : (fun w : List Bool => walkFn F pol r.deg r.P i (walkArg r w)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp (walkArg_mem_FP r) (walkFn_mem_FP F pol r.deg r.P i))
       fun _ => rfl
-  have hcode : (fun w : List Bool => recThd (Cobham.sndBlock (Cobham.fstBlock w))
+  have hcode : (fun w : List Bool => recThd (pairSnd (pairFst w))
       (divC 2 (walkFn F pol r.deg r.P i (walkArg r w))).length) ∈ FP :=
     gCodeFn_mem_FP (divC_mem_FP hwalk 2) Cobham.fstBlock_mem_FP
   refine ifLtLen_mem_FP (constFn_mem_FP _) (stopBlk_mem_FP r) ?_ (constFn_mem_FP [])
@@ -207,15 +207,15 @@ theorem blocks_eq (hD : 0 < r.cD) (hZ : 0 < r.cZ) (g : List Bool) (a b c d : ℕ
   rw [← hre] at h1 h2 h3
   have htest : testFn r (pair g (List.replicate (((a * r.cD + b) * r.cZ + c) * 22 + d) true))
       = List.replicate (a * r.cD + b) true := by
-    rw [testFn, Cobham.sndBlock_pair, divC_eq (by positivity), List.length_replicate, h1]
+    rw [testFn, pairSnd_pair, divC_eq (by positivity), List.length_replicate, h1]
   refine ⟨htest, ?_, ?_, ?_, ?_⟩
   · rw [vertFn, htest, divC_eq hD, List.length_replicate, Nat.add_comm,
       Nat.add_mul_div_right _ _ hD, Nat.div_eq_of_lt hb, Nat.zero_add]
   · rw [dartFn, htest, modC_eq hD, List.length_replicate, Nat.add_comm,
       Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hb]
-  · rw [randFn, Cobham.sndBlock_pair, modC_eq (by positivity), List.length_replicate,
+  · rw [randFn, pairSnd_pair, modC_eq (by positivity), List.length_replicate,
       divC_eq (by omega), List.length_replicate, h2]
-  · rw [readFn, Cobham.sndBlock_pair, modC_eq (by omega), List.length_replicate, h3]
+  · rw [readFn, pairSnd_pair, modC_eq (by omega), List.length_replicate, h3]
 
 /-- **The dart block splits into steps and coins.** -/
 theorem steps_coin_eq (hQ : 0 < r.cQ) (w : List Bool) (s t : ℕ) (ht : t < r.cQ)
@@ -228,14 +228,14 @@ theorem steps_coin_eq (hQ : 0 < r.cQ) (w : List Bool) (s t : ℕ) (ht : t < r.cQ
       Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt ht]
 
 /-- **The walk's input**, once the blocks are known. -/
-theorem walkArg_eq {w g : List Bool} {a s : ℕ} (hg : Cobham.fstBlock w = g)
+theorem walkArg_eq {w g : List Bool} {a s : ℕ} (hg : pairFst w = g)
     (hv : vertFn r w = List.replicate a true)
     (hs : stepsFn r w = List.replicate s true) :
     walkArg r w = pair g (pair (List.replicate a true) (List.replicate s true)) := by
   rw [walkArg, hg, hv, hs]
 
 /-- **The killed walk's input**, likewise. -/
-theorem killArg_eq {w g : List Bool} {a b : ℕ} (hg : Cobham.fstBlock w = g)
+theorem killArg_eq {w g : List Bool} {a b : ℕ} (hg : pairFst w = g)
     (hv : vertFn r w = List.replicate a true)
     (hb : dartFn r w = List.replicate b true) :
     killArg r w = pair g (pair (List.replicate a true) (List.replicate b true)) := by
@@ -285,14 +285,14 @@ variable {F pol} in
 theorem stopBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
     (v : (G.preprocess (F.toFamily hd)).graph.V)
     (x : (Fin r.T → (G.preprocess (F.toFamily hd)).graph.D) × (Fin r.T → Fin r.q))
-    {w : List Bool} (hg : Cobham.fstBlock w = encGraph G)
+    {w : List Bool} (hg : pairFst w = encGraph G)
     (hv : vertFn r w = List.replicate (NumEnc.enc v) true)
     (hdart : dartFn r w = List.replicate (NumEnc.enc x) true) :
     stopBlk r w = List.replicate ((G.preprocess (F.toFamily hd)).graph.kLen x) true := by
   have hlt : NumEnc.enc x.2 < r.q ^ r.T := NumEnc.enc_lt x.2
   have hxenc : NumEnc.enc x = NumEnc.enc x.1 * r.q ^ r.T + NumEnc.enc x.2 := rfl
   have hco : coinsOf r.q r.T (killArg r w) = List.replicate (NumEnc.enc x.2) true := by
-    rw [killArg_eq r hg hv hdart, coinsOf, Cobham.sndBlock_pair, Cobham.sndBlock_pair,
+    rw [killArg_eq r hg hv hdart, coinsOf, pairSnd_pair, pairSnd_pair,
       modC_eq (Nat.pow_pos hq), List.length_replicate, hxenc, Nat.add_comm,
       Nat.add_mul_mod_self_right, Nat.mod_eq_of_lt hlt]
   rw [stopBlk, stopFn_eq hq hco r.T 0, ← stopAtNum_eq_stopFromNum, stopAtNum_eq hq x.2]
@@ -304,7 +304,7 @@ theorem parBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
     (hdeg : r.deg = (F.toFamily hd).degree) (hP : r.P = G.preDeg (F.toFamily hd))
     (v : (G.preprocess (F.toFamily hd)).graph.V)
     (x : (Fin r.T → (G.preprocess (F.toFamily hd)).graph.D) × (Fin r.T → Fin r.q))
-    {w : List Bool} (hg : Cobham.fstBlock w = encGraph G)
+    {w : List Bool} (hg : pairFst w = encGraph G)
     (hv : vertFn r w = List.replicate (NumEnc.enc v) true)
     (hs : stepsFn r w = List.replicate (NumEnc.enc x.1) true)
     (hdart : dartFn r w = List.replicate (NumEnc.enc x) true)
@@ -355,7 +355,7 @@ theorem codeBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
     (hC : r.C = Fintype.card (α → α → Bool))
     (v : (G.preprocess (F.toFamily hd)).graph.V)
     (x : (Fin r.T → (G.preprocess (F.toFamily hd)).graph.D) × (Fin r.T → Fin r.q))
-    {w : List Bool} (hg : Cobham.fstBlock w = encGraph G)
+    {w : List Bool} (hg : pairFst w = encGraph G)
     (hv : vertFn r w = List.replicate (NumEnc.enc v) true)
     (hs : stepsFn r w = List.replicate (NumEnc.enc x.1) true)
     (hdart : dartFn r w = List.replicate (NumEnc.enc x) true)
@@ -425,7 +425,7 @@ theorem revBlk_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
     (hdeg : r.deg = (F.toFamily hd).degree) (hP : r.P = G.preDeg (F.toFamily hd))
     (v : (G.preprocess (F.toFamily hd)).graph.V)
     (x : (Fin r.T → (G.preprocess (F.toFamily hd)).graph.D) × (Fin r.T → Fin r.q))
-    {w : List Bool} (hg : Cobham.fstBlock w = encGraph G)
+    {w : List Bool} (hg : pairFst w = encGraph G)
     (hv : vertFn r w = List.replicate (NumEnc.enc v) true)
     (hdart : dartFn r w = List.replicate (NumEnc.enc x) true)
     (hpc : ∀ u : Fin G.numVerts,
@@ -496,9 +496,9 @@ theorem keyFn_eq (hd : 1 < F.deg) (G : ConstraintGraph α) (hq : 0 < r.q)
   have hxenc : NumEnc.enc x = NumEnc.enc x.1 * r.cQ + NumEnc.enc x.2 := rfl
   obtain ⟨hs, hc⟩ := steps_coin_eq r (Nat.pow_pos hq) _ (NumEnc.enc x.1)
     (NumEnc.enc x.2) hclt (by rw [hdart, hxenc])
-  have hg : Cobham.fstBlock (pair (encGraph G) (List.replicate
+  have hg : pairFst (pair (encGraph G) (List.replicate
       (((NumEnc.enc v * r.cD + NumEnc.enc x) * r.cZ + NumEnc.enc z) * 22 + NumEnc.enc i) true))
-      = encGraph G := Cobham.fstBlock_pair _ _
+      = encGraph G := pairFst_pair _ _
   rw [keyFn, hs, hc, hrand, hread,
     parBlk_eq r hd G hq hdeg hP v x hg hv hs hdart hpc hpe B z i,
     codeBlk_eq r hd G hq hdeg hP hC v x hg hv hs hdart hpc hpe B z i,
@@ -526,7 +526,7 @@ theorem keyFn_length_le (hQ : 0 < r.cQ) (hD : 0 < r.cD) (hZ : 0 < r.cZ) (hC : 0 
   have hrand : (randFn r w).length ≤ r.cZ := by
     rw [randFn, divC_eq (by omega), List.length_replicate, modC_eq (by positivity),
       List.length_replicate]
-    have hlt : (Cobham.sndBlock w).length % (r.cZ * 22) < r.cZ * 22 :=
+    have hlt : (pairSnd w).length % (r.cZ * 22) < r.cZ * 22 :=
       Nat.mod_lt _ (by positivity)
     exact Nat.div_le_of_le_mul (by omega)
   have hread : (readFn w).length ≤ 22 := by

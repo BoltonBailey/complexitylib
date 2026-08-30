@@ -44,12 +44,12 @@ namespace Cobham
 
 /-- The first pair decoder is in the algebra, being polynomial-time. -/
 theorem fstBlockFn {n : ℕ} {g : (Fin n → List Bool) → List Bool} (hg : Cobham g) :
-    Cobham fun v : Fin n → List Bool => fstBlock (g v) :=
+    Cobham fun v : Fin n → List Bool => pairFst (g v) :=
   (Cobham.comp (FP_subset_CobhamFP fstBlock_mem_FP) fun _ : Fin 1 => hg).of_eq fun _ => rfl
 
 /-- The second pair decoder is in the algebra. -/
 theorem sndBlockFn {n : ℕ} {g : (Fin n → List Bool) → List Bool} (hg : Cobham g) :
-    Cobham fun v : Fin n → List Bool => sndBlock (g v) :=
+    Cobham fun v : Fin n → List Bool => pairSnd (g v) :=
   (Cobham.comp (FP_subset_CobhamFP sndBlock_mem_FP) fun _ : Fin 1 => hg).of_eq fun _ => rfl
 
 end Cobham
@@ -80,13 +80,13 @@ theorem binFn_mem_FP {g : List Bool → List Bool → List Bool}
     {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : b ∈ FP) :
     (fun z => g (a z) (b z)) ∈ FP := by
   have hpacked : Cobham fun v : Fin 1 → List Bool =>
-      g (Cobham.fstBlock (v 0)) (Cobham.sndBlock (v 0)) :=
+      g (pairFst (v 0)) (pairSnd (v 0)) :=
     (Cobham.comp₂ hg (Cobham.fstBlockFn (Cobham.proj 0))
       (Cobham.sndBlockFn (Cobham.proj 0))).of_eq fun _ => rfl
-  have hfp : (fun w => g (Cobham.fstBlock w) (Cobham.sndBlock w)) ∈ FP :=
+  have hfp : (fun w => g (pairFst w) (pairSnd w)) ∈ FP :=
     CobhamFP_subset_FP hpacked
   have h := mem_FP_comp (Cobham.pairFn_mem_FP ha hb) hfp
-  have heq : ((fun w => g (Cobham.fstBlock w) (Cobham.sndBlock w)) ∘ fun z => pair (a z) (b z))
+  have heq : ((fun w => g (pairFst w) (pairSnd w)) ∘ fun z => pair (a z) (b z))
       = fun z => g (a z) (b z) := by
     funext z
     simp [Function.comp]

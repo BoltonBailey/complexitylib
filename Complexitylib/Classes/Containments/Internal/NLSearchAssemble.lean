@@ -207,11 +207,11 @@ theorem searchRun_eq (tm : NTM k) (R V₀ ruler : List Bool) :
 
 /-- The visited string a search leaves behind. -/
 noncomputable def searchVisited (tm : NTM k) (R V₀ ruler : List Bool) : List Bool :=
-  sndBlock (sndBlock (searchRun tm R V₀ ruler))
+  pairSnd (pairSnd (searchRun tm R V₀ ruler))
 
 theorem searchVisited_eq (tm : NTM k) (R V₀ ruler : List Bool) :
     searchVisited tm R V₀ ruler = (searchState tm R V₀ ruler.length).2 := by
-  rw [searchVisited, searchRun_eq, searchPack, Cobham.sndBlock_pair, Cobham.sndBlock_pair]
+  rw [searchVisited, searchRun_eq, searchPack, pairSnd_pair, pairSnd_pair]
 
 /-- **The search is polynomial-time**, given a polynomial bound on its state. -/
 theorem searchVisitedFn_mem_FP (tm : NTM k)

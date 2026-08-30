@@ -53,13 +53,13 @@ def sqPositions (x ρ : List Bool) : List ℕ :=
   V.positions x (fstCoins t x ρ) ++ V.positions x (sndCoins t x ρ)
 
 /-- The input, out of a verdict argument `pair (pair x ρ) a`. -/
-def vX (z : List Bool) : List Bool := Cobham.fstBlock (Cobham.fstBlock z)
+def vX (z : List Bool) : List Bool := pairFst (pairFst z)
 
 /-- The coins, out of a verdict argument. -/
-def vR (z : List Bool) : List Bool := Cobham.sndBlock (Cobham.fstBlock z)
+def vR (z : List Bool) : List Bool := pairSnd (pairFst z)
 
 /-- The answers, out of a verdict argument. -/
-def vA (z : List Bool) : List Bool := Cobham.sndBlock z
+def vA (z : List Bool) : List Bool := pairSnd z
 
 /-- The verdict of the doubled verifier: both runs accept. The answers of the
 first run are the first `|positions|` of them. -/
@@ -110,34 +110,34 @@ theorem sqPositions_mem (hf : f ∈ FP)
       f (pair x rr) = DataEncode.bitstringEncode (V.positions x rr)) :
     ∃ g ∈ FP, ∀ x ρ : List Bool,
       g (pair x ρ) = DataEncode.bitstringEncode (sqPositions V t x ρ) := by
-  have hx : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hr : (fun z : List Bool => Cobham.sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
-  have h1 : (fun z : List Bool => f (pair (Cobham.fstBlock z)
-      (fstCoins t (Cobham.fstBlock z) (Cobham.sndBlock z)))) ∈ FP := by
+  have hx : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hr : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
+  have h1 : (fun z : List Bool => f (pair (pairFst z)
+      (fstCoins t (pairFst z) (pairSnd z)))) ∈ FP := by
     have := mem_FP_comp
       (Cobham.pairFn_mem_FP hx (fstCoinsFn_mem_FP ht hx hr)) hf
     simpa using this
-  have h2 : (fun z : List Bool => f (pair (Cobham.fstBlock z)
-      (sndCoins t (Cobham.fstBlock z) (Cobham.sndBlock z)))) ∈ FP := by
+  have h2 : (fun z : List Bool => f (pair (pairFst z)
+      (sndCoins t (pairFst z) (pairSnd z)))) ∈ FP := by
     have := mem_FP_comp
       (Cobham.pairFn_mem_FP hx (sndCoinsFn_mem_FP ht hx hr)) hf
     simpa using this
-  refine ⟨fun z => false :: (posInner (f (pair (Cobham.fstBlock z)
-      (fstCoins t (Cobham.fstBlock z) (Cobham.sndBlock z))))
-      ++ posInner (f (pair (Cobham.fstBlock z)
-      (sndCoins t (Cobham.fstBlock z) (Cobham.sndBlock z))))) ++ [true], ?_, ?_⟩
+  refine ⟨fun z => false :: (posInner (f (pair (pairFst z)
+      (fstCoins t (pairFst z) (pairSnd z))))
+      ++ posInner (f (pair (pairFst z)
+      (sndCoins t (pairFst z) (pairSnd z))))) ++ [true], ?_, ?_⟩
   · have hcat := Cobham.appendFn_mem_FP (posInner_mem_FP h1) (posInner_mem_FP h2)
     have hcons := mem_FP_comp hcat (Cobham.cons_mem_FP false)
     have := Cobham.appendFn_mem_FP hcons (constFn_mem_FP [true])
     refine mem_FP_of_eq this fun z => ?_
     simp
   · intro x ρ
-    show false :: (posInner (f (pair (Cobham.fstBlock (pair x ρ))
-        (fstCoins t (Cobham.fstBlock (pair x ρ)) (Cobham.sndBlock (pair x ρ)))))
-        ++ posInner (f (pair (Cobham.fstBlock (pair x ρ))
-        (sndCoins t (Cobham.fstBlock (pair x ρ)) (Cobham.sndBlock (pair x ρ)))))) ++ [true]
+    show false :: (posInner (f (pair (pairFst (pair x ρ))
+        (fstCoins t (pairFst (pair x ρ)) (pairSnd (pair x ρ)))))
+        ++ posInner (f (pair (pairFst (pair x ρ))
+        (sndCoins t (pairFst (pair x ρ)) (pairSnd (pair x ρ)))))) ++ [true]
       = _
-    rw [Cobham.fstBlock_pair, Cobham.sndBlock_pair, hfspec, hfspec, sqPositions,
+    rw [pairFst_pair, pairSnd_pair, hfspec, hfspec, sqPositions,
       bitstringEncode_append]
 
 include ht in
@@ -227,7 +227,7 @@ theorem accepts_squareAt (ht : (fun x : List Bool =>
   rw [Accepts, positions_squareAt, sqPositions, answers, List.map_append]
   show _ ∈ V.sqVerdict t ↔ _
   rw [sqVerdict, Set.mem_setOf_eq]
-  simp only [vX, vR, vA, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [vX, vR, vA, pairFst_pair, pairSnd_pair]
   rw [show List.map (fun i => π.getD i false) (V.positions x (fstCoins t x ρ))
         = answers π (V.positions x (fstCoins t x ρ)) from rfl,
     show List.map (fun i => π.getD i false) (V.positions x (sndCoins t x ρ))

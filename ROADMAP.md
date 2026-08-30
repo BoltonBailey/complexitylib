@@ -1290,15 +1290,20 @@ families of protocols with polynomial bounds into `IP`, `AM`, and related classe
 
 **Staged milestones.**
 
-- [ ] Define transcripts, legal interaction, deterministic prover strategies, and
-  verifier acceptance counts.
-- [ ] Prove strategy extensionality: only responses on reachable transcripts
-  affect acceptance.
-- [ ] Define completeness/soundness and prove monotonicity in thresholds.
-- [ ] Formalize sequential repetition and one soundness-amplification theorem.
-- [ ] Define polynomially bounded protocol families and `IP`.
-- [ ] Prove elementary containments such as `NP subset IP` and
-  `IP subset EXP` before attempting the sharp upper bound.
+- [x] Define transcripts, legal interaction, deterministic prover strategies, and
+  verifier acceptance counts (`Complexitylib.Classes.Interactive`: `Transcript`,
+  `ProverStrategy`, `Protocol`, `Protocol.acceptEvent`).
+- [x] Prove strategy extensionality: only responses on reachable transcripts
+  affect acceptance (`Protocol.transcript_congr`, `Protocol.transcript_congr_lt`).
+- [x] Define completeness/soundness and prove monotonicity in thresholds
+  (`IPWith`, `IPWith_mono` in `Complexitylib.Classes.Interactive.Amplification`).
+- [x] Formalize sequential repetition and one soundness-amplification theorem
+  (`RepArgs.repeatProtocol`, `IP_subset_IPWith_two_pow`, `IPWith_two_pow_eq_IP`; the
+  adaptive-prover tail bound is `card_fireCount_le` in `Interactive/Internal/SeqBound`).
+- [x] Define polynomially bounded protocol families and `IP` (`IP`, `MA`, `AM`).
+- [x] Prove elementary containments such as `NP subset IP` (`NP_subset_MA`,
+  `MA_subset_IP`, `NP_subset_IP` in `Complexitylib.Classes.Interactive.Containments`;
+  `IP_subset_PSPACE` is the sharp upper bound).
 
 **Formalization hazards.** A prover is adaptive, so it cannot be represented by a
 single witness string without encoding a potentially exponential strategy tree.
@@ -1709,13 +1714,28 @@ soundness amplification, and substantial finite-field polynomial support.
 
 - [ ] Develop the required finite-field and low-degree polynomial evaluation API,
   including an appropriate Schwartz--Zippel theorem.
-- [ ] State and prove sum-check completeness and soundness for a fixed number of
-  variables and explicit individual-degree bounds.
-- [ ] Arithmetize Boolean formulas over a finite field.
-- [ ] Formalize the degree-reduction step needed during quantified-formula
-  evaluation; naive recursive arithmetization has degree blow-up.
-- [ ] Build the interactive protocol for TQBF and prove polynomial verifier time,
+- [x] State and prove sum-check completeness and soundness for a fixed number of
+  variables and explicit individual-degree bounds
+  (`Complexitylib.Classes.Interactive.SumCheck`: `SumCheck.accept_honest`,
+  `SumCheck.card_accept_le_ratio`, abstractly over any finite field).
+- [x] Arithmetize Boolean formulas over a finite field
+  (`Complexitylib.SAT.QBF.Arith`: `QBF.arith`, Boolean-preserving by
+  `QBF.arith_ofBool`, of degree `QBF.varDeg` in each variable by `QBF.arith_isPoly`).
+- [~] Formalize the degree-reduction step needed during quantified-formula
+  evaluation; naive recursive arithmetization has degree blow-up. *(The
+  linearization operator `QBF.linearize` with `linearize_ofBool`,
+  `linearize_isPoly_self`, `linearize_isPoly_other` is in `Complexitylib.SAT.QBF.Arith`;
+  its interleaving into the protocol remains.)*
+- [~] Build the interactive protocol for TQBF and prove polynomial verifier time,
   polynomial communication, perfect/high completeness, and bounded soundness.
+  *(The abstract protocol is done: the round structure — Shen's chain of sum,
+  product, "or" and linearization operators — with completeness and the additive
+  soundness bound is `Complexitylib.Classes.Interactive.OperatorChain`, and its
+  instance for a prenex QBF, with the value lemma at Boolean points and the
+  degree bookkeeping, is `Complexitylib.Classes.Interactive.TQBFProtocol`
+  (`Shen.tqbf_accept_honest`, `Shen.tqbf_card_accept_le_ratio`). The field
+  encoding, the polynomial-time verifier as a `Protocol`, and TQBF's
+  PSPACE-hardness remain.)*
 - [ ] Conclude `PSPACE subset IP` from TQBF completeness.
 - [ ] Prove `IP subset PSPACE` by evaluating the finite game/acceptance recursion in
   polynomial space.
@@ -1735,7 +1755,8 @@ soundness constants should be explicit before class-level amplification.
 - [M] Prove a univariate root-count probability bound over a finite field.
 - [M] Define the sum-check verifier state and prove round-by-round invariant
   preservation.
-- [L] Formalize sum-check soundness independently of TQBF.
+- [x] Formalize sum-check soundness independently of TQBF
+  (`SumCheck.card_accept_le`).
 
 ### L2. Oracle machines and relativization
 
@@ -1988,8 +2009,10 @@ randomness, interaction, and lower bounds.
 - [~] Define the polynomial hierarchy both by alternating quantifiers and oracle
   levels, then prove equivalence at fixed levels. *(The certificate-quantifier
   definition is `Complexitylib.Classes.PH`: `SigmaP`, `PiP`, `PH`, quantifier
-  duality, and the level inclusions relative to the `pairFst ∈ FP` seam. Oracle
-  levels and the equivalence remain.)*
+  duality, and the level inclusions relative to the `pairFst ∈ FP` seam;
+  `Complexitylib.Classes.PH.SigmaOne` identifies the first level with the
+  machine classes, `SigmaP_one_eq_NP` and `PiP_one_eq_coNP`. Oracle levels and
+  the equivalence remain.)*
 - [x] Prove the Sipser--Lautemann theorem `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`
   (`Complexitylib.Classes.PH.SipserLautemann`: `sipserLautemann`, with
   `BPP_subset_SigmaP_two`, `BPP_subset_PiP_two` and `BPP_subset_PH`).

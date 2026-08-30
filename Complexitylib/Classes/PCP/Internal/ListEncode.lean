@@ -35,18 +35,18 @@ namespace Complexity
 /-- One step: append the next entry's encoding and advance the counter. The
 state is `pair (pair accumulated counter) input`. -/
 def listStep (E : List Bool → List Bool) (st : List Bool) : List Bool :=
-  pair (pair (Cobham.fstBlock (Cobham.fstBlock st)
-      ++ E (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st))))
-    (true :: Cobham.sndBlock (Cobham.fstBlock st))) (Cobham.sndBlock st)
+  pair (pair (pairFst (pairFst st)
+      ++ E (pair (pairSnd st) (pairSnd (pairFst st))))
+    (true :: pairSnd (pairFst st))) (pairSnd st)
 
 theorem listStep_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) : listStep E ∈ FP := by
-  have hacc : (fun st : List Bool => Cobham.fstBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hacc : (fun st : List Bool => pairFst (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hctr : (fun st : List Bool => Cobham.sndBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hctr : (fun st : List Bool => pairSnd (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hx : (fun st : List Bool => Cobham.sndBlock st) ∈ FP := Cobham.sndBlock_mem_FP
+  have hx : (fun st : List Bool => pairSnd st) ∈ FP := Cobham.sndBlock_mem_FP
   have hE' : (fun st : List Bool =>
-      E (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st)))) ∈ FP := by
+      E (pair (pairSnd st) (pairSnd (pairFst st)))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hx hctr) hE
     simpa using this
   exact Cobham.pairFn_mem_FP
@@ -75,8 +75,8 @@ theorem listStep_iterate (E : List Bool → List Bool) (x : List Bool) :
   induction n with
   | zero => simp
   | succ n ih =>
-      rw [Function.iterate_succ_apply', ih, listStep, Cobham.fstBlock_pair,
-        Cobham.sndBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
+      rw [Function.iterate_succ_apply', ih, listStep, pairFst_pair,
+        pairSnd_pair, pairFst_pair, pairSnd_pair,
         entryCat_succ, List.replicate_succ]
 
 /-- **The accumulation is the encoding.** If each step writes the encoding of
@@ -119,21 +119,21 @@ theorem length_entryCat_le (E : List Bool → List Bool) (x : List Bool) (b : �
 
 /-- **The list encoder**, on `pair (unary count) input`. -/
 noncomputable def listEncFn (E : List Bool → List Bool) (z : List Bool) : List Bool :=
-  false :: Cobham.fstBlock (Cobham.fstBlock
-    ((listStep E)^[(Cobham.fstBlock z).length] (pair (pair [] []) (Cobham.sndBlock z))))
+  false :: pairFst (pairFst
+    ((listStep E)^[(pairFst z).length] (pair (pair [] []) (pairSnd z))))
     ++ [true]
 
 theorem listEncFn_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) (p : Polynomial ℕ)
-    (hbound : ∀ z : List Bool, ∀ k ≤ (Cobham.fstBlock z).length,
-      ((listStep E)^[k] (pair (pair [] []) (Cobham.sndBlock z))).length
+    (hbound : ∀ z : List Bool, ∀ k ≤ (pairFst z).length,
+      ((listStep E)^[k] (pair (pair [] []) (pairSnd z))).length
         ≤ p.eval z.length) :
     listEncFn E ∈ FP := by
-  have hinit : (fun z : List Bool => pair (pair [] []) (Cobham.sndBlock z)) ∈ FP :=
+  have hinit : (fun z : List Bool => pair (pair [] []) (pairSnd z)) ∈ FP :=
     Cobham.pairFn_mem_FP (constFn_mem_FP (pair [] [])) Cobham.sndBlock_mem_FP
   have hwidth : (fun z : List Bool => polyRuler p (id z)) ∈ FP :=
     polyRulerFn_mem_FP p id_mem_FP
-  have hbound' : ∀ z : List Bool, ∀ k ≤ (Cobham.fstBlock z).length,
-      ((listStep E)^[k] (pair (pair [] []) (Cobham.sndBlock z))).length
+  have hbound' : ∀ z : List Bool, ∀ k ≤ (pairFst z).length,
+      ((listStep E)^[k] (pair (pair [] []) (pairSnd z))).length
         ≤ (polyRuler p (id z)).length := by
     intro z k hk
     rw [polyRuler_length]
@@ -150,15 +150,15 @@ theorem listEncFn_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) (p : Poly
 
 theorem listEncFn_eq (E : List Bool → List Bool) (z : List Bool) :
     listEncFn E z
-      = false :: entryCat E (Cobham.sndBlock z) (Cobham.fstBlock z).length ++ [true] := by
-  rw [listEncFn, listStep_iterate, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+      = false :: entryCat E (pairSnd z) (pairFst z).length ++ [true] := by
+  rw [listEncFn, listStep_iterate, pairFst_pair, pairFst_pair]
 
 /-- **The loop writes the list's encoding.** -/
 theorem listEncFn_eq_bitstringEncode {α : Type} [DataEncode α]
     {E : List Bool → List Bool} {z : List Bool} (l : List α)
-    (hn : (Cobham.fstBlock z).length = l.length)
+    (hn : (pairFst z).length = l.length)
     (h : ∀ i, ∀ hi : i < l.length,
-      E (pair (Cobham.sndBlock z) (List.replicate i true))
+      E (pair (pairSnd z) (List.replicate i true))
         = DataEncode.bitstringEncode (l[i]'hi)) :
     listEncFn E z = DataEncode.bitstringEncode l := by
   rw [listEncFn_eq, hn, ← bitstringEncode_of_entries l h]

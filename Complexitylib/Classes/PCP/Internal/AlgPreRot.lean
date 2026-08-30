@@ -45,13 +45,13 @@ namespace Complexity
 
 /-- The vertex a half-edge hangs from, on `pair (encoded graph) (unary p)`. -/
 noncomputable def ownerFn (z : List Bool) : List Bool :=
-  ifEqLen (modC 2 (Cobham.sndBlock z)) []
-    (recSnd (Cobham.sndBlock (Cobham.fstBlock z)) (divC 2 (Cobham.sndBlock z)).length)
-    (recFst (Cobham.sndBlock (Cobham.fstBlock z)) (divC 2 (Cobham.sndBlock z)).length)
+  ifEqLen (modC 2 (pairSnd z)) []
+    (recSnd (pairSnd (pairFst z)) (divC 2 (pairSnd z)).length)
+    (recFst (pairSnd (pairFst z)) (divC 2 (pairSnd z)).length)
 
 theorem ownerFn_mem_FP : ownerFn ∈ FP := by
-  have hp : (fun z : List Bool => Cobham.sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
-  have hG : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hp : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hG : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP) fun _ => rfl
   have he := divC_mem_FP hp 2
   have hb := modC_mem_FP hp 2
@@ -62,17 +62,17 @@ theorem ownerFn_mem_FP : ownerFn ∈ FP := by
 /-- One mark when the half-edge `j` hangs from the vertex asked for. The
 argument is `pair (pair (encoded graph) (unary u)) (unary j)`. -/
 noncomputable def cloudMark (w : List Bool) : List Bool :=
-  ifEqLen (ownerFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w)))
-    (Cobham.sndBlock (Cobham.fstBlock w)) [true] []
+  ifEqLen (ownerFn (pair (pairFst (pairFst w)) (pairSnd w)))
+    (pairSnd (pairFst w)) [true] []
 
 theorem cloudMark_mem_FP : cloudMark ∈ FP := by
-  have hG : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hG : (fun w : List Bool => pairFst (pairFst w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hu : (fun w : List Bool => Cobham.sndBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hu : (fun w : List Bool => pairSnd (pairFst w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hj : (fun w : List Bool => Cobham.sndBlock w) ∈ FP := Cobham.sndBlock_mem_FP
+  have hj : (fun w : List Bool => pairSnd w) ∈ FP := Cobham.sndBlock_mem_FP
   have hown : (fun w : List Bool =>
-      ownerFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w))) ∈ FP := by
+      ownerFn (pair (pairFst (pairFst w)) (pairSnd w))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG hj) ownerFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
@@ -81,8 +81,8 @@ theorem cloudMark_mem_FP : cloudMark ∈ FP := by
 theorem length_cloudMark (Gz u j : List Bool) :
     (cloudMark (pair (pair Gz u) j)).length
       = if (ownerFn (pair Gz j)).length = u.length then 1 else 0 := by
-  rw [cloudMark, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair]
+  rw [cloudMark, pairFst_pair, pairSnd_pair, pairFst_pair,
+    pairSnd_pair]
   by_cases h : (ownerFn (pair Gz j)).length = u.length
   · rw [ifEqLen_pos h, if_pos h]
     rfl
@@ -93,12 +93,12 @@ theorem length_cloudMark (Gz u j : List Bool) :
 `pair (encoded graph) (unary u)`. -/
 noncomputable def cloudSizeFn (z : List Bool) : List Bool :=
   countOver cloudMark
-    (pair (marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z))))) z)
+    (pair (marks (mulC 2 (posCount (pairSnd (pairFst z))))) z)
 
 theorem cloudSizeFn_mem_FP : cloudSizeFn ∈ FP := by
   have hcnt : (fun z : List Bool =>
-      marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z))))) ∈ FP := by
-    have h1 : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+      marks (mulC 2 (posCount (pairSnd (pairFst z))))) ∈ FP := by
+    have h1 : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
       mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
     exact marks_mem_FP (mulC_mem_FP (posCount_mem_FP h1) 2)
   have harg := Cobham.pairFn_mem_FP hcnt id_mem_FP
@@ -109,13 +109,13 @@ theorem cloudSizeFn_mem_FP : cloudSizeFn ∈ FP := by
 
 /-- **The count is the number of half-edges the rule accepts.** -/
 theorem length_cloudSizeFn (Gz u : List Bool) (m : ℕ)
-    (hm : (mulC 2 (posCount (Cobham.sndBlock Gz))).length = m) :
+    (hm : (mulC 2 (posCount (pairSnd Gz))).length = m) :
     (cloudSizeFn (pair Gz u)).length
       = ∑ j ∈ Finset.range m,
         (if (ownerFn (pair Gz (List.replicate j true))).length = u.length then 1 else 0) := by
-  have hmarks : marks (mulC 2 (posCount (Cobham.sndBlock Gz))) = List.replicate m true := by
+  have hmarks : marks (mulC 2 (posCount (pairSnd Gz))) = List.replicate m true := by
     rw [marks_eq, hm]
-  rw [cloudSizeFn, Cobham.fstBlock_pair, hmarks, length_countOver]
+  rw [cloudSizeFn, pairFst_pair, hmarks, length_countOver]
   refine Finset.sum_congr rfl fun j _ => ?_
   rw [length_cloudMark]
 
@@ -123,7 +123,7 @@ theorem length_cloudSizeFn (Gz u : List Bool) (m : ℕ)
 `pair (encoded graph) (unary p)`. -/
 noncomputable def cloudIdxFn (z : List Bool) : List Bool :=
   countOver cloudMark
-    (pair (marks (Cobham.sndBlock z)) (pair (Cobham.fstBlock z) (ownerFn z)))
+    (pair (marks (pairSnd z)) (pair (pairFst z) (ownerFn z)))
 
 theorem cloudIdxFn_mem_FP : cloudIdxFn ∈ FP := by
   have hcnt := marks_mem_FP Cobham.sndBlock_mem_FP
@@ -139,10 +139,10 @@ theorem length_cloudIdxFn (Gz : List Bool) (p : ℕ) :
       = ∑ j ∈ Finset.range p,
         (if (ownerFn (pair Gz (List.replicate j true))).length
             = (ownerFn (pair Gz (List.replicate p true))).length then 1 else 0) := by
-  have hmarks : marks (Cobham.sndBlock (pair Gz (List.replicate p true)))
+  have hmarks : marks (pairSnd (pair Gz (List.replicate p true)))
       = List.replicate p true := by
-    rw [Cobham.sndBlock_pair, marks_eq, List.length_replicate]
-  rw [cloudIdxFn, hmarks, Cobham.fstBlock_pair, length_countOver]
+    rw [pairSnd_pair, marks_eq, List.length_replicate]
+  rw [cloudIdxFn, hmarks, pairFst_pair, length_countOver]
   refine Finset.sum_congr rfl fun j _ => ?_
   rw [length_cloudMark]
 
@@ -153,32 +153,32 @@ theorem length_cloudIdxFn (Gz : List Bool) (p : ℕ) :
 /-- One mark when the half-edge `c` is the `k`-th of the cloud of `u`. The
 argument is `pair (pair (encoded graph) (pair (unary u) (unary k))) (unary c)`. -/
 noncomputable def eltMark (w : List Bool) : List Bool :=
-  ifEqLen (ownerFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w)))
-    (Cobham.fstBlock (Cobham.sndBlock (Cobham.fstBlock w)))
-    (ifEqLen (cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w)))
-      (Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock w))) [true] [])
+  ifEqLen (ownerFn (pair (pairFst (pairFst w)) (pairSnd w)))
+    (pairFst (pairSnd (pairFst w)))
+    (ifEqLen (cloudIdxFn (pair (pairFst (pairFst w)) (pairSnd w)))
+      (pairSnd (pairSnd (pairFst w))) [true] [])
     []
 
 theorem eltMark_mem_FP : eltMark ∈ FP := by
-  have hG : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hG : (fun w : List Bool => pairFst (pairFst w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hc : (fun w : List Bool => Cobham.sndBlock w) ∈ FP := Cobham.sndBlock_mem_FP
+  have hc : (fun w : List Bool => pairSnd w) ∈ FP := Cobham.sndBlock_mem_FP
   have hu : (fun w : List Bool =>
-      Cobham.fstBlock (Cobham.sndBlock (Cobham.fstBlock w))) ∈ FP :=
+      pairFst (pairSnd (pairFst w))) ∈ FP :=
     mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP)
       Cobham.fstBlock_mem_FP
   have hk : (fun w : List Bool =>
-      Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock w))) ∈ FP :=
+      pairSnd (pairSnd (pairFst w))) ∈ FP :=
     mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP)
       Cobham.sndBlock_mem_FP
   have harg := Cobham.pairFn_mem_FP hG hc
   have hown : (fun w : List Bool =>
-      ownerFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w))) ∈ FP := by
+      ownerFn (pair (pairFst (pairFst w)) (pairSnd w))) ∈ FP := by
     have h := mem_FP_comp harg ownerFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
   have hidx : (fun w : List Bool =>
-      cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w))) ∈ FP := by
+      cloudIdxFn (pair (pairFst (pairFst w)) (pairSnd w))) ∈ FP := by
     have h := mem_FP_comp harg cloudIdxFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
@@ -191,8 +191,8 @@ theorem length_eltMark (Gz u k c : List Bool) :
       = if (ownerFn (pair Gz c)).length = u.length then
           (if (cloudIdxFn (pair Gz c)).length = k.length then 1 else 0)
         else 0 := by
-  rw [eltMark, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  rw [eltMark, pairFst_pair, pairSnd_pair, pairFst_pair,
+    pairSnd_pair, pairFst_pair, pairSnd_pair]
   by_cases h1 : (ownerFn (pair Gz c)).length = u.length
   · rw [ifEqLen_pos h1, if_pos h1]
     by_cases h2 : (cloudIdxFn (pair Gz c)).length = k.length
@@ -207,7 +207,7 @@ theorem length_eltMark (Gz u k c : List Bool) :
 `pair (encoded graph) (pair (unary u) (unary k))`. -/
 noncomputable def cloudEltFn (z : List Bool) : List Bool :=
   findFirst eltMark
-    (pair (marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z))))) z)
+    (pair (marks (mulC 2 (posCount (pairSnd (pairFst z))))) z)
 
 theorem cloudEltFn_eq_replicate (z : List Bool) :
     cloudEltFn z = List.replicate (cloudEltFn z).length true := by
@@ -215,7 +215,7 @@ theorem cloudEltFn_eq_replicate (z : List Bool) :
   rw [← cloudEltFn]
 
 theorem cloudEltFn_mem_FP : cloudEltFn ∈ FP := by
-  have h1 : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h1 : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   have hcnt := marks_mem_FP (mulC_mem_FP (posCount_mem_FP h1) 2)
   have h := mem_FP_comp (Cobham.pairFn_mem_FP hcnt id_mem_FP)
@@ -234,17 +234,17 @@ theorem ownerFn_eq (G : ConstraintGraph α) (p : ℕ) (hp : p / 2 < G.numEdges) 
     rw [divC_eq (by norm_num), List.length_replicate]
   have hmod : (modC 2 (List.replicate p true)) = List.replicate (p % 2) true := by
     rw [modC_eq (by norm_num), List.length_replicate]
-  rw [ownerFn, Cobham.sndBlock_pair, Cobham.fstBlock_pair, hdiv, hmod,
+  rw [ownerFn, pairSnd_pair, pairFst_pair, hdiv, hmod,
     List.length_replicate, ConstraintGraph.ownerNum, dif_pos hp]
   by_cases h : p % 2 = 0
   · rw [if_pos h, ifEqLen_pos (by rw [h]; rfl)]
-    rw [encGraph, Cobham.sndBlock_pair,
+    rw [encGraph, pairSnd_pair,
       recSnd_eq (l3 := edgeRecs G) (by rw [length_edgeRecs]; exact hp)
         (getElem_edgeRecs G _ hp)]
   · rw [if_neg h, ifEqLen_neg (by
       rw [List.length_replicate, List.length_nil]
       exact h)]
-    rw [encGraph, Cobham.sndBlock_pair,
+    rw [encGraph, pairSnd_pair,
       recFst_eq (l3 := edgeRecs G) (by rw [length_edgeRecs]; exact hp)
         (getElem_edgeRecs G _ hp)]
 
@@ -328,8 +328,8 @@ end ConstraintGraph
 variable (G : ConstraintGraph α)
 
 theorem length_count_encGraph :
-    (mulC 2 (posCount (Cobham.sndBlock (encGraph G)))).length = 2 * G.numEdges := by
-  rw [encGraph, Cobham.sndBlock_pair, posCount_eq, length_mulC, List.length_replicate,
+    (mulC 2 (posCount (pairSnd (encGraph G)))).length = 2 * G.numEdges := by
+  rw [encGraph, pairSnd_pair, posCount_eq, length_mulC, List.length_replicate,
     length_edgeRecs]
   ring
 
@@ -385,10 +385,10 @@ theorem length_cloudEltFn_eq (v : Fin G.numVerts) (k : ℕ)
   have hcount : countBelow (G.cloudCodes v) (G.halfCode q) = k := by
     rw [← G.idxOf_cloudList howner, hidx]
   have hclt : G.halfCode q < 2 * G.numEdges := halfCode_lt G q
-  have hmarks : marks (mulC 2 (posCount (Cobham.sndBlock (encGraph G))))
+  have hmarks : marks (mulC 2 (posCount (pairSnd (encGraph G))))
       = List.replicate (2 * G.numEdges) true := by
     rw [marks_eq, length_count_encGraph]
-  rw [cloudEltFn, Cobham.fstBlock_pair, hmarks]
+  rw [cloudEltFn, pairFst_pair, hmarks]
   refine length_findFirst_eq hclt ?_ ?_
   · have howner' : G.ownerNum (G.halfCode q) = v.val := by
       rw [← ConstraintGraph.enc_halfEdge, ConstraintGraph.ownerNum_enc, howner]
@@ -444,58 +444,58 @@ variable (F : FinBase) (pol : Polynomial ℕ)
 half-edge the new index names. -/
 noncomputable def cloudStepFn (z : List Bool) : List Bool :=
   pair
-    (cloudEltFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-      (pair (Cobham.sndBlock (Cobham.fstBlock z))
-        (Cobham.fstBlock (F.famRotFn pol
-          (pair (cloudSizeFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-              (Cobham.sndBlock (Cobham.fstBlock z))))
-            (pair (cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-                (Cobham.fstBlock (Cobham.sndBlock z))))
-              (Cobham.sndBlock (Cobham.sndBlock z)))))))))
-    (Cobham.sndBlock (F.famRotFn pol
-      (pair (cloudSizeFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-          (Cobham.sndBlock (Cobham.fstBlock z))))
-        (pair (cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-            (Cobham.fstBlock (Cobham.sndBlock z))))
-          (Cobham.sndBlock (Cobham.sndBlock z))))))
+    (cloudEltFn (pair (pairFst (pairFst z))
+      (pair (pairSnd (pairFst z))
+        (pairFst (F.famRotFn pol
+          (pair (cloudSizeFn (pair (pairFst (pairFst z))
+              (pairSnd (pairFst z))))
+            (pair (cloudIdxFn (pair (pairFst (pairFst z))
+                (pairFst (pairSnd z))))
+              (pairSnd (pairSnd z)))))))))
+    (pairSnd (F.famRotFn pol
+      (pair (cloudSizeFn (pair (pairFst (pairFst z))
+          (pairSnd (pairFst z))))
+        (pair (cloudIdxFn (pair (pairFst (pairFst z))
+            (pairFst (pairSnd z))))
+          (pairSnd (pairSnd z))))))
 
 theorem cloudStepFn_mem_FP : cloudStepFn F pol ∈ FP := by
-  have hG : (fun z : List Bool => Cobham.fstBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hG : (fun z : List Bool => pairFst (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hu : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hu : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hc : (fun z : List Bool => Cobham.fstBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hc : (fun z : List Bool => pairFst (pairSnd z)) ∈ FP :=
     mem_FP_comp Cobham.sndBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hj : (fun z : List Bool => Cobham.sndBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hj : (fun z : List Bool => pairSnd (pairSnd z)) ∈ FP :=
     mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hsize : (fun z : List Bool => cloudSizeFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-      (Cobham.sndBlock (Cobham.fstBlock z)))) ∈ FP := by
+  have hsize : (fun z : List Bool => cloudSizeFn (pair (pairFst (pairFst z))
+      (pairSnd (pairFst z)))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG hu) cloudSizeFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
-  have hidx : (fun z : List Bool => cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-      (Cobham.fstBlock (Cobham.sndBlock z)))) ∈ FP := by
+  have hidx : (fun z : List Bool => cloudIdxFn (pair (pairFst (pairFst z))
+      (pairFst (pairSnd z)))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG hc) cloudIdxFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
   have hy : (fun z : List Bool => F.famRotFn pol
-      (pair (cloudSizeFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-          (Cobham.sndBlock (Cobham.fstBlock z))))
-        (pair (cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-            (Cobham.fstBlock (Cobham.sndBlock z))))
-          (Cobham.sndBlock (Cobham.sndBlock z))))) ∈ FP := by
+      (pair (cloudSizeFn (pair (pairFst (pairFst z))
+          (pairSnd (pairFst z))))
+        (pair (cloudIdxFn (pair (pairFst (pairFst z))
+            (pairFst (pairSnd z))))
+          (pairSnd (pairSnd z))))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hsize (Cobham.pairFn_mem_FP hidx hj))
       (F.famRotFn_mem_FP pol)
     refine mem_FP_of_eq h fun w => ?_
     rw [Function.comp_apply]
-  have helt : (fun z : List Bool => cloudEltFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-      (pair (Cobham.sndBlock (Cobham.fstBlock z))
-        (Cobham.fstBlock (F.famRotFn pol
-          (pair (cloudSizeFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-              (Cobham.sndBlock (Cobham.fstBlock z))))
-            (pair (cloudIdxFn (pair (Cobham.fstBlock (Cobham.fstBlock z))
-                (Cobham.fstBlock (Cobham.sndBlock z))))
-              (Cobham.sndBlock (Cobham.sndBlock z))))))))) ∈ FP := by
+  have helt : (fun z : List Bool => cloudEltFn (pair (pairFst (pairFst z))
+      (pair (pairSnd (pairFst z))
+        (pairFst (F.famRotFn pol
+          (pair (cloudSizeFn (pair (pairFst (pairFst z))
+              (pairSnd (pairFst z))))
+            (pair (cloudIdxFn (pair (pairFst (pairFst z))
+                (pairFst (pairSnd z))))
+              (pairSnd (pairSnd z))))))))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG
       (Cobham.pairFn_mem_FP hu (mem_FP_comp hy Cobham.fstBlock_mem_FP))) cloudEltFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
@@ -508,11 +508,11 @@ theorem cloudStepFn_mem_FP : cloudStepFn F pol ∈ FP := by
 /-- The expander move, on `pair (graph) (pair (unary vertex) (unary dart))`. -/
 noncomputable def expStepFn (z : List Bool) : List Bool :=
   F.famRotFn pol
-    (pair (marks (mulC 2 (posCount (Cobham.sndBlock (Cobham.fstBlock z)))))
-      (Cobham.sndBlock z))
+    (pair (marks (mulC 2 (posCount (pairSnd (pairFst z)))))
+      (pairSnd z))
 
 theorem expStepFn_mem_FP : expStepFn F pol ∈ FP := by
-  have h1 : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h1 : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   have hcnt := marks_mem_FP (mulC_mem_FP (posCount_mem_FP h1) 2)
   have h := mem_FP_comp (Cobham.pairFn_mem_FP hcnt Cobham.sndBlock_mem_FP)
@@ -584,9 +584,9 @@ theorem cloudStepFn_eq (hd : 1 < F.deg) (v : Fin G.numVerts) (c j : ℕ)
     conv_lhs => rw [cloudEltFn_eq_replicate]
     rw [length_cloudEltFn_eq G v _ (Fin.isLt _)]
   rw [cloudStepFn]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   rw [hsize, hidx, hrot]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   rw [helt, ConstraintGraph.cloudStepNum, dif_pos hidxlt]
   dsimp only
   rw [← G.halfCode_getElem_cloudList v _ (Fin.isLt _)]
@@ -598,10 +598,10 @@ theorem expStepFn_eq (hd : 1 < F.deg) (v j : ℕ) (hn : 0 < 2 * G.numEdges)
         (pair (List.replicate v true) (List.replicate j true)))
       = pair (List.replicate (F.famRotVal hd (2 * G.numEdges) (v, j)).1 true)
         (List.replicate (F.famRotVal hd (2 * G.numEdges) (v, j)).2 true) := by
-  have hmarks : marks (mulC 2 (posCount (Cobham.sndBlock (encGraph G))))
+  have hmarks : marks (mulC 2 (posCount (pairSnd (encGraph G))))
       = List.replicate (2 * G.numEdges) true := by
     rw [marks_eq, length_count_encGraph]
-  rw [expStepFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair, hmarks]
+  rw [expStepFn, pairFst_pair, pairSnd_pair, hmarks]
   exact F.famRotFn_eq pol hd _ v j hn hp
 
 /-! ### The whole rotation map -/
@@ -631,66 +631,66 @@ theorem flipFn_eq (v : ℕ) :
 dart `1` crosses the edge, the next `deg` are the cloud's, and the rest are the
 superposed expander's. -/
 noncomputable def preRotFn (deg : ℕ) (z : List Bool) : List Bool :=
-  ifEqLen (Cobham.sndBlock (Cobham.sndBlock z)) []
-    (pair (Cobham.fstBlock (Cobham.sndBlock z)) [])
-    (ifEqLen (Cobham.sndBlock (Cobham.sndBlock z)) [true]
-      (pair (flipFn (Cobham.fstBlock (Cobham.sndBlock z))) [true])
-      (ifLtLen (Cobham.sndBlock (Cobham.sndBlock z)) (List.replicate (2 + deg) true)
+  ifEqLen (pairSnd (pairSnd z)) []
+    (pair (pairFst (pairSnd z)) [])
+    (ifEqLen (pairSnd (pairSnd z)) [true]
+      (pair (flipFn (pairFst (pairSnd z))) [true])
+      (ifLtLen (pairSnd (pairSnd z)) (List.replicate (2 + deg) true)
         (pair
-          (Cobham.fstBlock (cloudStepFn F pol
-            (pair (pair (Cobham.fstBlock z)
-                (ownerFn (pair (Cobham.fstBlock z) (Cobham.fstBlock (Cobham.sndBlock z)))))
-              (pair (Cobham.fstBlock (Cobham.sndBlock z))
-                ((Cobham.sndBlock (Cobham.sndBlock z)).drop 2)))))
-          (Cobham.sndBlock (cloudStepFn F pol
-            (pair (pair (Cobham.fstBlock z)
-                (ownerFn (pair (Cobham.fstBlock z) (Cobham.fstBlock (Cobham.sndBlock z)))))
-              (pair (Cobham.fstBlock (Cobham.sndBlock z))
-                ((Cobham.sndBlock (Cobham.sndBlock z)).drop 2)))) ++ [true, true]))
+          (pairFst (cloudStepFn F pol
+            (pair (pair (pairFst z)
+                (ownerFn (pair (pairFst z) (pairFst (pairSnd z)))))
+              (pair (pairFst (pairSnd z))
+                ((pairSnd (pairSnd z)).drop 2)))))
+          (pairSnd (cloudStepFn F pol
+            (pair (pair (pairFst z)
+                (ownerFn (pair (pairFst z) (pairFst (pairSnd z)))))
+              (pair (pairFst (pairSnd z))
+                ((pairSnd (pairSnd z)).drop 2)))) ++ [true, true]))
         (pair
-          (Cobham.fstBlock (expStepFn F pol
-            (pair (Cobham.fstBlock z)
-              (pair (Cobham.fstBlock (Cobham.sndBlock z))
-                ((Cobham.sndBlock (Cobham.sndBlock z)).drop (2 + deg))))))
-          (Cobham.sndBlock (expStepFn F pol
-            (pair (Cobham.fstBlock z)
-              (pair (Cobham.fstBlock (Cobham.sndBlock z))
-                ((Cobham.sndBlock (Cobham.sndBlock z)).drop (2 + deg)))))
+          (pairFst (expStepFn F pol
+            (pair (pairFst z)
+              (pair (pairFst (pairSnd z))
+                ((pairSnd (pairSnd z)).drop (2 + deg))))))
+          (pairSnd (expStepFn F pol
+            (pair (pairFst z)
+              (pair (pairFst (pairSnd z))
+                ((pairSnd (pairSnd z)).drop (2 + deg)))))
             ++ List.replicate (2 + deg) true))))
 
 theorem preRotFn_mem_FP (deg : ℕ) : preRotFn F pol deg ∈ FP := by
-  have hG : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hv : (fun z : List Bool => Cobham.fstBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hG : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hv : (fun z : List Bool => pairFst (pairSnd z)) ∈ FP :=
     mem_FP_comp Cobham.sndBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hd : (fun z : List Bool => Cobham.sndBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hd : (fun z : List Bool => pairSnd (pairSnd z)) ∈ FP :=
     mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hd2 : (fun z : List Bool => (Cobham.sndBlock (Cobham.sndBlock z)).drop 2) ∈ FP := by
+  have hd2 : (fun z : List Bool => (pairSnd (pairSnd z)).drop 2) ∈ FP := by
     have := dropLenFn_mem_FP (constFn_mem_FP (List.replicate 2 true)) hd
     refine mem_FP_of_eq this fun w => ?_
     rw [List.length_replicate]
   have hdk : (fun z : List Bool =>
-      (Cobham.sndBlock (Cobham.sndBlock z)).drop (2 + deg)) ∈ FP := by
+      (pairSnd (pairSnd z)).drop (2 + deg)) ∈ FP := by
     have := dropLenFn_mem_FP (constFn_mem_FP (List.replicate (2 + deg) true)) hd
     refine mem_FP_of_eq this fun w => ?_
     rw [List.length_replicate]
   have hown : (fun z : List Bool =>
-      ownerFn (pair (Cobham.fstBlock z) (Cobham.fstBlock (Cobham.sndBlock z)))) ∈ FP := by
+      ownerFn (pair (pairFst z) (pairFst (pairSnd z)))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG hv) ownerFn_mem_FP
     refine mem_FP_of_eq h fun w => ?_
     simp only [Function.comp_apply]
   have hcs : (fun z : List Bool => cloudStepFn F pol
-      (pair (pair (Cobham.fstBlock z)
-          (ownerFn (pair (Cobham.fstBlock z) (Cobham.fstBlock (Cobham.sndBlock z)))))
-        (pair (Cobham.fstBlock (Cobham.sndBlock z))
-          ((Cobham.sndBlock (Cobham.sndBlock z)).drop 2)))) ∈ FP := by
+      (pair (pair (pairFst z)
+          (ownerFn (pair (pairFst z) (pairFst (pairSnd z)))))
+        (pair (pairFst (pairSnd z))
+          ((pairSnd (pairSnd z)).drop 2)))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP (Cobham.pairFn_mem_FP hG hown)
       (Cobham.pairFn_mem_FP hv hd2)) (cloudStepFn_mem_FP F pol)
     refine mem_FP_of_eq h fun w => ?_
     simp only [Function.comp_apply]
   have hes : (fun z : List Bool => expStepFn F pol
-      (pair (Cobham.fstBlock z)
-        (pair (Cobham.fstBlock (Cobham.sndBlock z))
-          ((Cobham.sndBlock (Cobham.sndBlock z)).drop (2 + deg))))) ∈ FP := by
+      (pair (pairFst z)
+        (pair (pairFst (pairSnd z))
+          ((pairSnd (pairSnd z)).drop (2 + deg))))) ∈ FP := by
     have h := mem_FP_comp (Cobham.pairFn_mem_FP hG (Cobham.pairFn_mem_FP hv hdk))
       (expStepFn_mem_FP F pol)
     refine mem_FP_of_eq h fun w => ?_
@@ -727,7 +727,7 @@ theorem preRotFn_eq (hd : 1 < F.deg) (v d : ℕ) (hv : v < 2 * G.numEdges)
     rw [ConstraintGraph.ownerNum, dif_pos hvd]
     split <;> exact Fin.isLt _
   rw [preRotFn]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   rw [ConstraintGraph.preRotNum]
   by_cases h0 : d = 0
   · subst h0
@@ -748,7 +748,7 @@ theorem preRotFn_eq (hd : 1 < F.deg) (v d : ℕ) (hv : v < 2 * G.numEdges)
       cloudStepFn_eq G F pol hd ⟨G.ownerNum v, hulr⟩ v (d - 2) hv rfl hjlt
         (hpc ⟨G.ownerNum v, hulr⟩)]
     rw [ConstraintGraph.cloudStepN, dif_pos hulr, dif_pos hjlt]
-    simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+    simp only [pairFst_pair, pairSnd_pair]
     have happ : ∀ n : ℕ, List.replicate n true ++ [true, true]
         = List.replicate (n + 2) true := by
       intro n
@@ -774,7 +774,7 @@ theorem preRotFn_eq (hd : 1 < F.deg) (v d : ℕ) (hv : v < 2 * G.numEdges)
     rw [ifLtLen_neg (by simpa using h2), if_neg h2, hdropk,
       expStepFn_eq G F pol hd v (d - (2 + (F.toFamily hd).degree)) hne hpe]
     rw [ConstraintGraph.expStepN, dif_pos hvlt, dif_pos hjlt]
-    simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+    simp only [pairFst_pair, pairSnd_pair]
     have hk := key _ horder hvlt hjlt
     have hk1 := congrArg Prod.fst hk
     have hk2 := congrArg Prod.snd hk

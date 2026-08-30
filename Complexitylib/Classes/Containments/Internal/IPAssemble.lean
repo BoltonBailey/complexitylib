@@ -41,17 +41,17 @@ the input the second, so the very first call — on `pair [] x` — builds the i
 noncomputable def ipG (prot : Protocol) (vd : List Bool → List Bool)
     (rp cp mp : Polynomial ℕ) (z : List Bool) : List Bool :=
   pair
-    (selectHead (emptyFlag (fstBlock z))
-      (IPM.ipInit (polyRuler cp (sndBlock z)) (polyRuler rp (sndBlock z)))
-      (IPM.ipStep (polyRuler mp (sndBlock z)) (polyRuler cp (sndBlock z))
-        (okFn prot.vmsg vd (polyRuler rp (sndBlock z)) (sndBlock z)) (fstBlock z)))
-    (sndBlock z)
+    (selectHead (emptyFlag (pairFst z))
+      (IPM.ipInit (polyRuler cp (pairSnd z)) (polyRuler rp (pairSnd z)))
+      (IPM.ipStep (polyRuler mp (pairSnd z)) (polyRuler cp (pairSnd z))
+        (okFn prot.vmsg vd (polyRuler rp (pairSnd z)) (pairSnd z)) (pairFst z)))
+    (pairSnd z)
 
 theorem ipG_nil (prot : Protocol) (vd : List Bool → List Bool) (rp cp mp : Polynomial ℕ)
     (x : List Bool) :
     ipG prot vd rp cp mp (pair [] x)
       = pair (IPM.ipInit (polyRuler cp x) (polyRuler rp x)) x := by
-  rw [ipG, fstBlock_pair, sndBlock_pair, emptyFlag_nil, selectHead_cons_true]
+  rw [ipG, pairFst_pair, pairSnd_pair, emptyFlag_nil, selectHead_cons_true]
 
 theorem ipG_step (prot : Protocol) (vd : List Bool → List Bool) (rp cp mp : Polynomial ℕ)
     (st x : List Bool) (h : st ≠ []) :
@@ -62,7 +62,7 @@ theorem ipG_step (prot : Protocol) (vd : List Bool → List Bool) (rp cp mp : Po
     cases st with
     | nil => exact absurd rfl h
     | cons b t => exact ⟨b, t, rfl⟩
-  rw [ipG, fstBlock_pair, sndBlock_pair, emptyFlag_cons, selectHead_cons_false]
+  rw [ipG, pairFst_pair, pairSnd_pair, emptyFlag_cons, selectHead_cons_false]
 
 /-! ## The orbit -/
 
@@ -178,11 +178,11 @@ theorem ip_mem_PSPACE (prot : Protocol) {L : Language} (rp cp mp r w : Polynomia
   classical
   obtain ⟨vd, hvdFP, hvd⟩ := exists_verdictFlag prot
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
-  have hfst : (fun z : List Bool => fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hsnd : (fun z : List Bool => sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
-  have hcr : (fun z => polyRuler cp (sndBlock z)) ∈ FP := polyRulerFn_mem_FP cp hsnd
-  have hmr : (fun z => polyRuler mp (sndBlock z)) ∈ FP := polyRulerFn_mem_FP mp hsnd
-  have hrr : (fun z => polyRuler rp (sndBlock z)) ∈ FP := polyRulerFn_mem_FP rp hsnd
+  have hfst : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hsnd : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hcr : (fun z => polyRuler cp (pairSnd z)) ∈ FP := polyRulerFn_mem_FP cp hsnd
+  have hmr : (fun z => polyRuler mp (pairSnd z)) ∈ FP := polyRulerFn_mem_FP mp hsnd
+  have hrr : (fun z => polyRuler rp (pairSnd z)) ∈ FP := polyRulerFn_mem_FP rp hsnd
   have hGfp : ipG prot vd rp cp mp ∈ FP := by
     refine Cobham.pairFn_mem_FP (Cobham.selectHeadFn_mem_FP (emptyFlagFn_mem_FP hfst)
       (IPM.ipInitFn_mem_FP hcr hrr) ?_) hsnd

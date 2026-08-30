@@ -171,13 +171,13 @@ noncomputable def savInit (tm : NTM k) (qp lp : Polynomial ℕ) (x : List Bool) 
 first component and the input the second, so the very first call — on
 `pair [] x` — is the one that builds the initial state. -/
 noncomputable def savG (tm : NTM k) (qp lp : Polynomial ℕ) (z : List Bool) : List Bool :=
-  pair (selectHead (emptyFlag (fstBlock z))
-    (savInit tm qp lp (sndBlock z)) (savStep tm (fstBlock z))) (sndBlock z)
+  pair (selectHead (emptyFlag (pairFst z))
+    (savInit tm qp lp (pairSnd z)) (savStep tm (pairFst z))) (pairSnd z)
 
 @[simp] theorem savG_pair (tm : NTM k) (qp lp : Polynomial ℕ) (s x : List Bool) :
     savG tm qp lp (pair s x)
       = pair (selectHead (emptyFlag s) (savInit tm qp lp x) (savStep tm s)) x := by
-  rw [savG, fstBlock_pair, sndBlock_pair]
+  rw [savG, pairFst_pair, pairSnd_pair]
 
 theorem savG_nil (tm : NTM k) (qp lp : Polynomial ℕ) (x : List Bool) :
     savG tm qp lp (pair [] x) = pair (savInit tm qp lp x) x := by
@@ -289,7 +289,7 @@ theorem savG_mem_FP (tm : NTM k) (qp lp : Polynomial ℕ) : savG tm qp lp ∈ FP
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst := fstBlockOf_mem_FP hid
   have hsnd := sndBlockOf_mem_FP hid
-  have hstep : (fun z => savStep tm (fstBlock z)) ∈ FP := by
+  have hstep : (fun z => savStep tm (pairFst z)) ∈ FP := by
     have := mem_FP_comp hfst (savStep_mem_FP tm)
     simpa [Function.comp] using this
   exact Cobham.pairFn_mem_FP

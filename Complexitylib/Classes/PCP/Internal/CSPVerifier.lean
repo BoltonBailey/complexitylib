@@ -53,7 +53,7 @@ structure AlgCSP where
   vert : Bool → List Bool → ℕ → ℕ
   /-- The endpoints are polynomial-time computable in unary. -/
   vert_mem : ∀ b, (fun w : List Bool => List.replicate
-    (vert b (Cobham.fstBlock w) (Cobham.sndBlock w).length) true) ∈ FP
+    (vert b (pairFst w) (pairSnd w).length) true) ∈ FP
   /-- The constraint, on `pair (pair x (unary e)) (the two symbol blocks)`. -/
   ok : Language
   /-- The constraint is polynomial-time decidable. -/
@@ -64,7 +64,7 @@ namespace AlgCSP
 variable (A : AlgCSP) (p : Polynomial ℕ)
 
 /-- The edge a coin string names. -/
-def edgeIdx (z : List Bool) : ℕ := binValLE (Cobham.sndBlock z)
+def edgeIdx (z : List Bool) : ℕ := binValLE (pairSnd z)
 
 /-- That index in unary, as far as the clamp allows. -/
 noncomputable def edgeU (z : List Bool) : List Bool := unaryVal p z
@@ -72,24 +72,24 @@ noncomputable def edgeU (z : List Bool) : List Bool := unaryVal p z
 theorem edgeU_mem_FP : edgeU p ∈ FP := unaryVal_mem_FP p
 
 theorem edgeU_eq {z : List Bool}
-    (h : 2 ^ (Cobham.sndBlock z).length ≤ p.eval z.length) :
+    (h : 2 ^ (pairSnd z).length ≤ p.eval z.length) :
     edgeU p z = List.replicate (edgeIdx z) true := unaryVal_eq h
 
 /-- Is the named edge a real one? -/
 noncomputable def inRange (z : List Bool) : List Bool :=
-  Cobham.lenLeFlag (List.replicate (A.numEdges (Cobham.fstBlock z)) true)
+  Cobham.lenLeFlag (List.replicate (A.numEdges (pairFst z)) true)
     (true :: edgeU p z)
 
 theorem inRange_mem_FP : A.inRange p ∈ FP := by
   have hn : (fun z : List Bool =>
-      List.replicate (A.numEdges (Cobham.fstBlock z)) true) ∈ FP := by
+      List.replicate (A.numEdges (pairFst z)) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP A.numEdges_mem
     simpa using this
   exact lenLeFlagFn_mem_FP hn (mem_FP_comp (edgeU_mem_FP p) (Cobham.cons_mem_FP true))
 
 theorem inRange_eq_true_iff {z : List Bool}
-    (h : 2 ^ (Cobham.sndBlock z).length ≤ p.eval z.length) :
-    A.inRange p z = [true] ↔ edgeIdx z < A.numEdges (Cobham.fstBlock z) := by
+    (h : 2 ^ (pairSnd z).length ≤ p.eval z.length) :
+    A.inRange p z = [true] ↔ edgeIdx z < A.numEdges (pairFst z) := by
   rw [inRange, edgeU_eq p h,
     Cobham.lenLeFlag_eq_true_iff, List.length_cons, List.length_replicate,
     List.length_replicate]
@@ -109,34 +109,34 @@ theorem cntU_mem_FP : A.cntU p ∈ FP :=
 /-- The endpoint a query index refers to: the first for the low half of the
 queries, the second for the high half. -/
 noncomputable def vertU (b : Bool) (w : List Bool) : List Bool :=
-  List.replicate (A.vert b (Cobham.fstBlock (Cobham.fstBlock w))
-    (edgeU p (Cobham.fstBlock w)).length) true
+  List.replicate (A.vert b (pairFst (pairFst w))
+    (edgeU p (pairFst w)).length) true
 
 theorem vertU_mem_FP (b : Bool) : A.vertU p b ∈ FP := by
-  have hx : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hx : (fun w : List Bool => pairFst (pairFst w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have he : (fun w : List Bool => edgeU p (Cobham.fstBlock w)) ∈ FP :=
+  have he : (fun w : List Bool => edgeU p (pairFst w)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP (edgeU_mem_FP p)
   have := mem_FP_comp (Cobham.pairFn_mem_FP hx he) (A.vert_mem b)
   refine mem_FP_of_eq this fun w => ?_
-  rw [vertU, Function.comp_apply, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  rw [vertU, Function.comp_apply, pairFst_pair, pairSnd_pair]
 
 /-- Is this query in the low half? -/
 def lowFlag (w : List Bool) : List Bool :=
-  Cobham.lenLeFlag (List.replicate A.width true) (true :: Cobham.sndBlock w)
+  Cobham.lenLeFlag (List.replicate A.width true) (true :: pairSnd w)
 
 theorem lowFlag_mem_FP : A.lowFlag ∈ FP :=
   lenLeFlagFn_mem_FP (constFn_mem_FP (List.replicate A.width true))
     (mem_FP_comp Cobham.sndBlock_mem_FP (Cobham.cons_mem_FP true))
 
 theorem lowFlag_eq_true_iff (w : List Bool) :
-    A.lowFlag w = [true] ↔ (Cobham.sndBlock w).length < A.width := by
+    A.lowFlag w = [true] ↔ (pairSnd w).length < A.width := by
   rw [lowFlag, Cobham.lenLeFlag_eq_true_iff, List.length_cons, List.length_replicate]
   omega
 
 /-- The offset inside the symbol block. -/
 def offU (w : List Bool) : List Bool :=
-  Cobham.selectHead (A.lowFlag w) (Cobham.sndBlock w) ((Cobham.sndBlock w).drop A.width)
+  Cobham.selectHead (A.lowFlag w) (pairSnd w) ((pairSnd w).drop A.width)
 
 theorem offU_mem_FP : A.offU ∈ FP := by
   refine Cobham.selectHeadFn_mem_FP A.lowFlag_mem_FP Cobham.sndBlock_mem_FP ?_
@@ -174,7 +174,7 @@ theorem posU_mem_FP : A.posU p ∈ FP := by
 theorem cntU_eq_replicate (z : List Bool) :
     A.cntU p z = List.replicate (A.cntU p z).length true := by
   rw [cntU]
-  rcases Cobham.lenLeFlag_flag (List.replicate (A.numEdges (Cobham.fstBlock z)) true)
+  rcases Cobham.lenLeFlag_flag (List.replicate (A.numEdges (pairFst z)) true)
     (true :: edgeU p z) with h | h <;> rw [inRange, h]
   · rw [selectHead_cons_true, List.length_replicate]
   · rw [selectHead_cons_false]
@@ -196,48 +196,48 @@ noncomputable def pos (z : List Bool) (i : ℕ) : ℕ :=
 
 /-- The argument the constraint is asked about. -/
 noncomputable def okArg (z : List Bool) : List Bool :=
-  pair (pair (Cobham.fstBlock (Cobham.fstBlock z)) (edgeU p (Cobham.fstBlock z)))
-    (Cobham.sndBlock z)
+  pair (pair (pairFst (pairFst z)) (edgeU p (pairFst z)))
+    (pairSnd z)
 
 theorem okArg_mem_FP : okArg p ∈ FP := by
-  have hx : (fun z : List Bool => Cobham.fstBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hx : (fun z : List Bool => pairFst (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have he : (fun z : List Bool => edgeU p (Cobham.fstBlock z)) ∈ FP :=
+  have he : (fun z : List Bool => edgeU p (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP (edgeU_mem_FP p)
   exact Cobham.pairFn_mem_FP (Cobham.pairFn_mem_FP hx he) Cobham.sndBlock_mem_FP
 
 /-- The verdict: accept unless the coin string names a real edge whose
 constraint fails. -/
 noncomputable def verdictLang : Language :=
-  {z | A.inRange p (Cobham.fstBlock z) = [true] → okArg p z ∈ A.ok}
+  {z | A.inRange p (pairFst z) = [true] → okArg p z ∈ A.ok}
 
 theorem verdictLang_mem_P : A.verdictLang p ∈ P := by
   obtain ⟨g, hgFP, hg⟩ := exists_decisionFn_of_mem_P A.ok_mem
-  have hin : (fun z : List Bool => A.inRange p (Cobham.fstBlock z)) ∈ FP := by
+  have hin : (fun z : List Bool => A.inRange p (pairFst z)) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (A.inRange_mem_FP p)
     simpa using this
   have hok : (fun z : List Bool => [g (okArg p z)]) ∈ FP := by
     have := mem_FP_comp (okArg_mem_FP p) hgFP
     simpa using this
   have hflag : (fun z : List Bool =>
-      Cobham.selectHead (A.inRange p (Cobham.fstBlock z)) [g (okArg p z)] [true]) ∈ FP :=
+      Cobham.selectHead (A.inRange p (pairFst z)) [g (okArg p z)] [true]) ∈ FP :=
     Cobham.selectHeadFn_mem_FP hin hok (constFn_mem_FP [true])
   refine mem_P_of_decisionFn hflag fun z => ?_
-  show (A.inRange p (Cobham.fstBlock z) = [true] → okArg p z ∈ A.ok) ↔ _
+  show (A.inRange p (pairFst z) = [true] → okArg p z ∈ A.ok) ↔ _
   rcases Cobham.lenLeFlag_flag (List.replicate (A.numEdges
-    (Cobham.fstBlock (Cobham.fstBlock z))) true)
-    (true :: edgeU p (Cobham.fstBlock z)) with h | h
-  · have hv : A.inRange p (Cobham.fstBlock z) = [true] := by rw [inRange]; exact h
+    (pairFst (pairFst z))) true)
+    (true :: edgeU p (pairFst z)) with h | h
+  · have hv : A.inRange p (pairFst z) = [true] := by rw [inRange]; exact h
     rw [hv, selectHead_cons_true]
     simp only [List.mem_singleton, exists_eq_left, forall_const]
     exact hg _
-  · have hv : A.inRange p (Cobham.fstBlock z) = [false] := by rw [inRange]; exact h
+  · have hv : A.inRange p (pairFst z) = [false] := by rw [inRange]; exact h
     rw [hv, selectHead_cons_false]
     simp
 
 theorem cnt_le (z : List Bool) : A.cnt p z ≤ 2 * A.width := by
   rw [cnt, cntU]
-  rcases Cobham.lenLeFlag_flag (List.replicate (A.numEdges (Cobham.fstBlock z)) true)
+  rcases Cobham.lenLeFlag_flag (List.replicate (A.numEdges (pairFst z)) true)
     (true :: edgeU p z) with h | h <;> rw [inRange, h]
   · rw [selectHead_cons_true, List.length_replicate]
   · rw [selectHead_cons_false]
@@ -270,7 +270,7 @@ theorem verifier_queryBounded : (A.verifier p).QueryBounded (fun _ => 2 * A.widt
 
 theorem mem_verdict_verifier (z : List Bool) :
     z ∈ (A.verifier p).verdict
-      ↔ (A.inRange p (Cobham.fstBlock z) = [true] → okArg p z ∈ A.ok) := Iff.rfl
+      ↔ (A.inRange p (pairFst z) = [true] → okArg p z ∈ A.ok) := Iff.rfl
 
 /-! ### What the verifier reads and decides -/
 
@@ -280,16 +280,16 @@ def posVal (x : List Bool) (e i : ℕ) : ℕ :=
 
 theorem pos_eq {x ρ : List Bool} (h : 2 ^ ρ.length ≤ p.eval (pair x ρ).length) (i : ℕ) :
     A.pos p (pair x ρ) i = A.posVal x (binValLE ρ) i := by
-  have hz : Cobham.sndBlock (pair x ρ) = ρ := Cobham.sndBlock_pair x ρ
+  have hz : pairSnd (pair x ρ) = ρ := pairSnd_pair x ρ
   have hE : edgeU p (pair x ρ) = List.replicate (binValLE ρ) true := by
     have := edgeU_eq (p := p) (z := pair x ρ) (by rw [hz]; exact h)
     rw [this, edgeIdx, hz]
   set w := pair (pair x ρ) (List.replicate i true) with hw
-  have hsnd : Cobham.sndBlock w = List.replicate i true := Cobham.sndBlock_pair _ _
-  have hfst : Cobham.fstBlock w = pair x ρ := Cobham.fstBlock_pair _ _
+  have hsnd : pairSnd w = List.replicate i true := pairSnd_pair _ _
+  have hfst : pairFst w = pair x ρ := pairFst_pair _ _
   have hlow : A.lowFlag w = if i < A.width then [true] else [false] := by
     rcases Cobham.lenLeFlag_flag (List.replicate A.width true)
-      (true :: Cobham.sndBlock w) with hf | hf
+      (true :: pairSnd w) with hf | hf
     · rw [lowFlag, hf, if_pos]
       rw [← lowFlag, A.lowFlag_eq_true_iff w, hsnd, List.length_replicate] at hf
       exact hf
@@ -301,7 +301,7 @@ theorem pos_eq {x ρ : List Bool} (h : 2 ^ ρ.length ≤ p.eval (pair x ρ).leng
   have hv : ∀ b, (A.vertU p b w).length = A.vert b x (binValLE ρ) := by
     intro b
     rw [vertU, List.length_replicate, hfst, hE, List.length_replicate,
-      Cobham.fstBlock_pair]
+      pairFst_pair]
   have hoff : (A.offU w).length = if i < A.width then i else i - A.width := by
     rw [offU, hlow, hsnd]
     by_cases hi : i < A.width
@@ -334,16 +334,16 @@ theorem accepts_verifier_iff {x ρ : List Bool}
     (h : 2 ^ ρ.length ≤ p.eval (pair x ρ).length) (π : List Bool) :
     (A.verifier p).Accepts x π ρ
       ↔ (binValLE ρ < A.numEdges x → A.Sat x π (binValLE ρ)) := by
-  have hz : Cobham.sndBlock (pair x ρ) = ρ := Cobham.sndBlock_pair x ρ
+  have hz : pairSnd (pair x ρ) = ρ := pairSnd_pair x ρ
   have hE : edgeU p (pair x ρ) = List.replicate (binValLE ρ) true := by
     have := edgeU_eq (p := p) (z := pair x ρ) (by rw [hz]; exact h)
     rw [this, edgeIdx, hz]
   have hin : A.inRange p (pair x ρ) = [true] ↔ binValLE ρ < A.numEdges x := by
-    rw [A.inRange_eq_true_iff p (by rw [hz]; exact h), edgeIdx, hz, Cobham.fstBlock_pair]
+    rw [A.inRange_eq_true_iff p (by rw [hz]; exact h), edgeIdx, hz, pairFst_pair]
   set a := PCPVerifier.answers π ((A.verifier p).positions x ρ) with ha
   have hacc : (A.verifier p).Accepts x π ρ
       ↔ (A.inRange p (pair x ρ) = [true] → okArg p (pair (pair x ρ) a) ∈ A.ok) := by
-    rw [PCPVerifier.Accepts, mem_verdict_verifier, Cobham.fstBlock_pair]
+    rw [PCPVerifier.Accepts, mem_verdict_verifier, pairFst_pair]
   have haeq : binValLE ρ < A.numEdges x →
       a = PCPVerifier.answers π ((List.range (2 * A.width)).map (A.posVal x (binValLE ρ))) := by
     intro hlt
@@ -354,13 +354,13 @@ theorem accepts_verifier_iff {x ρ : List Bool}
   constructor
   · intro hh hlt
     have hok := hh hlt
-    rw [okArg, Cobham.fstBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair, hE] at hok
+    rw [okArg, pairFst_pair, pairFst_pair, pairSnd_pair, hE] at hok
     rw [Sat, ← haeq hlt]
     exact hok
   · intro hh hlt
     have hs := hh hlt
     rw [Sat] at hs
-    rw [okArg, Cobham.fstBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair, hE,
+    rw [okArg, pairFst_pair, pairFst_pair, pairSnd_pair, hE,
       haeq hlt]
     exact hs
 

@@ -92,9 +92,9 @@ theorem tableSnd_table {k j : ℕ} (hj : j < F.size k * F.deg ^ 2) :
 noncomputable def baseRaw (z : List Bool) : List Bool :=
   encPair
     (List.replicate
-      (F.baseVal (Cobham.fstBlock z).length (Cobham.sndBlock z).length).1 true)
+      (F.baseVal (pairFst z).length (pairSnd z).length).1 true)
     (List.replicate
-      (F.baseVal (Cobham.fstBlock z).length (Cobham.sndBlock z).length).2 true)
+      (F.baseVal (pairFst z).length (pairSnd z).length).2 true)
 
 /-- How long an argument to the base's table can be. -/
 def baseKeyBound : ℕ := 2 * F.deg ^ 4 + 2 + F.deg
@@ -115,7 +115,7 @@ theorem baseRec_eq {x a : ℕ} (hx : x < F.deg ^ 4) (ha : a < F.deg) :
     rw [pair_length, List.length_replicate, List.length_replicate, baseKeyBound]
     omega
   rw [baseRec, if_pos (mem_keySet.mpr ⟨hlen, trivial⟩), baseRaw,
-    Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate,
+    pairFst_pair, pairSnd_pair, List.length_replicate,
     List.length_replicate]
 
 /-! ### One record of the next level -/
@@ -125,8 +125,8 @@ theorem baseRec_eq {x a : ℕ} (hx : x < F.deg ^ 4) (ha : a < F.deg) :
 vertex into a vertex of the level below and a base vertex, and the dart into two
 base darts. -/
 noncomputable def stepRec (z : List Bool) : List Bool :=
-  let T := Cobham.fstBlock z
-  let J := Cobham.sndBlock z
+  let T := pairFst z
+  let J := pairSnd z
   let V := divC (F.deg ^ 2) J
   let I := modC (F.deg ^ 2) J
   let U := divC (F.deg ^ 4) V
@@ -207,7 +207,7 @@ theorem stepRec_eq {k j : ℕ} (hj : j < F.size (k + 1) * F.deg ^ 2) :
     have := (F.baseVal_lt hxlt halt).1
     rwa [hp] at this
   rw [stepRec]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, divC_eq hd2, modC_eq hd2,
+  simp only [pairFst_pair, pairSnd_pair, divC_eq hd2, modC_eq hd2,
     divC_eq hd4, modC_eq hd4, divC_eq hd1, modC_eq hd1, List.length_replicate,
     F.baseRec_eq hxlt halt, hp, unaryOf_fstEnc_encPair, unaryOf_sndEnc_encPair,
     length_mulC_append, ← tableFst_def, ← tableSnd_def]

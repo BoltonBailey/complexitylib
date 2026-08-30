@@ -69,9 +69,8 @@ Completeness `1` and soundness `1/2` are hard-wired, following the
 `PCP[r, q]` convention rather than the `2/3`–`1/3` of
 `Complexitylib.Classes.Randomized`.
 
-## TODO
-
-- Prove the PCP theorem.
+The theorem itself, `Complexity.PCP_theorem`, is proved in
+`Complexitylib.Classes.PCP`.
 -/
 
 @[expose] public section
@@ -139,7 +138,7 @@ private noncomputable def inputVerifier (L : Language) (hL : L ∈ P) : PCPVerif
   positions_mem :=
     ⟨fun _ => DataEncode.bitstringEncode ([] : List ℕ),
       constFn_mem_FP _, fun _ _ => rfl⟩
-  verdict := (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L
+  verdict := (fun z => pairFst (pairFst z)) ⁻¹' L
   verdict_mem := by
     refine mem_P_preimage ?_ hL
     exact mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP

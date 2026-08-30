@@ -114,6 +114,12 @@ theorem exists_good_seed_of_eventProb_le_two_pow_succ (n S : ℕ)
     exists_good_seed_of_sum_eventProb_lt_one Finset.univ bad hsum
   exact ⟨seed, fun x => hseed x (Finset.mem_univ x)⟩
 
+/-- A larger event has larger probability. -/
+theorem eventProb_mono {T : ℕ} {E E' : Finset (Fin T → Bool)} (h : E ⊆ E') :
+    eventProb E ≤ eventProb E' := by
+  unfold eventProb
+  exact div_le_div_of_nonneg_right (by exact_mod_cast Finset.card_le_card h) (by positivity)
+
 @[simp] theorem eventProb_empty {T : ℕ} : eventProb (∅ : Finset (Fin T → Bool)) = 0 := by
   simp [eventProb]
 
@@ -348,7 +354,8 @@ theorem binomial_lower_tail_le (r : ℕ) (p : ℚ)
       rw [show (8 / 9 : ℚ) = 4 * (2 / 9) by norm_num, mul_pow]
       ring
 
-private theorem amplification_power_le (k : ℕ) :
+/-- The numeric step of amplification: `6k` factors of `8/9` beat `k` halvings. -/
+theorem amplification_power_le (k : ℕ) :
     (1 / 3 : ℚ) * (8 / 9) ^ (6 * k) ≤ 1 / (2 : ℚ) ^ k := by
   have hbase : (8 / 9 : ℚ) ^ 6 ≤ 1 / 2 := by norm_num
   have hpow : (8 / 9 : ℚ) ^ (6 * k) ≤ (1 / 2) ^ k := by

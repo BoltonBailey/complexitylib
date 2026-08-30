@@ -50,16 +50,16 @@ theorem segFrom_cons₂ (s0 s1 : Bool) (t c : ℕ) (b0 b1 : Bool) (r : List Bool
         else if c = t then b0 :: b1 :: segFrom s0 s1 t c r else segFrom s0 s1 t c r := rfl
 
 /-- The target index carried by the state. -/
-def segTgt (z : List Bool) : List Bool := Cobham.fstBlock (Cobham.fstBlock z)
+def segTgt (z : List Bool) : List Bool := pairFst (pairFst z)
 
 /-- The number of separators already passed. -/
-def segCnt (z : List Bool) : List Bool := Cobham.sndBlock (Cobham.fstBlock z)
+def segCnt (z : List Bool) : List Bool := pairSnd (pairFst z)
 
 /-- The tokens collected so far. -/
-def segColl (z : List Bool) : List Bool := Cobham.fstBlock (Cobham.sndBlock z)
+def segColl (z : List Bool) : List Bool := pairFst (pairSnd z)
 
 /-- The unread suffix. -/
-def segRest (z : List Bool) : List Bool := Cobham.sndBlock (Cobham.sndBlock z)
+def segRest (z : List Bool) : List Bool := pairSnd (pairSnd z)
 
 /-- Does the string begin with the bit `b`, as a flag? -/
 def matchBit (b : Bool) (s : List Bool) : List Bool :=
@@ -136,7 +136,7 @@ variable (s0 s1 : Bool)
 @[simp] theorem segStep_nil (tgt cnt coll : List Bool) :
     segStep s0 s1 (pair (pair tgt cnt) (pair coll [])) = pair (pair tgt cnt) (pair coll []) := by
   have hr : segRest (pair (pair tgt cnt) (pair coll [])) = [] := by
-    rw [segRest, Cobham.sndBlock_pair, Cobham.sndBlock_pair]
+    rw [segRest, pairSnd_pair, pairSnd_pair]
   rw [segStep, hr, emptyFlag_nil, selectHead_cons_true]
 
 theorem segStep_cons₂ (tgt cnt coll : List Bool) (b0 b1 : Bool) (r : List Bool) :
@@ -146,13 +146,13 @@ theorem segStep_cons₂ (tgt cnt coll : List Bool) (b0 b1 : Bool) (r : List Bool
         else pair (pair tgt cnt)
           (pair (if cnt.length = tgt.length then coll ++ [b0, b1] else coll) r) := by
   have hr : segRest (pair (pair tgt cnt) (pair coll (b0 :: b1 :: r))) = b0 :: b1 :: r := by
-    rw [segRest, Cobham.sndBlock_pair, Cobham.sndBlock_pair]
+    rw [segRest, pairSnd_pair, pairSnd_pair]
   have ht : segTgt (pair (pair tgt cnt) (pair coll (b0 :: b1 :: r))) = tgt := by
-    rw [segTgt, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+    rw [segTgt, pairFst_pair, pairFst_pair]
   have hc : segCnt (pair (pair tgt cnt) (pair coll (b0 :: b1 :: r))) = cnt := by
-    rw [segCnt, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+    rw [segCnt, pairFst_pair, pairSnd_pair]
   have hl : segColl (pair (pair tgt cnt) (pair coll (b0 :: b1 :: r))) = coll := by
-    rw [segColl, Cobham.sndBlock_pair, Cobham.fstBlock_pair]
+    rw [segColl, pairSnd_pair, pairFst_pair]
   have hsep : segIsSep s0 s1 (pair (pair tgt cnt) (pair coll (b0 :: b1 :: r)))
       = if b0 = s0 ∧ b1 = s1 then [true] else [false] := by
     rw [segIsSep, hr]
@@ -192,7 +192,7 @@ theorem segStep_iterate : ∀ (k : ℕ) (tgt cnt coll s : List Bool),
       intro tgt cnt coll s hs _
       have : s = [] := List.eq_nil_of_length_eq_zero (by omega)
       subst this
-      rw [Function.iterate_zero_apply, segColl, Cobham.sndBlock_pair, Cobham.fstBlock_pair]
+      rw [Function.iterate_zero_apply, segColl, pairSnd_pair, pairFst_pair]
       simp
   | succ k ih =>
       intro tgt cnt coll s hs hev
@@ -262,13 +262,13 @@ theorem segStep_one (tgt cnt coll s : List Bool) :
       ∧ cnt'.length ≤ cnt.length + 1 ∧ coll'.length ≤ coll.length + 2
       ∧ s'.length ≤ s.length := by
   have hr : segRest (pair (pair tgt cnt) (pair coll s)) = s := by
-    rw [segRest, Cobham.sndBlock_pair, Cobham.sndBlock_pair]
+    rw [segRest, pairSnd_pair, pairSnd_pair]
   have ht : segTgt (pair (pair tgt cnt) (pair coll s)) = tgt := by
-    rw [segTgt, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+    rw [segTgt, pairFst_pair, pairFst_pair]
   have hc : segCnt (pair (pair tgt cnt) (pair coll s)) = cnt := by
-    rw [segCnt, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+    rw [segCnt, pairFst_pair, pairSnd_pair]
   have hl : segColl (pair (pair tgt cnt) (pair coll s)) = coll := by
-    rw [segColl, Cobham.sndBlock_pair, Cobham.fstBlock_pair]
+    rw [segColl, pairSnd_pair, pairFst_pair]
   match s with
   | [] =>
       exact ⟨cnt, coll, [], segStep_nil s0 s1 tgt cnt coll, by omega, by omega, le_refl _⟩
@@ -309,27 +309,27 @@ theorem segStep_shape : ∀ (k : ℕ) (tgt cnt coll s : List Bool),
 
 /-- **The packaged extraction**, on `pair (unary index) encoding`. -/
 noncomputable def segAtFn (s0 s1 : Bool) (z : List Bool) : List Bool :=
-  segColl ((segStep s0 s1)^[(Cobham.sndBlock z).length]
-    (pair (pair (Cobham.fstBlock z) []) (pair [] (Cobham.sndBlock z))))
+  segColl ((segStep s0 s1)^[(pairSnd z).length]
+    (pair (pair (pairFst z) []) (pair [] (pairSnd z))))
 
 theorem segAtFn_mem_FP : segAtFn s0 s1 ∈ FP := by
-  have hf : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hs : (fun z : List Bool => Cobham.sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hf : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hs : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
   have hinit : (fun z : List Bool =>
-      pair (pair (Cobham.fstBlock z) []) (pair [] (Cobham.sndBlock z))) ∈ FP :=
+      pair (pair (pairFst z) []) (pair [] (pairSnd z))) ∈ FP :=
     Cobham.pairFn_mem_FP (Cobham.pairFn_mem_FP hf (constFn_mem_FP []))
       (Cobham.pairFn_mem_FP (constFn_mem_FP []) hs)
   have hwidth : (fun z : List Bool => polyRuler (Polynomial.C 11 * Polynomial.X
       + Polynomial.C 8) (id z)) ∈ FP := polyRulerFn_mem_FP _ id_mem_FP
-  have hbound : ∀ z : List Bool, ∀ k ≤ (Cobham.sndBlock z).length,
+  have hbound : ∀ z : List Bool, ∀ k ≤ (pairSnd z).length,
       ((segStep s0 s1)^[k]
-          (pair (pair (Cobham.fstBlock z) []) (pair [] (Cobham.sndBlock z)))).length
+          (pair (pair (pairFst z) []) (pair [] (pairSnd z)))).length
         ≤ (polyRuler (Polynomial.C 11 * Polynomial.X + Polynomial.C 8) (id z)).length := by
     intro z k hk
     obtain ⟨cnt', coll', s', h1, hc, hl, hss⟩ :=
-      segStep_shape s0 s1 k (Cobham.fstBlock z) [] [] (Cobham.sndBlock z)
-    have hfz : (Cobham.fstBlock z).length ≤ z.length := fstBlock_length_le z
-    have hsz : (Cobham.sndBlock z).length ≤ z.length := sndBlock_length_le z
+      segStep_shape s0 s1 k (pairFst z) [] [] (pairSnd z)
+    have hfz : (pairFst z).length ≤ z.length := fstBlock_length_le z
+    have hsz : (pairSnd z).length ≤ z.length := sndBlock_length_le z
     rw [h1, pair_length, pair_length, pair_length, polyRuler_length]
     simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_C,
       Polynomial.eval_X, id, List.length_nil, Nat.zero_add] at *
@@ -340,7 +340,7 @@ theorem segAtFn_mem_FP : segAtFn s0 s1 ∈ FP := by
 
 theorem segAtFn_eq {j : ℕ} {e : List Bool} (h : Even e.length) :
     segAtFn s0 s1 (pair (List.replicate j true) e) = segFrom s0 s1 j 0 e := by
-  rw [segAtFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
+  rw [segAtFn, pairFst_pair, pairSnd_pair,
     segStep_iterate s0 s1 e.length _ _ _ e (by omega) h, List.length_replicate,
     List.length_nil]
   simp
@@ -351,17 +351,17 @@ theorem segAtFn_eq {j : ℕ} {e : List Bool} (h : Even e.length) :
 `pair (pair (unary j) (unary p)) encoding`. -/
 noncomputable def litSegFn (z : List Bool) : List Bool :=
   segAtFn false true
-    (pair (Cobham.sndBlock (Cobham.fstBlock z))
-      (segAtFn true false (pair (Cobham.fstBlock (Cobham.fstBlock z)) (Cobham.sndBlock z))))
+    (pair (pairSnd (pairFst z))
+      (segAtFn true false (pair (pairFst (pairFst z)) (pairSnd z))))
 
 theorem litSegFn_mem_FP : litSegFn ∈ FP := by
-  have hj : (fun z : List Bool => Cobham.fstBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hj : (fun z : List Bool => pairFst (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hp : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hp : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have he : (fun z : List Bool => Cobham.sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
+  have he : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
   have hcl : (fun z : List Bool => segAtFn true false
-      (pair (Cobham.fstBlock (Cobham.fstBlock z)) (Cobham.sndBlock z))) ∈ FP := by
+      (pair (pairFst (pairFst z)) (pairSnd z))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hj he) (segAtFn_mem_FP true false)
     simpa only using this
   have := mem_FP_comp (Cobham.pairFn_mem_FP hp hcl) (segAtFn_mem_FP false true)
@@ -370,8 +370,8 @@ theorem litSegFn_mem_FP : litSegFn ∈ FP := by
 theorem litSegFn_eq {j p : ℕ} {e : List Bool} (h : Even e.length) :
     litSegFn (pair (pair (List.replicate j true) (List.replicate p true)) e)
       = segFrom false true p 0 (segFrom true false j 0 e) := by
-  rw [litSegFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair, segAtFn_eq true false h,
+  rw [litSegFn, pairFst_pair, pairSnd_pair, pairFst_pair,
+    pairSnd_pair, segAtFn_eq true false h,
     segAtFn_eq false true (even_length_segFrom true false j e.length e 0 (le_refl _) h)]
 
 /-- The variable a literal names, in unary. -/

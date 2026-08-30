@@ -44,21 +44,21 @@ def maxStep (f : List Bool → List Bool) (st : List Bool) : List Bool :=
   pair
     (pair
       (Cobham.selectHead
-        (Cobham.lenLeFlag (Cobham.fstBlock (Cobham.fstBlock st))
-          (f (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st)))))
-        (Cobham.fstBlock (Cobham.fstBlock st))
-        (f (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st)))))
-      (true :: Cobham.sndBlock (Cobham.fstBlock st)))
-    (Cobham.sndBlock st)
+        (Cobham.lenLeFlag (pairFst (pairFst st))
+          (f (pair (pairSnd st) (pairSnd (pairFst st)))))
+        (pairFst (pairFst st))
+        (f (pair (pairSnd st) (pairSnd (pairFst st)))))
+      (true :: pairSnd (pairFst st)))
+    (pairSnd st)
 
 theorem maxStep_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) : maxStep f ∈ FP := by
-  have hm : (fun st : List Bool => Cobham.fstBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hm : (fun st : List Bool => pairFst (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hi : (fun st : List Bool => Cobham.sndBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hi : (fun st : List Bool => pairSnd (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hz : (fun st : List Bool => Cobham.sndBlock st) ∈ FP := Cobham.sndBlock_mem_FP
+  have hz : (fun st : List Bool => pairSnd st) ∈ FP := Cobham.sndBlock_mem_FP
   have hv : (fun st : List Bool =>
-      f (pair (Cobham.sndBlock st) (Cobham.sndBlock (Cobham.fstBlock st)))) ∈ FP := by
+      f (pair (pairSnd st) (pairSnd (pairFst st)))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hz hi) hf
     simpa using this
   exact Cobham.pairFn_mem_FP
@@ -76,8 +76,8 @@ theorem maxStep_iterate (f : List Bool → List Bool) (z : List Bool) : ∀ n : 
   | zero => exact ⟨[], rfl, rfl⟩
   | succ n ih =>
       obtain ⟨M, hM, hlen⟩ := ih
-      rw [Function.iterate_succ_apply', hM, maxStep, Cobham.fstBlock_pair,
-        Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.sndBlock_pair]
+      rw [Function.iterate_succ_apply', hM, maxStep, pairFst_pair,
+        pairFst_pair, pairSnd_pair, pairSnd_pair]
       set v := f (pair z (List.replicate n true)) with hv
       rcases Cobham.lenLeFlag_flag M v with hf | hf
       · rw [hf, selectHead_cons_true]
@@ -145,25 +145,25 @@ theorem maxOver_le {f : List Bool → List Bool} {z : List Bool} {B : ℕ} :
 
 /-- **The packaged loop**, on `pair (unary count) input`. -/
 noncomputable def maxFn (f : List Bool → List Bool) (w : List Bool) : List Bool :=
-  Cobham.fstBlock (Cobham.fstBlock ((maxStep f)^[(Cobham.fstBlock w).length]
-    (pair (pair [] []) (Cobham.sndBlock w))))
+  pairFst (pairFst ((maxStep f)^[(pairFst w).length]
+    (pair (pair [] []) (pairSnd w))))
 
 theorem maxFn_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) : maxFn f ∈ FP := by
   obtain ⟨pf, hpf⟩ := Cobham.output_length_poly_of_mem_FP hf
-  have hinit : (fun w : List Bool => pair (pair [] []) (Cobham.sndBlock w)) ∈ FP :=
+  have hinit : (fun w : List Bool => pair (pair [] []) (pairSnd w)) ∈ FP :=
     Cobham.pairFn_mem_FP (constFn_mem_FP _) Cobham.sndBlock_mem_FP
   set q : Polynomial ℕ :=
     Polynomial.C 4 * (pf.comp (Polynomial.C 3 * Polynomial.X + Polynomial.C 2))
       + Polynomial.C 3 * Polynomial.X + Polynomial.C 6 with hq
   have hwidth : (fun w : List Bool => polyRuler q (id w)) ∈ FP :=
     polyRulerFn_mem_FP q id_mem_FP
-  have hbound : ∀ w : List Bool, ∀ k ≤ (Cobham.fstBlock w).length,
-      ((maxStep f)^[k] (pair (pair [] []) (Cobham.sndBlock w))).length
+  have hbound : ∀ w : List Bool, ∀ k ≤ (pairFst w).length,
+      ((maxStep f)^[k] (pair (pair [] []) (pairSnd w))).length
         ≤ (polyRuler q (id w)).length := by
     intro w k hk
-    obtain ⟨M, hM, hlen⟩ := maxStep_iterate f (Cobham.sndBlock w) k
-    have hfw : (Cobham.fstBlock w).length ≤ w.length := fstBlock_length_le w
-    have hzw : (Cobham.sndBlock w).length ≤ w.length := sndBlock_length_le w
+    obtain ⟨M, hM, hlen⟩ := maxStep_iterate f (pairSnd w) k
+    have hfw : (pairFst w).length ≤ w.length := fstBlock_length_le w
+    have hzw : (pairSnd w).length ≤ w.length := sndBlock_length_le w
     have hMB : M.length ≤ pf.eval (3 * w.length + 2) := by
       rw [hlen]
       refine maxOver_le k fun i hi => ?_
@@ -182,7 +182,7 @@ theorem maxFn_mem_FP {f : List Bool → List Bool} (hf : f ∈ FP) : maxFn f ∈
 theorem maxFn_eq (f : List Bool → List Bool) {n : ℕ} {z : List Bool} :
     (maxFn f (pair (List.replicate n true) z)).length = maxOver f z n := by
   obtain ⟨M, hM, hlen⟩ := maxStep_iterate f z n
-  rw [maxFn, Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate, hM,
-    Cobham.fstBlock_pair, Cobham.fstBlock_pair, hlen]
+  rw [maxFn, pairFst_pair, pairSnd_pair, List.length_replicate, hM,
+    pairFst_pair, pairFst_pair, hlen]
 
 end Complexity

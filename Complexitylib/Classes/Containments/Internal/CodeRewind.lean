@@ -77,11 +77,11 @@ theorem outPair_cfgCode {Q : Type} [Fintype Q] [DecidableEq Q] (W : ℕ) (c : Cf
 
 /-- One rewind step, on the packed state `pair R z`. -/
 def rewindStepP (z : List Bool) : List Bool :=
-  pair (fstBlock z) (rewindFn (fstBlock z) (sndBlock z))
+  pair (pairFst z) (rewindFn (pairFst z) (pairSnd z))
 
 theorem rewindStepP_pack (R z : List Bool) :
     rewindStepP (pair R z) = pair R (rewindFn R z) := by
-  rw [rewindStepP, fstBlock_pair, sndBlock_pair]
+  rw [rewindStepP, pairFst_pair, pairSnd_pair]
 
 theorem rewindStepP_iterate (R z : List Bool) (n : ℕ) :
     rewindStepP^[n] (pair R z) = pair R ((rewindFn R)^[n] z) := by
@@ -92,11 +92,11 @@ theorem rewindStepP_iterate (R z : List Bool) (n : ℕ) :
 
 /-- A whole rewind: one step per bit of the ruler. -/
 def rewindCode (R ruler z : List Bool) : List Bool :=
-  sndBlock (rewindStepP^[ruler.length] (pair R z))
+  pairSnd (rewindStepP^[ruler.length] (pair R z))
 
 theorem rewindCode_eq (R ruler z : List Bool) :
     rewindCode R ruler z = (rewindFn R)^[ruler.length] z := by
-  rw [rewindCode, rewindStepP_iterate, sndBlock_pair]
+  rw [rewindCode, rewindStepP_iterate, pairSnd_pair]
 
 /-- **A long enough rewind parks the head at cell `0`.** -/
 theorem rewindCode_pairCode (W : ℕ) (t : Tape) (hinv : t.StartInvariant)
@@ -114,8 +114,8 @@ theorem rewindFnFn_mem_FP {a b : List Bool → List Bool} (ha : a ∈ FP) (hb : 
 
 theorem rewindStepP_mem_FP : rewindStepP ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
-  have hfst : (fun z => fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hsnd : (fun z => sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hfst : (fun z => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hsnd : (fun z => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
   exact Cobham.pairFn_mem_FP hfst (rewindFnFn_mem_FP hfst hsnd)
 
 /-- **The rewind is polynomial-time.** -/

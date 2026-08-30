@@ -59,11 +59,11 @@ and after polynomially many rounds the verifier would no longer be polynomial in
 the input at all. The prover is adaptive — it is a function of the transcript,
 not a single witness string.
 
-## TODO
-
-- Embed `MA` into `IP` as a one-round protocol with an empty verifier message.
-- Amplification: sequential repetition and the resulting threshold robustness.
-- `NP ⊆ MA` through the witness characterization interface, and `IP ⊆ PSPACE`.
+`Complexitylib.Classes.Interactive.Containments` proves `NP ⊆ MA` and embeds
+`MA` into `IP` as a one-round protocol with an empty verifier message;
+`Complexitylib.Classes.Containments.IPSubsetPSPACE` proves `IP ⊆ PSPACE`;
+`Complexitylib.Classes.Interactive.Amplification` proves that sequential
+repetition makes the thresholds `2/3` and `1/3` immaterial.
 -/
 
 @[expose] public section
@@ -209,25 +209,25 @@ def IP : Set Language :=
 /-- The verifier that ignores the proof and the coins and decides `L` on the
 input it can recover from the encoded view. -/
 private theorem inputVerifier_mem_P {L : Language} (hL : L ∈ P) :
-    (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L ∈ P := by
+    (fun z => pairFst (pairFst z)) ⁻¹' L ∈ P := by
   refine mem_P_preimage ?_ hL
   exact mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
 
 /-- **`P ⊆ MA`.** Merlin sends nothing and Arthur ignores his coins. -/
 theorem P_subset_MA : P ⊆ MA := by
   intro L hL
-  refine ⟨0, (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L,
+  refine ⟨0, (fun z => pairFst (pairFst z)) ⁻¹' L,
     inputVerifier_mem_P hL, ?_, ?_⟩
   · intro x hx
     refine ⟨[], by simp, ?_⟩
-    have hev : merlinEvent ((fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L)
+    have hev : merlinEvent ((fun z => pairFst (pairFst z)) ⁻¹' L)
         (Polynomial.eval x.length 0) x [] = Finset.univ := by
       ext r
       simp [merlinEvent, Set.mem_preimage, hx]
     rw [hev, eventProb_univ]
     norm_num
   · intro x hx w _
-    have hev : merlinEvent ((fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L)
+    have hev : merlinEvent ((fun z => pairFst (pairFst z)) ⁻¹' L)
         (Polynomial.eval x.length 0) x w = ∅ := by
       ext r
       simp [merlinEvent, Set.mem_preimage, hx]
@@ -237,10 +237,10 @@ theorem P_subset_MA : P ⊆ MA := by
 /-- **`P ⊆ AM`.** Arthur's coins are irrelevant and Merlin's answer is empty. -/
 theorem P_subset_AM : P ⊆ AM := by
   intro L hL
-  refine ⟨0, (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L,
+  refine ⟨0, (fun z => pairFst (pairFst z)) ⁻¹' L,
     inputVerifier_mem_P hL, ?_, ?_⟩
   · intro x hx
-    have hev : arthurEvent ((fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L)
+    have hev : arthurEvent ((fun z => pairFst (pairFst z)) ⁻¹' L)
         (Polynomial.eval x.length 0) (Polynomial.eval x.length 0) x = Finset.univ := by
       ext r
       simp only [arthurEvent, Finset.mem_filter, Finset.mem_univ, true_and, iff_true]
@@ -248,7 +248,7 @@ theorem P_subset_AM : P ⊆ AM := by
     rw [hev, eventProb_univ]
     norm_num
   · intro x hx
-    have hev : arthurEvent ((fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L)
+    have hev : arthurEvent ((fun z => pairFst (pairFst z)) ⁻¹' L)
         (Polynomial.eval x.length 0) (Polynomial.eval x.length 0) x = ∅ := by
       ext r
       simp only [arthurEvent, Finset.mem_filter, Finset.mem_univ, true_and,

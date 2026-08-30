@@ -55,19 +55,19 @@ namespace DataScan
 the state built so far and `t` the unscanned tail. -/
 
 /-- The workspace: the index of the child being extracted, in unary. -/
-def wsOf (z : List Bool) : List Bool := Cobham.fstBlock (Cobham.fstBlock z)
+def wsOf (z : List Bool) : List Bool := pairFst (pairFst z)
 
 /-- The state carried by the scan. -/
-def stOf (z : List Bool) : List Bool := Cobham.sndBlock (Cobham.fstBlock z)
+def stOf (z : List Bool) : List Bool := pairSnd (pairFst z)
 
 /-- The bracket depth, in unary. -/
-def depthOf (z : List Bool) : List Bool := Cobham.fstBlock (stOf z)
+def depthOf (z : List Bool) : List Bool := pairFst (stOf z)
 
 /-- The number of children already passed, in unary. -/
-def countOf (z : List Bool) : List Bool := Cobham.fstBlock (Cobham.sndBlock (stOf z))
+def countOf (z : List Bool) : List Bool := pairFst (pairSnd (stOf z))
 
 /-- The bits collected so far. -/
-def accOf (z : List Bool) : List Bool := Cobham.sndBlock (Cobham.sndBlock (stOf z))
+def accOf (z : List Bool) : List Bool := pairSnd (pairSnd (stOf z))
 
 /-- Append the current bit, but only while inside the requested child. -/
 def collect (z : List Bool) (b : Bool) : List Bool :=
@@ -124,9 +124,9 @@ theorem closeStep_mem_FP : closeStep ∈ FP := by
 /-- **The scan.** On `pair (unary i) s` it runs the two steps over `s`, keeping
 every intermediate state within `p.eval` bits, and returns the collected bits. -/
 def childOf (p : Polynomial ℕ) (z : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.sndBlock
+  pairSnd (pairSnd
     (Cobham.recFoldClamp openStep closeStep (p.eval z.length) initState
-      (Cobham.fstBlock z) (Cobham.sndBlock z)))
+      (pairFst z) (pairSnd z)))
 
 theorem childOf_mem_FP (p : Polynomial ℕ) : childOf p ∈ FP := by
   have hfold := Cobham.recFoldClamp_mem_FP openStep_mem_FP closeStep_mem_FP
@@ -164,20 +164,20 @@ theorem eqFlag_replicate (c i : ℕ) :
 
 theorem depthOf_pack (i : ℕ) (st : ℕ × ℕ × List Bool) (t : List Bool) :
     depthOf (pair (pair (List.replicate i true) (pack st)) t) = List.replicate st.1 true := by
-  rw [depthOf, stOf, Cobham.fstBlock_pair, Cobham.sndBlock_pair, pack, Cobham.fstBlock_pair]
+  rw [depthOf, stOf, pairFst_pair, pairSnd_pair, pack, pairFst_pair]
 
 theorem countOf_pack (i : ℕ) (st : ℕ × ℕ × List Bool) (t : List Bool) :
     countOf (pair (pair (List.replicate i true) (pack st)) t)
       = List.replicate st.2.1 true := by
-  rw [countOf, stOf, Cobham.fstBlock_pair, Cobham.sndBlock_pair, pack, Cobham.sndBlock_pair,
-    Cobham.fstBlock_pair]
+  rw [countOf, stOf, pairFst_pair, pairSnd_pair, pack, pairSnd_pair,
+    pairFst_pair]
 
 theorem collect_pack (i : ℕ) (st : ℕ × ℕ × List Bool) (t : List Bool) (b : Bool) :
     collect (pair (pair (List.replicate i true) (pack st)) t) b
       = if st.2.1 = i then st.2.2 ++ [b] else st.2.2 := by
-  rw [collect, countOf, accOf, wsOf, stOf, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
-    pack, Cobham.fstBlock_pair, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair, eqFlag_replicate]
+  rw [collect, countOf, accOf, wsOf, stOf, pairFst_pair, pairSnd_pair,
+    pack, pairFst_pair, pairSnd_pair, pairFst_pair,
+    pairSnd_pair, eqFlag_replicate]
   by_cases h : st.2.1 = i <;> simp [h]
 
 theorem openStep_pack (i : ℕ) (st : ℕ × ℕ × List Bool) (t : List Bool) :
@@ -308,17 +308,17 @@ theorem child_flatten (i : ℕ) (xs : List Data) :
   set F := (xs.map Data.toBits).flatten with hF
   have hlen : (scanArg i F).length = 2 * i + 2 + F.length := by
     rw [scanArg, pair_length, List.length_replicate, List.length_reverse]
-  rw [childOf, scanArg, Cobham.fstBlock_pair, Cobham.sndBlock_pair, ← scanArg, hlen,
+  rw [childOf, scanArg, pairFst_pair, pairSnd_pair, ← scanArg, hlen,
     scanPoly_eval, recFoldClamp_eq_pack i _ F.reverse (by simp),
-    List.reverse_reverse, hF, runSpec_inner, pack, Cobham.sndBlock_pair,
-    Cobham.sndBlock_pair]
+    List.reverse_reverse, hF, runSpec_inner, pack, pairSnd_pair,
+    pairSnd_pair]
 
 /-- **How many children there are**, in unary: the same pass, reading off the
 counter instead of the collected bits. -/
 def childCount (p : Polynomial ℕ) (z : List Bool) : List Bool :=
-  Cobham.fstBlock (Cobham.sndBlock
+  pairFst (pairSnd
     (Cobham.recFoldClamp openStep closeStep (p.eval z.length) initState
-      (Cobham.fstBlock z) (Cobham.sndBlock z)))
+      (pairFst z) (pairSnd z)))
 
 theorem childCount_mem_FP (p : Polynomial ℕ) : childCount p ∈ FP := by
   have hfold := Cobham.recFoldClamp_mem_FP openStep_mem_FP closeStep_mem_FP
@@ -331,10 +331,10 @@ theorem childCount_flatten (i : ℕ) (xs : List Data) :
   set F := (xs.map Data.toBits).flatten with hF
   have hlen : (scanArg i F).length = 2 * i + 2 + F.length := by
     rw [scanArg, pair_length, List.length_replicate, List.length_reverse]
-  rw [childCount, scanArg, Cobham.fstBlock_pair, Cobham.sndBlock_pair, ← scanArg, hlen,
+  rw [childCount, scanArg, pairFst_pair, pairSnd_pair, ← scanArg, hlen,
     scanPoly_eval, recFoldClamp_eq_pack i _ F.reverse (by simp),
-    List.reverse_reverse, hF, runSpec_inner, pack, Cobham.sndBlock_pair,
-    Cobham.fstBlock_pair]
+    List.reverse_reverse, hF, runSpec_inner, pack, pairSnd_pair,
+    pairFst_pair]
 
 /-- The bits strictly between the outer brackets of a serialized list. -/
 theorem inner_toBits (xs : List Data) :

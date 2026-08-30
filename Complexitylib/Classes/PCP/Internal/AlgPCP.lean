@@ -147,7 +147,7 @@ theorem exists_pcp_of_mem_NP {L : Language} (hL : L ∈ NP) :
     fun x => numEdges_gapAlg_eq hgap hEeq h3 hmark hle hq x
   have ht : (fun x : List Bool => List.replicate (gapCoins q x.length) true) ∈ FP := by
     have hfp : (fun x : List Bool =>
-        logRuler (posCount (Cobham.sndBlock (gapAll algF algHd E padU x)))) ∈ FP :=
+        logRuler (posCount (pairSnd (gapAll algF algHd E padU x)))) ∈ FP :=
       mem_FP_of_eq (mem_FP_comp (gEdgesFn_mem_FP hgap) logRuler_mem_FP) fun _ => rfl
     refine mem_FP_of_eq hfp fun x => ?_
     have h : gEdges (gapAll algF algHd E padU x) = gapNumEdges q x.length := by

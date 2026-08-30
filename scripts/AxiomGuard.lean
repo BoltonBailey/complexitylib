@@ -77,12 +77,32 @@ def headlineTheorems : List Name := [
   `Complexity.NL_subset_P,
   `Complexity.PSPACE_subset_EXP,
   `Complexity.PP_subset_PSPACE,
+  `Complexity.BPP_subset_PSPACE,
   `Complexity.PH_subset_PSPACE,
   -- Savitch's theorem
   `Complexity.NPSPACE_subset_PSPACE,
   `Complexity.PSPACE_eq_NPSPACE,
   -- the easy half of Shamir's theorem
   `Complexity.IP_subset_PSPACE,
+  -- the polynomial hierarchy and interactive proofs
+  `Complexity.SigmaP_one_eq_NP,
+  `Complexity.PiP_one_eq_coNP,
+  `Complexity.NP_subset_MA,
+  `Complexity.MA_subset_IP,
+  `Complexity.AM_subset_IP,
+  `Complexity.IP_subset_EXP,
+  `Complexity.IP_subset_IPWith_two_pow,
+  `Complexity.IPWith_two_pow_eq_IP,
+  -- the sum-check protocol and QBF arithmetization
+  `Complexity.SumCheck.accept_honest,
+  `Complexity.SumCheck.card_accept_le_ratio,
+  `Complexity.QBF.arith_ofBool,
+  `Complexity.QBF.arith_isPoly,
+  `Complexity.OpChain.accept_honest,
+  `Complexity.OpChain.card_accept_le_ratio,
+  `Complexity.Shen.tqbf_accept_honest,
+  `Complexity.Shen.tqbf_card_accept_le_ratio,
+  `Complexity.mem_IP_of_shen_reduction,
   -- the PCP theorem
   `Complexity.PCP_theorem,
   `Complexity.exists_pcp_of_mem_NP,

@@ -191,23 +191,23 @@ def memPack (R u f rest : List Bool) : List Bool := pair R (pair (pair u f) rest
 
 /-- One step of the scan on the packed state. -/
 def memStep (z : List Bool) : List Bool :=
-  pair (Cobham.fstBlock z)
+  pair (pairFst z)
     (Cobham.selectHead
-      (Cobham.lenLeFlag (Cobham.sndBlock (Cobham.sndBlock z)) (Cobham.fstBlock z))
+      (Cobham.lenLeFlag (pairSnd (pairSnd z)) (pairFst z))
       (pair
-        (pair (Cobham.fstBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-          (orBit (Cobham.sndBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-            (Cobham.eqFlag (Cobham.fstBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-              ((Cobham.sndBlock (Cobham.sndBlock z)).take (Cobham.fstBlock z).length))))
-        ((Cobham.sndBlock (Cobham.sndBlock z)).drop (Cobham.fstBlock z).length))
-      (Cobham.sndBlock z))
+        (pair (pairFst (pairFst (pairSnd z)))
+          (orBit (pairSnd (pairFst (pairSnd z)))
+            (Cobham.eqFlag (pairFst (pairFst (pairSnd z)))
+              ((pairSnd (pairSnd z)).take (pairFst z).length))))
+        ((pairSnd (pairSnd z)).drop (pairFst z).length))
+      (pairSnd z))
 
 /-- **The packed step is the unpacked step.** -/
 theorem memStep_pack (R u f rest : List Bool) :
     memStep (memPack R u f rest)
       = memPack R u (scanStep R u (f, rest)).1 (scanStep R u (f, rest)).2 := by
   rw [memStep, memPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   by_cases hle : R.length ≤ rest.length
   · rw [scanStep, anyStepPair_pos R (eqFlag u) (f, rest) hle, Cobham.selectHead,
       if_pos (by rw [(Cobham.lenLeFlag_eq_true_iff rest R).mpr hle]; rfl)]
@@ -235,7 +235,7 @@ theorem memStep_iterate (R u : List Bool) (s : List Bool × List Bool) (n : ℕ)
 
 /-- Does the block `u` occur in the block-aligned string `V`? -/
 def memFlag (R u V : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock (Cobham.sndBlock (memStep^[V.length]
+  pairSnd (pairFst (pairSnd (memStep^[V.length]
     (memPack R u [false] V))))
 
 theorem memFlag_flag (R u V : List Bool) :
@@ -243,7 +243,7 @@ theorem memFlag_flag (R u V : List Bool) :
   rw [memFlag, show V = ((([false] : List Bool), V)).2 from rfl,
     show ([false] : List Bool) = ((([false] : List Bool), V)).1 from rfl,
     memStep_iterate, memPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   exact scanStep_flag R u (Or.inr rfl) _
 
 /-- **The scan decides membership.** -/
@@ -253,7 +253,7 @@ theorem memFlag_eq_true_iff (R u V : List Bool) (hR : 0 < R.length) :
   rw [memFlag, show V = ((([false] : List Bool), V)).2 from rfl,
     show ([false] : List Bool) = ((([false] : List Bool), V)).1 from rfl,
     memStep_iterate, memPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   rw [scanStep_flag_eq_true_iff R u _ (Or.inr rfl)]
   constructor
   · rintro (h | ⟨i, -, hlen, hblk⟩)
@@ -269,12 +269,12 @@ theorem memFlag_eq_true_iff (R u V : List Bool) (hR : 0 < R.length) :
 theorem memStep_mem_FP : memStep ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => Cobham.fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => Cobham.sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -283,15 +283,15 @@ theorem memStep_mem_FP : memStep ∈ FP := by
   have hrest := hsnd hw
   have hu := hfst (hfst hw)
   have hf := hsnd (hfst hw)
-  have htake : (fun z => (Cobham.sndBlock (Cobham.sndBlock z)).take
-      (Cobham.fstBlock z).length) ∈ FP := Cobham.takeLenFn_mem_FP hR hrest
-  have hdrop : (fun z => (Cobham.sndBlock (Cobham.sndBlock z)).drop
-      (Cobham.fstBlock z).length) ∈ FP := dropLenFn_mem_FP hR hrest
-  have hthen : (fun z => pair (pair (Cobham.fstBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-      (orBit (Cobham.sndBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-        (Cobham.eqFlag (Cobham.fstBlock (Cobham.fstBlock (Cobham.sndBlock z)))
-          ((Cobham.sndBlock (Cobham.sndBlock z)).take (Cobham.fstBlock z).length))))
-      ((Cobham.sndBlock (Cobham.sndBlock z)).drop (Cobham.fstBlock z).length)) ∈ FP :=
+  have htake : (fun z => (pairSnd (pairSnd z)).take
+      (pairFst z).length) ∈ FP := Cobham.takeLenFn_mem_FP hR hrest
+  have hdrop : (fun z => (pairSnd (pairSnd z)).drop
+      (pairFst z).length) ∈ FP := dropLenFn_mem_FP hR hrest
+  have hthen : (fun z => pair (pair (pairFst (pairFst (pairSnd z)))
+      (orBit (pairSnd (pairFst (pairSnd z)))
+        (Cobham.eqFlag (pairFst (pairFst (pairSnd z)))
+          ((pairSnd (pairSnd z)).take (pairFst z).length))))
+      ((pairSnd (pairSnd z)).drop (pairFst z).length)) ∈ FP :=
     Cobham.pairFn_mem_FP
       (Cobham.pairFn_mem_FP hu (orBitFn_mem_FP hf (eqFlagFn_mem_FP hu htake))) hdrop
   exact Cobham.pairFn_mem_FP hR
@@ -320,7 +320,7 @@ theorem memFlagFn_mem_FP {Rf uf Vf : List Bool → List Bool}
         ≤ (memPack (Rf z) (uf z) [false] (Vf z)).length :=
     fun z n _ => memStep_iterate_length_le (Rf z) (uf z) ([false], Vf z) (Or.inr rfl) n
   have h := Cobham.iterate_mem_FP memStep_mem_FP hinit hV hinit hbound
-  have hcomp : (fun z => Cobham.sndBlock (Cobham.fstBlock (Cobham.sndBlock
+  have hcomp : (fun z => pairSnd (pairFst (pairSnd
       (memStep^[(Vf z).length] (memPack (Rf z) (uf z) [false] (Vf z)))))) ∈ FP := by
     have h1 := mem_FP_comp h Cobham.sndBlock_mem_FP
     have h2 := mem_FP_comp h1 Cobham.fstBlock_mem_FP

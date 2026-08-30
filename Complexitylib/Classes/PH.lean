@@ -23,14 +23,13 @@ polyExistsClass (PiP n)`, `PiP n = complClass (SigmaP n)`, and their union `PH`.
 The level inclusions `SigmaP n ⊆ SigmaP (n + 1)` and `PiP n ⊆ PiP (n + 1)` need
 one computational fact: decoding the first component of a canonical pair is
 polynomial-time computable. That is `pairFst_mem_FP`, which reuses the payload
-scanner `Cobham.fstBlock` of Cobham's algebra, so every result in this file is
+scanner `pairFst` of Cobham's algebra, so every result in this file is
 unconditional.
 
 ## Main definitions
 
 - `polyExistsLang`, `polyForallLang` — witness quantifiers on languages
 - `polyExistsClass`, `polyForallClass` — the induced operators on classes
-- `pairFst` — first-component decoder for the pairing codec
 - `SigmaP`, `PiP`, `PH` — the hierarchy levels and their union
 
 ## Main results
@@ -44,10 +43,8 @@ unconditional.
 - `SigmaP_subset_SigmaP_succ` / `PiP_subset_PiP_succ` — level inclusions
 - `SigmaP_subset_PH`, `P_subset_PH`
 
-## TODO
-
-- Relate `SigmaP 1` to the NTM-based `NP` through the witness characterization
-  interface in `Complexitylib.Classes.NP.Witness`.
+`Complexitylib.Classes.PH.SigmaOne` identifies the first level with the
+machine-defined classes: `SigmaP 1 = NP` and `PiP 1 = coNP`.
 -/
 
 @[expose] public section
@@ -147,19 +144,9 @@ theorem complClass_polyForallClass (C : Set Language) :
 
 /-! ## The pair decoder seam -/
 
-/-- Decode the first component of a canonical pair. This is the payload scanner
-`Cobham.fstBlock` of Cobham's algebra: it reads doubled bits up to the
-separator, so on a canonical pair it returns the first component, and on
-malformed input it returns the bits decoded so far. Only its behaviour on
-canonical pairs is used. -/
-def pairFst (z : List Bool) : List Bool := Cobham.fstBlock z
-
-/-- `pairFst` recovers the first component of a canonical pair. -/
-@[simp] theorem pairFst_pair (x y : List Bool) : pairFst (pair x y) = x :=
-  Cobham.fstBlock_pair x y
-
-/-- **Decoding the first component is polynomial-time.** The scanner is one of
-the bespoke transducers of Cobham's soundness direction. -/
+/-- **Decoding the first component is polynomial-time.** `pairFst` is the
+payload scanner of Cobham's algebra: it reads doubled bits up to the separator,
+and on a canonical pair returns the first component (`pairFst_pair`). -/
 theorem pairFst_mem_FP : pairFst ∈ FP := Cobham.fstBlock_mem_FP
 
 /-! ## Base inclusions -/

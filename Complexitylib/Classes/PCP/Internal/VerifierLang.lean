@@ -123,20 +123,20 @@ section Acceptance
 variable (V : PCPVerifier) (f : List Bool → List Bool) (r : ℕ → ℕ) (Q : ℕ)
 
 /-- The input of one iteration is `pair (pair x w) (unary c)`. -/
-def accX (y : List Bool) : List Bool := Cobham.fstBlock (Cobham.fstBlock y)
+def accX (y : List Bool) : List Bool := pairFst (pairFst y)
 
 /-- The witness, out of the iteration's input. -/
-def accW (y : List Bool) : List Bool := Cobham.sndBlock (Cobham.fstBlock y)
+def accW (y : List Bool) : List Bool := pairSnd (pairFst y)
 
 /-- The coin string named by the iteration's index. -/
 noncomputable def accCoin (y : List Bool) : List Bool :=
-  coinStr (r (accX y).length) (Cobham.sndBlock y).length
+  coinStr (r (accX y).length) (pairSnd y).length
 
 /-- The verifier's view: input and coins paired with the answers read off the
 witness block. -/
 noncomputable def accView (y : List Bool) : List Bool :=
   pair (pair (accX y) (accCoin r y))
-    (wBlock (accW y) ((Cobham.sndBlock y).length * Q)
+    (wBlock (accW y) ((pairSnd y).length * Q)
       (posCount (f (pair (accX y) (accCoin r y)))).length)
 
 theorem accX_mem_FP : accX ∈ FP :=
@@ -151,7 +151,7 @@ theorem accCoin_mem_FP
   have ht : (fun y : List Bool => List.replicate (r (accX y).length) true) ∈ FP := by
     have := mem_FP_comp accX_mem_FP hr
     simpa using this
-  have hc : (fun y : List Bool => List.replicate (Cobham.sndBlock y).length true) ∈ FP := by
+  have hc : (fun y : List Bool => List.replicate (pairSnd y).length true) ∈ FP := by
     have := mem_FP_comp Cobham.sndBlock_mem_FP unaryLength_mem_FP
     simpa using this
   exact coinStr_mem_FP ht hc
@@ -168,14 +168,14 @@ theorem accView_mem_FP (hf : f ∈ FP)
   have hcount : (fun y => posCount (f (pair (accX y) (accCoin r y)))) ∈ FP :=
     posCount_mem_FP hfv
   have hoff : (fun y : List Bool =>
-      List.replicate ((Cobham.sndBlock y).length * Q) false) ∈ FP := by
+      List.replicate ((pairSnd y).length * Q) false) ∈ FP := by
     have hb : (fun _ : List Bool => List.replicate Q false) ∈ FP :=
       Cobham.const_replicate_mem_FP Q
     have := Cobham.mulLenFn_mem_FP Cobham.sndBlock_mem_FP hb
     refine mem_FP_of_eq this fun y => ?_
     rw [List.length_replicate]
   have hblk : (fun y => wBlock (accW y)
-      (List.replicate ((Cobham.sndBlock y).length * Q) false).length
+      (List.replicate ((pairSnd y).length * Q) false).length
       (posCount (f (pair (accX y) (accCoin r y)))).length) ∈ FP :=
     wBlock_mem_FP accW_mem_FP hoff hcount
   refine Cobham.pairFn_mem_FP hview (mem_FP_of_eq hblk fun y => ?_)
@@ -191,7 +191,7 @@ theorem accInner_mem_P (hf : f ∈ FP)
 
 /-- **Acceptance on every coin string**, as a language of `pair x w`. -/
 noncomputable def accLang : Language :=
-  {z : List Bool | ∀ c < 2 ^ r (Cobham.fstBlock z).length,
+  {z : List Bool | ∀ c < 2 ^ r (pairFst z).length,
     pair z (List.replicate c true) ∈ accInner V f r Q}
 
 open scoped Complexity in
@@ -200,7 +200,7 @@ theorem accLang_mem_P (hf : f ∈ FP)
     (hrlog : r =O fun n => Nat.log 2 n) :
     accLang V f r Q ∈ P := by
   have hlen : (fun z : List Bool =>
-      List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
+      List.replicate (2 ^ r (pairFst z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
     simpa using this
   exact forall_unary_mem_P (accInner_mem_P V f r Q hf hr) hlen
@@ -218,11 +218,11 @@ theorem accView_pair
             (PCPVerifier.coinOfIndex (t := r x.length) ⟨c, hc⟩)) := by
   set ρ := PCPVerifier.coinOfIndex (t := r x.length) ⟨c, hc⟩ with hρ
   have hX : accX (pair (pair x w) (List.replicate c true)) = x := by
-    rw [accX, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+    rw [accX, pairFst_pair, pairFst_pair]
   have hW : accW (pair (pair x w) (List.replicate c true)) = w := by
-    rw [accW, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
-  have hC : (Cobham.sndBlock (pair (pair x w) (List.replicate c true))).length = c := by
-    rw [Cobham.sndBlock_pair, List.length_replicate]
+    rw [accW, pairFst_pair, pairSnd_pair]
+  have hC : (pairSnd (pair (pair x w) (List.replicate c true))).length = c := by
+    rw [pairSnd_pair, List.length_replicate]
   have hcoin : accCoin r (pair (pair x w) (List.replicate c true)) = BitString.toList ρ := by
     rw [accCoin, hX, hC, coinStr_eq hc, hρ, toList_coinOfIndex]
   have hidx : PCPVerifier.coinIndex ρ = c := coinIndex_coinOfIndex _
@@ -249,7 +249,7 @@ theorem mem_accLang_iff
     pair x w ∈ accLang V f r Q
       ↔ ∀ ρ : Fin (r x.length) → Bool,
           pair (pair x (BitString.toList ρ)) (V.tableOf (r x.length) Q x w ρ) ∈ V.verdict := by
-  have hfst : Cobham.fstBlock (pair x w) = x := Cobham.fstBlock_pair x w
+  have hfst : pairFst (pair x w) = x := pairFst_pair x w
   constructor
   · intro h ρ
     have hc : PCPVerifier.coinIndex ρ < 2 ^ r x.length := PCPVerifier.coinIndex_lt ρ

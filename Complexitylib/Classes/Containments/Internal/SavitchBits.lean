@@ -208,12 +208,12 @@ def bumpPack (c acc rest : List Bool) : List Bool := pair c (pair acc rest)
 
 /-- One step of the packed scan. -/
 def bumpStepP (z : List Bool) : List Bool :=
-  selectHead (lenLeFlag (sndBlock (sndBlock z)) [false])
-    (pair (andBit (fstBlock z) ((sndBlock (sndBlock z)).take 1))
-      (pair (fstBlock (sndBlock z) ++
-          selectHead (fstBlock z) (notBit ((sndBlock (sndBlock z)).take 1))
-            ((sndBlock (sndBlock z)).take 1))
-        ((sndBlock (sndBlock z)).drop 1)))
+  selectHead (lenLeFlag (pairSnd (pairSnd z)) [false])
+    (pair (andBit (pairFst z) ((pairSnd (pairSnd z)).take 1))
+      (pair (pairFst (pairSnd z) ++
+          selectHead (pairFst z) (notBit ((pairSnd (pairSnd z)).take 1))
+            ((pairSnd (pairSnd z)).take 1))
+        ((pairSnd (pairSnd z)).drop 1)))
     z
 
 /-- **The packed step is the unpacked step.** -/
@@ -222,7 +222,7 @@ theorem bumpStepP_pack (c acc rest : List Bool) :
       = bumpPack (bumpStep (c, acc, rest)).1 (bumpStep (c, acc, rest)).2.1
           (bumpStep (c, acc, rest)).2.2 := by
   rw [bumpStepP, bumpPack]
-  simp only [fstBlock_pair, sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   cases rest with
   | nil =>
       rw [selectHead]
@@ -260,10 +260,10 @@ theorem bumpStepP_iterate_args (c acc rest : List Bool) (n : ℕ) :
 def bumpRun (w : List Bool) : List Bool := bumpStepP^[w.length] (bumpPack [true] [] w)
 
 /-- The increment of `w`, computed by the scan. -/
-def bumpCode (w : List Bool) : List Bool := fstBlock (sndBlock (bumpRun w))
+def bumpCode (w : List Bool) : List Bool := pairFst (pairSnd (bumpRun w))
 
 /-- The carry out of the increment, as a flag. -/
-def bumpFlag (w : List Bool) : List Bool := fstBlock (bumpRun w)
+def bumpFlag (w : List Bool) : List Bool := pairFst (bumpRun w)
 
 theorem bumpRun_eq (w : List Bool) :
     bumpRun w = bumpPack [bumpOver w] (bumpBits w) [] := by
@@ -283,12 +283,12 @@ theorem bumpRun_eq (w : List Bool) :
 theorem bumpStepP_mem_FP : bumpStepP ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -297,14 +297,14 @@ theorem bumpStepP_mem_FP : bumpStepP ∈ FP := by
   have hrest := hsnd hw
   have hacc := hfst hw
   have hone : (fun _ : List Bool => ([false] : List Bool)) ∈ FP := constFn_mem_FP [false]
-  have htake : (fun z => (sndBlock (sndBlock z)).take 1) ∈ FP := by
+  have htake : (fun z => (pairSnd (pairSnd z)).take 1) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone hrest
     simpa using this
-  have hdrop : (fun z => (sndBlock (sndBlock z)).drop 1) ∈ FP := by
+  have hdrop : (fun z => (pairSnd (pairSnd z)).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hrest
     simpa using this
-  have hbit : (fun z => selectHead (fstBlock z)
-      (notBit ((sndBlock (sndBlock z)).take 1)) ((sndBlock (sndBlock z)).take 1)) ∈ FP :=
+  have hbit : (fun z => selectHead (pairFst z)
+      (notBit ((pairSnd (pairSnd z)).take 1)) ((pairSnd (pairSnd z)).take 1)) ∈ FP :=
     Cobham.selectHeadFn_mem_FP hc (notBitFn_mem_FP htake) htake
   exact Cobham.selectHeadFn_mem_FP (lenLeFlagFn_mem_FP hrest hone)
     (Cobham.pairFn_mem_FP (andBitFn_mem_FP hc htake)

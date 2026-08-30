@@ -102,17 +102,17 @@ theorem exists_slot_eq_maxVar (φ : CNF) (h3 : CNF.Is3CNF φ) (h : 0 < φ.length
 
 /-- The variable index at a flat slot, read off the encoding. -/
 noncomputable def slotVar (w : List Bool) : List Bool :=
-  litVarFn (pair (pair (divFn [false, false, false] (Cobham.sndBlock w))
-    (modFn [false, false, false] (Cobham.sndBlock w))) (Cobham.fstBlock w))
+  litVarFn (pair (pair (divFn [false, false, false] (pairSnd w))
+    (modFn [false, false, false] (pairSnd w))) (pairFst w))
 
 theorem slotVar_mem_FP : slotVar ∈ FP := by
-  have hs : (fun w : List Bool => Cobham.sndBlock w) ∈ FP := Cobham.sndBlock_mem_FP
-  have hf : (fun w : List Bool => Cobham.fstBlock w) ∈ FP := Cobham.fstBlock_mem_FP
-  have hd : (fun w : List Bool => divFn [false, false, false] (Cobham.sndBlock w)) ∈ FP := by
+  have hs : (fun w : List Bool => pairSnd w) ∈ FP := Cobham.sndBlock_mem_FP
+  have hf : (fun w : List Bool => pairFst w) ∈ FP := Cobham.fstBlock_mem_FP
+  have hd : (fun w : List Bool => divFn [false, false, false] (pairSnd w)) ∈ FP := by
     have := mem_FP_comp hs (divFn_mem_FP [false, false, false])
     refine mem_FP_of_eq this fun w => ?_
     rw [Function.comp_apply]
-  have hm : (fun w : List Bool => modFn [false, false, false] (Cobham.sndBlock w)) ∈ FP := by
+  have hm : (fun w : List Bool => modFn [false, false, false] (pairSnd w)) ∈ FP := by
     have := mem_FP_comp hs (modFn_mem_FP [false, false, false])
     refine mem_FP_of_eq this fun w => ?_
     rw [Function.comp_apply]
@@ -123,7 +123,7 @@ theorem slotVar_mem_FP : slotVar ∈ FP := by
 theorem slotVar_eq (φ : CNF) {i j p : ℕ} (hj : j < φ.length) (hp : p < (φ[j]'hj).length)
     (hdj : i / 3 = j) (hdp : i % 3 = p) :
     (slotVar (pair φ.encode (List.replicate i true))).length = ((φ[j]'hj)[p]'hp).var := by
-  rw [slotVar, Cobham.sndBlock_pair, Cobham.fstBlock_pair,
+  rw [slotVar, pairSnd_pair, pairFst_pair,
     divFn_eq (by simp) (List.replicate i true), modFn_eq (by simp) (List.replicate i true)]
   simp only [List.length_replicate,
     show ([false, false, false] : List Bool).length = 3 from rfl, hdj, hdp]
