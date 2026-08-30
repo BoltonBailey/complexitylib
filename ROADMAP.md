@@ -1777,6 +1777,13 @@ set `S`, the canonical table on restrictions to `S` reconstructs every value,
 has exactly `2^|S|` entries, and bounds the function's finite range by the same
 quantity. This layer is independent of NW designs and can also support locality
 and magnification arguments.
+The NW-specific hardwiring layer is now exact as well. A computable insertion
+map places an arbitrary challenge on block `S_i` while retaining a fixed outside
+seed. The induced input to every predecessor block `S_j` depends only on the
+challenge coordinates pulled back from `S_i ∩ S_j`; hence the canonical table
+recovers every observed predecessor value from exactly `2^|S_i ∩ S_j|`
+assignments. Summing those assignment spaces over `j < i` gives the predecessor
+term of `overlapCostAt`, and `HasOverlapBudget` bounds the entire collection.
 Composing all finite layers now gives the concrete probabilistic NW conclusion:
 every positive-density random-string test against a low-complexity NW generator
 admits a polarity and coordinate whose canonical predictor succeeds with
@@ -2942,9 +2949,12 @@ meta-computational notation hides several incompatible choices; expose them.
   success at least `1/2 + delta/m`. The generic finite Boolean-dependency layer
   now reconstructs any finitely dependent function from a canonical table of
   exactly `2^|S|` entries and proves the matching finite-range bound. Proving
-  that each challenged predecessor block depends only on its NW intersection,
-  summing those table sizes within the overlap budget, the randomized
-  certificate search, and the final reconstruction remain.*
+  that each challenged predecessor block depends only on its NW intersection is
+  also complete: challenge insertion is exact, overlap coordinates have the
+  recorded intersection cardinality, predecessor observations are recovered by
+  canonical tables of `2^|S_i ∩ S_j|` entries, and their sum fits the proved
+  weak-design budget. The explicit RRV construction, randomized certificate
+  search, and final reconstruction remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

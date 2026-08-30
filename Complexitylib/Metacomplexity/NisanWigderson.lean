@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Internal
+public import Complexitylib.Metacomplexity.NisanWigderson.Hardwiring
 
 /-!
 # Nisan--Wigderson set systems and generators
@@ -19,8 +20,9 @@ generator is definitionally a `BitGenerator`.
 Combining the random-string statistical-test theorem with the finite hybrid
 lemma shows that every dense random test against a low-complexity NW generator
 has an oriented adjacent hybrid gap of at least its density divided by the
-output length. The next-bit predictor and weak-design size accounting remain
-separate subsequent layers.
+output length. The public submodules also connect that gap to an exact next-bit
+predictor and realize the weak-design predecessor term as the entry count of
+canonical overlap-indexed hardwiring tables.
 -/
 
 
