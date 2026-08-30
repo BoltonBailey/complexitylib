@@ -2905,8 +2905,13 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   a verified fan-in-two strict-majority circuit has size
   `3 + 2*n*(n/2 + 1)`, and hardness above
   `n*smallThreshold + 3 + 2*n*(n/2 + 1)` supplies every-tuple coverage and the
-  resulting `1/(2n)` shrink. Conditional counter circuits and round composition
-  remain.*
+  resulting `1/(2n)` shrink. The rounded hard threshold eventually covers this
+  exact majority bound. Semantic round composition is also complete: relative
+  precision `8n` turns each good extension into a certified `1/(4n)` shrink,
+  `4n` rounds halve the survivor bound, the published sample count eventually
+  covers every required block, and zero-padding gives exactly that many samples.
+  Conditional counter circuits and circuit-level realization of the round
+  selector remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
