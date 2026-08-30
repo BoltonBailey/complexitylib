@@ -63,7 +63,7 @@ theorem pairLang_orRelation_mem_P {R₁ R₂ : List Bool → List Bool → Prop}
   have : n ^ d₁ + n ^ d₂ ≤ 2 * n ^ max d₁ d₂ := by omega
   exact_mod_cast this
 
-/-- The tagged relation is in FNP when both components are. -/
+/-- The disjunctive relation is in FNP when both components are. -/
 theorem orRelation_mem_FNP {R₁ R₂ : List Bool → List Bool → Prop}
     (hR₁ : R₁ ∈ FNP) (hR₂ : R₂ ∈ FNP) :
     OrRelation R₁ R₂ ∈ FNP :=

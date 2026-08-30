@@ -28,7 +28,7 @@ namespace Structured
 
 namespace GateEval
 
-/-- Encoded gate-operation bit: zero for AND and one for OR. -/
+/-- Encoded gate-operation bit: one for AND and zero for OR. -/
 def opReg : ℕ := 0
 /-- Negation bit for the first gate input. -/
 def negated0Reg : ℕ := 1

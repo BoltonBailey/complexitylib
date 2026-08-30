@@ -104,9 +104,10 @@ theorem eval_all_iff (α : ℕ → Bool) (i : ℕ) (φ : QBF) :
   · intro h
     exact ⟨h false, h true⟩
 
-/-- The quantifier nesting depth of a QBF — an upper bound on the number of
-    quantifier *alternations*, used to stratify QBF (and hence the polynomial
-    hierarchy) by bounded alternation. -/
+/-- The quantifier nesting depth of a QBF: the largest number of quantifiers on
+    a root-to-leaf syntax path. This bounds, but does not count, quantifier
+    alternations; consecutive quantifiers of the same kind each increase
+    `quantDepth`. -/
 def quantDepth : QBF → ℕ
   | .var _ => 0
   | .tru => 0

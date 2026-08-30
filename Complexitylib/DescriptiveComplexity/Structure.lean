@@ -15,10 +15,12 @@ public import Complexitylib.DescriptiveComplexity.Vocabulary
   element of that universe.
 
   Following Immerman's Proviso 1.15, all structures have at least 2 elements,
-  ensuring that the built-in constants 0 and 1 are always distinct.
+  ensuring that the canonical elements 0 and 1 are always distinct.
 
-  Built-in numeric predicates (min, max, ≤, succ) are not stored in the
-  structure but computed from the `Fin` ordering (Proviso 1.14).
+  Canonical numeric operations (min, max, ≤, succ) are not stored in the
+  structure but are available as meta-level helpers computed from the `Fin`
+  ordering. The current first-order syntax does not yet contain terms or atoms
+  that can reference these helpers.
 -/
 
 
@@ -47,26 +49,26 @@ namespace FinStruct
 
 variable {V : Vocabulary} (A : FinStruct V)
 
-/-- The minimum element of the universe (built-in constant 0). -/
+/-- The minimum element of the universe, intended for a built-in constant `0`. -/
 def minElem : Fin A.card := ⟨0, by have := A.hcard; omega⟩
 
-/-- The maximum element of the universe (built-in constant card - 1). -/
+/-- The maximum element of the universe, intended for a built-in maximum constant. -/
 def maxElem : Fin A.card := ⟨A.card - 1, by have := A.hcard; omega⟩
 
-/-- The element 1 of the universe (built-in constant). -/
+/-- The element `1` of the universe, intended for a built-in constant. -/
 def oneElem : Fin A.card := ⟨1, by have := A.hcard; omega⟩
 
-/-- The built-in less-than-or-equal relation on the universe. -/
+/-- The canonical less-than-or-equal relation on the universe. -/
 def leRel (a b : Fin A.card) : Prop := a.val ≤ b.val
 
-/-- The built-in successor relation: `sucRel a b` iff `b = a + 1`. -/
+/-- The canonical successor relation: `sucRel a b` iff `b = a + 1`. -/
 def sucRel (a b : Fin A.card) : Prop := b.val = a.val + 1
 
 instance : DecidableRel A.leRel := fun a b => Nat.decLe a.val b.val
 
 instance : DecidableRel A.sucRel := fun a b => Nat.decEq b.val (a.val + 1)
 
-/-- The built-in constants 0 and 1 are distinct (follows from Proviso 1.15). -/
+/-- The canonical elements 0 and 1 are distinct (follows from Proviso 1.15). -/
 theorem minElem_ne_oneElem : A.minElem ≠ A.oneElem := by
   simp [minElem, oneElem, Fin.ext_iff]
 

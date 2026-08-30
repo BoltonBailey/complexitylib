@@ -37,9 +37,10 @@ The library already contains substantial foundations:
 - A logarithmic-cost random access machine model with a soundness theorem
   distinguishing it from the unsound unit-cost measure.
 - A Fourier-analysis-of-Boolean-functions subtheory (`Complexitylib.BooleanAnalysis`,
-  after Ryan O'Donnell): Chapter 1, with the parity functions as an orthonormal
-  basis, Fourier coefficients/weights, and the mean/variance/convolution API — the
-  analytic foundation for small-depth-circuit lower bounds and natural proofs.
+  after Ryan O'Donnell): Chapters 1 and 2, from the parity basis and the
+  mean/variance/convolution API through noise, influence, derivatives, and
+  average sensitivity — the analytic foundation for small-depth-circuit lower
+  bounds and natural proofs.
 
 This baseline is not yet a single unified theory. In particular, machine
 encodings, circuit families, uniformity, advice, oracle access, interactive
@@ -479,7 +480,9 @@ tape-bank layout, its exact random-bit schedule, and cancellation of ignored
 administrative bits are now public. The wrapper's complete pathwise simulation,
 exact acceptance-probability identity, and yes/no amplification bounds are proved
 in `Complexitylib.Models.TuringMachine.Repetition.Correctness`, completing the N2
-wrapper milestone.
+wrapper milestone. Acceptance probability is also proved invariant under extending
+an observation clock after every path has halted
+(`NTM.acceptProb_eq_of_le_of_allPathsHaltIn`).
 
 **Staged milestones.**
 
@@ -488,7 +491,8 @@ wrapper milestone.
   `blockEquiv`/`blockFst`/`blockAppend`, `eventProb_map`).
 - [x] Define finite event probability once and relate it to `Finset.card` and the
   existing rational PTM probabilities (`Complexitylib.Classes.EventProb`:
-  `eventProb`, its basic laws, and `NTM.acceptProb_eq_eventProb`).
+  `eventProb`, its basic laws, `NTM.acceptProb_eq_eventProb`, and clock-extension
+  invariance after all-paths halting).
 - [x] Prove union, complement, conditioning-by-partition, and product lemmas
   (`eventProb_union_le`, `eventProb_compl`, `eventProb_eq_sum_fiberwise`,
   `eventProb_block`, and the `popCount` complement count).
@@ -524,6 +528,11 @@ to formalizing an optimal Chernoff constant first.
 - [x] Prove the finite union bound for a list of predicates by card counting.
 - [x] Implement a majority function on `Fin k -> Bool` and prove its complement
   symmetry.
+- [L] Add a direct Las Vegas/zero-error class and prove that it equals the current
+  definition `ZPP = RP ∩ coRP`. Keep expected-time or explicit `don't know`
+  semantics separate from strict all-path polynomial time: a binary-output machine
+  that is always correct and halts within a polynomial bound on every random tape
+  already gives a deterministic polynomial-time decider.
 
 ### N3. Canonical complete problems and reduction infrastructure
 
@@ -1989,21 +1998,27 @@ randomness, interaction, and lower bounds.
   unsatisfiability), and `derives_cons` (weakening). `resolvent_length_le` gives
   the one-step width bound; fuller width/size measures over derivations remain.)*
 
-**Formalization hazards.** Counting paths depends on a clock and on a canonical
-number of nondeterministic choices; early halting must be padded consistently.
-Oracle characterizations of PH depend on the exact query model. Proof-complexity
-lower bounds need a clean distinction between semantic unsatisfiability and the
-syntactic derivation system.
+**Formalization hazards.** Fixed-length random strings and nondeterministic
+computation leaves are different counts when a machine halts early. PTM
+probabilities retain every unused random suffix with equal multiplicity; `#P`
+counts the halted leaf once. In particular, a merely big-O-bounded external clock
+must not be allowed to change a `#P` value. Oracle characterizations of PH depend
+on the exact query model. Proof-complexity lower bounds need a clean distinction
+between semantic unsatisfiability and the syntactic derivation system.
 
 **Small entry tasks.**
 
-- [S] Define a clocked accepting-path count and prove invariance after halted-path
-  padding.
-- [x] Define `#P` functions using the existing NTM path semantics
-  (`Complexitylib.Classes.SharpP`: `SharpP` class, `NTM.acceptCount_le`,
+- [x] Define accepting-leaf count separately from fixed-clock PTM count and prove
+  invariance under extending any sufficient all-paths clock
+  (`NTM.acceptLeafCount`,
+  `NTM.acceptLeafCount_eq_of_le_of_allPathsHaltIn`).
+- [x] Define `#P` functions using accepting computation-tree leaves
+  (`Complexitylib.Classes.SharpP`: `SharpP`, `NTM.acceptLeafCount_le`,
   `SharpP.le_two_pow`).
-- [x] Define quantified Boolean formulas with a bounded alternation counter
+- [x] Define quantified Boolean formulas with a quantifier-nesting-depth measure
   (`Complexitylib.SAT.QBF`: `QBF`, `QBF.quantDepth`, `QBF.QuantifierFree`).
+- [S] Add a quantifier-block/alternation measure after fixing conventions for
+  formulas that are not in prenex normal form.
 - [x] Define resolution clauses and verify soundness of one resolution step
   (`Complexitylib.SAT.Resolution`: `Clause.resolvent`, `Clause.resolvent_sound`).
 
@@ -2017,9 +2032,11 @@ track grows it toward the headline theorems.
 
 **Foundations (imported, all 0 custom axioms).**
 
-- [x] Vocabularies/signatures and finite structures over `Fin card`
+- [~] Vocabularies/signatures and finite structures over `Fin card`
   (`DescriptiveComplexity.Vocabulary`, `.Structure`: `Vocabulary`, `FinStruct`,
-  built-in `≤`/successor/min/max, `DecFinStruct`).
+  `DecFinStruct`, and canonical `≤`/successor/min/max helpers). The existing
+  unordered `Formula` syntax cannot yet mention those helpers; ordered terms,
+  atoms, and their appropriate preservation theorem remain.
 - [x] Isomorphisms, embeddings, substructures; isomorphism is an equivalence and
   preserves cardinality (`.Isomorphism`: `Iso.refl`/`symm`/`trans`,
   `Iso.card_eq`, `Embedding`, `IsSubstructure`).
@@ -2030,14 +2047,18 @@ track grows it toward the headline theorems.
 - [x] **FO sentences define order-independent queries** (Immerman Prop 1.16):
   `.FirstOrder.Isomorphism` `Sentence.orderIndependent`, via term/formula
   isomorphism-invariance (`Term.eval_iso`, `Formula.sat_iso`).
-- [x] Worked examples: directed 3-cycles with an explicit isomorphism, a binary
-  string with built-in order (`.Examples`).
+- [x] Worked examples: directed 3-cycles with an explicit isomorphism, and a
+  binary string over the canonical meta-level `Fin` order (`.Examples`).
 - [x] First-order *definable* queries and the packaged crux
   (`.Definable`: `FODefinable`, `FODefinable.orderIndependent` — FO-definable ⟹
   order-independent — with Boolean closure `complement`/`inter`/`union`).
 
 **Milestones (open).**
 
+- [ ] Add an explicitly ordered first-order layer exposing canonical min/max,
+  `≤`, and successor. Keep the existing unordered `Formula` and its unrestricted
+  isomorphism-invariance theorem intact; ordered formulas need a preservation
+  notion whose maps respect the canonical order.
 - [~] Second-order logic (`SO`, `∃SO`) syntax and semantics over finite
   structures, and its order-independence. *Decomposed:*
   - [x] `SOFormula` syntax: extend `Formula` with relation-variable application
@@ -2064,10 +2085,10 @@ track grows it toward the headline theorems.
   - [~] Full encoding: prepend `card` (and any constants) and make it computable;
     a decode/encode round-trip on ordered structures. (`Encoding.lean`: computable
     tuple enumeration `allTuples` (length `card^k`, `mem_allTuples`), computable
-    relation/structure encodings `encodeRelC`/`encodeRelsC`, and the full
-    `encodeStruct` (unary `card` prefix + relations) with cardinality recovery
-    `encodeStruct_card` are done; encoding the constants and a full structure
-    round-trip remain.)
+    relation/structure encodings `encodeRelC`/`encodeRelsC`, one-hot constant
+    blocks `encodeConstC`/`encodeConstsC`, and the full `encodeStruct` (unary
+    `card` prefix + relations + constants) with cardinality recovery
+    `encodeStruct_card` are done; a full structure parser and round-trip remain.)
   - [x] The induced language `⟦Q⟧ : Language` of a query (`Language.lean`:
     `queryLanguage` — the encodings of `Q`-satisfying structures — and
     `mem_queryLanguage`). This is the bridge to the machine-model `Language`.

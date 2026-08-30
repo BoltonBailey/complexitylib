@@ -49,10 +49,14 @@ each with its own entry module:
 | Area | Import | What it is |
 | --- | --- | --- |
 | Machine models | `Complexitylib.Models` | Arora–Barak multi-tape Turing machines — deterministic, nondeterministic, probabilistic — and everything built from them: combinators, simulations, universal machines |
+| Encodings | `Complexitylib.Encoding` | Machine-independent self-delimiting blocks, pairing, and rose-tree data encodings |
 | Asymptotics | `Complexitylib.Asymptotics` | `=O`/`=o` notation on `ℕ → ℕ`, bridging to Mathlib's asymptotics |
+| Time bounds | `Complexitylib.TimeConstructible` | Time-constructible bounds for hierarchy and separation results |
 | Complexity classes | `Complexitylib.Classes` | `P`, `NP`, `BPP`, `PSPACE`, and friends; containments, closure properties, reductions, and the time-hierarchy theorem |
 | SAT | `Complexitylib.SAT` | CNF semantics and encoding, a verified SAT verifier, and the Cook–Levin theorem: `SAT` is NP-complete |
 | Circuits | `Complexitylib.Circuits` | Boolean circuits with size and depth, circuit families, `P/poly`, normal forms, and classical lower bounds |
+| Boolean analysis | `Complexitylib.BooleanAnalysis` | Fourier expansion, noise stability, and influence for Boolean functions |
+| Descriptive complexity | `Complexitylib.DescriptiveComplexity` | Finite structures, first- and second-order logic, definability, and model checking |
 | Languages | `Complexitylib.Languages` | Concrete decidable languages exercising the machine API end to end |
 | Mathlib prelude | `Complexitylib.Mathlib` | Extensions to Mathlib types in their home namespaces; candidates for upstreaming |
 
@@ -76,7 +80,7 @@ are pinned (currently v4.30.0).
 lake build --wfail
 ```
 
-CI additionally runs two executable regression suites and three quality gates;
+CI additionally runs five executable regression suites and three quality gates;
 see [CONTRIBUTING.md](CONTRIBUTING.md) for the full list and the style guide.
 API documentation builds with doc-gen4 from `docbuild/` and publishes to
 [GitHub Pages](https://samuelschlesinger.github.io/complexitylib/) on every

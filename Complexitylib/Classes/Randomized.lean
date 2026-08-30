@@ -85,13 +85,16 @@ def RP : Set Language :=
   ⋃ k : ℕ, RTIME (· ^ k)
 
 /-- **coRP** is the class of languages whose complements are in RP.
-    Equivalently: yes-instances always accepted (probability 1), no-instances
-    accepted with probability ≤ 1/2. -/
+
+The standard direct PTM characterization (yes-instances always accepted and
+no-instances accepted with probability at most `1/2`) is not proved in this
+module. -/
 def coRP : Set Language := complClass RP
 
-/-- **ZPP** (zero-error probabilistic polynomial time) is RP ∩ coRP. A language
-    is in ZPP iff it has a PTM with zero-error expected polynomial running
-    time. -/
+/-- **ZPP** is defined here as `RP ∩ coRP`. Its standard equivalence with
+zero-error expected-polynomial-time probabilistic computation is not formalized:
+the library currently has only fixed-clock PTM semantics, not an expected-time
+machine model. -/
 def ZPP : Set Language := RP ∩ coRP
 
 /-- `PPTIME(T)` is the class of languages decidable by a PTM in time `O(T(n))`

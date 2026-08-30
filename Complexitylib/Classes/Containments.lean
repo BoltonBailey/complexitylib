@@ -254,7 +254,7 @@ theorem L_subset_NL : L ⊆ NL := by
   intro L ⟨k, tm, f, htrans, hdec, hbig⟩
   exact ⟨k, tm.toNTM, f, tm.toNTM_isTransducer htrans, tm.toNTM_decidesInSpace hdec, hbig⟩
 
-/-- **ZPP ⊆ RP**: zero-error probabilistic ⊆ one-sided error. -/
+/-- **ZPP ⊆ RP**, directly from the definition `ZPP = RP ∩ coRP`. -/
 theorem ZPP_subset_RP : ZPP ⊆ RP := Set.inter_subset_left
 
 /-- **ZPP ⊆ coRP**. -/
