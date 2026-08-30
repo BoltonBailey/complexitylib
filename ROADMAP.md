@@ -3308,7 +3308,13 @@ meta-computational notation hides several incompatible choices; expose them.
   NP-hardness transfers from the multiplicative problem to additive
   `GapMINCKT`; combining this transfer with either an additive `PromiseP`
   completion or a valid estimator whose threshold language is in `P` now gives
-  a checked `P = NP` endpoint.*
+  a checked `P = NP` endpoint. The full slack-amplified spine is now composed in
+  one finite theorem: admissible primitive clock, operational pair compiler,
+  correct ordinary estimator, time-bounded SoI, polynomial-time induced
+  threshold language, and multiplicative-gap NP-hardness imply `P = NP`. Its
+  contrapositive isolates exactly the SoI statement that must fail under
+  `P != NP`; the future `DistNP subset AvgP -> SoI` bridge can therefore attach
+  without restating the clock and loss accounting.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3397,6 +3403,10 @@ formalization targets and should be stated positively under their exact names.
 - [x] Transfer multiplicative-gap NP-hardness to additive `GapMINCKT` and derive
   the `P = NP` consequence from either additive `PromiseP` membership or the
   induced estimator threshold language in `P`.
+- [x] Compose the admissible slack-amplified clock, operational pair compiler,
+  unconditional estimator, SoI hypothesis, threshold-language implementation,
+  and multiplicative NP-hardness into one finite `P = NP` theorem and its
+  `P != NP` contrapositive.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
