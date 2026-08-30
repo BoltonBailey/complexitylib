@@ -2650,6 +2650,10 @@ at positive parameter `m`, it chooses the binary length `n` uniformly from
 pair `(x, 1^(m-n))`. The seed space has `m * 2^m` points, and every fixed pair
 with `|x| = n < m` has proved mass `1 / (m * 2^n)`. The zero slice is explicitly
 totalized as the point `pair [] []` rather than being attributed to the paper.
+Every seed is now mapped to the exact `MINKT.Instance` it samples; its code is
+definitionally the ensemble output, decoding succeeds, and membership expands
+to `C_U^(m-n)(x) < r(n)`. The fixed-pair mass theorem is also exposed directly
+for canonical MINKT instance codes.
 `HeuristicAnswer` now gives errorless algorithms distinct accept, reject, and
 failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
 global soundness, deterministic polynomial time, and per-slice failure bounds;
@@ -2766,10 +2770,11 @@ meta-computational notation hides several incompatible choices; expose them.
   `Gap_(sigma,tau)MINKT`, and the associated decision promise. Prove all codec,
   threshold-monotonicity, and NP-witness facts before the average-case theorem.
   *The exact `D^u` sampler, component decoding, seed cardinality, and fixed-pair
-  probability are done. The strict machine-relative MINKT language, exact unary
-  codec, direct short-program semantics, threshold and clock monotonicity, and
-  raw witness-existence characterization are done; polynomial balance,
-  machine verification, and the gap/search problems remain.*
+  probability are done, as is the exact seed-to-MINKT instance, decoding,
+  membership, and point-mass bridge. The strict machine-relative MINKT language,
+  exact unary codec, direct short-program semantics, threshold and clock
+  monotonicity, and raw witness-existence characterization are done; polynomial
+  balance, machine verification, and the gap/search problems remain.*
 - [~] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
   because low-complexity strings are sparse. This is the first substantive bridge
