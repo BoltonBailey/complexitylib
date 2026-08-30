@@ -2864,8 +2864,9 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   typed-witness equivalence, and threshold-relative serialization bound are also
   done. A linear sampled-DNF threshold normalization and a polynomially balanced
   canonical raw-witness relation now give polynomial witness bounds, including
-  the empty-sample/large-arity edge case. The final verifier-in-`P` and NP
-  packaging remain.*
+  the empty-sample/large-arity edge case. The complete Boolean relation checker
+  and conditional FNP/NP packaging are done. A concrete paired verifier-in-`P`
+  theorem and discharge of the generic witness-NTM premise remain.*
 - [ ] Define finite anti-checkers as multisets of inputs meeting every small
   circuit that fails to compute a target function. Prove monotonicity, extraction
   from a shrinking set of consistent circuit descriptions, and the exact bridge

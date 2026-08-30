@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.Succinct.Defs
 public import Complexitylib.Metacomplexity.MCSP.Succinct.Internal
 public import Complexitylib.Metacomplexity.MCSP.Succinct.Witness
 public import Complexitylib.Metacomplexity.MCSP.Succinct.Normalization
+public import Complexitylib.Metacomplexity.MCSP.Succinct.NP
 
 /-!
 # Succinct Minimum Circuit Size Problem
@@ -23,7 +24,8 @@ The binary codec is exact and total. In particular, malformed pairing,
 noncanonical natural fields, wrong-width sample inputs, non-singleton outputs,
 and any mismatch between the stored sample count and payload are rejected. Its
 raw-circuit verifier checks every sample and is exact for the typed semantics;
-threshold normalization supplies a polynomially balanced witness relation.
+threshold normalization supplies a polynomially balanced witness relation and
+the class wrapper records the remaining machine-level premises for NP.
 -/
 
 
