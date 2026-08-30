@@ -149,6 +149,19 @@ def candidateCounterKey
     (packLabeledSamples
       (candidateLabeledSamples candidate table packedPrefix))
 
+/-- Natural extension estimate computed by the counter for an arbitrary
+candidate input. -/
+def counterRoundEstimate
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1)))
+    (input : BitString arity) : ℕ :=
+  counter.estimate
+    (packLabeledSamples
+      (candidateLabeledSamples (MCSP.Instance.inputIndex input)
+        table packedPrefix))
+
 /-- All fixed-candidate key-payload circuits, reindexed for the recursive
 tournament layout. -/
 def candidateCounterRecordFamily

@@ -136,6 +136,83 @@ from the sequential keyed-minimum tournament. -/
               5 * (arity + 1) + 1)) :=
   size_minimumCounterRecordCircuit_internal counter
 
+/-- The first `arity` payload bits are the selected candidate input. -/
+@[simp] theorem candidateSampleBits_input {arity : ℕ}
+    (candidate : Fin (2 ^ arity)) (table : BitString (2 ^ arity))
+    (coordinate : Fin arity) :
+    candidateSampleBits candidate table coordinate.castSucc =
+      MCSP.Instance.inputOfIndex candidate coordinate :=
+  candidateSampleBits_input_internal candidate table coordinate
+
+/-- The final payload bit is the selected candidate's truth-table label. -/
+@[simp] theorem candidateSampleBits_output {arity : ℕ}
+    (candidate : Fin (2 ^ arity)) (table : BitString (2 ^ arity)) :
+    candidateSampleBits candidate table (Fin.last arity) = table candidate :=
+  candidateSampleBits_output_internal candidate table
+
+/-- The semantic tournament winner is one of the canonical candidate
+records. -/
+theorem exists_minimumCounterRecord_eq_candidate
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      minimumCounterRecord counter table packedPrefix =
+        (candidateCounterKey counter candidate table packedPrefix,
+          candidateSampleBits candidate table) :=
+  exists_minimumCounterRecord_eq_candidate_internal
+    counter table packedPrefix
+
+/-- The winning counter key is no larger than the key of any candidate. -/
+theorem minimumCounterRecord_key_le_candidate
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1)))
+    (candidate : Fin (2 ^ arity)) :
+    (minimumCounterRecord counter table packedPrefix).1.unsignedValue ≤
+      (candidateCounterKey counter candidate table
+        packedPrefix).unsignedValue :=
+  minimumCounterRecord_key_le_candidate_internal
+    counter table packedPrefix candidate
+
+/-- The winning record carries a canonical input minimizing the counter's
+natural extension estimate. -/
+theorem exists_minimumCounterRecord_candidate_isEstimateMinimizer
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      minimumCounterRecord counter table packedPrefix =
+          (candidateCounterKey counter candidate table packedPrefix,
+            candidateSampleBits candidate table) ∧
+        AntiChecker.IsEstimateMinimizer
+          (counterRoundEstimate counter table packedPrefix)
+          (MCSP.Instance.inputOfIndex candidate) :=
+  exists_minimumCounterRecord_candidate_isEstimateMinimizer_internal
+    counter table packedPrefix
+
+/-- Circuit evaluation emits a genuine candidate record whose input globally
+minimizes the natural counter estimate. -/
+theorem exists_eval_minimumCounterRecordCircuit_eq_candidate
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      (minimumCounterRecordCircuit counter).2.eval
+          (selectionRoundInput table packedPrefix) =
+        Fin.append
+          (candidateCounterKey counter candidate table packedPrefix)
+          (candidateSampleBits candidate table) ∧
+        AntiChecker.IsEstimateMinimizer
+          (counterRoundEstimate counter table packedPrefix)
+          (MCSP.Instance.inputOfIndex candidate) :=
+  exists_eval_minimumCounterRecordCircuit_eq_candidate_internal
+    counter table packedPrefix
+
 end AntiCheckerLemma
 
 end Magnification

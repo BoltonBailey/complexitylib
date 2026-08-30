@@ -10,6 +10,7 @@ import Complexitylib.Circuits.Composition
 import Complexitylib.Circuits.InputSources
 import Complexitylib.Circuits.KeyedMinimumTournament
 import Complexitylib.Circuits.KeyedMinimumTournament.Family
+import Complexitylib.Metacomplexity.MCSP
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding
 
 /-!
@@ -171,6 +172,98 @@ theorem size_minimumCounterRecordCircuit_internal
   rw [Circuit.size_compose,
     size_packedCandidateCounterRecords_internal,
     Circuit.size_unsignedKeyedMinTournament]
+
+theorem candidateSampleBits_input_internal {arity : ℕ}
+    (candidate : Fin (2 ^ arity)) (table : BitString (2 ^ arity))
+    (coordinate : Fin arity) :
+    candidateSampleBits candidate table coordinate.castSucc =
+      MCSP.Instance.inputOfIndex candidate coordinate := by
+  simp [candidateSampleBits]
+
+theorem candidateSampleBits_output_internal {arity : ℕ}
+    (candidate : Fin (2 ^ arity)) (table : BitString (2 ^ arity)) :
+    candidateSampleBits candidate table (Fin.last arity) = table candidate := by
+  simp [candidateSampleBits]
+
+theorem exists_minimumCounterRecord_eq_candidate_internal
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      minimumCounterRecord counter table packedPrefix =
+        (candidateCounterKey counter candidate table packedPrefix,
+          candidateSampleBits candidate table) := by
+  obtain ⟨index, hindex⟩ :=
+    BitString.exists_unsignedMinimumKeyedRecord_eq
+      (selectionCandidateCount arity)
+      (candidateCounterKeys counter table packedPrefix)
+      (candidateCounterPayloads table)
+  refine ⟨selectionCandidateEquiv arity index, ?_⟩
+  simpa only [minimumCounterRecord, candidateCounterKeys,
+    candidateCounterPayloads] using hindex
+
+theorem minimumCounterRecord_key_le_candidate_internal
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1)))
+    (candidate : Fin (2 ^ arity)) :
+    (minimumCounterRecord counter table packedPrefix).1.unsignedValue ≤
+      (candidateCounterKey counter candidate table
+        packedPrefix).unsignedValue := by
+  have hminimum := BitString.unsignedMinimumKeyedRecord_key_le
+    (selectionCandidateCount arity)
+    (candidateCounterKeys counter table packedPrefix)
+    (candidateCounterPayloads table)
+    ((selectionCandidateEquiv arity).symm candidate)
+  simpa only [minimumCounterRecord, candidateCounterKeys,
+    Equiv.apply_symm_apply] using hminimum
+
+theorem exists_minimumCounterRecord_candidate_isEstimateMinimizer_internal
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      minimumCounterRecord counter table packedPrefix =
+          (candidateCounterKey counter candidate table packedPrefix,
+            candidateSampleBits candidate table) ∧
+        AntiChecker.IsEstimateMinimizer
+          (counterRoundEstimate counter table packedPrefix)
+          (MCSP.Instance.inputOfIndex candidate) := by
+  obtain ⟨candidate, hrecord⟩ :=
+    exists_minimumCounterRecord_eq_candidate_internal
+      counter table packedPrefix
+  refine ⟨candidate, hrecord, ?_⟩
+  intro input
+  have hminimum := minimumCounterRecord_key_le_candidate_internal
+    counter table packedPrefix (MCSP.Instance.inputIndex input)
+  rw [hrecord] at hminimum
+  simpa only [counterRoundEstimate,
+      ApproximateCounterCircuit.estimate, candidateCounterKey,
+      BitString.unsignedValue, counterValue,
+      MCSP.Instance.inputIndex_inputOfIndex] using hminimum
+
+theorem exists_eval_minimumCounterRecordCircuit_eq_candidate_internal
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    ∃ candidate : Fin (2 ^ arity),
+      (minimumCounterRecordCircuit counter).2.eval
+          (selectionRoundInput table packedPrefix) =
+        Fin.append
+          (candidateCounterKey counter candidate table packedPrefix)
+          (candidateSampleBits candidate table) ∧
+        AntiChecker.IsEstimateMinimizer
+          (counterRoundEstimate counter table packedPrefix)
+          (MCSP.Instance.inputOfIndex candidate) := by
+  obtain ⟨candidate, hrecord, hminimum⟩ :=
+    exists_minimumCounterRecord_candidate_isEstimateMinimizer_internal
+      counter table packedPrefix
+  refine ⟨candidate, ?_, hminimum⟩
+  rw [eval_minimumCounterRecordCircuit_internal, hrecord]
 
 end AntiCheckerLemma
 
