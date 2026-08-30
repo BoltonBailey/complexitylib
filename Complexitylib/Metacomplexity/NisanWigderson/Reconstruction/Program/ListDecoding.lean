@@ -35,6 +35,9 @@ handles every finite test through its canonical membership oracle, yielding a
 machine-relative oracle `C^{t,A}` certificate with no test bits in the program.
 Every oracle machine satisfying the oracle-uniform efficient-universality
 interface inherits those bounds with constants chosen before the test oracle.
+A family-uniform oracle decoder goes further: one machine handles every code
+parameter and design, charging an explicit design encoding while retaining the
+test as oracle access.
 -/
 
 

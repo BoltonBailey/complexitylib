@@ -3138,13 +3138,18 @@ meta-computational notation hides several incompatible choices; expose them.
   now also transferred to any abstract efficiently universal oracle machine:
   the public endpoint returns one compiler constant and polynomial clock with a
   transfer law quantified over every finite test oracle before retaining the
-  half-success guarantee for the current test. Uniformity across the remaining
-  design/code parameters and a concrete universal oracle machine are still open.
+  half-success guarantee for the current test. A fully family-uniform oracle
+  realization contract now chooses one decoder machine and one set of compiler
+  constants before every code parameter, design, test, and message. It charges
+  exactly `2 * |designEncoding| + 2` bits around the reconstruction description
+  while keeping the test as oracle access. Thus the remaining uniformity work is
+  a concrete bounded design codec and machine construction, not a hidden
+  compiler constant.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
-  bounded ambient codec or a family-uniform oracle decoder, constructing
-  machine/runtime realizers for the sampler, checker, indexed-message evaluator,
-  and concrete code family, instantiating a concrete oracle-universal machine,
+  bounded ambient/design codec, constructing machine/runtime realizers for the
+  sampler, checker, indexed-message evaluator, and concrete code family,
+  instantiating a concrete oracle-universal machine,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case

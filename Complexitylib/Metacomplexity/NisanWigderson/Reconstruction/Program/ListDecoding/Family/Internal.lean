@@ -11,6 +11,7 @@ import Complexitylib.Metacomplexity.ListDecoding.Family.Internal
 public
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Internal
 import Complexitylib.Models.TuringMachine.OutputSemantics.Internal
 
 /-!
@@ -54,6 +55,34 @@ theorem uniformTimeBoundedKolmogorovComplexity_le_internal
     (TM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
     (WithTop.coe_le_coe.mpr hframedLength)
 
+theorem uniformOracleTimeBoundedKolmogorovComplexity_le_internal
+    {family : BooleanListCodeFamily}
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (hcertificate : HasEncodedMessageCertificateWithin design
+      (family.code messageLength inverseAccuracy) test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (finiteTestOracle test) (List.ofFn message)
+        (realization.time
+          (realization.framedDescriptionBound design bound)) ≤
+      (realization.framedDescriptionBound design bound : WithTop ℕ) := by
+  obtain ⟨description, hdecode, hlength⟩ := hcertificate
+  have hproduce := realization.correct design test description message hdecode
+  have hframedLength :
+      (pair (realization.designEncoding design) description).length ≤
+        realization.framedDescriptionBound design bound := by
+    simp [UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound]
+    omega
+  have hproduceBound := hproduce.mono
+    (realization.time_mono hframedLength)
+  exact le_trans
+    (OracleTM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
+    (WithTop.coe_le_coe.mpr hframedLength)
+
 end HasEncodedMessageCertificateWithin
 
 namespace UniformEncodedMessageDecoderRealization
@@ -95,6 +124,45 @@ theorem efficientlyUniversal_transfer_internal
       realization)
 
 end UniformEncodedMessageDecoderRealization
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+theorem efficientlyUniversal_transfer_internal
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ {messageLength inverseAccuracy outputLength seedLength : ℕ}
+        (design : NWDesign outputLength
+          (family.coordinateLength messageLength inverseAccuracy) seedLength)
+        (test : Finset (Fin outputLength → Bool))
+        (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design
+            (family.code messageLength inverseAccuracy) test message bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (realization.framedDescriptionBound design bound +
+                  realization.time
+                    (realization.framedDescriptionBound design bound) + 1) ^
+                    exponent) ≤
+            (realization.framedDescriptionBound design bound + constant : ℕ) := by
+  obtain ⟨compile, constant, clock, _hsim, hlength, htimed, hclock⟩ :=
+    huniversal realization.tapes realization.machine
+  obtain ⟨coefficient, exponent, htransfer⟩ :=
+    OracleTM.polynomialTimeOverhead_kolmogorov_transfer_internal
+      htimed hlength hclock
+  refine ⟨constant, coefficient, exponent, ?_⟩
+  intro messageLength inverseAccuracy outputLength seedLength design test
+    message bound hcertificate
+  exact htransfer (finiteTestOracle test) (List.ofFn message)
+    (realization.time (realization.framedDescriptionBound design bound))
+    (realization.framedDescriptionBound design bound)
+    (hcertificate.uniformOracleTimeBoundedKolmogorovComplexity_le_internal
+      realization)
+
+end UniformOracleEncodedMessageDecoderRealization
 
 theorem two_le_reconstructionInverseAccuracy_internal
     {outputLength inverseDensity : ℕ}
@@ -703,6 +771,80 @@ theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_inter
     (hcertificates batch certificate hfind)
 
 end UniformEncodedMessageDecoderRealization
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ (bounds : family.PolynomialParameterBounds)
+        {messageLength outputLength inverseDensity seedLength tapes time
+          threshold budget : ℕ}
+        {design : NWDesign outputLength
+          (family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+        {message : Fin messageLength → Bool}
+        {machine : TM tapes} {test : Finset (Fin outputLength → Bool)},
+        family.IsListDecodableAtInverseAccuracy →
+        0 < outputLength →
+        0 < inverseDensity →
+        BitGenerator.HasLowTimeBoundedComplexity
+          (design.generator ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message)) machine time threshold →
+        BitGenerator.IsTimeBoundedRandomTest test machine time threshold →
+        BitGenerator.IsDenseTest test (1 / (inverseDensity : ℚ)) →
+        design.HasOverlapBudget budget →
+        1 / 2 ≤
+            design.checkedReconstructionBatchSuccessProbability
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+              (reconstructionAdviceTrialCount outputLength
+                (1 / (inverseDensity : ℚ))) ∧
+          ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) →
+              ReconstructionTrial outputLength seedLength) certificate,
+            design.findGoodReconstructionCertificate?
+                ((family.code messageLength
+                  (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                    message) test
+                (1 / 2 +
+                  ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+              some certificate →
+            universal.timeBoundedKolmogorovComplexity
+                (finiteTestOracle test) (List.ofFn message)
+                (coefficient *
+                  (realization.inverseDensityFramedDescriptionBound bounds
+                      design budget +
+                    realization.time
+                      (realization.inverseDensityFramedDescriptionBound bounds
+                        design budget) + 1) ^ exponent) ≤
+              (realization.inverseDensityFramedDescriptionBound bounds
+                design budget + constant : ℕ) := by
+  obtain ⟨constant, coefficient, exponent, htransfer⟩ :=
+    realization.efficientlyUniversal_transfer_internal universal huniversal
+  refine ⟨constant, coefficient, exponent, ?_⟩
+  intro bounds messageLength outputLength inverseDensity seedLength tapes time
+    threshold budget design message machine test hfamily houtputLength
+    hinverseDensity hlow hrandom hdense hbudget
+  obtain ⟨hhalf, hcertificates⟩ :=
+    half_le_encodedMessageCertificate_of_inverseDensity_internal
+      family hfamily bounds houtputLength hinverseDensity hlow hrandom hdense
+        hbudget
+  refine ⟨hhalf, ?_⟩
+  intro batch certificate hfind
+  exact htransfer design test message
+    (inverseDensityDescriptionBound family bounds messageLength outputLength
+      inverseDensity seedLength budget)
+    (hcertificates batch certificate hfind)
+
+end UniformOracleEncodedMessageDecoderRealization
 
 end NWDesign
 

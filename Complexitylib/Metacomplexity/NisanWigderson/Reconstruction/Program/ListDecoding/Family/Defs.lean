@@ -112,6 +112,68 @@ def inverseDensityFramedDescriptionBound
 
 end UniformEncodedMessageDecoderRealization
 
+/-- A single oracle decoder machine for every instance of one Boolean
+list-code family. The NW design is supplied by an explicit finite encoding;
+the statistical test remains separate oracle access and contributes no program
+bits. -/
+structure UniformOracleEncodedMessageDecoderRealization
+    (family : BooleanListCodeFamily) where
+  /-- Explicit binary representation of one NW design. -/
+  designEncoding :
+    ∀ {messageLength inverseAccuracy outputLength seedLength : ℕ},
+      NWDesign outputLength
+          (family.coordinateLength messageLength inverseAccuracy) seedLength →
+        List Bool
+  /-- Number of ordinary work tapes in addition to the query tape. -/
+  tapes : ℕ
+  /-- One oracle decoder machine for the whole family. -/
+  machine : OracleTM tapes
+  /-- Decoder clock as a function of total framed program length. -/
+  time : ℕ → ℕ
+  /-- Larger framed programs receive no smaller clock. -/
+  time_mono : Monotone time
+  /-- Correctness for every family parameter, design, and finite test oracle. -/
+  correct :
+    ∀ {messageLength inverseAccuracy outputLength seedLength : ℕ}
+      (design : NWDesign outputLength
+        (family.coordinateLength messageLength inverseAccuracy) seedLength)
+      (test : Finset (Fin outputLength → Bool)) (description : List Bool)
+      (message : Fin messageLength → Bool),
+      decodeIndexedMessage? design (family.code messageLength inverseAccuracy)
+          test description = some message →
+        machine.ProducesInTime (finiteTestOracle test)
+          (pair (designEncoding design) description) (List.ofFn message)
+          (time (pair (designEncoding design) description).length)
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+/-- Total program bound after framing a design encoding with an indexed
+reconstruction description of length at most `descriptionBound`. -/
+def framedDescriptionBound
+    {family : BooleanListCodeFamily}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength)
+    (descriptionBound : ℕ) : ℕ :=
+  2 * (realization.designEncoding design).length + 2 + descriptionBound
+
+/-- Total framed program bound at the canonical inverse-density parameters. -/
+def inverseDensityFramedDescriptionBound
+    {family : BooleanListCodeFamily}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (bounds : family.PolynomialParameterBounds)
+    {messageLength outputLength inverseDensity seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength)
+    (budget : ℕ) : ℕ :=
+  realization.framedDescriptionBound design
+    (inverseDensityDescriptionBound family bounds messageLength outputLength
+      inverseDensity seedLength budget)
+
+end UniformOracleEncodedMessageDecoderRealization
+
 end NWDesign
 
 end Complexity

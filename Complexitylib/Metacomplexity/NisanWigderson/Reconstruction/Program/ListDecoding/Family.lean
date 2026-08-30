@@ -28,6 +28,8 @@ An oracle-relative endpoint instead supplies the finite test through canonical
 membership queries and retains the original reconstruction-description bound.
 Its efficiently universal specialization exposes one transfer law valid for
 all finite test oracles before applying the half-success reconstruction result.
+A fully uniform oracle specialization chooses the compiler constants before
+all numeric parameters and designs, charging only the framed design encoding.
 -/
 
 
@@ -59,6 +61,28 @@ theorem uniformTimeBoundedKolmogorovComplexity_le
           (realization.framedDescriptionBound design test bound)) ≤
       (realization.framedDescriptionBound design test bound : WithTop ℕ) :=
   hcertificate.uniformTimeBoundedKolmogorovComplexity_le_internal realization
+
+/-- A bounded indexed reconstruction certificate remains a bounded
+oracle-relative program for one decoder machine shared across the whole code
+family. The design encoding is charged explicitly; the finite test remains
+oracle access. -/
+theorem uniformOracleTimeBoundedKolmogorovComplexity_le
+    {family : BooleanListCodeFamily}
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (hcertificate : HasEncodedMessageCertificateWithin design
+      (family.code messageLength inverseAccuracy) test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (finiteTestOracle test) (List.ofFn message)
+        (realization.time
+          (realization.framedDescriptionBound design bound)) ≤
+      (realization.framedDescriptionBound design bound : WithTop ℕ) :=
+  hcertificate.uniformOracleTimeBoundedKolmogorovComplexity_le_internal
+    realization
 
 end HasEncodedMessageCertificateWithin
 
@@ -92,6 +116,37 @@ theorem efficientlyUniversal_transfer
   realization.efficientlyUniversal_transfer_internal universal huniversal
 
 end UniformEncodedMessageDecoderRealization
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+/-- One oracle-universal compiler constant and polynomial clock transfer every
+certificate across all lengths, accuracies, designs, tests, and messages for a
+uniform family decoder. Design framing is explicit and the test remains an
+oracle. -/
+theorem efficientlyUniversal_transfer
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ {messageLength inverseAccuracy outputLength seedLength : ℕ}
+        (design : NWDesign outputLength
+          (family.coordinateLength messageLength inverseAccuracy) seedLength)
+        (test : Finset (Fin outputLength → Bool))
+        (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design
+            (family.code messageLength inverseAccuracy) test message bound →
+          universal.timeBoundedKolmogorovComplexity
+              (finiteTestOracle test) (List.ofFn message)
+              (coefficient *
+                (realization.framedDescriptionBound design bound +
+                  realization.time
+                    (realization.framedDescriptionBound design bound) + 1) ^
+                    exponent) ≤
+            (realization.framedDescriptionBound design bound + constant : ℕ) :=
+  realization.efficientlyUniversal_transfer_internal universal huniversal
+
+end UniformOracleEncodedMessageDecoderRealization
 
 /-- Positive output length and inverse density make the canonical inverse
 accuracy at least two. -/
@@ -674,6 +729,70 @@ theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
     realization universal huniversal
 
 end UniformEncodedMessageDecoderRealization
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+/-- Fully family-uniform oracle-relative inverse-density reconstruction. One
+decoder machine and one oracle-universal compiler serve every length, accuracy,
+design encoding, finite test oracle, and source message. The test costs no
+program bits; the explicitly framed design encoding is charged exactly. -/
+theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformOracleEncodedMessageDecoderRealization family)
+    (universal : OracleTM universalTapes)
+    (huniversal : OracleTM.IsEfficientlyUniversal universal) :
+    ∃ constant coefficient exponent,
+      ∀ (bounds : family.PolynomialParameterBounds)
+        {messageLength outputLength inverseDensity seedLength tapes time
+          threshold budget : ℕ}
+        {design : NWDesign outputLength
+          (family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+        {message : Fin messageLength → Bool}
+        {machine : TM tapes} {test : Finset (Fin outputLength → Bool)},
+        family.IsListDecodableAtInverseAccuracy →
+        0 < outputLength →
+        0 < inverseDensity →
+        BitGenerator.HasLowTimeBoundedComplexity
+          (design.generator ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message)) machine time threshold →
+        BitGenerator.IsTimeBoundedRandomTest test machine time threshold →
+        BitGenerator.IsDenseTest test (1 / (inverseDensity : ℚ)) →
+        design.HasOverlapBudget budget →
+        1 / 2 ≤
+            design.checkedReconstructionBatchSuccessProbability
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+              (reconstructionAdviceTrialCount outputLength
+                (1 / (inverseDensity : ℚ))) ∧
+          ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) →
+              ReconstructionTrial outputLength seedLength) certificate,
+            design.findGoodReconstructionCertificate?
+                ((family.code messageLength
+                  (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                    message) test
+                (1 / 2 +
+                  ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+              some certificate →
+            universal.timeBoundedKolmogorovComplexity
+                (finiteTestOracle test) (List.ofFn message)
+                (coefficient *
+                  (realization.inverseDensityFramedDescriptionBound bounds
+                      design budget +
+                    realization.time
+                      (realization.inverseDensityFramedDescriptionBound bounds
+                        design budget) + 1) ^ exponent) ≤
+              (realization.inverseDensityFramedDescriptionBound bounds
+                design budget + constant : ℕ) :=
+  half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
+    realization universal huniversal
+
+end UniformOracleEncodedMessageDecoderRealization
 
 end NWDesign
 
