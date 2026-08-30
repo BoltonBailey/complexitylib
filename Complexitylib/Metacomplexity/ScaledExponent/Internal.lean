@@ -18,6 +18,85 @@ namespace Complexity
 
 namespace PositiveRationalScale
 
+private def commonLower (first second : PositiveRationalScale) :
+    PositiveRationalScale where
+  numerator := 1
+  denominator := first.denominator * second.denominator
+  numerator_pos := by decide
+  denominator_pos := Nat.mul_pos first.denominator_pos second.denominator_pos
+
+private theorem commonLower_le_left (first second : PositiveRationalScale) :
+    commonLower first second ≤ first := by
+  change value (commonLower first second) ≤ value first
+  simp only [value, commonLower, Nat.cast_one, Nat.cast_mul]
+  apply (div_le_div_iff₀
+    (mul_pos (Nat.cast_pos.mpr first.denominator_pos)
+      (Nat.cast_pos.mpr second.denominator_pos))
+    (Nat.cast_pos.mpr first.denominator_pos)).mpr
+  simp only [one_mul]
+  have hnat :
+      first.denominator ≤
+        first.numerator * (first.denominator * second.denominator) := by
+    calc
+      first.denominator = 1 * first.denominator * 1 := by simp
+      _ ≤ first.numerator * first.denominator * 1 :=
+        Nat.mul_le_mul_right 1
+          (Nat.mul_le_mul_right first.denominator first.numerator_pos)
+      _ ≤ first.numerator * first.denominator * second.denominator :=
+        Nat.mul_le_mul_left (first.numerator * first.denominator)
+          second.denominator_pos
+      _ = first.numerator * (first.denominator * second.denominator) := by
+        simp [Nat.mul_assoc]
+  simpa only [Nat.cast_mul] using (Nat.cast_le.mpr hnat :
+    (first.denominator : ℚ) ≤
+      (first.numerator * (first.denominator * second.denominator) : ℕ))
+
+private theorem commonLower_le_right (first second : PositiveRationalScale) :
+    commonLower first second ≤ second := by
+  change value (commonLower first second) ≤ value second
+  simp only [value, commonLower, Nat.cast_one, Nat.cast_mul]
+  apply (div_le_div_iff₀
+    (mul_pos (Nat.cast_pos.mpr first.denominator_pos)
+      (Nat.cast_pos.mpr second.denominator_pos))
+    (Nat.cast_pos.mpr second.denominator_pos)).mpr
+  simp only [one_mul]
+  have hnat :
+      second.denominator ≤
+        second.numerator * (first.denominator * second.denominator) := by
+    calc
+      second.denominator = 1 * second.denominator * 1 := by simp
+      _ ≤ second.numerator * second.denominator * 1 :=
+        Nat.mul_le_mul_right 1
+          (Nat.mul_le_mul_right second.denominator second.numerator_pos)
+      _ ≤ second.numerator * second.denominator * first.denominator :=
+        Nat.mul_le_mul_left (second.numerator * second.denominator)
+          first.denominator_pos
+      _ = second.numerator *
+          (first.denominator * second.denominator) := by
+        ac_rfl
+  simpa only [Nat.cast_mul] using (Nat.cast_le.mpr hnat :
+    (second.denominator : ℚ) ≤
+      (second.numerator * (first.denominator * second.denominator) : ℕ))
+
+local instance : Nonempty PositiveRationalScale :=
+  ⟨⟨1, 1, by decide, by decide⟩⟩
+
+local instance : IsCodirectedOrder PositiveRationalScale where
+  directed first second :=
+    ⟨commonLower first second, commonLower_le_left first second,
+      commonLower_le_right first second⟩
+
+theorem value_pos_internal (scale : PositiveRationalScale) :
+    0 < scale.value := by
+  exact div_pos (Nat.cast_pos.mpr scale.numerator_pos)
+    (Nat.cast_pos.mpr scale.denominator_pos)
+
+theorem eventually_atZeroFromPositive_iff_internal
+    {predicate : PositiveRationalScale → Prop} :
+    (∀ᶠ scale in atZeroFromPositive, predicate scale) ↔
+      ∃ cutoff, ∀ scale ≤ cutoff, predicate scale := by
+  exact Filter.eventually_atBot
+
 theorem floorMul_zero_internal (scale : PositiveRationalScale) :
     scale.floorMul 0 = 0 := by
   simp [floorMul]

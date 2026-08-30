@@ -6,7 +6,9 @@ Authors: Samuel Schlesinger
 
 module
 public import Mathlib.Algebra.Order.Floor.Div
+public import Mathlib.Algebra.Order.Field.Rat
 public import Mathlib.Data.Nat.Log
+public import Mathlib.Order.Filter.AtTopBot.Basic
 
 /-!
 # Positive rational exponent scales -- definitions
@@ -38,6 +40,26 @@ structure PositiveRationalScale where
   denominator_pos : 0 < denominator
 
 namespace PositiveRationalScale
+
+/-- The rational value represented by a positive scale.
+
+Different unreduced numerator/denominator pairs may have the same value. The
+induced order is therefore intentionally a preorder rather than a partial
+order. -/
+def value (scale : PositiveRationalScale) : ℚ :=
+  (scale.numerator : ℚ) / scale.denominator
+
+/-- Compare positive scales by their represented rational values. -/
+instance : Preorder PositiveRationalScale :=
+  Preorder.lift (value : PositiveRationalScale → ℚ)
+
+/-- The filter of positive rational scales approaching zero from above.
+
+Because zero itself is excluded structurally, `atBot` for the value preorder
+is exactly the small-positive-parameter convention used in magnification
+statements. -/
+def atZeroFromPositive : Filter PositiveRationalScale :=
+  Filter.atBot
 
 /-- Floor of `scale * n`, computed entirely in natural numbers. -/
 def floorMul (scale : PositiveRationalScale) (n : ℕ) : ℕ :=

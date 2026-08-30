@@ -24,6 +24,19 @@ namespace Complexity
 
 namespace PositiveRationalScale
 
+/-- Every represented rational scale is strictly positive. -/
+theorem value_pos (scale : PositiveRationalScale) :
+    0 < scale.value :=
+  value_pos_internal scale
+
+/-- A property holds for all sufficiently small positive rational scales exactly
+when it holds below one positive rational cutoff. -/
+theorem eventually_atZeroFromPositive_iff
+    {predicate : PositiveRationalScale → Prop} :
+    (∀ᶠ scale in atZeroFromPositive, predicate scale) ↔
+      ∃ cutoff, ∀ scale ≤ cutoff, predicate scale :=
+  eventually_atZeroFromPositive_iff_internal
+
 /-- Scaling zero gives zero under floor rounding. -/
 @[simp] theorem floorMul_zero (scale : PositiveRationalScale) :
     scale.floorMul 0 = 0 :=
