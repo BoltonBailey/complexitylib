@@ -2972,9 +2972,14 @@ meta-computational notation hides several incompatible choices; expose them.
   only in the ordered direction. Its finiteness, upper-bound, zero-depth, and
   antitone-clock laws are complete. Choosing a universal evaluator and relating
   its convention to the paper-specific measure remain separate obligations.
-- State time-bounded symmetry of information with its polynomial clock transform,
-  pairing convention, and logarithmic loss. A machine-relative finite inequality
-  should precede any asymptotic `O(log t)` wrapper.
+- Time-bounded symmetry of information is now a named machine-relative lower-
+  chain hypothesis with the canonical pair codec, an explicit transformed
+  clock, and an arbitrary finite loss. Its polynomial package requires an
+  identity-dominating polynomial clock and uses `log_2(clock(t)) + c` without
+  hiding the evaluator-dependent constant. Paired bounded complexity must be
+  finite, preventing arbitrary non-universal machines from satisfying SoI via
+  `top`. Instantiating this interface and proving the average-case implication
+  remain separate from the definition.
 - Randomized many-one, one-query, truth-table, Turing, non-black-box, restricted,
   and oracle-independent reductions are different structures. Every hardness
   theorem must retain the exact one it proves.
@@ -3204,9 +3209,13 @@ meta-computational notation hides several incompatible choices; expose them.
   asymmetric codec costs. A concrete evaluator satisfying this contract with
   the paper's additive overhead, the lower SoI inequality, and the chosen
   universal evaluator remain.*
-- [ ] State time-bounded symmetry of information as a named machine-relative
+- [~] State time-bounded symmetry of information as a named machine-relative
   hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
   into dense-string, language-compression, and clock-accounting modules.
+  *The non-vacuous fixed-clock lower-chain predicate and its polynomial/
+  logarithmic package are complete. SoI now forces finiteness of both left-hand
+  descriptions and is stable under pointwise clock and loss weakening. The
+  concrete universal evaluators and the `DistNP subset AvgP` proof remain.*
 - [ ] Under `SoI`, construct the quantitative reduction from conditional to
   unconditional gap MinKT, with the computational-depth loss exposed. Package the
   exact conditional theorem
@@ -3254,6 +3263,8 @@ formalization targets and should be stated positively under their exact names.
   finiteness, upper-bound, zero, and clock-monotonicity laws.
 - [x] Isolate bounded program composition as an evaluator contract and derive
   the finite upper-chain inequality, including both exact canonical-pair costs.
+- [x] Freeze a non-vacuous machine-relative SoI signature with explicit
+  polynomial clock, logarithmic loss, pair codec, and finiteness consequences.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

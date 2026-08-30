@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.Kolmogorov.Internal
 public import Complexitylib.Metacomplexity.Kolmogorov.Conditional
 public import Complexitylib.Metacomplexity.Kolmogorov.Chain
 public import Complexitylib.Metacomplexity.Kolmogorov.Depth
+public import Complexitylib.Metacomplexity.Kolmogorov.Symmetry
 
 /-!
 # Machine-relative Kolmogorov complexity
@@ -35,6 +36,7 @@ complexity value is at most `t`.
 - `TM.computationalDepth_add_plain` -- exact decomposition of bounded complexity
 - `TM.computationalDepth_mono` -- more time cannot increase computational depth
 - `timeBoundedKolmogorovComplexity_pair_le_of_composition` -- finite upper chain rule
+- `TimeBoundedSymmetryOfInformation` -- explicit non-vacuous lower-chain hypothesis
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
 -/
