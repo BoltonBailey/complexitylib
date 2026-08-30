@@ -3017,14 +3017,18 @@ meta-computational notation hides several incompatible choices; expose them.
   predecessor entries, outside coordinates, later coordinates, and candidate;
   its decoder round-trips given the polarity/coordinate metadata, and its
   length is exactly the weak-design payload count. The end-to-end theorem now
-  bounds this actual encoded string. Encoding the remaining metadata and giving
-  machine/runtime analyses of the sampler, checker, and evaluator, along with
-  the explicit RRV construction, the NW-specific list-decoder composition, and
-  final program/time accounting, remain. The abstract list-decoding layer is
+  bounds this actual encoded string. The abstract list-decoding layer is
   complete: exact agreement and relative Hamming distance are complementary,
   and agreement `1/2 + epsilon` with a code list-decodable to radius
   `1/2 - epsilon` yields a candidate set containing the original message and
-  having cardinality at most the advertised list size.*
+  having cardinality at most the advertised list size. This is now composed
+  end to end with checked NW reconstruction of an encoded message: with
+  probability at least one half, the returned flat payload induces a decoder
+  candidate set of size at most `L` containing the original source message.
+  Encoding the polarity, coordinate, parameters, and candidate-list index;
+  constructing an explicit efficiently list-decodable code family; giving
+  machine/runtime analyses of the sampler, checker, evaluator, and decoder;
+  the explicit RRV construction; and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
