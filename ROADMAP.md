@@ -1734,7 +1734,11 @@ compressible string into that finite type, giving both the exact cardinal upper
 bound and the uniform-probability bound
 `Pr[C_U^t(x) <= k] <= (2^(k+1)-1)/2^n`. The complementary density theorem and
 the existence of an `n`-bit string above every threshold `k < n` are also
-proved, for every machine and clock. `MINKT.Instance` now gives the canonical
+proved, for every machine and clock. The strict variant packages programs of
+length below `r` in a type of exact cardinality `2^r - 1`, proving the sharper
+MINKT-aligned bound `Pr[C_U^t(x) < r] <= (2^r-1)/2^n`. Its complementary
+`r`-random set has complexity at least `r`, the corresponding density lower
+bound, and a witnessed member whenever `r <= n`. `MINKT.Instance` now gives the canonical
 auxiliary-unary syntax `(x, 1^t)`, with exact total decoding and the strict
 predicate `C_U^t(x) < r(|x|)`. Canonical membership is equivalent to existence
 of a program shorter than `r(|x|)` that produces exactly `x` within `t` steps;
@@ -2770,7 +2774,8 @@ meta-computational notation hides several incompatible choices; expose them.
   heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
   because low-complexity strings are sparse. This is the first substantive bridge
   from finite incompressibility to the 2018 reduction. *The machine-relative
-  sparse-low-complexity count and exact uniform density bound are done; the
+  non-strict and strict sparse-low-complexity counts, exact uniform density
+  bounds, and complementary `r`-random-string existence theorem are done; the
   language/heuristic acceptance argument and auxiliary-unary averaging remain.*
 - [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
   turn that dense set into a near-optimal description search algorithm. First

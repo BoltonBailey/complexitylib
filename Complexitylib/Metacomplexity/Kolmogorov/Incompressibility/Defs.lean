@@ -21,6 +21,23 @@ Kolmogorov complexity is below or above that bound.
 
 namespace Complexity
 
+/-- A binary program of length strictly below `bound`. -/
+abbrev StrictShortProgram (bound : ℕ) :=
+  Σ length : Fin bound, Fin length.val → Bool
+
+namespace StrictShortProgram
+
+/-- Forget the strict length certificate and recover the variable-length program. -/
+def toList {bound : ℕ} (program : StrictShortProgram bound) : List Bool :=
+  List.ofFn program.2
+
+/-- Package a variable-length program with a strict length certificate. -/
+def ofList (bound : ℕ) (program : List Bool) (hlength : program.length < bound) :
+    StrictShortProgram bound :=
+  ⟨⟨program.length, hlength⟩, program.get⟩
+
+end StrictShortProgram
+
 /-- A binary program of length at most `bound`, represented by its length and
 fixed-length contents. -/
 abbrev ShortProgram (bound : ℕ) :=
@@ -42,6 +59,24 @@ end ShortProgram
 namespace TM
 
 variable {tapes : ℕ}
+
+/-- Fixed-length strings having a description strictly shorter than
+`threshold` within the specified clock. This is the exact low-complexity event
+used by strict-threshold MINKT. -/
+noncomputable def timeBoundedStrictlyCompressibleStrings (machine : TM tapes)
+    (outputLength time threshold : ℕ) : Finset (Fin outputLength → Bool) := by
+  classical
+  exact Finset.univ.filter fun output =>
+    machine.timeBoundedKolmogorovComplexity (List.ofFn output) time <
+      (threshold : WithTop ℕ)
+
+/-- Fixed-length `threshold`-random strings, namely those whose time-bounded
+complexity is at least `threshold`. -/
+noncomputable def timeBoundedRandomStrings (machine : TM tapes)
+    (outputLength time threshold : ℕ) : Finset (Fin outputLength → Bool) := by
+  classical
+  exact (machine.timeBoundedStrictlyCompressibleStrings
+    outputLength time threshold)ᶜ
 
 /-- Fixed-length strings having a description of length at most `bound` within
 the specified clock. -/
