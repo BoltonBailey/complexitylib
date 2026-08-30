@@ -381,6 +381,103 @@ theorem anyShiftAux_mem {n : ℕ} (tm : NTM k) (b : Bool)
   show recNotation _ _ _ (gι v) (Fin.tail fun i => ![gι, gu, gx, gτ, gρ, gσ, gr, gwit] i v) = _
   rw [htail, recNotation_anyShift]
 
+/-! ## Membership among blocks -/
+
+/-- Flag: the block `c` occurs among the width-`|τ|` blocks of `s` indexed by the ruler. -/
+def memBlockAux (τ s c : List Bool) : List Bool → List Bool
+  | [] => [false]
+  | _ :: y => orBit (eqFlag c (blockOf τ s y)) (memBlockAux τ s c y)
+
+theorem memBlockAux_flag (τ s c ι : List Bool) :
+    memBlockAux τ s c ι = [true] ∨ memBlockAux τ s c ι = [false] := by
+  induction ι with
+  | nil => exact Or.inr rfl
+  | cons β y ih => exact orBit_flag (eqFlag_flag _ _) ih
+
+/-- **The membership test is an existential over block indices.** -/
+theorem memBlockAux_eq_true_iff (τ s c ι : List Bool) :
+    memBlockAux τ s c ι = [true] ↔ ∃ i < ι.length, blockAtIdx τ.length s i = c := by
+  induction ι with
+  | nil => simp [memBlockAux]
+  | cons β y ih =>
+      rw [memBlockAux, orBit_eq_true_iff (eqFlag_flag _ _) (memBlockAux_flag _ _ _ _), ih,
+        eqFlag_eq_true_iff, blockOf_eq, List.length_cons]
+      constructor
+      · rintro (h | ⟨i, hi, hv⟩)
+        · exact ⟨y.length, by omega, h.symm⟩
+        · exact ⟨i, by omega, hv⟩
+      · rintro ⟨i, hi, hv⟩
+        rcases Nat.lt_or_ge i y.length with hlt | hge
+        · exact Or.inr ⟨i, hlt, hv⟩
+        · have : i = y.length := by omega
+          subst this
+          exact Or.inl hv.symm
+
+/-- The step of the membership recursion. -/
+private def memStep (w : Fin 5 → List Bool) : List Bool :=
+  orBit (eqFlag (w 4) (blockOf (w 2) (w 3) (w 0))) (w 1)
+
+private theorem memStep_mem : Cobham memStep :=
+  (orFn (eqFlag_mem (Cobham.proj 4)
+      (blockOf_mem (Cobham.proj 2) (Cobham.proj 3) (Cobham.proj 0)))
+    (Cobham.proj 1)).of_eq fun _ => rfl
+
+private theorem recNotation_memBlock (τ s c ι : List Bool) :
+    recNotation (fun _ : Fin 3 → List Bool => ([false] : List Bool)) memStep memStep ι
+        ![τ, s, c] = memBlockAux τ s c ι := by
+  induction ι with
+  | nil => rfl
+  | cons β y ih =>
+      rw [recNotation_cons, memBlockAux]
+      cases β <;>
+        · show memStep (Fin.cons y (Fin.cons _ ![τ, s, c])) = _
+          rw [memStep]
+          show orBit (eqFlag c (blockOf τ s y))
+              (recNotation (fun _ : Fin 3 → List Bool => ([false] : List Bool)) memStep memStep y
+                ![τ, s, c]) = _
+          rw [ih]
+
+private theorem recNotation_memBlock_length (ι : List Bool) (v : Fin 3 → List Bool) :
+    (recNotation (fun _ : Fin 3 → List Bool => ([false] : List Bool)) memStep memStep ι v).length
+      ≤ 1 := by
+  induction ι with
+  | nil => simp
+  | cons β y ih =>
+      rw [recNotation_cons]
+      have hstep : ∀ (a b : List Bool) (w' : Fin 3 → List Bool),
+          (memStep (Fin.cons a (Fin.cons b w'))).length ≤ 1 := by
+        intro a b w'
+        rw [memStep, orBit_length]
+      cases β <;> simpa using hstep y _ v
+
+/-- **The membership test is in the algebra.** -/
+theorem memBlockAux_mem {n : ℕ} {gτ gs gc gι : (Fin n → List Bool) → List Bool}
+    (hτ : Cobham gτ) (hs : Cobham gs) (hc : Cobham gc) (hι : Cobham gι) :
+    Cobham fun v : Fin n → List Bool => memBlockAux (gτ v) (gs v) (gc v) (gι v) := by
+  have hrec := Cobham.boundedRec (g := fun _ : Fin 3 → List Bool => ([false] : List Bool))
+    (h₀ := memStep) (h₁ := memStep)
+    (j := fun _ : Fin 4 → List Bool => ([false] : List Bool))
+    (Cobham.const _) memStep_mem memStep_mem (Cobham.const _)
+    (by
+      intro ι v
+      simpa using recNotation_memBlock_length ι v)
+  have hg : ∀ i : Fin 4, Cobham (![gι, gτ, gs, gc] i) := by
+    intro i
+    match i with
+    | 0 => exact hι
+    | 1 => exact hτ
+    | 2 => exact hs
+    | 3 => exact hc
+  refine (Cobham.comp hrec hg).of_eq fun v => ?_
+  have htail : (Fin.tail fun i => ![gι, gτ, gs, gc] i v) = ![gτ v, gs v, gc v] := by
+    funext i
+    match i with
+    | 0 => rfl
+    | 1 => rfl
+    | 2 => rfl
+  show recNotation _ _ _ (gι v) (Fin.tail fun i => ![gι, gτ, gs, gc] i v) = _
+  rw [htail, recNotation_memBlock]
+
 end Cobham
 
 end Complexity

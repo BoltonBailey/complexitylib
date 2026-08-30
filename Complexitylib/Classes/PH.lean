@@ -138,7 +138,6 @@ theorem complClass_polyForallClass (C : Set Language) :
     exact ⟨p, L'ᶜ, hL', by rw [compl_polyExistsLang]⟩
 
 /-! ## Base inclusions -/
-
 /-- Every language of `P` is a bounded existential over `P`: take the zero
 witness bound, so the only witness is `[]`, and decide `pair x []` by decoding
 the first component and running the original decider. -/
