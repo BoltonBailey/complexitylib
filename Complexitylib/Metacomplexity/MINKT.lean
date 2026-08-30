@@ -151,6 +151,54 @@ theorem MINKT.mem_iff_exists_programWitness {tapes : ℕ} (machine : TM tapes)
     exact (MINKT.Instance.isBelow_iff_hasProgramShorterThan
       inst machine threshold).mpr ⟨program, hlength, hproduce⟩
 
+/-- A polynomial bound on the threshold gives the same polynomial bound on
+every accepted raw program witness, measured against the encoded input. -/
+theorem MINKT.programWitnessRelation_length_le_polynomial
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (polynomial : Polynomial ℕ)
+    (hthreshold : ∀ length, threshold length ≤ polynomial.eval length)
+    {bits program : List Bool}
+    (hrelation : MINKT.ProgramWitnessRelation machine threshold bits program) :
+    program.length ≤ polynomial.eval bits.length :=
+  MINKT.programWitnessRelation_length_le_polynomial_internal
+    machine threshold polynomial hthreshold hrelation
+
+/-- If the MINKT threshold is polynomially bounded, its raw program relation
+is polynomially balanced. -/
+theorem MINKT.programWitnessRelation_polyBalanced
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (hthreshold : PolyBound threshold) :
+    PolyBalanced (MINKT.ProgramWitnessRelation machine threshold) :=
+  MINKT.programWitnessRelation_polyBalanced_internal
+    machine threshold hthreshold
+
+/-- With polynomial threshold growth, a polynomial-time paired verifier makes
+the raw MINKT program relation an FNP relation. -/
+theorem MINKT.programWitnessRelation_mem_FNP_of_pairLang_mem_P
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (hthreshold : PolyBound threshold)
+    (hverifier : pairLang
+      (MINKT.ProgramWitnessRelation machine threshold) ∈ P) :
+    MINKT.ProgramWitnessRelation machine threshold ∈ FNP :=
+  MINKT.programWitnessRelation_mem_FNP_of_pairLang_mem_P_internal
+    machine threshold hthreshold hverifier
+
+/-- Conditional NP packaging for MINKT: polynomial threshold growth and a
+polynomial-time paired verifier suffice, modulo the generic guess-and-verify
+NTM construction. -/
+theorem MINKT.mem_NP_of_pairLang_mem_P
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (hthreshold : PolyBound threshold)
+    (hwitness : NP.WitnessNTMConstruction)
+    (hverifier : pairLang
+      (MINKT.ProgramWitnessRelation machine threshold) ∈ P) :
+    MINKT machine threshold ∈ NP := by
+  apply NP.mem_NP_of_FNP_witness hwitness
+    (MINKT.programWitnessRelation_mem_FNP_of_pairLang_mem_P
+      machine threshold hthreshold hverifier)
+  intro bits
+  exact MINKT.mem_iff_exists_programWitness machine threshold bits
+
 /-- Pointwise threshold growth gives language inclusion. -/
 theorem MINKT.mono {tapes : ℕ} (machine : TM tapes)
     {first second : ℕ → ℕ} (hthreshold : ∀ length, first length ≤ second length) :

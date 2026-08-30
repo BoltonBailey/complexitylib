@@ -1743,9 +1743,14 @@ auxiliary-unary syntax `(x, 1^t)`, with exact total decoding and the strict
 predicate `C_U^t(x) < r(|x|)`. Canonical membership is equivalent to existence
 of a program shorter than `r(|x|)` that produces exactly `x` within `t` steps;
 the public layer also proves clock and pointwise-threshold monotonicity and
-packages the raw program-witness relation. The machine and threshold remain
-explicit parameters, so later theorems can request exactly the required notion
-of efficient universality. `GapMINKT.Parameters` now keeps description loss
+packages the raw program-witness relation. Whenever the threshold has a
+pointwise polynomial bound, every accepted program is bounded by the same
+polynomial in the canonical input length, so the relation is `PolyBalanced`.
+Together with a `P` decider for the paired relation, this yields conditional
+`MINKT ∈ NP` packaging under the explicit generic guess-and-verify construction
+hypothesis. The machine and threshold remain explicit parameters, so later
+theorems can request exactly the required notion of efficient universality.
+`GapMINKT.Parameters` now keeps description loss
 `sigma(n,s)` and clock blow-up `tau(n,t)` separate. Its canonical
 `(x,1^t,1^s)` promise uses yes condition `C_U^t(x) <= s` and no condition
 `C_U^tau(x) > sigma(n,s)`, exactly as in the 2018 statement. Widening is an
@@ -2827,9 +2832,11 @@ meta-computational notation hides several incompatible choices; expose them.
   probability are done, as is the exact seed-to-MINKT instance, decoding,
   membership, and point-mass bridge. The strict machine-relative MINKT language,
   exact unary codec, direct short-program semantics, threshold and clock
-  monotonicity, and raw witness-existence characterization are done. The exact
-  GapMINKT decision promise, separate `sigma`/`tau` transformations, triple
-  codec, widening/disjointness theorem, direct witness semantics, and finite
+  monotonicity, and raw witness-existence characterization are done. Polynomial
+  threshold growth now gives `PolyBalanced` raw witnesses and a conditional
+  paired-verifier-to-`NP` theorem. The exact GapMINKT decision promise, separate
+  `sigma`/`tau` transformations, triple codec, widening/disjointness theorem,
+  direct witness semantics, and finite
   optimization-search relation are done. An executable relaxed-witness checker
   and the semantic search-to-decision implication are also done. The canonical
   yes-witness relation is linearly `PolyBalanced`, and its conditional

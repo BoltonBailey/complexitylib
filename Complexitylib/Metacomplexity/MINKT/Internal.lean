@@ -5,6 +5,8 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Asymptotics.PolyBound
+public import Complexitylib.Classes.FNP.Defs
 public import Complexitylib.Metacomplexity.Kolmogorov.Internal
 public import Complexitylib.Metacomplexity.MINKT.Defs
 
@@ -111,6 +113,40 @@ theorem isBelow_threshold_mono_internal (inst : Instance)
   exact hsmall.trans_le (WithTop.coe_le_coe.mpr (hthreshold inst.output.length))
 
 end Instance
+
+theorem programWitnessRelation_length_le_polynomial_internal
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (polynomial : Polynomial ℕ)
+    (hthreshold : ∀ length, threshold length ≤ polynomial.eval length)
+    {bits program : List Bool}
+    (hrelation : ProgramWitnessRelation machine threshold bits program) :
+    program.length ≤ polynomial.eval bits.length := by
+  obtain ⟨inst, hdecode, hlength, _hproduce⟩ := hrelation
+  have hcanonical := (Instance.decode?_eq_some_iff_internal bits inst).mp hdecode
+  rw [hcanonical]
+  have houtputLength : inst.output.length ≤ inst.encode.length := by
+    rw [Instance.length_encode_internal]
+    omega
+  exact (Nat.le_of_lt hlength).trans
+    ((hthreshold inst.output.length).trans
+      (polynomial_eval_mono_nat polynomial houtputLength))
+
+theorem programWitnessRelation_polyBalanced_internal
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (hthreshold : PolyBound threshold) :
+    PolyBalanced (ProgramWitnessRelation machine threshold) := by
+  obtain ⟨polynomial, hpolynomial⟩ := hthreshold
+  exact ⟨polynomial, fun _bits _program hrelation =>
+    programWitnessRelation_length_le_polynomial_internal
+      machine threshold polynomial hpolynomial hrelation⟩
+
+theorem programWitnessRelation_mem_FNP_of_pairLang_mem_P_internal
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ)
+    (hthreshold : PolyBound threshold)
+    (hverifier : pairLang (ProgramWitnessRelation machine threshold) ∈ P) :
+    ProgramWitnessRelation machine threshold ∈ FNP :=
+  ⟨programWitnessRelation_polyBalanced_internal machine threshold hthreshold,
+    hverifier⟩
 
 end MINKT
 
