@@ -9,6 +9,7 @@ public import Complexitylib.Classes.Time
 public import Complexitylib.Classes.Space
 public import Complexitylib.Classes.FiniteCounting
 public import Complexitylib.Classes.EventProb
+public import Complexitylib.Classes.AverageCase
 public import Complexitylib.Classes.PropertyDensity
 public import Complexitylib.Classes.SharpP
 public import Complexitylib.Classes.Negligible

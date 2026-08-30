@@ -2611,6 +2611,15 @@ two-input universal evaluator with explicit random-access and clock conventions.
 The symmetry branch additionally needs finite incompressibility, pairing bounds,
 and an asymptotic library capable of retaining logarithmic losses.
 
+**Current foundation.** `DyadicEnsemble` represents each parameter slice by an
+explicit uniform Boolean seed and deterministic sample map, retaining sampler
+multiplicity. Its exact rational theory includes complement and union laws,
+predicate monotonicity, deterministic pushforward, normalized finite support
+mass, independent products via the seed-block bijection, point masses, and
+uniform bit-string slices. This is the representation-level distribution layer;
+no sample map is called efficient until a machine realizes it with proved
+polynomial seed, runtime, and output bounds.
+
 **Literature anchors and theorem ladder.** Freeze a specific published version
 before transcribing a theorem. The initial spine is Hirahara's 2018
 *Non-black-box Worst-case to Average-case Reductions within NP*, the 2021
@@ -2690,8 +2699,11 @@ meta-computational notation hides several incompatible choices; expose them.
 
 **Staged milestones.** Each completed item should be independently checkable.
 
-- [ ] Build exact dyadic ensembles, finite event probabilities under pushforward,
+- [~] Build exact dyadic ensembles, finite event probabilities under pushforward,
   product/mixture ensembles, and the uniform and auxiliary-unary ensembles.
+  *The generic seed representation, probability laws, pushforward, normalized
+  support mass, independent products, point masses, and uniform bit strings are
+  done; mixtures and the auxiliary-unary ensemble remain.*
 - [ ] Define polynomial-time samplers by uniform machines and prove closure under
   polynomial-time maps, pairing, padding, products, and efficiently chosen
   mixtures. Package distributional problems and `DistNP` only after this bridge.
@@ -2766,7 +2778,7 @@ formalization targets and should be stated positively under their exact names.
 
 **Small entry tasks.**
 
-- [S] Define a dyadic ensemble as an explicit seed width plus sample map, and
+- [x] Define a dyadic ensemble as an explicit seed width plus sample map, and
   prove that pushforward preserves total mass and event probability.
 - [S] Define errorless answers and prove that complementing an errorless heuristic
   preserves its failure event exactly.
