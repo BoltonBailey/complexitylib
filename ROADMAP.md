@@ -1243,10 +1243,15 @@ syntax.
 
 - [ ] Prove closure and normal-form lemmas for deterministic and nondeterministic
   space, including configuration counting.
-- [ ] Formalize Savitch's theorem with an explicit recursive reachability machine:
-  `NSPACE(S) subset DSPACE(S^2)` under suitable constructibility and lower-bound
-  hypotheses.
-- [ ] Derive `NPSPACE = PSPACE` in the library's polynomial-union convention.
+- [x] Formalize Savitch's theorem, as a polynomial-time stack recursion iterated in
+  place rather than an explicit machine (`Complexity.savStep`, `Complexity.Sav.step`,
+  `Complexity.Sav.run_frame`, `Complexity.accB_cfgCode`,
+  `Complexity.SpaceIter.mem_PSPACE_of_iterate`).
+- [x] Derive `NPSPACE = PSPACE` in the library's polynomial-union convention
+  (`Complexity.NPSPACE_subset_PSPACE`, `Complexity.PSPACE_eq_NPSPACE`).
+- [x] Prove `IP ⊆ PSPACE` by evaluating the protocol's game tree with a stack walk
+  (`Complexity.IP_subset_PSPACE`; `Protocol.gval`, `Complexity.IPM.step`,
+  `Complexity.IPM.ipStep`).
 - [ ] Define alternating machines or an equivalent bounded game semantics.
 - [ ] Prove polynomial-time alternation equals PSPACE, or first prove a bounded
   configuration-game characterization.

@@ -30,6 +30,10 @@ limit, or tape frames. Clients record those endpoint facts in
 - `BinaryForLoopSpec.reachesIn` composes a certified loop exactly.
 - `BinaryForLoopSpaceSpec.prefix_withinAuxSpace` covers every run prefix.
 - `IsTransducer.binaryForTM` preserves one-way output safety.
+- `binaryForTM_hoareTime` runs the loop from a per-index contract for its body,
+  for clients whose bodies come as Hoare triples rather than closed forms.
+- `guessProtocol_binaryForTM` carries a body's guess-tape discipline through
+  the loop, so a nondeterministic body may be driven by one.
 -/
 
 
@@ -168,11 +172,45 @@ theorem BinaryForLoopSpaceSpec.prefix_withinAuxSpace
     c.WithinAuxSpace inputLength spaceBound :=
   spaceSpec.prefix_withinAuxSpace_internal count value t c hlimit hreach htime
 
+/-- **A count-up loop from a contract for its body.**
+
+`BinaryForLoopSpec` asks for a canonical configuration at every loop index,
+which presumes a body whose tape effect is known in closed form. A body
+assembled from Hoare triples has no such form — its contract only asserts that
+some halting run exists — so this rule takes the per-index triple directly:
+if the body carries `BinaryForFrame` at `value` to `BinaryForBodyPost` at
+`value`, the driver runs the whole loop from counter zero to `limitValue`. -/
+theorem binaryForTM_hoareTime {body : TM n}
+    {counterIdx limitIdx : Fin n} (hne : counterIdx ≠ limitIdx)
+    (limitValue : ℕ) (bodyTime : ℕ → ℕ) (P : ℕ → TapePred n)
+    (hbody : ∀ value, value < limitValue →
+      body.HoareTime (BinaryForFrame counterIdx limitIdx limitValue P value)
+        (BinaryForBodyPost counterIdx limitIdx limitValue P value)
+        (bodyTime value)) :
+    (binaryForTM body counterIdx limitIdx).HoareTime
+      (BinaryForFrame counterIdx limitIdx limitValue P 0)
+      (BinaryForFrame counterIdx limitIdx limitValue P limitValue)
+      (binaryForLoopTime bodyTime limitValue 0 limitValue) :=
+  binaryForTM_hoareTime_internal body counterIdx limitIdx hne limitValue
+    bodyTime P hbody
+
 /-- A binary count-up loop preserves the body's one-way-output discipline. -/
 theorem IsTransducer.binaryForTM {body : TM n}
     (hbody : body.IsTransducer) (counterIdx limitIdx : Fin n) :
     (binaryForTM body counterIdx limitIdx).IsTransducer :=
   hbody.binaryForTM_internal counterIdx limitIdx
+
+/-- **The guess protocol survives a count-up loop.** The driver rewrites every
+tape it does not own and holds their heads still, so a body that consumes its
+guesses only in its advancing states keeps doing so inside the loop. The
+counter and the limit must not be the guess tape itself. -/
+theorem guessProtocol_binaryForTM {k : ℕ} {body : TM (k + 1)}
+    {Adv : body.Q → Bool} (hbody : body.GuessProtocol Adv)
+    (counterIdx limitIdx : Fin (k + 1)) (hcounter : counterIdx ≠ Fin.last k)
+    (hlimit : limitIdx ≠ Fin.last k) :
+    (binaryForTM body counterIdx limitIdx).GuessProtocol
+      (binaryForAdv Adv counterIdx limitIdx) :=
+  guessProtocol_binaryForTM_internal hbody counterIdx limitIdx hcounter hlimit
 
 end TM
 

@@ -35,6 +35,7 @@ public import Complexitylib.Classes.PCP.Internal.Arithmetize
 public import Complexitylib.Classes.PCP.Internal.BaseAlg
 public import Complexitylib.Classes.PCP.Internal.BinToUnary
 public import Complexitylib.Classes.PCP.Internal.BitwiseFP
+public import Complexitylib.Classes.PCP.Internal.BoundNotConstructible
 public import Complexitylib.Classes.PCP.Internal.BoundedQuant
 public import Complexitylib.Classes.PCP.Internal.CNFCount
 public import Complexitylib.Classes.PCP.Internal.CNFMaxVar
@@ -42,6 +43,7 @@ public import Complexitylib.Classes.PCP.Internal.CNFSegment
 public import Complexitylib.Classes.PCP.Internal.CNFTokens
 public import Complexitylib.Classes.PCP.Internal.CSPVerifier
 public import Complexitylib.Classes.PCP.Internal.Cheeger
+public import Complexitylib.Classes.PCP.Internal.Clique
 public import Complexitylib.Classes.PCP.Internal.CloudCount
 public import Complexitylib.Classes.PCP.Internal.CloudDisagreement
 public import Complexitylib.Classes.PCP.Internal.CoinEnum
@@ -55,6 +57,7 @@ public import Complexitylib.Classes.PCP.Internal.DataScanSpec
 public import Complexitylib.Classes.PCP.Internal.DegreeReduction
 public import Complexitylib.Classes.PCP.Internal.DegreeReductionSound
 public import Complexitylib.Classes.PCP.Internal.Dinur
+public import Complexitylib.Classes.PCP.Internal.Disagreement
 public import Complexitylib.Classes.PCP.Internal.EdgeExpansion
 public import Complexitylib.Classes.PCP.Internal.Expander
 public import Complexitylib.Classes.PCP.Internal.ExpanderExists
@@ -66,6 +69,7 @@ public import Complexitylib.Classes.PCP.Internal.FamilyFin
 public import Complexitylib.Classes.PCP.Internal.FiniteKey
 public import Complexitylib.Classes.PCP.Internal.FinsetPlurality
 public import Complexitylib.Classes.PCP.Internal.GapReduction
+public import Complexitylib.Classes.PCP.Internal.GapTheorem
 public import Complexitylib.Classes.PCP.Internal.GuessVerifyGeneric
 public import Complexitylib.Classes.PCP.Internal.Hadamard
 public import Complexitylib.Classes.PCP.Internal.HadamardTester
@@ -73,8 +77,10 @@ public import Complexitylib.Classes.PCP.Internal.KilledCSP
 public import Complexitylib.Classes.PCP.Internal.KilledFirstMoment
 public import Complexitylib.Classes.PCP.Internal.KilledPlurality
 public import Complexitylib.Classes.PCP.Internal.KilledWalk
+public import Complexitylib.Classes.PCP.Internal.LengthMod
 public import Complexitylib.Classes.PCP.Internal.ListEncode
 public import Complexitylib.Classes.PCP.Internal.LocalTest
+public import Complexitylib.Classes.PCP.Internal.Margulis
 public import Complexitylib.Classes.PCP.Internal.Materialize
 public import Complexitylib.Classes.PCP.Internal.MaxLoop
 public import Complexitylib.Classes.PCP.Internal.MergeGen
@@ -83,6 +89,7 @@ public import Complexitylib.Classes.PCP.Internal.NatEncode
 public import Complexitylib.Classes.PCP.Internal.NumEnc
 public import Complexitylib.Classes.PCP.Internal.NumEncPi
 public import Complexitylib.Classes.PCP.Internal.PCPtoSAT
+public import Complexitylib.Classes.PCP.Internal.Pad
 public import Complexitylib.Classes.PCP.Internal.PadGraph
 public import Complexitylib.Classes.PCP.Internal.PermArith
 public import Complexitylib.Classes.PCP.Internal.PermCount
@@ -104,6 +111,7 @@ public import Complexitylib.Classes.PCP.Internal.SubsetNPFinal
 public import Complexitylib.Classes.PCP.Internal.SymbolCodec
 public import Complexitylib.Classes.PCP.Internal.TesterChecks
 public import Complexitylib.Classes.PCP.Internal.TesterCore
+public import Complexitylib.Classes.PCP.Internal.TesterInput
 public import Complexitylib.Classes.PCP.Internal.ThreeSATReduction
 public import Complexitylib.Classes.PCP.Internal.TowerFin
 public import Complexitylib.Classes.PCP.Internal.TowerTable

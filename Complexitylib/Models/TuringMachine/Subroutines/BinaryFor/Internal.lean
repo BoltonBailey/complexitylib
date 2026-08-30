@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Comparison
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Loop
+public import Complexitylib.Models.TuringMachine.Subroutines.BinaryFor.Internal.Hoare
 
 /-!
 # Canonical binary count-up loops — internal proofs

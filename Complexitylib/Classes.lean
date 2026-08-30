@@ -56,6 +56,8 @@ public import Complexitylib.Classes.PPoly.Uniform.Unrolling.Serializer.Transitio
 public import Complexitylib.Classes.PPoly.Uniform.Preprocessing
 public import Complexitylib.Classes.PPoly.Uniform.Containment
 public import Complexitylib.Classes.NP
+public import Complexitylib.Classes.Interactive
+public import Complexitylib.Classes.PCP
 public import Complexitylib.Classes.Randomized
 public import Complexitylib.Classes.Randomized.GoodSeed
 public import Complexitylib.Classes.Randomized.CircuitAmplification
@@ -73,8 +75,16 @@ public import Complexitylib.Classes.L.PolynomialTime
 public import Complexitylib.Classes.Exponential
 public import Complexitylib.Classes.DTISP
 public import Complexitylib.Classes.Containments
-public import Complexitylib.Classes.Interactive
-public import Complexitylib.Classes.PCP
+public import Complexitylib.Classes.Containments.CoNLSubsetNL
+public import Complexitylib.Classes.Containments.IPSubsetPSPACE
+public import Complexitylib.Classes.Containments.NLSubsetCoNL
+public import Complexitylib.Classes.Containments.NLSubsetP
+public import Complexitylib.Classes.Containments.NPSPACESubsetPSPACE
+public import Complexitylib.Classes.Containments.PHSubsetPSPACE
+public import Complexitylib.Classes.Containments.PPSubsetPSPACE
+public import Complexitylib.Classes.Containments.PSPACESubsetEXP
+public import Complexitylib.Classes.Containments.PSPACESubsetIP
+public import Complexitylib.Classes.Containments.PSPACESubsetNPSPACE
 public import Complexitylib.Classes.Hierarchy
 import Complexitylib.Classes.NP.Internal.PairSplitTM
 
