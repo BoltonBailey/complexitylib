@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.GoodString
 
 /-!
 # The Oliveira--Pich--Santhanam Anti-Checker Lemma
