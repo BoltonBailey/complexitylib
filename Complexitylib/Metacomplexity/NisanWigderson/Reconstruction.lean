@@ -11,6 +11,7 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Averagi
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.RepeatedSampling
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.GlobalSampling
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.CertificateSearch
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program
 
 /-!
 # Nisan--Wigderson fixed-advice reconstruction
@@ -24,7 +25,9 @@ repeated sampling finds such advice with an explicit geometric guarantee, and
 global sampling chooses the hybrid coordinate and advice in one fixed-width
 trial matching the randomized reconstruction algorithm. Certificate search
 then checks both test orientations by exact finite agreement and returns the
-first successful sampled trial.
+first successful sampled trial. Finally, explicit reconstruction programs
+materialize the predecessor tables so that evaluating a selected predictor no
+longer accesses the hard function.
 -/
 
 

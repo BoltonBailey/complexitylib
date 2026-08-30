@@ -3004,9 +3004,14 @@ meta-computational notation hides several incompatible choices; expose them.
   success probability dominates the favorable-orientation repetition event.
   Consequently `ceil(2m/delta)` checked global trials succeed with probability
   at least one half while preserving the selected predictor's payload bound.
-  A machine realization and codec/runtime analysis of the sampler and checker,
-  the explicit RRV construction, list decoding, and final program/time
-  accounting remain.*
+  The predecessor truth tables are now materialized as fields of an explicit
+  reconstruction program: its evaluator no longer accesses the hard function,
+  it is pointwise equal to the original fixed-advice predictor, and its Boolean
+  payload is proved exactly equal to the earlier entry count. Thus every
+  selected certificate yields a stored predictor with the claimed agreement
+  and weak-design payload bound. A bit-level codec and machine/runtime analysis
+  of the sampler, checker, and program evaluator, the explicit RRV
+  construction, list decoding, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
