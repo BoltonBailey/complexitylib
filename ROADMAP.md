@@ -1799,6 +1799,13 @@ challenge, normalized tails split into earlier and later bits, and the earlier
 factor cancels because the hybrid query ignores it. Thus some fixed outside
 seed, later tail, and candidate preserve the full next-bit success probability
 over uniform challenges.
+The randomized-search probability loss is also exact. A general finite
+reverse-averaging inequality bounds the mass above any threshold for every
+statistic bounded by one. Its Hirahara specialization shows that mean agreement
+`1/2 + epsilon` makes at least an `epsilon/2` fraction of advice choices achieve
+agreement `1/2 + epsilon/2`. Thus the selected NW coordinate has a good uniform
+advice draw with probability at least `delta/(2m)`, matching the paper's
+Markov-style sampling step before repetition and certificate verification.
 Composing all finite layers now gives the stronger concrete NW conclusion:
 every positive-density random-string test against a low-complexity weak-design
 generator admits a polarity, coordinate, and fixed advice whose predictor agrees
@@ -2974,8 +2981,10 @@ meta-computational notation hides several incompatible choices; expose them.
   fiber averaging now fix one outside seed, later tail, and candidate without
   losing the `1/2 + delta/m` agreement guarantee. The end-to-end theorem combines
   that agreement with the weak-design payload bound. The explicit RRV
-  construction, randomized certificate search with its Markov bound, list
-  decoding, and final program/time accounting remain.*
+  construction remains. The randomized certificate search's single-draw
+  Markov bound is now proved exactly; executable repeated sampling, checking the
+  resulting approximate description, list decoding, and final program/time
+  accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

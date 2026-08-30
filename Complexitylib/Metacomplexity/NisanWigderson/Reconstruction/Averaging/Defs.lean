@@ -55,6 +55,19 @@ def averageReconstructionAgreement
     design.reconstructionPredictor hardFunction test current sample.1.1
       sample.1.2.1 sample.1.2.2 sample.2 = hardFunction sample.2
 
+/-- Probability that a uniformly sampled advice choice attains a requested
+agreement threshold. -/
+def goodReconstructionAdviceProbability
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (current : Fin outputLength) (agreementThreshold : ℚ) : ℚ :=
+  uniformProbability <| Finset.univ.filter fun advice :
+      design.ReconstructionAdvice current =>
+    agreementThreshold ≤
+      design.reconstructionAgreementProbability hardFunction test current advice
+
 end NWDesign
 
 end Complexity

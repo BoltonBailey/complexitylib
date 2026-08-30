@@ -185,6 +185,93 @@ theorem exists_fiber_uniformProbability_ge_internal
     (Finset.univ_nonempty : (Finset.univ : Finset advice).Nonempty) hsum
   exact ⟨fixed, hle⟩
 
+theorem uniformMean_le_threshold_add_probability_internal
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (threshold : ℚ)
+    (hupper : ∀ input, value input ≤ 1) :
+    uniformMean value ≤ threshold +
+      uniformProbability (Finset.univ.filter fun input =>
+        threshold ≤ value input) * (1 - threshold) := by
+  classical
+  let good := Finset.univ.filter fun input : sample => threshold ≤ value input
+  let bad := Finset.univ.filter fun input : sample => ¬threshold ≤ value input
+  have hgood : ∑ input ∈ good, value input ≤ (good.card : ℚ) := by
+    have h := Finset.sum_le_card_nsmul good value (1 : ℚ)
+      (fun input _hinput => hupper input)
+    simpa [nsmul_eq_mul] using h
+  have hbad :
+      ∑ input ∈ bad, value input ≤ (bad.card : ℚ) * threshold := by
+    have h := Finset.sum_le_card_nsmul bad value threshold (by
+      intro input hinput
+      have hnot : ¬threshold ≤ value input := by
+        simpa [bad] using hinput
+      exact le_of_lt (lt_of_not_ge hnot))
+    simpa [nsmul_eq_mul] using h
+  have hsum :
+      ∑ input : sample, value input ≤
+        (good.card : ℚ) + (bad.card : ℚ) * threshold := by
+    rw [← Finset.sum_filter_add_sum_filter_not Finset.univ
+      (fun input => threshold ≤ value input) value]
+    exact add_le_add hgood hbad
+  have hcardNat : good.card + bad.card = Fintype.card sample := by
+    simpa [good, bad] using
+      (Finset.card_filter_add_card_filter_not
+        (s := (Finset.univ : Finset sample))
+        (fun input => threshold ≤ value input))
+  have hcard :
+      (good.card : ℚ) + (bad.card : ℚ) = Fintype.card sample := by
+    exact_mod_cast hcardNat
+  have hden : (0 : ℚ) < Fintype.card sample := by
+    exact_mod_cast Fintype.card_pos_iff.mpr inferInstance
+  unfold uniformMean uniformProbability
+  change (∑ input : sample, value input) / Fintype.card sample ≤
+    threshold + (good.card : ℚ) / Fintype.card sample * (1 - threshold)
+  apply (div_le_iff₀ hden).2
+  calc
+    ∑ input : sample, value input ≤
+        (good.card : ℚ) + (bad.card : ℚ) * threshold := hsum
+    _ = (threshold + (good.card : ℚ) / Fintype.card sample *
+          (1 - threshold)) * Fintype.card sample := by
+      field_simp
+      rw [← hcard]
+      ring
+
+theorem uniformMean_sub_div_le_probability_ge_internal
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (lower threshold : ℚ)
+    (hupper : ∀ input, value input ≤ 1)
+    (hlower : lower ≤ uniformMean value) (hthreshold : threshold < 1) :
+    (lower - threshold) / (1 - threshold) ≤
+      uniformProbability (Finset.univ.filter fun input =>
+        threshold ≤ value input) := by
+  have hmean :=
+    (hlower.trans <|
+      uniformMean_le_threshold_add_probability_internal
+        value threshold hupper)
+  apply (div_le_iff₀ (sub_pos.mpr hthreshold)).2
+  linarith
+
+theorem half_epsilon_le_probability_ge_of_le_uniformMean_internal
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (epsilon : ℚ)
+    (hepsilon : 0 ≤ epsilon) (hupper : ∀ input, value input ≤ 1)
+    (hmean : 1 / 2 + epsilon ≤ uniformMean value) :
+    epsilon / 2 ≤
+      uniformProbability (Finset.univ.filter fun input =>
+        1 / 2 + epsilon / 2 ≤ value input) := by
+  let probability := uniformProbability
+    (Finset.univ.filter fun input : sample =>
+      1 / 2 + epsilon / 2 ≤ value input)
+  have hprobability : 0 ≤ probability := uniformProbability_nonneg_internal _
+  have hmeanUpper := uniformMean_le_threshold_add_probability_internal
+    value (1 / 2 + epsilon / 2) hupper
+  change uniformMean value ≤ 1 / 2 + epsilon / 2 +
+    probability * (1 - (1 / 2 + epsilon / 2)) at hmeanUpper
+  have hfactor :
+      probability * (1 - (1 / 2 + epsilon / 2)) ≤ probability := by
+    nlinarith
+  nlinarith
+
 theorem uniformProbability_equiv_internal
     {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
     [Fintype Ξ] [DecidableEq Ξ] (e : Ω ≃ Ξ) (P : Ξ → Prop)

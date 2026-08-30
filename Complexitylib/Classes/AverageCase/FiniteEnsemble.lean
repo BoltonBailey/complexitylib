@@ -116,6 +116,43 @@ theorem exists_fiber_uniformProbability_ge
         uniformProbability (Finset.univ.filter (event fixed)) :=
   exists_fiber_uniformProbability_ge_internal event
 
+/-- If a finite statistic is at most one, its mean is bounded by a threshold
+plus the probability of exceeding that threshold times the remaining range. -/
+theorem uniformMean_le_threshold_add_probability
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (threshold : ℚ)
+    (hupper : ∀ input, value input ≤ 1) :
+    uniformMean value ≤ threshold +
+      uniformProbability (Finset.univ.filter fun input =>
+        threshold ≤ value input) * (1 - threshold) :=
+  uniformMean_le_threshold_add_probability_internal value threshold hupper
+
+/-- Exact reverse averaging bound for a statistic bounded above by one. -/
+theorem uniformMean_sub_div_le_probability_ge
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (lower threshold : ℚ)
+    (hupper : ∀ input, value input ≤ 1)
+    (hlower : lower ≤ uniformMean value) (hthreshold : threshold < 1) :
+    (lower - threshold) / (1 - threshold) ≤
+      uniformProbability (Finset.univ.filter fun input =>
+        threshold ≤ value input) :=
+  uniformMean_sub_div_le_probability_ge_internal
+    value lower threshold hupper hlower hthreshold
+
+/-- Hirahara's convenient half-advantage corollary: mean at least
+`1/2 + ε` forces an `ε/2` fraction of samples to have value at least
+`1/2 + ε/2`. -/
+theorem half_epsilon_le_probability_ge_of_le_uniformMean
+    {sample : Type u} [Fintype sample] [DecidableEq sample]
+    [Nonempty sample] (value : sample → ℚ) (epsilon : ℚ)
+    (hepsilon : 0 ≤ epsilon) (hupper : ∀ input, value input ≤ 1)
+    (hmean : 1 / 2 + epsilon ≤ uniformMean value) :
+    epsilon / 2 ≤
+      uniformProbability (Finset.univ.filter fun input =>
+        1 / 2 + epsilon / 2 ≤ value input) :=
+  half_epsilon_le_probability_ge_of_le_uniformMean_internal
+    value epsilon hepsilon hupper hmean
+
 /-- Relabeling a finite uniform sample space by an equivalence preserves event
 probability. -/
 theorem uniformProbability_equiv

@@ -31,6 +31,10 @@ namespace Complexity
 def uniformProbability {Ω : Type u} [Fintype Ω] (event : Finset Ω) : ℚ :=
   (event.card : ℚ) / Fintype.card Ω
 
+/-- Mean of a rational-valued statistic on a finite uniform sample space. -/
+def uniformMean {Ω : Type u} [Fintype Ω] (value : Ω → ℚ) : ℚ :=
+  (∑ sample, value sample) / Fintype.card Ω
+
 /-- A parameterized distribution represented by a nonempty finite uniform seed
 space and deterministic sampler at every slice. -/
 structure FiniteEnsemble (α : Type u) where

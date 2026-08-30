@@ -309,6 +309,62 @@ theorem exists_reconstructionAdvice_agreement_ge_internal
   simpa [averageReconstructionAgreement,
     reconstructionAgreementProbability] using haverage
 
+theorem averageReconstructionAgreement_eq_uniformMean_internal
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (current : Fin outputLength) :
+    design.averageReconstructionAgreement hardFunction test current =
+      uniformMean (fun advice : design.ReconstructionAdvice current =>
+        design.reconstructionAgreementProbability hardFunction test current
+          advice) := by
+  have haverage := uniformProbability_product_eq_average_fibers_internal
+    (fun (advice : design.ReconstructionAdvice current)
+        (challenge : Fin inputLength → Bool) =>
+      design.reconstructionPredictor hardFunction test current advice.1
+        advice.2.1 advice.2.2 challenge = hardFunction challenge)
+  simpa [averageReconstructionAgreement, reconstructionAgreementProbability,
+    uniformMean] using haverage
+
+theorem average_sub_div_le_goodReconstructionAdviceProbability_internal
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (current : Fin outputLength) (agreementThreshold : ℚ)
+    (hthreshold : agreementThreshold < 1) :
+    (design.averageReconstructionAgreement hardFunction test current -
+        agreementThreshold) / (1 - agreementThreshold) ≤
+      design.goodReconstructionAdviceProbability hardFunction test current
+        agreementThreshold := by
+  rw [averageReconstructionAgreement_eq_uniformMean_internal]
+  exact uniformMean_sub_div_le_probability_ge_internal
+    (fun advice : design.ReconstructionAdvice current =>
+      design.reconstructionAgreementProbability hardFunction test current advice)
+    _ agreementThreshold
+    (fun _advice => uniformProbability_le_one_internal _)
+    le_rfl hthreshold
+
+theorem half_advantage_le_goodReconstructionAdviceProbability_internal
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (hardFunction : (Fin inputLength → Bool) → Bool)
+    (test : Finset (Fin outputLength → Bool))
+    (current : Fin outputLength) (advantage : ℚ)
+    (hadvantage : 0 ≤ advantage)
+    (haverage : 1 / 2 + advantage ≤
+      design.averageReconstructionAgreement hardFunction test current) :
+    advantage / 2 ≤
+      design.goodReconstructionAdviceProbability hardFunction test current
+        (1 / 2 + advantage / 2) := by
+  rw [averageReconstructionAgreement_eq_uniformMean_internal] at haverage
+  exact half_epsilon_le_probability_ge_of_le_uniformMean_internal
+    (fun advice : design.ReconstructionAdvice current =>
+      design.reconstructionAgreementProbability hardFunction test current advice)
+    advantage hadvantage
+    (fun _advice => uniformProbability_le_one_internal _) haverage
+
 theorem exists_fixed_reconstruction_of_randomTest_internal
     {outputLength inputLength seedLength tapes time threshold budget : ℕ}
     {design : NWDesign outputLength inputLength seedLength}
@@ -360,6 +416,65 @@ theorem exists_fixed_reconstruction_of_seedDescriptions_internal
           budget + (seedLength - inputLength) + 1 := by
   apply exists_fixed_reconstruction_of_randomTest_internal
     houtputLength (hrandom := hrandom) (hdense := hdense)
+    (hbudget := hbudget)
+  exact BitGenerator.hasLowTimeBoundedComplexity_of_seedDescriptions_internal
+    hseedLength hproduces
+
+theorem exists_goodAdviceProbability_ge_of_randomTest_internal
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 ≤ density)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ (complement : Bool) (current : Fin outputLength),
+      (density / (outputLength : ℚ)) / 2 ≤
+          design.goodReconstructionAdviceProbability hardFunction
+            (BitGenerator.orientTest test complement) current
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) ∧
+        design.reconstructionDataBitsAt current ≤
+          budget + (seedLength - inputLength) + 1 := by
+  obtain ⟨complement, current, hsuccess⟩ :=
+    exists_predictionSuccess_ge_half_add_density_div_internal
+      houtputLength hlow hrandom hdense
+  rw [predictionSuccessProbability_eq_averageReconstructionAgreement_internal]
+    at hsuccess
+  have hadvantage : 0 ≤ density / (outputLength : ℚ) := by positivity
+  exact ⟨complement, current,
+    half_advantage_le_goodReconstructionAdviceProbability_internal
+      design hardFunction (BitGenerator.orientTest test complement) current
+      (density / (outputLength : ℚ)) hadvantage hsuccess,
+    reconstructionDataBitsAt_le_of_hasOverlapBudget_internal hbudget current⟩
+
+theorem exists_goodAdviceProbability_ge_of_seedDescriptions_internal
+    {outputLength inputLength seedLength tapes time threshold budget : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hdensity : 0 ≤ density) (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density)
+    (hbudget : design.HasOverlapBudget budget) :
+    ∃ (complement : Bool) (current : Fin outputLength),
+      (density / (outputLength : ℚ)) / 2 ≤
+          design.goodReconstructionAdviceProbability hardFunction
+            (BitGenerator.orientTest test complement) current
+            (1 / 2 + (density / (outputLength : ℚ)) / 2) ∧
+        design.reconstructionDataBitsAt current ≤
+          budget + (seedLength - inputLength) + 1 := by
+  apply exists_goodAdviceProbability_ge_of_randomTest_internal
+    houtputLength hdensity (hrandom := hrandom) (hdense := hdense)
     (hbudget := hbudget)
   exact BitGenerator.hasLowTimeBoundedComplexity_of_seedDescriptions_internal
     hseedLength hproduces
