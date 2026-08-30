@@ -5,8 +5,7 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.PCP.Defs
-public import Complexitylib.Classes.PCP.Internal.AlgPCP
-public import Complexitylib.Classes.PCP.Internal.SubsetNPFinal
+public import Complexitylib.Classes.PCP.Internal
 
 /-!
 # The PCP theorem

@@ -35,26 +35,26 @@ namespace Complexity
 
 /-- Reading a zero: the value doubles. -/
 def binDbl (z : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock z) ++ Cobham.sndBlock (Cobham.fstBlock z)
+  pairSnd (pairFst z) ++ pairSnd (pairFst z)
 
 /-- Reading a one: the value doubles and gains one. -/
 def binDblOne (z : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock z) ++ Cobham.sndBlock (Cobham.fstBlock z) ++ [true]
+  pairSnd (pairFst z) ++ pairSnd (pairFst z) ++ [true]
 
 theorem binDbl_mem_FP : binDbl ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact Cobham.appendFn_mem_FP h h
 
 theorem binDblOne_mem_FP : binDblOne ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact Cobham.appendFn_mem_FP (Cobham.appendFn_mem_FP h h) (constFn_mem_FP [true])
 
 /-- **The value of a bit string, in unary**, computed on `pair anything bits`. -/
 def unaryVal (p : Polynomial ℕ) (z : List Bool) : List Bool :=
-  Cobham.recFoldClamp binDbl binDblOne (p.eval z.length) [] (Cobham.fstBlock z)
-    (Cobham.sndBlock z)
+  Cobham.recFoldClamp binDbl binDblOne (p.eval z.length) [] (pairFst z)
+    (pairSnd z)
 
 theorem unaryVal_mem_FP (p : Polynomial ℕ) : unaryVal p ∈ FP :=
   Cobham.recFoldClamp_mem_FP binDbl_mem_FP binDblOne_mem_FP (constFn_mem_FP []) p
@@ -88,10 +88,10 @@ theorem recFoldClamp_binValLE (bound : ℕ) (W : List Bool) :
         have : (b :: l).length = l.length + 1 := by simp
         omega
       rw [Cobham.recFoldClamp, ih hb']
-      have hstate : Cobham.sndBlock (Cobham.fstBlock
+      have hstate : pairSnd (pairFst
           (pair (pair W (List.replicate (binValLE l) true)) l))
           = List.replicate (binValLE l) true := by
-        rw [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+        rw [pairFst_pair, pairSnd_pair]
       cases b with
       | false =>
           show (binDbl _).take bound = _
@@ -112,8 +112,8 @@ theorem recFoldClamp_binValLE (bound : ℕ) (W : List Bool) :
 
 /-- **The conversion is exact** when the clamp is wide enough for the value. -/
 theorem unaryVal_eq {p : Polynomial ℕ} {z : List Bool}
-    (h : 2 ^ (Cobham.sndBlock z).length ≤ p.eval z.length) :
-    unaryVal p z = List.replicate (binValLE (Cobham.sndBlock z)) true :=
+    (h : 2 ^ (pairSnd z).length ≤ p.eval z.length) :
+    unaryVal p z = List.replicate (binValLE (pairSnd z)) true :=
   recFoldClamp_binValLE _ _ _ h
 
 end Complexity

@@ -34,25 +34,25 @@ reaches the divisor. The state is `pair (pair quotient remainder) divisor`. -/
 def dmStep (st : List Bool) : List Bool :=
   pair (pair
       (Cobham.selectHead
-        (Cobham.lenEqFlag (true :: Cobham.sndBlock (Cobham.fstBlock st)) (Cobham.sndBlock st))
-        (true :: Cobham.fstBlock (Cobham.fstBlock st))
-        (Cobham.fstBlock (Cobham.fstBlock st)))
+        (Cobham.lenEqFlag (true :: pairSnd (pairFst st)) (pairSnd st))
+        (true :: pairFst (pairFst st))
+        (pairFst (pairFst st)))
       (Cobham.selectHead
-        (Cobham.lenEqFlag (true :: Cobham.sndBlock (Cobham.fstBlock st)) (Cobham.sndBlock st))
-        [] (true :: Cobham.sndBlock (Cobham.fstBlock st))))
-    (Cobham.sndBlock st)
+        (Cobham.lenEqFlag (true :: pairSnd (pairFst st)) (pairSnd st))
+        [] (true :: pairSnd (pairFst st))))
+    (pairSnd st)
 
 theorem dmStep_mem_FP : dmStep ∈ FP := by
-  have hq : (fun st : List Bool => Cobham.fstBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hq : (fun st : List Bool => pairFst (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
-  have hr : (fun st : List Bool => Cobham.sndBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hr : (fun st : List Bool => pairSnd (pairFst st)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
-  have hb : (fun st : List Bool => Cobham.sndBlock st) ∈ FP := Cobham.sndBlock_mem_FP
-  have hr' : (fun st : List Bool => true :: Cobham.sndBlock (Cobham.fstBlock st)) ∈ FP :=
+  have hb : (fun st : List Bool => pairSnd st) ∈ FP := Cobham.sndBlock_mem_FP
+  have hr' : (fun st : List Bool => true :: pairSnd (pairFst st)) ∈ FP :=
     mem_FP_comp hr (Cobham.cons_mem_FP true)
   have hflag : (fun st : List Bool =>
-      Cobham.lenEqFlag (true :: Cobham.sndBlock (Cobham.fstBlock st))
-        (Cobham.sndBlock st)) ∈ FP := by
+      Cobham.lenEqFlag (true :: pairSnd (pairFst st))
+        (pairSnd st)) ∈ FP := by
     exact andBitFn_mem_FP (lenLeFlagFn_mem_FP hr' hb) (lenLeFlagFn_mem_FP hb hr')
   exact Cobham.pairFn_mem_FP
     (Cobham.pairFn_mem_FP
@@ -68,8 +68,8 @@ theorem dmStep_iterate {B : List Bool} (hb : 0 < B.length) :
   induction a with
   | zero => simp
   | succ a ih =>
-      rw [Function.iterate_succ_apply', ih, dmStep, Cobham.sndBlock_pair,
-        Cobham.fstBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+      rw [Function.iterate_succ_apply', ih, dmStep, pairSnd_pair,
+        pairFst_pair, pairFst_pair, pairSnd_pair]
       set b := B.length with hbdef
       have hlen : (true :: List.replicate (a % b) true).length = a % b + 1 := by simp
       have hmod : a % b < b := Nat.mod_lt _ hb
@@ -118,11 +118,11 @@ theorem length_selectHead_le (s x y : List Bool) :
 theorem dmStep_one (q r b : List Bool) :
     ∃ q' r', dmStep (pair (pair q r) b) = pair (pair q' r') b
       ∧ q'.length ≤ q.length + 1 ∧ r'.length ≤ r.length + 1 := by
-  have hq : Cobham.fstBlock (Cobham.fstBlock (pair (pair q r) b)) = q := by
-    rw [Cobham.fstBlock_pair, Cobham.fstBlock_pair]
-  have hr : Cobham.sndBlock (Cobham.fstBlock (pair (pair q r) b)) = r := by
-    rw [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
-  have hb : Cobham.sndBlock (pair (pair q r) b) = b := Cobham.sndBlock_pair _ _
+  have hq : pairFst (pairFst (pair (pair q r) b)) = q := by
+    rw [pairFst_pair, pairFst_pair]
+  have hr : pairSnd (pairFst (pair (pair q r) b)) = r := by
+    rw [pairFst_pair, pairSnd_pair]
+  have hb : pairSnd (pair (pair q r) b) = b := pairSnd_pair _ _
   rw [dmStep, hq, hr, hb]
   refine ⟨_, _, rfl, ?_, ?_⟩
   · refine le_trans (length_selectHead_le _ _ _) ?_
@@ -150,11 +150,11 @@ noncomputable def dmRun (b s : List Bool) : List Bool :=
 
 /-- The quotient of a length by a fixed divisor, in unary. -/
 noncomputable def divFn (b s : List Bool) : List Bool :=
-  Cobham.fstBlock (Cobham.fstBlock (dmRun b s))
+  pairFst (pairFst (dmRun b s))
 
 /-- The remainder of a length by a fixed divisor, in unary. -/
 noncomputable def modFn (b s : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock (dmRun b s))
+  pairSnd (pairFst (dmRun b s))
 
 theorem dmRun_mem_FP (b : List Bool) : dmRun b ∈ FP := by
   have hinit : (fun _ : List Bool => pair (pair [] []) b) ∈ FP := constFn_mem_FP _
@@ -185,49 +185,49 @@ theorem modFn_mem_FP (b : List Bool) : modFn b ∈ FP := by
 
 theorem divFn_eq {b : List Bool} (hb : 0 < b.length) (s : List Bool) :
     divFn b s = List.replicate (s.length / b.length) true := by
-  rw [divFn, dmRun, dmStep_iterate hb s.length, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+  rw [divFn, dmRun, dmStep_iterate hb s.length, pairFst_pair, pairFst_pair]
 
 theorem modFn_eq {b : List Bool} (hb : 0 < b.length) (s : List Bool) :
     modFn b s = List.replicate (s.length % b.length) true := by
-  rw [modFn, dmRun, dmStep_iterate hb s.length, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  rw [modFn, dmRun, dmStep_iterate hb s.length, pairFst_pair, pairSnd_pair]
 
 /-! ### Dividing by a length read from the input -/
 
-theorem fstBlock_len_le (z : List Bool) : (Cobham.fstBlock z).length ≤ z.length := by
-  induction z using Cobham.fstBlock.induct <;> simp [Cobham.fstBlock] <;> omega
+theorem fstBlock_len_le (z : List Bool) : (pairFst z).length ≤ z.length := by
+  induction z using pairFst.induct <;> simp [pairFst] <;> omega
 
-theorem sndBlock_len_le (z : List Bool) : (Cobham.sndBlock z).length ≤ z.length := by
+theorem sndBlock_len_le (z : List Bool) : (pairSnd z).length ≤ z.length := by
   rcases hu : unpair? z with _ | ⟨p, q⟩
-  · rw [show Cobham.sndBlock z = [] from by rw [Cobham.sndBlock, hu]]
+  · rw [show pairSnd z = [] from by rw [pairSnd, hu]]
     simp
   · have hz : z = pair p q := unpair?_eq_some_iff.mp hu
-    rw [show Cobham.sndBlock z = q from by rw [Cobham.sndBlock, hu], hz, pair_length]
+    rw [show pairSnd z = q from by rw [pairSnd, hu], hz, pair_length]
     omega
 
 /-- The counting run with the divisor read from the argument: `pair b s`. -/
 noncomputable def dmRun2 (z : List Bool) : List Bool :=
-  dmStep^[(Cobham.sndBlock z).length] (pair (pair [] []) (Cobham.fstBlock z))
+  dmStep^[(pairSnd z).length] (pair (pair [] []) (pairFst z))
 
 /-- The quotient of one length by another, in unary. -/
 noncomputable def divFn2 (z : List Bool) : List Bool :=
-  Cobham.fstBlock (Cobham.fstBlock (dmRun2 z))
+  pairFst (pairFst (dmRun2 z))
 
 /-- The remainder of one length by another, in unary. -/
 noncomputable def modFn2 (z : List Bool) : List Bool :=
-  Cobham.sndBlock (Cobham.fstBlock (dmRun2 z))
+  pairSnd (pairFst (dmRun2 z))
 
 theorem dmRun2_mem_FP : dmRun2 ∈ FP := by
-  have hinit : (fun z : List Bool => pair (pair [] []) (Cobham.fstBlock z)) ∈ FP :=
+  have hinit : (fun z : List Bool => pair (pair [] []) (pairFst z)) ∈ FP :=
     Cobham.pairFn_mem_FP (constFn_mem_FP (pair [] [])) Cobham.fstBlock_mem_FP
   have hwidth : (fun z : List Bool => polyRuler (Polynomial.C 7 * Polynomial.X
       + Polynomial.C 6) (id z)) ∈ FP := polyRulerFn_mem_FP _ id_mem_FP
-  have hbound : ∀ z : List Bool, ∀ k ≤ (Cobham.sndBlock z).length,
-      (dmStep^[k] (pair (pair [] []) (Cobham.fstBlock z))).length
+  have hbound : ∀ z : List Bool, ∀ k ≤ (pairSnd z).length,
+      (dmStep^[k] (pair (pair [] []) (pairFst z))).length
         ≤ (polyRuler (Polynomial.C 7 * Polynomial.X + Polynomial.C 6) (id z)).length := by
     intro z k hk
-    obtain ⟨q', r', h1, hq, hr⟩ := dmStep_shape k [] [] (Cobham.fstBlock z)
-    have hf : (Cobham.fstBlock z).length ≤ z.length := fstBlock_len_le z
-    have hs : (Cobham.sndBlock z).length ≤ z.length := sndBlock_len_le z
+    obtain ⟨q', r', h1, hq, hr⟩ := dmStep_shape k [] [] (pairFst z)
+    have hf : (pairFst z).length ≤ z.length := fstBlock_len_le z
+    have hs : (pairSnd z).length ≤ z.length := sndBlock_len_le z
     rw [h1, pair_length, pair_length, polyRuler_length]
     simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_C,
       Polynomial.eval_X, id, List.length_nil, Nat.zero_add] at *
@@ -247,13 +247,13 @@ theorem modFn2_mem_FP : modFn2 ∈ FP := by
 
 theorem divFn2_eq {b : List Bool} (hb : 0 < b.length) (s : List Bool) :
     divFn2 (pair b s) = List.replicate (s.length / b.length) true := by
-  rw [divFn2, dmRun2, Cobham.sndBlock_pair, Cobham.fstBlock_pair, dmStep_iterate hb s.length,
-    Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+  rw [divFn2, dmRun2, pairSnd_pair, pairFst_pair, dmStep_iterate hb s.length,
+    pairFst_pair, pairFst_pair]
 
 theorem modFn2_eq {b : List Bool} (hb : 0 < b.length) (s : List Bool) :
     modFn2 (pair b s) = List.replicate (s.length % b.length) true := by
-  rw [modFn2, dmRun2, Cobham.sndBlock_pair, Cobham.fstBlock_pair, dmStep_iterate hb s.length,
-    Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  rw [modFn2, dmRun2, pairSnd_pair, pairFst_pair, dmStep_iterate hb s.length,
+    pairFst_pair, pairSnd_pair]
 
 /-- **Halving a length**, in unary. -/
 noncomputable def halfFn (s : List Bool) : List Bool := divFn [false, false] s

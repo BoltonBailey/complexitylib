@@ -42,21 +42,21 @@ def rulerLen : ℕ → ℕ
 /-- One step of the ruler fold, on `pair (pair W acc) t` where `acc` is
 `pair ruler threshold`: on reaching the threshold, add a mark and double. -/
 noncomputable def logStep (z : List Bool) : List Bool :=
-  ifLtLen (Cobham.sndBlock z) (dropOne (Cobham.sndBlock (Cobham.sndBlock
-      (Cobham.fstBlock z))))
-    (Cobham.sndBlock (Cobham.fstBlock z))
-    (pair (Cobham.fstBlock (Cobham.sndBlock (Cobham.fstBlock z)) ++ [true])
-      (Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock z))
-        ++ Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock z))))
+  ifLtLen (pairSnd z) (dropOne (pairSnd (pairSnd
+      (pairFst z))))
+    (pairSnd (pairFst z))
+    (pair (pairFst (pairSnd (pairFst z)) ++ [true])
+      (pairSnd (pairSnd (pairFst z))
+        ++ pairSnd (pairSnd (pairFst z))))
 
 theorem logStep_mem_FP : logStep ∈ FP := by
-  have hacc : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hacc : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   have hr : (fun z : List Bool =>
-      Cobham.fstBlock (Cobham.sndBlock (Cobham.fstBlock z))) ∈ FP :=
+      pairFst (pairSnd (pairFst z))) ∈ FP :=
     mem_FP_comp hacc Cobham.fstBlock_mem_FP
   have hth : (fun z : List Bool =>
-      Cobham.sndBlock (Cobham.sndBlock (Cobham.fstBlock z))) ∈ FP :=
+      pairSnd (pairSnd (pairFst z))) ∈ FP :=
     mem_FP_comp hacc Cobham.sndBlock_mem_FP
   exact ifLtLen_mem_FP Cobham.sndBlock_mem_FP (dropOneFn_mem_FP hth) hacc
     (Cobham.pairFn_mem_FP (Cobham.appendFn_mem_FP hr (constFn_mem_FP [true]))
@@ -178,7 +178,7 @@ theorem logFold_eq (bound : ℕ) : ∀ z : List Bool, 4 * z.length + 4 ≤ bound
       rw [Cobham.recFoldClamp]
       simp only [Bool.cond_self]
       rw [ih hbt, logStep]
-      simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, dropOne]
+      simp only [pairFst_pair, pairSnd_pair, dropOne]
       have hb' : 4 * t.length + 8 ≤ bound := by simp at hb; omega
       by_cases h : t.length < 2 ^ rulerLen t.length - 1
       · rw [ifLtLen_pos (by simpa using h), List.length_cons,
@@ -207,7 +207,7 @@ theorem logFold_eq (bound : ℕ) : ∀ z : List Bool, 4 * z.length + 4 ≤ bound
 /-- The fold itself, on `pair W z`. -/
 noncomputable def logRulerRaw (w : List Bool) : List Bool :=
   Cobham.recFoldClamp logStep logStep (4 * w.length + 4) (pair [] [true])
-    (Cobham.fstBlock w) (Cobham.sndBlock w)
+    (pairFst w) (pairSnd w)
 
 theorem logRulerRaw_mem_FP : logRulerRaw ∈ FP := by
   refine mem_FP_of_eq (Cobham.recFoldClamp_mem_FP logStep_mem_FP logStep_mem_FP
@@ -217,7 +217,7 @@ theorem logRulerRaw_mem_FP : logRulerRaw ∈ FP := by
 
 /-- **A ruler of logarithmic length.** -/
 noncomputable def logRuler (z : List Bool) : List Bool :=
-  Cobham.fstBlock (logRulerRaw (pair [] z))
+  pairFst (logRulerRaw (pair [] z))
 
 theorem logRuler_mem_FP : logRuler ∈ FP :=
   mem_FP_of_eq (mem_FP_comp (Cobham.pairFn_mem_FP (constFn_mem_FP []) id_mem_FP)
@@ -226,8 +226,8 @@ theorem logRuler_mem_FP : logRuler ∈ FP :=
 /-- **The ruler is as long as the fold says.** -/
 theorem logRuler_eq (z : List Bool) :
     logRuler z = List.replicate (rulerLen z.length) true := by
-  rw [logRuler, logRulerRaw, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
-    logFold_eq _ z (by rw [pair_length]; simp), Cobham.fstBlock_pair]
+  rw [logRuler, logRulerRaw, pairFst_pair, pairSnd_pair,
+    logFold_eq _ z (by rw [pair_length]; simp), pairFst_pair]
 
 @[simp] theorem length_logRuler (z : List Bool) :
     (logRuler z).length = rulerLen z.length := by

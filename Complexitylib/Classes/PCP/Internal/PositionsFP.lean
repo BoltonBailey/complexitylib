@@ -28,8 +28,8 @@ the width bound for `natEncodeFn`.
 
 namespace Complexity
 
-theorem fstBlock_length_le (z : List Bool) : (Cobham.fstBlock z).length ≤ z.length := by
-  induction z using Cobham.fstBlock.induct <;> simp [Cobham.fstBlock] <;> omega
+theorem fstBlock_length_le (z : List Bool) : (pairFst z).length ≤ z.length := by
+  induction z using pairFst.induct <;> simp [pairFst] <;> omega
 
 /-- The encoding of one position, read off a packed argument. -/
 noncomputable def posEntryFn (P : List Bool → List Bool) (w : List Bool) : List Bool :=
@@ -42,8 +42,8 @@ theorem posEntryFn_mem_FP {P : List Bool → List Bool} (hP : P ∈ FP) :
 
 theorem posEntryFn_eq {P : List Bool → List Bool} (w : List Bool) :
     posEntryFn P w = DataEncode.bitstringEncode ((P w).length) := by
-  rw [posEntryFn, natEncodeFn_eq, Cobham.sndBlock_pair]
-  rw [Cobham.sndBlock_pair, Cobham.fstBlock_pair]
+  rw [posEntryFn, natEncodeFn_eq, pairSnd_pair]
+  rw [pairSnd_pair, pairFst_pair]
   exact Nat.lt_two_pow_self
 
 /-- **A unary position rule gives the query list.** If the number of queries and
@@ -68,20 +68,20 @@ theorem positions_mem_of_unary {pos : List Bool → ℕ → ℕ} {cnt : List Boo
   set p : Polynomial ℕ :=
     Polynomial.C 4 * Polynomial.X * (pE.comp (Polynomial.C 3 * Polynomial.X + Polynomial.C 2))
       + Polynomial.C 3 * Polynomial.X + Polynomial.C 6 with hp
-  have hbound : ∀ z' : List Bool, ∀ k ≤ (Cobham.fstBlock z').length,
-      ((listStep E)^[k] (pair (pair [] []) (Cobham.sndBlock z'))).length
+  have hbound : ∀ z' : List Bool, ∀ k ≤ (pairFst z').length,
+      ((listStep E)^[k] (pair (pair [] []) (pairSnd z'))).length
         ≤ p.eval z'.length := by
     intro z' k hk
-    have hx : (Cobham.sndBlock z').length ≤ z'.length := sndBlock_length_le z'
-    have hf : (Cobham.fstBlock z').length ≤ z'.length := fstBlock_length_le z'
-    have hb : ∀ i < k, (E (pair (Cobham.sndBlock z') (List.replicate i true))).length
+    have hx : (pairSnd z').length ≤ z'.length := sndBlock_length_le z'
+    have hf : (pairFst z').length ≤ z'.length := fstBlock_length_le z'
+    have hb : ∀ i < k, (E (pair (pairSnd z') (List.replicate i true))).length
         ≤ pE.eval (3 * z'.length + 2) := by
       intro i hi
       refine le_trans (hpE _) ?_
       refine polynomial_eval_mono_nat pE ?_
       rw [pair_length, List.length_replicate]
       omega
-    have hcat := length_entryCat_le E (Cobham.sndBlock z') _ k hb
+    have hcat := length_entryCat_le E (pairSnd z') _ k hb
     rw [listStep_iterate, pair_length, pair_length, List.length_replicate]
     have hpe : p.eval z'.length
         = 4 * z'.length * (pE.eval (3 * z'.length + 2)) + 3 * z'.length + 6 := by
@@ -91,7 +91,7 @@ theorem positions_mem_of_unary {pos : List Bool → ℕ → ℕ} {cnt : List Boo
     have hkz : k ≤ z'.length := le_trans hk hf
     have hmul : k * pE.eval (3 * z'.length + 2)
         ≤ z'.length * pE.eval (3 * z'.length + 2) := Nat.mul_le_mul_right _ hkz
-    have hcat' : (entryCat E (Cobham.sndBlock z') k).length
+    have hcat' : (entryCat E (pairSnd z') k).length
         ≤ z'.length * pE.eval (3 * z'.length + 2) := le_trans hcat hmul
     rw [show 4 * z'.length * pE.eval (3 * z'.length + 2)
         = 4 * (z'.length * pE.eval (3 * z'.length + 2)) from by ring]
@@ -103,9 +103,9 @@ theorem positions_mem_of_unary {pos : List Bool → ℕ → ℕ} {cnt : List Boo
     simpa using this
   · intro z
     refine listEncFn_eq_bitstringEncode _ ?_ ?_
-    · rw [Cobham.fstBlock_pair, List.length_replicate, List.length_map, List.length_range]
+    · rw [pairFst_pair, List.length_replicate, List.length_map, List.length_range]
     · intro i hi
-      rw [Cobham.sndBlock_pair, hEspec]
+      rw [pairSnd_pair, hEspec]
       congr 1
       rw [List.getElem_map, List.getElem_range]
 

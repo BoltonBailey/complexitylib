@@ -139,7 +139,7 @@ private noncomputable def inputVerifier (L : Language) (hL : L ∈ P) : PCPVerif
   positions_mem :=
     ⟨fun _ => DataEncode.bitstringEncode ([] : List ℕ),
       constFn_mem_FP _, fun _ _ => rfl⟩
-  verdict := (fun z => Cobham.fstBlock (Cobham.fstBlock z)) ⁻¹' L
+  verdict := (fun z => pairFst (pairFst z)) ⁻¹' L
   verdict_mem := by
     refine mem_P_preimage ?_ hL
     exact mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP

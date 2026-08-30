@@ -89,29 +89,29 @@ theorem padWith_mem_FP (p : Polynomial ℕ) : padWith p ∈ FP := by
 /-- The verifier for the padded language: run the original verifier on the
 unpadded input, and check that the padding really is long enough. -/
 noncomputable def padVerifier (p : Polynomial ℕ) (L₀ : Language) : Language :=
-  {w | pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w) ∈ L₀ ∧
-    (polyRuler p (Cobham.fstBlock (Cobham.fstBlock w))).length
-      ≤ (Cobham.sndBlock (Cobham.fstBlock w)).length}
+  {w | pair (pairFst (pairFst w)) (pairSnd w) ∈ L₀ ∧
+    (polyRuler p (pairFst (pairFst w))).length
+      ≤ (pairSnd (pairFst w)).length}
 
 theorem padVerifier_mem_P {p : Polynomial ℕ} {L₀ : Language} (hL₀ : L₀ ∈ P) :
     padVerifier p L₀ ∈ P := by
-  have hff : (fun w : List Bool => Cobham.fstBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hff : (fun w : List Bool => pairFst (pairFst w)) ∈ FP :=
     fstBlockOf_mem_FP Cobham.fstBlock_mem_FP
-  have hsf : (fun w : List Bool => Cobham.sndBlock (Cobham.fstBlock w)) ∈ FP :=
+  have hsf : (fun w : List Bool => pairSnd (pairFst w)) ∈ FP :=
     sndBlockOf_mem_FP Cobham.fstBlock_mem_FP
   have hA : (fun w : List Bool =>
-      pair (Cobham.fstBlock (Cobham.fstBlock w)) (Cobham.sndBlock w)) ⁻¹' L₀ ∈ P :=
+      pair (pairFst (pairFst w)) (pairSnd w)) ⁻¹' L₀ ∈ P :=
     mem_P_preimage (Cobham.pairFn_mem_FP hff Cobham.sndBlock_mem_FP) hL₀
   have hruler : (fun w : List Bool =>
-      polyRuler p (Cobham.fstBlock (Cobham.fstBlock w))) ∈ FP :=
+      polyRuler p (pairFst (pairFst w))) ∈ FP :=
     polyRulerFn_mem_FP p hff
   have hB : {w : List Bool |
-      (polyRuler p (Cobham.fstBlock (Cobham.fstBlock w))).length
-        ≤ (Cobham.sndBlock (Cobham.fstBlock w)).length} ∈ P := by
+      (polyRuler p (pairFst (pairFst w))).length
+        ≤ (pairSnd (pairFst w)).length} ∈ P := by
     refine mem_P_of_decisionFn (lenLeFlagFn_mem_FP hsf hruler) fun w => ?_
     simp only [Set.mem_setOf_eq]
-    set a := Cobham.sndBlock (Cobham.fstBlock w) with ha
-    set b := polyRuler p (Cobham.fstBlock (Cobham.fstBlock w)) with hb
+    set a := pairSnd (pairFst w) with ha
+    set b := polyRuler p (pairFst (pairFst w)) with hb
     constructor
     · intro hle
       rw [(Cobham.lenLeFlag_eq_true_iff a b).mpr hle]
@@ -149,12 +149,12 @@ theorem mem_NP_of_poly_witness {L L₀ : Language} (p : Polynomial ℕ) (hL₀ :
       · have := hbal x y hy
         rw [padWith, pair_length, polyRuler_length]
         omega
-      · rw [padWith, Cobham.sndBlock_pair, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+      · rw [padWith, pairSnd_pair, pairFst_pair, pairFst_pair]
         exact hy
-      · rw [padWith, Cobham.fstBlock_pair, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+      · rw [padWith, pairFst_pair, pairFst_pair, pairSnd_pair]
     · rintro ⟨y, _, hmem, _⟩
       refine ⟨y, ?_⟩
-      rw [padWith, Cobham.sndBlock_pair, Cobham.fstBlock_pair, Cobham.fstBlock_pair] at hmem
+      rw [padWith, pairSnd_pair, pairFst_pair, pairFst_pair] at hmem
       exact hmem
   rw [hpre]
   exact mem_NP_preimage (padWith_mem_FP p) (padLang_mem_NP hL₀)

@@ -125,9 +125,9 @@ split the dart into a slot and a step, lift the vertex into the tower member,
 look the step up in that member's table, and fold the answer back onto `n`
 vertices. Darts past the fold's degree are self-loops. -/
 noncomputable def famRotFn (z : List Bool) : List Bool :=
-  let n := Cobham.fstBlock z
-  let v := Cobham.fstBlock (Cobham.sndBlock z)
-  let i := Cobham.sndBlock (Cobham.sndBlock z)
+  let n := pairFst z
+  let v := pairFst (pairSnd z)
+  let i := pairSnd (pairSnd z)
   let N := sizeFn (F.deg ^ 4) p n
   let T := F.famTableFn p n
   let m := divFn2 (pair n N) ++ [true]
@@ -144,14 +144,14 @@ noncomputable def famRotFn (z : List Bool) : List Bool :=
     (pair (marks v) (marks i))
 
 theorem famRotFn_mem_FP : F.famRotFn p ∈ FP := by
-  have hn : (fun z : List Bool => Cobham.fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hv : (fun z : List Bool => Cobham.fstBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hn : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hv : (fun z : List Bool => pairFst (pairSnd z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp Cobham.sndBlock_mem_FP Cobham.fstBlock_mem_FP) fun _ => rfl
-  have hi : (fun z : List Bool => Cobham.sndBlock (Cobham.sndBlock z)) ∈ FP :=
+  have hi : (fun z : List Bool => pairSnd (pairSnd z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp Cobham.sndBlock_mem_FP Cobham.sndBlock_mem_FP) fun _ => rfl
-  have hN : (fun z : List Bool => sizeFn (F.deg ^ 4) p (Cobham.fstBlock z)) ∈ FP :=
+  have hN : (fun z : List Bool => sizeFn (F.deg ^ 4) p (pairFst z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp hn (sizeFn_mem_FP _ p)) fun _ => rfl
-  have hT : (fun z : List Bool => F.famTableFn p (Cobham.fstBlock z)) ∈ FP :=
+  have hT : (fun z : List Bool => F.famTableFn p (pairFst z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp hn (F.famTableFn_mem_FP p)) fun _ => rfl
   have hm := Cobham.appendFn_mem_FP
     (mem_FP_of_eq (mem_FP_comp (Cobham.pairFn_mem_FP hn hN) divFn2_mem_FP) fun _ => rfl)
@@ -202,7 +202,7 @@ theorem famRotFn_eq (hd : 1 < F.deg) (n v i : ℕ) (hn : 0 < n)
     rw [List.length_append, List.length_replicate, length_mulLen, hs, hrep,
       List.length_replicate]
   rw [famRotFn, famRotVal]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   by_cases h1 : i < F.wid hd n * F.fitD
   · rw [if_pos h1, ifLtLen_pos (by
       rw [List.length_replicate, length_mulLen, hm, List.length_replicate]

@@ -85,12 +85,12 @@ theorem matrixVerdictOn_eq_true_iff (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x
 
 /-- The innermost predicate of the Lautemann characterization, as a language of
 encoded triples. The components are decoded with the polynomial-time payload
-scanners `Cobham.fstBlock` and `Cobham.sndBlock`, which recover them from a
+scanners `pairFst` and `pairSnd`, which recover them from a
 canonical pair; on malformed input the decoders return their partial reads, and
 the language's contents there are irrelevant to the `Σ₂` identity below. -/
 def matrixLang (tm : NTM k) (f : ℕ → ℕ) (b : Bool) : Language :=
-  {z | matrixPred tm f b (Cobham.fstBlock (Cobham.fstBlock z))
-    (Cobham.sndBlock (Cobham.fstBlock z)) (Cobham.sndBlock z)}
+  {z | matrixPred tm f b (pairFst (pairFst z))
+    (pairSnd (pairFst z)) (pairSnd z)}
 
 /-- Membership of an encoded triple in the matrix language. -/
 theorem mem_matrixLang_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :
@@ -103,8 +103,8 @@ polynomial-time obligation is about a *function*, which
 `Complexitylib.Classes.P.Cobham` can discharge inside Cobham's algebra without
 constructing a machine. -/
 noncomputable def matrixVerdict (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (z : List Bool) : Bool :=
-  matrixVerdictOn tm f b (Cobham.fstBlock (Cobham.fstBlock z))
-    (Cobham.sndBlock (Cobham.fstBlock z)) (Cobham.sndBlock z)
+  matrixVerdictOn tm f b (pairFst (pairFst z))
+    (pairSnd (pairFst z)) (pairSnd z)
 
 /-- The verdict function on an encoded triple. -/
 @[simp] theorem matrixVerdict_pair (tm : NTM k) (f : ℕ → ℕ) (b : Bool) (x w r : List Bool) :

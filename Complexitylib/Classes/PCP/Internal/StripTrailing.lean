@@ -89,21 +89,21 @@ theorem stripTrailing_eq_bits (l : List Bool) : stripTrailing l = (binValLE l).b
 
 /-- The fold step on a zero. -/
 def stripZero (z : List Bool) : List Bool :=
-  Cobham.selectHead (emptyFlag (Cobham.sndBlock (Cobham.fstBlock z))) []
-    (false :: Cobham.sndBlock (Cobham.fstBlock z))
+  Cobham.selectHead (emptyFlag (pairSnd (pairFst z))) []
+    (false :: pairSnd (pairFst z))
 
 /-- The fold step on a one. -/
 def stripOne (z : List Bool) : List Bool :=
-  true :: Cobham.sndBlock (Cobham.fstBlock z)
+  true :: pairSnd (pairFst z)
 
 theorem stripZero_mem_FP : stripZero ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact Cobham.selectHeadFn_mem_FP (emptyFlagFn_mem_FP h) (constFn_mem_FP [])
     (mem_FP_comp h (Cobham.cons_mem_FP false))
 
 theorem stripOne_mem_FP : stripOne ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact mem_FP_comp h (Cobham.cons_mem_FP true)
 
@@ -123,9 +123,9 @@ theorem recFoldClamp_stripTrailing (bound : ℕ) (W : List Bool) :
         simp only [List.length_cons] at hb
         omega
       rw [Cobham.recFoldClamp, ih hb']
-      have hstate : Cobham.sndBlock (Cobham.fstBlock
+      have hstate : pairSnd (pairFst
           (pair (pair W (stripTrailing t)) t)) = stripTrailing t := by
-        rw [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+        rw [pairFst_pair, pairSnd_pair]
       have hlt : (stripTrailing t).length ≤ t.length := length_stripTrailing t
       cases b
       · show (stripZero _).take bound = _
@@ -150,8 +150,8 @@ theorem recFoldClamp_stripTrailing (bound : ℕ) (W : List Bool) :
 
 /-- Dropping trailing zeros, on `pair anything bits`. -/
 def stripFn (z : List Bool) : List Bool :=
-  Cobham.recFoldClamp stripZero stripOne z.length [] (Cobham.fstBlock z)
-    (Cobham.sndBlock z)
+  Cobham.recFoldClamp stripZero stripOne z.length [] (pairFst z)
+    (pairSnd z)
 
 theorem stripFn_mem_FP : stripFn ∈ FP := by
   have := Cobham.recFoldClamp_mem_FP stripZero_mem_FP stripOne_mem_FP
@@ -161,7 +161,7 @@ theorem stripFn_mem_FP : stripFn ∈ FP := by
   simp
 
 theorem stripFn_eq (z : List Bool) :
-    stripFn z = stripTrailing (Cobham.sndBlock z) := by
+    stripFn z = stripTrailing (pairSnd z) := by
   refine recFoldClamp_stripTrailing _ _ _ ?_
   exact sndBlock_length_le z
 

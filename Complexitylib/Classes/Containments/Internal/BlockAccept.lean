@@ -58,18 +58,18 @@ def acceptPack (R ruler flag rest : List Bool) : List Bool :=
 
 /-- One step of the accept scan. -/
 noncomputable def acceptStep (k : ℕ) (qcode z : List Bool) : List Bool :=
-  pair (fstBlock z)
+  pair (pairFst z)
     (selectHead
-      (lenLeFlag (sndBlock (sndBlock z))
-        (wideRuler (codeBlocks k) (fstBlock (fstBlock z))))
+      (lenLeFlag (pairSnd (pairSnd z))
+        (wideRuler (codeBlocks k) (pairFst (pairFst z))))
       (pair
-        (orBit (fstBlock (sndBlock z))
-          (acceptFlag qcode (fstBlock (fstBlock z)) (sndBlock (fstBlock z))
-            ((sndBlock (sndBlock z)).take
-              (wideRuler (codeBlocks k) (fstBlock (fstBlock z))).length)))
-        ((sndBlock (sndBlock z)).drop
-          (wideRuler (codeBlocks k) (fstBlock (fstBlock z))).length))
-      (sndBlock z))
+        (orBit (pairFst (pairSnd z))
+          (acceptFlag qcode (pairFst (pairFst z)) (pairSnd (pairFst z))
+            ((pairSnd (pairSnd z)).take
+              (wideRuler (codeBlocks k) (pairFst (pairFst z))).length)))
+        ((pairSnd (pairSnd z)).drop
+          (wideRuler (codeBlocks k) (pairFst (pairFst z))).length))
+      (pairSnd z))
 
 /-- The unpacked step the packed one performs. -/
 noncomputable def acceptPairStep (k : ℕ) (qcode R ruler : List Bool) :
@@ -82,7 +82,7 @@ theorem acceptStep_pack (k : ℕ) (qcode R ruler flag rest : List Bool) :
       = acceptPack R ruler (acceptPairStep k qcode R ruler (flag, rest)).1
           (acceptPairStep k qcode R ruler (flag, rest)).2 := by
   rw [acceptStep, acceptPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   by_cases hle : (wideRuler (codeBlocks k) R).length ≤ rest.length
   · rw [acceptPairStep, anyStepPair_pos _ (acceptFlag qcode R ruler) (flag, rest) hle,
       Cobham.selectHead,
@@ -116,14 +116,14 @@ theorem acceptStep_iterate (k : ℕ) (qcode R ruler : List Bool)
 
 /-- Does any record of `V` pass the accepting test? -/
 noncomputable def acceptScan (k : ℕ) (qcode R ruler V : List Bool) : List Bool :=
-  fstBlock (sndBlock ((acceptStep k qcode)^[V.length] (acceptPack R ruler [false] V)))
+  pairFst (pairSnd ((acceptStep k qcode)^[V.length] (acceptPack R ruler [false] V)))
 
 theorem acceptScan_flag (k : ℕ) (qcode R ruler V : List Bool) :
     acceptScan k qcode R ruler V = [true] ∨ acceptScan k qcode R ruler V = [false] := by
   rw [acceptScan, show V = ((([false] : List Bool), V)).2 from rfl,
     show ([false] : List Bool) = ((([false] : List Bool), V)).1 from rfl,
     acceptStep_iterate, acceptPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   exact anyStepPair_flag _ (fun z => acceptFlag_flag qcode R ruler z) (Or.inr rfl) _
 
 /-- **The scan finds an accepting record exactly when there is one.** -/
@@ -139,7 +139,7 @@ theorem acceptScan_eq_true_iff (k : ℕ) (qcode R ruler V : List Bool)
   rw [acceptScan, show V = ((([false] : List Bool), V)).2 from rfl,
     show ([false] : List Bool) = ((([false] : List Bool), V)).1 from rfl,
     acceptStep_iterate, acceptPack]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   rw [acceptPairStep,
     anyStepPair_flag_eq_true_iff _ (fun z => acceptFlag_flag qcode R ruler z) _ (Or.inr rfl)]
   constructor
@@ -157,12 +157,12 @@ theorem acceptScan_eq_true_iff (k : ℕ) (qcode R ruler V : List Bool)
 theorem acceptStep_mem_FP (k : ℕ) (qcode : List Bool) : acceptStep k qcode ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -173,11 +173,11 @@ theorem acceptStep_mem_FP (k : ℕ) (qcode : List Bool) : acceptStep k qcode ∈
   have hflag := hfst htail
   have hrest := hsnd htail
   have hwide := wideRulerFn_mem_FP hR (codeBlocks k)
-  have htake : (fun z => (sndBlock (sndBlock z)).take
-      (wideRuler (codeBlocks k) (fstBlock (fstBlock z))).length) ∈ FP :=
+  have htake : (fun z => (pairSnd (pairSnd z)).take
+      (wideRuler (codeBlocks k) (pairFst (pairFst z))).length) ∈ FP :=
     Cobham.takeLenFn_mem_FP hwide hrest
-  have hdrop : (fun z => (sndBlock (sndBlock z)).drop
-      (wideRuler (codeBlocks k) (fstBlock (fstBlock z))).length) ∈ FP :=
+  have hdrop : (fun z => (pairSnd (pairSnd z)).drop
+      (wideRuler (codeBlocks k) (pairFst (pairFst z))).length) ∈ FP :=
     dropLenFn_mem_FP hwide hrest
   exact Cobham.pairFn_mem_FP hhead
     (Cobham.selectHeadFn_mem_FP (lenLeFlagFn_mem_FP hrest hwide)

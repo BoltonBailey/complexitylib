@@ -53,76 +53,76 @@ def mkF (lvl v a sum best body : List Bool) : List Bool :=
 @[simp] theorem mkF_eq (f : Frm) : mkF f.lvl f.v f.a f.sum f.best f.body = encFrm f := rfl
 
 /-- The done flag. -/
-def sDone (z : List Bool) : List Bool := fstBlock z
+def sDone (z : List Bool) : List Bool := pairFst z
 
 /-- The answer bit. -/
-def sAns (z : List Bool) : List Bool := fstBlock (sndBlock z)
+def sAns (z : List Bool) : List Bool := pairFst (pairSnd z)
 
 /-- The returning value. -/
-def sRet (z : List Bool) : List Bool := fstBlock (sndBlock (sndBlock z))
+def sRet (z : List Bool) : List Bool := pairFst (pairSnd (pairSnd z))
 
 /-- The stack. -/
-def sStk (z : List Bool) : List Bool := sndBlock (sndBlock (sndBlock z))
+def sStk (z : List Bool) : List Bool := pairSnd (pairSnd (pairSnd z))
 
 /-- A frame's level. -/
-def fLvl (y : List Bool) : List Bool := fstBlock y
+def fLvl (y : List Bool) : List Bool := pairFst y
 
 /-- A frame's verifier counter. -/
-def fV (y : List Bool) : List Bool := fstBlock (sndBlock y)
+def fV (y : List Bool) : List Bool := pairFst (pairSnd y)
 
 /-- A frame's prover counter, or its coin counter. -/
-def fA (y : List Bool) : List Bool := fstBlock (sndBlock (sndBlock y))
+def fA (y : List Bool) : List Bool := pairFst (pairSnd (pairSnd y))
 
 /-- A frame's running sum. -/
-def fSum (y : List Bool) : List Bool := fstBlock (sndBlock (sndBlock (sndBlock y)))
+def fSum (y : List Bool) : List Bool := pairFst (pairSnd (pairSnd (pairSnd y)))
 
 /-- A frame's running maximum. -/
-def fBest (y : List Bool) : List Bool := fstBlock (sndBlock (sndBlock (sndBlock (sndBlock y))))
+def fBest (y : List Bool) : List Bool := pairFst (pairSnd (pairSnd (pairSnd (pairSnd y))))
 
 /-- The body of the encoding of the rounds below a frame. -/
-def fBody (y : List Bool) : List Bool := sndBlock (sndBlock (sndBlock (sndBlock (sndBlock y))))
+def fBody (y : List Bool) : List Bool := pairSnd (pairSnd (pairSnd (pairSnd (pairSnd y))))
 
 /-- The frame on top of the stack. -/
-def sTop (S : List Bool) : List Bool := fstBlock S
+def sTop (S : List Bool) : List Bool := pairFst S
 
 /-- The stack below the top frame. -/
-def sRest (S : List Bool) : List Bool := sndBlock S
+def sRest (S : List Bool) : List Bool := pairSnd S
 
 @[simp] theorem sDone_enc (s : Sst) : sDone (encSst s) = [s.done] := by
-  rw [sDone, encSst, fstBlock_pair]
+  rw [sDone, encSst, pairFst_pair]
 
 @[simp] theorem sAns_enc (s : Sst) : sAns (encSst s) = [s.ansBit] := by
-  rw [sAns, encSst, sndBlock_pair, fstBlock_pair]
+  rw [sAns, encSst, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem sRet_enc (s : Sst) : sRet (encSst s) = encRet s.ret := by
-  rw [sRet, encSst, sndBlock_pair, sndBlock_pair, fstBlock_pair]
+  rw [sRet, encSst, pairSnd_pair, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem sStk_enc (s : Sst) : sStk (encSst s) = encStk s.stk := by
-  rw [sStk, encSst, sndBlock_pair, sndBlock_pair, sndBlock_pair]
+  rw [sStk, encSst, pairSnd_pair, pairSnd_pair, pairSnd_pair]
 
 @[simp] theorem fLvl_enc (f : Frm) : fLvl (encFrm f) = f.lvl := by
-  rw [fLvl, encFrm, fstBlock_pair]
+  rw [fLvl, encFrm, pairFst_pair]
 
 @[simp] theorem fV_enc (f : Frm) : fV (encFrm f) = f.v := by
-  rw [fV, encFrm, sndBlock_pair, fstBlock_pair]
+  rw [fV, encFrm, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem fA_enc (f : Frm) : fA (encFrm f) = f.a := by
-  rw [fA, encFrm, sndBlock_pair, sndBlock_pair, fstBlock_pair]
+  rw [fA, encFrm, pairSnd_pair, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem fSum_enc (f : Frm) : fSum (encFrm f) = f.sum := by
-  rw [fSum, encFrm, sndBlock_pair, sndBlock_pair, sndBlock_pair, fstBlock_pair]
+  rw [fSum, encFrm, pairSnd_pair, pairSnd_pair, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem fBest_enc (f : Frm) : fBest (encFrm f) = f.best := by
-  rw [fBest, encFrm, sndBlock_pair, sndBlock_pair, sndBlock_pair, sndBlock_pair, fstBlock_pair]
+  rw [fBest, encFrm, pairSnd_pair, pairSnd_pair, pairSnd_pair, pairSnd_pair, pairFst_pair]
 
 @[simp] theorem fBody_enc (f : Frm) : fBody (encFrm f) = f.body := by
-  rw [fBody, encFrm, sndBlock_pair, sndBlock_pair, sndBlock_pair, sndBlock_pair, sndBlock_pair]
+  rw [fBody, encFrm, pairSnd_pair, pairSnd_pair, pairSnd_pair, pairSnd_pair, pairSnd_pair]
 
 @[simp] theorem sTop_pair (y S : List Bool) : sTop (pair y S) = y := by
-  rw [sTop, fstBlock_pair]
+  rw [sTop, pairFst_pair]
 
 @[simp] theorem sRest_pair (y S : List Bool) : sRest (pair y S) = S := by
-  rw [sRest, sndBlock_pair]
+  rw [sRest, pairSnd_pair]
 
 theorem sTop_cons (f : Frm) (fs : List Frm) : sTop (encStk (f :: fs)) = encFrm f := by
   rw [encStk_cons, sTop_pair]
@@ -377,11 +377,11 @@ theorem ipStepFn_mem_FP {A B C : List Bool → List Bool}
     (hok : ∀ {u v : List Bool → List Bool}, u ∈ FP → v ∈ FP →
       (fun z => OK z (u z) (v z)) ∈ FP) :
     (fun z => ipStep (A z) (B z) (OK z) (C z)) ∈ FP := by
-  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => fstBlock (a z)) ∈ FP := by
+  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
-  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => sndBlock (a z)) ∈ FP := by
+  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this

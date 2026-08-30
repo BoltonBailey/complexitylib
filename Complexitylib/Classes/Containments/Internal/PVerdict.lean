@@ -151,11 +151,11 @@ end TM
 
 /-- The encoded step, carrying its ruler alongside the code. -/
 noncomputable def codeStep (tm : TM k) (w : List Bool) : List Bool :=
-  pair (fstBlock w) (stepFn tm (fstBlock w) (sndBlock w))
+  pair (pairFst w) (stepFn tm (pairFst w) (pairSnd w))
 
 theorem codeStep_pair (tm : TM k) (R z : List Bool) :
     codeStep tm (pair R z) = pair R (stepFn tm R z) := by
-  rw [codeStep, fstBlock_pair, sndBlock_pair]
+  rw [codeStep, pairFst_pair, pairSnd_pair]
 
 theorem codeStep_iterate (tm : TM k) (R z : List Bool) :
     ∀ n, (codeStep tm)^[n] (pair R z) = pair R ((stepFn tm R)^[n] z) := by
@@ -166,9 +166,9 @@ theorem codeStep_iterate (tm : TM k) (R z : List Bool) :
       rw [Function.iterate_succ_apply, codeStep_pair, ih, Function.iterate_succ_apply]
 
 theorem codeStep_mem_FP (tm : TM k) : codeStep tm ∈ FP := by
-  have hfst : (fun z : List Bool => fstBlock z) ∈ FP := Cobham.fstBlock_mem_FP
-  have hsnd : (fun z : List Bool => sndBlock z) ∈ FP := Cobham.sndBlock_mem_FP
-  have hstep : (fun w => stepFn tm (fstBlock w) (sndBlock w)) ∈ FP :=
+  have hfst : (fun z : List Bool => pairFst z) ∈ FP := Cobham.fstBlock_mem_FP
+  have hsnd : (fun z : List Bool => pairSnd z) ∈ FP := Cobham.sndBlock_mem_FP
+  have hstep : (fun w => stepFn tm (pairFst w) (pairSnd w)) ∈ FP :=
     binFn_mem_FP (g := stepFn tm)
       (Cobham.stepFn_mem tm (Cobham.proj 0) (Cobham.proj 1)) hfst hsnd
   exact Cobham.pairFn_mem_FP hfst hstep
@@ -234,7 +234,7 @@ theorem acceptFlag_cfgCode_tm (tm : TM k) (W : ℕ) (c : Cfg k tm.Q)
 noncomputable def pVerdict (tm : TM k) (wp tp : Polynomial ℕ) (x : List Bool) : List Bool :=
   acceptFlag (stateCode tm.qhalt) (polyRuler (2 * wp + 2) x)
     (wideRuler (codeBlocks k) (polyRuler (2 * wp + 2) x))
-    (sndBlock ((codeStep tm)^[(polyRuler tp x).length]
+    (pairSnd ((codeStep tm)^[(polyRuler tp x).length]
       (pair (polyRuler (2 * wp + 2) x)
         (Cobham.initFn tm (polyRuler (2 * wp + 2) x) x))))
 
@@ -261,10 +261,10 @@ theorem pVerdict_eq_true_iff (tm : TM k) {L : Language} (wp tp : Polynomial ℕ)
   obtain ⟨c, t, htT, hreach, hhalt, hone, hzero⟩ := hdec x
   have hrun : tm.runTo x (tp.eval x.length) = c :=
     TM.runTo_of_halted tm x hreach hhalt (by simpa using htT)
-  have hcode : sndBlock ((codeStep tm)^[(polyRuler tp x).length]
+  have hcode : pairSnd ((codeStep tm)^[(polyRuler tp x).length]
       (pair (polyRuler (2 * wp + 2) x) (Cobham.initFn tm (polyRuler (2 * wp + 2) x) x)))
       = Cobham.cfgCode W c := by
-    rw [codeStep_iterate, sndBlock_pair, polyRuler_length, hR,
+    rw [codeStep_iterate, pairSnd_pair, polyRuler_length, hR,
       runCode_eq tm W (hq x.length) x hxW _ (by omega), hrun]
   rw [pVerdict, hcode, hR,
     acceptFlag_cfgCode_tm tm W c (hq x.length)
@@ -331,7 +331,7 @@ theorem pVerdict_mem_FP (tm : TM k) (wp tp : Polynomial ℕ)
     rw [hRlen x] at this
     omega
   have hiter := Cobham.iterate_mem_FP (codeStep_mem_FP tm) hinit hruler hwidth hbound
-  have hcode : (fun x => sndBlock ((codeStep tm)^[(polyRuler tp x).length]
+  have hcode : (fun x => pairSnd ((codeStep tm)^[(polyRuler tp x).length]
       (pair (polyRuler (2 * wp + 2) x)
         (Cobham.initFn tm (polyRuler (2 * wp + 2) x) x)))) ∈ FP := by
     have := mem_FP_comp hiter Cobham.sndBlock_mem_FP

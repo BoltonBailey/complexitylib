@@ -23,7 +23,7 @@ polyExistsClass (PiP n)`, `PiP n = complClass (SigmaP n)`, and their union `PH`.
 The level inclusions `SigmaP n ⊆ SigmaP (n + 1)` and `PiP n ⊆ PiP (n + 1)` need
 one computational fact: decoding the first component of a canonical pair is
 polynomial-time computable. That is `pairFst_mem_FP`, which reuses the payload
-scanner `Cobham.fstBlock` of Cobham's algebra, so every result in this file is
+scanner `pairFst` of Cobham's algebra, so every result in this file is
 unconditional.
 
 ## Main definitions
@@ -146,17 +146,6 @@ theorem complClass_polyForallClass (C : Set Language) :
     exact ⟨p, L'ᶜ, hL', by rw [compl_polyExistsLang]⟩
 
 /-! ## The pair decoder seam -/
-
-/-- Decode the first component of a canonical pair. This is the payload scanner
-`Cobham.fstBlock` of Cobham's algebra: it reads doubled bits up to the
-separator, so on a canonical pair it returns the first component, and on
-malformed input it returns the bits decoded so far. Only its behaviour on
-canonical pairs is used. -/
-def pairFst (z : List Bool) : List Bool := Cobham.fstBlock z
-
-/-- `pairFst` recovers the first component of a canonical pair. -/
-@[simp] theorem pairFst_pair (x y : List Bool) : pairFst (pair x y) = x :=
-  Cobham.fstBlock_pair x y
 
 /-- **Decoding the first component is polynomial-time.** The scanner is one of
 the bespoke transducers of Cobham's soundness direction. -/

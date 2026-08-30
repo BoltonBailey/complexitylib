@@ -125,8 +125,8 @@ def chkStep (vf : List Bool → List Bool) :
     List Bool × List Bool × List Bool → List Bool × List Bool × List Bool :=
   fun s =>
     (s.1,
-      selectHead (emptyFlag s.2.2) s.2.1 (andBit s.2.1 (chkOneP vf s.1 (fstBlock s.2.2))),
-      selectHead (emptyFlag s.2.2) s.2.2 (sndBlock s.2.2))
+      selectHead (emptyFlag s.2.2) s.2.1 (andBit s.2.1 (chkOneP vf s.1 (pairFst s.2.2))),
+      selectHead (emptyFlag s.2.2) s.2.2 (pairSnd s.2.2))
 
 @[simp] theorem chkStep_nil (vf : List Bool → List Bool) (xu acc : List Bool) :
     chkStep vf (xu, acc, []) = (xu, acc, []) := by
@@ -138,7 +138,7 @@ theorem chkStep_cons (vf : List Bool → List Bool) (xu acc : List Bool) (g : IP
     chkStep vf (xu, acc, IPM.encStk (g :: gs))
       = (xu, andBit acc (chkOneP vf xu (IPM.encFrm g)), IPM.encStk gs) := by
   rw [chkStep, IPM.encStk_cons]
-  simp only [emptyFlag_pair, selectHead_cons_false, fstBlock_pair, sndBlock_pair]
+  simp only [emptyFlag_pair, selectHead_cons_false, pairFst_pair, pairSnd_pair]
 
 /-- The running flag after folding in a list of frames. -/
 def chkFold (vf : List Bool → List Bool) (xu : List Bool) :
@@ -178,12 +178,12 @@ theorem chkStep_iterate (vf : List Bool → List Bool) (xu : List Bool) :
 
 /-! ## The packed scan -/
 
-theorem sndBlock_length_le (z : List Bool) : (sndBlock z).length ≤ z.length := by
+theorem sndBlock_length_le (z : List Bool) : (pairSnd z).length ≤ z.length := by
   rcases hu : unpair? z with _ | ⟨p, q⟩
-  · rw [show sndBlock z = [] from by rw [sndBlock, hu]]
+  · rw [show pairSnd z = [] from by rw [pairSnd, hu]]
     simp
   · have hz : z = pair p q := unpair?_eq_some_iff.mp hu
-    rw [show sndBlock z = q from by rw [sndBlock, hu], hz, pair_length]
+    rw [show pairSnd z = q from by rw [pairSnd, hu], hz, pair_length]
     omega
 
 /-- The packed scan state: the verifier's fixed arguments, the running flag, and the chain of
@@ -197,20 +197,20 @@ def chkPack (xu acc S : List Bool) : List Bool := pair xu (pair acc S)
 
 /-- One step of the packed scan. -/
 def chkStepP (vf : List Bool → List Bool) (z : List Bool) : List Bool :=
-  pair (fstBlock z)
+  pair (pairFst z)
     (pair
-      (selectHead (emptyFlag (sndBlock (sndBlock z))) (fstBlock (sndBlock z))
-        (andBit (fstBlock (sndBlock z))
-          (chkOneP vf (fstBlock z) (fstBlock (sndBlock (sndBlock z))))))
-      (selectHead (emptyFlag (sndBlock (sndBlock z))) (sndBlock (sndBlock z))
-        (sndBlock (sndBlock (sndBlock z)))))
+      (selectHead (emptyFlag (pairSnd (pairSnd z))) (pairFst (pairSnd z))
+        (andBit (pairFst (pairSnd z))
+          (chkOneP vf (pairFst z) (pairFst (pairSnd (pairSnd z))))))
+      (selectHead (emptyFlag (pairSnd (pairSnd z))) (pairSnd (pairSnd z))
+        (pairSnd (pairSnd (pairSnd z)))))
 
 theorem chkStepP_pack (vf : List Bool → List Bool) (xu acc S : List Bool) :
     chkStepP vf (chkPack xu acc S)
       = chkPack (chkStep vf (xu, acc, S)).1 (chkStep vf (xu, acc, S)).2.1
           (chkStep vf (xu, acc, S)).2.2 := by
   rw [chkStepP, chkPack, chkStep, chkPack]
-  simp only [fstBlock_pair, sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
 
 theorem chkStepP_iterate (vf : List Bool → List Bool)
     (s : List Bool × List Bool × List Bool) (n : ℕ) :
@@ -237,7 +237,7 @@ theorem chkStep_iterate_length (vf : List Bool → List Bool) (xu acc S : List B
   | succ n ih =>
       rw [Function.iterate_succ_apply]
       have hacc : (selectHead (emptyFlag S) acc
-          (andBit acc (chkOneP vf xu (fstBlock S)))).length ≤ max acc.length 1 := by
+          (andBit acc (chkOneP vf xu (pairFst S)))).length ≤ max acc.length 1 := by
         rw [selectHead]
         split
         · exact le_max_left _ _
@@ -245,7 +245,7 @@ theorem chkStep_iterate_length (vf : List Bool → List Bool) (xu acc S : List B
           · rw [andBit_length_eq]
             exact le_max_right _ _
           · simp
-      have hS : (selectHead (emptyFlag S) S (sndBlock S)).length ≤ S.length := by
+      have hS : (selectHead (emptyFlag S) S (pairSnd S)).length ≤ S.length := by
         rw [selectHead]
         split
         · exact le_rfl
@@ -253,8 +253,8 @@ theorem chkStep_iterate_length (vf : List Bool → List Bool) (xu acc S : List B
           · exact sndBlock_length_le S
           · simp
       obtain ⟨h1, h2, h3⟩ := ih (selectHead (emptyFlag S) acc
-        (andBit acc (chkOneP vf xu (fstBlock S))))
-        (selectHead (emptyFlag S) S (sndBlock S))
+        (andBit acc (chkOneP vf xu (pairFst S))))
+        (selectHead (emptyFlag S) S (pairSnd S))
       refine ⟨h1, le_trans h2 ?_, le_trans h3 hS⟩
       have hchain := max_le_max_right (α := ℕ) 1 hacc
       omega
@@ -263,19 +263,19 @@ theorem chkStep_iterate_length (vf : List Bool → List Bool) (xu acc S : List B
 
 /-- The consistency flag, computed by running the scan against a ruler. -/
 def chkFlag (vf : List Bool → List Bool) (rr xu S : List Bool) : List Bool :=
-  fstBlock (sndBlock ((chkStepP vf)^[rr.length] (chkPack xu [true] S)))
+  pairFst (pairSnd ((chkStepP vf)^[rr.length] (chkPack xu [true] S)))
 
 theorem chkFlag_eq (vf : List Bool → List Bool) (rr : List Bool) (x u : List Bool)
     (fs : List IPM.Frm) (h : fs.length ≤ rr.length) :
     chkFlag vf rr (pair x u) (IPM.encStk fs) = [stkCheckB vf x u fs] := by
   rw [chkFlag, chkStepP_iterate_args, chkStep_iterate vf _ fs [true] rr.length h, chkPack]
-  simp only [sndBlock_pair, fstBlock_pair]
+  simp only [pairSnd_pair, pairFst_pair]
   rw [chkFold_flag vf x u fs true, Bool.true_and]
 
 /-- **The leaf test on the tape**: the transcript replays, and the verifier accepts. -/
 def okFn (vf vd : List Bool → List Bool) (rr x S u : List Bool) : List Bool :=
-  andBit (chkFlag vf rr (pair x u) (sndBlock S))
-    (vd (pair (pair x u) (false :: IPM.fBody (fstBlock S) ++ [true])))
+  andBit (chkFlag vf rr (pair x u) (pairSnd S))
+    (vd (pair (pair x u) (false :: IPM.fBody (pairFst S) ++ [true])))
 
 open Classical in
 /-- **The leaf test computes what the walk asks for.** -/
@@ -286,7 +286,7 @@ theorem okFn_eq (prot : Protocol) (vd : List Bool → List Bool)
     okFn prot.vmsg vd rr x (IPM.encStk (f :: fs)) u
       = [(prot.walkParams x).ok (IPM.roundsOf fs) u] := by
   classical
-  rw [okFn, IPM.encStk_cons, sndBlock_pair, fstBlock_pair,
+  rw [okFn, IPM.encStk_cons, pairSnd_pair, pairFst_pair,
     chkFlag_eq prot.vmsg rr x u fs hlen, IPM.fBody_enc, hvd, andBit_cons, hb.1,
     ← replay_eq_stkCheckB prot x u fs hb.2]
   show _ = [decide (prot.replay x u (IPM.roundsOf fs) [] = true ∧
@@ -298,11 +298,11 @@ theorem okFn_eq (prot : Protocol) (vd : List Bool → List Bool)
 theorem chkOnePFn_mem_FP {vf : List Bool → List Bool} (hvf : vf ∈ FP)
     {XU Y : List Bool → List Bool} (hxu : XU ∈ FP) (hy : Y ∈ FP) :
     (fun z => chkOneP vf (XU z) (Y z)) ∈ FP := by
-  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => fstBlock (a z)) ∈ FP := by
+  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
-  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => sndBlock (a z)) ∈ FP := by
+  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -319,11 +319,11 @@ theorem chkOnePFn_mem_FP {vf : List Bool → List Bool} (hvf : vf ∈ FP)
 
 theorem chkStepPFn_mem_FP {vf : List Bool → List Bool} (hvf : vf ∈ FP) : chkStepP vf ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
-  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => fstBlock (a z)) ∈ FP := by
+  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
-  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => sndBlock (a z)) ∈ FP := by
+  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -362,23 +362,23 @@ theorem chkFlagFn_mem_FP {vf : List Bool → List Bool} (hvf : vf ∈ FP)
 theorem okFnFn_mem_FP {vf vd : List Bool → List Bool} (hvf : vf ∈ FP) (hvd : vd ∈ FP)
     {R X S U : List Bool → List Bool} (hR : R ∈ FP) (hX : X ∈ FP) (hS : S ∈ FP)
     (hU : U ∈ FP) : (fun z => okFn vf vd (R z) (X z) (S z) (U z)) ∈ FP := by
-  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => sndBlock (a z)) ∈ FP := by
+  have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
-  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => fstBlock (a z)) ∈ FP := by
+  have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP → (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hxu : (fun z => pair (X z) (U z)) ∈ FP := Cobham.pairFn_mem_FP hX hU
-  have hBody : (fun z => IPM.fBody (fstBlock (S z))) ∈ FP :=
+  have hBody : (fun z => IPM.fBody (pairFst (S z))) ∈ FP :=
     hsnd (hsnd (hsnd (hsnd (hsnd (hfst hS)))))
-  have hcons : (fun z => false :: (IPM.fBody (fstBlock (S z)) ++ [true])) ∈ FP := by
+  have hcons : (fun z => false :: (IPM.fBody (pairFst (S z)) ++ [true])) ∈ FP := by
     have hcat := Cobham.appendFn_mem_FP hBody (constFn_mem_FP [true])
     have := mem_FP_comp hcat (Cobham.cons_mem_FP false)
     simpa [Function.comp] using this
   have hverd : (fun z => vd (pair (pair (X z) (U z))
-      (false :: (IPM.fBody (fstBlock (S z)) ++ [true])))) ∈ FP := by
+      (false :: (IPM.fBody (pairFst (S z)) ++ [true])))) ∈ FP := by
     have := mem_FP_comp (Cobham.pairFn_mem_FP hxu hcons) hvd
     simpa [Function.comp] using this
   exact andBitFn_mem_FP (chkFlagFn_mem_FP hvf hR hxu (hsnd hS)) hverd

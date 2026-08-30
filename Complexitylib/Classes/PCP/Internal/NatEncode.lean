@@ -67,19 +67,19 @@ theorem bitstringEncode_list (l : List Bool) :
 
 /-- The fold step on a zero. -/
 def blitZero (z : List Bool) : List Bool :=
-  [false, true] ++ Cobham.sndBlock (Cobham.fstBlock z)
+  [false, true] ++ pairSnd (pairFst z)
 
 /-- The fold step on a one. -/
 def blitOne (z : List Bool) : List Bool :=
-  [false, false, true, true] ++ Cobham.sndBlock (Cobham.fstBlock z)
+  [false, false, true, true] ++ pairSnd (pairFst z)
 
 theorem blitZero_mem_FP : blitZero ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact Cobham.appendFn_mem_FP (constFn_mem_FP [false, true]) h
 
 theorem blitOne_mem_FP : blitOne ∈ FP := by
-  have h : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have h : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP
   exact Cobham.appendFn_mem_FP (constFn_mem_FP [false, false, true, true]) h
 
@@ -107,9 +107,9 @@ theorem recFoldClamp_flatBits (bound : ℕ) (W : List Bool) :
         simp only [List.length_cons] at hb
         omega
       rw [Cobham.recFoldClamp, ih hb']
-      have hstate : Cobham.sndBlock (Cobham.fstBlock
+      have hstate : pairSnd (pairFst
           (pair (pair W (t.flatMap boolBits)) t)) = t.flatMap boolBits := by
-        rw [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+        rw [pairFst_pair, pairSnd_pair]
       have hlt := length_flatMap_boolBits t
       cases b
       · show (blitZero _).take bound = _
@@ -127,10 +127,10 @@ theorem recFoldClamp_flatBits (bound : ℕ) (W : List Bool) :
         simp only [List.length_cons, List.length_nil, List.length_cons] at hb ⊢
         omega
 
-/-- The cipher applied to `sndBlock z`. -/
+/-- The cipher applied to `pairSnd z`. -/
 def flatBitsFn (z : List Bool) : List Bool :=
-  Cobham.recFoldClamp blitZero blitOne (4 * z.length) [] (Cobham.fstBlock z)
-    (Cobham.sndBlock z)
+  Cobham.recFoldClamp blitZero blitOne (4 * z.length) [] (pairFst z)
+    (pairSnd z)
 
 theorem flatBitsFn_mem_FP : flatBitsFn ∈ FP := by
   have := Cobham.recFoldClamp_mem_FP blitZero_mem_FP blitOne_mem_FP
@@ -140,7 +140,7 @@ theorem flatBitsFn_mem_FP : flatBitsFn ∈ FP := by
   simp
 
 theorem flatBitsFn_eq (z : List Bool) :
-    flatBitsFn z = (Cobham.sndBlock z).flatMap boolBits := by
+    flatBitsFn z = (pairSnd z).flatMap boolBits := by
   refine recFoldClamp_flatBits _ _ _ ?_
   have := sndBlock_length_le z
   omega
@@ -156,7 +156,7 @@ theorem encodeListFn_mem_FP : encodeListFn ∈ FP := by
   simp
 
 theorem encodeListFn_eq (z : List Bool) :
-    encodeListFn z = DataEncode.bitstringEncode (Cobham.sndBlock z) := by
+    encodeListFn z = DataEncode.bitstringEncode (pairSnd z) := by
   rw [encodeListFn, flatBitsFn_eq, bitstringEncode_list]
 
 /-! ### A number's own encoding -/
@@ -165,24 +165,24 @@ theorem encodeListFn_eq (z : List Bool) :
 unary. -/
 noncomputable def natEncodeFn (z : List Bool) : List Bool :=
   encodeListFn (pair [] (stripFn (pair []
-    (coinStr (Cobham.fstBlock z).length (Cobham.sndBlock z).length))))
+    (coinStr (pairFst z).length (pairSnd z).length))))
 
 theorem natEncodeFn_mem_FP : natEncodeFn ∈ FP := by
   have hw : (fun z : List Bool =>
-      List.replicate (Cobham.fstBlock z).length true) ∈ FP := by
+      List.replicate (pairFst z).length true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP unaryLength_mem_FP
     simpa using this
   have hv : (fun z : List Bool =>
-      List.replicate (Cobham.sndBlock z).length true) ∈ FP := by
+      List.replicate (pairSnd z).length true) ∈ FP := by
     have := mem_FP_comp Cobham.sndBlock_mem_FP unaryLength_mem_FP
     simpa using this
   have hcoin := coinStr_mem_FP hw hv
-  have h1 : (fun z => pair [] (coinStr (Cobham.fstBlock z).length
-      (Cobham.sndBlock z).length)) ∈ FP :=
+  have h1 : (fun z => pair [] (coinStr (pairFst z).length
+      (pairSnd z).length)) ∈ FP :=
     Cobham.pairFn_mem_FP (constFn_mem_FP []) hcoin
   have h2 := mem_FP_comp h1 stripFn_mem_FP
   have h3 : (fun z => pair [] (stripFn (pair []
-      (coinStr (Cobham.fstBlock z).length (Cobham.sndBlock z).length)))) ∈ FP := by
+      (coinStr (pairFst z).length (pairSnd z).length)))) ∈ FP := by
     refine Cobham.pairFn_mem_FP (constFn_mem_FP []) ?_
     simpa using h2
   have := mem_FP_comp h3 encodeListFn_mem_FP
@@ -191,9 +191,9 @@ theorem natEncodeFn_mem_FP : natEncodeFn ∈ FP := by
 /-- **It really is the number's encoding**, whenever the width holds the
 value. -/
 theorem natEncodeFn_eq {z : List Bool}
-    (h : (Cobham.sndBlock z).length < 2 ^ (Cobham.fstBlock z).length) :
-    natEncodeFn z = DataEncode.bitstringEncode ((Cobham.sndBlock z).length) := by
-  rw [natEncodeFn, encodeListFn_eq, Cobham.sndBlock_pair, stripFn_eq, Cobham.sndBlock_pair,
+    (h : (pairSnd z).length < 2 ^ (pairFst z).length) :
+    natEncodeFn z = DataEncode.bitstringEncode ((pairSnd z).length) := by
+  rw [natEncodeFn, encodeListFn_eq, pairSnd_pair, stripFn_eq, pairSnd_pair,
     coinStr_eq h, stripTrailing_eq_bits, binValLE_bitsOfLenLE _ _ h]
   rfl
 

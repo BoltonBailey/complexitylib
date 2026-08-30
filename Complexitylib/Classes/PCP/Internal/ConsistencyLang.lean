@@ -42,31 +42,31 @@ The innermost input is `pair (pair (pair (pair (pair x w) ρ) ρ') i) i'`, with
 the four loop indices in unary. -/
 
 /-- Strip the last two indices. -/
-def conY2 (y : List Bool) : List Bool := Cobham.fstBlock (Cobham.fstBlock y)
+def conY2 (y : List Bool) : List Bool := pairFst (pairFst y)
 
 /-- Strip the last three indices. -/
-def conY1 (y : List Bool) : List Bool := Cobham.fstBlock (conY2 y)
+def conY1 (y : List Bool) : List Bool := pairFst (conY2 y)
 
 /-- The original `pair x w`. -/
-def conY0 (y : List Bool) : List Bool := Cobham.fstBlock (conY1 y)
+def conY0 (y : List Bool) : List Bool := pairFst (conY1 y)
 
 /-- The input. -/
-def conX (y : List Bool) : List Bool := Cobham.fstBlock (conY0 y)
+def conX (y : List Bool) : List Bool := pairFst (conY0 y)
 
 /-- The witness. -/
-def conW (y : List Bool) : List Bool := Cobham.sndBlock (conY0 y)
+def conW (y : List Bool) : List Bool := pairSnd (conY0 y)
 
 /-- The first coin index. -/
-def conC1 (y : List Bool) : ℕ := (Cobham.sndBlock (conY1 y)).length
+def conC1 (y : List Bool) : ℕ := (pairSnd (conY1 y)).length
 
 /-- The second coin index. -/
-def conC2 (y : List Bool) : ℕ := (Cobham.sndBlock (conY2 y)).length
+def conC2 (y : List Bool) : ℕ := (pairSnd (conY2 y)).length
 
 /-- The first query index. -/
-def conC3 (y : List Bool) : ℕ := (Cobham.sndBlock (Cobham.fstBlock y)).length
+def conC3 (y : List Bool) : ℕ := (pairSnd (pairFst y)).length
 
 /-- The second query index. -/
-def conC4 (y : List Bool) : ℕ := (Cobham.sndBlock y).length
+def conC4 (y : List Bool) : ℕ := (pairSnd y).length
 
 theorem conY2_mem_FP : conY2 ∈ FP :=
   mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP
@@ -230,12 +230,12 @@ noncomputable def consL2 : Language :=
 
 /-- The outer loop over the second coin string. -/
 noncomputable def consL1 : Language :=
-  {y | ∀ c' < 2 ^ r (Cobham.fstBlock (Cobham.fstBlock y)).length,
+  {y | ∀ c' < 2 ^ r (pairFst (pairFst y)).length,
     pair y (List.replicate c' true) ∈ consL2 f r Q}
 
 /-- **The consistency check**, as a language of `pair x w`. -/
 noncomputable def consLang : Language :=
-  {z | ∀ c < 2 ^ r (Cobham.fstBlock z).length,
+  {z | ∀ c < 2 ^ r (pairFst z).length,
     pair z (List.replicate c true) ∈ consL1 f r Q}
 
 open scoped Complexity in
@@ -248,11 +248,11 @@ theorem consLang_mem_P (hrlog : r =O fun n => Nat.log 2 n) : consLang f r Q ∈ 
     forall_unary_mem_P (consInner_mem_P f r Q hf hr) hQ
   have h2 : consL2 f r Q ∈ P := forall_unary_mem_P h3 hQ'
   have hexp : (fun z : List Bool =>
-      List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
+      List.replicate (2 ^ r (pairFst z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
     simpa using this
   have hexp2 : (fun y : List Bool =>
-      List.replicate (2 ^ r (Cobham.fstBlock (Cobham.fstBlock y)).length) true) ∈ FP := by
+      List.replicate (2 ^ r (pairFst (pairFst y)).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP hexp
     simpa using this
   have h1 : consL1 f r Q ∈ P := forall_unary_mem_P h2 hexp2
@@ -317,32 +317,32 @@ def conArg (x w : List Bool) (c c' i i' : ℕ) : List Bool :=
 @[simp] theorem conX_arg (x w : List Bool) (c c' i i' : ℕ) :
     conX (conArg x w c c' i i') = x := by
   rw [conArg, conX, conY0, conY1, conY2]
-  simp only [Cobham.fstBlock_pair]
+  simp only [pairFst_pair]
 
 @[simp] theorem conW_arg (x w : List Bool) (c c' i i' : ℕ) :
     conW (conArg x w c c' i i') = w := by
   rw [conArg, conW, conY0, conY1, conY2]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
 
 @[simp] theorem conC1_arg (x w : List Bool) (c c' i i' : ℕ) :
     conC1 (conArg x w c c' i i') = c := by
   rw [conArg, conC1, conY1, conY2]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate]
+  simp only [pairFst_pair, pairSnd_pair, List.length_replicate]
 
 @[simp] theorem conC2_arg (x w : List Bool) (c c' i i' : ℕ) :
     conC2 (conArg x w c c' i i') = c' := by
   rw [conArg, conC2, conY2]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate]
+  simp only [pairFst_pair, pairSnd_pair, List.length_replicate]
 
 @[simp] theorem conC3_arg (x w : List Bool) (c c' i i' : ℕ) :
     conC3 (conArg x w c c' i i') = i := by
   rw [conArg, conC3]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair, List.length_replicate]
+  simp only [pairFst_pair, pairSnd_pair, List.length_replicate]
 
 @[simp] theorem conC4_arg (x w : List Bool) (c c' i i' : ℕ) :
     conC4 (conArg x w c c' i i') = i' := by
   rw [conArg, conC4]
-  simp only [Cobham.sndBlock_pair, List.length_replicate]
+  simp only [pairSnd_pair, List.length_replicate]
 
 /-! ### The pieces on a packed argument -/
 
@@ -389,9 +389,9 @@ theorem mem_consLang_iff_forall (x w : List Bool) :
     pair x w ∈ consLang f r Q
       ↔ ∀ c < 2 ^ r x.length, ∀ c' < 2 ^ r x.length, ∀ i < Q, ∀ i' < Q,
           conArg x w c c' i i' ∈ consInner f r Q := by
-  rw [consLang, Set.mem_setOf_eq, Cobham.fstBlock_pair]
+  rw [consLang, Set.mem_setOf_eq, pairFst_pair]
   refine forall_congr' fun c => forall_congr' fun _ => ?_
-  rw [consL1, Set.mem_setOf_eq, Cobham.fstBlock_pair, Cobham.fstBlock_pair]
+  rw [consL1, Set.mem_setOf_eq, pairFst_pair, pairFst_pair]
   refine forall_congr' fun c' => forall_congr' fun _ => ?_
   rw [consL2, Set.mem_setOf_eq]
   refine forall_congr' fun i => forall_congr' fun _ => ?_

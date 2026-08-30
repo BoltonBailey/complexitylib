@@ -206,15 +206,15 @@ def addPack (c acc ru rv : List Bool) : List Bool := pair c (pair acc (pair ru r
 
 /-- One step of the packed scan. -/
 def addStepP (z : List Bool) : List Bool :=
-  selectHead (lenLeFlag (fstBlock (sndBlock (sndBlock z))) [false])
+  selectHead (lenLeFlag (pairFst (pairSnd (pairSnd z))) [false])
     (addPack
-      (majBit (fstBlock z) (bit1 (fstBlock (sndBlock (sndBlock z))))
-        (bit1 (sndBlock (sndBlock (sndBlock z)))))
-      (fstBlock (sndBlock z) ++
-        sumBit (fstBlock z) (bit1 (fstBlock (sndBlock (sndBlock z))))
-          (bit1 (sndBlock (sndBlock (sndBlock z)))))
-      ((fstBlock (sndBlock (sndBlock z))).drop 1)
-      ((sndBlock (sndBlock (sndBlock z))).drop 1))
+      (majBit (pairFst z) (bit1 (pairFst (pairSnd (pairSnd z))))
+        (bit1 (pairSnd (pairSnd (pairSnd z)))))
+      (pairFst (pairSnd z) ++
+        sumBit (pairFst z) (bit1 (pairFst (pairSnd (pairSnd z))))
+          (bit1 (pairSnd (pairSnd (pairSnd z)))))
+      ((pairFst (pairSnd (pairSnd z))).drop 1)
+      ((pairSnd (pairSnd (pairSnd z))).drop 1))
     z
 
 /-- **The packed step is the unpacked step.** -/
@@ -223,7 +223,7 @@ theorem addStepP_pack (c acc ru rv : List Bool) :
       = addPack (addStep (c, acc, ru, rv)).1 (addStep (c, acc, ru, rv)).2.1
           (addStep (c, acc, ru, rv)).2.2.1 (addStep (c, acc, ru, rv)).2.2.2 := by
   rw [addStepP, addPack]
-  simp only [fstBlock_pair, sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   cases ru with
   | nil =>
       have hflag : lenLeFlag ([] : List Bool) [false] = [false] := rfl
@@ -260,10 +260,10 @@ theorem addStepP_iterate_args (c acc ru rv : List Bool) (n : ℕ) :
 def addRun (u v : List Bool) : List Bool := addStepP^[u.length] (addPack [false] [] u v)
 
 /-- The sum bits of `u` and `v`. -/
-def addBits (u v : List Bool) : List Bool := fstBlock (sndBlock (addRun u v))
+def addBits (u v : List Bool) : List Bool := pairFst (pairSnd (addRun u v))
 
 /-- The carry out of `u + v`. -/
-def addCarry (u v : List Bool) : List Bool := fstBlock (addRun u v)
+def addCarry (u v : List Bool) : List Bool := pairFst (addRun u v)
 
 theorem addRun_eq (u v : List Bool) (h : v.length = u.length) :
     addRun u v = addPack [(addBitsLE false u v).1] (addBitsLE false u v).2 [] [] := by
@@ -302,12 +302,12 @@ theorem addBits_length (u v : List Bool) (h : v.length = u.length) :
 theorem addStepP_mem_FP : addStepP ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -318,27 +318,27 @@ theorem addStepP_mem_FP : addStepP ∈ FP := by
   have hru := hfst hww
   have hrv := hsnd hww
   have hone : (fun _ : List Bool => ([false] : List Bool)) ∈ FP := constFn_mem_FP [false]
-  have htakeU : (fun z => bit1 (fstBlock (sndBlock (sndBlock z)))) ∈ FP := by
+  have htakeU : (fun z => bit1 (pairFst (pairSnd (pairSnd z)))) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone (Cobham.appendFn_mem_FP hru hone)
     simpa [bit1] using this
-  have htakeV : (fun z => bit1 (sndBlock (sndBlock (sndBlock z)))) ∈ FP := by
+  have htakeV : (fun z => bit1 (pairSnd (pairSnd (pairSnd z)))) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone (Cobham.appendFn_mem_FP hrv hone)
     simpa [bit1] using this
-  have hdropU : (fun z => (fstBlock (sndBlock (sndBlock z))).drop 1) ∈ FP := by
+  have hdropU : (fun z => (pairFst (pairSnd (pairSnd z))).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hru
     simpa using this
-  have hdropV : (fun z => (sndBlock (sndBlock (sndBlock z))).drop 1) ∈ FP := by
+  have hdropV : (fun z => (pairSnd (pairSnd (pairSnd z))).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hrv
     simpa using this
   have hxor : ∀ {a b : List Bool → List Bool}, a ∈ FP → b ∈ FP →
       (fun z => xorBit (a z) (b z)) ∈ FP := fun ha hb =>
     Cobham.selectHeadFn_mem_FP ha (notBitFn_mem_FP hb) hb
-  have hmaj : (fun z => majBit (fstBlock z) (bit1 (fstBlock (sndBlock (sndBlock z))))
-      (bit1 (sndBlock (sndBlock (sndBlock z))))) ∈ FP :=
+  have hmaj : (fun z => majBit (pairFst z) (bit1 (pairFst (pairSnd (pairSnd z))))
+      (bit1 (pairSnd (pairSnd (pairSnd z))))) ∈ FP :=
     orBitFn_mem_FP (andBitFn_mem_FP hc htakeU)
       (orBitFn_mem_FP (andBitFn_mem_FP hc htakeV) (andBitFn_mem_FP htakeU htakeV))
-  have hsum : (fun z => sumBit (fstBlock z) (bit1 (fstBlock (sndBlock (sndBlock z))))
-      (bit1 (sndBlock (sndBlock (sndBlock z))))) ∈ FP :=
+  have hsum : (fun z => sumBit (pairFst z) (bit1 (pairFst (pairSnd (pairSnd z))))
+      (bit1 (pairSnd (pairSnd (pairSnd z))))) ∈ FP :=
     hxor (hxor hc htakeU) htakeV
   exact Cobham.selectHeadFn_mem_FP (lenLeFlagFn_mem_FP hru hone)
     (Cobham.pairFn_mem_FP hmaj
@@ -490,19 +490,19 @@ def ltPack (f ru rv : List Bool) : List Bool := pair f (pair ru rv)
 
 /-- One step of the packed comparison. -/
 def ltStepP (z : List Bool) : List Bool :=
-  selectHead (lenLeFlag (fstBlock (sndBlock z)) [false])
+  selectHead (lenLeFlag (pairFst (pairSnd z)) [false])
     (ltPack
-      (selectHead (eqFlag (bit1 (fstBlock (sndBlock z))) (bit1 (sndBlock (sndBlock z))))
-        (fstBlock z) (bit1 (sndBlock (sndBlock z))))
-      ((fstBlock (sndBlock z)).drop 1)
-      ((sndBlock (sndBlock z)).drop 1))
+      (selectHead (eqFlag (bit1 (pairFst (pairSnd z))) (bit1 (pairSnd (pairSnd z))))
+        (pairFst z) (bit1 (pairSnd (pairSnd z))))
+      ((pairFst (pairSnd z)).drop 1)
+      ((pairSnd (pairSnd z)).drop 1))
     z
 
 theorem ltStepP_pack (f ru rv : List Bool) :
     ltStepP (ltPack f ru rv)
       = ltPack (ltStep (f, ru, rv)).1 (ltStep (f, ru, rv)).2.1 (ltStep (f, ru, rv)).2.2 := by
   rw [ltStepP, ltPack]
-  simp only [fstBlock_pair, sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   cases ru with
   | nil =>
       have hflag : lenLeFlag ([] : List Bool) [false] = [false] := rfl
@@ -534,7 +534,7 @@ theorem ltStepP_iterate_args (f ru rv : List Bool) (n : ℕ) :
 def ltRun (u v : List Bool) : List Bool := ltStepP^[u.length] (ltPack [false] u v)
 
 /-- Is `u` below `v`, as a flag. -/
-def ltFlag (u v : List Bool) : List Bool := fstBlock (ltRun u v)
+def ltFlag (u v : List Bool) : List Bool := pairFst (ltRun u v)
 
 theorem ltFlag_eq (u v : List Bool) (h : v.length = u.length) :
     ltFlag u v = [ltBitsLE false u v] := by
@@ -567,12 +567,12 @@ theorem ltFlag_flag (u v : List Bool) (h : v.length = u.length) :
 theorem ltStepP_mem_FP : ltStepP ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -581,16 +581,16 @@ theorem ltStepP_mem_FP : ltStepP ∈ FP := by
   have hru := hfst hw
   have hrv := hsnd hw
   have hone : (fun _ : List Bool => ([false] : List Bool)) ∈ FP := constFn_mem_FP [false]
-  have hbU : (fun z => bit1 (fstBlock (sndBlock z))) ∈ FP := by
+  have hbU : (fun z => bit1 (pairFst (pairSnd z))) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone (Cobham.appendFn_mem_FP hru hone)
     simpa [bit1] using this
-  have hbV : (fun z => bit1 (sndBlock (sndBlock z))) ∈ FP := by
+  have hbV : (fun z => bit1 (pairSnd (pairSnd z))) ∈ FP := by
     have := Cobham.takeLenFn_mem_FP hone (Cobham.appendFn_mem_FP hrv hone)
     simpa [bit1] using this
-  have hdU : (fun z => (fstBlock (sndBlock z)).drop 1) ∈ FP := by
+  have hdU : (fun z => (pairFst (pairSnd z)).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hru
     simpa using this
-  have hdV : (fun z => (sndBlock (sndBlock z)).drop 1) ∈ FP := by
+  have hdV : (fun z => (pairSnd (pairSnd z)).drop 1) ∈ FP := by
     have := dropLenFn_mem_FP hone hrv
     simpa using this
   exact Cobham.selectHeadFn_mem_FP (lenLeFlagFn_mem_FP hru hone)

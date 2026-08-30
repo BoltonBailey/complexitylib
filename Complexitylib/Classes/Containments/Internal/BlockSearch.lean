@@ -171,20 +171,20 @@ def searchPack (R r V : List Bool) : List Bool := pair R (pair r V)
 
 /-- One step of the worklist search, on the packed state. -/
 noncomputable def searchStep (tm : NTM k) (m : ℕ) (z : List Bool) : List Bool :=
-  pair (fstBlock z)
-    (pair (false :: fstBlock (sndBlock z))
+  pair (pairFst z)
+    (pair (false :: pairFst (pairSnd z))
       (selectHead
-        (lenLeFlag (sndBlock (sndBlock z))
-          (guardRuler m (fstBlock z) (fstBlock (sndBlock z))))
-        (searchBody tm m (fstBlock z) (fstBlock (sndBlock z)) (sndBlock (sndBlock z)))
-        (sndBlock (sndBlock z))))
+        (lenLeFlag (pairSnd (pairSnd z))
+          (guardRuler m (pairFst z) (pairFst (pairSnd z))))
+        (searchBody tm m (pairFst z) (pairFst (pairSnd z)) (pairSnd (pairSnd z)))
+        (pairSnd (pairSnd z))))
 
 /-- **The packed step is the unpacked step.** -/
 theorem searchStep_pack (tm : NTM k) (m : ℕ) (R r V : List Bool) :
     searchStep tm m (searchPack R r V)
       = searchPack R (searchStepPair tm m R (r, V)).1 (searchStepPair tm m R (r, V)).2 := by
   rw [searchStep, searchPack, searchStepPair]
-  simp only [Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+  simp only [pairFst_pair, pairSnd_pair]
   by_cases hle : (guardRuler m R r).length ≤ V.length
   · rw [if_pos hle, selectHead,
       if_pos (by rw [(Cobham.lenLeFlag_eq_true_iff V (guardRuler m R r)).mpr hle]; rfl)]
@@ -212,12 +212,12 @@ theorem searchStep_iterate (tm : NTM k) (m : ℕ) (R : List Bool)
 theorem searchStep_mem_FP (tm : NTM k) (m : ℕ) : searchStep tm m ∈ FP := by
   have hid : (fun z : List Bool => z) ∈ FP := CobhamFP_subset_FP (Cobham.proj 0)
   have hfst : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => fstBlock (a z)) ∈ FP := by
+      (fun z => pairFst (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.fstBlock_mem_FP
     simpa [Function.comp] using this
   have hsnd : ∀ {a : List Bool → List Bool}, a ∈ FP →
-      (fun z => sndBlock (a z)) ∈ FP := by
+      (fun z => pairSnd (a z)) ∈ FP := by
     intro a ha
     have := mem_FP_comp ha Cobham.sndBlock_mem_FP
     simpa [Function.comp] using this
@@ -225,7 +225,7 @@ theorem searchStep_mem_FP (tm : NTM k) (m : ℕ) : searchStep tm m ∈ FP := by
   have hw := hsnd hid
   have hr := hfst hw
   have hV := hsnd hw
-  have hcons : (fun z => false :: fstBlock (sndBlock z)) ∈ FP := by
+  have hcons : (fun z => false :: pairFst (pairSnd z)) ∈ FP := by
     have := mem_FP_comp hr (Cobham.cons_mem_FP false)
     simpa [Function.comp] using this
   exact Cobham.pairFn_mem_FP hR (Cobham.pairFn_mem_FP hcons

@@ -36,22 +36,22 @@ variable (r : ℕ → ℕ) (Q : ℕ)
 
 /-- The witness has exactly one block per coin string. -/
 noncomputable def lenLang : Language :=
-  {z | (Cobham.sndBlock z).length = 2 ^ r (Cobham.fstBlock z).length * Q}
+  {z | (pairSnd z).length = 2 ^ r (pairFst z).length * Q}
 
 open scoped Complexity in
 theorem lenLang_mem_P
     (hr : (fun x : List Bool => List.replicate (r x.length) true) ∈ FP)
     (hrlog : r =O fun n => Nat.log 2 n) : lenLang r Q ∈ P := by
-  have ha : (fun z : List Bool => List.replicate (Cobham.sndBlock z).length false) ∈ FP :=
+  have ha : (fun z : List Bool => List.replicate (pairSnd z).length false) ∈ FP :=
     zeroBlockFn_mem_FP Cobham.sndBlock_mem_FP
   have hexp : (fun z : List Bool =>
-      List.replicate (2 ^ r (Cobham.fstBlock z).length) true) ∈ FP := by
+      List.replicate (2 ^ r (pairFst z).length) true) ∈ FP := by
     have := mem_FP_comp Cobham.fstBlock_mem_FP (unaryExp_mem_FP_of_bigO_log hr hrlog)
     simpa using this
   have hQ : (fun _ : List Bool => List.replicate Q false) ∈ FP :=
     Cobham.const_replicate_mem_FP Q
   have hb : (fun z : List Bool =>
-      List.replicate (2 ^ r (Cobham.fstBlock z).length * Q) false) ∈ FP := by
+      List.replicate (2 ^ r (pairFst z).length * Q) false) ∈ FP := by
     have := Cobham.mulLenFn_mem_FP hexp hQ
     refine mem_FP_of_eq this fun z => ?_
     rw [List.length_replicate, List.length_replicate]
@@ -89,14 +89,14 @@ theorem mem_witLang_iff
   constructor
   · rintro ⟨hlen, hcons, hacc⟩
     have hlen' : w.length = 2 ^ r x.length * Q := by
-      rw [lenLang, Set.mem_setOf_eq, Cobham.fstBlock_pair, Cobham.sndBlock_pair] at hlen
+      rw [lenLang, Set.mem_setOf_eq, pairFst_pair, pairSnd_pair] at hlen
       exact hlen
     refine ⟨hlen', ?_, ?_⟩
     · exact (mem_consLang_iff V f r Q hfspec hlen' (hQ x)).mp hcons
     · exact (mem_accLang_iff V f r Q hfspec hlen' (hQ x)).mp hacc
   · rintro ⟨hlen, hcons, hacc⟩
     refine ⟨?_, ?_, ?_⟩
-    · rw [lenLang, Set.mem_setOf_eq, Cobham.fstBlock_pair, Cobham.sndBlock_pair]
+    · rw [lenLang, Set.mem_setOf_eq, pairFst_pair, pairSnd_pair]
       exact hlen
     · exact (mem_consLang_iff V f r Q hfspec hlen (hQ x)).mpr hcons
     · exact (mem_accLang_iff V f r Q hfspec hlen (hQ x)).mpr hacc

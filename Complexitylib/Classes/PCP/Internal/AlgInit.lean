@@ -77,7 +77,7 @@ theorem rel_baseCSP (φ : CNF) (e : ℕ) (he : e < (baseCSP φ).numEdges) :
 which of them the edge reads. -/
 noncomputable def baseCodeKey (w : List Bool) : List Bool :=
   pair (baseSigns E (pair w []))
-    (modFn [false, false, false] (Cobham.sndBlock w))
+    (modFn [false, false, false] (pairSnd w))
 
 theorem baseCodeKey_mem_FP (hE : E ∈ FP) : baseCodeKey E ∈ FP := by
   have harg : (fun w : List Bool => pair w []) ∈ FP :=
@@ -85,7 +85,7 @@ theorem baseCodeKey_mem_FP (hE : E ∈ FP) : baseCodeKey E ∈ FP := by
   have hsigns : (fun w : List Bool => baseSigns E (pair w [])) ∈ FP := by
     refine mem_FP_of_eq (mem_FP_comp harg (baseSigns_mem_FP E hE)) fun w => ?_
     rw [Function.comp_apply]
-  have hmod : (fun w : List Bool => modFn [false, false, false] (Cobham.sndBlock w)) ∈ FP := by
+  have hmod : (fun w : List Bool => modFn [false, false, false] (pairSnd w)) ∈ FP := by
     refine mem_FP_of_eq (mem_FP_comp Cobham.sndBlock_mem_FP
       (modFn_mem_FP [false, false, false])) fun w => ?_
     rw [Function.comp_apply]
@@ -93,9 +93,9 @@ theorem baseCodeKey_mem_FP (hE : E ∈ FP) : baseCodeKey E ∈ FP := by
 
 theorem baseCodeKey_length_le (w : List Bool) : (baseCodeKey E w).length ≤ 12 := by
   have hs : (baseSigns E (pair w [])).length ≤ 3 := length_baseSigns_le E _
-  have hm : (modFn [false, false, false] (Cobham.sndBlock w)).length ≤ 2 := by
+  have hm : (modFn [false, false, false] (pairSnd w)).length ≤ 2 := by
     rw [modFn_eq (by simp), List.length_replicate]
-    have : (Cobham.sndBlock w).length % [false, false, false].length < 3 := by
+    have : (pairSnd w).length % [false, false, false].length < 3 := by
       simpa using Nat.mod_lt _ (by omega)
     omega
   rw [baseCodeKey, pair_length]
@@ -108,7 +108,7 @@ theorem baseCodeKey_pair (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3C
     baseCodeKey E (pair x (List.replicate e true))
       = pair [(litOf (Φ x) (e / 3) 0).sign, (litOf (Φ x) (e / 3) 1).sign,
           (litOf (Φ x) (e / 3) 2).sign] (List.replicate (e % 3) true) := by
-  rw [baseCodeKey, baseSigns_pair E hE h3 x he [], Cobham.sndBlock_pair,
+  rw [baseCodeKey, baseSigns_pair E hE h3 x he [], pairSnd_pair,
     modFn_eq (by simp) (List.replicate e true), List.length_replicate,
     show ([false, false, false] : List Bool).length = 3 from rfl]
 
@@ -116,8 +116,8 @@ theorem baseCodeKey_pair (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3C
 
 /-- The constraint an edge's key stands for. -/
 noncomputable def baseRelOfKey (k : List Bool) : GapAlpha → GapAlpha → Bool :=
-  relOfSigns (fun q => (Cobham.fstBlock k).getD q.val false)
-    ⟨(Cobham.sndBlock k).length % 3, Nat.mod_lt _ (by omega)⟩
+  relOfSigns (fun q => (pairFst k).getD q.val false)
+    ⟨(pairSnd k).length % 3, Nat.mod_lt _ (by omega)⟩
 
 /-- The constraint's code, in unary, from the key. -/
 noncomputable def baseCodeFn (k : List Bool) : List Bool :=
@@ -139,10 +139,10 @@ theorem baseCodeFn_codeKey (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is
           ⟨e % 3, Nat.mod_lt _ (by omega)⟩ := by
     rw [baseRelOfKey]
     refine relOfSigns_congr _ _ ?_ ?_
-    · rw [baseCodeKey_pair E hE h3 x he', Cobham.fstBlock_pair]
+    · rw [baseCodeKey_pair E hE h3 x he', pairFst_pair]
       funext q
       fin_cases q <;> rfl
-    · rw [baseCodeKey_pair E hE h3 x he', Cobham.sndBlock_pair, List.length_replicate]
+    · rw [baseCodeKey_pair E hE h3 x he', pairSnd_pair, List.length_replicate]
       omega
   rw [baseCodeFn, hrel, rel_baseCSP]
 
@@ -234,7 +234,7 @@ noncomputable def trivCode : List Bool :=
 can be made to depend on the input's length alone. -/
 noncomputable def basePadFn (padU g : List Bool → List Bool) : List Bool → List Bool :=
   buildGraph (baseVertsU E) padU
-    (fun w => ifLtLen (Cobham.sndBlock w) (baseEdgesU E (Cobham.fstBlock w))
+    (fun w => ifLtLen (pairSnd w) (baseEdgesU E (pairFst w))
       (encTriple (marks (baseTailU E w)) (marks (baseHeadU E w)) (g (baseCodeKey E w)))
       (encTriple [] [] trivCode))
 
@@ -261,17 +261,17 @@ theorem basePadFn_eq (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3CNF (
   · rw [ConstraintGraph.numEdges_padGraph, hmax]
     exact hPmark
   · rw [ConstraintGraph.numEdges_padGraph, hmax] at he
-    have hcnt : (baseEdgesU E (Cobham.fstBlock (pair x (List.replicate e true)))).length
+    have hcnt : (baseEdgesU E (pairFst (pair x (List.replicate e true)))).length
         = 3 * (Φ x).length := by
-      rw [Cobham.fstBlock_pair, baseEdgesU_eq E hE, List.length_replicate]
+      rw [pairFst_pair, baseEdgesU_eq E hE, List.length_replicate]
     by_cases hlt : e < (baseCSP (Φ x)).numEdges
     · have hlt' : e < 3 * (Φ x).length := by rwa [numEdges_baseCSP] at hlt
-      rw [ifLtLen_pos (by rw [Cobham.sndBlock_pair, List.length_replicate, hcnt]; exact hlt')]
+      rw [ifLtLen_pos (by rw [pairSnd_pair, List.length_replicate, hcnt]; exact hlt')]
       rw [ConstraintGraph.tail_padGraph_of_lt _ hlt, ConstraintGraph.head_padGraph_of_lt _ hlt,
         ConstraintGraph.rel_padGraph_of_lt _ hlt]
       rw [marks_eq, marks_eq, baseTailU_val E hE h3 x e hlt, baseHeadU_val E hE h3 x e hlt,
         baseCodeFn_codeKey E hE h3 x e hlt]
-    · rw [ifLtLen_neg (by rw [Cobham.sndBlock_pair, List.length_replicate, hcnt,
+    · rw [ifLtLen_neg (by rw [pairSnd_pair, List.length_replicate, hcnt,
         numEdges_baseCSP] at *; omega)]
       rw [ConstraintGraph.tail_padGraph_of_ge _ hlt, ConstraintGraph.head_padGraph_of_ge _ hlt,
         ConstraintGraph.rel_padGraph_of_ge _ hlt, trivCode]

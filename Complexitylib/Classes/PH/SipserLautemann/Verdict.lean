@@ -207,16 +207,16 @@ the amplified majority verdict. -/
 noncomputable def matrixFn (tm : NTM k) (pt : Polynomial ℕ) (b : Bool) (z : List Bool) :
     List Bool :=
   caseBit₀
-    (Cobham.lenEqFlag (Cobham.sndBlock z)
-      (seedStr pt (Cobham.fstBlock (Cobham.fstBlock z))))
+    (Cobham.lenEqFlag (pairSnd z)
+      (seedStr pt (pairFst (pairFst z))))
     (Cobham.anyShiftAux tm b
-      (clockStr pt (Fintype.card tm.Q) (Cobham.fstBlock (Cobham.fstBlock z)))
-      (Cobham.fstBlock (Cobham.fstBlock z))
-      (Cobham.polyLen pt (Cobham.fstBlock (Cobham.fstBlock z)))
-      (runsStr pt (Cobham.fstBlock (Cobham.fstBlock z)))
-      (seedStr pt (Cobham.fstBlock (Cobham.fstBlock z)))
-      (Cobham.sndBlock z) (Cobham.sndBlock (Cobham.fstBlock z))
-      (shiftStr pt (Cobham.fstBlock (Cobham.fstBlock z))))
+      (clockStr pt (Fintype.card tm.Q) (pairFst (pairFst z)))
+      (pairFst (pairFst z))
+      (Cobham.polyLen pt (pairFst (pairFst z)))
+      (runsStr pt (pairFst (pairFst z)))
+      (seedStr pt (pairFst (pairFst z)))
+      (pairSnd z) (pairSnd (pairFst z))
+      (shiftStr pt (pairFst (pairFst z))))
     [true]
 
 /-- A flag matching a Boolean, in the two polarities. -/
@@ -327,12 +327,12 @@ theorem matrixFn_eq (tm : NTM k) (pt : Polynomial ℕ) (b : Bool) (z : List Bool
 
 /-- The pair decoders are in the algebra, being polynomial-time. -/
 theorem fstBlock_cobham {n : ℕ} {g : (Fin n → List Bool) → List Bool} (hg : Cobham g) :
-    Cobham fun v : Fin n → List Bool => Cobham.fstBlock (g v) :=
+    Cobham fun v : Fin n → List Bool => pairFst (g v) :=
   (Cobham.comp (FP_subset_CobhamFP Cobham.fstBlock_mem_FP)
     fun _ : Fin 1 => hg).of_eq fun _ => rfl
 
 theorem sndBlock_cobham {n : ℕ} {g : (Fin n → List Bool) → List Bool} (hg : Cobham g) :
-    Cobham fun v : Fin n → List Bool => Cobham.sndBlock (g v) :=
+    Cobham fun v : Fin n → List Bool => pairSnd (g v) :=
   (Cobham.comp (FP_subset_CobhamFP Cobham.sndBlock_mem_FP)
     fun _ : Fin 1 => hg).of_eq fun _ => rfl
 
@@ -363,10 +363,10 @@ theorem matrixFn_mem (tm : NTM k) (pt : Polynomial ℕ) (b : Bool) :
     Cobham fun v : Fin 1 → List Bool => matrixFn tm pt b (v 0) := by
   have hz : Cobham fun v : Fin 1 → List Bool => v 0 := Cobham.proj 0
   have hx : Cobham fun v : Fin 1 → List Bool =>
-      Cobham.fstBlock (Cobham.fstBlock (v 0)) := fstBlock_cobham (fstBlock_cobham hz)
+      pairFst (pairFst (v 0)) := fstBlock_cobham (fstBlock_cobham hz)
   have hw : Cobham fun v : Fin 1 → List Bool =>
-      Cobham.sndBlock (Cobham.fstBlock (v 0)) := sndBlock_cobham (fstBlock_cobham hz)
-  have hr : Cobham fun v : Fin 1 → List Bool => Cobham.sndBlock (v 0) := sndBlock_cobham hz
+      pairSnd (pairFst (v 0)) := sndBlock_cobham (fstBlock_cobham hz)
+  have hr : Cobham fun v : Fin 1 → List Bool => pairSnd (v 0) := sndBlock_cobham hz
   exact (Cobham.iteFn (Cobham.lenEqFlag_mem hr (seedStr_mem pt hx))
     (Cobham.anyShiftAux_mem tm b (clockStr_mem pt (Fintype.card tm.Q) hx) hx
       (Cobham.polyLen_mem pt hx) (runsStr_mem pt hx) (seedStr_mem pt hx) hr hw

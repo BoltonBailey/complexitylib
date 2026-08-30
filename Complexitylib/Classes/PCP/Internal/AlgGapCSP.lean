@@ -43,7 +43,7 @@ variable (F : FinBase) (hd : 1 < F.deg) (E padU : List Bool → List Bool)
 
 /-- The graph string a verifier argument names. -/
 noncomputable def gapStr (z : List Bool) : List Bool :=
-  gapAll F hd E padU (Cobham.fstBlock (Cobham.fstBlock z))
+  gapAll F hd E padU (pairFst (pairFst z))
 
 theorem gapStr_mem_FP (hgap : gapAll F hd E padU ∈ FP) : gapStr F hd E padU ∈ FP :=
   mem_FP_of_eq (mem_FP_comp (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.fstBlock_mem_FP) hgap)
@@ -52,12 +52,12 @@ theorem gapStr_mem_FP (hgap : gapAll F hd E padU ∈ FP) : gapStr F hd E padU �
 /-- The code of the constraint the argument names, clamped to the number of
 constraints there are. -/
 noncomputable def gapCodeBlk (z : List Bool) : List Bool :=
-  (recThd (Cobham.sndBlock (gapStr F hd E padU z))
-    (Cobham.sndBlock (Cobham.fstBlock z)).length).take cRel
+  (recThd (pairSnd (gapStr F hd E padU z))
+    (pairSnd (pairFst z)).length).take cRel
 
 theorem gapCodeBlk_mem_FP (hgap : gapAll F hd E padU ∈ FP) :
     gapCodeBlk F hd E padU ∈ FP := by
-  have hidx : (fun z : List Bool => Cobham.sndBlock (Cobham.fstBlock z)) ∈ FP :=
+  have hidx : (fun z : List Bool => pairSnd (pairFst z)) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp Cobham.fstBlock_mem_FP Cobham.sndBlock_mem_FP) fun _ => rfl
   have hrec := gCodeFn_mem_FP hidx (gapStr_mem_FP F hd E padU hgap)
   refine mem_FP_of_eq (Cobham.takeLenFn_mem_FP
@@ -66,7 +66,7 @@ theorem gapCodeBlk_mem_FP (hgap : gapAll F hd E padU ∈ FP) :
 
 /-- Everything the constraint depends on: the code and the two symbol blocks. -/
 noncomputable def gapOkKey (z : List Bool) : List Bool :=
-  pair (gapCodeBlk F hd E padU z) ((Cobham.sndBlock z).take 46)
+  pair (gapCodeBlk F hd E padU z) ((pairSnd z).take 46)
 
 theorem gapOkKey_mem_FP (hgap : gapAll F hd E padU ∈ FP) : gapOkKey F hd E padU ∈ FP :=
   Cobham.pairFn_mem_FP (gapCodeBlk_mem_FP F hd E padU hgap)
@@ -79,7 +79,7 @@ theorem gapOkKey_length_le (z : List Bool) :
   have h1 : (gapCodeBlk F hd E padU z).length ≤ cRel := by
     rw [gapCodeBlk, List.length_take]
     omega
-  have h2 : ((Cobham.sndBlock z).take 46).length ≤ 46 := by
+  have h2 : ((pairSnd z).take 46).length ≤ 46 := by
     rw [List.length_take]
     omega
   rw [gapOkKey, pair_length]
@@ -87,9 +87,9 @@ theorem gapOkKey_length_le (z : List Bool) :
 
 /-- What the constraint says, of the key alone. -/
 def gapOkPred (k : List Bool) : Prop :=
-  relOfCode DinurAlpha (Cobham.fstBlock k).length
-      (symDec DinurAlpha ((Cobham.sndBlock k).take 23))
-      (symDec DinurAlpha ((Cobham.sndBlock k).drop 23)) = true
+  relOfCode DinurAlpha (pairFst k).length
+      (symDec DinurAlpha ((pairSnd k).take 23))
+      (symDec DinurAlpha ((pairSnd k).drop 23)) = true
 
 /-- The constraint, as a language on the verifier's verdict argument. -/
 noncomputable def gapOk : Language :=
@@ -113,7 +113,7 @@ noncomputable def gapAlg (hgap : gapAll F hd E padU ∈ FP) : AlgCSP where
     cond b (gHead (gapAll F hd E padU x) e) (gTail (gapAll F hd E padU x) e)
   vert_mem := by
     intro b
-    have hg : (fun w : List Bool => gapAll F hd E padU (Cobham.fstBlock w)) ∈ FP :=
+    have hg : (fun w : List Bool => gapAll F hd E padU (pairFst w)) ∈ FP :=
       mem_FP_of_eq (mem_FP_comp Cobham.fstBlock_mem_FP hgap) fun _ => rfl
     cases b
     · refine mem_FP_of_eq (marks_mem_FP (gTailFn_mem_FP Cobham.sndBlock_mem_FP hg))
@@ -154,14 +154,14 @@ theorem gapCodeBlk_length (hE : ∀ x, E x = (Φ x).encode) (h3 : ∀ x, CNF.Is3
     (he : e < (gapAllG F hd padU (Φ := Φ) x).numEdges) (a : List Bool) :
     (gapCodeBlk F hd E padU (pair (pair x (List.replicate e true)) a)).length
       = codeOfRel ((gapAllG F hd padU (Φ := Φ) x).rel ⟨e, he⟩) := by
-  have hcode : (recThd (Cobham.sndBlock (gapAll F hd E padU x)) e).length
+  have hcode : (recThd (pairSnd (gapAll F hd E padU x)) e).length
       = codeOfRel ((gapAllG F hd padU (Φ := Φ) x).rel ⟨e, he⟩) := by
     rw [length_recThd_sndBlock, gapAll_eq F hd E padU hE h3 hmark hle x, gCode_encGraph]
   have hlt : codeOfRel ((gapAllG F hd padU (Φ := Φ) x).rel ⟨e, he⟩) < cRel := by
     rw [cRel_eq]
     exact codeOfRel_lt _
-  rw [gapCodeBlk, gapStr, Cobham.fstBlock_pair, Cobham.fstBlock_pair,
-    Cobham.sndBlock_pair, List.length_replicate, List.length_take, hcode]
+  rw [gapCodeBlk, gapStr, pairFst_pair, pairFst_pair,
+    pairSnd_pair, List.length_replicate, List.length_take, hcode]
   omega
 
 /-- **The algorithm models the gap graph.** -/
@@ -190,7 +190,7 @@ theorem gapAlg_models (hgap : gapAll F hd E padU ∈ FP)
     have hcode := gapCodeBlk_length F hd E padU hE h3 hmark hle x e he (u ++ v)
     have htake46 : (u ++ v).take 46 = u ++ v := List.take_of_length_le (by omega)
     show gapOkPred (gapOkKey F hd E padU (pair (pair x (List.replicate e true)) (u ++ v))) ↔ _
-    rw [gapOkPred, gapOkKey, Cobham.fstBlock_pair, Cobham.sndBlock_pair, hcode,
-      Cobham.sndBlock_pair, htake46, htake, hdrop, relOfCode_codeOfRel]
+    rw [gapOkPred, gapOkKey, pairFst_pair, pairSnd_pair, hcode,
+      pairSnd_pair, htake46, htake, hdrop, relOfCode_codeOfRel]
 
 end Complexity

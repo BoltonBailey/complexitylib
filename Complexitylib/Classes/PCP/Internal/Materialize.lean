@@ -45,32 +45,32 @@ theorem materialize_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) : listE
   set Q : Polynomial ℕ := q.comp (3 * Polynomial.X + Polynomial.C 2) with hQ
   refine listEncFn_mem_FP hE
     (4 * Polynomial.X * Q + 3 * Polynomial.X + Polynomial.C 6) fun z k hk => ?_
-  have hfz : (Cobham.fstBlock z).length ≤ z.length := fstBlock_length_le z
-  have hsz : (Cobham.sndBlock z).length ≤ z.length := sndBlock_length_le z
+  have hfz : (pairFst z).length ≤ z.length := fstBlock_length_le z
+  have hsz : (pairSnd z).length ≤ z.length := sndBlock_length_le z
   have hkz : k ≤ z.length := le_trans hk hfz
-  have hrec : ∀ i < k, (E (pair (Cobham.sndBlock z) (List.replicate i true))).length
+  have hrec : ∀ i < k, (E (pair (pairSnd z) (List.replicate i true))).length
       ≤ Q.eval z.length := by
     intro i hi
     refine le_trans (hq _) ?_
-    have hlen : (pair (Cobham.sndBlock z) (List.replicate i true)).length
+    have hlen : (pair (pairSnd z) (List.replicate i true)).length
         ≤ 3 * z.length + 2 := by
       rw [pair_length, List.length_replicate]
       omega
     have := polynomial_eval_mono_nat q hlen
     rw [hQ, Polynomial.eval_comp]
     simpa using this
-  have hcat : (entryCat E (Cobham.sndBlock z) k).length ≤ k * Q.eval z.length :=
+  have hcat : (entryCat E (pairSnd z) k).length ≤ k * Q.eval z.length :=
     length_entryCat_le E _ _ k hrec
-  have hstate : ((listStep E)^[k] (pair (pair [] []) (Cobham.sndBlock z))).length
-      = 2 * (2 * (entryCat E (Cobham.sndBlock z) k).length + 2 + k) + 2
-        + (Cobham.sndBlock z).length := by
+  have hstate : ((listStep E)^[k] (pair (pair [] []) (pairSnd z))).length
+      = 2 * (2 * (entryCat E (pairSnd z) k).length + 2 + k) + 2
+        + (pairSnd z).length := by
     rw [listStep_iterate, pair_length, pair_length, List.length_replicate]
   have heval : (4 * Polynomial.X * Q + 3 * Polynomial.X + Polynomial.C 6).eval z.length
       = 4 * (z.length * Q.eval z.length) + 3 * z.length + 6 := by
     simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_ofNat,
       Polynomial.eval_X, Polynomial.eval_C]
     ring
-  have hC : (entryCat E (Cobham.sndBlock z) k).length ≤ z.length * Q.eval z.length :=
+  have hC : (entryCat E (pairSnd z) k).length ≤ z.length * Q.eval z.length :=
     le_trans hcat (Nat.mul_le_mul_right _ hkz)
   rw [hstate, heval]
   set A := z.length * Q.eval z.length with hA
@@ -82,8 +82,8 @@ theorem materialize_eq {α : Type} [DataEncode α] {E : List Bool → List Bool}
     (h : ∀ i, ∀ hi : i < l.length,
       E (pair x (List.replicate i true)) = DataEncode.bitstringEncode (l[i]'hi)) :
     listEncFn E (pair (List.replicate l.length true) x) = DataEncode.bitstringEncode l :=
-  listEncFn_eq_bitstringEncode l (by rw [Cobham.fstBlock_pair, List.length_replicate])
-    (by rw [Cobham.sndBlock_pair]; exact h)
+  listEncFn_eq_bitstringEncode l (by rw [pairFst_pair, List.length_replicate])
+    (by rw [pairSnd_pair]; exact h)
 
 /-! ### Adding up -/
 
@@ -108,7 +108,7 @@ theorem length_countOver (E : List Bool → List Bool) (x : List Bool) (n : ℕ)
     (countOver E (pair (List.replicate n true) x)).length
       = ∑ i ∈ Finset.range n, (E (pair x (List.replicate i true))).length := by
   rw [countOver, marks_eq, List.length_replicate, dropOne, dropOne, List.length_drop,
-    List.length_drop, listEncFn_eq, Cobham.fstBlock_pair, Cobham.sndBlock_pair,
+    List.length_drop, listEncFn_eq, pairFst_pair, pairSnd_pair,
     List.length_replicate, List.length_append, List.length_cons, length_entryCat]
   simp
 
@@ -214,7 +214,7 @@ bound itself when it never does: count the indices no answer has been seen up
 to. -/
 noncomputable def findFirst (E : List Bool → List Bool) (z : List Bool) : List Bool :=
   countOver (fun w =>
-    isEmptyMark (countOver E (pair (Cobham.sndBlock w ++ [true]) (Cobham.fstBlock w)))) z
+    isEmptyMark (countOver E (pair (pairSnd w ++ [true]) (pairFst w)))) z
 
 theorem findFirst_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) : findFirst E ∈ FP := by
   have harg := Cobham.pairFn_mem_FP
@@ -222,7 +222,7 @@ theorem findFirst_mem_FP {E : List Bool → List Bool} (hE : E ∈ FP) : findFir
     Cobham.fstBlock_mem_FP
   have hcount : countOver E ∈ FP := countOver_mem_FP hE
   have hcomp : (fun w : List Bool =>
-      countOver E (pair (Cobham.sndBlock w ++ [true]) (Cobham.fstBlock w))) ∈ FP :=
+      countOver E (pair (pairSnd w ++ [true]) (pairFst w))) ∈ FP :=
     mem_FP_of_eq (mem_FP_comp harg hcount) fun _ => rfl
   exact countOver_mem_FP (isEmptyMark_mem_FP hcomp)
 
@@ -239,7 +239,7 @@ theorem length_findFirst (E : List Bool → List Bool) (x : List Bool) (n : ℕ)
             then 1 else 0 := by
   rw [findFirst, length_countOver]
   refine Finset.sum_congr rfl fun j _ => ?_
-  rw [Cobham.sndBlock_pair, Cobham.fstBlock_pair, ← List.replicate_succ',
+  rw [pairSnd_pair, pairFst_pair, ← List.replicate_succ',
     length_isEmptyMark]
   by_cases h : (∑ k ∈ Finset.range (j + 1), (E (pair x (List.replicate k true))).length) = 0
   · rw [if_pos h, if_pos]
