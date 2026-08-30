@@ -52,6 +52,14 @@ theorem floorMul_mono (scale : PositiveRationalScale) :
     Monotone scale.floorMul :=
   floorMul_mono_internal scale
 
+/-- The sum of two floor-rounded scaled exponents does not exceed the
+floor-rounded scale of their sum. -/
+theorem floorMul_add_le (scale : PositiveRationalScale)
+    (first second : ℕ) :
+    scale.floorMul first + scale.floorMul second ≤
+      scale.floorMul (first + second) :=
+  floorMul_add_le_internal scale first second
+
 /-- The floor-scaled exponent tends to infinity for every positive rational
 scale. -/
 theorem tendsto_floorMul_atTop (scale : PositiveRationalScale) :
@@ -134,6 +142,22 @@ theorem powCeil_pos (scale : PositiveRationalScale) (n : ℕ) :
 theorem powFloor_mono (scale : PositiveRationalScale) :
     Monotone scale.powFloor :=
   powFloor_mono_internal scale
+
+/-- The product of two floor-rounded binary powers is bounded by the rounded
+power at the sum of their arguments. -/
+theorem powFloor_mul_le_powFloor_add
+    (scale : PositiveRationalScale) (first second : ℕ) :
+    scale.powFloor first * scale.powFloor second ≤
+      scale.powFloor (first + second) :=
+  powFloor_mul_le_powFloor_add_internal scale first second
+
+/-- A fixed power of a floor-rounded binary power is bounded by scaling the
+natural argument by the same multiplier. -/
+theorem powFloor_pow_le_mul
+    (scale : PositiveRationalScale) (n multiplier : ℕ) :
+    (scale.powFloor n) ^ multiplier ≤
+      scale.powFloor (multiplier * n) :=
+  powFloor_pow_le_mul_internal scale n multiplier
 
 /-- Rounded-up powers are monotone in the natural argument. -/
 theorem powCeil_mono (scale : PositiveRationalScale) :

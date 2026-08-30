@@ -111,6 +111,14 @@ theorem floorMul_mono_internal (scale : PositiveRationalScale) :
   intro first second hle
   exact Nat.div_le_div_right (Nat.mul_le_mul_left scale.numerator hle)
 
+theorem floorMul_add_le_internal (scale : PositiveRationalScale)
+    (first second : ℕ) :
+    scale.floorMul first + scale.floorMul second ≤
+      scale.floorMul (first + second) := by
+  unfold floorMul
+  rw [Nat.mul_add]
+  exact Nat.add_div_le_add_div _ _ _
+
 theorem tendsto_floorMul_atTop_internal (scale : PositiveRationalScale) :
     Filter.Tendsto scale.floorMul Filter.atTop Filter.atTop := by
   apply Filter.tendsto_atTop.mpr
@@ -308,6 +316,34 @@ theorem powFloor_mono_internal (scale : PositiveRationalScale) :
   intro first second hle
   exact Nat.pow_le_pow_right (by decide)
     (floorMul_mono_internal scale hle)
+
+theorem powFloor_mul_le_powFloor_add_internal
+    (scale : PositiveRationalScale) (first second : ℕ) :
+    scale.powFloor first * scale.powFloor second ≤
+      scale.powFloor (first + second) := by
+  unfold powFloor
+  rw [← pow_add]
+  exact Nat.pow_le_pow_right (by decide)
+    (floorMul_add_le_internal scale first second)
+
+theorem powFloor_pow_le_mul_internal
+    (scale : PositiveRationalScale) (n multiplier : ℕ) :
+    (scale.powFloor n) ^ multiplier ≤
+      scale.powFloor (multiplier * n) := by
+  induction multiplier with
+  | zero => simp [powFloor, floorMul]
+  | succ multiplier ih =>
+      calc
+        (scale.powFloor n) ^ (multiplier + 1) =
+            (scale.powFloor n) ^ multiplier * scale.powFloor n := by
+          rw [pow_succ]
+        _ ≤ scale.powFloor (multiplier * n) * scale.powFloor n :=
+          Nat.mul_le_mul_right (scale.powFloor n) ih
+        _ ≤ scale.powFloor (multiplier * n + n) :=
+          powFloor_mul_le_powFloor_add_internal
+            scale (multiplier * n) n
+        _ = scale.powFloor ((multiplier + 1) * n) := by
+          rw [Nat.add_mul, one_mul]
 
 theorem powCeil_mono_internal (scale : PositiveRationalScale) :
     Monotone scale.powCeil := by
