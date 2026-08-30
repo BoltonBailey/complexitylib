@@ -95,6 +95,49 @@ theorem exists_isRawCircuitWitness_iff_internal (inst : Instance) :
       exact ⟨CircuitCode.encodeCircuit circuit,
         isRawCircuitWitness_encodeCircuit_internal inst circuit hsize hcomputes⟩
 
+theorem isRawCircuitWitness_withThreshold_mono_internal (inst : Instance)
+    {first second : ℕ} (hthreshold : first ≤ second) {code : List Bool}
+    (hwitness : (inst.withThreshold first).IsRawCircuitWitness code) :
+    (inst.withThreshold second).IsRawCircuitWitness code := by
+  by_cases harity : inst.arity = 0
+  · simpa [withThreshold, IsRawCircuitWitness, harity] using hwitness
+  · simp only [withThreshold, IsRawCircuitWitness, harity, if_false] at hwitness ⊢
+    cases hdecode : CircuitCode.RawCircuit.decode? code with
+    | none => simp [hdecode] at hwitness
+    | some circuit =>
+        simp only [hdecode] at hwitness ⊢
+        exact ⟨hwitness.1, hwitness.2.1.trans hthreshold, hwitness.2.2⟩
+
+theorem isRawCircuitWitness_length_le_internal (inst : Instance) {code : List Bool}
+    (hwitness : inst.IsRawCircuitWitness code) :
+    code.length ≤ inst.rawWitnessCodeLengthBound := by
+  by_cases harity : inst.arity = 0
+  · simp [IsRawCircuitWitness, harity] at hwitness
+    simp [hwitness, rawWitnessCodeLengthBound]
+  · simp only [IsRawCircuitWitness, harity, if_false] at hwitness
+    cases hdecode : CircuitCode.RawCircuit.decode? code with
+    | none => simp [hdecode] at hwitness
+    | some circuit =>
+        simp only [hdecode] at hwitness
+        obtain ⟨hwell, hsize, _⟩ := hwitness
+        have hcode :=
+          (CircuitCode.RawCircuit.decode?_eq_some_iff code circuit).mp hdecode
+        rw [hcode]
+        apply (CircuitCode.RawCircuit.encode_length_le inst.arity circuit.length
+          circuit rfl hwell.2).trans
+        unfold rawWitnessCodeLengthBound
+        have hfactor :
+            2 * (inst.arity + circuit.length) + 6 ≤
+              2 * (inst.arity + inst.threshold) + 6 := by
+          omega
+        calc
+          circuit.length + 1 +
+                circuit.length * (2 * (inst.arity + circuit.length) + 5) =
+              1 + circuit.length * (2 * (inst.arity + circuit.length) + 6) := by
+            ring
+          _ ≤ 1 + inst.threshold * (2 * (inst.arity + inst.threshold) + 6) :=
+            Nat.add_le_add_left (Nat.mul_le_mul hsize hfactor) 1
+
 theorem exists_isRawCircuitWitness_length_le_internal (inst : Instance)
     (hsmall : inst.HasCircuitAtMost) :
     ∃ code,

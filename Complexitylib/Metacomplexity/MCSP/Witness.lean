@@ -53,6 +53,20 @@ theorem exists_isRawCircuitWitness_iff (inst : Instance) :
     (∃ code, inst.IsRawCircuitWitness code) ↔ inst.HasCircuitAtMost :=
   exists_isRawCircuitWitness_iff_internal inst
 
+/-- Increasing only the threshold preserves every valid raw-circuit witness. -/
+theorem IsRawCircuitWitness.mono (inst : Instance) {first second : ℕ}
+    (hthreshold : first ≤ second) {code : List Bool}
+    (hwitness : (inst.withThreshold first).IsRawCircuitWitness code) :
+    (inst.withThreshold second).IsRawCircuitWitness code :=
+  isRawCircuitWitness_withThreshold_mono_internal inst hthreshold hwitness
+
+/-- Every valid raw witness satisfies the concrete serialization bound; this
+controls all accepted witnesses, not only a selected completeness witness. -/
+theorem IsRawCircuitWitness.length_le (inst : Instance) {code : List Bool}
+    (hwitness : inst.IsRawCircuitWitness code) :
+    code.length ≤ inst.rawWitnessCodeLengthBound :=
+  isRawCircuitWitness_length_le_internal inst hwitness
+
 /-- Every MCSP yes-instance has a raw witness within the explicit serialization
 bound. Threshold normalization is still required before treating this as a
 polynomial bound in encoded instance length. -/

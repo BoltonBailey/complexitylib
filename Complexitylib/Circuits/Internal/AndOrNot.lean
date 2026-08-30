@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.AndOrNot.Defs
+public import Complexitylib.Circuits.Dependency.Defs
+public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 
@@ -74,6 +76,33 @@ def andOrNotFor {N : Nat} [NeZero N] (f : BitString N → Bool) :
       negated := fun _ => false }
   acyclic i k := by
     exact andOrNotFor.mkGate_acyclic f i k
+
+/-- The DNF construction has total fan-in at most `(N + 1) * 2^N`.
+
+Each of its `2^N` internal gates has fan-in either `N` or zero, and its
+single output gate has fan-in `2^N`. -/
+theorem andOrNotFor_totalFanIn_le_internal {N : Nat} [NeZero N]
+    (f : BitString N → Bool) :
+    (andOrNotFor f).totalFanIn ≤ (N + 1) * 2 ^ N := by
+  unfold Circuit.totalFanIn
+  have hgates :
+      (∑ index, ((andOrNotFor f).gates index).fanIn) ≤
+        ∑ _ : Fin (2 ^ N), N := by
+    apply Finset.sum_le_sum
+    intro index _
+    simp only [andOrNotFor]
+    unfold andOrNotFor.mkGate
+    split <;> simp
+  have houtput :
+      (∑ output, ((andOrNotFor f).outputs output).fanIn) = 2 ^ N := by
+    simp [andOrNotFor]
+  calc
+    (∑ index, ((andOrNotFor f).gates index).fanIn) +
+          ∑ output, ((andOrNotFor f).outputs output).fanIn ≤
+        (∑ _ : Fin (2 ^ N), N) + 2 ^ N :=
+      Nat.add_le_add hgates houtput.le
+    _ = (N + 1) * 2 ^ N := by
+      simp [Nat.add_mul, Nat.mul_comm]
 
 private lemma AONFor_wireValue_gate {N : Nat} [NeZero N] (f : BitString N → Bool)
     (x : BitString N) (i : Fin (2 ^ N)) :

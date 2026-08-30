@@ -26,12 +26,20 @@ This module provides the AND/OR basis definitions and completeness results.
   from `unboundedAndOr`, using `CompleteBasis.of_simulation`
 * `CompileAndOr.compileFn_eval` — exact semantics of that simulation
 * `CompileAndOr.compileFn_size_le` — its quantitative size overhead
+- `andOrNotFor_totalFanIn_le` — total fan-in of the explicit DNF construction
 -/
 
 
 public section
 
 namespace Complexity
+
+/-- The explicit DNF circuit for an `N`-input Boolean function has total
+fan-in at most `(N + 1) * 2^N`. -/
+theorem andOrNotFor_totalFanIn_le {N : Nat} [NeZero N]
+    (f : BitString N → Bool) :
+    (andOrNotFor f).totalFanIn ≤ (N + 1) * 2 ^ N :=
+  andOrNotFor_totalFanIn_le_internal f
 
 namespace CompileAndOr
 

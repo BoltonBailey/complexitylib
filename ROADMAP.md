@@ -1747,6 +1747,12 @@ is monotone in the threshold. `MCSP.Instance.IsRawCircuitWitness` and
 check topology, size, and every truth-table row. Existence of such a finite
 witness is equivalent to the typed MCSP predicate, and every yes-instance has
 a serialized witness within an explicit threshold-dependent length bound.
+Oversized binary thresholds are now capped at the proved unconditional bound
+`(2^n + 2)^2` without changing MCSP semantics. The resulting
+`MCSP.RawWitnessRelation` is characterized exactly against MCSP membership and
+is `PolyBalanced`; its concrete witness envelope is a fixed polynomial in the
+canonical encoded instance length. This establishes the short-witness half of
+the NP argument, not the polynomial-time machine verifier.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
@@ -1844,9 +1850,12 @@ the mathematics and must not be hidden behind notation.
   - [x] Expose an executable canonical raw-circuit witness relation, prove it
     equivalent to the typed semantics, and bound serialized witness length in
     terms of arity and threshold.
-  - [ ] Normalize oversized thresholds and prove that a machine implementation
-    of the circuit decoder/evaluator verifies witnesses within a polynomial in
-    truth-table input length `N`.
+  - [x] Normalize oversized thresholds at a proved unconditional
+    truth-table-square circuit bound, preserve yes/no semantics, and package the
+    normalized witness relation as polynomially balanced in encoded input length.
+  - [ ] Prove that a machine implementation of the circuit decoder/evaluator
+    verifies the normalized relation within a polynomial in truth-table input
+    length `N`.
   - [ ] Add `MCSP[s]`, search-MCSP, basis transport, and the final NP theorem.
 - [ ] Define `MKtP`, `MK^tP`, their search variants, and their gap promise
   problems. Prove the intended NP upper bounds with an executable bounded
