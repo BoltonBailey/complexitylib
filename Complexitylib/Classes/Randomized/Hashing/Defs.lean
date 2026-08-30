@@ -96,6 +96,15 @@ def cellSizeVariance {domainWidth rangeWidth seedWidth : ℕ}
         hash.averageCellSize set target) ^ 2) /
     (2 : ℚ) ^ seedWidth
 
+/-- Seeds whose target-cell size deviates from its mean by at least `radius`. -/
+def deviationEvent {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (radius : ℚ) : Finset (BitString seedWidth) :=
+  Finset.univ.filter fun seed =>
+    radius ≤ |(hash.cellSize set target seed : ℚ) -
+      hash.averageCellSize set target|
+
 end PairwiseIndependentHash
 
 end Complexity

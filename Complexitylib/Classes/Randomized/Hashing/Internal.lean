@@ -229,6 +229,63 @@ theorem cellSizeVariance_le_averageCellSize_internal
   have hinv : 0 ≤ 1 / (2 : ℚ) ^ rangeWidth := by positivity
   nlinarith
 
+/-- Internal finite Chebyshev inequality for target-cell sizes. -/
+theorem eventProb_deviationEvent_le_variance_div_sq_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (radius : ℚ) (hradius : 0 < radius) :
+    eventProb (hash.deviationEvent set target radius) ≤
+      hash.cellSizeVariance set target / radius ^ 2 := by
+  have hmarkov := eventProb_le_uniformAverage_div
+    (hash.deviationEvent set target radius)
+    (fun seed : BitString seedWidth =>
+      ((hash.cellSize set target seed : ℚ) -
+        hash.averageCellSize set target) ^ 2)
+    (radius ^ 2) (sq_pos_of_pos hradius)
+    (fun _seed => sq_nonneg _)
+    (fun seed hseed => by
+      have hdev := (Finset.mem_filter.mp hseed).2
+      have hsq :=
+        (sq_le_sq₀ (le_of_lt hradius) (abs_nonneg _)).2 hdev
+      simpa only [sq_abs] using hsq)
+  simpa only [cellSizeVariance] using hmarkov
+
+/-- Internal Chebyshev bound after replacing variance by the cell-size mean. -/
+theorem eventProb_deviationEvent_le_average_div_sq_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (radius : ℚ) (hradius : 0 < radius) :
+    eventProb (hash.deviationEvent set target radius) ≤
+      hash.averageCellSize set target / radius ^ 2 := by
+  refine le_trans
+    (hash.eventProb_deviationEvent_le_variance_div_sq_internal
+      set target radius hradius) ?_
+  exact div_le_div_of_nonneg_right
+    (hash.cellSizeVariance_le_averageCellSize_internal set target)
+    (sq_nonneg radius)
+
+/-- Internal relative-error form of the hashing lemma. -/
+theorem eventProb_relativeDeviationEvent_le_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (epsilon : ℚ) (hepsilon : 0 < epsilon)
+    (hmean : 0 < hash.averageCellSize set target) :
+    eventProb (hash.deviationEvent set target
+      (epsilon * hash.averageCellSize set target)) ≤
+        1 / (epsilon ^ 2 * hash.averageCellSize set target) := by
+  calc
+    eventProb (hash.deviationEvent set target
+        (epsilon * hash.averageCellSize set target)) ≤
+      hash.averageCellSize set target /
+        (epsilon * hash.averageCellSize set target) ^ 2 :=
+      hash.eventProb_deviationEvent_le_average_div_sq_internal
+        set target _ (mul_pos hepsilon hmean)
+    _ = 1 / (epsilon ^ 2 * hash.averageCellSize set target) := by
+      field_simp [ne_of_gt hepsilon, ne_of_gt hmean]
+
 end PairwiseIndependentHash
 
 end Complexity

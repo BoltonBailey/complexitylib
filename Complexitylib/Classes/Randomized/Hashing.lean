@@ -12,7 +12,8 @@ import Complexitylib.Classes.Randomized.Hashing.Internal
 # Pairwise-independent hashing
 
 This module exposes the first two exact finite moments behind Stockmeyer
-counting. They imply the variance bound used by the hashing lemma.
+counting, the resulting variance bound, and the finite Chebyshev hashing
+lemma.
 -/
 
 
@@ -100,6 +101,41 @@ theorem cellSizeVariance_le_averageCellSize
     (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
     hash.cellSizeVariance set target ≤ hash.averageCellSize set target :=
   hash.cellSizeVariance_le_averageCellSize_internal set target
+
+/-- Finite Chebyshev inequality for the size of one target cell. -/
+theorem eventProb_deviationEvent_le_variance_div_sq
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (radius : ℚ) (hradius : 0 < radius) :
+    eventProb (hash.deviationEvent set target radius) ≤
+      hash.cellSizeVariance set target / radius ^ 2 :=
+  hash.eventProb_deviationEvent_le_variance_div_sq_internal
+    set target radius hradius
+
+/-- Pairwise-independence hashing lemma with the variance replaced by the mean. -/
+theorem eventProb_deviationEvent_le_average_div_sq
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (radius : ℚ) (hradius : 0 < radius) :
+    eventProb (hash.deviationEvent set target radius) ≤
+      hash.averageCellSize set target / radius ^ 2 :=
+  hash.eventProb_deviationEvent_le_average_div_sq_internal
+    set target radius hradius
+
+/-- Relative-error form of the pairwise-independence hashing lemma. -/
+theorem eventProb_relativeDeviationEvent_le
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (epsilon : ℚ) (hepsilon : 0 < epsilon)
+    (hmean : 0 < hash.averageCellSize set target) :
+    eventProb (hash.deviationEvent set target
+      (epsilon * hash.averageCellSize set target)) ≤
+        1 / (epsilon ^ 2 * hash.averageCellSize set target) :=
+  hash.eventProb_relativeDeviationEvent_le_internal
+    set target epsilon hepsilon hmean
 
 end PairwiseIndependentHash
 
