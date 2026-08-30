@@ -135,6 +135,25 @@ theorem timeBoundedKolmogorovComplexity_le_coe_iff_internal (machine : TM n)
     exact (timeBoundedKolmogorovComplexity_le_internal hproduce).trans
       (WithTop.coe_le_coe.mpr hlength)
 
+theorem timeBoundedKolmogorovComplexity_lt_coe_iff_internal (machine : TM n)
+    (output : List Bool) (time bound : ℕ) :
+    machine.timeBoundedKolmogorovComplexity output time < (bound : WithTop ℕ) ↔
+      ∃ program, program.length < bound ∧
+        machine.ProducesInTime program output time := by
+  constructor
+  · intro hbound
+    have hfinite : machine.timeBoundedKolmogorovComplexity output time ≠ ⊤ := by
+      intro htop
+      rw [htop] at hbound
+      exact (not_lt_of_ge le_top) hbound
+    obtain ⟨program, hlength, hproduce⟩ :=
+      timeBoundedKolmogorovComplexity_witness_internal machine output time hfinite
+    refine ⟨program, ?_, hproduce⟩
+    exact WithTop.coe_lt_coe.mp (hlength.trans_lt hbound)
+  · rintro ⟨program, hlength, hproduce⟩
+    exact (timeBoundedKolmogorovComplexity_le_internal hproduce).trans_lt
+      (WithTop.coe_lt_coe.mpr hlength)
+
 theorem timeBoundedKolmogorovComplexity_mono_internal (machine : TM n)
     (output : List Bool) {first second : ℕ} (hclock : first ≤ second) :
     machine.timeBoundedKolmogorovComplexity output second ≤

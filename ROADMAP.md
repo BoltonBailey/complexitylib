@@ -1725,8 +1725,8 @@ composable predicates; none mentions the concrete UTM codec.
 `TM.plainKolmogorovComplexity`, `TM.timeBoundedKolmogorovComplexity`, and
 `TM.prefixKolmogorovComplexity` now provide the machine-relative `C_U`, `C_U^t`,
 and certified-prefix-free `K_U` layers with `WithTop Nat` failure values. Their
-public theory includes attaining witnesses, threshold characterizations, clock
-monotonicity, additive semantic-simulation comparison, and a polynomial
+public theory includes attaining witnesses, non-strict and strict threshold
+characterizations, clock monotonicity, additive semantic-simulation comparison, and a polynomial
 resource-aware timed comparison. `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -1734,7 +1734,14 @@ compressible string into that finite type, giving both the exact cardinal upper
 bound and the uniform-probability bound
 `Pr[C_U^t(x) <= k] <= (2^(k+1)-1)/2^n`. The complementary density theorem and
 the existence of an `n`-bit string above every threshold `k < n` are also
-proved, for every machine and clock. The
+proved, for every machine and clock. `MINKT.Instance` now gives the canonical
+auxiliary-unary syntax `(x, 1^t)`, with exact total decoding and the strict
+predicate `C_U^t(x) < r(|x|)`. Canonical membership is equivalent to existence
+of a program shorter than `r(|x|)` that produces exactly `x` within `t` steps;
+the public layer also proves clock and pointwise-threshold monotonicity and
+packages the raw program-witness relation. The machine and threshold remain
+explicit parameters, so later theorems can request exactly the required notion
+of efficient universality. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1765,8 +1772,8 @@ the NP argument, not the polynomial-time machine verifier.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
-normalized MCSP verifier and its NP packaging, and promise/reduction
-infrastructure for gap problems.
+normalized MCSP verifier and its NP packaging, and the search, promise, and
+reduction infrastructure for gap minimum-description problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
 the mathematics and must not be hidden behind notation.
@@ -2710,9 +2717,11 @@ meta-computational notation hides several incompatible choices; expose them.
   and a unary clock inside a fixed total input length. It is not the same as the
   uniform distribution at each string length; give it its own sampler and exact
   probability/counting lemmas.
-- Parameterize `MINKT[r]` by the universal machine, clock encoding, randomness
-  threshold, and strict/non-strict comparison. Parameterize `GapMINKT` by both the
-  description loss `sigma(n,s)` and clock blow-up `tau(n,t)`.
+- The canonical `MINKT[r]` layer uses an explicit machine, the shared pairing
+  codec, a unary primitive clock, a length-indexed threshold, and the strict
+  comparison `C_U^t(x) < r(|x|)`. Keep non-strict variants visibly distinct.
+  Parameterize `GapMINKT` by both the description loss `sigma(n,s)` and clock
+  blow-up `tau(n,t)`.
 - Define conditional complexity only after fixing whether the condition is a
   read-only sequential input, an oracle, or random-access data. The 2022 MinCKT
   results use access conventions that cannot be identified silently with the
@@ -2753,7 +2762,10 @@ meta-computational notation hides several incompatible choices; expose them.
   `Gap_(sigma,tau)MINKT`, and the associated decision promise. Prove all codec,
   threshold-monotonicity, and NP-witness facts before the average-case theorem.
   *The exact `D^u` sampler, component decoding, seed cardinality, and fixed-pair
-  probability are done; the MinKT languages and gap/search problems remain.*
+  probability are done. The strict machine-relative MINKT language, exact unary
+  codec, direct short-program semantics, threshold and clock monotonicity, and
+  raw witness-existence characterization are done; polynomial balance,
+  machine verification, and the gap/search problems remain.*
 - [~] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
   because low-complexity strings are sparse. This is the first substantive bridge

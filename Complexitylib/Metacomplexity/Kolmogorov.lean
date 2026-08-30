@@ -25,6 +25,7 @@ comparison.
 
 - `TM.plainKolmogorovComplexity_le_coe_iff` -- plain threshold characterization
 - `TM.timeBoundedKolmogorovComplexity_le_coe_iff` -- bounded characterization
+- `TM.timeBoundedKolmogorovComplexity_lt_coe_iff` -- strict characterization
 - `TM.timeBoundedKolmogorovComplexity_mono` -- more time cannot increase complexity
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
@@ -105,6 +106,15 @@ theorem timeBoundedKolmogorovComplexity_le_coe_iff (machine : TM n)
       ∃ program, program.length ≤ bound ∧
         machine.ProducesInTime program output time :=
   timeBoundedKolmogorovComplexity_le_coe_iff_internal machine output time bound
+
+/-- Time-bounded complexity is strictly below `bound` exactly when a program
+strictly shorter than `bound` produces the output within the clock. -/
+theorem timeBoundedKolmogorovComplexity_lt_coe_iff (machine : TM n)
+    (output : List Bool) (time bound : ℕ) :
+    machine.timeBoundedKolmogorovComplexity output time < (bound : WithTop ℕ) ↔
+      ∃ program, program.length < bound ∧
+        machine.ProducesInTime program output time :=
+  timeBoundedKolmogorovComplexity_lt_coe_iff_internal machine output time bound
 
 /-- Enlarging the clock cannot increase time-bounded complexity. -/
 theorem timeBoundedKolmogorovComplexity_mono (machine : TM n)
