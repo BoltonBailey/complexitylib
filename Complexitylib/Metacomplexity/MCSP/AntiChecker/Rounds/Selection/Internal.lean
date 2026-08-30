@@ -20,6 +20,16 @@ namespace Complexity
 
 namespace AntiChecker
 
+theorem ApproximatesEveryRound.approximatesRoundsUpTo_internal
+    {arity precision threshold : ℕ}
+    {target : BitString arity → Bool}
+    {estimator : List (BitString arity) → BitString arity → ℕ}
+    (happrox : ApproximatesEveryRound precision target threshold estimator)
+    (rounds : ℕ) :
+    ApproximatesRoundsUpTo rounds precision target threshold estimator := by
+  intro inputs _
+  exact happrox inputs
+
 theorem isEstimateSelectionTrace_nil_internal {arity : ℕ}
     (estimator : List (BitString arity) → BitString arity → ℕ) :
     IsEstimateSelectionTrace estimator [] := by
@@ -70,6 +80,33 @@ theorem IsEstimateSelectionTrace.isShrinkTrace_internal
       exact htrace.2.isShrinkExtension_double_internal
         hprecision hdenominator hbound (happrox inputs) (hgood inputs)
 
+theorem IsEstimateSelectionTrace.isShrinkTrace_of_length_le_internal
+    {arity rounds precision denominator threshold : ℕ}
+    {target : BitString arity → Bool}
+    {estimator : List (BitString arity) → BitString arity → ℕ}
+    {inputs : List (BitString arity)}
+    (hprecision : 1 < precision)
+    (hdenominator : 0 < denominator)
+    (hbound : 4 * denominator ≤ precision + 3)
+    (happrox :
+      ApproximatesRoundsUpTo rounds precision target threshold estimator)
+    (hgood :
+      ∀ samplePrefix : List (BitString arity),
+        HasShrinkExtension denominator target threshold samplePrefix)
+    (htrace : IsEstimateSelectionTrace estimator inputs)
+    (hlength : inputs.length ≤ rounds) :
+    IsShrinkTrace (2 * denominator) target threshold inputs := by
+  induction inputs with
+  | nil => exact isShrinkTrace_nil_internal target
+  | cons input inputs ih =>
+      have htailLt : inputs.length < rounds := by
+        simpa only [List.length_cons] using hlength
+      refine (isShrinkTrace_cons_iff_internal
+        target input inputs).mpr ⟨ih htrace.1 htailLt.le, ?_⟩
+      exact htrace.2.isShrinkExtension_double_internal
+        hprecision hdenominator hbound (happrox inputs htailLt)
+          (hgood inputs)
+
 theorem exists_isShrinkTrace_length_of_approximatesEveryRound_internal
     {arity precision denominator threshold : ℕ}
     {target : BitString arity → Bool}
@@ -91,6 +128,28 @@ theorem exists_isShrinkTrace_length_of_approximatesEveryRound_internal
   exact ⟨inputs, hlength,
     htrace.isShrinkTrace_internal
       hprecision hdenominator hbound happrox hgood⟩
+
+theorem exists_isShrinkTrace_length_of_approximatesRoundsUpTo_internal
+    {arity precision denominator threshold : ℕ}
+    {target : BitString arity → Bool}
+    (estimator : List (BitString arity) → BitString arity → ℕ)
+    (rounds : ℕ)
+    (hprecision : 1 < precision)
+    (hdenominator : 0 < denominator)
+    (hbound : 4 * denominator ≤ precision + 3)
+    (happrox :
+      ApproximatesRoundsUpTo rounds precision target threshold estimator)
+    (hgood :
+      ∀ samplePrefix : List (BitString arity),
+        HasShrinkExtension denominator target threshold samplePrefix) :
+    ∃ inputs : List (BitString arity),
+      inputs.length = rounds ∧
+        IsShrinkTrace (2 * denominator) target threshold inputs := by
+  obtain ⟨inputs, hlength, htrace⟩ :=
+    exists_isEstimateSelectionTrace_length_internal estimator rounds
+  exact ⟨inputs, hlength,
+    htrace.isShrinkTrace_of_length_le_internal
+      hprecision hdenominator hbound happrox hgood hlength.le⟩
 
 end AntiChecker
 

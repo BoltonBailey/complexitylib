@@ -11,8 +11,9 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Defs
 # Approximate-selection round traces -- definitions
 
 An extension estimator assigns an estimated survivor count to every possible
-next input at every sample prefix. This layer records global accuracy and the
-trace obtained by repeatedly choosing a minimum estimate.
+next input at every sample prefix. This layer records bounded and global
+accuracy, together with the trace obtained by repeatedly choosing a minimum
+estimate.
 -/
 
 
@@ -21,6 +22,15 @@ trace obtained by repeatedly choosing a minimum estimate.
 namespace Complexity
 
 namespace AntiChecker
+
+/-- An extension estimator satisfies the relative survivor-count contract at
+every sample prefix shorter than the prescribed number of rounds. -/
+def ApproximatesRoundsUpTo {arity : ℕ} (rounds precision : ℕ)
+    (target : BitString arity → Bool) (threshold : ℕ)
+    (estimator : List (BitString arity) → BitString arity → ℕ) : Prop :=
+  ∀ inputs, inputs.length < rounds →
+    ApproximatesAllExtensions precision target threshold inputs
+      (estimator inputs)
 
 /-- An extension estimator satisfies the relative survivor-count contract at
 every possible sample prefix. -/
