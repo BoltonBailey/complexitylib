@@ -2910,8 +2910,20 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   precision `8n` turns each good extension into a certified `1/(4n)` shrink,
   `4n` rounds halve the survivor bound, the published sample count eventually
   covers every required block, and zero-padding gives exactly that many samples.
-  Conditional counter circuits and circuit-level realization of the round
-  selector remain.*
+  The conditional counter boundary is now explicit rather than axiomatic:
+  labeled sample vectors have a bijective fixed-width row-major codec, arbitrary
+  labels define an exact canonical circuit-code survivor relation, and
+  target-labeled vectors recover the existing survivor count. A finite family of
+  circuits with output width `roundBlockCount + 1`, relative precision `8n`, and
+  ceiling-rounded size `2^(k*beta*n)` is specified by
+  `ApproximateCounterFamily`; `HasApproximateCounterFamilies` is only a named
+  conditional conclusion, not a theorem. Every correct family now induces the
+  bounded round estimator and, for every sufficiently large hard target, an
+  anti-checker of exactly the published sample count. What remains is to derive
+  these counter families from `NP ⊆ PPoly` through a formal relative-counting/PH
+  circuitization argument with the quantitative size bound, and to realize the
+  exhaustive minimum-estimate selector as the advertised multi-output generator
+  circuit.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
