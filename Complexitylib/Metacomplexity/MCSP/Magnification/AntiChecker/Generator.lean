@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Internal
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Selection
 
 /-!
 # Typed Anti-Checker Lemma generators
