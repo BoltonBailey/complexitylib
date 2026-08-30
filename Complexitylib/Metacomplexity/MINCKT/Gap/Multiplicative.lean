@@ -186,6 +186,68 @@ theorem mapReducesPoly_additive
     mapReducesVia_additive ordinaryMachine conditionalMachine parameters factor
       hwidening hfactor⟩
 
+/-- NP-hardness of a factor-at-least-one multiplicative gap transfers to the
+additive factor-one promise. The direction follows the narrowing of the
+multiplicative no side. -/
+theorem promiseNPHard_additive
+    {ordinaryTapes conditionalTapes : ℕ}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (parameters : GapMINCKT.Parameters) (factor : ℕ → ℕ)
+    (hwidening : parameters.IsWidening)
+    (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (problem ordinaryMachine conditionalMachine parameters factor hwidening
+        hfactor)) :
+    PromiseNPHard
+      (Complexity.GapMINCKT ordinaryMachine conditionalMachine parameters
+        hwidening) :=
+  hhard.of_reduction
+    (mapReducesPoly_additive ordinaryMachine conditionalMachine parameters
+      factor hwidening hfactor)
+
+/-- If the multiplicative conditional gap is NP-hard while the corresponding
+additive gap has a deterministic polynomial-time completion, then `P = NP`. -/
+theorem P_eq_NP_of_hard_of_additive_mem_PromiseP
+    {ordinaryTapes conditionalTapes : ℕ}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (parameters : GapMINCKT.Parameters) (factor : ℕ → ℕ)
+    (hwidening : parameters.IsWidening)
+    (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (problem ordinaryMachine conditionalMachine parameters factor hwidening
+        hfactor))
+    (hmembership :
+      Complexity.GapMINCKT ordinaryMachine conditionalMachine parameters
+          hwidening ∈ PromiseP) :
+    P = NP :=
+  (promiseNPHard_additive ordinaryMachine conditionalMachine parameters factor
+    hwidening hfactor hhard).P_eq_NP_of_mem_PromiseP hmembership
+
+/-- A valid conditional-complexity estimator whose threshold language is in
+`P` rules out NP-hardness of the corresponding multiplicative gap unless
+`P = NP`. This is the promise-hardness endpoint of the SoI estimator route. -/
+theorem P_eq_NP_of_hard_of_estimatorLanguage_mem_P
+    {ordinaryTapes conditionalTapes : ℕ}
+    (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (parameters : GapMINCKT.Parameters) (factor : ℕ → ℕ)
+    (hwidening : parameters.IsWidening)
+    (hfactor : ∀ length, 1 ≤ factor length)
+    (hhard : PromiseNPHard
+      (problem ordinaryMachine conditionalMachine parameters factor hwidening
+        hfactor))
+    {estimate : GapMINCKT.Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters)
+    (hpolynomial : GapMINCKT.estimatorLanguage estimate ∈ P) :
+    P = NP :=
+  P_eq_NP_of_hard_of_additive_mem_PromiseP ordinaryMachine conditionalMachine
+    parameters factor hwidening hfactor hhard
+      (GapMINCKT_mem_PromiseP_of_estimatorLanguage_mem_P hwidening hestimate
+        hpolynomial)
+
 end Multiplicative
 
 end GapMINCKT

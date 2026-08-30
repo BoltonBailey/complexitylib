@@ -3304,7 +3304,11 @@ meta-computational notation hides several incompatible choices; expose them.
   hardness/class bridge remain. Definition 6.5's multiplicative promise is now
   formalized separately with exact witness semantics, factor antitonicity,
   factor-one specialization, and the side-preserving identity reduction from
-  every factor-at-least-one promise to the additive promise.*
+  every factor-at-least-one promise to the additive promise. Consequently,
+  NP-hardness transfers from the multiplicative problem to additive
+  `GapMINCKT`; combining this transfer with either an additive `PromiseP`
+  completion or a valid estimator whose threshold language is in `P` now gives
+  a checked `P = NP` endpoint.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3390,6 +3394,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Formalize Definition 6.5's multiplicative conditional gap, including
   exact program semantics, disjointness, factor monotonicity, and its
   factor-at-least-one identity reduction to additive `GapMINCKT`.
+- [x] Transfer multiplicative-gap NP-hardness to additive `GapMINCKT` and derive
+  the `P = NP` consequence from either additive `PromiseP` membership or the
+  induced estimator threshold language in `P`.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
