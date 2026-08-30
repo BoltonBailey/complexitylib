@@ -1719,7 +1719,13 @@ simulation rather than duplicated in a metacomplexity-specific layer.
 machine-independent universality interface over arbitrary source work-tape
 counts. Semantic halting/output preservation, additive program length, explicit
 program-sensitive clocks, and polynomial clock admissibility are separate
-composable predicates; none mentions the concrete UTM codec. The
+composable predicates; none mentions the concrete UTM codec.
+`TM.plainKolmogorovComplexity`, `TM.timeBoundedKolmogorovComplexity`, and
+`TM.prefixKolmogorovComplexity` now provide the machine-relative `C_U`, `C_U^t`,
+and certified-prefix-free `K_U` layers with `WithTop Nat` failure values. Their
+public theory includes attaining witnesses, threshold characterizations, clock
+monotonicity, additive semantic-simulation comparison, and a polynomial
+resource-aware timed comparison. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1731,8 +1737,8 @@ functions, and the truth-table bridges, circuit codec, evaluator, and functional
 unrolling construction supply most of the intended MCSP verification path.
 
 What remains missing is an instance connecting the fixed UTM to the generic
-interface, any Kolmogorov measure, a total MCSP instance language, and
-promise/reduction infrastructure for gap problems.
+interface, executable finite minimization for the bounded measure, a total MCSP
+instance language, and promise/reduction infrastructure for gap problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
 the mathematics and must not be hidden behind notation.
@@ -1789,7 +1795,7 @@ the mathematics and must not be hidden behind notation.
   instantiate the generic efficient-universality interface. The compiler should
   expose the exact paired-program length `2 * |description| + 2 + |p|` and the
   existing single-tape and UTM clock transformations.
-- [ ] Define plain `C_U`, bounded `C^t_U`, and prefix-free `K_U`; prove clock
+- [x] Define plain `C_U`, bounded `C^t_U`, and prefix-free `K_U`; prove clock
   monotonicity, witness/threshold characterizations, additive invariance under
   the appropriate compiler, and the corresponding resource-aware comparison
   theorem. A time-bounded measure is not invariant under an unchanged clock.
