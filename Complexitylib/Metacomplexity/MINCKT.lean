@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINCKT.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap
+public import Complexitylib.Metacomplexity.MINCKT.Gap.Multiplicative
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional
