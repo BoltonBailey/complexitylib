@@ -2927,8 +2927,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   gives an explicit counter-to-generator overhead lift `k ↦ k + 32`, packages the
   circuit as `Generator`, and proves
   `HasApproximateCounterFamilies → HasGenerators`. What remains is to derive the
-  counter families from `NP ⊆ PPoly` through a formal relative-counting/PH
-  circuitization argument with the quantitative size bound.*
+  counter families from `NP ⊆ PPoly` through a formal relative-counting and
+  direct SAT-oracle circuitization argument with the quantitative size bound.
+  The exact Boolean-oracle semantics and the extraction of a polynomial-size
+  SAT circuit oracle from `NP ⊆ PPoly` are now packaged; adaptive oracle-circuit
+  inlining and the randomized relative counter remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

@@ -32,6 +32,15 @@ namespace Complexity
 /-- A Boolean oracle answers one bit for every finite binary query string. -/
 abbrev BooleanOracle := List Bool → Bool
 
+namespace BooleanOracle
+
+/-- An oracle decides a language when its answer bit is its exact
+characteristic function on every finite query string. -/
+def Decides (oracle : BooleanOracle) (language : Language) : Prop :=
+  ∀ query, oracle query = true ↔ query ∈ language
+
+end BooleanOracle
+
 namespace Tape
 
 /-- Query string delimited by the query-tape head. Cells strictly between the

@@ -19,6 +19,7 @@ public import Complexitylib.SAT.Encoding
 public import Complexitylib.SAT.Language
 public import Complexitylib.SAT.Verifier
 public import Complexitylib.SAT.Headline
+public import Complexitylib.SAT.CircuitOracle
 public import Complexitylib.SAT.ThreeSAT.Headline
 public import Complexitylib.SAT.CookLevin
 public import Complexitylib.SAT.CookLevin.Assembly
@@ -49,4 +50,6 @@ infrastructure used by the polynomial-time verifier.
   setup, bounded guessing, pair construction, and verifier simulation.
 - `Headline` / `CookLevin.Assembly` — `SAT ∈ NP` and the final
   NP-completeness theorem.
+- `CircuitOracle` — extraction of a polynomial-size SAT circuit oracle from
+  the hypothesis `NP ⊆ PPoly`.
 -/
