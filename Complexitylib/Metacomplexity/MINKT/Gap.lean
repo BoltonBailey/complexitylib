@@ -116,6 +116,21 @@ theorem mem_yesLanguage_iff_exists_program {tapes : ℕ}
       ∃ program, YesWitnessRelation machine bits program :=
   mem_yesLanguage_iff_exists_program_internal machine bits
 
+/-- Every valid source program is no longer than its canonical unary-threshold
+instance code. -/
+theorem yesWitnessRelation_length_le_input {tapes : ℕ}
+    (machine : TM tapes) {bits program : List Bool}
+    (hrelation : YesWitnessRelation machine bits program) :
+    program.length ≤ bits.length :=
+  yesWitnessRelation_length_le_input_internal machine hrelation
+
+/-- The direct source-program witness relation for GapMINKT yes-instances is
+linearly balanced, with the identity polynomial as its bound. -/
+theorem yesWitnessRelation_polyBalanced {tapes : ℕ}
+    (machine : TM tapes) :
+    PolyBalanced (YesWitnessRelation machine) :=
+  yesWitnessRelation_polyBalanced_internal machine
+
 /-- The optimization search relation has a witness exactly when the source
 time-bounded complexity is finite. -/
 theorem exists_searchRelation_iff {tapes : ℕ}

@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.Promise.Defs
+public import Complexitylib.Classes.Pairing
 public import Complexitylib.Metacomplexity.MINKT.Defs
 public import Complexitylib.Models.TuringMachine.OutputSemantics
 

@@ -234,6 +234,24 @@ theorem mem_yesLanguage_iff_exists_program_internal {tapes : ℕ}
         subst decoded
         exact ⟨program, hlength, hproduce⟩
 
+theorem yesWitnessRelation_length_le_input_internal {tapes : ℕ}
+    (machine : TM tapes) {bits program : List Bool}
+    (hrelation : YesWitnessRelation machine bits program) :
+    program.length ≤ bits.length := by
+  obtain ⟨inst, hdecode, hlength, _hproduce⟩ := hrelation
+  have hcanonical :=
+    (Instance.decode?_eq_some_iff_internal bits inst).mp hdecode
+  rw [hcanonical, Instance.length_encode_internal]
+  omega
+
+theorem yesWitnessRelation_polyBalanced_internal {tapes : ℕ}
+    (machine : TM tapes) :
+    PolyBalanced (YesWitnessRelation machine) := by
+  refine ⟨Polynomial.X, ?_⟩
+  intro bits program hrelation
+  simpa only [Polynomial.eval_X] using
+    yesWitnessRelation_length_le_input_internal machine hrelation
+
 theorem exists_searchRelation_iff_internal {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters)
     (hwidening : parameters.IsWidening) (inst : MINKT.Instance) :

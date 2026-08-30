@@ -1756,7 +1756,8 @@ complexity is finite. The relaxed-resource witness checker is executable, and
 any search algorithm satisfying the approximation relation on finite inputs
 induces a semantic GapMINKT promise solver when `sigma(n,-)` is monotone. On
 promised no-instances the checker rejects independently of the search
-algorithm's behavior. The
+algorithm's behavior. The canonical yes-witness relation is linearly balanced:
+every source program is no longer than the unary-threshold instance code. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -2804,9 +2805,10 @@ meta-computational notation hides several incompatible choices; expose them.
   GapMINKT decision promise, separate `sigma`/`tau` transformations, triple
   codec, widening/disjointness theorem, direct witness semantics, and finite
   optimization-search relation are done. An executable relaxed-witness checker
-  and the semantic search-to-decision implication are also done; polynomial
-  balance, polynomial-time machine verification, and construction of the
-  randomized search algorithm remain.*
+  and the semantic search-to-decision implication are also done. The canonical
+  yes-witness relation is linearly `PolyBalanced`; polynomial-time machine
+  verification, parameter-sensitive balance for the optimization search
+  relation, and construction of the randomized search algorithm remain.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
