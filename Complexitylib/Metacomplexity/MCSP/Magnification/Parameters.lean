@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.Promise.CircuitSize
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Parameters.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Parameters.Internal
 public import Complexitylib.Metacomplexity.MCSP.Raw
@@ -155,6 +156,27 @@ theorem mem_rawProblem_promise_imp_isRawTruthTable
     MCSP.IsRawTruthTable bits :=
   mem_rawSliceProblem_promise_imp_isRawTruthTable
     parameters.sliceParameters parameters.sliceParameters_isGap hmem
+
+/-- The selected raw problem has a pointwise circuit lower bound at exponent
+`1+epsilon`. -/
+def HasPointwiseCircuitLowerBound
+    (parameters : Parameters) (epsilon : PositiveRationalScale) : Prop :=
+  parameters.rawProblem ∉ PromiseSIZE (circuitBound epsilon)
+
+/-- The selected raw problem has a circuit lower bound even when finitely many
+exceptional input lengths are allowed. -/
+def HasEventualCircuitLowerBound
+    (parameters : Parameters) (epsilon : PositiveRationalScale) : Prop :=
+  parameters.rawProblem ∉ PromiseEventuallySIZE (circuitBound epsilon)
+
+/-- An eventual lower bound implies the corresponding pointwise lower bound. -/
+theorem HasEventualCircuitLowerBound.pointwise
+    {parameters : Parameters} {epsilon : PositiveRationalScale}
+    (hlower : parameters.HasEventualCircuitLowerBound epsilon) :
+    parameters.HasPointwiseCircuitLowerBound epsilon := by
+  intro hpointwise
+  exact hlower (PromiseSIZE_subset_PromiseEventuallySIZE
+    (circuitBound epsilon) hpointwise)
 
 end Parameters
 

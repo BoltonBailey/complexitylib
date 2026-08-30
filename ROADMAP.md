@@ -1939,6 +1939,12 @@ under polynomial-time preimages. In particular, `PromiseP ⊆ PromiseNP`, and
 promise target; this is proved equivalent to quantifying over every source in
 the lifted promise class. Thus `PromiseNPHard` and `PromiseNPComplete` agree
 exactly with ordinary `NPHard` and `NPComplete` on total embedded languages.
+`PromiseSIZE` now names the completion lift of nonuniform circuit size and is
+proved equivalent to one explicit circuit family solving both promised sides.
+`PromiseEventuallySIZE` keeps finite exceptional lengths explicit; an eventual
+polynomial bound is upgraded to pointwise polynomial size by adding a constant
+polynomial, hence yields `PromisePPoly`. Total-language embeddings recover
+ordinary `SIZE` and `PPoly` exactly.
 A `PromiseNPHard` target in `PromiseP` collapses `P` and `NP`, so under
 `P ≠ NP` every such hard target is outside `PromiseP`. An FNP relation that
 characterizes the yes-instances also yields `PromiseNP` membership under the
@@ -2690,8 +2696,12 @@ one, and their powers of two differ by at most a factor of two. The selected
 `GapMCSP.Magnification.Parameters` family now defines
 `2^floor(beta*n)/(c*n)` versus `2^floor(beta*n)`, proves the finite gap and
 denominator inequality, and gives a rounded solver bound that agrees exactly
-with its arity form on `N = 2^n` bits. Eventual small-`beta` quantification and
-promise circuit-size membership remain.
+with its arity form on `N = 2^n` bits. `PromiseSIZE` is characterized by an
+explicit family solving both promise sides, while `PromiseEventuallySIZE`
+records bounds outside a finite prefix. Eventual polynomial bounds yield
+`PromisePPoly` after a proved finite-prefix patch. The selected parameter family
+now exposes both pointwise and eventual lower-bound predicates. Eventual
+small-`beta` quantification and basis transport remain.
 Canonical truth tables now round-trip to typed Boolean functions, and the checked
 Shannon circuit bounds give the exact finite MCSP window from a no-instance at
 `2^n/(5n)` to universal acceptance at `18*2^n/n` for `n >= 16`. This calibrates
@@ -2799,10 +2809,13 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   scale, floor/ceiling factor-two comparison, selected GapMCSP thresholds, gap,
   and exact power-of-two input identity are done; eventual domination and the
   small-parameter filter remain.*
-- [ ] Define the nonuniform circuit-size predicate for promise problems used by
+- [~] Define the nonuniform circuit-size predicate for promise problems used by
   the selected theorem. Relate it to `PromiseClass (SIZE s)`, allow finite
   exceptional lengths explicitly, and prove that polynomial-size promise solvers
   and `PPoly` are invariant under the selected finite-prefix and basis transports.
+  *Explicit solver equivalence, pointwise/eventual classes, monotonicity, total-
+  language agreement, and finite-prefix invariance for polynomial bounds are
+  done; exact basis transport remains.*
 - [ ] Define `SuccinctMCSP`: a list of distinct or repeated input/output samples
   together with a circuit-size threshold, accepted when one small circuit matches
   every sample. Give it a total codec, exact sample semantics, polynomial witness
@@ -2946,8 +2959,8 @@ not evidence that either the collapse or the desired lower bound has been proved
   conventions together with the Anti-Checker Lemma proof spine.
 - [~] Define rational scaled-exponential threshold functions and an eventual
   promise-`SIZE` interface sufficient to state the selected theorem in Lean.
-  *The rounded threshold and solver-bound functions are done; the eventual
-  promise-`SIZE` interface remains.*
+  *The rounded functions and pointwise/eventual promise-`SIZE` interfaces are
+  done; the small-positive-parameter quantifier and basis transport remain.*
 - [M] Define finite anti-checkers and prove their equivalence with rejection of
   the corresponding sampled `SuccinctMCSP` instance.
 - [M] Define formula-XOR (or the first selected weak model) by extending the

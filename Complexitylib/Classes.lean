@@ -15,6 +15,7 @@ public import Complexitylib.Classes.SharpP
 public import Complexitylib.Classes.Negligible
 public import Complexitylib.Classes.P
 public import Complexitylib.Classes.Promise
+public import Complexitylib.Classes.Promise.CircuitSize
 public import Complexitylib.Classes.PPoly
 public import Complexitylib.Classes.PPoly.Advice
 public import Complexitylib.Classes.PPoly.Unrolling
@@ -77,7 +78,8 @@ import Complexitylib.Classes.NP.Internal.PairSplitTM
 # Complexity classes
 
 Aggregation module for the class definitions and their relationships:
-time and space classes, `P`, `NP`, randomized and nonuniform classes, the
-logspace-uniform circuit containment in `P`, function classes, reductions,
-containments, and the time hierarchy.
+time and space classes, `P`, `NP`, randomized and nonuniform classes, pointwise
+and eventual promise circuit-size classes, the logspace-uniform circuit
+containment in `P`, function classes, reductions, containments, and the time
+hierarchy.
 -/
