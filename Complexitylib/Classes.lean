@@ -68,6 +68,9 @@ public import Complexitylib.Classes.L.PolynomialTime
 public import Complexitylib.Classes.Exponential
 public import Complexitylib.Classes.DTISP
 public import Complexitylib.Classes.Containments
+public import Complexitylib.Classes.Interactive
+public import Complexitylib.Classes.PCP
+public import Complexitylib.Classes.PH
 public import Complexitylib.Classes.Hierarchy
 import Complexitylib.Classes.NP.Internal.PairSplitTM
 

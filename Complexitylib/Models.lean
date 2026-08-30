@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models.TuringMachine
+public import Complexitylib.Models.TuringMachine.Branch
+public import Complexitylib.Models.TuringMachine.ChoiceTape
 public import Complexitylib.Models.TuringMachine.Trace
 public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape

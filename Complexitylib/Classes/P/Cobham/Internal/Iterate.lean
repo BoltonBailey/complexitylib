@@ -876,13 +876,9 @@ theorem iterTM_computesInTime (M : TM k) {G : List Bool → List Bool} {tp : Pol
 `Complexity.iterBound` is a sum of products of polynomial evaluations, so the
 closure API of `Complexitylib.Asymptotics.PolyBound` bounds it directly. -/
 
-theorem polyBound_iterBound (k : ℕ) (tp p r : Polynomial ℕ) :
-    PolyBound (iterBound k tp p r) := by
-  have hcomp : PolyBound (fun n => tp.eval (r.eval n)) :=
-    PolyBound.mono (PolyBound.eval (tp.comp r))
-      (fun n => le_of_eq (by rw [Polynomial.eval_comp]))
+/-- `Complexity.setupBound` is polynomially bounded. -/
+theorem polyBound_setupBound (p : Polynomial ℕ) : PolyBound (setupBound p) := by
   have hp : PolyBound (fun n => p.eval n) := PolyBound.eval p
-  have hr : PolyBound (fun n => r.eval n) := PolyBound.eval r
   have hpow : PolyBound (fun n => (n + 1) ^ (polyCoeffs p).length) :=
     PolyBound.pow (PolyBound.add PolyBound.id (PolyBound.const 1)) _
   have hM : PolyBound (fun n => polyM p n) := by
@@ -899,42 +895,54 @@ theorem polyBound_iterBound (k : ℕ) (tp p r : Polynomial ℕ) :
     rw [show (fun n => layerBudget (polyM p n)) = fun n =>
       4 * opBudget (polyM p n) + 3 from rfl]
     exact PolyBound.add (PolyBound.mul (PolyBound.const _) hop) (PolyBound.const _)
-  have hsetup : PolyBound (setupBound p) := by
-    rw [show setupBound p = fun n => 1 + 1 + (2 * n + 4) + 1 +
-        (opBudget (polyM p n) + 1 +
-          ((p.natDegree + 1) * (layerBudget (polyM p n) + 1) + 1)) + 1 + (n + 3) from rfl]
-    exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
-      (PolyBound.add (PolyBound.const _) (PolyBound.const _))
-      (PolyBound.add (PolyBound.mul (PolyBound.const 2) PolyBound.id) (PolyBound.const _)))
-      (PolyBound.const _))
-      (PolyBound.add (PolyBound.add hop (PolyBound.const _))
-        (PolyBound.add
-          (PolyBound.mul (PolyBound.const _) (PolyBound.add hlayer (PolyBound.const _)))
-          (PolyBound.const _))))
-      (PolyBound.const _)) (PolyBound.add PolyBound.id (PolyBound.const _))
+  rw [show setupBound p = fun n => 1 + 1 + (2 * n + 4) + 1 +
+      (opBudget (polyM p n) + 1 +
+        ((p.natDegree + 1) * (layerBudget (polyM p n) + 1) + 1)) + 1 + (n + 3) from rfl]
+  exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
+    (PolyBound.add (PolyBound.const _) (PolyBound.const _))
+    (PolyBound.add (PolyBound.mul (PolyBound.const 2) PolyBound.id) (PolyBound.const _)))
+    (PolyBound.const _))
+    (PolyBound.add (PolyBound.add hop (PolyBound.const _))
+      (PolyBound.add
+        (PolyBound.mul (PolyBound.const _) (PolyBound.add hlayer (PolyBound.const _)))
+        (PolyBound.const _))))
+    (PolyBound.const _)) (PolyBound.add PolyBound.id (PolyBound.const _))
+
+/-- `Complexity.tailBound` is polynomially bounded in the input length, for any
+polynomially bounded result length. -/
+theorem polyBound_tailBound (k : ℕ) (p : Polynomial ℕ) (m : ℕ → ℕ) (hm : PolyBound m) :
+    PolyBound (fun n => tailBound k (p.eval n) (m n)) := by
+  have hp : PolyBound (fun n => p.eval n) := PolyBound.eval p
+  rw [show (fun n => tailBound k (p.eval n) (m n)) = fun n =>
+    1 + 1 + (p.eval n + 1 + 2) + 1 +
+      ((k + 1) * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + ((k + 1) * (p.eval n + 4) + 1)) + 1 +
+    (2 * m n + 5 + 1 +
+      (1 * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + (1 * (p.eval n + 4) + 1))) from rfl]
+  have hbase : PolyBound (fun n => p.eval n + 4) := PolyBound.add hp (PolyBound.const _)
+  have hk : PolyBound (fun n => (k + 1) * (p.eval n + 4)) :=
+    PolyBound.mul (PolyBound.const _) hbase
+  have h1 : PolyBound (fun n => 1 * (p.eval n + 4)) := PolyBound.mul (PolyBound.const _) hbase
+  have h4 : PolyBound (fun n => p.eval n * 4) := PolyBound.mul hp (PolyBound.const _)
+  exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
+    (PolyBound.add (PolyBound.const _) (PolyBound.const _))
+    (PolyBound.add (PolyBound.add hp (PolyBound.const _)) (PolyBound.const _)))
+    (PolyBound.const _))
+    (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add hk h4) (PolyBound.const _))
+      (PolyBound.const _)) (PolyBound.add hk (PolyBound.const _)))) (PolyBound.const _))
+    (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.mul (PolyBound.const 2) hm)
+      (PolyBound.const _)) (PolyBound.const _))
+      (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add h1 h4) (PolyBound.const _))
+        (PolyBound.const _)) (PolyBound.add h1 (PolyBound.const _))))
+
+theorem polyBound_iterBound (k : ℕ) (tp p r : Polynomial ℕ) :
+    PolyBound (iterBound k tp p r) := by
+  have hcomp : PolyBound (fun n => tp.eval (r.eval n)) :=
+    PolyBound.mono (PolyBound.eval (tp.comp r))
+      (fun n => le_of_eq (by rw [Polynomial.eval_comp]))
+  have hr : PolyBound (fun n => r.eval n) := PolyBound.eval r
+  have hsetup : PolyBound (setupBound p) := polyBound_setupBound p
   have htail : ∀ m : ℕ → ℕ, PolyBound m →
-      PolyBound (fun n => tailBound k (p.eval n) (m n)) := by
-    intro m hm
-    rw [show (fun n => tailBound k (p.eval n) (m n)) = fun n =>
-      1 + 1 + (p.eval n + 1 + 2) + 1 +
-        ((k + 1) * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + ((k + 1) * (p.eval n + 4) + 1)) + 1 +
-      (2 * m n + 5 + 1 +
-        (1 * (p.eval n + 4) + p.eval n * 4 + 8 + 1 + (1 * (p.eval n + 4) + 1))) from rfl]
-    have hbase : PolyBound (fun n => p.eval n + 4) := PolyBound.add hp (PolyBound.const _)
-    have hk : PolyBound (fun n => (k + 1) * (p.eval n + 4)) :=
-      PolyBound.mul (PolyBound.const _) hbase
-    have h1 : PolyBound (fun n => 1 * (p.eval n + 4)) := PolyBound.mul (PolyBound.const _) hbase
-    have h4 : PolyBound (fun n => p.eval n * 4) := PolyBound.mul hp (PolyBound.const _)
-    exact PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add
-      (PolyBound.add (PolyBound.const _) (PolyBound.const _))
-      (PolyBound.add (PolyBound.add hp (PolyBound.const _)) (PolyBound.const _)))
-      (PolyBound.const _))
-      (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add hk h4) (PolyBound.const _))
-        (PolyBound.const _)) (PolyBound.add hk (PolyBound.const _)))) (PolyBound.const _))
-      (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.mul (PolyBound.const 2) hm)
-        (PolyBound.const _)) (PolyBound.const _))
-        (PolyBound.add (PolyBound.add (PolyBound.add (PolyBound.add h1 h4) (PolyBound.const _))
-          (PolyBound.const _)) (PolyBound.add h1 (PolyBound.const _))))
+      PolyBound (fun n => tailBound k (p.eval n) (m n)) := polyBound_tailBound k p
   rw [show iterBound k tp p r = fun n => setupBound p n + 1 +
       (tailBound k (p.eval n) (n + 2) + 1 +
         (n * (tp.eval (r.eval n) + 1 + tailBound k (p.eval n) (r.eval n) + 2) + (n + 2)) + 1 +

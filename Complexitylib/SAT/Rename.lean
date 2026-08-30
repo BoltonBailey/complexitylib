@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.SAT.Semantics
+public import Mathlib.Data.List.MinMax
 
 /-!
 # Variable renaming and satisfiability transport
@@ -84,16 +85,6 @@ theorem Assignment.ofFn_get {M v : ℕ} (g : ℕ → Bool) (h : v < M) :
     (Assignment.ofFn M g).get v = g v := by
   simp [Assignment.ofFn, Assignment.get, List.getElem?_map, List.getElem?_range h]
 
-/-- Every member is at most the `foldr max` of its list. -/
-private theorem le_foldr_max' {v : ℕ} {l : List ℕ} (h : v ∈ l) :
-    v ≤ l.foldr max 0 := by
-  induction l with
-  | nil => exact (List.not_mem_nil h).elim
-  | cons a l ih =>
-    rcases List.mem_cons.mp h with rfl | h
-    · exact le_max_left _ _
-    · exact le_trans (ih h) (le_max_right _ _)
-
 -- ════════════════════════════════════════════════════════════════════════
 -- Evaluation commutes with renaming
 -- ════════════════════════════════════════════════════════════════════════
@@ -145,7 +136,7 @@ theorem CNF.Satisfiable.mapVar {f : ℕ → ℕ} (hf : Function.Injective f) {φ
     · have hfv : f v < M := by
         rw [hM]
         exact Nat.lt_succ_of_le
-          (le_foldr_max' (List.mem_map_of_mem (List.mem_range.mpr hv)))
+          (List.le_max_of_le' 0 (List.mem_map_of_mem (List.mem_range.mpr hv)) le_rfl)
       rw [hα, Assignment.ofFn_get _ hfv]
       cases hβv : β.get v with
       | false =>
