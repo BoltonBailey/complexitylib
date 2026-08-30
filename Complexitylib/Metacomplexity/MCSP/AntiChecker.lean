@@ -11,6 +11,7 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Approximation
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Selection
 
 /-!
 # Finite anti-checkers
@@ -28,7 +29,8 @@ members all fail somewhere, using at most one disagreement input per code. The
 enumeration layer supplies a canonical covering set with an explicit exhaustive
 cardinality bound. Its survivor-count layer identifies anti-checking exactly
 with reducing the number of consistent canonical candidates to zero. Relative
-estimates of that count use an exact cross-multiplied natural-number contract.
+estimates of that count use an exact cross-multiplied natural-number contract,
+and minimizing those estimates preserves survivor shrinkage with explicit loss.
 -/
 
 
