@@ -63,11 +63,22 @@ theorem disjoint_sliceLanguages
   disjoint_sliceLanguages_internal parameters hgap
 
 /-- Canonical arity-indexed Gap MCSP promise problem. -/
+@[expose]
 def sliceProblem (parameters : SliceParameters)
     (hgap : parameters.IsGap) : PromiseProblem where
   yesInstances := sliceYesLanguage parameters
   noInstances := sliceNoLanguage parameters
   disjoint := disjoint_sliceLanguages parameters hgap
+
+@[simp] theorem sliceProblem_yesInstances
+    (parameters : SliceParameters) (hgap : parameters.IsGap) :
+    (sliceProblem parameters hgap).yesInstances =
+      sliceYesLanguage parameters := rfl
+
+@[simp] theorem sliceProblem_noInstances
+    (parameters : SliceParameters) (hgap : parameters.IsGap) :
+    (sliceProblem parameters hgap).noInstances =
+      sliceNoLanguage parameters := rfl
 
 /-- Exact table-preserving reduction between ordered threshold slices. The map
 re-encodes only the target yes threshold; `MCSP.rethreshold_comp` and

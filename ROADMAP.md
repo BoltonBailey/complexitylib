@@ -1911,7 +1911,14 @@ circuit size, and records the precise change in code length through the old and
 new binary threshold widths. `GapMCSP.sliceProblem` supplies the corresponding
 `GapMCSP[s_yes,s_no]` promise. Its parameter order exposes both inequalities
 needed by a table-preserving side reduction, and the resulting explicit map is
-proved correct. `PromiseProblem`
+proved correct. `GapMCSP.rawSliceProblem` now supplies the bare truth-table
+convention used in hardness-magnification papers: promised inputs have exactly
+`N = 2^n` bits, the arity is recovered from `N`, and both thresholds are external
+problem parameters. Raw decoding succeeds exactly at power-of-two lengths.
+Adding canonical metadata and erasing it again are inverse on valid raw inputs,
+and adding or erasing metadata is proved to preserve both promise sides. These
+are semantic `MapReducesVia` theorems; polynomial-time implementations of the
+two maps remain separate obligations. `PromiseProblem`
 now packages disjoint yes/no languages, their promised union, semantic Boolean
 solvers constrained only on that union, explicit side-preserving maps, and
 polynomial-time many-one reductions. Complement, total-language embedding, and
@@ -2666,11 +2673,17 @@ corresponding finite randomized circuit semantics.
 
 **Current foundation.** `GapMCSP.sliceProblem` now fixes separate arity-indexed
 yes/no thresholds and has exact table-preserving reductions under the two
-required parameter inequalities. Canonical truth tables now round-trip to typed
-Boolean functions, and the checked Shannon circuit bounds give the exact finite
-MCSP window from a no-instance at `2^n/(5n)` to universal acceptance at
-`18*2^n/n` for `n >= 16`. This calibrates the native MCSP scale but is not the
-weak model lower bound required by a magnification theorem. `BooleanHamming`
+required parameter inequalities. `GapMCSP.rawSliceProblem` removes the encoded
+arity and threshold fields and accepts exactly bare truth tables of power-of-two
+length. Its public API proves that every promised input has length `N = 2^n`,
+characterizes both sides by the same minimum-size inequalities as the canonical
+problem, and gives side-preserving raw-to-canonical and canonical-to-raw maps.
+The maps are semantic reductions, not yet polynomial-time circuit constructions.
+Canonical truth tables now round-trip to typed Boolean functions, and the checked
+Shannon circuit bounds give the exact finite MCSP window from a no-instance at
+`2^n/(5n)` to universal acceptance at `18*2^n/n` for `n >= 16`. This calibrates
+the native MCSP scale but is not the weak model lower bound required by a
+magnification theorem. `BooleanHamming`
 supplies absolute distance,
 the triangle inequality, XOR translation, and an exact bridge to the rational
 relative distance already used by `BooleanListCode`. Boolean spheres and balls
@@ -2692,15 +2705,46 @@ side, a maximum-cardinality separated code is proved to cover the entire cube
 by radius-`d-1` balls, yielding the exact finite Gilbert--Varshamov inequality
 `2^n <= |C| * volume(n,d-1)`. This supplies existence, not an efficient family.
 
-**Literature anchors.** The initial theorem menu should be drawn from the
-Oliveira--Santhanam hardness-magnification framework, the
-Oliveira--Pich--Santhanam gap-MCSP/gap-MKtP results, the
-Chen--Jin--Williams sharp-threshold results, and the
-Chen--Hirahara--Oliveira--Pich--Rajgopal--Santhanam analysis of natural proofs and
-the locality barrier. Allender--Grochow--van Melkebeek--Moore--Morgan supplies a
-separate reduction-oriented bridge between MKtP and isomorphism problems. Before
-formalization, pin one paper/version and transcribe its exact model, threshold,
-uniformity, error, and quantifier conventions into a short design document.
+**Selected first headline.** Pin the first complete theorem to Oliveira--Pich--
+Santhanam, [*Hardness Magnification near State-Of-The-Art Lower Bounds*, CCC
+2019, Theorem 4](https://doi.org/10.4230/LIPIcs.CCC.2019.27), with the
+[ECCC TR18-158 revision](https://eccc.weizmann.ac.il/report/2018/158/) retained
+as the extended source. In the paper's notation, raw input length is `N = 2^n`;
+`GapMCSP[s₁,s₂]` has yes side `Size(f) <= s₁(n)` and no side
+`Size(f) > s₂(n)`; and `Circuit[S]` means unbounded-depth, fan-in-two Boolean
+circuits of at most `S` gates. The theorem states that there is a universal
+constant `c >= 1` such that
+
+```text
+(exists epsilon > 0, for every sufficiently small beta > 0,
+  GapMCSP[2^(beta*n)/(c*n), 2^(beta*n)]
+    is not in Circuit[N^(1+epsilon)])
+  -> NP is not contained in Circuit[poly].
+```
+
+The library target is the same implication over `GapMCSP.rawSliceProblem`, with
+the antecedent expressed by the completion-based promise lift of a nonuniform
+size class and the conclusion transported to `¬ NP ⊆ PPoly`. This is a target,
+not a current theorem. Before the final Lean signature lands, make four implicit
+paper conventions explicit and prove they do not change the headline:
+
+1. encode positive `beta` and `epsilon` by rationals, define the rounded natural
+   thresholds and the bound corresponding to `N^(1+epsilon)`, and prove that the
+   floor/ceiling choices are absorbed by constant-factor slack;
+2. express “every sufficiently small beta” as an eventual quantifier at zero
+   from the positive side, while keeping the sufficiently-large-`n` quantifier
+   separate;
+3. reconcile the paper's arbitrary fan-in-two gate basis and gate count with
+   `Basis.andOr2`, free input negations, and `Circuit.size`; and
+4. reconcile eventual circuit bounds and finite exceptional input lengths with
+   the library's pointwise `SIZE`/`PPoly` conventions.
+
+**Secondary literature matrix.** After the selected theorem, draw additional
+frontiers from the Oliveira--Santhanam framework, the remaining Oliveira--Pich--
+Santhanam gap-MKtP results, the Chen--Jin--Williams sharp-threshold results, and
+the Chen--Hirahara--Oliveira--Pich--Rajgopal--Santhanam analysis of natural proofs
+and the locality barrier. Allender--Grochow--van Melkebeek--Moore--Morgan supplies
+a separate reduction-oriented bridge between MKtP and isomorphism problems.
 
 **Definitions and theorem shape to settle first.**
 
@@ -2731,6 +2775,42 @@ uniformity, error, and quantifier conventions into a short design document.
 
 **Staged milestones.**
 
+- [x] Define raw truth-table `MCSP[s]` and `GapMCSP[s₁,s₂]` on exactly
+  `N = 2^n` input bits. Prove exact power-of-two well-formedness, membership
+  characterizations, raw/canonical round trips, and semantic side-preserving maps
+  in both directions.
+- [ ] Add rationally scaled natural thresholds for `2^(beta*n)`, division by
+  `c*n`, and slightly-superlinear bounds on `N = 2^n`. Prove monotonicity,
+  rounding robustness, positivity, the required threshold gap, and eventual
+  domination lemmas without introducing real-valued circuit sizes.
+- [ ] Define the nonuniform circuit-size predicate for promise problems used by
+  the selected theorem. Relate it to `PromiseClass (SIZE s)`, allow finite
+  exceptional lengths explicitly, and prove that polynomial-size promise solvers
+  and `PPoly` are invariant under the selected finite-prefix and basis transports.
+- [ ] Define `SuccinctMCSP`: a list of distinct or repeated input/output samples
+  together with a circuit-size threshold, accepted when one small circuit matches
+  every sample. Give it a total codec, exact sample semantics, polynomial witness
+  bounds, and an NP theorem via the executable circuit verifier.
+- [ ] Define finite anti-checkers as multisets of inputs meeting every small
+  circuit that fails to compute a target function. Prove monotonicity, extraction
+  from a shrinking set of consistent circuit descriptions, and the exact bridge
+  saying that a sampled `SuccinctMCSP` instance rejects precisely when the sample
+  is an anti-checker at the chosen threshold.
+- [ ] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (Lemma 17) as the
+  main conditional engine. Under `NP ⊆ PPoly`, construct the multi-output circuit
+  that maps an `N`-bit truth table to `t = 2^(10*beta*n)` sample points using size
+  `2^(n + k*beta*n)`; prove that functions above size `2^(beta*n)` yield an
+  anti-checker against circuits of size `2^(beta*n)/(10*n)`. Isolate and prove the
+  approximate-counting/circuit-enumeration sublemma rather than importing it as an
+  axiom.
+- [ ] Compose the anti-checker generator, truth-table lookups, and a small
+  `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
+  sample encoding, multi-output fanout, threshold transformation, and all three
+  size terms to obtain the finite `N^(1+epsilon)` bound.
+- [ ] Prove the asymptotic contrapositive and expose the selected headline:
+  the quantified raw GapMCSP lower-bound hypothesis implies `¬ NP ⊆ PPoly`.
+  Separately expose the forward form `NP ⊆ PPoly ->` existence of a small promise
+  solver, since that is the actual constructive content of the proof.
 - [~] Add binary-code foundations sufficient for magnification: Hamming distance,
   rate, relative distance, encoding/decoding correctness, circuit complexity of
   encoding, and whichever local/list/unique decoding guarantee the selected paper
@@ -2745,8 +2825,9 @@ uniformity, error, and quantifier conventions into a short design document.
   identity/composition while retaining yes/no thresholds, output length, resource
   blow-up, randomness, and error rather than projecting immediately to a language
   reduction. *Canonical deterministic `GapMCSP` threshold slices, parameter
-  composition, side preservation, and exact re-encoding length are done; the
-  general resource/randomness/error family interface remains.*
+  composition, side preservation, exact re-encoding length, and mutually
+  side-preserving raw/canonical maps are done; polynomial-time realization and the
+  general resource/randomness/error family interface remain.*
 - [ ] Isolate an abstract coding/compression lemma: under a stated upper-bound or
   collapse hypothesis, codewords of relevant instances receive low circuit or
   `Kt` complexity, while the decoding/distance argument keeps no-instances far
@@ -2757,11 +2838,11 @@ uniformity, error, and quantifier conventions into a short design document.
 - [ ] Transfer the construction to `GapMCSP` using the M7 circuit/description
   bridges. State the loss in thresholds and lower-bound-model size explicitly;
   polynomial relatedness of measures is insufficient for a sharp frontier.
-- [ ] Formalize one complete published formula-based magnification frontier for
-  `GapMKtP` or `GapMCSP`: exact finite implication, asymptotic implication, and
-  the advertised major separation. This is the preferred first headline because
-  the repository already has typed formulas, composition, restrictions, and
-  substantial near-quadratic lower-bound infrastructure.
+- [ ] After the selected circuit/GapMCSP theorem, formalize one complete published
+  formula-based magnification frontier for `GapMKtP` or `GapMCSP`: exact finite
+  implication, asymptotic implication, and the advertised major separation. Reuse
+  the repository's typed formulas, composition, restrictions, and near-quadratic
+  lower-bound infrastructure.
 - [ ] Place the strongest matching unconditional lower bound and the magnification
   hypothesis in one comparison theorem or parameter table. Machine-check which
   exponent/gap remains, rather than saying only that the results are “close.”
@@ -2842,12 +2923,20 @@ not evidence that either the collapse or the desired lower bound has been proved
 - [x] Connect the exact Shannon lower and upper circuit bounds to canonical MCSP
   codes, retaining the arity, threshold constants, and the distinction between
   existence of hard truth tables and hardness of deciding MCSP.
+- [x] Add the raw `N = 2^n` GapMCSP convention and prove semantic equivalence in
+  both directions with canonical threshold-bearing codes.
+- [x] Pin Oliveira--Pich--Santhanam CCC 2019, Theorem 4 as the first headline and
+  record its exact input, promise, threshold, circuit-model, and quantifier
+  conventions together with the Anti-Checker Lemma proof spine.
+- [M] Define rational scaled-exponential threshold functions and an eventual
+  promise-`SIZE` interface sufficient to state the selected theorem in Lean.
+- [M] Define finite anti-checkers and prove their equivalence with rejection of
+  the corresponding sampled `SuccinctMCSP` instance.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
   existing formula semantics and prove its basic size monotonicity.
-- [M] Write the selected published magnification theorem's complete Lean signature
-  in a design or uncommitted scratch file, check that it expresses the paper's
-  quantifiers, and plan separate finite-coding, resource-simulation, and
-  asymptotic-lifting modules. Do not land proof placeholders.
+- [M] Land the selected theorem's complete Lean signature only after its rounded
+  parameter, promise-`SIZE`, and basis-transport vocabulary typechecks. Do not
+  land proof placeholders.
 
 ### L9. The Hirahara program and excluding Heuristica
 

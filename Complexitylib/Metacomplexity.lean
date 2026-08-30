@@ -18,6 +18,7 @@ public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary
 public import Complexitylib.Metacomplexity.MINCKT
 public import Complexitylib.Metacomplexity.MCSP
 public import Complexitylib.Metacomplexity.MCSP.Shannon
+public import Complexitylib.Metacomplexity.MCSP.Raw
 
 /-!
 # Metacomplexity
@@ -27,5 +28,6 @@ complexity, finite incompressibility, dependency-table codecs, finite list
 decoding and Hamming geometry, and the minimum-resource problems built from
 them, including canonical MCSP, strict-threshold MINKT, and conditional MinKT
 instances. Canonical MCSP also exposes its exact finite Shannon threshold
-window.
+window, while raw GapMCSP supplies the bare `2^n`-bit input convention used by
+hardness magnification.
 -/
