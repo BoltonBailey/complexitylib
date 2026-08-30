@@ -2933,7 +2933,13 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   SAT circuit oracle from `NP ⊆ PPoly` are now packaged. Fixed-round adaptive
   programs with round-dependent query widths now inline those family members
   with exact semantics and size accounting. Circuitizing Stockmeyer's randomized
-  relative counter and deriving the quantitative family bound remain.*
+  relative counter and deriving the quantitative family bound remain. The finite
+  hashing foundation is now checked: the standard affine family uses exactly
+  `rangeWidth * (domainWidth + 1)` seed bits and satisfies exact one-point and
+  two-point uniformity. Double counting gives its first and second cell-size
+  moments, the exact variance and `variance ≤ mean` bound, and a finite Chebyshev
+  lemma with both absolute- and relative-error forms. The weak nonemptiness
+  estimator, power trick, median amplification, and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
