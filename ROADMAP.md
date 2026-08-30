@@ -2867,11 +2867,14 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   the empty-sample/large-arity edge case. The complete Boolean relation checker
   and conditional FNP/NP packaging are done. A concrete paired verifier-in-`P`
   theorem and discharge of the generic witness-NTM premise remain.*
-- [ ] Define finite anti-checkers as multisets of inputs meeting every small
+- [~] Define finite anti-checkers as multisets of inputs meeting every small
   circuit that fails to compute a target function. Prove monotonicity, extraction
   from a shrinking set of consistent circuit descriptions, and the exact bridge
   saying that a sampled `SuccinctMCSP` instance rejects precisely when the sample
-  is an anti-checker at the chosen threshold.
+  is an anti-checker at the chosen threshold. *The concrete list-as-multiset
+  predicate, input and threshold monotonicity, permutation invariance, and exact
+  typed and encoded SuccinctMCSP rejection bridges are done. Extraction from a
+  shrinking finite set of consistent circuit descriptions remains.*
 - [ ] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (Lemma 17) as the
   main conditional engine. Under `NP ⊆ PPoly`, construct the multi-output circuit
   that maps an `N`-bit truth table to `t = 2^(10*beta*n)` sample points using size
