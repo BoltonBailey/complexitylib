@@ -46,9 +46,116 @@ theorem descriptionDifference_add_lower
     descriptionDifference upper lower + lower = upper :=
   descriptionDifference_add_lower_internal horder
 
+/-- Under the same order, description difference is infinite exactly when its
+upper value is infinite. -/
+theorem descriptionDifference_eq_top_iff
+    {upper lower : WithTop ℕ} (horder : lower ≤ upper) :
+    descriptionDifference upper lower = ⊤ ↔ upper = ⊤ :=
+  descriptionDifference_eq_top_iff_internal horder
+
+/-- For a finite ordered pair, description difference vanishes exactly when
+the two lengths coincide. -/
+theorem descriptionDifference_eq_zero_iff
+    {upper lower : WithTop ℕ} (horder : lower ≤ upper)
+    (hfinite : upper ≠ ⊤) :
+    descriptionDifference upper lower = 0 ↔ upper = lower :=
+  descriptionDifference_eq_zero_iff_internal horder hfinite
+
+/-- Description differences telescope through an ordered intermediate value. -/
+theorem descriptionDifference_add
+    {upper middle lower : WithTop ℕ}
+    (hlower : lower ≤ middle) (hupper : middle ≤ upper) :
+    descriptionDifference upper middle +
+        descriptionDifference middle lower =
+      descriptionDifference upper lower :=
+  descriptionDifference_add_internal hlower hupper
+
 namespace TM
 
 variable {n : ℕ}
+
+/-- Two-clock depth plus the later-clock complexity reconstructs the earlier-
+clock complexity exactly. -/
+theorem computationalDepthBetween_add_later
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime +
+        machine.timeBoundedKolmogorovComplexity output laterTime =
+      machine.timeBoundedKolmogorovComplexity output firstTime :=
+  computationalDepthBetween_add_later_internal
+    machine output hclock
+
+/-- Two-clock depth never exceeds the earlier-clock complexity. -/
+theorem computationalDepthBetween_le_first
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime ≤
+      machine.timeBoundedKolmogorovComplexity output firstTime :=
+  computationalDepthBetween_le_first_internal machine output hclock
+
+/-- Ordered two-clock depth is infinite exactly when the earlier-clock
+complexity is infinite. -/
+theorem computationalDepthBetween_eq_top_iff
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime = ⊤ ↔
+      machine.timeBoundedKolmogorovComplexity output firstTime = ⊤ :=
+  computationalDepthBetween_eq_top_iff_internal machine output hclock
+
+/-- Delaying the earlier clock toward a fixed later clock cannot increase the
+remaining depth. -/
+theorem computationalDepthBetween_mono_first
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output secondTime laterTime ≤
+      machine.computationalDepthBetween output firstTime laterTime :=
+  computationalDepthBetween_mono_first_internal
+    machine output hfirst hsecond
+
+/-- Extending the later clock away from a fixed earlier clock cannot decrease
+the accumulated depth. -/
+theorem computationalDepthBetween_mono_later
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime secondTime ≤
+      machine.computationalDepthBetween output firstTime laterTime :=
+  computationalDepthBetween_mono_later_internal
+    machine output hfirst hsecond
+
+/-- On a finite earlier-clock instance, two-clock depth is zero exactly when
+the extra time does not improve description length. -/
+theorem computationalDepthBetween_eq_zero_iff
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime)
+    (hfinite : machine.timeBoundedKolmogorovComplexity output firstTime ≠ ⊤) :
+    machine.computationalDepthBetween output firstTime laterTime = 0 ↔
+      machine.timeBoundedKolmogorovComplexity output firstTime =
+        machine.timeBoundedKolmogorovComplexity output laterTime :=
+  computationalDepthBetween_eq_zero_iff_internal
+    machine output hclock hfinite
+
+/-- Once the later clock attains plain complexity, two-clock depth is exactly
+the usual one-clock computational depth. -/
+theorem computationalDepthBetween_eq_computationalDepth
+    (machine : TM n) (output : List Bool) (firstTime laterTime : ℕ)
+    (hlater : machine.timeBoundedKolmogorovComplexity output laterTime =
+      machine.plainKolmogorovComplexity output) :
+    machine.computationalDepthBetween output firstTime laterTime =
+      machine.computationalDepth output firstTime :=
+  computationalDepthBetween_eq_computationalDepth_internal
+    machine output firstTime laterTime hlater
+
+/-- Two-clock depths telescope exactly across three ordered clocks. -/
+theorem computationalDepthBetween_add
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime secondTime +
+        machine.computationalDepthBetween output secondTime laterTime =
+      machine.computationalDepthBetween output firstTime laterTime :=
+  computationalDepthBetween_add_internal machine output hfirst hsecond
 
 /-- Computational depth plus plain complexity is exactly bounded complexity;
 the subtraction is therefore nontruncated on every finite instance. -/

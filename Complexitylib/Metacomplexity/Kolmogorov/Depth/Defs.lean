@@ -10,12 +10,15 @@ public import Complexitylib.Metacomplexity.Kolmogorov.Defs
 /-!
 # Computational depth -- definitions
 
-The `time`-bounded computational depth of `output` relative to a machine is the
-description-length gap `C_M^time(output) - C_M(output)`. Because this library
-allows either complexity to be `⊤`, `descriptionDifference` returns `⊤` if
-either operand is infinite and otherwise embeds the natural-number difference.
-The proof layer establishes the required order `C_M ≤ C_M^time` before using
-the natural subtraction identity.
+The two-clock computational depth of `output` relative to a machine is the gap
+`C_M^first(output) - C_M^later(output)`, where `first ≤ later`. Taking the
+second clock to infinity gives the usual one-clock gap
+`C_M^time(output) - C_M(output)`.
+
+Because this library allows a complexity to be `⊤`, `descriptionDifference`
+returns `⊤` if either operand is infinite and otherwise embeds the
+natural-number difference. The proof layer establishes the required complexity
+order before using natural subtraction.
 -/
 
 
@@ -34,6 +37,15 @@ def descriptionDifference (upper lower : WithTop ℕ) : WithTop ℕ :=
 namespace TM
 
 variable {n : ℕ}
+
+/-- Machine-relative two-clock computational depth:
+`C_M^firstTime(output) - C_M^laterTime(output)`. Its exact laws require
+`firstTime ≤ laterTime`. -/
+noncomputable def computationalDepthBetween (machine : TM n)
+    (output : List Bool) (firstTime laterTime : ℕ) : WithTop ℕ :=
+  descriptionDifference
+    (machine.timeBoundedKolmogorovComplexity output firstTime)
+    (machine.timeBoundedKolmogorovComplexity output laterTime)
 
 /-- Machine-relative `time`-bounded computational depth:
 `C_M^time(output) - C_M(output)`. -/

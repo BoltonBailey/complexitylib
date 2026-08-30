@@ -2966,12 +2966,14 @@ meta-computational notation hides several incompatible choices; expose them.
   threshold/witness/clock laws, uniform simulation transfer, and
   condition-ignoring ordinary-machine sanity theorem are complete. A paper-
   specific evaluator must still prove equivalence to this query convention.*
-- Computational depth is now defined machine-relatively as
-  `C_M^t(x) - C_M(x)`. The extended-natural difference preserves `top`, and the
-  exact identity `depth + C_M = C_M^t` proves that natural subtraction is used
-  only in the ordered direction. Its finiteness, upper-bound, zero-depth, and
-  antitone-clock laws are complete. Choosing a universal evaluator and relating
-  its convention to the paper-specific measure remain separate obligations.
+- Computational depth is now defined machine-relatively both in Hirahara's
+  two-clock form `cd_M^(s,t)(x) = C_M^s(x) - C_M^t(x)` for `s <= t` and in the
+  usual plain-limit form `C_M^s(x) - C_M(x)`. The extended-natural difference
+  preserves `top`; exact additive decompositions prove subtraction is used only
+  in the ordered direction. Finiteness, upper-bound, zero-depth, both clock
+  monotonicities, plain-limit specialization, and three-clock telescoping are
+  complete. Choosing a universal evaluator and relating its convention to the
+  paper-specific measure remain separate obligations.
 - Time-bounded symmetry of information is now a named machine-relative lower-
   chain hypothesis with the canonical pair codec, an explicit transformed
   clock, and an arbitrary finite loss. Its polynomial package requires an
@@ -3200,9 +3202,10 @@ meta-computational notation hides several incompatible choices; expose them.
   bounded complexity has producing-program upper bounds, exact top/witness and
   threshold characterizations, clock monotonicity, oracle-uniform polynomial
   transfer, and exact conservativity for embedded ordinary machines.
-  Machine-relative computational depth is also complete, including its exact
-  additive decomposition, finiteness criterion, bounded-complexity upper bound,
-  zero-depth characterization, and antitone clock law. A finite upper-chain
+  Machine-relative one- and two-clock computational depth are also complete,
+  including exact additive decomposition, finiteness, upper-bound and zero
+  criteria, both clock monotonicities, plain-limit specialization, and exact
+  telescoping. A finite upper-chain
   theorem now derives paired bounded complexity from an explicit operational
   program-composition contract and arbitrary compiler-length bound. Canonical
   program pairing is instantiated in both orientations, retaining the exact
@@ -3259,8 +3262,9 @@ formalization targets and should be stated positively under their exact names.
   preserves its failure event exactly.
 - [x] Define the auxiliary-unary ensemble and calculate the probability of every
   fixed split/string pair.
-- [x] Define machine-relative computational depth and prove its exact additive,
-  finiteness, upper-bound, zero, and clock-monotonicity laws.
+- [x] Define one- and two-clock machine-relative computational depth and prove
+  exact additive, finiteness, upper-bound, zero, clock-monotonicity,
+  specialization, and telescoping laws.
 - [x] Isolate bounded program composition as an evaluator contract and derive
   the finite upper-chain inequality, including both exact canonical-pair costs.
 - [x] Freeze a non-vacuous machine-relative SoI signature with explicit

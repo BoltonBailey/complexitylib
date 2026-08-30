@@ -71,9 +71,175 @@ theorem descriptionDifference_mono_left_internal
               exact WithTop.coe_le_coe.mpr <|
                 Nat.sub_le_sub_right (WithTop.coe_le_coe.mp hupper) lower
 
+theorem descriptionDifference_anti_right_internal
+    {upper firstLower secondLower : WithTop ℕ}
+    (hlower : secondLower ≤ firstLower) (hupper : firstLower ≤ upper) :
+    descriptionDifference upper firstLower ≤
+      descriptionDifference upper secondLower := by
+  induction upper using WithTop.recTopCoe with
+  | top => simp [descriptionDifference]
+  | coe upper =>
+      induction firstLower using WithTop.recTopCoe with
+      | top => simp at hupper
+      | coe firstLower =>
+          induction secondLower using WithTop.recTopCoe with
+          | top => simp at hlower
+          | coe secondLower =>
+              exact WithTop.coe_le_coe.mpr <|
+                Nat.sub_le_sub_left
+                  (WithTop.coe_le_coe.mp hlower) upper
+
+theorem descriptionDifference_eq_top_iff_internal
+    {upper lower : WithTop ℕ} (horder : lower ≤ upper) :
+    descriptionDifference upper lower = ⊤ ↔ upper = ⊤ := by
+  induction upper using WithTop.recTopCoe with
+  | top => simp [descriptionDifference]
+  | coe upper =>
+      induction lower using WithTop.recTopCoe with
+      | top => simp at horder
+      | coe lower => simp [descriptionDifference]
+
+theorem descriptionDifference_eq_zero_iff_internal
+    {upper lower : WithTop ℕ} (horder : lower ≤ upper)
+    (hfinite : upper ≠ ⊤) :
+    descriptionDifference upper lower = 0 ↔ upper = lower := by
+  have hlowerFinite : lower ≠ ⊤ := by
+    intro hlower
+    rw [hlower] at horder
+    exact hfinite (top_unique horder)
+  obtain ⟨upperValue, hupperValue⟩ := WithTop.ne_top_iff_exists.mp hfinite
+  obtain ⟨lowerValue, hlowerValue⟩ :=
+    WithTop.ne_top_iff_exists.mp hlowerFinite
+  have hvalueOrder : lowerValue ≤ upperValue := by
+    rw [← hlowerValue, ← hupperValue] at horder
+    exact WithTop.coe_le_coe.mp horder
+  rw [← hupperValue, ← hlowerValue]
+  change ((upperValue - lowerValue : ℕ) : WithTop ℕ) = (0 : ℕ) ↔
+    (upperValue : WithTop ℕ) = (lowerValue : ℕ)
+  constructor
+  · intro hzero
+    apply WithTop.coe_eq_coe.mpr
+    have hsub := WithTop.coe_eq_coe.mp hzero
+    exact Nat.le_antisymm (Nat.sub_eq_zero_iff_le.mp hsub) hvalueOrder
+  · intro heq
+    apply WithTop.coe_eq_coe.mpr
+    have hvalues : upperValue = lowerValue := by
+      exact_mod_cast heq
+    simp [hvalues]
+
+theorem descriptionDifference_add_internal
+    {upper middle lower : WithTop ℕ}
+    (hlower : lower ≤ middle) (hupper : middle ≤ upper) :
+    descriptionDifference upper middle +
+        descriptionDifference middle lower =
+      descriptionDifference upper lower := by
+  induction upper using WithTop.recTopCoe with
+  | top => simp [descriptionDifference, WithTop.top_add]
+  | coe upper =>
+      induction middle using WithTop.recTopCoe with
+      | top => simp at hupper
+      | coe middle =>
+          induction lower using WithTop.recTopCoe with
+          | top => simp at hlower
+          | coe lower =>
+              change (((upper - middle) + (middle - lower) : ℕ) : WithTop ℕ) =
+                ((upper - lower : ℕ) : WithTop ℕ)
+              have hlowerValue : lower ≤ middle := by
+                exact_mod_cast hlower
+              have hupperValue : middle ≤ upper := by
+                exact_mod_cast hupper
+              have hidentity :
+                  (upper - middle) + (middle - lower) = upper - lower := by
+                omega
+              exact_mod_cast hidentity
+
 namespace TM
 
 variable {n : ℕ}
+
+theorem computationalDepthBetween_add_later_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime +
+        machine.timeBoundedKolmogorovComplexity output laterTime =
+      machine.timeBoundedKolmogorovComplexity output firstTime := by
+  exact descriptionDifference_add_lower_internal
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hclock)
+
+theorem computationalDepthBetween_le_first_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime ≤
+      machine.timeBoundedKolmogorovComplexity output firstTime := by
+  exact descriptionDifference_le_upper_internal
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hclock)
+
+theorem computationalDepthBetween_eq_top_iff_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime laterTime = ⊤ ↔
+      machine.timeBoundedKolmogorovComplexity output firstTime = ⊤ := by
+  exact descriptionDifference_eq_top_iff_internal
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hclock)
+
+theorem computationalDepthBetween_mono_first_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output secondTime laterTime ≤
+      machine.computationalDepthBetween output firstTime laterTime := by
+  apply descriptionDifference_mono_left_internal
+  · exact timeBoundedKolmogorovComplexity_mono_internal
+      machine output hsecond
+  · exact timeBoundedKolmogorovComplexity_mono_internal
+      machine output hfirst
+
+theorem computationalDepthBetween_mono_later_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime secondTime ≤
+      machine.computationalDepthBetween output firstTime laterTime := by
+  apply descriptionDifference_anti_right_internal
+  · exact timeBoundedKolmogorovComplexity_mono_internal
+      machine output hsecond
+  · exact timeBoundedKolmogorovComplexity_mono_internal
+      machine output hfirst
+
+theorem computationalDepthBetween_eq_zero_iff_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime laterTime : ℕ} (hclock : firstTime ≤ laterTime)
+    (hfinite : machine.timeBoundedKolmogorovComplexity output firstTime ≠ ⊤) :
+    machine.computationalDepthBetween output firstTime laterTime = 0 ↔
+      machine.timeBoundedKolmogorovComplexity output firstTime =
+        machine.timeBoundedKolmogorovComplexity output laterTime := by
+  exact descriptionDifference_eq_zero_iff_internal
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hclock) hfinite
+
+theorem computationalDepthBetween_eq_computationalDepth_internal
+    (machine : TM n) (output : List Bool) (firstTime laterTime : ℕ)
+    (hlater : machine.timeBoundedKolmogorovComplexity output laterTime =
+      machine.plainKolmogorovComplexity output) :
+    machine.computationalDepthBetween output firstTime laterTime =
+      machine.computationalDepth output firstTime := by
+  rw [computationalDepthBetween, computationalDepth, hlater]
+
+theorem computationalDepthBetween_add_internal
+    (machine : TM n) (output : List Bool)
+    {firstTime secondTime laterTime : ℕ}
+    (hfirst : firstTime ≤ secondTime) (hsecond : secondTime ≤ laterTime) :
+    machine.computationalDepthBetween output firstTime secondTime +
+        machine.computationalDepthBetween output secondTime laterTime =
+      machine.computationalDepthBetween output firstTime laterTime := by
+  exact descriptionDifference_add_internal
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hsecond)
+    (timeBoundedKolmogorovComplexity_mono_internal
+      machine output hfirst)
 
 theorem computationalDepth_add_plain_internal
     (machine : TM n) (output : List Bool) (time : ℕ) :
@@ -94,22 +260,8 @@ theorem computationalDepth_eq_top_iff_internal
     (machine : TM n) (output : List Bool) (time : ℕ) :
     machine.computationalDepth output time = ⊤ ↔
       machine.timeBoundedKolmogorovComplexity output time = ⊤ := by
-  constructor
-  · intro hdepth
-    by_contra htime
-    have hplain : machine.plainKolmogorovComplexity output ≠ ⊤ := by
-      intro htop
-      have horder :=
-        plainKolmogorovComplexity_le_timeBounded_internal machine output time
-      rw [htop] at horder
-      exact htime (top_unique horder)
-    obtain ⟨timeValue, htimeValue⟩ := WithTop.ne_top_iff_exists.mp htime
-    obtain ⟨plainValue, hplainValue⟩ := WithTop.ne_top_iff_exists.mp hplain
-    rw [computationalDepth, ← htimeValue, ← hplainValue] at hdepth
-    change ((timeValue - plainValue : ℕ) : WithTop ℕ) = ⊤ at hdepth
-    exact WithTop.coe_ne_top hdepth
-  · intro htime
-    simp [computationalDepth, htime, descriptionDifference_top_left_internal]
+  exact descriptionDifference_eq_top_iff_internal
+    (plainKolmogorovComplexity_le_timeBounded_internal machine output time)
 
 theorem computationalDepth_mono_internal
     (machine : TM n) (output : List Bool)
@@ -128,32 +280,9 @@ theorem computationalDepth_eq_zero_iff_internal
     machine.computationalDepth output time = 0 ↔
       machine.timeBoundedKolmogorovComplexity output time =
         machine.plainKolmogorovComplexity output := by
-  have hplain : machine.plainKolmogorovComplexity output ≠ ⊤ := by
-    intro htop
-    have horder :=
-      plainKolmogorovComplexity_le_timeBounded_internal machine output time
-    rw [htop] at horder
-    exact hfinite (top_unique horder)
-  obtain ⟨timeValue, htimeValue⟩ := WithTop.ne_top_iff_exists.mp hfinite
-  obtain ⟨plainValue, hplainValue⟩ := WithTop.ne_top_iff_exists.mp hplain
-  have horder : plainValue ≤ timeValue := by
-    have hbase := plainKolmogorovComplexity_le_timeBounded_internal
-      machine output time
-    rw [← hplainValue, ← htimeValue] at hbase
-    exact WithTop.coe_le_coe.mp hbase
-  rw [computationalDepth, ← htimeValue, ← hplainValue]
-  change ((timeValue - plainValue : ℕ) : WithTop ℕ) = (0 : ℕ) ↔
-    (timeValue : WithTop ℕ) = (plainValue : ℕ)
-  constructor
-  · intro hzero
-    apply WithTop.coe_eq_coe.mpr
-    have hsub := WithTop.coe_eq_coe.mp hzero
-    exact Nat.le_antisymm (Nat.sub_eq_zero_iff_le.mp hsub) horder
-  · intro heq
-    apply WithTop.coe_eq_coe.mpr
-    have hvalues : timeValue = plainValue := by
-      exact_mod_cast heq
-    simp [hvalues]
+  exact descriptionDifference_eq_zero_iff_internal
+    (plainKolmogorovComplexity_le_timeBounded_internal machine output time)
+    hfinite
 
 end TM
 
