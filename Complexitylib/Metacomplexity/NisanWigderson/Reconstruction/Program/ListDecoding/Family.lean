@@ -20,8 +20,10 @@ accuracy `q`, under the exact relation `1/q = density/(2*outputLength)` used in
 Hirahara's argument. Polynomial list size then gives a concrete logarithmic
 bound on the encoded decoder choice. For density `1/inverseDensity`, the final
 theorem chooses `q = 2*outputLength*inverseDensity` and discharges that relation.
-The final endpoint composes this exact specialization with any efficiently
+The final endpoints compose this exact specialization with any efficiently
 universal machine while retaining the compiler constant and polynomial clock.
+A family-uniform realization chooses those constants before all ambient
+instances and charges the explicit design/test encoding in the description.
 -/
 
 
@@ -30,6 +32,62 @@ public section
 namespace Complexity
 
 namespace NWDesign
+
+namespace HasEncodedMessageCertificateWithin
+
+/-- A bounded indexed reconstruction description remains a bounded program for
+one decoder machine shared by every instance of a list-code family. The exact
+self-delimiting cost of the ambient design/test encoding is included in the
+description bound. -/
+theorem uniformTimeBoundedKolmogorovComplexity_le
+    {family : BooleanListCodeFamily}
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength}
+    {test : Finset (Fin outputLength → Bool)}
+    {message : Fin messageLength → Bool} {bound : ℕ}
+    (realization : UniformEncodedMessageDecoderRealization family)
+    (hcertificate : HasEncodedMessageCertificateWithin design
+      (family.code messageLength inverseAccuracy) test message bound) :
+    realization.machine.timeBoundedKolmogorovComplexity
+        (List.ofFn message)
+        (realization.time
+          (realization.framedDescriptionBound design test bound)) ≤
+      (realization.framedDescriptionBound design test bound : WithTop ℕ) :=
+  hcertificate.uniformTimeBoundedKolmogorovComplexity_le_internal realization
+
+end HasEncodedMessageCertificateWithin
+
+namespace UniformEncodedMessageDecoderRealization
+
+/-- A single uniform family decoder gives one set of universal compiler
+constants valid simultaneously for all lengths, accuracies, designs, tests,
+messages, and certificate bounds. Ambient information is explicit in the
+framed description length and therefore cannot leak into those constants. -/
+theorem efficientlyUniversal_transfer
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformEncodedMessageDecoderRealization family)
+    (universal : TM universalTapes)
+    (huniversal : universal.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent,
+      ∀ {messageLength inverseAccuracy outputLength seedLength : ℕ}
+        (design : NWDesign outputLength
+          (family.coordinateLength messageLength inverseAccuracy) seedLength)
+        (test : Finset (Fin outputLength → Bool))
+        (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design
+            (family.code messageLength inverseAccuracy) test message bound →
+          universal.timeBoundedKolmogorovComplexity (List.ofFn message)
+              (coefficient *
+                (realization.framedDescriptionBound design test bound +
+                  realization.time
+                    (realization.framedDescriptionBound design test bound) + 1) ^
+                    exponent) ≤
+            (realization.framedDescriptionBound design test bound +
+              constant : ℕ) :=
+  realization.efficientlyUniversal_transfer_internal universal huniversal
+
+end UniformEncodedMessageDecoderRealization
 
 /-- Positive output length and inverse density make the canonical inverse
 accuracy at least two. -/
@@ -405,6 +463,75 @@ theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
   half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
     family hfamily bounds houtputLength hinverseDensity realization universal
       huniversal hlow hrandom hdense hbudget
+
+namespace UniformEncodedMessageDecoderRealization
+
+/-- Uniform inverse-density NW reconstruction on an arbitrary efficiently
+universal machine. One compiler constant and one polynomial clock work
+simultaneously for every numeric parameter, NW design, statistical test, and
+source message. The ambient design/test representation is not hidden: its
+self-delimiting framing is charged by
+`inverseDensityFramedDescriptionBound`.
+
+This is a fully uniform oracle-free transfer theorem. Replacing the explicit
+ambient string by random-access oracle access requires a separate oracle
+machine model and is not asserted here. -/
+theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
+    {family : BooleanListCodeFamily} {universalTapes : ℕ}
+    (realization : UniformEncodedMessageDecoderRealization family)
+    (universal : TM universalTapes)
+    (huniversal : universal.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent,
+      ∀ (bounds : family.PolynomialParameterBounds)
+        {messageLength outputLength inverseDensity seedLength tapes time
+          threshold budget : ℕ}
+        {design : NWDesign outputLength
+          (family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+        {message : Fin messageLength → Bool}
+        {machine : TM tapes} {test : Finset (Fin outputLength → Bool)},
+        family.IsListDecodableAtInverseAccuracy →
+        0 < outputLength →
+        0 < inverseDensity →
+        BitGenerator.HasLowTimeBoundedComplexity
+          (design.generator ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message)) machine time threshold →
+        BitGenerator.IsTimeBoundedRandomTest test machine time threshold →
+        BitGenerator.IsDenseTest test (1 / (inverseDensity : ℚ)) →
+        design.HasOverlapBudget budget →
+        1 / 2 ≤
+            design.checkedReconstructionBatchSuccessProbability
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) test
+              (1 / 2 +
+                ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+              (reconstructionAdviceTrialCount outputLength
+                (1 / (inverseDensity : ℚ))) ∧
+          ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+              (1 / (inverseDensity : ℚ))) →
+              ReconstructionTrial outputLength seedLength) certificate,
+            design.findGoodReconstructionCertificate?
+                ((family.code messageLength
+                  (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                    message) test
+                (1 / 2 +
+                  ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+              some certificate →
+            universal.timeBoundedKolmogorovComplexity (List.ofFn message)
+                (coefficient *
+                  (realization.inverseDensityFramedDescriptionBound bounds
+                      design test budget +
+                    realization.time
+                      (realization.inverseDensityFramedDescriptionBound bounds
+                        design test budget) + 1) ^ exponent) ≤
+              (realization.inverseDensityFramedDescriptionBound bounds
+                design test budget + constant : ℕ) :=
+  half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
+    realization universal huniversal
+
+end UniformEncodedMessageDecoderRealization
 
 end NWDesign
 

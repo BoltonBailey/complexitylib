@@ -3106,12 +3106,18 @@ meta-computational notation hides several incompatible choices; expose them.
   This is now composed directly with the inverse-density reconstruction theorem:
   one public endpoint chooses the universal compiler constants, retains the
   at-least-one-half checked-search probability, and turns every returned
-  certificate into the explicit universal-machine `C^t` bound. Its decoder
-  realization remains fixed by the ambient design, code, and test, so it does
-  not claim the paper's oracle-uniform decoder interface.
+  certificate into the explicit universal-machine `C^t` bound. That first
+  decoder realization remains fixed by the ambient design, code, and test. A
+  second family-uniform realization contract now uses one decoder machine for
+  every length, accuracy, design, and test; its universal compiler constants
+  are chosen before all those instances, while the exact
+  `2 * |ambientEncoding| + 2` self-delimiting cost is charged to the program.
+  This closes the hidden compiler-constant dependency in the oracle-free model,
+  but deliberately does not claim the paper's oracle-uniform decoder interface.
   Constructing an explicit
-  Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
-  remaining ambient parameters, constructing machine/runtime realizers for the
+  Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
+  bounded ambient codec or an oracle-access replacement, constructing
+  machine/runtime realizers for the
   sampler, checker, indexed-message evaluator, and concrete code family,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*

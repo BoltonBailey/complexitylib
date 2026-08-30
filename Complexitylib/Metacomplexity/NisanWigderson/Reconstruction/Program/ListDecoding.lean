@@ -27,6 +27,9 @@ decoder layer turns the complete encoding into a literal bitstring certificate
 and, for any realizing TM, a machine-relative time-bounded Kolmogorov bound.
 Any arbitrary machine satisfying the generic efficient-universality interface
 inherits that bound with additive description and polynomial clock overhead.
+An additional family-uniform decoder interface uses one machine for every
+ambient instance and exposes the exact self-delimiting cost of encoding the
+design and test, without conflating explicit input with oracle access.
 -/
 
 
