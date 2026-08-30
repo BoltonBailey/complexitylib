@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Internal
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Circuit
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Tail
 
 /-!
