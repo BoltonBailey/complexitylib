@@ -2991,9 +2991,16 @@ meta-computational notation hides several incompatible choices; expose them.
   least one half under the explicit Hirahara trial condition
   `k * (delta / (2m)) >= 1`, while retaining the fixed payload bound. The
   canonical count `ceil(2m / delta)` meets this condition and is proved strictly
-  below `2m / delta + 1`. An
-  executable sampler and checker for the resulting approximate description,
-  list decoding, and final program/time accounting remain.*
+  below `2m / delta + 1`. The coordinate-selection gap is also closed: one
+  fixed-width trial samples a coordinate, full seed assignment, full tail, and
+  candidate bit; uniform restriction gives exactly the coordinate-dependent
+  advice distribution. Summing the hybrid gaps before reverse averaging proves
+  that this single global trial succeeds with probability at least
+  `delta/(2m)`, so the same canonical number of global trials succeeds with
+  probability at least one half without assuming the good coordinate is known.
+  A machine realization of the sampler, the executable agreement checker and
+  certificate selector, list decoding, and final program/time accounting
+  remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

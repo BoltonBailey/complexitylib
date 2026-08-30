@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Defs
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Internal
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Averaging
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.RepeatedSampling
+public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.GlobalSampling
 
 /-!
 # Nisan--Wigderson fixed-advice reconstruction
@@ -18,7 +19,9 @@ next-bit predictor. It also removes irrelevant seed and tail coordinates from
 the fixed advice and proves the resulting Boolean payload bound
 `overlapCostAt + (d - ell) + 1`, before codec and parameter overhead. The
 averaging submodule fixes one advice choice without losing success probability,
-and repeated sampling finds such advice with an explicit geometric guarantee.
+repeated sampling finds such advice with an explicit geometric guarantee, and
+global sampling chooses the hybrid coordinate and advice in one fixed-width
+trial matching the randomized reconstruction algorithm.
 -/
 
 
