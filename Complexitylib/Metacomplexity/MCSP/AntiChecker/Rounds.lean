@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Internal
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Halving
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Selection
 
 /-!
@@ -16,7 +17,8 @@ One shrink round bounds the next survivor count by a fixed fraction of the
 current count. This module composes a trace of such rounds into an exact
 natural-number power inequality. If that upper bound is smaller than one after
 rescaling, the final survivor count is zero and the trace is an anti-checker.
-The selection submodule constructs these traces by approximate minimization.
+The halving submodule gives a convenient blockwise stopping rule, and the
+selection submodule constructs traces by approximate minimization.
 -/
 
 
