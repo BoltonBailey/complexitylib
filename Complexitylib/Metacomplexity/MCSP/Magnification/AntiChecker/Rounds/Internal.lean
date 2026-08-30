@@ -8,6 +8,8 @@ module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds.Defs
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting.Internal
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.Internal
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Halving.Internal
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds.Selection.Internal
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.GoodString
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters.Internal
@@ -141,6 +143,46 @@ theorem eventually_exists_shrinkTrace_of_isHardAt_internal
       (by unfold roundPrecision; omega) hestimate
       (fun inputs => hgood target inputs hhard)
   simpa [roundShrinkDenominator, ← Nat.mul_assoc] using htrace
+
+theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ),
+        IsHardAt beta target →
+          IsAccurateRoundEstimator beta target estimator →
+            ∃ inputs : List (BitString arity),
+              inputs.length = sampleCount beta arity ∧
+                AntiChecker.IsFor target (smallThreshold beta arity) inputs := by
+  filter_upwards
+      [eventually_exists_shrinkTrace_of_isHardAt_internal beta,
+        eventually_requiredRoundCount_le_sampleCount_internal beta,
+        Filter.eventually_ge_atTop 1]
+      with arity htrace hbudget hlarge
+  intro harity target estimator hhard hestimate
+  letI : NeZero arity := ⟨harity⟩
+  obtain ⟨inputs, hlength, hshrink⟩ :=
+    htrace target estimator hhard hestimate
+      (requiredRoundCount beta arity)
+  have hanti :
+      AntiChecker.IsFor target (smallThreshold beta arity) inputs := by
+    apply hshrink.isFor_of_initial_lt_two_pow_internal
+      (blocks := roundBlockCount beta arity)
+    · unfold roundShrinkDenominator
+      omega
+    · rw [hlength]
+      rfl
+    · exact
+        initialCandidateSurvivorCount_lt_two_pow_roundBlockCount_internal
+          beta target
+  have hlengthLe : inputs.length ≤ sampleCount beta arity :=
+    hlength.le.trans hbudget
+  refine ⟨AntiChecker.padInputsTo (sampleCount beta arity) inputs,
+    AntiChecker.length_padInputsTo_internal hlengthLe, ?_⟩
+  exact hanti.padInputsTo_internal
 
 end AntiCheckerLemma
 

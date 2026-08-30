@@ -65,6 +65,23 @@ theorem eventually_exists_shrinkTrace_of_isHardAt
                     (smallThreshold beta arity) inputs :=
   eventually_exists_shrinkTrace_of_isHardAt_internal beta
 
+/-- For every sufficiently large arity, an accurate round estimator yields an
+anti-checker of exactly the published sample count for every hard target. -/
+theorem eventually_exists_isFor_length_eq_sampleCount_of_isHardAt
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (target : BitString arity → Bool)
+          (estimator :
+            List (BitString arity) → BitString arity → ℕ),
+        IsHardAt beta target →
+          IsAccurateRoundEstimator beta target estimator →
+            ∃ inputs : List (BitString arity),
+              inputs.length = sampleCount beta arity ∧
+                AntiChecker.IsFor target (smallThreshold beta arity) inputs :=
+  eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal beta
+
 end AntiCheckerLemma
 
 end Magnification
