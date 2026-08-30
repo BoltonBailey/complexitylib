@@ -295,4 +295,14 @@ theorem pairSnd_eq_unpair? (z : List Bool) :
   unfold pairSnd
   cases unpair? z <;> rfl
 
+
+/-- The second component of a pair is no longer than the pair. -/
+theorem pairSnd_length_le (z : List Bool) : (pairSnd z).length ≤ z.length := by
+  rcases hu : unpair? z with _ | ⟨p, q⟩
+  · rw [show pairSnd z = [] from by rw [pairSnd, hu]]
+    simp
+  · have hz : z = pair p q := unpair?_eq_some_iff.mp hu
+    rw [show pairSnd z = q from by rw [pairSnd, hu], hz, pair_length]
+    omega
+
 end Complexity

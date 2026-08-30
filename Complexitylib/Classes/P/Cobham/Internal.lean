@@ -13,6 +13,8 @@ public import Complexitylib.Classes.P.Cobham.Internal.ConsBit
 public import Complexitylib.Classes.P.Cobham.Internal.Reorder
 public import Complexitylib.Classes.P.Cobham.Internal.Vec
 public import Complexitylib.Classes.P.Cobham.Internal.Algebra
+public import Complexitylib.Classes.P.Cobham.Internal.PolyLen
+public import Complexitylib.Classes.P.Cobham.Internal.StringOps
 public import Complexitylib.Classes.P.Cobham.Internal.Encoding
 public import Complexitylib.Classes.P.Cobham.Internal.StepAlgebra
 public import Complexitylib.Classes.P.Cobham.Internal.Simulate
