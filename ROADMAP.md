@@ -2860,8 +2860,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   together with a circuit-size threshold, accepted when one small circuit matches
   every sample. *Typed sampled instances, their exact total codec, repeated-input
   semantics, positive-arity circuit witnesses, and the consistent-constant
-  zero-arity convention are done. Polynomial witness bounds and the NP theorem
-  via the executable circuit verifier remain.*
+  zero-arity convention are done. The executable raw-circuit verifier, exact
+  typed-witness equivalence, and threshold-relative serialization bound are also
+  done. Threshold normalization, polynomial witness bounds, and the NP theorem
+  remain.*
 - [ ] Define finite anti-checkers as multisets of inputs meeting every small
   circuit that fails to compute a target function. Prove monotonicity, extraction
   from a shrinking set of consistent circuit descriptions, and the exact bridge
