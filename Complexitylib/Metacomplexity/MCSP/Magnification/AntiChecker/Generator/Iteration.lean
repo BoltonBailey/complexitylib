@@ -129,6 +129,35 @@ theorem counterRoundEstimate_eq_extensionEstimator
   counterRoundEstimate_eq_extensionEstimator_internal
     family target inputs hrounds
 
+/-- Every bounded prefix circuit realizes a sequence of genuine greedy
+estimate-minimizing choices for the counter family's induced estimator. -/
+theorem exists_eval_selectionPrefixCircuit_isEstimateSelectionTrace
+    {overhead arity rounds : ℕ} {beta : PositiveRationalScale}
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool)
+    (hrounds : rounds ≤ requiredRoundCount beta arity) :
+    ∃ inputs : Fin rounds → BitString arity,
+      (selectionPrefixCircuit family rounds hrounds).2.eval
+          (truthTable target) = selectionTraceState target inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) :=
+  exists_eval_selectionPrefixCircuit_isEstimateSelectionTrace_internal
+    family target hrounds
+
+/-- The full state circuit realizes an estimate-selection trace of the exact
+length required by the anti-checker argument. -/
+theorem exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace
+    {overhead arity : ℕ} {beta : PositiveRationalScale}
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool) :
+    ∃ inputs : Fin (requiredRoundCount beta arity) → BitString arity,
+      (fullSelectionStateCircuit family).2.eval (truthTable target) =
+          selectionTraceState target inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) :=
+  exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace_internal
+    family target
+
 end AntiCheckerLemma
 
 end Magnification

@@ -12,6 +12,7 @@ import Complexitylib.Metacomplexity.MCSP
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Internal
+import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Round
 
 /-!
 # Finite iteration of anti-checker selection rounds -- proof internals
@@ -188,6 +189,92 @@ theorem counterRoundEstimate_eq_extensionEstimator_internal
     apply hlength
     simp
     omega
+
+private theorem packTargetSamples_elim0
+    {arity : ℕ} (target : BitString arity → Bool) :
+    packTargetSamples target (fun index : Fin 0 => index.elim0) =
+      emptyLabeledPrefix arity := by
+  funext coordinate
+  exact Fin.elim0 ⟨coordinate.val, by simpa using coordinate.isLt⟩
+
+theorem exists_eval_selectionPrefixCircuit_isEstimateSelectionTrace_internal
+    {overhead arity rounds : ℕ} {beta : PositiveRationalScale}
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool)
+    (hrounds : rounds ≤ requiredRoundCount beta arity) :
+    ∃ inputs : Fin rounds → BitString arity,
+      (selectionPrefixCircuit family rounds hrounds).2.eval
+          (truthTable target) = selectionTraceState target inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) := by
+  induction rounds with
+  | zero =>
+      refine ⟨fun index : Fin 0 => index.elim0, ?_, ?_⟩
+      · rw [eval_selectionPrefixCircuit_zero_internal]
+        unfold selectionTraceState
+        rw [packTargetSamples_elim0]
+      · simp [AntiChecker.IsEstimateSelectionTrace]
+  | succ rounds ih =>
+      obtain ⟨inputs, heval, htrace⟩ :=
+        ih (selectionPrefixPriorBound hrounds)
+      let counter : ApproximateCounterCircuit overhead beta arity rounds :=
+        family.counter (selectionPrefixCounterIndex hrounds)
+      obtain ⟨candidate, hstep, hminimum⟩ :=
+        exists_eval_selectionRoundStateCircuit_eq_successor
+          counter (truthTable target) (packTargetSamples target inputs)
+      let chosen := MCSP.Instance.inputOfIndex candidate
+      refine ⟨Fin.cons chosen inputs, ?_, ?_⟩
+      · calc
+          (selectionPrefixCircuit family (rounds + 1) hrounds).2.eval
+              (truthTable target) =
+            (selectionRoundStateCircuit counter).2.eval
+                ((selectionPrefixCircuit family rounds
+                  (selectionPrefixPriorBound hrounds)).2.eval
+                    (truthTable target)) := by
+              simpa [counter] using
+                eval_selectionPrefixCircuit_succ_internal
+                  family hrounds (truthTable target)
+          _ = (selectionRoundStateCircuit counter).2.eval
+                  (selectionTraceState target inputs) :=
+              congrArg
+                (selectionRoundStateCircuit counter).2.eval heval
+          _ = (selectionRoundStateCircuit counter).2.eval
+                  (selectionRoundInput (truthTable target)
+                    (packTargetSamples target inputs)) := rfl
+          _ = selectionRoundSuccessorInput candidate (truthTable target)
+                (packTargetSamples target inputs) := hstep
+          _ = selectionTraceState target (Fin.cons chosen inputs) := by
+              unfold chosen
+              exact
+                selectionRoundSuccessorInput_truthTable_packTargetSamples_internal
+                  target inputs candidate
+      · have hestimator :
+            counterRoundEstimate counter (truthTable target)
+                (packTargetSamples target inputs) =
+              family.extensionEstimator target (List.ofFn inputs) := by
+          simpa [counter] using
+            counterRoundEstimate_eq_extensionEstimator_internal
+              family target inputs hrounds
+        have hminimum' :
+            AntiChecker.IsEstimateMinimizer
+              (family.extensionEstimator target (List.ofFn inputs)) chosen := by
+          rw [← hestimator]
+          exact hminimum
+        rw [List.ofFn_cons]
+        exact ⟨htrace, hminimum'⟩
+
+theorem exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace_internal
+    {overhead arity : ℕ} {beta : PositiveRationalScale}
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool) :
+    ∃ inputs : Fin (requiredRoundCount beta arity) → BitString arity,
+      (fullSelectionStateCircuit family).2.eval (truthTable target) =
+          selectionTraceState target inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) := by
+  simpa [fullSelectionStateCircuit] using
+    exists_eval_selectionPrefixCircuit_isEstimateSelectionTrace_internal
+      family target (le_refl (requiredRoundCount beta arity))
 
 end AntiCheckerLemma
 
