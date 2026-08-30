@@ -53,6 +53,14 @@ def containsZero : Language := {x | ∃ b ∈ x, b = false}
 /-- Strings containing at least one `1`-bit. -/
 def containsOne : Language := {x | ∃ b ∈ x, b = true}
 
+/-- Membership in `containsZero` unfolds to the existence of a `0`-bit. -/
+@[simp] theorem mem_containsZero {x : List Bool} :
+    x ∈ containsZero ↔ ∃ b ∈ x, b = false := Iff.rfl
+
+/-- Membership in `containsOne` unfolds to the existence of a `1`-bit. -/
+@[simp] theorem mem_containsOne {x : List Bool} :
+    x ∈ containsOne ↔ ∃ b ∈ x, b = true := Iff.rfl
+
 end Language
 
 -- ════════════════════════════════════════════════════════════════════════

@@ -2431,11 +2431,31 @@ randomness, interaction, and lower bounds.
 
 **Staged directions.**
 
-- [ ] Define the polynomial hierarchy both by alternating quantifiers and oracle
-  levels, then prove equivalence at fixed levels.
-- [~] Define `#P`, `GapP`, and parsimonious reductions using exact accepting-path
-  counts. *(`#P` = `SharpP` and `GapP` (with `GapP.neg_mem`) in
-  `Complexitylib.Classes.SharpP` done; parsimonious reductions remain.)*
+- [~] Define the polynomial hierarchy both by alternating quantifiers and oracle
+  levels, then prove equivalence at fixed levels. *(The certificate-quantifier
+  definition is `Complexitylib.Classes.PH`: `SigmaP`, `PiP`, `PH`, quantifier
+  duality, and the level inclusions relative to the `pairFst ∈ FP` seam. Oracle
+  levels and the equivalence remain.)*
+- [x] Prove the Sipser--Lautemann theorem `BPP ⊆ Σ₂ᵖ ∩ Π₂ᵖ`
+  (`Complexitylib.Classes.PH.SipserLautemann`: `sipserLautemann`, with
+  `BPP_subset_SigmaP_two`, `BPP_subset_PiP_two` and `BPP_subset_PH`).
+  Unconditional. The development: Lautemann's covering lemma in both
+  directions (`SipserLautemann.Covering`); the freeze of acceptance
+  probability past the halting time, which replaces a machine's arbitrary time
+  bound by a dominating polynomial (`SipserLautemann.TimeBound`); the
+  amplified `∃∀` characterization of `L` and of its complement
+  (`SipserLautemann.Amplified`); the seed/shift codecs
+  (`SipserLautemann.Encode`); the identity exhibiting `L` and `Lᶜ` as
+  polynomially bounded `∃∀` forms over the matrix language
+  (`SipserLautemann.Matrix`); and the matrix verdict as a member of Cobham's
+  algebra (`SipserLautemann.Verdict`), which discharges the polynomial-time
+  obligation with no machine construction. Supporting additions:
+  `NTM.choiceTM` runs one nondeterministic path deterministically from a
+  choice tape (`Complexitylib.Models.TuringMachine.ChoiceTape`), simulated
+  inside the algebra by `Complexitylib.Classes.P.Cobham.Internal.ChoiceSim`
+  and `.BlockLoop`; `mem_P_of_decisionFn_bool`
+  (`Complexitylib.Classes.P.DecisionFn`) turns a verdict function in `FP` into
+  membership in `P`.
 - [ ] Prove elementary closure properties and relate PP to GapP sign.
 - [ ] Formalize `PH subset P^#P`/Toda-style results only after polynomial
   interpolation and modular counting are available.

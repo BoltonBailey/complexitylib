@@ -36,6 +36,7 @@ unconditional.
 - `compl_polyExistsLang` / `compl_polyForallLang` — quantifier duality
 - `complClass_polyExistsClass` / `complClass_polyForallClass` — class duality
 - `SigmaP_zero`, `PiP_zero`, `SigmaP_succ`, `PiP_succ` — recursion laws
+- `pairFst_mem_FP` — the pair decoder is polynomial-time
 - `P_subset_polyExistsClass_P` / `P_subset_polyForallClass_P` — base inclusions
 - `SigmaP_subset_SigmaP_succ` / `PiP_subset_PiP_succ` — level inclusions
 - `SigmaP_subset_PH`, `P_subset_PH`
@@ -211,6 +212,16 @@ theorem PiP_succ (n : ℕ) : PiP (n + 1) = polyForallClass (SigmaP n) := by
   show complClass (polyExistsClass (complClass (SigmaP n))) = _
   rw [complClass_polyExistsClass, complClass_complClass]
 
+/-- The first Σ level is the bounded existential closure of `P` — the
+certificate form of `NP`. -/
+theorem SigmaP_one : SigmaP 1 = polyExistsClass P := by
+  rw [SigmaP_succ, PiP_zero]
+
+/-- The first Π level is the bounded universal closure of `P` — the
+certificate form of `coNP`. -/
+theorem PiP_one : PiP 1 = polyForallClass P := by
+  rw [PiP_succ, SigmaP_zero]
+
 /-! ## Level inclusions -/
 
 /-- Both level inclusions, proved simultaneously by induction: the base case is
@@ -221,9 +232,9 @@ private theorem piP_sigmaP_subset_succ (n : ℕ) :
   induction n with
   | zero =>
     constructor
-    · rw [PiP_zero, PiP_succ, SigmaP_zero]
+    · rw [PiP_zero, PiP_one]
       exact P_subset_polyForallClass_P
-    · rw [SigmaP_zero, SigmaP_succ, PiP_zero]
+    · rw [SigmaP_zero, SigmaP_one]
       exact P_subset_polyExistsClass_P
   | succ n ih =>
     constructor
