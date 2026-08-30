@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Kolmogorov
 public import Complexitylib.Metacomplexity.Kolmogorov.Incompressibility
+public import Complexitylib.Metacomplexity.StatisticalTest
 public import Complexitylib.Metacomplexity.MINKT
 public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary
 public import Complexitylib.Metacomplexity.MCSP

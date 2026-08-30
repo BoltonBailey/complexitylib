@@ -1732,6 +1732,16 @@ public theory includes attaining witnesses, non-strict and strict threshold
 characterizations, clock monotonicity, additive semantic-simulation comparison, and a polynomial
 resource-aware timed comparison. Input locality additionally gives the sharp
 machine-independent bound `C_U^t(x) ≤ t` whenever the value is finite.
+`BitGenerator` now fixes an exact finite binary-generator convention together
+with uniform and generated test probabilities and absolute distinguishing
+advantage. A test containing only strings with `C_U^t(x) ≥ r` accepts no
+output of a generator whose outputs all satisfy `C_U^t(x) < r`; hence a
+`delta`-dense such test has distinguishing advantage at least `delta`. The
+direct seed-description corollary derives the low-complexity premise when the
+machine produces every generator output from its seed within `t` and the seed
+length is strictly below `r`. This formalizes the statistical-test step before
+the Nisan--Wigderson reconstruction, without assuming universality or an
+efficient implementation of the generator.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2866,10 +2876,16 @@ meta-computational notation hides several incompatible choices; expose them.
   low-complexity density and failure mass, with a pointwise-bound corollary.
   This is the first substantive bridge from finite incompressibility to the
   2018 reduction.
-- [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
+- [~] Formalize the Nisan--Wigderson reconstruction/information argument needed to
   turn that dense set into a near-optimal description search algorithm. First
   prove the exact finite parameter theorem; then derive the published
-  `sqrt(k)`-loss and polynomial-clock corollaries.
+  `sqrt(k)`-loss and polynomial-clock corollaries. *The initial statistical-test
+  layer is complete: a dense set of threshold-random strings has exactly its
+  uniform density as distinguishing advantage against any generator whose
+  outputs have strictly lower time-bounded complexity. A direct
+  seed-description theorem discharges that premise for a generator computed
+  from seeds shorter than the threshold. Weak designs, the NW generator, and
+  reconstruction from a distinguishing test remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
