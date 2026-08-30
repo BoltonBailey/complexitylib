@@ -14,8 +14,9 @@ Fix a prefix of a fan-in-two AND/OR circuit's inputs without changing its gate
 count. This is the circuit-level operation used to turn length-dependent advice
 or random seeds into nonuniform constants while leaving the ordinary input live.
 
-The live suffix has positive arity, matching the typed `Circuit` convention.
-Circuit families represent the zero-input member separately with `emptyOutput`.
+The live suffix and output tuple have positive arity, matching the typed
+`Circuit` convention. Circuit families represent the zero-input member
+separately with `emptyOutput`.
 
 ## Main definitions
 
@@ -47,9 +48,9 @@ def castInputArity {B : Basis} {N N' M G : ℕ} [NeZero N] [NeZero N']
 The remaining positive number `m` of inputs retain their order, and the
 internal gate count `G` is unchanged. The zero-length prefix is the identity
 after canonical input-arity transport. -/
-def restrictPrefix {m G : ℕ} [NeZero m] :
-    {k : ℕ} → BitString k → Circuit Basis.andOr2 (k + m) 1 G →
-      Circuit Basis.andOr2 m 1 G
+def restrictPrefix {m M G : ℕ} [NeZero m] [NeZero M] :
+    {k : ℕ} → BitString k → Circuit Basis.andOr2 (k + m) M G →
+      Circuit Basis.andOr2 m M G
   | 0, _, circuit => castInputArity (Nat.zero_add m) circuit
   | k + 1, seed, circuit =>
       restrictPrefix (Fin.tail seed)
@@ -70,21 +71,22 @@ private theorem prepend_tail_append {k m : ℕ} (seed : BitString (k + 1))
   all_goals congr 1 <;> simp_all [Fin.ext_iff] <;> omega
 
 /-- Evaluation commutes with transporting a circuit's input arity. -/
-private theorem eval_castInputArity {N N' G : ℕ} [NeZero N] [NeZero N']
-    (h : N = N') (circuit : Circuit Basis.andOr2 N 1 G)
+private theorem eval_castInputArity {N N' M G : ℕ}
+    [NeZero N] [NeZero N'] [NeZero M]
+    (h : N = N') (circuit : Circuit Basis.andOr2 N M G)
     (input : BitString N') :
-    ((castInputArity h circuit).eval input) 0 =
-      (circuit.eval (input ∘ Fin.cast h)) 0 := by
+    (castInputArity h circuit).eval input =
+      circuit.eval (input ∘ Fin.cast h) := by
   subst N'
   rfl
 
 /-- Prefix hardwiring agrees with evaluating the original circuit on the fixed
 prefix followed by the live input. -/
-theorem restrictPrefix_eval {k m G : ℕ} [NeZero m]
-    (seed : BitString k) (circuit : Circuit Basis.andOr2 (k + m) 1 G)
+theorem restrictPrefix_eval {k m M G : ℕ} [NeZero m] [NeZero M]
+    (seed : BitString k) (circuit : Circuit Basis.andOr2 (k + m) M G)
     (input : BitString m) :
-    ((restrictPrefix seed circuit).eval input) 0 =
-      (circuit.eval (Fin.append seed input)) 0 := by
+    (restrictPrefix seed circuit).eval input =
+      circuit.eval (Fin.append seed input) := by
   induction k with
   | zero =>
       have hseed : seed = Fin.elim0 := Subsingleton.elim _ _
@@ -94,17 +96,12 @@ theorem restrictPrefix_eval {k m G : ℕ} [NeZero m]
   | succ k ih =>
       rw [restrictPrefix]
       rw [ih]
-      have hstep := congrFun
-        (Complexity.restrictCircuit_eval (k := k) (seed 0) circuit
-          (fun x => (circuit.eval x) 0) rfl)
-        (Fin.append (Fin.tail seed) input)
-      rw [hstep]
-      simp only [restrictFirst]
+      rw [Complexity.restrictCircuit_eval_all]
       rw [prepend_tail_append seed input]
 
 /-- Prefix hardwiring preserves the exact circuit size. -/
-@[simp] theorem restrictPrefix_size {k m G : ℕ} [NeZero m]
-    (seed : BitString k) (circuit : Circuit Basis.andOr2 (k + m) 1 G) :
+@[simp] theorem restrictPrefix_size {k m M G : ℕ} [NeZero m] [NeZero M]
+    (seed : BitString k) (circuit : Circuit Basis.andOr2 (k + m) M G) :
     (restrictPrefix seed circuit).size = circuit.size := by
   rfl
 

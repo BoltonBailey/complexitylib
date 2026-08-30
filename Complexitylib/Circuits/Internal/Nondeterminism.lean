@@ -186,9 +186,9 @@ def restrictGateBounded {G : Nat} [NeZero m] (b : Bool)
 
 /-- The restricted circuit: same gate count, with each gate transformed
     by `restrictGateBounded` to account for the hardwired first input. -/
-def restrictCircuit {G : Nat} [NeZero m] (b : Bool)
-    (c : Circuit Basis.andOr2 ((k + 1) + m) 1 G) :
-    Circuit Basis.andOr2 (k + m) 1 G where
+def restrictCircuit {M G : Nat} [NeZero m] [NeZero M] (b : Bool)
+    (c : Circuit Basis.andOr2 ((k + 1) + m) M G) :
+    Circuit Basis.andOr2 (k + m) M G where
   gates i := (restrictGateBounded (k := k) (m := m) b (c.gates i) (fanIn_andOr2 (c.gates i))
     i.val (fun j => c.acyclic i j)).val
   outputs j := (restrictGateBounded (k := k) (m := m) b (c.outputs j) (fanIn_andOr2 (c.outputs j))
@@ -243,8 +243,8 @@ private def prependInput (b : Bool) (x : BitString (k + m)) :
     BitString ((k + 1) + m) :=
   fun i => if h : i.val = 0 then b else x ⟨i.val - 1, by omega⟩
 
-private theorem wireValue_zero {G : Nat} [NeZero m] (b : Bool)
-    (c : Circuit Basis.andOr2 ((k + 1) + m) 1 G)
+private theorem wireValue_zero {M G : Nat} [NeZero m] [NeZero M] (b : Bool)
+    (c : Circuit Basis.andOr2 ((k + 1) + m) M G)
     (x : BitString (k + m)) :
     c.wireValue (prependInput b x) ⟨0, by omega⟩ = b := by
   rw [Circuit.wireValue_of_lt _ _ _ (by show 0 < (k + 1) + m; omega)]
@@ -252,8 +252,8 @@ private theorem wireValue_zero {G : Nat} [NeZero m] (b : Bool)
 
 /-- Wire value correspondence: for wires > 0, the old circuit's wire value
     with prepended input equals the restricted circuit's shifted wire value. -/
-private theorem wireValue_restrict {G : Nat} [NeZero m] (b : Bool)
-    (c : Circuit Basis.andOr2 ((k + 1) + m) 1 G)
+private theorem wireValue_restrict {M G : Nat} [NeZero m] [NeZero M] (b : Bool)
+    (c : Circuit Basis.andOr2 ((k + 1) + m) M G)
     (x : BitString (k + m))
     (w : Nat) (hwlt : w < (k + 1) + m + G)
     (hw : 0 < w) :
@@ -284,7 +284,26 @@ private theorem wireValue_restrict {G : Nat} [NeZero m] (b : Bool)
       intro i hi hip
       exact ih i (by omega) (by omega) hip
 
-/-- The restricted circuit computes `restrictFirst f b`. -/
+/-- Every output of the restricted circuit agrees with the original circuit
+after prepending the hardwired bit. -/
+theorem restrictCircuit_eval_all {M G : Nat} [NeZero m] [NeZero M]
+    (b : Bool) (c : Circuit Basis.andOr2 ((k + 1) + m) M G)
+    (x : BitString (k + m)) :
+    (restrictCircuit (k := k) b c).eval x =
+      c.eval (fun i => if h : i.val = 0 then b else x ⟨i.val - 1, by omega⟩) := by
+  funext output
+  simp only [Circuit.eval, restrictCircuit]
+  symm
+  apply restrictGateP_eval_eq b (c.outputs output) (fanIn_andOr2 _) G
+    (le_refl G)
+    (fun j => by have := ((c.outputs output).inputs j).isLt; omega)
+    (c.wireValue (prependInput b x)) ((restrictCircuit b c).wireValue x)
+    (wireValue_zero b c x)
+  intro i hi hip
+  have := wireValue_restrict b c x i (by omega) hip
+  convert this using 2
+
+/-- The single-output restricted circuit computes `restrictFirst f b`. -/
 theorem restrictCircuit_eval {G : Nat} [NeZero m] (b : Bool)
     (c : Circuit Basis.andOr2 ((k + 1) + m) 1 G)
     (f : BitString ((k + 1) + m) → Bool)
@@ -292,15 +311,7 @@ theorem restrictCircuit_eval {G : Nat} [NeZero m] (b : Bool)
     (fun x => ((restrictCircuit (k := k) b c).eval x) 0) = restrictFirst f b := by
   funext x
   have hrhs : restrictFirst f b x = f (prependInput b x) := rfl
-  rw [hrhs, ← heval]
-  simp only [Circuit.eval, restrictCircuit]
-  symm
-  apply restrictGateP_eval_eq b (c.outputs 0) (fanIn_andOr2 _) G (le_refl G)
-    (fun j => by have := ((c.outputs 0).inputs j).isLt; omega)
-    (c.wireValue (prependInput b x)) ((restrictCircuit b c).wireValue x)
-    (wireValue_zero b c x)
-  intro i hi hip
-  have := wireValue_restrict b c x i (by omega) hip
-  convert this using 2
+  rw [hrhs, ← heval, restrictCircuit_eval_all]
+  rfl
 
 end Complexity
