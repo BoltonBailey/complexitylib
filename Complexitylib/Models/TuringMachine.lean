@@ -846,7 +846,7 @@ noncomputable def acceptCount (tm : NTM n) (x : List Bool) (T : ℕ) : ℕ :=
     let c' := tm.trace T choices (tm.initCfg x)
     c'.state = tm.qhalt ∧ c'.output.cells 1 = Γ.one).card
 
-/-- Acceptance probability = |accepting paths| / 2^T.
+/-- Acceptance probability = |accepting length-`T` choice sequences| / 2^T.
 
     Meaningful when the machine halts on all paths within `T` steps. -/
 noncomputable def acceptProb (tm : NTM n) (x : List Bool) (T : ℕ) : ℚ :=

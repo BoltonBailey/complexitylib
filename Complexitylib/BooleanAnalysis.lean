@@ -16,9 +16,10 @@ larger complexity-theory corpus, where the Fourier-analytic toolkit underpins
 circuit lower bounds (small-depth circuits, `AC⁰`), learning, property testing,
 and the natural-proofs barrier.
 
-Currently formalized: Chapter 1 — Boolean functions and the Fourier expansion
-(`Complexitylib.BooleanAnalysis.FourierExpansion`), with the parity functions as
-an orthonormal basis, Fourier coefficients and weights, Parseval/Plancherel, and
-the mean/variance/covariance and convolution API. All definitions and theorems
-live under the `Complexity.BooleanAnalysis` namespace.
+Currently formalized: Boolean functions and the Fourier expansion, with the
+parity functions as an orthonormal basis, Fourier coefficients and weights,
+Parseval/Plancherel, and the mean/variance/covariance and convolution API;
+Chapter 2 foundations include noise stability, the noise operator, derivatives,
+and coordinate and total influence. All definitions and theorems live under the
+`Complexity.BooleanAnalysis` namespace.
 -/

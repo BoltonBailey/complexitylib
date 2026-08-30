@@ -32,7 +32,7 @@ open Complexity.TM
 
 /-- The payload decoder: scan doubled payload bits, emitting each decoded bit to
 the output, until the `[false, true]` separator or end of input. Computes
-`fstBlock`. -/
+`pairFst`. -/
 def fstBlockTM : TM 0 where
   Q := ScanPhase
   qstart := .skip
@@ -94,14 +94,14 @@ def fstBlockTM : TM 0 where
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
 /-- The scan of `fstBlockTM`: from `scanA` on input `w` with output holding `acc`,
-the machine emits the decoded payload of `w`, halting with `acc ++ fstBlock w`. -/
+the machine emits the decoded payload of `w`, halting with `acc ++ pairFst w`. -/
 private theorem fstBlockTM_scan_loop :
     ∀ (fuel : ℕ) (w acc : List Bool), w.length ≤ fuel → ∀ (c : Cfg 0 fstBlockTM.Q),
       c.state = ScanPhase.scanA →
       c.input.HasBinarySuffix w →
       c.output.HasBinaryPrefix acc →
       ∃ c' t, t ≤ 2 * w.length + 2 ∧ fstBlockTM.reachesIn t c c' ∧ fstBlockTM.halted c' ∧
-        c'.output.HasBinaryPrefix (acc ++ fstBlock w) := by
+        c'.output.HasBinaryPrefix (acc ++ pairFst w) := by
   intro fuel
   induction fuel with
   | zero =>
@@ -119,7 +119,7 @@ private theorem fstBlockTM_scan_loop :
         .step (by simp [TM.step, hstate, fstBlockTM, hread]) .zero, rfl, ?_⟩
       rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
           = c.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne]
-      simpa [fstBlock] using hpre
+      simpa [pairFst] using hpre
   | succ fuel ih =>
       intro w acc hw c hstate hsuf hpre
       have houtne : c.output.read ≠ Γ.start := by rw [hpre.read_blank]; decide
@@ -135,7 +135,7 @@ private theorem fstBlockTM_scan_loop :
             .step (by simp [TM.step, hstate, fstBlockTM, hread]) .zero, rfl, ?_⟩
           rw [show c.output.writeAndMove (readBackWrite c.output.read) (idleDir c.output.read)
               = c.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne]
-          simpa [fstBlock] using hpre
+          simpa [pairFst] using hpre
       | [false] =>
           have hread : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 fstBlockTM.Q :=
@@ -163,7 +163,7 @@ private theorem fstBlockTM_scan_loop :
             .step hstep (.step (by simp [TM.step, fstBlockTM, hread1, c1]) .zero), rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | [true] =>
           have hread : c.input.read = Γ.ofBool true := hsuf.read_cons
           let c1 : Cfg 0 fstBlockTM.Q :=
@@ -191,7 +191,7 @@ private theorem fstBlockTM_scan_loop :
             .step hstep (.step (by simp [TM.step, fstBlockTM, hread1, c1]) .zero), rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | false :: true :: y =>
           have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 fstBlockTM.Q :=
@@ -220,7 +220,7 @@ private theorem fstBlockTM_scan_loop :
             rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | true :: false :: rest =>
           have hreadA : c.input.read = Γ.ofBool true := hsuf.read_cons
           let c1 : Cfg 0 fstBlockTM.Q :=
@@ -249,7 +249,7 @@ private theorem fstBlockTM_scan_loop :
             rfl, ?_⟩
           rw [show c1.output.writeAndMove (readBackWrite c1.output.read) (idleDir c1.output.read)
               = c1.output from Tape.writeAndMove_readBack_idle_of_ne_start _ houtne1]
-          simpa [fstBlock] using hpre1
+          simpa [pairFst] using hpre1
       | false :: false :: z =>
           have hreadA : c.input.read = Γ.ofBool false := hsuf.read_cons
           let c1 : Cfg 0 fstBlockTM.Q :=
@@ -286,7 +286,7 @@ private theorem fstBlockTM_scan_loop :
             ih z (acc ++ [false]) hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have hfb : fstBlock (false :: false :: z) = false :: fstBlock z := rfl
+          have hfb : pairFst (false :: false :: z) = false :: pairFst z := rfl
           rw [hfb, List.append_assoc, List.cons_append, List.nil_append] at *
           exact hcout
       | true :: true :: z =>
@@ -325,12 +325,12 @@ private theorem fstBlockTM_scan_loop :
             ih z (acc ++ [true]) hzfuel c2 rfl hsuf2 hpre2
           refine ⟨c', t + 1 + 1, by simp only [List.length_cons]; omega,
             .step hstepA (.step hstepB hreach), hhalt, ?_⟩
-          have hfb : fstBlock (true :: true :: z) = true :: fstBlock z := rfl
+          have hfb : pairFst (true :: true :: z) = true :: pairFst z := rfl
           rw [hfb, List.append_assoc, List.cons_append, List.nil_append] at *
           exact hcout
 
-/-- `fstBlock` is polynomial-time, via the `fstBlockTM` scanner. -/
-theorem fstBlock_mem_FP : fstBlock ∈ FP := by
+/-- `pairFst` is polynomial-time, via the `fstBlockTM` scanner. -/
+theorem fstBlock_mem_FP : pairFst ∈ FP := by
   refine ⟨1, 0, fstBlockTM, (fun m => 2 * m + 3), ?_, ?_⟩
   · intro z
     let c1 : Cfg 0 fstBlockTM.Q :=

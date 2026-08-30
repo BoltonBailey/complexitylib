@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.Dependency
 public import Complexitylib.Circuits.DecisionTree
 public import Complexitylib.Circuits.DecisionTree.Finite
+public import Complexitylib.Circuits.DecisionTree.Block
 public import Complexitylib.Circuits.DecisionTree.NormalForm
 public import Complexitylib.Circuits.DecisionTree.Path
 public import Complexitylib.Circuits.DecisionTree.Restriction
@@ -58,6 +59,7 @@ public import Complexitylib.Circuits.Nondeterminism
 public import Complexitylib.Circuits.Hardwiring
 public import Complexitylib.Circuits.Unrolling
 public import Complexitylib.Circuits.Valiant
+import Complexitylib.Circuits.Internal.Bridge
 
 /-! # Circuit Complexity Library
 

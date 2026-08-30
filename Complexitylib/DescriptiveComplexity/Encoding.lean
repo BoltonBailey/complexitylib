@@ -26,6 +26,8 @@ relational part of that encoding and computes its length; it is step 5 (structur
   (length `card ^ arity`).
 - `DescriptiveComplexity.encodeRels`, `encodeRels_length` — the relational part of
   a structure's encoding, and its total length.
+- `DescriptiveComplexity.encodeConstC`, `encodeConstsC` — computable one-hot
+  encodings of the distinguished constants.
 - `DescriptiveComplexity.allTuples`, `encodeRelC` — a **computable** tuple
   enumeration and a computable truth-table encoding (needed for the machine-side
   Fagin bridge).
@@ -92,17 +94,67 @@ theorem encodeRelsC_length {V : Vocabulary} (A : DecFinStruct V) :
   intro i _
   exact encodeRelC_length (A.rel i)
 
+/-- Encode a distinguished constant as the truth table of its singleton unary
+    relation. The resulting one-hot block has exactly `card` bits. -/
+def encodeConstC {card : Nat} (c : Fin card) : List Bool :=
+  (List.finRange card).map fun i => i == c
+
+@[simp] theorem encodeConstC_length {card : Nat} (c : Fin card) :
+    (encodeConstC c).length = card := by
+  simp [encodeConstC]
+
+/-- A one-hot constant block determines the distinguished element. -/
+theorem encodeConstC_injective {card : Nat} :
+    Function.Injective (@encodeConstC card) := by
+  intro a b h
+  apply Fin.ext
+  have hget := congrArg (fun bits => bits[a.val]?) h
+  simp [encodeConstC, Fin.ext_iff] at hget
+  exact hget
+
+/-- Encode all distinguished constants as consecutive one-hot blocks. -/
+def encodeConstsC {V : Vocabulary} (A : DecFinStruct V) : List Bool :=
+  (List.finRange V.numConsts).flatMap fun i => encodeConstC (A.const i)
+
+@[simp] theorem encodeConstsC_length {V : Vocabulary} (A : DecFinStruct V) :
+    (encodeConstsC A).length = V.numConsts * A.card := by
+  simp [encodeConstsC]
+
 /-- The **full** computable encoding of a decidable structure: the cardinality in
     unary (a block of `card` `true`s terminated by a `false`), followed by the
-    relational encoding. The unary prefix makes `card` self-delimiting. -/
+    relational truth tables and one one-hot block per distinguished constant.
+    The unary prefix makes `card` self-delimiting. -/
 def encodeStruct {V : Vocabulary} (A : DecFinStruct V) : List Bool :=
-  List.replicate A.card true ++ false :: encodeRelsC A
+  List.replicate A.card true ++ false :: (encodeRelsC A ++ encodeConstsC A)
 
 /-- The cardinality is recoverable from the encoding as the length of the leading
     run of `true`s. -/
 theorem encodeStruct_card {V : Vocabulary} (A : DecFinStruct V) :
     ((encodeStruct A).takeWhile id).length = A.card := by
   rw [encodeStruct]; simp
+
+/-- Constant-free vocabularies retain the prior cardinality-plus-relations wire
+    format. -/
+theorem encodeStruct_of_isRelational {V : Vocabulary} (A : DecFinStruct V)
+    (hV : V.IsRelational) :
+    encodeStruct A = List.replicate A.card true ++ false :: encodeRelsC A := by
+  have hempty : encodeConstsC A = [] := by
+    apply List.eq_nil_of_length_eq_zero
+    rw [encodeConstsC_length]
+    unfold Vocabulary.IsRelational at hV
+    simp [hV]
+  simp [encodeStruct, hempty]
+
+/-- The full encoding has one unary cardinality block, all relation tables, and
+    one `card`-bit block for each constant symbol. -/
+theorem encodeStruct_length {V : Vocabulary} (A : DecFinStruct V) :
+    (encodeStruct A).length =
+      A.card + 1 +
+        ((List.finRange V.numRels).map (fun i => A.card ^ V.relArity i)).sum +
+          V.numConsts * A.card := by
+  simp only [encodeStruct, List.length_append, List.length_replicate, List.length_cons,
+    encodeRelsC_length, encodeConstsC_length]
+  omega
 
 /-- Encode a `Bool`-valued arity-`k` relation on `Fin card` as its **truth table**:
     the list of its values over all `k`-tuples, in the canonical `Fintype` order. -/

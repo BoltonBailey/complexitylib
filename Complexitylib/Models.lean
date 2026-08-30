@@ -87,7 +87,7 @@ addition, fixed-constant addition, copying, multiply-add, and fixed-polynomial
 evaluation, framed work-tape clearing,
 unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
-the universal machine, and the logarithmic-cost random access machine
+the universal machine, the rose-tree program model, and the logarithmic-cost random access machine
 (`Complexitylib.Models.RandomAccessMachine`), including its verified structured
 imperative frontend and Hamming-weight benchmark with exact steps and explicit
 quasilinear logarithmic-time and peak-space bounds, plus a generic verified

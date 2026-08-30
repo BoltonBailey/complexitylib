@@ -169,7 +169,10 @@ suites that are intentionally outside the public import graph.
 The last three are the quality gates:
 
 - **`scripts/lint_style.py`** checks copyright headers, module docstrings,
-  line length, and whitespace. It is a hard gate: any violation fails the run.
+  line length, whitespace, and that every non-internal, non-validation module
+  is reachable from the public root import. It also ensures every module belongs
+  to the root or one of the required validation-only build graphs. It is a hard
+  gate: any violation fails the run.
 - **`lake exe runLinter …`** runs the Mathlib/Batteries environment linters
   (missing docstrings, naming, unused arguments, simp hygiene, …) over the
   public root and all five validation-only import graphs, also as a hard gate.

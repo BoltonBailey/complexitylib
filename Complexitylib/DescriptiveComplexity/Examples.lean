@@ -12,7 +12,7 @@ public import Complexitylib.DescriptiveComplexity.FirstOrder.Isomorphism
 
   Concrete examples from Immerman Chapter 1:
   - A small directed graph (3-cycle)
-  - A binary string (with built-in ordering)
+  - A binary string over the canonical meta-level `Fin` ordering
   - An isomorphism between two concrete graphs
 -/
 
@@ -94,7 +94,8 @@ def cycle3Iso : Iso cycle3 cycle3' where
   const_map j := Fin.elim0 j
 
 /-- The binary string "101" of length 3: positions 0 and 2 are 1-bits.
-    The linear ordering is built-in via `Fin 3`. -/
+    `Fin 3` supplies a canonical meta-level ordering; ordered formula atoms are
+    not yet part of the first-order syntax. -/
 def string101 : FinStruct stringBuiltinOrder where
   card := 3
   hcard := by omega

@@ -18,7 +18,7 @@ halt check of the interpreted machine `(decodeDesc α).toTM`:
 * a running state tape (`w`-bit encoding of `q < 2^w`) matches the field
   iff `q` is the decoded halt state (well-formed fields decode by
   `Nat.toBits`/`Nat.fromBits`; malformed-width fields never match, and the
-  decoded sentinel `2^w` is unreachable);
+  decoded sentinel `2^w` has no `w`-bit running-state encoding);
 * after a default transition the state tape holds the field verbatim, and
   the interpreted machine sits exactly at its (clamped) halt state.
 -/
