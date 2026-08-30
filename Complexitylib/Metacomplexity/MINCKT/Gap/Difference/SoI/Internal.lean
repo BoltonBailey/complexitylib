@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Conditional.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Depth.Internal
 
 /-!
@@ -136,31 +137,34 @@ theorem SatisfiesSoIInputs.satisfiesAccounting_internal
   · intro inst
     have hchain := hsoi.chain_le inst.output inst.condition
       (schedule.soiTime inst) (hinputs.soiSize inst)
-    rw [← hinputs.transformedTime_eq inst] at hchain
+    have hconditionalClock :=
+      OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity_mono_internal
+        conditionalMachine inst.output inst.condition
+          (hinputs.soiClock_le_transformedTime inst)
     have hcondition :
         (inst.withTime (parameters.transformedTime inst)).complexity
               conditionalMachine + components.subtrahend inst ≤
-          (inst.withTime (parameters.transformedTime inst)).complexity
-                conditionalMachine +
+          conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                inst.output inst.condition (soiClock (schedule.soiTime inst)) +
             ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
-              (parameters.transformedTime inst) :=
-      withTopNat_add_le_add_internal le_rfl
+              (soiClock (schedule.soiTime inst)) :=
+      withTopNat_add_le_add_internal hconditionalClock
         (hinputs.condition_upper inst)
     have hconditionCorrection :
         ((inst.withTime (parameters.transformedTime inst)).complexity
               conditionalMachine + components.subtrahend inst) +
             components.correction inst ≤
-          ((inst.withTime (parameters.transformedTime inst)).complexity
-                conditionalMachine +
+          (conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                inst.output inst.condition (soiClock (schedule.soiTime inst)) +
               ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
-                (parameters.transformedTime inst)) +
+                (soiClock (schedule.soiTime inst))) +
             components.correction inst :=
       withTopNat_add_le_add_internal hcondition le_rfl
     have hchainCorrection :
-        ((inst.withTime (parameters.transformedTime inst)).complexity
-                conditionalMachine +
+        (conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                inst.output inst.condition (soiClock (schedule.soiTime inst)) +
               ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
-                (parameters.transformedTime inst)) +
+                (soiClock (schedule.soiTime inst))) +
             components.correction inst ≤
           (ordinaryMachine.timeBoundedKolmogorovComplexity
                 (pair inst.output inst.condition) (schedule.soiTime inst) +

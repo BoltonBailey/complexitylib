@@ -18,9 +18,10 @@ difference estimator. It keeps the two clocks and three finite losses visible:
 - a base clock at which symmetry of information is applied;
 - upper-chain, condition-estimator, and joint-estimator losses.
 
-The transformed conditional clock must be exactly the SoI clock at the chosen
-base time. Two natural-number budget inequalities state which losses are paid
-by the estimator correction and which fit inside the final logarithmic slack.
+The transformed conditional clock may be later than the SoI clock at the
+chosen base time. This is the `p^3`-to-`p^4` step in the paper. Two
+natural-number budget inequalities state which losses are paid by the estimator
+correction and which fit inside the final logarithmic slack.
 -/
 
 
@@ -58,9 +59,9 @@ structure SatisfiesSoIInputs
     (ordinaryMachine : TM ordinaryTapes)
     (conditionalMachine : OracleTM conditionalTapes)
     (parameters : Parameters) (soiClock soiLoss : ℕ → ℕ) : Prop where
-  /-- The gap problem's transformed clock is exactly the SoI target clock. -/
-  transformedTime_eq : ∀ inst,
-    parameters.transformedTime inst = soiClock (schedule.soiTime inst)
+  /-- The gap problem's transformed clock is at least the SoI target clock. -/
+  soiClock_le_transformedTime : ∀ inst,
+    soiClock (schedule.soiTime inst) ≤ parameters.transformedTime inst
   /-- Each chosen SoI base time is large enough for its pair. -/
   soiSize : ∀ inst,
     inst.output.length + inst.condition.length ≤ schedule.soiTime inst
@@ -90,7 +91,7 @@ structure SatisfiesSoIInputs
   condition_upper : ∀ inst,
     (components.subtrahend inst : WithTop ℕ) ≤
       ordinaryMachine.timeBoundedKolmogorovComplexity inst.condition
-        (parameters.transformedTime inst)
+        (soiClock (schedule.soiTime inst))
   /-- The ordinary paired complexity on the right of SoI is below the minuend
   plus its estimator loss. -/
   pair_lower : ∀ inst,

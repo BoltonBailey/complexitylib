@@ -3273,14 +3273,19 @@ meta-computational notation hides several incompatible choices; expose them.
   `WithTop` values. This result composes directly with the semantic solver and
   `PromiseP` criterion. The SoI accounting theorem is now complete too: an
   explicit schedule records the SoI base time, paired upper-chain time, three
-  finite losses, the exact transformed-clock equality, both joint/condition
+  finite losses, the SoI-to-gap clock ordering, both joint/condition
   estimator bounds, and the two loss budgets. Under widening, one invocation
   of the named SoI hypothesis and these surrounding inputs produce the full
   cancellation contract, estimator sandwich, solver, and `PromiseP` endpoint.
-  Constructing this schedule from one concrete Fact 3.4 unconditional
-  estimator and the evaluator composition theorem, connecting its algorithm to
-  `P`, adding the multiplicative Definition 6.5 variant, and the hardness/class
-  bridge remain.*
+  A single unconditional Fact 3.4 estimator now instantiates all four numerical
+  bounds: a typed plan maps `(x,y,1^t)` to paired and condition-only ordinary
+  MINKT queries, records the `p^3 <= p^4` clock ladder, and converts its two
+  estimator sandwiches into the complete SoI input contract. The resulting
+  adjusted difference reaches the conditional sandwich, solver, and
+  `PromiseP` criterion. Constructing a concrete plan from the evaluator
+  composition theorem, discharging its iterated-polynomial clock/loss budgets,
+  connecting the induced algorithm to `P`, adding the multiplicative
+  Definition 6.5 variant, and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3346,6 +3351,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Compose an explicit clock/loss accounting schedule with the named SoI
   hypothesis to derive both adjusted-difference premises and the end-to-end
   `GapMINCKT` solver/`PromiseP` endpoint.
+- [x] Instantiate the SoI schedule from two queries to one unconditional Fact
+  3.4 estimator, retaining the paired/condition clocks, `p^3 <= p^4` ordering,
+  upper-chain premise, and both logarithmic budgets.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
