@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.StatisticalTest.Defs
 public import Complexitylib.Metacomplexity.StatisticalTest.Internal
+public import Complexitylib.Metacomplexity.StatisticalTest.Hybrid
 
 /-!
 # Finite statistical tests for binary generators

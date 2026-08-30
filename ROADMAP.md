@@ -1742,6 +1742,14 @@ machine produces every generator output from its seed within `t` and the seed
 length is strictly below `r`. This formalizes the statistical-test step before
 the Nisan--Wigderson reconstruction, without assuming universality or an
 efficient implementation of the generator.
+The exact Yao hybrid layer is also complete. It packs generator seeds and an
+independent uniform output block into one finite dyadic experiment, proves the
+zero and final hybrids equal the uniform and generated distributions, and
+telescopes all adjacent acceptance gaps. Optional test complementation orients
+an absolute distinguishing advantage, after which a finite averaging theorem
+finds one coordinate transition with gap at least `delta / m`. This conclusion
+holds for every positive output length and every finite test, with no sign or
+nonnegativity assumption silently imposed on `delta`.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2884,8 +2892,11 @@ meta-computational notation hides several incompatible choices; expose them.
   uniform density as distinguishing advantage against any generator whose
   outputs have strictly lower time-bounded complexity. A direct
   seed-description theorem discharges that premise for a generator computed
-  from seeds shorter than the threshold. Weak designs, the NW generator, and
-  reconstruction from a distinguishing test remain.*
+  from seeds shorter than the threshold. The exact finite hybrid argument is
+  also complete: complementing the test chooses the favorable polarity, the
+  adjacent hybrid gaps telescope, and some coordinate has oriented gap at
+  least `delta / m`. Weak designs, the NW generator, next-bit prediction, and
+  reconstruction from the predictor remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
