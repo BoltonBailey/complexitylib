@@ -9,7 +9,9 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Genera
 import Complexitylib.Circuits.Composition
 import Complexitylib.Circuits.InputSources
 import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
+import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator.Internal
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Iteration.Internal
+import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds.Internal
 
 /-!
 # Anti-checker generator output padding -- proof internals
@@ -175,6 +177,36 @@ theorem exists_eval_paddedSelectionCircuit_isEstimateSelectionTrace_internal
   refine ⟨inputs, ?_, htrace⟩
   rw [eval_paddedSelectionCircuit_internal,
     unpackSamples_padPackedSamples_internal, heval]
+
+theorem eventually_eval_paddedSelectionCircuit_isFor_of_correctCounterFamily_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (overhead : ℕ)
+          (family : ApproximateCounterFamily overhead beta arity)
+          (hbudget : requiredRoundCount beta arity ≤ sampleCount beta arity),
+          family.IsCorrect →
+            ∀ target : BitString arity → Bool,
+              IsHardAt beta target →
+                AntiChecker.IsFor target (smallThreshold beta arity)
+                  (unpackSamples
+                    ((paddedSelectionCircuit family hbudget).2.eval
+                      (truthTable target))) := by
+  filter_upwards
+      [eventually_padInputsTo_isFor_of_isEstimateSelectionTrace_internal beta]
+      with arity hanti
+  intro harity
+  letI : NeZero arity := ⟨harity⟩
+  intro overhead family hbudget hcorrect target hhard
+  obtain ⟨inputs, heval, htrace⟩ :=
+    exists_eval_paddedSelectionCircuit_isEstimateSelectionTrace_internal
+      family hbudget target
+  rw [heval]
+  exact (hanti harity target (family.extensionEstimator target)
+    (List.ofFn inputs) hhard
+    (ApproximateCounterFamily.isAccurateRequiredRoundEstimator_internal
+      hcorrect target) (by simp) htrace).2
 
 end AntiCheckerLemma
 

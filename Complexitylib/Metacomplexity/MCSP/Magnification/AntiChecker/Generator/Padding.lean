@@ -113,6 +113,28 @@ theorem exists_eval_paddedSelectionCircuit_isEstimateSelectionTrace
   exists_eval_paddedSelectionCircuit_isEstimateSelectionTrace_internal
     family hbudget target
 
+/-- For every sufficiently large positive arity, correctness of the finite
+counter family makes the padded circuit output an anti-checker for every hard
+target. This certifies the circuit's computed output, rather than merely the
+existence of a suitable list. -/
+theorem eventually_eval_paddedSelectionCircuit_isFor_of_correctCounterFamily
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (overhead : ℕ)
+          (family : ApproximateCounterFamily overhead beta arity)
+          (hbudget : requiredRoundCount beta arity ≤ sampleCount beta arity),
+          family.IsCorrect →
+            ∀ target : BitString arity → Bool,
+              IsHardAt beta target →
+                AntiChecker.IsFor target (smallThreshold beta arity)
+                  (unpackSamples
+                    ((paddedSelectionCircuit family hbudget).2.eval
+                      (truthTable target))) :=
+  eventually_eval_paddedSelectionCircuit_isFor_of_correctCounterFamily_internal
+    beta
+
 end AntiCheckerLemma
 
 end Magnification
