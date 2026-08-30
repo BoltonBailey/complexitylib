@@ -125,6 +125,44 @@ theorem exists_searchRelation_iff {tapes : ℕ}
       machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ :=
   exists_searchRelation_iff_internal machine parameters hwidening inst
 
+/-- The executable relaxed-resource checker accepts exactly valid candidates. -/
+theorem verifyRelaxedWitness_eq_true_iff {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters) (inst : Instance)
+    (program : List Bool) :
+    verifyRelaxedWitness machine parameters inst program = true ↔
+      inst.IsRelaxedWitness machine parameters program :=
+  verifyRelaxedWitness_eq_true_iff_internal machine parameters inst program
+
+/-- The executable relaxed-resource checker rejects exactly invalid
+candidates. -/
+theorem verifyRelaxedWitness_eq_false_iff {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters) (inst : Instance)
+    (program : List Bool) :
+    verifyRelaxedWitness machine parameters inst program = false ↔
+      ¬inst.IsRelaxedWitness machine parameters program :=
+  verifyRelaxedWitness_eq_false_iff_internal machine parameters inst program
+
+/-- A correct finite-input search solver makes the search-derived decision
+function accept every promised yes-instance when `sigma` is monotone. -/
+theorem decisionOfSearch_eq_true_of_mem_yesLanguage
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    {search : SearchAlgorithm}
+    (hdescription : parameters.DescriptionMonotone)
+    (hsearch : SolvesSearchOnFinite machine parameters search)
+    {bits : List Bool} (hyes : bits ∈ yesLanguage machine) :
+    decisionOfSearch machine parameters search bits = true :=
+  decisionOfSearch_eq_true_of_mem_yesLanguage_internal
+    hdescription hsearch hyes
+
+/-- The search-derived decision function rejects every promised no-instance,
+regardless of the search algorithm's behavior there. -/
+theorem decisionOfSearch_eq_false_of_mem_noLanguage
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    (search : SearchAlgorithm) {bits : List Bool}
+    (hno : bits ∈ noLanguage machine parameters) :
+    decisionOfSearch machine parameters search bits = false :=
+  decisionOfSearch_eq_false_of_mem_noLanguage_internal search hno
+
 end GapMINKT
 
 /-- The widening-certified GapMINKT decision promise. -/
@@ -150,5 +188,22 @@ def GapMINKT {tapes : ℕ} (machine : TM tapes)
     (hwidening : parameters.IsWidening) :
     (GapMINKT machine parameters hwidening).noInstances =
       GapMINKT.noLanguage machine parameters := rfl
+
+/-- A search algorithm correct on every finite source instance induces a
+semantic solver for the widening-certified GapMINKT promise. -/
+theorem GapMINKT_solvedBy_decisionOfSearch
+    {tapes : ℕ} {machine : TM tapes} {parameters : GapMINKT.Parameters}
+    (hwidening : parameters.IsWidening)
+    (hdescription : parameters.DescriptionMonotone)
+    {search : GapMINKT.SearchAlgorithm}
+    (hsearch : GapMINKT.SolvesSearchOnFinite machine parameters search) :
+    (GapMINKT machine parameters hwidening).SolvedBy
+      (GapMINKT.decisionOfSearch machine parameters search) := by
+  constructor
+  · intro bits hyes
+    exact GapMINKT.decisionOfSearch_eq_true_of_mem_yesLanguage
+      hdescription hsearch hyes
+  · intro bits hno
+    exact GapMINKT.decisionOfSearch_eq_false_of_mem_noLanguage search hno
 
 end Complexity

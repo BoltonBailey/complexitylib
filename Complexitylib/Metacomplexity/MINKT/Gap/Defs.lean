@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.Promise.Defs
 public import Complexitylib.Metacomplexity.MINKT.Defs
+public import Complexitylib.Models.TuringMachine.OutputSemantics
 
 /-!
 # Gap MINKT -- definitions
@@ -48,6 +49,11 @@ disjoint and to reuse an exact source description as a search witness. -/
 def IsWidening (parameters : Parameters) : Prop :=
   (∀ length threshold, threshold ≤ parameters.description length threshold) ∧
     ∀ length time, time ≤ parameters.clock length time
+
+/-- For each output length, increasing the source threshold cannot decrease
+the allowed target description length. -/
+def DescriptionMonotone (parameters : Parameters) : Prop :=
+  ∀ length, Monotone (parameters.description length)
 
 end Parameters
 
@@ -149,6 +155,35 @@ def SearchRelation {tapes : ℕ} (machine : TM tapes)
       program.length ≤ parameters.description inst.output.length optimum ∧
       machine.ProducesInTime program inst.output
         (parameters.clock inst.output.length inst.time)
+
+/-- Semantic search algorithm returning a candidate program from `(x,1^t)`. -/
+abbrev SearchAlgorithm := MINKT.Instance → List Bool
+
+/-- A search algorithm satisfies the approximation relation on every input
+whose source time-bounded complexity is finite. -/
+def SolvesSearchOnFinite {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (search : SearchAlgorithm) : Prop :=
+  ∀ inst,
+    machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ →
+      SearchRelation machine parameters inst (search inst)
+
+/-- Executably check whether a candidate meets a gap instance's relaxed target
+resources. -/
+def verifyRelaxedWitness {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (inst : Instance) (program : List Bool) : Bool :=
+  decide
+      (program.length ≤ parameters.description inst.output.length inst.threshold) &&
+    decide
+      (machine.ProducesInTime program inst.output
+        (parameters.clock inst.output.length inst.time))
+
+/-- Convert a search algorithm into a total Boolean decision function by
+decoding a gap instance and checking the returned candidate program. -/
+def decisionOfSearch {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (search : SearchAlgorithm) : List Bool → Bool :=
+  fun bits => match Instance.decode? bits with
+    | some inst => verifyRelaxedWitness machine parameters inst (search inst.base)
+    | none => false
 
 end GapMINKT
 

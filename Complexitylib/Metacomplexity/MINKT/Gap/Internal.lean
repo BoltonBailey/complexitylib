@@ -209,6 +209,8 @@ theorem disjoint_yesLanguage_noLanguage_internal {tapes : ℕ}
   | some inst =>
       have hisYes : inst.IsYes machine := by
         simpa [yesLanguage, hdecode] using hyes
+      change machine.timeBoundedKolmogorovComplexity inst.output inst.time ≤
+        (inst.threshold : WithTop ℕ) at hisYes
       have hisNo : inst.IsNo machine parameters := by
         simpa [noLanguage, hdecode] using hno
       exact Instance.not_isNo_of_isYes_internal
@@ -255,6 +257,79 @@ theorem exists_searchRelation_iff_internal {tapes : ℕ}
     · rw [hprogramLength]
       exact hwidening.1 inst.output.length optimum
     · exact hproduce.mono (hwidening.2 inst.output.length inst.time)
+
+theorem verifyRelaxedWitness_eq_true_iff_internal {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters) (inst : Instance)
+    (program : List Bool) :
+    verifyRelaxedWitness machine parameters inst program = true ↔
+      inst.IsRelaxedWitness machine parameters program := by
+  simp [verifyRelaxedWitness, Instance.IsRelaxedWitness]
+
+theorem verifyRelaxedWitness_eq_false_iff_internal {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters) (inst : Instance)
+    (program : List Bool) :
+    verifyRelaxedWitness machine parameters inst program = false ↔
+      ¬inst.IsRelaxedWitness machine parameters program := by
+  rw [Bool.eq_false_iff]
+  exact not_congr
+    (verifyRelaxedWitness_eq_true_iff_internal machine parameters inst program)
+
+theorem decisionOfSearch_eq_true_of_mem_yesLanguage_internal
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    {search : SearchAlgorithm}
+    (hdescription : parameters.DescriptionMonotone)
+    (hsearch : SolvesSearchOnFinite machine parameters search)
+    {bits : List Bool} (hyes : bits ∈ yesLanguage machine) :
+    decisionOfSearch machine parameters search bits = true := by
+  cases hdecode : Instance.decode? bits with
+  | none => simp [yesLanguage, hdecode] at hyes
+  | some inst =>
+      have hisYes : inst.IsYes machine := by
+        simpa [yesLanguage, hdecode] using hyes
+      change machine.timeBoundedKolmogorovComplexity inst.output inst.time ≤
+        (inst.threshold : WithTop ℕ) at hisYes
+      have hfinite :
+          machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ := by
+        intro htop
+        rw [htop] at hisYes
+        exact WithTop.not_top_le_coe inst.threshold hisYes
+      obtain ⟨optimum, hcomplexity, hlength, hproduce⟩ :=
+        hsearch inst.base hfinite
+      change machine.timeBoundedKolmogorovComplexity inst.output inst.time =
+        (optimum : WithTop ℕ) at hcomplexity
+      change (search inst.base).length ≤
+        parameters.description inst.output.length optimum at hlength
+      change machine.ProducesInTime (search inst.base) inst.output
+        (parameters.clock inst.output.length inst.time) at hproduce
+      have hoptimum : optimum ≤ inst.threshold := by
+        have hbound := hisYes
+        rw [hcomplexity] at hbound
+        exact WithTop.coe_le_coe.mp hbound
+      have hrelaxed : inst.IsRelaxedWitness machine parameters (search inst.base) := by
+        constructor
+        · exact hlength.trans (hdescription inst.output.length hoptimum)
+        · exact hproduce
+      rw [decisionOfSearch, hdecode]
+      exact (verifyRelaxedWitness_eq_true_iff_internal
+        machine parameters inst (search inst.base)).mpr hrelaxed
+
+theorem decisionOfSearch_eq_false_of_mem_noLanguage_internal
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    (search : SearchAlgorithm) {bits : List Bool}
+    (hno : bits ∈ noLanguage machine parameters) :
+    decisionOfSearch machine parameters search bits = false := by
+  cases hdecode : Instance.decode? bits with
+  | none => simp [noLanguage, hdecode] at hno
+  | some inst =>
+      have hisNo : inst.IsNo machine parameters := by
+        simpa [noLanguage, hdecode] using hno
+      have hnone :=
+        (Instance.isNo_iff_no_relaxedWitness_internal
+          inst machine parameters).mp hisNo
+      rw [decisionOfSearch, hdecode]
+      exact (verifyRelaxedWitness_eq_false_iff_internal
+        machine parameters inst (search inst.base)).mpr
+          (fun hrelaxed => hnone ⟨search inst.base, hrelaxed⟩)
 
 end GapMINKT
 

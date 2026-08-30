@@ -1752,7 +1752,11 @@ of efficient universality. `GapMINKT.Parameters` now keeps description loss
 explicit sufficient hypothesis for disjointness. The codec, direct yes/no
 program characterizations, raw yes-witness relation, and optimization search
 relation are proved; the latter has a witness exactly when the source bounded
-complexity is finite. The
+complexity is finite. The relaxed-resource witness checker is executable, and
+any search algorithm satisfying the approximation relation on finite inputs
+induces a semantic GapMINKT promise solver when `sigma(n,-)` is monotone. On
+promised no-instances the checker rejects independently of the search
+algorithm's behavior. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -2799,8 +2803,10 @@ meta-computational notation hides several incompatible choices; expose them.
   monotonicity, and raw witness-existence characterization are done. The exact
   GapMINKT decision promise, separate `sigma`/`tau` transformations, triple
   codec, widening/disjointness theorem, direct witness semantics, and finite
-  optimization-search relation are done; polynomial balance, machine
-  verification, and randomized search algorithms remain.*
+  optimization-search relation are done. An executable relaxed-witness checker
+  and the semantic search-to-decision implication are also done; polynomial
+  balance, polynomial-time machine verification, and construction of the
+  randomized search algorithm remain.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
