@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.ListDecoding.Defs
 public import Complexitylib.Metacomplexity.ListDecoding.Internal
+public import Complexitylib.Metacomplexity.ListDecoding.Family
 
 /-!
 # Finite Boolean list decoding
@@ -15,7 +16,9 @@ Exact truth-table agreement above `1/2 + ε` places the original message in
 the candidate set of any code list-decodable up to radius `1/2 - ε`. The
 candidate set contains at most the advertised indexed list size. A canonical
 fixed-width codec stores the selecting index in exactly `clog₂(listSize)` bits
-and turns the existential decoder occurrence into an actual bit string.
+and turns the existential decoder occurrence into an actual bit string. The
+family layer separates semantic inverse-accuracy decoding, concrete polynomial
+parameter bounds, and single-machine encoder/full-decoder uniformity.
 -/
 
 

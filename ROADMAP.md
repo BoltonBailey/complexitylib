@@ -3032,11 +3032,16 @@ meta-computational notation hides several incompatible choices; expose them.
   extra `clog_2(L)` bits. Polarity and hybrid coordinate are now included too:
   complete reconstruction and indexed-program codecs round-trip from the
   ambient parameters, paying exactly one polarity bit and
-  `clog_2(outputLength)` coordinate bits. Encoding or fixing the remaining
-  ambient parameters; constructing an explicit efficiently list-decodable code
-  family; giving machine/runtime analyses of the sampler, checker, evaluator,
-  and decoder; the explicit RRV construction; and final program/time accounting
-  remain.*
+  `clog_2(outputLength)` coordinate bits. The efficiently list-decodable family
+  contract is now formalized: it separates inverse-accuracy list decoding,
+  polynomial codeword/list bounds, and one uniform encoder and full-list
+  decoder TM. At the exact relation `1/q = density/(2*outputLength)`, the NW
+  theorem is instantiated by such a family; a polynomial list-size guarantee
+  sharpens its index cost to `clog_2(C*(q+1)^k)`. Constructing an explicit
+  Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
+  remaining ambient parameters, constructing machine/runtime realizers for the
+  sampler, checker, evaluator, and concrete code family, the explicit RRV
+  construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

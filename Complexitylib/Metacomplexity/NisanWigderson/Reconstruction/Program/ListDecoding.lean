@@ -8,6 +8,8 @@ module
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Defs
 public
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Internal
+public
+import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Family
 
 /-!
 # List decoding explicit NW reconstruction programs
@@ -17,7 +19,9 @@ list code. Beyond producing a bounded candidate set containing the source
 message, it stores a selecting decoder index in ceiling-logarithmic space and
 materializes a program that decodes exactly to the source message. Its complete
 codec includes polarity, hybrid coordinate, reconstruction data, and list
-index, leaving only ambient parameters external.
+index, leaving only ambient parameters external. The family specialization
+matches inverse accuracy to reconstruction advantage and converts polynomial
+list size into a concrete logarithmic description bound.
 -/
 
 
