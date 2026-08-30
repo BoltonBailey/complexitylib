@@ -85,6 +85,8 @@ core API and encodings
   |           +-- uniform NC/AC variants
   |     +-- resource-aware universal simulation
   |           +-- bounded Kolmogorov measures + MKtP
+  |                 +-- conditional complexity + average-case meta-complexity
+  |                       +-- Hirahara program for excluding Heuristica
   +-- nonuniform circuit families + quantitative transformations
   |     +-- Barrington, balancing, restrictions, and bounded-depth lower bounds
   |     +-- monotone, threshold, and communication-complexity methods
@@ -2590,6 +2592,190 @@ not evidence that either the collapse or the desired lower bound has been proved
   in a design or uncommitted scratch file, check that it expresses the paper's
   quantifiers, and plan separate finite-coding, resource-simulation, and
   asymptotic-lifting modules. Do not land proof placeholders.
+
+### L9. The Hirahara program and excluding Heuristica
+
+**Goal.** Formalize the meta-complexity route toward ruling out Impagliazzo's
+Heuristica: connect average-case easiness of distributional NP to worst-case
+algorithms for approximate minimum-description problems, then isolate exact
+NP-hardness hypotheses whose proofs would imply
+`P = NP <-> DistNP subset AvgP`. The ultimate unconditional equivalence is open;
+the track should still prove the published worst-to-average implications,
+conditional consequences, parameterized reductions, and barriers that make the
+remaining target mathematically precise.
+
+**Prerequisites.** M7 machine-relative complexity and MCSP, N2 finite probability,
+N3 reductions, a promise-problem API, randomized and oracle machines, and the L8
+parameter-preserving reduction layer. The conditional-complexity branch needs a
+two-input universal evaluator with explicit random-access and clock conventions.
+The symmetry branch additionally needs finite incompressibility, pairing bounds,
+and an asymptotic library capable of retaining logarithmic losses.
+
+**Literature anchors and theorem ladder.** Freeze a specific published version
+before transcribing a theorem. The initial spine is Hirahara's 2018
+*Non-black-box Worst-case to Average-case Reductions within NP*, the 2021
+*Average-Case Hardness of NP from Exponential Worst-Case Hardness Assumptions*,
+and the 2022 *Symmetry of Information from Meta-Complexity*. Partial MCSP and
+partial MinKT use Hirahara's 2022 *NP-Hardness of Learning Programs and Partial
+MCSP*. Distributional Kolmogorov complexity and the padding conjecture use the
+2023 *Capturing One-Way Functions via NP-Hardness of Meta-Complexity*. Later
+search-to-decision or cryptographic-hardness refinements must cite their own exact
+paper rather than being attributed to this spine.
+
+The principal published implications to formalize separately are:
+
+1. Average-case easiness of the dense-threshold problem `(MINKT[r], D^u)` gives a
+   zero-error randomized search algorithm whose descriptions lose roughly
+   `sqrt(K^t(x))` bits and whose clock grows polynomially. Its decision form is a
+   worst-case gap problem with separate description and time transformations.
+2. For uniform truth tables, average-case easiness of `MCSP[2^(epsilon*n)]` is
+   equivalent, at the stated randomized complexity level, to worst-case solution
+   of a very-large-gap MCSP approximation problem. Here `n` is arity and the
+   algorithmic input length is `N = 2^n`.
+3. `UP` requiring time beyond `2^(O(n/log n))` implies
+   `DistNP` is not contained in `AvgP`. This is a proved conditional separation,
+   stronger than merely restating an NP-hardness conjecture but weaker than
+   excluding Heuristica from `P != NP` alone.
+4. `DistNP subset AvgP` implies time-bounded symmetry of information. Symmetry
+   then relates conditional and unconditional time-bounded complexity with a loss
+   depending on the computational depth of the condition.
+5. NP-hardness, under the exact randomized reductions, of the required
+   conditional gap problem for every polynomial clock transformation would rule
+   out Heuristica. Published NP-hardness reaches a sublinear-time regime; the
+   superlinear, low-computational-depth regime needed by this implication is the
+   crucial frontier and must remain visibly open unless all extra cryptographic
+   hypotheses are present.
+
+**Definitions and conventions to settle first.** Average-case and
+meta-computational notation hides several incompatible choices; expose them.
+
+- A distribution ensemble is indexed by a security/size parameter and represented
+  by an explicit finite random seed and sample map. Define polynomial-time
+  samplability by a uniform machine plus polynomial seed and runtime bounds.
+  Preserve output lengths; do not assume samples have length equal to the index.
+- An errorless heuristic returns `yes`, `no`, or `failure`, is never wrong on any
+  input, and fails with bounded probability on each ensemble slice. An error-prone
+  heuristic may be wrong. Define `Avg_delta P`, `AvgP`, `Heur_delta P`, and
+  `HeurP` separately, including whether the bound holds eventually or at every
+  positive index.
+- A distributional problem pairs a language with an ensemble. Define `DistNP`
+  using ordinary language membership in `NP` plus polynomial-time samplability;
+  keep Levin-style domination and direct samplability as distinct notions if both
+  are later needed.
+- Define the statement excluding Heuristica, rather than a class called
+  `Heuristica`: `P = NP <-> DistNP subset AvgP`. Also expose its nontrivial
+  direction `P != NP -> DistNP not_subset AvgP`. Prove the easy reverse direction
+  from `P = NP` once deterministic polynomial deciders are promoted to never-fail
+  heuristics.
+- The 2018 auxiliary-unary ensemble `D^u` samples a split between a binary string
+  and a unary clock inside a fixed total input length. It is not the same as the
+  uniform distribution at each string length; give it its own sampler and exact
+  probability/counting lemmas.
+- Parameterize `MINKT[r]` by the universal machine, clock encoding, randomness
+  threshold, and strict/non-strict comparison. Parameterize `GapMINKT` by both the
+  description loss `sigma(n,s)` and clock blow-up `tau(n,t)`.
+- Define conditional complexity only after fixing whether the condition is a
+  read-only sequential input, an oracle, or random-access data. The 2022 MinCKT
+  results use access conventions that cannot be identified silently with the
+  current ordinary input tape.
+- Define computational depth as a difference between two finite time-bounded
+  measures only after proving clock monotonicity in the required direction.
+  Avoid truncated subtraction unless the ordering theorem is in scope.
+- State time-bounded symmetry of information with its polynomial clock transform,
+  pairing convention, and logarithmic loss. A machine-relative finite inequality
+  should precede any asymptotic `O(log t)` wrapper.
+- Randomized many-one, one-query, truth-table, Turing, non-black-box, restricted,
+  and oracle-independent reductions are different structures. Every hardness
+  theorem must retain the exact one it proves.
+
+**Staged milestones.** Each completed item should be independently checkable.
+
+- [ ] Build exact dyadic ensembles, finite event probabilities under pushforward,
+  product/mixture ensembles, and the uniform and auxiliary-unary ensembles.
+- [ ] Define polynomial-time samplers by uniform machines and prove closure under
+  polynomial-time maps, pairing, padding, products, and efficiently chosen
+  mixtures. Package distributional problems and `DistNP` only after this bridge.
+- [ ] Define errorless and error-prone heuristic schemes, failure/error events,
+  `Avg_delta P`/`AvgP` and `Heur_delta P`/`HeurP`, with monotonicity and
+  amplification. Prove that a worst-case polynomial decider is a never-failing
+  heuristic on every samplable ensemble.
+- [ ] State and prove the easy half `P = NP -> DistNP subset AvgP`. Give
+  `ExcludesHeuristica` and the equivalent nontrivial implication stable public
+  names so later conditional results compose without restating class logic.
+- [ ] Add `MINKT[r]`, the auxiliary-unary ensemble `D^u`, search
+  `Gap_(sigma,tau)MINKT`, and the associated decision promise. Prove all codec,
+  threshold-monotonicity, and NP-witness facts before the average-case theorem.
+- [ ] Formalize the finite dense-random-string extraction lemma: an errorless
+  heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
+  because low-complexity strings are sparse. This is the first substantive bridge
+  from finite incompressibility to the 2018 reduction.
+- [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
+  turn that dense set into a near-optimal description search algorithm. First
+  prove the exact finite parameter theorem; then derive the published
+  `sqrt(k)`-loss and polynomial-clock corollaries.
+- [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
+  search and decision `GapMINKT`, followed by its conditional
+  `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
+  and randomized-class hypotheses.
+- [ ] Instantiate the uniform-truth-table route for MCSP: define
+  `MCSP[2^(epsilon*n)]`, its average-case distributional problem, and the matching
+  very-large-gap promise. Prove the published worst-case/average-case equivalence
+  without silently strengthening it to exact MCSP.
+- [ ] Formalize universal heuristic schemes and algorithmic language compression,
+  then target the 2021 theorem
+  `UP not_subset DTIME(2^(O(n/log n))) -> DistNP not_subset AvgP`. Keep the
+  exponential-time premise in the public statement.
+- [ ] Add conditional time-bounded complexity, exact chain inequalities, and
+  finite computational depth. Prove generic monotonicity, nonnegativity, and
+  depth bounds before any symmetry hypothesis.
+- [ ] State time-bounded symmetry of information as a named machine-relative
+  hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
+  into dense-string, language-compression, and clock-accounting modules.
+- [ ] Under `SoI`, construct the quantitative reduction from conditional to
+  unconditional gap MinKT, with the computational-depth loss exposed. Package the
+  exact conditional theorem
+  `NP-hard GapMinCKT for every polynomial tau -> ExcludesHeuristica`.
+- [ ] Formalize NP-hardness of the published partial-function variants
+  `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
+  isolate the unresolved partial-to-total extension rather than assuming it.
+- [ ] Add distributional Kolmogorov complexity, approximation-preserving padding,
+  and the Meta-Complexity Padding Conjecture as an explicit hypothesis. Connect
+  its conditional one-way-function characterization to the later cryptographic
+  track without using it as an unconditional Heuristica theorem.
+- [ ] Record relativization, oracle-independence, natural-reduction, and
+  black-box-reduction barriers as formal oracle implications or countermodels
+  once the oracle layer is available. Barriers constrain proof interfaces; they
+  are not licenses to assume the desired nonrelativizing result.
+
+**Ambitious endpoints.** A complete track should expose a theorem graph, not one
+monolithic claim: the easy `P = NP` direction; the 2018 MinKT and MCSP
+worst-to-average bridges; the exponential-hardness conditional exclusion; the
+symmetry-of-information bridge; partial-problem NP-hardness; and the final open
+conditional implication from the precise MinCKT hardness frontier. A machine-
+checked finite statement identifying the exact missing parameter regime would
+already be a meaningful research artifact even before the frontier is crossed.
+
+**Open-problem boundary.** Do not mark Heuristica excluded unless the library has
+actually proved `P = NP <-> DistNP subset AvgP` with all definitions connected to
+the machine classes. NP-hardness of total exact MCSP or standard total MINKT is
+open. The known partial-function results, sublinear conditional-complexity
+hardness, exponential worst-case assumptions, padding conjectures, witness-
+encryption assumptions, or oracle theorems do not by themselves establish the
+unconditional equivalence. Conversely, these qualified theorems are substantial
+formalization targets and should be stated positively under their exact names.
+
+**Small entry tasks.**
+
+- [S] Define a dyadic ensemble as an explicit seed width plus sample map, and
+  prove that pushforward preserves total mass and event probability.
+- [S] Define errorless answers and prove that complementing an errorless heuristic
+  preserves its failure event exactly.
+- [M] Define the auxiliary-unary ensemble and calculate the probability of every
+  fixed split/string pair.
+- [M] Define finite computational depth from two ordered clocks and prove its
+  zero/monotonicity laws.
+- [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
+  with no proof placeholder, before implementing its counting proof.
 
 ## Cross-cutting project ideas
 
