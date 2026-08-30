@@ -170,6 +170,94 @@ theorem eventually_coefficient_mul_succ_le_two_pow_internal
     exact_mod_cast hnat
   exact_mod_cast hnatReal.trans hexponential'
 
+theorem eventually_coefficient_mul_succ_pow_le_two_pow_internal
+    (coefficient degree : ℕ) :
+    ∀ᶠ exponent : ℕ in Filter.atTop,
+      coefficient * (exponent + 1) ^ degree ≤ 2 ^ exponent := by
+  let scaledCoefficient := coefficient * 2 ^ degree
+  have hlittle : (fun exponent : ℕ => (exponent : ℝ) ^ degree)
+      =o[Filter.atTop] fun exponent => (2 : ℝ) ^ exponent :=
+    isLittleO_pow_const_const_pow_of_one_lt degree (by norm_num)
+  have hcoefficient :
+      (0 : ℝ) < (((scaledCoefficient + 1 : ℕ) : ℝ))⁻¹ := by
+    positivity
+  have hbound := hlittle.bound hcoefficient
+  filter_upwards [hbound, Filter.eventually_ge_atTop 1]
+      with exponent hexponential hexponent
+  simp only [Real.norm_eq_abs] at hexponential
+  rw [abs_of_nonneg (pow_nonneg (Nat.cast_nonneg exponent) degree),
+    abs_of_nonneg (pow_nonneg (by norm_num) exponent)] at hexponential
+  have hcoefficientPos :
+      (0 : ℝ) < ((scaledCoefficient + 1 : ℕ) : ℝ) := by
+    positivity
+  have hexponential' :
+      ((scaledCoefficient + 1 : ℕ) : ℝ) *
+          (exponent : ℝ) ^ degree ≤
+        (2 : ℝ) ^ exponent := by
+    have hdiv :
+        (exponent : ℝ) ^ degree ≤
+          (2 : ℝ) ^ exponent /
+            ((scaledCoefficient + 1 : ℕ) : ℝ) := by
+      rw [div_eq_inv_mul]
+      exact hexponential
+    simpa only [mul_comm] using
+      (le_div_iff₀ hcoefficientPos).mp hdiv
+  have hbase : exponent + 1 ≤ 2 * exponent := by
+    omega
+  have hnat :
+      coefficient * (exponent + 1) ^ degree ≤
+        (scaledCoefficient + 1) * exponent ^ degree := by
+    calc
+      coefficient * (exponent + 1) ^ degree ≤
+          coefficient * (2 * exponent) ^ degree :=
+        Nat.mul_le_mul_left coefficient
+          (Nat.pow_le_pow_left hbase degree)
+      _ = scaledCoefficient * exponent ^ degree := by
+        simp [scaledCoefficient, Nat.mul_pow, Nat.mul_assoc]
+      _ ≤ (scaledCoefficient + 1) * exponent ^ degree :=
+        Nat.mul_le_mul_right (exponent ^ degree)
+          (Nat.le_add_right scaledCoefficient 1)
+  have hnatReal :
+      (coefficient : ℝ) * (exponent + 1) ^ degree ≤
+        ((scaledCoefficient + 1 : ℕ) : ℝ) * exponent ^ degree := by
+    exact_mod_cast hnat
+  exact_mod_cast hnatReal.trans hexponential'
+
+theorem eventually_coefficient_mul_succ_pow_le_powFloor_internal
+    (scale : PositiveRationalScale) (coefficient degree : ℕ) :
+    ∀ᶠ n : ℕ in Filter.atTop,
+      coefficient * (n + 1) ^ degree ≤ scale.powFloor n := by
+  have hexponential :=
+    (tendsto_floorMul_atTop_internal scale).eventually
+      (eventually_coefficient_mul_succ_pow_le_two_pow_internal
+        (coefficient * scale.denominator ^ degree) degree)
+  filter_upwards [hexponential] with n hn
+  have hnle : n ≤ scale.numerator * n := by
+    calc
+      n = 1 * n := by simp
+      _ ≤ scale.numerator * n :=
+        Nat.mul_le_mul_right n scale.numerator_pos
+  have hfloor :
+      scale.numerator * n <
+        scale.denominator * (scale.floorMul n + 1) := by
+    unfold floorMul
+    simpa only [Nat.mul_comm] using
+      Nat.lt_mul_div_succ (scale.numerator * n) scale.denominator_pos
+  have hbase :
+      n + 1 ≤ scale.denominator * (scale.floorMul n + 1) := by
+    omega
+  calc
+    coefficient * (n + 1) ^ degree ≤
+        coefficient *
+          (scale.denominator * (scale.floorMul n + 1)) ^ degree :=
+      Nat.mul_le_mul_left coefficient
+        (Nat.pow_le_pow_left hbase degree)
+    _ = (coefficient * scale.denominator ^ degree) *
+        (scale.floorMul n + 1) ^ degree := by
+      simp [Nat.mul_pow, Nat.mul_assoc]
+    _ ≤ 2 ^ scale.floorMul n := hn
+    _ = scale.powFloor n := rfl
+
 theorem ceilMul_mono_internal (scale : PositiveRationalScale) :
     Monotone scale.ceilMul := by
   intro first second hle

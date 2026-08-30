@@ -64,6 +64,24 @@ theorem eventually_coefficient_mul_succ_le_two_pow (coefficient : ℕ) :
       coefficient * (exponent + 1) ≤ 2 ^ exponent :=
   eventually_coefficient_mul_succ_le_two_pow_internal coefficient
 
+/-- Every fixed coefficient times a fixed power of `n + 1` is eventually
+bounded by the binary exponential `2^n`. -/
+theorem eventually_coefficient_mul_succ_pow_le_two_pow
+    (coefficient degree : ℕ) :
+    ∀ᶠ exponent : ℕ in Filter.atTop,
+      coefficient * (exponent + 1) ^ degree ≤ 2 ^ exponent :=
+  eventually_coefficient_mul_succ_pow_le_two_pow_internal
+    coefficient degree
+
+/-- Every fixed polynomial is eventually bounded by a floor-rounded binary
+exponential at any positive rational scale. -/
+theorem eventually_coefficient_mul_succ_pow_le_powFloor
+    (scale : PositiveRationalScale) (coefficient degree : ℕ) :
+    ∀ᶠ n : ℕ in Filter.atTop,
+      coefficient * (n + 1) ^ degree ≤ scale.powFloor n :=
+  eventually_coefficient_mul_succ_pow_le_powFloor_internal
+    scale coefficient degree
+
 /-- Ceiling-scaled multiplication is monotone in the natural argument. -/
 theorem ceilMul_mono (scale : PositiveRationalScale) :
     Monotone scale.ceilMul :=
