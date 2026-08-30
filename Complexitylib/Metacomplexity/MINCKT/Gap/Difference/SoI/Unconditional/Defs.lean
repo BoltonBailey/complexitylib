@@ -148,10 +148,11 @@ structure Compatible {ordinaryTapes conditionalTapes : ℕ}
   /-- The condition query's source clock is the condition clock in SoI. -/
   conditionInputTime_eq : ∀ inst,
     plan.conditionInputTime inst = soiClock (plan.soiTime inst)
-  /-- Transforming the condition query clock reaches the conditional gap
-  clock. -/
-  conditionTransformedTime_eq : ∀ inst,
-    ordinaryParameters.transformedTime (plan.conditionInput inst) =
+  /-- The final conditional gap clock dominates the transformed condition-query
+  clock. In Proposition 6.2 these are `p^4(t + |x| + |y|)` and `p^4(t')`,
+  respectively, for `t' = max {t, |x| + |y|}`. -/
+  conditionTransformedTime_le : ∀ inst,
+    ordinaryParameters.transformedTime (plan.conditionInput inst) ≤
       conditionalParameters.transformedTime inst
   /-- Transforming the paired query clock reaches the ordinary paired clock on
   the right of SoI. -/

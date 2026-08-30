@@ -20,8 +20,8 @@ Consequently their adjusted difference satisfies the conditional estimator
 sandwich and solves `GapMINCKT`.
 
 The remaining construction obligations are concentrated in `Compatible`: a
-concrete upper-chain evaluator, the paper's iterated clock identities, and the
-finite logarithmic budget calculations.
+concrete upper-chain evaluator, the paper's iterated clock identities and
+dominations, and the finite logarithmic budget calculations.
 -/
 
 

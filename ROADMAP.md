@@ -3285,10 +3285,13 @@ meta-computational notation hides several incompatible choices; expose them.
   `PromiseP` criterion. The plan's paired upper-chain field is now discharged
   generically from a condition-first operational compiler, additive program
   length, attained minima, and explicit description budgets by the existing
-  chain theorem. Constructing a concrete universal compiler satisfying that
-  contract, discharging the iterated-polynomial clock/loss budgets, connecting
-  the induced algorithm to `P`, adding the multiplicative Definition 6.5
-  variant, and the hardness/class bridge remain.*
+  chain theorem. The condition-query clock is related to the final gap clock by
+  domination rather than equality, faithfully retaining the paper's
+  `p^4(max {t, |x| + |y|}) <= p^4(t + |x| + |y|)` monotonicity step.
+  Constructing a concrete universal compiler satisfying that contract,
+  discharging the iterated-polynomial clock/loss budgets, connecting the
+  induced algorithm to `P`, adding the multiplicative Definition 6.5 variant,
+  and the hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.

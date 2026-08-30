@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Unconditional.Defs
 public import Complexitylib.Metacomplexity.MINCKT.Gap.Difference.SoI.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Chain.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Internal
 
 /-!
 # Building the conditional difference estimator from one ordinary estimator
@@ -68,9 +69,12 @@ theorem Compatible.satisfiesSoIInputs_internal
     simpa [Plan.accountingSchedule] using hcompatible.pair_upper inst
   · intro inst
     have hlower := (hestimate (plan.conditionInput inst)).2
-    rw [hcompatible.conditionTransformedTime_eq inst] at hlower
-    simpa [Plan.components, Plan.conditionInput, Plan.accountingSchedule] using
-      hlower
+    have hwiden := TM.timeBoundedKolmogorovComplexity_mono_internal
+      ordinaryMachine inst.condition
+        (hcompatible.conditionTransformedTime_le inst)
+    exact hwiden.trans (by
+      simpa [Plan.components, Plan.conditionInput, Plan.accountingSchedule] using
+        hlower)
   · intro inst
     have hupper := (hestimate (plan.conditionInput inst)).1
     change (estimate (plan.conditionInput inst) : WithTop ℕ) ≤
