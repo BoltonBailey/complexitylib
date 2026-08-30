@@ -2901,7 +2901,12 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   step over all inputs. An ordered-tuple binomial bound now yields a constant
   disagreement share and hence the required `1/(2n)` shrink for `n ≥ 8`,
   avoiding the paper's distinct-subset/Stirling detour. The majority-circuit
-  hardness bridge, conditional counter circuits, and round composition remain.*
+  bridge is now complete: finite circuit families pack with exact additive size,
+  a verified fan-in-two strict-majority circuit has size
+  `3 + 2*n*(n/2 + 1)`, and hardness above
+  `n*smallThreshold + 3 + 2*n*(n/2 + 1)` supplies every-tuple coverage and the
+  resulting `1/(2n)` shrink. Conditional counter circuits and round composition
+  remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
