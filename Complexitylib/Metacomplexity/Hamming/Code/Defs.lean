@@ -29,10 +29,28 @@ structure BooleanCode (messageLength blockLength : ℕ) where
 
 namespace BooleanCode
 
+/-- The all-zero Boolean word. -/
+def zeroWord (length : ℕ) : BooleanHamming.Word length :=
+  fun _ => false
+
+/-- Coordinatewise addition over `GF(2)`, represented by Boolean XOR. -/
+def xorWords {length : ℕ} (left right : BooleanHamming.Word length) :
+    BooleanHamming.Word length :=
+  fun coordinate => Bool.xor (left coordinate) (right coordinate)
+
 /-- Exact rational information rate for the two code lengths. At block length
 zero this uses the total rational-division convention. -/
 def rate (messageLength blockLength : ℕ) : ℚ :=
   messageLength / blockLength
+
+/-- Linearity over `GF(2)`, stated directly through zero and XOR so the coding
+layer does not need a second representation of Boolean words. -/
+def IsLinear {messageLength blockLength : ℕ}
+    (code : BooleanCode messageLength blockLength) : Prop :=
+  code.encode (zeroWord messageLength) = zeroWord blockLength ∧
+    ∀ left right,
+      code.encode (xorWords left right) =
+        xorWords (code.encode left) (code.encode right)
 
 /-- Finite image of all messages. -/
 def codewords {messageLength blockLength : ℕ}

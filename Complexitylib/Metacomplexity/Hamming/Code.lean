@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Hamming.Code.Defs
 public import Complexitylib.Metacomplexity.Hamming.Code.Internal
+public import Complexitylib.Metacomplexity.Hamming.Code.Repetition
 
 /-!
 # Finite Boolean codes
@@ -15,7 +16,8 @@ This module turns the finite Hamming geometry into an abstract coding layer.
 An injective code has exactly `2^messageLength` codewords, minimum distance
 implies the exact sphere-packing bound, and exhaustive decoding is uniquely
 correct below half that distance. No runtime claim is bundled into these
-semantic results.
+semantic results. The repetition submodule supplies the first concrete linear
+code with exact distance amplification.
 -/
 
 

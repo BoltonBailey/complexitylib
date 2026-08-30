@@ -2647,7 +2647,12 @@ bound `|C| * volume(n,r) <= 2^n` below half their minimum distance. A concrete
 minimum-distance contract. It proves that a `k`-bit code has exactly `2^k`
 codewords, specializes the packing bound, and gives an exhaustive decoder whose
 candidate set is a singleton below half the minimum distance. This decoder is
-deliberately non-efficient: a concrete linear code, efficient encoder/decoder,
+deliberately non-efficient. `BooleanCode.repetitionCode` is the first concrete
+`GF(2)`-linear instance: at a positive copy count it is injective, has rate
+exactly `1/copies` for positive message length, multiplies every distance by
+`copies`, corrects below half that lower bound, and satisfies the specialized
+packing inequality. It is an infrastructure code rather than an asymptotically
+good one; efficient encoder/decoder circuits, a theorem-suitable code family,
 and theorem-specific resource analysis remain missing.
 
 **Literature anchors.** The initial theorem menu should be drawn from the
@@ -2695,7 +2700,9 @@ uniformity, error, and quantifier conventions into a short design document.
   actually uses. Start with a finite linear code and exact parameters. *The
   complete finite Hamming geometry, exact volumes, abstract injective-code rate,
   minimum-distance packing, and exhaustive unique decoding are done; concrete
-  linear codes, efficient algorithms, and circuit complexity remain.*
+  XOR-linear repetition codes with exact rate and distance are done as the first
+  concrete instance; asymptotically useful codes, efficient algorithms, and
+  circuit complexity remain.*
 - [~] Define parameter-preserving reductions between promise families. Prove
   identity/composition while retaining yes/no thresholds, output length, resource
   blow-up, randomness, and error rather than projecting immediately to a language
