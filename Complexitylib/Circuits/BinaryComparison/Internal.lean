@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.BinaryComparison.Defs
+import Complexitylib.Circuits.Encoding.Formula.Internal
 
 /-!
 # Little-endian binary comparison -- proof internals
@@ -152,6 +153,99 @@ theorem eval_unsignedLE_internal (width : ℕ)
       rfl
     rw [hindex, Fin.append_right]
 
+theorem vars_unsignedLEAux_lt_internal (width leftBase rightBase available : ℕ)
+    (hleft : leftBase + width ≤ available)
+    (hright : rightBase + width ≤ available) :
+    ∀ i ∈ (unsignedLEAux width leftBase rightBase).vars, i < available := by
+  induction width with
+  | zero =>
+      simp [unsignedLEAux, BoolFormula.vars]
+  | succ width ih =>
+      intro i hi
+      simp only [unsignedLEAux, BoolFormula.vars, Finset.mem_union,
+        Finset.mem_singleton] at hi
+      rcases hi with (hi | hi) | (((hi | hi) | (hi | hi)) | hi)
+      · omega
+      · omega
+      · omega
+      · omega
+      · omega
+      · omega
+      · exact ih (by omega) (by omega) i hi
+
+theorem vars_unsignedLE_lt_internal (width : ℕ) :
+    ∀ i ∈ (unsignedLE width).vars, i < width + width := by
+  rw [unsignedLE]
+  exact vars_unsignedLEAux_lt_internal width 0 width (width + width)
+    (by omega) (by omega)
+
 end BoolFormula
+
+namespace CircuitCode
+
+theorem length_unsignedLERawCircuit_internal (width : ℕ) :
+    (unsignedLERawCircuit width).length = 15 * width + 1 := by
+  rw [unsignedLERawCircuit, BoolFormula.length_compileRaw_internal,
+    BoolFormula.size_unsignedLE_internal]
+
+theorem unsignedLERawCircuit_wellFormed_internal (width : ℕ)
+    [NeZero width] :
+    (unsignedLERawCircuit width).WellFormed (width + width) := by
+  have hwidth := NeZero.ne width
+  letI : NeZero (width + width) := ⟨by omega⟩
+  constructor
+  · intro hempty
+    have hlength := length_unsignedLERawCircuit_internal width
+    rw [hempty] at hlength
+    simp at hlength
+  · apply BoolFormula.topologicallyWellFormed_compileRaw_internal
+    exact BoolFormula.vars_unsignedLE_lt_internal width
+
+theorem eval?_unsignedLERawCircuit_internal (width : ℕ) [NeZero width]
+    (left right : BitString width) :
+    (unsignedLERawCircuit width).eval?
+        (BitString.toList (Fin.append left right)) =
+      some (decide (left.unsignedValue ≤ right.unsignedValue)) := by
+  have hwidth := NeZero.ne width
+  letI : NeZero (width + width) := ⟨by omega⟩
+  let input := Fin.append left right
+  let wires := (BitString.toList input).toArray
+  have hwiresSize : wires.size = width + width := by
+    simp [wires, input]
+  have hwiresInput : ∀ i < width + width,
+      wires[i]? = some (BitString.toTotal input i) := by
+    intro i hi
+    simp [wires, BitString.toList, BitString.toTotal, hi]
+  obtain ⟨result, heval, _hresultSize, _hprefix, houtput⟩ :=
+    BoolFormula.evalAux?_compileRaw_internal (width + width)
+      (BoolFormula.unsignedLE width) (BitString.toTotal input) wires
+      hwiresSize hwiresInput (BoolFormula.vars_unsignedLE_lt_internal width)
+  have heval' :
+      RawCircuit.evalAux? (unsignedLERawCircuit width)
+          (BitString.toList (Fin.append left right)).toArray = some result := by
+    simpa [unsignedLERawCircuit, wires, input] using heval
+  have hwell := unsignedLERawCircuit_wellFormed_internal width
+  have hnonempty : (unsignedLERawCircuit width).isEmpty = false := by
+    cases hraw : unsignedLERawCircuit width with
+    | nil => exact (hwell.1 hraw).elim
+    | cons gate gates => rfl
+  have houtputIndex :
+      (BitString.toList input).length +
+          (unsignedLERawCircuit width).length - 1 =
+        BoolFormula.rawOutputWire (width + width)
+          (BoolFormula.unsignedLE width) := by
+    simp [BoolFormula.rawOutputWire, length_unsignedLERawCircuit_internal,
+      BoolFormula.size_unsignedLE_internal]
+  rw [RawCircuit.eval?]
+  simp only [hnonempty, Bool.false_eq_true, if_false, heval']
+  rw [houtputIndex]
+  change result[BoolFormula.rawOutputWire (width + width)
+      (BoolFormula.unsignedLE width)]? =
+    some (decide (left.unsignedValue ≤ right.unsignedValue))
+  rw [houtput]
+  simpa [input] using congrArg some
+    (BoolFormula.eval_unsignedLE_internal width left right)
+
+end CircuitCode
 
 end Complexity

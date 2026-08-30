@@ -6,7 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Circuits.BitString
-public import Complexitylib.Circuits.Formula
+public import Complexitylib.Circuits.Encoding.Formula.Defs
 public import Complexitylib.Mathlib.NatBits
 
 /-!
@@ -63,5 +63,14 @@ def unsignedLE (width : ℕ) : BoolFormula :=
   unsignedLEAux width 0 width
 
 end BoolFormula
+
+namespace CircuitCode
+
+/-- Raw fan-in-two circuit comparing two consecutive `width`-bit unsigned
+little-endian words. -/
+def unsignedLERawCircuit (width : ℕ) : RawCircuit :=
+  BoolFormula.compileRaw (width + width) (BoolFormula.unsignedLE width)
+
+end CircuitCode
 
 end Complexity
