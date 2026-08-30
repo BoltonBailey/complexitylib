@@ -40,6 +40,7 @@ complexity value is at most `t`.
 - `timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition` -- additive chain
 - `TimeBoundedSymmetryOfInformation` -- explicit non-vacuous lower-chain hypothesis
 - `TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper` -- depth-loss bridge
+- `TimeBoundedSymmetryOfInformation.conditional_le_of_composition` -- evaluator bridge
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
 -/

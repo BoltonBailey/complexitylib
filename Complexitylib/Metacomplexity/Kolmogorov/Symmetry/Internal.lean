@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Symmetry.Defs
+import Complexitylib.Metacomplexity.Kolmogorov.Chain.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Conditional.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Depth.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
@@ -232,6 +233,50 @@ theorem TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper_internal
           rw [← hdepth]
           ac_rfl
   exact withTopNat_le_of_add_le_add_right_internal hcondition htotal
+
+theorem TimeBoundedSymmetryOfInformation.conditional_le_of_composition_internal
+    {ordinaryTapes conditionalTapes alternativeTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {alternativeMachine : OracleTM alternativeTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {clock loss : ℕ → ℕ}
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock loss)
+    {first condition : List Bool}
+    {time conditionTime alternativeTime conditionBound alternativeBound
+      constant : ℕ}
+    (hsize : first.length + condition.length ≤ time)
+    (hclock : conditionTime ≤ clock time)
+    (hcompose : TimeBoundedConditionalPairCompositionAt ordinaryMachine
+      ordinaryMachine alternativeMachine compile first condition conditionTime
+      alternativeTime time conditionBound alternativeBound)
+    (hlength : ∀ conditionProgram alternativeProgram,
+      conditionProgram.length ≤ conditionBound →
+      alternativeProgram.length ≤ alternativeBound →
+      (compile conditionProgram alternativeProgram).length ≤
+        alternativeProgram.length + conditionProgram.length + constant)
+    (hconditionFinite : ordinaryMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≠ ⊤)
+    (halternativeFinite :
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition alternativeTime ≠ ⊤)
+    (hconditionBound : ordinaryMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≤ (conditionBound : WithTop ℕ))
+    (halternativeBound :
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition alternativeTime ≤ (alternativeBound : WithTop ℕ)) :
+    conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition (clock time) ≤
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            first condition alternativeTime +
+          ordinaryMachine.computationalDepthBetween
+            condition conditionTime (clock time) +
+        (constant : WithTop ℕ) + (loss time : WithTop ℕ) := by
+  apply hsoi.conditional_le_of_pair_upper_internal hsize hclock
+  exact timeBoundedKolmogorovComplexity_pair_le_add_of_conditional_composition_internal
+    hcompose hlength hconditionFinite halternativeFinite hconditionBound
+      halternativeBound
 
 theorem PolynomialTimeBoundedSymmetryOfInformation.enlarge_clock_internal
     {ordinaryTapes conditionalTapes : ℕ}

@@ -3233,8 +3233,10 @@ meta-computational notation hides several incompatible choices; expose them.
   and leaves exactly an alternative conditional description, two-clock depth,
   the paired-program overhead, and the SoI loss. The generic condition-first
   composition theorem supplies the required paired upper bound from a concrete
-  evaluator contract and additive compiler. Constructing that evaluator,
-  lifting the inequality to gap promises, and the hardness/class bridge remain.*
+  evaluator contract and additive compiler; `conditional_le_of_composition`
+  now composes these layers without a manual intermediate inequality.
+  Constructing that evaluator, lifting the result to gap promises, and the
+  hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.

@@ -125,6 +125,54 @@ theorem TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper
         (upperLoss : WithTop ℕ) + (loss time : WithTop ℕ) :=
   hsoi.conditional_le_of_pair_upper_internal hsize hclock hpairUpper
 
+/-- Fully composed evaluator-to-depth bridge. A condition-first operational
+compiler with additive program length supplies the paired upper bound required
+by SoI, yielding the target conditional-complexity inequality without any
+additional algebraic premise. All finiteness, clock, and description-budget
+requirements remain visible until a concrete universal evaluator discharges
+them. -/
+theorem TimeBoundedSymmetryOfInformation.conditional_le_of_composition
+    {ordinaryTapes conditionalTapes alternativeTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {alternativeMachine : OracleTM alternativeTapes}
+    {compile : List Bool → List Bool → List Bool}
+    {clock loss : ℕ → ℕ}
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock loss)
+    {first condition : List Bool}
+    {time conditionTime alternativeTime conditionBound alternativeBound
+      constant : ℕ}
+    (hsize : first.length + condition.length ≤ time)
+    (hclock : conditionTime ≤ clock time)
+    (hcompose : TimeBoundedConditionalPairCompositionAt ordinaryMachine
+      ordinaryMachine alternativeMachine compile first condition conditionTime
+      alternativeTime time conditionBound alternativeBound)
+    (hlength : ∀ conditionProgram alternativeProgram,
+      conditionProgram.length ≤ conditionBound →
+      alternativeProgram.length ≤ alternativeBound →
+      (compile conditionProgram alternativeProgram).length ≤
+        alternativeProgram.length + conditionProgram.length + constant)
+    (hconditionFinite : ordinaryMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≠ ⊤)
+    (halternativeFinite :
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition alternativeTime ≠ ⊤)
+    (hconditionBound : ordinaryMachine.timeBoundedKolmogorovComplexity
+      condition conditionTime ≤ (conditionBound : WithTop ℕ))
+    (halternativeBound :
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition alternativeTime ≤ (alternativeBound : WithTop ℕ)) :
+    conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition (clock time) ≤
+      alternativeMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            first condition alternativeTime +
+          ordinaryMachine.computationalDepthBetween
+            condition conditionTime (clock time) +
+        (constant : WithTop ℕ) + (loss time : WithTop ℕ) :=
+  hsoi.conditional_le_of_composition_internal hsize hclock hcompose hlength
+    hconditionFinite halternativeFinite hconditionBound halternativeBound
+
 /-- Any polynomial SoI witness remains valid at an admissible larger clock,
 with the logarithmic loss recalculated at that clock. The premise quantifies
 over witnesses because the existential clock is intentionally opaque. -/
