@@ -3294,10 +3294,13 @@ meta-computational notation hides several incompatible choices; expose them.
   of hiding them in `O(log t)`. Finite iteration is now proved to preserve the
   library's explicit polynomial bound, so an admissible primitive clock induces
   admissible one-step ordinary and four-step conditional gap transforms.
-  Constructing a concrete universal compiler, discharging the finite losses for
-  a sufficiently enlarged polynomial, connecting the induced algorithm to `P`,
-  adding the multiplicative Definition 6.5 variant, and the hardness/class
-  bridge remain.*
+  A slack-amplified final clock now constructively pays all three logarithmic
+  losses, the SoI additive constant, and a uniform pair-compiler loss. This
+  removes both abstract loss inequalities while retaining every clock
+  domination explicitly. Proving polynomial growth of this amplified clock,
+  constructing a concrete universal compiler, connecting the induced algorithm
+  to `P`, adding the multiplicative Definition 6.5 variant, and the
+  hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3375,6 +3378,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Prove that every fixed iterate of an explicitly polynomially bounded
   clock is polynomially bounded, and derive admissibility of both gap-clock
   parameter packages.
+- [x] Construct a slack-amplified final clock whose logarithm pays the three
+  estimator/SoI losses and fixed compiler overhead, eliminating both abstract
+  finite loss-budget hypotheses from the reduction.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
