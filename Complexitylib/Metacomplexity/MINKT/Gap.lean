@@ -199,6 +199,23 @@ theorem encodedSearchRelation_polyBalanced
   encodedSearchRelation_polyBalanced_internal
     machine parameters hdescription hsource
 
+/-- Every deterministic machine satisfies the source-complexity input-size
+bound, with the identity polynomial: finite `C_U^t(x)` is at most the unary
+clock `t`, which is contained in the canonical input. -/
+theorem sourceComplexityPolyBound {tapes : ℕ} (machine : TM tapes) :
+    SourceComplexityPolyBound machine :=
+  sourceComplexityPolyBound_internal machine
+
+/-- Polynomial growth of the description-loss map is the only parameter
+condition needed for polynomial balance of the encoded optimization search
+relation. -/
+theorem encodedSearchRelation_polyBalanced_of_description
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (hdescription : parameters.DescriptionPolyBound) :
+    PolyBalanced (EncodedSearchRelation machine parameters) :=
+  encodedSearchRelation_polyBalanced_of_description_internal
+    machine parameters hdescription
+
 /-- The executable relaxed-resource checker accepts exactly valid candidates. -/
 theorem verifyRelaxedWitness_eq_true_iff {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters) (inst : Instance)

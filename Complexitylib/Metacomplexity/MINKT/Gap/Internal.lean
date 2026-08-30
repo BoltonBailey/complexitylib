@@ -357,6 +357,29 @@ theorem encodedSearchRelation_polyBalanced_internal
         machine parameters descriptionPolynomial sourcePolynomial
           hdescription hsource hrelation⟩
 
+theorem sourceComplexityPolyBound_internal {tapes : ℕ} (machine : TM tapes) :
+    SourceComplexityPolyBound machine := by
+  refine ⟨Polynomial.X, ?_⟩
+  intro inst optimum hcomplexity
+  have hfinite :
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ := by
+    rw [hcomplexity]
+    exact WithTop.coe_ne_top
+  have htime := TM.timeBoundedKolmogorovComplexity_le_time_internal
+    machine inst.output inst.time hfinite
+  rw [hcomplexity] at htime
+  have hoptimum : optimum ≤ inst.time := WithTop.coe_le_coe.mp htime
+  simp only [Polynomial.eval_X]
+  rw [MINKT.Instance.length_encode_internal]
+  omega
+
+theorem encodedSearchRelation_polyBalanced_of_description_internal
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (hdescription : parameters.DescriptionPolyBound) :
+    PolyBalanced (EncodedSearchRelation machine parameters) :=
+  encodedSearchRelation_polyBalanced_internal
+    machine parameters hdescription (sourceComplexityPolyBound_internal machine)
+
 theorem verifyRelaxedWitness_eq_true_iff_internal {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters) (inst : Instance)
     (program : List Bool) :

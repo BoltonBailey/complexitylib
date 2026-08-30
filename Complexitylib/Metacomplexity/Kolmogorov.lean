@@ -19,7 +19,8 @@ prefix-free.
 The threshold theorems characterize each minimum by a short producing program.
 Generic simulations yield additive plain-complexity comparison, while a
 polynomial timed simulation gives an explicit resource-aware bounded-complexity
-comparison.
+comparison. Bounded input locality also implies that every finite `t`-time
+complexity value is at most `t`.
 
 ## Main results
 
@@ -27,6 +28,7 @@ comparison.
 - `TM.timeBoundedKolmogorovComplexity_le_coe_iff` -- bounded characterization
 - `TM.timeBoundedKolmogorovComplexity_lt_coe_iff` -- strict characterization
 - `TM.timeBoundedKolmogorovComplexity_mono` -- more time cannot increase complexity
+- `TM.timeBoundedKolmogorovComplexity_le_time` -- finite values are at most the clock
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
 -/
@@ -97,6 +99,16 @@ theorem timeBoundedKolmogorovComplexity_witness (machine : TM n)
       machine.timeBoundedKolmogorovComplexity output time ∧
       machine.ProducesInTime program output time :=
   timeBoundedKolmogorovComplexity_witness_internal machine output time hfinite
+
+/-- Every finite `t`-time description complexity is at most `t`: a producing
+program can be truncated to the prefix reachable by the input head. -/
+theorem timeBoundedKolmogorovComplexity_le_time (machine : TM n)
+    (output : List Bool) (time : ℕ)
+    (hfinite : machine.timeBoundedKolmogorovComplexity output time ≠ ⊤) :
+    machine.timeBoundedKolmogorovComplexity output time ≤
+      (time : WithTop ℕ) :=
+  timeBoundedKolmogorovComplexity_le_time_internal
+    machine output time hfinite
 
 /-- Time-bounded complexity is at most `bound` exactly when a short program
 produces the output within the clock. -/

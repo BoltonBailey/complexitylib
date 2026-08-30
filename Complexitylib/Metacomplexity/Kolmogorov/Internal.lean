@@ -116,6 +116,18 @@ theorem timeBoundedKolmogorovComplexity_witness_internal (machine : TM n)
   obtain ⟨size, ⟨program, hlength, hproduce⟩, hcoe⟩ := hmem
   exact ⟨program, hlength ▸ hcoe, hproduce⟩
 
+theorem timeBoundedKolmogorovComplexity_le_time_internal (machine : TM n)
+    (output : List Bool) (time : ℕ)
+    (hfinite : machine.timeBoundedKolmogorovComplexity output time ≠ ⊤) :
+    machine.timeBoundedKolmogorovComplexity output time ≤
+      (time : WithTop ℕ) := by
+  obtain ⟨program, _hlength, hproduce⟩ :=
+    timeBoundedKolmogorovComplexity_witness_internal
+      machine output time hfinite
+  have hshort := producesInTime_take_internal hproduce
+  exact (timeBoundedKolmogorovComplexity_le_internal hshort).trans
+    (WithTop.coe_le_coe.mpr (List.length_take_le time program))
+
 theorem timeBoundedKolmogorovComplexity_le_coe_iff_internal (machine : TM n)
     (output : List Bool) (time bound : ℕ) :
     machine.timeBoundedKolmogorovComplexity output time ≤ (bound : WithTop ℕ) ↔

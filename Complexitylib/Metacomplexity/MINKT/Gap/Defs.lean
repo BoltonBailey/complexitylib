@@ -66,8 +66,9 @@ def DescriptionPolyBound (parameters : Parameters) : Prop :=
 end Parameters
 
 /-- Finite source complexity values are polynomially bounded by the canonical
-`(x,1^t)` input length. This machine-local condition is the precise input-size
-bridge needed to make the optimization search relation polynomially balanced. -/
+`(x,1^t)` input length. This names the precise input-size bridge needed for
+optimization-search balance; input locality proves it for every current
+sequential-input `TM`, with the identity polynomial. -/
 def SourceComplexityPolyBound {tapes : ℕ} (machine : TM tapes) : Prop :=
   ∃ polynomial : Polynomial ℕ, ∀ inst : MINKT.Instance, ∀ optimum : ℕ,
     machine.timeBoundedKolmogorovComplexity inst.output inst.time =

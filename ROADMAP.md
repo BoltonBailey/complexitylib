@@ -1716,7 +1716,10 @@ public `TM.runCfg`, `TM.Produces`, and `TM.ProducesInTime` API now supplies a
 total halt-idempotent evaluator, a decidable bounded-production relation,
 clock monotonicity, exact-output uniqueness, and equivalences with the existing
 whole-function computation predicates. The evaluator is shared with the Cobham
-simulation rather than duplicated in a metacomplexity-specific layer.
+simulation rather than duplicated in a metacomplexity-specific layer. Bounded
+input locality is now proved: two runs whose reachable input cells agree remain
+synchronized in state, work, and output, so a program producing within `t`
+steps can be truncated to its first `t` bits without changing production.
 `TM.Simulates`, `TM.IsUniversal`, and `TM.IsEfficientlyUniversalFor` now give a
 machine-independent universality interface over arbitrary source work-tape
 counts. Semantic halting/output preservation, additive program length, explicit
@@ -1727,7 +1730,9 @@ composable predicates; none mentions the concrete UTM codec.
 and certified-prefix-free `K_U` layers with `WithTop Nat` failure values. Their
 public theory includes attaining witnesses, non-strict and strict threshold
 characterizations, clock monotonicity, additive semantic-simulation comparison, and a polynomial
-resource-aware timed comparison. `ShortProgram k` now packages all binary
+resource-aware timed comparison. Input locality additionally gives the sharp
+machine-independent bound `C_U^t(x) ≤ t` whenever the value is finite.
+`ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
 compressible string into that finite type, giving both the exact cardinal upper
@@ -1761,8 +1766,9 @@ complexity is finite. Its canonical encoded form agrees exactly with the
 semantic relation. When `sigma(n,s)` is polynomially bounded in `n+s` and
 finite source optima are polynomially bounded in the unary-clock input length,
 the encoded search relation is `PolyBalanced` by an explicit polynomial
-composition theorem. The second condition is named
-`GapMINKT.SourceComplexityPolyBound` rather than silently assumed. The
+composition theorem. Input locality proves the latter source bound for every
+machine with the identity polynomial, so polynomial growth of `sigma` is the
+only remaining parameter premise. The
 relaxed-resource witness checker is executable, and
 any search algorithm satisfying the approximation relation on finite inputs
 induces a semantic GapMINKT promise solver when `sigma(n,-)` is monotone. On
@@ -2848,11 +2854,11 @@ meta-computational notation hides several incompatible choices; expose them.
   yes-witness relation is linearly `PolyBalanced`, and its conditional
   `PromiseNP` theorem reduces the problem-specific FNP obligation exactly to
   polynomial-time machine verification of the paired relation. That verifier,
-  the generic guess-and-verify NTM construction, an unconditional
-  input-locality proof of `SourceComplexityPolyBound`, and construction of the
-  randomized search algorithm remain. The encoded optimization relation and
-  its parameter-sensitive `PolyBalanced` theorem under explicit description
-  and source-complexity bounds are done.*
+  the generic guess-and-verify NTM construction, and construction of the
+  randomized search algorithm remain. The encoded optimization relation,
+  input-locality proof of `SourceComplexityPolyBound`, and its
+  parameter-sensitive `PolyBalanced` theorem under polynomial description loss
+  are done.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public

@@ -20,6 +20,7 @@ machines and for later universal-machine invariance theorems.
 - `TM.runCfg_reachesIn` -- bounded evaluation agrees with relational execution
 - `TM.HaltsInTime.iff_runCfg` -- executable bounded halting
 - `TM.ProducesInTime.iff_runCfg` -- an executable characterization
+- `TM.ProducesInTime.take_time` -- unread program suffixes can be truncated
 - `TM.ProducesInTime.mono` -- increasing the clock preserves production
 - `Tape.HasOutput.eq` -- a tape has at most one exact binary-string output
 - `TM.computes_iff_forall_produces` -- pointwise production uniformizes by length
@@ -103,11 +104,41 @@ theorem ProducesInTime.iff_runCfg (tm : TM n) (program output : List Bool)
         (tm.runCfg (tm.initCfg program) time).output.HasOutput output :=
   producesInTime_iff_runCfg_internal tm program output time
 
+/-- Bounded runs on two inputs stay synchronized in state, work, and output
+when the initialized input tapes agree on every cell reachable by the clock. -/
+theorem runCfg_initCfg_congr_of_input_cells (tm : TM n)
+    (first second : List Bool) (time : ℕ)
+    (hinput : ∀ position, position ≤ time →
+      (tm.initCfg first).input.cells position =
+        (tm.initCfg second).input.cells position) :
+    (tm.runCfg (tm.initCfg first) time).state =
+        (tm.runCfg (tm.initCfg second) time).state ∧
+      (tm.runCfg (tm.initCfg first) time).work =
+        (tm.runCfg (tm.initCfg second) time).work ∧
+      (tm.runCfg (tm.initCfg first) time).output =
+        (tm.runCfg (tm.initCfg second) time).output :=
+  runCfg_initCfg_congr_of_input_cells_internal tm first second time hinput
+
+/-- Truncating an input to the clock preserves every initialized input cell
+that can be reached within that clock. -/
+theorem initCfg_take_input_cells_le (tm : TM n)
+    (program : List Bool) (time position : ℕ) (hposition : position ≤ time) :
+    (tm.initCfg program).input.cells position =
+      (tm.initCfg (program.take time)).input.cells position :=
+  initCfg_take_input_cells_le_internal tm program time position hposition
+
 /-- Pointwise bounded production is decidable by running the machine for its
 clock and checking the resulting finite output claim. -/
 instance instDecidableProducesInTime (tm : TM n) (program output : List Bool)
     (time : ℕ) : Decidable (tm.ProducesInTime program output time) :=
   decidable_of_iff _ (ProducesInTime.iff_runCfg tm program output time).symm
+
+/-- No bounded computation can inspect more than the first `time` program
+bits: truncating there preserves exact production within the same clock. -/
+theorem ProducesInTime.take_time {tm : TM n} {program output : List Bool}
+    {time : ℕ} (hproduce : tm.ProducesInTime program output time) :
+    tm.ProducesInTime (program.take time) output time :=
+  producesInTime_take_internal hproduce
 
 /-- Increasing the clock preserves pointwise production. -/
 theorem ProducesInTime.mono {tm : TM n} {program output : List Bool}

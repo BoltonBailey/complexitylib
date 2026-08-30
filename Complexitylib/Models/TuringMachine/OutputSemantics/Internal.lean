@@ -24,6 +24,41 @@ namespace TM
 
 variable {n : ℕ}
 
+/-- Configurations synchronized in every component that can affect future
+execution, except for unread input-tape cells. -/
+private def SameExceptInputCells {tm : TM n} (first second : Cfg n tm.Q) : Prop :=
+  first.state = second.state ∧
+    first.input.head = second.input.head ∧
+    first.work = second.work ∧
+    first.output = second.output
+
+/-- One bounded-evaluator step preserves synchronization when the two input
+heads read the same symbol. -/
+private theorem sameExceptInputCells_next {tm : TM n} {first second : Cfg n tm.Q}
+    (hsame : SameExceptInputCells first second)
+    (hread : first.input.read = second.input.read) :
+    SameExceptInputCells ((tm.step first).getD first)
+      ((tm.step second).getD second) := by
+  rcases hsame with ⟨hstate, hhead, hwork, houtput⟩
+  by_cases hhalt : first.state = tm.qhalt
+  · have hhalt' : second.state = tm.qhalt := hstate ▸ hhalt
+    simp [TM.step, hhalt, hhalt', SameExceptInputCells, hhead, hwork, houtput]
+  · have hhalt' : second.state ≠ tm.qhalt := by
+      intro hsecond
+      exact hhalt (hstate.trans hsecond)
+    have hworkRead :
+        (fun i => (first.work i).read) =
+          (fun i => (second.work i).read) := by
+      rw [hwork]
+    have houtputRead : first.output.read = second.output.read := by
+      rw [houtput]
+    simp only [TM.step, hhalt, hhalt', if_false, Option.getD_some]
+    rw [hstate, hread, hworkRead, houtputRead, hwork, houtput]
+    refine ⟨rfl, ?_, rfl, rfl⟩
+    cases (tm.δ second.state second.input.read
+      (fun i => (second.work i).read) second.output.read).2.2.2.1 <;>
+      simp [Tape.move, hhead]
+
 theorem runCfg_add_internal (tm : TM n) (c : Cfg n tm.Q) (first second : ℕ) :
     tm.runCfg c (first + second) = tm.runCfg (tm.runCfg c first) second := by
   induction second with
@@ -62,6 +97,64 @@ theorem runCfg_reachesIn_internal (tm : TM n) (c : Cfg n tm.Q) (time : ℕ) :
       | some c' =>
           rw [Option.getD_some]
           exact ⟨steps + 1, by omega, reachesIn_snoc hreach hstep⟩
+
+private theorem runCfg_input_cells_internal (tm : TM n)
+    (c : Cfg n tm.Q) (time : ℕ) :
+    (tm.runCfg c time).input.cells = c.input.cells := by
+  obtain ⟨_steps, _hsteps, hreach⟩ := runCfg_reachesIn_internal tm c time
+  exact input_cells_eq_of_reachesIn hreach
+
+private theorem runCfg_input_head_le_internal (tm : TM n)
+    (c : Cfg n tm.Q) (time : ℕ) :
+    (tm.runCfg c time).input.head ≤ c.input.head + time := by
+  obtain ⟨steps, hsteps, hreach⟩ := runCfg_reachesIn_internal tm c time
+  have hhead := tm.input_head_reachesIn_bound hreach
+  omega
+
+/-- Runs stay synchronized when their initial input tapes agree throughout the
+entire region either input head can reach within the clock. -/
+private theorem runCfg_sameExceptInputCells_internal (tm : TM n)
+    {first second : Cfg n tm.Q} (hsame : SameExceptInputCells first second) :
+    ∀ time : ℕ,
+      (∀ position, position ≤ first.input.head + time →
+        first.input.cells position = second.input.cells position) →
+      SameExceptInputCells (tm.runCfg first time) (tm.runCfg second time) := by
+  intro time
+  induction time with
+  | zero =>
+      intro _hinput
+      exact hsame
+  | succ time ih =>
+      intro hinput
+      have hsameRun := ih fun position hposition => hinput position (by omega)
+      have hhead := runCfg_input_head_le_internal tm first time
+      have hread :
+          (tm.runCfg first time).input.read =
+            (tm.runCfg second time).input.read := by
+        simp only [Tape.read]
+        rw [runCfg_input_cells_internal, runCfg_input_cells_internal,
+          ← hsameRun.2.1]
+        exact hinput _ (by omega)
+      simpa only [runCfg] using
+        sameExceptInputCells_next hsameRun hread
+
+theorem runCfg_initCfg_congr_of_input_cells_internal (tm : TM n)
+    (first second : List Bool) (time : ℕ)
+    (hinput : ∀ position, position ≤ time →
+      (tm.initCfg first).input.cells position =
+        (tm.initCfg second).input.cells position) :
+    (tm.runCfg (tm.initCfg first) time).state =
+        (tm.runCfg (tm.initCfg second) time).state ∧
+      (tm.runCfg (tm.initCfg first) time).work =
+        (tm.runCfg (tm.initCfg second) time).work ∧
+      (tm.runCfg (tm.initCfg first) time).output =
+        (tm.runCfg (tm.initCfg second) time).output := by
+  have hsame : SameExceptInputCells (tm.initCfg first) (tm.initCfg second) :=
+    ⟨rfl, rfl, rfl, rfl⟩
+  have hrun := runCfg_sameExceptInputCells_internal tm hsame time (by
+    intro position hposition
+    exact hinput position (by simpa using hposition))
+  exact ⟨hrun.1, hrun.2.2.1, hrun.2.2.2⟩
 
 /-- A halted exact-step endpoint is the bounded evaluator's endpoint at every
 larger clock. -/
@@ -115,6 +208,39 @@ theorem producesInTime_iff_runCfg_internal (tm : TM n) (program output : List Bo
     obtain ⟨steps, hsteps, hreach⟩ :=
       runCfg_reachesIn_internal tm (tm.initCfg program) time
     exact ⟨_, steps, hsteps, hreach, hhalt, hout⟩
+
+theorem initCfg_take_input_cells_le_internal (tm : TM n)
+    (program : List Bool) (time position : ℕ) (hposition : position ≤ time) :
+    (tm.initCfg program).input.cells position =
+      (tm.initCfg (program.take time)).input.cells position := by
+  by_cases hzero : position = 0
+  · subst position
+    simp
+  · obtain ⟨index, rfl⟩ : ∃ index, position = index + 1 :=
+      ⟨position - 1, by omega⟩
+    have hindex : index < time := by omega
+    change (Tape.init (program.map Γ.ofBool)).cells (index + 1) =
+      (Tape.init ((program.take time).map Γ.ofBool)).cells (index + 1)
+    rw [Tape.init_cells_succ, Tape.init_cells_succ]
+    simp only [List.getElem?_map]
+    rw [List.getElem?_take_of_lt hindex]
+
+theorem producesInTime_take_internal {tm : TM n} {program output : List Bool}
+    {time : ℕ} (hproduce : tm.ProducesInTime program output time) :
+    tm.ProducesInTime (program.take time) output time := by
+  have hrun :=
+    (producesInTime_iff_runCfg_internal tm program output time).mp hproduce
+  have hcongr := runCfg_initCfg_congr_of_input_cells_internal
+    tm program (program.take time) time
+      (initCfg_take_input_cells_le_internal tm program time)
+  apply (producesInTime_iff_runCfg_internal
+    tm (program.take time) output time).mpr
+  constructor
+  · change (tm.runCfg (tm.initCfg (program.take time)) time).state = tm.qhalt
+    rw [← hcongr.1]
+    exact hrun.1
+  · rw [← hcongr.2.2]
+    exact hrun.2
 
 theorem producesInTime_mono_internal {tm : TM n} {program output : List Bool}
     {first second : ℕ} (hbound : first ≤ second)
