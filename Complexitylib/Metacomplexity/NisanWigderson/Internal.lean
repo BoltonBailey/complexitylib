@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.NisanWigderson.Defs
 import Complexitylib.Metacomplexity.StatisticalTest.Internal
 import Complexitylib.Metacomplexity.StatisticalTest.Hybrid.Internal
+import Complexitylib.Metacomplexity.StatisticalTest.HybridPrediction.Internal
 
 /-!
 # Nisan--Wigderson set systems and generators -- proof internals
@@ -125,6 +126,55 @@ theorem exists_oriented_hybridGap_of_seedDescriptions_internal
           (design.generator hardFunction).hybridGap
             (BitGenerator.orientTest test complement) step := by
   apply exists_oriented_hybridGap_of_randomTest_internal
+    houtputLength (hrandom := hrandom) (hdense := hdense)
+  exact BitGenerator.hasLowTimeBoundedComplexity_of_seedDescriptions_internal
+    hseedLength hproduces
+
+theorem exists_predictionSuccess_ge_half_add_density_div_internal
+    {outputLength inputLength seedLength tapes time threshold : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density) :
+    ∃ (complement : Bool) (step : Fin outputLength),
+      1 / 2 + density / (outputLength : ℚ) ≤
+        NextBitPrediction.successProbability
+          ((design.generator hardFunction).targetBit step)
+          ((design.generator hardFunction).testAtCandidate
+            (BitGenerator.orientTest test complement) step) := by
+  obtain ⟨complement, step, hstep, hgap⟩ :=
+    exists_oriented_hybridGap_of_randomTest_internal
+      houtputLength hlow hrandom hdense
+  let coordinate : Fin outputLength := ⟨step, hstep⟩
+  refine ⟨complement, coordinate, ?_⟩
+  rw [BitGenerator.predictionSuccessProbability_eq_half_add_hybridGap_internal]
+  simpa [coordinate, add_comm] using add_le_add_left hgap (1 / 2)
+
+theorem exists_predictionSuccess_ge_half_add_density_div_of_seedDescriptions_internal
+    {outputLength inputLength seedLength tapes time threshold : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density) :
+    ∃ (complement : Bool) (step : Fin outputLength),
+      1 / 2 + density / (outputLength : ℚ) ≤
+        NextBitPrediction.successProbability
+          ((design.generator hardFunction).targetBit step)
+          ((design.generator hardFunction).testAtCandidate
+            (BitGenerator.orientTest test complement) step) := by
+  apply exists_predictionSuccess_ge_half_add_density_div_internal
     houtputLength (hrandom := hrandom) (hdense := hdense)
   exact BitGenerator.hasLowTimeBoundedComplexity_of_seedDescriptions_internal
     hseedLength hproduces

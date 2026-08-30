@@ -1771,6 +1771,12 @@ background with one normalized tail coordinate and an independent candidate
 bit. Candidate acceptance is proved equal to the current hybrid, target-bit
 acceptance equal to the next hybrid, and the canonical predictor therefore has
 success probability exactly `1/2 + hybridGap_i`.
+Composing all finite layers now gives the concrete probabilistic NW conclusion:
+every positive-density random-string test against a low-complexity NW generator
+admits a polarity and coordinate whose canonical predictor succeeds with
+probability at least `1/2 + delta/m`. The same theorem derives low complexity
+from direct production by seeds of length strictly below the randomness
+threshold.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2925,8 +2931,10 @@ meta-computational notation hides several incompatible choices; expose them.
   nonempty finite background space. Decomposing an NW hybrid's random tail into
   a candidate coordinate and its complement is now complete via an explicit
   finite equivalence. The resulting actual-hybrid predictor succeeds with
-  probability exactly `1/2 + hybridGap_i`. Hardwiring overlap-dependent values
-  within the proved budget, the randomized certificate search, and the final
+  probability exactly `1/2 + hybridGap_i`. This is now composed with the dense-
+  random test and short-seed theorems to obtain a concrete predictor with
+  success at least `1/2 + delta/m`. Hardwiring overlap-dependent values within
+  the proved budget, the randomized certificate search, and the final
   reconstruction remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional

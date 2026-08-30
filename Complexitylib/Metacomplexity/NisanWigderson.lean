@@ -142,6 +142,54 @@ theorem exists_oriented_hybridGap_of_seedDescriptions
   exists_oriented_hybridGap_of_seedDescriptions_internal
     houtputLength hseedLength hproduces hrandom hdense
 
+/-- End-to-end finite probabilistic NW reconstruction step: a dense random test
+against a low-complexity generator yields a polarity and coordinate whose
+canonical next-bit predictor succeeds with probability at least
+`1/2 + density / outputLength`. -/
+theorem exists_predictionSuccess_ge_half_add_density_div
+    {outputLength inputLength seedLength tapes time threshold : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hlow : (design.generator hardFunction).HasLowTimeBoundedComplexity
+      machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density) :
+    ∃ (complement : Bool) (step : Fin outputLength),
+      1 / 2 + density / (outputLength : ℚ) ≤
+        NextBitPrediction.successProbability
+          ((design.generator hardFunction).targetBit step)
+          ((design.generator hardFunction).testAtCandidate
+            (BitGenerator.orientTest test complement) step) :=
+  exists_predictionSuccess_ge_half_add_density_div_internal
+    houtputLength hlow hrandom hdense
+
+/-- The same concrete next-bit prediction guarantee with low complexity
+discharged by direct production from seeds shorter than the threshold. -/
+theorem exists_predictionSuccess_ge_half_add_density_div_of_seedDescriptions
+    {outputLength inputLength seedLength tapes time threshold : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {hardFunction : (Fin inputLength → Bool) → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    {density : ℚ} (houtputLength : 0 < outputLength)
+    (hseedLength : seedLength < threshold)
+    (hproduces : ∀ seed,
+      machine.ProducesInTime (List.ofFn seed)
+        (List.ofFn (design.generator hardFunction seed)) time)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test density) :
+    ∃ (complement : Bool) (step : Fin outputLength),
+      1 / 2 + density / (outputLength : ℚ) ≤
+        NextBitPrediction.successProbability
+          ((design.generator hardFunction).targetBit step)
+          ((design.generator hardFunction).testAtCandidate
+            (BitGenerator.orientTest test complement) step) :=
+  exists_predictionSuccess_ge_half_add_density_div_of_seedDescriptions_internal
+    houtputLength hseedLength hproduces hrandom hdense
+
 end NWDesign
 
 end Complexity

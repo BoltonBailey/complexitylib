@@ -5,7 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Metacomplexity.StatisticalTest.Hybrid.Defs
+public import Complexitylib.Metacomplexity.StatisticalTest.HybridPrediction.Defs
 
 /-!
 # Nisan--Wigderson set systems and generators -- definitions
