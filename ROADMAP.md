@@ -1951,7 +1951,10 @@ proved equivalent to one explicit circuit family solving both promised sides.
 `PromiseEventuallySIZE` keeps finite exceptional lengths explicit; an eventual
 polynomial bound is upgraded to pointwise polynomial size by adding a constant
 polynomial, hence yields `PromisePPoly`. Total-language embeddings recover
-ordinary `SIZE` and `PPoly` exactly.
+ordinary `SIZE` and `PPoly` exactly. Exact semantics-preserving `Basis.Hom`
+relabelings preserve pointwise and eventual promise-size bounds with no
+overhead, and relabelings in both directions give equality of the corresponding
+promise classes.
 A `PromiseNPHard` target in `PromiseP` collapses `P` and `NP`, so under
 `P ≠ NP` every such hard target is outside `PromiseP`. An FNP relation that
 characterizes the yes-instances also yields `PromiseNP` membership under the
@@ -2738,7 +2741,9 @@ outside the lower-bound antecedent, while `HasMagnificationLowerBoundHypothesis`
 chooses one positive `epsilon` and requires the eventual circuit lower bound for
 every sufficiently small positive `beta`. Its public cutoff characterization and
 pointwise consequence keep the small-parameter and large-input quantifiers
-separate. Exact basis transport remains.
+separate. Exact `Basis.Hom` relabeling transport is complete. The broader
+constant-overhead compiler reconciling the paper's fan-in-two/free-negation gate
+convention with `Basis.andOr2` remains.
 Canonical truth tables now round-trip to typed Boolean functions, and the checked
 Shannon circuit bounds give the exact finite MCSP window from a no-instance at
 `2^n/(5n)` to universal acceptance at `18*2^n/n` for `n >= 16`. This calibrates
@@ -2849,7 +2854,8 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   and `PPoly` are invariant under the selected finite-prefix and basis transports.
   *Explicit solver equivalence, pointwise/eventual classes, monotonicity, total-
   language agreement, and finite-prefix invariance for polynomial bounds are
-  done; exact basis transport remains.*
+  done. Exact `Basis.Hom` transport and two-way equivalence are also done; the
+  selected paper-basis compiler and its constant overhead remain.*
 - [ ] Define `SuccinctMCSP`: a list of distinct or repeated input/output samples
   together with a circuit-size threshold, accepted when one small circuit matches
   every sample. Give it a total codec, exact sample semantics, polynomial witness
@@ -2995,7 +3001,8 @@ not evidence that either the collapse or the desired lower bound has been proved
   promise-`SIZE` interface sufficient to state the selected theorem in Lean.
   *The rounded functions and pointwise/eventual promise-`SIZE` interfaces are
   done, as are the small-positive scale filter and selected lower-bound
-  quantifier; basis transport remains.*
+  quantifier. Exact basis relabeling is done; the broader constant-overhead
+  paper-basis transport remains.*
 - [M] Define finite anti-checkers and prove their equivalence with rejection of
   the corresponding sampled `SuccinctMCSP` instance.
 - [M] Define formula-XOR (or the first selected weak model) by extending the

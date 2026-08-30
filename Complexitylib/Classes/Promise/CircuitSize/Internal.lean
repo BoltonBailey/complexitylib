@@ -6,6 +6,8 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.Promise.CircuitSize.Defs
+public import Complexitylib.Circuits.BasisHom.Defs
+import Complexitylib.Circuits.BasisHom
 import Complexitylib.Classes.Promise
 import Complexitylib.Classes.PPoly
 
@@ -149,6 +151,67 @@ theorem PromiseEventuallySIZEWithBasis_mono_internal
       PromiseEventuallySIZEWithBasis B second := by
   rintro problem ⟨family, hsolve, hbound⟩
   exact ⟨family, hsolve, hbound.mono_internal hle⟩
+
+theorem PromiseSIZEWithBasis_mapBasis_subset_internal
+    {source target : Basis} (hom : Basis.Hom source target)
+    (bound : ℕ → ℕ) :
+    PromiseSIZEWithBasis source bound ⊆
+      PromiseSIZEWithBasis target bound := by
+  intro problem hproblem
+  obtain ⟨family, hsolve, hbound⟩ :=
+    (mem_PromiseSIZEWithBasis_iff_internal
+      problem source bound).mp hproblem
+  apply (mem_PromiseSIZEWithBasis_iff_internal
+    problem target bound).mpr
+  have heval : (family.mapBasis hom).evalList = family.evalList := by
+    funext input
+    unfold CircuitFamily.evalList
+    rw [CircuitFamily.function_mapBasis hom family]
+  refine ⟨family.mapBasis hom, ?_, ?_⟩
+  · simpa only [heval] using hsolve
+  · intro length
+    rw [show (family.mapBasis hom).size length = family.size length by
+      exact congrFun (CircuitFamily.size_mapBasis hom family) length]
+    exact hbound length
+
+theorem PromiseEventuallySIZEWithBasis_mapBasis_subset_internal
+    {source target : Basis} (hom : Basis.Hom source target)
+    (bound : ℕ → ℕ) :
+    PromiseEventuallySIZEWithBasis source bound ⊆
+      PromiseEventuallySIZEWithBasis target bound := by
+  rintro problem ⟨family, hsolve, hbound⟩
+  have heval : (family.mapBasis hom).evalList = family.evalList := by
+    funext input
+    unfold CircuitFamily.evalList
+    rw [CircuitFamily.function_mapBasis hom family]
+  refine ⟨family.mapBasis hom, ?_, ?_⟩
+  · simpa only [heval] using hsolve
+  · filter_upwards [hbound] with length hlength
+    rw [show (family.mapBasis hom).size length = family.size length by
+      exact congrFun (CircuitFamily.size_mapBasis hom family) length]
+    exact hlength
+
+theorem PromiseSIZEWithBasis_eq_of_homs_internal
+    {first second : Basis}
+    (forward : Basis.Hom first second)
+    (reverse : Basis.Hom second first) (bound : ℕ → ℕ) :
+    PromiseSIZEWithBasis first bound =
+      PromiseSIZEWithBasis second bound := by
+  apply Set.Subset.antisymm
+  · exact PromiseSIZEWithBasis_mapBasis_subset_internal forward bound
+  · exact PromiseSIZEWithBasis_mapBasis_subset_internal reverse bound
+
+theorem PromiseEventuallySIZEWithBasis_eq_of_homs_internal
+    {first second : Basis}
+    (forward : Basis.Hom first second)
+    (reverse : Basis.Hom second first) (bound : ℕ → ℕ) :
+    PromiseEventuallySIZEWithBasis first bound =
+      PromiseEventuallySIZEWithBasis second bound := by
+  apply Set.Subset.antisymm
+  · exact PromiseEventuallySIZEWithBasis_mapBasis_subset_internal
+      forward bound
+  · exact PromiseEventuallySIZEWithBasis_mapBasis_subset_internal
+      reverse bound
 
 theorem PromiseEventuallySIZE_polynomial_subset_PromisePPoly_internal
     (p : Polynomial ℕ) :

@@ -9,6 +9,7 @@ public import Complexitylib.Classes.Promise.CircuitSize.Defs
 public import Complexitylib.Classes.Promise.CircuitSize.Internal
 public import Complexitylib.Classes.Promise
 public import Complexitylib.Classes.PPoly
+public import Complexitylib.Circuits.BasisHom
 
 /-!
 # Nonuniform circuit size for promise problems
@@ -111,6 +112,45 @@ theorem PromiseEventuallySIZEWithBasis_mono
     PromiseEventuallySIZEWithBasis B first ⊆
       PromiseEventuallySIZEWithBasis B second :=
   PromiseEventuallySIZEWithBasis_mono_internal B hle
+
+/-- Exact semantics-preserving basis relabeling preserves pointwise promise
+circuit size with no overhead. -/
+theorem PromiseSIZEWithBasis_mapBasis_subset
+    {source target : Basis} (hom : Basis.Hom source target)
+    (bound : ℕ → ℕ) :
+    PromiseSIZEWithBasis source bound ⊆
+      PromiseSIZEWithBasis target bound :=
+  PromiseSIZEWithBasis_mapBasis_subset_internal hom bound
+
+/-- Exact semantics-preserving basis relabeling preserves eventual promise
+circuit size with no overhead. -/
+theorem PromiseEventuallySIZEWithBasis_mapBasis_subset
+    {source target : Basis} (hom : Basis.Hom source target)
+    (bound : ℕ → ℕ) :
+    PromiseEventuallySIZEWithBasis source bound ⊆
+      PromiseEventuallySIZEWithBasis target bound :=
+  PromiseEventuallySIZEWithBasis_mapBasis_subset_internal hom bound
+
+/-- Bases admitting exact semantics-preserving relabelings in both directions
+give the same pointwise promise-size class at every bound. -/
+theorem PromiseSIZEWithBasis_eq_of_homs
+    {first second : Basis}
+    (forward : Basis.Hom first second)
+    (reverse : Basis.Hom second first) (bound : ℕ → ℕ) :
+    PromiseSIZEWithBasis first bound =
+      PromiseSIZEWithBasis second bound :=
+  PromiseSIZEWithBasis_eq_of_homs_internal forward reverse bound
+
+/-- Bases admitting exact semantics-preserving relabelings in both directions
+give the same eventual promise-size class at every bound. -/
+theorem PromiseEventuallySIZEWithBasis_eq_of_homs
+    {first second : Basis}
+    (forward : Basis.Hom first second)
+    (reverse : Basis.Hom second first) (bound : ℕ → ℕ) :
+    PromiseEventuallySIZEWithBasis first bound =
+      PromiseEventuallySIZEWithBasis second bound :=
+  PromiseEventuallySIZEWithBasis_eq_of_homs_internal
+    forward reverse bound
 
 /-- Finitely many exceptional lengths do not prevent a polynomially bounded
 promise solver from giving a `P/poly` completion. -/
