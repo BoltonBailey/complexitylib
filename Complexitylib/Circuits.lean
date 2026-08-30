@@ -12,6 +12,7 @@ public import Complexitylib.Circuits.BinaryMinimum
 public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.InputProjection
 public import Complexitylib.Circuits.InputReindexing
+public import Complexitylib.Circuits.InputSources
 public import Complexitylib.Circuits.KeyedMinimum
 public import Complexitylib.Circuits.KeyedMinimumTournament
 public import Complexitylib.Circuits.Majority
