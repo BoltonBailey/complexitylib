@@ -2966,9 +2966,12 @@ meta-computational notation hides several incompatible choices; expose them.
   threshold/witness/clock laws, uniform simulation transfer, and
   condition-ignoring ordinary-machine sanity theorem are complete. A paper-
   specific evaluator must still prove equivalence to this query convention.*
-- Define computational depth as a difference between two finite time-bounded
-  measures only after proving clock monotonicity in the required direction.
-  Avoid truncated subtraction unless the ordering theorem is in scope.
+- Computational depth is now defined machine-relatively as
+  `C_M^t(x) - C_M(x)`. The extended-natural difference preserves `top`, and the
+  exact identity `depth + C_M = C_M^t` proves that natural subtraction is used
+  only in the ordered direction. Its finiteness, upper-bound, zero-depth, and
+  antitone-clock laws are complete. Choosing a universal evaluator and relating
+  its convention to the paper-specific measure remain separate obligations.
 - State time-bounded symmetry of information with its polynomial clock transform,
   pairing convention, and logarithmic loss. A machine-relative finite inequality
   should precede any asymptotic `O(log t)` wrapper.
@@ -3192,8 +3195,10 @@ meta-computational notation hides several incompatible choices; expose them.
   bounded complexity has producing-program upper bounds, exact top/witness and
   threshold characterizations, clock monotonicity, oracle-uniform polynomial
   transfer, and exact conservativity for embedded ordinary machines.
-  Pair/chain inequalities, computational depth, and the chosen universal
-  evaluator remain.*
+  Machine-relative computational depth is also complete, including its exact
+  additive decomposition, finiteness criterion, bounded-complexity upper bound,
+  zero-depth characterization, and antitone clock law. Pair/chain inequalities
+  and the chosen universal evaluator remain.*
 - [ ] State time-bounded symmetry of information as a named machine-relative
   hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
   into dense-string, language-compression, and clock-accounting modules.
@@ -3240,8 +3245,8 @@ formalization targets and should be stated positively under their exact names.
   preserves its failure event exactly.
 - [x] Define the auxiliary-unary ensemble and calculate the probability of every
   fixed split/string pair.
-- [M] Define finite computational depth from two ordered clocks and prove its
-  zero/monotonicity laws.
+- [x] Define machine-relative computational depth and prove its exact additive,
+  finiteness, upper-bound, zero, and clock-monotonicity laws.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

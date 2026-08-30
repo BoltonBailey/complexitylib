@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Internal
 public import Complexitylib.Metacomplexity.Kolmogorov.Conditional
+public import Complexitylib.Metacomplexity.Kolmogorov.Depth
 
 /-!
 # Machine-relative Kolmogorov complexity
@@ -30,6 +31,8 @@ complexity value is at most `t`.
 - `TM.timeBoundedKolmogorovComplexity_lt_coe_iff` -- strict characterization
 - `TM.timeBoundedKolmogorovComplexity_mono` -- more time cannot increase complexity
 - `TM.timeBoundedKolmogorovComplexity_le_time` -- finite values are at most the clock
+- `TM.computationalDepth_add_plain` -- exact decomposition of bounded complexity
+- `TM.computationalDepth_mono` -- more time cannot increase computational depth
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
 -/
