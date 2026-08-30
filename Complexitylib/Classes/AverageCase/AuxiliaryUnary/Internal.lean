@@ -87,6 +87,87 @@ theorem prefix_probability_internal {m n : ℕ} (hn : n ≤ m)
         uniformProbability_univ_internal, mul_one, card_finArrowBool]
       norm_cast
 
+theorem prefix_event_probability_internal {m n : ℕ} (hn : n ≤ m)
+    (event : Finset (Fin n → Bool)) :
+    uniformProbability
+        (Finset.univ.filter fun bits : Fin m → Bool =>
+          (bitBlocks hn bits).1 ∈ event) =
+      eventProb event := by
+  calc
+    uniformProbability
+        (Finset.univ.filter fun bits : Fin m → Bool =>
+          (bitBlocks hn bits).1 ∈ event) =
+        uniformProbability
+          (Finset.univ.filter fun blocks :
+              (Fin n → Bool) × (Fin (m - n) → Bool) => blocks.1 ∈ event) :=
+      uniformProbability_equiv_internal (bitBlocks hn)
+        (fun blocks : (Fin n → Bool) × (Fin (m - n) → Bool) =>
+          blocks.1 ∈ event)
+    _ = uniformProbability
+          (Finset.univ.filter fun prefixBits : Fin n → Bool => prefixBits ∈ event) *
+        uniformProbability
+          (Finset.univ.filter fun _suffix : Fin (m - n) → Bool => True) := by
+      simpa only [and_true] using
+        (uniformProbability_product_internal
+          (fun prefixBits : Fin n → Bool => prefixBits ∈ event)
+          (fun _suffix : Fin (m - n) → Bool => True))
+    _ = eventProb event := by
+      rw [show Finset.univ.filter
+          (fun prefixBits : Fin n → Bool => prefixBits ∈ event) = event by
+            ext
+            simp,
+        show Finset.univ.filter (fun _suffix : Fin (m - n) → Bool => True) =
+          Finset.univ by simp,
+        uniformProbability_univ_internal, mul_one]
+      simp only [uniformProbability, eventProb, card_finArrowBool]
+      norm_cast
+
+theorem split_prefix_event_probability_internal {m : ℕ}
+    (event : ∀ n, Finset (Fin n → Bool)) :
+    uniformProbability
+        (Finset.univ.filter fun seed : (Fin m) × (Fin m → Bool) =>
+          (bitBlocks (Nat.le_of_lt seed.1.isLt) seed.2).1 ∈
+            event seed.1.val) =
+      (1 / (m : ℚ)) * ∑ n : Fin m, eventProb (event n.val) := by
+  let selected : Finset ((Fin m) × (Fin m → Bool)) :=
+    Finset.univ.filter fun seed =>
+      (bitBlocks (Nat.le_of_lt seed.1.isLt) seed.2).1 ∈ event seed.1.val
+  have hmaps : (selected : Set ((Fin m) × (Fin m → Bool))).MapsTo
+      Prod.fst ((Finset.univ : Finset (Fin m)) : Set (Fin m)) := by
+    intro seed _hseed
+    simp
+  rw [show Finset.univ.filter
+      (fun seed : (Fin m) × (Fin m → Bool) =>
+        (bitBlocks (Nat.le_of_lt seed.1.isLt) seed.2).1 ∈
+          event seed.1.val) = selected from rfl,
+    uniformProbability_eq_sum_fiberwise_internal
+      selected Finset.univ Prod.fst hmaps]
+  have hfiber (n : Fin m) :
+      uniformProbability (selected.filter fun seed => seed.1 = n) =
+        (1 / (m : ℚ)) * eventProb (event n.val) := by
+    rw [show selected.filter (fun seed => seed.1 = n) =
+        Finset.univ.filter (fun seed : (Fin m) × (Fin m → Bool) =>
+          seed.1 = n ∧
+            (bitBlocks (Nat.le_of_lt n.isLt) seed.2).1 ∈ event n.val) by
+      ext seed
+      simp only [selected, Finset.mem_filter, Finset.mem_univ, true_and]
+      constructor
+      · rintro ⟨hmember, hsplit⟩
+        subst n
+        exact ⟨rfl, hmember⟩
+      · rintro ⟨hsplit, hmember⟩
+        subst n
+        exact ⟨hmember, rfl⟩]
+    rw [uniformProbability_product_internal
+      (fun splitIndex : Fin m => splitIndex = n)
+      (fun bits : Fin m → Bool =>
+        (bitBlocks (Nat.le_of_lt n.isLt) bits).1 ∈ event n.val),
+      uniformProbability_eq_internal n,
+      Fintype.card_fin,
+      prefix_event_probability_internal (Nat.le_of_lt n.isLt)]
+  simp_rw [hfiber]
+  rw [← Finset.mul_sum]
+
 theorem split_prefix_probability_internal {m n : ℕ} (hn : n < m)
     (x : Fin n → Bool) :
     uniformProbability

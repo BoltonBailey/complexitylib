@@ -70,6 +70,27 @@ theorem prefix_probability {m n : ℕ} (hn : n ≤ m)
       1 / (2 : ℚ) ^ n :=
   prefix_probability_internal hn x
 
+/-- Retaining a uniform prefix preserves the exact uniform probability of
+every finite event on prefixes, not only singleton events. -/
+theorem prefix_event_probability {m n : ℕ} (hn : n ≤ m)
+    (event : Finset (Fin n → Bool)) :
+    uniformProbability
+        (Finset.univ.filter fun bits : Fin m → Bool =>
+          (bitBlocks hn bits).1 ∈ event) =
+      eventProb event :=
+  prefix_event_probability_internal hn event
+
+/-- Choosing a split and retaining its prefix gives the uniform average of a
+possibly length-dependent family of prefix-event probabilities. -/
+theorem split_prefix_event_probability {m : ℕ}
+    (event : ∀ n, Finset (Fin n → Bool)) :
+    uniformProbability
+        (Finset.univ.filter fun seed : (Fin m) × (Fin m → Bool) =>
+          (bitBlocks (Nat.le_of_lt seed.1.isLt) seed.2).1 ∈
+            event seed.1.val) =
+      (1 / (m : ℚ)) * ∑ n : Fin m, eventProb (event n.val) :=
+  split_prefix_event_probability_internal event
+
 /-- The joint seed event selecting binary length `n` and fixed prefix `x` has
 probability exactly `1 / (m * 2^n)`. -/
 theorem split_prefix_probability {m n : ℕ} (hn : n < m)

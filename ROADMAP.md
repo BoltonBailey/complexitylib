@@ -2653,7 +2653,12 @@ totalized as the point `pair [] []` rather than being attributed to the paper.
 Every seed is now mapped to the exact `MINKT.Instance` it samples; its code is
 definitionally the ensemble output, decoding succeeds, and membership expands
 to `C_U^(m-n)(x) < r(n)`. The fixed-pair mass theorem is also exposed directly
-for canonical MINKT instance codes.
+for canonical MINKT instance codes. Retaining an `n`-bit prefix preserves the
+probability of every finite prefix event, not only point masses. Consequently,
+for every positive `m`, the MINKT probability under `D^u_m` is exactly
+`(1/m) * sum_(n<m) Pr_x[C_U^(m-n)(x) < r(n)]`; the strict incompressibility
+theorem bounds this by the corresponding average of
+`(2^r(n) - 1) / 2^n`, with a pointwise-to-slice adapter.
 `HeuristicAnswer` now gives errorless algorithms distinct accept, reject, and
 failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
 global soundness, deterministic polynomial time, and per-slice failure bounds;
@@ -2780,8 +2785,9 @@ meta-computational notation hides several incompatible choices; expose them.
   because low-complexity strings are sparse. This is the first substantive bridge
   from finite incompressibility to the 2018 reduction. *The machine-relative
   non-strict and strict sparse-low-complexity counts, exact uniform density
-  bounds, and complementary `r`-random-string existence theorem are done; the
-  language/heuristic acceptance argument and auxiliary-unary averaging remain.*
+  bounds, complementary `r`-random-string existence theorem, exact
+  auxiliary-unary split average, and transferred MINKT probability bound are
+  done; the language/heuristic acceptance argument remains.*
 - [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
   turn that dense set into a near-optimal description search algorithm. First
   prove the exact finite parameter theorem; then derive the published

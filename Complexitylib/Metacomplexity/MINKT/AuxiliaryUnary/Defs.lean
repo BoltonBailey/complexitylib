@@ -30,4 +30,16 @@ def minktInstance {m : ℕ} (seed : AuxiliaryUnarySeed m) : MINKT.Instance where
 
 end AuxiliaryUnarySeed
 
+namespace FiniteEnsemble
+
+/-- Exact probability that the positive or totalized auxiliary-unary slice is
+a strict MINKT yes-instance. Classical decidability is confined to this finite
+enumeration boundary. -/
+noncomputable def auxiliaryUnaryMINKTProbability {tapes : ℕ}
+    (machine : TM tapes) (threshold : ℕ → ℕ) (m : ℕ) : ℚ := by
+  classical
+  exact auxiliaryUnary.probability m fun bits => bits ∈ MINKT machine threshold
+
+end FiniteEnsemble
+
 end Complexity
