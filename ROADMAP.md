@@ -2955,7 +2955,10 @@ meta-computational notation hides several incompatible choices; expose them.
   codec, a unary primitive clock, a length-indexed threshold, and the strict
   comparison `C_U^t(x) < r(|x|)`. Keep non-strict variants visibly distinct.
   Parameterize `GapMINKT` by both the description loss `sigma(n,s)` and clock
-  blow-up `tau(n,t)`.
+  blow-up `tau(n,t)`. The search-oriented `sigma` interface is intentionally
+  distinct from the paper's exact Definition 3.3 no threshold
+  `s + log_2(tau(n,t))`; `GapMINKT.Logarithmic` now provides that exact promise
+  without forcing time dependence into every generic description map.
 - Define conditional complexity only after fixing whether the condition is a
   read-only sequential input, an oracle, or random-access data. The 2022 MinCKT
   results use access conventions that cannot be identified silently with the
@@ -3043,7 +3046,11 @@ meta-computational notation hides several incompatible choices; expose them.
   randomized search algorithm remain. The encoded optimization relation,
   input-locality proof of `SourceComplexityPolyBound`, and its
   parameter-sensitive `PolyBalanced` theorem under polynomial description loss
-  are done.*
+  are done. The exact 2022 Definition 3.3 logarithmic variant is now complete as
+  a separate additive layer: it has a two-argument clock, widening and
+  polynomial-growth predicates, exact no-witness semantics, a disjoint promise,
+  and Fact 3.4's estimator sandwich. Thresholding a valid estimator solves the
+  promise, and a `P` estimator language supplies a `PromiseP` completion.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
@@ -3318,6 +3325,9 @@ formalization targets and should be stated positively under their exact names.
   canonical widening-certified promise problem with exact program semantics.
 - [x] Prove Proposition 6.2's estimator-sandwich core: thresholding a valid
   estimator solves `GapMINCKT`, with an exact `PromiseP` completion criterion.
+- [x] Separate the search-oriented GapMINKT parameters from Hirahara's exact
+  logarithmic Definition 3.3, and prove the corresponding Fact 3.4 estimator
+  solver and `PromiseP` completion criterion.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

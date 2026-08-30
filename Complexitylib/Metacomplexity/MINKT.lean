@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MINKT.Defs
 public import Complexitylib.Metacomplexity.MINKT.Gap
+public import Complexitylib.Metacomplexity.MINKT.Gap.Logarithmic
 public import Complexitylib.Metacomplexity.MINKT.Internal
 
 /-!
@@ -28,6 +29,7 @@ results can ask for the precise efficient-universality property they use.
 - `MINKT.Instance.IsBelow` -- strict time-bounded complexity predicate
 - `MINKT.ProgramWitnessRelation` -- direct short-program witness relation
 - `MINKT` -- encoded language, with malformed strings rejected
+- `GapMINKT.Logarithmic.problem` -- exact `s + log_2(tau)` promise
 -/
 
 
