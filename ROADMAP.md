@@ -3197,8 +3197,13 @@ meta-computational notation hides several incompatible choices; expose them.
   transfer, and exact conservativity for embedded ordinary machines.
   Machine-relative computational depth is also complete, including its exact
   additive decomposition, finiteness criterion, bounded-complexity upper bound,
-  zero-depth characterization, and antitone clock law. Pair/chain inequalities
-  and the chosen universal evaluator remain.*
+  zero-depth characterization, and antitone clock law. A finite upper-chain
+  theorem now derives paired bounded complexity from an explicit operational
+  program-composition contract and arbitrary compiler-length bound. Canonical
+  program pairing is instantiated in both orientations, retaining the exact
+  asymmetric codec costs. A concrete evaluator satisfying this contract with
+  the paper's additive overhead, the lower SoI inequality, and the chosen
+  universal evaluator remain.*
 - [ ] State time-bounded symmetry of information as a named machine-relative
   hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
   into dense-string, language-compression, and clock-accounting modules.
@@ -3247,6 +3252,8 @@ formalization targets and should be stated positively under their exact names.
   fixed split/string pair.
 - [x] Define machine-relative computational depth and prove its exact additive,
   finiteness, upper-bound, zero, and clock-monotonicity laws.
+- [x] Isolate bounded program composition as an evaluator contract and derive
+  the finite upper-chain inequality, including both exact canonical-pair costs.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
