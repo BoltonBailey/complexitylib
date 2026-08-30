@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Genera
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Internal
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Selection
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Round
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Iteration
 
 /-!
 # Typed Anti-Checker Lemma generators
