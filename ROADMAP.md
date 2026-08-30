@@ -1995,6 +1995,9 @@ the mathematics and must not be hidden behind notation.
   monotonicity, witness/threshold characterizations, additive invariance under
   the appropriate compiler, and the corresponding resource-aware comparison
   theorem. A time-bounded measure is not invariant under an unchanged clock.
+  The deterministic oracle model now also has plain `C^A_M` and bounded
+  `C^{t,A}_M`, including bounded witnesses, threshold characterization, clock
+  monotonicity, and exact conservativity for embedded ordinary machines.
 - [~] Prove finite incompressibility: fewer than `2^s` descriptions of length
   below `s` exist, so sufficiently large length slices contain strings of high
   complexity. Add the trivial print upper bound for an efficiently universal
@@ -3124,9 +3127,9 @@ meta-computational notation hides several incompatible choices; expose them.
   but deliberately does not claim the paper's oracle-uniform decoder interface.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
-  bounded ambient codec or lifting the decoder and Kolmogorov layer to the new
-  deterministic oracle-machine substrate, constructing machine/runtime realizers for the
-  sampler, checker, indexed-message evaluator, and concrete code family,
+  bounded ambient codec or lifting the indexed decoder realization to the new
+  oracle-relative Kolmogorov layer, constructing machine/runtime realizers for
+  the sampler, checker, indexed-message evaluator, and concrete code family,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case

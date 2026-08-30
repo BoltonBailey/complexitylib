@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Models.TuringMachine
 public import Complexitylib.Models.TuringMachine.Oracle
+public import Complexitylib.Models.TuringMachine.Oracle.OutputSemantics
 public import Complexitylib.Models.TuringMachine.Trace
 public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape
