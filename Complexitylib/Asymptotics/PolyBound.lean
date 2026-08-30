@@ -23,6 +23,7 @@ form the complexity classes are stated in.
 - `PolyBound.const`, `.id`, `.add`, `.mul`, `.pow`, `.mono`, `.max`, `.eval` —
   the closure API
 - `PolyBound.bigO` — a polynomial bound is a big-O power bound
+- `PolyBound.exists_mul_pow_bound` — a polynomial bound is an `A * (n + 1) ^ B` bound
 -/
 
 
@@ -82,6 +83,21 @@ theorem pow {f : ℕ → ℕ} (hf : PolyBound f) (exponent : ℕ) :
 theorem bigO {f : ℕ → ℕ} (hf : PolyBound f) : ∃ d, f =O (· ^ d) := by
   obtain ⟨p, hp⟩ := hf
   exact ⟨p.natDegree, BigO.of_polynomial_bound p hp⟩
+
+/-- A polynomial bound is a bound of the form `A * (n + 1) ^ B`: take `A` to be
+the sum of the coefficients and `B` the degree. -/
+theorem exists_mul_pow_bound {f : ℕ → ℕ} (hf : PolyBound f) :
+    ∃ A B : ℕ, ∀ n, f n ≤ A * (n + 1) ^ B := by
+  obtain ⟨p, hp⟩ := hf
+  refine ⟨∑ i ∈ Finset.range (p.natDegree + 1), p.coeff i, p.natDegree, fun n => ?_⟩
+  refine le_trans (hp n) ?_
+  rw [Polynomial.eval_eq_sum_range, Finset.sum_mul]
+  refine Finset.sum_le_sum fun i hi => ?_
+  have hi' : i ≤ p.natDegree := by
+    rw [Finset.mem_range] at hi
+    omega
+  exact Nat.mul_le_mul_left _
+    (le_trans (Nat.pow_le_pow_left (by omega) i) (Nat.pow_le_pow_right (by omega) hi'))
 
 end PolyBound
 
