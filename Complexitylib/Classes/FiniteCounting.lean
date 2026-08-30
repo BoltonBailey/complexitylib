@@ -39,6 +39,8 @@ and interactive proofs (roadmap track N2).
   used by circuit encoders to finite-set support counting
 - `blocksEquiv`, `card_blockEventCount_eq` — a long machine seed as independent
   blocks and the exact weighted binomial count for any block event
+- `tupleEventCount`, `card_tupleEventCount_eq` — the corresponding generic
+  weighted binomial count for tuples over any finite type
 - `repeatRandomSeed`, `card_repeatRandomSeed_fiber` — extract the actual simulation
   slots from a fixed-time repetition seed and count its ignored administrative bits
 - `card_filter_of_constant_fibers` — transfer an event count through a projection
@@ -564,6 +566,36 @@ private theorem card_eventCount_eq {k : ℕ} {α : Type*}
     _ = k.choose j * E.card ^ j * (Fintype.card α - E.card) ^ (k - j) := by
       rw [card_filter_popCount_eq]
       simp only [Nat.mul_assoc]
+
+/-- Number of positions in a finite tuple whose value belongs to `E`. -/
+def tupleEventCount {k : ℕ} {α : Type*} [DecidableEq α]
+    (E : Finset α) (f : Fin k → α) : ℕ :=
+  (Finset.univ.filter (fun i : Fin k => f i ∈ E)).card
+
+/-- **Generic weighted binomial count.** Exactly the stated number of
+`k`-tuples over `α` have `j` positions in `E`. -/
+theorem card_tupleEventCount_eq {k : ℕ} {α : Type*}
+    [Fintype α] [DecidableEq α] (E : Finset α) (j : ℕ) :
+    (Finset.univ.filter
+      (fun f : Fin k → α => tupleEventCount E f = j)).card =
+        k.choose j * E.card ^ j *
+          (Fintype.card α - E.card) ^ (k - j) := by
+  simpa only [tupleEventCount, eventCount] using
+    card_eventCount_eq (k := k) E j
+
+/-- The number of tuples whose event count lies in a finite set is the
+corresponding weighted binomial sum. -/
+theorem card_tupleEventCount_mem {k : ℕ} {α : Type*}
+    [Fintype α] [DecidableEq α] (E : Finset α) (counts : Finset ℕ) :
+    (Finset.univ.filter
+      (fun f : Fin k → α => tupleEventCount E f ∈ counts)).card =
+        ∑ j ∈ counts,
+          k.choose j * E.card ^ j *
+            (Fintype.card α - E.card) ^ (k - j) := by
+  rw [← Finset.sum_card_fiberwise_eq_card_filter]
+  apply Finset.sum_congr rfl
+  intro j _
+  exact card_tupleEventCount_eq E j
 
 /-- **Weighted binomial count in the machine seed space.** Exactly the stated
     binomial number of long seeds have `j` blocks in `E`; the two weights are the
