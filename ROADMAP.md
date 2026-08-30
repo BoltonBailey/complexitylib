@@ -2635,6 +2635,17 @@ need an explicit error-correcting-code library. A streaming magnification theore
 additionally needs a streaming model; a probabilistic-formula theorem needs the
 corresponding finite randomized circuit semantics.
 
+**Current foundation.** `GapMCSP.sliceProblem` now fixes separate arity-indexed
+yes/no thresholds and has exact table-preserving reductions under the two
+required parameter inequalities. `BooleanHamming` supplies absolute distance,
+the triangle inequality, XOR translation, and an exact bridge to the rational
+relative distance already used by `BooleanListCode`. Boolean spheres and balls
+have the center-independent cardinalities `choose(n,r)` and
+`sum_{i <= r} choose(n,i)`, and separated finite codes satisfy the exact packing
+bound `|C| * volume(n,r) <= 2^n` below half their minimum distance. A concrete
+linear code, efficient encoder/decoder, and theorem-specific resource analysis
+remain missing.
+
 **Literature anchors.** The initial theorem menu should be drawn from the
 Oliveira--Santhanam hardness-magnification framework, the
 Oliveira--Pich--Santhanam gap-MCSP/gap-MKtP results, the
@@ -2674,14 +2685,18 @@ uniformity, error, and quantifier conventions into a short design document.
 
 **Staged milestones.**
 
-- [ ] Add binary-code foundations sufficient for magnification: Hamming distance,
+- [~] Add binary-code foundations sufficient for magnification: Hamming distance,
   rate, relative distance, encoding/decoding correctness, circuit complexity of
   encoding, and whichever local/list/unique decoding guarantee the selected paper
-  actually uses. Start with a finite linear code and exact parameters.
-- [ ] Define parameter-preserving reductions between promise families. Prove
+  actually uses. Start with a finite linear code and exact parameters. *The
+  complete finite Hamming geometry, exact volumes, and packing bound are done;
+  rate, concrete codes, algorithms, and circuit complexity remain.*
+- [~] Define parameter-preserving reductions between promise families. Prove
   identity/composition while retaining yes/no thresholds, output length, resource
   blow-up, randomness, and error rather than projecting immediately to a language
-  reduction.
+  reduction. *Canonical deterministic `GapMCSP` threshold slices, parameter
+  composition, side preservation, and exact re-encoding length are done; the
+  general resource/randomness/error family interface remains.*
 - [ ] Isolate an abstract coding/compression lemma: under a stated upper-bound or
   collapse hypothesis, codewords of relevant instances receive low circuit or
   `Kt` complexity, while the decoding/distance argument keeps no-instances far
@@ -2771,8 +2786,9 @@ not evidence that either the collapse or the desired lower bound has been proved
   exact output-length and threshold maps. The canonical map preserves the truth
   table, installs the target yes threshold, and exposes both parameter-order
   inequalities.
-- [M] Add Hamming balls and the elementary packing/counting bounds used by the
-  selected coding argument.
+- [x] Add Hamming balls and the elementary packing/counting bounds used by the
+  selected coding argument, including exact sphere/ball cardinalities and the
+  finite separated-code packing theorem.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
   existing formula semantics and prove its basic size monotonicity.
 - [M] Write the selected published magnification theorem's complete Lean signature
