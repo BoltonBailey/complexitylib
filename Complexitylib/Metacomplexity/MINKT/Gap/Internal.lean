@@ -283,6 +283,80 @@ theorem exists_searchRelation_iff_internal {tapes : ℕ}
       exact hwidening.1 inst.output.length optimum
     · exact hproduce.mono (hwidening.2 inst.output.length inst.time)
 
+theorem encodedSearchRelation_encode_iff_internal {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters)
+    (inst : MINKT.Instance) (program : List Bool) :
+    EncodedSearchRelation machine parameters inst.encode program ↔
+      SearchRelation machine parameters inst program := by
+  simp [EncodedSearchRelation, MINKT.Instance.decode?_encode_internal]
+
+theorem exists_encodedSearchRelation_encode_iff_internal {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters)
+    (hwidening : parameters.IsWidening) (inst : MINKT.Instance) :
+    (∃ program, EncodedSearchRelation machine parameters inst.encode program) ↔
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ := by
+  rw [show (∃ program,
+      EncodedSearchRelation machine parameters inst.encode program) ↔
+        ∃ program, SearchRelation machine parameters inst program by
+      simp only [encodedSearchRelation_encode_iff_internal]]
+  exact exists_searchRelation_iff_internal machine parameters hwidening inst
+
+theorem encodedSearchRelation_length_le_polynomial_internal
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (descriptionPolynomial sourcePolynomial : Polynomial ℕ)
+    (hdescription : ∀ length optimum,
+      parameters.description length optimum ≤
+        descriptionPolynomial.eval (length + optimum))
+    (hsource : ∀ inst : MINKT.Instance, ∀ optimum : ℕ,
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time =
+          (optimum : WithTop ℕ) →
+        optimum ≤ sourcePolynomial.eval inst.encode.length)
+    {bits program : List Bool}
+    (hrelation : EncodedSearchRelation machine parameters bits program) :
+    program.length ≤
+      (descriptionPolynomial.comp (Polynomial.X + sourcePolynomial)).eval
+        bits.length := by
+  cases hdecode : MINKT.Instance.decode? bits with
+  | none => simp [EncodedSearchRelation, hdecode] at hrelation
+  | some inst =>
+      simp only [EncodedSearchRelation, hdecode] at hrelation
+      obtain ⟨optimum, hcomplexity, hlength, _hproduce⟩ := hrelation
+      have hcanonical :=
+        (MINKT.Instance.decode?_eq_some_iff_internal bits inst).mp hdecode
+      rw [hcanonical]
+      have houtput : inst.output.length ≤ inst.encode.length := by
+        rw [MINKT.Instance.length_encode_internal]
+        omega
+      have hoptimum := hsource inst optimum hcomplexity
+      have hargument :
+          inst.output.length + optimum ≤
+            inst.encode.length + sourcePolynomial.eval inst.encode.length :=
+        Nat.add_le_add houtput hoptimum
+      calc
+        program.length ≤
+            parameters.description inst.output.length optimum := hlength
+        _ ≤ descriptionPolynomial.eval (inst.output.length + optimum) :=
+          hdescription inst.output.length optimum
+        _ ≤ descriptionPolynomial.eval
+            (inst.encode.length + sourcePolynomial.eval inst.encode.length) :=
+          polynomial_eval_mono_nat descriptionPolynomial hargument
+        _ = (descriptionPolynomial.comp
+              (Polynomial.X + sourcePolynomial)).eval inst.encode.length := by
+          simp [Polynomial.eval_comp]
+
+theorem encodedSearchRelation_polyBalanced_internal
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (hdescription : parameters.DescriptionPolyBound)
+    (hsource : SourceComplexityPolyBound machine) :
+    PolyBalanced (EncodedSearchRelation machine parameters) := by
+  obtain ⟨descriptionPolynomial, hdescription⟩ := hdescription
+  obtain ⟨sourcePolynomial, hsource⟩ := hsource
+  exact ⟨descriptionPolynomial.comp (Polynomial.X + sourcePolynomial),
+    fun _bits _program hrelation =>
+      encodedSearchRelation_length_le_polynomial_internal
+        machine parameters descriptionPolynomial sourcePolynomial
+          hdescription hsource hrelation⟩
+
 theorem verifyRelaxedWitness_eq_true_iff_internal {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters) (inst : Instance)
     (program : List Bool) :

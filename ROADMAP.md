@@ -1757,7 +1757,13 @@ theorems can request exactly the required notion of efficient universality.
 explicit sufficient hypothesis for disjointness. The codec, direct yes/no
 program characterizations, raw yes-witness relation, and optimization search
 relation are proved; the latter has a witness exactly when the source bounded
-complexity is finite. The relaxed-resource witness checker is executable, and
+complexity is finite. Its canonical encoded form agrees exactly with the
+semantic relation. When `sigma(n,s)` is polynomially bounded in `n+s` and
+finite source optima are polynomially bounded in the unary-clock input length,
+the encoded search relation is `PolyBalanced` by an explicit polynomial
+composition theorem. The second condition is named
+`GapMINKT.SourceComplexityPolyBound` rather than silently assumed. The
+relaxed-resource witness checker is executable, and
 any search algorithm satisfying the approximation relation on finite inputs
 induces a semantic GapMINKT promise solver when `sigma(n,-)` is monotone. On
 promised no-instances the checker rejects independently of the search
@@ -2842,9 +2848,11 @@ meta-computational notation hides several incompatible choices; expose them.
   yes-witness relation is linearly `PolyBalanced`, and its conditional
   `PromiseNP` theorem reduces the problem-specific FNP obligation exactly to
   polynomial-time machine verification of the paired relation. That verifier,
-  the generic guess-and-verify NTM construction, parameter-sensitive balance
-  for the optimization search relation, and construction of the randomized
-  search algorithm remain.*
+  the generic guess-and-verify NTM construction, an unconditional
+  input-locality proof of `SourceComplexityPolyBound`, and construction of the
+  randomized search algorithm remain. The encoded optimization relation and
+  its parameter-sensitive `PolyBalanced` theorem under explicit description
+  and source-complexity bounds are done.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public

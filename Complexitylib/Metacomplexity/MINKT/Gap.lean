@@ -148,6 +148,57 @@ theorem exists_searchRelation_iff {tapes : ℕ}
       machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ :=
   exists_searchRelation_iff_internal machine parameters hwidening inst
 
+/-- On canonical `(x,1^t)` inputs, the encoded and semantic optimization
+search relations agree exactly. -/
+@[simp] theorem encodedSearchRelation_encode_iff {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters)
+    (inst : MINKT.Instance) (program : List Bool) :
+    EncodedSearchRelation machine parameters inst.encode program ↔
+      SearchRelation machine parameters inst program :=
+  encodedSearchRelation_encode_iff_internal machine parameters inst program
+
+/-- The canonical encoded optimization search problem has a solution exactly
+when the source time-bounded complexity is finite. -/
+theorem exists_encodedSearchRelation_encode_iff {tapes : ℕ}
+    (machine : TM tapes) (parameters : Parameters)
+    (hwidening : parameters.IsWidening) (inst : MINKT.Instance) :
+    (∃ program, EncodedSearchRelation machine parameters inst.encode program) ↔
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤ :=
+  exists_encodedSearchRelation_encode_iff_internal
+    machine parameters hwidening inst
+
+/-- Explicit composed polynomial bound for every output of the encoded search
+relation. The description loss is polynomial in `|x|+s`, while finite source
+optima are polynomial in the canonical `(x,1^t)` input length. -/
+theorem encodedSearchRelation_length_le_polynomial
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (descriptionPolynomial sourcePolynomial : Polynomial ℕ)
+    (hdescription : ∀ length optimum,
+      parameters.description length optimum ≤
+        descriptionPolynomial.eval (length + optimum))
+    (hsource : ∀ inst : MINKT.Instance, ∀ optimum : ℕ,
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time =
+          (optimum : WithTop ℕ) →
+        optimum ≤ sourcePolynomial.eval inst.encode.length)
+    {bits program : List Bool}
+    (hrelation : EncodedSearchRelation machine parameters bits program) :
+    program.length ≤
+      (descriptionPolynomial.comp (Polynomial.X + sourcePolynomial)).eval
+        bits.length :=
+  encodedSearchRelation_length_le_polynomial_internal
+    machine parameters descriptionPolynomial sourcePolynomial
+      hdescription hsource hrelation
+
+/-- Polynomial description loss and polynomially bounded finite source
+optima make the canonical optimization search relation polynomially balanced. -/
+theorem encodedSearchRelation_polyBalanced
+    {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
+    (hdescription : parameters.DescriptionPolyBound)
+    (hsource : SourceComplexityPolyBound machine) :
+    PolyBalanced (EncodedSearchRelation machine parameters) :=
+  encodedSearchRelation_polyBalanced_internal
+    machine parameters hdescription hsource
+
 /-- The executable relaxed-resource checker accepts exactly valid candidates. -/
 theorem verifyRelaxedWitness_eq_true_iff {tapes : ℕ}
     (machine : TM tapes) (parameters : Parameters) (inst : Instance)

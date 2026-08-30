@@ -56,7 +56,23 @@ the allowed target description length. -/
 def DescriptionMonotone (parameters : Parameters) : Prop :=
   ∀ length, Monotone (parameters.description length)
 
+/-- The description-loss map is bounded by one polynomial in the sum of the
+output length and source optimum. -/
+def DescriptionPolyBound (parameters : Parameters) : Prop :=
+  ∃ polynomial : Polynomial ℕ, ∀ length optimum,
+    parameters.description length optimum ≤
+      polynomial.eval (length + optimum)
+
 end Parameters
+
+/-- Finite source complexity values are polynomially bounded by the canonical
+`(x,1^t)` input length. This machine-local condition is the precise input-size
+bridge needed to make the optimization search relation polynomially balanced. -/
+def SourceComplexityPolyBound {tapes : ℕ} (machine : TM tapes) : Prop :=
+  ∃ polynomial : Polynomial ℕ, ∀ inst : MINKT.Instance, ∀ optimum : ℕ,
+    machine.timeBoundedKolmogorovComplexity inst.output inst.time =
+        (optimum : WithTop ℕ) →
+      optimum ≤ polynomial.eval inst.encode.length
 
 /-- A decoded gap-decision instance `(x, 1^t, 1^s)`. -/
 structure Instance where
@@ -156,6 +172,14 @@ def SearchRelation {tapes : ℕ} (machine : TM tapes)
       program.length ≤ parameters.description inst.output.length optimum ∧
       machine.ProducesInTime program inst.output
         (parameters.clock inst.output.length inst.time)
+
+/-- Canonical binary-input form of the optimization search relation. Malformed
+`(x,1^t)` codes have no related output. -/
+def EncodedSearchRelation {tapes : ℕ} (machine : TM tapes)
+    (parameters : Parameters) (bits program : List Bool) : Prop :=
+  match MINKT.Instance.decode? bits with
+  | some inst => SearchRelation machine parameters inst program
+  | none => False
 
 /-- Semantic search algorithm returning a candidate program from `(x,1^t)`. -/
 abbrev SearchAlgorithm := MINKT.Instance → List Bool
