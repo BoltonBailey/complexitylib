@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.AverageCase.Ensemble
+public import Complexitylib.Classes.AverageCase.Heuristic
 
 /-!
 # Average-case complexity

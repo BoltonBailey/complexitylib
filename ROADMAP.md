@@ -2619,6 +2619,13 @@ mass, independent products via the seed-block bijection, point masses, and
 uniform bit-string slices. This is the representation-level distribution layer;
 no sample map is called efficient until a machine realizes it with proved
 polynomial seed, runtime, and output bounds.
+`HeuristicAnswer` now gives errorless algorithms distinct accept, reject, and
+failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
+global soundness, deterministic polynomial time, and per-slice failure bounds;
+the public theory includes bound monotonicity, complement preservation of the
+failure event, and a zero-failure embedding of exact polynomial-time Boolean
+decision functions. Error-prone heuristics and machine-realized samplers remain
+separate open layers.
 
 **Literature anchors and theorem ladder.** Freeze a specific published version
 before transcribing a theorem. The initial spine is Hirahara's 2018
@@ -2707,10 +2714,13 @@ meta-computational notation hides several incompatible choices; expose them.
 - [ ] Define polynomial-time samplers by uniform machines and prove closure under
   polynomial-time maps, pairing, padding, products, and efficiently chosen
   mixtures. Package distributional problems and `DistNP` only after this bridge.
-- [ ] Define errorless and error-prone heuristic schemes, failure/error events,
+- [~] Define errorless and error-prone heuristic schemes, failure/error events,
   `Avg_delta P`/`AvgP` and `Heur_delta P`/`HeurP`, with monotonicity and
   amplification. Prove that a worst-case polynomial decider is a never-failing
-  heuristic on every samplable ensemble.
+  heuristic on every samplable ensemble. *Errorless answers, their `FP` codec,
+  `AvgPAt`, `AvgP`, failure monotonicity, and the exact-decision-function adapter
+  are done. Error-prone classes, amplification, and the bridge from a `P`
+  language witness to the required `FP` characteristic function remain.*
 - [ ] State and prove the easy half `P = NP -> DistNP subset AvgP`. Give
   `ExcludesHeuristica` and the equivalent nontrivial implication stable public
   names so later conditional results compose without restating class logic.
@@ -2780,7 +2790,7 @@ formalization targets and should be stated positively under their exact names.
 
 - [x] Define a dyadic ensemble as an explicit seed width plus sample map, and
   prove that pushforward preserves total mass and event probability.
-- [S] Define errorless answers and prove that complementing an errorless heuristic
+- [x] Define errorless answers and prove that complementing an errorless heuristic
   preserves its failure event exactly.
 - [M] Define the auxiliary-unary ensemble and calculate the probability of every
   fixed split/string pair.
