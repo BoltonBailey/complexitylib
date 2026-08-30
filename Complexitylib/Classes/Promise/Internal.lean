@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.Promise.Defs
+public import Complexitylib.Classes.NP.Reduction
 import Complexitylib.Classes.P
 import Complexitylib.Classes.NP.Closure
 import Complexitylib.Classes.Containments
@@ -205,5 +206,93 @@ theorem PromiseP_complement_internal {problem : PromiseProblem}
   · apply Set.disjoint_left.mpr
     intro x hxComplement hxYes
     exact hxComplement (hyes hxYes)
+
+namespace PromiseProblem
+
+theorem mapReducesPoly_to_ofLanguage_internal
+    {problem : PromiseProblem} {completion : Language}
+    (hyes : problem.yesInstances ⊆ completion)
+    (hno : Disjoint completion problem.noInstances) :
+    problem.MapReducesPoly (ofLanguage completion) := by
+  refine ⟨id, id_mem_FP, ?_, ?_⟩
+  · intro x hx
+    exact hyes hx
+  · intro x hxNo hxCompletion
+    exact Set.disjoint_left.mp hno hxCompletion hxNo
+
+end PromiseProblem
+
+theorem promiseHardFor_iff_forall_promiseClass_internal
+    (C : Set Language) (target : PromiseProblem) :
+    PromiseHardFor C target ↔
+      ∀ source ∈ PromiseClass C, source.MapReducesPoly target := by
+  constructor
+  · intro hhard source hsource
+    obtain ⟨completion, hcompletion, hyes, hno⟩ := hsource
+    exact (PromiseProblem.mapReducesPoly_to_ofLanguage_internal hyes hno).trans_internal
+      (hhard completion hcompletion)
+  · intro hhard L hL
+    exact hhard (PromiseProblem.ofLanguage L)
+      ((ofLanguage_mem_promiseClass_iff_internal C L).2 hL)
+
+theorem PromiseHardFor.of_reduction_internal
+    {C : Set Language} {first second : PromiseProblem}
+    (hfirst : PromiseHardFor C first)
+    (hred : first.MapReducesPoly second) :
+    PromiseHardFor C second := by
+  intro L hL
+  exact (hfirst L hL).trans_internal hred
+
+theorem ofLanguage_promiseNPComplete_iff_internal (L : Language) :
+    PromiseNPComplete (PromiseProblem.ofLanguage L) ↔ NPComplete L := by
+  constructor
+  · rintro ⟨hmembership, hhard⟩
+    constructor
+    · exact (ofLanguage_mem_promiseClass_iff_internal NP L).mp hmembership
+    · intro source hsource
+      obtain ⟨f, hf, hmap⟩ := hhard source hsource
+      exact ⟨f, hf,
+        (PromiseProblem.mapReducesVia_ofLanguage_iff_internal source L f).mp hmap⟩
+  · rintro ⟨hmembership, hhard⟩
+    constructor
+    · exact (ofLanguage_mem_promiseClass_iff_internal NP L).mpr hmembership
+    · intro source hsource
+      obtain ⟨f, hf, hmap⟩ := hhard source hsource
+      exact ⟨f, hf,
+        (PromiseProblem.mapReducesVia_ofLanguage_iff_internal source L f).mpr hmap⟩
+
+theorem PromiseNPHard.P_eq_NP_of_mem_PromiseP_internal
+    {target : PromiseProblem} (hhard : PromiseNPHard target)
+    (hmembership : target ∈ PromiseP) :
+    P = NP := by
+  apply Set.Subset.antisymm P_subset_NP
+  intro L hL
+  have hsource : PromiseProblem.ofLanguage L ∈ PromiseP :=
+    (PromiseProblem.MapReducesPoly.mem_PromiseP_internal
+      (hhard L hL) hmembership)
+  exact (ofLanguage_mem_promiseClass_iff_internal P L).mp hsource
+
+theorem promiseP_eq_promiseNP_iff_internal : PromiseP = PromiseNP ↔ P = NP := by
+  constructor
+  · intro heq
+    apply Set.Subset.antisymm P_subset_NP
+    intro L hL
+    have hpromiseNP : PromiseProblem.ofLanguage L ∈ PromiseNP :=
+      (ofLanguage_mem_promiseClass_iff_internal NP L).mpr hL
+    rw [← heq] at hpromiseNP
+    exact (ofLanguage_mem_promiseClass_iff_internal P L).mp hpromiseNP
+  · intro heq
+    unfold PromiseP PromiseNP
+    rw [heq]
+
+theorem PromiseNPComplete.mem_PromiseP_iff_P_eq_NP_internal
+    {target : PromiseProblem} (hcomplete : PromiseNPComplete target) :
+    target ∈ PromiseP ↔ P = NP := by
+  constructor
+  · exact PromiseNPHard.P_eq_NP_of_mem_PromiseP_internal hcomplete.2
+  · intro heq
+    unfold PromiseP
+    rw [heq]
+    exact hcomplete.1
 
 end Complexity

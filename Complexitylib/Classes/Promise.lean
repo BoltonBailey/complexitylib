@@ -154,6 +154,21 @@ language lies in the underlying class. -/
     ofLanguage L ∈ PromiseCoNP ↔ L ∈ coNP := by
   exact ofLanguage_mem_promiseClass_iff coNP L
 
+/-- Every completion induces an identity reduction from the promise problem to
+the corresponding total embedded language. -/
+theorem mapReducesPoly_to_ofLanguage
+    {problem : PromiseProblem} {completion : Language}
+    (hyes : problem.yesInstances ⊆ completion)
+    (hno : Disjoint completion problem.noInstances) :
+    problem.MapReducesPoly (ofLanguage completion) :=
+  mapReducesPoly_to_ofLanguage_internal hyes hno
+
+/-- Embedding a total language is promise-NP-complete exactly when the
+original language is NP-complete. -/
+@[simp] theorem ofLanguage_promiseNPComplete_iff (L : Language) :
+    PromiseNPComplete (ofLanguage L) ↔ NPComplete L :=
+  ofLanguage_promiseNPComplete_iff_internal L
+
 end PromiseProblem
 
 /-- Inclusion of ordinary language classes lifts to their completion-based
@@ -165,6 +180,30 @@ theorem promiseClass_mono {C D : Set Language} (hsubset : C ⊆ D) :
 /-- Deterministic polynomial-time promise problems lie in `PromiseNP`. -/
 theorem PromiseP_subset_PromiseNP : PromiseP ⊆ PromiseNP :=
   PromiseP_subset_PromiseNP_internal
+
+/-- Hardness against all total languages in `C` is equivalent to hardness
+against every problem in the completion-based promise lift of `C`. -/
+theorem promiseHardFor_iff_forall_promiseClass
+    (C : Set Language) (target : PromiseProblem) :
+    PromiseHardFor C target ↔
+      ∀ source ∈ PromiseClass C, source.MapReducesPoly target :=
+  promiseHardFor_iff_forall_promiseClass_internal C target
+
+/-- In particular, NP-hardness of a promise target may equivalently quantify
+over every source problem in `PromiseNP`. -/
+theorem promiseNPHard_iff_forall_promiseNP (target : PromiseProblem) :
+    PromiseNPHard target ↔
+      ∀ source ∈ PromiseNP, source.MapReducesPoly target :=
+  promiseHardFor_iff_forall_promiseClass NP target
+
+/-- Promise hardness transfers forward along a side-preserving polynomial
+reduction. -/
+theorem PromiseHardFor.of_reduction
+    {C : Set Language} {first second : PromiseProblem}
+    (hfirst : PromiseHardFor C first)
+    (hred : first.MapReducesPoly second) :
+    PromiseHardFor C second :=
+  hfirst.of_reduction_internal hred
 
 /-- `PromiseP` is closed under swapping its promised yes and no sides. -/
 theorem PromiseP.complement {problem : PromiseProblem}
@@ -179,5 +218,23 @@ theorem PromiseP.complement {problem : PromiseProblem}
   · intro hcomplement
     simpa using PromiseP.complement hcomplement
   · exact PromiseP.complement
+
+/-- The completion-based promise classes collapse exactly when `P = NP`. -/
+theorem promiseP_eq_promiseNP_iff : PromiseP = PromiseNP ↔ P = NP :=
+  promiseP_eq_promiseNP_iff_internal
+
+/-- If an NP-hard promise target has a deterministic polynomial-time
+completion, then `P = NP`. -/
+theorem PromiseNPHard.P_eq_NP_of_mem_PromiseP
+    {target : PromiseProblem} (hhard : PromiseNPHard target)
+    (hmembership : target ∈ PromiseP) :
+    P = NP :=
+  hhard.P_eq_NP_of_mem_PromiseP_internal hmembership
+
+/-- A promise-NP-complete problem lies in `PromiseP` exactly if `P = NP`. -/
+theorem PromiseNPComplete.mem_PromiseP_iff_P_eq_NP
+    {target : PromiseProblem} (hcomplete : PromiseNPComplete target) :
+    target ∈ PromiseP ↔ P = NP :=
+  hcomplete.mem_PromiseP_iff_P_eq_NP_internal
 
 end Complexity

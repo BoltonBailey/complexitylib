@@ -91,4 +91,23 @@ def PromiseNP : Set PromiseProblem :=
 def PromiseCoNP : Set PromiseProblem :=
   PromiseClass coNP
 
+/-- A promise problem is hard for a language class when every total language
+in the class reduces to it by a side-preserving polynomial-time map. -/
+def PromiseHardFor (C : Set Language) (target : PromiseProblem) : Prop :=
+  ∀ L ∈ C, (PromiseProblem.ofLanguage L).MapReducesPoly target
+
+/-- A promise problem is complete for a language class when it belongs to the
+completion-based promise lift and is hard for every total language in the
+class. -/
+def PromiseCompleteFor (C : Set Language) (target : PromiseProblem) : Prop :=
+  target ∈ PromiseClass C ∧ PromiseHardFor C target
+
+/-- Polynomial-time side-preserving NP-hardness for a promise target. -/
+def PromiseNPHard (target : PromiseProblem) : Prop :=
+  PromiseHardFor NP target
+
+/-- Completeness for `PromiseNP` under side-preserving polynomial reductions. -/
+def PromiseNPComplete (target : PromiseProblem) : Prop :=
+  PromiseCompleteFor NP target
+
 end Complexity

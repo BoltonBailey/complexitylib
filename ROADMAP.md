@@ -1795,7 +1795,12 @@ are now defined this way. The lift agrees exactly with the underlying class on
 total embedded languages, preserves class inclusions, and is closed backward
 under side-preserving polynomial reductions whenever the base class is closed
 under polynomial-time preimages. In particular, `PromiseP ⊆ PromiseNP`, and
-`PromiseP` is closed under complement.
+`PromiseP` is closed under complement. `PromiseHardFor` and
+`PromiseCompleteFor` quantify hardness over total languages while retaining a
+promise target; this is proved equivalent to quantifying over every source in
+the lifted promise class. Thus `PromiseNPHard` and `PromiseNPComplete` agree
+exactly with ordinary `NPHard` and `NPComplete` on total embedded languages.
+A `PromiseNPHard` target in `PromiseP` collapses `P` and `NP`.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
@@ -1860,6 +1865,10 @@ the mathematics and must not be hidden behind notation.
   `PromiseNP`, and `PromiseCoNP`, and prove total-embedding equivalences,
   reduction closure, deterministic containment, and complement closure for
   `PromiseP`.
+- [x] Define side-preserving hardness and completeness for promise targets;
+  prove total-source and all-promise-source formulations equivalent, recover
+  ordinary `NPComplete` exactly on total embeddings, and derive the hard-target
+  collapse criterion `PromiseNPHard Π → Π ∈ PromiseP → P = NP`.
 - [ ] Promote the fixed UTM's full-output theorem to the public surface and
   instantiate the generic efficient-universality interface. The compiler should
   expose the exact paired-program length `2 * |description| + 2 + |p|` and the
