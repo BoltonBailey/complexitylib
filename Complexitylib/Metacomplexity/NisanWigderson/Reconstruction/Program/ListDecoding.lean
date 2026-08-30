@@ -25,6 +25,8 @@ list size into a concrete logarithmic description bound, including the
 canonical choice for inverse-polynomially represented test density. The final
 decoder layer turns the complete encoding into a literal bitstring certificate
 and, for any realizing TM, a machine-relative time-bounded Kolmogorov bound.
+Any arbitrary machine satisfying the generic efficient-universality interface
+inherits that bound with additive description and polynomial clock overhead.
 -/
 
 
@@ -106,6 +108,28 @@ theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le
         (List.ofFn message) (realization.time bound) ≤
       (bound : WithTop ℕ) :=
   hcertificate.timeBoundedKolmogorovComplexity_le_internal realization
+
+/-- Every efficiently universal machine inherits the decoded-description bound
+with the universal compiler's additive constant and an explicit polynomially
+larger clock. This is independent of any particular universal-machine
+implementation. -/
+theorem EncodedMessageDecoderRealization.efficientlyUniversal_transfer
+    {messageLength listSize outputLength inputLength seedLength
+      universalTapes : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    (realization : EncodedMessageDecoderRealization design code test)
+    (universal : TM universalTapes)
+    (huniversal : universal.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent,
+      ∀ (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design code test message bound →
+          universal.timeBoundedKolmogorovComplexity (List.ofFn message)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ) :=
+  realization.efficientlyUniversal_transfer_internal universal huniversal
 
 /-- Explicit-program agreement with an encoded message is exactly the generic
 Boolean list-code agreement statistic. -/

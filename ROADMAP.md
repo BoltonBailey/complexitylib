@@ -3045,11 +3045,14 @@ meta-computational notation hides several incompatible choices; expose them.
   program. Any monotone-clock TM realization of that fixed decoder yields the
   corresponding machine-relative time-bounded Kolmogorov upper bound, cleanly
   separating Corollary III.9's certificate transfer from later universal-
-  machine simulation. Constructing an explicit
+  machine simulation. The latter generic transfer is now complete too: any
+  arbitrary `IsEfficientlyUniversal` machine inherits the certificate with its
+  compiler's additive description constant and an explicit polynomial clock.
+  Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
   remaining ambient parameters, constructing machine/runtime realizers for the
   sampler, checker, indexed-message evaluator, and concrete code family,
-  instantiating the efficient universal-machine transfer, the explicit RRV
+  instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional

@@ -100,6 +100,33 @@ theorem HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le_in
     (TM.timeBoundedKolmogorovComplexity_le_internal hproduceBound)
     (by exact_mod_cast hlength)
 
+theorem EncodedMessageDecoderRealization.efficientlyUniversal_transfer_internal
+    {messageLength listSize outputLength inputLength seedLength
+      universalTapes : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    {code : BooleanListCode messageLength listSize (Fin inputLength → Bool)}
+    {test : Finset (Fin outputLength → Bool)}
+    (realization : EncodedMessageDecoderRealization design code test)
+    (universal : TM universalTapes)
+    (huniversal : universal.IsEfficientlyUniversal) :
+    ∃ constant coefficient exponent,
+      ∀ (message : Fin messageLength → Bool) (bound : ℕ),
+        HasEncodedMessageCertificateWithin design code test message bound →
+          universal.timeBoundedKolmogorovComplexity (List.ofFn message)
+              (coefficient *
+                (bound + realization.time bound + 1) ^ exponent) ≤
+            (bound + constant : ℕ) := by
+  obtain ⟨compile, constant, clock, _hsim, hlength, htimed, hclock⟩ :=
+    huniversal realization.tapes realization.machine
+  obtain ⟨coefficient, exponent, htransfer⟩ :=
+    TM.polynomialTimeOverhead_kolmogorov_transfer_internal
+      htimed hlength hclock
+  refine ⟨constant, coefficient, exponent, ?_⟩
+  intro message bound hcertificate
+  exact htransfer (List.ofFn message) (realization.time bound) bound
+    (HasEncodedMessageCertificateWithin.timeBoundedKolmogorovComplexity_le_internal
+      realization hcertificate)
+
 theorem ReconstructionProgram.agreementProbability_eq_listCode_internal
     {messageLength listSize outputLength inputLength seedLength : ℕ}
     {design : NWDesign outputLength inputLength seedLength}

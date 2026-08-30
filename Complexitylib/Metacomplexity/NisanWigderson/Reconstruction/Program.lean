@@ -26,7 +26,8 @@ ceiling-logarithmic list-index cost beyond reconstruction. Its family layer
 instantiates the result at inverse accuracy `q` and exposes the exact semantic,
 polynomial-parameter, and uniform-machine obligations on the code family. A
 complete bitstring decoder and its realization interface expose the resulting
-machine-relative time-bounded Kolmogorov certificate.
+machine-relative time-bounded Kolmogorov certificate, together with its
+generic transfer to any efficiently universal machine.
 -/
 
 
