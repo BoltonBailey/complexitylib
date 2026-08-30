@@ -144,6 +144,22 @@ theorem exists_input_many_caughtSurvivorTuples {arity : ℕ}
   exists_input_many_caughtSurvivorTuples_internal
     target threshold inputs hall
 
+/-- At arity at least eight, target hardness above the explicit
+packing-plus-majority bound gives a one-input survivor shrink by `1/(2n)`. -/
+theorem hasShrinkExtension_two_mul_arity_of_circuitHardness
+    {arity threshold hardnessThreshold : ℕ} (harity : 8 ≤ arity)
+    (target : BitString arity → Bool)
+    (inputs : List (BitString arity))
+    (hfits :
+      survivorTupleMajoritySizeBound arity threshold ≤ hardnessThreshold)
+    (hhard :
+      ¬ (MCSP.Instance.ofFunction arity hardnessThreshold target).HasCircuitAtMost) :
+    HasShrinkExtension (2 * arity) target threshold inputs := by
+  letI : NeZero arity := ⟨by omega⟩
+  apply hasShrinkExtension_two_mul_arity harity
+  exact everySurvivorTupleCaught_of_circuitHardness
+    target inputs hfits hhard
+
 end AntiChecker
 
 end Complexity
