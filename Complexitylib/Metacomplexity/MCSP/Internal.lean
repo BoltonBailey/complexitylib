@@ -48,6 +48,12 @@ theorem function_inputOfIndex_internal (inst : Instance)
     inst.function (inputOfIndex index) = inst.table index := by
   simp [function, inputIndex_inputOfIndex_internal]
 
+theorem function_ofFunction_internal (arity threshold : ℕ)
+    (f : BitString arity → Bool) :
+    (ofFunction arity threshold f).function = f := by
+  funext input
+  simp [function, ofFunction, inputOfIndex_inputIndex_internal]
+
 theorem function_withThreshold_internal (inst : Instance) (threshold : ℕ) :
     (inst.withThreshold threshold).function = inst.function := by
   rfl

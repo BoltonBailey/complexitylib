@@ -65,6 +65,14 @@ def inputOfIndex {arity : ℕ} (index : Fin (2 ^ arity)) : BitString arity :=
 def function (inst : Instance) : BitString inst.arity → Bool :=
   fun input => inst.table (inputIndex input)
 
+/-- Package a Boolean function as its exact canonical truth table at a chosen
+MCSP threshold. -/
+def ofFunction (arity threshold : ℕ) (f : BitString arity → Bool) :
+    Instance where
+  arity := arity
+  table := fun index => f (inputOfIndex index)
+  threshold := threshold
+
 /-- Replace only the size threshold of an instance. -/
 def withThreshold (inst : Instance) (threshold : ℕ) : Instance :=
   { inst with threshold }

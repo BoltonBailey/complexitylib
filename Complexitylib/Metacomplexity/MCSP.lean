@@ -22,6 +22,7 @@ to the library's Boolean circuit complexity measure.
 
 - `MCSP.Instance` -- arity, a structurally exact truth table, and threshold
 - `MCSP.Instance.encode` / `decode?` -- canonical total binary codec
+- `MCSP.Instance.ofFunction` -- exact function-to-truth-table packaging
 - `MCSP.Instance.function` -- little-endian truth-table semantics
 - `MCSP.Instance.HasCircuitAtMost` -- direct circuit-witness predicate
 - `MCSP.Instance.verifyRawCircuit` -- executable canonical witness checker
@@ -67,6 +68,21 @@ the input. -/
     (index : Fin (2 ^ inst.arity)) :
     inst.function (inputOfIndex index) = inst.table index :=
   function_inputOfIndex_internal inst index
+
+@[simp] theorem arity_ofFunction (arity threshold : ℕ)
+    (f : BitString arity → Bool) :
+    (ofFunction arity threshold f).arity = arity := rfl
+
+@[simp] theorem threshold_ofFunction (arity threshold : ℕ)
+    (f : BitString arity → Bool) :
+    (ofFunction arity threshold f).threshold = threshold := rfl
+
+/-- Reading the canonical truth table of a packaged Boolean function recovers
+that function exactly. -/
+@[simp] theorem function_ofFunction (arity threshold : ℕ)
+    (f : BitString arity → Bool) :
+    (ofFunction arity threshold f).function = f :=
+  function_ofFunction_internal arity threshold f
 
 /-- Changing the threshold does not change the represented function. -/
 @[simp] theorem function_withThreshold (inst : Instance) (threshold : ℕ) :

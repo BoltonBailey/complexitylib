@@ -1881,7 +1881,13 @@ noncanonical string, and has an exact code-length theorem separating `2^n` from
 the binary widths of `n` and the threshold. The zero-arity convention matches
 `CircuitFamily`'s explicit size-zero bit; at positive arity the direct circuit
 witness predicate agrees exactly with `Circuit.sizeComplexity Basis.andOr2` and
-is monotone in the threshold. `MCSP.Instance.IsRawCircuitWitness` and
+is monotone in the threshold. A canonical `MCSP.Instance.ofFunction` constructor
+now materializes the exact truth table of any typed Boolean function and recovers
+that function pointwise. Transporting the checked Shannon bounds through this
+constructor gives a finite MCSP threshold window: for every arity `n >= 16`,
+some canonical table is rejected at `2^n/(5n)`, while every canonical table is
+accepted at `18*2^n/n`. These are quantitative instance facts, not a decision
+lower bound for MCSP. `MCSP.Instance.IsRawCircuitWitness` and
 `verifyRawCircuit` now reuse the canonical raw-circuit decoder and evaluator to
 check topology, size, and every truth-table row. Existence of such a finite
 witness is equivalent to the typed MCSP predicate, and every yes-instance has
@@ -2007,13 +2013,14 @@ the mathematics and must not be hidden behind notation.
   efficient-universality interface chooses one compiler and polynomial clock
   before the oracle, and the corresponding `C^{t,A}` transfer is uniform in
   that oracle.
-- [~] Prove finite incompressibility: fewer than `2^s` descriptions of length
+- [x] Prove finite incompressibility: fewer than `2^s` descriptions of length
   below `s` exist, so sufficiently large length slices contain strings of high
   complexity. Add the trivial print upper bound for an efficiently universal
   machine and clearly state its clock requirement. *The exact short-program
   cardinality, fixed-length compressible/incompressible counts, uniform density
   bounds, and high-complexity existence theorem are done for arbitrary machines
-  and clocks; the efficient-universal print upper bound remains.*
+  and clocks. Efficient universality now supplies the uniform printer theorem:
+  `|x| + O(1)` description length at one explicit polynomial clock.*
 - [ ] Formalize the classical noncomputability layer for unbounded plain or
   prefix-free complexity, separately from the decidable bounded measures. This
   should reuse a precise partial-computation or halting interface rather than a
@@ -2659,7 +2666,12 @@ corresponding finite randomized circuit semantics.
 
 **Current foundation.** `GapMCSP.sliceProblem` now fixes separate arity-indexed
 yes/no thresholds and has exact table-preserving reductions under the two
-required parameter inequalities. `BooleanHamming` supplies absolute distance,
+required parameter inequalities. Canonical truth tables now round-trip to typed
+Boolean functions, and the checked Shannon circuit bounds give the exact finite
+MCSP window from a no-instance at `2^n/(5n)` to universal acceptance at
+`18*2^n/n` for `n >= 16`. This calibrates the native MCSP scale but is not the
+weak model lower bound required by a magnification theorem. `BooleanHamming`
+supplies absolute distance,
 the triangle inequality, XOR translation, and an exact bridge to the rational
 relative distance already used by `BooleanListCode`. Boolean spheres and balls
 have the center-independent cardinalities `choose(n,r)` and
@@ -2827,6 +2839,9 @@ not evidence that either the collapse or the desired lower bound has been proved
 - [x] Add Hamming balls and the elementary packing/counting bounds used by the
   selected coding argument, including exact sphere/ball cardinalities and the
   finite separated-code packing theorem.
+- [x] Connect the exact Shannon lower and upper circuit bounds to canonical MCSP
+  codes, retaining the arity, threshold constants, and the distinction between
+  existence of hard truth tables and hardness of deciding MCSP.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
   existing formula semantics and prove its basic size monotonicity.
 - [M] Write the selected published magnification theorem's complete Lean signature
