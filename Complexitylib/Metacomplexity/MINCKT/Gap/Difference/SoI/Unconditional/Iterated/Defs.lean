@@ -101,6 +101,13 @@ structure IsRegularClock (clock : ℕ → ℕ) : Prop where
   /-- One clock application never gives less time. -/
   dominates : ∀ time, time ≤ clock time
 
+/-- A regular primitive clock with a uniform polynomial upper bound. -/
+structure IsAdmissibleClock (clock : ℕ → ℕ) : Prop extends
+    IsRegularClock clock where
+  /-- One polynomial controls the primitive clock at every input. -/
+  polynomiallyBounded : ∃ coefficient exponent, ∀ time,
+    clock time ≤ coefficient * (time + 1) ^ exponent
+
 end Iterated
 
 end Unconditional

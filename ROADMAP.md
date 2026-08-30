@@ -3291,11 +3291,13 @@ meta-computational notation hides several incompatible choices; expose them.
   The exact `p`, `p^2`, `p^3`, and `p^4` query schedule now has a reusable
   constructor: monotone widening clocks prove every clock alignment, while an
   explicit finite `LossBudget` retains both logarithmic inequalities instead
-  of hiding them in `O(log t)`. Constructing a concrete universal compiler,
-  proving polynomial growth of the iterated transforms, discharging the finite
-  losses for a sufficiently enlarged polynomial, connecting the induced
-  algorithm to `P`, adding the multiplicative Definition 6.5 variant, and the
-  hardness/class bridge remain.*
+  of hiding them in `O(log t)`. Finite iteration is now proved to preserve the
+  library's explicit polynomial bound, so an admissible primitive clock induces
+  admissible one-step ordinary and four-step conditional gap transforms.
+  Constructing a concrete universal compiler, discharging the finite losses for
+  a sufficiently enlarged polynomial, connecting the induced algorithm to `P`,
+  adding the multiplicative Definition 6.5 variant, and the hardness/class
+  bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3370,6 +3372,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Construct the exact iterated-clock plan and reduce all clock alignment
   and logarithmic accounting to monotonicity, widening, and two explicit finite
   loss inequalities.
+- [x] Prove that every fixed iterate of an explicitly polynomially bounded
+  clock is polynomially bounded, and derive admissibility of both gap-clock
+  parameter packages.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
