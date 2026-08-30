@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Hamming.Defs
 public import Complexitylib.Metacomplexity.Hamming.Internal
+public import Complexitylib.Metacomplexity.Hamming.Code
 
 /-!
 # Finite Boolean Hamming geometry
@@ -14,7 +15,9 @@ public import Complexitylib.Metacomplexity.Hamming.Internal
 This module supplies the exact finite geometry used by coding-based
 metacomplexity and hardness magnification: a metric on Boolean words, exact
 binomial sphere and ball counts, and the Hamming packing bound. Absolute and
-rational relative distance are connected explicitly.
+rational relative distance are connected explicitly. `BooleanCode` then packages
+injective finite encodings, exact rate, minimum distance, and exhaustive unique
+decoding without asserting an efficient implementation.
 -/
 
 

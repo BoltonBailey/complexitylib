@@ -2643,8 +2643,12 @@ relative distance already used by `BooleanListCode`. Boolean spheres and balls
 have the center-independent cardinalities `choose(n,r)` and
 `sum_{i <= r} choose(n,i)`, and separated finite codes satisfy the exact packing
 bound `|C| * volume(n,r) <= 2^n` below half their minimum distance. A concrete
-linear code, efficient encoder/decoder, and theorem-specific resource analysis
-remain missing.
+`BooleanCode` now separates injective encoding, exact rational rate, and a
+minimum-distance contract. It proves that a `k`-bit code has exactly `2^k`
+codewords, specializes the packing bound, and gives an exhaustive decoder whose
+candidate set is a singleton below half the minimum distance. This decoder is
+deliberately non-efficient: a concrete linear code, efficient encoder/decoder,
+and theorem-specific resource analysis remain missing.
 
 **Literature anchors.** The initial theorem menu should be drawn from the
 Oliveira--Santhanam hardness-magnification framework, the
@@ -2689,8 +2693,9 @@ uniformity, error, and quantifier conventions into a short design document.
   rate, relative distance, encoding/decoding correctness, circuit complexity of
   encoding, and whichever local/list/unique decoding guarantee the selected paper
   actually uses. Start with a finite linear code and exact parameters. *The
-  complete finite Hamming geometry, exact volumes, and packing bound are done;
-  rate, concrete codes, algorithms, and circuit complexity remain.*
+  complete finite Hamming geometry, exact volumes, abstract injective-code rate,
+  minimum-distance packing, and exhaustive unique decoding are done; concrete
+  linear codes, efficient algorithms, and circuit complexity remain.*
 - [~] Define parameter-preserving reductions between promise families. Prove
   identity/composition while retaining yes/no thresholds, output length, resource
   blow-up, randomness, and error rather than projecting immediately to a language
