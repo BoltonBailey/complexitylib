@@ -3266,7 +3266,13 @@ meta-computational notation hides several incompatible choices; expose them.
   `C^tau(x|y) <= B+log_2(tau)` yields a total completion that contains every
   yes-instance and excludes every no-instance. Thresholding it solves the
   promise, and membership of that completion in `P` implies `GapMINCKT` is in
-  `PromiseP`. Constructing the concrete SoI-based estimator, connecting its
+  `PromiseP`. The adjusted-difference cancellation layer is complete as well:
+  a joint estimate, condition estimate, and explicit rounding correction define
+  `B = J-D-c`; two pre-cancellation accounting inequalities suffice to prove
+  the estimator sandwich despite natural truncated subtraction and possible
+  `WithTop` values. This result composes directly with the semantic solver and
+  `PromiseP` criterion. Instantiating those accounting inequalities from SoI,
+  the upper chain rule, and concrete unconditional estimators, connecting the
   algorithm to `P`, adding the multiplicative Definition 6.5 variant, and the
   hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
@@ -3328,6 +3334,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Separate the search-oriented GapMINKT parameters from Hirahara's exact
   logarithmic Definition 3.3, and prove the corresponding Fact 3.4 estimator
   solver and `PromiseP` completion criterion.
+- [x] Isolate Proposition 6.2's adjusted-difference estimator and prove that its
+  two pre-cancellation accounting inequalities imply the full conditional
+  estimator sandwich, solver, and `PromiseP` criterion.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
