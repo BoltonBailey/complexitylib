@@ -1771,6 +1771,12 @@ background with one normalized tail coordinate and an independent candidate
 bit. Candidate acceptance is proved equal to the current hybrid, target-bit
 acceptance equal to the next hybrid, and the canonical predictor therefore has
 success probability exactly `1/2 + hybridGap_i`.
+Finite Boolean dependency tables now provide the general hardwiring primitive
+needed by reconstruction. For a function depending only on a finite coordinate
+set `S`, the canonical table on restrictions to `S` reconstructs every value,
+has exactly `2^|S|` entries, and bounds the function's finite range by the same
+quantity. This layer is independent of NW designs and can also support locality
+and magnification arguments.
 Composing all finite layers now gives the concrete probabilistic NW conclusion:
 every positive-density random-string test against a low-complexity NW generator
 admits a polarity and coordinate whose canonical predictor succeeds with
@@ -2933,9 +2939,12 @@ meta-computational notation hides several incompatible choices; expose them.
   finite equivalence. The resulting actual-hybrid predictor succeeds with
   probability exactly `1/2 + hybridGap_i`. This is now composed with the dense-
   random test and short-seed theorems to obtain a concrete predictor with
-  success at least `1/2 + delta/m`. Hardwiring overlap-dependent values within
-  the proved budget, the randomized certificate search, and the final
-  reconstruction remain.*
+  success at least `1/2 + delta/m`. The generic finite Boolean-dependency layer
+  now reconstructs any finitely dependent function from a canonical table of
+  exactly `2^|S|` entries and proves the matching finite-range bound. Proving
+  that each challenged predecessor block depends only on its NW intersection,
+  summing those table sizes within the overlap budget, the randomized
+  certificate search, and the final reconstruction remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
