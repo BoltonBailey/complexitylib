@@ -12,6 +12,7 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Approximation
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Selection
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Rounds
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString
 
 /-!
@@ -32,7 +33,8 @@ cardinality bound. Its survivor-count layer identifies anti-checking exactly
 with reducing the number of consistent canonical candidates to zero. Relative
 estimates of that count use an exact cross-multiplied natural-number contract,
 and minimizing those estimates preserves survivor shrinkage with explicit loss.
-The good-string layer supplies exact tuple counts and finite averaging.
+Shrink traces compose those one-round bounds exactly. The good-string layer
+supplies exact tuple counts and finite averaging.
 -/
 
 
