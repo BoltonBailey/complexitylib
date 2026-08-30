@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.NisanWigderson.Defs
+public import Complexitylib.Metacomplexity.NisanWigderson.Encoding
 public import Complexitylib.Metacomplexity.NisanWigderson.Internal
 public import Complexitylib.Metacomplexity.NisanWigderson.Hardwiring
 public import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction

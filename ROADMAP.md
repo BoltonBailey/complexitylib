@@ -3141,14 +3141,23 @@ meta-computational notation hides several incompatible choices; expose them.
   half-success guarantee for the current test. A fully family-uniform oracle
   realization contract now chooses one decoder machine and one set of compiler
   constants before every code parameter, design, test, and message. It charges
-  exactly `2 * |designEncoding| + 2` bits around the reconstruction description
-  while keeping the test as oracle access. Thus the remaining uniformity work is
-  a concrete bounded design codec and machine construction, not a hidden
-  compiler constant.
+  the design around the reconstruction description while keeping the test as
+  oracle access. The design representation is no longer abstract: a canonical
+  row-major codec writes every seed coordinate in exactly
+  `clog_2(seedLength)` bits, has total length
+  `outputLength * inputLength * clog_2(seedLength)`, and has an executable
+  decoder that rejects malformed lengths, out-of-range coordinates, and
+  noninjective blocks while round-tripping every valid design. The uniform
+  oracle realization now uses this codec by construction, so its framed cost is
+  exactly twice that rectangular length plus two framing bits and the
+  reconstruction-description bound. Thus the remaining uniformity work is the
+  concrete decoder-machine construction and runtime proof, not a hidden codec
+  or compiler constant.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
-  bounded ambient/design codec, constructing machine/runtime realizers for the
-  sampler, checker, indexed-message evaluator, and concrete code family,
+  bounded oracle-free ambient codec, constructing machine/runtime realizers for
+  the canonical design parser, sampler, checker, indexed-message evaluator, and
+  concrete code family,
   instantiating a concrete oracle-universal machine,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*

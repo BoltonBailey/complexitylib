@@ -253,6 +253,22 @@ width. -/
   simp only [Fin.toBits]
   simp [Nat.fromBits_toBits hfits, index.isLt]
 
+/-- Successful finite-index decoding recovers the exact fixed-width input. -/
+theorem Fin.toBits_eq_of_fromBits?_eq_some
+    {size : ℕ} {bits : List Bool} {index : Fin size}
+    (hdecode : Fin.fromBits? size bits = some index) :
+    index.toBits = bits := by
+  unfold Fin.fromBits? at hdecode
+  split at hdecode
+  · rename_i hlength
+    split at hdecode
+    · cases hdecode
+      simp only [Fin.toBits]
+      rw [← hlength]
+      exact Nat.toBits_fromBits bits
+    · simp at hdecode
+  · simp at hdecode
+
 /-- Finite-index decoding fails exactly on a malformed width or an
 out-of-range decoded value. -/
 theorem Fin.fromBits?_eq_none_iff (size : ℕ) (bits : List Bool) :

@@ -29,7 +29,8 @@ membership queries and retains the original reconstruction-description bound.
 Its efficiently universal specialization exposes one transfer law valid for
 all finite test oracles before applying the half-success reconstruction result.
 A fully uniform oracle specialization chooses the compiler constants before
-all numeric parameters and designs, charging only the framed design encoding.
+all numeric parameters and designs, charging the exact canonical fixed-width
+design encoding.
 -/
 
 
@@ -79,8 +80,10 @@ theorem uniformOracleTimeBoundedKolmogorovComplexity_le
     realization.machine.timeBoundedKolmogorovComplexity
         (finiteTestOracle test) (List.ofFn message)
         (realization.time
-          (realization.framedDescriptionBound design bound)) ≤
-      (realization.framedDescriptionBound design bound : WithTop ℕ) :=
+          (UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
+            design bound)) ≤
+      (UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
+        design bound : WithTop ℕ) :=
   hcertificate.uniformOracleTimeBoundedKolmogorovComplexity_le_internal
     realization
 
@@ -119,6 +122,38 @@ end UniformEncodedMessageDecoderRealization
 
 namespace UniformOracleEncodedMessageDecoderRealization
 
+/-- Canonical design framing has an exact parameter-only bit cost. -/
+@[simp] theorem framedDescriptionBound_eq
+    {family : BooleanListCodeFamily}
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength)
+    (descriptionBound : ℕ) :
+    framedDescriptionBound design descriptionBound =
+      2 * (outputLength *
+          family.coordinateLength messageLength inverseAccuracy *
+          Fin.bitWidth seedLength) + 2 + descriptionBound :=
+  framedDescriptionBound_eq_internal design descriptionBound
+
+/-- At inverse-density parameters, canonical design framing makes the complete
+description bound an explicit arithmetic expression. -/
+@[simp] theorem inverseDensityFramedDescriptionBound_eq
+    {family : BooleanListCodeFamily}
+    (bounds : family.PolynomialParameterBounds)
+    {messageLength outputLength inverseDensity seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength)
+    (budget : ℕ) :
+    inverseDensityFramedDescriptionBound bounds design budget =
+      2 * (outputLength *
+          family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity) *
+          Fin.bitWidth seedLength) + 2 +
+        inverseDensityDescriptionBound family bounds messageLength outputLength
+          inverseDensity seedLength budget :=
+  inverseDensityFramedDescriptionBound_eq_internal bounds design budget
+
 /-- One oracle-universal compiler constant and polynomial clock transfer every
 certificate across all lengths, accuracies, designs, tests, and messages for a
 uniform family decoder. Design framing is explicit and the test remains an
@@ -139,11 +174,11 @@ theorem efficientlyUniversal_transfer
           universal.timeBoundedKolmogorovComplexity
               (finiteTestOracle test) (List.ofFn message)
               (coefficient *
-                (realization.framedDescriptionBound design bound +
+                (framedDescriptionBound design bound +
                   realization.time
-                    (realization.framedDescriptionBound design bound) + 1) ^
+                    (framedDescriptionBound design bound) + 1) ^
                     exponent) ≤
-            (realization.framedDescriptionBound design bound + constant : ℕ) :=
+            (framedDescriptionBound design bound + constant : ℕ) :=
   realization.efficientlyUniversal_transfer_internal universal huniversal
 
 end UniformOracleEncodedMessageDecoderRealization
@@ -782,13 +817,12 @@ theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity
             universal.timeBoundedKolmogorovComplexity
                 (finiteTestOracle test) (List.ofFn message)
                 (coefficient *
-                  (realization.inverseDensityFramedDescriptionBound bounds
-                      design budget +
+                  (inverseDensityFramedDescriptionBound bounds design budget +
                     realization.time
-                      (realization.inverseDensityFramedDescriptionBound bounds
-                        design budget) + 1) ^ exponent) ≤
-              (realization.inverseDensityFramedDescriptionBound bounds
-                design budget + constant : ℕ) :=
+                      (inverseDensityFramedDescriptionBound bounds design
+                        budget) + 1) ^ exponent) ≤
+              (inverseDensityFramedDescriptionBound bounds design budget +
+                constant : ℕ) :=
   half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_internal
     realization universal huniversal
 

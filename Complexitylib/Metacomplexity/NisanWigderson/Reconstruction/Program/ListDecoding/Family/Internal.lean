@@ -12,6 +12,7 @@ public
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Oracle.Internal
+import Complexitylib.Metacomplexity.NisanWigderson.Encoding.Internal
 import Complexitylib.Models.TuringMachine.OutputSemantics.Internal
 
 /-!
@@ -68,13 +69,16 @@ theorem uniformOracleTimeBoundedKolmogorovComplexity_le_internal
     realization.machine.timeBoundedKolmogorovComplexity
         (finiteTestOracle test) (List.ofFn message)
         (realization.time
-          (realization.framedDescriptionBound design bound)) ≤
-      (realization.framedDescriptionBound design bound : WithTop ℕ) := by
+          (UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
+            design bound)) ≤
+      (UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
+        design bound : WithTop ℕ) := by
   obtain ⟨description, hdecode, hlength⟩ := hcertificate
   have hproduce := realization.correct design test description message hdecode
   have hframedLength :
-      (pair (realization.designEncoding design) description).length ≤
-        realization.framedDescriptionBound design bound := by
+      (pair design.encode description).length ≤
+        UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound
+          design bound := by
     simp [UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound]
     omega
   have hproduceBound := hproduce.mono
@@ -84,6 +88,41 @@ theorem uniformOracleTimeBoundedKolmogorovComplexity_le_internal
     (WithTop.coe_le_coe.mpr hframedLength)
 
 end HasEncodedMessageCertificateWithin
+
+namespace UniformOracleEncodedMessageDecoderRealization
+
+theorem framedDescriptionBound_eq_internal
+    {family : BooleanListCodeFamily}
+    {messageLength inverseAccuracy outputLength seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength inverseAccuracy) seedLength)
+    (descriptionBound : ℕ) :
+    framedDescriptionBound design descriptionBound =
+      2 * (outputLength *
+          family.coordinateLength messageLength inverseAccuracy *
+          Fin.bitWidth seedLength) + 2 + descriptionBound := by
+  simp [UniformOracleEncodedMessageDecoderRealization.framedDescriptionBound,
+    length_encode_internal]
+
+theorem inverseDensityFramedDescriptionBound_eq_internal
+    {family : BooleanListCodeFamily}
+    (bounds : family.PolynomialParameterBounds)
+    {messageLength outputLength inverseDensity seedLength : ℕ}
+    (design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength)
+    (budget : ℕ) :
+    inverseDensityFramedDescriptionBound bounds design budget =
+      2 * (outputLength *
+          family.coordinateLength messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity) *
+          Fin.bitWidth seedLength) + 2 +
+        inverseDensityDescriptionBound family bounds messageLength outputLength
+          inverseDensity seedLength budget := by
+  simp [inverseDensityFramedDescriptionBound,
+    framedDescriptionBound_eq_internal]
+
+end UniformOracleEncodedMessageDecoderRealization
 
 namespace UniformEncodedMessageDecoderRealization
 
@@ -143,11 +182,11 @@ theorem efficientlyUniversal_transfer_internal
           universal.timeBoundedKolmogorovComplexity
               (finiteTestOracle test) (List.ofFn message)
               (coefficient *
-                (realization.framedDescriptionBound design bound +
+                (framedDescriptionBound design bound +
                   realization.time
-                    (realization.framedDescriptionBound design bound) + 1) ^
+                    (framedDescriptionBound design bound) + 1) ^
                     exponent) ≤
-            (realization.framedDescriptionBound design bound + constant : ℕ) := by
+            (framedDescriptionBound design bound + constant : ℕ) := by
   obtain ⟨compile, constant, clock, _hsim, hlength, htimed, hclock⟩ :=
     huniversal realization.tapes realization.machine
   obtain ⟨coefficient, exponent, htransfer⟩ :=
@@ -157,8 +196,8 @@ theorem efficientlyUniversal_transfer_internal
   intro messageLength inverseAccuracy outputLength seedLength design test
     message bound hcertificate
   exact htransfer (finiteTestOracle test) (List.ofFn message)
-    (realization.time (realization.framedDescriptionBound design bound))
-    (realization.framedDescriptionBound design bound)
+    (realization.time (framedDescriptionBound design bound))
+    (framedDescriptionBound design bound)
     (hcertificate.uniformOracleTimeBoundedKolmogorovComplexity_le_internal
       realization)
 
@@ -820,13 +859,12 @@ theorem half_le_efficientlyUniversalKolmogorovComplexity_of_inverseDensity_inter
             universal.timeBoundedKolmogorovComplexity
                 (finiteTestOracle test) (List.ofFn message)
                 (coefficient *
-                  (realization.inverseDensityFramedDescriptionBound bounds
-                      design budget +
+                  (inverseDensityFramedDescriptionBound bounds design budget +
                     realization.time
-                      (realization.inverseDensityFramedDescriptionBound bounds
-                        design budget) + 1) ^ exponent) ≤
-              (realization.inverseDensityFramedDescriptionBound bounds
-                design budget + constant : ℕ) := by
+                      (inverseDensityFramedDescriptionBound bounds design
+                        budget) + 1) ^ exponent) ≤
+              (inverseDensityFramedDescriptionBound bounds design budget +
+                constant : ℕ) := by
   obtain ⟨constant, coefficient, exponent, htransfer⟩ :=
     realization.efficientlyUniversal_transfer_internal universal huniversal
   refine ⟨constant, coefficient, exponent, ?_⟩
