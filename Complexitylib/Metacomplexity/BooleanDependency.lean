@@ -14,7 +14,9 @@ public import Complexitylib.Metacomplexity.BooleanDependency.Internal
 A function depending on a finite coordinate set can be represented by its
 canonical table on assignments to that set. This module exposes exact
 reconstruction, the `2^|S|` table-entry count, finiteness of the function's
-range, and the corresponding range-cardinality bound.
+range, and the corresponding range-cardinality bound. It also splits total
+assignments bijectively across a coordinate set and its complement and proves
+that uniform restriction is exactly uniform.
 -/
 
 
@@ -23,6 +25,50 @@ public section
 namespace Complexity
 
 namespace BooleanDependency
+
+/-- Splitting and then merging a total assignment recovers it exactly. -/
+@[simp] theorem mergeAssignments_split {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate) (input : coordinate → Bool) :
+    mergeAssignments coordinates
+        (restrict coordinates input, restrict coordinatesᶜ input) = input :=
+  (assignmentSplitEquiv coordinates).left_inv input
+
+/-- Restricting a merged assignment to its selected coordinates recovers the
+selected component. -/
+@[simp] theorem restrict_mergeAssignments_left {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate)
+    (selected : coordinates → Bool)
+    (outside : (coordinatesᶜ : Finset coordinate) → Bool) :
+    restrict coordinates (mergeAssignments coordinates (selected, outside)) =
+      selected :=
+  congrArg Prod.fst ((assignmentSplitEquiv coordinates).right_inv
+    (selected, outside))
+
+/-- Restricting a merged assignment to the complement recovers the complement
+component. -/
+@[simp] theorem restrict_mergeAssignments_right {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate)
+    (selected : coordinates → Bool)
+    (outside : (coordinatesᶜ : Finset coordinate) → Bool) :
+    restrict coordinatesᶜ
+        (mergeAssignments coordinates (selected, outside)) = outside :=
+  congrArg Prod.snd ((assignmentSplitEquiv coordinates).right_inv
+    (selected, outside))
+
+/-- Restricting a uniformly random total Boolean assignment to any finite
+coordinate subset produces the exact uniform distribution on subset
+assignments. -/
+theorem uniformProbability_restrict {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate)
+    (event : (coordinates → Bool) → Prop) [DecidablePred event] :
+    uniformProbability (Finset.univ.filter fun input : coordinate → Bool =>
+        event (restrict coordinates input)) =
+      uniformProbability (Finset.univ.filter event) :=
+  uniformProbability_restrict_internal coordinates event
 
 /-- Extending a restricted assignment recovers every selected coordinate. -/
 @[simp] theorem extendByFalse_restrict_apply {coordinate : Type*}

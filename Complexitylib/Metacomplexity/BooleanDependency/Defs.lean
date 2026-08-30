@@ -5,8 +5,10 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.AverageCase.FiniteEnsemble.Defs
 public import Mathlib.Logic.Function.DependsOn
 public import Mathlib.Data.Finset.Card
+public import Mathlib.Data.Finset.BooleanAlgebra
 
 /-!
 # Finite Boolean dependency tables -- definitions
@@ -28,6 +30,41 @@ namespace BooleanDependency
 def restrict {coordinate : Type*} (coordinates : Finset coordinate)
     (input : coordinate → Bool) : coordinates → Bool :=
   fun index => input index
+
+/-- Merge Boolean assignments on a finite coordinate set and its complement. -/
+def mergeAssignments {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate)
+    (assignments : (coordinates → Bool) ×
+      ((coordinatesᶜ : Finset coordinate) → Bool)) : coordinate → Bool :=
+  fun index =>
+    if hindex : index ∈ coordinates then
+      assignments.1 ⟨index, hindex⟩
+    else
+      assignments.2 ⟨index, by simpa using hindex⟩
+
+/-- A total Boolean assignment is equivalently its restrictions to a finite
+coordinate set and its complement. -/
+def assignmentSplitEquiv {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate) :
+    (coordinate → Bool) ≃
+      (coordinates → Bool) ×
+        ((coordinatesᶜ : Finset coordinate) → Bool) where
+  toFun input :=
+    (restrict coordinates input, restrict coordinatesᶜ input)
+  invFun := mergeAssignments coordinates
+  left_inv input := by
+    funext index
+    by_cases hindex : index ∈ coordinates
+    · simp [mergeAssignments, restrict, hindex]
+    · simp [mergeAssignments, restrict, hindex]
+  right_inv assignments := by
+    apply Prod.ext <;> funext index
+    · simp [mergeAssignments, restrict, index.property]
+    · have hindex : index.val ∉ coordinates := by
+        exact Finset.mem_compl.mp index.property
+      simp [mergeAssignments, restrict, hindex]
 
 /-- Extend an assignment on selected coordinates by `false` everywhere else. -/
 def extendByFalse {coordinate : Type*} [DecidableEq coordinate]

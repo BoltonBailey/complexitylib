@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.BooleanDependency.Defs
+import Complexitylib.Classes.AverageCase.FiniteEnsemble.Internal
 public import Mathlib.Data.Set.Finite.Range
 public import Mathlib.SetTheory.Cardinal.Finite
 
@@ -19,6 +20,29 @@ public section
 namespace Complexity
 
 namespace BooleanDependency
+
+theorem uniformProbability_restrict_internal {coordinate : Type*}
+    [Fintype coordinate] [DecidableEq coordinate]
+    (coordinates : Finset coordinate)
+    (event : (coordinates → Bool) → Prop) [DecidablePred event] :
+    uniformProbability (Finset.univ.filter fun input : coordinate → Bool =>
+        event (restrict coordinates input)) =
+      uniformProbability (Finset.univ.filter event) := by
+  have htransport := uniformProbability_equiv_internal
+    (assignmentSplitEquiv coordinates)
+    (fun sample : (coordinates → Bool) ×
+        ((coordinatesᶜ : Finset coordinate) → Bool) =>
+      event sample.1)
+  have hproduct := uniformProbability_product_internal event
+    (fun _outside : (coordinatesᶜ : Finset coordinate) → Bool => True)
+  have hproduct' :
+      uniformProbability (Finset.univ.filter fun sample :
+          (coordinates → Bool) ×
+            ((coordinatesᶜ : Finset coordinate) → Bool) =>
+        event sample.1) =
+        uniformProbability (Finset.univ.filter event) := by
+    simpa [uniformProbability_univ_internal] using hproduct
+  simpa [assignmentSplitEquiv] using htransport.trans hproduct'
 
 theorem extendByFalse_restrict_apply_internal {coordinate : Type*}
     [DecidableEq coordinate] (coordinates : Finset coordinate)
