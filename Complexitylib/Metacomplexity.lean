@@ -15,6 +15,7 @@ public import Complexitylib.Metacomplexity.StatisticalTest
 public import Complexitylib.Metacomplexity.NisanWigderson
 public import Complexitylib.Metacomplexity.MINKT
 public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary
+public import Complexitylib.Metacomplexity.MINCKT
 public import Complexitylib.Metacomplexity.MCSP
 
 /-!
@@ -23,5 +24,6 @@ public import Complexitylib.Metacomplexity.MCSP
 Public aggregation module for ordinary and oracle-relative machine description
 complexity, finite incompressibility, dependency-table codecs, finite list
 decoding and Hamming geometry, and the minimum-resource problems built from
-them, including canonical MCSP and strict-threshold MINKT instances.
+them, including canonical MCSP, strict-threshold MINKT, and conditional MinKT
+instances.
 -/

@@ -2964,8 +2964,11 @@ meta-computational notation hides several incompatible choices; expose them.
   data bits and in-bounds tests, thereby retaining both contents and length.
   The resulting machine-relative plain and bounded conditional complexities,
   threshold/witness/clock laws, uniform simulation transfer, and
-  condition-ignoring ordinary-machine sanity theorem are complete. A paper-
-  specific evaluator must still prove equivalence to this query convention.*
+  condition-ignoring ordinary-machine sanity theorem are complete. Canonical
+  `MINCKT.Instance` codes now represent `(x,y,1^t)` by a right-associated
+  self-delimiting tuple, with exact decoding, code length, direct-program
+  threshold semantics, and clock/threshold monotonicity. A paper-specific
+  evaluator must still prove equivalence to this query convention.*
 - Computational depth is now defined machine-relatively both in Hirahara's
   two-clock form `cd_M^(s,t)(x) = C_M^s(x) - C_M^t(x)` for `s <= t` and in the
   usual plain-limit form `C_M^s(x) - C_M(x)`. The extended-natural difference
@@ -3205,7 +3208,8 @@ meta-computational notation hides several incompatible choices; expose them.
   Machine-relative one- and two-clock computational depth are also complete,
   including exact additive decomposition, finiteness, upper-bound and zero
   criteria, both clock monotonicities, plain-limit specialization, and exact
-  telescoping. A finite upper-chain
+  telescoping. The canonical conditional MinKT triple codec and its exact
+  bounded-program semantics are complete. A finite upper-chain
   theorem now derives paired bounded complexity from an explicit operational
   program-composition contract and arbitrary compiler-length bound. Canonical
   program pairing is instantiated in both orientations, retaining the exact
@@ -3287,6 +3291,8 @@ formalization targets and should be stated positively under their exact names.
   paired-description upper bound.
 - [x] Add the condition-first composition orientation and derive the additive
   paired upper bound directly in terms of attained minimum complexities.
+- [x] Add canonical `(x,y,1^t)` conditional MinKT instances with exact codec,
+  witness semantics, and clock/threshold monotonicity.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 
