@@ -1759,6 +1759,13 @@ budget. The associated Nisan--Wigderson generator is a `BitGenerator d m`.
 For this generator, a positive-density time-bounded-random test now yields an
 oriented adjacent hybrid gap of at least `delta / m`; a direct seed-production
 corollary discharges the low-complexity premise whenever `d < r`.
+The algebraic heart of Yao next-bit prediction is now exact over every
+nonempty finite background space. If substituting the target bit for an
+independent uniform candidate raises a Boolean test's acceptance by `gamma`,
+the predictor that returns the candidate on acceptance and its complement on
+rejection succeeds with probability exactly `1/2 + gamma`. The proof expands
+the two candidate fibers and normalizes their exact finite counts; connecting
+this generic experiment to an NW hybrid coordinate is the next coding layer.
 `ShortProgram k` now packages all binary
 programs of length at most `k` and has proved cardinality `2^(k+1) - 1`.
 Deterministic output uniqueness injects every fixed-length time-bounded
@@ -2908,8 +2915,11 @@ meta-computational notation hides several incompatible choices; expose them.
   seed restriction, and generator are now defined and their basic finite laws
   proved. The dense-random test theorem is instantiated to this generator,
   including the direct short-seed-description premise. The explicit RRV weak-
-  design construction, next-bit prediction, and reconstruction from the
-  predictor remain.*
+  design construction remains. The exact abstract next-bit prediction identity
+  `success = 1/2 + targetAcceptance - candidateAcceptance` is proved for every
+  nonempty finite background space. Decomposing an NW hybrid's random tail into
+  a candidate coordinate and its complement, then hardwiring overlap-dependent
+  values within the proved budget, remain before full reconstruction.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction
