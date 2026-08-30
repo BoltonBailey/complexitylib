@@ -158,6 +158,54 @@ theorem exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace
   exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace_internal
     family target
 
+/-- Projecting a canonical selection state to sample inputs recovers each
+selected input exactly. -/
+theorem unpackSample_selectionTraceState_projection
+    {arity rounds : ℕ} (target : BitString arity → Bool)
+    (inputs : Fin rounds → BitString arity) (sample : Fin rounds) :
+    unpackSample
+        (selectionTraceState target inputs ∘
+          selectionSampleOutputMap arity rounds) sample =
+      inputs sample :=
+  unpackSample_selectionTraceState_projection_internal
+    target inputs sample
+
+/-- The projected circuit evaluates by selecting the sample-input coordinates
+from the full iterated state. -/
+@[simp] theorem eval_fullSelectionSamplesCircuit
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity)
+    (table : BitString (2 ^ arity)) :
+    (fullSelectionSamplesCircuit family).2.eval table =
+      (fullSelectionStateCircuit family).2.eval table ∘
+        selectionSampleOutputMap arity (requiredRoundCount beta arity) :=
+  eval_fullSelectionSamplesCircuit_internal family table
+
+/-- Projecting away the labels and carried truth table costs exactly one
+output gate per required-round sample bit. -/
+@[simp] theorem size_fullSelectionSamplesCircuit
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity) :
+    (fullSelectionSamplesCircuit family).2.size =
+      (fullSelectionStateCircuit family).2.size +
+        requiredRoundCount beta arity * arity :=
+  size_fullSelectionSamplesCircuit_internal family
+
+/-- The projected circuit prints exactly the inputs of a full greedy
+estimate-selection trace. -/
+theorem exists_eval_fullSelectionSamplesCircuit_isEstimateSelectionTrace
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool) :
+    ∃ inputs : Fin (requiredRoundCount beta arity) → BitString arity,
+      unpackSamples
+          ((fullSelectionSamplesCircuit family).2.eval (truthTable target)) =
+          List.ofFn inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) :=
+  exists_eval_fullSelectionSamplesCircuit_isEstimateSelectionTrace_internal
+    family target
+
 end AntiCheckerLemma
 
 end Magnification

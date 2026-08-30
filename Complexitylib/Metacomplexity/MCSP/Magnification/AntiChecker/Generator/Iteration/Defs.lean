@@ -49,6 +49,21 @@ def selectionTraceState {arity rounds : ℕ}
   selectionRoundInput (truthTable target)
     (packTargetSamples target inputs)
 
+/-- Project the input coordinates from the labeled rows carried by a selection
+state, discarding the preserved truth table and every output label. -/
+def selectionSampleOutputMap (arity rounds : ℕ) :
+    Fin (rounds * arity) → Fin (selectionRoundInputWidth arity rounds) :=
+  fun output =>
+    let position := finProdFinEquiv.symm output
+    Fin.natAdd (2 ^ arity)
+      (finProdFinEquiv (position.1, position.2.castSucc))
+
+instance (beta : PositiveRationalScale) (arity : ℕ) [NeZero arity] :
+    NeZero (requiredRoundCount beta arity * arity) :=
+  ⟨by
+    simp [requiredRoundCount, roundShrinkDenominator, roundBlockCount,
+      NeZero.ne arity]⟩
+
 /-- Removing the final round preserves the required-round upper bound. -/
 theorem selectionPrefixPriorBound
     {beta : PositiveRationalScale} {arity rounds : ℕ}
@@ -88,6 +103,19 @@ noncomputable def fullSelectionStateCircuit
         (selectionRoundInputWidth arity
           (requiredRoundCount beta arity)) internalGates :=
   selectionPrefixCircuit family (requiredRoundCount beta arity) le_rfl
+
+/-- Full selection circuit with its carried state projected down to the packed
+input coordinates of the required-round sample vector. -/
+noncomputable def fullSelectionSamplesCircuit
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity) :
+    Σ internalGates,
+      Circuit Basis.andOr2 (2 ^ arity)
+        (requiredRoundCount beta arity * arity) internalGates := by
+  let state := fullSelectionStateCircuit family
+  let samples := Circuit.projectInputs
+    (selectionSampleOutputMap arity (requiredRoundCount beta arity))
+  exact ⟨_, samples.compose state.2⟩
 
 end AntiCheckerLemma
 

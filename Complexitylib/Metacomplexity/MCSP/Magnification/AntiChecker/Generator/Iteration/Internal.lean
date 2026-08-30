@@ -276,6 +276,57 @@ theorem exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace_internal
     exists_eval_selectionPrefixCircuit_isEstimateSelectionTrace_internal
       family target (le_refl (requiredRoundCount beta arity))
 
+theorem unpackSample_selectionTraceState_projection_internal
+    {arity rounds : ℕ} (target : BitString arity → Bool)
+    (inputs : Fin rounds → BitString arity) (sample : Fin rounds) :
+    unpackSample
+        (selectionTraceState target inputs ∘
+          selectionSampleOutputMap arity rounds) sample =
+      inputs sample := by
+  funext coordinate
+  simp [unpackSample, selectionTraceState, selectionSampleOutputMap,
+    selectionRoundInput]
+
+theorem eval_fullSelectionSamplesCircuit_internal
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity)
+    (table : BitString (2 ^ arity)) :
+    (fullSelectionSamplesCircuit family).2.eval table =
+      (fullSelectionStateCircuit family).2.eval table ∘
+        selectionSampleOutputMap arity (requiredRoundCount beta arity) := by
+  unfold fullSelectionSamplesCircuit
+  rw [Circuit.eval_compose, Circuit.eval_projectInputs]
+
+theorem size_fullSelectionSamplesCircuit_internal
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity) :
+    (fullSelectionSamplesCircuit family).2.size =
+      (fullSelectionStateCircuit family).2.size +
+        requiredRoundCount beta arity * arity := by
+  unfold fullSelectionSamplesCircuit
+  rw [Circuit.size_compose, Circuit.size_projectInputs]
+
+theorem exists_eval_fullSelectionSamplesCircuit_isEstimateSelectionTrace_internal
+    {overhead arity : ℕ} {beta : PositiveRationalScale} [NeZero arity]
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool) :
+    ∃ inputs : Fin (requiredRoundCount beta arity) → BitString arity,
+      unpackSamples
+          ((fullSelectionSamplesCircuit family).2.eval (truthTable target)) =
+          List.ofFn inputs ∧
+        AntiChecker.IsEstimateSelectionTrace
+          (family.extensionEstimator target) (List.ofFn inputs) := by
+  obtain ⟨inputs, hstate, htrace⟩ :=
+    exists_eval_fullSelectionStateCircuit_isEstimateSelectionTrace_internal
+      family target
+  refine ⟨inputs, ?_, htrace⟩
+  rw [eval_fullSelectionSamplesCircuit_internal, hstate]
+  unfold unpackSamples
+  apply congrArg List.ofFn
+  funext sample
+  exact unpackSample_selectionTraceState_projection_internal
+    target inputs sample
+
 end AntiCheckerLemma
 
 end Magnification
