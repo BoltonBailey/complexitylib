@@ -2895,8 +2895,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   contract now proves zero preservation and transfers comparison of estimates to
   scaled comparison of true survivor counts. Finite approximate minimization is
   formalized and, under `4*d ≤ p+3`, converts a true `1/d` survivor shrink into
-  a certified `1/(2*d)` shrink for the selected input. The conditional counter
-  circuits, combinatorial good-string lemma, and round composition remain.*
+  a certified `1/(2*d)` shrink for the selected input. The good-string layer now
+  has exact weighted-binomial counts for caught survivor tuples, the exact bridge
+  from disagreement density to survivor shrinkage, and the max-fiber averaging
+  step over all inputs. The binomial-tail estimate, majority-circuit hardness
+  bridge, conditional counter circuits, and round composition remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
