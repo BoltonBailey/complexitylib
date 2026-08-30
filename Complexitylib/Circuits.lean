@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.BinaryComparison
 public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.InputReindexing
 public import Complexitylib.Circuits.Majority
+public import Complexitylib.Circuits.Multiplexer
 public import Complexitylib.Circuits.Dependency
 public import Complexitylib.Circuits.DecisionTree
 public import Complexitylib.Circuits.DecisionTree.Finite
