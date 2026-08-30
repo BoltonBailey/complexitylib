@@ -3253,9 +3253,15 @@ meta-computational notation hides several incompatible choices; expose them.
   Definition 6.1 `GapMINCKT` promise is also complete: trivariate clock,
   depth-adjusted yes side, logarithmic no side, canonical quadruple codec,
   program characterizations, and widening-certified disjointness are all
-  machine checked. Constructing the concrete evaluator, proving the estimator
-  maps these promise sides to an unconditional gap promise, adding the
-  multiplicative Definition 6.5 variant, and the hardness/class bridge remain.*
+  machine checked. The numerical core of Proposition 6.2 is now complete too:
+  any threshold-free estimator satisfying
+  `B <= C^t(x|y)+cd^(t,tau)(y)` and
+  `C^tau(x|y) <= B+log_2(tau)` yields a total completion that contains every
+  yes-instance and excludes every no-instance. Thresholding it solves the
+  promise, and membership of that completion in `P` implies `GapMINCKT` is in
+  `PromiseP`. Constructing the concrete SoI-based estimator, connecting its
+  algorithm to `P`, adding the multiplicative Definition 6.5 variant, and the
+  hardness/class bridge remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3310,6 +3316,8 @@ formalization targets and should be stated positively under their exact names.
   witness semantics, and clock/threshold monotonicity.
 - [x] Formalize Hirahara's depth-adjusted `Gap_tau MINcKT` Definition 6.1 as a
   canonical widening-certified promise problem with exact program semantics.
+- [x] Prove Proposition 6.2's estimator-sandwich core: thresholding a valid
+  estimator solves `GapMINCKT`, with an exact `PromiseP` completion criterion.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

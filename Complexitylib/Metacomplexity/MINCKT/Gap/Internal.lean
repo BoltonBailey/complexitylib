@@ -308,6 +308,54 @@ theorem not_isNo_of_isYes_internal (inst : Instance)
 
 end Instance
 
+theorem estimator_le_threshold_of_isYes_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters)
+    (inst : Instance)
+    (hyes : inst.IsYes ordinaryMachine conditionalMachine parameters) :
+    estimate inst.base ≤ inst.threshold := by
+  have hupper := (hestimate inst.base).1
+  have hyes' :
+      inst.base.complexity conditionalMachine +
+          ordinaryMachine.computationalDepthBetween inst.condition inst.time
+            (parameters.transformedTime inst.base) ≤
+        (inst.threshold : WithTop ℕ) := by
+    simpa [Instance.IsYes, Instance.conditionDepth, Instance.laterTime] using
+      hyes
+  exact WithTop.coe_le_coe.mp (hupper.trans hyes')
+
+theorem threshold_lt_estimator_of_isNo_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters)
+    (inst : Instance) (hno : inst.IsNo conditionalMachine parameters) :
+    inst.threshold < estimate inst.base := by
+  apply Nat.lt_of_not_ge
+  intro hthreshold
+  have hlower := (hestimate inst.base).2
+  have hsum :
+      estimate inst.base + parameters.logarithmicSlack inst.base ≤
+        inst.threshold + parameters.logarithmicSlack inst.base :=
+    Nat.add_le_add_right hthreshold _
+  have hlater :
+      (inst.base.withTime (parameters.transformedTime inst.base)).complexity
+          conditionalMachine ≤
+        (inst.threshold + parameters.logarithmicSlack inst.base : ℕ) :=
+    hlower.trans (WithTop.coe_le_coe.mpr hsum)
+  have hno' :
+      (inst.threshold + parameters.logarithmicSlack inst.base : ℕ) <
+        (inst.base.withTime (parameters.transformedTime inst.base)).complexity
+          conditionalMachine := by
+    simpa [Instance.IsNo, Instance.laterTime, Instance.logSlack] using hno
+  exact (not_lt_of_ge hlater) hno'
+
 theorem yesLanguage_mem_encode_iff_internal
     {ordinaryTapes conditionalTapes : ℕ}
     (ordinaryMachine : TM ordinaryTapes)
@@ -343,6 +391,92 @@ theorem disjoint_yesLanguage_noLanguage_internal
         simpa [noLanguage, hdecode] using hno
       exact Instance.not_isNo_of_isYes_internal inst ordinaryMachine
         conditionalMachine parameters hwidening hisYes hisNo
+
+theorem estimatorLanguage_mem_encode_iff_internal (estimate : Estimator)
+    (inst : Instance) :
+    inst.encode ∈ estimatorLanguage estimate ↔
+      estimate inst.base ≤ inst.threshold := by
+  simp [estimatorLanguage, Instance.decode?_encode_internal]
+
+theorem decisionOfEstimator_eq_true_iff_internal (estimate : Estimator)
+    (bits : List Bool) :
+    decisionOfEstimator estimate bits = true ↔
+      bits ∈ estimatorLanguage estimate := by
+  cases hdecode : Instance.decode? bits with
+  | none => simp [decisionOfEstimator, estimatorLanguage, hdecode]
+  | some inst => simp [decisionOfEstimator, estimatorLanguage, hdecode]
+
+theorem yesLanguage_subset_estimatorLanguage_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters) :
+    yesLanguage ordinaryMachine conditionalMachine parameters ⊆
+      estimatorLanguage estimate := by
+  intro bits hyes
+  cases hdecode : Instance.decode? bits with
+  | none => simp [yesLanguage, hdecode] at hyes
+  | some inst =>
+      have hisYes :
+          inst.IsYes ordinaryMachine conditionalMachine parameters := by
+        simpa [yesLanguage, hdecode] using hyes
+      have hbound := estimator_le_threshold_of_isYes_internal
+        hestimate inst hisYes
+      simpa [estimatorLanguage, hdecode] using hbound
+
+theorem disjoint_estimatorLanguage_noLanguage_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters) :
+    Disjoint (estimatorLanguage estimate)
+      (noLanguage conditionalMachine parameters) := by
+  apply Set.disjoint_left.mpr
+  intro bits hestimateLanguage hno
+  cases hdecode : Instance.decode? bits with
+  | none => simp [estimatorLanguage, hdecode] at hestimateLanguage
+  | some inst =>
+      have hle : estimate inst.base ≤ inst.threshold := by
+        simpa [estimatorLanguage, hdecode] using hestimateLanguage
+      have hisNo : inst.IsNo conditionalMachine parameters := by
+        simpa [noLanguage, hdecode] using hno
+      have hlt := threshold_lt_estimator_of_isNo_internal
+        hestimate inst hisNo
+      omega
+
+theorem decisionOfEstimator_eq_true_of_mem_yesLanguage_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters) {bits : List Bool}
+    (hyes : bits ∈ yesLanguage ordinaryMachine conditionalMachine parameters) :
+    decisionOfEstimator estimate bits = true :=
+  (decisionOfEstimator_eq_true_iff_internal estimate bits).mpr
+    (yesLanguage_subset_estimatorLanguage_internal hestimate hyes)
+
+theorem decisionOfEstimator_eq_false_of_mem_noLanguage_internal
+    {ordinaryTapes conditionalTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {parameters : Parameters} {estimate : Estimator}
+    (hestimate : estimate.SatisfiesBounds ordinaryMachine conditionalMachine
+      parameters) {bits : List Bool}
+    (hno : bits ∈ noLanguage conditionalMachine parameters) :
+    decisionOfEstimator estimate bits = false := by
+  cases hvalue : decisionOfEstimator estimate bits with
+  | false => rfl
+  | true =>
+      have hmem :=
+        (decisionOfEstimator_eq_true_iff_internal estimate bits).mp hvalue
+      exact (Set.disjoint_left.mp
+        (disjoint_estimatorLanguage_noLanguage_internal hestimate)
+          hmem hno).elim
 
 end GapMINCKT
 

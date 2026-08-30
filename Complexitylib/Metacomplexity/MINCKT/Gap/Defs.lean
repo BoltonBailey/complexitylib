@@ -70,7 +70,39 @@ structure IsAdmissible (parameters : Parameters) : Prop where
 def identity : Parameters where
   clock := fun _outputLength _conditionLength time => time
 
+/-- Apply the clock transformation to one threshold-free conditional MinKT
+instance. -/
+def transformedTime (parameters : Parameters) (inst : MINCKT.Instance) : ℕ :=
+  parameters.clock inst.output.length inst.condition.length inst.time
+
+/-- Base-two logarithmic error attached to the transformed clock. -/
+def logarithmicSlack (parameters : Parameters) (inst : MINCKT.Instance) : ℕ :=
+  Nat.log 2 (parameters.transformedTime inst)
+
 end Parameters
+
+/-- A threshold-free numerical estimator for conditional bounded complexity. -/
+abbrev Estimator := MINCKT.Instance → ℕ
+
+/-- The two-sided estimator sandwich used in Proposition 6.2:
+
+`B(x,y,1^t) <= C^t(x|y) + cd^(t,tau)(y)` and
+`C^tau(x|y) <= B(x,y,1^t) + log_2(tau)`.
+
+Both inequalities use `WithTop` so a claimed estimator also certifies the
+relevant descriptions are finite. -/
+def Estimator.SatisfiesBounds {ordinaryTapes conditionalTapes : ℕ}
+    (estimate : Estimator) (ordinaryMachine : TM ordinaryTapes)
+    (conditionalMachine : OracleTM conditionalTapes)
+    (parameters : Parameters) : Prop :=
+  ∀ inst : MINCKT.Instance,
+    (estimate inst : WithTop ℕ) ≤
+        inst.complexity conditionalMachine +
+          ordinaryMachine.computationalDepthBetween inst.condition inst.time
+            (parameters.transformedTime inst) ∧
+      (inst.withTime (parameters.transformedTime inst)).complexity
+          conditionalMachine ≤
+        (estimate inst + parameters.logarithmicSlack inst : ℕ)
 
 /-- A decoded conditional gap instance `(x, y, 1^t, 1^s)`. -/
 structure Instance where
@@ -119,11 +151,11 @@ def withThreshold (inst : Instance) (threshold : ℕ) : Instance :=
 
 /-- The transformed clock `tau(|x|, |y|, t)`. -/
 def laterTime (inst : Instance) (parameters : Parameters) : ℕ :=
-  parameters.clock inst.output.length inst.condition.length inst.time
+  parameters.transformedTime inst.base
 
 /-- The base-two logarithmic slack on the no side. -/
 def logSlack (inst : Instance) (parameters : Parameters) : ℕ :=
-  Nat.log 2 (inst.laterTime parameters)
+  parameters.logarithmicSlack inst.base
 
 /-- The condition's two-clock computational depth
 `C^t(y) - C^tau(y)`. -/
@@ -190,6 +222,19 @@ def noLanguage {conditionalTapes : ℕ}
   {bits | match Instance.decode? bits with
     | some inst => inst.IsNo conditionalMachine parameters
     | none => False}
+
+/-- Total completion obtained by accepting exactly when the estimator value is
+at most the encoded threshold. Malformed codes are rejected. -/
+def estimatorLanguage (estimate : Estimator) : Language :=
+  {bits | match Instance.decode? bits with
+    | some inst => estimate inst.base ≤ inst.threshold
+    | none => False}
+
+/-- Executable thresholding of a numerical estimator. -/
+def decisionOfEstimator (estimate : Estimator) : List Bool → Bool :=
+  fun bits => match Instance.decode? bits with
+    | some inst => decide (estimate inst.base ≤ inst.threshold)
+    | none => false
 
 end GapMINCKT
 
