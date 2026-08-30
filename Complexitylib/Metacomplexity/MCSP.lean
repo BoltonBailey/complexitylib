@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.Defs
 public import Complexitylib.Metacomplexity.MCSP.Internal
+public import Complexitylib.Metacomplexity.MCSP.Witness
 
 /-!
 # The Minimum Circuit Size Problem
@@ -20,6 +21,7 @@ to the library's Boolean circuit complexity measure.
 - `MCSP.Instance.encode` / `decode?` -- canonical total binary codec
 - `MCSP.Instance.function` -- little-endian truth-table semantics
 - `MCSP.Instance.HasCircuitAtMost` -- direct circuit-witness predicate
+- `MCSP.Instance.verifyRawCircuit` -- executable canonical witness checker
 - `MCSP` -- encoded language, with malformed strings rejected
 
 The zero-arity case is explicit: its one truth-table bit is stored directly and

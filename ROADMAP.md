@@ -1742,7 +1742,11 @@ noncanonical string, and has an exact code-length theorem separating `2^n` from
 the binary widths of `n` and the threshold. The zero-arity convention matches
 `CircuitFamily`'s explicit size-zero bit; at positive arity the direct circuit
 witness predicate agrees exactly with `Circuit.sizeComplexity Basis.andOr2` and
-is monotone in the threshold.
+is monotone in the threshold. `MCSP.Instance.IsRawCircuitWitness` and
+`verifyRawCircuit` now reuse the canonical raw-circuit decoder and evaluator to
+check topology, size, and every truth-table row. Existence of such a finite
+witness is equivalent to the typed MCSP predicate, and every yes-instance has
+a serialized witness within an explicit threshold-dependent length bound.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
@@ -1837,9 +1841,12 @@ the mathematics and must not be hidden behind notation.
   - [x] Land total typed instances and their exact canonical codec, reject
     malformed strings, settle zero arity, and prove positive-arity agreement
     with `Circuit.sizeComplexity` plus threshold monotonicity.
-  - [ ] Normalize oversized thresholds, expose an executable raw-circuit witness
-    relation, and prove that the circuit decoder/evaluator verifies it within a
-    polynomial in truth-table input length `N`.
+  - [x] Expose an executable canonical raw-circuit witness relation, prove it
+    equivalent to the typed semantics, and bound serialized witness length in
+    terms of arity and threshold.
+  - [ ] Normalize oversized thresholds and prove that a machine implementation
+    of the circuit decoder/evaluator verifies witnesses within a polynomial in
+    truth-table input length `N`.
   - [ ] Add `MCSP[s]`, search-MCSP, basis transport, and the final NP theorem.
 - [ ] Define `MKtP`, `MK^tP`, their search variants, and their gap promise
   problems. Prove the intended NP upper bounds with an executable bounded
