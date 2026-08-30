@@ -77,6 +77,65 @@ materialized counter input and labeled payload. -/
         (prefixLength + 1) * (arity + 1) + (arity + 1) :=
   size_candidateCounterRecordCircuit_internal counter candidate
 
+/-- The recursive tournament contains exactly one record for every truth-table
+input. -/
+@[simp] theorem selectionCandidateCount_add_one (arity : ℕ) :
+    selectionCandidateCount arity + 1 = 2 ^ arity :=
+  selectionCandidateCount_add_one_internal arity
+
+/-- Parallel candidate evaluation produces the exact recursive record layout
+expected by the minimum tournament. -/
+@[simp] theorem eval_packedCandidateCounterRecords
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    (packedCandidateCounterRecords counter).2.eval
+        (selectionRoundInput table packedPrefix) =
+      BitString.packKeyedRecords (selectionCandidateCount arity)
+        (candidateCounterKeys counter table packedPrefix)
+        (candidateCounterPayloads table) :=
+  eval_packedCandidateCounterRecords_internal counter table packedPrefix
+
+/-- Exact parallel-evaluation cost: one fixed-candidate record circuit for
+each truth-table input. -/
+@[simp] theorem size_packedCandidateCounterRecords
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength) :
+    (packedCandidateCounterRecords counter).2.size =
+      (selectionCandidateCount arity + 1) *
+        (counter.circuit.size +
+          (prefixLength + 1) * (arity + 1) + (arity + 1)) :=
+  size_packedCandidateCounterRecords_internal counter
+
+/-- Exhaustive selection evaluates to the semantic minimum counter record. -/
+@[simp] theorem eval_minimumCounterRecordCircuit
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    (minimumCounterRecordCircuit counter).2.eval
+        (selectionRoundInput table packedPrefix) =
+      Fin.append (minimumCounterRecord counter table packedPrefix).1
+        (minimumCounterRecord counter table packedPrefix).2 :=
+  eval_minimumCounterRecordCircuit_internal counter table packedPrefix
+
+/-- Exact exhaustive-selector cost, separating parallel candidate evaluation
+from the sequential keyed-minimum tournament. -/
+@[simp] theorem size_minimumCounterRecordCircuit
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength) :
+    (minimumCounterRecordCircuit counter).2.size =
+      (selectionCandidateCount arity + 1) *
+          (counter.circuit.size +
+            (prefixLength + 1) * (arity + 1) + (arity + 1)) +
+        ((selectionCandidateCount arity + 1) *
+            (counterOutputWidth beta arity + (arity + 1)) +
+          selectionCandidateCount arity *
+            (20 * counterOutputWidth beta arity +
+              5 * (arity + 1) + 1)) :=
+  size_minimumCounterRecordCircuit_internal counter
+
 end AntiCheckerLemma
 
 end Magnification

@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Circuits.Composition.Defs
 public import Complexitylib.Circuits.InputSources.Defs
+public import Complexitylib.Circuits.KeyedMinimumTournament.Family.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Circuit.Defs
 
 /-!
@@ -127,6 +128,93 @@ def candidateCounterRecordCircuit
     (counter.circuit.compose
       (candidateCounterInputCircuit arity prefixLength candidate)).parallel
       (candidateSampleCircuit arity prefixLength candidate)⟩
+
+/-- Number of comparisons needed to select among all `2^arity` candidates. -/
+def selectionCandidateCount (arity : ℕ) : ℕ :=
+  2 ^ arity - 1
+
+/-- Reindex the tournament's `count + 1` records by all truth-table inputs. -/
+def selectionCandidateEquiv (arity : ℕ) :
+    Fin (selectionCandidateCount arity + 1) ≃ Fin (2 ^ arity) :=
+  finCongr (Nat.sub_add_cancel Nat.one_le_two_pow)
+
+/-- Counter-output key associated with one fixed candidate. -/
+def candidateCounterKey
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (candidate : Fin (2 ^ arity)) (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    BitString (counterOutputWidth beta arity) :=
+  counter.circuit.eval
+    (packLabeledSamples
+      (candidateLabeledSamples candidate table packedPrefix))
+
+/-- All fixed-candidate key-payload circuits, reindexed for the recursive
+tournament layout. -/
+def candidateCounterRecordFamily
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength) :
+    Fin (selectionCandidateCount arity + 1) →
+      Σ internalGates,
+        Circuit Basis.andOr2 (selectionRoundInputWidth arity prefixLength)
+          (counterOutputWidth beta arity + (arity + 1)) internalGates :=
+  fun index =>
+    candidateCounterRecordCircuit counter (selectionCandidateEquiv arity index)
+
+/-- Semantic counter keys in tournament record order. -/
+def candidateCounterKeys
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    Fin (selectionCandidateCount arity + 1) →
+      BitString (counterOutputWidth beta arity) :=
+  fun index => candidateCounterKey counter
+    (selectionCandidateEquiv arity index) table packedPrefix
+
+/-- Semantic labeled-candidate payloads in tournament record order. -/
+def candidateCounterPayloads {arity : ℕ}
+    (table : BitString (2 ^ arity)) :
+    Fin (selectionCandidateCount arity + 1) → BitString (arity + 1) :=
+  fun index => candidateSampleBits (selectionCandidateEquiv arity index) table
+
+/-- Pack every fixed-candidate counter record in the exact recursive layout
+consumed by the minimum tournament. -/
+noncomputable def packedCandidateCounterRecords
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength) :
+    Σ internalGates,
+      Circuit Basis.andOr2 (selectionRoundInputWidth arity prefixLength)
+        (BitString.keyedTournamentInputWidth
+          (selectionCandidateCount arity)
+          (counterOutputWidth beta arity + (arity + 1))) internalGates :=
+  Circuit.parallelKeyedRecordFamily (selectionCandidateCount arity)
+    (candidateCounterRecordFamily counter)
+
+/-- Semantic winner of exhaustive counter-key minimization. -/
+def minimumCounterRecord
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (table : BitString (2 ^ arity))
+    (packedPrefix : BitString (prefixLength * (arity + 1))) :
+    BitString (counterOutputWidth beta arity) × BitString (arity + 1) :=
+  BitString.unsignedMinimumKeyedRecord (selectionCandidateCount arity)
+    (candidateCounterKeys counter table packedPrefix)
+    (candidateCounterPayloads table)
+
+/-- Exhaustive selector returning a minimum counter key and its labeled
+candidate payload. -/
+noncomputable def minimumCounterRecordCircuit
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength) :
+    Σ internalGates,
+      Circuit Basis.andOr2 (selectionRoundInputWidth arity prefixLength)
+        (counterOutputWidth beta arity + (arity + 1)) internalGates :=
+  let records := packedCandidateCounterRecords counter
+  let tournament := Circuit.unsignedKeyedMinTournament
+    (counterOutputWidth beta arity) (arity + 1)
+      (selectionCandidateCount arity)
+  ⟨_, tournament.2.compose records.2⟩
 
 end AntiCheckerLemma
 
