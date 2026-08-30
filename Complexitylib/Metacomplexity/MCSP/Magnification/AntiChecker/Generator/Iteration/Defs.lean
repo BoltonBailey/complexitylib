@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Round.Defs
 
 /-!
@@ -38,6 +39,15 @@ def selectionEmptyStateInputMap (arity : ℕ) :
     ⟨input.val, by
       have hinput := input.isLt
       simpa [selectionRoundInputWidth] using hinput⟩
+
+/-- Circuit state represented by a target truth table and an ordered vector of
+target-labeled selected inputs. -/
+def selectionTraceState {arity rounds : ℕ}
+    (target : BitString arity → Bool)
+    (inputs : Fin rounds → BitString arity) :
+    BitString (selectionRoundInputWidth arity rounds) :=
+  selectionRoundInput (truthTable target)
+    (packTargetSamples target inputs)
 
 /-- Removing the final round preserves the required-round upper bound. -/
 theorem selectionPrefixPriorBound

@@ -72,6 +72,63 @@ the counter-selection round indexed by that prefix length. -/
           (family.counter (selectionPrefixCounterIndex hrounds))).2.size :=
   size_selectionPrefixCircuit_succ_internal family hrounds
 
+/-- Prepending a candidate to a target-labeled packed vector agrees exactly
+with the candidate-prefix encoding used by the counter circuit. -/
+theorem candidateLabeledSamples_truthTable_packTargetSamples
+    {arity prefixLength : ℕ} (target : BitString arity → Bool)
+    (inputs : Fin prefixLength → BitString arity)
+    (input : BitString arity) :
+    candidateLabeledSamples (MCSP.Instance.inputIndex input)
+        (truthTable target) (packTargetSamples target inputs) =
+      fun sample =>
+        SuccinctMCSP.Sample.ofFunction target
+          ((Fin.cons input inputs :
+            Fin (prefixLength + 1) → BitString arity) sample) :=
+  candidateLabeledSamples_truthTable_packTargetSamples_internal
+    target inputs input
+
+/-- On a canonical target truth table, the round successor state is precisely
+the state obtained by consing the selected input. -/
+theorem selectionRoundSuccessorInput_truthTable_packTargetSamples
+    {arity prefixLength : ℕ} (target : BitString arity → Bool)
+    (inputs : Fin prefixLength → BitString arity)
+    (candidate : Fin (2 ^ arity)) :
+    selectionRoundSuccessorInput candidate (truthTable target)
+        (packTargetSamples target inputs) =
+      selectionTraceState target
+        (Fin.cons (MCSP.Instance.inputOfIndex candidate) inputs) :=
+  selectionRoundSuccessorInput_truthTable_packTargetSamples_internal
+    target inputs candidate
+
+/-- The circuit-level counter estimate on a canonical state is the counter's
+semantic estimate of the target-labeled cons extension. -/
+theorem counterRoundEstimate_truthTable_packTargetSamples
+    {overhead arity prefixLength : ℕ} {beta : PositiveRationalScale}
+    (counter : ApproximateCounterCircuit overhead beta arity prefixLength)
+    (target : BitString arity → Bool)
+    (inputs : Fin prefixLength → BitString arity)
+    (input : BitString arity) :
+    counterRoundEstimate counter (truthTable target)
+        (packTargetSamples target inputs) input =
+      counter.estimate (packTargetSamples target (Fin.cons input inputs)) :=
+  counterRoundEstimate_truthTable_packTargetSamples_internal
+    counter target inputs input
+
+/-- At every bounded prefix, the circuit-level round estimate is exactly the
+existing total estimator induced by the counter family. -/
+theorem counterRoundEstimate_eq_extensionEstimator
+    {overhead arity rounds : ℕ} {beta : PositiveRationalScale}
+    (family : ApproximateCounterFamily overhead beta arity)
+    (target : BitString arity → Bool)
+    (inputs : Fin rounds → BitString arity)
+    (hrounds : rounds + 1 ≤ requiredRoundCount beta arity) :
+    counterRoundEstimate
+        (family.counter (selectionPrefixCounterIndex hrounds))
+        (truthTable target) (packTargetSamples target inputs) =
+      family.extensionEstimator target (List.ofFn inputs) :=
+  counterRoundEstimate_eq_extensionEstimator_internal
+    family target inputs hrounds
+
 end AntiCheckerLemma
 
 end Magnification
