@@ -21,6 +21,7 @@ public import Complexitylib.Metacomplexity.MCSP
 public import Complexitylib.Metacomplexity.MCSP.Shannon
 public import Complexitylib.Metacomplexity.MCSP.Raw
 public import Complexitylib.Metacomplexity.MCSP.Magnification.Parameters
+public import Complexitylib.Metacomplexity.MCSP.Magnification.Frontier
 
 /-!
 # Metacomplexity
@@ -32,5 +33,6 @@ them, including canonical MCSP, strict-threshold MINKT, and conditional MinKT
 instances. Canonical MCSP also exposes its exact finite Shannon threshold
 window, while raw GapMCSP supplies the bare `2^n`-bit input convention used by
 hardness magnification. Positive rational exponent scales and the selected
-finite magnification parameters make its rounded thresholds explicit.
+finite magnification parameters make its rounded thresholds and lower-bound
+quantifiers explicit.
 -/

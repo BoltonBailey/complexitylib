@@ -2727,8 +2727,13 @@ with its arity form on `N = 2^n` bits. `PromiseSIZE` is characterized by an
 explicit family solving both promise sides, while `PromiseEventuallySIZE`
 records bounds outside a finite prefix. Eventual polynomial bounds yield
 `PromisePPoly` after a proved finite-prefix patch. The selected parameter family
-now exposes both pointwise and eventual lower-bound predicates. The selected
-eventual small-`beta` lower-bound quantifier and basis transport remain.
+now exposes both pointwise and eventual lower-bound predicates.
+`Magnification.DenominatorConstant` fixes the candidate universal constant
+outside the lower-bound antecedent, while `HasMagnificationLowerBoundHypothesis`
+chooses one positive `epsilon` and requires the eventual circuit lower bound for
+every sufficiently small positive `beta`. Its public cutoff characterization and
+pointwise consequence keep the small-parameter and large-input quantifiers
+separate. Exact basis transport remains.
 Canonical truth tables now round-trip to typed Boolean functions, and the checked
 Shannon circuit bounds give the exact finite MCSP window from a no-instance at
 `2^n/(5n)` to universal acceptance at `18*2^n/n` for `n >= 16`. This calibrates
@@ -2835,7 +2840,8 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   domination lemmas without introducing real-valued circuit sizes. *The finite
   scale, floor/ceiling factor-two comparison, selected GapMCSP thresholds, gap,
   exact power-of-two input identity, and the small-positive filter are done;
-  eventual domination and the selected frontier quantifier remain.*
+  the selected frontier quantifier is also packaged, while eventual domination
+  remains.*
 - [~] Define the nonuniform circuit-size predicate for promise problems used by
   the selected theorem. Relate it to `PromiseClass (SIZE s)`, allow finite
   exceptional lengths explicitly, and prove that polynomial-size promise solvers
@@ -2987,8 +2993,8 @@ not evidence that either the collapse or the desired lower bound has been proved
 - [~] Define rational scaled-exponential threshold functions and an eventual
   promise-`SIZE` interface sufficient to state the selected theorem in Lean.
   *The rounded functions and pointwise/eventual promise-`SIZE` interfaces are
-  done, as is the small-positive scale filter; the selected lower-bound
-  quantifier and basis transport remain.*
+  done, as are the small-positive scale filter and selected lower-bound
+  quantifier; basis transport remains.*
 - [M] Define finite anti-checkers and prove their equivalence with rejection of
   the corresponding sampled `SuccinctMCSP` instance.
 - [M] Define formula-XOR (or the first selected weak model) by extending the
