@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Internal
+public import Complexitylib.Metacomplexity.Kolmogorov.Conditional
 
 /-!
 # Machine-relative Kolmogorov complexity

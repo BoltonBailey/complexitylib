@@ -2959,7 +2959,13 @@ meta-computational notation hides several incompatible choices; expose them.
 - Define conditional complexity only after fixing whether the condition is a
   read-only sequential input, an oracle, or random-access data. The 2022 MinCKT
   results use access conventions that cannot be identified silently with the
-  current ordinary input tape.
+  current ordinary input tape. *The first explicit convention is now fixed:
+  `RandomAccessCondition.oracle` uses canonical tagged binary-index queries for
+  data bits and in-bounds tests, thereby retaining both contents and length.
+  The resulting machine-relative plain and bounded conditional complexities,
+  threshold/witness/clock laws, uniform simulation transfer, and
+  condition-ignoring ordinary-machine sanity theorem are complete. A paper-
+  specific evaluator must still prove equivalence to this query convention.*
 - Define computational depth as a difference between two finite time-bounded
   measures only after proving clock monotonicity in the required direction.
   Avoid truncated subtraction unless the ordering theorem is in scope.
@@ -3178,9 +3184,16 @@ meta-computational notation hides several incompatible choices; expose them.
   then target the 2021 theorem
   `UP not_subset DTIME(2^(O(n/log n))) -> DistNP not_subset AvgP`. Keep the
   exponential-time premise in the public statement.
-- [ ] Add conditional time-bounded complexity, exact chain inequalities, and
+- [~] Add conditional time-bounded complexity, exact chain inequalities, and
   finite computational depth. Prove generic monotonicity, nonnegativity, and
-  depth bounds before any symmetry hypothesis.
+  depth bounds before any symmetry hypothesis. *Oracle-random-access
+  conditional plain and bounded complexity are now defined for arbitrary
+  oracle machines. The condition oracle is faithful (including length), and
+  bounded complexity has producing-program upper bounds, exact top/witness and
+  threshold characterizations, clock monotonicity, oracle-uniform polynomial
+  transfer, and exact conservativity for embedded ordinary machines.
+  Pair/chain inequalities, computational depth, and the chosen universal
+  evaluator remain.*
 - [ ] State time-bounded symmetry of information as a named machine-relative
   hypothesis. Formalize the 2022 implication `DistNP subset AvgP -> SoI`, split
   into dense-string, language-compression, and clock-accounting modules.
