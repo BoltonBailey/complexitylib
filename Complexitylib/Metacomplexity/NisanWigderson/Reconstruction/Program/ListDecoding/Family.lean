@@ -7,6 +7,8 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.ListDecoding.Family
 public
+import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Family.Defs
+public
 import
 Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Family.Internal
 
@@ -16,7 +18,8 @@ Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.
 This layer specializes checked NW reconstruction to a code family at inverse
 accuracy `q`, under the exact relation `1/q = density/(2*outputLength)` used in
 Hirahara's argument. Polynomial list size then gives a concrete logarithmic
-bound on the encoded decoder choice.
+bound on the encoded decoder choice. For density `1/inverseDensity`, the final
+theorem chooses `q = 2*outputLength*inverseDensity` and discharges that relation.
 -/
 
 
@@ -25,6 +28,27 @@ public section
 namespace Complexity
 
 namespace NWDesign
+
+/-- Positive output length and inverse density make the canonical inverse
+accuracy at least two. -/
+theorem two_le_reconstructionInverseAccuracy
+    {outputLength inverseDensity : ℕ}
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity) :
+    2 ≤ reconstructionInverseAccuracy outputLength inverseDensity :=
+  two_le_reconstructionInverseAccuracy_internal
+    houtputLength hinverseDensity
+
+/-- The canonical inverse accuracy has exactly the NW reconstruction margin
+for a test of density `1 / inverseDensity`. -/
+theorem reconstructionInverseAccuracy_margin_eq
+    {outputLength inverseDensity : ℕ}
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity) :
+    1 / (reconstructionInverseAccuracy outputLength inverseDensity : ℚ) =
+      ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2 :=
+  reconstructionInverseAccuracy_margin_eq_internal
+    houtputLength hinverseDensity
 
 /-- Fully encoded NW reconstruction instantiated by a semantic inverse-accuracy
 list-code family. -/
@@ -131,6 +155,75 @@ theorem half_le_fullyEncodedIndexedReconstructionProgram_of_polynomialCodeFamily
   half_le_fullyEncodedIndexedReconstructionProgram_of_polynomialCodeFamily_internal
     family hfamily bounds haccuracy hmargin houtputLength hdensity hlow hrandom
       hdense hbudget
+
+/-- Paper-shaped family reconstruction at density `1 / inverseDensity`. The
+inverse accuracy is fixed canonically to
+`2 * outputLength * inverseDensity`, so no arithmetic compatibility premise
+remains. -/
+theorem half_le_fullyEncodedIndexedReconstructionProgram_of_inverseDensity
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message) test
+          (1 / 2 +
+            ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+          (1 / (inverseDensity : ℚ))) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate?
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        ∃ indexed : IndexedReconstructionProgram design
+            (family.listSize messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)),
+          indexed.reconstruction = certificate.toProgram design
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) ∧
+            indexed.decodedMessage
+                (family.code messageLength
+                  (reconstructionInverseAccuracy outputLength inverseDensity))
+                test = message ∧
+              indexed.encode.length ≤
+                1 + Fin.bitWidth outputLength +
+                  (budget + (seedLength - family.coordinateLength messageLength
+                    (reconstructionInverseAccuracy outputLength inverseDensity)) +
+                      1) +
+                    Nat.clog 2
+                      (bounds.listConstant *
+                        (reconstructionInverseAccuracy outputLength
+                          inverseDensity + 1) ^ bounds.listDegree) :=
+  half_le_fullyEncodedIndexedReconstructionProgram_of_inverseDensity_internal
+    family hfamily bounds houtputLength hinverseDensity hlow hrandom hdense
+      hbudget
 
 end NWDesign
 

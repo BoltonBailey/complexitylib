@@ -3037,7 +3037,10 @@ meta-computational notation hides several incompatible choices; expose them.
   polynomial codeword/list bounds, and one uniform encoder and full-list
   decoder TM. At the exact relation `1/q = density/(2*outputLength)`, the NW
   theorem is instantiated by such a family; a polynomial list-size guarantee
-  sharpens its index cost to `clog_2(C*(q+1)^k)`. Constructing an explicit
+  sharpens its index cost to `clog_2(C*(q+1)^k)`. For density
+  `1/inverseDensity`, the canonical paper choice
+  `q = 2*outputLength*inverseDensity` is now proved admissible and removes the
+  arithmetic compatibility premise. Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, encoding or fixing the
   remaining ambient parameters, constructing machine/runtime realizers for the
   sampler, checker, evaluator, and concrete code family, the explicit RRV

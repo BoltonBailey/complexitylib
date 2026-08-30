@@ -21,7 +21,8 @@ materializes a program that decodes exactly to the source message. Its complete
 codec includes polarity, hybrid coordinate, reconstruction data, and list
 index, leaving only ambient parameters external. The family specialization
 matches inverse accuracy to reconstruction advantage and converts polynomial
-list size into a concrete logarithmic description bound.
+list size into a concrete logarithmic description bound, including the
+canonical choice for inverse-polynomially represented test density.
 -/
 
 

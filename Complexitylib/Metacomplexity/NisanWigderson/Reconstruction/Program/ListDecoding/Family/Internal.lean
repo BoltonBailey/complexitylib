@@ -5,7 +5,8 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Metacomplexity.ListDecoding.Family.Defs
+public
+import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Family.Defs
 import Complexitylib.Metacomplexity.ListDecoding.Family.Internal
 public
 import Complexitylib.Metacomplexity.NisanWigderson.Reconstruction.Program.ListDecoding.Internal
@@ -20,6 +21,25 @@ public section
 namespace Complexity
 
 namespace NWDesign
+
+theorem two_le_reconstructionInverseAccuracy_internal
+    {outputLength inverseDensity : ℕ}
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity) :
+    2 ≤ reconstructionInverseAccuracy outputLength inverseDensity := by
+  rw [reconstructionInverseAccuracy]
+  exact le_trans (Nat.le_mul_of_pos_right 2 houtputLength)
+    (Nat.le_mul_of_pos_right (2 * outputLength) hinverseDensity)
+
+theorem reconstructionInverseAccuracy_margin_eq_internal
+    {outputLength inverseDensity : ℕ}
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity) :
+    1 / (reconstructionInverseAccuracy outputLength inverseDensity : ℚ) =
+      ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2 := by
+  simp only [reconstructionInverseAccuracy, Nat.cast_mul, Nat.cast_ofNat]
+  norm_num [div_eq_mul_inv]
+  field_simp
 
 theorem half_le_fullyEncodedIndexedReconstructionProgram_of_codeFamily_internal
     {messageLength inverseAccuracy outputLength seedLength tapes time
@@ -134,6 +154,78 @@ theorem
   exact Nat.add_le_add_left
     (BooleanListCodeFamily.decoderIndexBitWidth_le_polynomialBound_internal
       bounds messageLength inverseAccuracy) _
+
+theorem
+    half_le_fullyEncodedIndexedReconstructionProgram_of_inverseDensity_internal
+    {messageLength outputLength inverseDensity seedLength tapes time
+      threshold budget : ℕ}
+    (family : BooleanListCodeFamily)
+    (hfamily : family.IsListDecodableAtInverseAccuracy)
+    (bounds : family.PolynomialParameterBounds)
+    (houtputLength : 0 < outputLength)
+    (hinverseDensity : 0 < inverseDensity)
+    {design : NWDesign outputLength
+      (family.coordinateLength messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)) seedLength}
+    {message : Fin messageLength → Bool}
+    {machine : TM tapes} {test : Finset (Fin outputLength → Bool)}
+    (hlow : BitGenerator.HasLowTimeBoundedComplexity
+      (design.generator ((family.code messageLength
+        (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+          message)) machine time threshold)
+    (hrandom : BitGenerator.IsTimeBoundedRandomTest
+      test machine time threshold)
+    (hdense : BitGenerator.IsDenseTest test
+      (1 / (inverseDensity : ℚ)))
+    (hbudget : design.HasOverlapBudget budget) :
+    1 / 2 ≤
+        design.checkedReconstructionBatchSuccessProbability
+          ((family.code messageLength
+            (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+              message) test
+          (1 / 2 +
+            ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2)
+          (reconstructionAdviceTrialCount outputLength
+            (1 / (inverseDensity : ℚ))) ∧
+      ∀ (batch : Fin (reconstructionAdviceTrialCount outputLength
+          (1 / (inverseDensity : ℚ))) →
+          ReconstructionTrial outputLength seedLength) certificate,
+        design.findGoodReconstructionCertificate?
+            ((family.code messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                message) test
+            (1 / 2 +
+              ((1 / (inverseDensity : ℚ)) / (outputLength : ℚ)) / 2) batch =
+          some certificate →
+        ∃ indexed : IndexedReconstructionProgram design
+            (family.listSize messageLength
+              (reconstructionInverseAccuracy outputLength inverseDensity)),
+          indexed.reconstruction = certificate.toProgram design
+              ((family.code messageLength
+                (reconstructionInverseAccuracy outputLength inverseDensity)).encode
+                  message) ∧
+            indexed.decodedMessage
+                (family.code messageLength
+                  (reconstructionInverseAccuracy outputLength inverseDensity))
+                test = message ∧
+              indexed.encode.length ≤
+                1 + Fin.bitWidth outputLength +
+                  (budget + (seedLength - family.coordinateLength messageLength
+                    (reconstructionInverseAccuracy outputLength inverseDensity)) +
+                      1) +
+                    Nat.clog 2
+                      (bounds.listConstant *
+                        (reconstructionInverseAccuracy outputLength
+                          inverseDensity + 1) ^ bounds.listDegree) := by
+  exact
+    half_le_fullyEncodedIndexedReconstructionProgram_of_polynomialCodeFamily_internal
+      family hfamily bounds
+        (two_le_reconstructionInverseAccuracy_internal
+          houtputLength hinverseDensity)
+        (density := 1 / (inverseDensity : ℚ))
+        (reconstructionInverseAccuracy_margin_eq_internal
+          houtputLength hinverseDensity)
+        houtputLength (by positivity) hlow hrandom hdense hbudget
 
 end NWDesign
 
