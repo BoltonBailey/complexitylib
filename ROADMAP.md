@@ -2787,6 +2787,10 @@ choices from `Fin m` when `m` is not a power of two. This is the
 representation-level distribution layer; no sample map is called efficient
 until a machine realizes it with proved polynomial seed, runtime, and output
 bounds.
+Independent repetition is also exact at this layer: the probability that one of
+`k` uniform draws hits an event of probability `p` is `1 - (1 - p)^k`. The
+proved elementary lower bound `kp / (1 + kp)` gives success at least one half
+whenever `kp >= 1`, without importing a second probability convention.
 `FiniteEnsemble.auxiliaryUnary` now gives the exact 2018 distribution `D^u`:
 at positive parameter `m`, it chooses the binary length `n` uniformly from
 `{0, ..., m - 1}`, retains a uniform `n`-bit prefix, and emits the canonical
@@ -2982,9 +2986,12 @@ meta-computational notation hides several incompatible choices; expose them.
   losing the `1/2 + delta/m` agreement guarantee. The end-to-end theorem combines
   that agreement with the weak-design payload bound. The explicit RRV
   construction remains. The randomized certificate search's single-draw
-  Markov bound is now proved exactly; executable repeated sampling, checking the
-  resulting approximate description, list decoding, and final program/time
-  accounting remain.*
+  Markov bound is now proved exactly. Independent advice repetition now has the
+  exact geometric success law, and the end-to-end theorem proves success at
+  least one half under the explicit Hirahara trial condition
+  `k * (delta / (2m)) >= 1`, while retaining the fixed payload bound. An
+  executable sampler and checker for the resulting approximate description,
+  list decoding, and final program/time accounting remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

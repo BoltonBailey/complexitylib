@@ -35,6 +35,18 @@ def uniformProbability {Ω : Type u} [Fintype Ω] (event : Finset Ω) : ℚ :=
 def uniformMean {Ω : Type u} [Fintype Ω] (value : Ω → ℚ) : ℚ :=
   (∑ sample, value sample) / Fintype.card Ω
 
+/-- Samples in which at least one of `trials` independent uniform draws lands
+in `event`. -/
+def uniformAtLeastOneEvent {Ω : Type u} [Fintype Ω] [DecidableEq Ω]
+    (event : Finset Ω) (trials : ℕ) : Finset (Fin trials → Ω) :=
+  Finset.univ.filter fun draws => ∃ trial, draws trial ∈ event
+
+/-- Probability that at least one of `trials` independent uniform draws lands
+in `event`. -/
+def uniformAtLeastOneProbability {Ω : Type u}
+    [Fintype Ω] [DecidableEq Ω] (event : Finset Ω) (trials : ℕ) : ℚ :=
+  uniformProbability (uniformAtLeastOneEvent event trials)
+
 /-- A parameterized distribution represented by a nonempty finite uniform seed
 space and deterministic sampler at every slice. -/
 structure FiniteEnsemble (α : Type u) where

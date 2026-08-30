@@ -272,6 +272,125 @@ theorem half_epsilon_le_probability_ge_of_le_uniformMean_internal
     nlinarith
   nlinarith
 
+theorem uniformAtLeastOneProbability_eq_one_sub_pow_internal
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) :
+    uniformAtLeastOneProbability event trials =
+      1 - (1 - uniformProbability event) ^ trials := by
+  classical
+  let success := uniformAtLeastOneEvent event trials
+  let failure := Finset.univ.filter fun draws : Fin trials → Ω =>
+    ∀ trial, draws trial ∉ event
+  have hcompl : successᶜ = failure := by
+    ext draws
+    simp [success, failure, uniformAtLeastOneEvent]
+  have hfailureCard : failure.card = eventᶜ.card ^ trials := by
+    have hfailure : failure =
+        Fintype.piFinset (fun _trial : Fin trials => eventᶜ) := by
+      ext draws
+      simp [failure]
+    rw [hfailure, Fintype.card_piFinset]
+    simp
+  have hfailureProbability :
+      uniformProbability failure =
+        uniformProbability eventᶜ ^ trials := by
+    unfold uniformProbability
+    rw [hfailureCard, Fintype.card_fun, Fintype.card_fin]
+    push_cast
+    rw [div_pow]
+  have hsuccessFailure :
+      uniformProbability success = 1 - uniformProbability failure := by
+    have h := uniformProbability_compl_internal success
+    rw [hcompl] at h
+    linarith
+  change uniformProbability success = _
+  rw [hsuccessFailure, hfailureProbability,
+    uniformProbability_compl_internal event]
+
+theorem one_sub_pow_le_uniformAtLeastOneProbability_internal
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) (singleDrawLower : ℚ)
+    (hlower : singleDrawLower ≤ uniformProbability event) :
+    1 - (1 - singleDrawLower) ^ trials ≤
+      uniformAtLeastOneProbability event trials := by
+  rw [uniformAtLeastOneProbability_eq_one_sub_pow_internal]
+  have hnonneg : 0 ≤ 1 - uniformProbability event :=
+    sub_nonneg.mpr (uniformProbability_le_one_internal event)
+  have hpow :
+      (1 - uniformProbability event) ^ trials ≤
+        (1 - singleDrawLower) ^ trials :=
+    pow_le_pow_left₀ hnonneg (sub_le_sub_left hlower 1) trials
+  linarith
+
+private theorem pow_one_sub_le_one_div_one_add_nat_mul
+    (probability : ℚ) (hnonneg : 0 ≤ probability)
+    (hleOne : probability ≤ 1) (trials : ℕ) :
+    (1 - probability) ^ trials ≤
+      1 / (1 + (trials : ℚ) * probability) := by
+  induction trials with
+  | zero => simp
+  | succ trials ih =>
+      have hden : 0 < 1 + (trials : ℚ) * probability := by positivity
+      have hdenSucc : 0 < 1 + (trials.succ : ℚ) * probability := by
+        positivity
+      rw [pow_succ]
+      calc
+        (1 - probability) ^ trials * (1 - probability) ≤
+            (1 / (1 + (trials : ℚ) * probability)) *
+              (1 - probability) := by
+          exact mul_le_mul_of_nonneg_right ih (sub_nonneg.mpr hleOne)
+        _ ≤ 1 / (1 + (trials.succ : ℚ) * probability) := by
+          rw [le_div_iff₀ hdenSucc]
+          field_simp [hden.ne']
+          push_cast
+          have hterm :
+              0 ≤ ((trials : ℚ) + 1) * probability ^ 2 := by
+            positivity
+          nlinarith
+
+theorem trials_mul_div_one_add_le_uniformAtLeastOneProbability_internal
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) :
+    (trials : ℚ) * uniformProbability event /
+        (1 + (trials : ℚ) * uniformProbability event) ≤
+      uniformAtLeastOneProbability event trials := by
+  let probability := uniformProbability event
+  have hnonneg : 0 ≤ probability := uniformProbability_nonneg_internal event
+  have hleOne : probability ≤ 1 := uniformProbability_le_one_internal event
+  have hden : 0 < 1 + (trials : ℚ) * probability := by positivity
+  have hpow := pow_one_sub_le_one_div_one_add_nat_mul
+    probability hnonneg hleOne trials
+  rw [uniformAtLeastOneProbability_eq_one_sub_pow_internal]
+  change (trials : ℚ) * probability /
+      (1 + (trials : ℚ) * probability) ≤ 1 - (1 - probability) ^ trials
+  calc
+    (trials : ℚ) * probability /
+          (1 + (trials : ℚ) * probability) =
+        1 - 1 / (1 + (trials : ℚ) * probability) := by
+      field_simp [hden.ne']
+      ring
+    _ ≤ 1 - (1 - probability) ^ trials := sub_le_sub_left hpow 1
+
+theorem half_le_uniformAtLeastOneProbability_of_singleDrawLower_internal
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) (singleDrawLower : ℚ)
+    (hlower : singleDrawLower ≤ uniformProbability event)
+    (htrials : 1 ≤ (trials : ℚ) * singleDrawLower) :
+    1 / 2 ≤ uniformAtLeastOneProbability event trials := by
+  have heventNonneg : 0 ≤ uniformProbability event :=
+    uniformProbability_nonneg_internal event
+  have hden :
+      0 < 1 + (trials : ℚ) * uniformProbability event := by
+    positivity
+  refine le_trans ?_
+    (trials_mul_div_one_add_le_uniformAtLeastOneProbability_internal
+      event trials)
+  rw [le_div_iff₀ hden]
+  have hmul :
+      1 ≤ (trials : ℚ) * uniformProbability event :=
+    htrials.trans <| mul_le_mul_of_nonneg_left hlower (by positivity)
+  nlinarith
+
 theorem uniformProbability_equiv_internal
     {Ω : Type u} {Ξ : Type v} [Fintype Ω] [DecidableEq Ω]
     [Fintype Ξ] [DecidableEq Ξ] (e : Ω ≃ Ξ) (P : Ξ → Prop)

@@ -153,6 +153,51 @@ theorem half_epsilon_le_probability_ge_of_le_uniformMean
   half_epsilon_le_probability_ge_of_le_uniformMean_internal
     value epsilon hepsilon hupper hmean
 
+/-- Exact success probability for independent repetition: if one uniform draw
+lands in `event` with probability `p`, then at least one of `trials` draws lands
+there with probability `1 - (1 - p) ^ trials`. -/
+theorem uniformAtLeastOneProbability_eq_one_sub_pow
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) :
+    uniformAtLeastOneProbability event trials =
+      1 - (1 - uniformProbability event) ^ trials :=
+  uniformAtLeastOneProbability_eq_one_sub_pow_internal event trials
+
+/-- A lower bound on one-draw success lifts to the corresponding independent
+repetition bound. -/
+theorem one_sub_pow_le_uniformAtLeastOneProbability
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) (singleDrawLower : ℚ)
+    (hlower : singleDrawLower ≤ uniformProbability event) :
+    1 - (1 - singleDrawLower) ^ trials ≤
+      uniformAtLeastOneProbability event trials :=
+  one_sub_pow_le_uniformAtLeastOneProbability_internal
+    event trials singleDrawLower hlower
+
+/-- A denominator-free quantitative repetition bound: `trials` independent
+draws hit an event of probability `p` with probability at least
+`trials * p / (1 + trials * p)`. -/
+theorem trials_mul_div_one_add_le_uniformAtLeastOneProbability
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) :
+    (trials : ℚ) * uniformProbability event /
+        (1 + (trials : ℚ) * uniformProbability event) ≤
+      uniformAtLeastOneProbability event trials :=
+  trials_mul_div_one_add_le_uniformAtLeastOneProbability_internal
+    event trials
+
+/-- If the number of trials times a certified one-draw success lower bound is
+at least one, independent repetition succeeds with probability at least one
+half. -/
+theorem half_le_uniformAtLeastOneProbability_of_singleDrawLower
+    {Ω : Type u} [Fintype Ω] [DecidableEq Ω] [Nonempty Ω]
+    (event : Finset Ω) (trials : ℕ) (singleDrawLower : ℚ)
+    (hlower : singleDrawLower ≤ uniformProbability event)
+    (htrials : 1 ≤ (trials : ℚ) * singleDrawLower) :
+    1 / 2 ≤ uniformAtLeastOneProbability event trials :=
+  half_le_uniformAtLeastOneProbability_of_singleDrawLower_internal
+    event trials singleDrawLower hlower htrials
+
 /-- Relabeling a finite uniform sample space by an equivalence preserves event
 probability. -/
 theorem uniformProbability_equiv
