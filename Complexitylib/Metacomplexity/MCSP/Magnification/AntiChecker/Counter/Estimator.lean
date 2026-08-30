@@ -55,6 +55,25 @@ theorem isAccurateRequiredRoundEstimator
 
 end ApproximateCounterFamily
 
+/-- At every sufficiently large nonzero arity, a correct conditional counter
+family yields an exact-length anti-checker for every hard target. -/
+theorem eventually_exists_isFor_length_eq_sampleCount_of_correctCounterFamily
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (overhead : ℕ)
+          (family : ApproximateCounterFamily overhead beta arity),
+          family.IsCorrect →
+            ∀ target : BitString arity → Bool,
+              IsHardAt beta target →
+                ∃ inputs : List (BitString arity),
+                  inputs.length = sampleCount beta arity ∧
+                    AntiChecker.IsFor target (smallThreshold beta arity)
+                      inputs :=
+  eventually_exists_isFor_length_eq_sampleCount_of_correctCounterFamily_internal
+    beta
+
 end AntiCheckerLemma
 
 end Magnification

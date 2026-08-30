@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator.Defs
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Relation.Internal
+import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds.Internal
 
 /-!
 # Counter-family extension estimators -- proof internals
@@ -53,6 +54,30 @@ theorem isAccurateRequiredRoundEstimator_internal
       List.ofFn_get] using happrox
 
 end ApproximateCounterFamily
+
+theorem eventually_exists_isFor_length_eq_sampleCount_of_correctCounterFamily_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (harity : arity ≠ 0),
+        letI : NeZero arity := ⟨harity⟩
+        ∀ (overhead : ℕ)
+          (family : ApproximateCounterFamily overhead beta arity),
+          family.IsCorrect →
+            ∀ target : BitString arity → Bool,
+              IsHardAt beta target →
+                ∃ inputs : List (BitString arity),
+                  inputs.length = sampleCount beta arity ∧
+                    AntiChecker.IsFor target (smallThreshold beta arity)
+                      inputs := by
+  filter_upwards
+      [eventually_exists_isFor_length_eq_sampleCount_of_isHardAt_internal beta]
+      with arity hanti
+  intro harity
+  letI : NeZero arity := ⟨harity⟩
+  intro overhead family hcorrect target hhard
+  exact hanti harity target (family.extensionEstimator target) hhard
+    (ApproximateCounterFamily.isAccurateRequiredRoundEstimator_internal
+      hcorrect target)
 
 end AntiCheckerLemma
 
