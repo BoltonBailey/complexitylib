@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MINKT.Defs
+public import Complexitylib.Metacomplexity.MINKT.Gap
 public import Complexitylib.Metacomplexity.MINKT.Internal
 
 /-!

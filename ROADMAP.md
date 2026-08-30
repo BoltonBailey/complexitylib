@@ -1745,7 +1745,14 @@ of a program shorter than `r(|x|)` that produces exactly `x` within `t` steps;
 the public layer also proves clock and pointwise-threshold monotonicity and
 packages the raw program-witness relation. The machine and threshold remain
 explicit parameters, so later theorems can request exactly the required notion
-of efficient universality. The
+of efficient universality. `GapMINKT.Parameters` now keeps description loss
+`sigma(n,s)` and clock blow-up `tau(n,t)` separate. Its canonical
+`(x,1^t,1^s)` promise uses yes condition `C_U^t(x) <= s` and no condition
+`C_U^tau(x) > sigma(n,s)`, exactly as in the 2018 statement. Widening is an
+explicit sufficient hypothesis for disjointness. The codec, direct yes/no
+program characterizations, raw yes-witness relation, and optimization search
+relation are proved; the latter has a witness exactly when the source bounded
+complexity is finite. The
 fixed `TM.utmTM` has a total description decoder, an interpreter for
 single-work-tape machines, a compiler from arbitrary multitape machines through
 the single-tape simulation, and explicit simulation overhead. Its strongest
@@ -1781,8 +1788,8 @@ arbitrary semantics to their gap region.
 
 What remains missing is an instance connecting the fixed UTM to the generic
 interface, executable finite minimization for the bounded measure, an executable
-normalized MCSP verifier and its NP packaging, and the search, promise, and
-gap-specific reduction infrastructure for minimum-description problems.
+normalized MCSP verifier and its NP packaging, and gap-specific randomized and
+hardness reduction infrastructure for minimum-description problems.
 
 **Definitions and conventions to settle first.** These distinctions are part of
 the mathematics and must not be hidden behind notation.
@@ -2789,8 +2796,11 @@ meta-computational notation hides several incompatible choices; expose them.
   probability are done, as is the exact seed-to-MINKT instance, decoding,
   membership, and point-mass bridge. The strict machine-relative MINKT language,
   exact unary codec, direct short-program semantics, threshold and clock
-  monotonicity, and raw witness-existence characterization are done; polynomial
-  balance, machine verification, and the gap/search problems remain.*
+  monotonicity, and raw witness-existence characterization are done. The exact
+  GapMINKT decision promise, separate `sigma`/`tau` transformations, triple
+  codec, widening/disjointness theorem, direct witness semantics, and finite
+  optimization-search relation are done; polynomial balance, machine
+  verification, and randomized search algorithms remain.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
