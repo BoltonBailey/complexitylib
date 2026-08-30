@@ -14,7 +14,8 @@ import Complexitylib.Classes.Randomized.Hashing.Internal
 
 This module exposes the first two exact finite moments behind Stockmeyer
 counting, the resulting variance bound, and the finite Chebyshev hashing
-lemma.
+lemma. It also exposes the low- and high-occupancy bounds used by the weak
+Stockmeyer counting test.
 -/
 
 
@@ -137,6 +138,90 @@ theorem eventProb_relativeDeviationEvent_le
         1 / (epsilon ^ 2 * hash.averageCellSize set target) :=
   hash.eventProb_relativeDeviationEvent_le_internal
     set target epsilon hepsilon hmean
+
+/-- Empty- and nonempty-cell events partition the affine seeds. -/
+theorem emptyCellEvent_eq_compl_nonemptyCellEvent
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.emptyCellEvent set target = (hash.nonemptyCellEvent set target)ᶜ :=
+  hash.emptyCellEvent_eq_compl_nonemptyCellEvent_internal set target
+
+/-- A seed belongs to the nonempty-cell event exactly when its target cell has
+a member. -/
+theorem mem_nonemptyCellEvent_iff
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (seed : BitString seedWidth) :
+    seed ∈ hash.nonemptyCellEvent set target ↔
+      (hash.cell set target seed).Nonempty :=
+  hash.mem_nonemptyCellEvent_iff_internal set target seed
+
+/-- A seed belongs to the empty-cell event exactly when its target cell is
+empty. -/
+theorem mem_emptyCellEvent_iff
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (seed : BitString seedWidth) :
+    seed ∈ hash.emptyCellEvent set target ↔
+      hash.cell set target seed = ∅ :=
+  hash.mem_emptyCellEvent_iff_internal set target seed
+
+/-- First-moment upper bound on the probability that the target cell is
+nonempty. -/
+theorem eventProb_nonemptyCellEvent_le_averageCellSize
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    eventProb (hash.nonemptyCellEvent set target) ≤
+      hash.averageCellSize set target :=
+  hash.eventProb_nonemptyCellEvent_le_averageCellSize_internal set target
+
+/-- Second-moment upper bound on the probability that the target cell is
+empty. -/
+theorem eventProb_emptyCellEvent_le_inv_averageCellSize
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 0 < hash.averageCellSize set target) :
+    eventProb (hash.emptyCellEvent set target) ≤
+      1 / hash.averageCellSize set target :=
+  hash.eventProb_emptyCellEvent_le_inv_averageCellSize_internal
+    set target hmean
+
+/-- Second-moment lower bound on the probability that the target cell is
+nonempty. -/
+theorem one_sub_inv_averageCellSize_le_eventProb_nonemptyCellEvent
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 0 < hash.averageCellSize set target) :
+    1 - 1 / hash.averageCellSize set target ≤
+      eventProb (hash.nonemptyCellEvent set target) :=
+  hash.one_sub_inv_averageCellSize_le_eventProb_nonemptyCellEvent_internal
+    set target hmean
+
+/-- If the mean cell size is at most `1/8`, target-cell occupancy has
+probability at most `1/8`. -/
+theorem eventProb_nonemptyCellEvent_le_one_eighth
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : hash.averageCellSize set target ≤ 1 / 8) :
+    eventProb (hash.nonemptyCellEvent set target) ≤ 1 / 8 :=
+  hash.eventProb_nonemptyCellEvent_le_one_eighth_internal set target hmean
+
+/-- If the mean cell size is at least `8`, target-cell occupancy has probability
+at least `7/8`. -/
+theorem seven_eighths_le_eventProb_nonemptyCellEvent
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 8 ≤ hash.averageCellSize set target) :
+    7 / 8 ≤ eventProb (hash.nonemptyCellEvent set target) :=
+  hash.seven_eighths_le_eventProb_nonemptyCellEvent_internal set target hmean
 
 end PairwiseIndependentHash
 

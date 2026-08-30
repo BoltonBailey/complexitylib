@@ -105,6 +105,21 @@ def deviationEvent {domainWidth rangeWidth seedWidth : ℕ}
     radius ≤ |(hash.cellSize set target seed : ℚ) -
       hash.averageCellSize set target|
 
+/-- Seeds whose target hash cell is nonempty. This is the event tested by the
+NP oracle in Stockmeyer counting. -/
+def nonemptyCellEvent {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    Finset (BitString seedWidth) :=
+  Finset.univ.filter fun seed => 0 < hash.cellSize set target seed
+
+/-- Seeds whose target hash cell is empty. -/
+def emptyCellEvent {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    Finset (BitString seedWidth) :=
+  Finset.univ.filter fun seed => hash.cellSize set target seed = 0
+
 end PairwiseIndependentHash
 
 end Complexity

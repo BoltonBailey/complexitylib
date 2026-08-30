@@ -22,7 +22,7 @@ rational PTM acceptance probability `NTM.acceptProb` (roadmap track N2).
 
 ## Main results
 
-- `eventProb` with `eventProb_nonneg`, `eventProb_le_one`, `eventProb_empty`,
+- `eventProb` with `eventProb_nonneg`, `eventProb_mono`, `eventProb_le_one`, `eventProb_empty`,
   `eventProb_univ`, the complement identity `eventProb_compl`, and the union
   bound `eventProb_union_le`
 - `eventProb_le_uniformAverage_div` — finite-uniform Markov inequality
@@ -62,6 +62,12 @@ def eventProb {T : ℕ} (E : Finset (Fin T → Bool)) : ℚ := (E.card : ℚ) / 
 
 theorem eventProb_nonneg {T : ℕ} (E : Finset (Fin T → Bool)) : 0 ≤ eventProb E := by
   unfold eventProb; positivity
+
+/-- Probability is monotone under event inclusion. -/
+theorem eventProb_mono {T : ℕ} {E F : Finset (Fin T → Bool)} (h : E ⊆ F) :
+    eventProb E ≤ eventProb F := by
+  unfold eventProb
+  gcongr
 
 /-- Every finite event has cardinality at most the size of the sample space. -/
 theorem card_le_pow {T : ℕ} (E : Finset (Fin T → Bool)) : E.card ≤ 2 ^ T := by

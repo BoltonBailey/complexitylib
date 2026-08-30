@@ -2938,8 +2938,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   `rangeWidth * (domainWidth + 1)` seed bits and satisfies exact one-point and
   two-point uniformity. Double counting gives its first and second cell-size
   moments, the exact variance and `variance ≤ mean` bound, and a finite Chebyshev
-  lemma with both absolute- and relative-error forms. The weak nonemptiness
-  estimator, power trick, median amplification, and circuit realization remain.*
+  lemma with both absolute- and relative-error forms. The single-hash
+  nonemptiness test now has the required occupancy gap: probability at most
+  `1/8` when the mean cell size is at most `1/8`, and at least `7/8` when the
+  mean is at least `8`. The multi-level weak estimator, power trick, median
+  amplification, and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

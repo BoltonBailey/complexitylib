@@ -286,6 +286,123 @@ theorem eventProb_relativeDeviationEvent_le_internal
     _ = 1 / (epsilon ^ 2 * hash.averageCellSize set target) := by
       field_simp [ne_of_gt hepsilon, ne_of_gt hmean]
 
+/-- Internal partition of hash seeds into empty and nonempty target cells. -/
+theorem emptyCellEvent_eq_compl_nonemptyCellEvent_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    hash.emptyCellEvent set target = (hash.nonemptyCellEvent set target)ᶜ := by
+  classical
+  ext seed
+  simp [emptyCellEvent, nonemptyCellEvent]
+
+/-- Internal semantic characterization of the nonempty-cell event. -/
+theorem mem_nonemptyCellEvent_iff_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (seed : BitString seedWidth) :
+    seed ∈ hash.nonemptyCellEvent set target ↔
+      (hash.cell set target seed).Nonempty := by
+  simp [nonemptyCellEvent, cellSize, Finset.card_pos]
+
+/-- Internal semantic characterization of the empty-cell event. -/
+theorem mem_emptyCellEvent_iff_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (seed : BitString seedWidth) :
+    seed ∈ hash.emptyCellEvent set target ↔
+      hash.cell set target seed = ∅ := by
+  simp [emptyCellEvent, cellSize]
+
+/-- Internal first-moment upper bound on target-cell occupancy. -/
+theorem eventProb_nonemptyCellEvent_le_averageCellSize_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth) :
+    eventProb (hash.nonemptyCellEvent set target) ≤
+      hash.averageCellSize set target := by
+  have hmarkov := eventProb_le_uniformAverage_div
+    (hash.nonemptyCellEvent set target)
+    (fun seed : BitString seedWidth => (hash.cellSize set target seed : ℚ))
+    1 (by norm_num) (fun _seed => by positivity)
+    (fun seed hseed => by
+      have hpos := (Finset.mem_filter.mp hseed).2
+      have hge : 1 ≤ hash.cellSize set target seed := by omega
+      change (1 : ℚ) ≤ (hash.cellSize set target seed : ℚ)
+      exact_mod_cast hge)
+  simpa only [averageCellSize, div_one] using hmarkov
+
+/-- Internal second-moment upper bound on target-cell emptiness. -/
+theorem eventProb_emptyCellEvent_le_inv_averageCellSize_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 0 < hash.averageCellSize set target) :
+    eventProb (hash.emptyCellEvent set target) ≤
+      1 / hash.averageCellSize set target := by
+  have hsubset : hash.emptyCellEvent set target ⊆
+      hash.deviationEvent set target (hash.averageCellSize set target) := by
+    intro seed hseed
+    simp only [emptyCellEvent, deviationEvent, Finset.mem_filter,
+      Finset.mem_univ, true_and] at hseed ⊢
+    rw [hseed]
+    norm_num [abs_of_pos hmean]
+  calc
+    eventProb (hash.emptyCellEvent set target) ≤
+        eventProb (hash.deviationEvent set target
+          (hash.averageCellSize set target)) :=
+      eventProb_mono hsubset
+    _ ≤ hash.averageCellSize set target /
+        hash.averageCellSize set target ^ 2 :=
+      hash.eventProb_deviationEvent_le_average_div_sq_internal
+        set target _ hmean
+    _ = 1 / hash.averageCellSize set target := by
+      field_simp [ne_of_gt hmean]
+
+/-- Internal lower bound on target-cell occupancy. -/
+theorem one_sub_inv_averageCellSize_le_eventProb_nonemptyCellEvent_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 0 < hash.averageCellSize set target) :
+    1 - 1 / hash.averageCellSize set target ≤
+      eventProb (hash.nonemptyCellEvent set target) := by
+  have hempty :=
+    hash.eventProb_emptyCellEvent_le_inv_averageCellSize_internal
+      set target hmean
+  rw [hash.emptyCellEvent_eq_compl_nonemptyCellEvent_internal set target,
+    eventProb_compl] at hempty
+  linarith
+
+/-- Internal low-mean occupancy bound used by the weak counting test. -/
+theorem eventProb_nonemptyCellEvent_le_one_eighth_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : hash.averageCellSize set target ≤ 1 / 8) :
+    eventProb (hash.nonemptyCellEvent set target) ≤ 1 / 8 :=
+  le_trans
+    (hash.eventProb_nonemptyCellEvent_le_averageCellSize_internal set target)
+    hmean
+
+/-- Internal high-mean occupancy bound used by the weak counting test. -/
+theorem seven_eighths_le_eventProb_nonemptyCellEvent_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (hmean : 8 ≤ hash.averageCellSize set target) :
+    7 / 8 ≤ eventProb (hash.nonemptyCellEvent set target) := by
+  have hmeanPos : 0 < hash.averageCellSize set target :=
+    lt_of_lt_of_le (by norm_num) hmean
+  have hlower :=
+    hash.one_sub_inv_averageCellSize_le_eventProb_nonemptyCellEvent_internal
+      set target hmeanPos
+  have hinv : 1 / hash.averageCellSize set target ≤ 1 / 8 :=
+    one_div_le_one_div_of_le (by norm_num) hmean
+  linarith
+
 end PairwiseIndependentHash
 
 end Complexity
