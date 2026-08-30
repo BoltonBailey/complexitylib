@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.AverageCase.AuxiliaryUnary
+public import Complexitylib.Classes.AverageCase.Heuristic
 public import Complexitylib.Metacomplexity.Kolmogorov.Incompressibility
 public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary.Defs
 public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary.Internal
@@ -96,6 +97,14 @@ end AuxiliaryUnarySeed
 
 namespace FiniteEnsemble
 
+/-- The generic language-mass definition agrees exactly with the named MINKT
+probability under the auxiliary-unary ensemble. -/
+theorem languageProbability_auxiliaryUnary_minkt
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ) (m : ℕ) :
+    auxiliaryUnary.languageProbability (MINKT machine threshold) m =
+      auxiliaryUnaryMINKTProbability machine threshold m :=
+  languageProbability_auxiliaryUnary_minkt_internal machine threshold m
+
 /-- Exact conditioning identity for strict MINKT under a positive
 auxiliary-unary slice: its probability is the uniform average of the
 fixed-length strict-compressibility probabilities over all split lengths. -/
@@ -141,5 +150,47 @@ theorem mass_auxiliaryUnary_minktInstance {m n : ℕ} (hn : n < m)
   mass_auxiliaryUnary_minktInstance_internal hn output
 
 end FiniteEnsemble
+
+namespace MINKT
+
+/-- An errorless MINKT heuristic rejects mass at least one minus the exact
+MINKT mass and its failure mass on every auxiliary-unary slice. -/
+theorem one_sub_auxiliaryUnaryProbability_sub_failure_le_reject
+    {tapes m : ℕ} {machine : TM tapes} {threshold : ℕ → ℕ}
+    {A : HeuristicAlgorithm}
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold)) :
+    1 - FiniteEnsemble.auxiliaryUnaryMINKTProbability machine threshold m -
+        A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m :=
+  one_sub_auxiliaryUnaryProbability_sub_failure_le_reject_internal herrorless
+
+/-- The sharp incompressibility average gives an explicit lower bound on the
+correct rejection mass of every errorless MINKT heuristic. -/
+theorem auxiliaryUnary_rejectProbability_ge_average
+    {tapes m : ℕ} (hm : 0 < m) {machine : TM tapes}
+    {threshold : ℕ → ℕ} {A : HeuristicAlgorithm}
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold)) :
+    1 - (1 / (m : ℚ)) * ∑ n : Fin m,
+          ((2 ^ threshold n.val - 1 : ℕ) : ℚ) / (2 : ℚ) ^ n.val -
+        A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m :=
+  auxiliaryUnary_rejectProbability_ge_average_internal hm herrorless
+
+/-- If every split's low-complexity density is at most `low` and the heuristic
+fails with probability at most `failure`, then it correctly rejects mass at
+least `1 - low - failure`. -/
+theorem auxiliaryUnary_rejectProbability_ge_of_pointwise
+    {tapes m : ℕ} (hm : 0 < m) {machine : TM tapes}
+    {threshold : ℕ → ℕ} {A : HeuristicAlgorithm} (low failure : ℚ)
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold))
+    (hlow : ∀ n : Fin m,
+      ((2 ^ threshold n.val - 1 : ℕ) : ℚ) / (2 : ℚ) ^ n.val ≤ low)
+    (hfailure : A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤ failure) :
+    1 - low - failure ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m :=
+  auxiliaryUnary_rejectProbability_ge_of_pointwise_internal
+    hm low failure herrorless hlow hfailure
+
+end MINKT
 
 end Complexity

@@ -2664,8 +2664,11 @@ failure results with a canonical `FP` output codec. `AvgPAt` and `AvgP` impose
 global soundness, deterministic polynomial time, and per-slice failure bounds;
 the public theory includes bound monotonicity, complement preservation of the
 failure event, and a zero-failure embedding of exact polynomial-time Boolean
-decision functions. Error-prone heuristics and machine-realized samplers remain
-separate open layers.
+decision functions. Named answer and language probabilities now support the
+general errorless inequality `Pr[reject] >= 1 - Pr[L] - Pr[failure]`. For
+`L = MINKT[r]` under `D^u`, strict incompressibility turns this into the explicit
+lower bound `1 - average_(n<m)((2^r(n)-1)/2^n) - Pr[failure]`. Error-prone
+heuristics and machine-realized samplers remain separate open layers.
 
 **Literature anchors and theorem ladder.** Freeze a specific published version
 before transcribing a theorem. The initial spine is Hirahara's 2018
@@ -2780,14 +2783,13 @@ meta-computational notation hides several incompatible choices; expose them.
   exact unary codec, direct short-program semantics, threshold and clock
   monotonicity, and raw witness-existence characterization are done; polynomial
   balance, machine verification, and the gap/search problems remain.*
-- [~] Formalize the finite dense-random-string extraction lemma: an errorless
-  heuristic for `MINKT[r]` must accept a dense subset of high-complexity strings
-  because low-complexity strings are sparse. This is the first substantive bridge
-  from finite incompressibility to the 2018 reduction. *The machine-relative
-  non-strict and strict sparse-low-complexity counts, exact uniform density
-  bounds, complementary `r`-random-string existence theorem, exact
-  auxiliary-unary split average, and transferred MINKT probability bound are
-  done; the language/heuristic acceptance argument remains.*
+- [x] Formalize the finite dense-random-string extraction lemma: an errorless
+  heuristic for strict `MINKT[r]` must correctly reject a dense subset of
+  high-complexity strings because low-complexity strings are sparse. The public
+  theorem gives rejection mass at least one minus the exact averaged
+  low-complexity density and failure mass, with a pointwise-bound corollary.
+  This is the first substantive bridge from finite incompressibility to the
+  2018 reduction.
 - [ ] Formalize the Nisan--Wigderson reconstruction/information argument needed to
   turn that dense set into a near-optimal description search algorithm. First
   prove the exact finite parameter theorem; then derive the published

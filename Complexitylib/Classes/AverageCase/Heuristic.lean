@@ -85,6 +85,34 @@ theorem failureProbability_le_one (D : FiniteEnsemble (List Bool))
     A.failureProbability D n ≤ 1 :=
   failureProbability_le_one_internal D A n
 
+/-- Every answer probability is nonnegative. -/
+theorem answerProbability_nonneg (D : FiniteEnsemble (List Bool))
+    (A : HeuristicAlgorithm) (answer : HeuristicAnswer) (n : ℕ) :
+    0 ≤ A.answerProbability D answer n :=
+  answerProbability_nonneg_internal D A answer n
+
+/-- Every answer probability is at most one. -/
+theorem answerProbability_le_one (D : FiniteEnsemble (List Bool))
+    (A : HeuristicAlgorithm) (answer : HeuristicAnswer) (n : ℕ) :
+    A.answerProbability D answer n ≤ 1 :=
+  answerProbability_le_one_internal D A answer n
+
+/-- Failure probability is the probability of the `failure` answer. -/
+theorem failureProbability_eq_answerProbability
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    A.failureProbability D n = A.answerProbability D .failure n :=
+  failureProbability_eq_answerProbability_internal D A n
+
+/-- An errorless heuristic correctly rejects mass at least one minus the
+language mass and its failure mass. -/
+theorem IsErrorlessFor.one_sub_languageProbability_sub_failure_le_reject
+    {A : HeuristicAlgorithm} {L : Language}
+    (herrorless : A.IsErrorlessFor L)
+    (D : FiniteEnsemble (List Bool)) (n : ℕ) :
+    1 - D.languageProbability L n - A.failureProbability D n ≤
+      A.answerProbability D .reject n :=
+  herrorless.one_sub_languageProbability_sub_failure_le_reject_internal D n
+
 /-- Complementing a heuristic preserves its failure probability exactly. -/
 @[simp] theorem failureProbability_complement
     (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :

@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.AverageCase.AuxiliaryUnary.Defs
+public import Complexitylib.Classes.AverageCase.Heuristic.Defs
 public import Complexitylib.Metacomplexity.MINKT.Defs
 
 /-!

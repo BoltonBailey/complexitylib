@@ -10,6 +10,7 @@ public import Complexitylib.Metacomplexity.MINKT.AuxiliaryUnary.Defs
 public import Complexitylib.Metacomplexity.MINKT.Internal
 public import Complexitylib.Metacomplexity.Kolmogorov.Incompressibility.Internal
 import Complexitylib.Classes.AverageCase.FiniteEnsemble
+import Complexitylib.Classes.AverageCase.Heuristic.Internal
 
 /-!
 # Auxiliary-unary MINKT instances -- proof internals
@@ -82,6 +83,12 @@ theorem sample_mem_minkt_iff_mem_strictlyCompressible_internal {m : ℕ}
 end AuxiliaryUnarySeed
 
 namespace FiniteEnsemble
+
+theorem languageProbability_auxiliaryUnary_minkt_internal
+    {tapes : ℕ} (machine : TM tapes) (threshold : ℕ → ℕ) (m : ℕ) :
+    auxiliaryUnary.languageProbability (MINKT machine threshold) m =
+      auxiliaryUnaryMINKTProbability machine threshold m := by
+  rfl
 
 theorem probability_auxiliaryUnary_minkt_eq_average_internal
     {tapes m : ℕ} (hm : 0 < m) (machine : TM tapes)
@@ -186,5 +193,55 @@ theorem mass_auxiliaryUnary_minktInstance_internal {m n : ℕ} (hn : n < m)
     mass_auxiliaryUnary_pair_internal hn output
 
 end FiniteEnsemble
+
+namespace MINKT
+
+theorem one_sub_auxiliaryUnaryProbability_sub_failure_le_reject_internal
+    {tapes m : ℕ} {machine : TM tapes} {threshold : ℕ → ℕ}
+    {A : HeuristicAlgorithm}
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold)) :
+    1 - FiniteEnsemble.auxiliaryUnaryMINKTProbability machine threshold m -
+        A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m := by
+  have hreject :=
+    herrorless.one_sub_languageProbability_sub_failure_le_reject_internal
+      FiniteEnsemble.auxiliaryUnary m
+  rw [FiniteEnsemble.languageProbability_auxiliaryUnary_minkt_internal] at hreject
+  exact hreject
+
+theorem auxiliaryUnary_rejectProbability_ge_average_internal
+    {tapes m : ℕ} (hm : 0 < m) {machine : TM tapes}
+    {threshold : ℕ → ℕ} {A : HeuristicAlgorithm}
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold)) :
+    1 - (1 / (m : ℚ)) * ∑ n : Fin m,
+          ((2 ^ threshold n.val - 1 : ℕ) : ℚ) / (2 : ℚ) ^ n.val -
+        A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m := by
+  have hreject :=
+    one_sub_auxiliaryUnaryProbability_sub_failure_le_reject_internal
+      (m := m) herrorless
+  have hprob :=
+    FiniteEnsemble.probability_auxiliaryUnary_minkt_le_average_incompressibility_internal
+      hm machine threshold
+  linarith
+
+theorem auxiliaryUnary_rejectProbability_ge_of_pointwise_internal
+    {tapes m : ℕ} (hm : 0 < m) {machine : TM tapes}
+    {threshold : ℕ → ℕ} {A : HeuristicAlgorithm} (low failure : ℚ)
+    (herrorless : A.IsErrorlessFor (MINKT machine threshold))
+    (hlow : ∀ n : Fin m,
+      ((2 ^ threshold n.val - 1 : ℕ) : ℚ) / (2 : ℚ) ^ n.val ≤ low)
+    (hfailure : A.failureProbability FiniteEnsemble.auxiliaryUnary m ≤ failure) :
+    1 - low - failure ≤
+      A.answerProbability FiniteEnsemble.auxiliaryUnary .reject m := by
+  have hreject :=
+    one_sub_auxiliaryUnaryProbability_sub_failure_le_reject_internal
+      (m := m) herrorless
+  have hprob :=
+    FiniteEnsemble.probability_auxiliaryUnary_minkt_le_of_pointwise_internal
+      hm machine threshold low hlow
+  linarith
+
+end MINKT
 
 end Complexity

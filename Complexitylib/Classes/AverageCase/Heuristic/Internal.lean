@@ -73,6 +73,53 @@ theorem failureProbability_le_one_internal
     A.failureProbability D n ≤ 1 :=
   D.probability_le_one_internal n _
 
+theorem answerProbability_nonneg_internal
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm)
+    (answer : HeuristicAnswer) (n : ℕ) :
+    0 ≤ A.answerProbability D answer n :=
+  D.probability_nonneg_internal n _
+
+theorem answerProbability_le_one_internal
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm)
+    (answer : HeuristicAnswer) (n : ℕ) :
+    A.answerProbability D answer n ≤ 1 :=
+  D.probability_le_one_internal n _
+
+theorem failureProbability_eq_answerProbability_internal
+    (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
+    A.failureProbability D n = A.answerProbability D .failure n :=
+  rfl
+
+theorem IsErrorlessFor.one_sub_languageProbability_sub_failure_le_reject_internal
+    {A : HeuristicAlgorithm} {L : Language}
+    (herrorless : A.IsErrorlessFor L)
+    (D : FiniteEnsemble (List Bool)) (n : ℕ) :
+    1 - D.languageProbability L n - A.failureProbability D n ≤
+      A.answerProbability D .reject n := by
+  classical
+  unfold FiniteEnsemble.languageProbability failureProbability answerProbability
+  have hcover : ∀ x : List Bool, True →
+      x ∈ L ∨ A x = .failure ∨ A x = .reject := by
+    intro x _hx
+    cases hanswer : A x with
+    | accept =>
+        left
+        simpa only [IsErrorlessFor, hanswer, HeuristicAnswer.CorrectFor] using
+          herrorless x
+    | reject => exact Or.inr (Or.inr rfl)
+    | failure => exact Or.inr (Or.inl rfl)
+  have htotal : 1 ≤ D.probability n
+      (fun x => x ∈ L ∨ A x = .failure ∨ A x = .reject) := by
+    have hmono := D.probability_mono_internal n
+      (fun _x : List Bool => True)
+      (fun x => x ∈ L ∨ A x = .failure ∨ A x = .reject) hcover
+    simpa only [D.probability_true_internal] using hmono
+  have houter := D.probability_or_le_internal n
+    (fun x => x ∈ L) (fun x => A x = .failure ∨ A x = .reject)
+  have hinner := D.probability_or_le_internal n
+    (fun x => A x = .failure) (fun x => A x = .reject)
+  linarith
+
 theorem failureProbability_complement_internal
     (D : FiniteEnsemble (List Bool)) (A : HeuristicAlgorithm) (n : ℕ) :
     A.complement.failureProbability D n = A.failureProbability D n := by

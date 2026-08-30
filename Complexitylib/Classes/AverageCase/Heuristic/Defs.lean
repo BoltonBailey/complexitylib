@@ -96,6 +96,11 @@ def complement (A : HeuristicAlgorithm) : HeuristicAlgorithm :=
 def ofDecision (decide : List Bool → Bool) : HeuristicAlgorithm :=
   fun x => if decide x then .accept else .reject
 
+/-- Exact probability of one answer on one ensemble slice. -/
+def answerProbability (D : FiniteEnsemble (List Bool))
+    (A : HeuristicAlgorithm) (answer : HeuristicAnswer) (n : ℕ) : ℚ :=
+  D.probability n fun x => A x = answer
+
 /-- Exact failure probability of a heuristic on one ensemble slice. -/
 def failureProbability (D : FiniteEnsemble (List Bool))
     (A : HeuristicAlgorithm) (n : ℕ) : ℚ :=
@@ -107,6 +112,17 @@ def FailsWithProbabilityAtMost (D : FiniteEnsemble (List Bool))
   ∀ n, A.failureProbability D n ≤ δ n
 
 end HeuristicAlgorithm
+
+namespace FiniteEnsemble
+
+/-- Exact mass assigned to a language on one ensemble slice. Classical
+decidability is confined to this finite semantic enumeration. -/
+noncomputable def languageProbability (D : FiniteEnsemble (List Bool))
+    (L : Language) (n : ℕ) : ℚ := by
+  classical
+  exact D.probability n fun x => x ∈ L
+
+end FiniteEnsemble
 
 /-- A language together with a parameterized input distribution. No complexity
 or samplability condition is imposed by the structure itself. -/
