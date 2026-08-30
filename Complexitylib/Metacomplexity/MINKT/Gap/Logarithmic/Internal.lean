@@ -191,6 +191,121 @@ theorem decisionOfEstimator_eq_false_of_mem_noLanguage_internal {tapes : ℕ}
         (disjoint_estimatorLanguage_noLanguage_internal hestimate)
           hmem hno).elim
 
+theorem thresholdInstance_base_internal (inst : MINKT.Instance)
+    (threshold : ℕ) :
+    (thresholdInstance inst threshold).base = inst := by
+  rfl
+
+theorem firstAcceptedThreshold_spec_of_accepted_internal
+    (decide : List Bool → Bool) (inst : MINKT.Instance) {cap threshold : ℕ}
+    (hthreshold : threshold ≤ cap)
+    (haccept : decide (thresholdInstance inst threshold).encode = true) :
+    decide
+        (thresholdInstance inst
+          (firstAcceptedThreshold decide inst cap)).encode = true ∧
+      firstAcceptedThreshold decide inst cap ≤ threshold := by
+  let candidate : Fin (cap + 1) := ⟨threshold, by omega⟩
+  let accepts : Fin (cap + 1) → Bool := fun value =>
+    decide (thresholdInstance inst value.val).encode
+  have hcandidate : accepts candidate = true := by
+    simpa [accepts, candidate] using haccept
+  have hexists : ∃ value, accepts value := ⟨candidate, hcandidate⟩
+  have hfind : Fin.find? accepts =
+      some (Fin.find (accepts ·) hexists) :=
+    Fin.find?_eq_some_find_of_exists hexists
+  have hspec : accepts (Fin.find (accepts ·) hexists) :=
+    Fin.find_spec hexists
+  have hleast : Fin.find (accepts ·) hexists ≤ candidate :=
+    Fin.find_le_of_pos hexists hcandidate
+  unfold firstAcceptedThreshold
+  rw [show (fun value : Fin (cap + 1) =>
+    decide (thresholdInstance inst value.val).encode) = accepts from rfl]
+  rw [hfind]
+  exact ⟨hspec, hleast⟩
+
+theorem timeSearchEstimator_satisfiesBoundsAt_internal {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    {decide : List Bool → Bool}
+    (haccept : ∀ bits ∈ yesLanguage machine, decide bits = true)
+    (hreject : ∀ bits ∈ noLanguage machine parameters,
+      decide bits = false)
+    (inst : MINKT.Instance)
+    (hfinite : machine.timeBoundedKolmogorovComplexity
+      inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide inst : WithTop ℕ) ≤
+        machine.timeBoundedKolmogorovComplexity inst.output inst.time ∧
+      machine.timeBoundedKolmogorovComplexity inst.output
+          (parameters.transformedTime inst) ≤
+        (timeSearchEstimator decide inst +
+          parameters.logarithmicSlack inst : ℕ) := by
+  obtain ⟨optimum, hoptimum⟩ := WithTop.ne_top_iff_exists.mp hfinite
+  have hsourceLe := TM.timeBoundedKolmogorovComplexity_le_time_internal
+    machine inst.output inst.time hfinite
+  have hoptimumLe : optimum ≤ inst.time := by
+    apply WithTop.coe_le_coe.mp
+    rw [hoptimum]
+    exact hsourceLe
+  let exactInstance := thresholdInstance inst optimum
+  have hexactYes : exactInstance.IsYes machine := by
+    change machine.timeBoundedKolmogorovComplexity inst.output inst.time ≤
+      (optimum : WithTop ℕ)
+    exact hoptimum.symm.le
+  have hexactAccept : decide exactInstance.encode = true :=
+    haccept exactInstance.encode
+      ((yesLanguage_mem_encode_iff_internal machine exactInstance).mpr
+        hexactYes)
+  have hsearch := firstAcceptedThreshold_spec_of_accepted_internal
+    decide inst hoptimumLe (by
+      simpa [exactInstance] using hexactAccept)
+  have hsearchAccept : decide
+      (thresholdInstance inst (timeSearchEstimator decide inst)).encode = true := by
+    simpa [timeSearchEstimator, estimatorOfSolver] using hsearch.1
+  have hsearchLe : timeSearchEstimator decide inst ≤ optimum := by
+    simpa [timeSearchEstimator, estimatorOfSolver] using hsearch.2
+  constructor
+  · rw [← hoptimum]
+    exact WithTop.coe_le_coe.mpr hsearchLe
+  · apply le_of_not_gt
+    intro hlater
+    let chosen := thresholdInstance inst (timeSearchEstimator decide inst)
+    have hchosenNo : IsNo chosen machine parameters := by
+      simpa [chosen, IsNo, thresholdInstance, GapMINKT.Instance.base] using
+        hlater
+    have hchosenReject : decide chosen.encode = false :=
+      hreject chosen.encode
+        ((noLanguage_mem_encode_iff_internal machine parameters chosen).mpr
+          hchosenNo)
+    have hchosenAccept : decide chosen.encode = true := by
+      simpa [chosen] using hsearchAccept
+    exact Bool.false_ne_true (hchosenReject.symm.trans hchosenAccept)
+
+theorem timeSearchEstimator_satisfiesBoundsOn_internal {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    {decide : List Bool → Bool} {eligible : MINKT.Instance → Prop}
+    (haccept : ∀ bits ∈ yesLanguage machine, decide bits = true)
+    (hreject : ∀ bits ∈ noLanguage machine parameters,
+      decide bits = false)
+    (hfinite : ∀ inst, eligible inst →
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide).SatisfiesBoundsOn
+      machine parameters eligible := by
+  intro inst heligible
+  exact timeSearchEstimator_satisfiesBoundsAt_internal
+    haccept hreject inst (hfinite inst heligible)
+
+theorem timeSearchEstimator_satisfiesBounds_internal {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    {decide : List Bool → Bool}
+    (haccept : ∀ bits ∈ yesLanguage machine, decide bits = true)
+    (hreject : ∀ bits ∈ noLanguage machine parameters,
+      decide bits = false)
+    (hfinite : ∀ inst : MINKT.Instance, machine.timeBoundedKolmogorovComplexity
+      inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide).SatisfiesBounds machine parameters := by
+  intro inst
+  exact timeSearchEstimator_satisfiesBoundsAt_internal
+    haccept hreject inst (hfinite inst)
+
 end Logarithmic
 
 end GapMINKT

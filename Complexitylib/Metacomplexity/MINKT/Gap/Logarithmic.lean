@@ -109,6 +109,26 @@ theorem decisionOfEstimator_eq_true_iff (estimate : Estimator)
       bits ∈ estimatorLanguage estimate :=
   decisionOfEstimator_eq_true_iff_internal estimate bits
 
+/-- Adding a threshold and then forgetting it recovers the original MINKT
+instance. -/
+@[simp] theorem thresholdInstance_base (inst : MINKT.Instance)
+    (threshold : ℕ) :
+    (thresholdInstance inst threshold).base = inst :=
+  thresholdInstance_base_internal inst threshold
+
+/-- If some threshold up to the cap is accepted, bounded search returns an
+accepted threshold no larger than that witness. -/
+theorem firstAcceptedThreshold_spec_of_accepted
+    (decide : List Bool → Bool) (inst : MINKT.Instance) {cap threshold : ℕ}
+    (hthreshold : threshold ≤ cap)
+    (haccept : decide (thresholdInstance inst threshold).encode = true) :
+    decide
+        (thresholdInstance inst
+          (firstAcceptedThreshold decide inst cap)).encode = true ∧
+      firstAcceptedThreshold decide inst cap ≤ threshold :=
+  firstAcceptedThreshold_spec_of_accepted_internal
+    decide inst hthreshold haccept
+
 /-- A valid estimator completion contains the yes language. -/
 theorem Estimator.SatisfiesBounds.yesLanguage_subset {tapes : ℕ}
     {machine : TM tapes} {parameters : Parameters} {estimate : Estimator}
@@ -147,6 +167,65 @@ def problem {tapes : ℕ} (machine : TM tapes) (parameters : Parameters)
   yesInstances := yesLanguage machine
   noInstances := noLanguage machine parameters
   disjoint := disjoint_yesLanguage_noLanguage machine parameters hwidening
+
+/-- The reverse numerical direction of Fact 3.4 at one finite source instance.
+
+Bounded threshold search against any solver for logarithmic GapMINKT returns a
+value between the later-clock complexity minus logarithmic slack and the exact
+source-clock complexity. -/
+theorem timeSearchEstimator_satisfiesBoundsAt {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    (hwidening : parameters.IsWidening) {decide : List Bool → Bool}
+    (hsolve : (problem machine parameters hwidening).SolvedBy decide)
+    (inst : MINKT.Instance)
+    (hfinite : machine.timeBoundedKolmogorovComplexity
+      inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide inst : WithTop ℕ) ≤
+        machine.timeBoundedKolmogorovComplexity inst.output inst.time ∧
+      machine.timeBoundedKolmogorovComplexity inst.output
+          (parameters.transformedTime inst) ≤
+        (timeSearchEstimator decide inst +
+          parameters.logarithmicSlack inst : ℕ) :=
+  timeSearchEstimator_satisfiesBoundsAt_internal
+    hsolve.1 hsolve.2 inst hfinite
+
+/-- A gap solver yields the Fact 3.4 estimator sandwich on every explicitly
+eligible input whose source-clock complexity is finite. -/
+theorem timeSearchEstimator_satisfiesBoundsOn {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    (hwidening : parameters.IsWidening) {decide : List Bool → Bool}
+    {eligible : MINKT.Instance → Prop}
+    (hsolve : (problem machine parameters hwidening).SolvedBy decide)
+    (hfinite : ∀ inst, eligible inst →
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide).SatisfiesBoundsOn
+      machine parameters eligible :=
+  timeSearchEstimator_satisfiesBoundsOn_internal
+    hsolve.1 hsolve.2 hfinite
+
+/-- Exact domain-restricted reverse Fact 3.4: on inputs with `|x| <= t`, it is
+enough that the source complexity be finite on that same domain. -/
+theorem timeSearchEstimator_satisfiesBoundsOn_lengthWithinTime
+    {tapes : ℕ} {machine : TM tapes} {parameters : Parameters}
+    (hwidening : parameters.IsWidening) {decide : List Bool → Bool}
+    (hsolve : (problem machine parameters hwidening).SolvedBy decide)
+    (hfinite : ∀ inst : MINKT.Instance, IsLengthWithinTime inst →
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide).SatisfiesBoundsOn machine parameters
+      IsLengthWithinTime :=
+  timeSearchEstimator_satisfiesBoundsOn hwidening hsolve hfinite
+
+/-- If source-clock complexity is finite on every input, bounded threshold
+search converts a logarithmic-gap solver into a global Fact 3.4 estimator. -/
+theorem timeSearchEstimator_satisfiesBounds {tapes : ℕ}
+    {machine : TM tapes} {parameters : Parameters}
+    (hwidening : parameters.IsWidening) {decide : List Bool → Bool}
+    (hsolve : (problem machine parameters hwidening).SolvedBy decide)
+    (hfinite : ∀ inst : MINKT.Instance,
+      machine.timeBoundedKolmogorovComplexity inst.output inst.time ≠ ⊤) :
+    (timeSearchEstimator decide).SatisfiesBounds machine parameters :=
+  timeSearchEstimator_satisfiesBounds_internal
+    hsolve.1 hsolve.2 hfinite
 
 /-- Thresholding a valid estimator solves the exact logarithmic promise. -/
 theorem problem_solvedBy_decisionOfEstimator {tapes : ℕ}

@@ -3050,7 +3050,14 @@ meta-computational notation hides several incompatible choices; expose them.
   a separate additive layer: it has a two-argument clock, widening and
   polynomial-growth predicates, exact no-witness semantics, a disjoint promise,
   and Fact 3.4's estimator sandwich. Thresholding a valid estimator solves the
-  promise, and a `P` estimator language supplies a `PromiseP` completion.*
+  promise, and a `P` estimator language supplies a `PromiseP` completion.
+  The reverse numerical direction is now complete as well: finite threshold
+  search against any semantic promise solver returns the least accepted value,
+  which satisfies the estimator sandwich at every finite source instance.
+  Public variants expose the paper's exact `|x| <= t` domain and the stronger
+  global-finiteness specialization separately. Proving that this bounded sweep
+  preserves `FP`, and discharging domain finiteness from a concrete universal
+  printer, remain the algorithmic parts of Fact 3.4.*
 - [x] Formalize the finite dense-random-string extraction lemma: an errorless
   heuristic for strict `MINKT[r]` must correctly reject a dense subset of
   high-complexity strings because low-complexity strings are sparse. The public
@@ -3383,6 +3390,9 @@ formalization targets and should be stated positively under their exact names.
 - [x] Separate the search-oriented GapMINKT parameters from Hirahara's exact
   logarithmic Definition 3.3, and prove the corresponding Fact 3.4 estimator
   solver and `PromiseP` completion criterion.
+- [x] Prove the reverse numerical direction of Fact 3.4 by bounded threshold
+  search, both pointwise and on the exact `|x| <= t` domain; retain `FP`
+  preservation and the concrete universal-printer bound as explicit next steps.
 - [x] Isolate Proposition 6.2's adjusted-difference estimator and prove that its
   two pre-cancellation accounting inequalities imply the full conditional
   estimator sandwich, solver, and `PromiseP` criterion.

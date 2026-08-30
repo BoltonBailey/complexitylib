@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Classes.Promise.Defs
 public import Complexitylib.Metacomplexity.MINKT.Gap.Defs
+public import Mathlib.Data.Fin.Tuple.Basic
 public import Mathlib.Data.Nat.Log
 
 /-!
@@ -90,6 +91,25 @@ def Estimator.SatisfiesBounds {tapes : ℕ} (estimate : Estimator)
           (parameters.transformedTime inst) ≤
         (estimate inst + parameters.logarithmicSlack inst : ℕ)
 
+/-- The estimator sandwich restricted to an explicit set of inputs.
+
+Hirahara's Fact 3.4 uses the domain `|x| <= t`. Keeping the domain explicit
+lets the machine-relative library state that version without pretending that
+an arbitrary machine can print every output at every tiny clock. -/
+def Estimator.SatisfiesBoundsOn {tapes : ℕ} (estimate : Estimator)
+    (machine : TM tapes) (parameters : Parameters)
+    (eligible : MINKT.Instance → Prop) : Prop :=
+  ∀ inst : MINKT.Instance, eligible inst →
+    (estimate inst : WithTop ℕ) ≤
+        machine.timeBoundedKolmogorovComplexity inst.output inst.time ∧
+      machine.timeBoundedKolmogorovComplexity inst.output
+          (parameters.transformedTime inst) ≤
+        (estimate inst + parameters.logarithmicSlack inst : ℕ)
+
+/-- The input domain `|x| <= t` used in Fact 3.4. -/
+def IsLengthWithinTime (inst : MINKT.Instance) : Prop :=
+  inst.output.length ≤ inst.time
+
 /-- Exact logarithmic no condition
 `C^tau(x) > s + log_2(tau)`. -/
 def IsNo {tapes : ℕ} (inst : GapMINKT.Instance) (machine : TM tapes)
@@ -128,6 +148,35 @@ def decisionOfEstimator (estimate : Estimator) : List Bool → Bool :=
   fun bits => match GapMINKT.Instance.decode? bits with
     | some inst => decide (estimate inst.base ≤ inst.threshold)
     | none => false
+
+/-- Add a description threshold to a threshold-free MINKT instance. -/
+def thresholdInstance (inst : MINKT.Instance) (threshold : ℕ) :
+    GapMINKT.Instance where
+  output := inst.output
+  time := inst.time
+  threshold := threshold
+
+/-- Search the finite interval `[0,cap]` for the first threshold accepted by a
+Boolean promise solver. If the solver accepts none of them, return `cap`.
+
+The fallback makes the operation total. Correctness theorems use an accepted
+upper bound, so the fallback branch is then unreachable. -/
+def firstAcceptedThreshold (decide : List Bool → Bool)
+    (inst : MINKT.Instance) (cap : ℕ) : ℕ :=
+  match Fin.find? fun threshold : Fin (cap + 1) =>
+      decide (thresholdInstance inst threshold.val).encode with
+  | some threshold => threshold.val
+  | none => cap
+
+/-- Turn a gap solver into a numerical estimator by bounded threshold search. -/
+def estimatorOfSolver (decide : List Bool → Bool)
+    (cap : MINKT.Instance → ℕ) : Estimator :=
+  fun inst => firstAcceptedThreshold decide inst (cap inst)
+
+/-- The canonical Fact 3.4 search uses the unary source clock as its threshold
+cap. Every finite source complexity is at most this value by input locality. -/
+def timeSearchEstimator (decide : List Bool → Bool) : Estimator :=
+  estimatorOfSolver decide fun inst => inst.time
 
 end Logarithmic
 
