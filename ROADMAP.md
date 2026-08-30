@@ -2157,8 +2157,12 @@ precise closure property of arguments.
 
 **Staged milestones.**
 
-- [ ] Define oracle TMs with a query mechanism, query-cost convention, and
-  deterministic/nondeterministic execution semantics.
+- [~] Define oracle TMs with a query mechanism, query-cost convention, and
+  deterministic/nondeterministic execution semantics. *The deterministic
+  Boolean-oracle model is complete at the base layer: it has a dedicated query
+  tape, total query-word semantics, one-step lookup cost, exact-time execution,
+  functional runs, and true/false query laws. Nondeterministic oracle machines
+  remain.*
 - [ ] Define relativized time/space classes and lift basic simulations and
   containments that genuinely relativize.
 - [ ] Build clocked enumerations of oracle machines suitable for diagonalization.
@@ -2178,9 +2182,13 @@ closure and simulation results.
 
 **Small entry tasks.**
 
-- [S] Define a single oracle-query step and prove deterministic execution remains
+- [x] Define a single oracle-query step and prove deterministic execution remains
   functional.
-- [M] Embed ordinary machines as oracle machines that never query.
+- [x] Embed ordinary machines as oracle machines that never query. *`TM.toOracleTM`
+  has no query states, its steps are oracle-independent, and erasing its query
+  tape agrees exactly with source execution at every exact time. Runs lift in
+  the other direction too, yielding exact preservation of `DecidesInTime` for
+  every oracle.*
 - [M] Define the standard existential unary oracle language and prove it belongs to
   `NP^A` for every oracle `A`.
 - [L] Adapt the existing diagonal-machine infrastructure to clocked oracle DTMs.
@@ -3116,8 +3124,8 @@ meta-computational notation hides several incompatible choices; expose them.
   but deliberately does not claim the paper's oracle-uniform decoder interface.
   Constructing an explicit
   Reed-Solomon/Hadamard family satisfying that contract, constructing a concrete
-  bounded ambient codec or an oracle-access replacement, constructing
-  machine/runtime realizers for the
+  bounded ambient codec or lifting the decoder and Kolmogorov layer to the new
+  deterministic oracle-machine substrate, constructing machine/runtime realizers for the
   sampler, checker, indexed-message evaluator, and concrete code family,
   instantiating a concrete efficient universal machine, the explicit RRV
   construction, and final program/time accounting remain.*

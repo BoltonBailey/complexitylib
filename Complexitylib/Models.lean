@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Models.TuringMachine
+public import Complexitylib.Models.TuringMachine.Oracle
 public import Complexitylib.Models.TuringMachine.Trace
 public import Complexitylib.Models.TuringMachine.Trace.DetPrefix
 public import Complexitylib.Models.TuringMachine.SingleTape
@@ -88,7 +89,9 @@ addition, fixed-constant addition, copying, multiply-add, and fixed-polynomial
 evaluation, framed work-tape clearing,
 unary length, and pair-emission subroutines,
 computed-value/input fanout, finite space-to-time bounds, determinism results,
-the universal machine, the rose-tree program model, and the logarithmic-cost random access machine
+the universal machine, deterministic Boolean-oracle machines with an explicit
+one-step query convention, the rose-tree program model, and the logarithmic-cost
+random access machine
 (`Complexitylib.Models.RandomAccessMachine`), including its verified structured
 imperative frontend and Hamming-weight benchmark with exact steps and explicit
 quasilinear logarithmic-time and peak-space bounds, plus a generic verified
