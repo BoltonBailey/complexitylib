@@ -3025,10 +3025,15 @@ meta-computational notation hides several incompatible choices; expose them.
   end to end with checked NW reconstruction of an encoded message: with
   probability at least one half, the returned flat payload induces a decoder
   candidate set of size at most `L` containing the original source message.
-  Encoding the polarity, coordinate, parameters, and candidate-list index;
-  constructing an explicit efficiently list-decodable code family; giving
-  machine/runtime analyses of the sampler, checker, evaluator, and decoder;
-  the explicit RRV construction; and final program/time accounting remain.*
+  The candidate-list index is now a real fixed-width string of exactly
+  `clog_2(L)` bits. Appending it to the reconstruction payload has an exact
+  decoder round trip and yields an indexed oracle-free program whose decoded
+  message is the original source; the end-to-end bound pays precisely those
+  extra `clog_2(L)` bits. Encoding the polarity, coordinate, and ambient
+  parameters; constructing an explicit efficiently list-decodable code family;
+  giving machine/runtime analyses of the sampler, checker, evaluator, and
+  decoder; the explicit RRV construction; and final program/time accounting
+  remain.*
 - [ ] Package the 2018 implication from average-case `MINKT[r]` to worst-case
   search and decision `GapMINKT`, followed by its conditional
   `NP-hard GapMINKT -> ExcludesHeuristica` consequence under the exact reduction

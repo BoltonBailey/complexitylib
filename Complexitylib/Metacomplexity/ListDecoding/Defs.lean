@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.AverageCase.FiniteEnsemble.Defs
+public import Complexitylib.Mathlib.NatBits
 
 /-!
 # Finite Boolean list decoding -- definitions
@@ -57,6 +58,35 @@ def candidates {messageLength listSize : ℕ} {coordinate : Type u}
     (code : BooleanListCode messageLength listSize coordinate)
     (received : coordinate → Bool) : Finset (Fin messageLength → Bool) :=
   Finset.univ.image (code.decode received)
+
+/-- Number of bits sufficient to select one of `listSize` indexed decoder
+outputs. -/
+def decoderIndexBitWidth (listSize : ℕ) : ℕ :=
+  Nat.clog 2 listSize
+
+/-- Fixed-width binary encoding of an indexed decoder output. -/
+def encodeDecoderIndex {listSize : ℕ} (index : Fin listSize) : List Bool :=
+  Nat.toBits (decoderIndexBitWidth listSize) index
+
+/-- Decode a fixed-width decoder index, rejecting malformed lengths and
+values outside `Fin listSize`. -/
+def decodeDecoderIndex? (listSize : ℕ) (bits : List Bool) : Option (Fin listSize) :=
+  if _hlength : bits.length = decoderIndexBitWidth listSize then
+    if hvalue : Nat.fromBits bits < listSize then
+      some ⟨Nat.fromBits bits, hvalue⟩
+    else
+      none
+  else
+    none
+
+/-- Decode a source message using a fixed-width encoded list index. -/
+def decodeAtIndexBits? {messageLength listSize : ℕ} {coordinate : Type u}
+    (code : BooleanListCode messageLength listSize coordinate)
+    (received : coordinate → Bool) (bits : List Bool) :
+    Option (Fin messageLength → Bool) :=
+  match decodeDecoderIndex? listSize bits with
+  | some index => some (code.decode received index)
+  | none => none
 
 end BooleanListCode
 

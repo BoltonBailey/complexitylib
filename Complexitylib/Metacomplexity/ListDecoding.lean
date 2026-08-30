@@ -13,7 +13,9 @@ public import Complexitylib.Metacomplexity.ListDecoding.Internal
 
 Exact truth-table agreement above `1/2 + ε` places the original message in
 the candidate set of any code list-decodable up to radius `1/2 - ε`. The
-candidate set contains at most the advertised indexed list size.
+candidate set contains at most the advertised indexed list size. A canonical
+fixed-width codec stores the selecting index in exactly `clog₂(listSize)` bits
+and turns the existential decoder occurrence into an actual bit string.
 -/
 
 
@@ -24,6 +26,29 @@ universe u
 namespace Complexity
 
 namespace BooleanListCode
+
+/-- Encoding a decoder index uses exactly the ceiling-logarithmic number of
+bits needed for the advertised list size. -/
+@[simp] theorem length_encodeDecoderIndex
+    {listSize : ℕ} (index : Fin listSize) :
+    (encodeDecoderIndex index).length = decoderIndexBitWidth listSize :=
+  length_encodeDecoderIndex_internal index
+
+/-- Fixed-width decoder-index encoding round-trips exactly. -/
+theorem decodeDecoderIndex?_encodeDecoderIndex
+    {listSize : ℕ} (index : Fin listSize) :
+    decodeDecoderIndex? listSize (encodeDecoderIndex index) = some index :=
+  decodeDecoderIndex?_encodeDecoderIndex_internal index
+
+/-- Selecting a list decoder output through its encoded index agrees with
+selecting it directly. -/
+theorem decodeAtIndexBits?_encodeDecoderIndex
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    (code : BooleanListCode messageLength listSize coordinate)
+    (received : coordinate → Bool) (index : Fin listSize) :
+    code.decodeAtIndexBits? received (encodeDecoderIndex index) =
+      some (code.decode received index) :=
+  decodeAtIndexBits?_encodeDecoderIndex_internal code received index
 
 /-- Relative Boolean Hamming distance is one minus exact agreement
 probability. -/
@@ -64,6 +89,22 @@ theorem exists_decoder_index_of_agreementProbability_ge
   exists_decoder_index_of_agreementProbability_ge_internal
     hcode message received hagreement
 
+/-- A list-decoding guarantee and sufficient agreement produce an actual
+fixed-width bit string selecting the original message. -/
+theorem exists_indexBits_of_agreementProbability_ge
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    [Fintype coordinate] [DecidableEq coordinate] [Nonempty coordinate]
+    {code : BooleanListCode messageLength listSize coordinate} {radius : ℚ}
+    (hcode : code.IsListDecodableAt radius)
+    (message : Fin messageLength → Bool) (received : coordinate → Bool)
+    (hagreement : 1 - radius ≤
+      agreementProbability (code.encode message) received) :
+    ∃ bits : List Bool,
+      bits.length = decoderIndexBitWidth listSize ∧
+        code.decodeAtIndexBits? received bits = some message :=
+  exists_indexBits_of_agreementProbability_ge_internal
+    hcode message received hagreement
+
 /-- Sufficient agreement places the original message in the decoder candidate
 set. -/
 theorem mem_candidates_of_agreementProbability_ge
@@ -99,6 +140,22 @@ theorem mem_candidates_of_half_add_margin
       agreementProbability (code.encode message) received) :
     message ∈ code.candidates received :=
   mem_candidates_of_half_add_margin_internal
+    hcode message received hagreement
+
+/-- At agreement `1/2 + ε`, the original message is selected by an actual
+ceiling-logarithmic decoder-index string. -/
+theorem exists_indexBits_of_half_add_margin
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    [Fintype coordinate] [DecidableEq coordinate] [Nonempty coordinate]
+    {code : BooleanListCode messageLength listSize coordinate} {margin : ℚ}
+    (hcode : code.IsListDecodableAt (1 / 2 - margin))
+    (message : Fin messageLength → Bool) (received : coordinate → Bool)
+    (hagreement : 1 / 2 + margin ≤
+      agreementProbability (code.encode message) received) :
+    ∃ bits : List Bool,
+      bits.length = decoderIndexBitWidth listSize ∧
+        code.decodeAtIndexBits? received bits = some message :=
+  exists_indexBits_of_half_add_margin_internal
     hcode message received hagreement
 
 /-- Hirahara's abstract list-decoding bridge: a `1/2 + ε` approximator

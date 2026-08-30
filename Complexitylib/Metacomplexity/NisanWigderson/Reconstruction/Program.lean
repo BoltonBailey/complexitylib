@@ -19,8 +19,8 @@ therefore has no hard-function oracle; the hard function is used only while
 materializing and subsequently scoring the stored predictor. The encoding
 submodule flattens every stored Boolean field into a canonical bit string with
 an exact decoder and length theorem. The list-decoding submodule then turns
-agreement with an encoded source message into a bounded candidate set
-containing that message.
+agreement with an encoded source message into an indexed program that decodes
+exactly to that message, paying a ceiling-logarithmic list-index cost.
 -/
 
 

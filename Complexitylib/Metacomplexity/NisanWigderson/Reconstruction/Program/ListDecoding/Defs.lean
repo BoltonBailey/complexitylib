@@ -24,6 +24,56 @@ namespace Complexity
 
 namespace NWDesign
 
+/-- An explicit NW reconstruction program together with one indexed output of
+a list decoder. -/
+structure IndexedReconstructionProgram
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength)
+    (listSize : ℕ) where
+  /-- The oracle-free Boolean predictor materialized from reconstruction
+  advice. -/
+  reconstruction : design.ReconstructionProgram
+  /-- Which one of the list decoder's indexed outputs to select. -/
+  decoderIndex : Fin listSize
+
+namespace IndexedReconstructionProgram
+
+/-- Source message selected by an indexed reconstruction program. -/
+def decodedMessage
+    {messageLength listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize)
+    (code : BooleanListCode messageLength listSize (Fin inputLength → Bool))
+    (test : Finset (Fin outputLength → Bool)) : Fin messageLength → Bool :=
+  code.decode (program.reconstruction.predictor test) program.decoderIndex
+
+/-- Flat Boolean data stored by an indexed reconstruction program. The
+polarity and hybrid coordinate remain external codec metadata. -/
+def encodeBooleanPayload
+    {listSize outputLength inputLength seedLength : ℕ}
+    {design : NWDesign outputLength inputLength seedLength}
+    (program : IndexedReconstructionProgram design listSize) : List Bool :=
+  program.reconstruction.encodeBooleanPayload ++
+    BooleanListCode.encodeDecoderIndex program.decoderIndex
+
+end IndexedReconstructionProgram
+
+/-- Decode the Boolean payload of an indexed reconstruction program using an
+externally supplied polarity and hybrid coordinate. -/
+def decodeIndexedReconstructionBooleanPayload?
+    {outputLength inputLength seedLength : ℕ}
+    (design : NWDesign outputLength inputLength seedLength) (listSize : ℕ)
+    (complement : Bool) (current : Fin outputLength) (bits : List Bool) :
+    Option (IndexedReconstructionProgram design listSize) :=
+  let payloadLength := design.reconstructionDataBitsAt current
+  let programBits := bits.take payloadLength
+  let indexBits := bits.drop payloadLength
+  match decodeReconstructionBooleanPayload? design complement current programBits,
+      BooleanListCode.decodeDecoderIndex? listSize indexBits with
+  | some reconstruction, some decoderIndex =>
+      some { reconstruction, decoderIndex }
+  | _, _ => none
+
 namespace ReconstructionProgram
 
 /-- Candidate source messages obtained by list decoding the Boolean predictor

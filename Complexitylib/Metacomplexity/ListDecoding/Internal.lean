@@ -21,6 +21,30 @@ namespace Complexity
 
 namespace BooleanListCode
 
+theorem length_encodeDecoderIndex_internal
+    {listSize : ℕ} (index : Fin listSize) :
+    (encodeDecoderIndex index).length = decoderIndexBitWidth listSize := by
+  simp [encodeDecoderIndex, decoderIndexBitWidth, Nat.length_toBits]
+
+theorem decodeDecoderIndex?_encodeDecoderIndex_internal
+    {listSize : ℕ} (index : Fin listSize) :
+    decodeDecoderIndex? listSize (encodeDecoderIndex index) = some index := by
+  have hfits : index.val < 2 ^ decoderIndexBitWidth listSize :=
+    lt_of_lt_of_le index.isLt
+      (Nat.le_pow_clog Nat.one_lt_two listSize)
+  unfold decodeDecoderIndex?
+  rw [length_encodeDecoderIndex_internal, dif_pos rfl]
+  simp only [encodeDecoderIndex]
+  simp [Nat.fromBits_toBits hfits, index.isLt]
+
+theorem decodeAtIndexBits?_encodeDecoderIndex_internal
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    (code : BooleanListCode messageLength listSize coordinate)
+    (received : coordinate → Bool) (index : Fin listSize) :
+    code.decodeAtIndexBits? received (encodeDecoderIndex index) =
+      some (code.decode received index) := by
+  simp [decodeAtIndexBits?, decodeDecoderIndex?_encodeDecoderIndex_internal]
+
 theorem relativeDistance_eq_one_sub_agreementProbability_internal
     {coordinate : Type u} [Fintype coordinate] [DecidableEq coordinate]
     [Nonempty coordinate] (left right : coordinate → Bool) :
@@ -60,6 +84,24 @@ theorem exists_decoder_index_of_agreementProbability_ge_internal
   exact hcode message received
     (relativeDistance_le_of_agreementProbability_ge_internal hagreement)
 
+theorem exists_indexBits_of_agreementProbability_ge_internal
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    [Fintype coordinate] [DecidableEq coordinate] [Nonempty coordinate]
+    {code : BooleanListCode messageLength listSize coordinate} {radius : ℚ}
+    (hcode : code.IsListDecodableAt radius)
+    (message : Fin messageLength → Bool) (received : coordinate → Bool)
+    (hagreement : 1 - radius ≤
+      agreementProbability (code.encode message) received) :
+    ∃ bits : List Bool,
+      bits.length = decoderIndexBitWidth listSize ∧
+        code.decodeAtIndexBits? received bits = some message := by
+  obtain ⟨index, hdecode⟩ :=
+    exists_decoder_index_of_agreementProbability_ge_internal
+      hcode message received hagreement
+  refine ⟨encodeDecoderIndex index,
+    length_encodeDecoderIndex_internal index, ?_⟩
+  rw [decodeAtIndexBits?_encodeDecoderIndex_internal, hdecode]
+
 theorem mem_candidates_of_agreementProbability_ge_internal
     {messageLength listSize : ℕ} {coordinate : Type u}
     [Fintype coordinate] [DecidableEq coordinate] [Nonempty coordinate]
@@ -96,6 +138,22 @@ theorem mem_candidates_of_half_add_margin_internal
       agreementProbability (code.encode message) received) :
     message ∈ code.candidates received := by
   apply mem_candidates_of_agreementProbability_ge_internal
+    hcode message received
+  convert hagreement using 1
+  all_goals ring
+
+theorem exists_indexBits_of_half_add_margin_internal
+    {messageLength listSize : ℕ} {coordinate : Type u}
+    [Fintype coordinate] [DecidableEq coordinate] [Nonempty coordinate]
+    {code : BooleanListCode messageLength listSize coordinate} {margin : ℚ}
+    (hcode : code.IsListDecodableAt (1 / 2 - margin))
+    (message : Fin messageLength → Bool) (received : coordinate → Bool)
+    (hagreement : 1 / 2 + margin ≤
+      agreementProbability (code.encode message) received) :
+    ∃ bits : List Bool,
+      bits.length = decoderIndexBitWidth listSize ∧
+        code.decodeAtIndexBits? received bits = some message := by
+  apply exists_indexBits_of_agreementProbability_ge_internal
     hcode message received
   convert hagreement using 1
   all_goals ring
