@@ -61,6 +61,7 @@ public import Complexitylib.Classes.PCP
 public import Complexitylib.Classes.Randomized
 public import Complexitylib.Classes.Randomized.GoodSeed
 public import Complexitylib.Classes.Randomized.CircuitAmplification
+public import Complexitylib.Classes.Randomized.CircuitHardwiring
 public import Complexitylib.Classes.Randomized.PPoly
 public import Complexitylib.Classes.Pairing
 public import Complexitylib.Classes.FNP
