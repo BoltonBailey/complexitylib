@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
 
 /-!
 # Finite anti-checkers
@@ -21,7 +22,9 @@ permutation, so the list acts semantically as a multiset.
 The main bridge is exact: the canonical SuccinctMCSP instance labelled by the
 target rejects if and only if its input list is an anti-checker. The extraction
 layer obtains such a list from any finite covering set of circuit codes whose
-members all fail somewhere, using at most one disagreement input per code.
+members all fail somewhere, using at most one disagreement input per code. The
+enumeration layer supplies a canonical covering set with an explicit exhaustive
+cardinality bound.
 -/
 
 

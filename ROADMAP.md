@@ -2887,8 +2887,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   existing GapMCSP parameter family are done. The typed multi-output circuit,
   canonical truth-table input, packed sample decoder, exact sample count,
   hard-function contract, SuccinctMCSP rejection bridge, and nested eventual
-  quantifiers are also done. The conditional approximate-counting construction
-  remains.*
+  quantifiers are also done. A canonical bounded enumeration of small circuit
+  codes now supplies exact coverage, an explicit cardinality bound, and a
+  hardness-to-finite-extraction theorem. The conditional approximate-counting
+  construction and its quantitative compression remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
