@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Circuit.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters.Defs
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.GoodString.Internal
 
 /-!
@@ -38,6 +39,18 @@ theorem eventually_survivorTupleMajoritySizeBound_le_hardThreshold
           (smallThreshold beta arity) ≤
         hardThreshold beta arity :=
   eventually_survivorTupleMajoritySizeBound_le_hardThreshold_internal beta
+
+/-- At every sufficiently large arity, hardness at the Anti-Checker Lemma's
+threshold guarantees a one-input `1/(2n)` survivor shrink from any prefix. -/
+theorem eventually_hasShrinkExtension_of_isHardAt
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (target : BitString arity → Bool)
+          (inputs : List (BitString arity)),
+        IsHardAt beta target →
+          AntiChecker.HasShrinkExtension (2 * arity) target
+            (smallThreshold beta arity) inputs :=
+  eventually_hasShrinkExtension_of_isHardAt_internal beta
 
 end AntiCheckerLemma
 

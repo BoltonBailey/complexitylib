@@ -7,7 +7,9 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString.Circuit.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Parameters.Defs
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Generator.Defs
 import Complexitylib.Circuits.Majority
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.GoodString
 import Complexitylib.Metacomplexity.ScaledExponent
 
 /-!
@@ -83,6 +85,23 @@ theorem eventually_survivorTupleMajoritySizeBound_le_hardThreshold_internal
         omega
   unfold AntiChecker.survivorTupleMajoritySizeBound
   exact Nat.le_of_mul_le_mul_left htotalScaled (by decide)
+
+theorem eventually_hasShrinkExtension_of_isHardAt_internal
+    (beta : PositiveRationalScale) :
+    ∀ᶠ arity : ℕ in Filter.atTop,
+      ∀ (target : BitString arity → Bool)
+          (inputs : List (BitString arity)),
+        IsHardAt beta target →
+          AntiChecker.HasShrinkExtension (2 * arity) target
+            (smallThreshold beta arity) inputs := by
+  filter_upwards
+      [eventually_survivorTupleMajoritySizeBound_le_hardThreshold_internal
+        beta,
+      Filter.eventually_ge_atTop 8]
+      with arity hfits harity
+  intro target inputs hhard
+  exact AntiChecker.hasShrinkExtension_two_mul_arity_of_circuitHardness
+    harity target inputs hfits hhard
 
 end AntiCheckerLemma
 
