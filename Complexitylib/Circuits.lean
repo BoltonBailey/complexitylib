@@ -9,6 +9,7 @@ public import Complexitylib.Circuits.Basic
 public import Complexitylib.Circuits.BitString
 public import Complexitylib.Circuits.BinaryComparison
 public import Complexitylib.Circuits.Composition
+public import Complexitylib.Circuits.InputProjection
 public import Complexitylib.Circuits.InputReindexing
 public import Complexitylib.Circuits.Majority
 public import Complexitylib.Circuits.Multiplexer
