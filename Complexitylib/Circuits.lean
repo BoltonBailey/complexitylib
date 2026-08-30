@@ -8,6 +8,7 @@ module
 public import Complexitylib.Circuits.Basic
 public import Complexitylib.Circuits.BitString
 public import Complexitylib.Circuits.BinaryComparison
+public import Complexitylib.Circuits.BinaryMinimum
 public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.InputProjection
 public import Complexitylib.Circuits.InputReindexing
