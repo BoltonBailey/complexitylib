@@ -3217,12 +3217,20 @@ meta-computational notation hides several incompatible choices; expose them.
   into dense-string, language-compression, and clock-accounting modules.
   *The non-vacuous fixed-clock lower-chain predicate and its polynomial/
   logarithmic package are complete. SoI now forces finiteness of both left-hand
-  descriptions and is stable under pointwise clock and loss weakening. The
+  descriptions and is stable under pointwise clock and loss weakening. Its
+  exact cancellation theorem combines any paired-description upper bound with
+  SoI to expose the condition's two-clock depth and both finite losses. The
   concrete universal evaluators and the `DistNP subset AvgP` proof remain.*
-- [ ] Under `SoI`, construct the quantitative reduction from conditional to
+- [~] Under `SoI`, construct the quantitative reduction from conditional to
   unconditional gap MinKT, with the computational-depth loss exposed. Package the
   exact conditional theorem
   `NP-hard GapMinCKT for every polynomial tau -> ExcludesHeuristica`.
+  *The evaluator-independent algebraic core is complete:
+  `conditional_le_of_pair_upper` cancels the later-clock condition complexity
+  and leaves exactly an alternative conditional description, two-clock depth,
+  the paired-program overhead, and the SoI loss. Constructing the paired upper
+  bound, lifting the inequality to gap promises, and the hardness/class bridge
+  remain.*
 - [ ] Formalize NP-hardness of the published partial-function variants
   `PartialMCSP`, `MKTPStar`, and `MINKTStar` under randomized reductions. Then
   isolate the unresolved partial-to-total extension rather than assuming it.
@@ -3269,6 +3277,8 @@ formalization targets and should be stated positively under their exact names.
   the finite upper-chain inequality, including both exact canonical-pair costs.
 - [x] Freeze a non-vacuous machine-relative SoI signature with explicit
   polynomial clock, logarithmic loss, pair codec, and finiteness consequences.
+- [x] Prove the SoI depth-loss cancellation lemma from an arbitrary explicit
+  paired-description upper bound.
 - [M] Transcribe the full finite signature of the 2018 dense-random-string lemma,
   with no proof placeholder, before implementing its counting proof.
 

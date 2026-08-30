@@ -38,6 +38,7 @@ complexity value is at most `t`.
 - `TM.computationalDepthBetween_add` -- exact three-clock depth telescoping
 - `timeBoundedKolmogorovComplexity_pair_le_of_composition` -- finite upper chain rule
 - `TimeBoundedSymmetryOfInformation` -- explicit non-vacuous lower-chain hypothesis
+- `TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper` -- depth-loss bridge
 - `TM.Simulates.plainKolmogorovComplexity_le_add` -- additive invariance direction
 - `TM.PolynomialTimeOverhead.kolmogorov_transfer` -- resource-aware comparison
 -/

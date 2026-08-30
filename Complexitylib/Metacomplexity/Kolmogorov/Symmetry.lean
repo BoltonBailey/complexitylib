@@ -88,6 +88,43 @@ theorem TimeBoundedSymmetryOfInformation.weaken_clock
       secondClock loss :=
   hsoi.weaken_clock_internal hclock
 
+/-- The algebraic depth-loss bridge used by conditional meta-complexity
+reductions. If a paired description is upper-bounded by an alternative
+conditional description plus an earlier-clock description of the condition,
+SoI cancels the later-clock condition term. The exact remainder is the
+condition's two-clock depth plus the operational and SoI losses.
+
+The paired-description upper bound remains an explicit premise; constructing
+it is an evaluator theorem, not an algebraic consequence of SoI. -/
+theorem TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper
+    {ordinaryTapes conditionalTapes alternativeTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {alternativeMachine : OracleTM alternativeTapes}
+    {clock loss : ℕ → ℕ}
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock loss)
+    {first condition : List Bool}
+    {time conditionTime alternativeTime upperLoss : ℕ}
+    (hsize : first.length + condition.length ≤ time)
+    (hclock : conditionTime ≤ clock time)
+    (hpairUpper :
+      ordinaryMachine.timeBoundedKolmogorovComplexity
+          (pair first condition) time ≤
+        OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+              alternativeMachine first condition alternativeTime +
+            ordinaryMachine.timeBoundedKolmogorovComplexity
+              condition conditionTime +
+          (upperLoss : WithTop ℕ)) :
+    conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition (clock time) ≤
+      OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            alternativeMachine first condition alternativeTime +
+          ordinaryMachine.computationalDepthBetween
+            condition conditionTime (clock time) +
+        (upperLoss : WithTop ℕ) + (loss time : WithTop ℕ) :=
+  hsoi.conditional_le_of_pair_upper_internal hsize hclock hpairUpper
+
 /-- Any polynomial SoI witness remains valid at an admissible larger clock,
 with the logarithmic loss recalculated at that clock. The premise quantifies
 over witnesses because the existential clock is intentionally opaque. -/

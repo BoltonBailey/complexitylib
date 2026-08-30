@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Chain.Defs
+public import Complexitylib.Metacomplexity.Kolmogorov.Depth.Defs
 public import Mathlib.Algebra.Order.Monoid.WithTop
 public import Mathlib.Data.Nat.Log
 

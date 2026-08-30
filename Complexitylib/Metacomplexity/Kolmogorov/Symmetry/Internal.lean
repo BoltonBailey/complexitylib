@@ -7,6 +7,7 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Metacomplexity.Kolmogorov.Symmetry.Defs
 import Complexitylib.Metacomplexity.Kolmogorov.Conditional.Internal
+import Complexitylib.Metacomplexity.Kolmogorov.Depth.Internal
 import Complexitylib.Metacomplexity.Kolmogorov.Internal
 
 /-!
@@ -43,6 +44,31 @@ private theorem withTopNat_add_le_add_internal
                   exact WithTop.coe_le_coe.mpr <|
                     Nat.add_le_add (WithTop.coe_le_coe.mp hfirst)
                       (WithTop.coe_le_coe.mp hsecond)
+
+private theorem withTopNat_le_of_add_le_add_right_internal
+    {first second suffix : WithTop ℕ} (hsuffix : suffix ≠ ⊤)
+    (hbound : first + suffix ≤ second + suffix) : first ≤ second := by
+  obtain ⟨suffixValue, hsuffixValue⟩ := WithTop.ne_top_iff_exists.mp hsuffix
+  rw [← hsuffixValue] at hbound
+  induction first using WithTop.recTopCoe with
+  | top =>
+      induction second using WithTop.recTopCoe with
+      | top => exact le_rfl
+      | coe secondValue =>
+          exfalso
+          rw [WithTop.top_add] at hbound
+          change (⊤ : WithTop ℕ) ≤
+            ((secondValue + suffixValue : ℕ) : WithTop ℕ) at hbound
+          exact WithTop.not_top_le_coe _ hbound
+  | coe firstValue =>
+      induction second using WithTop.recTopCoe with
+      | top => exact le_top
+      | coe secondValue =>
+          apply WithTop.coe_le_coe.mpr
+          have hvalueBound :
+              firstValue + suffixValue ≤ secondValue + suffixValue := by
+            exact_mod_cast hbound
+          exact Nat.le_of_add_le_add_right hvalueBound
 
 theorem isAdmissibleKolmogorovClock_id_internal :
     IsAdmissibleKolmogorovClock id := by
@@ -139,6 +165,73 @@ theorem TimeBoundedSymmetryOfInformation.weaken_clock_internal
       _ ≤ ordinaryMachine.timeBoundedKolmogorovComplexity
               (pair first condition) time + (loss time : WithTop ℕ) :=
         hsoi.chain_le first condition time hsize
+
+theorem TimeBoundedSymmetryOfInformation.conditional_le_of_pair_upper_internal
+    {ordinaryTapes conditionalTapes alternativeTapes : ℕ}
+    {ordinaryMachine : TM ordinaryTapes}
+    {conditionalMachine : OracleTM conditionalTapes}
+    {alternativeMachine : OracleTM alternativeTapes}
+    {clock loss : ℕ → ℕ}
+    (hsoi : TimeBoundedSymmetryOfInformation ordinaryMachine
+      conditionalMachine clock loss)
+    {first condition : List Bool}
+    {time conditionTime alternativeTime upperLoss : ℕ}
+    (hsize : first.length + condition.length ≤ time)
+    (hclock : conditionTime ≤ clock time)
+    (hpairUpper :
+      ordinaryMachine.timeBoundedKolmogorovComplexity
+          (pair first condition) time ≤
+        OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+              alternativeMachine first condition alternativeTime +
+            ordinaryMachine.timeBoundedKolmogorovComplexity
+              condition conditionTime +
+          (upperLoss : WithTop ℕ)) :
+    conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+        first condition (clock time) ≤
+      OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            alternativeMachine first condition alternativeTime +
+          ordinaryMachine.computationalDepthBetween
+            condition conditionTime (clock time) +
+        (upperLoss : WithTop ℕ) + (loss time : WithTop ℕ) := by
+  have hcondition := hsoi.condition_ne_top_internal hsize
+  have hdepth := TM.computationalDepthBetween_add_later_internal
+    ordinaryMachine condition hclock
+  have htotal :
+      conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+            first condition (clock time) +
+          ordinaryMachine.timeBoundedKolmogorovComplexity
+            condition (clock time) ≤
+        (OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                alternativeMachine first condition alternativeTime +
+              ordinaryMachine.computationalDepthBetween
+                condition conditionTime (clock time) +
+            (upperLoss : WithTop ℕ) + (loss time : WithTop ℕ)) +
+          ordinaryMachine.timeBoundedKolmogorovComplexity
+            condition (clock time) := by
+    calc
+      conditionalMachine.randomAccessConditionalTimeBoundedKolmogorovComplexity
+              first condition (clock time) +
+          ordinaryMachine.timeBoundedKolmogorovComplexity
+            condition (clock time) ≤
+        ordinaryMachine.timeBoundedKolmogorovComplexity
+              (pair first condition) time + (loss time : WithTop ℕ) :=
+          hsoi.chain_le first condition time hsize
+      _ ≤ (OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                  alternativeMachine first condition alternativeTime +
+                ordinaryMachine.timeBoundedKolmogorovComplexity
+                  condition conditionTime +
+              (upperLoss : WithTop ℕ)) + (loss time : WithTop ℕ) :=
+          withTopNat_add_le_add_internal hpairUpper le_rfl
+      _ = (OracleTM.randomAccessConditionalTimeBoundedKolmogorovComplexity
+                  alternativeMachine first condition alternativeTime +
+                ordinaryMachine.computationalDepthBetween
+                  condition conditionTime (clock time) +
+              (upperLoss : WithTop ℕ) + (loss time : WithTop ℕ)) +
+            ordinaryMachine.timeBoundedKolmogorovComplexity
+              condition (clock time) := by
+          rw [← hdepth]
+          ac_rfl
+  exact withTopNat_le_of_add_le_add_right_internal hcondition htotal
 
 theorem PolynomialTimeBoundedSymmetryOfInformation.enlarge_clock_internal
     {ordinaryTapes conditionalTapes : ℕ}
