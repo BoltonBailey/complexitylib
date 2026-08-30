@@ -232,6 +232,181 @@ theorem eval_compose_internal
     ((outer.outputs output).negated gateInput).xor value)
   exact wireValue_compose_outer_internal outer inner input _
 
+/-! ## Parallel composition -/
+
+private theorem parallelGate_left
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (index : Fin (G₁ + G₂)) (hleft : index.val < G₁) :
+    (parallelGate left right index).val =
+      (left.gates ⟨index.val, hleft⟩).rewire
+        embedParallelLeftWire := by
+  simp [parallelGate, hleft]
+
+private theorem parallelGate_right
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (index : Fin (G₁ + G₂)) (hleft : ¬ index.val < G₁) :
+    (parallelGate left right index).val =
+      (right.gates ⟨index.val - G₁, by omega⟩).rewire
+        embedParallelRightWire := by
+  simp [parallelGate, hleft]
+
+theorem wireValue_parallel_left_internal
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) (wire : Fin (N + G₁)) :
+    (left.parallel right).wireValue input (embedParallelLeftWire wire) =
+      left.wireValue input wire := by
+  induction hwire : wire.val using Nat.strong_induction_on
+      generalizing wire with
+  | h wireIndex ih =>
+      by_cases hinput : wire.val < N
+      · rw [Circuit.wireValue_of_lt (left.parallel right) input
+            (embedParallelLeftWire wire) (by
+              simpa only [embedParallelLeftWire] using hinput),
+          Circuit.wireValue_of_lt left input wire hinput]
+        rfl
+      · rw [Circuit.wireValue_of_not_lt (left.parallel right) input
+            (embedParallelLeftWire wire) (by
+              simpa only [embedParallelLeftWire] using hinput),
+          Circuit.wireValue_of_not_lt left input wire hinput]
+        change
+          (parallelGate left right ⟨wire.val - N, by omega⟩).val.eval
+              ((left.parallel right).wireValue input) =
+            (left.gates ⟨wire.val - N, by omega⟩).eval
+              (left.wireValue input)
+        have hgate : wire.val - N < G₁ := by
+          have := wire.isLt
+          omega
+        rw [parallelGate_left left right _ hgate,
+          Gate.eval_rewire_internal]
+        unfold Gate.eval
+        congr 1
+        funext gateInput
+        apply congrArg (fun value =>
+          ((left.gates ⟨wire.val - N, hgate⟩).negated gateInput).xor
+            value)
+        let source :=
+          (left.gates ⟨wire.val - N, hgate⟩).inputs gateInput
+        apply ih source.val
+        · have hacyclic :=
+            left.acyclic ⟨wire.val - N, hgate⟩ gateInput
+          change source.val < N + (wire.val - N) at hacyclic
+          omega
+        · rfl
+
+theorem wireValue_parallel_right_internal
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) (wire : Fin (N + G₂)) :
+    (left.parallel right).wireValue input (embedParallelRightWire wire) =
+      right.wireValue input wire := by
+  induction hwire : wire.val using Nat.strong_induction_on
+      generalizing wire with
+  | h wireIndex ih =>
+      by_cases hinput : wire.val < N
+      · rw [Circuit.wireValue_of_lt (left.parallel right) input
+            (embedParallelRightWire wire)
+              (by simp [embedParallelRightWire, hinput]),
+          Circuit.wireValue_of_lt right input wire hinput]
+        simp [embedParallelRightWire, hinput]
+      · have hembedVal :
+            (embedParallelRightWire (G₁ := G₁) wire).val =
+              N + G₁ + (wire.val - N) := by
+          simp [embedParallelRightWire, hinput]
+        rw [Circuit.wireValue_of_not_lt (left.parallel right) input
+            (embedParallelRightWire wire) (by
+              rw [hembedVal]
+              omega),
+          Circuit.wireValue_of_not_lt right input wire hinput]
+        change
+          (parallelGate left right
+              ⟨(embedParallelRightWire (G₁ := G₁) wire).val - N,
+                by omega⟩).val.eval
+                ((left.parallel right).wireValue input) =
+            (right.gates ⟨wire.val - N, by omega⟩).eval
+              (right.wireValue input)
+        have hindex :
+            (⟨(embedParallelRightWire (G₁ := G₁) wire).val - N,
+                by omega⟩ : Fin (G₁ + G₂)) =
+              ⟨G₁ + (wire.val - N), by omega⟩ := by
+          apply Fin.ext
+          change
+            (embedParallelRightWire (G₁ := G₁) wire).val - N =
+              G₁ + (wire.val - N)
+          omega
+        have hnotLeft :
+            ¬ (⟨G₁ + (wire.val - N), by omega⟩ :
+              Fin (G₁ + G₂)).val < G₁ := by
+          dsimp only
+          omega
+        rw [hindex, parallelGate_right left right _ hnotLeft]
+        have hrightIndex :
+            (⟨(⟨G₁ + (wire.val - N), by omega⟩ :
+                Fin (G₁ + G₂)).val - G₁, by omega⟩ : Fin G₂) =
+              ⟨wire.val - N, by omega⟩ := by
+          apply Fin.ext
+          dsimp only
+          omega
+        rw [hrightIndex, Gate.eval_rewire_internal]
+        unfold Gate.eval
+        congr 1
+        funext gateInput
+        apply congrArg (fun value =>
+          ((right.gates ⟨wire.val - N, by omega⟩).negated
+            gateInput).xor value)
+        let source :=
+          (right.gates ⟨wire.val - N, by omega⟩).inputs gateInput
+        apply ih source.val
+        · have hacyclic :=
+            right.acyclic ⟨wire.val - N, by omega⟩ gateInput
+          change source.val < N + (wire.val - N) at hacyclic
+          omega
+        · rfl
+
+theorem eval_parallel_internal
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) :
+    (left.parallel right).eval input =
+      Fin.append (left.eval input) (right.eval input) := by
+  funext output
+  by_cases hleft : output.val < K
+  · let leftOutput : Fin K := ⟨output.val, hleft⟩
+    have houtput :
+        (left.parallel right).outputs output =
+          (left.outputs leftOutput).rewire embedParallelLeftWire := by
+      simp [parallel, hleft, leftOutput]
+    rw [Circuit.eval, houtput, Gate.eval_rewire_internal]
+    change
+      (left.outputs leftOutput).eval
+          (fun wire => (left.parallel right).wireValue input
+            (embedParallelLeftWire wire)) =
+        Fin.append (left.eval input) (right.eval input) output
+    rw [show output = Fin.castAdd M leftOutput by
+      apply Fin.ext
+      rfl, Fin.append_left]
+    unfold Circuit.eval
+    congr 1
+    funext wire
+    exact wireValue_parallel_left_internal left right input wire
+  · let rightOutput : Fin M := ⟨output.val - K, by omega⟩
+    have houtput :
+        (left.parallel right).outputs output =
+          (right.outputs rightOutput).rewire embedParallelRightWire := by
+      simp [parallel, hleft, rightOutput]
+    rw [Circuit.eval, houtput, Gate.eval_rewire_internal]
+    change
+      (right.outputs rightOutput).eval
+          (fun wire => (left.parallel right).wireValue input
+            (embedParallelRightWire wire)) =
+        Fin.append (left.eval input) (right.eval input) output
+    rw [show output = Fin.natAdd K rightOutput by
+      apply Fin.ext
+      simp only [Fin.val_natAdd]
+      dsimp only [rightOutput]
+      omega, Fin.append_right]
+    unfold Circuit.eval
+    congr 1
+    funext wire
+    exact wireValue_parallel_right_internal left right input wire
+
 private theorem le_fold_max {n : ℕ} (f : Fin n → ℕ) (i : Fin n) :
     f i ≤ Fin.foldl n (fun acc j => max acc (f j)) 0 := by
   induction n with

@@ -20,6 +20,8 @@ size, rather than duplicating the inner circuit once per outer use.
 * `Circuit.eval_compose` -- exact functional composition.
 * `Circuit.size_compose` -- exact additive size.
 * `Circuit.depth_compose_le` -- depth is at most the sum of source depths.
+* `Circuit.eval_parallel` -- parallel composition appends output tuples.
+* `Circuit.size_parallel` -- parallel composition also has exact additive size.
 -/
 
 
@@ -116,6 +118,41 @@ theorem depth_compose_le
     (outer : Circuit B K M G₂) (inner : Circuit B N K G₁) :
     (outer.compose inner).depth ≤ inner.depth + outer.depth :=
   depth_compose_le_internal outer inner
+
+/-! ## Parallel composition -/
+
+/-- Parallel composition preserves every left-component wire value. -/
+theorem wireValue_parallel_left
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) (wire : Fin (N + G₁)) :
+    (left.parallel right).wireValue input (embedParallelLeftWire wire) =
+      left.wireValue input wire :=
+  wireValue_parallel_left_internal left right input wire
+
+/-- Parallel composition preserves every right-component wire value after
+shifting its internal-gate block past the left component. -/
+theorem wireValue_parallel_right
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) (wire : Fin (N + G₂)) :
+    (left.parallel right).wireValue input (embedParallelRightWire wire) =
+      right.wireValue input wire :=
+  wireValue_parallel_right_internal left right input wire
+
+/-- Parallel circuit composition appends the two source output tuples. -/
+@[simp] theorem eval_parallel
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (input : BitString N) :
+    (left.parallel right).eval input =
+      Fin.append (left.eval input) (right.eval input) :=
+  eval_parallel_internal left right input
+
+/-- Parallel composition has exactly additive size: it shares primary inputs
+and otherwise preserves every internal and output gate. -/
+@[simp] theorem size_parallel
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂) :
+    (left.parallel right).size = left.size + right.size := by
+  simp only [Circuit.size]
+  omega
 
 end Circuit
 

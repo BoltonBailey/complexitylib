@@ -111,6 +111,72 @@ def compose (outer : Circuit B K M G₂) (inner : Circuit B N K G₁) :
   outputs output := (outer.outputs output).rewire embedOuterWire
   acyclic index := (composeGate outer inner index).property
 
+/-! ## Parallel composition -/
+
+/-- Embed a wire of the left parallel component without changing its index. -/
+def embedParallelLeftWire (wire : Fin (N + G₁)) :
+    Fin (N + (G₁ + G₂)) :=
+  ⟨wire.val, by omega⟩
+
+/-- Embed a wire of the right parallel component. Primary inputs remain shared,
+while internal gates move after the left component's internal gates. -/
+def embedParallelRightWire (wire : Fin (N + G₂)) :
+    Fin (N + (G₁ + G₂)) :=
+  if hinput : wire.val < N then
+    ⟨wire.val, by omega⟩
+  else
+    ⟨N + G₁ + (wire.val - N), by omega⟩
+
+/-- The gate at one flat index of two circuits placed in parallel, bundled with
+its acyclicity proof. -/
+def parallelGate
+    (left : Circuit B N K G₁) (right : Circuit B N M G₂)
+    (index : Fin (G₁ + G₂)) :
+    {gate : Gate B (N + (G₁ + G₂)) //
+      ∀ input : Fin gate.fanIn,
+        (gate.inputs input).val < N + index.val} := by
+  if hleft : index.val < G₁ then
+    refine
+      ⟨(left.gates ⟨index.val, hleft⟩).rewire
+        embedParallelLeftWire, ?_⟩
+    intro input
+    have hacyclic := left.acyclic ⟨index.val, hleft⟩ input
+    change ((left.gates ⟨index.val, hleft⟩).inputs input).val <
+      N + index.val at hacyclic
+    exact hacyclic
+  else
+    refine
+      ⟨(right.gates ⟨index.val - G₁, by omega⟩).rewire
+        embedParallelRightWire, ?_⟩
+    intro input
+    let source :=
+      (right.gates ⟨index.val - G₁, by omega⟩).inputs input
+    have hacyclic :=
+      right.acyclic ⟨index.val - G₁, by omega⟩ input
+    change source.val < N + (index.val - G₁) at hacyclic
+    change (embedParallelRightWire source).val < N + index.val
+    unfold embedParallelRightWire
+    split_ifs with hsource
+    · change source.val < N + index.val
+      omega
+    · have hinternal : source.val - N < index.val - G₁ := by
+        omega
+      change N + G₁ + (source.val - N) < N + index.val
+      omega
+
+/-- Place two circuits with the same primary inputs in parallel. Their internal
+gates occupy disjoint consecutive blocks and their output tuples are appended. -/
+def parallel (left : Circuit B N K G₁) (right : Circuit B N M G₂) :
+    Circuit B N (K + M) (G₁ + G₂) where
+  gates index := (parallelGate left right index).val
+  outputs output :=
+    if hleft : output.val < K then
+      (left.outputs ⟨output.val, hleft⟩).rewire embedParallelLeftWire
+    else
+      (right.outputs ⟨output.val - K, by omega⟩).rewire
+        embedParallelRightWire
+  acyclic index := (parallelGate left right index).property
+
 end Circuit
 
 end Complexity
