@@ -25,6 +25,7 @@ public import Complexitylib.Circuits.Encoding.FixedWidth.Lookup
 public import Complexitylib.Circuits.Encoding.FixedWidth.Validity
 public import Complexitylib.Circuits.Encoding.Internal
 public import Complexitylib.Circuits.Encoding.Parity
+public import Complexitylib.Circuits.Encoding.Shift
 public import Complexitylib.Circuits.Encoding.Threshold
 public import Complexitylib.Circuits.Encoding.ToCircuit
 
