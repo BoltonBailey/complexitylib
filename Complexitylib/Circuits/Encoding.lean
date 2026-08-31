@@ -13,6 +13,7 @@ public import Complexitylib.Circuits.Encoding.Formula.Stream
 public import Complexitylib.Circuits.Encoding.FixedWidth
 public import Complexitylib.Circuits.Encoding.FixedWidth.Codec
 public import Complexitylib.Circuits.Encoding.FixedWidth.Conversion
+public import Complexitylib.Circuits.Encoding.FixedWidth.Validity
 public import Complexitylib.Circuits.Encoding.Internal
 public import Complexitylib.Circuits.Encoding.Parity
 public import Complexitylib.Circuits.Encoding.Threshold
