@@ -2979,11 +2979,14 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   zero-cell nonemptiness event used by the probability analysis. An exact-width
   circuit-satisfiability language and its fixed-public-prefix extension are in
   `NP`; the extension form lets future occupancy queries carry samples and hash
-  seeds as public bits while quantifying only the survivor tuple. The relative
-  estimator is also proved to fit in one bit beyond its domain width, hence
-  strictly inside the anti-checker counter's reserved output range. The
-  remaining construction must build the fixed predicate circuits and adaptive
-  queries, then discharge their quantitative bound.*
+  seeds as public bits while quantifying only the survivor tuple. Given any
+  fixed circuit implementing the powered-survivor hash-cell predicate, its
+  canonical extension-language query is now proved equivalent to semantic
+  hash-cell nonemptiness. The relative estimator is also proved to fit in one
+  bit beyond its domain width, hence strictly inside the anti-checker counter's
+  reserved output range. The remaining construction must build those fixed
+  predicate circuits and the adaptive query generator, then discharge their
+  quantitative bound.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

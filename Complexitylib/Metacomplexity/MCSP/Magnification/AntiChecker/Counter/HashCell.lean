@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.HashCell.Defs
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.HashCell.Circuit
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.HashCell.Internal
 
 /-!
