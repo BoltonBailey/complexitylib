@@ -182,7 +182,7 @@ end Description
 
 /-- Internal exact equivalence between valid fixed descriptions and bounded
 raw circuits. -/
-def wellFormedEquivInternal (inputWidth gateBound : Nat) :
+@[expose] def wellFormedEquivInternal (inputWidth gateBound : Nat) :
     Equiv (ValidDescription inputWidth gateBound)
       (BoundedRawCircuit inputWidth gateBound) where
   toFun description :=
@@ -201,6 +201,20 @@ def wellFormedEquivInternal (inputWidth gateBound : Nat) :
     apply Subtype.ext
     exact Description.toRawCircuit_ofRawCircuit_internal
       circuit.property.1.2 circuit.property.2
+
+theorem wellFormedEquiv_apply_val_internal
+    {inputWidth gateBound : Nat}
+    (description : ValidDescription inputWidth gateBound) :
+    (wellFormedEquivInternal inputWidth gateBound description).val =
+      description.val.toRawCircuit :=
+  rfl
+
+theorem wellFormedEquiv_symm_val_internal
+    {inputWidth gateBound : Nat}
+    (circuit : BoundedRawCircuit inputWidth gateBound) :
+    ((wellFormedEquivInternal inputWidth gateBound).symm circuit).val =
+      Description.ofRawCircuit circuit.val circuit.property.2 :=
+  rfl
 
 end FixedWidth
 

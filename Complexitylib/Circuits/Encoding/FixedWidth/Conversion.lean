@@ -88,6 +88,28 @@ def wellFormedEquiv (inputWidth gateBound : Nat) :
       (BoundedRawCircuit inputWidth gateBound) :=
   wellFormedEquivInternal inputWidth gateBound
 
+/-- The forward equivalence map is the raw-circuit view of a valid fixed-width
+description. -/
+@[simp] theorem wellFormedEquiv_apply_val
+    {inputWidth gateBound : Nat}
+    (description : ValidDescription inputWidth gateBound) :
+    (wellFormedEquiv inputWidth gateBound description).val =
+      description.val.toRawCircuit := by
+  change (wellFormedEquivInternal inputWidth gateBound description).val =
+    description.val.toRawCircuit
+  exact wellFormedEquiv_apply_val_internal description
+
+/-- The inverse equivalence map is canonical fixed-width conversion of a
+bounded raw circuit. -/
+@[simp] theorem wellFormedEquiv_symm_val
+    {inputWidth gateBound : Nat}
+    (circuit : BoundedRawCircuit inputWidth gateBound) :
+    ((wellFormedEquiv inputWidth gateBound).symm circuit).val =
+      Description.ofRawCircuit circuit.val circuit.property.2 := by
+  change ((wellFormedEquivInternal inputWidth gateBound).symm circuit).val =
+    Description.ofRawCircuit circuit.val circuit.property.2
+  exact wellFormedEquiv_symm_val_internal circuit
+
 noncomputable instance (inputWidth gateBound : Nat) :
     Fintype (BoundedRawCircuit inputWidth gateBound) :=
   Fintype.ofEquiv (ValidDescription inputWidth gateBound)

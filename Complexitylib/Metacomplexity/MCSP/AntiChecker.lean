@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Internal
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Extraction
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.FixedWidth
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Approximation
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Selection
