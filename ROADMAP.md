@@ -2953,8 +2953,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   power now has a row-major bit-string encoding with exact membership and
   cardinality `|S^c| = |S|^c`. Scaling a weak power estimate by `16` before
   taking its integer root avoids downward rounding; `c = 8p` copies then give
-  exact-zero-preserving relative error `1/p` for every natural count. Hashing
-  integration, median amplification, and circuit realization remain.*
+  exact-zero-preserving relative error `1/p` for every natural count. The
+  powered hashing estimator now exposes an arbitrary global failure exponent:
+  strengthening the already-present per-level majorities and taking the finite
+  union bound gives failure at most `2^-k`, so a separate median layer is
+  unnecessary. Circuit realization and the quantitative family bound remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
