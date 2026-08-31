@@ -25,6 +25,11 @@ namespace CircuitCode
 
 namespace Parity
 
+/-- The iterative XOR agrees with finite addition in the Boolean ring. -/
+theorem foldXor_eq_sum (count : ℕ) (bits : Fin count → Bool) :
+    foldXor count bits = ∑ i, bits i :=
+  foldXor_eq_sum_internal count bits
+
 /-- Parity compilation emits exactly one initializer and three gates per
 selected wire. -/
 @[simp] theorem length_compileRaw (available : ℕ) {inputCount : ℕ}

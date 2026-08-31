@@ -21,6 +21,16 @@ namespace CircuitCode
 
 namespace Parity
 
+theorem foldXor_eq_sum_internal (count : ℕ) (bits : Fin count → Bool) :
+    foldXor count bits = ∑ i, bits i := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [Fin.sum_univ_succ]
+      simp only [foldXor]
+      rw [ih]
+      rfl
+
 theorem length_xorGates_internal (available step input : ℕ) :
     (xorGates available step input).length = 3 := by
   rfl

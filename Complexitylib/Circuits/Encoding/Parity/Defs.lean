@@ -7,6 +7,8 @@ Authors: Samuel Schlesinger
 module
 public import Complexitylib.Circuits.BitString
 public import Complexitylib.Circuits.Encoding.Fragment.Defs
+public import Mathlib.Algebra.BigOperators.Fin
+public import Mathlib.Algebra.Ring.BooleanRing
 
 /-!
 # Raw parity-circuit fragments -- definitions
