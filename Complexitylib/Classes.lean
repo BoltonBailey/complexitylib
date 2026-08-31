@@ -19,6 +19,7 @@ public import Complexitylib.Classes.Promise.CircuitSize
 public import Complexitylib.Classes.PPoly
 public import Complexitylib.Classes.PPoly.Oracle
 public import Complexitylib.Classes.PPoly.Oracle.Evaluation
+public import Complexitylib.Classes.PPoly.Oracle.Evaluation.OutputMatch
 public import Complexitylib.Classes.PPoly.Oracle.Inlining
 public import Complexitylib.Classes.PPoly.Advice
 public import Complexitylib.Classes.PPoly.Unrolling
