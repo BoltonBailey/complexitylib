@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting.Defs
+public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.FixedWidth.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding.Defs
 
 /-!
@@ -65,6 +66,43 @@ labeled-sample vector. -/
 def candidateLabeledSurvivorCount {count : ℕ} (arity threshold : ℕ)
     (samples : Fin count → SuccinctMCSP.Sample arity) : ℕ :=
   (candidateLabeledSurvivorCodes arity threshold samples).card
+
+/-- One valid fixed-width description agrees with one explicitly labeled
+sample through its parser-free raw-circuit view. -/
+def DescriptionMatchesLabeledSample {arity threshold : ℕ}
+    (description : CircuitCode.FixedWidth.ValidDescription arity threshold)
+    (sample : SuccinctMCSP.Sample arity) : Prop :=
+  description.val.toRawCircuit.eval? sample.input.toList =
+    some sample.output
+
+instance {arity threshold : ℕ}
+    (description : CircuitCode.FixedWidth.ValidDescription arity threshold)
+    (sample : SuccinctMCSP.Sample arity) :
+    Decidable (DescriptionMatchesLabeledSample description sample) := by
+  unfold DescriptionMatchesLabeledSample
+  infer_instance
+
+/-- One valid fixed-width description agrees with every sample in a vector. -/
+def DescriptionMatchesLabeledSamples {count arity threshold : ℕ}
+    (samples : Fin count → SuccinctMCSP.Sample arity)
+    (description : CircuitCode.FixedWidth.ValidDescription arity threshold) :
+    Prop :=
+  ∀ sample, DescriptionMatchesLabeledSample description (samples sample)
+
+instance {count arity threshold : ℕ}
+    (samples : Fin count → SuccinctMCSP.Sample arity)
+    (description : CircuitCode.FixedWidth.ValidDescription arity threshold) :
+    Decidable (DescriptionMatchesLabeledSamples samples description) := by
+  unfold DescriptionMatchesLabeledSamples
+  infer_instance
+
+/-- Valid fixed-width descriptions surviving an arbitrary labeled-sample
+vector. -/
+noncomputable def candidateLabeledSurvivorDescriptions {count : ℕ}
+    (arity threshold : ℕ)
+    (samples : Fin count → SuccinctMCSP.Sample arity) :
+    Finset (CircuitCode.FixedWidth.ValidDescription arity threshold) :=
+  Finset.univ.filter (DescriptionMatchesLabeledSamples samples)
 
 end AntiCheckerLemma
 

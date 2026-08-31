@@ -26,6 +26,15 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+/-- Valid fixed-width descriptions surviving a labeled sample vector have
+exactly the existing canonical survivor count. -/
+theorem card_candidateLabeledSurvivorDescriptions
+    {count arity threshold : ℕ}
+    (samples : Fin count → SuccinctMCSP.Sample arity) :
+    (candidateLabeledSurvivorDescriptions arity threshold samples).card =
+      candidateLabeledSurvivorCount arity threshold samples :=
+  card_candidateLabeledSurvivorDescriptions_internal samples
+
 /-- Explicit target labels recover the existing target-relative consistency
 predicate on the corresponding input list. -/
 theorem codeMatchesTargetSamples_iff {count arity : ℕ}
