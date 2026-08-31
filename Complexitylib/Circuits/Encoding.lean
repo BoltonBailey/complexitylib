@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.Encoding.Formula
 public import Complexitylib.Circuits.Encoding.Formula.Batch
 public import Complexitylib.Circuits.Encoding.Formula.Stream
 public import Complexitylib.Circuits.Encoding.Internal
+public import Complexitylib.Circuits.Encoding.Parity
 public import Complexitylib.Circuits.Encoding.Threshold
 public import Complexitylib.Circuits.Encoding.ToCircuit
 
@@ -34,6 +35,7 @@ This module exposes the machine-facing representation of
 - `BoolFormula.compileRawBatch`: compile many formulas and pack their outputs.
 - `BoolFormula.compileRawRightFold`: expose finite folds as forward members,
   one identity gate, and reverse connectors.
+- `Parity.compileRaw`: append a linear-size XOR of selected existing wires.
 - `Threshold.compileRaw`: append a unary dynamic-programming threshold test.
 
 ## Main results
@@ -51,6 +53,7 @@ This module exposes the machine-facing representation of
   `RawCircuit.size_toCircuit`: exact reconstruction, semantics, and size.
 - `BoolFormula.evalAux?_compileRaw`: exact formula-fragment evaluation.
 - `BoolFormula.evalAux?_compileRawBatch`: exact contiguous batch-output semantics.
+- `Parity.evalAux?_compileRaw`: exact linear parity-fragment evaluation.
 - `Threshold.evalAux?_compileRaw`: exact threshold-fragment evaluation.
 -/
 

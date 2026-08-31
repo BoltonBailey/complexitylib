@@ -91,6 +91,9 @@ private def formulaBatch : RawCircuit :=
 private def twoOfThree : RawCircuit :=
   Threshold.compileRaw 3 2 fun i : Fin 3 => i.val
 
+private def parityFour : RawCircuit :=
+  Parity.compileRaw 4 fun i : Fin 4 => i.val
+
 #guard RawCircuit.decode? andCircuit.encode = some andCircuit
 #guard RawCircuit.decode? andCircuit.encode.dropLast = none
 #guard RawCircuit.decode? (andCircuit.encode ++ [false]) = none
@@ -120,6 +123,11 @@ private def twoOfThree : RawCircuit :=
 #guard RawCircuit.isWellFormed 3 twoOfThree = true
 #guard twoOfThree.eval? [true, false, true] = some true
 #guard twoOfThree.eval? [true, false, false] = some false
+
+#guard parityFour.length = 13
+#guard RawCircuit.isWellFormed 4 parityFour = true
+#guard parityFour.eval? [true, false, true, false] = some false
+#guard parityFour.eval? [true, false, false, false] = some true
 
 -- Positive codes are parameterized by the evaluator's arity rather than
 -- carrying a serialized arity stamp of their own.
