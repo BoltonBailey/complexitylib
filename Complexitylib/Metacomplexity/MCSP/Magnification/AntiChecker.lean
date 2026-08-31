@@ -12,6 +12,7 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Relation
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domain
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domain.Shape
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.HashCell
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Circuit
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Randomized
