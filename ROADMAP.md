@@ -2960,8 +2960,12 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   unnecessary. A generic circuit adapter now transfers that exact failure
   event to any seed-prefix circuit computing the estimator; at exponent one
   above the ordinary input width, one seed hardwires to a circuit accurate on
-  every input without changing size. Constructing the oracle program and the
-  quantitative family bound remain.*
+  every input without changing size. The semantic adaptive-oracle bridge is now
+  complete as well: any fixed-round program computing the estimator remains
+  correct after exact oracle-circuit inlining, and membership of its oracle
+  language in `PPoly` yields one hardwired circuit accurate on every ordinary
+  input, with exact preservation of the inlined size. Constructing the concrete
+  SAT-oracle program and proving the quantitative family bound remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
