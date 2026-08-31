@@ -8,6 +8,7 @@ module
 public import Complexitylib.Classes.Randomized.ApproximateCounting.Relative.Defs
 import Complexitylib.Classes.Randomized.ApproximateCounting.Power
 import Complexitylib.Classes.Randomized.ApproximateCounting.Weak.Hashing
+import Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas
 
 /-!
 # Relative approximate counting -- proof internals
@@ -21,6 +22,45 @@ namespace Complexity
 namespace ApproximateCounting
 
 namespace Relative
+
+theorem hashingEstimate_lt_two_pow_succ_internal
+    {domainWidth precision failureBits : ℕ}
+    (set : Finset (BitString domainWidth))
+    (seed : BitString (seedWidth domainWidth precision failureBits))
+    (hprecision : 0 < precision) :
+    hashingEstimate precision failureBits set seed <
+      2 ^ (domainWidth + 1) := by
+  let copies := relativeCopies precision
+  let powered := poweredWidth domainWidth precision
+  let weak := Weak.hashingEstimate
+    (cartesianPower set (relativeCopies precision)) seed
+  have hcopies : 8 ≤ copies := by
+    simp only [copies, relativeCopies]
+    omega
+  have hcopiesNe : copies ≠ 0 := by omega
+  have hweak : weak < 2 ^ (powered + 4) := by
+    exact Weak.hashingEstimate_lt_two_pow_add_four
+      (cartesianPower set (relativeCopies precision)) seed
+  have hscaled : 16 * weak < 16 * 2 ^ (powered + 4) :=
+    Nat.mul_lt_mul_of_pos_left hweak (by omega)
+  have hscale : 16 * 2 ^ (powered + 4) = 2 ^ (powered + 8) := by
+    rw [show 16 = 2 ^ 4 by norm_num, ← pow_add]
+    congr 1
+    omega
+  have hexponent : powered + 8 ≤ (domainWidth + 1) * copies := by
+    calc
+      powered + 8 = copies * domainWidth + 8 := by
+        simp only [powered, poweredWidth, copies]
+      _ ≤ copies * domainWidth + copies := Nat.add_le_add_left hcopies _
+      _ = (domainWidth + 1) * copies := by ring
+  change Nat.nthRoot copies (16 * weak) < 2 ^ (domainWidth + 1)
+  rw [Nat.nthRoot_lt_iff hcopiesNe]
+  calc
+    16 * weak < 16 * 2 ^ (powered + 4) := hscaled
+    _ = 2 ^ (powered + 8) := hscale
+    _ ≤ 2 ^ ((domainWidth + 1) * copies) := by
+      exact Nat.pow_le_pow_right (by omega) hexponent
+    _ = (2 ^ (domainWidth + 1)) ^ copies := by rw [pow_mul]
 
 private theorem factorApproximationEvent_subset_successEvent
     {domainWidth precision failureBits : ℕ}

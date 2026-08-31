@@ -26,6 +26,17 @@ namespace ApproximateCounting
 
 namespace Relative
 
+/-- For positive precision, every amplified relative estimate fits in
+`domainWidth + 1` output bits. -/
+theorem hashingEstimate_lt_two_pow_succ
+    {domainWidth precision failureBits : ℕ}
+    (set : Finset (BitString domainWidth))
+    (seed : BitString (seedWidth domainWidth precision failureBits))
+    (hprecision : 0 < precision) :
+    hashingEstimate precision failureBits set seed <
+      2 ^ (domainWidth + 1) :=
+  hashingEstimate_lt_two_pow_succ_internal set seed hprecision
+
 /-- The amplified relative hashing estimator fails with probability at most
 `2^-failureBits`. -/
 theorem one_sub_two_pow_le_eventProb_successEvent

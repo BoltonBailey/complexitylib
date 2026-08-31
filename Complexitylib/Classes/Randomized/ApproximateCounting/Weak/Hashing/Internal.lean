@@ -23,6 +23,13 @@ namespace ApproximateCounting
 
 namespace Weak
 
+theorem hashingEstimate_lt_two_pow_add_four_internal
+    {domainWidth errorBits : ℕ}
+    (set : Finset (BitString domainWidth))
+    (seed : BitString (hashingSeedWidth domainWidth errorBits)) :
+    hashingEstimate set seed < 2 ^ (domainWidth + 4) := by
+  exact estimate_lt_two_pow_add_four (hashingResponses set seed)
+
 private theorem uniformProbability_bitString_eq_eventProb {width : ℕ}
     (event : Finset (BitString width)) :
     uniformProbability event = eventProb event := by

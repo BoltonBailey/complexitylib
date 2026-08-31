@@ -25,6 +25,15 @@ namespace ApproximateCounting
 
 namespace Weak
 
+/-- The hashing-based weak estimate always fits below the first power of two
+beyond its finite level range. -/
+theorem hashingEstimate_lt_two_pow_add_four
+    {domainWidth errorBits : ℕ}
+    (set : Finset (BitString domainWidth))
+    (seed : BitString (hashingSeedWidth domainWidth errorBits)) :
+    hashingEstimate set seed < 2 ^ (domainWidth + 4) :=
+  hashingEstimate_lt_two_pow_add_four_internal set seed
+
 /-- Union bound for all hash widths: every bad response has total probability
 at most `(domainWidth + 4) / 2^errorBits`. -/
 theorem eventProb_badHashingEvent_le

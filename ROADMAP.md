@@ -2965,7 +2965,7 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   correct after exact oracle-circuit inlining, and membership of its oracle
   language in `PPoly` yields one hardwired circuit accurate on every ordinary
   input, with exact preservation of the inlined size. Constructing the concrete
-  SAT-oracle program and proving the quantitative family bound remain. The
+  occupancy-oracle program and proving the quantitative family bound remain. The
   variable-length canonical circuit codes now embed injectively into an
   explicit fixed Boolean cube of width exactly one above the code bound, using
   a delimiter and zero padding; the resulting encoded survivor set has exactly
@@ -2979,9 +2979,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   zero-cell nonemptiness event used by the probability analysis. An exact-width
   circuit-satisfiability language and its fixed-public-prefix extension are in
   `NP`; the extension form lets future occupancy queries carry samples and hash
-  seeds as public bits while quantifying only the survivor tuple. The remaining
-  construction must build the fixed predicate circuits and adaptive queries,
-  then discharge their quantitative bound.*
+  seeds as public bits while quantifying only the survivor tuple. The relative
+  estimator is also proved to fit in one bit beyond its domain width, hence
+  strictly inside the anti-checker counter's reserved output range. The
+  remaining construction must build the fixed predicate circuits and adaptive
+  queries, then discharge their quantitative bound.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

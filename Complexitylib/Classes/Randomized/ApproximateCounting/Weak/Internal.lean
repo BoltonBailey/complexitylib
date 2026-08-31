@@ -21,6 +21,15 @@ namespace ApproximateCounting
 
 namespace Weak
 
+theorem estimate_lt_two_pow_add_four_internal {domainWidth : ℕ}
+    (responses : Level domainWidth → Bool) :
+    estimate responses < 2 ^ (domainWidth + 4) := by
+  unfold estimate
+  split
+  · apply Nat.pow_lt_pow_right (by omega)
+    exact (selectedLevel responses).isLt
+  · exact Nat.two_pow_pos _
+
 theorem mem_trueLevels_iff_internal {domainWidth : ℕ}
     {responses : Level domainWidth → Bool} {level : Level domainWidth} :
     level ∈ trueLevels responses ↔ responses level = true := by

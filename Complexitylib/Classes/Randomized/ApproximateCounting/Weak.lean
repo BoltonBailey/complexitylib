@@ -24,6 +24,13 @@ namespace ApproximateCounting
 
 namespace Weak
 
+/-- Every weak estimate fits below the first power of two beyond its finite
+level range. -/
+theorem estimate_lt_two_pow_add_four {domainWidth : ℕ}
+    (responses : Level domainWidth → Bool) :
+    estimate responses < 2 ^ (domainWidth + 4) :=
+  estimate_lt_two_pow_add_four_internal responses
+
 /-- The weak Stockmeyer estimator gives a factor-`16` approximation whenever
 all occupancy responses satisfy their high- and low-mean contracts. -/
 theorem estimate_isFactorApproximation

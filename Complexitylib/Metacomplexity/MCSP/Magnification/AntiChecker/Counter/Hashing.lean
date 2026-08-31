@@ -28,6 +28,19 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+/-- Every semantic relative-hashing estimate fits in the output width reserved
+by the anti-checker counter. -/
+theorem hashingEstimate_lt_counterRange
+    {arity prefixLength : ℕ}
+    (beta : PositiveRationalScale) (harity : arity ≠ 0)
+    (input : BitString (counterInputWidth arity prefixLength))
+    (seed : BitString (hashingCounterSeedWidth beta arity prefixLength)) :
+    ApproximateCounting.Relative.hashingEstimate
+        (roundPrecision arity) (counterInputWidth arity prefixLength + 1)
+        (encodedSurvivorSet arity (smallThreshold beta arity) input) seed <
+      2 ^ counterOutputWidth beta arity :=
+  hashingEstimate_lt_counterRange_internal beta harity input seed
+
 /-- A bounded hashing-estimator circuit yields a deterministic counter that
 is accurate on every packed labeled-sample input, at identical size. -/
 theorem exists_correct_counter_of_hashingCircuit

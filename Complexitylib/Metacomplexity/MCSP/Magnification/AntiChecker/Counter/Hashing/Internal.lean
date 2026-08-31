@@ -8,6 +8,7 @@ module
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Hashing.Defs
 public import Complexitylib.Classes.Randomized.ApproximateCounting.Relative.OracleProgram
 import Complexitylib.Classes.Randomized.ApproximateCounting.Relative.Circuit
+import Complexitylib.Classes.Randomized.ApproximateCounting.Relative
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domain
 
 /-!
@@ -24,6 +25,30 @@ namespace GapMCSP
 namespace Magnification
 
 namespace AntiCheckerLemma
+
+theorem hashingEstimate_lt_counterRange_internal
+    {arity prefixLength : ℕ}
+    (beta : PositiveRationalScale) (harity : arity ≠ 0)
+    (input : BitString (counterInputWidth arity prefixLength))
+    (seed : BitString (hashingCounterSeedWidth beta arity prefixLength)) :
+    ApproximateCounting.Relative.hashingEstimate
+        (roundPrecision arity) (counterInputWidth arity prefixLength + 1)
+        (encodedSurvivorSet arity (smallThreshold beta arity) input) seed <
+      2 ^ counterOutputWidth beta arity := by
+  have hprecision : 0 < roundPrecision arity := by
+    simp only [roundPrecision]
+    omega
+  have hbound :=
+    ApproximateCounting.Relative.hashingEstimate_lt_two_pow_succ
+      (encodedSurvivorSet arity (smallThreshold beta arity) input)
+      seed hprecision
+  have hwidth :
+      candidateCodeWidth arity (smallThreshold beta arity) + 1 ≤
+        counterOutputWidth beta arity := by
+    simp only [candidateCodeWidth, boundedCodeWidth, counterOutputWidth,
+      roundBlockCount]
+    omega
+  exact hbound.trans_le (Nat.pow_le_pow_right (by omega) hwidth)
 
 theorem exists_correct_counter_of_hashingCircuit_internal
     {overhead arity prefixLength internalGates : ℕ}
