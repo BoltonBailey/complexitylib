@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.Randomized.ApproximateCounting.Defs
 public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Counting.Defs
 
 /-!
@@ -22,13 +23,9 @@ namespace Complexity
 
 namespace AntiChecker
 
-/-- `estimate` approximates `actual` to relative error at most
-`1 / precision`, expressed without division. -/
-def IsRelativeApproximation
-    (precision actual estimate : ℕ) : Prop :=
-  0 < precision ∧
-    (precision - 1) * actual ≤ precision * estimate ∧
-      precision * estimate ≤ (precision + 1) * actual
+/-- Anti-checker-facing name for the general relative-counting contract. -/
+abbrev IsRelativeApproximation :=
+  ApproximateCounting.IsRelativeApproximation
 
 /-- A natural number relatively approximates the canonical survivor count for
 one target-labelled sample prefix. -/

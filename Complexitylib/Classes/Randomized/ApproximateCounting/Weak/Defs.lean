@@ -5,6 +5,7 @@ Authors: Samuel Schlesinger
 -/
 
 module
+public import Complexitylib.Classes.Randomized.ApproximateCounting.Defs
 public import Mathlib.Data.Finset.Max
 public import Mathlib.Data.Fintype.Basic
 
@@ -22,15 +23,6 @@ answer, with four extra levels supplying the constant-factor slack.
 namespace Complexity
 
 namespace ApproximateCounting
-
-/-- Symmetric multiplicative approximation without division. -/
-def IsFactorApproximation (factor actual estimate : ℕ) : Prop :=
-  estimate ≤ factor * actual ∧ actual ≤ factor * estimate
-
-instance instDecidableIsFactorApproximation (factor actual estimate : ℕ) :
-    Decidable (IsFactorApproximation factor actual estimate) := by
-  unfold IsFactorApproximation
-  infer_instance
 
 namespace Weak
 
