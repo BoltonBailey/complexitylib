@@ -57,6 +57,13 @@ theorem card_validDescription_eq_candidateCodes (arity threshold : Nat) :
       (candidateCodes arity threshold).card :=
   card_validDescription_eq_candidateCodes_internal arity threshold
 
+/-- The fixed-width description cube fits inside the existing uniform unary
+code-length bound. -/
+theorem fixedWidth_codeWidth_le_codeLengthBound (arity threshold : Nat) :
+    CircuitCode.FixedWidth.codeWidth arity threshold ≤
+      codeLengthBound arity threshold :=
+  fixedWidth_codeWidth_le_codeLengthBound_internal arity threshold
+
 end AntiChecker
 
 end Complexity

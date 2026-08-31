@@ -163,6 +163,42 @@ theorem card_validDescription_eq_candidateCodes_internal
     _ = (candidateCodes arity threshold).card := by
       simp [CandidateCode]
 
+theorem fixedWidth_codeWidth_le_codeLengthBound_internal
+    (arity threshold : Nat) :
+    CircuitCode.FixedWidth.codeWidth arity threshold ≤
+      codeLengthBound arity threshold := by
+  have hbitWidth (value : Nat) : Fin.bitWidth value ≤ value := by
+    unfold Fin.bitWidth
+    exact Nat.clog_le_of_le_pow (le_of_lt (Nat.lt_two_pow_self))
+  have hreference :
+      CircuitCode.FixedWidth.referenceWidth arity threshold ≤
+        arity + threshold + 1 := by
+    unfold CircuitCode.FixedWidth.referenceWidth
+    apply max_le
+    · omega
+    · exact (hbitWidth (arity + threshold)).trans (by omega)
+  have hcount :
+      CircuitCode.FixedWidth.gateCountWidth threshold ≤ threshold + 1 := by
+    unfold CircuitCode.FixedWidth.gateCountWidth
+    apply max_le
+    · omega
+    · exact hbitWidth (threshold + 1)
+  unfold CircuitCode.FixedWidth.codeWidth
+    CircuitCode.FixedWidth.gateSlotWidth codeLengthBound
+  calc
+    CircuitCode.FixedWidth.gateCountWidth threshold +
+        threshold *
+          (3 +
+            (CircuitCode.FixedWidth.referenceWidth arity threshold +
+              CircuitCode.FixedWidth.referenceWidth arity threshold)) ≤
+        threshold + 1 +
+          threshold *
+            (3 + ((arity + threshold + 1) +
+              (arity + threshold + 1))) := by
+      gcongr
+    _ = 1 + threshold * (2 * (arity + threshold) + 6) := by
+      ring
+
 end AntiChecker
 
 end Complexity

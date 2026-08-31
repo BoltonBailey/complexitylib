@@ -11,10 +11,9 @@ import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domai
 /-!
 # Fixed-width anti-checker counter domains
 
-Canonical variable-length circuit codes embed injectively into an explicit
-Boolean cube of only one bit more than the maximum code length. Consequently,
-counting the encoded survivors is exactly the existing labeled survivor count,
-with no padding multiplicity.
+Valid bounded circuit descriptions encode injectively into one parameter-sized
+Boolean cube. Consequently, counting encoded survivors is exactly the existing
+labeled survivor count, with no delimiter parser or padding multiplicity.
 -/
 
 
@@ -28,40 +27,39 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
-/-- The bounded-code encoding is injective on lists satisfying its advertised
-length bound. -/
-theorem encodeBoundedCode_injective_of_length_le
-    {bound : ℕ} {first second : List Bool}
-    (hfirst : first.length ≤ bound) (hsecond : second.length ≤ bound)
-    (hencode : encodeBoundedCode bound first =
-      encodeBoundedCode bound second) :
-    first = second :=
-  encodeBoundedCode_injective_of_length_le_internal
-    hfirst hsecond hencode
-
-/-- Membership in the fixed-width survivor domain is witnessed by one
-canonical variable-length survivor code and its delimiter encoding. -/
+/-- Membership in the fixed-width survivor domain is exactly successful
+decoding to a valid description that matches every sample. -/
 theorem mem_encodedCandidateLabeledSurvivorCodes_iff
     {count arity threshold : ℕ}
     {samples : Fin count → SuccinctMCSP.Sample arity}
     {encoded : BitString (candidateCodeWidth arity threshold)} :
     encoded ∈ encodedCandidateLabeledSurvivorCodes arity threshold samples ↔
-      ∃ code ∈ candidateLabeledSurvivorCodes arity threshold samples,
-        encodeBoundedCode (AntiChecker.codeLengthBound arity threshold) code =
-          encoded :=
+      EncodedDescriptionMatchesLabeledSamples samples encoded :=
   mem_encodedCandidateLabeledSurvivorCodes_iff_internal
 
-/-- Packed-input survivor membership has the same explicit variable-code
-witness characterization. -/
+/-- Equivalently, a survivor word decodes to one valid description that
+matches every labeled sample. -/
+theorem mem_encodedCandidateLabeledSurvivorCodes_iff_exists_description
+    {count arity threshold : ℕ}
+    {samples : Fin count → SuccinctMCSP.Sample arity}
+    {encoded : BitString (candidateCodeWidth arity threshold)} :
+    encoded ∈ encodedCandidateLabeledSurvivorCodes arity threshold samples ↔
+      ∃ description :
+          CircuitCode.FixedWidth.ValidDescription arity threshold,
+        CircuitCode.FixedWidth.Description.decode? encoded =
+          some description.val ∧
+        DescriptionMatchesLabeledSamples samples description :=
+  mem_encodedCandidateLabeledSurvivorCodes_iff_exists_description_internal
+
+/-- Packed-input survivor membership uses the decoded fixed-description
+predicate on the unpacked labeled samples. -/
 theorem mem_encodedSurvivorSet_iff
     {count arity threshold : ℕ}
     {input : BitString (count * (arity + 1))}
     {encoded : BitString (candidateCodeWidth arity threshold)} :
     encoded ∈ encodedSurvivorSet arity threshold input ↔
-      ∃ code ∈ candidateLabeledSurvivorCodes arity threshold
-          (unpackLabeledSamples input),
-        encodeBoundedCode (AntiChecker.codeLengthBound arity threshold) code =
-          encoded :=
+      EncodedDescriptionMatchesLabeledSamples
+        (unpackLabeledSamples input) encoded :=
   mem_encodedSurvivorSet_iff_internal
 
 /-- Encoding canonical labeled survivors in the fixed Boolean cube preserves

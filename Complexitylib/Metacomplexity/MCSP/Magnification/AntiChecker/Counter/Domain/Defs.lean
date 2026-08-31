@@ -5,16 +5,15 @@ Authors: Samuel Schlesinger
 -/
 
 module
-public import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.Defs
+public import Complexitylib.Circuits.Encoding.FixedWidth.Codec.Defs
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Relation.Defs
 
 /-!
 # Fixed-width anti-checker counter domains -- definitions
 
-Affine hashing acts on a Boolean cube of fixed dimension, while canonical
-circuit codes have every length up to `AntiChecker.codeLengthBound`. We embed
-each bounded code into a fixed-width string by appending a delimiter and then
-padding with zeroes.
+Affine hashing acts directly on the fixed-width binary descriptions of valid
+bounded circuits. Each survivor has one canonical word, with no delimiter,
+parser branch, or padding multiplicity.
 -/
 
 
@@ -28,43 +27,43 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
-/-- Width of the fixed Boolean cube used to represent codes of length at most
-`bound`: the code bits followed by one delimiter and zero padding. -/
-def boundedCodeWidth (bound : ℕ) : ℕ :=
-  bound + 1
-
-instance (bound : ℕ) : NeZero (boundedCodeWidth bound) :=
-  ⟨by simp [boundedCodeWidth]⟩
-
-/-- Encode a variable-length Boolean code by retaining its contents, placing
-a `true` delimiter immediately afterward, and padding the rest with `false`.
-Codes longer than `bound` are truncated only to make the function total; the
-counter domain uses it solely on bounded canonical codes. -/
-def encodeBoundedCode (bound : ℕ) (code : List Bool) :
-    BitString (boundedCodeWidth bound) :=
-  fun index =>
-    if hindex : index.val < code.length then
-      code[index.val]
-    else
-      decide (index.val = code.length)
-
-/-- Fixed cube dimension for canonical circuit codes at one arity and size
+/-- Fixed cube dimension for circuit descriptions at one arity and gate
 threshold. -/
 def candidateCodeWidth (arity threshold : ℕ) : ℕ :=
-  boundedCodeWidth (AntiChecker.codeLengthBound arity threshold)
+  CircuitCode.FixedWidth.codeWidth arity threshold
 
 instance (arity threshold : ℕ) : NeZero (candidateCodeWidth arity threshold) :=
-  inferInstanceAs (NeZero (boundedCodeWidth
-    (AntiChecker.codeLengthBound arity threshold)))
+  inferInstanceAs
+    (NeZero (CircuitCode.FixedWidth.codeWidth arity threshold))
 
-/-- Fixed-width encodings of the canonical circuit codes surviving a labeled
-sample vector. -/
+/-- One fixed-width word decodes to a valid description matching every labeled
+sample. Malformed count words and invalid descriptions are rejected. -/
+def EncodedDescriptionMatchesLabeledSamples {count arity threshold : ℕ}
+    (samples : Fin count → SuccinctMCSP.Sample arity)
+    (encoded : BitString (candidateCodeWidth arity threshold)) : Prop :=
+  match CircuitCode.FixedWidth.Description.decode? encoded with
+  | none => False
+  | some description =>
+      description.WellFormed ∧
+        ∀ sample,
+          description.toRawCircuit.eval? (samples sample).input.toList =
+            some (samples sample).output
+
+instance {count arity threshold : ℕ}
+    (samples : Fin count → SuccinctMCSP.Sample arity)
+    (encoded : BitString (candidateCodeWidth arity threshold)) :
+    Decidable (EncodedDescriptionMatchesLabeledSamples samples encoded) := by
+  unfold EncodedDescriptionMatchesLabeledSamples
+  cases CircuitCode.FixedWidth.Description.decode? encoded <;>
+    infer_instance
+
+/-- Canonical fixed-width words that decode to valid descriptions surviving a
+labeled sample vector. -/
 def encodedCandidateLabeledSurvivorCodes {count : ℕ}
     (arity threshold : ℕ)
     (samples : Fin count → SuccinctMCSP.Sample arity) :
     Finset (BitString (candidateCodeWidth arity threshold)) :=
-  (candidateLabeledSurvivorCodes arity threshold samples).image
-    (encodeBoundedCode (AntiChecker.codeLengthBound arity threshold))
+  Finset.univ.filter (EncodedDescriptionMatchesLabeledSamples samples)
 
 /-- The fixed-width survivor set associated with a packed labeled-sample
 input. -/

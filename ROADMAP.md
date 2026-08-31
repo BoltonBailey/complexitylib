@@ -2835,8 +2835,12 @@ transport, and the parameter-dependent width bound are all proved. The fixed-wid
 binary gate-slot representation is better aligned with this relation than the temporary
 delimiter embedding: it makes the witness cube and its validity circuit structural,
 removes parser branches and padding multiplicity, and has width
-`O(s * log(n + s))` for `s` gates. Do not retire the delimiter domain until those three
-bridges and the corresponding hash-cell semantics are checked.
+`O(s * log(n + s))` for `s` gates. The required bridges are now checked: valid
+fixed descriptions are equivalent to the old canonical candidate-code domain,
+their labeled-survivor sets have exactly the same cardinality, and the fixed
+cube width is at most the former unary-code length bound. The delimiter domain
+and its finite branch-shape parser have therefore been retired; the unchanged
+Cartesian-power hash-cell semantics now act on the fixed-description cube.
 
 The approximate-counting obligation remains substantive. Journal Theorem 4.2 supplies
 relative counting in randomized polynomial time with a SAT oracle and exponentially
@@ -3007,15 +3011,15 @@ proof obligations, not codec bookkeeping.
   language in `PPoly` yields one hardwired circuit accurate on every ordinary
   input, with exact preservation of the inlined size. Constructing the concrete
   occupancy-oracle program and proving the quantitative family bound remain. The
-  variable-length canonical circuit codes now embed injectively into an
-  explicit fixed Boolean cube of width exactly one above the code bound, using
-  a delimiter and zero padding; the resulting encoded survivor set has exactly
-  the original labeled survivor count, so hashing introduces no padding
-  multiplicity. The generic hashing-circuit contract is now specialized to
-  this survivor set as well: any circuit meeting the target counter-size bound
+  counter domain now uses canonical fixed-width binary gate-slot descriptions
+  directly. Exact equivalence with the former variable-length candidate domain,
+  exact labeled-survivor count transport, and a width bound inside the former
+  unary-code envelope are proved; the delimiter, zero padding, and finite
+  branch-shape parser have been removed. The generic hashing-circuit contract
+  remains specialized to this survivor set: any circuit meeting the target counter-size bound
   yields, after seed fixing, a deterministic correct `ApproximateCounterCircuit`
   of exactly the same size. Membership in the encoded domain now exposes its
-  unique underlying variable-length survivor code, and the existential
+  unique valid fixed-width description, and the existential
   powered-survivor hash-cell predicate is identified exactly with the affine
   zero-cell nonemptiness event used by the probability analysis. An exact-width
   circuit-satisfiability language and its fixed-public-prefix extension are in

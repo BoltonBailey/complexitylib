@@ -9,6 +9,7 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counte
 public import Complexitylib.Classes.Randomized.ApproximateCounting.Relative.OracleProgram
 import Complexitylib.Classes.Randomized.ApproximateCounting.Relative.Circuit
 import Complexitylib.Classes.Randomized.ApproximateCounting.Relative
+import Complexitylib.Metacomplexity.MCSP.AntiChecker.Enumeration.FixedWidth
 import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domain
 
 /-!
@@ -45,8 +46,9 @@ theorem hashingEstimate_lt_counterRange_internal
   have hwidth :
       candidateCodeWidth arity (smallThreshold beta arity) + 1 ≤
         counterOutputWidth beta arity := by
-    simp only [candidateCodeWidth, boundedCodeWidth, counterOutputWidth,
-      roundBlockCount]
+    have hcode := AntiChecker.fixedWidth_codeWidth_le_codeLengthBound
+      arity (smallThreshold beta arity)
+    simp only [candidateCodeWidth, counterOutputWidth, roundBlockCount]
     omega
   exact hbound.trans_le (Nat.pow_le_pow_right (by omega) hwidth)
 
