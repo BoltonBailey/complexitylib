@@ -10,6 +10,7 @@ public import Complexitylib.Circuits.Encoding.Fragment
 public import Complexitylib.Circuits.Encoding.Formula
 public import Complexitylib.Circuits.Encoding.Formula.Batch
 public import Complexitylib.Circuits.Encoding.Formula.Stream
+public import Complexitylib.Circuits.Encoding.FixedWidth
 public import Complexitylib.Circuits.Encoding.Internal
 public import Complexitylib.Circuits.Encoding.Parity
 public import Complexitylib.Circuits.Encoding.Threshold
@@ -29,6 +30,8 @@ This module exposes the machine-facing representation of
 - `RawCircuit.eval?`: array-backed iterative evaluation.
 - `CircuitCode.encodeCircuit`: serialization of a typed circuit.
 - `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
+- `CircuitCode.FixedWidth.Description`: bounded fixed-slot binary syntax with
+  structural field boundaries and canonical inactive padding.
 - `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
 - `RawCircuit.evalAux?_append`: compose appendable raw fragments.
 - `BoolFormula.compileRaw`: compile formulas into appendable raw fragments.
@@ -49,6 +52,10 @@ This module exposes the machine-facing representation of
   list-native theorem for machine-facing clients.
 - `CircuitCode.encodeCircuit_length_le_size`: concrete polynomial bit-length
   bound for the unary encoding.
+- `FixedWidth.card_description`: exact size of the unfiltered fixed-slot
+  description space.
+- `FixedWidth.Description.wellFormed_toRawCircuit`: valid fixed descriptions
+  produce nonempty topologically ordered raw circuits.
 - `RawCircuit.ofCircuit_toCircuit`, `RawCircuit.eval?_toCircuit`, and
   `RawCircuit.size_toCircuit`: exact reconstruction, semantics, and size.
 - `BoolFormula.evalAux?_compileRaw`: exact formula-fragment evaluation.
