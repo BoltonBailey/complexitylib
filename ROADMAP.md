@@ -2949,8 +2949,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   approximate-counting layer, so the Stockmeyer development and anti-checker
   share one division-free contract. A canonical variable-width block codec
   gives every level an independent seed without padding; the finite union bound
-  proves factor-`16` accuracy with probability at least `3/4`. The power trick,
-  median amplification, and circuit realization remain.*
+  proves factor-`16` accuracy with probability at least `3/4`. The Cartesian
+  power now has a row-major bit-string encoding with exact membership and
+  cardinality `|S^c| = |S|^c`. The root-accuracy bridge, median amplification,
+  and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
