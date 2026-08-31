@@ -38,6 +38,22 @@ specified by their paired ruler string. -/
 def language : Language :=
   {query | ∃ witness, Witness query witness}
 
+/-- A witness extends the public prefix carried by a query with exactly the
+number of bits advertised by its ruler, and the combined input makes the
+tagged circuit code evaluate to true. A query has the canonical shape
+`pair code (pair prefix ruler)`. -/
+def ExtensionWitness (query witness : List Bool) : Prop :=
+  query ∈ validPairEncoding ∧
+    pairSnd query ∈ validPairEncoding ∧
+    witness.length = (pairSnd (pairSnd query)).length ∧
+    pair (pairFst query) (pairFst (pairSnd query) ++ witness) ∈
+      CircuitCode.circuitEvalLanguage
+
+/-- Tagged circuits having an accepting extension of the exact width specified
+by the query's ruler. -/
+def extensionLanguage : Language :=
+  {query | ∃ witness, ExtensionWitness query witness}
+
 end CircuitSAT
 
 end Complexity

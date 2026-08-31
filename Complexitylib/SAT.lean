@@ -53,6 +53,6 @@ infrastructure used by the polynomial-time verifier.
   NP-completeness theorem.
 - `CircuitOracle` — extraction of a polynomial-size SAT circuit oracle from
   the hypothesis `NP ⊆ PPoly`.
-- `CircuitSatisfiability` — an exact-width padded circuit-SAT language in `NP`,
-  backed by the verified serialized circuit evaluator.
+- `CircuitSatisfiability` — exact-width circuit-SAT and fixed-prefix extension
+  languages in `NP`, backed by the verified serialized circuit evaluator.
 -/
