@@ -197,6 +197,30 @@ theorem evalAux?_compileZeroRaw
     inputRefs coefficients input wires hsize hcoefficientRefs hinputRefs
     hcoefficients hinputs
 
+/-- Direct raw evaluation returns the all-zero decision for the affine forms
+selected from the primary input wires. -/
+theorem eval?_compileZeroRaw
+    (available width rowCount : ℕ) [NeZero available]
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ)
+    (hcoefficientRefs : ∀ row coordinate,
+      coefficientRefs row coordinate < available)
+    (hinputRefs : ∀ coordinate, inputRefs coordinate < available)
+    (input : BitString available) :
+    CircuitCode.RawCircuit.eval?
+        (compileZeroRaw available width rowCount coefficientRefs inputRefs)
+        input.toList =
+      some (zeroValue fun row =>
+        linearValue
+          (fun coordinate => input ⟨coefficientRefs row coordinate.castSucc,
+            hcoefficientRefs row coordinate.castSucc⟩)
+          (fun coordinate => input ⟨inputRefs coordinate,
+            hinputRefs coordinate⟩)
+          (input ⟨coefficientRefs row (Fin.last width),
+            hcoefficientRefs row (Fin.last width)⟩)) :=
+  eval?_compileZeroRaw_internal available width rowCount coefficientRefs
+    inputRefs hcoefficientRefs hinputRefs input
+
 /-- Specializing the generic affine form to one row of the standard seed
 matrix agrees with `affineEval`. -/
 theorem linearValue_affineRow {domainWidth rangeWidth : ℕ}

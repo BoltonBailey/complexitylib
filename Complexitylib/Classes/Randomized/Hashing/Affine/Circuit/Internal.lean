@@ -594,6 +594,63 @@ theorem compileZeroRaw_wellFormed_internal
       available width rowCount coefficientRefs inputRefs
       hcoefficientRefs hinputRefs
 
+theorem eval?_compileZeroRaw_internal
+    (available width rowCount : ℕ) [NeZero available]
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ)
+    (hcoefficientRefs : ∀ row coordinate,
+      coefficientRefs row coordinate < available)
+    (hinputRefs : ∀ coordinate, inputRefs coordinate < available)
+    (input : BitString available) :
+    CircuitCode.RawCircuit.eval?
+        (compileZeroRaw available width rowCount coefficientRefs inputRefs)
+        input.toList =
+      some (zeroValue fun row =>
+        linearValue
+          (fun coordinate => input ⟨coefficientRefs row coordinate.castSucc,
+            hcoefficientRefs row coordinate.castSucc⟩)
+          (fun coordinate => input ⟨inputRefs coordinate,
+            hinputRefs coordinate⟩)
+          (input ⟨coefficientRefs row (Fin.last width),
+            hcoefficientRefs row (Fin.last width)⟩)) := by
+  let wires := input.toList.toArray
+  let coefficients : Fin rowCount → BitString (width + 1) :=
+    fun row coordinate =>
+      input ⟨coefficientRefs row coordinate,
+        hcoefficientRefs row coordinate⟩
+  let selectedInput : BitString width := fun coordinate =>
+    input ⟨inputRefs coordinate, hinputRefs coordinate⟩
+  have hsize : wires.size = available := by
+    simp [wires]
+  have hcoefficients : ∀ row coordinate,
+      wires[coefficientRefs row coordinate]? =
+        some (coefficients row coordinate) := by
+    intro row coordinate
+    simp [wires, coefficients, BitString.toList,
+      hcoefficientRefs row coordinate]
+  have hinputs : ∀ coordinate,
+      wires[inputRefs coordinate]? = some (selectedInput coordinate) := by
+    intro coordinate
+    simp [wires, selectedInput, BitString.toList, hinputRefs coordinate]
+  obtain ⟨result, heval, _hresultSize, _hpreserved, houtput⟩ :=
+    evalAux?_compileZeroRaw_internal available width rowCount
+      coefficientRefs inputRefs coefficients selectedInput wires hsize
+      hcoefficientRefs hinputRefs hcoefficients hinputs
+  have hnonempty :
+      (compileZeroRaw available width rowCount coefficientRefs inputRefs).isEmpty =
+        false := by
+    simp [compileZeroRaw]
+  have houtputIndex :
+      input.toList.length +
+          (compileZeroRaw available width rowCount coefficientRefs inputRefs).length - 1 =
+        zeroOutputWire available width rowCount := by
+    rw [BitString.length_toList,
+      zeroOutputWire_eq_internal available width rowCount coefficientRefs inputRefs]
+  rw [CircuitCode.RawCircuit.eval?]
+  simp only [hnonempty, Bool.false_eq_true, if_false]
+  rw [show input.toList.toArray = wires by rfl, heval, houtputIndex]
+  simpa only [coefficients, selectedInput] using houtput
+
 theorem linearValue_affineRow_internal {domainWidth rangeWidth : ℕ}
     (seed : BitString (affineSeedWidth domainWidth rangeWidth))
     (input : BitString domainWidth) (row : Fin rangeWidth) :
