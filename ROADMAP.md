@@ -2957,7 +2957,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   powered hashing estimator now exposes an arbitrary global failure exponent:
   strengthening the already-present per-level majorities and taking the finite
   union bound gives failure at most `2^-k`, so a separate median layer is
-  unnecessary. Circuit realization and the quantitative family bound remain.*
+  unnecessary. A generic circuit adapter now transfers that exact failure
+  event to any seed-prefix circuit computing the estimator; at exponent one
+  above the ordinary input width, one seed hardwires to a circuit accurate on
+  every input without changing size. Constructing the oracle program and the
+  quantitative family bound remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

@@ -41,6 +41,20 @@ def badSeedEvent {seedWidth inputWidth outputWidth internalGates : Nat}
   Finset.univ.filter fun seed =>
     ¬ IsCorrect input (circuit.eval (Fin.append seed input))
 
+/-- Membership in the bad-seed event is exactly failure of the output
+specification on the seed-prefixed input. -/
+@[simp] theorem mem_badSeedEvent_iff
+    {seedWidth inputWidth outputWidth internalGates : Nat}
+    [NeZero inputWidth] [NeZero outputWidth]
+    (circuit : Circuit Basis.andOr2 (seedWidth + inputWidth)
+      outputWidth internalGates)
+    (IsCorrect : BitString inputWidth -> BitString outputWidth -> Prop)
+    [forall input output, Decidable (IsCorrect input output)]
+    (input : BitString inputWidth) (seed : BitString seedWidth) :
+    seed ∈ badSeedEvent circuit IsCorrect input ↔
+      ¬ IsCorrect input (circuit.eval (Fin.append seed input)) := by
+  simp [badSeedEvent]
+
 /-- A pointwise `2^-(n + 1)` failure bound leaves one seed that satisfies a
 multi-output specification simultaneously on every `n`-bit input. -/
 theorem exists_uniform_correct_seed
