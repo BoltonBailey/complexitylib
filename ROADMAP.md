@@ -2813,6 +2813,41 @@ the Chen--Hirahara--Oliveira--Pich--Rajgopal--Santhanam analysis of natural proo
 and the locality barrier. Allender--Grochow--van Melkebeek--Moore--Morgan supplies
 a separate reduction-oriented bridge between MKtP and isomorphism problems.
 
+The 2025 Atserias--Mueller preprint,
+[*Simple General Magnification of Circuit Lower Bounds*](https://arxiv.org/abs/2503.24061),
+adds a promising but distinct second route. Its strongly explicit distinguisher
+construction gives a simpler uniform magnification theorem for Hamming-approximate
+`MCSP[sigma]`: a slightly superlinear lower bound against P-uniform circuits implies
+`P != NP` with a `ParityP` oracle. This does not replace the selected Oliveira--Pich--Santhanam
+headline. The promise problem is approximate MCSP rather than worst-case circuit-size
+GapMCSP, the lower-bound model is P-uniform rather than nonuniform, and the conclusion
+is a uniform separation rather than `NP` not contained in `PPoly`. Record it as a
+parallel post-headline track whose distinguisher and sparse-matrix infrastructure can
+reuse the finite Hamming and linear-code layers.
+
+**Anti-checker source audit.** The revised journal proof counts fixed-length witness
+strings for a polynomial-time relation `Q`, interpreting each witness as a bounded
+circuit description. It does not require a particular concrete circuit codec or that
+different descriptions denote different circuits. The library instead uses one
+canonical description for each well-formed small raw circuit. This is a legitimate
+refinement provided that coverage of every small typed circuit, exact survivor-count
+transport, and the parameter-dependent width bound are all proved. The fixed-width
+binary gate-slot representation is better aligned with this relation than the temporary
+delimiter embedding: it makes the witness cube and its validity circuit structural,
+removes parser branches and padding multiplicity, and has width
+`O(s * log(n + s))` for `s` gates. Do not retire the delimiter domain until those three
+bridges and the corresponding hash-cell semantics are checked.
+
+The approximate-counting obligation remains substantive. Journal Theorem 4.2 supplies
+relative counting in randomized polynomial time with a SAT oracle and exponentially
+small failure; Corollary 4.3 fixes one random seed for every input and replaces SAT by
+small circuits under `NP` contained in `PPoly`. The library's affine hashing, occupancy
+amplification, Cartesian-power accuracy boost, union bound, oracle inlining, and seed
+hardwiring follow exactly that decomposition. What is still missing is the concrete
+occupancy-query program, the circuit implementing its fixed-width witness predicate,
+and the quantitative `2^(k*beta*n)` bound after SAT-oracle inlining. These are central
+proof obligations, not codec bookkeeping.
+
 **Definitions and theorem shape to settle first.**
 
 - A magnification theorem is an implication
