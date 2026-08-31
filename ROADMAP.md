@@ -2941,7 +2941,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   lemma with both absolute- and relative-error forms. The single-hash
   nonemptiness test now has the required occupancy gap: probability at most
   `1/8` when the mean cell size is at most `1/8`, and at least `7/8` when the
-  mean is at least `8`. The multi-level weak estimator, power trick, median
+  mean is at least `8`. Independent strict-majority repetition reduces either
+  one-level error to `2^-errorBits`. The pure multi-level estimator now selects
+  the largest positive width among `n + 4` probes and, under the simultaneous
+  occupancy-response contract, gives an exact-zero-preserving factor-`16`
+  estimate. Its joint probabilistic guarantee, the power trick, median
   amplification, and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the

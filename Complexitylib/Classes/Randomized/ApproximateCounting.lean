@@ -1,0 +1,15 @@
+/-
+Copyright (c) 2026 Samuel Schlesinger. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Samuel Schlesinger
+-/
+
+module
+public import Complexitylib.Classes.Randomized.ApproximateCounting.Weak
+
+/-!
+# Approximate counting
+
+Randomized approximate-counting algorithms and their finite correctness
+contracts.
+-/
