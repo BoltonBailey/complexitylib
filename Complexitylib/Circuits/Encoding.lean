@@ -17,6 +17,8 @@ public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Gate
 public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Layout
 public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Padded
 public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Sequence
+public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Sequence.Semantics
+public import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Step
 public import Complexitylib.Circuits.Encoding.FixedWidth.Lookup
 public import Complexitylib.Circuits.Encoding.FixedWidth.Validity
 public import Complexitylib.Circuits.Encoding.Internal
