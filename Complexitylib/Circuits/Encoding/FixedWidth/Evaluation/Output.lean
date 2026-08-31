@@ -77,6 +77,20 @@ theorem some_eval_formula_prefixResult
         (lastActiveSlot description hdescription.1).val]? :=
   some_eval_formula_prefixResult_internal hdescription input result
 
+/-- On a valid description, selector semantics is exactly ordinary raw-circuit
+evaluation on the sample input. -/
+theorem some_eval_formula_eq_eval?
+    {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth)
+    (result : EvaluationSequence.PrefixResult description input gateBound
+      (Nat.le_refl gateBound)) :
+    some ((formula inputWidth gateBound).eval
+        (memoAssignment result.circuitWires)) =
+      description.toRawCircuit.eval? input.toList :=
+  some_eval_formula_eq_eval?_internal hdescription input result
+
 /-- Selector compilation emits exactly its advertised formula size. -/
 @[simp] theorem length_compileRaw (inputWidth gateBound : Nat) :
     (compileRaw inputWidth gateBound).length = selectorSize gateBound :=
@@ -88,6 +102,35 @@ theorem topologicallyWellFormed_compileRaw (inputWidth gateBound : Nat) :
     (compileRaw inputWidth gateBound).TopologicallyWellFormed
       (fullAvailable inputWidth gateBound) :=
   topologicallyWellFormed_compileRaw_internal inputWidth gateBound
+
+/-- The complete evaluator emits the gate-sequence prefix and one selector
+formula. -/
+@[simp] theorem length_circuit (inputWidth gateBound : Nat) :
+    (circuit inputWidth gateBound).length =
+      prefixSize inputWidth gateBound gateBound + selectorSize gateBound :=
+  length_circuit_internal inputWidth gateBound
+
+/-- The complete evaluator's designated output is its final emitted wire. -/
+theorem outputWire_eq (inputWidth gateBound : Nat) :
+    outputWire inputWidth gateBound =
+      baseWireCount inputWidth gateBound +
+        (circuit inputWidth gateBound).length - 1 :=
+  outputWire_eq_internal inputWidth gateBound
+
+/-- The complete evaluator is topologically valid from its description-and-
+sample input block. -/
+theorem topologicallyWellFormed_circuit (inputWidth gateBound : Nat) :
+    (circuit inputWidth gateBound).TopologicallyWellFormed
+      (baseWireCount inputWidth gateBound) :=
+  topologicallyWellFormed_circuit_internal inputWidth gateBound
+
+/-- A valid fixed-width description's complete evaluator runs successfully and
+returns its direct raw-circuit value. -/
+noncomputable def result {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth) : Result description input :=
+  resultInternal hdescription input
 
 end EvaluationOutput
 

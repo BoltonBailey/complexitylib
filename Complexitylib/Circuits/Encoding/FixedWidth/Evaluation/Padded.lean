@@ -43,6 +43,15 @@ theorem slot_wellFormedAt_of_wellFormed
     description.toPaddedRawCircuit.length = gateBound :=
   length_toPaddedRawCircuit_internal description
 
+/-- Taking exactly the active slots from the padded circuit recovers the
+ordinary raw-circuit view. -/
+theorem take_toPaddedRawCircuit_gateCount
+    {inputWidth gateBound : Nat}
+    (description : Description inputWidth gateBound) :
+    description.toPaddedRawCircuit.take description.gateCountNat =
+      description.toRawCircuit :=
+  take_toPaddedRawCircuit_gateCount_internal description
+
 /-- A valid description's complete padded raw circuit is topologically
 ordered. -/
 theorem topologicallyWellFormed_toPaddedRawCircuit

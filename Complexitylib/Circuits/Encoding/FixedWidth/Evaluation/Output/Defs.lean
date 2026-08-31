@@ -68,6 +68,12 @@ def outputWire (inputWidth gateBound : Nat) : Nat :=
   BoolFormula.rawOutputWire (fullAvailable inputWidth gateBound)
     (formula inputWidth gateBound)
 
+/-- Complete fixed-width evaluator: every bounded gate slot followed by active
+output selection. -/
+def circuit (inputWidth gateBound : Nat) : RawCircuit :=
+  EvaluationSequence.circuit inputWidth gateBound ++
+    compileRaw inputWidth gateBound
+
 /-- Total Boolean assignment read from an evaluated memo array. -/
 def memoAssignment (wires : Array Bool) : Nat → Bool :=
   fun wire => (wires[wire]?).getD false
@@ -81,6 +87,25 @@ def lastActiveSlot {inputWidth gateBound : Nat}
     change description.gateCountNat < gateBound + 1 at hcount
     change 0 < description.gateCountNat at hpositive
     omega⟩
+
+/-- Successful complete evaluation of a valid fixed-width description on one
+sample input. -/
+structure Result {inputWidth gateBound : Nat}
+    (description : Description inputWidth gateBound)
+    (input : BitString inputWidth) where
+  /-- Memo after the gate sequence and active-output selector. -/
+  wires : Array Bool
+  /-- Successful execution of the complete evaluator fragment. -/
+  circuitEval :
+    RawCircuit.evalAux? (circuit inputWidth gateBound)
+        (EvaluationSequence.inputWires description input) = some wires
+  /-- Exact final memo size. -/
+  size :
+    wires.size = fullAvailable inputWidth gateBound + selectorSize gateBound
+  /-- The designated evaluator output is exactly direct raw-circuit evaluation. -/
+  output :
+    wires[outputWire inputWidth gateBound]? =
+      description.toRawCircuit.eval? input.toList
 
 end EvaluationOutput
 

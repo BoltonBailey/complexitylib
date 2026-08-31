@@ -10,10 +10,14 @@ import Complexitylib.Circuits.Encoding.FixedWidth
 import Complexitylib.Circuits.Encoding.FixedWidth.Codec
 import Complexitylib.Circuits.Encoding.FixedWidth.Conversion
 import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Layout
+import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Padded
+import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Sequence
 import Complexitylib.Circuits.Encoding.FixedWidth.Evaluation.Sequence.Semantics
 import Complexitylib.Circuits.Encoding.FixedWidth.Lookup
 import Complexitylib.Circuits.Encoding.FixedWidth.Validity
+import Complexitylib.Circuits.Encoding.Fragment
 import Complexitylib.Circuits.Encoding.Formula
+import Complexitylib.Circuits.Encoding.Internal.Codec
 
 /-!
 # Fixed-width evaluator output selection -- proof internals
@@ -203,6 +207,77 @@ theorem some_eval_formula_prefixResult_internal
   rw [Array.getElem?_eq_getElem hrawBound]
   rfl
 
+theorem some_eval_formula_eq_eval?_internal
+    {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth)
+    (result : EvaluationSequence.PrefixResult description input gateBound
+      (Nat.le_refl gateBound)) :
+    some ((formula inputWidth gateBound).eval
+        (memoAssignment result.circuitWires)) =
+      description.toRawCircuit.eval? input.toList := by
+  rw [some_eval_formula_prefixResult_internal hdescription input result]
+  have hpaddedEval :
+      RawCircuit.evalAux? description.toPaddedRawCircuit (Array.ofFn input) =
+        some result.rawWires := by
+    have htake : description.toPaddedRawCircuit.take gateBound =
+        description.toPaddedRawCircuit := by
+      simpa only [Description.length_toPaddedRawCircuit] using
+        (List.take_length (l := description.toPaddedRawCircuit))
+    simpa only [EvaluationSequence.rawPrefix, htake] using result.rawEval
+  have hsplit :
+      description.toPaddedRawCircuit =
+        description.toRawCircuit ++
+          description.toPaddedRawCircuit.drop description.gateCountNat := by
+    calc
+      description.toPaddedRawCircuit =
+          description.toPaddedRawCircuit.take description.gateCountNat ++
+            description.toPaddedRawCircuit.drop description.gateCountNat :=
+        (List.take_append_drop _ _).symm
+      _ = description.toRawCircuit ++
+            description.toPaddedRawCircuit.drop description.gateCountNat := by
+        rw [Description.take_toPaddedRawCircuit_gateCount]
+  rw [hsplit, RawCircuit.evalAux?_append] at hpaddedEval
+  cases hactive :
+      RawCircuit.evalAux? description.toRawCircuit (Array.ofFn input) with
+  | none => simp [hactive] at hpaddedEval
+  | some activeWires =>
+      simp only [hactive, Option.bind_some] at hpaddedEval
+      have hactiveSize := RawCircuit.evalAux?_size hactive
+      let slot := lastActiveSlot description hdescription.1
+      have hpositive := hdescription.1
+      change 0 < description.gateCountNat at hpositive
+      have hactiveBound : inputWidth + slot.val < activeWires.size := by
+        rw [hactiveSize]
+        simp only [Array.size_ofFn, Description.length_toRawCircuit]
+        dsimp only [slot, lastActiveSlot]
+        omega
+      have hpreserved := RawCircuit.evalAux?_preserves_prefix
+        hpaddedEval hactiveBound
+      have hnonempty : description.toRawCircuit ≠ [] := by
+        intro hempty
+        have hlength := congrArg List.length hempty
+        simp only [Description.length_toRawCircuit,
+          List.length_nil] at hlength
+        exact (Nat.ne_of_gt hpositive) hlength
+      have heval :
+          description.toRawCircuit.eval? input.toList =
+            activeWires[inputWidth + slot.val]? := by
+        unfold RawCircuit.eval?
+        simp only [List.isEmpty_iff, hnonempty, reduceIte]
+        rw [show input.toList.toArray = Array.ofFn input by
+          simp [BitString.toList]]
+        rw [hactive]
+        change activeWires[
+            input.toList.length + description.toRawCircuit.length - 1]? = _
+        rw [BitString.length_toList, Description.length_toRawCircuit]
+        dsimp only [slot, lastActiveSlot]
+        congr 1
+        omega
+      rw [heval]
+      exact hpreserved
+
 theorem length_compileRaw_internal (inputWidth gateBound : Nat) :
     (compileRaw inputWidth gateBound).length = selectorSize gateBound := by
   unfold compileRaw
@@ -220,6 +295,96 @@ theorem topologicallyWellFormed_compileRaw_internal
   unfold compileRaw
   exact BoolFormula.topologicallyWellFormed_compileRaw _ _
     (vars_formula_lt_internal inputWidth gateBound)
+
+theorem length_circuit_internal (inputWidth gateBound : Nat) :
+    (circuit inputWidth gateBound).length =
+      prefixSize inputWidth gateBound gateBound + selectorSize gateBound := by
+  unfold circuit
+  rw [List.length_append, EvaluationSequence.length_circuit,
+    length_compileRaw_internal]
+
+theorem outputWire_eq_internal (inputWidth gateBound : Nat) :
+    outputWire inputWidth gateBound =
+      baseWireCount inputWidth gateBound +
+        (circuit inputWidth gateBound).length - 1 := by
+  unfold outputWire BoolFormula.rawOutputWire
+  rw [size_formula_internal, length_circuit_internal]
+  unfold fullAvailable
+  omega
+
+theorem topologicallyWellFormed_circuit_internal
+    (inputWidth gateBound : Nat) :
+    (circuit inputWidth gateBound).TopologicallyWellFormed
+      (baseWireCount inputWidth gateBound) := by
+  rw [circuit, RawCircuit.topologicallyWellFormed_append]
+  constructor
+  · exact EvaluationSequence.topologicallyWellFormed_circuit
+      inputWidth gateBound
+  · simpa only [EvaluationSequence.length_circuit, fullAvailable] using
+      topologicallyWellFormed_compileRaw_internal inputWidth gateBound
+
+/-- Construct the complete fixed-width evaluation witness. -/
+noncomputable def resultInternal {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth) : Result description input := by
+  let completePrefix :=
+    EvaluationSequence.prefixResult hdescription input gateBound
+      (Nat.le_refl gateBound)
+  let assignment := memoAssignment completePrefix.circuitWires
+  have hprefixSize : completePrefix.circuitWires.size =
+      fullAvailable inputWidth gateBound := by
+    rw [completePrefix.circuitSize]
+    rfl
+  have hagree : ∀ wire < fullAvailable inputWidth gateBound,
+      completePrefix.circuitWires[wire]? = some (assignment wire) := by
+    intro wire hwire
+    have hbound : wire < completePrefix.circuitWires.size := by
+      rw [hprefixSize]
+      exact hwire
+    unfold assignment memoAssignment
+    rw [Array.getElem?_eq_getElem hbound]
+    rfl
+  have hcode : codeWidth inputWidth gateBound ≠ 0 :=
+    NeZero.ne (codeWidth inputWidth gateBound)
+  letI : NeZero (fullAvailable inputWidth gateBound) := ⟨by
+    unfold fullAvailable baseWireCount
+    omega⟩
+  have hcompiled := BoolFormula.evalAux?_compileRaw
+    (fullAvailable inputWidth gateBound)
+    (formula inputWidth gateBound) assignment completePrefix.circuitWires
+    hprefixSize hagree (vars_formula_lt_internal inputWidth gateBound)
+  let wires := Classical.choose hcompiled
+  have hwiresSpec := Classical.choose_spec hcompiled
+  have hselectorEval :
+      RawCircuit.evalAux? (compileRaw inputWidth gateBound)
+          completePrefix.circuitWires = some wires := by
+    exact hwiresSpec.1
+  have hcircuitEval :
+      RawCircuit.evalAux? (circuit inputWidth gateBound)
+          (EvaluationSequence.inputWires description input) = some wires := by
+    rw [circuit, RawCircuit.evalAux?_append]
+    have hprefixEval :
+        RawCircuit.evalAux? (EvaluationSequence.circuit inputWidth gateBound)
+            (EvaluationSequence.inputWires description input) =
+          some completePrefix.circuitWires := by
+      simpa only [EvaluationSequence.circuit] using completePrefix.circuitEval
+    rw [hprefixEval]
+    exact hselectorEval
+  have hwiresSize : wires.size =
+      fullAvailable inputWidth gateBound + selectorSize gateBound := by
+    rw [hwiresSpec.2.1, hprefixSize, size_formula_internal]
+  have houtput : wires[outputWire inputWidth gateBound]? =
+      description.toRawCircuit.eval? input.toList := by
+    have hselectorOutput := hwiresSpec.2.2.2
+    change wires[outputWire inputWidth gateBound]? = _ at hselectorOutput
+    exact hselectorOutput.trans
+      (some_eval_formula_eq_eval?_internal hdescription input completePrefix)
+  exact
+    { wires := wires
+      circuitEval := hcircuitEval
+      size := hwiresSize
+      output := houtput }
 
 end EvaluationOutput
 

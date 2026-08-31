@@ -62,6 +62,19 @@ theorem length_toPaddedRawCircuit_internal
     description.toPaddedRawCircuit.length = gateBound := by
   simp [toPaddedRawCircuit]
 
+theorem take_toPaddedRawCircuit_gateCount_internal
+    {inputWidth gateBound : Nat}
+    (description : Description inputWidth gateBound) :
+    description.toPaddedRawCircuit.take description.gateCountNat =
+      description.toRawCircuit := by
+  apply List.ext_get
+  · simp [toPaddedRawCircuit]
+    have hcount := description.gateCount.isLt
+    change description.gateCountNat < gateBound + 1 at hcount
+    omega
+  · intro index hleft hright
+    simp [toPaddedRawCircuit, toRawCircuit, activeSlot]
+
 theorem get_toPaddedRawCircuit_internal
     {inputWidth gateBound : Nat}
     (description : Description inputWidth gateBound)
