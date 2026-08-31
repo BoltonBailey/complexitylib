@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.Encoding.Formula
 public import Complexitylib.Circuits.Encoding.Formula.Batch
 public import Complexitylib.Circuits.Encoding.Formula.Stream
 public import Complexitylib.Circuits.Encoding.FixedWidth
+public import Complexitylib.Circuits.Encoding.FixedWidth.Conversion
 public import Complexitylib.Circuits.Encoding.Internal
 public import Complexitylib.Circuits.Encoding.Parity
 public import Complexitylib.Circuits.Encoding.Threshold
@@ -32,6 +33,8 @@ This module exposes the machine-facing representation of
 - `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
 - `CircuitCode.FixedWidth.Description`: bounded fixed-slot binary syntax with
   structural field boundaries and canonical inactive padding.
+- `CircuitCode.FixedWidth.wellFormedEquiv`: exact correspondence between valid
+  fixed descriptions and bounded valid raw circuits.
 - `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
 - `RawCircuit.evalAux?_append`: compose appendable raw fragments.
 - `BoolFormula.compileRaw`: compile formulas into appendable raw fragments.
