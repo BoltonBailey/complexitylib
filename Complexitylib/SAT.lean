@@ -20,6 +20,7 @@ public import Complexitylib.SAT.Language
 public import Complexitylib.SAT.Verifier
 public import Complexitylib.SAT.Headline
 public import Complexitylib.SAT.CircuitOracle
+public import Complexitylib.SAT.CircuitSatisfiability
 public import Complexitylib.SAT.ThreeSAT.Headline
 public import Complexitylib.SAT.CookLevin
 public import Complexitylib.SAT.CookLevin.Assembly
@@ -52,4 +53,6 @@ infrastructure used by the polynomial-time verifier.
   NP-completeness theorem.
 - `CircuitOracle` — extraction of a polynomial-size SAT circuit oracle from
   the hypothesis `NP ⊆ PPoly`.
+- `CircuitSatisfiability` — an exact-width padded circuit-SAT language in `NP`,
+  backed by the verified serialized circuit evaluator.
 -/
