@@ -2771,10 +2771,12 @@ by radius-`d-1` balls, yielding the exact finite Gilbert--Varshamov inequality
 `2^n <= |C| * volume(n,d-1)`. This supplies existence, not an efficient family.
 
 **Selected first headline.** Pin the first complete theorem to Oliveira--Pich--
-Santhanam, [*Hardness Magnification near State-Of-The-Art Lower Bounds*, CCC
-2019, Theorem 4](https://doi.org/10.4230/LIPIcs.CCC.2019.27), with the
-[ECCC TR18-158 revision](https://eccc.weizmann.ac.il/report/2018/158/) retained
-as the extended source. In the paper's notation, raw input length is `N = 2^n`;
+Santhanam, [*Hardness Magnification Near State-of-the-Art Lower Bounds*, Theory
+of Computing 2021, Theorem 1.4](https://doi.org/10.4086/toc.2021.v017a011), the
+revised journal version of [CCC 2019, Theorem
+4](https://doi.org/10.4230/LIPIcs.CCC.2019.27). Retain [ECCC
+TR18-158](https://eccc.weizmann.ac.il/report/2018/158/) as the preprint record,
+not as the canonical source. In the paper's notation, raw input length is `N = 2^n`;
 `GapMCSP[s₁,s₂]` has yes side `Size(f) <= s₁(n)` and no side
 `Size(f) > s₂(n)`; and `Circuit[S]` means unbounded-depth, fan-in-two Boolean
 circuits of at most `S` gates. The theorem states that there is a universal
@@ -2876,8 +2878,9 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   typed and encoded SuccinctMCSP rejection bridges are done. The survivor-set
   construction now extracts a list of length at most the covering finite code
   set's cardinality under explicit coverage and pointwise-failure hypotheses.*
-- [~] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (Lemma 17) as the
-  main conditional engine. Under `NP ⊆ PPoly`, construct the multi-output circuit
+- [~] Formalize the Oliveira--Pich--Santhanam Anti-Checker Lemma (revised journal
+  Lemma 4.1; conference Lemma 17) as the main conditional engine. Under
+  `NP ⊆ PPoly`, construct the multi-output circuit
   that maps an `N`-bit truth table to `t = 2^(10*beta*n)` sample points using size
   `2^(n + k*beta*n)`; prove that functions above size `2^(beta*n)` yield an
   anti-checker against circuits of size `2^(beta*n)/(10*n)`. Isolate and prove the
@@ -2910,6 +2913,9 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   precision `8n` turns each good extension into a certified `1/(4n)` shrink,
   `4n` rounds halve the survivor bound, the published sample count eventually
   covers every required block, and zero-padding gives exactly that many samples.
+  This proved variant spends the published sample budget to shrink the canonical
+  finite code domain all the way to zero, replacing the journal proof's separate
+  final listing and error-witness phase (Lemmas 4.5 and 4.6).
   The conditional counter boundary is now explicit rather than axiomatic:
   labeled sample vectors have a bijective fixed-width row-major codec, arbitrary
   labels define an exact canonical circuit-code survivor relation, and
@@ -3089,6 +3095,9 @@ or eventually always. Error-correcting codes must be efficient in the model used
 by the collapse hypothesis. A lower bound for an easier neighboring problem does
 not automatically transfer to the magnifying problem; that missing reduction is
 often the point. Natural-proofs and locality results describe different barriers.
+The Anti-Checker Hypothesis refuted by Chen--Hirahara--Oliveira--Pich--Rajgopal--
+Santhanam is an unconditional small-menu hypothesis and must not be conflated
+with the collapse-conditional Anti-Checker Lemma 4.1 formalized here.
 Finally, a formal contrapositive deriving a small solver under a class collapse is
 not evidence that either the collapse or the desired lower bound has been proved.
 
@@ -3109,9 +3118,10 @@ not evidence that either the collapse or the desired lower bound has been proved
   existence of hard truth tables and hardness of deciding MCSP.
 - [x] Add the raw `N = 2^n` GapMCSP convention and prove semantic equivalence in
   both directions with canonical threshold-bearing codes.
-- [x] Pin Oliveira--Pich--Santhanam CCC 2019, Theorem 4 as the first headline and
-  record its exact input, promise, threshold, circuit-model, and quantifier
-  conventions together with the Anti-Checker Lemma proof spine.
+- [x] Pin Oliveira--Pich--Santhanam Theory of Computing 2021, Theorem 1.4 as the
+  first headline (with CCC 2019, Theorem 4 retained as the conference version)
+  and record its exact input, promise, threshold, circuit-model, and quantifier
+  conventions together with the revised Anti-Checker Lemma 4.1 proof spine.
 - [~] Define rational scaled-exponential threshold functions and an eventual
   promise-`SIZE` interface sufficient to state the selected theorem in Lean.
   *The rounded functions and pointwise/eventual promise-`SIZE` interfaces are
