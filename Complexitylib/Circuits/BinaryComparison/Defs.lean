@@ -44,6 +44,42 @@ end BitString
 
 namespace BoolFormula
 
+/-- Embed one Boolean value as a constant formula leaf. -/
+def ofBool : Bool → BoolFormula
+  | false => .fls
+  | true => .tru
+
+/-- Compare two fixed-width vectors of Boolean formulas as little-endian
+unsigned words. This general form supports variables, constants, and later
+compiled wire layouts without changing the comparator tree. -/
+def unsignedLEOf : {width : ℕ} →
+    (Fin width → BoolFormula) → (Fin width → BoolFormula) → BoolFormula
+  | 0, _, _ => .tru
+  | width + 1, left, right =>
+      let leftHigh := left (Fin.last width)
+      let rightHigh := right (Fin.last width)
+      let lessHigh := .conj (.neg leftHigh) rightHigh
+      let equalHigh := .disj (.conj leftHigh rightHigh)
+        (.conj (.neg leftHigh) (.neg rightHigh))
+      .disj lessHigh
+        (.conj equalHigh
+          (unsignedLEOf (fun i => left i.castSucc)
+            (fun i => right i.castSucc)))
+
+/-- Compare a constant left word with a variable block beginning at
+`rightBase`. -/
+def unsignedLELeftConstant {width : ℕ} (left : BitString width)
+    (rightBase : ℕ) : BoolFormula :=
+  unsignedLEOf (fun i => ofBool (left i))
+    (fun i => .var (rightBase + i.val))
+
+/-- Compare a variable block beginning at `leftBase` with a constant right
+word. -/
+def unsignedLERightConstant {width : ℕ} (leftBase : ℕ)
+    (right : BitString width) : BoolFormula :=
+  unsignedLEOf (fun i => .var (leftBase + i.val))
+    (fun i => ofBool (right i))
+
 /-- Formula for unsigned comparison of two `width`-bit words beginning at the
 given variable bases. -/
 def unsignedLEAux : (width leftBase rightBase : ℕ) → BoolFormula

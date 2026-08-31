@@ -72,6 +72,156 @@ end BitString
 
 namespace BoolFormula
 
+theorem eval_ofBool_internal (value : Bool)
+    (assignment : ℕ → Bool) :
+    (ofBool value).eval assignment = value := by
+  cases value <;> rfl
+
+@[simp] theorem size_ofBool_internal (value : Bool) :
+    (ofBool value).size = 1 := by
+  cases value <;> rfl
+
+theorem eval_unsignedLEOf_internal : ∀ {width : ℕ}
+    (left right : Fin width → BoolFormula) (assignment : ℕ → Bool),
+    (unsignedLEOf left right).eval assignment =
+      BitString.unsignedLE
+        (fun i => (left i).eval assignment)
+        (fun i => (right i).eval assignment) := by
+  intro width
+  induction width with
+  | zero =>
+      intro left right assignment
+      rfl
+  | succ width ih =>
+      intro left right assignment
+      simp only [unsignedLEOf, BoolFormula.eval]
+      rw [ih (fun i => left i.castSucc)
+        (fun i => right i.castSucc) assignment]
+      change
+        ((!(left (Fin.last width)).eval assignment &&
+            (right (Fin.last width)).eval assignment) ||
+          ((((left (Fin.last width)).eval assignment &&
+              (right (Fin.last width)).eval assignment) ||
+            (!(left (Fin.last width)).eval assignment &&
+              !(right (Fin.last width)).eval assignment)) &&
+            BitString.unsignedLE
+              (fun i => (left i.castSucc).eval assignment)
+              (fun i => (right i.castSucc).eval assignment))) =
+          ((!(left (Fin.last width)).eval assignment &&
+              (right (Fin.last width)).eval assignment) ||
+            (((left (Fin.last width)).eval assignment ==
+                (right (Fin.last width)).eval assignment) &&
+              BitString.unsignedLE
+                (fun i => (left i.castSucc).eval assignment)
+                (fun i => (right i.castSucc).eval assignment)))
+      cases (left (Fin.last width)).eval assignment <;>
+        cases (right (Fin.last width)).eval assignment <;> rfl
+
+theorem size_unsignedLEOf_internal : ∀ {width : ℕ}
+    (left right : Fin width → BoolFormula),
+    (∀ i, (left i).size = 1) →
+    (∀ i, (right i).size = 1) →
+    (unsignedLEOf left right).size = 15 * width + 1 := by
+  intro width
+  induction width with
+  | zero =>
+      intro left right hleft hright
+      rfl
+  | succ width ih =>
+      intro left right hleft hright
+      have htail := ih (fun i => left i.castSucc)
+        (fun i => right i.castSucc)
+        (fun i => hleft i.castSucc) (fun i => hright i.castSucc)
+      simp only [unsignedLEOf, BoolFormula.size,
+        hleft (Fin.last width), hright (Fin.last width), htail]
+      omega
+
+theorem vars_unsignedLEOf_lt_internal : ∀ {width : ℕ}
+    (left right : Fin width → BoolFormula) (available : ℕ),
+    (∀ i j, j ∈ (left i).vars → j < available) →
+    (∀ i j, j ∈ (right i).vars → j < available) →
+    ∀ j ∈ (unsignedLEOf left right).vars, j < available := by
+  intro width
+  induction width with
+  | zero =>
+      intro left right available hleft hright j hj
+      simp [unsignedLEOf, BoolFormula.vars] at hj
+  | succ width ih =>
+      intro left right available hleft hright j hj
+      simp only [unsignedLEOf, BoolFormula.vars, Finset.mem_union] at hj
+      rcases hj with (hj | hj) | (((hj | hj) | (hj | hj)) | hj)
+      · exact hleft (Fin.last width) j hj
+      · exact hright (Fin.last width) j hj
+      · exact hleft (Fin.last width) j hj
+      · exact hright (Fin.last width) j hj
+      · exact hleft (Fin.last width) j hj
+      · exact hright (Fin.last width) j hj
+      · exact ih (fun i => left i.castSucc)
+          (fun i => right i.castSucc) available
+          (fun i => hleft i.castSucc) (fun i => hright i.castSucc) j hj
+
+theorem eval_unsignedLELeftConstant_internal {width : ℕ}
+    (left : BitString width) (rightBase : ℕ)
+    (assignment : ℕ → Bool) :
+    (unsignedLELeftConstant left rightBase).eval assignment =
+      decide (left.unsignedValue ≤
+        BitString.unsignedValue
+          (fun i : Fin width => assignment (rightBase + i.val))) := by
+  rw [unsignedLELeftConstant, eval_unsignedLEOf_internal,
+    BitString.unsignedLE_eq_decide_internal]
+  simp only [eval_ofBool_internal, BoolFormula.eval]
+
+theorem eval_unsignedLERightConstant_internal {width : ℕ}
+    (leftBase : ℕ) (right : BitString width)
+    (assignment : ℕ → Bool) :
+    (unsignedLERightConstant leftBase right).eval assignment =
+      decide (BitString.unsignedValue
+          (fun i : Fin width => assignment (leftBase + i.val)) ≤
+        right.unsignedValue) := by
+  rw [unsignedLERightConstant, eval_unsignedLEOf_internal,
+    BitString.unsignedLE_eq_decide_internal]
+  simp only [eval_ofBool_internal, BoolFormula.eval]
+
+theorem size_unsignedLELeftConstant_internal {width : ℕ}
+    (left : BitString width) (rightBase : ℕ) :
+    (unsignedLELeftConstant left rightBase).size = 15 * width + 1 := by
+  apply size_unsignedLEOf_internal
+  · intro i
+    exact size_ofBool_internal (left i)
+  · intro i
+    rfl
+
+theorem size_unsignedLERightConstant_internal {width : ℕ}
+    (leftBase : ℕ) (right : BitString width) :
+    (unsignedLERightConstant leftBase right).size = 15 * width + 1 := by
+  apply size_unsignedLEOf_internal
+  · intro i
+    rfl
+  · intro i
+    exact size_ofBool_internal (right i)
+
+theorem vars_unsignedLELeftConstant_lt_internal {width : ℕ}
+    (left : BitString width) (rightBase available : ℕ)
+    (hright : rightBase + width ≤ available) :
+    ∀ j ∈ (unsignedLELeftConstant left rightBase).vars, j < available := by
+  apply vars_unsignedLEOf_lt_internal
+  · intro i j hj
+    cases hbit : left i <;> simp [ofBool, hbit, BoolFormula.vars] at hj
+  · intro i j hj
+    simp only [BoolFormula.vars, Finset.mem_singleton] at hj
+    omega
+
+theorem vars_unsignedLERightConstant_lt_internal {width : ℕ}
+    (leftBase : ℕ) (right : BitString width) (available : ℕ)
+    (hleft : leftBase + width ≤ available) :
+    ∀ j ∈ (unsignedLERightConstant leftBase right).vars, j < available := by
+  apply vars_unsignedLEOf_lt_internal
+  · intro i j hj
+    simp only [BoolFormula.vars, Finset.mem_singleton] at hj
+    omega
+  · intro i j hj
+    cases hbit : right i <;> simp [ofBool, hbit, BoolFormula.vars] at hj
+
 theorem size_unsignedLEAux_internal (width leftBase rightBase : ℕ) :
     (unsignedLEAux width leftBase rightBase).size = 15 * width + 1 := by
   induction width with
