@@ -13,7 +13,8 @@ import Complexitylib.Classes.Randomized.Hashing.Affine.Circuit.Internal
 
 One fragment computes a Boolean affine form over arbitrary existing wires. It
 uses one AND gate per linear coefficient and the shared linear-size parity
-compiler, giving exact size, topological, and evaluation guarantees.
+compiler. Sequential row compilation plus a threshold fragment yields a
+linear-size circuit deciding whether the complete affine output is zero.
 -/
 
 
@@ -32,6 +33,12 @@ theorem linearValue_eq_sum_add {width : ℕ}
     linearValue coefficients input constant =
       (∑ coordinate, coefficients coordinate * input coordinate) + constant :=
   linearValue_eq_sum_add_internal coefficients input constant
+
+/-- The executable all-zero test agrees with extensional equality to the zero
+bit string. -/
+theorem zeroValue_eq_decide {width : ℕ} (output : BitString width) :
+    zeroValue output = decide (output = fun _ => false) :=
+  zeroValue_eq_decide_internal output
 
 /-- An affine-form fragment uses exactly four gates per linear coordinate and
 four additional gates. -/
@@ -101,6 +108,95 @@ theorem evalAux?_compileLinearRaw (available : ℕ) [NeZero available]
     constantRef coefficients input constant wires hsize hcoefficientRefs
     hinputRefs hconstantRef hcoefficients hinputs hconstant
 
+/-- Sequential row compilation has exact additive size. -/
+@[simp] theorem length_compileRowsRaw
+    (available width rowCount : ℕ)
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ) :
+    (compileRowsRaw available width rowCount coefficientRefs inputRefs).length =
+      rowCount * linearGateCount width :=
+  length_compileRowsRaw_internal available width rowCount coefficientRefs
+    inputRefs
+
+/-- The full affine-zero fragment has its advertised linear gate count. -/
+@[simp] theorem length_compileZeroRaw
+    (available width rowCount : ℕ)
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ) :
+    (compileZeroRaw available width rowCount coefficientRefs inputRefs).length =
+      zeroGateCount width rowCount :=
+  length_compileZeroRaw_internal available width rowCount coefficientRefs
+    inputRefs
+
+/-- The final gate of full affine-zero compilation carries its decision. -/
+theorem zeroOutputWire_eq
+    (available width rowCount : ℕ)
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ) :
+    zeroOutputWire available width rowCount =
+      available +
+        (compileZeroRaw available width rowCount coefficientRefs inputRefs).length - 1 :=
+  zeroOutputWire_eq_internal available width rowCount coefficientRefs inputRefs
+
+/-- The full affine-zero fragment is topologically ordered when all matrix and
+input references name pre-existing wires. -/
+theorem topologicallyWellFormed_compileZeroRaw
+    (available width rowCount : ℕ) [NeZero available]
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ)
+    (hcoefficientRefs : ∀ row coordinate,
+      coefficientRefs row coordinate < available)
+    (hinputRefs : ∀ coordinate, inputRefs coordinate < available) :
+    CircuitCode.RawCircuit.TopologicallyWellFormed available
+      (compileZeroRaw available width rowCount coefficientRefs inputRefs) :=
+  topologicallyWellFormed_compileZeroRaw_internal available width rowCount
+    coefficientRefs inputRefs hcoefficientRefs hinputRefs
+
+/-- The full affine-zero builder produces a nonempty well-formed raw circuit. -/
+theorem compileZeroRaw_wellFormed
+    (available width rowCount : ℕ) [NeZero available]
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ)
+    (hcoefficientRefs : ∀ row coordinate,
+      coefficientRefs row coordinate < available)
+    (hinputRefs : ∀ coordinate, inputRefs coordinate < available) :
+    CircuitCode.RawCircuit.WellFormed available
+      (compileZeroRaw available width rowCount coefficientRefs inputRefs) :=
+  compileZeroRaw_wellFormed_internal available width rowCount
+    coefficientRefs inputRefs hcoefficientRefs hinputRefs
+
+/-- Evaluation preserves the incoming prefix and decides whether every
+compiled affine form vanishes. -/
+theorem evalAux?_compileZeroRaw
+    (available width rowCount : ℕ) [NeZero available]
+    (coefficientRefs : Fin rowCount → Fin (width + 1) → ℕ)
+    (inputRefs : Fin width → ℕ)
+    (coefficients : Fin rowCount → BitString (width + 1))
+    (input : BitString width) (wires : Array Bool)
+    (hsize : wires.size = available)
+    (hcoefficientRefs : ∀ row coordinate,
+      coefficientRefs row coordinate < available)
+    (hinputRefs : ∀ coordinate, inputRefs coordinate < available)
+    (hcoefficients : ∀ row coordinate,
+      wires[coefficientRefs row coordinate]? =
+        some (coefficients row coordinate))
+    (hinputs : ∀ coordinate,
+      wires[inputRefs coordinate]? = some (input coordinate)) :
+    ∃ result,
+      CircuitCode.RawCircuit.evalAux?
+          (compileZeroRaw available width rowCount coefficientRefs inputRefs)
+          wires = some result ∧
+      result.size = wires.size + zeroGateCount width rowCount ∧
+      (∀ i < wires.size, result[i]? = wires[i]?) ∧
+      result[zeroOutputWire available width rowCount]? =
+        some (zeroValue fun row =>
+          linearValue
+            (fun coordinate => coefficients row coordinate.castSucc)
+            input (coefficients row (Fin.last width))) :=
+  evalAux?_compileZeroRaw_internal available width rowCount coefficientRefs
+    inputRefs coefficients input wires hsize hcoefficientRefs hinputRefs
+    hcoefficients hinputs
+
 /-- Specializing the generic affine form to one row of the standard seed
 matrix agrees with `affineEval`. -/
 theorem linearValue_affineRow {domainWidth rangeWidth : ℕ}
@@ -111,6 +207,18 @@ theorem linearValue_affineRow {domainWidth rangeWidth : ℕ}
         input (affineRows seed row (Fin.last domainWidth)) =
       affineEval seed input row :=
   linearValue_affineRow_internal seed input row
+
+/-- The all-zero value of the compiled matrix rows is exactly the affine
+zero-cell predicate. -/
+theorem zeroValue_affineEval {domainWidth rangeWidth : ℕ}
+    (seed : BitString (affineSeedWidth domainWidth rangeWidth))
+    (input : BitString domainWidth) :
+    zeroValue (fun row =>
+      linearValue
+        (fun coordinate => affineRows seed row coordinate.castSucc)
+        input (affineRows seed row (Fin.last domainWidth))) =
+      decide (affineEval seed input = fun _ => false) :=
+  zeroValue_affineEval_internal seed input
 
 end AffineCircuit
 
