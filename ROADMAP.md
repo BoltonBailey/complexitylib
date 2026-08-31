@@ -2951,8 +2951,10 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   gives every level an independent seed without padding; the finite union bound
   proves factor-`16` accuracy with probability at least `3/4`. The Cartesian
   power now has a row-major bit-string encoding with exact membership and
-  cardinality `|S^c| = |S|^c`. The root-accuracy bridge, median amplification,
-  and circuit realization remain.*
+  cardinality `|S^c| = |S|^c`. Scaling a weak power estimate by `16` before
+  taking its integer root avoids downward rounding; `c = 8p` copies then give
+  exact-zero-preserving relative error `1/p` for every natural count. Hashing
+  integration, median amplification, and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
