@@ -2973,8 +2973,15 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   multiplicity. The generic hashing-circuit contract is now specialized to
   this survivor set as well: any circuit meeting the target counter-size bound
   yields, after seed fixing, a deterministic correct `ApproximateCounterCircuit`
-  of exactly the same size. The remaining construction must supply that circuit
-  through SAT queries and discharge its bound.*
+  of exactly the same size. Membership in the encoded domain now exposes its
+  unique underlying variable-length survivor code, and the existential
+  powered-survivor hash-cell predicate is identified exactly with the affine
+  zero-cell nonemptiness event used by the probability analysis. An exact-width
+  circuit-satisfiability language and its fixed-public-prefix extension are in
+  `NP`; the extension form lets future occupancy queries carry samples and hash
+  seeds as public bits while quantifying only the survivor tuple. The remaining
+  construction must build the fixed predicate circuits and adaptive queries,
+  then discharge their quantitative bound.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

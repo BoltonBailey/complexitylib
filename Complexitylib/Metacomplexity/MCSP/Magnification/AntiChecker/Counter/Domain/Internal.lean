@@ -55,6 +55,33 @@ theorem encodeBoundedCode_injective_of_length_le_internal
   have hcontent := congrFun hencode content
   simpa [content, encodeBoundedCode, hfirstIndex, hsecondIndex] using hcontent
 
+theorem mem_encodedCandidateLabeledSurvivorCodes_iff_internal
+    {count arity threshold : ℕ}
+    {samples : Fin count → SuccinctMCSP.Sample arity}
+    {encoded : BitString (candidateCodeWidth arity threshold)} :
+    encoded ∈ encodedCandidateLabeledSurvivorCodes arity threshold samples ↔
+      ∃ code ∈ candidateLabeledSurvivorCodes arity threshold samples,
+        encodeBoundedCode (AntiChecker.codeLengthBound arity threshold) code =
+          encoded := by
+  unfold encodedCandidateLabeledSurvivorCodes
+  constructor
+  · intro hencoded
+    rcases Finset.mem_image.mp hencoded with ⟨code, hcode, rfl⟩
+    exact ⟨code, hcode, rfl⟩
+  · rintro ⟨code, hcode, rfl⟩
+    exact Finset.mem_image.mpr ⟨code, hcode, rfl⟩
+
+theorem mem_encodedSurvivorSet_iff_internal
+    {count arity threshold : ℕ}
+    {input : BitString (count * (arity + 1))}
+    {encoded : BitString (candidateCodeWidth arity threshold)} :
+    encoded ∈ encodedSurvivorSet arity threshold input ↔
+      ∃ code ∈ candidateLabeledSurvivorCodes arity threshold
+          (unpackLabeledSamples input),
+        encodeBoundedCode (AntiChecker.codeLengthBound arity threshold) code =
+          encoded := by
+  exact mem_encodedCandidateLabeledSurvivorCodes_iff_internal
+
 theorem card_encodedCandidateLabeledSurvivorCodes_internal
     {count arity threshold : ℕ}
     (samples : Fin count → SuccinctMCSP.Sample arity) :
