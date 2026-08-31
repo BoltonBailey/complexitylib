@@ -2970,7 +2970,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   explicit fixed Boolean cube of width exactly one above the code bound, using
   a delimiter and zero padding; the resulting encoded survivor set has exactly
   the original labeled survivor count, so hashing introduces no padding
-  multiplicity.*
+  multiplicity. The generic hashing-circuit contract is now specialized to
+  this survivor set as well: any circuit meeting the target counter-size bound
+  yields, after seed fixing, a deterministic correct `ApproximateCounterCircuit`
+  of exactly the same size. The remaining construction must supply that circuit
+  through SAT queries and discharge its bound.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three
