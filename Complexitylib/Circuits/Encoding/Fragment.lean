@@ -90,6 +90,43 @@ theorem evalCode_appendOutputMatch_encode_iff_of_length
   evalCode_appendOutputMatch_encode_iff_of_length_internal
     inputWidth circuit input expected hnonempty hwidth
 
+/-- Live-bit output-match extension serialization consists of the incremented
+gate count, the original gate stream, and two final copy gates. The live
+`expected` bit occurs positively in the first new gate. -/
+theorem encode_appendOutputMatchBit (inputWidth : ℕ)
+    (circuit : RawCircuit) (expected : Bool) :
+    (appendOutputMatchBit inputWidth circuit expected).encode =
+      NatCode.encode (circuit.length + 2) ++
+        circuit.flatMap RawGate.encode ++
+          (RawGate.copy
+            (inputWidth + circuit.length - 1) expected).encode ++
+            (RawGate.copy (inputWidth + circuit.length) true).encode :=
+  encode_appendOutputMatchBit_internal inputWidth circuit expected
+
+/-- A live-bit output-match extension returns true exactly when the original
+nonempty circuit returns the selected bit. -/
+theorem eval?_appendOutputMatchBit_eq_some_true_iff
+    (circuit : RawCircuit) (input : List Bool) (expected : Bool)
+    (hnonempty : circuit ≠ []) :
+    (appendOutputMatchBit input.length circuit expected).eval? input =
+        some true ↔
+      circuit.eval? input = some expected :=
+  eval?_appendOutputMatchBit_eq_some_true_iff_internal
+    circuit input expected hnonempty
+
+/-- Exact decoding turns a live-bit output-match extension into a
+true-evaluation test at the declared input width. -/
+theorem evalCode_appendOutputMatchBit_encode_iff_of_length
+    (inputWidth : ℕ) (circuit : RawCircuit) (input : List Bool)
+    (expected : Bool) (hnonempty : circuit ≠ [])
+    (hwidth : input.length = inputWidth) :
+    evalCode inputWidth
+          (appendOutputMatchBit inputWidth circuit expected).encode input =
+        some true ↔
+      circuit.eval? input = some expected :=
+  evalCode_appendOutputMatchBit_encode_iff_of_length_internal
+    inputWidth circuit input expected hnonempty hwidth
+
 /-- Appended fragments are topological exactly when each fragment is
 topological at its corresponding initial wire count. -/
 theorem topologicallyWellFormed_append (available : ℕ)

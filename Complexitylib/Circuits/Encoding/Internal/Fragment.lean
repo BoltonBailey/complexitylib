@@ -149,6 +149,64 @@ theorem evalCode_appendOutputMatch_encode_iff_of_length_internal
   | none => simp
   | some value => cases expected <;> cases value <;> simp
 
+/-- Exact serialization of a two-gate live-bit output-match extension. -/
+theorem encode_appendOutputMatchBit_internal (inputWidth : ℕ)
+    (circuit : RawCircuit) (expected : Bool) :
+    (appendOutputMatchBit inputWidth circuit expected).encode =
+      NatCode.encode (circuit.length + 2) ++
+        circuit.flatMap RawGate.encode ++
+          (RawGate.copy
+            (inputWidth + circuit.length - 1) expected).encode ++
+            (RawGate.copy (inputWidth + circuit.length) true).encode := by
+  simp [appendOutputMatchBit, encode, List.append_assoc]
+
+/-- The two-gate live-bit output-match extension returns true exactly when
+the original nonempty circuit returns the selected bit. -/
+theorem eval?_appendOutputMatchBit_eq_some_true_iff_internal
+    (circuit : RawCircuit) (input : List Bool) (expected : Bool)
+    (hnonempty : circuit ≠ []) :
+    (appendOutputMatchBit input.length circuit expected).eval? input =
+        some true ↔
+      circuit.eval? input = some expected := by
+  let mismatch :=
+    RawGate.copy (input.length + circuit.length - 1) expected
+  let first := circuit ++ [mismatch]
+  have hfirstNonempty : first ≠ [] := by simp [first]
+  have hfirst :=
+    eval?_append_copy_internal circuit input expected hnonempty
+  have hsecond := eval?_append_copy_internal first input true hfirstNonempty
+  have hshape :
+      appendOutputMatchBit input.length circuit expected =
+        first ++ [RawGate.copy (input.length + first.length - 1) true] := by
+    simp [appendOutputMatchBit, first, mismatch]
+  rw [hshape, hsecond]
+  have hfirstShape :
+      first = circuit ++
+        [RawGate.copy (input.length + circuit.length - 1) expected] := rfl
+  rw [hfirstShape, hfirst]
+  cases heval : circuit.eval? input with
+  | none => simp
+  | some value => cases expected <;> cases value <;> simp
+
+/-- Exact decoding turns a two-gate live-bit output-match extension into a
+true-evaluation test at the declared input width. -/
+theorem evalCode_appendOutputMatchBit_encode_iff_of_length_internal
+    (inputWidth : ℕ) (circuit : RawCircuit) (input : List Bool)
+    (expected : Bool) (hnonempty : circuit ≠ [])
+    (hwidth : input.length = inputWidth) :
+    evalCode inputWidth
+          (appendOutputMatchBit inputWidth circuit expected).encode input =
+        some true ↔
+      circuit.eval? input = some expected := by
+  unfold evalCode
+  rw [if_pos hwidth, decode?_encode]
+  change
+    (appendOutputMatchBit inputWidth circuit expected).eval? input = some true ↔
+      circuit.eval? input = some expected
+  rw [← hwidth]
+  exact eval?_appendOutputMatchBit_eq_some_true_iff_internal
+    circuit input expected hnonempty
+
 /-- Internal topological decomposition for appended raw fragments. -/
 theorem topologicallyWellFormed_append_internal (available : ℕ)
     (first second : RawCircuit) :

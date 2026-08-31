@@ -60,6 +60,16 @@ def appendOutputMatch (inputWidth : ℕ) (circuit : RawCircuit)
   circuit ++
     [RawGate.copy (inputWidth + circuit.length - 1) (!expected)]
 
+/-- Append two final gates whose output is true exactly when the original
+circuit output equals `expected`. Unlike `appendOutputMatch`, the first new
+gate contains `expected` without negating it, which is useful when serializing
+a circuit whose expected bit is supplied by a live input wire. -/
+def appendOutputMatchBit (inputWidth : ℕ) (circuit : RawCircuit)
+    (expected : Bool) : RawCircuit :=
+  circuit ++
+    [RawGate.copy (inputWidth + circuit.length - 1) expected,
+      RawGate.copy (inputWidth + circuit.length) true]
+
 end RawCircuit
 
 end CircuitCode
