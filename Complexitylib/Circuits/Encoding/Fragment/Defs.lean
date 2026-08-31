@@ -50,6 +50,18 @@ def constant (input : ℕ) : Bool → RawGate
 
 end RawGate
 
+namespace RawCircuit
+
+/-- Append one final gate whose output is true exactly when the original
+circuit output equals `expected`. The reference is the original last-gate
+wire, so semantic use requires the original circuit to be nonempty. -/
+def appendOutputMatch (inputWidth : ℕ) (circuit : RawCircuit)
+    (expected : Bool) : RawCircuit :=
+  circuit ++
+    [RawGate.copy (inputWidth + circuit.length - 1) (!expected)]
+
+end RawCircuit
+
 end CircuitCode
 
 end Complexity

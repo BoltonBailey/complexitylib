@@ -52,6 +52,103 @@ theorem evalAux?_append_internal (first second : RawCircuit) (wires : Array Bool
       | some value₀ =>
           cases hvalue₁ : wires[gate.input₁]? <;> simp [ih]
 
+/-- Appending a copy gate to a nonempty circuit maps its original output by
+the gate's optional negation. -/
+theorem eval?_append_copy_internal (circuit : RawCircuit)
+    (input : List Bool) (negated : Bool) (hnonempty : circuit ≠ []) :
+    (circuit ++
+        [RawGate.copy (input.length + circuit.length - 1) negated]).eval?
+          input =
+      (circuit.eval? input).map (fun value => negated.xor value) := by
+  have hlength : 0 < circuit.length :=
+    Nat.pos_of_ne_zero (by
+      intro hzero
+      apply hnonempty
+      exact List.eq_nil_of_length_eq_zero hzero)
+  have hcircuitEmpty : circuit.isEmpty = false := by
+    simpa using hnonempty
+  have happendedNonempty :
+      (circuit ++
+          [RawGate.copy (input.length + circuit.length - 1) negated]).isEmpty =
+        false := by
+    simp
+  unfold eval?
+  rw [hcircuitEmpty, happendedNonempty]
+  simp only [Bool.false_eq_true, ↓reduceIte, List.length_append,
+    List.length_cons, List.length_nil]
+  rw [evalAux?_append_internal]
+  cases hresult : evalAux? circuit input.toArray with
+  | none => simp
+  | some result =>
+      have hsize := evalAux?_size hresult
+      have hindex : input.length + circuit.length - 1 < result.size := by
+        rw [hsize]
+        simp
+        omega
+      simp only [Option.bind_some]
+      unfold RawGate.copy
+      simp only [evalAux?]
+      have hget :
+          result[input.length + circuit.length - 1]? =
+            some result[input.length + circuit.length - 1] := by
+        simp [hindex]
+      rw [hget]
+      simp
+      have houtputIndex : input.length + circuit.length = result.size := by
+        rw [hsize]
+        simp
+      rw [Array.getElem?_push]
+      rw [if_pos houtputIndex, hget]
+      simp [RawGate.eval]
+
+/-- Exact serialization of an output-match extension. -/
+theorem encode_appendOutputMatch_internal (inputWidth : ℕ)
+    (circuit : RawCircuit) (expected : Bool) :
+    (appendOutputMatch inputWidth circuit expected).encode =
+      NatCode.encode (circuit.length + 1) ++
+        circuit.flatMap RawGate.encode ++
+          (RawGate.copy
+            (inputWidth + circuit.length - 1) (!expected)).encode := by
+  simp [appendOutputMatch, encode]
+
+/-- An output-match extension returns true exactly when the original
+nonempty circuit returns the selected bit. -/
+theorem eval?_appendOutputMatch_eq_some_true_iff_internal
+    (circuit : RawCircuit) (input : List Bool) (expected : Bool)
+    (hnonempty : circuit ≠ []) :
+    (appendOutputMatch input.length circuit expected).eval? input = some true ↔
+      circuit.eval? input = some expected := by
+  rw [appendOutputMatch,
+    eval?_append_copy_internal circuit input (!expected) hnonempty]
+  cases heval : circuit.eval? input with
+  | none => simp
+  | some value => cases expected <;> cases value <;> simp
+
+/-- Exact decoding turns an output-match extension into a true-evaluation
+test at the declared input width. -/
+theorem evalCode_appendOutputMatch_encode_iff_of_length_internal
+    (inputWidth : ℕ) (circuit : RawCircuit) (input : List Bool)
+    (expected : Bool) (hnonempty : circuit ≠ [])
+    (hwidth : input.length = inputWidth) :
+    evalCode inputWidth
+          (appendOutputMatch inputWidth circuit expected).encode input =
+        some true ↔
+      circuit.eval? input = some expected := by
+  unfold evalCode
+  rw [if_pos hwidth, decode?_encode]
+  rw [appendOutputMatch]
+  have happly := eval?_append_copy_internal circuit input (!expected) hnonempty
+  rw [hwidth] at happly
+  change
+    (circuit ++
+        [RawGate.copy (inputWidth + circuit.length - 1) (!expected)]).eval?
+          input = some true ↔
+      circuit.eval? input = some expected
+  rw [happly]
+  cases heval : circuit.eval? input with
+  | none => simp
+  | some value => cases expected <;> cases value <;> simp
+
 /-- Internal topological decomposition for appended raw fragments. -/
 theorem topologicallyWellFormed_append_internal (available : ℕ)
     (first second : RawCircuit) :

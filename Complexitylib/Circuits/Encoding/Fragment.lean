@@ -46,6 +46,50 @@ theorem evalAux?_append (first second : RawCircuit) (wires : Array Bool) :
       (evalAux? first wires).bind (evalAux? second) :=
   evalAux?_append_internal first second wires
 
+/-- Appending a copy gate to a nonempty circuit maps its original output by
+the gate's optional negation. -/
+theorem eval?_append_copy (circuit : RawCircuit) (input : List Bool)
+    (negated : Bool) (hnonempty : circuit ≠ []) :
+    (circuit ++
+        [RawGate.copy (input.length + circuit.length - 1) negated]).eval?
+          input =
+      (circuit.eval? input).map (fun value => negated.xor value) :=
+  eval?_append_copy_internal circuit input negated hnonempty
+
+/-- Output-match extension serialization consists of the incremented gate
+count, the original gate stream, and one final copy gate. -/
+theorem encode_appendOutputMatch (inputWidth : ℕ)
+    (circuit : RawCircuit) (expected : Bool) :
+    (appendOutputMatch inputWidth circuit expected).encode =
+      NatCode.encode (circuit.length + 1) ++
+        circuit.flatMap RawGate.encode ++
+          (RawGate.copy
+            (inputWidth + circuit.length - 1) (!expected)).encode :=
+  encode_appendOutputMatch_internal inputWidth circuit expected
+
+/-- An output-match extension returns true exactly when the original
+nonempty circuit returns the selected bit. -/
+theorem eval?_appendOutputMatch_eq_some_true_iff
+    (circuit : RawCircuit) (input : List Bool) (expected : Bool)
+    (hnonempty : circuit ≠ []) :
+    (appendOutputMatch input.length circuit expected).eval? input = some true ↔
+      circuit.eval? input = some expected :=
+  eval?_appendOutputMatch_eq_some_true_iff_internal
+    circuit input expected hnonempty
+
+/-- Exact decoding turns an output-match extension into a true-evaluation
+test at the declared input width. -/
+theorem evalCode_appendOutputMatch_encode_iff_of_length
+    (inputWidth : ℕ) (circuit : RawCircuit) (input : List Bool)
+    (expected : Bool) (hnonempty : circuit ≠ [])
+    (hwidth : input.length = inputWidth) :
+    evalCode inputWidth
+          (appendOutputMatch inputWidth circuit expected).encode input =
+        some true ↔
+      circuit.eval? input = some expected :=
+  evalCode_appendOutputMatch_encode_iff_of_length_internal
+    inputWidth circuit input expected hnonempty hwidth
+
 /-- Appended fragments are topological exactly when each fragment is
 topological at its corresponding initial wire count. -/
 theorem topologicallyWellFormed_append (available : ℕ)
