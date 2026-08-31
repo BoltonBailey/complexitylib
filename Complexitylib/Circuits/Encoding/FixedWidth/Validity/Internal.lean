@@ -9,6 +9,7 @@ public import Complexitylib.Circuits.Encoding.FixedWidth.Validity.Defs
 import Complexitylib.Circuits.BinaryComparison
 import Complexitylib.Circuits.Encoding.FixedWidth.Codec
 import Complexitylib.Circuits.Encoding.FixedWidth.Conversion
+import Complexitylib.Circuits.Encoding.Formula
 import Complexitylib.Circuits.Encoding.Formula.Batch
 import Mathlib.Tactic.FinCases
 
@@ -633,6 +634,69 @@ theorem vars_wellFormed_lt_internal (inputWidth gateBound : Nat) :
       obtain ⟨slot, rfl⟩ := hformula
       exact vars_slotValid_lt inputWidth gateBound slot
     · exact hwire
+
+theorem length_compileRaw_internal (inputWidth gateBound : Nat) :
+    (compileRaw inputWidth gateBound).length =
+      wellFormedSize inputWidth gateBound := by
+  rw [compileRaw, BoolFormula.length_compileRaw,
+    size_wellFormed_internal]
+
+theorem compileRaw_wellFormed_internal (inputWidth gateBound : Nat) :
+    (compileRaw inputWidth gateBound).WellFormed
+      (codeWidth inputWidth gateBound) := by
+  constructor
+  · intro hempty
+    have hlength := length_compileRaw_internal inputWidth gateBound
+    rw [hempty] at hlength
+    simp only [List.length_nil] at hlength
+    have hcountWidth := one_le_gateCountWidth gateBound
+    unfold wellFormedSize at hlength
+    omega
+  · apply BoolFormula.topologicallyWellFormed_compileRaw
+    exact vars_wellFormed_lt_internal inputWidth gateBound
+
+theorem eval?_compileRaw_internal (inputWidth gateBound : Nat)
+    (code : BitString (codeWidth inputWidth gateBound)) :
+    (compileRaw inputWidth gateBound).eval? code.toList =
+      some (decide (EncodedWellFormed code)) := by
+  let wires := code.toList.toArray
+  have hwiresSize : wires.size = codeWidth inputWidth gateBound := by
+    simp [wires]
+  have hwiresInput : ∀ wire < codeWidth inputWidth gateBound,
+      wires[wire]? = some (code.toTotal wire) := by
+    intro wire hwire
+    simp [wires, BitString.toList, BitString.toTotal, hwire]
+  obtain ⟨result, heval, _hresultSize, _hprefix, houtput⟩ :=
+    BoolFormula.evalAux?_compileRaw
+      (codeWidth inputWidth gateBound)
+      (wellFormed inputWidth gateBound) code.toTotal wires
+      hwiresSize hwiresInput
+      (vars_wellFormed_lt_internal inputWidth gateBound)
+  have heval' :
+      RawCircuit.evalAux? (compileRaw inputWidth gateBound)
+        code.toList.toArray = some result := by
+    simpa [compileRaw, wires] using heval
+  have hwell := compileRaw_wellFormed_internal inputWidth gateBound
+  have hnonempty : (compileRaw inputWidth gateBound).isEmpty = false := by
+    cases hraw : compileRaw inputWidth gateBound with
+    | nil => exact (hwell.1 hraw).elim
+    | cons gate gates => rfl
+  have houtputIndex :
+      code.toList.length + (compileRaw inputWidth gateBound).length - 1 =
+        BoolFormula.rawOutputWire (codeWidth inputWidth gateBound)
+          (wellFormed inputWidth gateBound) := by
+    simp [BoolFormula.rawOutputWire, length_compileRaw_internal,
+      size_wellFormed_internal]
+  rw [RawCircuit.eval?]
+  simp only [hnonempty, Bool.false_eq_true, if_false, heval']
+  rw [houtputIndex]
+  change result[BoolFormula.rawOutputWire
+      (codeWidth inputWidth gateBound)
+      (wellFormed inputWidth gateBound)]? =
+    some (decide (EncodedWellFormed code))
+  rw [houtput]
+  simpa using congrArg some
+    (eval_wellFormed_internal inputWidth gateBound code)
 
 end ValidityFormula
 

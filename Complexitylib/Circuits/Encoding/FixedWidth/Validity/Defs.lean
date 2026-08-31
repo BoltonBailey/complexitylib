@@ -171,6 +171,12 @@ def wellFormed (inputWidth gateBound : Nat) : BoolFormula :=
       (BoolFormula.conjs <| List.ofFn fun slot : Fin gateBound =>
         slotValid inputWidth gateBound slot))
 
+/-- Compile the structural-validity formula after the incoming description
+code wires. -/
+def compileRaw (inputWidth gateBound : Nat) : RawCircuit :=
+  BoolFormula.compileRaw (codeWidth inputWidth gateBound)
+    (wellFormed inputWidth gateBound)
+
 end ValidityFormula
 
 end Description
