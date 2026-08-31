@@ -68,9 +68,15 @@ theorem card_description_internal (inputWidth gateBound : Nat) :
   rw [Fintype.card_congr (descriptionEquiv inputWidth gateBound),
     Fintype.card_prod, Fintype.card_fin, Fintype.card_fun,
     card_gateSlot_internal]
-  simp only [Fintype.card_fin, gateSlotWidth]
+  simp only [Fintype.card_fin]
+  have hwidth :
+      3 + 2 * referenceWidth inputWidth gateBound =
+        gateSlotWidth inputWidth gateBound := by
+    simp [gateSlotWidth]
+    omega
+  rw [hwidth]
   rw [← pow_mul]
-  rw [Nat.mul_comm (3 + 2 * referenceWidth inputWidth gateBound)]
+  rw [Nat.mul_comm (gateSlotWidth inputWidth gateBound)]
 
 namespace Description
 

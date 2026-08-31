@@ -11,6 +11,7 @@ public import Complexitylib.Circuits.Encoding.Formula
 public import Complexitylib.Circuits.Encoding.Formula.Batch
 public import Complexitylib.Circuits.Encoding.Formula.Stream
 public import Complexitylib.Circuits.Encoding.FixedWidth
+public import Complexitylib.Circuits.Encoding.FixedWidth.Codec
 public import Complexitylib.Circuits.Encoding.FixedWidth.Conversion
 public import Complexitylib.Circuits.Encoding.Internal
 public import Complexitylib.Circuits.Encoding.Parity
@@ -33,6 +34,8 @@ This module exposes the machine-facing representation of
 - `CircuitCode.evalCode`: decode and evaluate with an exact arity check.
 - `CircuitCode.FixedWidth.Description`: bounded fixed-slot binary syntax with
   structural field boundaries and canonical inactive padding.
+- `FixedWidth.Description.encode` / `decode?`: parser-free fixed-length codec
+  that rejects exactly the out-of-range gate-count words.
 - `CircuitCode.FixedWidth.wellFormedEquiv`: exact correspondence between valid
   fixed descriptions and bounded valid raw circuits.
 - `RawCircuit.toCircuit`: package well-formed raw syntax as a typed circuit.
@@ -57,6 +60,8 @@ This module exposes the machine-facing representation of
   bound for the unary encoding.
 - `FixedWidth.card_description`: exact size of the unfiltered fixed-slot
   description space.
+- `FixedWidth.Description.decode?_eq_some_iff`: exact fixed-width decoder
+  soundness and completeness.
 - `FixedWidth.Description.wellFormed_toRawCircuit`: valid fixed descriptions
   produce nonempty topologically ordered raw circuits.
 - `RawCircuit.ofCircuit_toCircuit`, `RawCircuit.eval?_toCircuit`, and

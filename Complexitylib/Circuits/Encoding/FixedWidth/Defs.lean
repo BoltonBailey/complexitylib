@@ -46,12 +46,17 @@ def gateCountWidth (gateBound : Nat) : Nat :=
 
 /-- Three control bits and two fixed-width wire references per gate. -/
 def gateSlotWidth (inputWidth gateBound : Nat) : Nat :=
-  3 + 2 * referenceWidth inputWidth gateBound
+  3 + (referenceWidth inputWidth gateBound +
+    referenceWidth inputWidth gateBound)
 
 /-- Width of a flattened bounded description: one count field followed by
 exactly `gateBound` gate slots. -/
 def codeWidth (inputWidth gateBound : Nat) : Nat :=
   gateCountWidth gateBound + gateBound * gateSlotWidth inputWidth gateBound
+
+instance (inputWidth gateBound : Nat) :
+    NeZero (codeWidth inputWidth gateBound) :=
+  ⟨by simp [codeWidth, gateCountWidth]⟩
 
 /-- One fixed-width fan-in-two gate slot.
 
