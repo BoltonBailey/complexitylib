@@ -41,6 +41,14 @@ def majorityNonemptyEvent {domainWidth rangeWidth seedWidth : ℕ}
   Finset.univ.filter fun seed =>
     hash.majorityNonempty set target errorBits seed = true
 
+/-- Seeds on which the amplified target-cell occupancy test returns false. -/
+def majorityEmptyEvent {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (errorBits : ℕ) : Finset (BitString (majoritySeedWidth seedWidth errorBits)) :=
+  Finset.univ.filter fun seed =>
+    hash.majorityNonempty set target errorBits seed = false
+
 end PairwiseIndependentHash
 
 end Complexity

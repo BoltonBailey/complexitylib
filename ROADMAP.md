@@ -2945,7 +2945,9 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   one-level error to `2^-errorBits`. The pure multi-level estimator now selects
   the largest positive width among `n + 4` probes and, under the simultaneous
   occupancy-response contract, gives an exact-zero-preserving factor-`16`
-  estimate. Its joint probabilistic guarantee, the power trick, median
+  estimate. A canonical variable-width block codec gives every level an
+  independent seed without padding; the finite union bound proves factor-`16`
+  accuracy with probability at least `3/4`. The power trick, median
   amplification, and circuit realization remain.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the

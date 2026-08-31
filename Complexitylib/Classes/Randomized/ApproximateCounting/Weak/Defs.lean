@@ -27,6 +27,11 @@ namespace ApproximateCounting
 def IsFactorApproximation (factor actual estimate : ℕ) : Prop :=
   estimate ≤ factor * actual ∧ actual ≤ factor * estimate
 
+instance instDecidableIsFactorApproximation (factor actual estimate : ℕ) :
+    Decidable (IsFactorApproximation factor actual estimate) := by
+  unfold IsFactorApproximation
+  infer_instance
+
 namespace Weak
 
 /-- Hash output widths probed by the weak estimator. -/
@@ -67,6 +72,12 @@ def ResponsesAccurate {domainWidth cardinality : ℕ}
   responses (zeroLevel domainWidth) = decide (0 < cardinality) ∧
     (∀ level, 8 * 2 ^ level.val ≤ cardinality → responses level = true) ∧
     ∀ level, 8 * cardinality ≤ 2 ^ level.val → responses level = false
+
+instance instDecidableResponsesAccurate {domainWidth cardinality : ℕ}
+    (responses : Fin (domainWidth + 4) → Bool) :
+    Decidable (ResponsesAccurate (cardinality := cardinality) responses) := by
+  unfold ResponsesAccurate
+  infer_instance
 
 end Weak
 

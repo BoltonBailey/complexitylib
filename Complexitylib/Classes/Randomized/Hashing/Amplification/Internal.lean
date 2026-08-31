@@ -19,6 +19,38 @@ namespace Complexity
 
 namespace PairwiseIndependentHash
 
+/-- Internal membership characterization for an amplified positive answer. -/
+theorem mem_majorityNonemptyEvent_iff_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (errorBits : ℕ) (seed : BitString (majoritySeedWidth seedWidth errorBits)) :
+    seed ∈ hash.majorityNonemptyEvent set target errorBits ↔
+      hash.majorityNonempty set target errorBits seed = true := by
+  simp [majorityNonemptyEvent]
+
+/-- Internal membership characterization for an amplified negative answer. -/
+theorem mem_majorityEmptyEvent_iff_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (errorBits : ℕ) (seed : BitString (majoritySeedWidth seedWidth errorBits)) :
+    seed ∈ hash.majorityEmptyEvent set target errorBits ↔
+      hash.majorityNonempty set target errorBits seed = false := by
+  simp [majorityEmptyEvent]
+
+/-- Internal complement identity for the two amplified occupancy outcomes. -/
+theorem majorityEmptyEvent_eq_compl_majorityNonemptyEvent_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (errorBits : ℕ) :
+    hash.majorityEmptyEvent set target errorBits =
+      (hash.majorityNonemptyEvent set target errorBits)ᶜ := by
+  ext seed
+  cases hresponse : hash.majorityNonempty set target errorBits seed <;>
+    simp [majorityEmptyEvent, majorityNonemptyEvent, hresponse]
+
 /-- Internal high-mean amplification theorem. -/
 theorem one_sub_two_pow_le_eventProb_majorityNonemptyEvent_internal
     {domainWidth rangeWidth seedWidth : ℕ}
@@ -33,6 +65,21 @@ theorem one_sub_two_pow_le_eventProb_majorityNonemptyEvent_internal
         set target hmean)
   exact eventProb_blockMajority_true_ge_one_sub_two_pow
     seedWidth errorBits (hash.nonemptyCellEvent set target) hbase
+
+/-- Internal high-mean failure-probability theorem. -/
+theorem eventProb_majorityEmptyEvent_le_two_pow_internal
+    {domainWidth rangeWidth seedWidth : ℕ}
+    (hash : PairwiseIndependentHash domainWidth rangeWidth seedWidth)
+    (set : Finset (BitString domainWidth)) (target : BitString rangeWidth)
+    (errorBits : ℕ) (hmean : 8 ≤ hash.averageCellSize set target) :
+    eventProb (hash.majorityEmptyEvent set target errorBits) ≤
+      1 / (2 : ℚ) ^ errorBits := by
+  rw [hash.majorityEmptyEvent_eq_compl_majorityNonemptyEvent_internal,
+    eventProb_compl]
+  have hsuccess :=
+    hash.one_sub_two_pow_le_eventProb_majorityNonemptyEvent_internal
+      set target errorBits hmean
+  linarith
 
 /-- Internal low-mean amplification theorem. -/
 theorem eventProb_majorityNonemptyEvent_le_two_pow_internal

@@ -6,6 +6,7 @@ Authors: Samuel Schlesinger
 
 module
 public import Complexitylib.Classes.Randomized.ApproximateCounting.Weak
+public import Complexitylib.Classes.Randomized.ApproximateCounting.Weak.Hashing
 
 /-!
 # Approximate counting
