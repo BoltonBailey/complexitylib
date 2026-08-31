@@ -2965,7 +2965,11 @@ a separate reduction-oriented bridge between MKtP and isomorphism problems.
   correct after exact oracle-circuit inlining, and membership of its oracle
   language in `PPoly` yields one hardwired circuit accurate on every ordinary
   input, with exact preservation of the inlined size. Constructing the concrete
-  SAT-oracle program and proving the quantitative family bound remain.*
+  SAT-oracle program and proving the quantitative family bound remain. The
+  variable-length canonical circuit codes now embed injectively into an
+  explicit fixed Boolean cube using a one-hot length block and zero-padded
+  contents; the resulting encoded survivor set has exactly the original
+  labeled survivor count, so hashing introduces no padding multiplicity.*
 - [ ] Compose the anti-checker generator, truth-table lookups, and a small
   `SuccinctMCSP` solver into an explicit promise solver for raw GapMCSP. Track the
   sample encoding, multi-output fanout, threshold transformation, and all three

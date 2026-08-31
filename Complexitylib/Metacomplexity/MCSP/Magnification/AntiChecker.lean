@@ -11,6 +11,7 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.GoodSt
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Rounds
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Encoding
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Relation
+public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domain
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Circuit
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Randomized
 public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Estimator
@@ -21,7 +22,8 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counte
 Public aggregation module for the rounded finite parameters, typed multi-output
 generator contract, semantic approximate-selection rounds, and the explicit
 conditional approximate-counter circuit and estimator interfaces. The
-randomized-counter layer isolates the finite union-bound and hardwiring step;
-constructing its circuits from relative approximate counting and `NP ⊆ P/poly`
-remains open.
+randomized-counter layer isolates the finite union-bound and hardwiring step,
+and the fixed-width domain layer embeds variable-length canonical circuit codes
+without changing the survivor count. Constructing the counters from relative
+approximate counting and `NP ⊆ P/poly` remains open.
 -/
