@@ -386,6 +386,41 @@ noncomputable def resultInternal {inputWidth gateBound : Nat}
       size := hwiresSize
       output := houtput }
 
+theorem circuit_ne_nil_internal (inputWidth gateBound : Nat) :
+    circuit inputWidth gateBound ≠ [] := by
+  intro hempty
+  have hlength := congrArg List.length hempty
+  rw [length_circuit_internal] at hlength
+  simp only [List.length_nil] at hlength
+  unfold selectorSize LookupFormula.selectSize at hlength
+  omega
+
+theorem eval?_circuit_internal
+    {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth) :
+    (circuit inputWidth gateBound).eval?
+        (EvaluationSequence.combinedInput description input).toList =
+      description.toRawCircuit.eval? input.toList := by
+  let evaluated := resultInternal hdescription input
+  have hinputArray :
+      (EvaluationSequence.combinedInput description input).toList.toArray =
+        EvaluationSequence.inputWires description input := by
+    simp [BitString.toList, EvaluationSequence.inputWires]
+  calc
+    (circuit inputWidth gateBound).eval?
+        (EvaluationSequence.combinedInput description input).toList =
+        evaluated.wires[outputWire inputWidth gateBound]? := by
+      unfold RawCircuit.eval?
+      simp only [List.isEmpty_iff, circuit_ne_nil_internal, reduceIte]
+      rw [hinputArray, evaluated.circuitEval]
+      change evaluated.wires[
+          (EvaluationSequence.combinedInput description input).toList.length +
+            (circuit inputWidth gateBound).length - 1]? = _
+      rw [BitString.length_toList, ← outputWire_eq_internal]
+    _ = description.toRawCircuit.eval? input.toList := evaluated.output
+
 end EvaluationOutput
 
 end Description

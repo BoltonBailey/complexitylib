@@ -132,6 +132,24 @@ noncomputable def result {inputWidth gateBound : Nat}
     (input : BitString inputWidth) : Result description input :=
   resultInternal hdescription input
 
+/-- The complete evaluator is nonempty because its selector emits at least one
+gate. -/
+theorem circuit_ne_nil (inputWidth gateBound : Nat) :
+    circuit inputWidth gateBound ≠ [] :=
+  circuit_ne_nil_internal inputWidth gateBound
+
+/-- Complete fixed-width evaluation agrees exactly with ordinary raw-circuit
+evaluation on a valid encoded description and sample. -/
+theorem eval?_circuit
+    {inputWidth gateBound : Nat}
+    {description : Description inputWidth gateBound}
+    (hdescription : description.WellFormed)
+    (input : BitString inputWidth) :
+    (circuit inputWidth gateBound).eval?
+        (EvaluationSequence.combinedInput description input).toList =
+      description.toRawCircuit.eval? input.toList :=
+  eval?_circuit_internal hdescription input
+
 end EvaluationOutput
 
 end Description
