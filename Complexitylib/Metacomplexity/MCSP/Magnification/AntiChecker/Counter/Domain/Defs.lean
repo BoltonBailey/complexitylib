@@ -13,8 +13,8 @@ public import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counte
 
 Affine hashing acts on a Boolean cube of fixed dimension, while canonical
 circuit codes have every length up to `AntiChecker.codeLengthBound`. We embed
-each bounded code into a fixed-width string consisting of a one-hot length
-block followed by its contents padded with zeroes.
+each bounded code into a fixed-width string by appending a delimiter and then
+padding with zeroes.
 -/
 
 
@@ -28,25 +28,25 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
-/-- Width of the fixed Boolean cube used to represent bounded circuit codes.
-The first `bound + 1` bits identify the code length, and the last `bound` bits
-hold its zero-padded contents. -/
+/-- Width of the fixed Boolean cube used to represent codes of length at most
+`bound`: the code bits followed by one delimiter and zero padding. -/
 def boundedCodeWidth (bound : ℕ) : ℕ :=
-  (bound + 1) + bound
+  bound + 1
 
 instance (bound : ℕ) : NeZero (boundedCodeWidth bound) :=
   ⟨by simp [boundedCodeWidth]⟩
 
-/-- Encode a variable-length Boolean code by a one-hot length block followed
-by a zero-padded content block. Codes longer than `bound` are truncated only
-to make the function total; the counter domain uses it solely on bounded
-canonical codes. -/
+/-- Encode a variable-length Boolean code by retaining its contents, placing
+a `true` delimiter immediately afterward, and padding the rest with `false`.
+Codes longer than `bound` are truncated only to make the function total; the
+counter domain uses it solely on bounded canonical codes. -/
 def encodeBoundedCode (bound : ℕ) (code : List Bool) :
     BitString (boundedCodeWidth bound) :=
-  Fin.append
-    (fun length : Fin (bound + 1) =>
-      decide (length.val = min code.length bound))
-    (fun index : Fin bound => (code[index.val]?).getD false)
+  fun index =>
+    if hindex : index.val < code.length then
+      code[index.val]
+    else
+      decide (index.val = code.length)
 
 /-- Fixed cube dimension for canonical circuit codes at one arity and size
 threshold. -/

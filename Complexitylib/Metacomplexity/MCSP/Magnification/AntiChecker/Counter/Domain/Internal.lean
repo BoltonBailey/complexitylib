@@ -30,22 +30,30 @@ theorem encodeBoundedCode_injective_of_length_le_internal
       encodeBoundedCode bound second) :
     first = second := by
   have hlength : first.length = second.length := by
-    let marker : Fin (boundedCodeWidth bound) :=
-      Fin.castAdd bound
-        (⟨first.length, Nat.lt_succ_iff.mpr hfirst⟩ : Fin (bound + 1))
-    have hmarker := congrFun hencode marker
-    dsimp only [marker, encodeBoundedCode] at hmarker
-    rw [Fin.append_left, Fin.append_left] at hmarker
-    simpa [Nat.min_eq_left hfirst, Nat.min_eq_left hsecond] using hmarker
+    by_contra hne
+    rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+    · let marker : Fin (boundedCodeWidth bound) :=
+        ⟨second.length, by simp [boundedCodeWidth, hsecond]⟩
+      have hmarker := congrFun hencode marker
+      have hnotLt : ¬second.length < first.length :=
+        Nat.not_lt.mpr (Nat.le_of_lt hlt)
+      have hneLength : second.length ≠ first.length :=
+        Nat.ne_of_gt hlt
+      simp [marker, encodeBoundedCode, hnotLt, hneLength] at hmarker
+    · let marker : Fin (boundedCodeWidth bound) :=
+        ⟨first.length, by simp [boundedCodeWidth, hfirst]⟩
+      have hmarker := congrFun hencode marker
+      have hnotLt : ¬first.length < second.length :=
+        Nat.not_lt.mpr (Nat.le_of_lt hgt)
+      have hneLength : first.length ≠ second.length :=
+        Nat.ne_of_gt hgt
+      simp [marker, encodeBoundedCode, hnotLt, hneLength] at hmarker
   apply List.ext_get hlength
   intro index hfirstIndex hsecondIndex
-  have hindex : index < bound := lt_of_lt_of_le hfirstIndex hfirst
   let content : Fin (boundedCodeWidth bound) :=
-    Fin.natAdd (bound + 1) (⟨index, hindex⟩ : Fin bound)
+    ⟨index, by simp [boundedCodeWidth]; omega⟩
   have hcontent := congrFun hencode content
-  dsimp only [content, encodeBoundedCode] at hcontent
-  rw [Fin.append_right, Fin.append_right] at hcontent
-  simpa [hfirstIndex, hsecondIndex] using hcontent
+  simpa [content, encodeBoundedCode, hfirstIndex, hsecondIndex] using hcontent
 
 theorem card_encodedCandidateLabeledSurvivorCodes_internal
     {count arity threshold : ℕ}

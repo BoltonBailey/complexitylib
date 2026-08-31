@@ -12,8 +12,9 @@ import Complexitylib.Metacomplexity.MCSP.Magnification.AntiChecker.Counter.Domai
 # Fixed-width anti-checker counter domains
 
 Canonical variable-length circuit codes embed injectively into an explicit
-Boolean cube. Consequently, counting the encoded survivors is exactly the
-existing labeled survivor count, with no padding multiplicity.
+Boolean cube of only one bit more than the maximum code length. Consequently,
+counting the encoded survivors is exactly the existing labeled survivor count,
+with no padding multiplicity.
 -/
 
 

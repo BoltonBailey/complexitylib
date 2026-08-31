@@ -24,6 +24,6 @@ generator contract, semantic approximate-selection rounds, and the explicit
 conditional approximate-counter circuit and estimator interfaces. The
 randomized-counter layer isolates the finite union-bound and hardwiring step,
 and the fixed-width domain layer embeds variable-length canonical circuit codes
-without changing the survivor count. Constructing the counters from relative
-approximate counting and `NP ⊆ P/poly` remains open.
+with one delimiter bit and without changing the survivor count. Constructing
+the counters from relative approximate counting and `NP ⊆ P/poly` remains open.
 -/
