@@ -13,6 +13,7 @@ public import Complexitylib.Circuits.Composition
 public import Complexitylib.Circuits.OracleInlining
 public import Complexitylib.Circuits.OracleInlining.Adaptive
 public import Complexitylib.Circuits.InputProjection
+public import Complexitylib.Circuits.InputPairing
 public import Complexitylib.Circuits.InputReindexing
 public import Complexitylib.Circuits.InputSources
 public import Complexitylib.Circuits.KeyedMinimum
