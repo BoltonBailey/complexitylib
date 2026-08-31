@@ -27,6 +27,25 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+/-- A hash-cell witness is exactly a row-major tuple whose every block is an
+encoded survivor and whose full tuple hashes to zero. -/
+theorem hashCellWitness_iff_blocks
+    {count arity threshold precision rangeWidth : ℕ}
+    (input : BitString (count * (arity + 1)))
+    (seed : BitString (PairwiseIndependentHash.affineSeedWidth
+      (survivorPowerWidth arity threshold precision) rangeWidth))
+    (witness : BitString (survivorPowerWidth arity threshold precision)) :
+    HashCellWitness arity threshold precision rangeWidth input seed witness ↔
+      (∀ copy : Fin (ApproximateCounting.relativeCopies precision),
+        blocksEquiv
+            (ApproximateCounting.relativeCopies precision)
+            (candidateCodeWidth arity threshold) witness copy ∈
+          encodedSurvivorSet arity threshold input) ∧
+      (PairwiseIndependentHash.affine
+          (survivorPowerWidth arity threshold precision) rangeWidth).eval
+        seed witness = fun _ => false :=
+  hashCellWitness_iff_blocks_internal input seed witness
+
 /-- The anti-checker hash-cell predicate is exactly nonemptiness of the
 corresponding generic affine zero cell. -/
 theorem hashCellNonempty_iff_cellNonempty

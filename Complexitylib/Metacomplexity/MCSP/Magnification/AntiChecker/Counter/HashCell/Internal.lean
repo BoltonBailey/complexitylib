@@ -24,6 +24,25 @@ namespace Magnification
 
 namespace AntiCheckerLemma
 
+theorem hashCellWitness_iff_blocks_internal
+    {count arity threshold precision rangeWidth : ℕ}
+    (input : BitString (count * (arity + 1)))
+    (seed : BitString (PairwiseIndependentHash.affineSeedWidth
+      (survivorPowerWidth arity threshold precision) rangeWidth))
+    (witness : BitString (survivorPowerWidth arity threshold precision)) :
+    HashCellWitness arity threshold precision rangeWidth input seed witness ↔
+      (∀ copy : Fin (ApproximateCounting.relativeCopies precision),
+        blocksEquiv
+            (ApproximateCounting.relativeCopies precision)
+            (candidateCodeWidth arity threshold) witness copy ∈
+          encodedSurvivorSet arity threshold input) ∧
+      (PairwiseIndependentHash.affine
+          (survivorPowerWidth arity threshold precision) rangeWidth).eval
+        seed witness = fun _ => false := by
+  unfold HashCellWitness survivorPowerWidth
+    ApproximateCounting.Relative.poweredWidth
+  rw [ApproximateCounting.mem_cartesianPower_iff]
+
 theorem hashCellNonempty_iff_cellNonempty_internal
     {count arity threshold precision rangeWidth : ℕ}
     (input : BitString (count * (arity + 1)))
