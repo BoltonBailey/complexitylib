@@ -640,6 +640,143 @@ theorem savitch_spec (init : Fin W → Bool) (k : ℕ) :
         D.Valid init ∧ ∃ B : Fin W → Bool, D.Valid B ∧ D.Acc B ∧ D.ReachPow k init B) :=
   ⟨D.wellFormed_savitch init k, D.eval_savitch init k _⟩
 
+/-! ## The prefix as an indexed family -/
+
+/-- A prefix that names the consecutive variables from `off`, with kinds given by `kind`. This
+is the shape an emitter wants: one arithmetic rule for the `i`-th entry. -/
+def Listed (kind : ℕ → Bool) (off : ℕ) (qs : Prefix) : Prop :=
+  qs = (List.range qs.length).map fun i => (kind (off + i), off + i)
+
+theorem listed_blockQ {kind : ℕ → Bool} {q : Bool} {off n : ℕ}
+    (h : ∀ i, i < n → kind (off + i) = q) : Listed kind off (blockQ q off n) := by
+  rw [Listed, blockQ_length, blockQ]
+  refine List.map_congr_left fun i hi => ?_
+  rw [List.mem_range] at hi
+  rw [h i hi]
+
+theorem Listed.getElem {kind : ℕ → Bool} {off : ℕ} {qs : Prefix} (h : Listed kind off qs)
+    {i : ℕ} (hi : i < qs.length) : qs[i]'hi = (kind (off + i), off + i) := by
+  rw [List.getElem_of_eq h hi]
+  simp
+
+theorem Listed.append {kind : ℕ → Bool} {off : ℕ} {qs₁ qs₂ : Prefix}
+    (h₁ : Listed kind off qs₁) (h₂ : Listed kind (off + qs₁.length) qs₂) :
+    Listed kind off (qs₁ ++ qs₂) := by
+  rw [Listed]
+  refine List.ext_getElem (by simp) fun i hi hi' => ?_
+  rw [List.length_append] at hi
+  simp only [List.getElem_map, List.getElem_range]
+  by_cases hlt : i < qs₁.length
+  · rw [List.getElem_append_left hlt, h₁.getElem hlt]
+  · rw [List.getElem_append_right (by omega), h₂.getElem (by omega)]
+    have hoff : off + qs₁.length + (i - qs₁.length) = off + i := by omega
+    rw [hoff]
+
+theorem Listed.eq_of_length {kind : ℕ → Bool} {off : ℕ} {qs₁ qs₂ : Prefix}
+    (h₁ : Listed kind off qs₁) (h₂ : Listed kind off qs₂) (hlen : qs₁.length = qs₂.length) :
+    qs₁ = qs₂ := by
+  rw [Listed] at h₁ h₂
+  rw [h₁, h₂, hlen]
+
+theorem listed_prefixF (W : ℕ) {kind : ℕ → Bool} : ∀ (k nxt : ℕ),
+    (∀ j i, j < k → i < 3 * W → kind (nxt + 3 * W * j + i) = decide (W ≤ i)) →
+      Listed kind nxt (prefixF W k nxt)
+  | 0, nxt, _ => by
+      rw [Listed, prefixF]
+      simp
+  | k + 1, nxt, h => by
+      rw [prefixF]
+      have hA : Listed kind nxt (blockQ false nxt W) :=
+        listed_blockQ fun i hi => by
+          have := h 0 i (by omega) (by omega)
+          rw [Nat.mul_zero, Nat.add_zero] at this
+          rw [this, decide_eq_false (by omega)]
+      have hB : Listed kind (nxt + W) (blockQ true (nxt + W) W) :=
+        listed_blockQ fun i hi => by
+          have := h 0 (W + i) (by omega) (by omega)
+          rw [Nat.mul_zero, Nat.add_zero] at this
+          rw [show nxt + W + i = nxt + (W + i) by omega, this, decide_eq_true (by omega)]
+      have hC : Listed kind (nxt + 2 * W) (blockQ true (nxt + 2 * W) W) :=
+        listed_blockQ fun i hi => by
+          have := h 0 (2 * W + i) (by omega) (by omega)
+          rw [Nat.mul_zero, Nat.add_zero] at this
+          rw [show nxt + 2 * W + i = nxt + (2 * W + i) by omega, this, decide_eq_true (by omega)]
+      have hP : Listed kind (nxt + 3 * W) (prefixF W k (nxt + 3 * W)) :=
+        listed_prefixF W k (nxt + 3 * W) fun j i hj hi => by
+          have := h (j + 1) i (by omega) hi
+          rw [show nxt + 3 * W * (j + 1) + i = nxt + 3 * W + 3 * W * j + i by ring] at this
+          exact this
+      refine ((hA.append ?_).append ?_).append ?_
+      · rw [blockQ_length]
+        exact hB
+      · rw [List.length_append, blockQ_length, blockQ_length,
+          show nxt + (W + W) = nxt + 2 * W by ring]
+        exact hC
+      · rw [List.length_append, List.length_append, blockQ_length, blockQ_length, blockQ_length,
+          show nxt + (W + W + W) = nxt + 3 * W by ring]
+        exact hP
+
+/-- The kind of the variable at index `i` of a Savitch prefix: universal exactly on the `U` and
+`V` blocks of a level. -/
+def savKind (W k : ℕ) (i : ℕ) : Bool :=
+  decide (2 * W ≤ i ∧ i < 2 * W + 3 * W * k ∧ W ≤ (i - 2 * W) % (3 * W))
+
+theorem listed_basePrefix (W Ws k : ℕ) (hW : 0 < W) :
+    Listed (savKind W k) 0 (basePrefix W Ws k) := by
+  have hA : Listed (savKind W k) 0 (blockQ false 0 W) :=
+    listed_blockQ fun i hi => by
+      rw [savKind, decide_eq_false]
+      rintro ⟨h1, -, -⟩
+      omega
+  have hB : Listed (savKind W k) W (blockQ false W W) :=
+    listed_blockQ fun i hi => by
+      rw [savKind, decide_eq_false]
+      rintro ⟨h1, -, -⟩
+      omega
+  have hP : Listed (savKind W k) (2 * W) (prefixF W k (2 * W)) := by
+    refine listed_prefixF W k (2 * W) fun j i hj hi => ?_
+    rw [savKind]
+    have hmod : (2 * W + 3 * W * j + i - 2 * W) % (3 * W) = i := by
+      rw [show 2 * W + 3 * W * j + i - 2 * W = i + 3 * W * j by omega,
+        Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hi]
+    rw [hmod]
+    refine decide_eq_decide.mpr ⟨fun hc => hc.2.2, fun hc => ⟨by omega, ?_, hc⟩⟩
+    have : 3 * W * j + i < 3 * W * (j + 1) := by nlinarith
+    have h2 : 3 * W * (j + 1) ≤ 3 * W * k := Nat.mul_le_mul_left _ (by omega)
+    omega
+  have hS : Listed (savKind W k) (scratchOff W k) (blockQ false (scratchOff W k) Ws) :=
+    listed_blockQ fun i hi => by
+      rw [savKind, decide_eq_false]
+      rintro ⟨-, h2, -⟩
+      rw [scratchOff] at h2
+      omega
+  rw [basePrefix]
+  refine ((hA.append ?_).append ?_).append ?_
+  · rw [blockQ_length, Nat.zero_add]
+    exact hB
+  · rw [List.length_append, blockQ_length, blockQ_length, show 0 + (W + W) = 2 * W by ring]
+    exact hP
+  · rw [List.length_append, List.length_append, blockQ_length, blockQ_length, prefixF_length,
+      show 0 + (W + W + 3 * W * k) = scratchOff W k by rw [scratchOff]; ring]
+    exact hS
+
+/-- **The whole prefix is an indexed family.** -/
+theorem listed_savitchPrefix (init : Fin W → Bool) (k : ℕ) (hW : 0 < W) :
+    Listed (savKind W k) 0 (D.savitchPrefix init k) := by
+  have hbase := listed_basePrefix W Ws k hW
+  have haux : Listed (savKind W k) (preAux W Ws k)
+      (blockQ false (preAux W Ws k)
+        ((tseitin (D.topBody init k) (preAux W Ws k)).2.2 - preAux W Ws k)) :=
+    listed_blockQ fun i hi => by
+      rw [savKind, decide_eq_false]
+      rintro ⟨-, h2, -⟩
+      rw [preAux, scratchOff] at h2
+      omega
+  rw [savitchPrefix]
+  refine hbase.append ?_
+  rw [basePrefix_length, Nat.zero_add]
+  exact haux
+
 end SavitchData
 
 end Complexity

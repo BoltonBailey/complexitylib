@@ -5,6 +5,8 @@ Authors: Bolton Bailey
 -/
 module
 public import Complexitylib.Classes.Containments.IPSubsetPSPACE
+public import Complexitylib.Classes.Containments.Internal.TQBFFlatHard
+public import Complexitylib.Classes.Interactive.Internal.ShenIP
 public import Complexitylib.Classes.Interactive
 public import Complexitylib.Classes.P.Defs
 
@@ -40,33 +42,39 @@ step interleaved to keep the intermediate polynomials small.
   (`Internal.TQBFTseitin`) of Savitch's recursion. `SavitchData.savitch_spec` proves the instance
   is `WellFormed` — its prefix names the variables `0, …, n - 1` in order — and that it is true
   exactly when a valid accepting block is reachable from the start in `2 ^ k` steps.
-- **What is missing.** Two things, both about a concrete machine:
-  1. *An instance of `SavitchData` for a polynomial-space machine.* The block layout of
-     `Complexitylib.Circuits.Unrolling` fits: `configWire tm T base atom` is contiguous of width
-     `configWidth tm T`, and `nextFormula`/`nextFormula_eval` give one step as a `BoolFormula`
-     (`QBF.ofBoolFormula` carries it over). What has to be written is `validF` — the one-hot
-     constraints, with the decoding lemma that a one-hot block *is* a configuration — and the
-     acceptance formula, which is two literals.
-  2. *A polynomial-time emitter.* `mem_IP_of_shen_reduction` needs the instance's encoding as a
-     function in `FP`. This is the analogue of Cook–Levin's `reductionFn_mem_FP` for the Savitch
-     formula, and is the larger of the two.
-
-## TODO
-
-- Instantiate `SavitchData` for a polynomial-space machine and emit the instance in `FP`; the
-  protocol side is finished. This is the deepest single theorem on the roadmap's long-term
-  track.
+- **The reduction is now proved, as mathematics.**
+  `Complexitylib.Classes.Containments.Internal.TQBFConfig` reads the one-hot configuration layout
+  of `Complexitylib.Circuits.Unrolling` as a block of a quantified formula and packages a
+  machine's configuration space as a `SavitchData` (`cfgSavitchData`); `blockInj` says a block
+  determines a windowed, space-bounded configuration. `Internal.TQBFReach` identifies block
+  reachability with `NTM.ReachesCfgLe` (`reachPow_iff`), and `Internal.TQBFHard` concludes
+  `Complexity.exists_savitch_instance`: **every `PSPACE` language has, for each input, a
+  `WellFormed` prenex-CNF quantified Boolean formula that is true exactly when the input is in
+  the language.**
+- **The emitter — done.** `Internal.TQBFFlat` rebuilds the matrix as a fixed number of *indexed
+  clause families* over a `FlatLayout` — one-hot clauses in at-least-one/at-most-one form,
+  Cook–Levin style transition clauses indexed by transition case and atom, and level-indexed
+  Tseitin auxiliaries for the recursion's chain — and `Internal.TQBFFlatHard` proves
+  `Complexity.exists_flat_instance`, the same reduction in that shape. The families are then
+  written down in Cobham's algebra by `Internal.TQBFEmitArith`, `TQBFEmitValid`,
+  `TQBFEmitPrefix`, `TQBFEmitWire` and `TQBFEmitMatrix` (`Complexity.flatInstance_mem_FP`):
+  every wire index is an arithmetic function of the clause index, so each family is a single
+  `Complexity.emitListAt`.
 -/
 
 @[expose] public section
 
 namespace Complexity
 
-/-- **`PSPACE ⊆ IP`** (Shamir): arithmetize a quantified Boolean formula and run sum-check. -/
-def PSPACESubsetIP : Prop := PSPACE ⊆ IP
+/-- **`PSPACE ⊆ IP`** (Shamir): every `PSPACE` language reduces in polynomial time to a
+well-formed prenex-CNF quantified Boolean formula, and every such language is in `IP` by the
+sum-check protocol. -/
+theorem PSPACE_subset_IP : PSPACE ⊆ IP := fun L hL => by
+  obtain ⟨inst, hwf, hfp, heq⟩ := exists_flat_instance hL
+  exact mem_IP_of_shen_reduction L _ hfp inst (fun _ => rfl) hwf heq
 
-/-- The two halves together are Shamir's theorem; the first is `IP_subset_PSPACE`. -/
-theorem IP_eq_PSPACE_of (h' : PSPACESubsetIP) : IP = PSPACE :=
-  subset_antisymm IP_subset_PSPACE (h' : PSPACE ⊆ IP)
+/-- **`IP = PSPACE`** (Shamir's theorem): the two containments together. -/
+theorem IP_eq_PSPACE : IP = PSPACE :=
+  subset_antisymm IP_subset_PSPACE PSPACE_subset_IP
 
 end Complexity

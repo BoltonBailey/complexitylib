@@ -31,6 +31,10 @@ at the simulated position keeps it there.
   the result tape
 - `TM.andCellTM` — conjoining one register's cell into another, which is how a machine with no
   early exit remembers that a check failed
+- `TM.orCellTM` — and disjoining, which is how one that is searching remembers that a check
+  succeeded
+- `TM.setCellTM` — setting a cell to a fixed bit, which is how a loop body starts each iteration
+  from a known value
 
 ## Main results
 
@@ -38,8 +42,12 @@ at the simulated position keeps it there.
   compared register rewound, every other tape untouched
 - `TM.inMoveTM_hoareTime` — and the move's: one step, the input head where the register says
 - `TM.copyCellTM_hoareTime` — and the copy's
-- `TM.andCellTM_hoareTime` — and the conjunction's
-- `TM.guessProtocol_andCellTM` — the conjunction never consults the guess tape
+- `TM.andCellTM_hoareTime`, `TM.andCellTM_hoareTime'` — and the conjunction's, with the input
+  head off the marker or anywhere
+- `TM.orCellTM_hoareTime`, `TM.orCellTM_hoareTime'` — and the disjunction's
+- `TM.setCellTM_hoareTime`, `TM.setCellTM_hoareTime'` — and the write's
+- `TM.guessProtocol_andCellTM`, `TM.guessProtocol_orCellTM`, `TM.guessProtocol_setCellTM` — none
+  of them consults the guess tape
 -/
 
 @[expose] public section
@@ -482,14 +490,17 @@ def andCellTM (src dst : Fin n) : TM n where
         idleDir_right_of_start⟩
     | .done => exact rightOfStart_allIdle iHead wHeads oHead
 
-/-- **The contract of the cell conjunction.** One step; the destination's cell under its head
-becomes the conjunction of the two cells, and nothing else moves. -/
-theorem andCellTM_hoareTime (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+/-- **The contract of the cell conjunction, with the input head anywhere.** One step; the
+destination's cell under its head becomes the conjunction of the two cells, nothing else moves,
+and the input head takes the step the marker forces on it — which is nothing unless it is on the
+marker. A caller whose input head is off the marker should use
+`Complexity.TM.andCellTM_hoareTime` instead. -/
+theorem andCellTM_hoareTime' (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
     (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
-    (hinp : inp₀.read ≠ Γ.start) (hout : out₀.read ≠ Γ.start) :
+    (hout : out₀.read ≠ Γ.start) :
     (andCellTM src dst).HoareTime
       (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
-      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+      (fun inp work out => inp = transitionInput inp₀ ∧ out = out₀ ∧
         (∀ i, i ≠ dst → work i = W₀ i) ∧
         work dst = ⟨(W₀ dst).head,
           Function.update (W₀ dst).cells (W₀ dst).head
@@ -513,15 +524,14 @@ theorem andCellTM_hoareTime (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin
       if_neg (hinvt.read_ne_start ht)]
     rfl
   have hstep : (andCellTM src dst).step ⟨InMovePhase.go, inp, work, out⟩
-      = some ⟨InMovePhase.done, inp,
+      = some ⟨InMovePhase.done, transitionInput inp,
         fun i => if i = dst then (⟨(work dst).head,
             Function.update (work dst).cells (work dst).head
               (if (work src).read = Γ.one ∧ (work dst).read = Γ.one then Γ.one else Γ.zero)⟩
             : Tape)
           else work i, out⟩ := by
     rw [TM.step_of_not_halted _ (show InMovePhase.go ≠ InMovePhase.done by decide)]
-    refine congrArg some (Cfg.ext rfl (transitionInput_eq_self hinp) ?_
-      (transitionTape_eq_self hout))
+    refine congrArg some (Cfg.ext rfl rfl ?_ (transitionTape_eq_self hout))
     funext i
     show (work i).writeAndMove
       ((if i = dst then
@@ -543,6 +553,251 @@ theorem andCellTM_hoareTime (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin
     rw [if_neg hi]
   · show (if dst = dst then _ else _) = _
     rw [if_pos rfl]
+
+/-- **The contract of the cell conjunction.** One step; the destination's cell under its head
+becomes the conjunction of the two cells, and nothing else moves. -/
+theorem andCellTM_hoareTime (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+    (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
+    (hinp : inp₀.read ≠ Γ.start) (hout : out₀.read ≠ Γ.start) :
+    (andCellTM src dst).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+        (∀ i, i ≠ dst → work i = W₀ i) ∧
+        work dst = ⟨(W₀ dst).head,
+          Function.update (W₀ dst).cells (W₀ dst).head
+            (if (W₀ src).read = Γ.one ∧ (W₀ dst).read = Γ.one then Γ.one else Γ.zero)⟩)
+      1 := by
+  refine (andCellTM_hoareTime' src dst inp₀ out₀ W₀ hinv hh hout).consequence
+    (fun _ _ _ h => h) (fun inp work out h => ?_) le_rfl
+  rwa [transitionInput_eq_self hinp] at h
+
+/-- **Set one register's cell to a fixed bit.** A loop whose body accumulates a verdict has to
+start each iteration from a known value; this is how it does that. -/
+def setCellTM (dst : Fin n) (b : Bool) : TM n where
+  Q := InMovePhase
+  qstart := .go
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .go =>
+      (.done,
+        fun i => if i = dst then Γw.ofBool b else readBackWrite (wHeads i),
+        readBackWrite oHead, idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .go => exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+        idleDir_right_of_start⟩
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- **The contract of the cell write, with the input head anywhere.** -/
+theorem setCellTM_hoareTime' (dst : Fin n) (b : Bool) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+    (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
+    (hout : out₀.read ≠ Γ.start) :
+    (setCellTM dst b).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out => inp = transitionInput inp₀ ∧ out = out₀ ∧
+        (∀ i, i ≠ dst → work i = W₀ i) ∧
+        work dst = ⟨(W₀ dst).head,
+          Function.update (W₀ dst).cells (W₀ dst).head (Γ.ofBool b)⟩)
+      1 := by
+  rintro inp work out ⟨rfl, rfl, rfl⟩
+  have hwrite : ∀ (t : Tape) (s : Γ), t.StartInvariant → 1 ≤ t.head →
+      t.writeAndMove s (idleDir t.read)
+        = ⟨t.head, Function.update t.cells t.head s⟩ := by
+    intro t s hinvt ht
+    rw [idleDir, if_neg (hinvt.read_ne_start ht)]
+    refine Tape.ext ?_ ?_
+    · show (t.write s).head = t.head
+      rw [Tape.write_head]
+    · show (t.write s).cells = _
+      rw [Tape.write, if_neg (by omega)]
+  have hidle : ∀ (t : Tape), t.StartInvariant → 1 ≤ t.head →
+      t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
+    intro t hinvt ht
+    rw [writeAndMove_readBack_of_startInvariant t hinvt, idleDir,
+      if_neg (hinvt.read_ne_start ht)]
+    rfl
+  have hstep : (setCellTM dst b).step ⟨InMovePhase.go, inp, work, out⟩
+      = some ⟨InMovePhase.done, transitionInput inp,
+        fun i => if i = dst then (⟨(work dst).head,
+            Function.update (work dst).cells (work dst).head (Γ.ofBool b)⟩ : Tape)
+          else work i, out⟩ := by
+    rw [TM.step_of_not_halted _ (show InMovePhase.go ≠ InMovePhase.done by decide)]
+    refine congrArg some (Cfg.ext rfl rfl ?_ (transitionTape_eq_self hout))
+    funext i
+    show (work i).writeAndMove
+      ((if i = dst then Γw.ofBool b else readBackWrite (work i).read) : Γw).toΓ
+      (idleDir (work i).read) = (if i = dst then _ else _)
+    by_cases hi : i = dst
+    · subst hi
+      rw [if_pos rfl, if_pos rfl, Γw.ofBool_toΓ, hwrite (work i) _ (hinv i) (hh i)]
+    · rw [if_neg hi, if_neg hi, hidle (work i) (hinv i) (hh i)]
+  refine ⟨_, 1, le_rfl, TM.reachesIn.step hstep TM.reachesIn.zero, rfl, rfl, rfl,
+    fun i hi => ?_, ?_⟩
+  · show (if i = dst then _ else _) = work i
+    rw [if_neg hi]
+  · show (if dst = dst then _ else _) = _
+    rw [if_pos rfl]
+
+/-- **The contract of the cell write**, when the input head is off the left marker. -/
+theorem setCellTM_hoareTime (dst : Fin n) (b : Bool) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+    (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
+    (hinp : inp₀.read ≠ Γ.start) (hout : out₀.read ≠ Γ.start) :
+    (setCellTM dst b).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+        (∀ i, i ≠ dst → work i = W₀ i) ∧
+        work dst = ⟨(W₀ dst).head,
+          Function.update (W₀ dst).cells (W₀ dst).head (Γ.ofBool b)⟩)
+      1 := by
+  refine (setCellTM_hoareTime' dst b inp₀ out₀ W₀ hinv hh hout).consequence
+    (fun _ _ _ h => h) (fun inp work out h => ?_) le_rfl
+  rwa [transitionInput_eq_self hinp] at h
+
+/-- **The cell write never consults the guess tape.** -/
+theorem guessProtocol_setCellTM {k : ℕ} (dst : Fin (k + 1)) (b : Bool)
+    (hdst : dst ≠ Fin.last k) : GuessProtocol (setCellTM dst b) (fun _ => false) := by
+  have hdst' : ¬ (Fin.last k = dst) := fun h => hdst h.symm
+  refine ⟨?_, ?_, ?_⟩
+  · intro q hq iHead wHeads oHead
+    cases q with
+    | go => simp [setCellTM, hdst']
+    | done => exact absurd rfl hq
+  · intro q hq iHead wHeads oHead hg
+    cases q with
+    | go => simp [setCellTM, idleDir, hg]
+    | done => exact absurd rfl hq
+  · intro q hq _ iHead ww oHead g g'
+    obtain ⟨jd, hjd⟩ := Fin.exists_castSucc_eq.mpr hdst
+    subst hjd
+    cases q with
+    | go => simp [setCellTM, visible, Fin.snoc_castSucc]
+    | done => simp [setCellTM, visible, allIdle, Fin.snoc_castSucc]
+
+/-- **Disjoin one register's cell into another.** The destination's cell under its head becomes
+`1` exactly when at least one of it and the source's cell held `1`. This is what a loop that is
+searching accumulates into — the dual of `Complexity.TM.andCellTM`, which is what a loop that is
+checking uses. -/
+def orCellTM (src dst : Fin n) : TM n where
+  Q := InMovePhase
+  qstart := .go
+  qhalt := .done
+  δ := fun state iHead wHeads oHead =>
+    match state with
+    | .go =>
+      (.done,
+        fun i => if i = dst then
+            (if wHeads src = Γ.one ∨ wHeads dst = Γ.one then Γw.one else Γw.zero)
+          else readBackWrite (wHeads i),
+        readBackWrite oHead, idleDir iHead, fun i => idleDir (wHeads i), idleDir oHead)
+    | .done => allIdle .done iHead wHeads oHead
+  δ_right_of_start := by
+    intro state iHead wHeads oHead
+    match state with
+    | .go => exact ⟨idleDir_right_of_start, fun _ => idleDir_right_of_start,
+        idleDir_right_of_start⟩
+    | .done => exact rightOfStart_allIdle iHead wHeads oHead
+
+/-- **The contract of the cell disjunction, with the input head anywhere.** -/
+theorem orCellTM_hoareTime' (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+    (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
+    (hout : out₀.read ≠ Γ.start) :
+    (orCellTM src dst).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out => inp = transitionInput inp₀ ∧ out = out₀ ∧
+        (∀ i, i ≠ dst → work i = W₀ i) ∧
+        work dst = ⟨(W₀ dst).head,
+          Function.update (W₀ dst).cells (W₀ dst).head
+            (if (W₀ src).read = Γ.one ∨ (W₀ dst).read = Γ.one then Γ.one else Γ.zero)⟩)
+      1 := by
+  rintro inp work out ⟨rfl, rfl, rfl⟩
+  have hwrite : ∀ (t : Tape) (s : Γ), t.StartInvariant → 1 ≤ t.head →
+      t.writeAndMove s (idleDir t.read)
+        = ⟨t.head, Function.update t.cells t.head s⟩ := by
+    intro t s hinvt ht
+    rw [idleDir, if_neg (hinvt.read_ne_start ht)]
+    refine Tape.ext ?_ ?_
+    · show (t.write s).head = t.head
+      rw [Tape.write_head]
+    · show (t.write s).cells = _
+      rw [Tape.write, if_neg (by omega)]
+  have hidle : ∀ (t : Tape), t.StartInvariant → 1 ≤ t.head →
+      t.writeAndMove (readBackWrite t.read).toΓ (idleDir t.read) = t := by
+    intro t hinvt ht
+    rw [writeAndMove_readBack_of_startInvariant t hinvt, idleDir,
+      if_neg (hinvt.read_ne_start ht)]
+    rfl
+  have hstep : (orCellTM src dst).step ⟨InMovePhase.go, inp, work, out⟩
+      = some ⟨InMovePhase.done, transitionInput inp,
+        fun i => if i = dst then (⟨(work dst).head,
+            Function.update (work dst).cells (work dst).head
+              (if (work src).read = Γ.one ∨ (work dst).read = Γ.one then Γ.one else Γ.zero)⟩
+            : Tape)
+          else work i, out⟩ := by
+    rw [TM.step_of_not_halted _ (show InMovePhase.go ≠ InMovePhase.done by decide)]
+    refine congrArg some (Cfg.ext rfl rfl ?_ (transitionTape_eq_self hout))
+    funext i
+    show (work i).writeAndMove
+      ((if i = dst then
+          (if (work src).read = Γ.one ∨ (work dst).read = Γ.one then Γw.one else Γw.zero)
+        else readBackWrite (work i).read) : Γw).toΓ
+      (idleDir (work i).read) = (if i = dst then _ else _)
+    by_cases hi : i = dst
+    · subst hi
+      rw [if_pos rfl, if_pos rfl, hwrite (work i) _ (hinv i) (hh i)]
+      by_cases hc : (work src).read = Γ.one ∨ (work i).read = Γ.one
+      · rw [if_pos hc, if_pos hc]
+        rfl
+      · rw [if_neg hc, if_neg hc]
+        rfl
+    · rw [if_neg hi, if_neg hi, hidle (work i) (hinv i) (hh i)]
+  refine ⟨_, 1, le_rfl, TM.reachesIn.step hstep TM.reachesIn.zero, rfl, rfl, rfl,
+    fun i hi => ?_, ?_⟩
+  · show (if i = dst then _ else _) = work i
+    rw [if_neg hi]
+  · show (if dst = dst then _ else _) = _
+    rw [if_pos rfl]
+
+/-- **The contract of the cell disjunction**, when the input head is off the left marker. -/
+theorem orCellTM_hoareTime (src dst : Fin n) (inp₀ out₀ : Tape) (W₀ : Fin n → Tape)
+    (hinv : ∀ i, (W₀ i).StartInvariant) (hh : ∀ i, 1 ≤ (W₀ i).head)
+    (hinp : inp₀.read ≠ Γ.start) (hout : out₀.read ≠ Γ.start) :
+    (orCellTM src dst).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+        (∀ i, i ≠ dst → work i = W₀ i) ∧
+        work dst = ⟨(W₀ dst).head,
+          Function.update (W₀ dst).cells (W₀ dst).head
+            (if (W₀ src).read = Γ.one ∨ (W₀ dst).read = Γ.one then Γ.one else Γ.zero)⟩)
+      1 := by
+  refine (orCellTM_hoareTime' src dst inp₀ out₀ W₀ hinv hh hout).consequence
+    (fun _ _ _ h => h) (fun inp work out h => ?_) le_rfl
+  rwa [transitionInput_eq_self hinp] at h
+
+/-- **The cell disjunction never consults the guess tape** either. -/
+theorem guessProtocol_orCellTM {k : ℕ} (src dst : Fin (k + 1))
+    (hsrc : src ≠ Fin.last k) (hdst : dst ≠ Fin.last k) :
+    GuessProtocol (orCellTM src dst) (fun _ => false) := by
+  have hdst' : ¬ (Fin.last k = dst) := fun h => hdst h.symm
+  refine ⟨?_, ?_, ?_⟩
+  · intro q hq iHead wHeads oHead
+    cases q with
+    | go => simp [orCellTM, hdst']
+    | done => exact absurd rfl hq
+  · intro q hq iHead wHeads oHead hg
+    cases q with
+    | go => simp [orCellTM, idleDir, hg]
+    | done => exact absurd rfl hq
+  · intro q hq _ iHead ww oHead g g'
+    obtain ⟨js, hjs⟩ := Fin.exists_castSucc_eq.mpr hsrc
+    obtain ⟨jd, hjd⟩ := Fin.exists_castSucc_eq.mpr hdst
+    subst hjs
+    subst hjd
+    cases q with
+    | go => simp [orCellTM, visible, Fin.snoc_castSucc]
+    | done => simp [orCellTM, visible, allIdle, Fin.snoc_castSucc]
 
 /-- **The cell conjunction never consults the guess tape**, so it may sit inside a
 nondeterministic assembly. -/

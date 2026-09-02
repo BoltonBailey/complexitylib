@@ -58,6 +58,7 @@ lasts.
 - `Complexity.Scanner.isConst_range_run`, `Complexity.Scanner.isNotConst_range_run` — the same
   over a range of cells, which is how a field is tested for being all zeros
 - `Complexity.Scanner.plusOne` — the increment-check scanner
+- `Complexity.Scanner.le` — the comparison scanner
 - `Complexity.Scanner.andAll`, `Complexity.Scanner.andSome`, `Complexity.Scanner.andFirst`,
   `Complexity.Scanner.firstCol` — the scanners that combine verdicts
 
@@ -76,6 +77,7 @@ lasts.
   the start of a scan applies wherever the scan puts it
 - `Complexity.Scanner.plusOne_run` — one scan checks that one register holds one more than
   another
+- `Complexity.Scanner.le_run` — and one scan compares the numbers two registers hold
 - `Complexity.Scanner.andAll_run`, `Complexity.Scanner.andSome_run`,
   `Complexity.Scanner.andFirst_run`, `Complexity.Scanner.firstCol_run` — and one scan reports
   any function of the verdicts
@@ -1130,6 +1132,64 @@ theorem plusOne_run (j : ℕ) (a b : Fin (j + 1)) (cols : ℕ → Fin (j + 1) �
     simp only [Bool.not_true, Bool.not_false, Bool.false_and, Bool.true_and,
       Bool.false_eq_true, if_true, if_false, true_iff, false_iff] at hcar hinv ⊢ <;>
     omega
+
+/-! ## A scanner that compares two registers
+
+The same little-endian reading as the increment check: the scan meets the bits least significant
+first, so a comparison keeps the verdict for the bits it has seen and lets each more significant
+bit override it. -/
+
+/-- Check that register `a` holds at most what register `b` holds. -/
+def le (j : ℕ) (a b : Fin (j + 1)) : Scanner j :=
+  ofRight Bool true
+    (fun s cols =>
+      let ba := decide (cols a = Γ.one)
+      let bb := decide (cols b = Γ.one)
+      if ba = bb then s else bb)
+    id
+
+/-- One cell of the comparison, on values: a differing bit at the top outweighs everything
+below it. -/
+theorem le_step_eq (s ba bb : Bool) (vA vB pw : ℕ) (hA : vA < pw) (hB : vB < pw)
+    (hs : s = decide (vA ≤ vB)) :
+    (if ba = bb then s else bb)
+      = decide (vA + (if ba = true then pw else 0) ≤ vB + (if bb = true then pw else 0)) := by
+  subst hs
+  cases ba <;> cases bb
+  · simp
+  · rw [if_neg (by simp)]
+    exact (decide_eq_true (by simp; omega)).symm
+  · rw [if_neg (by simp)]
+    exact (decide_eq_false (by simp; omega)).symm
+  · simp
+
+/-- **The invariant of the comparison check.** After `p` cells the state is exactly the verdict
+for the `p`-bit values. -/
+theorem le_runR (j : ℕ) (a b : Fin (j + 1)) (cols : ℕ → Fin (j + 1) → Γ) :
+    ∀ p : ℕ, (le j a b).runR cols p
+      = decide (valUpTo (bitAt cols a) p ≤ valUpTo (bitAt cols b) p) := by
+  intro p
+  induction p with
+  | zero =>
+      show true = _
+      simp [valUpTo]
+  | succ p ih =>
+      rw [runR]
+      show (if bitAt cols a (p + 1) = bitAt cols b (p + 1) then (le j a b).runR cols p
+          else bitAt cols b (p + 1))
+        = decide (valUpTo (bitAt cols a) (p + 1) ≤ valUpTo (bitAt cols b) (p + 1))
+      simp only [valUpTo]
+      exact le_step_eq _ _ _ _ _ (2 ^ p) (valUpTo_lt _ p) (valUpTo_lt _ p) ih
+
+/-- **What the comparison scanner reports.** -/
+theorem le_run (j : ℕ) (a b : Fin (j + 1)) (cols : ℕ → Fin (j + 1) → Γ) (len : ℕ) :
+    (le j a b).emit ((le j a b).run cols len) = true ↔
+      valUpTo (bitAt cols a) len ≤ valUpTo (bitAt cols b) len := by
+  have hrunL : ∀ s : Bool, (le j a b).runL cols len s = s := fun s =>
+    ofRight_runL Bool _ _ _ cols len s
+  rw [run, hrunL, le_runR]
+  show decide (valUpTo (bitAt cols a) len ≤ valUpTo (bitAt cols b) len) = true ↔ _
+  exact decide_eq_true_iff
 
 end Scanner
 

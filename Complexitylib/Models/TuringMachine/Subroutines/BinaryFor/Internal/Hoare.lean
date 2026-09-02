@@ -163,6 +163,103 @@ private theorem binaryForTM_loop_hoareTime
       have r₂ := reachesIn_trans _ r₁ (reachesIn.step hseam reachesIn.zero)
       exact reachesIn_trans _ r₂ hreach₃
 
+private theorem exists_reachesIn_of_reaches {tm : TM n} {c c' : Cfg n tm.Q}
+    (h : tm.reaches c c') : ∃ t, tm.reachesIn t c c' := by
+  induction h with
+  | refl => exact ⟨0, reachesIn.zero⟩
+  | tail _ hstep ih =>
+    obtain ⟨t, ht⟩ := ih
+    exact ⟨t + 1, reachesIn_snoc ht hstep⟩
+
+/-- **Sequential composition without a time bound.** -/
+private theorem seqTM_hoare (tm₁ tm₂ : TM n) {pre mid mid' post : TapePred n}
+    (h₁ : tm₁.Hoare pre mid)
+    (h_trans : ∀ inp work out, mid inp work out →
+        mid' (transitionInput inp) (fun i => transitionTape (work i)) (transitionTape out))
+    (h₂ : tm₂.Hoare mid' post) :
+    (seqTM tm₁ tm₂).Hoare pre post := by
+  intro inp work out hpre
+  obtain ⟨c₁, hreach₁, hhalt₁, hmid⟩ := h₁ inp work out hpre
+  obtain ⟨t₁, hr₁⟩ := exists_reachesIn_of_reaches hreach₁
+  obtain ⟨c₂, hreach₂, hhalt₂, hpost⟩ := h₂ _ _ _ (h_trans c₁.input c₁.work c₁.output hmid)
+  obtain ⟨t₂, hr₂⟩ := exists_reachesIn_of_reaches hreach₂
+  refine ⟨phase2Wrap tm₁ tm₂ c₂, ?_, ?_, hpost⟩
+  · refine reaches_of_reachesIn (t := t₁ + 1 + t₂) ?_
+    convert seqTM_reachesIn_of_reachesIn tm₁ tm₂ hr₁ hhalt₁ hr₂ using 1
+  · rw [phase2Wrap_halted_iff]
+    exact hhalt₂
+
+/-- One composite iteration, without a time bound. -/
+private theorem binaryForIterationTM_hoare
+    (body : TM n) (counterIdx limitIdx : Fin n) (hne : counterIdx ≠ limitIdx)
+    (limitValue : ℕ) (P : ℕ → TapePred n) (value : ℕ)
+    (hbody : body.Hoare
+      (BinaryForFrame counterIdx limitIdx limitValue P value)
+      (BinaryForBodyPost counterIdx limitIdx limitValue P value)) :
+    (binaryForIterationTM body counterIdx).Hoare
+      (BinaryForFrame counterIdx limitIdx limitValue P value)
+      (BinaryForFrame counterIdx limitIdx limitValue P (value + 1)) :=
+  seqTM_hoare body (binarySuccTM counterIdx) hbody
+    (binaryForBodyPost_transition counterIdx limitIdx limitValue P value)
+    (binarySuccTM_binaryForFrame_hoareTime counterIdx limitIdx hne limitValue
+      P value).toHoare
+
+/-- The remaining count-up loop, without a time bound. -/
+private theorem binaryForTM_loop_hoare
+    (body : TM n) (counterIdx limitIdx : Fin n) (hne : counterIdx ≠ limitIdx)
+    (limitValue : ℕ) (P : ℕ → TapePred n)
+    (hbody : ∀ value, value < limitValue →
+      body.Hoare (BinaryForFrame counterIdx limitIdx limitValue P value)
+        (BinaryForBodyPost counterIdx limitIdx limitValue P value)) :
+    ∀ count value, value + count = limitValue →
+      (binaryForTM body counterIdx limitIdx).Hoare
+        (BinaryForFrame counterIdx limitIdx limitValue P value)
+        (BinaryForFrame counterIdx limitIdx limitValue P limitValue) := by
+  intro count
+  induction count with
+  | zero =>
+    intro value hvalue inp work out hframe
+    have hval : value = limitValue := by omega
+    subst hval
+    obtain ⟨hP, hcnt, hlim, hinp, hwork, hout⟩ := hframe
+    exact ⟨{ state := .inl .done, input := inp, work := work, output := out },
+      reaches_of_reachesIn (binaryForTM_compare_reachesIn_frame_of_eq_internal body counterIdx
+        limitIdx hne value inp work out hcnt hlim hinp (fun i hi hj => hwork i) hout),
+      rfl, ⟨hP, hcnt, hlim, hinp, hwork, hout⟩⟩
+  | succ count ih =>
+    intro value hvalue inp work out hframe
+    have hlt : value < limitValue := by omega
+    obtain ⟨hP, hcnt, hlim, hinp, hwork, hout⟩ := hframe
+    have hcompare := binaryForTM_compare_reachesIn_frame_of_lt_internal body counterIdx
+      limitIdx hne value limitValue hlt inp work out hcnt hlim hinp
+      (fun i hi hj => hwork i) hout
+    obtain ⟨c₂, hreach₂, hhalt₂, hframe₂⟩ :=
+      binaryForIterationTM_hoare body counterIdx limitIdx hne limitValue P value
+        (hbody value hlt) inp work out ⟨hP, hcnt, hlim, hinp, hwork, hout⟩
+    obtain ⟨t₂, hr₂⟩ := exists_reachesIn_of_reaches hreach₂
+    have hlift := binaryForTM_iteration_reachesIn_internal body counterIdx limitIdx hr₂
+    have hseam := binaryForTM_step_iteration_halt_internal body counterIdx
+      limitIdx c₂ hhalt₂ hframe₂.2.2.2.1 hframe₂.2.2.2.2.1 hframe₂.2.2.2.2.2
+    obtain ⟨c₃, hreach₃, hhalt₃, hpost₃⟩ :=
+      ih (value + 1) (by omega) c₂.input c₂.work c₂.output hframe₂
+    obtain ⟨t₃, hr₃⟩ := exists_reachesIn_of_reaches hreach₃
+    have r₁ := reachesIn_trans _ hcompare hlift
+    have r₂ := reachesIn_trans _ r₁ (reachesIn.step hseam reachesIn.zero)
+    exact ⟨c₃, reaches_of_reachesIn (reachesIn_trans _ r₂ hr₃), hhalt₃, hpost₃⟩
+
+/-- **A count-up loop from a contract for its body, without a time bound.** -/
+theorem binaryForTM_hoare_internal
+    (body : TM n) (counterIdx limitIdx : Fin n) (hne : counterIdx ≠ limitIdx)
+    (limitValue : ℕ) (P : ℕ → TapePred n)
+    (hbody : ∀ value, value < limitValue →
+      body.Hoare (BinaryForFrame counterIdx limitIdx limitValue P value)
+        (BinaryForBodyPost counterIdx limitIdx limitValue P value)) :
+    (binaryForTM body counterIdx limitIdx).Hoare
+      (BinaryForFrame counterIdx limitIdx limitValue P 0)
+      (BinaryForFrame counterIdx limitIdx limitValue P limitValue) :=
+  binaryForTM_loop_hoare body counterIdx limitIdx hne limitValue P hbody limitValue 0
+    (Nat.zero_add limitValue)
+
 /-- **A count-up loop from a contract for its body.** A body that carries the
 loop frame from `value` to the pre-successor postcondition at every index runs
 the whole loop, from counter zero to the limit, within the advertised time. -/

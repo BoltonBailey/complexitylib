@@ -186,4 +186,13 @@ theorem card_Code_le_two_pow (Q : Type) [Fintype Q] (k nn S : ℕ) :
         rw [← pow_add, ← pow_add, ← pow_add]
         ring_nf
 
+/-- The exponent of the code-count bound: how deep Savitch's recursion has to go. It is
+polynomial in the input length and the space bound — the *number of codes* is not. -/
+def codeBound (Q : Type) [Fintype Q] (k nn S : ℕ) : ℕ :=
+  Fintype.card Q + (nn + S + 2) + 3 * k * (S + 1) + 3 * (S + 2)
+
+theorem card_Code_le_two_pow_codeBound (Q : Type) [Fintype Q] (k nn S : ℕ) :
+    Fintype.card (Code Q k nn S) ≤ 2 ^ codeBound Q k nn S :=
+  card_Code_le_two_pow Q k nn S
+
 end Complexity

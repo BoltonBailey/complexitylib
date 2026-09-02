@@ -361,6 +361,42 @@ theorem transitionInput_eq_self {t : Tape} (hread : t.read ≠ Γ.start) :
     transitionInput t = t := by
   simp only [transitionInput, idleDir, hread, ↓reduceIte, Tape.move]
 
+/-- **A phase boundary leaves the head off the marker.** -/
+theorem one_le_transitionInput_head {t : Tape} (h : t.StartInvariant) :
+    1 ≤ (transitionInput t).head := by
+  by_cases hread : t.read = Γ.start
+  · have h0 : t.head = 0 := by
+      by_contra hc
+      exact h.2 t.head (by omega) hread
+    show 1 ≤ (t.move (idleDir t.read)).head
+    rw [idleDir, if_pos hread]
+    show 1 ≤ (t.move Dir3.right).head
+    show 1 ≤ t.head + 1
+    omega
+  · rw [transitionInput_eq_self hread]
+    by_contra hc
+    exact hread (by
+      show t.cells t.head = Γ.start
+      rw [show t.head = 0 by omega]
+      exact h.1)
+
+/-- **One phase boundary suffices.** A head on the left marker is pushed off it, and a head off
+it does not move, so applying the boundary twice is applying it once. -/
+theorem transitionInput_idem {t : Tape} (h : t.StartInvariant) :
+    transitionInput (transitionInput t) = transitionInput t := by
+  by_cases hread : t.read = Γ.start
+  · have h0 : t.head = 0 := by
+      by_contra hc
+      exact h.2 t.head (by omega) hread
+    have hmove : transitionInput t = ⟨t.head + 1, t.cells⟩ := by
+      simp only [transitionInput, idleDir, hread, ↓reduceIte]
+      rfl
+    refine transitionInput_eq_self ?_
+    rw [hmove]
+    show t.cells (t.head + 1) ≠ Γ.start
+    exact h.2 _ (by omega)
+  · rw [transitionInput_eq_self hread, transitionInput_eq_self hread]
+
 end TM
 
 end Complexity

@@ -26,6 +26,7 @@ prenex CNF instance absorbs an arbitrary matrix.
 ## Main results
 
 - `QBF.eval_exs_iff`, `QBF.tseitin_sound`, `QBF.tseitin_complete`, `QBF.eval_exs_tseitin`
+- `QBF.eval_disjLits`, `QBF.eval_exs_orCNF` — guarding and combining clause lists
 -/
 
 @[expose] public section
@@ -55,6 +56,16 @@ theorem eval_cnfQBF_iff (β : ℕ → Bool) (φ : List (List CLit)) :
   | cons c φ ih =>
       rw [cnfQBF, List.foldr_cons, eval, ← cnfQBF, Bool.and_eq_true, ih]
       simp
+
+theorem eval_cnfQBF_flatMap {A : Type} (β : ℕ → Bool) (l : List A)
+    (f : A → List (List CLit)) :
+    eval β (cnfQBF (l.flatMap f)) = true ↔ ∀ a ∈ l, eval β (cnfQBF (f a)) = true := by
+  simp only [eval_cnfQBF_iff, List.mem_flatMap]
+  constructor
+  · intro h a ha c hc
+    exact h c ⟨a, ha, hc⟩
+  · rintro h c ⟨a, ha, hc⟩
+    exact h a ha c hc
 
 theorem eval_cnfQBF_append (β : ℕ → Bool) (φ ψ : List (List CLit)) :
     eval β (cnfQBF (φ ++ ψ)) = true ↔ eval β (cnfQBF φ) = true ∧ eval β (cnfQBF ψ) = true := by
@@ -478,6 +489,254 @@ theorem eval_exs_tseitin (φ : QBF) (v : ℕ) (hqf : QuantifierFree φ)
     rw [eval, Bool.and_eq_true, tseitin_sound φ v hqf β hc,
       eval_eq_of_agree φ β α fun i hi => hβ i (Or.inl (hv i hi))]
     exact ⟨hc, h⟩
+
+/-! ## Disjunction of two clause lists, with one auxiliary variable -/
+
+/-- Add some literals to every clause: the CNF `φ` guarded by their disjunction. -/
+def disjLits (ls : List CLit) (φ : List (List CLit)) : List (List CLit) := φ.map (ls ++ ·)
+
+theorem eval_disjLits (β : ℕ → Bool) (ls : List CLit) (φ : List (List CLit)) :
+    eval β (cnfQBF (disjLits ls φ)) = true ↔
+      ((∃ l ∈ ls, eval β (litQBF l) = true) ∨ eval β (cnfQBF φ) = true) := by
+  simp only [disjLits, eval_cnfQBF_iff, List.mem_map, forall_exists_index, and_imp,
+    forall_apply_eq_imp_iff₂, eval_clauseQBF_iff, List.mem_append]
+  constructor
+  · intro h
+    by_cases hl : ∃ l ∈ ls, eval β (litQBF l) = true
+    · exact Or.inl hl
+    · refine Or.inr fun c hc => ?_
+      obtain ⟨l', hl', hv⟩ := h c hc
+      rcases hl' with hl' | hl'
+      · exact absurd ⟨l', hl', hv⟩ hl
+      · exact ⟨l', hl', hv⟩
+  · rintro (⟨l, hl, hv⟩ | h) c hc
+    · exact ⟨l, Or.inl hl, hv⟩
+    · obtain ⟨l', hl', hv⟩ := h c hc
+      exact ⟨l', Or.inr hl', hv⟩
+
+/-- Add one literal to every clause. -/
+def disjLit (l : CLit) (φ : List (List CLit)) : List (List CLit) := disjLits [l] φ
+
+theorem eval_disjLit (β : ℕ → Bool) (l : CLit) (φ : List (List CLit)) :
+    eval β (cnfQBF (disjLit l φ)) = true ↔
+      (eval β (litQBF l) = true ∨ eval β (cnfQBF φ) = true) := by
+  rw [disjLit, eval_disjLits]
+  simp
+
+/-- The disjunction of two clause lists, using one fresh variable `z`: `z` chooses which side
+has to hold. -/
+def orCNF (z : ℕ) (φ ψ : List (List CLit)) : List (List CLit) :=
+  disjLit (false, z) φ ++ disjLit (true, z) ψ
+
+/-- **What the selector does**: the CNF holds iff the side the selector picks holds. -/
+theorem eval_orCNF (α : ℕ → Bool) (z : ℕ) (φ ψ : List (List CLit)) :
+    eval α (cnfQBF (orCNF z φ ψ)) = true ↔
+      (if α z = true then eval α (cnfQBF φ) = true else eval α (cnfQBF ψ) = true) := by
+  rw [orCNF, eval_cnfQBF_append, eval_disjLit, eval_disjLit, eval_litQBF, eval_litQBF]
+  cases hz : α z
+  · simp
+  · simp
+
+/-- **The fresh variable turns a disjunction of CNFs back into a CNF.** -/
+theorem eval_exs_orCNF (α : ℕ → Bool) (z : ℕ) (φ ψ : List (List CLit))
+    (hφ : ∀ c ∈ φ, ∀ l ∈ c, l.2 < z) (hψ : ∀ c ∈ ψ, ∀ l ∈ c, l.2 < z) :
+    eval α (exs z 1 (cnfQBF (orCNF z φ ψ))) = true ↔
+      (eval α (cnfQBF φ) = true ∨ eval α (cnfQBF ψ) = true) := by
+  have hagree : ∀ (χ : List (List CLit)), (∀ c ∈ χ, ∀ l ∈ c, l.2 < z) →
+      ∀ β : ℕ → Bool, (∀ i, (i < z ∨ z + 1 ≤ i) → β i = α i) →
+        eval β (cnfQBF χ) = eval α (cnfQBF χ) := fun χ hχ β hβ =>
+    eval_cnfQBF_of_agree χ z hχ α β fun i hi => hβ i (Or.inl hi)
+  rw [eval_exs_iff]
+  constructor
+  · rintro ⟨β, hβ, h⟩
+    rw [orCNF, eval_cnfQBF_append, eval_disjLit, eval_disjLit] at h
+    obtain ⟨h1, h2⟩ := h
+    rw [hagree φ hφ β hβ] at h1
+    rw [hagree ψ hψ β hβ] at h2
+    have hlit : eval β (litQBF (false, z)) = !(eval β (litQBF (true, z))) := by
+      rw [eval_litQBF, eval_litQBF]
+      cases β z <;> rfl
+    rcases h1 with h1 | h1
+    · rw [hlit] at h1
+      rcases h2 with h2 | h2
+      · rw [h2] at h1
+        exact absurd h1 (by simp)
+      · exact Or.inr h2
+    · exact Or.inl h1
+  · intro h
+    refine ⟨Function.update α z (decide (eval α (cnfQBF φ) = true)), fun i hi =>
+      Function.update_of_ne (by omega) _ _, ?_⟩
+    have hβ : ∀ i, (i < z ∨ z + 1 ≤ i) →
+        Function.update α z (decide (eval α (cnfQBF φ) = true)) i = α i := fun i hi =>
+      Function.update_of_ne (by omega) _ _
+    rw [orCNF, eval_cnfQBF_append, eval_disjLit, eval_disjLit, hagree φ hφ _ hβ,
+      hagree ψ hψ _ hβ]
+    have hz : Function.update α z (decide (eval α (cnfQBF φ) = true)) z
+        = decide (eval α (cnfQBF φ) = true) := Function.update_self _ _ _
+    have hfalse : eval (Function.update α z (decide (eval α (cnfQBF φ) = true)))
+        (litQBF (false, z)) = !(decide (eval α (cnfQBF φ) = true)) := by
+      rw [eval_litQBF, hz]
+      cases decide (eval α (cnfQBF φ) = true) <;> rfl
+    have htrue : eval (Function.update α z (decide (eval α (cnfQBF φ) = true)))
+        (litQBF (true, z)) = decide (eval α (cnfQBF φ) = true) := by
+      rw [eval_litQBF, hz]
+      cases decide (eval α (cnfQBF φ) = true) <;> rfl
+    rw [hfalse, htrue]
+    by_cases hφt : eval α (cnfQBF φ) = true
+    · rw [decide_eq_true hφt]
+      exact ⟨Or.inr hφt, Or.inl rfl⟩
+    · rw [decide_eq_false hφt]
+      refine ⟨Or.inl rfl, Or.inr ?_⟩
+      rcases h with h | h
+      · exact absurd h hφt
+      · exact h
+
+/-! ## Equality bits -/
+
+/-- The four clauses forcing `e ↔ (u ↔ v)`. -/
+def iffAuxCNF (e u v : ℕ) : List (List CLit) :=
+  [[(false, e), (false, u), (true, v)],
+   [(false, e), (true, u), (false, v)],
+   [(true, e), (false, u), (false, v)],
+   [(true, e), (true, u), (true, v)]]
+
+theorem eval_iffAuxCNF (β : ℕ → Bool) (e u v : ℕ) :
+    eval β (cnfQBF (iffAuxCNF e u v)) = true ↔ β e = (β u == β v) := by
+  simp only [iffAuxCNF, eval_cnfQBF_iff, eval_clauseQBF_iff, eval_litQBF, List.mem_cons,
+    List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq, exists_eq_or_imp, exists_eq_left]
+  cases β e <;> cases β u <;> cases β v <;> simp
+
+theorem mem_iffAuxCNF_vars (e u v : ℕ) : ∀ c ∈ iffAuxCNF e u v, ∀ l ∈ c,
+    l.2 = e ∨ l.2 = u ∨ l.2 = v := by
+  intro c hc l hl
+  simp only [iffAuxCNF, List.mem_cons, List.not_mem_nil, or_false] at hc
+  rcases hc with rfl | rfl | rfl | rfl <;>
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hl <;>
+    rcases hl with rfl | rfl | rfl <;> simp
+
+/-- One equality bit per position of a `W`-bit block. -/
+def eqAuxCNF (W eOff u v : ℕ) : List (List CLit) :=
+  (List.range W).flatMap fun i => iffAuxCNF (eOff + i) (u + i) (v + i)
+
+theorem eval_eqAuxCNF (β : ℕ → Bool) (W eOff u v : ℕ) :
+    eval β (cnfQBF (eqAuxCNF W eOff u v)) = true ↔
+      ∀ i, i < W → β (eOff + i) = (β (u + i) == β (v + i)) := by
+  constructor
+  · intro h i hi
+    rw [← eval_iffAuxCNF β (eOff + i) (u + i) (v + i), eval_cnfQBF_iff]
+    intro c hc
+    rw [eval_cnfQBF_iff] at h
+    exact h c (List.mem_flatMap.mpr ⟨i, List.mem_range.mpr hi, hc⟩)
+  · intro h
+    rw [eval_cnfQBF_iff]
+    intro c hc
+    rw [eqAuxCNF, List.mem_flatMap] at hc
+    obtain ⟨i, hi, hc⟩ := hc
+    rw [List.mem_range] at hi
+    have := (eval_iffAuxCNF β (eOff + i) (u + i) (v + i)).mpr (h i hi)
+    rw [eval_cnfQBF_iff] at this
+    exact this c hc
+
+theorem mem_eqAuxCNF_vars (W eOff u v : ℕ) : ∀ c ∈ eqAuxCNF W eOff u v, ∀ l ∈ c,
+    (∃ i, i < W ∧ l.2 = eOff + i) ∨ (∃ i, i < W ∧ l.2 = u + i) ∨ (∃ i, i < W ∧ l.2 = v + i) := by
+  intro c hc l hl
+  rw [eqAuxCNF, List.mem_flatMap] at hc
+  obtain ⟨i, hi, hc⟩ := hc
+  rw [List.mem_range] at hi
+  rcases mem_iffAuxCNF_vars (eOff + i) (u + i) (v + i) c hc l hl with h | h | h
+  · exact Or.inl ⟨i, hi, h⟩
+  · exact Or.inr (Or.inl ⟨i, hi, h⟩)
+  · exact Or.inr (Or.inr ⟨i, hi, h⟩)
+
+theorem iffAuxCNF_length (e u v : ℕ) : (iffAuxCNF e u v).length = 4 := rfl
+
+theorem eqAuxCNF_length (W eOff u v : ℕ) : (eqAuxCNF W eOff u v).length = W * 4 := by
+  rw [eqAuxCNF, List.length_flatMap]
+  simp [iffAuxCNF]
+
+theorem disjLit_getElem? (l : CLit) (φ : List (List CLit)) (p : ℕ) :
+    (disjLit l φ)[p]? = (φ[p]?).map fun c => l :: c := by
+  rw [disjLit, disjLits, List.getElem?_map]
+  rfl
+
+theorem disjLit_length (l : CLit) (φ : List (List CLit)) :
+    (disjLit l φ).length = φ.length := by
+  rw [disjLit, disjLits, List.length_map]
+
+/-- **All equality bits set means the two blocks agree.** -/
+theorem all_eqAux_iff (W : ℕ) (β : ℕ → Bool) (eOff u v : ℕ)
+    (h : ∀ i, i < W → β (eOff + i) = (β (u + i) == β (v + i))) :
+    (∀ i, i < W → β (eOff + i) = true) ↔ ∀ i, i < W → β (u + i) = β (v + i) := by
+  constructor
+  · intro hall i hi
+    have hi' := h i hi
+    rw [hall i hi] at hi'
+    exact beq_iff_eq.mp hi'.symm
+  · intro heq i hi
+    rw [h i hi]
+    exact beq_iff_eq.mpr (heq i hi)
+
+/-! ## Clause lists are quantifier free -/
+
+theorem quantifierFree_litQBF (l : CLit) : QuantifierFree (litQBF l) := by
+  rw [litQBF]
+  split <;> simp [QuantifierFree, quantDepth]
+
+theorem quantifierFree_clauseQBF (c : List CLit) : QuantifierFree (clauseQBF c) := by
+  induction c with
+  | nil => simp [clauseQBF, QuantifierFree, quantDepth]
+  | cons a t ih =>
+      rw [clauseQBF, List.foldr_cons, ← clauseQBF]
+      simp only [QuantifierFree, quantDepth, Nat.max_eq_zero_iff]
+      exact ⟨quantifierFree_litQBF a, ih⟩
+
+theorem quantifierFree_cnfQBF (φ : List (List CLit)) : QuantifierFree (cnfQBF φ) := by
+  induction φ with
+  | nil => simp [cnfQBF, QuantifierFree, quantDepth]
+  | cons c t ih =>
+      rw [cnfQBF, List.foldr_cons, ← cnfQBF]
+      simp only [QuantifierFree, quantDepth, Nat.max_eq_zero_iff]
+      exact ⟨quantifierFree_clauseQBF c, ih⟩
+
+/-! ## The variables of a clause list -/
+
+theorem mem_freeVars_litQBF (l : CLit) (i : ℕ) (hi : i ∈ freeVars (litQBF l)) : i = l.2 := by
+  rw [litQBF] at hi
+  split at hi <;> simpa [freeVars] using hi
+
+theorem mem_freeVars_clauseQBF (c : List CLit) (i : ℕ) (hi : i ∈ freeVars (clauseQBF c)) :
+    ∃ l ∈ c, i = l.2 := by
+  induction c with
+  | nil => simp [clauseQBF, freeVars] at hi
+  | cons a t ih =>
+      rw [clauseQBF, List.foldr_cons, ← clauseQBF] at hi
+      simp only [freeVars, Finset.mem_union] at hi
+      rcases hi with hi | hi
+      · exact ⟨a, List.mem_cons_self, mem_freeVars_litQBF a i hi⟩
+      · obtain ⟨l, hl, h⟩ := ih hi
+        exact ⟨l, List.mem_cons_of_mem _ hl, h⟩
+
+theorem mem_freeVars_cnfQBF (φ : List (List CLit)) (i : ℕ) (hi : i ∈ freeVars (cnfQBF φ)) :
+    ∃ c ∈ φ, ∃ l ∈ c, i = l.2 := by
+  induction φ with
+  | nil => simp [cnfQBF, freeVars] at hi
+  | cons c t ih =>
+      rw [cnfQBF, List.foldr_cons, ← cnfQBF] at hi
+      simp only [freeVars, Finset.mem_union] at hi
+      rcases hi with hi | hi
+      · obtain ⟨l, hl, h⟩ := mem_freeVars_clauseQBF c i hi
+        exact ⟨c, List.mem_cons_self, l, hl, h⟩
+      · obtain ⟨c', hc', h⟩ := ih hi
+        exact ⟨c', List.mem_cons_of_mem _ hc', h⟩
+
+theorem mem_disjLits_vars (ls : List CLit) (φ : List (List CLit)) :
+    ∀ c ∈ disjLits ls φ, ∀ l ∈ c, l ∈ ls ∨ ∃ c' ∈ φ, l ∈ c' := by
+  intro c hc l hl
+  rw [disjLits, List.mem_map] at hc
+  obtain ⟨c', hc', rfl⟩ := hc
+  rcases List.mem_append.mp hl with h | h
+  · exact Or.inl h
+  · exact Or.inr ⟨c', hc', h⟩
 
 end QBF
 

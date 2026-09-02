@@ -66,9 +66,25 @@ and discharges the width and round-trip obligations once, and its decoder is tot
 bitstring the counter reaches denotes some configuration — the ones outside the image simply
 denote configurations no walk reaches.
 
-What remains is the machine itself: a successor check on those codes — decode, apply one
-transition of the simulated machine, encode — the three nested loops over rounds, codes, and walk
-steps, and the space accounting that keeps every register logarithmically wide.
+**The innermost of the three loops is built.** The successor check is a scan
+(`Internal.SuccMachine`), one walk step is `Complexity.walkStepTM` with a full contract, and
+`Internal.SuccStepTriple` runs that contract inside the walk's own invariant: `walkStep_carries`
+carries `Complexity.WalkStepInv` one stage, `walkPair_carries` a pair — the two code families
+swapping roles, so no register is ever copied — and `walkLoop_carries` the whole walk, through
+`TM.binaryForTM`'s count-up driver. `exists_walkLoop_run` supplies the guess stream and
+`mem_reachCodes_of_stepData` says what the walk it runs establishes.
+
+**The walk is now proved in both directions.** `walkLoop_carries` says a real walk is accepted;
+`Internal.SuccStepTriple`'s `walkLoop_chain` says an accepted one is real — for *any* guess
+stream, since a guess is its own certificate (`streamCert`), the scan is well formed whatever it
+wrote (`scanTape_of_step_any`), and the fields it did not write canonically are read through
+their decoders. Two checks had to be added to the scan for that: the state register's canonicity
+and its not being the halt state (`stateScanner`), and the cell past each window
+(`tailZeroScanner`). The input head's range is not a check but a consequence — a reachable
+configuration obeys the machine's own space bound (`clampIn_of_prefix`).
+
+What remains is the two outer loops — over the codes of a round and over the rounds — and the
+space accounting that keeps every register logarithmically wide.
 
 ## Main results
 
@@ -81,7 +97,8 @@ steps, and the space accounting that keeps every register logarithmically wide.
 
 ## TODO
 
-- Build the counting machine and discharge the hypothesis of `NL_subset_coNL_of_counting`.
+- Build the two outer counting loops on top of `Complexity.walkLoop_carries` and discharge the
+  hypothesis of `NL_subset_coNL_of_counting`.
   `CoNLSubsetNL.coNL_subset_NL_of_NL_subset_coNL` then gives the reverse inclusion, so this
   single direction settles `NL = coNL`.
 -/

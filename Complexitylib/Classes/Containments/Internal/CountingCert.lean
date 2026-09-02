@@ -39,6 +39,11 @@ and `Complexity.NTM.roundList_exists` is what says an honest prover can always s
 - `Complexity.NTM.roundList_exists` — a round can always be listed
 - `Complexity.NTM.not_mem_of_roundList`, `Complexity.NTM.mem_of_roundList` — what a list decides
 - `Complexity.NTM.card_reachCodes_zero` — the count the machine starts from
+- `Complexity.NTM.mem_reachCodes_succ_iff_of_roundList`,
+  `Complexity.NTM.reachCodes_succ_eq_filter`,
+  `Complexity.NTM.card_reachCodes_succ_of_roundList`,
+  `Complexity.NTM.roundList_succ_of_roundList` — the counting recursion, in the form one pass
+  over the code space can accumulate, and the induction it runs
 - `Complexity.NL_complement_certificate_internal` — the complement as a certificate
 -/
 
@@ -141,6 +146,56 @@ theorem mem_of_roundList {a₀ : Code tm.Q k x.length S} {i : ℕ}
   classical
   rw [← List.mem_toFinset, roundList_toFinset h]
   exact ha
+
+open Classical in
+/-- **The round recursion a machine can check.** Given a list that exhausts round `i`, membership
+in round `i + 1` becomes a condition on that list alone: a code is in the next round exactly when
+it appears in the list or is a successor of something that does. Both halves are positive facts —
+a walk, and one transition — so the negative one is certified by the list's length, which is what
+inductive counting is for. -/
+theorem mem_reachCodes_succ_iff_of_roundList {a₀ : Code tm.Q k x.length S} {i : ℕ}
+    {l : List (Code tm.Q k x.length S)} (h : RoundList tm x S a₀ i l)
+    (u : Code tm.Q k x.length S) :
+    u ∈ reachCodes tm x S a₀ (i + 1) ↔ u ∈ l ∨ ∃ v ∈ l, u ∈ codeSucc tm x S v := by
+  classical
+  rw [mem_reachCodes_succ_iff, ← roundList_toFinset h]
+  simp only [List.mem_toFinset]
+
+open Classical in
+/-- **The next round, as the machine enumerates it.** -/
+theorem reachCodes_succ_eq_filter {a₀ : Code tm.Q k x.length S} {i : ℕ}
+    {l : List (Code tm.Q k x.length S)} (h : RoundList tm x S a₀ i l) :
+    reachCodes tm x S a₀ (i + 1)
+      = Finset.univ.filter (fun u => u ∈ l ∨ ∃ v ∈ l, u ∈ codeSucc tm x S v) := by
+  classical
+  ext u
+  rw [Finset.mem_filter]
+  exact ⟨fun hu => ⟨Finset.mem_univ u, (mem_reachCodes_succ_iff_of_roundList h u).mp hu⟩,
+    fun hu => (mem_reachCodes_succ_iff_of_roundList h u).mpr hu.2⟩
+
+open Classical in
+/-- **And so the next round's size is a count the machine can accumulate**: one pass over the
+code space, testing each code against the list it has just certified. -/
+theorem card_reachCodes_succ_of_roundList {a₀ : Code tm.Q k x.length S} {i : ℕ}
+    {l : List (Code tm.Q k x.length S)} (h : RoundList tm x S a₀ i l) :
+    (reachCodes tm x S a₀ (i + 1)).card
+      = (Finset.univ.filter (fun u => u ∈ l ∨ ∃ v ∈ l, u ∈ codeSucc tm x S v)).card :=
+  congrArg Finset.card (reachCodes_succ_eq_filter h)
+
+open Classical in
+/-- **One round's list yields the next one.** This is the induction inductive counting runs: the
+machine turns a certified enumeration of round `i` into a certified enumeration of round
+`i + 1`, and with `Complexity.NTM.card_reachCodes_zero` as the base it reaches the last round
+holding nothing but a count. -/
+theorem roundList_succ_of_roundList {a₀ : Code tm.Q k x.length S} {i : ℕ}
+    {l : List (Code tm.Q k x.length S)} (h : RoundList tm x S a₀ i l) :
+    RoundList tm x S a₀ (i + 1)
+      (Finset.univ.filter (fun u => u ∈ l ∨ ∃ v ∈ l, u ∈ codeSucc tm x S v)).toList := by
+  classical
+  refine ⟨Finset.nodup_toList _, fun a ha => ?_, ?_⟩
+  · rw [reachCodes_succ_eq_filter h]
+    exact Finset.mem_toList.mp ha
+  · rw [Finset.length_toList, reachCodes_succ_eq_filter h]
 
 /-- The list is exactly as long as the round, so the count a machine accumulates is the round's
 size. -/

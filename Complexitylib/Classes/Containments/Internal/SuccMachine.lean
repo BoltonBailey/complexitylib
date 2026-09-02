@@ -86,7 +86,9 @@ register is a register the scans can read.
 - `Complexity.succ_fields_of_eq` — a genuine successor's fields are what the checks compare
   against
 - `Complexity.WalkLayout`, `Complexity.WalkWidths` — which register plays which role in the walk,
-  and how wide each is guessed
+  and how wide each is guessed. Three code tuples: the walk's own two, which alternate along a
+  pair, and a third the walk never writes, for the code an enclosing enumeration is testing
+  (`Complexity.stepCells_codeT`)
 - `Complexity.stageBits`, `Complexity.walkCert` — what one stage of the walk must guess into each
   of them, and the certificate for a whole walk
 - `Complexity.stageCells`, `Complexity.stageCols` — the registers a stage leaves, as the scan
@@ -822,8 +824,16 @@ noncomputable def paramsOfStateTable (tm : NTM kk) (a : StateAcc tm) : SuccParam
   (succParamsCodec tm.Q kk).ofTable
     (tableSlice a.2 0 (succParamsCodec tm.Q kk).width (le_max_left _ _))
 
+/-- The bits a state check has read off the state register. -/
+noncomputable def stateBitsOfTable (tm : NTM kk) (a : StateAcc tm) : List Bool :=
+  List.ofFn (tableSlice a.2 1 (qCodec tm.Q).width (le_max_right _ _))
+
 /-- **The state checker.** With `isNew = false` it checks the old code's state against the guessed
-one; with `isNew = true`, the new code's state against the one the transition produces. -/
+one; with `isNew = true`, the new code's state against the one the transition produces. It also
+checks that the register carries the *canonical* encoding of the state it names: the state field
+is a fixed number of cells, so the scan holds all of them and can compare. Without that a guess
+could name a state through a bit pattern no encoder produces, and the next step would read the
+register as something the checks never constrained. -/
 noncomputable def stateScanner (tm : NTM kk) (isNew : Bool) : Scanner 1 :=
   Scanner.prefixed (stateWidth tm) (StateAcc tm) Unit
     (⟨0, Nat.zero_lt_succ _⟩, fun _ _ => false)
@@ -831,7 +841,9 @@ noncomputable def stateScanner (tm : NTM kk) (isNew : Bool) : Scanner 1 :=
     (fun _ => ())
     (fun _ t _ => t)
     (fun a _ => decide (stateOfTable tm a =
-      if isNew then succState tm (paramsOfStateTable tm a) else (paramsOfStateTable tm a).q))
+      if isNew then succState tm (paramsOfStateTable tm a) else (paramsOfStateTable tm a).q) &&
+      decide ((qCodec tm.Q).enc (stateOfTable tm a) = stateBitsOfTable tm a) &&
+      (isNew || decide (stateOfTable tm a ≠ tm.qhalt)))
 
 /-- The table a state check accumulates from given tapes. -/
 noncomputable def stateTable (tm : NTM kk) (cols : ℕ → Fin 2 → Γ) : StateAcc tm :=
@@ -845,14 +857,19 @@ set_option maxHeartbeats 1000000 in
 /-- **What a state checker computes.** -/
 theorem stateScanner_run (tm : NTM kk) (isNew : Bool) (cols : ℕ → Fin 2 → Γ) :
     (stateScanner tm isNew).emit ((stateScanner tm isNew).run cols (stateWidth tm))
-      = decide (stateOfTable tm (stateTable tm cols) =
+      = (decide (stateOfTable tm (stateTable tm cols) =
         if isNew then succState tm (paramsOfStateTable tm (stateTable tm cols))
-        else (paramsOfStateTable tm (stateTable tm cols)).q) := by
+        else (paramsOfStateTable tm (stateTable tm cols)).q) &&
+        decide ((qCodec tm.Q).enc (stateOfTable tm (stateTable tm cols))
+          = stateBitsOfTable tm (stateTable tm cols)) &&
+        (isNew || decide (stateOfTable tm (stateTable tm cols) ≠ tm.qhalt))) := by
   have h := Scanner.prefixed_run (α := StateAcc tm) (τ := Unit) (stateWidth tm)
     (⟨0, Nat.zero_lt_succ _⟩, fun _ _ => false)
     (Scanner.bitsStep 2 (stateWidth tm) (fun t => t)) (fun _ => ()) (fun _ t _ => t)
     (fun a _ => decide (stateOfTable tm a =
-      if isNew then succState tm (paramsOfStateTable tm a) else (paramsOfStateTable tm a).q))
+      if isNew then succState tm (paramsOfStateTable tm a) else (paramsOfStateTable tm a).q) &&
+      decide ((qCodec tm.Q).enc (stateOfTable tm a) = stateBitsOfTable tm a) &&
+      (isNew || decide (stateOfTable tm a ≠ tm.qhalt)))
     cols (stateWidth_pos tm) 0
   rw [stateTable, stateScanner]
   exact h
@@ -1258,15 +1275,28 @@ theorem headScanner_decides (tm : NTM kk) (cols : ℕ → Fin 3 → Γ) (w u v :
 set_option maxHeartbeats 1000000 in
 /-- **The state checker decides the state condition.** -/
 theorem stateScanner_decides (tm : NTM kk) (isNew : Bool) (cols : ℕ → Fin 2 → Γ) (q : tm.Q)
-    (h : HoldsBits cols 0 1 ((qCodec tm.Q).enc q)) :
+    (h : HoldsBits cols 0 1 ((qCodec tm.Q).enc q)) (hhalt : isNew = true ∨ q ≠ tm.qhalt) :
     (stateScanner tm isNew).emit ((stateScanner tm isNew).run cols (stateWidth tm)) = true ↔
       q = (if isNew then succState tm (paramsOfStateTable tm (stateTable tm cols))
         else (paramsOfStateTable tm (stateTable tm cols)).q) := by
-  rw [stateScanner_run, decide_eq_true_eq]
   have hq : stateOfTable tm (stateTable tm cols) = q :=
     ofTable_of_holds_zero (qCodec tm.Q) q cols 2 (stateWidth tm) (fun t => t) 1
       (le_max_right _ _) _ h
-  rw [hq]
+  have hbits : stateBitsOfTable tm (stateTable tm cols) = (qCodec tm.Q).enc q := by
+    have hshift : (fun p => cols (0 + p)) = cols := by
+      funext p
+      rw [Nat.zero_add]
+    have hgen := ofFn_tableSlice_eq (qCodec tm.Q) ((qCodec tm.Q).enc q)
+      ((qCodec tm.Q).enc_length q) cols 0 2 (stateWidth tm) (fun t => t) 1 (le_max_right _ _)
+      (fun _ _ => false) (by rw [hshift]; exact h)
+    rw [stateBitsOfTable, stateTable]
+    rwa [hshift] at hgen
+  have hlast : (isNew || decide (q ≠ tm.qhalt)) = true := by
+    rcases hhalt with h' | h'
+    · rw [h']; rfl
+    · rw [decide_eq_true h', Bool.or_true]
+  rw [stateScanner_run, hq, hbits, decide_eq_true rfl, Bool.and_true, hlast, Bool.and_true,
+    decide_eq_true_eq]
 
 /-! ## The checks as machines
 
@@ -1412,6 +1442,45 @@ noncomputable def inSymScanner {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
       else (Scanner.isConst jj par Γ.one).upTo 2))
     (Scanner.all 2 (fun p => if p.val = 0 then headNonZeroScanner tm nn S hd
       else (Scanner.isConst jj res Γ.one).upTo 1))
+
+/-- **An accepting equality scan says the two tuples agree cell by cell**, over each block's own
+width. This is the raw form: everything either tuple holds over that range transfers to the
+other. -/
+theorem eqScanner_agree {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
+    (cols : ℕ → Fin (jj + 1) → Γ) (j j' : ℕ → Fin (jj + 1))
+    (hv : (eqScanner tm nn S j j').emit
+      ((eqScanner tm nn S j j').run cols (walkScanLen tm nn S)) = true) :
+    ∀ p, p < kk + 3 → ∀ q, 1 ≤ q → q ≤ blockLen tm nn S p → cols q (j p) = cols q (j' p) := by
+  rw [eqScanner, Scanner.all_emit_run] at hv
+  intro p hp
+  have h := hv ⟨p, hp⟩
+  rw [Scanner.upTo_emit_run _ (Scanner.rightOnly_eq jj (j p) (j' p)) _ _
+    (blockLen_le tm nn S p)] at h
+  have h' : (Scanner.eq jj (j p) (j' p)).run cols (blockLen tm nn S p) = true := h
+  exact (Scanner.eq_run jj (j p) (j' p) cols (blockLen tm nn S p)).mp h'
+
+/-- **An accepting equality scan copies what the first tuple holds onto the second.** This is the
+soundness reading of the same scan: nothing says the second tuple is a code, but agreeing cell by
+cell with one that is makes it one. -/
+theorem eqScanner_forces {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ)
+    (cols : ℕ → Fin (jj + 1) → Γ) (j j' : ℕ → Fin (jj + 1)) (a : Code tm.Q kk x.length S)
+    (ha : ∀ p, p < kk + 3 → HoldsBits cols 0 (j p) (codeBlockScan tm x S a p))
+    (hv : (eqScanner tm x.length S j j').emit
+      ((eqScanner tm x.length S j j').run cols (walkScanLen tm x.length S)) = true) :
+    ∀ p, p < kk + 3 → HoldsBits cols 0 (j' p) (codeBlockScan tm x S a p) := by
+  rw [eqScanner, Scanner.all_emit_run] at hv
+  intro p hp q hq
+  have h := hv ⟨p, hp⟩
+  rw [Scanner.upTo_emit_run _ (Scanner.rightOnly_eq jj (j p) (j' p)) _ _
+    (blockLen_le tm x.length S p)] at h
+  have hlen : (codeBlockScan tm x S a p).length = blockLen tm x.length S p :=
+    codeBlockScan_length tm x S a p
+  have h' : (Scanner.eq jj (j p) (j' p)).run cols (blockLen tm x.length S p) = true := h
+  have hagree := (Scanner.eq_run jj (j p) (j' p) cols (blockLen tm x.length S p)).mp h'
+    (0 + q + 1) (by omega) (by rw [hlen] at hq; omega)
+  show cols (0 + q + 1) (j' p) = _
+  rw [← hagree]
+  exact ha p hp q hq
 
 /-- **The equality scan decides that two guesses are the same code.** -/
 theorem eqScanner_decides {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ)
@@ -1687,7 +1756,7 @@ theorem succScanner_accepts {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ
     (hout : b.2.2.2.1.val = movedIdx (succTrans tm P).2.2.2.2.2 a.2.2.2.1.val ∧
       ∀ p, b.2.2.2.2 p = if p = a.2.2.2.1 ∧ 0 < p.val
         then (((succTrans tm P).2.2.1 : Γw) : Γ) else a.2.2.2.2 p)
-    (hleft : (succTrans tm P).2.2.2.1 = Dir3.left → 0 < a.2.1.val) :
+    (hleft : (succTrans tm P).2.2.2.1 = Dir3.left → 0 < a.2.1.val) (hne : a.1 ≠ tm.qhalt) :
     (succScanner tm x.length S par Ra Rb).emit
       ((succScanner tm x.length S par Ra Rb).run cols (walkScanLen tm x.length S)) = true := by
   obtain ⟨hast, hahd, hawk, haot⟩ := ha
@@ -1754,12 +1823,12 @@ theorem succScanner_accepts {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ
         by_cases hps : p.val = kk + 2
         · rw [if_pos hps]
           refine hcomp _ _ _ (fun _ _ => rfl) (by rw [walkScanLen]; omega) ?_
-          refine (stateScanner_decides tm false _ a.1 hast).mpr ?_
+          refine (stateScanner_decides tm false _ a.1 hast (Or.inr hne)).mpr ?_
           rw [hPsa, if_neg (by simp)]
           exact hq
         · rw [if_neg hps]
           refine hcomp _ _ _ (fun _ _ => rfl) (by rw [walkScanLen]; omega) ?_
-          refine (stateScanner_decides tm true _ b.1 hbst).mpr ?_
+          refine (stateScanner_decides tm true _ b.1 hbst (Or.inl rfl)).mpr ?_
           rw [hPsb, if_pos rfl]
           exact hstate
 
@@ -1812,11 +1881,11 @@ theorem succScanner_decides {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ
       (fun q c => cols q (stateCols par Rb c)) hpar hpar).2
   have hq : a.1 = P.q := by
     have h := (stateScanner_decides tm false (fun q c => cols q (stateCols par Ra c)) a.1
-      hast).mp vsta
+      hast (Or.inr hne)).mp vsta
     rwa [hPsa, if_neg (by simp)] at h
   have hstate : b.1 = succState tm P := by
     have h := (stateScanner_decides tm true (fun q c => cols q (stateCols par Rb c)) b.1
-      hbst).mp vstb
+      hbst (Or.inl rfl)).mp vstb
     rwa [hPsb, if_pos rfl] at h
   have hwork : ∀ i, ((a.2.2.1 i).2 (a.2.2.1 i).1 = P.wSym i) ∧
       (∀ p, (b.2.2.1 i).2 p = if p = (a.2.2.1 i).1 ∧ 0 < p.val then succWrite tm P i
@@ -2109,6 +2178,69 @@ theorem dirCheckScanner_accepts {kk jj : ℕ} (tm : NTM kk) (x : List Bool) (S :
           show cols 1 dr = _
           rw [hdr, hdir]
 
+/-- Every block but the state's is at least one cell wide. -/
+theorem one_le_blockLen {kk : ℕ} (tm : NTM kk) (nn S p : ℕ) (hp : p ≠ 0) :
+    1 ≤ blockLen tm nn S p := by
+  rw [blockLen, if_neg hp]
+  omega
+
+/-- **A window block ends with a zero**, which is the cell the window checks read as carrying no
+head marker. -/
+theorem codeBlockScan_tail {kk : ℕ} (tm : NTM kk) (x : List Bool) (S : ℕ)
+    (b : Code tm.Q kk x.length S) (p : ℕ) (hp : p ≠ 0)
+    (hlt : blockLen tm x.length S p - 1 < (codeBlockScan tm x S b p).length) :
+    (codeBlockScan tm x S b p)[blockLen tm x.length S p - 1]'hlt = false := by
+  have hstruct : codeBlockScan tm x S b p
+      = (List.replicate (succParamsCodec tm.Q kk).width false ++ codeBlock tm x S b p)
+        ++ [false] := by
+    rw [codeBlockScan, if_neg hp, List.append_assoc]
+  have hlen : (codeBlockScan tm x S b p).length = blockLen tm x.length S p :=
+    codeBlockScan_length tm x S b p
+  have hA : (List.replicate (succParamsCodec tm.Q kk).width false
+      ++ codeBlock tm x S b p).length = blockLen tm x.length S p - 1 := by
+    rw [hstruct, List.length_append] at hlen
+    simp only [List.length_cons, List.length_nil] at hlen
+    omega
+  have hidx : blockLen tm x.length S p - 1
+      = (List.replicate (succParamsCodec tm.Q kk).width false
+        ++ codeBlock tm x S b p).length := hA.symm
+  simp only [hstruct]
+  rw [List.getElem_append_right (by omega)]
+  simp [hA]
+
+/-- **The tail check.** Each window register carries one cell past its window, and the window
+checks read that cell as saying "no head marker here". For the register a step *retains* that
+comes from the code it holds; for the one a step *guesses* nothing else says it, so the scan
+checks it. -/
+noncomputable def tailZeroScanner {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
+    (j' : ℕ → Fin (jj + 1)) : Scanner jj :=
+  Scanner.all (kk + 2) (fun i =>
+    ((Scanner.isConst jj (j' (i.val + 1)) Γ.zero).after
+      (blockLen tm nn S (i.val + 1) - 1)).upTo (blockLen tm nn S (i.val + 1)))
+
+/-- **What the tail check reports.** -/
+theorem tailZeroScanner_decides {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ) (j' : ℕ → Fin (jj + 1))
+    (cols : ℕ → Fin (jj + 1) → Γ) :
+    (tailZeroScanner tm nn S j').emit
+        ((tailZeroScanner tm nn S j').run cols (walkScanLen tm nn S)) = true ↔
+      ∀ i : Fin (kk + 2),
+        cols (blockLen tm nn S (i.val + 1)) (j' (i.val + 1)) = Γ.zero := by
+  rw [tailZeroScanner, Scanner.all_emit_run]
+  have hone : ∀ i : Fin (kk + 2), 1 ≤ blockLen tm nn S (i.val + 1) := fun i =>
+    one_le_blockLen tm nn S _ (by omega)
+  constructor
+  · intro h i
+    have hi := h i
+    rw [Scanner.isConst_range_run jj (j' (i.val + 1)) Γ.zero cols _ _ (walkScanLen tm nn S)
+      (blockLen_le tm nn S _)] at hi
+    exact hi _ (by have := hone i; omega) le_rfl
+  · intro h i
+    rw [Scanner.isConst_range_run jj (j' (i.val + 1)) Γ.zero cols _ _ (walkScanLen tm nn S)
+      (blockLen_le tm nn S _)]
+    intro q h1 h2
+    rw [show q = blockLen tm nn S (i.val + 1) by have := hone i; omega]
+    exact h i
+
 /-- The code half of a walk step's scan. -/
 noncomputable def walkCodeScanner {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
     (par mv dr res : Fin (jj + 1)) (dc : DirCodec) (j j' : ℕ → Fin (jj + 1)) : Scanner jj :=
@@ -2116,12 +2248,13 @@ noncomputable def walkCodeScanner {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
     (Scanner.all 3 (fun p => if p.val = 0 then eqScanner tm nn S j j'
       else if p.val = 1 then (Scanner.isConst jj mv (dc.encMove Dir3.stay)).upTo 1
       else (Scanner.isConst jj dr (dc.enc Dir3.stay)).upTo 1))
-    (Scanner.all 3 (fun p => if p.val = 0 then
+    (Scanner.all 4 (fun p => if p.val = 0 then
         succScanner tm nn S par (codeRegsOf j) (codeRegsOf j')
       else if p.val = 1 then
         dirCheckScanner tm nn S par mv dr (codeRegsOf (kk := kk) j).hd
           (codeRegsOf (kk := kk) j').hd dc
-      else inSymScanner tm nn S par (codeRegsOf (kk := kk) j).hd res))
+      else if p.val = 2 then inSymScanner tm nn S par (codeRegsOf (kk := kk) j).hd res
+      else tailZeroScanner tm nn S j'))
 
 
 /-- **The counter check accepts the move it is meant to.** -/
@@ -2266,7 +2399,7 @@ theorem walkCodeScanner_accepts_succ {kk jj : ℕ} (tm : NTM kk) (x : List Bool)
     (hout : b.2.2.2.1.val = movedIdx (succTrans tm P).2.2.2.2.2 a.2.2.2.1.val ∧
       ∀ p, b.2.2.2.2 p = if p = a.2.2.2.1 ∧ 0 < p.val
         then (((succTrans tm P).2.2.1 : Γw) : Γ) else a.2.2.2.2 p)
-    (hleft : (succTrans tm P).2.2.2.1 = Dir3.left → 0 < a.2.1.val)
+    (hleft : (succTrans tm P).2.2.2.1 = Dir3.left → 0 < a.2.1.val) (hne : a.1 ≠ tm.qhalt)
     (hdr : (dirCheckScanner tm x.length S par mv dr (codeRegsOf (kk := kk) j).hd
       (codeRegsOf (kk := kk) j').hd dc).emit
       ((dirCheckScanner tm x.length S par mv dr (codeRegsOf (kk := kk) j).hd
@@ -2303,13 +2436,26 @@ theorem walkCodeScanner_accepts_succ {kk jj : ℕ} (tm : NTM kk) (x : List Bool)
   · rw [if_pos hp0]
     exact succScanner_accepts tm x S cols par (codeRegsOf j) (codeRegsOf j') a b P hpar
       (holdsCodeScan_of_blocks tm x S cols j a ha) (holdsCodeScan_of_blocks tm x S cols j' b hb)
-      hendW hendO hq hstate hwsym hosym hhead hwork hout hleft
+      hendW hendO hq hstate hwsym hosym hhead hwork hout hleft hne
   · rw [if_neg hp0]
     by_cases hp1 : p.val = 1
     · rw [if_pos hp1]
       exact hdr
     · rw [if_neg hp1]
-      exact hres
+      by_cases hp2 : p.val = 2
+      · rw [if_pos hp2]
+        exact hres
+      · rw [if_neg hp2, tailZeroScanner_decides]
+        intro i
+        have hone := one_le_blockLen tm x.length S (i.val + 1) (by omega)
+        have hlen : (codeBlockScan tm x S b (i.val + 1)).length
+            = blockLen tm x.length S (i.val + 1) := codeBlockScan_length tm x S b _
+        have h := hb (i.val + 1) (by omega) (blockLen tm x.length S (i.val + 1) - 1)
+          (by omega)
+        rw [codeBlockScan_tail tm x S b (i.val + 1) (by omega) (by omega)] at h
+        rw [show blockLen tm x.length S (i.val + 1)
+          = 0 + (blockLen tm x.length S (i.val + 1) - 1) + 1 by omega]
+        exact h
 
 /-- **One walk step, as a single scan.** Either the guessed code repeats the old one and the
 input head is told to stay, or it is a successor and the input head is told to move the way the
@@ -2447,26 +2593,23 @@ theorem holdsBits_checked {jj : ℕ} {cells : Fin (jj + 1) → ℕ → Γ} {par 
   rw [checked_cell cells par res g r hr]
   exact h q hq
 
-/-- **The check phase's contract.** -/
-theorem checkPhase_hoareTime {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
-    (par mv dr res cntOld cntNew : Fin (jj + 1)) (wc : ℕ) (advance : Bool) (dc : DirCodec)
-    (jold jnew : ℕ → Fin (jj + 1))
+/-- **The contract of a check phase with an input match**: compare the guessed input symbol
+against the machine's own tape, then run any scan. This is `Complexity.checkPhase_hoareTime`
+with the walk's scanner made a parameter. -/
+theorem matchScan_hoareTime {jj : ℕ} (Sc : Scanner jj) (par res : Fin (jj + 1))
     (cells : Fin (jj + 1) → ℕ → Γ) (len : ℕ) (inp₀ out₀ resT : Tape)
     (hok : TM.ScanOk inp₀ resT out₀) (ht : TM.ScanTape cells len)
     (hresSI : resT.StartInvariant) (hresH : 1 ≤ resT.head)
     (hpr : par ≠ res)
     (ht' : TM.ScanTape (checkedCells cells par res inp₀.read) len) :
     (TM.seqTM (TM.inMatchTM gammaBits par.castSucc res.castSucc)
-        (TM.twoPassTM (walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
-        jold jnew))).HoareTime
+        (TM.twoPassTM Sc)).HoareTime
       (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
         work = Fin.snoc (fun i => (⟨1, cells i⟩ : Tape)) resT)
       (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
         work = Fin.snoc (fun i => (⟨1, checkedCells cells par res inp₀.read i⟩ : Tape))
-          (resT.write (Γ.ofBool ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
-        jold jnew).emit
-            ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
-        jold jnew).run
+          (resT.write (Γ.ofBool (Sc.emit
+            (Sc.run
               (TM.scanCol (checkedCells cells par res inp₀.read)) len)))))
       (2 + 1 + (2 * len + 3)) := by
   classical
@@ -2540,9 +2683,32 @@ theorem checkPhase_hoareTime {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
       rw [Fin.snoc_castSucc]
       exact fun hc => ht'.ne_start q 1 le_rfl hc
   exact TM.seqTM_hoareTime _ _ hmatch' hmid
-    (TM.twoPassTM_hoareTime (walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
-        jold jnew)
+    (TM.twoPassTM_hoareTime Sc
       (checkedCells cells par res inp₀.read) len inp₀ out₀ resT hok ht')
+
+/-- **The check phase's contract.** -/
+theorem checkPhase_hoareTime {kk jj : ℕ} (tm : NTM kk) (nn S : ℕ)
+    (par mv dr res cntOld cntNew : Fin (jj + 1)) (wc : ℕ) (advance : Bool) (dc : DirCodec)
+    (jold jnew : ℕ → Fin (jj + 1))
+    (cells : Fin (jj + 1) → ℕ → Γ) (len : ℕ) (inp₀ out₀ resT : Tape)
+    (hok : TM.ScanOk inp₀ resT out₀) (ht : TM.ScanTape cells len)
+    (hresSI : resT.StartInvariant) (hresH : 1 ≤ resT.head)
+    (hpr : par ≠ res)
+    (ht' : TM.ScanTape (checkedCells cells par res inp₀.read) len) :
+    (TM.seqTM (TM.inMatchTM gammaBits par.castSucc res.castSucc)
+        (TM.twoPassTM (walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
+        jold jnew))).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+        work = Fin.snoc (fun i => (⟨1, cells i⟩ : Tape)) resT)
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧
+        work = Fin.snoc (fun i => (⟨1, checkedCells cells par res inp₀.read i⟩ : Tape))
+          (resT.write (Γ.ofBool ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
+        jold jnew).emit
+            ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
+        jold jnew).run
+              (TM.scanCol (checkedCells cells par res inp₀.read)) len)))))
+      (2 + 1 + (2 * len + 3)) :=
+  matchScan_hoareTime _ par res cells len inp₀ out₀ resT hok ht hresSI hresH hpr ht'
 
 /-- The guess-free half of a walk step: check the guessed input symbol against the machine's own
 input tape, run the walk-step scan, and move the input head by the direction the scan pinned. The
@@ -2677,7 +2843,7 @@ guessed tapes are named by `TM.guessBlocksTapes`; what they contain is the calle
 `Complexity.walkStepScanner_decides` is what turns the resulting verdict into a step of the walk.
 The accumulator is not a register — no guess can reach it — and it only ever loses its one, which
 is what makes a single failed check final in a loop that cannot stop early. -/
-theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
+theorem walkStepTM_hoareTime' {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
     (par mv dr res cntOld cntNew : Fin (jj + 1)) (wc : ℕ) (advance : Bool) (dc : DirCodec)
     (jold jnew : ℕ → Fin (jj + 1)) (guessReg : ℕ → Fin (jj + 2 + r + 1)) (w : ℕ → ℕ) (t : ℕ)
     (targets : List (Fin (jj + 2 + r))) (accIdx : Fin (jj + 2 + r + 1)) (hnodup : targets.Nodup)
@@ -2705,11 +2871,7 @@ theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
     (ht' : TM.ScanTape (checkedCells (fun i : Fin (jj + 1) =>
       (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
       (TM.parkTape inp₀).read) len)
-    (hmoved : ((TM.parkTape inp₀).move (dc.dec (checkedCells (fun i : Fin (jj + 1) =>
-      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
-      (TM.parkTape inp₀).read mv 1) (checkedCells (fun i : Fin (jj + 1) =>
-      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
-      (TM.parkTape inp₀).read dr 1))).read ≠ Γ.start) :
+    :
     (walkStepTM r tm nn S par mv dr res cntOld cntNew wc advance dc jold jnew guessReg w t
       targets accIdx).HoareTime
       (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
@@ -2718,13 +2880,14 @@ theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
           = TM.guessBlocksTapes guessReg w t W₀ (Fin.last (jj + 2 + r)) ∧
         (∀ c : Fin r, (Fin.natAdd (jj + 2) c).castSucc ≠ accIdx →
           work (Fin.natAdd (jj + 2) c).castSucc = W₀ (Fin.natAdd (jj + 2) c).castSucc) ∧
-        inp = (TM.parkTape inp₀).move (dc.dec (checkedCells (fun i : Fin (jj + 1) =>
+        inp = TM.transitionInput ((TM.parkTape inp₀).move
+            (dc.dec (checkedCells (fun i : Fin (jj + 1) =>
             (TM.guessBlocksTapes guessReg w t W₀
               (Fin.castAdd r i.castSucc).castSucc).cells) par res
             (TM.parkTape inp₀).read mv 1) (checkedCells (fun i : Fin (jj + 1) =>
             (TM.guessBlocksTapes guessReg w t W₀
               (Fin.castAdd r i.castSucc).castSucc).cells) par res
-            (TM.parkTape inp₀).read dr 1)) ∧
+            (TM.parkTape inp₀).read dr 1))) ∧
         out = TM.parkTape out₀ ∧
         (∀ i : Fin (jj + 2), work (Fin.castAdd r i).castSucc =
           (Fin.snoc (fun i : Fin (jj + 1) =>
@@ -2807,13 +2970,13 @@ theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
         work (Fin.last (jj + 2 + r)) = G (Fin.last (jj + 2 + r)) ∧
         (∀ c : Fin r,
           work (Fin.natAdd (jj + 2) c).castSucc = W₀ (Fin.natAdd (jj + 2) c).castSucc) ∧
-        inp = movedInp ∧ out = TM.parkTape out₀ ∧
+        inp = TM.transitionInput movedInp ∧ out = TM.parkTape out₀ ∧
         (∀ i : Fin (jj + 2), work (Fin.castAdd r i).castSucc = W₁ i))
       (fun inp work out =>
         work (Fin.last (jj + 2 + r)) = G (Fin.last (jj + 2 + r)) ∧
         (∀ c : Fin r, (Fin.natAdd (jj + 2) c).castSucc ≠ accIdx →
           work (Fin.natAdd (jj + 2) c).castSucc = W₀ (Fin.natAdd (jj + 2) c).castSucc) ∧
-        inp = movedInp ∧ out = TM.parkTape out₀ ∧
+        inp = TM.transitionInput movedInp ∧ out = TM.parkTape out₀ ∧
         (∀ i : Fin (jj + 2), work (Fin.castAdd r i).castSucc = W₁ i) ∧
         work accIdx = ⟨(W₀ accIdx).head, Function.update (W₀ accIdx).cells (W₀ accIdx).head
           (if v = true ∧ (W₀ accIdx).read = Γ.one then Γ.one else Γ.zero)⟩)
@@ -2842,10 +3005,20 @@ theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
       · intro i; rw [hregs i]; exact hW₁head i
       · intro c; rw [hgaux c]; exact hhW _
     obtain ⟨c', tt, htt, hreach, hhalt, hin', hout', hother', hacc'⟩ :=
-      TM.andCellTM_hoareTime (Fin.castAdd r (Fin.last (jj + 1))).castSucc accIdx
-        movedInp (TM.parkTape out₀) work hinv' hh' hmoved
-        (TM.parkTape_parked houtSI).read_ne_start movedInp work (TM.parkTape out₀)
-        ⟨rfl, rfl, rfl⟩
+      TM.andCellTM_hoareTime' (Fin.castAdd r (Fin.last (jj + 1))).castSucc accIdx
+        (TM.transitionInput movedInp) (TM.parkTape out₀) work hinv' hh'
+        (TM.parkTape_parked houtSI).read_ne_start (TM.transitionInput movedInp) work
+        (TM.parkTape out₀) ⟨rfl, rfl, rfl⟩
+    have hmovedSI : movedInp.StartInvariant := by
+      have hc : movedInp.cells = (TM.parkTape inp₀).cells := by
+        rw [hmovedInp]
+        exact Tape.move_cells _ _
+      refine ⟨?_, fun q hq => ?_⟩
+      · rw [show movedInp.cells 0 = (TM.parkTape inp₀).cells 0 from congrFun hc 0]
+        exact hinpSI.1
+      · rw [show movedInp.cells q = (TM.parkTape inp₀).cells q from congrFun hc q]
+        exact hinpSI.2 q hq
+    rw [TM.transitionInput_idem hmovedSI] at hin'
     have hsrcRead : (work (Fin.castAdd r (Fin.last (jj + 1))).castSucc).read = Γ.ofBool v := by
       rw [hregs (Fin.last (jj + 1)), hW₁, Fin.snoc_last]
       show (resT.write (Γ.ofBool v)).read = _
@@ -2910,7 +3083,6 @@ theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
       rw [h]
       exact TM.transitionTape_eq_self ((hinvW _).read_ne_start (hhW _))
     · rw [hin]
-      exact TM.transitionInput_eq_self hmoved
     · rw [hout']
       exact TM.transitionTape_eq_self (TM.parkTape_parked houtSI).read_ne_start
     · intro i
@@ -2927,6 +3099,91 @@ noncomputable def walkStepAdv {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
       targets accIdx).Q → Bool :=
   TM.seqAdv (TM.seqAdv (TM.guessBlocksAdv guessReg w t) (fun _ => false))
     (TM.seqAdv (fun _ => false) (fun _ => false))
+
+/-- **The contract of a walk step**, when the stage's move keeps the machine's own input head off
+the left marker — which an accepted stage always does. `Complexity.walkStepTM_hoareTime'` is the
+version that does not assume it. -/
+theorem walkStepTM_hoareTime {kk jj : ℕ} (r : ℕ) (tm : NTM kk) (nn S : ℕ)
+    (par mv dr res cntOld cntNew : Fin (jj + 1)) (wc : ℕ) (advance : Bool) (dc : DirCodec)
+    (jold jnew : ℕ → Fin (jj + 1)) (guessReg : ℕ → Fin (jj + 2 + r + 1)) (w : ℕ → ℕ) (t : ℕ)
+    (targets : List (Fin (jj + 2 + r))) (accIdx : Fin (jj + 2 + r + 1)) (hnodup : targets.Nodup)
+    (hall : ∀ i : Fin (jj + 2), Fin.castAdd r i ∈ targets)
+    (haux : ∀ c : Fin r, Fin.natAdd (jj + 2) c ∉ targets)
+    (hauxG : ∀ p c, p < t → guessReg p ≠ (Fin.natAdd (jj + 2) c).castSucc)
+    (haccReg : ∀ i : Fin (jj + 2), accIdx ≠ (Fin.castAdd r i).castSucc)
+    (haccLast : accIdx ≠ Fin.last (jj + 2 + r))
+    (hj : ∀ p, guessReg p ≠ Fin.last (jj + 2 + r)) (B : ℕ) (hB : 1 ≤ B)
+    (inp₀ out₀ : Tape) (W₀ : Fin (jj + 2 + r + 1) → Tape)
+    (hinpSI : inp₀.StartInvariant) (houtSI : out₀.StartInvariant)
+    (hinp : inp₀.read ≠ Γ.start) (hout : out₀.read ≠ Γ.start)
+    (hinvW : ∀ i, (W₀ i).StartInvariant) (hhW : ∀ i, 1 ≤ (W₀ i).head)
+    (hinj : ∀ p q, p < t → q < t → guessReg p = guessReg q → p = q)
+    (hbound : ∀ i, i ∈ targets →
+      (TM.guessBlocksTapes guessReg w t W₀ i.castSucc).head ≤ B)
+    (len : ℕ)
+    (hok : TM.ScanOk (TM.parkTape inp₀)
+      (⟨1, (TM.guessBlocksTapes guessReg w t W₀
+        (Fin.castAdd r (Fin.last (jj + 1))).castSucc).cells⟩ : Tape)
+      (TM.parkTape out₀))
+    (ht : TM.ScanTape (fun i : Fin (jj + 1) =>
+      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) len)
+    (hpr : par ≠ res)
+    (ht' : TM.ScanTape (checkedCells (fun i : Fin (jj + 1) =>
+      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
+      (TM.parkTape inp₀).read) len)
+    (hmoved : ((TM.parkTape inp₀).move (dc.dec (checkedCells (fun i : Fin (jj + 1) =>
+      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
+      (TM.parkTape inp₀).read mv 1) (checkedCells (fun i : Fin (jj + 1) =>
+      (TM.guessBlocksTapes guessReg w t W₀ (Fin.castAdd r i.castSucc).castSucc).cells) par res
+      (TM.parkTape inp₀).read dr 1))).read ≠ Γ.start)
+    :
+    (walkStepTM r tm nn S par mv dr res cntOld cntNew wc advance dc jold jnew guessReg w t
+      targets accIdx).HoareTime
+      (fun inp work out => inp = inp₀ ∧ out = out₀ ∧ work = W₀)
+      (fun inp work out =>
+        work (Fin.last (jj + 2 + r))
+          = TM.guessBlocksTapes guessReg w t W₀ (Fin.last (jj + 2 + r)) ∧
+        (∀ c : Fin r, (Fin.natAdd (jj + 2) c).castSucc ≠ accIdx →
+          work (Fin.natAdd (jj + 2) c).castSucc = W₀ (Fin.natAdd (jj + 2) c).castSucc) ∧
+        inp = (TM.parkTape inp₀).move (dc.dec (checkedCells (fun i : Fin (jj + 1) =>
+            (TM.guessBlocksTapes guessReg w t W₀
+              (Fin.castAdd r i.castSucc).castSucc).cells) par res
+            (TM.parkTape inp₀).read mv 1) (checkedCells (fun i : Fin (jj + 1) =>
+            (TM.guessBlocksTapes guessReg w t W₀
+              (Fin.castAdd r i.castSucc).castSucc).cells) par res
+            (TM.parkTape inp₀).read dr 1)) ∧
+        out = TM.parkTape out₀ ∧
+        (∀ i : Fin (jj + 2), work (Fin.castAdd r i).castSucc =
+          (Fin.snoc (fun i : Fin (jj + 1) =>
+            (⟨1, checkedCells (fun i : Fin (jj + 1) =>
+              (TM.guessBlocksTapes guessReg w t W₀
+                (Fin.castAdd r i.castSucc).castSucc).cells) par res
+              (TM.parkTape inp₀).read i⟩ : Tape))
+          ((⟨1, (TM.guessBlocksTapes guessReg w t W₀
+              (Fin.castAdd r (Fin.last (jj + 1))).castSucc).cells⟩ : Tape).write
+            (Γ.ofBool ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
+              jold jnew).emit
+              ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc
+                jold jnew).run
+                (TM.scanCol (checkedCells (fun i : Fin (jj + 1) =>
+                  (TM.guessBlocksTapes guessReg w t W₀
+                    (Fin.castAdd r i.castSucc).castSucc).cells) par res
+                  (TM.parkTape inp₀).read)) len)))) : Fin (jj + 2) → Tape) i) ∧
+        work accIdx = ⟨(W₀ accIdx).head, Function.update (W₀ accIdx).cells (W₀ accIdx).head
+          (if (walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc jold jnew).emit
+              ((walkStepScanner tm nn S par mv dr res cntOld cntNew wc advance dc jold jnew).run
+                (TM.scanCol (checkedCells (fun i : Fin (jj + 1) =>
+                  (TM.guessBlocksTapes guessReg w t W₀
+                    (Fin.castAdd r i.castSucc).castSucc).cells) par res
+                  (TM.parkTape inp₀).read)) len) = true ∧ (W₀ accIdx).read = Γ.one
+            then Γ.one else Γ.zero)⟩)
+      (TM.guessBlocksTime w t + 1 + (1 + 1 + (targets.length * (B + 3) + 1)) + 1 +
+        (2 + 1 + (2 * len + 3) + 1 + 1 + 1 + 1)) :=
+  (walkStepTM_hoareTime' r tm nn S par mv dr res cntOld cntNew wc advance dc jold jnew guessReg
+    w t targets accIdx hnodup hall haux hauxG haccReg haccLast hj B hB inp₀ out₀ W₀ hinpSI
+    houtSI hinp hout hinvW hhW hinj hbound len hok ht hpr ht').consequence
+    (fun _ _ _ h => h) (fun inp work out h => by
+      rwa [TM.transitionInput_eq_self hmoved] at h) le_rfl
 
 /-- **A walk step respects the guess protocol.** Only the guess stage advances the guess head; the
 checks and the input-head move never consult it. -/
@@ -3269,7 +3526,7 @@ theorem walkStepScanner_accepts_succ {kk jj : ℕ} (tm : NTM kk) (x : List Bool)
     (hmv : cols 1 mv = dc.encMove (adjustedDir (succTrans tm P).2.2.2.1 a.2.1.val))
     (hdr : cols 1 dr = dc.enc (adjustedDir (succTrans tm P).2.2.2.1 a.2.1.val))
     (hin : P.inSym = inSymOf tm x S a)
-    (hres : a.2.1.val ≠ 0 → cols 1 res = Γ.one)
+    (hres : a.2.1.val ≠ 0 → cols 1 res = Γ.one) (hne : a.1 ≠ tm.qhalt)
     (hwc : wc ≤ walkScanLen tm x.length S) (hu : u < 2 ^ wc) (hv : v < 2 ^ wc)
     (hcntOld : HoldsBits cols 0 cntOld (bitsOfLenLE wc u))
     (hcntNew : HoldsBits cols 0 cntNew (bitsOfLenLE wc v))
@@ -3280,7 +3537,7 @@ theorem walkStepScanner_accepts_succ {kk jj : ℕ} (tm : NTM kk) (x : List Bool)
   refine walkStepScanner_accepts tm x S cols par mv dr res cntOld cntNew wc advance dc j j'
     hwc u v hu hv hcntOld hcntNew hmove ?_
   refine walkCodeScanner_accepts_succ tm x S cols par mv dr res dc j j' a b P hpar ha hb hq
-    hstate hwsym hosym hhead hwork hout hleft ?_ ?_
+    hstate hwsym hosym hhead hwork hout hleft hne ?_ ?_
   · exact dirCheckScanner_accepts tm x S cols par mv dr (codeRegsOf j).hd (codeRegsOf j').hd dc
       P a b hpar (holdsCodeScan_of_blocks tm x S cols j a ha).2.1
       (holdsCodeScan_of_blocks tm x S cols j' b hb).2.1 hhead hmv hdr
@@ -3455,6 +3712,9 @@ inductive BlockRole (kk : ℕ) where
   | codeA (p : ℕ)
   /-- Block `p` of the second. -/
   | codeB (p : ℕ)
+  /-- Block `p` of spare tuple `n`: a code an enclosing loop is holding, which the walk never
+  writes. -/
+  | spare (n p : ℕ)
   deriving DecidableEq
 
 /-- Which register plays which role in the walk, and that the roles are distinct. -/
@@ -3489,6 +3749,13 @@ structure WalkLayout (kk jj : ℕ) where
   codeAIdx : ℕ → ℕ
   /-- The second code tuple's blocks. -/
   codeBIdx : ℕ → ℕ
+  /-- How many spare code tuples the layout carries: codes an enclosing loop is holding. A walk
+  never writes them, so they survive a whole walk untouched. -/
+  spares : ℕ
+  /-- There is at least one. -/
+  spares_pos : 0 < spares
+  /-- Spare tuple `n`'s blocks. -/
+  spareIdx : ℕ → ℕ → ℕ
   /-- How many blocks come before the two code tuples: the scan's scratch. A step guesses the
   scratch and one code tuple, and leaves the other tuple where the previous step put it — which is
   what chains the walk. -/
@@ -3497,8 +3764,11 @@ structure WalkLayout (kk jj : ℕ) where
   codeA_eq : ∀ p, p < kk + 3 → codeAIdx p = scratch + p
   /-- The new code's follow those. -/
   codeB_eq : ∀ p, p < kk + 3 → codeBIdx p = scratch + (kk + 3) + p
+  /-- The spare tuples' follow those. -/
+  spare_eq : ∀ n p, n < spares → p < kk + 3 →
+    spareIdx n p = scratch + (kk + 3) + (kk + 3) + n * (kk + 3) + p
   /-- And nothing follows them. -/
-  blocks_eq : blocks = scratch + (kk + 3) + (kk + 3)
+  blocks_eq : blocks = scratch + (kk + 3) + (kk + 3) + spares * (kk + 3)
   /-- The ruler is register zero, where a scan looks for its length. -/
   ruler_zero : reg rulerIdx = 0
   /-- The ruler is scratch. -/
@@ -3541,10 +3811,26 @@ structure WalkLayout (kk jj : ℕ) where
   role_codeA : ∀ p, p < kk + 3 → role (codeAIdx p) = BlockRole.codeA p
   /-- And the other tuple's. -/
   role_codeB : ∀ p, p < kk + 3 → role (codeBIdx p) = BlockRole.codeB p
+  /-- And the spares'. -/
+  role_spare : ∀ n p, n < spares → p < kk + 3 → role (spareIdx n p) = BlockRole.spare n p
 
 namespace WalkLayout
 
 variable {kk jj : ℕ} (L : WalkLayout kk jj)
+
+/-- The first spare tuple's blocks, named for the use every walk puts it to: the code an
+enclosing enumeration is testing. -/
+def codeTIdx : ℕ → ℕ := L.spareIdx 0
+
+/-- Where it sits. -/
+theorem codeT_eq : ∀ p, p < kk + 3 → L.codeTIdx p = L.scratch + (kk + 3) + (kk + 3) + p := by
+  intro p hp
+  rw [codeTIdx, L.spare_eq 0 p L.spares_pos hp]
+  omega
+
+/-- And what it is for. -/
+theorem role_codeT : ∀ p, p < kk + 3 → L.role (L.codeTIdx p) = BlockRole.spare 0 p :=
+  fun p hp => L.role_spare 0 p L.spares_pos hp
 
 /-- The ruler is a block. -/
 theorem ruler_lt : L.rulerIdx < L.blocks := by
@@ -3619,6 +3905,86 @@ theorem stepIdx_inj (second : Bool) : ∀ p q, p < L.stepBlocks → q < L.stepBl
   rw [stepIdx, stepIdx] at h
   split at h <;> split at h <;> first | omega | (split at h <;> omega)
 
+/-- **Where code family `f`'s blocks sit.** The two tuples the walk swaps are families `0` and
+`1`; the spares follow. Numbering the families is what lets one stage write any of them. -/
+def famIdx (f p : ℕ) : ℕ := L.scratch + f * (kk + 3) + p
+
+/-- Family zero is the first tuple. -/
+theorem famIdx_codeA (p : ℕ) (hp : p < kk + 3) : L.famIdx 0 p = L.codeAIdx p := by
+  rw [famIdx, L.codeA_eq p hp]
+  omega
+
+/-- Family one is the second. -/
+theorem famIdx_codeB (p : ℕ) (hp : p < kk + 3) : L.famIdx 1 p = L.codeBIdx p := by
+  rw [famIdx, L.codeB_eq p hp]
+  omega
+
+/-- And the rest are the spares. -/
+theorem famIdx_spare (n p : ℕ) (hn : n < L.spares) (hp : p < kk + 3) :
+    L.famIdx (2 + n) p = L.spareIdx n p := by
+  have he : (2 + n) * (kk + 3) = (kk + 3) + (kk + 3) + n * (kk + 3) := by ring
+  rw [famIdx, L.spare_eq n p hn hp]
+  omega
+
+/-- **The blocks a stage guesses when it writes family `f`**: the scratch, and that family's
+tuple. -/
+def stepIdxF (f p : ℕ) : ℕ := if p < L.scratch then p else p + f * (kk + 3)
+
+/-- A walk's own stages write families zero and one. -/
+theorem stepIdx_eq_stepIdxF (second : Bool) (p : ℕ) :
+    L.stepIdx second p = L.stepIdxF (if second then 0 else 1) p := by
+  rw [stepIdx, stepIdxF]
+  cases second <;> simp
+
+/-- Past the scratch, a stage writes the family's blocks. -/
+theorem stepIdxF_fam (f p : ℕ) :
+    L.stepIdxF f (L.scratch + p) = L.famIdx f p := by
+  rw [stepIdxF, if_neg (by omega), famIdx]
+  omega
+
+/-- Such a stage's blocks are blocks. -/
+theorem stepIdxF_lt (f p : ℕ) (hf : f < 2 + L.spares) (hp : p < L.stepBlocks) :
+    L.stepIdxF f p < L.blocks := by
+  have hb : L.blocks = L.scratch + (2 + L.spares) * (kk + 3) := by
+    have he : (2 + L.spares) * (kk + 3) = (kk + 3) + (kk + 3) + L.spares * (kk + 3) := by ring
+    rw [L.blocks_eq]
+    omega
+  have hstep : L.stepBlocks = L.scratch + (kk + 3) := rfl
+  have hmul : (f + 1) * (kk + 3) ≤ (2 + L.spares) * (kk + 3) :=
+    Nat.mul_le_mul_right _ (by omega)
+  have he : (f + 1) * (kk + 3) = f * (kk + 3) + (kk + 3) := by ring
+  rw [stepIdxF, hb]
+  split <;> omega
+
+/-- It guesses each of them once. -/
+theorem stepIdxF_inj (f : ℕ) : ∀ p q, p < L.stepBlocks → q < L.stepBlocks →
+    L.stepIdxF f p = L.stepIdxF f q → p = q := by
+  intro p q hp hq h
+  rw [stepIdxF, stepIdxF] at h
+  have h0 : 0 ≤ f * (kk + 3) := Nat.zero_le _
+  split at h <;> split at h <;> omega
+
+/-- **And it never touches another family.** -/
+theorem stepIdxF_ne_famIdx (f f' p q : ℕ) (hp : p < L.stepBlocks) (hq : q < kk + 3)
+    (hff : f ≠ f') : L.stepIdxF f p ≠ L.famIdx f' q := by
+  have hstep : L.stepBlocks = L.scratch + (kk + 3) := rfl
+  have hkey : ∀ a b : ℕ, a < b → a * (kk + 3) + (kk + 3) ≤ b * (kk + 3) := by
+    intro a b hab
+    have h1 : (a + 1) * (kk + 3) ≤ b * (kk + 3) := Nat.mul_le_mul_right _ hab
+    have h2 : (a + 1) * (kk + 3) = a * (kk + 3) + (kk + 3) := by ring
+    omega
+  rw [stepIdxF, famIdx]
+  have h0 : 0 ≤ f' * (kk + 3) := Nat.zero_le _
+  split
+  · omega
+  · intro hc
+    rcases Nat.lt_trichotomy f f' with h | h | h
+    · have := hkey f f' h
+      omega
+    · exact hff h
+    · have := hkey f' f h
+      omega
+
 /-- The second step of a pair guesses the old code's blocks. -/
 theorem stepIdx_codeA (p : ℕ) (hp : p < kk + 3) :
     L.stepIdx true (L.scratch + p) = L.codeAIdx p := by
@@ -3642,6 +4008,34 @@ theorem stepIdx_ne_codeB (p q : ℕ) (hp : p < L.stepBlocks) (hq : q < kk + 3) :
   rw [stepIdx, L.codeB_eq q hq]
   rw [stepBlocks] at hp
   split <;> [omega; (rw [if_pos rfl]; omega)]
+
+/-- **A walk stage never writes a spare tuple.** -/
+theorem stepIdx_ne_spare (second : Bool) (n p q : ℕ) (hp : p < L.stepBlocks) (hn : n < L.spares)
+    (hq : q < kk + 3) : L.stepIdx second p ≠ L.spareIdx n q := by
+  rw [stepIdx, L.spare_eq n q hn hq]
+  rw [stepBlocks] at hp
+  have h0 : 0 ≤ n * (kk + 3) := Nat.zero_le _
+  split
+  · omega
+  · cases second
+    · rw [if_neg (by simp)]
+      omega
+    · rw [if_pos rfl]
+      omega
+
+/-- **Neither step guesses the third tuple's blocks**, so the code an enclosing enumeration is
+testing survives a whole walk. -/
+theorem stepIdx_ne_codeT (second : Bool) (p q : ℕ) (hp : p < L.stepBlocks) (hq : q < kk + 3) :
+    L.stepIdx second p ≠ L.codeTIdx q := by
+  rw [stepIdx, L.codeT_eq q hq]
+  rw [stepBlocks] at hp
+  split
+  · omega
+  · cases second
+    · rw [if_neg (by simp)]
+      omega
+    · rw [if_pos rfl]
+      omega
 
 /-- The parameter register. -/
 def par : Fin (jj + 1) := L.reg L.parIdx
@@ -3689,6 +4083,73 @@ theorem codeA_ne_res {r : ℕ} (hr : r < kk + 3) : L.codeA r ≠ L.res :=
 theorem codeB_ne_res {r : ℕ} (hr : r < kk + 3) : L.codeB r ≠ L.res :=
   L.reg_ne (L.codeB_lt r hr) L.res_lt (by
     rw [L.role_codeB r hr, L.role_res]
+    exact fun hc => by simp at hc)
+
+/-- The third code tuple's blocks are blocks. -/
+theorem codeT_lt : ∀ p, p < kk + 3 → L.codeTIdx p < L.blocks := by
+  intro p hp
+  have h1 : kk + 3 ≤ L.spares * (kk + 3) :=
+    le_trans (le_of_eq (one_mul _).symm) (Nat.mul_le_mul_right _ L.spares_pos)
+  rw [L.blocks_eq, L.codeT_eq p hp]
+  omega
+
+/-- The registers of code family `f`. -/
+def famReg (f : ℕ) : ℕ → Fin (jj + 1) := fun p => L.reg (L.famIdx f p)
+
+/-- The registers of spare tuple `n`. -/
+def spareReg (n : ℕ) : ℕ → Fin (jj + 1) := fun p => L.reg (L.spareIdx n p)
+
+/-- Family zero is the first tuple. -/
+theorem famReg_zero (p : ℕ) (hp : p < kk + 3) : L.famReg 0 p = L.codeA p := by
+  rw [famReg, L.famIdx_codeA p hp]
+  rfl
+
+/-- Family one is the second. -/
+theorem famReg_one (p : ℕ) (hp : p < kk + 3) : L.famReg 1 p = L.codeB p := by
+  rw [famReg, L.famIdx_codeB p hp]
+  rfl
+
+/-- And the rest are the spares. -/
+theorem famReg_spare (n p : ℕ) (hn : n < L.spares) (hp : p < kk + 3) :
+    L.famReg (2 + n) p = L.spareReg n p := by
+  rw [famReg, L.famIdx_spare n p hn hp]
+  rfl
+
+/-- The third tuple's registers: the first spare. -/
+def codeT : ℕ → Fin (jj + 1) := fun p => L.reg (L.codeTIdx p)
+
+/-- The first spare is the third tuple. -/
+theorem spareReg_zero : L.spareReg 0 = L.codeT := rfl
+
+/-- A spare tuple's blocks are blocks. -/
+theorem spare_lt (n : ℕ) (hn : n < L.spares) : ∀ p, p < kk + 3 → L.spareIdx n p < L.blocks := by
+  intro p hp
+  have h1 : (n + 1) * (kk + 3) ≤ L.spares * (kk + 3) := Nat.mul_le_mul_right _ hn
+  have h2 : (n + 1) * (kk + 3) = n * (kk + 3) + (kk + 3) := by ring
+  rw [L.blocks_eq, L.spare_eq n p hn hp]
+  omega
+
+/-- A spare tuple is not the verdict register. -/
+theorem spareReg_ne_res (n : ℕ) (hn : n < L.spares) (p : ℕ) (hp : p < kk + 3) :
+    L.spareReg n p ≠ L.res :=
+  L.reg_ne (L.spare_lt n hn p hp) L.res_lt (by
+    rw [L.role_spare n p hn hp, L.role_res]
+    exact fun hc => by simp at hc)
+
+/-- No code family is the verdict register. -/
+theorem famReg_ne_res (f : ℕ) (hf : f < 2 + L.spares) (p : ℕ) (hp : p < kk + 3) :
+    L.famReg f p ≠ L.res := by
+  match f, hf with
+  | 0, _ => rw [L.famReg_zero p hp]; exact L.codeA_ne_res hp
+  | 1, _ => rw [L.famReg_one p hp]; exact L.codeB_ne_res hp
+  | (n + 2), hf =>
+    rw [show n + 2 = 2 + n by omega, L.famReg_spare n p (by omega) hp]
+    exact L.spareReg_ne_res n (by omega) p hp
+
+/-- The third tuple is not the verdict register. -/
+theorem codeT_ne_res {r : ℕ} (hr : r < kk + 3) : L.codeT r ≠ L.res :=
+  L.reg_ne (L.codeT_lt r hr) L.res_lt (by
+    rw [L.role_codeT r hr, L.role_res]
     exact fun hc => by simp at hc)
 
 /-- Nor the parameter block. -/
@@ -3750,6 +4211,9 @@ structure WalkWidths (kk jj : ℕ) (tm : NTM kk) (nn S wc : ℕ) extends WalkLay
   width_codeA : ∀ p, p < kk + 3 → width (toWalkLayout.codeAIdx p) = codeWidthScan tm nn S p
   /-- And the other tuple's the same. -/
   width_codeB : ∀ p, p < kk + 3 → width (toWalkLayout.codeBIdx p) = codeWidthScan tm nn S p
+  /-- And every spare tuple's. -/
+  width_spare : ∀ n p, n < toWalkLayout.spares → p < kk + 3 →
+    width (toWalkLayout.spareIdx n p) = codeWidthScan tm nn S p
 
 /-- **How wide that block is guessed.** Both steps of a pair guess the same widths — a code's two
 tuples are laid out alike — so one width function serves both, and the guess stream advances by
@@ -3803,6 +4267,7 @@ noncomputable def stageBits {kk jj : ℕ} {tm : NTM kk} {nn S wc : ℕ}
     | BlockRole.target => (bitsOfLenLE wc tgt).getD q false
     | BlockRole.codeA r => (codeBlockScan tm x S aOld r).getD q false
     | BlockRole.codeB r => (codeBlockScan tm x S aNew r).getD q false
+    | BlockRole.spare _ _ => false
 
 /-- **The code blocks a stage guesses are the code's own.** -/
 theorem stageBits_codeA {kk jj : ℕ} {tm : NTM kk} {nn S wc : ℕ}
@@ -4286,6 +4751,31 @@ theorem stepCells_retained {kk jj r : ℕ} {tm : NTM kk} {nn S wc : ℕ}
     L.toWalkLayout.stepBlocks W (walkReg i)).cells q = _
   rw [h]
 
+/-- **A walk step leaves every spare tuple alone.** -/
+theorem stepCells_spare {kk jj r : ℕ} {tm : NTM kk} {nn S wc : ℕ}
+    (L : WalkWidths kk jj tm nn S wc) (second : Bool) (W : Fin (jj + 2 + r + 1) → Tape)
+    (hinv : ∀ i, (W i).StartInvariant) (hh : ∀ i, 1 ≤ (W i).head) (n : ℕ)
+    (hn : n < L.toWalkLayout.spares) (p : ℕ) (hp : p < kk + 3) :
+    stepCells L second W (L.toWalkLayout.spareReg n p)
+      = (W (walkReg (L.toWalkLayout.spareReg n p))).cells :=
+  stepCells_retained L second W hinv hh (L.toWalkLayout.spareReg n p) (fun p' hp' hc =>
+    L.toWalkLayout.stepIdx_ne_spare second n p' p hp' hn hp
+      (L.toWalkLayout.reg_inj _ _ (L.toWalkLayout.stepIdx_lt second p' hp')
+        (L.toWalkLayout.spare_lt n hn p hp) (walkReg_inj hc).symm))
+
+/-- **A walk step leaves the third code tuple alone.** The enclosing enumeration owns those
+registers; a step guesses only the scratch and one of the walk's own two tuples, so whatever the
+enumeration put there is still there when the walk is done. -/
+theorem stepCells_codeT {kk jj r : ℕ} {tm : NTM kk} {nn S wc : ℕ}
+    (L : WalkWidths kk jj tm nn S wc) (second : Bool) (W : Fin (jj + 2 + r + 1) → Tape)
+    (hinv : ∀ i, (W i).StartInvariant) (hh : ∀ i, 1 ≤ (W i).head) (p : ℕ) (hp : p < kk + 3) :
+    stepCells L second W (L.toWalkLayout.codeT p)
+      = (W (walkReg (L.toWalkLayout.codeT p))).cells :=
+  stepCells_retained L second W hinv hh (L.toWalkLayout.codeT p) (fun p' hp' hc =>
+    L.toWalkLayout.stepIdx_ne_codeT second p' p hp' hp
+      (L.toWalkLayout.reg_inj _ _ (L.toWalkLayout.stepIdx_lt second p' hp')
+        (L.toWalkLayout.codeT_lt p hp) (walkReg_inj hc).symm))
+
 /-- **What a stage leaves on the parameter register, as the scan sees it.** -/
 theorem stageCols_par {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
@@ -4542,10 +5032,10 @@ guesses against each other. -/
 theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
     (Ps : ℕ → SuccParams tm.Q kk) (ds : ℕ → Dir3) (cOlds cNews : ℕ → ℕ) (tgt : ℕ)
-    (f aOld aNew : ℕ → Code tm.Q kk x.length S) (g : ℕ → Bool) (second : Bool)
-    (cA cB : ℕ → Fin (jj + 1)) (s : ℕ)
-    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks
-      (stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second) g)
+    (f aOld aNew : ℕ → Code tm.Q kk x.length S) (b : ℕ → ℕ → ℕ → Bool) (g : ℕ → Bool)
+    (second : Bool) (cA cB : ℕ → Fin (jj + 1)) (s : ℕ)
+    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks b g)
+    (hb : ∀ p q, b s p q = stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second s p q)
     (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
     (hh : ∀ i, 1 ≤ (W i).head)
     (hr1 : ∀ p, p < L.toWalkLayout.stepBlocks → (W (stepReg L second p)).head = 1)
@@ -4555,7 +5045,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
     (hcB : ∀ p, p < kk + 3 →
       (stepReg L second (L.toWalkLayout.scratch + p) : Fin (jj + 2 + r + 1)) = walkReg (cB p))
     (hcertB : ∀ p, p < kk + 3 → ∀ q,
-      stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second s (L.toWalkLayout.scratch + p) q
+      b s (L.toWalkLayout.scratch + p) q
         = (codeBlockScan tm x S (f (s + 1)) p).getD q false)
     (hret : ∀ p, p < kk + 3 → HoldsBits (fun q i => (W (walkReg i)).cells q) 0 (cA p)
       (codeBlockScan tm x S (f s) p))
@@ -4571,7 +5061,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
   · have h := holdsBits_block_of_step x L second _ g hs s W hinv hh hr1 hgf
       L.toWalkLayout.parIdx (hscratch _ L.toWalkLayout.par_scratch)
       ((succParamsCodec tm.Q kk).enc (Ps s)) (fun q hq => by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.par_scratch,
           stageBits_par L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (aOld s) (aNew s) q,
           List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hq, Option.getD_some]) (by
@@ -4602,7 +5092,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
   · have h := holdsBits_block_of_step x L second _ g hs s W hinv hh hr1 hgf
       L.toWalkLayout.cntIdx (hscratch _ L.toWalkLayout.cnt_scratch)
       (bitsOfLenLE wc (cOlds s)) (fun q hq => by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.cnt_scratch,
           stageBits_cnt L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (aOld s) (aNew s) q,
           List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hq, Option.getD_some]) (by
@@ -4613,7 +5103,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
   · have h := holdsBits_block_of_step x L second _ g hs s W hinv hh hr1 hgf
       L.toWalkLayout.cnt'Idx (hscratch _ L.toWalkLayout.cnt'_scratch)
       (bitsOfLenLE wc (cNews s)) (fun q hq => by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.cnt'_scratch,
           stageBits_cnt' L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (aOld s) (aNew s) q,
           List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hq, Option.getD_some]) (by
@@ -4624,7 +5114,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
   · have h := holdsBits_block_of_step x L second _ g hs s W hinv hh hr1 hgf
       L.toWalkLayout.targetIdx (hscratch _ L.toWalkLayout.target_scratch)
       (bitsOfLenLE wc tgt) (fun q hq => by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.target_scratch,
           stageBits_target L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (aOld s) (aNew s) q,
           List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hq, Option.getD_some]) (by
@@ -4637,7 +5127,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
       (hscratch _ L.toWalkLayout.mv_scratch)
       (by rw [stepWidth_scratch L _ L.toWalkLayout.mv_scratch, L.width_mv]) _
       (dc.encMove_bit (ds s)) (by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.mv_scratch, stageBits]
         simp only [L.toWalkLayout.role_mv])
     rw [stepReg_scratch L second _ L.toWalkLayout.mv_scratch] at h
@@ -4646,7 +5136,7 @@ theorem stepCols_holds {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool
       (hscratch _ L.toWalkLayout.dr_scratch)
       (by rw [stepWidth_scratch L _ L.toWalkLayout.dr_scratch, L.width_dr]) _
       (dc.enc_bit (ds s)) (by
-        rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+        rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
             L.toWalkLayout.dr_scratch, stageBits]
         simp only [L.toWalkLayout.role_dr])
     rw [stepReg_scratch L second _ L.toWalkLayout.dr_scratch] at h
@@ -4657,9 +5147,10 @@ so its scan compares its guess against what the step before really left behind. 
 theorem stepCols_holds_first {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
     (Ps : ℕ → SuccParams tm.Q kk) (ds : ℕ → Dir3) (cOlds cNews : ℕ → ℕ) (tgt : ℕ)
-    (f : ℕ → Code tm.Q kk x.length S) (g : ℕ → Bool) (s : ℕ)
-    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks
-      (stepCert L x dc Ps ds cOlds cNews tgt f (fun s => f (s + 1)) false) g)
+    (f : ℕ → Code tm.Q kk x.length S) (b : ℕ → ℕ → ℕ → Bool) (g : ℕ → Bool) (s : ℕ)
+    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks b g)
+    (hb : ∀ p q, b s p q
+      = stepCert L x dc Ps ds cOlds cNews tgt f (fun s => f (s + 1)) false s p q)
     (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
     (hh : ∀ i, 1 ≤ (W i).head)
     (hr1 : ∀ p, p < L.toWalkLayout.stepBlocks → (W (stepReg L false p)).head = 1)
@@ -4670,11 +5161,11 @@ theorem stepCols_holds_first {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : Lis
       (L.toWalkLayout.codeA p) (codeBlockScan tm x S (f s) p)) :
     StageCols x L dc Ps ds cOlds cNews tgt f L.toWalkLayout.codeA L.toWalkLayout.codeB
       L.toWalkLayout.cnt L.toWalkLayout.cnt' s (stepCells L false W) := by
-  refine stepCols_holds x L dc Ps ds cOlds cNews tgt f f (fun s => f (s + 1)) g false _ _ s hs
-    W hinv hh hr1 hgf (fun p hp => ?_) (fun p hp q => ?_) hret (fun p hp p' hp' hc => ?_)
+  refine stepCols_holds x L dc Ps ds cOlds cNews tgt f f (fun s => f (s + 1)) b g false _ _ s hs
+    hb W hinv hh hr1 hgf (fun p hp => ?_) (fun p hp q => ?_) hret (fun p hp p' hp' hc => ?_)
   · rw [stepReg, L.toWalkLayout.stepIdx_codeB p hp]
     rfl
-  · rw [stepCert, L.toWalkLayout.stepIdx_codeB p hp,
+  · rw [hb, stepCert, L.toWalkLayout.stepIdx_codeB p hp,
       stageBits_codeB L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (f s) (f (s + 1)) p hp q]
   · exact L.toWalkLayout.stepIdx_ne_codeA p' p hp' hp
       (L.toWalkLayout.reg_inj _ _ (L.toWalkLayout.stepIdx_lt false p' hp')
@@ -4686,9 +5177,10 @@ in. -/
 theorem stepCols_holds_second {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
     (Ps : ℕ → SuccParams tm.Q kk) (ds : ℕ → Dir3) (cOlds cNews : ℕ → ℕ) (tgt : ℕ)
-    (f : ℕ → Code tm.Q kk x.length S) (g : ℕ → Bool) (s : ℕ)
-    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks
-      (stepCert L x dc Ps ds cOlds cNews tgt (fun s => f (s + 1)) f true) g)
+    (f : ℕ → Code tm.Q kk x.length S) (b : ℕ → ℕ → ℕ → Bool) (g : ℕ → Bool) (s : ℕ)
+    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks b g)
+    (hb : ∀ p q, b s p q
+      = stepCert L x dc Ps ds cOlds cNews tgt (fun s => f (s + 1)) f true s p q)
     (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
     (hh : ∀ i, 1 ≤ (W i).head)
     (hr1 : ∀ p, p < L.toWalkLayout.stepBlocks → (W (stepReg L true p)).head = 1)
@@ -4699,11 +5191,11 @@ theorem stepCols_holds_second {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : Li
       (L.toWalkLayout.codeB p) (codeBlockScan tm x S (f s) p)) :
     StageCols x L dc Ps ds cOlds cNews tgt f L.toWalkLayout.codeB L.toWalkLayout.codeA
       L.toWalkLayout.cnt L.toWalkLayout.cnt' s (stepCells L true W) := by
-  refine stepCols_holds x L dc Ps ds cOlds cNews tgt f (fun s => f (s + 1)) f g true _ _ s hs
-    W hinv hh hr1 hgf (fun p hp => ?_) (fun p hp q => ?_) hret (fun p hp p' hp' hc => ?_)
+  refine stepCols_holds x L dc Ps ds cOlds cNews tgt f (fun s => f (s + 1)) f b g true _ _ s hs
+    hb W hinv hh hr1 hgf (fun p hp => ?_) (fun p hp q => ?_) hret (fun p hp p' hp' hc => ?_)
   · rw [stepReg, L.toWalkLayout.stepIdx_codeA p hp]
     rfl
-  · rw [stepCert, L.toWalkLayout.stepIdx_codeA p hp,
+  · rw [hb, stepCert, L.toWalkLayout.stepIdx_codeA p hp,
       stageBits_codeA L x dc (Ps s) (ds s) (cOlds s) (cNews s) tgt true (f (s + 1)) (f s) p hp q]
   · exact L.toWalkLayout.stepIdx_ne_codeB p' p hp' hp
       (L.toWalkLayout.reg_inj _ _ (L.toWalkLayout.stepIdx_lt true p' hp')
@@ -4765,7 +5257,8 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
     (hcO : cO ≠ L.toWalkLayout.res) (hcN : cN ≠ L.toWalkLayout.res)
     (s : ℕ) (cells : Fin (jj + 1) → ℕ → Γ)
     (hc : StageCols x L dc Ps ds cOlds cNews tgt f cA cB cO cN s cells)
-    (advance : Bool) (β : Bool)
+    (advance : Bool) (β : Bool) (gsym : Γ)
+    (hgsym : (f s).2.1.val ≠ 0 → gsym = inSymOf tm x S (f s))
     (hPs : Ps s = paramsOf tm x S (f s) β)
     (hsucc : f (s + 1) = succCode tm x S β (f s))
     (hds : ds s = adjustedDir (succTrans tm (Ps s)).2.2.2.1 (f s).2.1.val)
@@ -4773,6 +5266,7 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
     (hclampW : ∀ i, movedIdx (succDir tm (Ps s) i) ((f s).2.2.1 i).1.val ≤ S)
     (hclampO : movedIdx (succTrans tm (Ps s)).2.2.2.2.2 (f s).2.2.2.1.val ≤ S + 1)
     (hleft : (succTrans tm (Ps s)).2.2.2.1 = Dir3.left → 0 < (f s).2.1.val)
+    (hne : (f s).1 ≠ tm.qhalt)
     (hwc : wc ≤ walkScanLen tm x.length S)
     (hu : cOlds s < 2 ^ wc) (hv : cNews s < 2 ^ wc)
     (hmove : if advance then cNews s = cOlds s + 1 else cOlds s = cNews s) :
@@ -4780,8 +5274,7 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
         L.toWalkLayout.res cO cN wc advance dc cA cB).emit
       ((walkStepScanner tm x.length S L.toWalkLayout.par L.toWalkLayout.mv L.toWalkLayout.dr
         L.toWalkLayout.res cO cN wc advance dc cA cB).run
-        (fun q i => checkedCells cells L.toWalkLayout.par L.toWalkLayout.res
-          (inSymOf tm x S (f s)) i q)
+        (fun q i => checkedCells cells L.toWalkLayout.par L.toWalkLayout.res gsym i q)
         (walkScanLen tm x.length S)) = true := by
   have hpar := hc.par
   have hinSym : (Ps s).inSym = inSymOf tm x S (f s) := by
@@ -4795,7 +5288,7 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
     L.toWalkLayout.dr L.toWalkLayout.res cO cN wc advance dc
     cA cB (f s) (f (s + 1)) (Ps s) (cOlds s) (cNews s)
     (holdsBits_checked L.toWalkLayout.par_ne_res hpar) ?_ ?_ hq hstate hwsym hosym hhead hwork
-    hout hleft ?_ ?_ hinSym ?_ hwc hu hv ?_ ?_ hmove
+    hout hleft ?_ ?_ hinSym ?_ hne hwc hu hv ?_ ?_ hmove
   · intro p hp
     exact holdsBits_checked (hcA p hp)
       (hc.codeA p hp)
@@ -4810,10 +5303,10 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
       L.toWalkLayout.dr 1 = _
     rw [checked_cell _ _ _ _ _ L.toWalkLayout.dr_ne_res]
     rw [hc.dr, hds]
-  · intro _
+  · intro h0
     show checkedCells cells L.toWalkLayout.par L.toWalkLayout.res _
       L.toWalkLayout.res 1 = _
-    rw [checkedCells_res]
+    rw [checkedCells_res, hgsym h0]
     have hv := inMatchVerdict_of_inSym tm (fun q i => cells i q) L.toWalkLayout.par (Ps s)
       (inSymOf tm x S (f s)) hpar hinSym
     have hv' : TM.inMatchVerdict gammaBits (inSymOf tm x S (f s))
@@ -4827,10 +5320,12 @@ theorem stage_accepts_succ {kk jj : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
 theorem ruler_of_step {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
     (Ps : ℕ → SuccParams tm.Q kk) (ds : ℕ → Dir3) (cOlds cNews : ℕ → ℕ) (tgt : ℕ)
-    (aOld aNew : ℕ → Code tm.Q kk x.length S) (g : ℕ → Bool) (second : Bool)
-    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks
-      (stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second) g)
-    (s : ℕ) (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
+    (aOld aNew : ℕ → Code tm.Q kk x.length S) (b : ℕ → ℕ → ℕ → Bool) (g : ℕ → Bool)
+    (second : Bool)
+    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks b g)
+    (s : ℕ)
+    (hb : ∀ p q, b s p q = stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second s p q)
+    (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
     (hh : ∀ i, 1 ≤ (W i).head)
     (hr1 : ∀ p, p < L.toWalkLayout.stepBlocks → (W (stepReg L second p)).head = 1)
     (hgf : TM.GuessFrom
@@ -4846,7 +5341,7 @@ theorem ruler_of_step {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     L.toWalkLayout.rulerIdx hlt (rulerBlock (walkScanLen tm x.length S)) (fun q hq => ?_) ?_
   · rw [stepReg_scratch L second _ L.toWalkLayout.ruler_scratch] at h
     exact ruler_of_holds _ _ _ h
-  · rw [stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
+  · rw [hb, stepCert_scratch L x dc Ps ds cOlds cNews tgt aOld aNew second s _
       L.toWalkLayout.ruler_scratch, stageBits]
     simp only [L.toWalkLayout.role_ruler]
     rw [rulerBlock_getElem _ q (by simpa using hq)]
@@ -4860,10 +5355,12 @@ so a caller only has to know that the tape was blank there to begin with. -/
 theorem scanTape_of_step {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     (L : WalkWidths kk jj tm x.length S wc) (dc : DirCodec)
     (Ps : ℕ → SuccParams tm.Q kk) (ds : ℕ → Dir3) (cOlds cNews : ℕ → ℕ) (tgt : ℕ)
-    (aOld aNew : ℕ → Code tm.Q kk x.length S) (g : ℕ → Bool) (second : Bool)
-    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks
-      (stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second) g)
-    (s : ℕ) (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
+    (aOld aNew : ℕ → Code tm.Q kk x.length S) (b : ℕ → ℕ → ℕ → Bool) (g : ℕ → Bool)
+    (second : Bool)
+    (hs : TM.StageBlocks (stepWidth L) L.toWalkLayout.stepBlocks b g)
+    (s : ℕ)
+    (hb : ∀ p q, b s p q = stepCert L x dc Ps ds cOlds cNews tgt aOld aNew second s p q)
+    (W : Fin (jj + 2 + r + 1) → Tape) (hinv : ∀ i, (W i).StartInvariant)
     (hh : ∀ i, 1 ≤ (W i).head)
     (hr1 : ∀ p, p < L.toWalkLayout.stepBlocks → (W (stepReg L second p)).head = 1)
     (hgf : TM.GuessFrom
@@ -4885,8 +5382,8 @@ theorem scanTape_of_step {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bo
     (fun i => (ginv (walkReg i)).1) (fun i q hq => (ginv (walkReg i)).2 q hq) (fun q h1 h2 => ?_)
     ?_
   · rw [← L.toWalkLayout.ruler_zero]
-    exact ruler_of_step x L dc Ps ds cOlds cNews tgt aOld aNew g second hs s W hinv hh hr1 hgf
-      q h1 h2
+    exact ruler_of_step x L dc Ps ds cOlds cNews tgt aOld aNew b g second hs s hb W hinv hh hr1
+      hgf q h1 h2
   · have hbeyond := TM.guessBlocksTapes_beyond (stepReg L second) (fun p => walkReg_ne_last _)
       (stepWidth L) L.toWalkLayout.stepBlocks W hinv hh
       (fun p q hp hq hpq => L.toWalkLayout.stepIdx_inj second p q hp hq
@@ -4966,7 +5463,7 @@ def WalkStepInv {kk jj r : ℕ} {tm : NTM kk} {S wc : ℕ} (x : List Bool)
     TM.TapePred (jj + 2 + r + 1) :=
   fun inp work out =>
     (∀ i, (work i).StartInvariant) ∧ (∀ i, 1 ≤ (work i).head) ∧
-    (∀ i : Fin (jj + 1), (work (walkReg i)).head = 1) ∧
+    (∀ i : Fin (jj + 2), (work (Fin.castAdd r i).castSucc).head = 1) ∧
     (work (walkReg (L.toWalkLayout.reg L.toWalkLayout.rulerIdx))).cells
       (walkScanLen tm x.length S + 1) = Γ.blank ∧
     (∀ p, p < kk + 3 → HoldsBits (fun q i => (work (walkReg i)).cells q) 0 (cOld p)

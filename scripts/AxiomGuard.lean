@@ -84,6 +84,8 @@ def headlineTheorems : List Name := [
   `Complexity.PSPACE_eq_NPSPACE,
   -- the easy half of Shamir's theorem
   `Complexity.IP_subset_PSPACE,
+  `Complexity.PSPACE_subset_IP,
+  `Complexity.IP_eq_PSPACE,
   -- the polynomial hierarchy and interactive proofs
   `Complexity.SigmaP_one_eq_NP,
   `Complexity.PiP_one_eq_coNP,

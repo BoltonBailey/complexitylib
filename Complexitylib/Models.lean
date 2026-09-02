@@ -34,6 +34,7 @@ public import Complexitylib.Models.TuringMachine.Tape.Encoding
 public import Complexitylib.Models.TuringMachine.Subroutines
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAdd
 public import Complexitylib.Models.TuringMachine.Subroutines.InputMatch
+public import Complexitylib.Models.TuringMachine.Subroutines.GuessCheck
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryAddConst
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryCopy
 public import Complexitylib.Models.TuringMachine.Subroutines.BinaryEq

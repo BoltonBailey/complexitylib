@@ -1726,19 +1726,23 @@ soundness amplification, and substantial finite-field polynomial support.
   linearization operator `QBF.linearize` with `linearize_ofBool`,
   `linearize_isPoly_self`, `linearize_isPoly_other` is in `Complexitylib.SAT.QBF.Arith`;
   its interleaving into the protocol remains.)*
-- [~] Build the interactive protocol for TQBF and prove polynomial verifier time,
+- [x] Build the interactive protocol for TQBF and prove polynomial verifier time,
   polynomial communication, perfect/high completeness, and bounded soundness.
-  *(The abstract protocol is done: the round structure — Shen's chain of sum,
-  product, "or" and linearization operators — with completeness and the additive
-  soundness bound is `Complexitylib.Classes.Interactive.OperatorChain`, and its
-  instance for a prenex QBF, with the value lemma at Boolean points and the
-  degree bookkeeping, is `Complexitylib.Classes.Interactive.TQBFProtocol`
-  (`Shen.tqbf_accept_honest`, `Shen.tqbf_card_accept_le_ratio`). The field
-  encoding, the polynomial-time verifier as a `Protocol`, and TQBF's
-  PSPACE-hardness remain.)*
-- [ ] Conclude `PSPACE subset IP` from TQBF completeness.
-- [ ] Prove `IP subset PSPACE` by evaluating the finite game/acceptance recursion in
-  polynomial space.
+  *(The round structure — Shen's chain of sum, product, "or" and linearization
+  operators — with completeness and the additive soundness bound is
+  `Complexitylib.Classes.Interactive.OperatorChain`, and its instance for a prenex
+  QBF, with the value lemma at Boolean points and the degree bookkeeping, is
+  `Complexitylib.Classes.Interactive.TQBFProtocol` (`Shen.tqbf_accept_honest`,
+  `Shen.tqbf_card_accept_le_ratio`). The field encoding and the polynomial-time
+  verifier as a `Protocol` are `Complexitylib.Classes.Interactive.Internal.Shen*`,
+  concluding `Complexity.mem_IP_of_shen_reduction`.)*
+- [x] Conclude `PSPACE subset IP` from TQBF completeness
+  (`Complexity.PSPACE_subset_IP`, and `Complexity.IP_eq_PSPACE` with the other
+  half). TQBF's PSPACE-hardness is Savitch's recursion written as one flat
+  prenex-CNF formula (`Complexity.exists_flat_instance`), emitted in `FP` by
+  `Complexity.flatInstance_mem_FP`.
+- [x] Prove `IP subset PSPACE` by evaluating the finite game/acceptance recursion in
+  polynomial space (`Complexity.IP_subset_PSPACE`).
 
 **Formalization hazards.** “Arithmetize QBF and apply sum-check” omits the central
 degree-control argument. Field size must dominate all relevant degree and

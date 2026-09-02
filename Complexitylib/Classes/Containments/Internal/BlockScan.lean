@@ -63,6 +63,8 @@ fold a `Complexity.Scanner` runs.
   encoding
 - `Complexity.plusOne_of_holds`, `Complexity.plusOne_of_holds_fin` — the increment scan decides
   the input-head field
+- `Complexity.le_of_holds`, `Complexity.le_of_holdsBits` — and the comparison scan bounds it,
+  against a register that carries the bound
 - `Complexity.inHeadEmit_of_holds` — and the input-head check, whichever way the head moves
 - `Complexity.moved_of_holds`, `Complexity.sym_of_holds` — the displacement and symbol
   conditions, read as statements about the decoded windows
@@ -486,7 +488,8 @@ def HoldsWindow {m : ℕ} [NeZero m] (cols : ℕ → Fin (j + 1) → Γ) (off : 
   ∀ q, (hq : q < m * 3) → cols (off + q + 1) r
     = Γ.ofBool (((tapeCodec m).enc (hd, cl))[q]'(by rw [(tapeCodec m).enc_length]; exact hq))
 
-private theorem enc_getElem {m : ℕ} [NeZero m] (hd : Fin m) (cl : Fin m → Γ) (p : Fin m)
+/-- **A cell of an encoded window**, by its chunk and its position within the chunk. -/
+theorem enc_getElem {m : ℕ} [NeZero m] (hd : Fin m) (cl : Fin m → Γ) (p : Fin m)
     (i : ℕ) (hi : i < 3) (hb : p.val * 3 + i < ((tapeCodec m).enc (hd, cl)).length) :
     ((tapeCodec m).enc (hd, cl))[p.val * 3 + i]'hb
       = ([decide (p = hd), (gammaBits (cl p)).1, (gammaBits (cl p)).2])[i]'(by simpa using hi) := by
@@ -802,6 +805,32 @@ theorem plusOne_of_holds (cols : ℕ → Fin (j + 1) → Γ) (r r' : Fin (j + 1)
     List.take_of_length_le (le_of_eq hlen), List.take_of_length_le (le_of_eq hlen'),
     binValLE_bitsOfLenLE w u hu, binValLE_bitsOfLenLE w v hv]
 
+/-- **The comparison check decides an inequality between two registers.** This is what bounds a
+binary field: the window fields carry their own bound in the marker, but the input-head field is
+a number, so its range has to be checked against a register that holds the bound. -/
+theorem le_of_holds (cols : ℕ → Fin (j + 1) → Γ) (r r' : Fin (j + 1)) (w u v : ℕ)
+    (hu : u < 2 ^ w) (hv : v < 2 ^ w)
+    (h : HoldsBits cols 0 r (bitsOfLenLE w u)) (h' : HoldsBits cols 0 r' (bitsOfLenLE w v)) :
+    (Scanner.le j r r').emit ((Scanner.le j r r').run cols w) = true ↔ u ≤ v := by
+  have hlen : (bitsOfLenLE w u).length = w := bitsOfLenLE_length w u
+  have hlen' : (bitsOfLenLE w v).length = w := bitsOfLenLE_length w v
+  rw [Scanner.le_run, valUpTo_of_holds cols r _ h w (by omega),
+    valUpTo_of_holds cols r' _ h' w (by omega),
+    List.take_of_length_le (le_of_eq hlen), List.take_of_length_le (le_of_eq hlen'),
+    binValLE_bitsOfLenLE w u hu, binValLE_bitsOfLenLE w v hv]
+
+/-- The same, for whatever bits the two registers hold. This is the form the soundness direction
+uses: the guess writes an arbitrary block, and the check still reports the comparison of the
+numbers those blocks name. -/
+theorem le_of_holdsBits (cols : ℕ → Fin (j + 1) → Γ) (r r' : Fin (j + 1)) (w : ℕ)
+    (bitsA bitsB : List Bool) (hlenA : bitsA.length = w) (hlenB : bitsB.length = w)
+    (h : HoldsBits cols 0 r bitsA) (h' : HoldsBits cols 0 r' bitsB) :
+    (Scanner.le j r r').emit ((Scanner.le j r r').run cols w) = true ↔
+      binValLE bitsA ≤ binValLE bitsB := by
+  rw [Scanner.le_run, valUpTo_of_holds cols r bitsA h w (by omega),
+    valUpTo_of_holds cols r' bitsB h' w (by omega),
+    List.take_of_length_le (le_of_eq hlenA), List.take_of_length_le (le_of_eq hlenB)]
+
 /-- The same, for registers holding a bounded index. -/
 theorem plusOne_of_holds_fin {m : ℕ} [NeZero m] (cols : ℕ → Fin (j + 1) → Γ)
     (r r' : Fin (j + 1)) (u v : Fin m)
@@ -834,6 +863,21 @@ theorem tableSlice_eq (bits : List Bool) (c : ℕ) (hlen : bits.length = c)
   simp only [hh]
   cases bits[i.val]'(by rw [hlen]; exact i.isLt) <;> simp [Γ.ofBool]
 
+/-- **The slice a scan has of one register is the bits that register holds.** -/
+theorem ofFn_tableSlice_eq {α : Type} (codec : BitCodec α) (bits : List Bool)
+    (hlen : bits.length = codec.width) (cols : ℕ → Fin (j + 1) → Γ) (off : ℕ) (s w : ℕ)
+    (regs : Fin s → Fin (j + 1)) (t : Fin s) (hc : codec.width ≤ w)
+    (x₀ : Fin s → Fin w → Bool)
+    (h : HoldsBits (fun q => cols (off + q)) 0 (regs t) bits) :
+    List.ofFn (tableSlice
+        (Scanner.auxRun (⟨0, Nat.zero_lt_succ w⟩, x₀) (Scanner.bitsStep s w regs)
+          (fun q => cols (off + q)) w).2 t codec.width hc) = bits := by
+  refine List.ext_getElem (by simp [hlen]) ?_
+  intro i h1 h2
+  have hi : i < codec.width := by simpa using h1
+  rw [List.getElem_ofFn]
+  exact tableSlice_eq bits codec.width hlen cols off s w regs t hc x₀ h ⟨i, hi⟩
+
 /-- **What a scan reads a register as, through a codec**, whatever bits it holds. -/
 theorem ofTable_of_holdsBits {α : Type} (codec : BitCodec α) (bits : List Bool)
     (hlen : bits.length = codec.width) (cols : ℕ → Fin (j + 1) → Γ) (off : ℕ) (s w : ℕ)
@@ -843,13 +887,7 @@ theorem ofTable_of_holdsBits {α : Type} (codec : BitCodec α) (bits : List Bool
     codec.ofTable (tableSlice
         (Scanner.auxRun (⟨0, Nat.zero_lt_succ w⟩, x₀) (Scanner.bitsStep s w regs)
           (fun q => cols (off + q)) w).2 t codec.width hc) = codec.dec bits := by
-  rw [BitCodec.ofTable]
-  congr 1
-  refine List.ext_getElem (by simp [hlen]) ?_
-  intro i h1 h2
-  have hi : i < codec.width := by simpa using h1
-  rw [List.getElem_ofFn]
-  exact tableSlice_eq bits codec.width hlen cols off s w regs t hc x₀ h ⟨i, hi⟩
+  rw [BitCodec.ofTable, ofFn_tableSlice_eq codec bits hlen cols off s w regs t hc x₀ h]
 
 /-- The same, when the register holds an encoding. -/
 theorem ofTable_of_holds {α : Type} (codec : BitCodec α) (val : α)
@@ -1403,6 +1441,27 @@ theorem eq_succCode_of_checks (a b : Code tm.Q k x.length S) (P : SuccParams tm.
     rw [params_eq tm x S a P hq hin hwsym hosym, hbeta]
   subst hP
   exact eq_succCode_iff tm x S a b β hclampIn hclampW hclampO
+
+/-- **The successor itself, from the conditions the checks establish.** Naming the choice bit is
+what a certificate that a code is *not* a successor needs: it has to rule out both. -/
+theorem eq_succCode_of_checks' (a b : Code tm.Q k x.length S) (P : SuccParams tm.Q k)
+    (hq : a.1 = P.q) (hin : P.inSym = inSymOf tm x S a)
+    (hwsym : ∀ i, (a.2.2.1 i).2 (a.2.2.1 i).1 = P.wSym i)
+    (hosym : a.2.2.2.2 a.2.2.2.1 = P.oSym)
+    (hclampIn : movedIdx (succTrans tm P).2.2.2.1 a.2.1.val ≤ x.length + S + 1)
+    (hclampW : ∀ i, movedIdx (succDir tm P i) (a.2.2.1 i).1.val ≤ S)
+    (hclampO : movedIdx (succTrans tm P).2.2.2.2.2 a.2.2.2.1.val ≤ S + 1)
+    (hstate : b.1 = succState tm P)
+    (hhead : b.2.1.val = movedIdx (succTrans tm P).2.2.2.1 a.2.1.val)
+    (hwork : ∀ i, (b.2.2.1 i).1.val = movedIdx (succDir tm P i) (a.2.2.1 i).1.val ∧
+      ∀ p, (b.2.2.1 i).2 p = if p = (a.2.2.1 i).1 ∧ 0 < p.val then succWrite tm P i
+        else (a.2.2.1 i).2 p)
+    (hout : b.2.2.2.1.val = movedIdx (succTrans tm P).2.2.2.2.2 a.2.2.2.1.val ∧
+      ∀ p, b.2.2.2.2 p = if p = a.2.2.2.1 ∧ 0 < p.val
+        then (((succTrans tm P).2.2.1 : Γw) : Γ) else a.2.2.2.2 p) :
+    b = succCode tm x S P.beta a :=
+  (eq_succCode_of_checks tm x S a b P P.beta rfl hq hin hwsym hosym hclampIn hclampW
+    hclampO).mpr ⟨hstate, hhead, hwork, hout⟩
 
 /-- **Membership in `codeSucc`, from the conditions the checks establish.** -/
 theorem mem_codeSucc_of_checks (a b : Code tm.Q k x.length S) (P : SuccParams tm.Q k)

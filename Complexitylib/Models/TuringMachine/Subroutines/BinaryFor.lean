@@ -194,6 +194,20 @@ theorem binaryForTM_hoareTime {body : TM n}
   binaryForTM_hoareTime_internal body counterIdx limitIdx hne limitValue
     bodyTime P hbody
 
+/-- **A count-up loop from a contract for its body, without a time bound.** When only
+correctness and halting matter — as they do for a space-bounded machine — the body's contract
+needs no uniform time bound, which a body assembled from guessed stages cannot supply. -/
+theorem binaryForTM_hoare {body : TM n}
+    {counterIdx limitIdx : Fin n} (hne : counterIdx ≠ limitIdx)
+    (limitValue : ℕ) (P : ℕ → TapePred n)
+    (hbody : ∀ value, value < limitValue →
+      body.Hoare (BinaryForFrame counterIdx limitIdx limitValue P value)
+        (BinaryForBodyPost counterIdx limitIdx limitValue P value)) :
+    (binaryForTM body counterIdx limitIdx).Hoare
+      (BinaryForFrame counterIdx limitIdx limitValue P 0)
+      (BinaryForFrame counterIdx limitIdx limitValue P limitValue) :=
+  binaryForTM_hoare_internal body counterIdx limitIdx hne limitValue P hbody
+
 /-- A binary count-up loop preserves the body's one-way-output discipline. -/
 theorem IsTransducer.binaryForTM {body : TM n}
     (hbody : body.IsTransducer) (counterIdx limitIdx : Fin n) :
